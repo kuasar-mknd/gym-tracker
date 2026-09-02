@@ -217,15 +217,14 @@ const openRestTimer = () => {
 /*
  * Reordonner les exercices, au doigt, pendant la seance.
  *
- * Les cartes se replient DES L'APPUI sur la poignee, pas au demarrage du
- * glissement : la bibliotheque fabrique alors son nœud de substitution a partir
- * de ce qu'elle voit, et replier apres laissait a l'ecran une carte pleine —
- * series comprises — au-dessus d'une liste qui venait de s'effondrer. Filme sur
- * simulateur : deux titres superposes, la page raccourcie de 800 px, et les
- * boutons du bas remontes au milieu de l'ecran.
+ * Les cartes ne se replient PAS pendant le geste. C'est deliberе : replier
+ * raccourcissait la page de 400 px sous le doigt, et il fallait ensuite
+ * rattraper le defilement, distinguer la tape du glissement, et devancer le
+ * moment ou la bibliotheque photographie la carte. Trois mecanismes pour un
+ * confort — et chacun ramenait un defaut.
  *
- * L'appui long laisse a Vue le temps de rendre le repli avant que le geste ne
- * commence. Un seul geste : j'appuie, ça se replie, je glisse.
+ * Une carte pleine se traine tres bien tant que le defilement automatique
+ * fonctionne aux bords, ce que la configuration ci-dessous assure.
  */
 const listeDesExercices = ref(null)
 
@@ -244,7 +243,7 @@ const lignesReordonnables = computed({
     },
 })
 
-const { cartesRepliees, rafraichir: rafraichirLeDeplacement } = useListeReordonnable(listeDesExercices, {
+const { rafraichir: rafraichirLeDeplacement } = useListeReordonnable(listeDesExercices, {
     valeurs: lignesReordonnables,
     handle: '[data-poignee-exercice]',
     estActif: () => !isFinished.value && localWorkout.value.workout_lines.length > 1,
@@ -1850,7 +1849,7 @@ onUnmounted(() => {
                     :data-line-id="line.id"
                     :dusk-id="`exercise-line-${line.id}`"
                     data-exercice
-                    :class="{ 'carte-portable': cartesRepliees }"
+                    class="carte-portable"
                 >
                     <div class="mb-4 flex items-center justify-between gap-2">
                         <div class="min-w-0">
@@ -1902,7 +1901,7 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div v-show="!cartesRepliees" class="space-y-2">
+                    <div class="space-y-2">
                         <!--
                       Keyed on something that never changes for the life of the
                       row. Folding the index in made the key change for every row
@@ -2103,7 +2102,6 @@ onUnmounted(() => {
 
                     <button
                         v-if="!isFinished"
-                        v-show="!cartesRepliees"
                         v-press
                         @click="addSet(line.id)"
                         :dusk="`add-set-${lineIndex}`"

@@ -1,21 +1,15 @@
-import { ref, onBeforeUnmount } from 'vue'
+import { onBeforeUnmount } from 'vue'
 
 /**
- * Rend une liste déplaçable au doigt, et replie ses éléments pendant le geste.
+ * Rend une liste déplaçable au doigt.
  *
- * Le repli ne peut pas attendre le démarrage du glissement : la bibliothèque
- * fabrique alors un nœud de substitution à partir de ce qu'elle voit, et
- * replier ensuite laisse à l'écran une carte pleine — séries comprises —
- * au-dessus d'une liste qui vient de s'effondrer. Filmé sur simulateur : deux
- * titres superposés, la page raccourcie de 800 px.
+ * La bibliothèque est donnée-d'abord : elle mute le tableau qu'on lui confie,
+ * et Vue garde la propriété du DOM. C'est ce qui évite d'avoir à défaire ses
+ * déplacements — et avec eux toute une classe de défauts.
  *
- * On écoute donc le CONTACT soi-même, et l'appui long de la bibliothèque laisse
- * à Vue le temps de rendre le repli avant que le geste ne commence. Un seul
- * geste : j'appuie, ça se replie, je glisse.
- *
- * La bibliothèque est importée à la monture, après la peinture : la liste des
- * exercices est le cœur de la page de séance, elle ne doit pas attendre un
- * morceau de code pour s'afficher.
+ * Elle est importée à la MONTURE, après la peinture : la liste des exercices
+ * est le cœur de la page de séance, elle ne doit pas attendre un morceau de
+ * code pour s'afficher.
  *
  * @param {import('vue').Ref<HTMLElement | null>} conteneur
  * @param {{
@@ -27,41 +21,11 @@ import { ref, onBeforeUnmount } from 'vue'
  * }} options
  */
 export const useListeReordonnable = (conteneur, options) => {
-    const cartesRepliees = ref(false)
-
     let montee = null
     let branche = false
-    let enGlissement = false
-
-    const relacher = () => {
-        if (!enGlissement) {
-            cartesRepliees.value = false
-        }
-    }
-
-    /** Le repli part au CONTACT, pas au démarrage du glissement. */
-    const surAppui = (evenement) => {
-        if (evenement.target?.closest?.(options.handle) === null) {
-            return
-        }
-
-        cartesRepliees.value = true
-        options.auDebut?.()
-
-        window.addEventListener('pointerup', relacher, { once: true })
-        window.addEventListener('pointercancel', relacher, { once: true })
-    }
-
-    const detacher = () => {
-        conteneur.value?.removeEventListener('pointerdown', surAppui)
-        enGlissement = false
-        cartesRepliees.value = false
-    }
 
     const attacher = async () => {
-        const element = conteneur.value
-
-        if (element === null || branche) {
+        if (conteneur.value === null || branche) {
             return
         }
 
@@ -75,8 +39,6 @@ export const useListeReordonnable = (conteneur, options) => {
 
         branche = true
 
-        element.addEventListener('pointerdown', surAppui)
-
         dragAndDrop({
             parent: conteneur,
             values: options.valeurs,
@@ -84,9 +46,8 @@ export const useListeReordonnable = (conteneur, options) => {
             dragHandle: options.handle,
 
             /*
-             * L'appui long laisse à Vue le temps de rendre le repli avant que
-             * le geste ne commence — et il évite qu'un simple contact sur la
-             * poignée n'emporte la carte.
+             * L'appui long distingue le glissement de la tape, et laisse le
+             * défilement de la page au doigt qui passe.
              */
             longPress: true,
             longPressDuration: 250,
@@ -96,14 +57,7 @@ export const useListeReordonnable = (conteneur, options) => {
             dropZoneClass: 'rangee-creux',
             synthDropZoneClass: 'rangee-creux',
 
-            onDragstart: () => {
-                enGlissement = true
-            },
-
-            onDragend: () => {
-                enGlissement = false
-                cartesRepliees.value = false
-            },
+            onDragstart: () => options.auDebut?.(),
 
             /*
              * La bibliothèque a DÉJÀ réordonné le tableau : ce rappel ne doit
@@ -121,7 +75,9 @@ export const useListeReordonnable = (conteneur, options) => {
         }
     }
 
-    onBeforeUnmount(detacher)
+    onBeforeUnmount(() => {
+        branche = false
+    })
 
-    return { cartesRepliees, rafraichir, detacher }
+    return { rafraichir }
 }

@@ -647,6 +647,23 @@
 }
 
 @utility rangee-en-vol {
+    /*
+     * OPAQUE. Les cartes de cette page sont en verre : translucides, avec un
+     * flou d'arriere-plan. Sortie de la liste et posee par-dessus le reste, une
+     * carte en verre laisse voir ce qu'il y a dessous — deux titres l'un sur
+     * l'autre, illisibles. C'est le defaut filme.
+     *
+     * `!important` parce que la carte pose son propre fond de verre par
+     * `glass-panel-light` : a specificite egale, c'est l'ordre qui tranche, et
+     * il ne nous est pas favorable. Sans lui la regle ne change rien a l'ecran,
+     * et aucun test ne le verrait.
+     *
+     * Le fond seul, jamais la paire fond + texte : `Charte::surfacesAppariees`
+     * ramasse la paire et exigerait une regeneration de la page de charte.
+     */
+    background: var(--color-surface-card) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
     box-shadow: 0 12px 40px rgb(from var(--color-shadow-ambient) r g b / 0.24);
     cursor: grabbing;
 }

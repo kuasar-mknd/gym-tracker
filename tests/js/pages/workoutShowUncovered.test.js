@@ -1825,28 +1825,22 @@ describe('reordering the exercises of a workout', () => {
     })
 
     /**
-     * Le repli part du CONTACT sur la poignée, pas du démarrage du glissement.
-     *
-     * La bibliothèque fabrique son nœud de substitution à partir de ce qu'elle
-     * voit : replier après laissait à l'écran une carte pleine — séries
-     * comprises — au-dessus d'une liste qui venait de s'effondrer.
+     * Les cartes ne se replient PAS pendant le geste, et c'est délibéré :
+     * replier raccourcissait la page de 400 px sous le doigt, et il fallait
+     * ensuite rattraper le défilement, distinguer la tape du glissement, et
+     * devancer le moment où la bibliothèque photographie la carte. Trois
+     * mécanismes pour un confort, et chacun ramenait un défaut.
      */
-    it('folds the cards from the press, not from the drag', async () => {
-        reordonnancements.length = 0
-
+    it('leaves the cards alone while dragging', async () => {
         const wrapper = await mountPage(deuxExercices())
-
-        // L'écouteur de contact est posé après l'import dynamique.
         await flushPromises()
 
         const series = () => wrapper.find('[dusk="exercise-card-0"]').findAll('div.space-y-2')
 
-        expect(series()[0].attributes('style') ?? '').not.toContain('display: none')
-
         wrapper.find('[dusk="reorder-line-0"]').element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
         await wrapper.vm.$nextTick()
 
-        expect(series()[0].attributes('style')).toContain('display: none')
+        expect(series()[0].attributes('style') ?? '').not.toContain('display: none')
     })
 
     it('binds the library to the exercise list itself', async () => {

@@ -44,11 +44,6 @@ const monter = (options = {}) => {
     return mount(composant, { attachTo: document.body })
 }
 
-const appuyer = (wrapper, selecteur) => {
-    const cible = wrapper.find(selecteur).element
-    cible.dispatchEvent(new Event('pointerdown', { bubbles: true }))
-}
-
 beforeEach(() => {
     configurations.length = 0
 })
@@ -76,72 +71,6 @@ describe('une liste réordonnable', () => {
     })
 
     /**
-     * Le cœur du correctif. Replier au démarrage du glissement laissait à
-     * l'écran une carte pleine — séries comprises — au-dessus d'une liste qui
-     * venait de s'effondrer : filmé sur simulateur, deux titres superposés et
-     * la page raccourcie de 800 px.
-     */
-    it('replie dès l’appui sur la poignée, pas au démarrage du glissement', async () => {
-        const wrapper = monter()
-
-        wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(configurations).toHaveLength(1))
-
-        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
-
-        appuyer(wrapper, '[data-poignee]')
-
-        expect(wrapper.vm.outils.cartesRepliees.value).toBe(true)
-        expect(wrapper.vm.rappels.auDebut).toHaveBeenCalled()
-    })
-
-    it('ne replie pas quand l’appui tombe à côté de la poignée', async () => {
-        const wrapper = monter()
-
-        wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(configurations).toHaveLength(1))
-
-        appuyer(wrapper, 'div:not([data-poignee])')
-
-        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
-    })
-
-    /** Un appui relâché sans glisser doit rendre la carte à sa taille. */
-    it('déplie quand on relâche sans avoir glissé', async () => {
-        const wrapper = monter()
-
-        wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(configurations).toHaveLength(1))
-
-        appuyer(wrapper, '[data-poignee]')
-        expect(wrapper.vm.outils.cartesRepliees.value).toBe(true)
-
-        window.dispatchEvent(new Event('pointerup'))
-
-        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
-    })
-
-    it('reste replié tant que le glissement dure, puis déplie à la fin', async () => {
-        const wrapper = monter()
-
-        wrapper.vm.outils.rafraichir()
-        await vi.waitFor(() => expect(configurations).toHaveLength(1))
-
-        const { onDragstart, onDragend } = configurations[0]
-
-        appuyer(wrapper, '[data-poignee]')
-        onDragstart({})
-
-        // Le doigt quitte l'écran pendant le glissement : la carte doit rester
-        // repliée jusqu'à ce que la bibliothèque dise que c'est fini.
-        window.dispatchEvent(new Event('pointerup'))
-        expect(wrapper.vm.outils.cartesRepliees.value).toBe(true)
-
-        onDragend({})
-        expect(wrapper.vm.outils.cartesRepliees.value).toBe(false)
-    })
-
-    /**
      * La bibliothèque a DÉJÀ réordonné le tableau quand elle appelle `onSort` :
      * muter une seconde fois appliquerait le déplacement deux fois.
      */
@@ -157,7 +86,24 @@ describe('une liste réordonnable', () => {
         expect(wrapper.vm.valeurs).toEqual(['a', 'b', 'c'])
     })
 
-    it('demande un appui long, et habille la rangée portée', async () => {
+    it('prévient au démarrage du glissement', async () => {
+        const wrapper = monter()
+
+        wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(configurations).toHaveLength(1))
+
+        configurations[0].onDragstart({})
+
+        expect(wrapper.vm.rappels.auDebut).toHaveBeenCalled()
+    })
+
+    /**
+     * Une carte pleine dépasse souvent l'écran : sans défilement automatique
+     * aux bords, on ne peut pas la sortir de la zone visible, donc pas la
+     * déplacer loin. Et l'appui long est ce qui laisse le défilement de la page
+     * au doigt qui ne fait que passer.
+     */
+    it('demande un appui long, et habille la carte portée', async () => {
         const wrapper = monter()
 
         wrapper.vm.outils.rafraichir()
@@ -166,9 +112,6 @@ describe('une liste réordonnable', () => {
         const config = configurations[0]
 
         expect(config.dragHandle).toBe('[data-poignee]')
-
-        // L'appui long laisse à Vue le temps de rendre le repli avant que le
-        // geste ne commence.
         expect(config.longPress).toBe(true)
         expect(config.longPressDuration).toBeGreaterThanOrEqual(150)
 
