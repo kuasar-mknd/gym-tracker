@@ -30,7 +30,12 @@ Trois règles se tiennent dans `tests/js/conventions/buttonVariants.test.js` et 
 
 Sur `GlassSelect`, `placeholder` est une INVITE (rendue `disabled`) et `empty-label` est un CHOIX vide sélectionnable. Les confondre donnait un « — Aucune — » sur lequel personne ne pouvait revenir.
 
-## Une poignée de glisser-déposer dans SwipeableRow doit porter data-swipe-ignore
-`SwipeableRow` s'arme sur toute la rangée : ses dix premiers pixels arbitrent entre glissement latéral et défilement. Une poignée posée dedans se dispute donc le doigt, et la saisie paraît marcher une fois sur deux selon la trajectoire — pas selon l'endroit. Toute poignée à l'intérieur doit porter `data-swipe-ignore`.
+## Glisser-déposer au doigt : les quatre pièges, tous payés au prix fort
 
-Corollaire de vérification : jsdom ne rejoue pas le chemin tactile de `@formkit/drag-and-drop`, et des évènements de pointeur synthétiques dans un navigateur non plus. Les défauts de ce geste ne se reproduisent que sur simulateur, avec `touch_path`. Un témoin utile porte sur le mécanisme (identité des éléments DOM, appel du rappel), jamais sur le rendu final.
+`@formkit/drag-and-drop` saisit au PREMIER mouvement sans regarder la direction — elle n'expose aucun seuil directionnel. Une rangée qui doit aussi glisser latéralement ne peut donc pas arbitrer par l'espace : c'est le temps qui tranche (`longPress`, 220 ms). Et `longPress` ne marche que si le geste ne peut pas devenir un défilement : la bibliothèque appelle `preventDefault` sur le `pointerdown` APRÈS son minuteur, ce qui n'annule pas un défilement déjà engagé sur iOS.
+
+Elle pose `draggable` sur le NODE — l'enfant direct du conteneur, donc la racine du composant de rangée, pas le div qu'on habille. Au doigt, iOS s'en saisit après une demi-seconde et fabrique son propre aperçu, qui vole le geste. `-webkit-user-drag: none` ne s'hérite pas : posé sur un descendant, il ne coupe rien. Et une media query ne suffit pas non plus — un iPad au trackpad se déclare pointeur fin tout en restant tactile. La coupure se fait sur le type du dernier `pointerdown`, dans `useListeReordonnable.js`. Ne pas passer `nativeDrag: false` : la souris de bureau n'a QUE ce chemin, le chemin synthétique se retirant pour elle.
+
+Elle déplace aussi le nœud elle-même sur le chemin tactile. Vue, restée sur l'ancien arrangement, écrit ensuite les numéros dans les mauvaises rangées. On reconstruit les rangées par une génération portée dans la clef du `v-for`.
+
+Corollaire de vérification, le plus coûteux : jsdom ne rejoue pas le chemin tactile, et des évènements de pointeur synthétiques dans un navigateur non plus. Ces défauts ne se reproduisent que sur simulateur, avec `touch_path` et une vraie temporisation — un appui trop court y passe pour un défilement et fait conclure à tort que rien ne marche. Un témoin utile porte sur le mécanisme (identité des éléments DOM, `defaultPrevented`, appel du rappel), jamais sur le rendu final.
