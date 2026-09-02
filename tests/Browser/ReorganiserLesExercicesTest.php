@@ -52,7 +52,9 @@ class ReorganiserLesExercicesTest extends DuskTestCase
             // poignee accepte aussi les fleches, et c'est le meme chemin
             // d'ecriture.
             $browser->keys('[dusk="reorder-line-0"]', '{ARROW_DOWN}')
-                ->waitUntil("document.querySelectorAll('[data-line-id]')[1].textContent.includes('ALPHA')", 15);
+                // `textContent` rend le texte SOURCE : la majuscule vient de
+                // `uppercase`, une regle CSS, et ne s'y voit pas.
+                ->waitUntil("document.querySelectorAll('[data-line-id]')[1].textContent.includes('Alpha')", 15);
 
             // L'ordre a bien ete ecrit : c'est la seule preuve que le PATCH a
             // atterri, et qu'il portait le bon ordre.
