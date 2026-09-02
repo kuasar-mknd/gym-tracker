@@ -1,7 +1,7 @@
-import { ref, onBeforeUnmount } from 'vue'
+import { onBeforeUnmount } from 'vue'
 
 /**
- * Rend une liste deplaçable au doigt, sans composant enveloppant.
+ * Rend une liste déplaçable au doigt, sans composant enveloppant.
  *
  * Le patron habituel enrobe la liste dans un composant tiers. Ici la liste est
  * le cœur de la page de séance : un enrobage chargé de façon asynchrone la
@@ -25,8 +25,6 @@ import { ref, onBeforeUnmount } from 'vue'
  * }} options
  */
 export const useListeReordonnable = (conteneur, options) => {
-    const deplacementEnCours = ref(false)
-
     let instance = null
     let montee = null
 
@@ -47,36 +45,69 @@ export const useListeReordonnable = (conteneur, options) => {
         const { default: Sortable } = await montee
 
         // Le conteneur a pu disparaître pendant l'import.
-        if (conteneur() === null) {
+        if (conteneur() === null || instance !== null) {
             return
         }
 
         instance = new Sortable(element, {
             handle: options.handle,
             draggable: options.draggable,
-            animation: 150,
-            // Le doigt doit pouvoir faire défiler la page : sans ce délai, tout
-            // début de glissement vertical sur une poignée attrape la carte.
-            delay: 120,
-            delayOnTouchOnly: true,
-            forceFallback: true,
-            fallbackTolerance: 4,
+            direction: 'vertical',
 
-            onStart: () => {
-                deplacementEnCours.value = true
-                options.auDebut?.()
-            },
+            /*
+             * Le glisser natif du HTML n'existe pas au tactile. Le repli de
+             * SortableJS le remplace par un CLONE qu'il déplace lui-même — et
+             * c'est ce clone que `fallbackClass` habille.
+             */
+            forceFallback: true,
+            fallbackClass: 'rangee-en-vol',
+            dragClass: 'rangee-en-vol',
+
+            /*
+             * Posée sur l'ORIGINAL resté dans la liste, pas sur le clone. Sans
+             * elle, la rangée se voit deux fois — l'original intact sous le
+             * clone — et les deux titres se superposent.
+             */
+            ghostClass: 'rangee-creux',
+
+            fallbackTolerance: 3,
+            animation: 160,
+            easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+
+            /*
+             * Le défaut oblige à traverser toute la rangée visée avant que
+             * l'échange ne se fasse : c'est une part de la raideur ressentie.
+             */
+            swapThreshold: 0.65,
+
+            /*
+             * La bande de déclenchement du défilement automatique vaut 30 px
+             * par défaut, entièrement cachée derrière la barre de navigation
+             * flottante et l'en-tête collant.
+             */
+            scroll: true,
+            scrollSensitivity: 96,
+            scrollSpeed: 12,
+            bubbleScroll: true,
+
+            onStart: () => options.auDebut?.(),
 
             onEnd: ({ oldIndex, newIndex, item, from }) => {
-                deplacementEnCours.value = false
-
                 if (newIndex === oldIndex || oldIndex === undefined || newIndex === undefined) {
                     return
                 }
 
-                // Rendre le nœud à sa place : le tableau est la source de vérité,
-                // et Vue va rejouer le déplacement à partir de lui.
-                from.insertBefore(item, from.children[oldIndex > newIndex ? oldIndex + 1 : oldIndex])
+                /*
+                 * `oldIndex` compte les DÉPLAÇABLES ; `from.children` compte
+                 * tous les enfants. Indexer l'un par l'autre range la ligne un
+                 * rang à côté dès qu'un élément non déplaçable partage le
+                 * conteneur.
+                 */
+                const rangs = [...from.children].filter((noeud) => noeud !== item && noeud.matches(options.draggable))
+
+                // Rendre le nœud à sa place : le tableau est la source de
+                // vérité, et Vue va rejouer le déplacement à partir de lui.
+                from.insertBefore(item, rangs[oldIndex] ?? null)
 
                 options.aLaFin?.(oldIndex, newIndex)
             },
@@ -95,5 +126,5 @@ export const useListeReordonnable = (conteneur, options) => {
 
     onBeforeUnmount(detacher)
 
-    return { deplacementEnCours, rafraichir, detacher }
+    return { rafraichir, detacher }
 }

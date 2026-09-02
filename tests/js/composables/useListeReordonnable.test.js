@@ -45,11 +45,13 @@ const monter = (options = {}) => {
             return { conteneur, outils, rappels }
         },
         render() {
-            return h(
-                'div',
-                { ref: (el) => (this.conteneur.value = el) },
-                ['a', 'b', 'c'].map((nom) => h('div', { key: nom, 'data-element': '' }, nom)),
-            )
+            return h('div', { ref: (el) => (this.conteneur.value = el) }, [
+                // Le conteneur réel en porte : la carte « Séance vide » avant,
+                // et le bloc de boutons après.
+                h('div', { key: 'entete' }, 'entête'),
+                ...['a', 'b', 'c'].map((nom) => h('div', { key: nom, 'data-element': '' }, nom)),
+                h('div', { key: 'pied' }, 'pied'),
+            ])
         },
     })
 
@@ -89,17 +91,24 @@ describe('une liste réordonnable', () => {
         await vi.waitFor(() => expect(instances).toHaveLength(1))
 
         const conteneur = wrapper.vm.conteneur.value
-        const [a, b, c] = [...conteneur.children]
+        const [, a, b, c] = [...conteneur.children]
+
+        const deplacables = () => [...conteneur.querySelectorAll('[data-element]')]
 
         // Ce que SortableJS vient de faire au DOM : « a » descendu en 3e place.
         conteneur.append(a)
-        expect([...conteneur.children]).toEqual([b, c, a])
+        expect(deplacables()).toEqual([b, c, a])
 
+        /*
+         * `oldIndex` compte les DÉPLAÇABLES ; le conteneur porte en plus un
+         * en-tête et un pied. Indexer l'un par l'autre range la ligne un rang à
+         * côté — le défaut que ce témoin ferme.
+         */
         instances[0].options.onEnd({ oldIndex: 0, newIndex: 2, item: a, from: conteneur })
 
         // Le DOM est rendu à Vue, INTACT : c'est le tableau qui décide, et le
         // rappel qui le mute.
-        expect([...conteneur.children]).toEqual([a, b, c])
+        expect(deplacables()).toEqual([a, b, c])
         expect(wrapper.vm.rappels.aLaFin).toHaveBeenCalledWith(0, 2)
     })
 
@@ -110,14 +119,16 @@ describe('une liste réordonnable', () => {
         await vi.waitFor(() => expect(instances).toHaveLength(1))
 
         const conteneur = wrapper.vm.conteneur.value
-        const [a, b, c] = [...conteneur.children]
+        const [, a, b, c] = [...conteneur.children]
 
-        conteneur.prepend(c)
-        expect([...conteneur.children]).toEqual([c, a, b])
+        const deplacables = () => [...conteneur.querySelectorAll('[data-element]')]
+
+        a.before(c)
+        expect(deplacables()).toEqual([c, a, b])
 
         instances[0].options.onEnd({ oldIndex: 2, newIndex: 0, item: c, from: conteneur })
 
-        expect([...conteneur.children]).toEqual([a, b, c])
+        expect(deplacables()).toEqual([a, b, c])
     })
 
     it('ne dit rien quand rien n’a bougé', async () => {
@@ -131,21 +142,51 @@ describe('une liste réordonnable', () => {
         expect(wrapper.vm.rappels.aLaFin).not.toHaveBeenCalled()
     })
 
-    it('signale le déplacement en cours, puis sa fin', async () => {
+    /**
+     * Le drapeau de repli est SUPPRIMÉ : replier pendant le geste laissait à
+     * l'écran un clone plein — SortableJS le photographie au démarrage —
+     * au-dessus d'une liste qui venait de s'effondrer.
+     */
+    it('n’expose plus de drapeau de déplacement', async () => {
+        const wrapper = monter()
+
+        expect(wrapper.vm.outils.deplacementEnCours).toBeUndefined()
+        expect(Object.keys(wrapper.vm.outils).sort()).toEqual(['detacher', 'rafraichir'])
+
+        wrapper.vm.outils.rafraichir()
+        await vi.waitFor(() => expect(instances).toHaveLength(1))
+
+        instances[0].options.onStart()
+
+        expect(wrapper.vm.rappels.auDebut).toHaveBeenCalled()
+    })
+
+    /**
+     * Le clone est un `cloneNode(true)` que SortableJS habille de styles EN
+     * LIGNE. Sans `fallbackClass`, il reste par-dessus un original intact —
+     * deux fois la même rangée, titre sur titre. Et sans `ghostClass`, corriger
+     * le clone ne retire pas le doublon.
+     */
+    it('habille le clone ET le creux qu’il laisse', async () => {
         const wrapper = monter()
 
         wrapper.vm.outils.rafraichir()
         await vi.waitFor(() => expect(instances).toHaveLength(1))
 
-        expect(wrapper.vm.outils.deplacementEnCours.value).toBe(false)
+        const { options } = instances[0]
 
-        instances[0].options.onStart()
-        expect(wrapper.vm.outils.deplacementEnCours.value).toBe(true)
-        expect(wrapper.vm.rappels.auDebut).toHaveBeenCalled()
+        expect(options.fallbackClass).toBe('rangee-en-vol')
+        expect(options.dragClass).toBe('rangee-en-vol')
+        expect(options.ghostClass).toBe('rangee-creux')
+        expect(options.forceFallback).toBe(true)
 
-        const conteneur = wrapper.vm.conteneur.value
-        instances[0].options.onEnd({ oldIndex: 1, newIndex: 1, item: null, from: conteneur })
-        expect(wrapper.vm.outils.deplacementEnCours.value).toBe(false)
+        // Le délai protégeait un défilement que `touch-none` interdit déjà.
+        expect(options.delay ?? 0).toBe(0)
+        expect(options.chosenClass).toBeUndefined()
+
+        // Sur iOS le clone est en `position: absolute` ; `fallbackOnBody`
+        // changerait son repère de coordonnées.
+        expect(options.fallbackOnBody).toBeUndefined()
     })
 
     it('se détache quand la liste cesse d’être déplaçable', async () => {

@@ -46,6 +46,23 @@ vi.mock('@/Utils/SyncService', () => ({
     },
 }))
 
+const sortables = vi.hoisted(() => [])
+
+vi.mock('sortablejs', () => ({
+    default: class {
+        constructor(element, options) {
+            this.element = element
+            this.options = options
+            this.destroyed = false
+            sortables.push(this)
+        }
+
+        destroy() {
+            this.destroyed = true
+        }
+    },
+}))
+
 const haptics = vi.hoisted(() => ({ triggerHaptic: vi.fn() }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => haptics.triggerHaptic(...args) }))
 
@@ -173,8 +190,14 @@ const FieldStub = { name: 'FieldStub', template: '<div />' }
  */
 const IconButtonStub = {
     name: 'IconButtonStub',
-    props: ['icon', 'label'],
-    template: '<button type="button" :aria-label="label" @click="$emit(\'click\')" />',
+    props: ['icon', 'label', 'disabled'],
+    /*
+     * `emits` déclaré, sinon `@click` arrive DEUX fois : une par l'émission, une
+     * par la retombée native sur le `<button>`. Un déplacement joué deux fois
+     * revient à son point de départ, et le témoin passe pour la mauvaise raison.
+     */
+    emits: ['click'],
+    template: '<button type="button" :aria-label="label" :disabled="disabled" @click="$emit(\'click\')" />',
 }
 const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
@@ -1742,6 +1765,15 @@ describe('reordering the exercises of a workout', () => {
             ],
         })
 
+    const troisExercices = () =>
+        session({
+            workout_lines: [
+                { id: 10, order: 0, exercise: STRENGTH, sets: [] },
+                { id: 11, order: 1, exercise: CARDIO, sets: [] },
+                { id: 12, order: 2, exercise: TIMED, sets: [] },
+            ],
+        })
+
     const noms = (wrapper) => wrapper.vm.localWorkout.workout_lines.map((l) => l.exercise.name)
 
     it('sends the whole order, not a swap', async () => {
@@ -1803,49 +1835,135 @@ describe('reordering the exercises of a workout', () => {
         await flushPromises()
     })
 
-    it('folds the sets away while an exercise is being dragged', async () => {
+    /**
+     * Le repli se fait AVANT le geste, pas pendant.
+     *
+     * SortableJS clone la rangée au démarrage du glissement : replier ensuite
+     * laissait à l'écran un clone plein — séries comprises — au-dessus d'une
+     * liste effondrée. Filmé sur simulateur : deux titres superposés, la page
+     * raccourcie de 800 px, les boutons du bas remontés au milieu.
+     */
+    it('opens a compact list instead of folding mid-gesture', async () => {
         const wrapper = await mountPage(deuxExercices())
 
-        const series = () =>
-            wrapper
-                .find('[dusk="exercise-card-0"]')
-                .findAll('div')
-                .filter((d) => d.attributes('style')?.includes('display: none'))
+        expect(wrapper.find('[dusk="reorder-row-0"]').exists()).toBe(false)
 
-        expect(series()).toHaveLength(0)
+        await click(wrapper, 'reorder-line-0')
 
-        wrapper.vm.deplacementEnCours = true
-        await wrapper.vm.$nextTick()
+        const cartes = wrapper.find('[dusk="exercise-list"]')
 
-        // Une carte a huit series depasse l'ecran : rien n'est moins maniable
-        // qu'une liste dont un element occupe toute la hauteur.
-        expect(series().length).toBeGreaterThan(0)
+        expect(cartes.attributes('style')).toContain('display: none')
+        expect(wrapper.find('[dusk="reorder-list"]').exists()).toBe(true)
+        expect(wrapper.findAll('[dusk^="reorder-row-"]')).toHaveLength(2)
     })
 
-    /**
-     * Un reordonnancement qui n'existe qu'au doigt exclut le clavier — et la
-     * poignee est deja un bouton focusable, donc elle promet une action.
-     */
-    it('moves an exercise with the arrow keys too', async () => {
+    it('attaches the library to the compact list, not to the cards', async () => {
+        sortables.length = 0
+
         const wrapper = await mountPage(deuxExercices())
+        await click(wrapper, 'reorder-line-0')
+        await flushPromises()
 
-        patch.mockResolvedValue({})
+        // `flush: 'post'` : sans lui le `<ul>` en `v-if` n'existe pas encore
+        // quand le rappel tourne, et rien n'est jamais attaché.
+        expect(sortables).toHaveLength(1)
+        expect(sortables[0].element).toBe(wrapper.find('[dusk="reorder-list"]').element)
+    })
 
-        await wrapper.find('[dusk="reorder-line-0"]').trigger('keydown', { key: 'ArrowDown' })
+    it('moves from the compact list, and disables the arrows at the ends', async () => {
+        const wrapper = await mountPage(deuxExercices())
+        await click(wrapper, 'reorder-line-0')
+
+        expect(wrapper.find('[dusk="reorder-up-0"]').attributes('disabled')).toBeDefined()
+        expect(wrapper.find('[dusk="reorder-down-1"]').attributes('disabled')).toBeDefined()
+
+        patch.mockResolvedValueOnce({})
+        await click(wrapper, 'reorder-down-0')
         await flushPromises()
 
         expect(noms(wrapper)).toEqual(['Course', 'Développé couché'])
+        expect(patch).toHaveBeenCalledWith(expect.stringContaining('workouts.line-order'), { lines: [11, 10] })
     })
 
-    it('refuses to move past either end', async () => {
+    /**
+     * Un écran de tri à un seul élément est une impasse : il n'y a rien à
+     * trier et plus rien pour en sortir.
+     */
+    it('leaves the mode when there is no longer anything to reorder', async () => {
         const wrapper = await mountPage(deuxExercices())
+        await click(wrapper, 'reorder-line-0')
 
-        wrapper.vm.deplacerExercice(0, -1)
+        expect(wrapper.find('[dusk="reorder-list"]').exists()).toBe(true)
+
+        await wrapper.setProps({
+            workout: JSON.parse(
+                JSON.stringify(
+                    session({
+                        workout_lines: [{ id: 10, order: 0, exercise: STRENGTH, sets: [] }],
+                    }),
+                ),
+            ),
+        })
+        await flushPromises()
+
+        expect(wrapper.find('[dusk="reorder-list"]').exists()).toBe(false)
+    })
+
+    /**
+     * Le témoin le plus important du lot, et le seul qu'on ne peut pas trouver
+     * en regardant l'écran : deux déplacements enchaînés dont les réponses
+     * reviennent dans le désordre. Sans sérialisation, le serveur retient
+     * l'ordre périmé.
+     */
+    it('sends only the latest order when two moves overlap', async () => {
+        const wrapper = await mountPage(troisExercices())
+
+        patch.mockResolvedValue({})
+
+        wrapper.vm.deplacerExercice(0, 1)
         wrapper.vm.deplacerExercice(1, 2)
         await flushPromises()
 
-        expect(noms(wrapper)).toEqual(['Développé couché', 'Course'])
-        expect(patch).not.toHaveBeenCalled()
+        const envois = patch.mock.calls.filter(([url]) => String(url).includes('line-order'))
+
+        expect(envois).toHaveLength(1)
+        expect(envois[0][1]).toEqual({ lines: wrapper.vm.localWorkout.workout_lines.map((l) => l.id) })
+    })
+
+    /**
+     * Le repli d'un échec part de l'ordre CONFIRMÉ. Un instantané pris à
+     * l'appel rendrait l'état d'avant le premier déplacement et effacerait le
+     * second sans un mot.
+     */
+    it('rolls back to the confirmed order, not to an intermediate snapshot', async () => {
+        const wrapper = await mountPage(troisExercices())
+        const depart = noms(wrapper)
+
+        patch.mockRejectedValue({ isOffline: false })
+
+        wrapper.vm.deplacerExercice(0, 1)
+        wrapper.vm.deplacerExercice(1, 2)
+        await flushPromises()
+
+        expect(noms(wrapper)).toEqual(depart)
+    })
+
+    /**
+     * Le bloc « Modèle / Terminer » était le dernier enfant du conteneur trié :
+     * quand la liste se repliait, il remontait au milieu de l'écran.
+     */
+    it('keeps the action buttons out of the sorted container', async () => {
+        const wrapper = await mountPage(deuxExercices())
+
+        const liste = wrapper.find('[dusk="exercise-list"]').element
+        const terminer = wrapper.find('[dusk="finish-workout-mobile"]').element
+        const carte = wrapper.find('[dusk="exercise-card-0"]').element
+
+        // Contrôle positif : la carte, elle, EST dedans. Sans lui, une
+        // assertion négative passerait aussi sur un sélecteur qui ne trouve
+        // rien.
+        expect(liste.contains(carte)).toBe(true)
+        expect(liste.contains(terminer)).toBe(false)
     })
 
     it('offers no handle when there is nothing to reorder', async () => {

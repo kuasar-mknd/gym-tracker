@@ -34,7 +34,7 @@ import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -77,6 +77,15 @@ if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workou
  * series.
  */
 const ordreEnVol = ref(0)
+
+/**
+ * L'ordre que le serveur a accepte en dernier.
+ *
+ * Le repli d'un echec ne peut pas partir d'un instantane pris a l'appel : avec
+ * deux deplacements enchaines, il rendrait l'etat d'avant le PREMIER et
+ * effacerait le second sans un mot.
+ */
+const ordreConfirme = ref([])
 
 const mergeServerWorkout = (server, local) => {
     const merged = JSON.parse(JSON.stringify(server))
@@ -165,6 +174,10 @@ watch(
     (newVal) => {
         releverLesValeursDuServeur(newVal)
         localWorkout.value = mergeServerWorkout(newVal, localWorkout.value)
+
+        if (ordreEnVol.value === 0) {
+            ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
+        }
     },
 )
 
@@ -202,32 +215,70 @@ const openRestTimer = () => {
 }
 
 /*
- * Deplacer un exercice pendant une seance.
+ * Reorganiser les exercices d'une seance.
  *
- * Les cartes se replient le temps du deplacement : une carte a huit series
- * depasse l'ecran, et rien n'est moins maniable qu'une liste dont un seul
- * element occupe toute la hauteur. `v-show` plutot que `v-if` — les champs
- * gardent leur etat et leur focus.
+ * Le repli des cartes se fait AVANT le geste, pas pendant : SortableJS clone la
+ * rangee au demarrage du glissement, donc replier ensuite laisse a l'ecran un
+ * clone plein — series comprises — au-dessus d'une liste qui vient de
+ * s'effondrer. Filme : deux titres superposes, la page raccourcie de 800 px, et
+ * les boutons du bas remontes au milieu de l'ecran.
+ *
+ * Le mode replie donc tout d'un coup, entre deux contacts, et on reordonne
+ * ensuite des rangees courtes qui tiennent a l'ecran.
  */
-const listeDesExercices = ref(null)
+const modeReorganisation = ref(false)
+const listeReordonnable = ref(null)
+const ligneDEntree = ref(null)
+const annonceReorganisation = ref('')
 
-const { deplacementEnCours, rafraichir: rafraichirLeDeplacement } = useListeReordonnable(
-    () => listeDesExercices.value,
-    {
-        handle: '[data-poignee-exercice]',
-        draggable: '[data-exercice]',
-        estActif: () => !isFinished.value && localWorkout.value.workout_lines.length > 1,
-        auDebut: () => triggerHaptic('tap'),
-        aLaFin: (ancien, nouveau) => deplacerExercice(ancien, nouveau),
-    },
-)
+const { rafraichir: rafraichirLeDeplacement } = useListeReordonnable(() => listeReordonnable.value, {
+    handle: '[data-poignee-exercice]',
+    draggable: '[data-exercice]',
+    estActif: () => modeReorganisation.value && !isFinished.value && localWorkout.value.workout_lines.length > 1,
+    auDebut: () => triggerHaptic('tap'),
+    aLaFin: (ancien, nouveau) => deplacerExercice(ancien, nouveau),
+})
 
-onMounted(rafraichirLeDeplacement)
-
+/*
+ * `flush: 'post'` : le `<ul>` du mode est en `v-if`, donc il n'existe pas
+ * encore quand un rappel « pre » tourne — `attacher()` sortirait sur un
+ * conteneur nul et rien ne serait jamais branche.
+ */
 watch(
-    () => [isFinished.value, localWorkout.value.workout_lines.length],
-    () => rafraichirLeDeplacement(),
+    () => [modeReorganisation.value, isFinished.value, localWorkout.value.workout_lines.length],
+    () => {
+        if (modeReorganisation.value && (isFinished.value || localWorkout.value.workout_lines.length < 2)) {
+            modeReorganisation.value = false
+        }
+
+        rafraichirLeDeplacement()
+    },
+    { flush: 'post' },
 )
+
+onMounted(() => {
+    ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
+})
+
+const ouvrirReorganisation = (index) => {
+    ligneDEntree.value = rowKey(localWorkout.value.workout_lines[index])
+    triggerHaptic('tap')
+    modeReorganisation.value = true
+}
+
+const fermerReorganisation = async () => {
+    modeReorganisation.value = false
+
+    await nextTick()
+
+    // Revenir sur la carte par laquelle on est entre : sans cela, on ouvre le
+    // mode depuis le sixieme exercice et on ressort en haut de page.
+    const carte = [...document.querySelectorAll('[data-line-id]')].find(
+        (noeud, rang) => rowKey(localWorkout.value.workout_lines[rang]) === ligneDEntree.value,
+    )
+
+    carte?.scrollIntoView({ block: 'center' })
+}
 
 /**
  * L'ordre part en entier, pas par echange.
@@ -239,39 +290,61 @@ watch(
 const deplacerExercice = (ancien, nouveau) => {
     const lignes = localWorkout.value.workout_lines
 
-    // Au doigt, SortableJS ne rend jamais un rang hors liste ; au clavier, la
-    // poignee du premier exercice recoit « haut » comme les autres.
+    // Au doigt, SortableJS ne rend jamais un rang hors liste ; au clavier et
+    // aux fleches, le premier exercice recoit « monter » comme les autres.
     if (nouveau < 0 || nouveau >= lignes.length || nouveau === ancien) {
         return
     }
 
-    const avant = lignes.slice()
-
     lignes.splice(nouveau, 0, ...lignes.splice(ancien, 1))
+
+    annonceReorganisation.value = `${lignes[nouveau].exercise.name} déplacé en position ${nouveau + 1} sur ${lignes.length}`
 
     ordreEnVol.value += 1
 
-    Promise.all(lignes.map((ligne) => pendingIds.resolve(ligne.id)))
-        .then((realLineIds) => {
-            if (realLineIds.some((id) => id === null)) {
-                throw Object.assign(new Error('exercice sans identifiant serveur'), { isOffline: false })
-            }
+    const seq = nextWrite('line-order')
 
-            return SyncService.patch(route('api.v1.workouts.line-order', { workout: localWorkout.value.id }), {
-                lines: realLineIds,
+    const envoyer = () => {
+        /*
+         * La charge est une permutation COMPLETE, donc un deplacement plus
+         * recent remplace exactement celui-ci : l'abandonner n'est pas une
+         * economie, c'est la seule facon de ne pas faire retenir au serveur un
+         * ordre perime.
+         */
+        if (!isLatestWrite('line-order', seq)) {
+            return Promise.resolve()
+        }
+
+        return Promise.all(lignes.map((ligne) => pendingIds.resolve(ligne.id)))
+            .then((realLineIds) => {
+                if (realLineIds.some((id) => id === null)) {
+                    throw Object.assign(new Error('exercice sans identifiant serveur'), { isOffline: false })
+                }
+
+                return SyncService.patch(route('api.v1.workouts.line-order', { workout: localWorkout.value.id }), {
+                    lines: realLineIds,
+                }).then(() => {
+                    ordreConfirme.value = realLineIds
+                })
             })
-        })
-        .catch((err) => {
-            if (err.isOffline) {
-                return
-            }
+            .catch((err) => {
+                if (err.isOffline) {
+                    return
+                }
 
-            localWorkout.value.workout_lines = avant
-            reportSyncFailure('L’ordre des exercices n’a pas pu être enregistré. Réessaie.')
-        })
-        .finally(() => {
-            ordreEnVol.value = Math.max(0, ordreEnVol.value - 1)
-        })
+                const parId = new Map(localWorkout.value.workout_lines.map((ligne) => [ligne.id, ligne]))
+
+                localWorkout.value.workout_lines = ordreConfirme.value
+                    .map((id) => parId.get(id))
+                    .filter((ligne) => ligne !== undefined)
+
+                reportSyncFailure('L’ordre des exercices n’a pas pu être enregistré. Réessaie.')
+            })
+    }
+
+    fieldWrites.queue('line-order', envoyer).finally(() => {
+        ordreEnVol.value = Math.max(0, ordreEnVol.value - 1)
+    })
 }
 
 const setAutoRestTimer = (valeur) => {
@@ -1753,38 +1826,39 @@ onUnmounted(() => {
             </button>
         </template>
 
-        <div ref="listeDesExercices" class="pb-main-safe space-y-4" dusk="exercise-list">
-            <GlassCard
-                v-if="localWorkout.workout_lines.length === 0"
-                class="flex flex-col items-center justify-center p-12 text-center"
-            >
-                <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
-                <GlassButton
-                    v-if="!isFinished"
-                    variant="primary"
-                    @click="showAddExercise = true"
-                    dusk="add-first-exercise"
-                    >Ajouter un exercice</GlassButton
+        <div class="pb-main-safe">
+            <div v-show="!modeReorganisation" class="space-y-4" dusk="exercise-list">
+                <GlassCard
+                    v-if="localWorkout.workout_lines.length === 0"
+                    class="flex flex-col items-center justify-center p-12 text-center"
                 >
-                <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
-            </GlassCard>
+                    <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
+                    <GlassButton
+                        v-if="!isFinished"
+                        variant="primary"
+                        @click="showAddExercise = true"
+                        dusk="add-first-exercise"
+                        >Ajouter un exercice</GlassButton
+                    >
+                    <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
+                </GlassCard>
 
-            <!-- Same reasoning as the set rows below: a line's id changes from
+                <!-- Same reasoning as the set rows below: a line's id changes from
                  placeholder to real one when its create lands, and re-keying on
                  it rebuilt the whole exercise card — every set input inside it
                  included — at the exact moment the user was filling in the first
                  set of the exercise they had just added. -->
-            <GlassCard
-                v-for="(line, lineIndex) in localWorkout.workout_lines"
-                :key="rowKey(line)"
-                :dusk="`exercise-card-${lineIndex}`"
-                :data-line-id="line.id"
-                :dusk-id="`exercise-line-${line.id}`"
-                data-exercice
-            >
-                <div class="mb-4 flex items-center justify-between gap-2">
-                    <div class="min-w-0">
-                        <!--
+                <GlassCard
+                    v-for="(line, lineIndex) in localWorkout.workout_lines"
+                    :key="rowKey(line)"
+                    :dusk="`exercise-card-${lineIndex}`"
+                    :data-line-id="line.id"
+                    :dusk-id="`exercise-line-${line.id}`"
+                    data-exercice
+                >
+                    <div class="mb-4 flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                            <!--
                           text-text-main is near-black and has no dark variant of
                           its own, so in dark mode the exercise name was rendered
                           at 2.20:1 against the page and its category at 1.71:1 —
@@ -1793,47 +1867,48 @@ onUnmounted(() => {
                           the exercise you are working on was effectively
                           invisible.
                         -->
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            {{ line.exercise.name }}
-                        </h3>
-                        <p class="text-text-muted text-xs font-bold uppercase">
-                            {{ line.exercise.category }}
-                        </p>
-                    </div>
-                    <div class="flex shrink-0 items-center gap-1">
-                        <!--
+                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                                {{ line.exercise.name }}
+                            </h3>
+                            <p class="text-text-muted text-xs font-bold uppercase">
+                                {{ line.exercise.category }}
+                            </p>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-1">
+                            <!--
                           Une poignee, et non la carte entiere : les rangees de
                           series sont deja sensibles au glissement lateral, et
                           laisser SortableJS ecouter toute la carte les rendrait
                           inutilisables au doigt.
                         -->
-                        <button
-                            v-if="!isFinished && localWorkout.workout_lines.length > 1"
-                            type="button"
-                            data-poignee-exercice
-                            class="text-text-muted focus-visible:ring-accent-primary min-h-touch min-w-touch inline-flex cursor-grab touch-none items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
-                            :dusk="`reorder-line-${lineIndex}`"
-                            :aria-label="`Déplacer ${line.exercise.name}`"
-                            @keydown.up.prevent="deplacerExercice(lineIndex, lineIndex - 1)"
-                            @keydown.down.prevent="deplacerExercice(lineIndex, lineIndex + 1)"
-                        >
-                            <span class="material-symbols-outlined text-lg" aria-hidden="true">drag_indicator</span>
-                        </button>
+                            <button
+                                v-if="!isFinished && localWorkout.workout_lines.length > 1"
+                                v-press
+                                type="button"
+                                class="text-text-muted focus-visible:ring-accent-primary min-h-touch min-w-touch inline-flex items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                                :dusk="`reorder-line-${lineIndex}`"
+                                :aria-label="`Réorganiser les exercices, à partir de ${line.exercise.name}`"
+                                @click="ouvrirReorganisation(lineIndex)"
+                                @keydown.up.prevent="deplacerExercice(lineIndex, lineIndex - 1)"
+                                @keydown.down.prevent="deplacerExercice(lineIndex, lineIndex + 1)"
+                            >
+                                <span class="material-symbols-outlined text-lg" aria-hidden="true">drag_indicator</span>
+                            </button>
 
-                        <GlassIconButton
-                            v-press="{ haptic: 'warning' }"
-                            icon="delete"
-                            label="Supprimer l'exercice"
-                            ton="danger"
-                            compact
-                            :dusk="`remove-line-${lineIndex}`"
-                            @click="removeLine(line.id)"
-                        />
+                            <GlassIconButton
+                                v-press="{ haptic: 'warning' }"
+                                icon="delete"
+                                label="Supprimer l'exercice"
+                                ton="danger"
+                                compact
+                                :dusk="`remove-line-${lineIndex}`"
+                                @click="removeLine(line.id)"
+                            />
+                        </div>
                     </div>
-                </div>
 
-                <div v-show="!deplacementEnCours" class="space-y-2">
-                    <!--
+                    <div class="space-y-2">
+                        <!--
                       Keyed on something that never changes for the life of the
                       row. Folding the index in made the key change for every row
                       below a deletion, so Vue destroyed and rebuilt them all:
@@ -1853,189 +1928,257 @@ onUnmounted(() => {
                       duration entry and did NOT fix it, so nothing here should be
                       read as a diagnosis of that.
                     -->
-                    <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
-                        <!-- The row was swipeable with no action behind it: dragging
+                        <SwipeableRow v-for="(set, index) in line.sets" :key="rowKey(set)">
+                            <!-- The row was swipeable with no action behind it: dragging
                              it snapped it open onto an empty background and left it
                              there. Same delete the row's own button calls, reached
                              the way Workouts/Index and ExerciseCard already do it. -->
-                        <template #action-right>
-                            <button
-                                type="button"
-                                @click="removeSet(set.id)"
-                                :dusk="`swipe-remove-set-${lineIndex}-${index}`"
-                                :aria-label="`Supprimer la série ${index + 1}`"
-                                class="bg-accent-danger text-text-on-accent flex h-full w-full items-center justify-center"
-                            >
-                                <span class="flex flex-col items-center" aria-hidden="true">
-                                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
-                                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
-                                </span>
-                            </button>
-                        </template>
+                            <template #action-right>
+                                <button
+                                    type="button"
+                                    @click="removeSet(set.id)"
+                                    :dusk="`swipe-remove-set-${lineIndex}-${index}`"
+                                    :aria-label="`Supprimer la série ${index + 1}`"
+                                    class="bg-accent-danger text-text-on-accent flex h-full w-full items-center justify-center"
+                                >
+                                    <span class="flex flex-col items-center" aria-hidden="true">
+                                        <span class="material-symbols-outlined text-2xl" aria-hidden="true"
+                                            >delete</span
+                                        >
+                                        <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                                    </span>
+                                </button>
+                            </template>
 
-                        <div
-                            class="border-surface-card bg-surface-card/80 flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
-                            :class="{ 'opacity-50': set.is_completed }"
-                        >
-                            <button
-                                v-press
-                                @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
-                                :disabled="isFinished"
-                                :dusk="`complete-set-${lineIndex}-${index}`"
-                                class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
-                                :class="
-                                    set.is_completed
-                                        ? 'bg-accent-state text-text-main'
-                                        : 'bg-surface-sunken text-text-muted'
-                                "
-                                :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
-                            >
-                                <svg
-                                    class="h-6 w-6"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    aria-hidden="true"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M5 13l4 4L19 7"
-                                    />
-                                </svg>
-                                <!-- PR Trophy Badge -->
-                                <div
-                                    v-if="set.personal_record"
-                                    class="bg-accent-warning text-text-on-accent absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full shadow-sm"
-                                    :dusk="`pr-trophy-${lineIndex}-${index}`"
-                                >
-                                    <span class="material-symbols-outlined text-[12px] font-bold" aria-hidden="true"
-                                        >stars</span
-                                    >
-                                </div>
-                            </button>
                             <div
-                                class="text-text-muted bg-surface-sunken relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black"
+                                class="border-surface-card bg-surface-card/80 flex items-center gap-2 rounded-2xl border p-3 shadow-sm"
+                                :class="{ 'opacity-50': set.is_completed }"
                             >
-                                {{ index + 1 }}
+                                <button
+                                    v-press
+                                    @click="toggleSetCompletion(set, line.exercise.default_rest_time)"
+                                    :disabled="isFinished"
+                                    :dusk="`complete-set-${lineIndex}-${index}`"
+                                    class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
+                                    :class="
+                                        set.is_completed
+                                            ? 'bg-accent-state text-text-main'
+                                            : 'bg-surface-sunken text-text-muted'
+                                    "
+                                    :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
+                                >
+                                    <svg
+                                        class="h-6 w-6"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M5 13l4 4L19 7"
+                                        />
+                                    </svg>
+                                    <!-- PR Trophy Badge -->
+                                    <div
+                                        v-if="set.personal_record"
+                                        class="bg-accent-warning text-text-on-accent absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full shadow-sm"
+                                        :dusk="`pr-trophy-${lineIndex}-${index}`"
+                                    >
+                                        <span class="material-symbols-outlined text-[12px] font-bold" aria-hidden="true"
+                                            >stars</span
+                                        >
+                                    </div>
+                                </button>
+                                <div
+                                    class="text-text-muted bg-surface-sunken relative flex h-11 w-6 shrink-0 items-center justify-center rounded-lg text-sm font-black"
+                                >
+                                    {{ index + 1 }}
 
-                                <!-- The value on screen is not the value in the
+                                    <!-- The value on screen is not the value in the
                                      database. Said out loud rather than left to a
                                      colour, and not with a title attribute, which
                                      a touch device never shows. -->
-                                <span
-                                    v-if="unsyncedSetIds.has(String(set.id))"
-                                    class="bg-accent-warning text-text-on-accent absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full"
-                                    :dusk="`set-unsynced-${lineIndex}-${index}`"
-                                    role="img"
-                                    :aria-label="`Série ${index + 1} non enregistrée`"
-                                >
-                                    <span class="material-symbols-outlined text-[10px]" aria-hidden="true"
-                                        >cloud_off</span
+                                    <span
+                                        v-if="unsyncedSetIds.has(String(set.id))"
+                                        class="bg-accent-warning text-text-on-accent absolute -top-1 -right-1 flex size-3.5 items-center justify-center rounded-full"
+                                        :dusk="`set-unsynced-${lineIndex}-${index}`"
+                                        role="img"
+                                        :aria-label="`Série ${index + 1} non enregistrée`"
                                     >
-                                </span>
+                                        <span class="material-symbols-outlined text-[10px]" aria-hidden="true"
+                                            >cloud_off</span
+                                        >
+                                    </span>
+                                </div>
+
+                                <template v-if="line.exercise.type === 'strength'">
+                                    <input
+                                        type="number"
+                                        inputmode="decimal"
+                                        :value="set.weight"
+                                        @focus="$event.target.select()"
+                                        @input="(e) => saisieEnCours(set, 'weight', e.target.value)"
+                                        @change="(e) => saisieTerminee(set, 'weight', e.target.value)"
+                                        :disabled="isFinished"
+                                        :dusk="`weight-input-${lineIndex}-${index}`"
+                                        :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
+                                        class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
+                                    />
+                                    <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true"
+                                        >kg</span
+                                    >
+                                    <input
+                                        type="number"
+                                        inputmode="numeric"
+                                        :value="set.reps"
+                                        @focus="$event.target.select()"
+                                        @input="(e) => saisieEnCours(set, 'reps', e.target.value)"
+                                        @change="(e) => saisieTerminee(set, 'reps', e.target.value)"
+                                        :disabled="isFinished"
+                                        :dusk="`reps-input-${lineIndex}-${index}`"
+                                        :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
+                                        class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
+                                    />
+                                    <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true"
+                                        >réps</span
+                                    >
+                                </template>
+
+                                <template v-else-if="line.exercise.type === 'cardio'">
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        inputmode="decimal"
+                                        :value="set.distance_km"
+                                        @focus="$event.target.select()"
+                                        @input="(e) => saisieEnCours(set, 'distance_km', e.target.value)"
+                                        @change="(e) => saisieTerminee(set, 'distance_km', e.target.value)"
+                                        :disabled="isFinished"
+                                        :dusk="`distance-input-${lineIndex}-${index}`"
+                                        :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
+                                        class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
+                                    />
+                                    <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true"
+                                        >km</span
+                                    >
+                                    <DurationWheel
+                                        :model-value="set.duration_seconds"
+                                        @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
+                                        :disabled="isFinished"
+                                        :fill="false"
+                                        :dusk="`duration-input-${lineIndex}-${index}`"
+                                        :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
+                                    />
+                                </template>
+
+                                <template v-else-if="line.exercise.type === 'timed'">
+                                    <DurationWheel
+                                        :model-value="set.duration_seconds"
+                                        @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
+                                        :disabled="isFinished"
+                                        :dusk="`duration-input-${lineIndex}-${index}`"
+                                        :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
+                                    />
+                                </template>
+
+                                <button
+                                    v-if="!isFinished"
+                                    v-press="{ haptic: 'warning' }"
+                                    @click="removeSet(set.id)"
+                                    :dusk="`remove-set-${lineIndex}-${index}`"
+                                    :class="[
+                                        'hover:text-accent-danger-deep text-text-muted relative ml-auto',
+                                        'before:absolute before:-inset-2.5 before:content-[\'\']',
+                                        // Redundant on a phone, where the row swipes.
+                                        // Kept from sm up, where there is no swipe at
+                                        // all: SwipeableRow listens for touch events
+                                        // only, so a mouse has no other way to delete.
+                                        'hidden sm:block',
+                                    ]"
+                                    aria-label="Supprimer la série"
+                                >
+                                    <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                                </button>
                             </div>
+                        </SwipeableRow>
+                    </div>
 
-                            <template v-if="line.exercise.type === 'strength'">
-                                <input
-                                    type="number"
-                                    inputmode="decimal"
-                                    :value="set.weight"
-                                    @focus="$event.target.select()"
-                                    @input="(e) => saisieEnCours(set, 'weight', e.target.value)"
-                                    @change="(e) => saisieTerminee(set, 'weight', e.target.value)"
-                                    :disabled="isFinished"
-                                    :dusk="`weight-input-${lineIndex}-${index}`"
-                                    :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
-                                />
-                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">kg</span>
-                                <input
-                                    type="number"
-                                    inputmode="numeric"
-                                    :value="set.reps"
-                                    @focus="$event.target.select()"
-                                    @input="(e) => saisieEnCours(set, 'reps', e.target.value)"
-                                    @change="(e) => saisieTerminee(set, 'reps', e.target.value)"
-                                    :disabled="isFinished"
-                                    :dusk="`reps-input-${lineIndex}-${index}`"
-                                    :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
-                                />
-                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">réps</span>
-                            </template>
+                    <button
+                        v-if="!isFinished"
+                        v-press
+                        @click="addSet(line.id)"
+                        :dusk="`add-set-${lineIndex}`"
+                        class="text-text-muted hover:border-accent-state border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition-all"
+                    >
+                        Ajouter une série
+                    </button>
+                </GlassCard>
+            </div>
 
-                            <template v-else-if="line.exercise.type === 'cardio'">
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    inputmode="decimal"
-                                    :value="set.distance_km"
-                                    @focus="$event.target.select()"
-                                    @input="(e) => saisieEnCours(set, 'distance_km', e.target.value)"
-                                    @change="(e) => saisieTerminee(set, 'distance_km', e.target.value)"
-                                    :disabled="isFinished"
-                                    :dusk="`distance-input-${lineIndex}-${index}`"
-                                    :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
-                                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
-                                />
-                                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">km</span>
-                                <DurationWheel
-                                    :model-value="set.duration_seconds"
-                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
-                                    :disabled="isFinished"
-                                    :fill="false"
-                                    :dusk="`duration-input-${lineIndex}-${index}`"
-                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
-                                />
-                            </template>
-
-                            <template v-else-if="line.exercise.type === 'timed'">
-                                <DurationWheel
-                                    :model-value="set.duration_seconds"
-                                    @update:model-value="(seconds) => updateSet(set, 'duration_seconds', seconds)"
-                                    :disabled="isFinished"
-                                    :dusk="`duration-input-${lineIndex}-${index}`"
-                                    :label="`Durée, série ${index + 1}, ${line.exercise.name}`"
-                                />
-                            </template>
-
-                            <button
-                                v-if="!isFinished"
-                                v-press="{ haptic: 'warning' }"
-                                @click="removeSet(set.id)"
-                                :dusk="`remove-set-${lineIndex}-${index}`"
-                                :class="[
-                                    'hover:text-accent-danger-deep text-text-muted relative ml-auto',
-                                    'before:absolute before:-inset-2.5 before:content-[\'\']',
-                                    // Redundant on a phone, where the row swipes.
-                                    // Kept from sm up, where there is no swipe at
-                                    // all: SwipeableRow listens for touch events
-                                    // only, so a mouse has no other way to delete.
-                                    'hidden sm:block',
-                                ]"
-                                aria-label="Supprimer la série"
-                            >
-                                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                            </button>
-                        </div>
-                    </SwipeableRow>
-                </div>
-
-                <button
-                    v-if="!isFinished"
-                    v-show="!deplacementEnCours"
-                    v-press
-                    @click="addSet(line.id)"
-                    :dusk="`add-set-${lineIndex}`"
-                    class="text-text-muted hover:border-accent-state border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition-all"
+            <ul v-if="modeReorganisation" ref="listeReordonnable" class="space-y-2" dusk="reorder-list">
+                <li
+                    v-for="(line, i) in localWorkout.workout_lines"
+                    :key="rowKey(line)"
+                    data-exercice
+                    :dusk="`reorder-row-${i}`"
+                    class="bg-surface-card border-border flex items-center gap-2 rounded-2xl border px-2 py-2"
                 >
-                    Ajouter une série
-                </button>
-            </GlassCard>
+                    <span class="font-display text-text-muted w-5 shrink-0 text-center text-sm font-black italic">{{
+                        i + 1
+                    }}</span>
 
-            <div v-if="localWorkout.workout_lines.length > 0 && !isFinished" class="mt-8 space-y-3 px-1">
+                    <span class="min-w-0 flex-1">
+                        <span class="text-text-main block truncate text-sm font-black uppercase italic">{{
+                            line.exercise.name
+                        }}</span>
+                        <span class="text-text-muted block text-xs font-bold uppercase"
+                            >{{ line.sets.length }} série<span v-if="line.sets.length > 1">s</span></span
+                        >
+                    </span>
+
+                    <GlassIconButton
+                        v-press
+                        icon="arrow_upward"
+                        :label="`Monter ${line.exercise.name}`"
+                        :disabled="i === 0"
+                        compact
+                        :dusk="`reorder-up-${i}`"
+                        @click="deplacerExercice(i, i - 1)"
+                    />
+                    <GlassIconButton
+                        v-press
+                        icon="arrow_downward"
+                        :label="`Descendre ${line.exercise.name}`"
+                        :disabled="i === localWorkout.workout_lines.length - 1"
+                        compact
+                        :dusk="`reorder-down-${i}`"
+                        @click="deplacerExercice(i, i + 1)"
+                    />
+
+                    <span
+                        data-poignee-exercice
+                        class="text-text-muted flex size-11 shrink-0 cursor-grab touch-none items-center justify-center"
+                    >
+                        <span class="material-symbols-outlined text-lg" aria-hidden="true">drag_indicator</span>
+                    </span>
+                </li>
+            </ul>
+
+            <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
+
+            <div v-if="modeReorganisation" class="mt-6 px-1">
+                <GlassButton variant="primary" @click="fermerReorganisation" class="w-full" dusk="finish-reorder"
+                    >Terminé</GlassButton
+                >
+            </div>
+
+            <div
+                v-if="localWorkout.workout_lines.length > 0 && !isFinished && !modeReorganisation"
+                class="mt-8 space-y-3 px-1"
+            >
                 <!--
                     Pas de variante : la carte pleine. Ajouter un exercice est
                     l'action courante de cette page ; « Modele », en dessous, est
