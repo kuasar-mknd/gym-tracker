@@ -105,7 +105,7 @@ vendor/bin/sail artisan test --coverage
 - **Rector** pour la modernisation : `vendor/bin/sail bin rector process`
 - **PHPStan** (Larastan) niveau Max : `vendor/bin/sail bin phpstan analyse --memory-limit=2G`
 - Suit les conventions Laravel
-- Utilise les type hints PHP 8.4 stricts (`declare(strict_types=1);`)
+- Utilise les type hints PHP 8.5 stricts (`declare(strict_types=1);`)
 - Crée des Form Requests pour la validation
 
 ### JavaScript/Vue

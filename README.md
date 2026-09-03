@@ -62,7 +62,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 
 S'y ajoutent une vingtaine de **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : fraîcheur de la spec OpenAPI, sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur.
 
-Voir aussi le [📅 Roadmap](docs/roadmap.md), le [plan de performance](docs/performance/gym_tracker_performance_master_plan.md) et les [décisions d'architecture](docs/adr/).
+Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](docs/charte.html). La feuille de route vit dans les issues GitHub et le journal des modifications, pas dans un document qui vieillit.
 
 ---
 

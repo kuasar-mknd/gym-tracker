@@ -62,7 +62,6 @@ error.png
 open_prs.json
 verify_workouts.py
 .grepai/
-.agent/cache/
 coverage
 
 # Agent skills, installed by Laravel Boost from the list in boost.json.
