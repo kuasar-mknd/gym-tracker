@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Set;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Service for calculating and managing recommended workout values.
@@ -19,6 +21,15 @@ use Illuminate\Support\Facades\Cache;
  */
 final class RecommendedValuesService
 {
+    /**
+     * Nombre de lignes precedentes examinees par exercice avant de renoncer.
+     *
+     * Une ligne dont toutes les series sont restees au pre-remplissage de
+     * l'ecran ne porte aucune information ; on remonte alors a la ligne
+     * d'avant, jusqu'a cette profondeur. Voir #1677.
+     */
+    private const int PROFONDEUR = 5;
+
     /**
      * Get the recommended values for a given workout line.
      *
@@ -49,23 +60,25 @@ final class RecommendedValuesService
         /*
          * Sans jointure : le filtre et l'ordre portent desormais sur la meme
          * table, donc `workout_lines(user_id, exercise_id, workout_started_at)`
-         * les sert tous les deux et le `LIMIT 1` s'arrete a la premiere ligne.
+         * les sert tous les deux et le `LIMIT` s'arrete aux premieres lignes.
          *
          * La jointure d'avant filtrait sur `workout_lines` et ordonnait sur
          * `workouts` : aucun index ne pouvant servir les deux, MySQL
          * materialisait toute la jointure et la triait. Mesure sur un exercice
          * present dans chaque seance : 601 lignes lues a 600 seances.
          */
-        $lastLine = WorkoutLine::query()
+        $candidates = WorkoutLine::query()
             ->with(['sets'])
             ->where('user_id', $workout->user_id)
             ->where('exercise_id', $line->exercise_id)
             ->where('workout_started_at', '<', $workout->started_at)
             ->where('workout_id', '!=', $workout->id)
             ->orderByDesc('workout_started_at')
-            ->first();
+            ->orderByDesc('id')
+            ->limit(self::PROFONDEUR)
+            ->get();
 
-        $values = $this->calculateFromLine($lastLine);
+        $values = $this->calculateFromLines($candidates);
         Cache::put($cacheKey, $values, 300);
 
         return $values;
@@ -157,33 +170,59 @@ final class RecommendedValuesService
     }
 
     /**
-     * Calculate recommended values based on a previous workout line's sets.
+     * Une serie laissee au pre-remplissage de l'ecran ne dit rien de l'exercice.
      *
-     * Determines the most frequent combination of weight, reps, distance,
-     * and duration used across all sets in that previous line.
+     * L'ecran ajoute chaque serie avec 0 kg, 10 repetitions, 0 km et 30 s, et
+     * l'utilisateur corrige ensuite. Une serie validee sans avoir ete touchee
+     * garde ces valeurs : la retenir comme historique proposerait 0 kg a la
+     * seance suivante, et ce 0 se propagerait de seance en seance. Une serie de
+     * poids de corps (0 kg mais des repetitions saisies) reste un historique.
+     */
+    private function estRestéeAuPréRemplissage(Set $set): bool
+    {
+        $defauts = $this->getDefaultValues();
+
+        return (float) ($set->weight ?? 0.0) === $defauts['weight']
+            && (int) ($set->reps ?? $defauts['reps']) === $defauts['reps']
+            && (float) ($set->distance_km ?? 0.0) === $defauts['distance_km']
+            && in_array((int) ($set->duration_seconds ?? $defauts['duration_seconds']), [0, $defauts['duration_seconds']], true);
+    }
+
+    /**
+     * Calculate recommended values from the most recent informative line.
      *
-     * @param  WorkoutLine|null  $lastLine  The most recent previous workout line for the exercise.
+     * Lines are examined from the most recent to the oldest. The first one
+     * that holds at least one set touched by the user provides the most
+     * frequent combination of weight, reps, distance, and duration among
+     * those sets. Lines with no set, or only untouched sets, are skipped.
+     *
+     * @param  Collection<int, WorkoutLine>  $lines  Previous lines for one exercise, most recent first.
      * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int} The most commonly used set parameters.
      */
-    private function calculateFromLine(?WorkoutLine $lastLine): array
+    private function calculateFromLines(Collection $lines): array
     {
-        if ($lastLine === null || $lastLine->sets->isEmpty()) {
-            return $this->getDefaultValues();
+        foreach ($lines as $line) {
+            $sets = $line->sets->reject(fn (Set $set): bool => $this->estRestéeAuPréRemplissage($set));
+
+            if ($sets->isEmpty()) {
+                continue;
+            }
+
+            $frequencies = $sets->groupBy(fn (Set $set): string => "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}")
+                ->map(fn ($group): int => $group->count());
+
+            $mostFrequentKey = (string) $frequencies->sortDesc()->keys()->first();
+            [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
+
+            return [
+                'weight' => (float) $weight,
+                'reps' => (int) $reps,
+                'distance_km' => (float) $distance,
+                'duration_seconds' => (int) $duration,
+            ];
         }
 
-        $sets = $lastLine->sets;
-        $frequencies = $sets->groupBy(fn ($set): string => "{$set->weight}-{$set->reps}-{$set->distance_km}-{$set->duration_seconds}")
-            ->map(fn ($group): int => $group->count());
-
-        $mostFrequentKey = (string) $frequencies->sortDesc()->keys()->first();
-        [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
-
-        return [
-            'weight' => (float) $weight,
-            'reps' => (int) $reps,
-            'distance_km' => (float) $distance,
-            'duration_seconds' => (int) $duration,
-        ];
+        return $this->getDefaultValues();
     }
 
     /**
@@ -235,9 +274,9 @@ final class RecommendedValuesService
     /**
      * Fetch un-cached recommended values directly from the database.
      *
-     * Performs a single query to find the latest previous workout line for each
-     * requested exercise, calculates the recommended values from those lines,
-     * caches the individual results, and returns them.
+     * Ranks the previous lines of each requested exercise by date, keeps the
+     * most recent ones, calculates the recommended values from the first
+     * informative line, caches the individual results, and returns them.
      *
      * @param  array<int, int>  $uncachedExerciseIds  Exercise IDs lacking cached data.
      * @param  int  $workoutId  The current workout ID (to exclude from search).
@@ -250,38 +289,40 @@ final class RecommendedValuesService
         $results = [];
 
         /*
-         * La meme question que le chemin unitaire, et enfin la meme reponse.
+         * La meme question que le chemin unitaire, et la meme reponse.
          *
          * Ce lot prenait `MAX(workout_lines.id)` quand l'unitaire triait par
          * `workouts.started_at` : sur une seance saisie apres coup, les deux
-         * designaient des lignes differentes. L'ordre porte desormais sur la
-         * date des deux cotes.
+         * designaient des lignes differentes. L'ordre porte sur la date des
+         * deux cotes, departage par la clef primaire dans le meme sens, et
+         * chaque exercice remonte ses dernieres lignes, pas seulement une.
          */
-        $latestSubquery = WorkoutLine::query()
-            ->selectRaw('MAX(workout_started_at) as derniere, exercise_id')
+        $classement = WorkoutLine::query()
+            ->select(['id', 'exercise_id'])
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY workout_started_at DESC, id DESC) AS rang')
             ->where('user_id', $userId)
             ->whereIn('exercise_id', $uncachedExerciseIds)
             ->where('workout_id', '!=', $workoutId)
-            ->where('workout_started_at', '<', $workout->started_at)
-            ->groupBy('exercise_id');
+            ->where('workout_started_at', '<', $workout->started_at);
 
-        $lastLines = WorkoutLine::query()
-            ->where('workout_lines.user_id', $userId)
-            ->whereIn('workout_lines.exercise_id', $uncachedExerciseIds)
-            ->where('workout_lines.workout_id', '!=', $workoutId)
-            ->joinSub($latestSubquery, 'dernieres', function (\Illuminate\Database\Query\JoinClause $jointure): void {
-                $jointure->on('workout_lines.exercise_id', '=', 'dernieres.exercise_id')
-                    ->on('workout_lines.workout_started_at', '=', 'dernieres.derniere');
-            })
-            ->select('workout_lines.*')
+        $retenues = DB::query()
+            ->select('id')
+            ->fromSub($classement, 'classement')
+            ->where('rang', '<=', self::PROFONDEUR);
+
+        $candidatesByExercise = WorkoutLine::query()
             ->with('sets')
+            ->whereIn('id', $retenues)
+            ->orderByDesc('workout_started_at')
+            ->orderByDesc('id')
             ->get()
-            ->keyBy('exercise_id');
+            ->groupBy('exercise_id');
 
         $cacheData = [];
         foreach ($uncachedExerciseIds as $exerciseId) {
-            $lastLine = $lastLines->get($exerciseId);
-            $values = $this->calculateFromLine($lastLine);
+            /** @var Collection<int, WorkoutLine> $candidates */
+            $candidates = $candidatesByExercise->get($exerciseId, new Collection());
+            $values = $this->calculateFromLines($candidates);
 
             $cacheKey = "recommended_values:{$userId}:{$exerciseId}:{$workoutId}";
             $cacheData[$cacheKey] = $values;
