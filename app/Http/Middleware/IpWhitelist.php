@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\IpUtils;
 use Symfony\Component\HttpFoundation\Response;
 
 class IpWhitelist
@@ -23,7 +24,9 @@ class IpWhitelist
             abort(404);
         }
 
-        if ($allowedIps !== [] && ! in_array($request->ip(), $allowedIps, true)) {
+        // Adresses exactes ou plages CIDR, IPv4 et IPv6 : un réseau local ou un
+        // tailnet ne se liste pas appareil par appareil.
+        if ($allowedIps !== [] && ! IpUtils::checkIp((string) $request->ip(), array_values(array_filter($allowedIps, is_string(...))))) {
             if (app()->isProduction()) {
                 abort(404);
             }

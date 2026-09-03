@@ -71,3 +71,57 @@ it('repond 403 hors production a une adresse hors liste, en nommant l adresse', 
         expect($e->getMessage())->toContain('198.51.100.7');
     }
 });
+
+/**
+ * Un réseau local ou un tailnet ne se liste pas appareil par appareil : la
+ * liste accepte les plages CIDR, IPv4 et IPv6, à côté des adresses exactes.
+ * Avec l'ancienne comparaison stricte, `192.168.1.0/24` ne correspondait à
+ * rien et fermait le panneau à tout le réseau.
+ */
+it('laisse passer une adresse comprise dans une plage CIDR', function (): void {
+    config(['app.admin_allowed_ips' => ['192.168.1.0/24']]);
+    $this->app->detectEnvironment(fn (): string => 'production');
+
+    expect(reponseDeLaListeBlanche('192.168.1.42'))->toBe(200);
+});
+
+it('refuse une adresse hors de la plage CIDR', function (): void {
+    config(['app.admin_allowed_ips' => ['192.168.1.0/24']]);
+    $this->app->detectEnvironment(fn (): string => 'production');
+
+    try {
+        reponseDeLaListeBlanche('192.168.2.42');
+        $this->fail('La requete aurait du etre refusee.');
+    } catch (HttpException $e) {
+        expect($e->getStatusCode())->toBe(404);
+    }
+});
+
+it('accepte un mélange d adresses exactes et de plages', function (): void {
+    config(['app.admin_allowed_ips' => ['192.168.1.0/24', '100.76.239.32']]);
+    $this->app->detectEnvironment(fn (): string => 'production');
+
+    expect(reponseDeLaListeBlanche('100.76.239.32'))->toBe(200)
+        ->and(reponseDeLaListeBlanche('192.168.1.7'))->toBe(200);
+
+    try {
+        reponseDeLaListeBlanche('100.76.239.33');
+        $this->fail('La requete aurait du etre refusee.');
+    } catch (HttpException $e) {
+        expect($e->getStatusCode())->toBe(404);
+    }
+});
+
+it('comprend aussi une plage IPv6', function (): void {
+    config(['app.admin_allowed_ips' => ['fd00::/8']]);
+    $this->app->detectEnvironment(fn (): string => 'production');
+
+    expect(reponseDeLaListeBlanche('fd00::1'))->toBe(200);
+
+    try {
+        reponseDeLaListeBlanche('2001:db8::1');
+        $this->fail('La requete aurait du etre refusee.');
+    } catch (HttpException $e) {
+        expect($e->getStatusCode())->toBe(404);
+    }
+});
