@@ -7,9 +7,18 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.8] - 2026-09-03
+
+### Corrigé
+- **La file hors-ligne ne perd plus d'écritures** (#1667) : une session ou un jeton expirés pendant que la PWA dormait (401, 419) classaient l'écriture refusée et vidaient la file derrière elle ; l'écriture reste maintenant en attente, la page est prévenue, et tout repart après reconnexion (trois portes fermées de suite classent l'écriture refusée pour ne pas bloquer la file). Une écriture faite en ligne alors que la file attendait pouvait être écrasée par une plus ancienne rejouée après elle : la file se vide d'abord, ou la nouvelle écriture prend rang derrière. Un stockage illisible ne fait plus échouer le chargement de la page, et un stockage plein ne bloque plus la file.
+
+### Modifié
+- **Moins d'écritures par action** (#1670) : le journal d'activité ne suit plus que les comptes (`User`, `Admin`) et non les six modèles métier qui y écrivaient à chaque modification sans lecteur ; il se lit désormais dans le panneau d'administration (« Journal d'audit », lecture seule, permission Shield dédiée) et se purge chaque nuit au-delà de 180 jours. Les recommandations de séries et les trois caches de la liste des séances sont invalidés dès qu'une série ou un exercice change, au lieu d'attendre leur expiration. La synchronisation des records ne part en file qu'après validation de la transaction. Un test fige le nombre d'écritures de chaque opération de la page de séance (trois par série créée, modifiée ou supprimée, trois par exercice retiré).
+
+## [1.5.7] - 2026-09-03
+
 ### Corrigé
 - **Un record personnel créé par l'API accepte un type hors énumération et une valeur sans borne** (#1665) : un type inconnu passait la validation puis cassait la lecture du record, et 99 999 999 kg étaient acceptés, ce qui débloquait les succès de poids. Le type est validé contre l'énumération et les valeurs sont bornées à 100 000, à la création comme à la modification.
-- **La file hors-ligne ne perd plus d'écritures** (#1667) : une session ou un jeton expirés pendant que la PWA dormait (401, 419) classaient l'écriture refusée et vidaient la file derrière elle ; l'écriture reste maintenant en attente, la page est prévenue, et tout repart après reconnexion (trois portes fermées de suite classent l'écriture refusée pour ne pas bloquer la file). Une écriture faite en ligne alors que la file attendait pouvait être écrasée par une plus ancienne rejouée après elle : la file se vide d'abord, ou la nouvelle écriture prend rang derrière. Un stockage illisible ne fait plus échouer le chargement de la page, et un stockage plein ne bloque plus la file.
 
 ### Sécurité
 - **Moins de données sortent de l'application** (#1666) : Sentry ne reçoit plus l'e-mail ni le nom de l'utilisateur, seulement son identifiant, et le Session Replay est coupé ; la table des routes Ziggy injectée dans chaque page passe de 310 routes (33 Ko) à 111 (10 Ko), sans aucune route d'administration ni d'API hors des sept servies ; les origines CORS locales ne sont autorisées qu'en environnement local ; `unsafe-eval` ne sort plus que sur le panneau d'administration ; le journal d'échec de création d'une série ne contient plus la pile ni la charge utile.
@@ -19,7 +28,6 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Modifié
 - **Ménage de l'audit** (#1669) : la CI annule le run précédent d'une PR et borne chaque job dans le temps, le job `audit` ne dépend plus des tests, `semgrep` et `actionlint` sont épinglés par version, un cache `vendor` absent est réinstallé au lieu de casser trois étapes plus loin ; `entrypoint.sh` n'avale plus un échec de migration ; `AGENTS.md` et `GEMINI.md` ne sont plus que des renvois vers `CLAUDE.md`, gardés par un test ; le README annonce les vrais seuils (PHPStan `max`, mutation 80 / 95 / 99) ; la production journalise les dépréciations PHP.
 - **La liste blanche du panneau accepte les plages CIDR** (#1664) : `ADMIN_ALLOWED_IPS` prend des adresses exactes ou des plages, IPv4 et IPv6, pour couvrir un réseau local ou un tailnet sans lister chaque appareil.
-- **Moins d'écritures par action** (#1670) : le journal d'activité ne suit plus que les comptes (`User`, `Admin`) et non les six modèles métier qui y écrivaient à chaque modification sans lecteur ; il se lit désormais dans le panneau d'administration (« Journal d'audit », lecture seule, permission Shield dédiée) et se purge chaque nuit au-delà de 180 jours. Les recommandations de séries et les trois caches de la liste des séances sont invalidés dès qu'une série ou un exercice change, au lieu d'attendre leur expiration. La synchronisation des records ne part en file qu'après validation de la transaction. Un test fige le nombre d'écritures de chaque opération de la page de séance (trois par série créée, modifiée ou supprimée, trois par exercice retiré).
 
 ### Retiré
 - `laravel/breeze` et la déclaration directe de `firebase/php-jwt` (tiré par Socialite), `serialize-javascript`, `autoprefixer` et `postcss` (Tailwind 4 s'en passe), les captures d'échec Dusk commitées, `ci-verified-ship.skill`, `setup_db.sh` et l'échafaudage Pest (`toBeOne`, `something()`) (#1669).
