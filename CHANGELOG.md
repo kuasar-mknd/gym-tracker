@@ -19,6 +19,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Retiré
 - `laravel/breeze` et la déclaration directe de `firebase/php-jwt` (tiré par Socialite), `serialize-javascript`, `autoprefixer` et `postcss` (Tailwind 4 s'en passe), les captures d'échec Dusk commitées, `ci-verified-ship.skill`, `setup_db.sh` et l'échafaudage Pest (`toBeOne`, `something()`) (#1669).
+- Les quatre documents de mars qui décrivaient une autre application (la feuille de route, l'analyse de restructuration, le plan de performance et l'enquête Dusk, tous sous docs/) et .agent/workflows/, quatrième emplacement d'instructions (#1671). Un garde de convention vérifie désormais que chaque chemin cité dans un document existe et que chaque version annoncée est celle des manifestes.
 
 ## [1.5.6] - 2026-09-03
 
