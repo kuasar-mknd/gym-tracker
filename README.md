@@ -90,6 +90,7 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 | `SENTRY_DSN` | Erreurs côté serveur. |
 | `SENTRY_DSN_PUBLIC` | Erreurs côté navigateur. Lue **à l'exécution**, jamais au build : une variable `VITE_` serait cuite dans l'image publique, et chaque installation tierce enverrait ses erreurs au même projet. Vide = pas de Sentry navigateur. |
 | `HORIZON_ALLOWED_EMAILS` | Adresses autorisées à consulter Horizon, séparées par des virgules. Vide = fermé à tout le monde. |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push. Sans elles, la page Profil affiche « service de notifications non configuré » et rien ne part. Générées une fois par `npx web-push generate-vapid-keys` ; en changer invalide les abonnements existants. |
 
 `docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, elles ne tournent pas, et rien ne le signale : une tâche qui ne s'exécute pas ne lève aucune erreur.
 
