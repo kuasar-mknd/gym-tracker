@@ -10,6 +10,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Le modèle caste `category` vers l'énumération : une valeur hors liste qui
+ * passerait la validation casserait la lecture de l'exercice. Vérifié sur
+ * les routes web, les seules qui créent et modifient des exercices depuis
+ * le retrait de l'API REST (#1673).
+ */
 class ExerciseCategoryValidationTest extends TestCase
 {
     use RefreshDatabase;
@@ -19,13 +25,13 @@ class ExerciseCategoryValidationTest extends TestCase
         $user = User::factory()->create();
 
         foreach (ExerciseCategory::cases() as $category) {
-            $response = $this->actingAs($user)->postJson('/api/v1/exercises', [
+            $response = $this->actingAs($user)->post(route('exercises.store'), [
                 'name' => "Exercise {$category->value}",
                 'type' => 'strength',
                 'category' => $category->value,
             ]);
 
-            $response->assertCreated();
+            $response->assertSessionHasNoErrors();
 
             $this->assertDatabaseHas('exercises', [
                 'name' => "Exercise {$category->value}",
@@ -43,7 +49,7 @@ class ExerciseCategoryValidationTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->postJson('/api/v1/exercises', [
+        $response = $this->actingAs($user)->postJson(route('exercises.store'), [
             'name' => 'Invalid Exercise',
             'type' => 'strength',
             'category' => 'InvalidCategory',
@@ -61,7 +67,7 @@ class ExerciseCategoryValidationTest extends TestCase
             'category' => ExerciseCategory::Pectoraux->value,
         ]);
 
-        $response = $this->actingAs($user)->putJson("/api/v1/exercises/{$exercise->id}", [
+        $response = $this->actingAs($user)->putJson(route('exercises.update', $exercise), [
             'category' => 'InvalidCategory',
         ]);
 

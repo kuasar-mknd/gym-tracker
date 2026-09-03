@@ -95,12 +95,6 @@ parameters:
         # raison d'etre du fichier.
         - identifier: shipmonk.deadMethod
           path: database/factories/*
-        # Documente en OpenAPI mais jamais route : routes/api.php sert /api/v1/status
-        # depuis une closure qui duplique la reponse. Divergence doc/implementation
-        # a traiter avec la regeneration de la spec (#1344), pas par une suppression
-        # qui retirerait la doc du seul endpoint documente.
-        - identifier: shipmonk.deadMethod
-          path: app/Http/Controllers/Api/Swagger.php
         # Pest lie $this au TestCase a l'execution, mais l'analyse statique ne voit
         # que le TestCall renvoye par it()/test(). Toute l'API de test ($this->get,
         # actingAs, assertDatabaseHas...) apparait donc comme inexistante. Ce sont

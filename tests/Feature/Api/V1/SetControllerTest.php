@@ -13,25 +13,6 @@ use function Pest\Laravel\assertDatabaseMissing;
 
 // Happy Path Tests
 
-test('user can list their sets', function (): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
-    $set = Set::factory()->create(['workout_line_id' => $line->id]);
-
-    // Create another user's set to ensure isolation
-    $otherUser = User::factory()->create();
-    $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
-    $otherLine = WorkoutLine::factory()->create(['workout_id' => $otherWorkout->id]);
-    Set::factory()->create(['workout_line_id' => $otherLine->id]);
-
-    actingAs($user, 'sanctum')
-        ->getJson(route('api.v1.sets.index'))
-        ->assertOk()
-        ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.id', $set->id);
-});
-
 test('user can create a set in their workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -56,18 +37,6 @@ test('user can create a set in their workout line', function (): void {
         'weight' => 100.5,
         'reps' => 10,
     ]);
-});
-
-test('user can show a specific set', function (): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
-    $set = Set::factory()->create(['workout_line_id' => $line->id]);
-
-    actingAs($user, 'sanctum')
-        ->getJson(route('api.v1.sets.show', $set))
-        ->assertOk()
-        ->assertJsonPath('data.id', $set->id);
 });
 
 test('user can update their set', function (): void {
@@ -123,18 +92,6 @@ test('user cannot create set in another users workout line', function (): void {
         ->postJson(route('api.v1.sets.store'), $data)
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['workout_line_id']);
-});
-
-test('user cannot show another users set', function (): void {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-    $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
-    $otherLine = WorkoutLine::factory()->create(['workout_id' => $otherWorkout->id]);
-    $otherSet = Set::factory()->create(['workout_line_id' => $otherLine->id]);
-
-    actingAs($user, 'sanctum')
-        ->getJson(route('api.v1.sets.show', $otherSet))
-        ->assertNotFound();
 });
 
 test('user cannot update another users set', function (): void {

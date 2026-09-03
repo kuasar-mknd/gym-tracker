@@ -133,23 +133,6 @@ it('propose les parties du corps, et les borne des deux cotes', function (): voi
         );
 });
 
-it('refuse une mensuration inventee, a la creation comme a la mise a jour', function (): void {
-    $proprietaire = User::factory()->create();
-    $objectif = objectifSurUnePartieDuCorps($proprietaire, 'Waist', 90.0, 80.0);
-
-    $this->actingAs($proprietaire)
-        ->postJson(route('goals.store'), [
-            'type' => 'measurement',
-            'measurement_type' => 'tour_de_cou_gauche',
-            'target_value' => 40,
-        ])
-        ->assertJsonValidationErrors('measurement_type');
-
-    $this->actingAs($proprietaire)
-        ->putJson(route('api.v1.goals.update', $objectif), ['measurement_type' => 'tour_de_cou_gauche'])
-        ->assertJsonValidationErrors('measurement_type');
-});
-
 it('annonce des kilogrammes pour un objectif de poids de corps', function (): void {
     $proprietaire = User::factory()->create();
 

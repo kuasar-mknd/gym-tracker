@@ -12,24 +12,6 @@ use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
-test('index returns user workout lines', function (): void {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
-
-    // Other user's data
-    $otherWorkout = Workout::factory()->create(['user_id' => $otherUser->id]);
-    WorkoutLine::factory()->create(['workout_id' => $otherWorkout->id]);
-
-    actingAs($user)
-        ->getJson(route('api.v1.workout-lines.index', ['filter[workout_id]' => $workout->id]))
-        ->assertOk()
-        ->assertJsonCount(1, 'data')
-        ->assertJsonFragment(['id' => $line->id]);
-});
-
 test('store creates workout line', function (): void {
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -63,30 +45,6 @@ test('store validates workout ownership', function (): void {
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['workout_id']);
-});
-
-test('show returns workout line', function (): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
-
-    actingAs($user)
-        ->getJson(route('api.v1.workout-lines.show', $line))
-        ->assertOk()
-        ->assertJsonFragment(['id' => $line->id]);
-});
-
-test('update updates workout line', function (): void {
-    $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
-    $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'notes' => 'Old Note']);
-
-    actingAs($user)
-        ->putJson(route('api.v1.workout-lines.update', $line), [
-            'notes' => 'New Note',
-        ])
-        ->assertOk()
-        ->assertJsonFragment(['notes' => 'New Note']);
 });
 
 test('destroy deletes workout line', function (): void {

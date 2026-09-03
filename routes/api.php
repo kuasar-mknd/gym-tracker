@@ -2,54 +2,26 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Api\BodyMeasurementController;
-use App\Http\Controllers\Api\BodyPartMeasurementController;
-use App\Http\Controllers\Api\ExerciseController;
-use App\Http\Controllers\Api\GoalController;
 use App\Http\Controllers\Api\SetController;
 use App\Http\Controllers\Api\WorkoutController;
-use App\Http\Controllers\Api\WorkoutTemplateController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\WorkoutLineController;
 use Illuminate\Support\Facades\Route;
 
+/*
+ * Les sept écritures que la page de séance fait en direct, et rien d'autre :
+ * l'API REST complète (28 ressources, 144 routes) n'avait aucun client, et
+ * chaque route ouverte était une surface à défendre (#1673).
+ */
 Route::prefix('v1')->middleware(['auth:sanctum', app()->isProduction() ? 'throttle:120,1' : 'throttle:1000,1'])->as('api.v1.')->group(function (): void {
-    Route::get('/user', fn (Request $request): \App\Http\Resources\UserResource => new \App\Http\Resources\UserResource($request->user()));
+    Route::post('sets', [SetController::class, 'store'])->name('sets.store');
+    Route::match(['put', 'patch'], 'sets/{set}', [SetController::class, 'update'])->name('sets.update');
+    Route::delete('sets/{set}', [SetController::class, 'destroy'])->name('sets.destroy');
 
-    Route::apiResource('admins', \App\Http\Controllers\Api\AdminController::class);
-    Route::apiResource('users', \App\Http\Controllers\Api\UserController::class);
+    Route::post('workout-lines', [WorkoutLineController::class, 'store'])->name('workout-lines.store');
+    // `{workout_line}` et non `{workoutLine}` : c'est le nom que la page passe à
+    // Ziggy, hérité de l'ancien apiResource ; la liaison implicite accepte les deux.
+    Route::delete('workout-lines/{workout_line}', [WorkoutLineController::class, 'destroy'])->name('workout-lines.destroy');
+    Route::patch('workout-lines/{workoutLine}/set-order', [WorkoutLineController::class, 'reorderSets'])->name('workout-lines.set-order');
 
-    Route::apiResource('achievements', \App\Http\Controllers\Api\AchievementController::class);
-    Route::apiResource('user-achievements', \App\Http\Controllers\Api\UserAchievementController::class);
-    Route::apiResource('exercises', ExerciseController::class);
-    Route::apiResource('plates', \App\Http\Controllers\Api\PlateController::class);
-    Route::patch('workouts/{workout}/line-order', [WorkoutController::class, 'reorderLines'])
-        ->name('workouts.line-order');
-    Route::patch('workout-lines/{workoutLine}/set-order', [\App\Http\Controllers\Api\WorkoutLineController::class, 'reorderSets'])
-        ->name('workout-lines.set-order');
-    Route::apiResource('workouts', WorkoutController::class);
-    Route::apiResource('sets', SetController::class);
-    Route::apiResource('personal-records', \App\Http\Controllers\Api\PersonalRecordController::class);
-    Route::apiResource('body-measurements', BodyMeasurementController::class);
-    Route::apiResource('body-part-measurements', BodyPartMeasurementController::class);
-    Route::apiResource('goals', GoalController::class);
-    Route::apiResource('workout-templates', WorkoutTemplateController::class);
-    Route::apiResource('workout-template-lines', \App\Http\Controllers\Api\WorkoutTemplateLineController::class);
-    Route::apiResource('workout-template-sets', \App\Http\Controllers\Api\WorkoutTemplateSetController::class);
-    Route::apiResource('workout-lines', \App\Http\Controllers\Api\WorkoutLineController::class);
-    Route::apiResource('daily-journals', \App\Http\Controllers\Api\DailyJournalController::class);
-    Route::apiResource('fasts', \App\Http\Controllers\Api\FastController::class);
-    Route::apiResource('notification-preferences', \App\Http\Controllers\Api\NotificationPreferenceController::class);
-    Route::apiResource('warmup-preferences', \App\Http\Controllers\Api\WarmupPreferenceController::class);
-
-    Route::apiResource('habits', \App\Http\Controllers\Api\HabitController::class);
-    Route::apiResource('habit-logs', \App\Http\Controllers\Api\HabitLogController::class);
-    Route::apiResource('supplements', \App\Http\Controllers\Api\SupplementController::class);
-    Route::apiResource('supplement-logs', \App\Http\Controllers\Api\SupplementLogController::class);
-    Route::apiResource('water-logs', \App\Http\Controllers\Api\WaterLogController::class);
-
-    Route::apiResource('macro-calculations', \App\Http\Controllers\Api\MacroCalculationController::class);
-    Route::apiResource('wilks-scores', \App\Http\Controllers\Api\WilksScoreController::class);
-    Route::apiResource('interval-timers', \App\Http\Controllers\Api\IntervalTimerController::class);
-
-    Route::get('/status', fn (): \Illuminate\Http\JsonResponse => response()->json(['status' => 'ok']));
+    Route::patch('workouts/{workout}/line-order', [WorkoutController::class, 'reorderLines'])->name('workouts.line-order');
 });

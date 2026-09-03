@@ -75,7 +75,7 @@ function isBehindAuth(\Illuminate\Routing\Route $route): bool
  */
 function isThirdPartyPanel(string $name): bool
 {
-    return array_any(['api.', 'filament.', 'horizon.', 'telescope', 'l5-swagger.', 'pulse'], fn (string $prefix): bool => str_starts_with($name, $prefix));
+    return array_any(['api.', 'filament.', 'horizon.', 'telescope', 'pulse'], fn (string $prefix): bool => str_starts_with($name, $prefix));
 }
 
 /**

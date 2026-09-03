@@ -69,42 +69,4 @@ class ExerciseCacheTest extends TestCase
 
         $this->assertNotContains($exercise->name, $this->listeCachee($user));
     }
-
-    public function test_api_store_invalidates_cache(): void
-    {
-        $user = User::factory()->create();
-        $this->listeCachee($user);
-
-        $this->actingAs($user, 'sanctum')->postJson('/api/v1/exercises', [
-            'name' => 'New API Exercise',
-            'type' => 'strength',
-            'category' => 'Pectoraux',
-        ]);
-
-        $this->assertContains('New API Exercise', $this->listeCachee($user));
-    }
-
-    public function test_api_update_invalidates_cache(): void
-    {
-        $user = User::factory()->create();
-        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        $this->listeCachee($user);
-
-        $this->actingAs($user, 'sanctum')->putJson("/api/v1/exercises/{$exercise->id}", [
-            'name' => 'Updated API Name',
-        ]);
-
-        $this->assertContains('Updated API Name', $this->listeCachee($user));
-    }
-
-    public function test_api_destroy_invalidates_cache(): void
-    {
-        $user = User::factory()->create();
-        $exercise = Exercise::factory()->create(['user_id' => $user->id]);
-        $this->listeCachee($user);
-
-        $this->actingAs($user, 'sanctum')->deleteJson("/api/v1/exercises/{$exercise->id}");
-
-        $this->assertNotContains($exercise->name, $this->listeCachee($user));
-    }
 }

@@ -59,3 +59,54 @@ test('chaque route nommée que le JavaScript demande est servie par Ziggy', func
     expect($demandees)->not->toBe([]);
     expect(array_values(array_diff($demandees, $servies)))->toBe([]);
 });
+
+/**
+ * Un appel `route('nom', { cle: … })` qui n'apporte pas un paramètre requis de
+ * la route ne part jamais : Ziggy lève une erreur côté client, sans requête ni
+ * trace réseau. C'est ainsi qu'une suppression d'exercice a cessé de partir
+ * quand `{workout_line}` est devenu `{workoutLine}` (#1689). Les clés en trop
+ * sont légitimes : Ziggy les envoie en chaîne de requête.
+ */
+test('chaque appel route() du JavaScript apporte les paramètres requis de la route', function (): void {
+    $routes = app('router')->getRoutes();
+    $manquants = [];
+
+    foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator(resource_path('js'))) as $fichier) {
+        if (! $fichier instanceof SplFileInfo || ! $fichier->isFile() || ! in_array($fichier->getExtension(), ['js', 'vue'], true)) {
+            continue;
+        }
+
+        preg_match_all("/route\\(\\s*['\"]([a-z0-9._-]+)['\"]\\s*,\\s*\\{([^}]*)\\}/", (string) file_get_contents($fichier->getPathname()), $appels, PREG_SET_ORDER);
+
+        foreach ($appels as [, $nom, $objet]) {
+            $route = $routes->getByName($nom);
+
+            if ($route === null) {
+                continue; // couvert par le test précédent
+            }
+
+            $cles = [];
+
+            foreach (explode(',', $objet) as $morceau) {
+                $cle = trim(explode(':', $morceau, 2)[0]);
+
+                if ($cle !== '') {
+                    $cles[] = $cle;
+                }
+            }
+
+            preg_match_all('/\\{(\\w+)\\?\\}/', $route->uri(), $optionnels);
+            /** @var list<string> $noms */
+            $noms = array_values(array_filter($route->parameterNames(), is_string(...)));
+            $requis = array_diff($noms, $optionnels[1]);
+
+            foreach ($requis as $parametre) {
+                if (! in_array($parametre, $cles, true)) {
+                    $manquants[] = basename($fichier->getPathname()).' → '.$nom.' sans « '.$parametre.' » (reçu : '.implode(', ', $cles).')';
+                }
+            }
+        }
+    }
+
+    expect($manquants)->toBe([]);
+});
