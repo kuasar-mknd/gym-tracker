@@ -3,10 +3,11 @@ includes:
     - vendor/shipmonk/dead-code-detector/rules.neon
     - vendor/phpstan/phpstan-strict-rules/rules.neon
     - vendor/phpstan/phpstan-deprecation-rules/rules.neon
-    # Les 430 erreurs que l'analyse de tests/ met au jour sont figees ici plutot
-    # qu'ignorees : le fichier ne doit que retrecir. Le plus gros poste, 138
-    # dereferencements de modele potentiellement nul, fait planter un test au lieu
-    # de le faire echouer proprement — voir #1341.
+    # Les erreurs que l'analyse de tests/ met au jour sont figees ici plutot
+    # qu'ignorees : le fichier ne doit que retrecir, et PhpstanBaselineRatchetTest
+    # tient le compte. Le plus gros poste reste le dereferencement de modele
+    # potentiellement nul, qui fait planter un test au lieu de le faire echouer
+    # proprement — voir #1341.
     - phpstan-baseline.neon
 
 parameters:

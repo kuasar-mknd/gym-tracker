@@ -3,7 +3,7 @@
   <img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3" />
   <img src="https://img.shields.io/badge/Tailwind-CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
   <img src="https://img.shields.io/badge/Inertia.js-3-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
-  <img src="https://img.shields.io/badge/PHPStan-Level%209-blue?style=for-the-badge" alt="PHPStan Level 9" />
+  <img src="https://img.shields.io/badge/PHPStan-level%20max-blue?style=for-the-badge" alt="PHPStan level max" />
 </p>
 
 <h1 align="center">💪 GymTracker</h1>
@@ -58,7 +58,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | **Tests navigateur** | 83 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
-| **Mutation testing** | ≥ 56 % `App\Services`, 62 % `App\Actions`, 92 % `App\Policies` | nocturne, **bloque la release** |
+| **Mutation testing** | ≥ 80 % `App\Services`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
 
 S'y ajoutent une vingtaine de **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : fraîcheur de la spec OpenAPI, sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur.
 

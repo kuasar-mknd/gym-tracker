@@ -21,6 +21,7 @@
     },
     "lint-staged": {
         "resources/**/*.{js,vue,css}": "prettier --write",
+        "tests/js/**/*.js": "prettier --write",
         "**/*.php": "./vendor/bin/pint"
     },
     "devDependencies": {
@@ -31,8 +32,6 @@
         "@vitejs/plugin-vue": "^6.0.8",
         "@vitest/coverage-v8": "^4.1.11",
         "@vue/test-utils": "^2.5.0",
-        "autoprefixer": "^10.5.4",
-        "axios": "^1.20.0",
         "concurrently": "^10.0.5",
         "eslint": "^10.9.1",
         "eslint-plugin-vue": "^10.10.0",
@@ -41,7 +40,6 @@
         "jsdom": "^30.0.1",
         "laravel-vite-plugin": "^3.2.0",
         "lint-staged": "^17.4.1",
-        "postcss": "^8.5.26",
         "prettier": "^3.9.6",
         "prettier-plugin-tailwindcss": "^0.8.1",
         "tailwindcss": "^4.3.3",
@@ -55,9 +53,9 @@
     "dependencies": {
         "@formkit/drag-and-drop": "^0.6.1",
         "@sentry/vue": "^10.71.0",
+        "axios": "^1.20.0",
         "chart.js": "^4.5.1",
         "dayjs": "^1.11.23",
-        "serialize-javascript": "^7.1.0",
         "vue-chartjs": "^5.3.4",
         "ziggy-js": "^2.6.4"
     },

@@ -56,6 +56,7 @@ ci_failure*.log
 /public/screenshot-*.png
 /tests/Browser/screenshots/*.png
 /tests/Browser/console/*.log
+/tests/Browser/screenshots_ci/
 verification.png
 error.png
 open_prs.json

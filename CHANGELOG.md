@@ -14,6 +14,12 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Moins de données sortent de l'application** (#1666) : Sentry ne reçoit plus l'e-mail ni le nom de l'utilisateur, seulement son identifiant, et le Session Replay est coupé ; la table des routes Ziggy injectée dans chaque page passe de 310 routes (33 Ko) à 111 (10 Ko), sans aucune route d'administration ni d'API hors des sept servies ; les origines CORS locales ne sont autorisées qu'en environnement local ; `unsafe-eval` ne sort plus que sur le panneau d'administration ; le journal d'échec de création d'une série ne contient plus la pile ni la charge utile.
 - **Le panneau d'administration ne s'ouvre plus par défaut** (#1664) : le seeder exige `ADMIN_INITIAL_PASSWORD` et ne réécrit jamais le mot de passe d'un compte existant ; la valeur par défaut `CHANGE_THIS_PASSWORD` disparaît de la configuration et de `.env.example` ; une ligne dans la table `admins` ne suffit plus, il faut un rôle ou une permission Shield ; et une liste blanche d'IP vide ferme le panneau en production. **Avant de déployer, renseigner `ADMIN_ALLOWED_IPS`.**
 
+### Modifié
+- **Ménage de l'audit** (#1669) : la CI annule le run précédent d'une PR et borne chaque job dans le temps, le job `audit` ne dépend plus des tests, `semgrep` et `actionlint` sont épinglés par version, un cache `vendor` absent est réinstallé au lieu de casser trois étapes plus loin ; `entrypoint.sh` n'avale plus un échec de migration ; `AGENTS.md` et `GEMINI.md` ne sont plus que des renvois vers `CLAUDE.md`, gardés par un test ; le README annonce les vrais seuils (PHPStan `max`, mutation 80 / 95 / 99) ; la production journalise les dépréciations PHP.
+
+### Retiré
+- `laravel/breeze` et la déclaration directe de `firebase/php-jwt` (tiré par Socialite), `serialize-javascript`, `autoprefixer` et `postcss` (Tailwind 4 s'en passe), les captures d'échec Dusk commitées, `ci-verified-ship.skill`, `setup_db.sh` et l'échafaudage Pest (`toBeOne`, `something()`) (#1669).
+
 ## [1.5.6] - 2026-09-03
 
 ### Corrigé
