@@ -1,11 +1,35 @@
 import axios from 'axios'
-import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
+import { classifySyncError, SYNC_AUTH, SYNC_OFFLINE } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
 const FAILED_KEY = 'offline_sync_failed'
 
 /** How many refused mutations are worth keeping. See recordFailure. */
 const MAX_FAILED = 50
+
+/**
+ * Combien de portes fermées (401, 419) une même écriture peut rencontrer avant
+ * d'être classée refusée plutôt que de bloquer la file pour toujours.
+ */
+const MAX_AUTH_ATTEMPTS = 3
+
+const MUTATIONS = ['post', 'patch', 'put', 'delete']
+
+/**
+ * Un stockage corrompu — une écriture coupée par une suspension iOS, un quota
+ * atteint à mi-chemin — faisait lever JSON.parse au chargement du module, et
+ * c'est toute la page qui ne démarrait plus. Une liste illisible vaut une
+ * liste vide : on perd au pire ce qui était déjà perdu.
+ */
+const lireLaListe = (cle) => {
+    try {
+        const valeur = JSON.parse(localStorage.getItem(cle) || '[]')
+
+        return Array.isArray(valeur) ? valeur : []
+    } catch {
+        return []
+    }
+}
 
 /**
  * Names one create attempt, for as long as that attempt exists.
@@ -22,8 +46,8 @@ const newIdempotencyKey = () =>
 
 class SyncService {
     constructor() {
-        this.queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]')
-        this.failed = JSON.parse(localStorage.getItem(FAILED_KEY) || '[]')
+        this.queue = lireLaListe(QUEUE_KEY)
+        this.failed = lireLaListe(FAILED_KEY)
 
         window.addEventListener('online', () => this.processQueue())
 
@@ -65,6 +89,24 @@ class SyncService {
     async request(config) {
         const api = window.axios || axios
         const stamped = this.stampIdempotency(config)
+
+        /*
+         * Une écriture directe ne doit pas doubler celles qui attendent : la
+         * file rejouait une modification plus ancienne APRÈS celle que
+         * l'utilisateur venait de faire en ligne, et l'ancienne valeur écrasait
+         * la nouvelle. On vide donc d'abord ; si la file ne se vide pas
+         * (toujours hors ligne, ou session à renouveler), la nouvelle écriture
+         * prend sa place derrière, dans l'ordre où elle a été faite.
+         */
+        if (this.isMutation(stamped) && this.queue.length > 0) {
+            await this.processQueue()
+
+            if (this.queue.length > 0) {
+                const queueId = this.addToQueue(stamped)
+
+                return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
+            }
+        }
 
         try {
             return await api(stamped)
@@ -134,9 +176,13 @@ class SyncService {
      * @returns {string|null} the queue entry's id, so a caller that depends on
      *   what this write eventually creates can recognise it when it goes out.
      */
+    isMutation(config) {
+        return MUTATIONS.includes(String(config.method ?? '').toLowerCase())
+    }
+
     addToQueue(config) {
         // Only queue mutations (POST, PATCH, PUT, DELETE)
-        if (!['post', 'patch', 'put', 'delete'].includes(config.method?.toLowerCase())) {
+        if (!this.isMutation(config)) {
             return null
         }
 
@@ -149,7 +195,17 @@ class SyncService {
     }
 
     saveQueue() {
-        localStorage.setItem(QUEUE_KEY, JSON.stringify(this.queue))
+        try {
+            localStorage.setItem(QUEUE_KEY, JSON.stringify(this.queue))
+        } catch {
+            /*
+             * Quota atteint ou stockage indisponible. La file reste en mémoire
+             * et continue de se vider ; on le dit, pour que la page puisse
+             * prévenir que ce qui n'est pas encore parti ne survivra pas à un
+             * rechargement.
+             */
+            window.dispatchEvent(new CustomEvent('sync:storage-full', { detail: { pending: this.queue.length } }))
+        }
     }
 
     /**
@@ -189,7 +245,7 @@ class SyncService {
 
             try {
                 // Remove internal queue ID before sending
-                const { id, timestamp, ...axiosConfig } = config
+                const { id, timestamp, authAttempts, ...axiosConfig } = config
                 const response = await api(axiosConfig)
 
                 /**
@@ -213,10 +269,38 @@ class SyncService {
                 // error — with a console.error as the only trace. These are edits
                 // the user made while offline, so dropping them silently is data
                 // loss, not error handling.
-                if (classifySyncError(error) === SYNC_OFFLINE) {
+                const verdict = classifySyncError(error)
+
+                if (verdict === SYNC_OFFLINE) {
                     // Still nothing out there. Leave this entry, and everything
                     // behind it, exactly where they are.
                     return
+                }
+
+                if (verdict === SYNC_AUTH) {
+                    /*
+                     * 401 ou 419 : la session ou le jeton a expiré pendant que
+                     * la PWA dormait. Ce n'est pas un refus de l'écriture, c'est
+                     * une porte fermée : tout reste en place, on prévient, et on
+                     * réessaiera après la prochaine reconnexion. Cette écriture
+                     * était classée refusée et la file vidée derrière elle.
+                     */
+                    config.authAttempts = (config.authAttempts ?? 0) + 1
+                    this.saveQueue()
+
+                    window.dispatchEvent(
+                        new CustomEvent('sync:auth-required', {
+                            detail: {
+                                url: config.url,
+                                status: error?.response?.status ?? null,
+                                pending: this.queue.length,
+                            },
+                        }),
+                    )
+
+                    if (config.authAttempts < MAX_AUTH_ATTEMPTS) {
+                        return
+                    }
                 }
 
                 this.recordFailure(config, error)

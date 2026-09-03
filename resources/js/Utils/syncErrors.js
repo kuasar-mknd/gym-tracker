@@ -10,6 +10,9 @@
  * the only trace.
  *
  * - `offline`   SyncService has queued the request; it will go out later.
+ * - `auth`      401 ou 419 : la session ou le jeton CSRF a expiré pendant que
+ *               la PWA dormait. La porte est fermée, pas l'écriture refusée :
+ *               elle repart telle quelle après reconnexion.
  * - `permanent` the server refused it (4xx). Retrying cannot change that.
  * - `transient` a 5xx, a timeout, anything unattributable. Worth another try.
  *
@@ -17,6 +20,7 @@
  * limit is by definition temporary.
  */
 export const SYNC_OFFLINE = 'offline'
+export const SYNC_AUTH = 'auth'
 export const SYNC_PERMANENT = 'permanent'
 export const SYNC_TRANSIENT = 'transient'
 
@@ -44,6 +48,10 @@ export const classifySyncError = (error) => {
 
     if (status === 429) {
         return SYNC_TRANSIENT
+    }
+
+    if (status === 401 || status === 419) {
+        return SYNC_AUTH
     }
 
     return status >= 400 && status < 500 ? SYNC_PERMANENT : SYNC_TRANSIENT
