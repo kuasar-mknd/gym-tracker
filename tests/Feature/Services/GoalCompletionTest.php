@@ -8,8 +8,6 @@ use App\Models\Goal;
 use App\Models\User;
 use App\Services\GoalService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Ce qui decide qu'un objectif est atteint.
  *

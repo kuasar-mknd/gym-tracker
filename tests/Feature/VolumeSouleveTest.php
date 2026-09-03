@@ -13,8 +13,6 @@ use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Le volume compte ce qui a ete souleve, pas ce qui etait prevu (#1499).
  *

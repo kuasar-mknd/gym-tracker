@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Models\Workout;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
-
-uses(RefreshDatabase::class);
 
 describe('WorkoutController', function (): void {
     describe('index', function (): void {

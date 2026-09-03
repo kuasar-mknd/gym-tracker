@@ -9,8 +9,6 @@ use App\Models\Goal;
 use App\Models\User;
 use App\Services\GoalService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * L'interface proposait cinq mensurations pour un objectif, dont trois qui
  * n'existent pas comme colonnes de `body_measurements`.

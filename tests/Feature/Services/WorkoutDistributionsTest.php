@@ -6,8 +6,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Services\Stats\WorkoutStatsService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Le corps entier de `getWorkoutDistributions` pouvait etre remplace par
  * `return []` sans qu'un seul test ne tombe.

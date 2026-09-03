@@ -49,8 +49,6 @@ function aSessionInProgress(): array
     ];
 }
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /**
  * users.total_volume and workouts.workout_volume are maintained by model events
  * on Set. sets.workout_line_id is ON DELETE CASCADE, so when a line or a whole

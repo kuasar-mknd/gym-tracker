@@ -9,8 +9,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function lecturesTri(callable $geste): int
 {
     $releve = function (): int {

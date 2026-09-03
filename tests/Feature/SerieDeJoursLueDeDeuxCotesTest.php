@@ -7,8 +7,6 @@ use App\Models\User;
 use App\Services\StreakService;
 use Illuminate\Http\Request;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * `users.current_streak` est un compteur incrémental : il n'est touché que
  * lorsqu'une séance est enregistrée. Passé un jour sans rien faire, il continue

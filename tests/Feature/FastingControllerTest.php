@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 use App\Models\Fast;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\delete;
 use function Pest\Laravel\get;
 use function Pest\Laravel\patch;
 use function Pest\Laravel\post;
-
-uses(RefreshDatabase::class);
 
 describe('FastingController', function (): void {
     describe('index', function (): void {

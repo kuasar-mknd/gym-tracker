@@ -7,8 +7,6 @@ use App\Models\Workout;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function lecturesTableauDeBord(callable $geste): int
 {
     $releve = function (): int {

@@ -9,8 +9,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Services\GoalService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * #1501 : deux défauts distincts, tous deux visibles par l'utilisateur.
  *

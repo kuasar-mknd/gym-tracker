@@ -9,8 +9,6 @@ use App\Services\StreakService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function seanceIlYA(User $user, int $recul): Workout
 {
     $seance = Workout::factory()->create([

@@ -6,15 +6,12 @@ use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-
-uses(RefreshDatabase::class);
 
 test('creating set creates max weight pr', function (): void {
     $user = User::factory()->create();

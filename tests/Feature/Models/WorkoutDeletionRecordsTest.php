@@ -9,8 +9,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Supprimer une seance doit emporter les records qu'elle detenait.
  *

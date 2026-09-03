@@ -7,8 +7,6 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Valider une serie ouvrait toujours le minuteur. `auto_rest_timer` permet de
  * s'en passer, et ne vaut que s'il ATTEINT le client : c'est exactement ainsi

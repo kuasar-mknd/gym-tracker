@@ -11,8 +11,6 @@ use App\Services\RecommendedValuesService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function ligneAvecSerie(User $user, Exercise $exercice, string $quand, float $poids): WorkoutLine
 {
     $seance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse($quand)]);

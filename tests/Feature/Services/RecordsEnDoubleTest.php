@@ -12,8 +12,6 @@ use App\Services\PersonalRecordService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /** @return array{0: User, 1: Exercise, 2: WorkoutLine} */
 function scenePourDoublons(): array
 {

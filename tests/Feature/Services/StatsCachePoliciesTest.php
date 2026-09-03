@@ -13,8 +13,6 @@ use App\Services\StatsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Ce que les caches de statistiques promettent : une duree, et une invalidation.
  *

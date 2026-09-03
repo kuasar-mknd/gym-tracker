@@ -8,8 +8,6 @@ use App\Services\ActiveWorkoutService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 it('designe la plus recente de celles qui ne sont pas terminees', function (): void {
     $user = User::factory()->create();
 

@@ -12,8 +12,6 @@ use App\Services\Stats\ExerciseStatsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * `ExerciseStatsService` etait la classe la moins tenue du depot : 27,27 %, trois
  * mutants sur quatre survivants. Ses deux methodes alimentent le camembert des

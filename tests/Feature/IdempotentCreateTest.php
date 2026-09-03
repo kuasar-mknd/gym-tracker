@@ -8,8 +8,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /**
  * A create the server accepted and wrote, whose response never reached the
  * client, is indistinguishable from one that never arrived — both surface as a

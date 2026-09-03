@@ -12,8 +12,6 @@ use App\Services\Stats\VolumeStatsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Les bornes de VolumeStatsService, ou 39 mutants survivaient.
  *

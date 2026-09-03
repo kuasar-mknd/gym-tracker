@@ -7,8 +7,6 @@ use App\Models\User;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /**
  * L'ordre d'un modele est porte par `workout_template_lines.order`, que
  * `UpdateWorkoutTemplateAction` reassigne depuis le rang soumis. Encore

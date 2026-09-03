@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function lecturesOutils(callable $geste): int
 {
     $releve = function (): int {

@@ -12,15 +12,12 @@ use App\Models\WorkoutLine;
 use App\Notifications\AchievementUnlocked;
 use App\Services\AchievementService;
 use Illuminate\Database\Events\QueryExecuted;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $this->service = app(AchievementService::class);

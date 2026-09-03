@@ -9,8 +9,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function semerLignesPourExercices(User $user, int $seances, int $combienExercices): void
 {
     $exercices = Exercise::factory()->count($combienExercices)->create(['user_id' => null]);

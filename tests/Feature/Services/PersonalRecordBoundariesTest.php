@@ -13,8 +13,6 @@ use App\Notifications\PersonalRecordAchieved;
 use App\Services\PersonalRecordService;
 use Illuminate\Support\Facades\Notification;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Les bornes de PersonalRecordService, chacune signalee par un mutant survivant
  * et aucune couverte (#1446).

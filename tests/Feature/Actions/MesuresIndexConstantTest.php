@@ -8,8 +8,6 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function lecturesIndex(callable $geste): int
 {
     $releve = function (): int {

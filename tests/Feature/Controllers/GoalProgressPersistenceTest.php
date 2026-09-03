@@ -10,8 +10,6 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * La progression calculee a la creation et a la modification doit etre ECRITE.
  *

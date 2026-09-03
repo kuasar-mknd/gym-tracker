@@ -7,8 +7,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Testing\AssertableInertia as Assert;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 describe('BodyMeasurementController', function (): void {
     describe('index', function (): void {
         it('renders the index page for authenticated users', function (): void {

@@ -8,8 +8,6 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Laravel\Sanctum\Sanctum;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 describe('SetController@store', function (): void {
     it('creates a set and returns it (Happy Path)', function (): void {
         $user = User::factory()->create();

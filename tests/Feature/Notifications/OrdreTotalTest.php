@@ -7,8 +7,6 @@ use App\Notifications\PersonalRecordAchieved;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function vingtCinqNotifications(User $user): void
 {
     // Ecrites d'un bloc : toutes portent la MEME seconde, ce qui est le cas

@@ -6,8 +6,6 @@ use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /**
  * Meme piege que pour la seance en cours : `Cache::remember()` ne sert jamais
  * un `null`, donc l'etat courant de tout compte a jour — aucun trophee non lu —

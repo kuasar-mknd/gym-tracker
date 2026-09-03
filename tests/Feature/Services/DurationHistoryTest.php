@@ -9,8 +9,6 @@ use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * `getDurationHistory` alimente la courbe de duree des seances.
  *

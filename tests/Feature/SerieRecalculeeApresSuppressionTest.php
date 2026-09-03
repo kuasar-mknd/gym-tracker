@@ -7,8 +7,6 @@ use App\Models\Workout;
 use App\Services\StreakService;
 use Illuminate\Support\Carbon;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * #1460 : supprimer une séance ne recalculait rien.
  *
