@@ -21,7 +21,7 @@ jobs:
               id: metadata
               uses: dependabot/fetch-metadata@v3
               with:
-                  github-token: '${{ secrets.GITHUB_TOKEN }}'
+                  github-token: '${{ secrets.AUTO_MERGE_TOKEN || secrets.GITHUB_TOKEN }}'
 
             - name: Approve and auto-merge Dependabot PRs
               if: |
@@ -31,4 +31,8 @@ jobs:
                   gh pr merge --auto --squash "$PR_URL"
               env:
                   PR_URL: ${{ github.event.pull_request.html_url }}
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  # Un jeton dedie plutot que GITHUB_TOKEN : une fusion faite avec ce
+                  # dernier ne reveille aucun workflow, donc main n'etait jamais testee
+                  # apres une montee Dependabot (#1672). Sans le secret, on retombe sur
+                  # GITHUB_TOKEN et sur l'ancien comportement.
+                  GITHUB_TOKEN: ${{ secrets.AUTO_MERGE_TOKEN || secrets.GITHUB_TOKEN }}
