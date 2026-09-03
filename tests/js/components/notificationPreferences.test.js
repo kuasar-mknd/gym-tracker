@@ -46,7 +46,9 @@ const mountForm = (props = {}) =>
     })
 
 const banner = (wrapper) => wrapper.find('h4')
-const pushCheckboxes = (wrapper) => wrapper.findAll('input[type="checkbox"]')
+// Les cases « Envoyer aussi en Push » seulement : les jours de rappel ont les leurs.
+const pushCheckboxes = (wrapper) =>
+    wrapper.findAll('input[type="checkbox"]').filter((box) => box.element.closest('[dusk="reminder-days"]') === null)
 const error = (wrapper) => wrapper.find('[dusk="notification-push-error"]')
 
 beforeEach(() => {
@@ -163,6 +165,57 @@ describe('UpdateNotificationPreferencesForm', () => {
         await flushPromises()
 
         expect(error(wrapper).exists()).toBe(false)
+
+        wrapper.unmount()
+    })
+})
+
+/**
+ * Le rappel part à 18 h les jours choisis ; la préférence est une liste de
+ * numéros ISO (1 = lundi, 7 = dimanche), tous cochés par défaut.
+ */
+describe('UpdateNotificationPreferencesForm — jours de rappel', () => {
+    const jour = (wrapper, iso) => wrapper.find(`[dusk="reminder-day-${iso}"] input[type="checkbox"]`)
+
+    it('propose tous les jours par défaut et les envoie avec la sauvegarde', async () => {
+        const wrapper = mountForm({ hasPushSubscription: true })
+
+        expect(wrapper.findAll('[dusk^="reminder-day-"]')).toHaveLength(7)
+
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(patch.mock.calls.at(-1)[1].days.training_reminder).toEqual([1, 2, 3, 4, 5, 6, 7])
+
+        wrapper.unmount()
+    })
+
+    it('reprend les jours enregistrés, puis coche et décoche en gardant la liste triée', async () => {
+        const wrapper = mountForm({
+            hasPushSubscription: true,
+            preferences: { training_reminder: { is_enabled: true, is_push_enabled: false, days: [1, 3, 5] } },
+        })
+
+        expect(jour(wrapper, 1).element.checked).toBe(true)
+        expect(jour(wrapper, 2).element.checked).toBe(false)
+
+        await jour(wrapper, 7).setValue(true)
+        await jour(wrapper, 1).setValue(false)
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(patch.mock.calls.at(-1)[1].days.training_reminder).toEqual([3, 5, 7])
+
+        wrapper.unmount()
+    })
+
+    it('cache les jours quand le rappel est coupé', async () => {
+        const wrapper = mountForm({
+            hasPushSubscription: true,
+            preferences: { training_reminder: { is_enabled: false, is_push_enabled: false, days: [1] } },
+        })
+
+        expect(wrapper.find('[dusk="reminder-days"]').exists()).toBe(false)
 
         wrapper.unmount()
     })

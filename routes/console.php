@@ -19,7 +19,7 @@ Artisan::command('inspire', function (): void {
  * tourne. Le moniteur attend le battement et alerte quand il manque.
  */
 \Illuminate\Support\Facades\Schedule::command('app:remind-training')
-    ->daily()
+    ->dailyAt('18:00')
     ->sentryMonitor();
 
 /*

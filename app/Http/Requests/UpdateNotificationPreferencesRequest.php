@@ -38,8 +38,26 @@ class UpdateNotificationPreferencesRequest extends FormRequest
             'preferences.*' => ['boolean'],
             'push_preferences' => ['required', 'array'],
             'push_preferences.*' => ['boolean'],
-            'values' => ['nullable', 'array'],
-            'values.*' => ['nullable', 'integer', 'min:1', 'max:30'],
+            /*
+             * Les jours de rappel, en numeros ISO (1 = lundi, 7 = dimanche).
+             * Absents, la preference vaut « tous les jours » ; presents, au
+             * moins un, sinon le rappel serait actif sans jamais partir.
+             */
+            'days' => ['nullable', 'array'],
+            'days.*' => ['array', 'min:1', 'max:7'],
+            'days.*.*' => ['integer', 'between:1,7', 'distinct'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    #[\Override]
+    public function messages(): array
+    {
+        return [
+            'days.*.min' => 'Choisis au moins un jour de rappel.',
+            'days.*.*.between' => 'Un jour de rappel va de 1 (lundi) à 7 (dimanche).',
         ];
     }
 

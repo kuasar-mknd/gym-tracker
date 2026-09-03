@@ -20,6 +20,7 @@ class NotificationPreference extends Model
         'is_enabled',
         'is_push_enabled',
         'value',
+        'days',
     ];
 
     /**
@@ -37,6 +38,7 @@ class NotificationPreference extends Model
             'is_enabled' => 'boolean',
             'is_push_enabled' => 'boolean',
             'value' => 'integer',
+            'days' => 'array',
         ];
     }
 }

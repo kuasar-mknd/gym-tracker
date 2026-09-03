@@ -33,6 +33,8 @@ class NotificationPreferenceStoreRequest extends FormRequest
                 Rule::unique('notification_preferences')->where(fn (Builder $query) => $query->where('user_id', $this->user()?->id)),
             ],
             'value' => ['nullable', 'integer'],
+            'days' => ['nullable', 'array', 'min:1', 'max:7'],
+            'days.*' => ['integer', 'between:1,7', 'distinct'],
             'is_enabled' => ['boolean'],
             'is_push_enabled' => ['boolean'],
         ];

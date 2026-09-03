@@ -112,8 +112,8 @@ class ProfileTest extends TestCase
                 'push_preferences' => [
                     'daily_reminder' => true,
                 ],
-                'values' => [
-                    'daily_reminder' => 10,
+                'days' => [
+                    'daily_reminder' => [2, 4, 6],
                 ],
             ]);
 
@@ -126,7 +126,7 @@ class ProfileTest extends TestCase
             'type' => 'daily_reminder',
             'is_enabled' => true,
             'is_push_enabled' => true,
-            'value' => 10,
         ]);
+        $this->assertSame([2, 4, 6], $user->notificationPreferences()->where('type', 'daily_reminder')->sole()->days);
     }
 }
