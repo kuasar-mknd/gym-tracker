@@ -270,7 +270,10 @@ jobs:
                   php artisan migrate:fresh --seed --force
 
                   # Start server
-                  php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
+                  # Quatre travailleurs pour le serveur PHP integre : Dusk enchaine
+                  # pages, XHR et assets, et un seul processus les sert l'un apres
+                  # l'autre — six minutes sur le chemin critique (#1672).
+                  PHP_CLI_SERVER_WORKERS=4 php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/serve.log 2>&1 &
 
                   # Wait for server
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'

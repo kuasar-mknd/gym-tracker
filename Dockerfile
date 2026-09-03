@@ -26,7 +26,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 FROM --platform=$BUILDPLATFORM node:24-slim AS frontend-builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+# Meme commande que la CI (`npm ci` nu) : le lock qui a ete teste est celui
+# qui est construit.
+RUN npm ci
 
 COPY vite.config.js ./
 COPY resources/ ./resources/
