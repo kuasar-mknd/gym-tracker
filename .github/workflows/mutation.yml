@@ -152,8 +152,11 @@ jobs:
                     # A resserrer a 97 apres deux nocturnes vertes de plus. Ce n'est
                     # pas une intention vague : 95 laisse passer une regression de
                     # deux points, la ou 66 en laissait passer trente.
+                    # App\Actions : 24 min mesurees sur quatre nocturnes, puis 31 le
+                    # 3 septembre (la part est plus couverte depuis #1692) et un job
+                    # annule a 30. Quarante-cinq laisse la marge que 30 n'avait plus.
                     - scope: 'App\Actions'
-                      timeout: 30
+                      timeout: 45
                       min: 95
                     # 99 sur une mesure a 100,00 %, 316 mutants tues sur 316.
                     #
