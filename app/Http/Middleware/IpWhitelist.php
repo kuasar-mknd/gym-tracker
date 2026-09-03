@@ -11,16 +11,19 @@ use Symfony\Component\HttpFoundation\Response;
 class IpWhitelist
 {
     /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Closure(\Illuminate\Http\Request): \Symfony\Component\HttpFoundation\Response  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $allowedIps = config('app.admin_allowed_ips', []);
+        $allowedIps = (array) config('app.admin_allowed_ips', []);
 
-        if ($allowedIps !== [] && ! in_array($request->ip(), (array) $allowedIps, true)) {
-            // In production, we return a 404 to avoid revealing the existence of the backoffice
+        // En production, une liste vide ferme le panneau : le laisser ouvert
+        // au monde par oubli d'une variable serait l'inverse d'une liste blanche.
+        if ($allowedIps === [] && app()->isProduction()) {
+            abort(404);
+        }
+
+        if ($allowedIps !== [] && ! in_array($request->ip(), $allowedIps, true)) {
             if (app()->isProduction()) {
                 abort(404);
             }

@@ -23,12 +23,10 @@ it('prevents regular users from accessing admin panel', function (): void {
     $this->actingAs($user)->get('/backoffice')->assertRedirect('/backoffice/login');
 });
 
-it('prevents admins without super_admin role from bypassing gate', function (): void {
-    // This depends on how Shield is configured, but specifically tests our Gate::before bypass
+it('refuse le panneau a un admin sans role ni permission Shield', function (): void {
+    // Une ligne dans la table admins ne suffit pas : canAccessPanel exige
+    // qu'un role ou une permission lui ait ete accorde.
     $admin = Admin::factory()->create();
-    // No role assigned
 
-    // They should still reach the dashboard because Filament has its own auth,
-    // but Shield might block specific resources.
-    $this->actingAs($admin, 'admin')->get('/backoffice')->assertOk();
+    $this->actingAs($admin, 'admin')->get('/backoffice')->assertForbidden();
 });

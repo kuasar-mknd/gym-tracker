@@ -146,6 +146,7 @@ return [
     // depuis IpWhitelist, ce qui rend l'espace definitivement bloquante.
     'admin_allowed_ips' => array_values(array_filter(array_map(trim(...), explode(',', (string) env('ADMIN_ALLOWED_IPS', ''))))),
 
-    'admin_initial_password' => env('ADMIN_INITIAL_PASSWORD', 'CHANGE_THIS_PASSWORD'),
+    // Pas de valeur par defaut : un secret par defaut dans un depot public n'en est pas un.
+    'admin_initial_password' => env('ADMIN_INITIAL_PASSWORD'),
 
 ];
