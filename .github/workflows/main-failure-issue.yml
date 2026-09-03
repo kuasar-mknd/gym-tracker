@@ -21,6 +21,8 @@ name: Signaler un workflow rouge sur main
 # fusions-la, non parce qu'elles sont vertes mais parce qu'elles ne sont pas
 # testees sur main du tout. Voir #1373, ou le meme mecanisme rendait la release
 # automatique inoperante.
+# Depuis #1672, auto-merge.yml fusionne avec le secret AUTO_MERGE_TOKEN (un PAT
+# a granularite fine) quand il existe : ces fusions-la declenchent bien la CI.
 on:
     workflow_run:
         workflows: ['CI', 'Mutation testing']
