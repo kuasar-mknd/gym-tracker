@@ -10,6 +10,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Corrigé
 - **Un record personnel créé par l'API accepte un type hors énumération et une valeur sans borne** (#1665) : un type inconnu passait la validation puis cassait la lecture du record, et 99 999 999 kg étaient acceptés, ce qui débloquait les succès de poids. Le type est validé contre l'énumération et les valeurs sont bornées à 100 000, à la création comme à la modification.
 
+### Sécurité
+- **Moins de données sortent de l'application** (#1666) : Sentry ne reçoit plus l'e-mail ni le nom de l'utilisateur, seulement son identifiant, et le Session Replay est coupé ; la table des routes Ziggy injectée dans chaque page passe de 310 routes (33 Ko) à 111 (10 Ko), sans aucune route d'administration ni d'API hors des sept servies ; les origines CORS locales ne sont autorisées qu'en environnement local ; `unsafe-eval` ne sort plus que sur le panneau d'administration ; le journal d'échec de création d'une série ne contient plus la pile ni la charge utile.
+
 ## [1.5.6] - 2026-09-03
 
 ### Corrigé

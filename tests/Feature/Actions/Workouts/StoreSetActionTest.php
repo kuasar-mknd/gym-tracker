@@ -156,18 +156,13 @@ it('journalise le message, la pile, l utilisateur et la charge utile, et rien d 
 
     expect($intitule)->toBe('Failed to create set in API:');
 
-    // La liste exacte des cles, et dans l'ordre : c'est la seule assertion qui
-    // tienne les quatre entrees a la fois. Verifier `array_key_exists` quatre
-    // fois couterait autant et laisserait en plus passer une cinquieme entree
-    // ajoutee par megarde — un journal qui grossit sans qu'on le decide.
-    expect(array_keys($contexte))->toBe(['error', 'trace', 'user_id', 'data']);
+    // La liste exacte des cles, et dans l'ordre : une entree ajoutee par
+    // megarde est un journal qui grossit sans qu'on le decide. La pile et la
+    // charge utile n'y sont plus : l'exception est relancee, et c'est le
+    // gestionnaire qui la rapporte, pile comprise.
+    expect(array_keys($contexte))->toBe(['error', 'user_id']);
 
     // Et leur contenu, parce qu'une cle presente mais vide ne diagnostique rien.
     expect($contexte['error'])->toBe('This action is unauthorized.');
-    expect($contexte['trace'])->toBeString();
-    // La pile situe l'appel : sans elle, on saurait qu'une autorisation a
-    // echoue quelque part, pas depuis ou.
-    expect($contexte['trace'])->toContain(StoreSetAction::class);
     expect($contexte['user_id'])->toBe($intrus->id);
-    expect($contexte['data'])->toBe($donnees);
 });

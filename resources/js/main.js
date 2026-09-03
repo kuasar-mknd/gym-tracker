@@ -79,20 +79,16 @@ createInertiaApp({
                 app,
                 dsn: sentryConfig.dsn,
                 environment: sentryConfig.environment,
-                integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+                integrations: [Sentry.browserTracingIntegration()],
                 tracesSampleRate: 0.1, // 10% sampling for performance to stay in free tier
-                replaysSessionSampleRate: 0.0, // Don't sample normal sessions
-                replaysOnErrorSampleRate: 1.0, // BUT record 100% of sessions that result in an error
+                sendDefaultPii: false,
             })
 
-            // Set user context if logged in
+            // L'identifiant suffit à relier les évènements d'un même compte ;
+            // l'e-mail et le nom n'ont rien à faire chez un tiers.
             const user = props.initialPage.props.auth?.user
             if (user) {
-                Sentry.setUser({
-                    id: user.id,
-                    email: user.email,
-                    username: user.name,
-                })
+                Sentry.setUser({ id: user.id })
             }
         }
 

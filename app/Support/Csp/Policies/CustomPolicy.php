@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Csp\Policies;
 
+use Filament\Facades\Filament;
 use Spatie\Csp\Directive;
 use Spatie\Csp\Keyword;
 use Spatie\Csp\Policy;
@@ -59,10 +60,12 @@ class CustomPolicy extends Basic
 
     protected function configureProduction(Policy $policy): void
     {
-        // Deliberate security tradeoff: AlpineJS requires 'unsafe-eval' to execute
-        // inline scripts. Refactoring to the CSP build of Alpine is not feasible
-        // as it is bundled and managed internally by Filament.
-        $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
+        // Alpine, que Filament embarque, compile ses expressions avec new Function :
+        // il lui faut 'unsafe-eval'. L'application Vue n'en a pas besoin, donc le
+        // mot-clef ne sort que sur le panneau.
+        if (request()->is(Filament::getPanel('admin')->getPath().'*')) {
+            $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
+        }
 
         // Filament Style Attributes: Instead of adding 'unsafe-inline' only to
         // the global style-src directive, we also use style-src-attr to specifically allow

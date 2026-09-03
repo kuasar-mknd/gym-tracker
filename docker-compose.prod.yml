@@ -44,7 +44,7 @@ x-app-env: &app-env
     SENTRY_DSN_PUBLIC: ${SENTRY_DSN_PUBLIC}
     SENTRY_TRACES_SAMPLE_RATE: 0.2
     SENTRY_PROFILES_SAMPLE_RATE: 0.1
-    SENTRY_SEND_DEFAULT_PII: 'true'
+    SENTRY_SEND_DEFAULT_PII: 'false'
 
 services:
     app:

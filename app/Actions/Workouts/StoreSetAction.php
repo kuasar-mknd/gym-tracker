@@ -32,11 +32,11 @@ class StoreSetAction
 
             return $this->createSetAction->execute($user, $workoutLine, $validated);
         } catch (\Exception $e) {
+            // Ni pile ni charge utile : l'exception est relancée et le gestionnaire
+            // la rapporte avec sa pile ; la charge utile n'a rien à faire en journal.
             Log::error('Failed to create set in API:', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
                 'user_id' => $user->id,
-                'data' => $validated,
             ]);
 
             throw $e;
