@@ -8,8 +8,6 @@ use App\Enums\GoalType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -31,7 +29,7 @@ use Spatie\Activitylog\Support\LogOptions;
 class Goal extends Model
 {
     /** @use HasFactory<\Database\Factories\GoalFactory> */
-    use HasFactory, LogsActivity;
+    use HasFactory;
 
     #[\Override]
     protected $fillable = [
@@ -77,14 +75,6 @@ class Goal extends Model
                 default => 'cm',
             },
         };
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['title', 'type', 'target_value', 'current_value', 'deadline', 'completed_at'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
     }
 
     #[\Override]

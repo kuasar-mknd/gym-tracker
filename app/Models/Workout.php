@@ -7,8 +7,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -24,7 +22,7 @@ use Spatie\Activitylog\Support\LogOptions;
 class Workout extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkoutFactory> */
-    use HasFactory, LogsActivity;
+    use HasFactory;
 
     /**
      * Les exercices dont les records devront etre recalcules apres la cascade.
@@ -70,14 +68,6 @@ class Workout extends Model
     public function workoutLines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(WorkoutLine::class)->orderBy('order')->orderBy('id');
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['started_at', 'ended_at', 'name'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
     }
 
     #[\Override]

@@ -143,7 +143,7 @@ return [
         ...array_map(
             fn (string $model): string => 'App\\Models\\'.$model,
             [
-                'Achievement', 'Admin', 'BaseMeasurement', 'BodyMeasurement', 'BodyPartMeasurement',
+                'Achievement', 'ActivityLog', 'Admin', 'BaseMeasurement', 'BodyMeasurement', 'BodyPartMeasurement',
                 'DailyJournal', 'Exercise', 'Fast', 'Goal', 'Habit', 'HabitLog', 'IntervalTimer',
                 'MacroCalculation', 'NotificationPreference', 'PersonalRecord', 'Plate', 'Set',
                 'Supplement', 'SupplementLog', 'User', 'UserAchievement', 'WarmupPreference',

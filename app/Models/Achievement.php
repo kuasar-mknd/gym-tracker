@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -26,7 +24,7 @@ use Spatie\Activitylog\Support\LogOptions;
 class Achievement extends Model
 {
     /** @use HasFactory<\Database\Factories\AchievementFactory> */
-    use HasFactory, LogsActivity;
+    use HasFactory;
 
     #[\Override]
     protected $fillable = [
@@ -58,14 +56,6 @@ class Achievement extends Model
         return $this->belongsToMany(User::class, 'user_achievements')
             ->withPivot('achieved_at')
             ->withTimestamps();
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['slug', 'name', 'description', 'type', 'category', 'threshold'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
     }
 
     #[\Override]

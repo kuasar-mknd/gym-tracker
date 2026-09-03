@@ -8,8 +8,6 @@ use App\Models\Traits\ResolvesOwnerAtRouteBinding;
 use App\Services\RecommendedValuesService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 /**
  * @property int $id
@@ -30,7 +28,7 @@ use Spatie\Activitylog\Support\LogOptions;
 class WorkoutLine extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkoutLineFactory> */
-    use HasFactory, LogsActivity;
+    use HasFactory;
 
     use ResolvesOwnerAtRouteBinding;
 
@@ -141,14 +139,6 @@ class WorkoutLine extends Model
     public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $userId): array
     {
         return app(RecommendedValuesService::class)->batchRecommendedValues($lines, $userId);
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['exercise.name', 'order', 'notes'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
     }
 
     #[\Override]

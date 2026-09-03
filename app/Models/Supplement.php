@@ -9,15 +9,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class Supplement extends Model
 {
     /** @use HasFactory<\Database\Factories\SupplementFactory> */
     use HasFactory;
-
-    use LogsActivity;
 
     #[\Override]
     protected $fillable = [
@@ -60,14 +56,6 @@ class Supplement extends Model
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
-    }
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['name', 'brand', 'dosage', 'servings_remaining', 'low_stock_threshold'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
     }
 
     #[\Override]
