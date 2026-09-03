@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Security;
 
 use App\Support\Csp\Policies\CustomPolicy;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use ReflectionClass;
 use Spatie\Csp\Directive;
@@ -14,17 +15,22 @@ use Tests\TestCase;
 
 class CustomPolicyTest extends TestCase
 {
+    /**
+     * @return array<string, list<string>>
+     */
     private function getDirectivesFromPolicy(Policy $policy): array
     {
-        $reflection = new ReflectionClass($policy);
-        $property = $reflection->getProperty('directives');
+        $directives = new ReflectionClass($policy)->getProperty('directives')->getValue($policy);
 
-        return $property->getValue($policy);
+        $this->assertIsArray($directives);
+
+        /** @var array<string, list<string>> $directives */
+        return $directives;
     }
 
-    private function getDirectiveKey(mixed $directive): string
+    private function getDirectiveKey(Directive $directive): string
     {
-        return $directive instanceof \UnitEnum ? (string) $directive->value : (string) $directive;
+        return $directive->value;
     }
 
     private function formatKeyword(Keyword $keyword): string
@@ -88,13 +94,29 @@ class CustomPolicyTest extends TestCase
 
         $directives = $this->getDirectivesFromPolicy($policy);
 
-        // Production environment should have unsafe-eval for script
-        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
+        // L'application Vue n'a pas besoin d'unsafe-eval : hors panneau, il ne sort pas.
+        $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $directives[$this->getDirectiveKey(Directive::SCRIPT)]);
         $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::SCRIPT)]); // unsafe-inline is local only
 
         // In production, we allow unsafe-inline for both elements and attributes to support Filament
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE)]);
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_INLINE), $directives[$this->getDirectiveKey(Directive::STYLE_ATTR)]);
+    }
+
+    /**
+     * Alpine, embarqué par Filament, compile ses expressions avec new Function :
+     * le panneau garde unsafe-eval, et lui seul.
+     */
+    public function test_production_policy_allows_unsafe_eval_on_the_filament_panel_only(): void
+    {
+        Config::set('app.env', 'production');
+        $this->app['env'] = 'production';
+        $this->app->instance('request', Request::create('/backoffice/login'));
+
+        $policy = new Policy();
+        new CustomPolicy()->configure($policy);
+
+        $this->assertContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $this->getDirectivesFromPolicy($policy)[$this->getDirectiveKey(Directive::SCRIPT)]);
     }
 
     public function test_custom_policy_has_correct_external_resources(): void
