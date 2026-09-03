@@ -73,7 +73,6 @@ return Application::configure(basePath: dirname(__DIR__))
         }
 
         $middleware->preventRequestForgery(except: [
-            'api/*',
             '_dusk/*',
         ]);
 
@@ -179,7 +178,7 @@ return Application::configure(basePath: dirname(__DIR__))
          * Unscoped, since #1432: the question it asks has no path in it. The
          * request must resolve a model from its URL and the caller must fail to
          * view it, which no page without a bound resource can do — not the
-         * Swagger UI at `api/documentation`, not the Filament panel, which
+         * Filament panel, which
          * resolves its records itself and binds strings, not models.
          *
          * It is also what keeps the fix from swallowing the ordinary refusal.

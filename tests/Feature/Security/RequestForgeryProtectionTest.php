@@ -38,16 +38,16 @@ final class RequestForgeryProtectionTest extends TestCase
         );
     }
 
-    public function test_only_api_and_dusk_routes_are_exempt(): void
+    public function test_only_dusk_routes_are_exempt(): void
     {
         $except = new ReflectionClass(PreventRequestForgery::class)
             ->getProperty('neverVerify')
             ->getValue();
 
         $this->assertEqualsCanonicalizing(
-            ['api/*', '_dusk/*'],
+            ['_dusk/*'],
             $except,
-            'Widening this list removes forgery protection from real routes.'
+            'Widening this list removes forgery protection from real routes. The api/* exemption left with the REST API (#1673): the seven remaining routes are session-authenticated, so they verify the token like any web route.'
         );
     }
 

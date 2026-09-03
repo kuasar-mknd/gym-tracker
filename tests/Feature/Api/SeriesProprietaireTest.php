@@ -9,7 +9,6 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -57,46 +56,6 @@ function semerSeriesDe(User $user, int $seances): void
         DB::table('sets')->insert($lot);
     }
 }
-
-/**
- * `GET /api/v1/sets` filtrait par une double jointure — `sets` vers
- * `workout_lines` vers `workouts` — et ordonnait sur `sets`. Aucun index ne
- * peut servir les deux : MySQL materialisait la jointure entiere et la triait
- * avant d'en prendre quinze lignes. 484 lectures d'index pour 120 series,
- * 2 802 pour 600, avec `Using temporary; Using filesort` au plan.
- */
-it('sert la liste des séries sans joindre les séances', function (): void {
-    $user = User::factory()->create();
-    semerSeriesDe($user, 10);
-    Sanctum::actingAs($user);
-
-    DB::flushQueryLog();
-    DB::enableQueryLog();
-    $reponse = $this->getJson(route('api.v1.sets.index'))->assertOk();
-    $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
-    DB::disableQueryLog();
-
-    expect($reponse->json('meta.total'))->toBe(30)
-        ->and($reponse->json('data'))->toHaveCount(15);
-
-    foreach ($requetes as $sql) {
-        if (! str_contains($sql, 'from `sets`')) {
-            continue;
-        }
-
-        expect($sql)->not->toContain('join `workout_lines`')
-            ->and($sql)->not->toContain('join `workouts`');
-    }
-});
-
-it('ne rend pas les séries d’un autre utilisateur', function (): void {
-    $user = User::factory()->create();
-    $autre = User::factory()->create();
-    semerSeriesDe($autre, 5);
-    Sanctum::actingAs($user);
-
-    expect($this->getJson(route('api.v1.sets.index'))->assertOk()->json('meta.total'))->toBe(0);
-});
 
 it('pose le propriétaire à l’écriture', function (): void {
     $seance = Workout::factory()->create();

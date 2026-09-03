@@ -2,15 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Models\Habit;
-use App\Models\HabitLog;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use App\Models\WorkoutTemplate;
-use App\Models\WorkoutTemplateLine;
 use Illuminate\Support\Facades\Schema;
-use Laravel\Sanctum\Sanctum;
 
 /**
  * Un enregistrement dont le parent a disparu.
@@ -58,63 +53,6 @@ function orphelin(\Illuminate\Database\Eloquent\Model $enfant, \Illuminate\Datab
     expect($enfant->newQuery()->whereKey($enfant->getKey())->exists())->toBeTrue()
         ->and($parent->newQuery()->whereKey($parent->getKey())->exists())->toBeFalse();
 }
-
-it('rend 404 et non 500 pour une ligne de séance dont la séance a disparu', function (): void {
-    $user = User::factory()->create();
-    Sanctum::actingAs($user);
-
-    $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
-    orphelin($ligne, $workout);
-
-    $this->getJson(route('api.v1.workout-lines.show', $ligne))
-        ->assertNotFound()
-        ->assertExactJson(['message' => 'Resource not found.']);
-
-    $this->deleteJson(route('api.v1.workout-lines.destroy', $ligne))
-        ->assertNotFound()
-        ->assertExactJson(['message' => 'Resource not found.']);
-
-    $this->assertDatabaseHas('workout_lines', ['id' => $ligne->id]);
-});
-
-it('rend 404 et non 500 pour une ligne de modèle dont le modèle a disparu', function (): void {
-    $user = User::factory()->create();
-    Sanctum::actingAs($user);
-
-    $modele = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
-    $ligne = WorkoutTemplateLine::factory()->create(['workout_template_id' => $modele->id]);
-    orphelin($ligne, $modele);
-
-    $this->getJson(route('api.v1.workout-template-lines.show', $ligne))
-        ->assertNotFound()
-        ->assertExactJson(['message' => 'Resource not found.']);
-
-    $this->deleteJson(route('api.v1.workout-template-lines.destroy', $ligne))
-        ->assertNotFound()
-        ->assertExactJson(['message' => 'Resource not found.']);
-
-    $this->assertDatabaseHas('workout_template_lines', ['id' => $ligne->id]);
-});
-
-it('rend 404 et non 500 pour un relevé d’habitude dont l’habitude a disparu', function (): void {
-    $user = User::factory()->create();
-    Sanctum::actingAs($user);
-
-    $habitude = Habit::factory()->create(['user_id' => $user->id]);
-    $releve = HabitLog::factory()->create(['habit_id' => $habitude->id]);
-    orphelin($releve, $habitude);
-
-    $this->getJson(route('api.v1.habit-logs.show', $releve))
-        ->assertNotFound()
-        ->assertExactJson(['message' => 'Resource not found.']);
-
-    $this->deleteJson(route('api.v1.habit-logs.destroy', $releve))
-        ->assertNotFound()
-        ->assertExactJson(['message' => 'Resource not found.']);
-
-    $this->assertDatabaseHas('habit_logs', ['id' => $releve->id]);
-});
 
 /**
  * La course elle-meme, sans lever aucune contrainte.

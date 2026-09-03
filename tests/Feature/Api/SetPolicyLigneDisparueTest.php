@@ -59,18 +59,6 @@ function serieOrpheline(User $user, array $attributs = []): Set
     return $set;
 }
 
-it('rend 404 et non 500 en consultant une serie dont la ligne a disparu', function (): void {
-    $user = User::factory()->create();
-    Sanctum::actingAs($user);
-
-    $set = serieOrpheline($user);
-
-    $response = $this->getJson(route('api.v1.sets.show', $set));
-
-    $response->assertNotFound();
-    $response->assertExactJson(['message' => 'Resource not found.']);
-});
-
 it('rend 404 et non 500 en modifiant une serie dont la ligne a disparu', function (): void {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
