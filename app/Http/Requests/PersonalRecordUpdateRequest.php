@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\PersonalRecordType;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,9 +23,9 @@ class PersonalRecordUpdateRequest extends FormRequest
     {
         return [
             'exercise_id' => $this->getExerciseIdRules(),
-            'type' => 'sometimes|string|max:255',
-            'value' => 'sometimes|numeric',
-            'secondary_value' => 'nullable|numeric',
+            'type' => ['sometimes', Rule::enum(PersonalRecordType::class)],
+            'value' => ['sometimes', 'numeric', 'min:0', 'max:100000'],
+            'secondary_value' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'workout_id' => $this->getWorkoutIdRules(),
             'set_id' => $this->getSetIdRules(),
             'achieved_at' => 'sometimes|date',

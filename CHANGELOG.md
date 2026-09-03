@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Un record personnel créé par l'API accepte un type hors énumération et une valeur sans borne** (#1665) : un type inconnu passait la validation puis cassait la lecture du record, et 99 999 999 kg étaient acceptés, ce qui débloquait les succès de poids. Le type est validé contre l'énumération et les valeurs sont bornées à 100 000, à la création comme à la modification.
+
 ## [1.5.6] - 2026-09-03
 
 ### Corrigé

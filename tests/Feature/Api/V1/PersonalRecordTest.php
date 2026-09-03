@@ -154,6 +154,62 @@ test('store validates numeric value', function (): void {
         ->assertJsonValidationErrors(['value']);
 });
 
+/**
+ * Le type est un enum au niveau du modele : une valeur hors enumeration
+ * passait la validation (`string|max:255`) puis cassait a la lecture du
+ * record. Et rien ne bornait la valeur : 99 999 999 kg etait accepte, et
+ * debloquait au passage les succes de poids.
+ */
+test('store refuse un type hors enumeration avec un 422', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+
+    actingAs($user, 'sanctum')
+        ->postJson(route('api.v1.personal-records.store'), [
+            'exercise_id' => $exercise->id,
+            'type' => 'bogus',
+            'value' => 100,
+            'achieved_at' => now()->toDateString(),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['type']);
+
+    assertDatabaseMissing('personal_records', ['user_id' => $user->id]);
+});
+
+test('store borne la valeur et la valeur secondaire', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+
+    actingAs($user, 'sanctum')
+        ->postJson(route('api.v1.personal-records.store'), [
+            'exercise_id' => $exercise->id,
+            'type' => 'max_weight',
+            'value' => 99999999,
+            'secondary_value' => -1,
+            'achieved_at' => now()->toDateString(),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['value', 'secondary_value']);
+
+    assertDatabaseMissing('personal_records', ['user_id' => $user->id]);
+});
+
+test('update refuse un type hors enumeration et une valeur hors borne', function (): void {
+    $user = User::factory()->create();
+    $pr = PersonalRecord::factory()->create(['user_id' => $user->id, 'value' => 100]);
+
+    actingAs($user, 'sanctum')
+        ->putJson(route('api.v1.personal-records.update', $pr), [
+            'type' => 'bogus',
+            'value' => 100001,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['type', 'value']);
+
+    assertDatabaseHas('personal_records', ['id' => $pr->id, 'value' => 100]);
+});
+
 test('store validates date format', function (): void {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create();
