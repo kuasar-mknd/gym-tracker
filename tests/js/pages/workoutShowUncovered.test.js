@@ -2159,3 +2159,83 @@ describe('reordering the sets of an exercise', () => {
         expect(surLesSeries[0].values.value.map((s) => s.weight)).toEqual([80, 90])
     })
 })
+
+/**
+ * Adding a set right after the exercise is the ordinary gesture on this screen,
+ * and the line's recommendation only travels back with the create response.
+ * A set added in that window used to be born at 0 kg, the next ones copied it,
+ * and that 0 became the history of the following session. See #1677.
+ */
+describe('Workouts/Show — a set added before the exercise’s recommendation has arrived', () => {
+    const lineAnswer = {
+        data: {
+            data: {
+                id: 77,
+                exercise_id: STRENGTH.id,
+                order: 0,
+                sets: [],
+                recommended_values: { weight: 62.5, reps: 8, distance_km: 0, duration_seconds: 30 },
+            },
+        },
+    }
+
+    const addExerciseThenSet = async () => {
+        const lineCreate = deferred()
+        post.mockImplementation((url) =>
+            url.includes('workout-lines') ? lineCreate.promise : Promise.resolve({ data: { data: { id: 88 } } }),
+        )
+
+        const wrapper = await mountPage(session())
+
+        wrapper.vm.showAddExercise = true
+        await wrapper.vm.$nextTick()
+        await click(wrapper, `select-exercise-${STRENGTH.id}`)
+        await click(wrapper, 'add-set-0')
+
+        return { wrapper, lineCreate }
+    }
+
+    it('fills an untouched set with the recommendation once the line is created', async () => {
+        const { wrapper, lineCreate } = await addExerciseThenSet()
+
+        // Added before the answer: the bare pre-fill, for now.
+        expect(lines(wrapper)[0].sets[0]).toMatchObject({ weight: 0, reps: 10 })
+
+        lineCreate.resolve(lineAnswer)
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets[0]).toMatchObject({ weight: 62.5, reps: 8 })
+        expect(post).toHaveBeenCalledWith(
+            '/api/v1/sets',
+            expect.objectContaining({ workout_line_id: 77, weight: 62.5, reps: 8 }),
+        )
+    })
+
+    it('keeps what the user typed while the line was in flight', async () => {
+        const { wrapper, lineCreate } = await addExerciseThenSet()
+
+        lines(wrapper)[0].sets[0].weight = 70
+
+        lineCreate.resolve(lineAnswer)
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets[0]).toMatchObject({ weight: 70, reps: 8 })
+        expect(post).toHaveBeenCalledWith(
+            '/api/v1/sets',
+            expect.objectContaining({ workout_line_id: 77, weight: 70, reps: 8 }),
+        )
+    })
+
+    it('copies the previous set rather than the recommendation when there is one', async () => {
+        const { wrapper, lineCreate } = await addExerciseThenSet()
+
+        lines(wrapper)[0].sets[0].weight = 70
+        lineCreate.resolve(lineAnswer)
+        await flushPromises()
+
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        expect(lines(wrapper)[0].sets[1]).toMatchObject({ weight: 70, reps: 8 })
+    })
+})

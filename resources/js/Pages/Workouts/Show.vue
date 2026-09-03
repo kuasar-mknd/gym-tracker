@@ -1133,12 +1133,13 @@ const addSet = (lineId) => {
     if (!line) return
 
     const lastSet = line.sets?.length > 0 ? line.sets[line.sets.length - 1] : null
+    const recommendation = line?.recommended_values ?? null
 
     const prefilled = {
-        weight: lastSet ? lastSet.weight : (line?.recommended_values?.weight ?? 0),
-        reps: lastSet ? lastSet.reps : (line?.recommended_values?.reps ?? 10),
-        distance_km: lastSet ? lastSet.distance_km : (line?.recommended_values?.distance_km ?? 0),
-        duration_seconds: lastSet ? lastSet.duration_seconds : (line?.recommended_values?.duration_seconds ?? 30),
+        weight: lastSet ? lastSet.weight : (recommendation?.weight ?? 0),
+        reps: lastSet ? lastSet.reps : (recommendation?.reps ?? 10),
+        distance_km: lastSet ? lastSet.distance_km : (recommendation?.distance_km ?? 0),
+        duration_seconds: lastSet ? lastSet.duration_seconds : (recommendation?.duration_seconds ?? 30),
     }
 
     /**
@@ -1211,9 +1212,26 @@ const addSet = (lineId) => {
                 return null
             }
 
+            /*
+             * La ligne vient de naitre : sa recommandation est arrivee avec la
+             * reponse de creation, APRES que cette serie a ete ajoutee avec les
+             * valeurs par defaut de l'ecran. Une serie que l'utilisateur n'a pas
+             * touchee prend maintenant ce que le serveur propose ; un champ deja
+             * corrige garde sa saisie. Sans cela, la premiere serie partait a
+             * 0 kg, les suivantes la copiaient, et ce 0 devenait l'historique de
+             * la seance d'apres. Voir #1677.
+             */
+            if (!lastSet && recommendation === null && line.recommended_values) {
+                for (const field of measured) {
+                    if (tempSet[field] === values[field]) {
+                        tempSet[field] = line.recommended_values[field] ?? tempSet[field]
+                    }
+                }
+            }
+
             const sent = {
                 is_completed: false,
-                ...values,
+                ...Object.fromEntries(measured.map((field) => [field, tempSet[field]])),
             }
 
             return SyncService.post(route('api.v1.sets.store'), {

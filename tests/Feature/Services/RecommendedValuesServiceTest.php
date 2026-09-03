@@ -198,3 +198,76 @@ test('batch processing applies and caches correctly for multiple exercises', fun
     // Since we don't have the explicit method definition, we can check if it ran without errors
     // The implementation calls $line->setRecommendedValuesAttribute()
 });
+
+/**
+ * @return array{0: User, 1: Exercise, 2: WorkoutLine} la ligne de la seance du jour, apres une
+ *                                                     seance d'il y a une semaine a 50 kg et une
+ *                                                     seance d'hier laissee au pre-remplissage
+ */
+function recommandationApresUneLigneVide(): array
+{
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+
+    $ancienne = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subWeek()]);
+    $ligneAncienne = WorkoutLine::factory()->create(['workout_id' => $ancienne->id, 'exercise_id' => $exercise->id]);
+    Set::factory()->count(3)->create(['workout_line_id' => $ligneAncienne->id, 'weight' => 50.0, 'reps' => 10]);
+
+    $hier = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDay()]);
+    $ligneHier = WorkoutLine::factory()->create(['workout_id' => $hier->id, 'exercise_id' => $exercise->id]);
+    Set::factory()->count(5)->create(['workout_line_id' => $ligneHier->id, 'weight' => 0.0, 'reps' => 10, 'is_completed' => true]);
+
+    $aujourdhui = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
+
+    return [$user, $exercise, $ligne];
+}
+
+it('ignore une ligne récente dont les séries sont restées au pré-remplissage et remonte à la séance d’avant', function (): void {
+    [, , $ligne] = recommandationApresUneLigneVide();
+
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne)['weight'])->toBe(50.0);
+});
+
+it('remonte aussi à la séance d’avant sur le chemin par lot', function (): void {
+    [$user, $exercise, $ligne] = recommandationApresUneLigneVide();
+
+    $values = app(RecommendedValuesService::class)->batchRecommendedValues(new \Illuminate\Database\Eloquent\Collection([$ligne]), $user->id);
+
+    // La valeur posee sur la ligne passe par JSON : 50.0 en ressort en entier.
+    expect($values[$exercise->id]['weight'])->toBe(50.0)
+        ->and((float) $ligne->getRecommendedValuesAttribute()['weight'])->toBe(50.0);
+});
+
+it('garde une série de poids de corps comme historique', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+
+    $hier = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDay()]);
+    $ligneHier = WorkoutLine::factory()->create(['workout_id' => $hier->id, 'exercise_id' => $exercise->id]);
+    Set::factory()->count(3)->create(['workout_line_id' => $ligneHier->id, 'weight' => 0.0, 'reps' => 12]);
+
+    $aujourdhui = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
+
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne))->toMatchArray(['weight' => 0.0, 'reps' => 12]);
+});
+
+it('rend les valeurs par défaut quand les cinq dernières lignes sont toutes vides', function (): void {
+    $user = User::factory()->create();
+    $exercise = Exercise::factory()->create();
+
+    $ancienne = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subWeeks(2)]);
+    $ligneAncienne = WorkoutLine::factory()->create(['workout_id' => $ancienne->id, 'exercise_id' => $exercise->id]);
+    Set::factory()->create(['workout_line_id' => $ligneAncienne->id, 'weight' => 50.0, 'reps' => 10]);
+
+    foreach (range(1, 5) as $joursAvant) {
+        $seance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays($joursAvant)]);
+        WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercise->id]);
+    }
+
+    $aujourdhui = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
+
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne)['weight'])->toBe(0.0);
+});
