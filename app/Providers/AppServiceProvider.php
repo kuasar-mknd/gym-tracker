@@ -111,7 +111,7 @@ final class AppServiceProvider extends ServiceProvider
                     \App\Jobs\SyncPersonalRecord::dispatchSync($set, $user);
                 } else {
                     // ⚡ Bolt: Offload PR sync to background job
-                    \App\Jobs\SyncPersonalRecord::dispatch($set, $user);
+                    \App\Jobs\SyncPersonalRecord::dispatch($set, $user)->afterCommit();
                 }
             }
 
@@ -121,10 +121,19 @@ final class AppServiceProvider extends ServiceProvider
              * nothing recomputed the record the corrected set was holding.
              */
             app(\App\Services\PersonalRecordService::class)->refreshRecordsHeldBy($set, $user);
+            app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $user->id);
 
             // ⚡ Bolt: Offload heavy sync to background jobs
             \App\Jobs\SyncUserAchievements::dispatch($user);
             \App\Jobs\SyncUserGoals::dispatch($user);
+        });
+
+        Set::deleted(function (Set $set): void {
+            $userId = $set->workoutLine?->workout?->user_id;
+
+            if ($userId !== null) {
+                app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $userId);
+            }
         });
 
         // `personal_records.set_id` est ON DELETE SET NULL : apres coup, plus rien

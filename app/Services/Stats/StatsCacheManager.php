@@ -127,6 +127,12 @@ final class StatsCacheManager
     {
         $this->clearVolumeStats($user);
         $this->clearDurationStats($user);
+
+        // Les trois caches d'une heure de la liste des séances n'étaient jamais
+        // oubliés : un exercice ajouté n'y apparaissait qu'à l'expiration.
+        Cache::forget("stats.total_exercises.{$user->id}");
+        Cache::forget("stats.day_of_week_frequency.{$user->id}");
+        Cache::forget("stats.monthly_frequency.{$user->id}");
     }
 
     /**

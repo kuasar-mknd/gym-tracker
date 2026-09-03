@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Models\Exercise;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Activity;
 
@@ -15,9 +15,9 @@ use Spatie\Activitylog\Models\Activity;
  * agreed.
  */
 it('records a model change in the column v5 reads', function (): void {
-    $exercise = Exercise::factory()->create(['name' => 'Squat']);
+    $user = User::factory()->create(['name' => 'Squat']);
 
-    $exercise->update(['name' => 'Front squat']);
+    $user->update(['name' => 'Front squat']);
 
     // firstOrFail plutot que first : sans ligne journalisee, le test doit echouer
     // en nommant ce qui manque, pas planter sur un acces de propriete sur null.
@@ -34,11 +34,11 @@ it('records a model change in the column v5 reads', function (): void {
  * the log fills with entries describing nothing.
  */
 it('writes nothing when no logged attribute moved', function (): void {
-    $exercise = Exercise::factory()->create(['name' => 'Squat']);
+    $user = User::factory()->create(['name' => 'Squat']);
 
     $before = Activity::query()->count();
 
-    $exercise->update(['name' => 'Squat']);
+    $user->update(['name' => 'Squat']);
 
     expect(Activity::query()->count())->toBe($before);
 });

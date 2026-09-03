@@ -36,3 +36,9 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('app:verify-data-coherence')
     ->dailyAt('04:30')
     ->sentryMonitor();
+
+// Le journal d'activité ne garde plus que l'audit des comptes (User, Admin) ;
+// sans purge, la table ne faisait que grossir (#1670).
+\Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180])
+    ->dailyAt('03:30')
+    ->sentryMonitor();

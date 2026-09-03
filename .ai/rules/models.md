@@ -14,3 +14,6 @@ Deux pièges, rencontrés chacun deux fois :
 2. **Les `insert()` en masse ne déclenchent aucun événement.** Le hook `saving` ne les voit pas : la colonne doit être posée dans le tableau inséré. Chercher `::insert(` avant de se fier à la copie.
 
 Pas de clef étrangère sur la copie : la copie n'est pas le lien, la clef d'origine l'est déjà et porte la cascade.
+
+## Le journal d'activité ne suit que les comptes, jamais les modèles métier
+Depuis #1670 (2026-09-03), seuls `User` et `Admin` portent `LogsActivity` : le journal d'activité est un audit des comptes (identité, actions d'administration), pas un historique des données métier, qui sont déjà en base. Chaque écriture y coûtait une instruction SQL de plus sur le NAS (0,35 à 1,7 s avant réglage) et personne ne le lisait. Ne pas rajouter le trait à un modèle métier ; le journal se lit dans le panneau (« Journal d'audit », `ActivityLogResource`, lecture seule derrière la permission Shield `ViewAny:ActivityLog`) et se purge chaque nuit à 180 jours (`activitylog:clean`, `routes/console.php`). `ActivityLogResourceTest` garde que les six modèles métier n'écrivent plus. Corollaire : `tests/Feature/Perf/EcrituresParOperationTest.php` fige le nombre d'écritures de chaque opération de la page de séance ; une écriture de plus se décide et se justifie dans ce test, elle ne s'ajoute pas par mégarde.

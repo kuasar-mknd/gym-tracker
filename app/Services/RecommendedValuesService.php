@@ -31,6 +31,23 @@ final class RecommendedValuesService
     private const int PROFONDEUR = 5;
 
     /**
+     * Clef par utilisateur, exercice et séance, portant une version : une
+     * série enregistrée incrémente la version et rend obsolètes d'un coup
+     * toutes les recommandations de l'utilisateur, sans les énumérer.
+     */
+    public static function cleDeCache(int $userId, int $exerciseId, int $workoutId): string
+    {
+        $version = Cache::get("recommended_values:version:{$userId}", 0);
+
+        return "recommended_values:{$userId}:v".(is_numeric($version) ? (int) $version : 0).":{$exerciseId}:{$workoutId}";
+    }
+
+    public function invaliderPour(int $userId): void
+    {
+        Cache::increment("recommended_values:version:{$userId}");
+    }
+
+    /**
      * Get the recommended values for a given workout line.
      *
      * Analyzes previous workout history for the same exercise and user to
@@ -49,7 +66,7 @@ final class RecommendedValuesService
             return $this->getDefaultValues();
         }
 
-        $cacheKey = "recommended_values:{$workout->user_id}:{$line->exercise_id}:{$line->workout_id}";
+        $cacheKey = self::cleDeCache((int) $workout->user_id, (int) $line->exercise_id, (int) $line->workout_id);
 
         /** @var array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null $cached */
         $cached = Cache::get($cacheKey);
@@ -246,7 +263,7 @@ final class RecommendedValuesService
 
         foreach ($exerciseIds as $exerciseId) {
             $exerciseIdInt = (int) $exerciseId;
-            $cacheKeys[$exerciseIdInt] = "recommended_values:{$userId}:{$exerciseIdInt}:{$workoutId}";
+            $cacheKeys[$exerciseIdInt] = self::cleDeCache($userId, $exerciseIdInt, $workoutId);
         }
 
         /** @var array<string, array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null> $cachedMany */

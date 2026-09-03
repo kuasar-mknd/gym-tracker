@@ -51,7 +51,7 @@ it('recommande d’après la séance la plus récente, pas la dernière saisie',
     /*
      * Le cache est vide avant CHAQUE appel.
      *
-     * Les deux chemins partagent la cle `recommended_values:{user}:{exercice}:{seance}` :
+     * Les deux chemins partagent la cle `recommended_values:{user}:v{version}:{exercice}:{seance}` :
      * sans ce vidage, le lot relit ce que l'unitaire vient d'ecrire et
      * n'execute jamais sa propre requete. Le test passait alors des deux cotes
      * du correctif, en ne testant qu'un seul chemin.

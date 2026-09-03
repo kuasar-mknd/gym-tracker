@@ -1333,24 +1333,6 @@ parameters:
 			path: tests/Feature/WaterControllerTest.php
 
 		-
-			message: '#^Cannot access offset ''exercise\.name'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Feature/WorkoutLineActivityLogTest.php
-
-		-
-			message: '#^Offset ''attributes'' might not exist on Illuminate\\Support\\Collection\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: tests/Feature/WorkoutLineActivityLogTest.php
-
-		-
-			message: '#^Offset ''old'' might not exist on Illuminate\\Support\\Collection\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: tests/Feature/WorkoutLineActivityLogTest.php
-
-		-
 			message: '#^Cannot access property \$id on mixed\.$#'
 			identifier: property.nonObject
 			count: 4

@@ -101,7 +101,7 @@ test('it calculates values based on the most frequent set of the last workout', 
     ]);
 
     // Ensure it was cached
-    $cacheKey = "recommended_values:{$user->id}:{$exercise->id}:{$workout->id}";
+    $cacheKey = \App\Services\RecommendedValuesService::cleDeCache($user->id, $exercise->id, $workout->id);
     expect(Cache::get($cacheKey))->toBe($values);
 });
 
@@ -114,7 +114,7 @@ test('it returns cached values when available', function (): void {
         'exercise_id' => $exercise->id,
     ]);
 
-    $cacheKey = "recommended_values:{$user->id}:{$exercise->id}:{$workout->id}";
+    $cacheKey = \App\Services\RecommendedValuesService::cleDeCache($user->id, $exercise->id, $workout->id);
     $cachedValues = [
         'weight' => 150.0,
         'reps' => 12,
@@ -173,7 +173,7 @@ test('batch processing applies and caches correctly for multiple exercises', fun
     ]);
 
     // Pre-cache line 2 to test mixed cached/uncached batch
-    $cacheKey2 = "recommended_values:{$user->id}:{$exercise2->id}:{$workout->id}";
+    $cacheKey2 = \App\Services\RecommendedValuesService::cleDeCache($user->id, $exercise2->id, $workout->id);
     $cachedValues2 = [
         'weight' => 60.0,
         'reps' => 12,
