@@ -17,6 +17,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Modifié
 - **Ménage de l'audit** (#1669) : la CI annule le run précédent d'une PR et borne chaque job dans le temps, le job `audit` ne dépend plus des tests, `semgrep` et `actionlint` sont épinglés par version, un cache `vendor` absent est réinstallé au lieu de casser trois étapes plus loin ; `entrypoint.sh` n'avale plus un échec de migration ; `AGENTS.md` et `GEMINI.md` ne sont plus que des renvois vers `CLAUDE.md`, gardés par un test ; le README annonce les vrais seuils (PHPStan `max`, mutation 80 / 95 / 99) ; la production journalise les dépréciations PHP.
+- **La liste blanche du panneau accepte les plages CIDR** (#1664) : `ADMIN_ALLOWED_IPS` prend des adresses exactes ou des plages, IPv4 et IPv6, pour couvrir un réseau local ou un tailnet sans lister chaque appareil.
 
 ### Retiré
 - `laravel/breeze` et la déclaration directe de `firebase/php-jwt` (tiré par Socialite), `serialize-javascript`, `autoprefixer` et `postcss` (Tailwind 4 s'en passe), les captures d'échec Dusk commitées, `ci-verified-ship.skill`, `setup_db.sh` et l'échafaudage Pest (`toBeOne`, `something()`) (#1669).
