@@ -54,10 +54,13 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
         'remember_token',
     ];
 
+    /**
+     * Une ligne dans `admins` ne suffit pas : il faut qu'un role ou une
+     * permission Shield lui ait ete accorde.
+     */
     public function canAccessPanel(Panel $panel): bool
     {
-        // For now, allow all admins in the admin table
-        return true;
+        return $this->roles()->exists() || $this->permissions()->exists();
     }
 
     public function getActivitylogOptions(): LogOptions

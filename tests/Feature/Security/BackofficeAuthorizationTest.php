@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Spatie\Permission\Models\Role;
 use Tests\Support\FilamentAdminPanel;
 
 /**
@@ -177,7 +178,10 @@ it("refuse a un admin la ressource dont il n'a pas la permission, tout en gardan
 });
 
 it('cloisonne chaque page de ressource derriere sa propre permission Shield', function (): void {
+    // Un role sans permission : de quoi entrer dans le panneau (canAccessPanel
+    // exige un role ou une permission), et rien de plus.
     $admin = FilamentAdminPanel::admin();
+    $admin->assignRole(Role::findOrCreate('invite', 'admin'));
 
     User::factory()->create(['name' => 'Utilisateur Cloisonne', 'email' => 'cloisonne@example.test']);
     Exercise::factory()->create(['name' => 'Exercice Cloisonne']);
