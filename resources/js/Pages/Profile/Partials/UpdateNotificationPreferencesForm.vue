@@ -1,6 +1,5 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassToggle from '@/Components/UI/GlassToggle.vue'
 import GlassSection from '@/Components/UI/GlassSection.vue'
 import Checkbox from '@/Components/Form/Checkbox.vue'
@@ -49,10 +48,29 @@ const form = reactive({
         personal_record: props.preferences.personal_record?.is_push_enabled ?? false,
         training_reminder: props.preferences.training_reminder?.is_push_enabled ?? false,
     },
-    values: {
-        training_reminder: props.preferences.training_reminder?.value ?? 3,
+    days: {
+        training_reminder: [...(props.preferences.training_reminder?.days ?? [1, 2, 3, 4, 5, 6, 7])],
     },
 })
+
+/**
+ * Numéros ISO : 1 = lundi, 7 = dimanche, comme le serveur les lit.
+ */
+const JOURS = [
+    { iso: 1, libelle: 'Lun' },
+    { iso: 2, libelle: 'Mar' },
+    { iso: 3, libelle: 'Mer' },
+    { iso: 4, libelle: 'Jeu' },
+    { iso: 5, libelle: 'Ven' },
+    { iso: 6, libelle: 'Sam' },
+    { iso: 7, libelle: 'Dim' },
+]
+
+const basculerLeJour = (iso, coche) => {
+    const jours = form.days.training_reminder.filter((jour) => jour !== iso)
+    if (coche) jours.push(iso)
+    form.days.training_reminder = jours.sort((a, b) => a - b)
+}
 
 const isSaving = ref(false)
 const recentlySuccessful = ref(false)
@@ -247,7 +265,7 @@ const updatePreferences = () => {
                     <GlassToggle
                         v-model="form.preferences.training_reminder"
                         label="Rappels d'Entraînement"
-                        description="Rappels automatiques après quelques jours d'inactivité."
+                        description="Un rappel à 18 h, les jours choisis, si aucune séance n'a été faite dans la journée."
                     />
 
                     <div v-if="pushRegistered" class="ml-2 flex items-center gap-2">
@@ -264,14 +282,30 @@ const updatePreferences = () => {
                         leave-to-class="translate-y-1 opacity-0"
                     >
                         <div v-if="form.preferences.training_reminder" class="border-border ml-2 border-l-2 pl-4">
-                            <GlassInput
-                                v-model="form.values.training_reminder"
-                                type="number"
-                                min="1"
-                                max="30"
-                                label="Nombre de jours d'inactivité"
-                                :error="errors['values.training_reminder']"
-                            />
+                            <p class="text-text-muted mb-2 text-xs font-semibold tracking-wider uppercase">
+                                Jours de rappel
+                            </p>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1" dusk="reminder-days">
+                                <label
+                                    v-for="jour in JOURS"
+                                    :key="jour.iso"
+                                    class="min-h-touch flex items-center gap-2 text-sm"
+                                    :dusk="`reminder-day-${jour.iso}`"
+                                >
+                                    <Checkbox
+                                        :checked="form.days.training_reminder.includes(jour.iso)"
+                                        @update:checked="basculerLeJour(jour.iso, $event)"
+                                    />
+                                    <span>{{ jour.libelle }}</span>
+                                </label>
+                            </div>
+                            <p
+                                v-if="errors['days.training_reminder']"
+                                class="text-accent-danger-deep mt-1 text-xs"
+                                role="alert"
+                            >
+                                {{ errors['days.training_reminder'] }}
+                            </p>
                         </div>
                     </Transition>
                 </div>

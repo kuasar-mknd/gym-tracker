@@ -64,6 +64,7 @@ class ProfileController extends Controller
                     'is_enabled' => $pref->is_enabled,
                     'is_push_enabled' => $pref->is_push_enabled,
                     'value' => $pref->value,
+                    'days' => $pref->days,
                 ],
             ]),
         ]);

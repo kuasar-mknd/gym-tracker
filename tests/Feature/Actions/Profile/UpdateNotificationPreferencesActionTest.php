@@ -81,13 +81,13 @@ it('corrige la ligne existante au lieu d\'en creer une seconde', function (): vo
     $action->execute($user, [
         'preferences' => ['daily_reminder' => true],
         'push_preferences' => ['daily_reminder' => true],
-        'values' => ['daily_reminder' => 10],
+        'days' => ['daily_reminder' => [1, 2]],
     ]);
 
     $action->execute($user, [
         'preferences' => ['daily_reminder' => false],
         'push_preferences' => ['daily_reminder' => false],
-        'values' => ['daily_reminder' => 21],
+        'days' => ['daily_reminder' => [5, 3, 3]],
     ]);
 
     expect(NotificationPreference::query()->where('user_id', $user->id)->count())->toBe(1);
@@ -99,7 +99,7 @@ it('corrige la ligne existante au lieu d\'en creer une seconde', function (): vo
 
     expect($quotidien->is_enabled)->toBeFalse();
     expect($quotidien->is_push_enabled)->toBeFalse();
-    expect($quotidien->value)->toBe(21);
+    expect($quotidien->days)->toBe([3, 5]);
 });
 
 it('n\'ecrit rien quand aucune preference n\'est envoyee', function (): void {

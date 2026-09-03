@@ -12,7 +12,7 @@ class UpdateNotificationPreferencesAction
      * @param array{
      *     preferences: array<string, bool>,
      *     push_preferences?: array<string, bool>,
-     *     values?: array<string, mixed>
+     *     days?: array<string, array<int, int>>
      * } $data
      */
     public function execute(User $user, array $data): void
@@ -25,7 +25,7 @@ class UpdateNotificationPreferencesAction
                 'type' => $type,
                 'is_enabled' => $isEnabled,
                 'is_push_enabled' => $data['push_preferences'][$type] ?? false,
-                'value' => $data['values'][$type] ?? null,
+                'days' => $this->joursEncodes($data['days'][$type] ?? null),
             ];
         }
 
@@ -33,8 +33,25 @@ class UpdateNotificationPreferencesAction
             \App\Models\NotificationPreference::upsert(
                 $upsertData,
                 ['user_id', 'type'],
-                ['is_enabled', 'is_push_enabled', 'value']
+                ['is_enabled', 'is_push_enabled', 'days']
             );
         }
+    }
+
+    /**
+     * `upsert` passe a cote des casts du modele : le JSON s'ecrit ici.
+     *
+     * @param  array<int, int>|null  $jours
+     */
+    private function joursEncodes(?array $jours): ?string
+    {
+        if ($jours === null || $jours === []) {
+            return null;
+        }
+
+        $tries = array_values(array_unique(array_map(fn (int $jour): int => $jour, $jours)));
+        sort($tries);
+
+        return json_encode($tries, JSON_THROW_ON_ERROR);
     }
 }

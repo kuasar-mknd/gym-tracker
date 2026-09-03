@@ -27,7 +27,7 @@ class TrainingReminderCommand extends Command
      * @var string
      */
     #[\Override]
-    protected $description = 'Send training reminders to users based on their custom inactivity threshold.';
+    protected $description = 'Send the training reminder to users who chose today and have not trained yet.';
 
     /**
      * Execute the console command.
@@ -37,7 +37,9 @@ class TrainingReminderCommand extends Command
         $this->info('Starting training reminders check...');
 
         $count = 0;
-        $now = time();
+        $maintenant = CarbonImmutable::now();
+        $jour = $maintenant->isoWeekday();
+        $debutDeJournee = $maintenant->startOfDay();
 
         // 1. Join notification_preferences to fetch data directly, avoiding whereHas subqueries and eager load N+1 memory issues.
         // 2. Use chunkById to process users in batches (memory efficient), specifying users.id due to the join.
@@ -45,7 +47,7 @@ class TrainingReminderCommand extends Command
         User::query()
             ->select([
                 'users.*',
-                'notification_preferences.value as pref_value',
+                'notification_preferences.days as pref_days',
                 'notification_preferences.is_push_enabled as pref_push',
             ])
             ->join('notification_preferences', function (JoinClause $join): void {
@@ -58,21 +60,23 @@ class TrainingReminderCommand extends Command
                 ->orderByDesc('started_at')
                 ->limit(1),
             ])
-            ->chunkById(100, function ($users) use (&$count, $now): void {
+            ->chunkById(100, function ($users) use (&$count, $jour, $debutDeJournee): void {
                 foreach ($users as $user) {
+                    $joursChoisis = $this->joursChoisis($user->getAttribute('pref_days'));
+
                     // Manually hydrate the relation to prevent N+1 in notify() -> isPushEnabled()
                     $preference = new NotificationPreference([
                         'type' => 'training_reminder',
                         'is_enabled' => true,
                         'is_push_enabled' => (bool) $user->getAttribute('pref_push'),
-                        'value' => is_numeric($user->getAttribute('pref_value')) ? (int) $user->getAttribute('pref_value') : null,
+                        'days' => $joursChoisis,
                     ]);
 
                     $user->setRelation('notificationPreferences', collect([$preference]));
 
-                    // Use user-defined value or fallback to 3 days
-                    $days = $preference->value ?? 3;
-                    $threshold = $now - ($days * 86400);
+                    if (! in_array($jour, $joursChoisis, true)) {
+                        continue;
+                    }
 
                     // Le garde de nullite reste vivant, lui : un compte sans
                     // aucune seance n'a pas de date. C'est `strtotime()` qui part,
@@ -82,13 +86,31 @@ class TrainingReminderCommand extends Command
                         ? CarbonImmutable::parse($lastWorkoutStartedAtStr)
                         : null;
 
-                    if ($derniereSeance === null || $derniereSeance->getTimestamp() < $threshold) {
-                        $user->notify(new TrainingReminder());
-                        $count++;
+                    if ($derniereSeance !== null && $derniereSeance->greaterThanOrEqualTo($debutDeJournee)) {
+                        continue;
                     }
+
+                    $user->notify(new TrainingReminder());
+                    $count++;
                 }
             }, 'users.id', 'id');
 
         $this->info("Sent {$count} training reminders.");
+    }
+
+    /**
+     * Les jours ISO retenus par la preference ; sans choix, tous les jours.
+     *
+     * @return array<int, int>
+     */
+    private function joursChoisis(mixed $brut): array
+    {
+        $jours = is_string($brut) ? json_decode($brut, true) : $brut;
+
+        if (! is_array($jours) || $jours === []) {
+            return range(1, 7);
+        }
+
+        return array_values(array_map(static fn (mixed $jour): int => is_numeric($jour) ? (int) $jour : 0, $jours));
     }
 }

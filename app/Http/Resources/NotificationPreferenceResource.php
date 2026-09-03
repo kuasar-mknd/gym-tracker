@@ -22,6 +22,7 @@ class NotificationPreferenceResource extends JsonResource
             'id' => $this->id,
             'type' => $this->type,
             'value' => $this->value,
+            'days' => $this->days,
             'is_enabled' => $this->is_enabled,
             'is_push_enabled' => $this->is_push_enabled,
             'created_at' => $this->created_at,

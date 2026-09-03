@@ -53,8 +53,8 @@ test('update preferences updates user preferences', function (): void {
         'push_preferences' => [
             'daily_reminder' => false,
         ],
-        'values' => [
-            'daily_reminder' => 1,
+        'days' => [
+            'daily_reminder' => [1],
         ],
     ]);
 
@@ -65,6 +65,6 @@ test('update preferences updates user preferences', function (): void {
         'type' => 'daily_reminder',
         'is_enabled' => true,
         'is_push_enabled' => false,
-        'value' => 1,
     ]);
+    expect($user->notificationPreferences()->where('type', 'daily_reminder')->sole()->days)->toBe([1]);
 });

@@ -12,6 +12,7 @@ use App\Models\WorkoutLine;
 use App\Notifications\PersonalRecordAchieved;
 use App\Notifications\TrainingReminder;
 use App\Services\PersonalRecordService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Notification;
@@ -71,38 +72,50 @@ class NotificationTest extends TestCase
         Notification::assertNotSentTo($user, PersonalRecordAchieved::class);
     }
 
-    public function test_training_reminder_command_notifies_inactive_users(): void
+    /**
+     * Le rappel part a 18 h, les jours choisis, quand aucune seance n'a
+     * commence dans la journee. L'horloge est arretee un lundi soir : la
+     * commande compare a « aujourd'hui », donc un test qui la laisse courir
+     * change de sens selon le jour ou il tourne.
+     */
+    public function test_training_reminder_command_notifies_users_who_chose_today_and_have_not_trained(): void
     {
         Notification::fake();
+        CarbonImmutable::setTestNow('2026-09-07 18:00:00');
         $user = User::factory()->create();
 
-        // Enable reminder
         $user->notificationPreferences()->create([
             'type' => 'training_reminder',
             'is_enabled' => true,
+            'days' => [1, 3],
         ]);
 
-        // No workouts for user
+        // Derniere seance hier soir : rien aujourd'hui.
+        Workout::factory()->create([
+            'user_id' => $user->id,
+            'started_at' => '2026-09-06 20:00:00',
+        ]);
 
         Artisan::call('app:remind-training');
 
         Notification::assertSentTo($user, TrainingReminder::class);
     }
 
-    public function test_training_reminder_command_does_not_notify_active_users(): void
+    public function test_training_reminder_command_does_not_notify_users_who_trained_today(): void
     {
         Notification::fake();
+        CarbonImmutable::setTestNow('2026-09-07 18:00:00');
         $user = User::factory()->create();
 
         $user->notificationPreferences()->create([
             'type' => 'training_reminder',
             'is_enabled' => true,
+            'days' => [1],
         ]);
 
-        // Recent workout
         Workout::factory()->create([
             'user_id' => $user->id,
-            'started_at' => now(),
+            'started_at' => '2026-09-07 09:00:00',
         ]);
 
         Artisan::call('app:remind-training');
@@ -110,31 +123,38 @@ class NotificationTest extends TestCase
         Notification::assertNotSentTo($user, TrainingReminder::class);
     }
 
-    public function test_training_reminder_command_respects_custom_days_threshold(): void
+    public function test_training_reminder_command_skips_days_the_user_did_not_choose(): void
     {
         Notification::fake();
+        CarbonImmutable::setTestNow('2026-09-07 18:00:00');
         $user = User::factory()->create();
 
-        // Set custom reminder to 7 days
+        // Mardi et jeudi seulement ; nous sommes lundi.
         $user->notificationPreferences()->create([
             'type' => 'training_reminder',
             'is_enabled' => true,
-            'value' => 7,
-        ]);
-
-        // Last workout was 5 days ago (should NOT trigger)
-        Workout::factory()->create([
-            'user_id' => $user->id,
-            'started_at' => now()->subDays(5),
+            'days' => [2, 4],
         ]);
 
         Artisan::call('app:remind-training');
+
         Notification::assertNotSentTo($user, TrainingReminder::class);
+    }
 
-        // Move last workout to 8 days ago (should trigger)
-        $user->workouts()->update(['started_at' => now()->subDays(8)]);
+    public function test_training_reminder_command_treats_no_choice_as_every_day(): void
+    {
+        Notification::fake();
+        CarbonImmutable::setTestNow('2026-09-07 18:00:00');
+        $user = User::factory()->create();
+
+        // Preference d'avant la colonne : pas de jours choisis.
+        $user->notificationPreferences()->create([
+            'type' => 'training_reminder',
+            'is_enabled' => true,
+        ]);
 
         Artisan::call('app:remind-training');
+
         Notification::assertSentTo($user, TrainingReminder::class);
     }
 
@@ -152,8 +172,8 @@ class NotificationTest extends TestCase
                 'personal_record' => true,
                 'training_reminder' => false,
             ],
-            'values' => [
-                'training_reminder' => 5,
+            'days' => [
+                'training_reminder' => [1, 3, 5],
             ],
         ]);
 
@@ -163,11 +183,8 @@ class NotificationTest extends TestCase
             'type' => 'personal_record',
             'is_enabled' => false,
         ]);
-        $this->assertDatabaseHas('notification_preferences', [
-            'user_id' => $user->id,
-            'type' => 'training_reminder',
-            'is_enabled' => true,
-            'value' => 5,
-        ]);
+        $rappel = $user->notificationPreferences()->where('type', 'training_reminder')->sole();
+        $this->assertTrue($rappel->is_enabled);
+        $this->assertSame([1, 3, 5], $rappel->days);
     }
 }

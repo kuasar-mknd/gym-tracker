@@ -12,6 +12,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Corrigé
 - **La première série d'un exercice ajouté en séance partait à 0 kg** (#1677, #1678) : ajouter un exercice déjà pratiqué et appuyer sur « + série » avant la réponse du serveur préremplissait la série à 0, les suivantes la copiaient, et la ligne à 0 devenait « la dernière fois » pour les propositions des séances suivantes. Une série encore intacte prend désormais la recommandation quand la ligne est créée, un champ déjà saisi garde sa valeur, et le service ignore les séries restées au pré-remplissage en remontant jusqu'à cinq séances en arrière, une série de poids de corps restant un historique.
 
+### Modifié
+- **Le rappel d'entraînement part à 18 h, les jours choisis** (#1681) : il partait à minuit après un nombre de jours d'inactivité ; il part désormais à 18 h, les jours de la semaine cochés dans le profil (tous par défaut), et seulement si aucune séance n'a commencé dans la journée. Une préférence sans jours choisis vaut « tous les jours ».
+
 ### Infrastructure
 - **Une sonde de santé propre au planificateur** (#1679) : le service `scheduler` héritait du `HEALTHCHECK` de l'image, qui interroge un serveur web absent de ce conteneur ; il était « unhealthy » à vie dans Portainer. Il vérifie désormais que l'application démarre et liste ses tâches.
 
