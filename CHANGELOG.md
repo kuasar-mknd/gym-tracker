@@ -7,6 +7,11 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-09-03
+
+### Corrigé
+- **Le bouton « Activer » des notifications push pouvait tourner sans fin** (#1683) : une étape du navigateur qui ne répond jamais (service worker jamais actif, abonnement jamais fourni) bloquait le bouton, et tout échec donnait le même message. Chaque étape est désormais nommée sur le bouton, bornée à 20 s, et le message d'échec dit laquelle a cassé, avec la réponse du serveur quand c'est lui qui refuse.
+
 ## [1.5.5] - 2026-09-03
 
 ### Corrigé

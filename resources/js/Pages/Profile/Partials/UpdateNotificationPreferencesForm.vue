@@ -27,6 +27,48 @@ const isSubscribing = ref(false)
 const pushError = ref(null)
 
 /**
+ * Étape en cours, affichée sur le bouton et nommée dans le message d'échec :
+ * sans elle, une activation qui échoue ne dit pas où, et une étape qui ne
+ * répond jamais laisse le bouton tourner sans fin.
+ */
+const etapeEnCours = ref(null)
+
+/**
+ * Ni serviceWorker.ready ni pushManager.subscribe() ne promettent de se
+ * régler ; passé ce délai on abandonne l'étape et on le dit.
+ */
+const DELAI_ETAPE_MS = 20_000
+
+const avecDelai = (promesse) => {
+    let minuteur
+
+    const expiration = new Promise((_, reject) => {
+        minuteur = setTimeout(() => reject(new Error('le navigateur n’a pas répondu en 20 s')), DELAI_ETAPE_MS)
+    })
+
+    return Promise.race([promesse, expiration]).finally(() => clearTimeout(minuteur))
+}
+
+const messageDEchec = (err) => {
+    const etape = etapeEnCours.value ?? 'activation'
+    const statut = err?.response?.status
+
+    if (statut) {
+        const detail = err.response.data?.message ?? `HTTP ${statut}`
+
+        return `Étape « ${etape} » refusée par le serveur : ${detail}`
+    }
+
+    const detail = err?.message ? ` (${err.message})` : ''
+    const conseil =
+        etape === 'Abonnement'
+            ? ' Sur iPhone, ouvre l’app depuis l’écran d’accueil et vérifie que le réseau laisse passer les notifications.'
+            : ''
+
+    return `L’activation a échoué à l’étape « ${etape} »${detail}.${conseil} Réessaie.`
+}
+
+/**
  * Whether the server holds a subscription for this user — the only thing that
  * decides whether a push can actually be delivered.
  *
@@ -99,7 +141,7 @@ const urlBase64ToUint8Array = (base64String) => {
 const forgetOnServer = async (endpoint) => {
     const api = window.axios || axios
 
-    await api.post(route('push-subscriptions.destroy'), { endpoint }).catch(() => {})
+    await api.post(route('push-subscriptions.destroy'), { endpoint }, { timeout: DELAI_ETAPE_MS }).catch(() => {})
 }
 
 const enablePush = async () => {
@@ -109,6 +151,8 @@ const enablePush = async () => {
     let subscription = null
 
     try {
+        // Pas de délai ici : l'invite du système attend l'utilisateur.
+        etapeEnCours.value = 'Permission'
         const permission = await Notification.requestPermission()
 
         if (permission !== 'granted') {
@@ -120,8 +164,8 @@ const enablePush = async () => {
             return
         }
 
-        // Force registration update to ensure we have the latest SW
-        const registration = await navigator.serviceWorker.ready
+        etapeEnCours.value = 'Service worker'
+        const registration = await avecDelai(navigator.serviceWorker.ready)
 
         /*
          * Dropped on the server as well as in the browser.
@@ -132,22 +176,26 @@ const enablePush = async () => {
          * the app keeps pushing to — the provider answers 410 Gone every time,
          * for a subscription nobody can receive.
          */
-        const existingSub = await registration.pushManager.getSubscription()
+        etapeEnCours.value = 'Abonnement'
+        const existingSub = await avecDelai(registration.pushManager.getSubscription())
         if (existingSub) {
             const staleEndpoint = existingSub.endpoint
 
-            await existingSub.unsubscribe()
+            await avecDelai(existingSub.unsubscribe())
             await forgetOnServer(staleEndpoint)
         }
 
-        subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        })
+        subscription = await avecDelai(
+            registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+            }),
+        )
 
         // Save subscription to backend using window.axios for CSRF/auth
+        etapeEnCours.value = 'Enregistrement'
         const api = window.axios || axios
-        await api.post(route('push-subscriptions.update'), subscription)
+        await api.post(route('push-subscriptions.update'), subscription, { timeout: DELAI_ETAPE_MS })
 
         pushRegistered.value = true
 
@@ -157,7 +205,7 @@ const enablePush = async () => {
 
         // Save preferences immediately
         updatePreferences()
-    } catch {
+    } catch (err) {
         // A browser subscription the server does not hold can never deliver
         // anything, and every later attempt discards it anyway (see the
         // unsubscribe above). Dropping it is the only state that stays true.
@@ -169,9 +217,10 @@ const enablePush = async () => {
         }
 
         pushRegistered.value = false
-        pushError.value = "L'activation des notifications push a échoué. Réessaie."
+        pushError.value = messageDEchec(err)
     } finally {
         isSubscribing.value = false
+        etapeEnCours.value = null
     }
 }
 
@@ -232,8 +281,14 @@ const updatePreferences = () => {
                                 fermée.
                             </p>
                         </div>
-                        <GlassButton type="button" size="sm" @click="enablePush" :loading="isSubscribing">
-                            Activer
+                        <GlassButton
+                            type="button"
+                            size="sm"
+                            dusk="enable-push"
+                            @click="enablePush"
+                            :loading="isSubscribing"
+                        >
+                            {{ isSubscribing ? `${etapeEnCours}…` : 'Activer' }}
                         </GlassButton>
                     </div>
                 </div>

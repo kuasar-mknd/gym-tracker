@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
 const page = {
@@ -164,6 +164,121 @@ describe('UpdateNotificationPreferencesForm', () => {
         await wrapper.find('form').trigger('submit')
         await flushPromises()
 
+        expect(error(wrapper).exists()).toBe(false)
+
+        wrapper.unmount()
+    })
+})
+
+/**
+ * Le bouton tournait sans fin quand une étape du navigateur ne répondait
+ * jamais, et tout échec donnait le même message : impossible de savoir où ça
+ * casse depuis un téléphone. Chaque étape est nommée, et bornée à 20 s.
+ */
+describe('UpdateNotificationPreferencesForm — activation par étapes', () => {
+    const bouton = (wrapper) => wrapper.find('[dusk="enable-push"]')
+    const enAttente = () => new Promise(() => {})
+    const worker = () => navigator.serviceWorker
+
+    beforeEach(() => {
+        // setImmediate reste réel : flushPromises s'en sert.
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('nomme l’étape sur le bouton pendant l’activation', async () => {
+        const registration = await worker().ready
+        registration.pushManager.subscribe.mockImplementationOnce(enAttente)
+
+        const wrapper = mountForm()
+        await bouton(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(bouton(wrapper).text()).toContain('Abonnement')
+        expect(bouton(wrapper).attributes('aria-busy')).toBe('true')
+
+        wrapper.unmount()
+    })
+
+    it('abandonne un abonnement que le navigateur ne fournit jamais', async () => {
+        const registration = await worker().ready
+        registration.pushManager.subscribe.mockImplementationOnce(enAttente)
+
+        const wrapper = mountForm()
+        await bouton(wrapper).trigger('click')
+        await flushPromises()
+        await vi.advanceTimersByTimeAsync(20_000)
+        await flushPromises()
+
+        expect(error(wrapper).text()).toContain('« Abonnement »')
+        expect(error(wrapper).text()).toContain('20 s')
+        expect(bouton(wrapper).text()).toBe('Activer')
+        expect(post).not.toHaveBeenCalled()
+        expect(unsubscribe).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+    })
+
+    it('abandonne un service worker qui ne devient jamais actif', async () => {
+        const actif = worker().ready
+        worker().ready = enAttente()
+
+        const wrapper = mountForm()
+        await bouton(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(bouton(wrapper).text()).toContain('Service worker')
+
+        await vi.advanceTimersByTimeAsync(20_000)
+        await flushPromises()
+
+        expect(error(wrapper).text()).toContain('« Service worker »')
+        expect(post).not.toHaveBeenCalled()
+
+        worker().ready = actif
+        wrapper.unmount()
+    })
+
+    it('rapporte le refus du serveur avec son message', async () => {
+        post.mockRejectedValue({
+            response: { status: 422, data: { message: 'L’endpoint doit désigner un hôte joignable et public.' } },
+        })
+
+        const wrapper = mountForm()
+        await bouton(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(error(wrapper).text()).toContain('« Enregistrement »')
+        expect(error(wrapper).text()).toContain('hôte joignable')
+        expect(unsubscribe).toHaveBeenCalledTimes(1)
+
+        wrapper.unmount()
+    })
+
+    it('nomme le statut HTTP quand le serveur répond sans message', async () => {
+        post.mockRejectedValue({ response: { status: 500, data: {} } })
+
+        const wrapper = mountForm()
+        await bouton(wrapper).trigger('click')
+        await flushPromises()
+
+        expect(error(wrapper).text()).toContain('HTTP 500')
+
+        wrapper.unmount()
+    })
+
+    it('ne dépasse pas le délai quand chaque étape répond', async () => {
+        post.mockResolvedValue({})
+
+        const wrapper = mountForm()
+        await bouton(wrapper).trigger('click')
+        await flushPromises()
+        await vi.advanceTimersByTimeAsync(20_000)
+
+        expect(banner(wrapper).exists()).toBe(false)
         expect(error(wrapper).exists()).toBe(false)
 
         wrapper.unmount()
