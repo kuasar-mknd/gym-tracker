@@ -134,6 +134,8 @@ vendor/bin/sail artisan test --coverage
 ### Avant de soumettre
 
 - [ ] Tests passent (`vendor/bin/sail artisan test`)
+- [ ] Tests JavaScript et couverture (`vendor/bin/sail npm run test:coverage`)
+- [ ] Lint JavaScript (`vendor/bin/sail npm run lint:js`)
 - [ ] Code formaté (`vendor/bin/sail npm run format` & `vendor/bin/sail bin pint`)
 - [ ] Rector appliqué (`vendor/bin/sail bin rector process`)
 - [ ] PHPStan propre (`vendor/bin/sail bin phpstan analyse --memory-limit=2G`)

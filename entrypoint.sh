@@ -32,7 +32,9 @@ php artisan event:cache
 
 # Run migrations ONLY for the app service (when command contains octane)
 if echo "$@" | grep -q "octane:frankenphp"; then
-    php artisan migrate --force --quiet || true
+    # Un echec de migration arrete le conteneur : demarrer un code qui ne
+    # correspond pas au schema a deja coute plusieurs pannes (#1630).
+    php artisan migrate --force --quiet
     php artisan filament:upgrade --no-interaction
 fi
 
