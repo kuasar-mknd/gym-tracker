@@ -7,6 +7,14 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-09-03
+
+### Corrigé
+- **La première série d'un exercice ajouté en séance partait à 0 kg** (#1677, #1678) : ajouter un exercice déjà pratiqué et appuyer sur « + série » avant la réponse du serveur préremplissait la série à 0, les suivantes la copiaient, et la ligne à 0 devenait « la dernière fois » pour les propositions des séances suivantes. Une série encore intacte prend désormais la recommandation quand la ligne est créée, un champ déjà saisi garde sa valeur, et le service ignore les séries restées au pré-remplissage en remontant jusqu'à cinq séances en arrière, une série de poids de corps restant un historique.
+
+### Infrastructure
+- **Une sonde de santé propre au planificateur** (#1679) : le service `scheduler` héritait du `HEALTHCHECK` de l'image, qui interroge un serveur web absent de ce conteneur ; il était « unhealthy » à vie dans Portainer. Il vérifie désormais que l'application démarre et liste ses tâches.
+
 ## [1.5.4] - 2026-09-02
 
 ### Ajouté
