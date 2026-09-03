@@ -2239,3 +2239,46 @@ describe('Workouts/Show — a set added before the exercise’s recommendation h
         expect(lines(wrapper)[0].sets[1]).toMatchObject({ weight: 70, reps: 8 })
     })
 })
+
+/**
+ * Deux nouveaux évènements de la file hors-ligne (#1667) : une porte fermée
+ * (session ou jeton expirés) et un stockage plein. Ni l'un ni l'autre n'est un
+ * refus, mais l'utilisateur doit savoir quoi faire, et le savoir depuis la
+ * page, pas depuis la console.
+ */
+describe('Workouts/Show — la file hors-ligne prévient', () => {
+    it('demande de se reconnecter quand la session a expiré, en comptant ce qui attend', async () => {
+        const wrapper = await mountPage()
+
+        window.dispatchEvent(
+            new CustomEvent('sync:auth-required', { detail: { url: '/api/v1/sets/1', status: 419, pending: 3 } }),
+        )
+        await wrapper.vm.$nextTick()
+
+        const message = wrapper.find('[dusk="set-edit-error"]').text()
+        expect(message).toContain('session a expiré')
+        expect(message).toContain('3 modifications')
+
+        wrapper.unmount()
+    })
+
+    it('prévient qu un stockage plein ne survivra pas à un rechargement', async () => {
+        const wrapper = await mountPage()
+
+        window.dispatchEvent(new CustomEvent('sync:storage-full', { detail: { pending: 1 } }))
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.find('[dusk="set-edit-error"]').text()).toContain('stockage du téléphone est plein')
+
+        wrapper.unmount()
+    })
+
+    it('cesse d écouter une fois la page quittée', async () => {
+        const wrapper = await mountPage()
+        wrapper.unmount()
+
+        expect(() =>
+            window.dispatchEvent(new CustomEvent('sync:auth-required', { detail: { pending: 1 } })),
+        ).not.toThrow()
+    })
+})

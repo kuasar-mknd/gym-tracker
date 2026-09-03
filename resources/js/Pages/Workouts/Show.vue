@@ -1355,6 +1355,25 @@ const markUnsynced = (setId) => {
  * and announces each one. Most of them are set updates, so this is where they
  * become visible instead of sitting in localStorage unread.
  */
+/**
+ * La file hors-ligne a trouvé porte close (session ou jeton expirés) ou un
+ * stockage plein. Ni l'un ni l'autre n'est un refus de l'écriture, mais
+ * l'utilisateur doit savoir quoi faire : se reconnecter, ou ne pas recharger.
+ */
+const handleSyncAuthRequired = (event) => {
+    const pending = event.detail?.pending ?? 0
+    reportEditFailure(
+        `Ta session a expiré : reconnecte-toi, ${pending > 1 ? `tes ${pending} modifications en attente` : 'ta modification en attente'} repartir${pending > 1 ? 'ont' : 'a'} ensuite.`,
+    )
+}
+
+const handleSyncStorageFull = (event) => {
+    const pending = event.detail?.pending ?? 0
+    reportEditFailure(
+        `Le stockage du téléphone est plein : ${pending} modification${pending > 1 ? 's' : ''} en attente ne survivr${pending > 1 ? 'ont' : 'a'} pas à un rechargement.`,
+    )
+}
+
 const handleSyncFailure = (event) => {
     const url = event.detail?.url ?? ''
     const setId = /\/sets\/(\d+)/.exec(url)?.[1]
@@ -1874,6 +1893,8 @@ onMounted(() => {
 
     window.addEventListener('open-add-exercise', handleFabAddExercise)
     window.addEventListener('sync:failed', handleSyncFailure)
+    window.addEventListener('sync:auth-required', handleSyncAuthRequired)
+    window.addEventListener('sync:storage-full', handleSyncStorageFull)
     markQueuedFailuresOnMount()
 
     // Restore set drafts if any exist and haven't synced
@@ -1949,6 +1970,8 @@ onMounted(() => {
 onUnmounted(() => {
     window.removeEventListener('open-add-exercise', handleFabAddExercise)
     window.removeEventListener('sync:failed', handleSyncFailure)
+    window.removeEventListener('sync:auth-required', handleSyncAuthRequired)
+    window.removeEventListener('sync:storage-full', handleSyncStorageFull)
 
     // One per create still waiting on the offline queue; the page may well be
     // left before the drain ever comes.

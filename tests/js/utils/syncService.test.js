@@ -66,7 +66,7 @@ describe('SyncService.processQueue', () => {
      * Any non-network failure fell off the end of the catch and was gone, with
      * a console.error as the only record.
      */
-    it.each([422, 419, 403, 500])('does not lose a mutation the server refused with %i', async (status) => {
+    it.each([422, 403, 500])('does not lose a mutation the server refused with %i', async (status) => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
         request.mockRejectedValue({ response: { status } })
 
@@ -480,5 +480,165 @@ describe('SyncService failed-request bucket', () => {
         // Both were attempted and neither is stuck in the queue.
         expect(request).toHaveBeenCalledTimes(2)
         expect(service.queue).toEqual([])
+    })
+})
+
+/**
+ * Le singleton vide la file dès sa construction : `chargé()` attend ce premier
+ * passage, pour que chaque test compte ses tentatives à partir de là.
+ */
+const chargé = async () => {
+    const service = await freshService()
+    await service.pending
+
+    return service
+}
+
+/**
+ * 401 ou 419 : la session ou le jeton CSRF a expiré pendant que la PWA
+ * dormait. L'écriture était classée refusée et la file vidée derrière elle,
+ * sans re-soumission possible : une perte définitive pour une porte qui se
+ * rouvre à la prochaine connexion (#1667).
+ */
+describe('SyncService session expirée', () => {
+    it.each([401, 419])('garde la file intacte sur %i et prévient', async (status) => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch(), aQueuedPatch('/api/v1/sets/2')]))
+        request.mockRejectedValue({ response: { status } })
+
+        const listener = vi.fn()
+        window.addEventListener('sync:auth-required', listener)
+
+        const service = await chargé()
+
+        window.removeEventListener('sync:auth-required', listener)
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(service.queue).toHaveLength(2)
+        expect(localStorage.getItem('offline_sync_failed')).toBeNull()
+        expect(listener).toHaveBeenCalledTimes(1)
+        expect(listener.mock.calls[0][0].detail).toEqual({ url: '/api/v1/sets/1', status, pending: 2 })
+    })
+
+    it('repart après la reconnexion', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
+        request.mockRejectedValueOnce({ response: { status: 419 } }).mockResolvedValueOnce({ data: {} })
+
+        const service = await chargé()
+        expect(service.queue).toHaveLength(1)
+
+        await service.processQueue()
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(service.queue).toEqual([])
+        expect(localStorage.getItem('offline_sync_failed')).toBeNull()
+    })
+
+    it('classe l écriture refusée après trois portes fermées, pour ne pas bloquer la file', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch(), aQueuedPatch('/api/v1/sets/2')]))
+        request.mockRejectedValue({ response: { status: 419 } })
+
+        const service = await chargé()
+        await service.processQueue()
+        await service.processQueue()
+
+        // La première a épuisé ses trois tentatives ; la seconde commence les siennes.
+        expect(service.failedRequests()).toHaveLength(1)
+        expect(service.failedRequests()[0].url).toBe('/api/v1/sets/1')
+        expect(service.queue).toHaveLength(1)
+        expect(service.queue[0].url).toBe('/api/v1/sets/2')
+    })
+
+    it('survit à un rechargement avec le compte de tentatives', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
+        request.mockRejectedValue({ response: { status: 401 } })
+
+        await chargé()
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))[0].authAttempts).toBe(1)
+    })
+})
+
+/**
+ * Une écriture directe partait même quand des écritures plus anciennes
+ * attendaient : la file les rejouait ensuite, et une vieille valeur
+ * écrasait celle que l'utilisateur venait de saisir en ligne.
+ */
+describe('SyncService ordre des écritures', () => {
+    it('vide la file avant d envoyer une écriture directe', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/api/v1/sets/1')]))
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK' }).mockResolvedValue({ data: {} })
+
+        // Le premier passage échoue : la file garde son écriture ancienne.
+        const service = await chargé()
+        expect(service.queue).toHaveLength(1)
+
+        await service.patch('/api/v1/sets/1', { weight: 120 })
+
+        expect(request).toHaveBeenCalledTimes(3)
+        expect(request.mock.calls[1][0].data).toEqual({ weight: 100 })
+        expect(request.mock.calls[2][0].data).toEqual({ weight: 120 })
+        expect(service.queue).toEqual([])
+    })
+
+    it('range la nouvelle écriture derrière la file quand celle-ci ne se vide pas', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/api/v1/sets/1')]))
+        request.mockRejectedValue({ code: 'ERR_NETWORK' })
+
+        const service = await chargé()
+
+        await expect(service.patch('/api/v1/sets/1', { weight: 120 })).rejects.toMatchObject({ isOffline: true })
+        expect(service.queue).toHaveLength(2)
+        expect(service.queue[0].data).toEqual({ weight: 100 })
+        expect(service.queue[1].data).toEqual({ weight: 120 })
+        // Seule l'écriture en file a été tentée ; la nouvelle n'a pas doublé.
+        expect(request.mock.calls.every((call) => call[0].data.weight === 100)).toBe(true)
+    })
+
+    it('laisse passer une lecture même quand la file attend', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK' }).mockResolvedValue({ data: { ok: true } })
+
+        const service = await chargé()
+        const response = await service.get('/api/v1/workouts')
+
+        expect(response.data).toEqual({ ok: true })
+        expect(service.queue).toHaveLength(1)
+    })
+})
+
+/**
+ * Le stockage n'est pas fiable : une écriture coupée le corrompt, un quota le
+ * ferme. Ni l'un ni l'autre ne doit empêcher la page de démarrer ou la file
+ * de se vider.
+ */
+describe('SyncService stockage', () => {
+    it('démarre avec une file vide quand le stockage est illisible', async () => {
+        localStorage.setItem('offline_sync_queue', '{corrompu')
+        localStorage.setItem('offline_sync_failed', '"pas une liste"')
+
+        const service = await chargé()
+
+        expect(service.queue).toEqual([])
+        expect(service.failedRequests()).toEqual([])
+    })
+
+    it('continue de vider la file quand le stockage refuse d écrire, et le dit', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch(), aQueuedPatch('/api/v1/sets/2')]))
+        request.mockResolvedValue({ data: {} })
+
+        const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new DOMException('quota', 'QuotaExceededError')
+        })
+        const listener = vi.fn()
+        window.addEventListener('sync:storage-full', listener)
+
+        const service = await chargé()
+
+        setItem.mockRestore()
+        window.removeEventListener('sync:storage-full', listener)
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(service.queue).toEqual([])
+        expect(listener).toHaveBeenCalled()
     })
 })

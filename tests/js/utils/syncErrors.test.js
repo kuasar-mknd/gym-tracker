@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT, SYNC_TRANSIENT } from '@/Utils/syncErrors'
+import { classifySyncError, SYNC_AUTH, SYNC_OFFLINE, SYNC_PERMANENT, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const setOnline = (value) => {
     Object.defineProperty(navigator, 'onLine', { writable: true, configurable: true, value })
@@ -48,7 +48,7 @@ describe('classifySyncError', () => {
      * The whole point: a 4xx will not become a 2xx on the next attempt, so the
      * edit behind it must stop being retried and be surfaced instead.
      */
-    it.each([400, 403, 404, 409, 419, 422])('treats %i as permanent', (status) => {
+    it.each([400, 403, 404, 409, 422])('treats %i as permanent', (status) => {
         expect(classifySyncError({ response: { status } })).toBe(SYNC_PERMANENT)
     })
 
@@ -69,5 +69,11 @@ describe('classifySyncError', () => {
         expect(classifySyncError(new Error('boom'))).toBe(SYNC_TRANSIENT)
         expect(classifySyncError(undefined)).toBe(SYNC_TRANSIENT)
         expect(classifySyncError({ response: {} })).toBe(SYNC_TRANSIENT)
+    })
+})
+
+describe('classifySyncError, session expirée', () => {
+    it.each([401, 419])('traite %i comme une porte fermée, pas comme un refus', (status) => {
+        expect(classifySyncError({ response: { status } })).toBe(SYNC_AUTH)
     })
 })
