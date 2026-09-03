@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
-
-uses(RefreshDatabase::class);
 
 describe('Controller', function (): void {
     describe('user', function (): void {

@@ -10,8 +10,6 @@ use App\Models\WorkoutLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function semerSeriesDe(User $user, int $seances): void
 {
     $exercice = Exercise::factory()->create(['user_id' => null]);

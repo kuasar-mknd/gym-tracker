@@ -6,8 +6,6 @@ use App\Models\Exercise;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /**
  * La revision du catalogue etait `time()`.
  *

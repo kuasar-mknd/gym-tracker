@@ -9,8 +9,6 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Laravel\Sanctum\Sanctum;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /**
  * @return array{0: WorkoutLine, 1: list<int>}
  */

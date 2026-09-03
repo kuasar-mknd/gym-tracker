@@ -11,8 +11,6 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\GoalService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Un objectif se met a jour par deux chemins, et ils doivent dire la meme chose.
  *

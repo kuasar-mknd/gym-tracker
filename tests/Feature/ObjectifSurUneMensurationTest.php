@@ -9,8 +9,6 @@ use App\Models\Goal;
 use App\Models\User;
 use App\Services\GoalService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * `weight` et `body_fat` sont des COLONNES de `body_measurements` ; une partie
  * du corps est une LIGNE de `body_part_measurements`, designee par son nom.

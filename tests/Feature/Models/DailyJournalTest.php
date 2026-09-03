@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 use App\Models\DailyJournal;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\get;
 use function Pest\Laravel\post;
-
-uses(RefreshDatabase::class);
 
 test('authenticated user can view daily journal index', function (): void {
     $user = User::factory()->create();

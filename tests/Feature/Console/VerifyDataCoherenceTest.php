@@ -10,8 +10,6 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Le controle de coherence doit trouver ce qu'aucun test ne cherche.
  *

@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 use App\Models\NotificationPreference;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
 use function Pest\Laravel\patch;
-
-uses(RefreshDatabase::class);
 
 test('authenticated user can update notification preferences', function (): void {
     $user = User::factory()->create();

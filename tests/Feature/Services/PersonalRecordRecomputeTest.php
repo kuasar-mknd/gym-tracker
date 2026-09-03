@@ -11,8 +11,6 @@ use App\Models\WorkoutLine;
 use App\Services\PersonalRecordService;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * `recompute()` reconstruit les records a partir des series qui restent.
  *

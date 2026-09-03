@@ -11,8 +11,6 @@ use App\Services\Stats\StatsCacheManager;
 use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * Le garde qui remplace une liste écrite à la main.
  *

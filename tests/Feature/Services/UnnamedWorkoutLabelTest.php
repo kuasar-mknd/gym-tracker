@@ -7,8 +7,6 @@ use App\Models\Workout;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * `workouts.name` est nullable, et rien ne testait ce cas.
  *

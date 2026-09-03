@@ -8,8 +8,6 @@ use App\Models\Workout;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function seanceLeJour(User $user, string $jour): void
 {
     Workout::factory()->create([

@@ -11,8 +11,6 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Carbon;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function ligneDatee(User $user, Exercise $exercice, Carbon $quand): WorkoutLine
 {
     $seance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => $quand]);

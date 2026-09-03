@@ -7,8 +7,6 @@ use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /**
  * La regle de validation est `['required', 'date']`, pas un format fixe.
  *

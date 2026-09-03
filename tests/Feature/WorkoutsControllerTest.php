@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Models\Workout;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
-
-uses(RefreshDatabase::class);
 
 it('renders the index page for authenticated user (Happy Path)', function (): void {
     $user = User::factory()->create();

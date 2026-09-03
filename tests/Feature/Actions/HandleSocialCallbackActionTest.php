@@ -5,13 +5,10 @@ declare(strict_types=1);
 use App\Actions\HandleSocialCallbackAction;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
-
-uses(RefreshDatabase::class);
 
 /**
  * Un fournisseur qui rend l'utilisateur social donne.

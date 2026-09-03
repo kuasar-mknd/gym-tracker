@@ -8,8 +8,6 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function serieValideeDe(Workout $workout, float $poids, int $repetitions): Set
 {
     $ligne = WorkoutLine::factory()->create(['workout_id' => $workout->id]);

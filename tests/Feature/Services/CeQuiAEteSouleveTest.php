@@ -13,8 +13,6 @@ use App\Services\PersonalRecordService;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function recordMaxDe(User $user, Exercise $exercice): float
 {
     $valeur = DB::table('personal_records')

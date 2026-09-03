@@ -6,8 +6,6 @@ use App\Models\BodyMeasurement;
 use App\Models\User;
 use App\Services\Stats\BodyStatsService;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 /*
  * `getLatestBodyMetrics` n'avait aucun test, et huit mutants y survivaient : la
  * taille de la fenetre (`take(2)`), le decalage vers la mesure precedente

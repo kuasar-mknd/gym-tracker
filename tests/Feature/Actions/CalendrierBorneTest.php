@@ -8,8 +8,6 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
 function lecturesCalendrier(callable $geste): int
 {
     $releve = function (): int {
