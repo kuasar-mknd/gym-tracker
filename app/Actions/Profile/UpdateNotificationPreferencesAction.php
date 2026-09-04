@@ -49,7 +49,7 @@ class UpdateNotificationPreferencesAction
             return null;
         }
 
-        $tries = array_values(array_unique(array_map(fn (int $jour): int => $jour, $jours)));
+        $tries = array_unique($jours);
         sort($tries);
 
         return json_encode($tries, JSON_THROW_ON_ERROR);

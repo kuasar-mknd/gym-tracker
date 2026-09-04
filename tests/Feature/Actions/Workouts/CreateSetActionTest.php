@@ -146,3 +146,20 @@ it('n enregistre pas une cle vide, qui ferait collisionner deux series distincte
     expect($seconde->idempotency_key)->toBeNull();
     $this->assertDatabaseCount('sets', 2);
 });
+
+/*
+ * Une série naît en dernier : la première prend le rang 0, la suivante le
+ * rang max + 1, et un rang fourni explicitement est conservé.
+ */
+it('range chaque nouvelle série après la dernière, sauf rang explicite', function (): void {
+    [$user, $workoutLine] = ligneNeuvePourSerie();
+    $action = app(CreateSetAction::class);
+
+    $premiere = $action->execute($user, $workoutLine, ['weight' => 50, 'reps' => 5]);
+    $seconde = $action->execute($user, $workoutLine, ['weight' => 60, 'reps' => 5]);
+    $explicite = $action->execute($user, $workoutLine, ['weight' => 70, 'reps' => 5, 'order' => 7]);
+
+    expect($premiere->order)->toBe(0)
+        ->and($seconde->order)->toBe(1)
+        ->and($explicite->order)->toBe(7);
+});
