@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.11] - 2026-09-04
+
 ### Ajouté
 - **Une sauvegarde quotidienne de la base, chiffrée, hors du conteneur** (#1663) : à 02:30 le planificateur archive la base dans le dossier de l'hôte `BACKUP_HOST_PATH` (nettoyage à 02:00, contrôle de fraîcheur à 08:00, chaque tâche surveillée par Sentry) ; sans `BACKUP_ARCHIVE_PASSWORD`, aucune archive n'est écrite, que la demande vienne du planificateur, de Filament ou de `backup:run`
 
@@ -441,7 +443,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.10...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.11...HEAD
+[1.5.11]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.10...v1.5.11
 [1.5.10]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.9...v1.5.10
 [1.5.5]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.4...v1.5.5
 [1.5.6]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.5...v1.5.6
