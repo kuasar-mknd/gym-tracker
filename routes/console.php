@@ -42,3 +42,15 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180])
     ->dailyAt('03:30')
     ->sentryMonitor();
+
+\Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])
+    ->dailyAt('02:00')
+    ->sentryMonitor();
+
+\Illuminate\Support\Facades\Schedule::command('sauvegarde:base')
+    ->dailyAt('02:30')
+    ->sentryMonitor();
+
+\Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
+    ->dailyAt('08:00')
+    ->sentryMonitor();

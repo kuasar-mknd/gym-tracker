@@ -49,6 +49,8 @@ x-app-env: &app-env
 services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        volumes:
+            - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
         restart: always
         ports:
             - 8888:80
@@ -174,6 +176,8 @@ services:
     # le conteneur, se redemarre avec lui, et n'ajoute pas de crontab a tenir.
     scheduler:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        volumes:
+            - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
         restart: always
         command: php artisan schedule:work
         environment:
