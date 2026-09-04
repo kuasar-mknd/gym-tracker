@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Le service worker ne s'installait jamais en production** (#1683) : sa liste de precache pointait sur `/assets/…` au lieu de `/build/assets/…`, chaque entrée répondait 404 et Workbox annulait l'installation. Conséquences depuis la 1.5.0 : pas de mode hors-ligne réel, et l'activation des notifications push bloquée à l'étape « Service worker ». Un contrôle en CI vérifie désormais chaque entrée.
+
 ## [1.5.8] - 2026-09-03
 
 ### Corrigé
