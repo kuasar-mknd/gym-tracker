@@ -153,6 +153,15 @@ describe('BaseChart', () => {
         expect(trace(wrapper).exists()).toBe(false)
     })
 
+    it('garde à l’ombre la densité que la carte demande', () => {
+        // Six cartes portaient une ombre plus dense ou plus pâle que 0,2 ; une
+        // valeur figée dans le composant les aurait toutes alignées en silence.
+        expect(monter({ lueur: 'accent-danger', lueurOpacite: 0.25 }).find('div').attributes('style')).toContain(
+            '--lueur-opacite: 0.25',
+        )
+        expect(monter({ lueur: 'accent-danger' }).find('div').attributes('style')).toContain('--lueur-opacite: 0.2')
+    })
+
     it('pose la hauteur, la lueur et la surcouche', () => {
         const wrapper = monter({ hauteur: 'h-64', lueur: 'accent-info' }, { surcouche: '<span>centre</span>' })
         const cadre = wrapper.find('div')

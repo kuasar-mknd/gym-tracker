@@ -68,6 +68,7 @@ const axeX = { grid: { display: true, ...grille() } }
         hauteur="h-64"
         index-axis="y"
         lueur="shadow-cast"
+        :lueur-opacite="0.05"
         :infobulle="infobulle"
         :axe-x="axeX"
         :axe-y="{ grid: { display: false } }"

@@ -39,3 +39,11 @@ Elle pose `draggable` sur le NODE — l'enfant direct du conteneur, donc la raci
 Elle déplace aussi le nœud elle-même sur le chemin tactile. Vue, restée sur l'ancien arrangement, écrit ensuite les numéros dans les mauvaises rangées. On reconstruit les rangées par une génération portée dans la clef du `v-for`.
 
 Corollaire de vérification, le plus coûteux : jsdom ne rejoue pas le chemin tactile, et des évènements de pointeur synthétiques dans un navigateur non plus. Ces défauts ne se reproduisent que sur simulateur, avec `touch_path` et une vraie temporisation — un appui trop court y passe pour un défilement et fait conclure à tort que rien ne marche. Un témoin utile porte sur le mécanisme (identité des éléments DOM, `defaultPrevented`, appel du rappel), jamais sur le rendu final.
+
+## Un graphique déclare ses séries, `BaseChart` fait le reste
+
+`resources/js/Components/Stats/BaseChart.vue` porte l'unique `ChartJS.register(...)` de l'application, l'infobulle, la légende, les axes et la hauteur. Une carte ne garde que ses `labels`, ses `datasets` et ce qui la distingue vraiment. Une garde de `tests/js/conventions/chartChunks.test.js` vérifie qu'aucun autre fichier n'importe `chart.js` ou `vue-chartjs`.
+
+Ce que la carte passe en props plutôt qu'en options recopiées : `type`, `hauteur`, `legende` (absente : cachée sur des barres ou une courbe, visible sous un anneau), `infobulle` (`{ accent, opaque, …réglages Chart.js }`), `axeX`/`axeY` (`false` cache l'axe **sans perdre son échelle**), `axeY1`, `indexAxis`, `interaction`, `lueur` + `lueurOpacite` (à la place d'un `<style scoped>` qui ne portait qu'un `drop-shadow`), `plugins`, `vide` avec les créneaux `#vide` et `#surcouche`. Le créneau `options` fusionne en dernier, branche par branche : il est là pour le cas non prévu, pas pour rebâtir l'habillage.
+
+Deux pièges payés pendant la migration des 48 cartes : `BaseChart` ne pose `beginAtZero` que sur des barres, donc une courbe qui l'attendait doit le redemander par `:axe-y` ; et le composant s'importe en chemin relatif depuis le dossier des cartes, jamais par l'alias, que la garde imposant `defineAsyncComponent` refuse sur tout fichier de graphique.

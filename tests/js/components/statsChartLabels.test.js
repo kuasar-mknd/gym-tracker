@@ -17,7 +17,7 @@ vi.mock('vue-chartjs', () => {
     return { Bar: recorder('Bar'), Line: recorder('Line'), Doughnut: recorder('Doughnut') }
 })
 
-const { volumeTooltipCallback, commonTooltipOptions } = await import('@/Components/Stats/chartConfig')
+const { volumeTooltipCallback } = await import('@/Components/Stats/chartConfig')
 const BodyPartDiffChart = (await import('@/Components/Stats/BodyPartDiffChart.vue')).default
 const BodyFatLineChart = (await import('@/Components/Stats/BodyFatLineChart.vue')).default
 const RecentWorkoutsExercisesChart = (await import('@/Components/Stats/RecentWorkoutsExercisesChart.vue')).default
@@ -66,7 +66,7 @@ describe('VolumePerWorkoutChart tooltip', () => {
     })
 
     it('keeps the shared tooltip chrome alongside its own callbacks', () => {
-        expect(tooltipOf(wrapper, 'Bar').cornerRadius).toBe(commonTooltipOptions.cornerRadius)
+        expect(tooltipOf(wrapper, 'Bar').cornerRadius).toBe(12)
     })
 })
 

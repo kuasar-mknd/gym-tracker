@@ -20,6 +20,16 @@ describe('les graphiques restent dans leur propre morceau', () => {
         expect(offenders).toEqual([])
     })
 
+    it("n'enregistre Chart.js qu'une fois, dans BaseChart", () => {
+        // Quarante-huit cartes recopiaient le même `ChartJS.register(...)`, en
+        // huit listes divergentes. Une seule entrée, désormais : une carte qui
+        // réimporte la bibliothèque a recopié un patron qui n'existe plus.
+        expect(filesMatching(/from '(?:chart\.js|vue-chartjs)'/)).toEqual([
+            'resources/js/Components/Stats/BaseChart.vue',
+        ])
+        expect(filesMatching(/ChartJS\.register\(/)).toEqual(['resources/js/Components/Stats/BaseChart.vue'])
+    })
+
     it('ne tire un graphique que par defineAsyncComponent', () => {
         expect(filesMatching(/^import\s+[^\n]*\bfrom '@\/Components\/Stats\/\w*Chart\.vue'/m)).toEqual([])
     })

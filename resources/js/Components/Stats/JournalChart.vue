@@ -130,6 +130,7 @@ const axeY = computed(() => ({
             :datasets="datasets"
             hauteur="h-64"
             lueur="shadow-cast"
+            :lueur-opacite="0.1"
             :infobulle="infobulle"
             :axe-x="{ ticks: { maxRotation: 45, minRotation: 0 } }"
             :axe-y="axeY"

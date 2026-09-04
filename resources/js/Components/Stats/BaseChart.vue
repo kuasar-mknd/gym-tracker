@@ -59,6 +59,7 @@ const props = defineProps({
     indexAxis: { type: String, default: 'x' },
     interaction: { type: Object, default: null },
     lueur: { type: String, default: '' },
+    lueurOpacite: { type: Number, default: 0.2 },
     options: { type: Object, default: () => ({}) },
     plugins: { type: Array, default: () => [] },
     vide: { type: Boolean, default: false },
@@ -147,7 +148,11 @@ const chartOptions = computed(() => {
     return fusionner(base, props.options)
 })
 
-const style = computed(() => (props.lueur ? { '--lueur': `var(--color-${props.lueur})` } : undefined))
+const style = computed(() =>
+    props.lueur
+        ? { '--lueur': `var(--color-${props.lueur})`, '--lueur-opacite': String(props.lueurOpacite) }
+        : undefined,
+)
 </script>
 
 <template>
@@ -162,6 +167,6 @@ const style = computed(() => (props.lueur ? { '--lueur': `var(--color-${props.lu
 
 <style scoped>
 .avec-lueur :deep(canvas) {
-    filter: drop-shadow(0 4px 6px rgb(from var(--lueur) r g b / 0.2));
+    filter: drop-shadow(0 4px 6px rgb(from var(--lueur) r g b / var(--lueur-opacite)));
 }
 </style>

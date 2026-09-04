@@ -61,6 +61,7 @@ const marges = { layout: { padding: { left: -10, right: -10, bottom: 0, top: 10 
         :datasets="datasets"
         hauteur="h-full"
         lueur="accent-tertiary"
+        :lueur-opacite="0.15"
         :infobulle="infobulle"
         :axe-x="{ ticks: { padding: 10 } }"
         :axe-y="{ display: false, beginAtZero: true }"

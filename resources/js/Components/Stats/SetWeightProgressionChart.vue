@@ -67,7 +67,7 @@ const infobulle = {
         :labels="chartData.labels"
         :datasets="chartData.datasets"
         hauteur="h-64"
-        :legende="true"
+        :legende="{ position: 'top', labels: { boxWidth: 6 } }"
         :infobulle="infobulle"
         :interaction="{ mode: 'index', intersect: false }"
     />

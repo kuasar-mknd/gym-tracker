@@ -69,6 +69,7 @@ const infobulle = {
         :datasets="datasets"
         hauteur="h-64"
         lueur="accent-primary"
+        :lueur-opacite="0.15"
         :infobulle="infobulle"
         :axe-x="{ ticks: { maxTicksLimit: 6 } }"
     />
