@@ -44,8 +44,16 @@ vi.mock('@inertiajs/vue3', async () => {
 import { router } from '@inertiajs/vue3'
 import TemplateCreate from '@/Pages/Workouts/Templates/Create.vue'
 import TemplateEdit from '@/Pages/Workouts/Templates/Edit.vue'
+import TemplateForm from '@/Components/Templates/TemplateForm.vue'
 import TemplateIndex from '@/Pages/Workouts/Templates/Index.vue'
 import { passesSlot, layoutStub } from './pageStubs'
+
+// Le formulaire vit dans TemplateForm, sous la page : ses internes se lisent là.
+const interne = (wrapper) => {
+    const formulaire = wrapper.findComponent(TemplateForm)
+
+    return formulaire.exists() ? formulaire.vm : wrapper.vm
+}
 
 /** La question passe par un dialogue de l'application, plus par `confirm()`. */
 const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
@@ -102,8 +110,8 @@ const quickCreateForm = () => forms[1]
 
 /** Puts exercises into the form the way the picker would have. */
 const seed = async (wrapper, exercises) => {
-    wrapper.vm.form.exercises = structuredClone(exercises)
-    await wrapper.vm.$nextTick()
+    interne(wrapper).form.exercises = structuredClone(exercises)
+    await interne(wrapper).$nextTick()
 }
 
 const twoExercises = [
@@ -211,8 +219,8 @@ describe('the template listing', () => {
         // render: `:disabled` only lands on the next tick, so between two taps
         // of an impatient thumb the in-code guard is the only thing standing
         // between the user and two identical workouts to delete by hand.
-        wrapper.vm.executeTemplate(7)
-        wrapper.vm.executeTemplate(8)
+        interne(wrapper).executeTemplate(7)
+        interne(wrapper).executeTemplate(8)
 
         expect(router.post).toHaveBeenCalledTimes(1)
         expect(router.post.mock.calls[0][0]).toBe('/templates.execute/{"template":7}')
@@ -235,7 +243,7 @@ describe('the template listing', () => {
 
         await wrapper.find('[dusk="execute-template-7"]').trigger('click')
         router.post.mock.calls[0][2].onFinish()
-        await wrapper.vm.$nextTick()
+        await interne(wrapper).$nextTick()
 
         expect(wrapper.find('[dusk="execute-template-7"]').text()).toBe('Lancer cette séance')
 
@@ -301,17 +309,17 @@ describe.each([
         const adders = wrapper.findAll('button').filter((b) => b.text() === '+ Ajouter une série')
         await adders[1].trigger('click')
 
-        expect(wrapper.vm.form.exercises[0].sets).toHaveLength(1)
-        expect(wrapper.vm.form.exercises[1].sets).toHaveLength(2)
+        expect(interne(wrapper).form.exercises[0].sets).toHaveLength(1)
+        expect(interne(wrapper).form.exercises[1].sets).toHaveLength(2)
     })
 
     it('starts a new set at ten reps with no weight and no warm-up flag', async () => {
         const wrapper = mountPage()
         await seed(wrapper, [{ id: 1, name: 'Squat', sets: [] }])
 
-        wrapper.vm.addSet(0)
+        interne(wrapper).addSet(0)
 
-        expect(wrapper.vm.form.exercises[0].sets).toEqual([{ reps: 10, weight: null, is_warmup: false }])
+        expect(interne(wrapper).form.exercises[0].sets).toEqual([{ reps: 10, weight: null, is_warmup: false }])
     })
 
     it('removes the set that was tapped and leaves the ones around it', async () => {
@@ -330,7 +338,7 @@ describe.each([
 
         await byLabel(wrapper, 'Supprimer la série')[1].trigger('click')
 
-        expect(wrapper.vm.form.exercises[0].sets.map((s) => s.reps)).toEqual([10, 30])
+        expect(interne(wrapper).form.exercises[0].sets.map((s) => s.reps)).toEqual([10, 30])
     })
 
     it('removes the exercise that was tapped and leaves the ones around it', async () => {
@@ -345,7 +353,7 @@ describe.each([
         // plutot que son rang.
         await byLabel(wrapper, 'Supprimer Squat')[0].trigger('click')
 
-        expect(wrapper.vm.form.exercises.map((e) => e.name)).toEqual(['Développé Couché', 'Soulevé de Terre'])
+        expect(interne(wrapper).form.exercises.map((e) => e.name)).toEqual(['Développé Couché', 'Soulevé de Terre'])
     })
 
     it('toggles the warm-up flag of one set both ways', async () => {
@@ -357,14 +365,14 @@ describe.each([
 
         await toggle.trigger('click')
 
-        expect(wrapper.vm.form.exercises[0].sets[0].is_warmup).toBe(true)
+        expect(interne(wrapper).form.exercises[0].sets[0].is_warmup).toBe(true)
         expect(toggle.attributes('aria-pressed')).toBe('true')
         // The other exercise must not have been dragged along.
-        expect(wrapper.vm.form.exercises[1].sets[0].is_warmup).toBe(false)
+        expect(interne(wrapper).form.exercises[1].sets[0].is_warmup).toBe(false)
 
         await toggle.trigger('click')
 
-        expect(wrapper.vm.form.exercises[0].sets[0].is_warmup).toBe(false)
+        expect(interne(wrapper).form.exercises[0].sets[0].is_warmup).toBe(false)
     })
 
     it('writes typed reps and weight back into the set being edited', async () => {
@@ -376,9 +384,9 @@ describe.each([
 
         // Numbers, not strings: `type="number"` makes Vue cast, and the server
         // validates these as numeric.
-        expect(wrapper.vm.form.exercises[1].sets[0].reps).toBe(12)
-        expect(wrapper.vm.form.exercises[1].sets[0].weight).toBe(102.5)
-        expect(wrapper.vm.form.exercises[0].sets[0].reps).toBe(10)
+        expect(interne(wrapper).form.exercises[1].sets[0].reps).toBe(12)
+        expect(interne(wrapper).form.exercises[1].sets[0].weight).toBe(102.5)
+        expect(interne(wrapper).form.exercises[0].sets[0].reps).toBe(10)
     })
 })
 
@@ -403,7 +411,7 @@ describe.each([
 
         await wrapper.get('textarea').setValue('Haut du corps')
 
-        expect(wrapper.vm.form.description).toBe('Haut du corps')
+        expect(interne(wrapper).form.description).toBe('Haut du corps')
         expect(counterOf(wrapper).text()).toBe('13 / 1000')
     })
 
@@ -440,7 +448,7 @@ describe.each([
         const wrapper = mountPage()
         await openPicker(wrapper)
 
-        expect(wrapper.vm.showAddExercise).toBe(true)
+        expect(interne(wrapper).showAddExercise).toBe(true)
         expect(wrapper.get('#add-exercise-title').text()).toBe('Choisir un exercice')
     })
 
@@ -465,8 +473,8 @@ describe.each([
         const squat = wrapper.findAll('button').find((b) => b.text().includes('Jambes'))
         await squat.trigger('click')
 
-        expect(wrapper.vm.form.exercises.map((e) => e.name)).toEqual(['Squat'])
-        expect(wrapper.vm.showAddExercise).toBe(false)
+        expect(interne(wrapper).form.exercises.map((e) => e.name)).toEqual(['Squat'])
+        expect(interne(wrapper).showAddExercise).toBe(false)
     })
 
     it('sends the type and the category that were picked, not the defaults', async () => {
@@ -477,9 +485,9 @@ describe.each([
         })
 
         const wrapper = mountPage()
-        wrapper.vm.showAddExercise = true
-        wrapper.vm.showCreateForm = true
-        await wrapper.vm.$nextTick()
+        interne(wrapper).showAddExercise = true
+        interne(wrapper).showCreateForm = true
+        await interne(wrapper).$nextTick()
 
         await wrapper.get('input[placeholder="Ex: Développé couché"]').setValue('Rowing Haltère')
         const [type, category] = wrapper.findAll('select')
@@ -501,11 +509,11 @@ describe.each([
 
     it('carries the search text over as the name of the exercise being created', async () => {
         const wrapper = mountPage()
-        wrapper.vm.searchQuery = 'Rowing Haltère'
-        await wrapper.vm.$nextTick()
+        interne(wrapper).searchQuery = 'Rowing Haltère'
+        await interne(wrapper).$nextTick()
 
-        wrapper.vm.quickCreate()
-        await wrapper.vm.$nextTick()
+        interne(wrapper).quickCreate()
+        await interne(wrapper).$nextTick()
 
         // Retyping a name that was just typed is the whole thing this saves.
         expect(quickCreateForm().name).toBe('Rowing Haltère')
@@ -514,40 +522,40 @@ describe.each([
 
     it('goes back to the list when the creation form is cancelled', async () => {
         const wrapper = mountPage()
-        wrapper.vm.showAddExercise = true
-        wrapper.vm.showCreateForm = true
-        await wrapper.vm.$nextTick()
+        interne(wrapper).showAddExercise = true
+        interne(wrapper).showCreateForm = true
+        await interne(wrapper).$nextTick()
 
         const cancel = wrapper.findAll('button').find((b) => b.text() === 'Annuler')
         await cancel.trigger('click')
 
-        expect(wrapper.vm.showCreateForm).toBe(false)
-        expect(wrapper.vm.showAddExercise).toBe(true)
+        expect(interne(wrapper).showCreateForm).toBe(false)
+        expect(interne(wrapper).showAddExercise).toBe(true)
         expect(wrapper.get('#add-exercise-title').text()).toBe('Choisir un exercice')
     })
 
     it('forgets the search and the half-filled form when it is closed', async () => {
         const wrapper = mountPage()
-        wrapper.vm.showAddExercise = true
-        wrapper.vm.showCreateForm = true
-        wrapper.vm.searchQuery = 'introuvable'
-        await wrapper.vm.$nextTick()
+        interne(wrapper).showAddExercise = true
+        interne(wrapper).showCreateForm = true
+        interne(wrapper).searchQuery = 'introuvable'
+        await interne(wrapper).$nextTick()
 
         await byLabel(wrapper, 'Fermer')[0].trigger('click')
 
-        expect(wrapper.vm.showAddExercise).toBe(false)
-        expect(wrapper.vm.showCreateForm).toBe(false)
+        expect(interne(wrapper).showAddExercise).toBe(false)
+        expect(interne(wrapper).showCreateForm).toBe(false)
         // A leftover query reopens the modal on a filtered list nobody asked for.
-        expect(wrapper.vm.searchQuery).toBe('')
+        expect(interne(wrapper).searchQuery).toBe('')
     })
 
     it('shows the failure inside the modal instead of only recording it', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
 
         const wrapper = mountPage()
-        wrapper.vm.showAddExercise = true
-        wrapper.vm.showCreateForm = true
-        await wrapper.vm.$nextTick()
+        interne(wrapper).showAddExercise = true
+        interne(wrapper).showCreateForm = true
+        await interne(wrapper).$nextTick()
 
         await wrapper.findAll('form')[1].trigger('submit')
         await flushPromises()
@@ -566,7 +574,7 @@ describe.each([
         })
 
         const wrapper = mountPage()
-        await wrapper.vm.createAndAddExercise()
+        await interne(wrapper).createAndAddExercise()
         await flushPromises()
 
         // An API Resource wraps its payload in `data`; only reading `exercise`
@@ -582,7 +590,7 @@ describe.each([
         })
 
         const wrapper = mountPage()
-        await wrapper.vm.createAndAddExercise()
+        await interne(wrapper).createAndAddExercise()
         await flushPromises()
 
         expect(templateForm().exercises.at(-1)).toMatchObject({ id: 13, name: 'Rowing Haltère' })
@@ -593,7 +601,7 @@ describe.each([
         vi.spyOn(globalThis, 'fetch').mockReturnValue(answer.promise)
 
         const wrapper = mountPage()
-        const submitted = wrapper.vm.createAndAddExercise()
+        const submitted = interne(wrapper).createAndAddExercise()
         await flushPromises()
 
         // Witnessed while the request is out. "Comes back to life" asserted on
@@ -608,7 +616,7 @@ describe.each([
         // Walking an absent `errors` bag throws, and the surrounding try/catch
         // would then tell the user their connection is down — which it is not,
         // and which sends them to reset a router over a validation refusal.
-        expect(wrapper.vm.createError).toBeNull()
+        expect(interne(wrapper).createError).toBeNull()
         // No bag to walk: the button must still come back to life.
         expect(quickCreateForm().processing).toBe(false)
         expect(quickCreateForm().errors).toEqual({})
@@ -618,7 +626,7 @@ describe.each([
     it('shows what the server said about a description it rejected', async () => {
         const wrapper = mountPage()
         templateForm().errors.description = 'La description ne peut pas dépasser 1000 caractères.'
-        await wrapper.vm.$nextTick()
+        await interne(wrapper).$nextTick()
 
         expect(wrapper.text()).toContain('La description ne peut pas dépasser 1000 caractères.')
     })
@@ -627,10 +635,10 @@ describe.each([
         vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'))
 
         const wrapper = mountPage()
-        await wrapper.vm.createAndAddExercise()
+        await interne(wrapper).createAndAddExercise()
         await flushPromises()
 
-        expect(wrapper.vm.createError).toContain('connexion')
+        expect(interne(wrapper).createError).toContain('connexion')
         // Leaving it spinning is what this branch exists to prevent.
         expect(quickCreateForm().processing).toBe(false)
         expect(templateForm().exercises).toHaveLength(0)
@@ -652,13 +660,13 @@ describe('opening a template the server described sparsely', () => {
 
         // `workout_template_sets` is a relation, so it is missing — not empty —
         // whenever the controller forgot to eager-load it.
-        expect(wrapper.vm.form.exercises).toEqual([{ uid: expect.any(Number), id: 1, name: 'Squat', sets: [] }])
+        expect(interne(wrapper).form.exercises).toEqual([{ uid: expect.any(Number), id: 1, name: 'Squat', sets: [] }])
     })
 
     it('opens a template that arrived without any lines key at all', () => {
         const wrapper = mountEdit({ id: 42, name: 'Push A', description: null })
 
-        expect(wrapper.vm.form.exercises).toEqual([])
+        expect(interne(wrapper).form.exercises).toEqual([])
     })
 
     it.each([
@@ -673,7 +681,7 @@ describe('opening a template the server described sparsely', () => {
         // the `|| []` is there for.
         const wrapper = mount(Page, { props, global: globalOptions() })
 
-        expect(wrapper.vm.localExercises).toEqual([])
+        expect(interne(wrapper).localExercises).toEqual([])
     })
 })
 
@@ -689,10 +697,10 @@ describe('quick-creating an exercise while editing a template', () => {
         answerWith(419)
 
         const wrapper = mountEdit()
-        await wrapper.vm.createAndAddExercise()
+        await interne(wrapper).createAndAddExercise()
         await flushPromises()
 
-        expect(wrapper.vm.createError).toContain('419')
+        expect(interne(wrapper).createError).toContain('419')
         expect(templateForm().exercises).toHaveLength(0)
     })
 
@@ -700,10 +708,10 @@ describe('quick-creating an exercise while editing a template', () => {
         answerWith(422, { errors: { name: ['Ce nom existe déjà.'] } })
 
         const wrapper = mountEdit()
-        await wrapper.vm.createAndAddExercise()
+        await interne(wrapper).createAndAddExercise()
         await flushPromises()
 
-        expect(wrapper.vm.createError).toBeNull()
+        expect(interne(wrapper).createError).toBeNull()
         expect(quickCreateForm().errors.name).toBe('Ce nom existe déjà.')
     })
 
@@ -711,10 +719,10 @@ describe('quick-creating an exercise while editing a template', () => {
         answerWith(200, { exercise: { name: 'Sans identifiant' } })
 
         const wrapper = mountEdit()
-        await wrapper.vm.createAndAddExercise()
+        await interne(wrapper).createAndAddExercise()
         await flushPromises()
 
-        expect(wrapper.vm.createError).toContain("n'a pas pu être lue")
+        expect(interne(wrapper).createError).toContain("n'a pas pu être lue")
         expect(templateForm().exercises).toHaveLength(0)
     })
 
@@ -722,11 +730,11 @@ describe('quick-creating an exercise while editing a template', () => {
         answerWith(201, { exercise: { id: 9, name: 'Aabtiré' } })
 
         const wrapper = mountEdit()
-        await wrapper.vm.createAndAddExercise()
+        await interne(wrapper).createAndAddExercise()
         await flushPromises()
 
         expect(templateForm().exercises.at(-1).id).toBe(9)
-        expect(wrapper.vm.localExercises[0].name).toBe('Aabtiré')
+        expect(interne(wrapper).localExercises[0].name).toBe('Aabtiré')
     })
 })
 

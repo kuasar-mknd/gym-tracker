@@ -9,6 +9,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Modifié
 - **L'autorisation d'une ressource vit au contrôleur** (#1676) : dix requêtes de validation refaisaient la vérification que le contrôleur fait déjà ; elles ne vérifient plus que la connexion, sauf `goals.update` où la règle `exists` ferait travailler la base avant le refus (le contrat de non-divulgation le mesure). Une requête de validation morte est retirée.
+- **Un seul formulaire de modèle de séance** (#1675) : les pages de création et de modification, identiques à 95 %, partagent le composant `TemplateForm` ; deux pages de trente lignes au lieu de deux copies de 450.
 
 ## [1.5.10] - 2026-09-04
 
