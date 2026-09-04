@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.10] - 2026-09-04
+
 ### Corrigé
 - **« Tes préférences n'ont pas pu être enregistrées » alors qu'elles l'étaient** : la page enregistre en XHR et le serveur répondait par une redirection 302 que le navigateur rejouait en `PATCH /profile/edit`, donc 405 ; il répond désormais 204 à un client XHR. Et la bannière « Activer les notifications » revient quand le navigateur n'a plus d'abonnement push, même si le serveur en garde un.
 
@@ -15,6 +17,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **La création d'une série suit un seul chemin** (#1676) : le contrôleur cherchait la ligne et vérifiait le droit d'y écrire, puis l'action refaisait les deux ; une lecture de moins par série, et une seule autorisation à relire.
 - **La façade `StatsService` disparaît** (#1676) : dix-sept de ses dix-huit méthodes relayaient vers les services de statistiques spécialisés ; chaque appelant reçoit désormais le service qu'il utilise, et la vue « performance » du tableau de bord est composée par l'action qui la sert, sous la même clef de cache.
 - **Un seul réordonnancement** (#1676) : les deux actions jumelles (séries d'une ligne, exercices d'une séance) n'en font plus qu'une, qui vérifie elle-même que l'ordre soumis est une permutation ; et les deux requêtes de validation identiques des disques n'en font plus qu'une.
+
+### Infrastructure
+- **L'audit des dépendances npm passe par la base OSV** (#1708) : `osv-scanner` épinglé scanne `package-lock.json` entier, même seuil qu'avant (CVSS ≥ 7), sans tolérance ; `npm audit` dépendait d'un endpoint du registre npm tombé par intermittence toute la journée du 4 septembre.
 
 ## [1.5.9] - 2026-09-04
 
@@ -425,7 +430,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.9...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.10...HEAD
+[1.5.10]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.9...v1.5.10
 [1.5.5]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.4...v1.5.5
 [1.5.6]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.5...v1.5.6
 [1.5.7]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.6...v1.5.7
