@@ -69,3 +69,4 @@ coverage
 # Derived output — regenerate with `artisan boost:install --skills`.
 /.claude/skills/
 /.agents/
+/osv.json

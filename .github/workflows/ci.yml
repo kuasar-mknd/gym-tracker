@@ -483,18 +483,26 @@ jobs:
             - name: Unused Composer Dependencies
               run: ./vendor/bin/composer-unused --no-progress
 
-            # Le job audit n'avait aucun Node : npm audit resout depuis
-            # package-lock.json, donc ni `npm ci` ni cache ne sont necessaires.
-            - name: Setup Node
-              uses: actions/setup-node@v7
-              with:
-                  node-version: 24
-
-            # Sans --omit=dev : dans ce depot, plusieurs paquets marques dev dans le
-            # lock sont bundles par Vite et partent bien au navigateur. Les exclure
-            # rendrait le gate aveugle sur du code qui atteint la production.
-            - name: NPM Audit
-              run: npm audit --audit-level=high
+            # Le lockfile entier (dev compris : plusieurs paquets marques dev sont
+            # bundles par Vite et partent au navigateur) est scanne contre la base
+            # OSV. `npm audit` dependait de l'endpoint des avis du registre npm,
+            # qui a rendu 503 ou expire par intermittence toute la journee du
+            # 2026-09-04 (14 jobs rouges sur 33, main comprise). Seuls les codes
+            # 0 (rien) et 1 (vulnerabilites) sont des verdicts ; tout autre code
+            # est une erreur du scanner et fait echouer le job.
+            - name: Vulnérabilités npm (OSV)
+              run: |
+                  set +e
+                  docker run --rm -v "$PWD":/repo:ro -w /repo ghcr.io/google/osv-scanner:v2.5.1 scan --lockfile=package-lock.json --format=json > osv.json
+                  code=$?
+                  set -e
+                  if [ "$code" != "0" ] && [ "$code" != "1" ]; then
+                    echo "osv-scanner a echoue (code $code)"; cat osv.json; exit 1
+                  fi
+                  jq -r '.results[].packages[] | "\(.package.name) \(.package.version): " + ([.groups[] | "\(.ids | join("/")) (CVSS \(.max_severity // "?"))"] | join(", "))' osv.json
+                  hautes=$(jq '[.results[].packages[].groups[] | select(((.max_severity // "0") | tonumber) >= 7)] | length' osv.json)
+                  echo "groupes de severite >= 7 : $hautes"
+                  [ "$hautes" = "0" ]
 
             - name: PHP Insights
               run: ./vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90
