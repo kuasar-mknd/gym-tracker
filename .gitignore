@@ -18,6 +18,7 @@ pnpm-lock.yaml
 pnpm-debug.log*
 .pnpm-store
 /public/build
+/public/sw.js
 /public/hot
 /public/storage
 /public/js/filament

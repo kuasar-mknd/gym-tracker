@@ -63,6 +63,7 @@ COPY --from=composer-builder /app/vendor ./vendor
 
 # Copy built frontend assets
 COPY --from=frontend-builder /app/public/build ./public/build
+COPY --from=frontend-builder /app/public/sw.js ./public/sw.js
 
 # Finalize Laravel
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -123,40 +123,6 @@ Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthCo
     ->name('social.callback');
 
 /**
- * Le service worker est bâti dans public/build, donc servi depuis /build/sw.js,
- * ce qui lui donne une portée de /build/ : il ne contrôlait aucune page de
- * l'application. Un worker ne peut revendiquer une portée plus large que son
- * propre chemin que si le serveur l'y autorise par cet en-tête.
- */
-Route::get('/sw.js', function (): \Symfony\Component\HttpFoundation\Response {
-    $worker = public_path('build/sw.js');
-
-    abort_unless(is_file($worker), 404);
-
-    return response()->file($worker, [
-        'Content-Type' => 'application/javascript',
-        'Service-Worker-Allowed' => '/',
-        'Cache-Control' => 'no-cache, must-revalidate',
-    ]);
-})->name('service-worker');
-
-/*
- * Le plugin PWA precache `manifest.webmanifest` sans préfixe, donc résolu
- * depuis /sw.js en /manifest.webmanifest : servi ici, sinon 404 et Workbox
- * annule l'installation du worker.
- */
-Route::get('/manifest.webmanifest', function (): \Symfony\Component\HttpFoundation\Response {
-    $manifest = public_path('build/manifest.webmanifest');
-
-    abort_unless(is_file($manifest), 404);
-
-    return response()->file($manifest, [
-        'Content-Type' => 'application/manifest+json',
-        'Cache-Control' => 'no-cache, must-revalidate',
-    ]);
-})->name('web-manifest');
-
-/**
  * Raccourci de connexion pour le développement mobile.
  *
  * Ouvre une session sur le compte de démonstration, comme loginAs() le fait
