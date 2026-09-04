@@ -19,7 +19,7 @@ final class ExerciseStatsService
     public function getMuscleDistribution(User $user, int $days = 30): array
     {
         return Cache::remember(
-            "stats.muscle_dist.{$user->id}.{$days}",
+            ClesDeStats::seances($user, "muscle_dist.{$days}"),
             now()->addMinutes(30),
             fn (): array => $this->repartitionParCategorie($user, $days),
         );
@@ -85,21 +85,8 @@ final class ExerciseStatsService
      */
     public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
     {
-        /*
-         * La version n'est ecrite qu'a un seul endroit, `StatsCacheManager:53`,
-         * sous la forme `(string) time()`. Le repli `is_scalar()` qui etait ici
-         * ne pouvait donc pas se declencher — deux mutants y survivaient.
-         *
-         * Ce qui EST atteignable, c'est l'absence de cle : un compte dont les
-         * statistiques n'ont jamais ete invalidees n'a pas de version, et le
-         * repli textuel sert alors vraiment. Ecrit ainsi, la branche est vivante
-         * et un test peut la tenir.
-         */
-        $version = Cache::get("stats.1rm_version.{$user->id}");
-        $version = is_string($version) ? $version : '1';
-
         return Cache::remember(
-            "stats.1rm.{$user->id}.{$exerciseId}.{$days}.v{$version}",
+            ClesDeStats::seances($user, "1rm.{$exerciseId}.{$days}"),
             now()->addMinutes(30),
             fn (): array => Set::query()
                 ->toBase()

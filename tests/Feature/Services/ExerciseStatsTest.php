@@ -138,18 +138,6 @@ it('date chaque point de la courbe de 1RM', function (): void {
  * Avant cela, la clé est absente et le repli sert vraiment — c'est lui qui rend
  * la clé de cache calculable pour un compte neuf.
  */
-it('calcule la clé de 1RM sans version enregistrée', function (): void {
-    $user = User::factory()->create();
-
-    $exercise = serieDeCategorie($user, 'Pectoraux', 100, 10);
-
-    Cache::forget("stats.1rm_version.{$user->id}");
-
-    app(ExerciseStatsService::class)->getExercise1RMProgress($user->refresh(), $exercise->id);
-
-    expect(Cache::has("stats.1rm.{$user->id}.{$exercise->id}.90.v1"))->toBeTrue();
-});
-
 it('garde chaque statistique d’exercice en cache trente minutes', function (string $methode, string $cle): void {
     $user = User::factory()->create();
 
@@ -158,11 +146,9 @@ it('garde chaque statistique d’exercice en cache trente minutes', function (st
 
     $exercise = serieDeCategorie($user, 'Pectoraux', 100, 10);
 
-    Cache::forget("stats.1rm_version.{$user->id}");
-
     app(ExerciseStatsService::class)->{$methode}($user->refresh(), ...($methode === 'getMuscleDistribution' ? [] : [$exercise->id]));
 
-    $cleComplete = str_replace(['{id}', '{ex}'], [(string) $user->id, (string) $exercise->id], $cle);
+    $cleComplete = \App\Services\Stats\ClesDeStats::seances($user, str_replace('{ex}', (string) $exercise->id, $cle));
 
     expect(Cache::has($cleComplete))->toBeTrue('la clé attendue n’a pas été écrite');
 
@@ -174,6 +160,6 @@ it('garde chaque statistique d’exercice en cache trente minutes', function (st
 
     Carbon::setTestNow();
 })->with([
-    'répartition musculaire' => ['getMuscleDistribution', 'stats.muscle_dist.{id}.30'],
-    'progression de 1RM' => ['getExercise1RMProgress', 'stats.1rm.{id}.{ex}.90.v1'],
+    'répartition musculaire' => ['getMuscleDistribution', 'muscle_dist.30'],
+    'progression de 1RM' => ['getExercise1RMProgress', '1rm.{ex}.90'],
 ]);

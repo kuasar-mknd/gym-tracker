@@ -21,7 +21,7 @@ class StatsCacheTest extends TestCase
     {
         $user = User::factory()->create();
         $weekKey = now()->startOfWeek()->format('Y-W');
-        $key = "stats.weekly_volume_comparison.{$user->id}.{$weekKey}";
+        $key = \App\Services\Stats\ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}");
 
         $this->assertFalse(Cache::has($key));
 
@@ -41,7 +41,7 @@ class StatsCacheTest extends TestCase
         ]);
 
         // Fill caches
-        $trendKey = "stats.volume_trend.{$user->id}.30";
+        $trendKey = \App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30');
 
         Cache::put($trendKey, ['data'], 600);
 
@@ -52,6 +52,7 @@ class StatsCacheTest extends TestCase
             'notes' => 'Updated Notes',
         ]);
 
+        // Les notes ne pèsent sur aucune statistique : rien n'est invalidé.
         $this->assertTrue(Cache::has($trendKey), 'Volume trend cache should NOT be cleared when only notes change');
     }
 
@@ -64,8 +65,8 @@ class StatsCacheTest extends TestCase
         ]);
 
         // Fill caches
-        $trendKey = "stats.volume_trend.{$user->id}.30";
-        $muscleKey = "stats.muscle_dist.{$user->id}.30";
+        $trendKey = \App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30');
+        $muscleKey = \App\Services\Stats\ClesDeStats::seances($user, 'muscle_dist.30');
 
         Cache::put($trendKey, ['data'], 600);
         Cache::put($muscleKey, ['data'], 600);
@@ -75,8 +76,8 @@ class StatsCacheTest extends TestCase
             'name' => 'New Name',
         ]);
 
-        $this->assertFalse(Cache::has($trendKey), 'Volume trend cache should be cleared when name changes');
-        $this->assertTrue(Cache::has($muscleKey), 'Muscle distribution cache should NOT be cleared when only name changes');
+        $this->assertFalse(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30')), 'Volume trend cache should be cleared when name changes');
+        $this->assertFalse(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'muscle_dist.30')), 'Muscle distribution cache is invalidated with the rest when the name changes');
     }
 
     public function test_updating_workout_date_clears_all_stats(): void
@@ -88,8 +89,8 @@ class StatsCacheTest extends TestCase
         ]);
 
         // Fill caches
-        $trendKey = "stats.volume_trend.{$user->id}.30";
-        $muscleKey = "stats.muscle_dist.{$user->id}.30";
+        $trendKey = \App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30');
+        $muscleKey = \App\Services\Stats\ClesDeStats::seances($user, 'muscle_dist.30');
 
         Cache::put($trendKey, ['data'], 600);
         Cache::put($muscleKey, ['data'], 600);
@@ -99,8 +100,8 @@ class StatsCacheTest extends TestCase
             'started_at' => now()->subDays(2)->toDateTimeString(),
         ]);
 
-        $this->assertFalse(Cache::has($trendKey), 'Volume trend cache should be cleared');
-        $this->assertFalse(Cache::has($muscleKey), 'Muscle distribution cache should be cleared when date changes');
+        $this->assertFalse(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30')), 'Volume trend cache should be cleared');
+        $this->assertFalse(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'muscle_dist.30')), 'Muscle distribution cache should be cleared when date changes');
     }
 
     public function test_updating_workout_does_not_clear_body_measurement_cache(): void
@@ -111,7 +112,7 @@ class StatsCacheTest extends TestCase
             'started_at' => now()->subDay(),
         ]);
 
-        $bodyKey = "stats.body_progress.{$user->id}.90";
+        $bodyKey = \App\Services\Stats\ClesDeStats::mesures($user, 'body_progress.90');
         Cache::put($bodyKey, ['data'], 600);
 
         $this->assertTrue(Cache::has($bodyKey));
@@ -129,21 +130,14 @@ class StatsCacheTest extends TestCase
         $user = User::factory()->create();
         $exerciseId = 1;
 
-        // Get initial 1RM progress (fills cache)
         app(ExerciseStatsService::class)->getExercise1RMProgress($user, $exerciseId);
-        $version = Cache::get("stats.1rm_version.{$user->id}", '1');
-        $key = "stats.1rm.{$user->id}.{$exerciseId}.90.v{$version}";
+        $avant = \App\Services\Stats\ClesDeStats::seances($user, "1rm.{$exerciseId}.90");
+        $this->assertTrue(Cache::has($avant));
 
-        $this->assertTrue(Cache::has($key));
-
-        // Clear workout related stats
         app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
 
-        // Check if version changed
-        $newVersion = Cache::get("stats.1rm_version.{$user->id}");
-        $this->assertNotEquals($version, $newVersion);
-
-        $newKey = "stats.1rm.{$user->id}.{$exerciseId}.90.v{$newVersion}";
-        $this->assertFalse(Cache::has($newKey));
+        $apres = \App\Services\Stats\ClesDeStats::seances($user, "1rm.{$exerciseId}.90");
+        $this->assertNotSame($avant, $apres);
+        $this->assertFalse(Cache::has($apres), 'La progression de 1RM se relit sous une clef neuve après invalidation');
     }
 }

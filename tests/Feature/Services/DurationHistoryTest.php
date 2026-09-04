@@ -126,7 +126,7 @@ it('garde les statistiques en cache trente minutes, pas plus', function (string 
 
     app(WorkoutStatsService::class)->{$methode}($user);
 
-    $cleComplete = str_replace('{id}', (string) $user->id, $cle);
+    $cleComplete = \App\Services\Stats\ClesDeStats::seances($user, $cle);
 
     expect(Cache::has($cleComplete))->toBeTrue();
 
@@ -138,6 +138,6 @@ it('garde les statistiques en cache trente minutes, pas plus', function (string 
 
     Carbon::setTestNow();
 })->with([
-    'historique de durée' => ['getDurationHistory', 'stats.duration_history.{id}.20'],
-    'répartitions' => ['getWorkoutDistributions', 'stats.workout_distributions.{id}.90'],
+    'historique de durée' => ['getDurationHistory', 'duration_history.20'],
+    'répartitions' => ['getWorkoutDistributions', 'workout_distributions.90'],
 ]);

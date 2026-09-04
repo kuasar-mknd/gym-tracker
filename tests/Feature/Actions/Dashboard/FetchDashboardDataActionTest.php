@@ -179,7 +179,7 @@ it('assemble les statistiques analytiques sous leurs deux cles', function (): vo
 
 it('garde les statistiques analytiques dix minutes, ni neuf ni onze', function (): void {
     $user = scenePourTableauDeBord();
-    $cle = "stats.dashboard_analytical.{$user->id}";
+    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'dashboard_analytical');
 
     app(FetchDashboardDataAction::class)->getAnalyticalStats($user);
 

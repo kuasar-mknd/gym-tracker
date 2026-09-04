@@ -16,10 +16,10 @@ it('names a workout by its date alone, and clears caches', function (): void {
     // On vérifie l'invalidation par l'état du cache, que StatsCacheManager modifie.
 
     // Seed caches that should be cleared by clearWorkoutRelatedStats & clearWorkoutMetadataStats
-    Cache::put("stats.weekly_volume.{$user->id}", ['some_data'], 600);
-    Cache::put("stats.volume_trend.{$user->id}.30", ['some_data'], 600);
-    Cache::put("stats.volume_history.{$user->id}.20", ['some_data'], 600);
-    Cache::put("stats.duration_history.{$user->id}.20", ['some_data'], 600);
+    Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'weekly_volume'), ['some_data'], 600);
+    Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30'), ['some_data'], 600);
+    Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'volume_history.20'), ['some_data'], 600);
+    Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'duration_history.20'), ['some_data'], 600);
 
     $action = app(CreateWorkoutAction::class);
     $workout = $action->execute($user);
@@ -37,8 +37,8 @@ it('names a workout by its date alone, and clears caches', function (): void {
     ]);
 
     // Verify caches are cleared
-    expect(Cache::has("stats.weekly_volume.{$user->id}"))->toBeFalse()
-        ->and(Cache::has("stats.volume_trend.{$user->id}.30"))->toBeFalse()
-        ->and(Cache::has("stats.volume_history.{$user->id}.20"))->toBeFalse()
-        ->and(Cache::has("stats.duration_history.{$user->id}.20"))->toBeFalse();
+    expect(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'weekly_volume')))->toBeFalse()
+        ->and(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30')))->toBeFalse()
+        ->and(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'volume_history.20')))->toBeFalse()
+        ->and(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'duration_history.20')))->toBeFalse();
 });

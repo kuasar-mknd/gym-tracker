@@ -6,6 +6,7 @@ namespace App\Actions\Dashboard;
 
 use App\Models\User;
 use App\Services\Stats\BodyStatsService;
+use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
 
@@ -90,7 +91,7 @@ final class FetchDashboardDataAction
     public function getAnalyticalStats(User $user): array
     {
         return \Illuminate\Support\Facades\Cache::remember(
-            "stats.dashboard_analytical.{$user->id}",
+            ClesDeStats::seances($user, 'dashboard_analytical'),
             now()->addMinutes(10),
             fn (): array => [
                 'weeklyVolume' => $this->getWeeklyVolumeData($user),

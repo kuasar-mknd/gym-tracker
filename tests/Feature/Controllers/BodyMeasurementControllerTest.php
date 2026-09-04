@@ -66,7 +66,8 @@ describe('BodyMeasurementController', function (): void {
                 ->post(route('body-measurements.store'), $data)
                 ->assertRedirect();
 
-            Cache::shouldHaveReceived('forget')->atLeast()->once();
+            // Invalider, c'est incrémenter la version des mesures (ClesDeStats).
+            Cache::shouldHaveReceived('increment')->atLeast()->once();
         });
 
         it('requires valid data', function (): void {
@@ -111,7 +112,8 @@ describe('BodyMeasurementController', function (): void {
                 ->delete(route('body-measurements.destroy', $measurement))
                 ->assertRedirect();
 
-            Cache::shouldHaveReceived('forget')->atLeast()->once();
+            // Invalider, c'est incrémenter la version des mesures (ClesDeStats).
+            Cache::shouldHaveReceived('increment')->atLeast()->once();
         });
 
         it('prevents deleting another users measurement', function (): void {

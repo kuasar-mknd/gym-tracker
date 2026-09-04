@@ -47,23 +47,20 @@ function utilisateurAvecSeance(): User
  * division ramenait la duree a quarante-huit minutes, et chacun des deux nombres
  * pouvait deriver d'une unite sans que rien ne bronche.
  */
-it('garde la version de 1RM trente jours', function (): void {
+it('ne laisse pas la version des séances expirer', function (): void {
     $user = User::factory()->create();
-
     $maintenant = Carbon::parse('2026-06-15 12:00:00');
     Carbon::setTestNow($maintenant);
 
+    $avant = \App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30');
     app(StatsCacheManager::class)->clearVolumeStats($user);
+    $apres = \App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30');
 
-    $cle = "stats.1rm_version.{$user->id}";
+    expect($apres)->not->toBe($avant, 'l’invalidation n’a pas changé la clef');
 
-    expect(Cache::has($cle))->toBeTrue('la version n’a pas été écrite');
-
-    Carbon::setTestNow($maintenant->copy()->addDays(30)->subSecond());
-    expect(Cache::has($cle))->toBeTrue('la version a expiré avant trente jours');
-
-    Carbon::setTestNow($maintenant->copy()->addDays(30)->addSecond());
-    expect(Cache::has($cle))->toBeFalse('la version a survécu au-delà de trente jours');
+    // Une version qui expirerait ramènerait les lecteurs sur d'anciennes clefs.
+    Carbon::setTestNow($maintenant->copy()->addDays(400));
+    expect(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30'))->toBe($apres);
 
     Carbon::setTestNow();
 });
@@ -80,13 +77,13 @@ it('vide l’historique de durée avec les statistiques de séance', function ()
 
     app(WorkoutStatsService::class)->getDurationHistory($user);
 
-    $cle = "stats.duration_history.{$user->id}.20";
+    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'duration_history.20');
 
     expect(Cache::has($cle))->toBeTrue();
 
     app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
 
-    expect(Cache::has($cle))->toBeFalse('l’historique de durée est resté en cache');
+    expect(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'duration_history.20')))->toBeFalse('l’historique de durée est resté en cache');
 });
 
 /**
@@ -141,7 +138,7 @@ it('garde la vue performance du tableau de bord trente minutes', function (): vo
     Carbon::setTestNow($maintenant);
 
     app(\App\Actions\Stats\GetStatsDashboardAction::class)->performanceOverview($user, 30);
-    $cle = "stats.performance_overview.{$user->id}.30";
+    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'performance_overview.30');
 
     expect(Cache::has($cle))->toBeTrue('la vue n’a pas été mise en cache');
 

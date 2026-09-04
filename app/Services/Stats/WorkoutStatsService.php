@@ -19,7 +19,7 @@ final class WorkoutStatsService
     public function getDurationHistory(User $user, int $limit = 20): array
     {
         return Cache::remember(
-            "stats.duration_history.{$user->id}.{$limit}",
+            ClesDeStats::seances($user, "duration_history.{$limit}"),
             now()->addMinutes(30),
             /**
              * Sans `toBase()`, contrairement a la methode voisine.
@@ -72,7 +72,7 @@ final class WorkoutStatsService
     public function getWorkoutDistributions(User $user, int $days = 90): array
     {
         return Cache::remember(
-            "stats.workout_distributions.{$user->id}.{$days}",
+            ClesDeStats::seances($user, "workout_distributions.{$days}"),
             now()->addMinutes(30),
             function () use ($user, $days): array {
                 /*
