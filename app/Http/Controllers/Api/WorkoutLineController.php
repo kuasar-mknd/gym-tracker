@@ -78,37 +78,11 @@ class WorkoutLineController extends Controller
     public function reorderSets(
         \App\Http\Requests\Api\SetOrderRequest $request,
         WorkoutLine $workoutLine,
-        \App\Actions\Workouts\ReorderSetsAction $reordonner
+        \App\Actions\Workouts\ReorderAction $reordonner
     ): WorkoutLineResource {
         $this->authorize('update', $workoutLine);
 
-        /** @var list<int> $series */
-        $series = array_map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0, (array) $request->validated('sets'));
-
-        /*
-         * L'ordre soumis doit etre une PERMUTATION des series de la ligne : une
-         * liste partielle laisserait les absentes sur leur rang d'origine, donc
-         * en double avec celles qu'on vient de renumeroter.
-         *
-         * Verifie ICI, apres l'autorisation : une lecture faite avant elle
-         * couterait une requete de plus pour une ligne qui existe mais
-         * n'appartient pas a l'appelant que pour une ligne inconnue.
-         */
-        $attendues = $workoutLine->sets()->pluck('id')
-            ->map(static fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
-            ->all();
-
-        $soumises = $series;
-        sort($soumises);
-        sort($attendues);
-
-        if ($soumises !== $attendues) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'sets' => 'La liste doit contenir exactement les séries de l’exercice, une fois chacune.',
-            ]);
-        }
-
-        $reordonner->execute($workoutLine, $series);
+        $reordonner->execute($workoutLine->sets(), (array) $request->validated('sets'), 'sets');
 
         return new WorkoutLineResource($workoutLine->load(['exercise', 'sets']));
     }

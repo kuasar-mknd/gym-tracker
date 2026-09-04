@@ -42,10 +42,10 @@ class PlateController extends Controller
      *
      * Validates and creates a new plate for the authenticated user.
      *
-     * @param  \App\Http\Requests\StorePlateRequest  $request  The validated request containing plate details.
+     * @param  \App\Http\Requests\PlateRequest  $request  The validated request containing plate details.
      * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
      */
-    public function store(\App\Http\Requests\StorePlateRequest $request): \Illuminate\Http\RedirectResponse
+    public function store(\App\Http\Requests\PlateRequest $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Plate::class);
 
@@ -61,13 +61,13 @@ class PlateController extends Controller
     /**
      * Update the specified plate in storage.
      *
-     * @param  \App\Http\Requests\UpdatePlateRequest  $request  The validated request containing updated fields.
+     * @param  \App\Http\Requests\PlateRequest  $request  The validated request containing updated fields.
      * @param  \App\Models\Plate  $plate  The plate to update.
      * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this plate.
      */
-    public function update(\App\Http\Requests\UpdatePlateRequest $request, Plate $plate): \Illuminate\Http\RedirectResponse
+    public function update(\App\Http\Requests\PlateRequest $request, Plate $plate): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('update', $plate);
 
