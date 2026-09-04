@@ -96,10 +96,12 @@ describe('MuscleDistributionChart legend', () => {
         expect(new Set(painted.map(([, colour]) => colour)).size).toBe(trained.length)
     })
 
-    it('keeps the ring open and its key beside it', () => {
+    it('keeps the ring open and its key under it', () => {
         const options = optionsOf(mount(MuscleDistributionChart, { props: { data: distribution } }))
 
-        expect(options.cutout).toBe('70%')
-        expect(options.plugins.legend.position).toBe('right')
+        // L'habillage commun des anneaux : 65 % de trou et la légende en bas,
+        // pour que tous les cercles du tableau de bord aient le même diamètre.
+        expect(options.cutout).toBe('65%')
+        expect(options.plugins.legend.position).toBe('bottom')
     })
 })

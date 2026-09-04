@@ -1,20 +1,7 @@
 <script setup>
-import { Line } from 'vue-chartjs'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler,
-} from 'chart.js'
 import { computed } from 'vue'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -23,102 +10,61 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    const labels = props.data.map((d) => d.day_label)
-    const volumes = props.data.map((d) => d.volume)
+const labels = computed(() => props.data.map((d) => d.day_label))
 
-    return {
-        labels,
-        datasets: [
-            {
-                label: 'Volume',
-                data: volumes,
-                fill: true,
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
+const datasets = computed(() => [
+    {
+        label: 'Volume',
+        data: props.data.map((d) => d.volume),
+        fill: true,
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
 
-                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
-                    gradient.addColorStop(1, jetonTransparent('accent-primary', 0))
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+            gradient.addColorStop(0, jetonTransparent('accent-primary', 0.2))
+            gradient.addColorStop(1, jetonTransparent('accent-primary', 0))
 
-                    return gradient
-                },
-                borderColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
-
-                    const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
-                    gradient.addColorStop(0, jeton('accent-primary'))
-                    gradient.addColorStop(0.5, jeton('accent-secondary'))
-                    gradient.addColorStop(1, jeton('accent-tertiary'))
-
-                    return gradient
-                },
-                borderWidth: 4,
-                tension: 0.4,
-                pointBackgroundColor: jeton('surface-card'),
-                pointBorderColor: jeton('accent-secondary'),
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-            },
-        ],
-    }
-})
-
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.9),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            borderColor: jetonTransparent('accent-primary', 0.1),
-            borderWidth: 1,
-            padding: 10,
-            displayColors: false,
-            callbacks: {
-                label: (context) => `${context.parsed.y} kg`,
-            },
+            return gradient
         },
-    },
-    scales: {
-        x: {
-            grid: { display: false },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold', family: 'sans-serif' },
-                padding: 10,
-            },
-            border: { display: false },
+        borderColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
+
+            const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0)
+            gradient.addColorStop(0, jeton('accent-primary'))
+            gradient.addColorStop(0.5, jeton('accent-secondary'))
+            gradient.addColorStop(1, jeton('accent-tertiary'))
+
+            return gradient
         },
-        y: {
-            display: false,
-            beginAtZero: true,
-        },
+        borderWidth: 4,
+        tension: 0.4,
+        pointBackgroundColor: jeton('surface-card'),
+        pointBorderColor: jeton('accent-secondary'),
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
     },
-    interaction: {
-        mode: 'index',
-        intersect: false,
-    },
-    layout: {
-        padding: {
-            left: -10,
-            right: -10,
-            bottom: 0,
-            top: 10,
-        },
-    },
-}))
+])
+
+const infobulle = { accent: 'accent-primary', callbacks: { label: (context) => `${context.parsed.y} kg` } }
+
+const marges = { layout: { padding: { left: -10, right: -10, bottom: 0, top: 10 } } }
 </script>
 
 <template>
-    <div class="h-48 w-full">
-        <Line :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart
+        type="line"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48"
+        :infobulle="infobulle"
+        :axe-x="{ ticks: { padding: 10 } }"
+        :axe-y="{ display: false, beginAtZero: true }"
+        :interaction="{ mode: 'index', intersect: false }"
+        :options="marges"
+    />
 </template>

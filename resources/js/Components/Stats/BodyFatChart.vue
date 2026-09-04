@@ -1,20 +1,7 @@
 <script setup>
-import { Line } from 'vue-chartjs'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler,
-} from 'chart.js'
 import { computed } from 'vue'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -23,80 +10,44 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    return {
-        labels: props.data.map((item) => item.date),
-        datasets: [
-            {
-                label: 'Masse Grasse (%)',
-                data: props.data.map((item) => item.body_fat),
-                fill: true,
-                tension: 0.4,
-                borderColor: jeton('accent-secondary'), // Magenta
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
-                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, jetonTransparent('accent-secondary', 0.2))
-                    gradient.addColorStop(1, jetonTransparent('accent-secondary', 0))
-                    return gradient
-                },
-                borderWidth: 3,
-                pointRadius: 2,
-                pointBackgroundColor: jeton('accent-secondary'),
-                pointBorderColor: jeton('surface-card'),
-                pointBorderWidth: 2,
-            },
-        ],
-    }
-})
+const labels = computed(() => props.data.map((item) => item.date))
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            display: false,
+const datasets = computed(() => [
+    {
+        label: 'Masse Grasse (%)',
+        data: props.data.map((item) => item.body_fat),
+        fill: true,
+        tension: 0.4,
+        borderColor: jeton('accent-secondary'), // Magenta
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+            gradient.addColorStop(0, jetonTransparent('accent-secondary', 0.2))
+            gradient.addColorStop(1, jetonTransparent('accent-secondary', 0))
+            return gradient
         },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.9),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            padding: 12,
-            cornerRadius: 12,
-            displayColors: false,
-            callbacks: {
-                label: (context) => `${context.parsed.y} %`,
-            },
-        },
+        borderWidth: 3,
+        pointRadius: 2,
+        pointBackgroundColor: jeton('accent-secondary'),
+        pointBorderColor: jeton('surface-card'),
+        pointBorderWidth: 2,
     },
-    scales: {
-        x: {
-            display: false,
-        },
-        y: {
-            display: true,
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-            },
-            grid: {
-                display: false,
-            },
-        },
-    },
-}))
+])
+
+const infobulle = { accent: 'accent-secondary', callbacks: { label: (context) => `${context.parsed.y} %` } }
 </script>
 
 <template>
-    <div class="h-32 w-full">
-        <Line :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart
+        type="line"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-32"
+        lueur="accent-secondary"
+        :infobulle="infobulle"
+        :axe-x="false"
+        :axe-y="{ grid: { display: false } }"
+    />
 </template>
-
-<style scoped>
-canvas {
-    filter: drop-shadow(0 4px 6px rgb(from var(--color-accent-secondary) r g b / 0.2));
-}
-</style>

@@ -53,49 +53,29 @@ export function graduations({ taille = 10, gras = true } = {}) {
 export function grille() {
     return {
         color: jetonTransparent('border', 0.6),
-        drawBorder: false,
     }
 }
+
+const estUnObjetSimple = (valeur) =>
+    valeur !== null && typeof valeur === 'object' && Object.getPrototypeOf(valeur) === Object.prototype
 
 /**
- * Un dégradé vertical entre deux jetons, pour un fond de barre ou d'aire.
+ * Les réglages d'un graphique posés sur ceux de base, branche par branche :
+ * un objet se fusionne, tout le reste (tableau, fonction, valeur) remplace.
  *
- * Rend `null` tant que Chart.js n'a pas mesuré sa zone de tracé — c'est son
- * protocole, pas une erreur : la fonction est rappelée à la mesure suivante.
- *
- * @param {object} context
- * @param {string} duBas
- * @param {string} duHaut
- * @param {{opaciteBasse?: number, opaciteHaute?: number}} options
- * @returns {CanvasGradient|null}
+ * @param {object} base
+ * @param {object|null|undefined} ajouts
+ * @returns {object}
  */
-export function degradeVertical(context, duBas, duHaut, { opaciteBasse = 1, opaciteHaute = 1 } = {}) {
-    const { ctx, chartArea } = context.chart
+export function fusionner(base, ajouts) {
+    const resultat = { ...base }
 
-    if (!chartArea) {
-        return null
+    for (const [clef, valeur] of Object.entries(ajouts ?? {})) {
+        resultat[clef] =
+            estUnObjetSimple(valeur) && estUnObjetSimple(base?.[clef]) ? fusionner(base[clef], valeur) : valeur
     }
 
-    const degrade = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-    degrade.addColorStop(0, jetonTransparent(duBas, opaciteBasse))
-    degrade.addColorStop(1, jetonTransparent(duHaut, opaciteHaute))
-
-    return degrade
-}
-
-export const commonTooltipOptions = {
-    get backgroundColor() {
-        return jetonTransparent('surface-card', 0.9)
-    },
-    get titleColor() {
-        return jeton('text-main')
-    },
-    get bodyColor() {
-        return jeton('text-main')
-    },
-    padding: 12,
-    cornerRadius: 12,
-    borderWidth: 0,
+    return resultat
 }
 
 export const volumeTooltipCallback = function (context) {

@@ -7,16 +7,25 @@
  * chartAxes.test.js declares the same mock inline; this module exists so the
  * suites written after it do not each keep their own copy of it.
  *
- * @returns {Object} The three chart components vue-chartjs exports here.
+ * @returns {Object} The four chart components vue-chartjs exports here.
  */
 export const chartRecorders = () => {
     const recorder = (name) => ({
         name,
-        props: { data: { type: Object, default: null }, options: { type: Object, default: null } },
+        props: {
+            data: { type: Object, default: null },
+            options: { type: Object, default: null },
+            plugins: { type: Array, default: () => [] },
+        },
         template: '<div />',
     })
 
-    return { Bar: recorder('Bar'), Line: recorder('Line'), Doughnut: recorder('Doughnut') }
+    return {
+        Bar: recorder('Bar'),
+        Line: recorder('Line'),
+        Doughnut: recorder('Doughnut'),
+        Scatter: recorder('Scatter'),
+    }
 }
 
 /**

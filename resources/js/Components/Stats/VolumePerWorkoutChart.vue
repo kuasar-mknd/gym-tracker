@@ -1,11 +1,8 @@
 <script setup>
-import { Bar } from 'vue-chartjs'
-import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
+import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
-import { commonTooltipOptions, volumeTooltipCallback } from './chartConfig'
-
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+import { volumeTooltipCallback } from './chartConfig'
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -14,69 +11,29 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    return {
-        labels: props.data.map((item) => item.date),
-        datasets: [
-            {
-                label: 'Volume (kg)',
-                data: props.data.map((item) => item.volume),
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
-                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, jeton('accent-info')) // Sky Blue
-                    gradient.addColorStop(1, jeton('accent-tertiary')) // Violet
-                    return gradient
-                },
-                borderRadius: 4,
-                hoverBackgroundColor: jeton('accent-tertiary'),
-            },
-        ],
-    }
-})
+const labels = computed(() => props.data.map((item) => item.date))
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-        y: {
-            beginAtZero: true,
-            grid: {
-                color: jetonTransparent('surface-card', 0.1),
-            },
-            ticks: {
-                color: jetonTransparent('surface-card', 0.7),
-                font: { size: 10, weight: 'bold' },
-            },
+const datasets = computed(() => [
+    {
+        label: 'Volume (kg)',
+        data: props.data.map((item) => item.volume),
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+            gradient.addColorStop(0, jeton('accent-info')) // Sky Blue
+            gradient.addColorStop(1, jeton('accent-tertiary')) // Violet
+            return gradient
         },
-        x: {
-            grid: {
-                display: false,
-            },
-            ticks: {
-                color: jetonTransparent('surface-card', 0.7),
-                font: { size: 10, weight: 'bold' },
-            },
-        },
+        borderRadius: 4,
+        hoverBackgroundColor: jeton('accent-tertiary'),
     },
-    plugins: {
-        legend: {
-            display: false,
-        },
-        tooltip: {
-            ...commonTooltipOptions,
-            callbacks: {
-                label: volumeTooltipCallback,
-            },
-        },
-    },
-}))
+])
+
+const infobulle = { accent: 'accent-info', callbacks: { label: volumeTooltipCallback } }
 </script>
 
 <template>
-    <div class="h-48 w-full sm:h-64">
-        <Bar :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48 sm:h-64" :infobulle="infobulle" />
 </template>

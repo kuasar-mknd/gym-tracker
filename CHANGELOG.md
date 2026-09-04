@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **Un seul graphique de base pour les 48 cartes de statistiques** (#1675) : chaque carte recopiait l'enregistrement de Chart.js, l'habillage de son infobulle, de sa légende et de ses axes ; elle ne déclare plus que ses séries et ce qui la distingue. Huit listes d'enregistrement divergentes deviennent une, tenue par une garde, et les trois gris de grille, les cinq bordures d'infobulle et les polices de graduation qui avaient dérivé se rejoignent. La densité de l'ombre et la place de la légende restent réglables, elles portaient une intention. Solde : 1 788 lignes de moins
+
 ## [1.5.11] - 2026-09-04
 
 ### Ajouté
