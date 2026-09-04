@@ -107,7 +107,7 @@ it('ecrit en une seule requete, quel que soit le nombre d exercices', function (
     ])->id)->all();
 
     \Illuminate\Support\Facades\DB::enableQueryLog();
-    app(\App\Actions\Workouts\ReorderWorkoutLinesAction::class)->execute($seance, array_values(array_reverse($ids)));
+    app(\App\Actions\Workouts\ReorderAction::class)->execute($seance->workoutLines(), array_values(array_reverse($ids)), 'lines');
     $ecritures = collect(\Illuminate\Support\Facades\DB::getQueryLog())
         ->filter(fn (array $r): bool => str_starts_with((string) $r['query'], 'update'));
     \Illuminate\Support\Facades\DB::disableQueryLog();
