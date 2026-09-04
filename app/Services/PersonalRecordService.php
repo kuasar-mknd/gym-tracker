@@ -38,7 +38,7 @@ final class PersonalRecordService
             return;
         }
 
-        $set->loadMissing(['workoutLine.workout.user', 'workoutLine.exercise']);
+        $set->loadMissing(['workoutLine.workout.user']);
 
         /*
          * Trois gardes sont parties d'ici : `! $workout`, `! $user` et
