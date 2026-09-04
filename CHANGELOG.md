@@ -7,10 +7,16 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Ajouté
+- **Une sauvegarde quotidienne de la base, chiffrée, hors du conteneur** (#1663) : à 02:30 le planificateur archive la base dans le dossier de l'hôte `BACKUP_HOST_PATH` (nettoyage à 02:00, contrôle de fraîcheur à 08:00, chaque tâche surveillée par Sentry) ; sans `BACKUP_ARCHIVE_PASSWORD`, aucune archive n'est écrite, que la demande vienne du planificateur, de Filament ou de `backup:run`
+
 ### Modifié
 - **Les statistiques en cache portent une version par utilisateur** (#1670) : invalider, c'est incrémenter la version (séances ou mesures), et toutes les entrées deviennent inatteignables d'un coup ; plus de liste de clefs à tenir à jour, celle qui avait déjà oublié une entrée (#1502). Renommer une séance recalcule aussi le volume hebdomadaire à la prochaine lecture.
 - **L'autorisation d'une ressource vit au contrôleur** (#1676) : dix requêtes de validation refaisaient la vérification que le contrôleur fait déjà ; elles ne vérifient plus que la connexion, sauf `goals.update` où la règle `exists` ferait travailler la base avant le refus (le contrat de non-divulgation le mesure). Une requête de validation morte est retirée.
 - **Un seul formulaire de modèle de séance** (#1675) : les pages de création et de modification, identiques à 95 %, partagent le composant `TemplateForm` ; deux pages de trente lignes au lieu de deux copies de 450.
+
+### Infrastructure
+- **Les tests navigateur de la CI tournent en trois éclats** (#1672) : le job faisait 62 % du chemin critique ; la répartition est un glouton sur des durées mesurées en CI (un fichier nouveau reçoit le poids médian), les trois éclats sont agrégés sous un seul contrôle requis
 
 ## [1.5.10] - 2026-09-04
 
