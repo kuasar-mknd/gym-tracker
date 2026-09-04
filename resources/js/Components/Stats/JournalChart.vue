@@ -1,21 +1,8 @@
 <script setup>
-import { Line } from 'vue-chartjs'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler,
-} from 'chart.js'
 import { computed, ref } from 'vue'
 import { parseCalendarDate } from '@/Utils/date'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -56,106 +43,62 @@ const currentMetricConfig = computed(() => {
     return metrics.find((m) => m.value === selectedMetric.value)
 })
 
-const chartData = computed(() => {
-    // Sort data by date ascending
-    // Y-m-d sorts correctly as a string; there is no reason to build two
-    // Date objects per comparison, let alone from a calendar day.
-    const sortedData = [...props.data].sort((a, b) => String(a.date).localeCompare(String(b.date)))
+// Sort data by date ascending
+// Y-m-d sorts correctly as a string; there is no reason to build two
+// Date objects per comparison, let alone from a calendar day.
+const sortedData = computed(() => [...props.data].sort((a, b) => String(a.date).localeCompare(String(b.date))))
 
-    return {
-        labels: sortedData.map((item) => {
-            const date = parseCalendarDate(item.date)
-            return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-        }),
-        datasets: [
-            {
-                label: currentMetricConfig.value.label,
-                data: sortedData.map((item) => item[selectedMetric.value]),
-                fill: true,
-                tension: 0.4,
-                borderColor: currentMetricConfig.value.color,
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
-                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    // Convert hex to rgba for gradient
-                    const hex = currentMetricConfig.value.color.replace('#', '')
-                    const r = parseInt(hex.substring(0, 2), 16)
-                    const g = parseInt(hex.substring(2, 4), 16)
-                    const b = parseInt(hex.substring(4, 6), 16)
+const labels = computed(() =>
+    sortedData.value.map((item) => {
+        const date = parseCalendarDate(item.date)
+        return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    }),
+)
 
-                    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.2)`)
-                    gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
-                    return gradient
-                },
-                borderWidth: 3,
-                pointRadius: 3,
-                pointBackgroundColor: currentMetricConfig.value.color,
-                pointBorderColor: jeton('surface-card'),
-                pointBorderWidth: 2,
-                pointHoverRadius: 6,
-                pointHoverBackgroundColor: jeton('surface-card'),
-                pointHoverBorderColor: currentMetricConfig.value.color,
-                pointHoverBorderWidth: 3,
-            },
-        ],
-    }
-})
+const datasets = computed(() => [
+    {
+        label: currentMetricConfig.value.label,
+        data: sortedData.value.map((item) => item[selectedMetric.value]),
+        fill: true,
+        tension: 0.4,
+        borderColor: currentMetricConfig.value.color,
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+            // Convert hex to rgba for gradient
+            const hex = currentMetricConfig.value.color.replace('#', '')
+            const r = parseInt(hex.substring(0, 2), 16)
+            const g = parseInt(hex.substring(2, 4), 16)
+            const b = parseInt(hex.substring(4, 6), 16)
 
-const chartOptions = computed(() => {
-    return {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false,
-            },
-            tooltip: {
-                backgroundColor: jetonTransparent('surface-card', 0.9),
-                titleColor: jeton('text-main'),
-                bodyColor: jeton('text-main'),
-                padding: 12,
-                cornerRadius: 12,
-                displayColors: false,
-                borderWidth: 1,
-                borderColor: jetonTransparent('shadow-cast', 0.05),
-                callbacks: {
-                    label: (context) => `${context.parsed.y} ${currentMetricConfig.value.labelSuffix}`,
-                },
-            },
+            gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.2)`)
+            gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
+            return gradient
         },
-        scales: {
-            x: {
-                grid: {
-                    display: false,
-                },
-                ticks: {
-                    color: jeton('text-muted'),
-                    font: { size: 10 },
-                    maxRotation: 45,
-                    minRotation: 0,
-                },
-            },
-            y: {
-                beginAtZero: true,
-                suggestedMax: currentMetricConfig.value.labelSuffix === '/5' ? 5 : 10,
-                ticks: {
-                    color: jeton('text-muted'),
-                    font: { size: 10, weight: 'bold' },
-                    stepSize: 1,
-                },
-                grid: {
-                    color: jetonTransparent('surface-card', 0.1),
-                    borderDash: [5, 5],
-                },
-                border: {
-                    display: false,
-                },
-            },
-        },
-    }
-})
+        borderWidth: 3,
+        pointRadius: 3,
+        pointBackgroundColor: currentMetricConfig.value.color,
+        pointBorderColor: jeton('surface-card'),
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: jeton('surface-card'),
+        pointHoverBorderColor: currentMetricConfig.value.color,
+        pointHoverBorderWidth: 3,
+    },
+])
+
+const infobulle = computed(() => ({
+    callbacks: { label: (context) => `${context.parsed.y} ${currentMetricConfig.value.labelSuffix}` },
+}))
+
+const axeY = computed(() => ({
+    beginAtZero: true,
+    suggestedMax: currentMetricConfig.value.labelSuffix === '/5' ? 5 : 10,
+    ticks: { stepSize: 1 },
+    grid: { color: jetonTransparent('surface-card', 0.1), borderDash: [5, 5] },
+}))
 </script>
 
 <template>
@@ -180,17 +123,22 @@ const chartOptions = computed(() => {
         </div>
 
         <!-- Chart -->
-        <div class="h-64 w-full">
-            <Line v-if="data.length > 0" :data="chartData" :options="chartOptions" />
-            <div v-else class="text-text-muted flex h-full items-center justify-center">
-                Pas assez de données pour afficher le graphique
-            </div>
-        </div>
+        <BaseChart
+            type="line"
+            :labels="labels"
+            :datasets="datasets"
+            hauteur="h-64"
+            lueur="shadow-cast"
+            :infobulle="infobulle"
+            :axe-x="{ ticks: { maxRotation: 45, minRotation: 0 } }"
+            :axe-y="axeY"
+            :vide="data.length === 0"
+        >
+            <template #vide>
+                <div class="text-text-muted flex h-full items-center justify-center">
+                    Pas assez de données pour afficher le graphique
+                </div>
+            </template>
+        </BaseChart>
     </div>
 </template>
-
-<style scoped>
-canvas {
-    filter: drop-shadow(0 4px 6px rgb(from var(--color-shadow-cast) r g b / 0.1));
-}
-</style>
