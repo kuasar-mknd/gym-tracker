@@ -1,19 +1,7 @@
 <script setup>
-import { Line } from 'vue-chartjs'
-import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-} from 'chart.js'
+import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -65,62 +53,22 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-        mode: 'index',
-        intersect: false,
-    },
-    plugins: {
-        legend: {
-            display: true,
-            position: 'top',
-            labels: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-                usePointStyle: true,
-                boxWidth: 6,
-            },
-        },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.95),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            borderColor: jetonTransparent('shadow-cast', 0.1),
-            borderWidth: 1,
-            cornerRadius: 12,
-            padding: 12,
-            callbacks: {
-                label: (context) => `${context.dataset.label}: ${context.parsed.y} kg`,
-            },
-        },
-    },
-    scales: {
-        x: {
-            grid: {
-                display: false,
-            },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-            },
-        },
-        y: {
-            grid: {
-                color: jetonTransparent('shadow-cast', 0.05),
-            },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-            },
-        },
-    },
-}))
+const infobulle = {
+    accent: 'shadow-cast',
+    opaque: true,
+    displayColors: true,
+    callbacks: { label: (context) => `${context.dataset.label}: ${context.parsed.y} kg` },
+}
 </script>
 
 <template>
-    <div class="h-64 w-full">
-        <Line :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart
+        type="line"
+        :labels="chartData.labels"
+        :datasets="chartData.datasets"
+        hauteur="h-64"
+        :legende="true"
+        :infobulle="infobulle"
+        :interaction="{ mode: 'index', intersect: false }"
+    />
 </template>
