@@ -1,10 +1,7 @@
 <script setup>
-import { Bar } from 'vue-chartjs'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { computed } from 'vue'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -13,69 +10,34 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    return {
-        labels: props.data.map((d) => d.date),
-        datasets: [
-            {
-                label: 'Volume (Reps)',
-                data: props.data.map((d) => d.reps),
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
-                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, jeton('accent-info'))
-                    gradient.addColorStop(1, jetonTransparent('accent-info', 0.55))
-                    return gradient
-                },
-                borderRadius: 4,
-                barPercentage: 0.5,
-                borderWidth: 0,
-                hoverBackgroundColor: jeton('accent-tertiary'),
-            },
-        ],
-    }
-})
+const labels = computed(() => props.data.map((d) => d.date))
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.95),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            borderColor: jetonTransparent('accent-info', 0.2),
-            borderWidth: 1,
-            padding: 10,
-            cornerRadius: 12,
-            displayColors: false,
-            callbacks: {
-                label: (context) => `${context.parsed.y} reps`,
-            },
+const datasets = computed(() => [
+    {
+        label: 'Volume (Reps)',
+        data: props.data.map((d) => d.reps),
+        backgroundColor: (context) => {
+            const { ctx, chartArea } = context.chart
+            if (!chartArea) return null
+            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
+            gradient.addColorStop(0, jeton('accent-info'))
+            gradient.addColorStop(1, jetonTransparent('accent-info', 0.55))
+            return gradient
         },
+        borderRadius: 4,
+        barPercentage: 0.5,
+        borderWidth: 0,
+        hoverBackgroundColor: jeton('accent-tertiary'),
     },
-    scales: {
-        x: {
-            grid: { display: false },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold', family: 'sans-serif' },
-            },
-            border: { display: false },
-        },
-        y: {
-            display: false,
-            beginAtZero: true,
-        },
-    },
-}))
+])
+
+const infobulle = {
+    accent: 'accent-info',
+    opaque: true,
+    callbacks: { label: (context) => `${context.parsed.y} reps` },
+}
 </script>
 
 <template>
-    <div class="h-full w-full">
-        <Bar :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-full" :infobulle="infobulle" :axe-y="false" />
 </template>

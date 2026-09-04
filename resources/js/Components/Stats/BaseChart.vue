@@ -23,7 +23,7 @@ import {
 import { computed } from 'vue'
 import { jeton } from '@/Utils/couleurs'
 import { optionsDAnneau } from '@/Utils/donut'
-import { fusionner, graduations, grille, infobulle } from './chartConfig'
+import { fusionner, graduations, grille, infobulle as habillageInfobulle } from './chartConfig'
 
 ChartJS.register(
     ArcElement,
@@ -43,7 +43,11 @@ ChartJS.register(
 const COMPOSANTS = { bar: 'Bar', line: 'Line', doughnut: 'Doughnut', scatter: 'Scatter' }
 
 const props = defineProps({
-    type: { type: String, default: 'bar', validator: (valeur) => valeur in COMPOSANTS },
+    type: {
+        type: String,
+        default: 'bar',
+        validator: (valeur) => ['bar', 'line', 'doughnut', 'scatter'].includes(valeur),
+    },
     labels: { type: Array, default: () => [] },
     datasets: { type: Array, required: true },
     hauteur: { type: String, default: 'h-48' },
@@ -89,18 +93,22 @@ const legende = () => {
     return estUnObjet(props.legende) ? fusionner(visible, props.legende) : visible
 }
 
+// Un axe caché garde son échelle : des barres partent toujours de zéro,
+// qu'on lise leurs graduations ou non.
 const axe = (reglage, defaut) => {
     if (reglage === false) {
-        return { display: false }
+        return { ...defaut, display: false }
     }
     return reglage === true ? defaut : fusionner(defaut, reglage)
 }
 
-const axeX = () => axe(props.axeX, { grid: { display: false }, ticks: graduations(), border: { display: false } })
+const axeX = () =>
+    axe(props.axeX, { display: true, grid: { display: false }, ticks: graduations(), border: { display: false } })
 
 const axeY = (reglage) =>
     axe(reglage, {
-        beginAtZero: props.type === 'bar',
+        display: true,
+        ...(props.type === 'bar' ? { beginAtZero: true } : {}),
         grid: grille(),
         ticks: graduations(),
         border: { display: false },
@@ -126,7 +134,7 @@ const chartOptions = computed(() => {
         indexAxis: props.indexAxis,
         plugins: {
             legend: legende(),
-            tooltip: { ...infobulle({ accent, opaque }), displayColors: false, ...reglages },
+            tooltip: { ...habillageInfobulle({ accent, opaque }), displayColors: false, ...reglages },
         },
         scales: { x: axeX(), y: axeY(props.axeY) },
     }
