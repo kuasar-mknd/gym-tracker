@@ -93,7 +93,7 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 | `ADMIN_INITIAL_PASSWORD` | Mot de passe du premier administrateur, exigé par `php artisan db:seed --class=AdminSeeder` ; le seeder échoue sans lui et ne réécrit jamais un mot de passe existant. |
 | `ADMIN_ALLOWED_IPS` | Adresses IP autorisées sur le panneau `/backoffice`, séparées par des virgules : adresses exactes ou plages CIDR, IPv4 et IPv6 (`192.168.1.0/24,100.76.239.32`). **Vide = fermé** en production. |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push. Sans elles, la page Profil affiche « service de notifications non configuré » et rien ne part. Générées une fois par `npx web-push generate-vapid-keys` ; en changer invalide les abonnements existants. |
-| `BACKUP_ARCHIVE_PASSWORD` | Mot de passe AES-256 des archives de sauvegarde. Sans lui, `sauvegarde:base` s'arrête en erreur : une archive en clair sur une autre machine serait une fuite. |
+| `BACKUP_ARCHIVE_PASSWORD` | Mot de passe AES-256 des archives de sauvegarde. Sans lui, aucune archive n'est écrite, que la sauvegarde vienne du planificateur, de Filament ou de `backup:run` : une archive en clair sur une autre machine serait une fuite. |
 | `BACKUP_HOST_PATH` | Dossier de l'hôte monté dans `app` et `scheduler` pour les archives : un partage d'une autre machine monté par le DSM, jamais un volume Docker. Obligatoire, la pile refuse de démarrer sans. |
 
 `docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, elles ne tournent pas, et rien ne le signale : une tâche qui ne s'exécute pas ne lève aucune erreur.

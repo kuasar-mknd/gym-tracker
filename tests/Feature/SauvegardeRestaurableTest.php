@@ -23,7 +23,7 @@ it('produit une archive chiffrée dont le dump est complet et relisible', functi
     app()->forgetInstance(\Spatie\Backup\Config\Config::class);
 
     try {
-        expect(Artisan::call('sauvegarde:base'))->toBe(0, Artisan::output());
+        expect(Artisan::call('backup:run', ['--only-db' => true, '--disable-notifications' => true]))->toBe(0, Artisan::output());
 
         $nom = config('backup.backup.name');
         assert(is_string($nom));
@@ -57,7 +57,7 @@ it('produit une archive chiffrée dont le dump est complet et relisible', functi
     }
 });
 
-it('refuse de sauvegarder sans mot de passe d’archive', function (): void {
+it('refuse d’écrire une archive sans mot de passe, d’où que vienne la demande', function (): void {
     $dossier = storage_path('framework/testing/sauvegardes-'.uniqid());
     File::ensureDirectoryExists($dossier);
     Config::set('filesystems.disks.sauvegardes.root', $dossier);
@@ -67,7 +67,8 @@ it('refuse de sauvegarder sans mot de passe d’archive', function (): void {
     app()->forgetInstance(\Spatie\Backup\Config\Config::class);
 
     try {
-        expect(Artisan::call('sauvegarde:base'))->toBe(1);
+        expect(Artisan::call('backup:run', ['--only-db' => true, '--disable-notifications' => true]))->toBe(1);
+        expect(Artisan::output())->toContain('BACKUP_ARCHIVE_PASSWORD');
         $nom = config('backup.backup.name');
         assert(is_string($nom));
         expect(glob($dossier.'/'.$nom.'/*.zip'))->toBe([]);

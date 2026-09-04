@@ -47,7 +47,7 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('02:00')
     ->sentryMonitor();
 
-\Illuminate\Support\Facades\Schedule::command('sauvegarde:base')
+\Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db' => true, '--disable-notifications' => true])
     ->dailyAt('02:30')
     ->sentryMonitor();
 

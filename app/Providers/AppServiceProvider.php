@@ -15,8 +15,10 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use RuntimeException;
 use SocialiteProviders\Apple\Provider as AppleProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
+use Spatie\Backup\Events\BackupManifestWasCreated;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -47,6 +49,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerAppleSocialiteDriver();
+        $this->refuserLesArchivesEnClair();
 
         if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
@@ -233,6 +236,19 @@ final class AppServiceProvider extends ServiceProvider
     {
         Event::listen(function (SocialiteWasCalled $event): void {
             $event->extendSocialite('apple', AppleProvider::class);
+        });
+    }
+
+    /**
+     * Sans mot de passe d'archive, aucune sauvegarde n'est écrite, qu'elle vienne
+     * du planificateur, de Filament ou d'un `backup:run` lancé à la main.
+     */
+    private function refuserLesArchivesEnClair(): void
+    {
+        Event::listen(BackupManifestWasCreated::class, function (): void {
+            if (blank(config('backup.backup.password'))) {
+                throw new RuntimeException('BACKUP_ARCHIVE_PASSWORD est vide : aucune archive en clair ne sera écrite.');
+            }
         });
     }
 }
