@@ -112,7 +112,7 @@ it('ecrit en une seule requete, quel que soit le nombre de series', function ():
     [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 12);
 
     \Illuminate\Support\Facades\DB::enableQueryLog();
-    app(\App\Actions\Workouts\ReorderSetsAction::class)->execute($ligne, array_values(array_reverse($ids)));
+    app(\App\Actions\Workouts\ReorderAction::class)->execute($ligne->sets(), array_values(array_reverse($ids)), 'sets');
     $ecritures = collect(\Illuminate\Support\Facades\DB::getQueryLog())
         ->filter(fn (array $r): bool => str_starts_with((string) $r['query'], 'update'));
     \Illuminate\Support\Facades\DB::disableQueryLog();
