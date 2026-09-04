@@ -116,6 +116,23 @@ jobs:
                   ls -la public/build
                   cat public/build/manifest.json || echo "Manifest not found"
 
+            # Chaque entree du precache doit commencer par /build/ et exister sous
+            # public/ : sans le prefixe, le worker demandait /assets/… (404) et n'a
+            # jamais ete installe en production (#1683).
+            - name: Verify Service Worker Precache
+              run: |
+                  node -e '
+                    const fs = require("fs");
+                    const sw = fs.readFileSync("public/build/sw.js", "utf8");
+                    const urls = [...sw.matchAll(/"url":"([^"]+)"/g)].map((m) => m[1]);
+                    if (urls.length === 0) { console.error("aucune entree de precache"); process.exit(1); }
+                    // manifest.webmanifest est servi a la racine par une route Laravel.
+                    const chemin = (u) => (u === "manifest.webmanifest" ? "public/build/" + u : "public" + u.split("?")[0]);
+                    const mauvaises = urls.filter((u) => !(u.startsWith("/build/") || u === "manifest.webmanifest") || !fs.existsSync(chemin(u)));
+                    if (mauvaises.length) { console.error("entrees de precache invalides :", mauvaises.slice(0, 10)); process.exit(1); }
+                    console.log(urls.length + " entrees de precache, toutes sous /build/ et presentes");
+                  '
+
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:

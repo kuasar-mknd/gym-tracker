@@ -140,6 +140,22 @@ Route::get('/sw.js', function (): \Symfony\Component\HttpFoundation\Response {
     ]);
 })->name('service-worker');
 
+/*
+ * Le plugin PWA precache `manifest.webmanifest` sans préfixe, donc résolu
+ * depuis /sw.js en /manifest.webmanifest : servi ici, sinon 404 et Workbox
+ * annule l'installation du worker.
+ */
+Route::get('/manifest.webmanifest', function (): \Symfony\Component\HttpFoundation\Response {
+    $manifest = public_path('build/manifest.webmanifest');
+
+    abort_unless(is_file($manifest), 404);
+
+    return response()->file($manifest, [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, must-revalidate',
+    ]);
+})->name('web-manifest');
+
 /**
  * Raccourci de connexion pour le développement mobile.
  *

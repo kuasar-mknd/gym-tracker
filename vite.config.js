@@ -48,6 +48,22 @@ export default defineConfig({
              */
             injectManifest: {
                 globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+                /**
+                 * Les entrées du precache sont relatives au dossier de sortie
+                 * (`assets/…`) et le worker est servi depuis /sw.js : sans ce
+                 * préfixe elles pointaient sur /assets/…, 404 pour chacune, et
+                 * Workbox annulait toute l'installation. Le worker ne s'est
+                 * jamais activé en production depuis que /sw.js existe (#1683).
+                 */
+                manifestTransforms: [
+                    (entries) => ({
+                        // Le plugin ajoute lui-même `manifest.webmanifest` sans passer
+                        // par modifyURLPrefix : la transformation couvre tout.
+                        manifest: entries.map((entry) =>
+                            entry.url.startsWith('/') ? entry : { ...entry, url: `/build/${entry.url}` },
+                        ),
+                    }),
+                ],
             },
             manifest: {
                 name: 'Gym Tracker',
