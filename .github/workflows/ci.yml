@@ -475,8 +475,20 @@ jobs:
             # Sans --omit=dev : dans ce depot, plusieurs paquets marques dev dans le
             # lock sont bundles par Vite et partent bien au navigateur. Les exclure
             # rendrait le gate aveugle sur du code qui atteint la production.
+            # Le point d'audit du registre npm rend parfois « Service Unavailable » :
+            # trois essais espaces avant de conclure, sinon une panne du registre
+            # passe pour une faille du depot (vu le 4 septembre 2026).
             - name: NPM Audit
-              run: npm audit --audit-level=high
+              run: |
+                  for essai in 1 2 3; do
+                      npm audit --audit-level=high && exit 0
+                      code=$?
+                      if npm audit --audit-level=high --json 2>/dev/null | grep -q '"vulnerabilities"'; then
+                          echo "::error::npm audit signale des vulnerabilites"; exit "$code"
+                      fi
+                      echo "npm audit indisponible (essai $essai), nouvel essai dans 20 s"; sleep 20
+                  done
+                  exit 1
 
             - name: PHP Insights
               run: ./vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90
