@@ -52,6 +52,16 @@ describe('WeightRepsScatterChart', () => {
         expect(scatter(wrapper).props('options').scales.y.beginAtZero).toBe(true)
     })
 
+    it('quadrille le nuage dans les deux sens', () => {
+        const wrapper = mount(WeightRepsScatterChart, { props: { data: sets } })
+        const scales = scatter(wrapper).props('options').scales
+
+        // Un point isolé ne se lit que par rapport à la grille : sans les
+        // verticales, plus rien ne rattache un point à son poids en abscisse.
+        expect(scales.x.grid.display).not.toBe(false)
+        expect(scales.x.grid.color).toBe(scales.y.grid.color)
+    })
+
     it('suit les points quand l’exercice change', async () => {
         const wrapper = mount(WeightRepsScatterChart, { props: { data: sets } })
 

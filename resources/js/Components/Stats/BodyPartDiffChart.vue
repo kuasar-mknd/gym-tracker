@@ -44,6 +44,7 @@ const datasets = computed(() => [
 ])
 
 const infobulle = {
+    accent: 'shadow-cast',
     opaque: true,
     callbacks: {
         label: (context) => {

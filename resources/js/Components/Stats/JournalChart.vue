@@ -90,6 +90,7 @@ const datasets = computed(() => [
 ])
 
 const infobulle = computed(() => ({
+    accent: 'shadow-cast',
     callbacks: { label: (context) => `${context.parsed.y} ${currentMetricConfig.value.labelSuffix}` },
 }))
 

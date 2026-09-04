@@ -26,9 +26,12 @@ const datasets = computed(() => [
 const titre = (text) => ({ display: true, text, color: jeton('text-muted'), font: { size: 10, weight: 'bold' } })
 
 const infobulle = {
+    accent: 'shadow-cast',
     opaque: true,
     callbacks: { label: (context) => `${context.parsed.x} kg × ${context.parsed.y} reps` },
 }
+
+const axeX = { title: titre('Poids (kg)'), grid: { display: true, ...grille() } }
 </script>
 
 <template>
@@ -38,7 +41,7 @@ const infobulle = {
         hauteur="h-full"
         lueur="accent-primary"
         :infobulle="infobulle"
-        :axe-x="{ title: titre('Poids (kg)'), grid: grille() }"
+        :axe-x="axeX"
         :axe-y="{ title: titre('Répétitions'), beginAtZero: true }"
     />
 </template>
