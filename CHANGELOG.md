@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.9] - 2026-09-04
+
 ### Corrigé
 - **Le service worker ne s'installait jamais en production** (#1683) : sa liste de precache pointait sur `/assets/…` au lieu de `/build/assets/…`, chaque entrée répondait 404 et Workbox annulait l'installation. Conséquences depuis la 1.5.0 : pas de mode hors-ligne réel, et l'activation des notifications push bloquée à l'étape « Service worker ». Un contrôle en CI vérifie désormais chaque entrée.
 
@@ -417,7 +419,12 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.9...HEAD
+[1.5.5]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.4...v1.5.5
+[1.5.6]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.5...v1.5.6
+[1.5.7]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.6...v1.5.7
+[1.5.8]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.7...v1.5.8
+[1.5.9]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.8...v1.5.9
 [1.5.4]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.3...v1.5.4
 [1.5.1]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.28...v1.5.1
 [1.4.28]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.4.26...v1.4.28
