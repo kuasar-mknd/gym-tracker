@@ -1,10 +1,7 @@
 <script setup>
-import { Bar } from 'vue-chartjs'
-import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
+import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -13,84 +10,48 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    // Reverse the data so it reads chronologically from left to right
-    const reversedData = [...props.data].reverse()
+// Reverse the data so it reads chronologically from left to right
+const donneesChronologiques = computed(() => [...props.data].reverse())
 
-    const labels = reversedData.map((d) => {
+const labels = computed(() =>
+    donneesChronologiques.value.map((d) => {
         const date = new Date(d.started_at)
         return date.toLocaleDateString('fr-FR', {
             day: 'numeric',
             month: 'short',
         })
-    })
+    }),
+)
 
-    const volumes = reversedData.map((d) => d.workout_volume || 0)
+const datasets = computed(() => [
+    {
+        label: 'Volume (kg)',
+        data: donneesChronologiques.value.map((d) => d.workout_volume || 0),
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
 
-    return {
-        labels,
-        datasets: [
-            {
-                label: 'Volume (kg)',
-                data: volumes,
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
+            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
+            gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
+            gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
 
-                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
-                    gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
-
-                    return gradient
-                },
-                borderRadius: 8,
-                barPercentage: 0.6,
-                borderWidth: 0,
-                hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
-            },
-        ],
-    }
-})
-
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.95),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            borderColor: jetonTransparent('accent-primary', 0.2),
-            borderWidth: 1,
-            padding: 10,
-            cornerRadius: 12,
-            displayColors: false,
-            callbacks: {
-                label: (context) => `${context.parsed.y} kg`,
-            },
+            return gradient
         },
+        borderRadius: 8,
+        barPercentage: 0.6,
+        borderWidth: 0,
+        hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
     },
-    scales: {
-        x: {
-            grid: { display: false },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold', family: 'sans-serif' },
-            },
-            border: { display: false },
-        },
-        y: {
-            display: false,
-            beginAtZero: true,
-        },
-    },
-}))
+])
+
+const infobulle = {
+    accent: 'accent-primary',
+    opaque: true,
+    callbacks: { label: (context) => `${context.parsed.y} kg` },
+}
 </script>
 
 <template>
-    <div class="h-48 w-full">
-        <Bar :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" :axe-y="false" />
 </template>
