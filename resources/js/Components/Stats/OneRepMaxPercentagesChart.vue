@@ -1,10 +1,7 @@
 <script setup>
-import { Bar } from 'vue-chartjs'
-import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
+import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -13,82 +10,47 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    // We want the chart to go from 50% up to 100%
-    const sortedData = [...props.data].sort((a, b) => a.percent - b.percent)
+// We want the chart to go from 50% up to 100%
+const donneesTriees = computed(() => [...props.data].sort((a, b) => a.percent - b.percent))
 
-    const labels = sortedData.map((d) => `${d.percent}%`)
-    const weights = sortedData.map((d) => d.value)
+const labels = computed(() => donneesTriees.value.map((d) => `${d.percent}%`))
 
-    return {
-        labels,
-        datasets: [
-            {
-                label: 'Poids Estimé (kg)',
-                data: weights,
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
+const datasets = computed(() => [
+    {
+        label: 'Poids Estimé (kg)',
+        data: donneesTriees.value.map((d) => d.value),
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
 
-                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
-                    gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
-                    gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
+            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top)
+            gradient.addColorStop(0, jeton('accent-primary')) // electric-orange
+            gradient.addColorStop(1, jeton('accent-secondary')) // hot-pink
 
-                    return gradient
-                },
-                borderRadius: 8,
-                barPercentage: 0.6,
-                borderWidth: 0,
-                hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
-            },
-        ],
-    }
-})
+            return gradient
+        },
+        borderRadius: 8,
+        barPercentage: 0.6,
+        borderWidth: 0,
+        hoverBackgroundColor: jeton('accent-tertiary'), // vivid-violet
+    },
+])
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.95),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            borderColor: jetonTransparent('accent-primary', 0.2),
-            borderWidth: 1,
-            padding: 10,
-            cornerRadius: 12,
-            displayColors: false,
-            callbacks: {
-                label: (context) => {
-                    // Try to find the est reps for this data point
-                    const dataPoint = [...props.data].find((d) => `${d.percent}%` === context.label)
-                    const repsText = dataPoint && dataPoint.reps !== '-' ? ` (${dataPoint.reps} reps)` : ''
-                    return `${context.parsed.y.toFixed(1)} kg${repsText}`
-                },
-            },
+const infobulle = {
+    accent: 'accent-primary',
+    opaque: true,
+    callbacks: {
+        label: (context) => {
+            // Try to find the est reps for this data point
+            const dataPoint = [...props.data].find((d) => `${d.percent}%` === context.label)
+            const repsText = dataPoint && dataPoint.reps !== '-' ? ` (${dataPoint.reps} reps)` : ''
+            return `${context.parsed.y.toFixed(1)} kg${repsText}`
         },
     },
-    scales: {
-        x: {
-            grid: { display: false },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold', family: 'sans-serif' },
-            },
-            border: { display: false },
-        },
-        y: {
-            display: false,
-            beginAtZero: true,
-        },
-    },
-}))
+}
 </script>
 
 <template>
-    <div class="h-48 w-full">
-        <Bar :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" :axe-y="false" />
 </template>

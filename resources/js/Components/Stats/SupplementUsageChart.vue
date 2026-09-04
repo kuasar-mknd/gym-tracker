@@ -1,10 +1,7 @@
 <script setup>
-import { Bar } from 'vue-chartjs'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
 import { computed } from 'vue'
-
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -13,80 +10,39 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    return {
-        labels: props.data.map((item) => item.date),
-        datasets: [
-            {
-                label: 'Doses prises',
-                data: props.data.map((item) => item.count),
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
-                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, jeton('accent-info')) // Cyan
-                    gradient.addColorStop(1, jetonTransparent('accent-info', 0.55)) // Blue
-                    return gradient
-                },
-                borderRadius: 6,
-                hoverBackgroundColor: jeton('accent-info'),
-            },
-        ],
-    }
-})
+const labels = computed(() => props.data.map((item) => item.date))
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-        y: {
-            beginAtZero: true,
-            grid: {
-                color: jetonTransparent('shadow-cast', 0.03),
-            },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-                stepSize: 1,
-                precision: 0,
-            },
+const datasets = computed(() => [
+    {
+        label: 'Doses prises',
+        data: props.data.map((item) => item.count),
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+            gradient.addColorStop(0, jeton('accent-info')) // Cyan
+            gradient.addColorStop(1, jetonTransparent('accent-info', 0.55)) // Blue
+            return gradient
         },
-        x: {
-            grid: {
-                display: false,
-            },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-                maxRotation: 0,
-                autoSkip: true,
-                maxTicksLimit: 7,
-            },
-        },
+        borderRadius: 6,
+        hoverBackgroundColor: jeton('accent-info'),
     },
-    plugins: {
-        legend: {
-            display: false,
-        },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.9),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            padding: 12,
-            cornerRadius: 12,
-            borderWidth: 1,
-            borderColor: jetonTransparent('shadow-cast', 0.05),
-            callbacks: {
-                label: (context) => `${context.raw} doses`,
-            },
-        },
-    },
-}))
+])
+
+const infobulle = {
+    accent: 'accent-info',
+    callbacks: { label: (context) => `${context.raw} doses` },
+}
 </script>
 
 <template>
-    <div class="h-48 w-full">
-        <Bar :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48"
+        :infobulle="infobulle"
+        :axe-x="{ ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 7 } }"
+        :axe-y="{ ticks: { stepSize: 1, precision: 0 } }"
+    />
 </template>
