@@ -118,11 +118,12 @@ it('sert la recommandation en cache pendant cinq minutes, puis la recalcule', fu
     expect($service->getRecommendedValues($ligneDuJour)['weight'])->toBe(80.0);
 });
 
-it('recommande pour une ligne relue en base sans la charger paresseusement', function (): void {
+it('recommande pour une ligne relue seule, sans sa séance', function (): void {
     [, , , $ligneDuJour] = historiquePourRecommandation(50.0);
 
-    // Relue seule, sans sa seance : c'est ce que tient la ressource qui
-    // serialise une ligne. Le service doit charger la relation lui-meme.
+    // Relue sans sa seance : c'est ce que tient la ressource qui serialise une
+    // ligne. Le service ne peut donc pas supposer la relation deja chargee, il
+    // doit aller la chercher.
     $relue = WorkoutLine::findOrFail($ligneDuJour->id);
 
     expect(app(RecommendedValuesService::class)->getRecommendedValues($relue)['weight'])->toBe(50.0);
@@ -155,4 +156,21 @@ it('sert le lot en cache pendant cinq minutes, puis le recalcule', function (): 
 
     $this->travel(1)->seconds();
     expect($service->batchRecommendedValues($lignes, $user->id)[$exercice->id]['weight'])->toBe(80.0);
+});
+
+it('ne va pas en base pour une ligne qui ne porte aucune séance', function (): void {
+    // `resolveWorkout()` écarte ce cas avant la requête : sans séance il n'y a
+    // ni date de référence ni propriétaire, donc rien à chercher.
+    $orpheline = WorkoutLine::factory()->make(['workout_id' => null]);
+
+    $requetes = [];
+    DB::listen(function (QueryExecuted $requete) use (&$requetes): void {
+        $requetes[] = $requete->sql;
+    });
+
+    $valeurs = app(RecommendedValuesService::class)
+        ->batchRecommendedValues(new Collection([$orpheline]), 1);
+
+    expect($valeurs)->toBe([])
+        ->and($requetes)->toBe([]);
 });
