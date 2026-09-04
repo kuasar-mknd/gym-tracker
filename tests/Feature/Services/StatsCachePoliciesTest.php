@@ -134,3 +134,22 @@ it('date chaque point de l’historique de poids', function (): void {
     expect($historique['weightHistory'][0]->date)->toBe('03/06')
         ->and($historique['weightHistory'][0]->full_date)->toBe('2026-06-03');
 });
+
+it('garde la vue performance du tableau de bord trente minutes', function (): void {
+    $user = User::factory()->create();
+    $maintenant = Carbon::parse('2026-06-15 12:00:00');
+    Carbon::setTestNow($maintenant);
+
+    app(\App\Actions\Stats\GetStatsDashboardAction::class)->performanceOverview($user, 30);
+    $cle = "stats.performance_overview.{$user->id}.30";
+
+    expect(Cache::has($cle))->toBeTrue('la vue n’a pas été mise en cache');
+
+    Carbon::setTestNow($maintenant->copy()->addMinutes(30)->subSecond());
+    expect(Cache::has($cle))->toBeTrue('la vue a expiré avant trente minutes');
+
+    Carbon::setTestNow($maintenant->copy()->addMinutes(30)->addSecond());
+    expect(Cache::has($cle))->toBeFalse('la vue a survécu au-delà de trente minutes');
+
+    Carbon::setTestNow();
+});

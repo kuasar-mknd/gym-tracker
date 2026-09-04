@@ -121,3 +121,45 @@ it('ecrit en une seule requete, quel que soit le nombre de series', function ():
     expect($ecritures)->toHaveCount(1)
         ->and($ligne->sets()->pluck('id')->all())->toBe(array_reverse($ids));
 });
+
+/*
+ * Un formulaire classique envoie les identifiants en chaînes ; un tableau
+ * décodé peut porter des clefs quelconques. L'action doit s'en tenir aux
+ * valeurs, dans leur ordre, converties en entiers.
+ */
+it('accepte des identifiants en chaînes et ordonne selon les valeurs, pas les clefs', function (): void {
+    $proprietaire = User::factory()->create();
+    [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 3);
+
+    app(\App\Actions\Workouts\ReorderAction::class)->execute(
+        $ligne->sets(),
+        [7 => (string) $ids[2], 3 => (string) $ids[0], 9 => (string) $ids[1]],
+        'sets'
+    );
+
+    expect($ligne->sets()->pluck('id')->all())->toBe([$ids[2], $ids[0], $ids[1]]);
+});
+
+it('refuse un identifiant qui n’est pas un nombre', function (): void {
+    $proprietaire = User::factory()->create();
+    [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 2);
+
+    expect(fn () => app(\App\Actions\Workouts\ReorderAction::class)->execute($ligne->sets(), ['abc', $ids[1]], 'sets'))
+        ->toThrow(\Illuminate\Validation\ValidationException::class);
+});
+
+/*
+ * Après un premier réordonnancement, la relation rend les séries dans leur
+ * nouvel ordre, plus par identifiant croissant : la comparaison doit trier
+ * les deux côtés.
+ */
+it('accepte une permutation quand les séries ne sont plus rangées par identifiant', function (): void {
+    $proprietaire = User::factory()->create();
+    [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 3);
+    $action = app(\App\Actions\Workouts\ReorderAction::class);
+
+    $action->execute($ligne->sets(), array_reverse($ids), 'sets');
+    $action->execute($ligne->sets(), [$ids[1], $ids[0], $ids[2]], 'sets');
+
+    expect($ligne->sets()->pluck('id')->all())->toBe([$ids[1], $ids[0], $ids[2]]);
+});

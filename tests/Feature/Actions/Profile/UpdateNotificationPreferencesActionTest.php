@@ -111,3 +111,29 @@ it('n\'ecrit rien quand aucune preference n\'est envoyee', function (): void {
 
     expect(NotificationPreference::query()->where('user_id', $user->id)->count())->toBe(0);
 });
+
+/*
+ * Les trois colonnes mises à jour par l'upsert doivent l'être vraiment :
+ * une ligne existante change d'état, de push et de jours.
+ */
+it('met à jour l’état, le push et les jours d’une ligne existante', function (): void {
+    $user = User::factory()->create();
+    $action = app(UpdateNotificationPreferencesAction::class);
+
+    $action->execute($user, [
+        'preferences' => ['daily_reminder' => false],
+        'push_preferences' => ['daily_reminder' => false],
+        'days' => ['daily_reminder' => [1]],
+    ]);
+    $action->execute($user, [
+        'preferences' => ['daily_reminder' => true],
+        'push_preferences' => ['daily_reminder' => true],
+        'days' => ['daily_reminder' => [4, 2]],
+    ]);
+
+    $quotidien = NotificationPreference::where('user_id', $user->id)->where('type', 'daily_reminder')->sole();
+
+    expect($quotidien->is_enabled)->toBeTrue()
+        ->and($quotidien->is_push_enabled)->toBeTrue()
+        ->and($quotidien->days)->toBe([2, 4]);
+});
