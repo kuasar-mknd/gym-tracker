@@ -7,13 +7,13 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **Le service worker et le manifeste sont des fichiers statiques** à la racine de `public/` (le manifeste est versionné, le worker construit) : plus de route Laravel pour les servir, donc plus de session ouverte ni de cookie posé à chaque vérification du worker (une écriture de moins sur le NAS par ouverture de l'application).
+
 ## [1.5.9] - 2026-09-04
 
 ### Corrigé
 - **Le service worker ne s'installait jamais en production** (#1683) : sa liste de precache pointait sur `/assets/…` au lieu de `/build/assets/…`, chaque entrée répondait 404 et Workbox annulait l'installation. Conséquences depuis la 1.5.0 : pas de mode hors-ligne réel, et l'activation des notifications push bloquée à l'étape « Service worker ». Un contrôle en CI vérifie désormais chaque entrée.
-
-### Modifié
-- **Le service worker et le manifeste sont des fichiers statiques** à la racine de `public/` (le manifeste est versionné, le worker construit) : plus de route Laravel pour les servir, donc plus de session ouverte ni de cookie posé à chaque vérification du worker (une écriture de moins sur le NAS par ouverture de l'application).
 
 ## [1.5.8] - 2026-09-03
 
