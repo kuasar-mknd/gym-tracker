@@ -185,10 +185,19 @@ jobs:
               # delete tests. Raise it whenever coverage climbs; never lower it.
               run: php artisan test -p --coverage --min=94
 
-    browser-tests:
+    # Trois éclats de durée comparable (poids mesurés dans
+    # .github/scripts/dusk-eclats.json) ; le job « browser-tests » ci-dessous
+    # les agrège, pour que la protection de branche et la promotion gardent
+    # le même nom de contrôle.
+    browser-shard:
+        name: browser-shard (${{ matrix.shard }})
         runs-on: ubuntu-latest
-        timeout-minutes: 45
+        timeout-minutes: 20
         needs: [setup-php, frontend-build]
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [1, 2, 3]
         services:
             mysql:
                 image: mysql:8.4
@@ -297,7 +306,7 @@ jobs:
                   timeout 30s bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null; do sleep 1; done'
 
                   # Run dusk
-                  php artisan dusk
+                  php .github/scripts/dusk-eclats.php 3 ${{ matrix.shard }} | xargs php artisan dusk
 
             - name: Dump Logs on Failure
               if: failure()
@@ -311,15 +320,26 @@ jobs:
               if: failure()
               uses: actions/upload-artifact@v7
               with:
-                  name: dusk-screenshots
+                  name: dusk-screenshots-${{ matrix.shard }}
                   path: tests/Browser/screenshots
 
             - name: Upload Test Logs
               if: failure()
               uses: actions/upload-artifact@v7
               with:
-                  name: dusk-console
+                  name: dusk-console-${{ matrix.shard }}
                   path: tests/Browser/console
+
+    browser-tests:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        needs: [browser-shard]
+        if: always()
+        steps:
+            - name: Verdict des éclats
+              run: |
+                  echo "éclats : ${{ needs.browser-shard.result }}"
+                  [ "${{ needs.browser-shard.result }}" = "success" ]
 
     lint:
         runs-on: ubuntu-latest
