@@ -163,9 +163,7 @@ class GoalController extends Controller
         $this->authorize('create', Goal::class);
 
         $data = $request->validated();
-        if (! isset($data['start_value'])) {
-            $data['start_value'] = 0;
-        }
+        $data['start_value'] ??= 0;
 
         $goal = new Goal();
         $goal->fill($data);

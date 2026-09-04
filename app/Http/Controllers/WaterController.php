@@ -58,9 +58,7 @@ class WaterController extends Controller
 
         $data = $request->validated();
 
-        if (! isset($data['consumed_at'])) {
-            $data['consumed_at'] = now();
-        }
+        $data['consumed_at'] ??= now();
 
         $this->user()->waterLogs()->create($data);
 
