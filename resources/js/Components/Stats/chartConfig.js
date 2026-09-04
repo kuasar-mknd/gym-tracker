@@ -53,8 +53,29 @@ export function graduations({ taille = 10, gras = true } = {}) {
 export function grille() {
     return {
         color: jetonTransparent('border', 0.6),
-        drawBorder: false,
     }
+}
+
+const estUnObjetSimple = (valeur) =>
+    valeur !== null && typeof valeur === 'object' && Object.getPrototypeOf(valeur) === Object.prototype
+
+/**
+ * Les réglages d'un graphique posés sur ceux de base, branche par branche :
+ * un objet se fusionne, tout le reste (tableau, fonction, valeur) remplace.
+ *
+ * @param {object} base
+ * @param {object|null|undefined} ajouts
+ * @returns {object}
+ */
+export function fusionner(base, ajouts) {
+    const resultat = { ...base }
+
+    for (const [clef, valeur] of Object.entries(ajouts ?? {})) {
+        resultat[clef] =
+            estUnObjetSimple(valeur) && estUnObjetSimple(base?.[clef]) ? fusionner(base[clef], valeur) : valeur
+    }
+
+    return resultat
 }
 
 /**
