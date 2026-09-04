@@ -5,97 +5,64 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Models\User;
+use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\StatsCacheManager;
-use Illuminate\Support\Facades\Cache;
-use Mockery;
 use Tests\TestCase;
 
+/*
+ * Invalider, c'est changer de version : les clefs relues ensuite diffèrent de
+ * celles écrites avant, et la famille voisine ne bouge pas.
+ */
 class StatsCacheManagerTest extends TestCase
 {
-    public function test_clear_volume_stats_clears_correct_keys(): void
+    public function test_clearing_workout_stats_changes_every_workout_key_and_leaves_body_keys_alone(): void
     {
         $user = User::factory()->make(['id' => 123]);
-
-        // Expectation: Volume related keys are cleared
-        Cache::shouldReceive('forget')->once()->with("stats.weekly_volume.{$user->id}");
-        Cache::shouldReceive('forget')->once()->with("stats.dashboard_analytical.{$user->id}");
-        Cache::shouldReceive('forget')->once()->with(Mockery::on(fn ($key): bool => str_starts_with((string) $key, "stats.weekly_volume_comparison.{$user->id}")));
-        /*
-         * L'assertion sur `stats.monthly_volume_comparison` est partie : elle
-         * verifiait qu'on oublie une entree que personne n'ecrit jamais (#1502).
-         */
-        Cache::shouldReceive('forget')->once()->with("stats.monthly_volume_history.{$user->id}.6");
-
-        foreach ([7, 30, 90, 365] as $days) {
-            Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
-            Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
-            Cache::shouldReceive('forget')->once()->with("stats.muscle_dist.{$user->id}.{$days}");
-        }
-
-        Cache::shouldReceive('put')->once()->with("stats.1rm_version.{$user->id}", Mockery::any(), Mockery::any());
-
-        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
-        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
-
-        app(StatsCacheManager::class)->clearVolumeStats($user);
-    }
-
-    public function test_clear_duration_stats_clears_correct_keys(): void
-    {
-        $user = User::factory()->make(['id' => 123]);
-
-        // Expectation: Duration related keys are cleared
-        // Les deux bornes, pas seulement 20 : `getPerformanceOverview()` ecrit
-        // aussi l'entree a 30, qui n'etait jamais invalidee (#1502).
-        Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
-        Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.30");
-        Cache::shouldReceive('forget')->once()->with("stats.workout_distributions.{$user->id}.90");
-        Cache::shouldReceive('forget')->once()->with("stats.dashboard_analytical.{$user->id}");
-
-        foreach ([7, 30, 90, 365] as $days) {
-            Cache::shouldReceive('forget')->once()->with("stats.performance_overview.{$user->id}.{$days}");
-        }
-
-        app(StatsCacheManager::class)->clearDurationStats($user);
-    }
-
-    public function test_clear_workout_related_stats_clears_everything(): void
-    {
-        $user = User::factory()->make(['id' => 123]);
-
-        // Expectation: Everything related to workouts is cleared
-        Cache::shouldReceive('forget')->atLeast()->once();
-        Cache::shouldReceive('put')->atLeast()->once();
+        $seance = ClesDeStats::seances($user, 'volume_trend.30');
+        $mesure = ClesDeStats::mesures($user, 'body_progress.90');
 
         app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
+
+        $this->assertNotSame($seance, ClesDeStats::seances($user, 'volume_trend.30'));
+        $this->assertSame($mesure, ClesDeStats::mesures($user, 'body_progress.90'));
     }
 
-    public function test_clear_body_measurement_stats_clears_correct_keys(): void
+    public function test_every_workout_clear_moves_the_same_version(): void
     {
         $user = User::factory()->make(['id' => 123]);
+        $manager = app(StatsCacheManager::class);
+        $depart = ClesDeStats::seances($user, 'weekly_volume');
 
-        // Expectation: Body measurement keys are cleared
-        Cache::shouldReceive('forget')->once()->with("stats.latest_metrics.{$user->id}");
+        $manager->clearWorkoutMetadataStats($user);
+        $apresMetadonnees = ClesDeStats::seances($user, 'weekly_volume');
+        $manager->clearVolumeStats($user);
+        $apresVolume = ClesDeStats::seances($user, 'weekly_volume');
+        $manager->clearWorkoutRelatedStats($user);
+        $apresTout = ClesDeStats::seances($user, 'weekly_volume');
 
-        foreach ([7, 30, 90, 365] as $days) {
-            Cache::shouldReceive('forget')->once()->with("stats.body_progress.{$user->id}.{$days}");
-        }
+        $this->assertCount(4, array_unique([$depart, $apresMetadonnees, $apresVolume, $apresTout]));
+    }
+
+    public function test_clearing_body_stats_changes_body_keys_and_leaves_workout_keys_alone(): void
+    {
+        $user = User::factory()->make(['id' => 123]);
+        $seance = ClesDeStats::seances($user, 'volume_trend.30');
+        $mesure = ClesDeStats::mesures($user, 'latest_metrics');
 
         app(StatsCacheManager::class)->clearBodyMeasurementStats($user);
+
+        $this->assertNotSame($mesure, ClesDeStats::mesures($user, 'latest_metrics'));
+        $this->assertSame($seance, ClesDeStats::seances($user, 'volume_trend.30'));
     }
 
-    public function test_clear_workout_metadata_stats_clears_correct_keys(): void
+    public function test_two_users_have_independent_versions(): void
     {
-        $user = User::factory()->make(['id' => 123]);
+        $premier = User::factory()->make(['id' => 1]);
+        $second = User::factory()->make(['id' => 2]);
+        $duSecond = ClesDeStats::seances($second, 'weekly_volume');
 
-        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
-        Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
-        Cache::shouldReceive('forget')->once()->with("stats.duration_history.{$user->id}.20");
+        app(StatsCacheManager::class)->clearWorkoutRelatedStats($premier);
 
-        foreach ([7, 30, 90, 365] as $days) {
-            Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
-        }
-
-        app(StatsCacheManager::class)->clearWorkoutMetadataStats($user);
+        $this->assertSame($duSecond, ClesDeStats::seances($second, 'weekly_volume'));
     }
 }

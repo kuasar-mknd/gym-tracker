@@ -33,7 +33,7 @@ final class VolumeStatsService
     public function getVolumeTrend(User $user, int $days = 30): array
     {
         return Cache::remember(
-            "stats.volume_trend.{$user->id}.{$days}",
+            ClesDeStats::seances($user, "volume_trend.{$days}"),
             now()->addMinutes(30),
             function () use ($user, $days): array {
                 // ⚡ Bolt: PERFORMANCE OPTIMIZATION
@@ -85,7 +85,7 @@ final class VolumeStatsService
     public function getWeeklyVolumeTrend(User $user): array
     {
         return Cache::remember(
-            "stats.weekly_volume.{$user->id}",
+            ClesDeStats::seances($user, 'weekly_volume'),
             now()->addMinutes(10),
             function () use ($user): array {
                 $startOfWeek = now()->startOfWeek();
@@ -130,7 +130,7 @@ final class VolumeStatsService
     public function getVolumeHistory(User $user, int $limit = 20): array
     {
         return Cache::remember(
-            "stats.volume_history.{$user->id}.{$limit}",
+            ClesDeStats::seances($user, "volume_history.{$limit}"),
             now()->addMinutes(30),
             function () use ($user, $limit): array {
                 /*
@@ -198,7 +198,7 @@ final class VolumeStatsService
         $weekKey = now()->startOfWeek()->format('Y-W');
 
         $comparison = Cache::remember(
-            "stats.weekly_volume_comparison.{$user->id}.{$weekKey}",
+            ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}"),
             now()->addMinutes(10),
             fn (): array => $this->calculateComparison(
                 $user,
@@ -228,7 +228,7 @@ final class VolumeStatsService
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
         return Cache::remember(
-            "stats.monthly_volume_history.{$user->id}.{$months}",
+            ClesDeStats::seances($user, "monthly_volume_history.{$months}"),
             now()->addMinutes(30),
             function () use ($user, $months): array {
                 // ⚡ Bolt: PERFORMANCE OPTIMIZATION

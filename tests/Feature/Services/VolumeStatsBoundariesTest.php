@@ -59,7 +59,7 @@ it('garde chaque statistique en cache la durée annoncée', function (string $me
 
     app(VolumeStatsService::class)->{$methode}($user->refresh());
 
-    $cleComplete = str_replace('{id}', (string) $user->id, $cle);
+    $cleComplete = \App\Services\Stats\ClesDeStats::seances($user, $cle);
 
     expect(Cache::has($cleComplete))->toBeTrue('la clé attendue n’a pas été écrite');
 
@@ -71,10 +71,10 @@ it('garde chaque statistique en cache la durée annoncée', function (string $me
 
     Carbon::setTestNow();
 })->with([
-    'tendance de volume' => ['getVolumeTrend', 'stats.volume_trend.{id}.30', 30],
-    'volume hebdomadaire' => ['getWeeklyVolumeTrend', 'stats.weekly_volume.{id}', 10],
-    'historique de volume' => ['getVolumeHistory', 'stats.volume_history.{id}.20', 30],
-    'historique mensuel' => ['getMonthlyVolumeHistory', 'stats.monthly_volume_history.{id}.6', 30],
+    'tendance de volume' => ['getVolumeTrend', 'volume_trend.30', 30],
+    'volume hebdomadaire' => ['getWeeklyVolumeTrend', 'weekly_volume', 10],
+    'historique de volume' => ['getVolumeHistory', 'volume_history.20', 30],
+    'historique mensuel' => ['getMonthlyVolumeHistory', 'monthly_volume_history.6', 30],
 ]);
 
 /**

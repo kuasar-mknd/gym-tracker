@@ -1183,18 +1183,6 @@ parameters:
 			path: tests/Feature/Services/RecommendedValuesServiceTest.php
 
 		-
-			message: '#^Part \$newVersion \(mixed\) of encapsed string cannot be cast to string\.$#'
-			identifier: encapsedStringPart.nonString
-			count: 1
-			path: tests/Feature/Services/StatsCacheTest.php
-
-		-
-			message: '#^Part \$version \(mixed\) of encapsed string cannot be cast to string\.$#'
-			identifier: encapsedStringPart.nonString
-			count: 1
-			path: tests/Feature/Services/StatsCacheTest.php
-
-		-
 			message: '#^Cannot access offset ''category'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
@@ -1391,12 +1379,6 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: tests/Unit/RouteIntegrityTest.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: tests/Unit/Services/StatsCacheManagerTest.php
 
 		-
 			message: '#^Parameter \#1 \$policy of method App\\Support\\Csp\\Policies\\PulsePolicy\:\:configure\(\) expects Spatie\\Csp\\Policy, Mockery\\MockInterface given\.$#'

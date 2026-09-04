@@ -15,7 +15,7 @@ final class BodyStatsService
     public function getLatestBodyMetrics(User $user): LatestBodyMetrics
     {
         return Cache::remember(
-            "stats.latest_metrics.{$user->id}",
+            ClesDeStats::mesures($user, 'latest_metrics'),
             now()->addMinutes(30),
             function () use ($user): LatestBodyMetrics {
                 $measurements = $user->bodyMeasurements()
@@ -54,7 +54,7 @@ final class BodyStatsService
     public function getBodyProgressOverview(User $user, int $days = 90): array
     {
         return Cache::remember(
-            "stats.body_progress.{$user->id}.{$days}",
+            ClesDeStats::mesures($user, "body_progress.{$days}"),
             now()->addMinutes(30),
             function () use ($user, $days): array {
                 /*

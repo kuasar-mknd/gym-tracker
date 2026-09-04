@@ -83,11 +83,25 @@ it('n’oublie aucune clé de statistique qu’il a fait écrire', function (): 
     expect($ecrites)->not->toBeEmpty('rien n’a été mis en cache : le test ne prouverait rien');
 
     app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
+    $avantRelecture = clesDeStatistiques();
 
-    $restantes = clesDeStatistiques();
+    // Les lecteurs rejouent : chacun doit écrire une clef neuve. Un lecteur
+    // qui n'a pas pris la version retomberait sur son ancienne entrée et
+    // n'en écrirait aucune.
+    foreach ([7, 30, 90, 365] as $jours) {
+        $tableauDeBord->performanceOverview($user, $jours);
+        $volume->getVolumeTrend($user, $jours);
+    }
+    $volume->getVolumeHistory($user, 20);
+    $volume->getVolumeHistory($user, 30);
+    $seances->getDurationHistory($user, 20);
+    $seances->getDurationHistory($user, 30);
+    $volume->getWeeklyVolumeComparison($user);
 
-    expect($restantes)->toBe([], sprintf(
-        "ces clés survivent à l'invalidation : %s",
-        implode(', ', $restantes)
+    $nouvelles = array_values(array_diff(clesDeStatistiques(), $avantRelecture));
+    expect(count($nouvelles))->toBe(count($ecrites), sprintf(
+        "%d clés écrites avant l'invalidation, %d clés neuves après : un lecteur relit une ancienne entrée",
+        count($ecrites),
+        count($nouvelles)
     ));
 });

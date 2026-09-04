@@ -7,6 +7,7 @@ namespace App\Actions\Workouts;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -83,7 +84,7 @@ final class FetchWorkoutsIndexAction
     protected function getTotalExercises(User $user): int
     {
         return (int) Cache::remember(
-            "stats.total_exercises.{$user->id}",
+            ClesDeStats::seances($user, 'total_exercises'),
             now()->addHour(),
             fn (): int => $this->compterExercicesDistincts($user)
         );
@@ -130,7 +131,7 @@ final class FetchWorkoutsIndexAction
     protected function getDayOfWeekFrequency(User $user): Collection
     {
         return Cache::remember(
-            "stats.day_of_week_frequency.{$user->id}",
+            ClesDeStats::seances($user, 'day_of_week_frequency'),
             now()->addHour(),
             fn (): Collection => $this->calculateDayOfWeekFrequency($user)
         );
@@ -143,7 +144,7 @@ final class FetchWorkoutsIndexAction
         User $user
     ): Collection {
         return Cache::remember(
-            "stats.monthly_frequency.{$user->id}",
+            ClesDeStats::seances($user, 'monthly_frequency'),
             now()->addHour(),
             fn (): Collection => $this->calculateMonthlyFrequency($user)
         );

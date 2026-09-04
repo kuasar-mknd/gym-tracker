@@ -6,6 +6,7 @@ namespace App\Actions\Stats;
 
 use App\Models\User;
 use App\Services\Stats\BodyStatsService;
+use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\ExerciseStatsService;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
@@ -52,7 +53,7 @@ class GetStatsDashboardAction
     public function performanceOverview(User $user, int $days = 30): array
     {
         return Cache::remember(
-            "stats.performance_overview.{$user->id}.{$days}",
+            ClesDeStats::seances($user, "performance_overview.{$days}"),
             now()->addMinutes(30),
             fn (): array => [
                 'volumeTrend' => $this->volumeStats->getVolumeTrend($user, $days),
