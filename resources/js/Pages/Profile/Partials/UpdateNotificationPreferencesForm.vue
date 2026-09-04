@@ -4,7 +4,7 @@ import GlassToggle from '@/Components/UI/GlassToggle.vue'
 import GlassSection from '@/Components/UI/GlassSection.vue'
 import Checkbox from '@/Components/Form/Checkbox.vue'
 import { usePage } from '@inertiajs/vue3'
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import axios from 'axios'
 import SyncService from '@/Utils/SyncService'
 
@@ -80,6 +80,27 @@ const messageDEchec = (err) => {
  * would let them retry was gone.
  */
 const pushRegistered = ref(props.hasPushSubscription)
+
+/*
+ * Le serveur peut garder un abonnement que le navigateur a perdu (PWA
+ * réinstallée, données du site effacées) : les envois partent, rien n'arrive,
+ * et la bannière qui permettrait de se réabonner reste cachée. On vérifie
+ * donc aussi côté navigateur ; en cas de doute, l'état du serveur reste.
+ */
+onMounted(async () => {
+    if (!pushRegistered.value || !pushSupported) {
+        return
+    }
+    try {
+        const registration = await avecDelai(navigator.serviceWorker.ready)
+        const abonnement = await avecDelai(registration.pushManager.getSubscription())
+        if (!abonnement) {
+            pushRegistered.value = false
+        }
+    } catch {
+        // Le worker ne répond pas : on ne contredit pas le serveur.
+    }
+})
 
 const form = reactive({
     preferences: {

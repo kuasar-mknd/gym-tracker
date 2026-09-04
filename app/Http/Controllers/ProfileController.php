@@ -102,9 +102,9 @@ class ProfileController extends Controller
      *
      * @param  \App\Http\Requests\UpdateNotificationPreferencesRequest  $request  The validated notification preferences request.
      * @param  \App\Actions\Profile\UpdateNotificationPreferencesAction  $updatePreferences  The action handling the preference updates.
-     * @return \Illuminate\Http\RedirectResponse A redirect response back to the profile edit route with a success status.
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response 204 pour un client XHR, sinon retour au profil.
      */
-    public function updatePreferences(UpdateNotificationPreferencesRequest $request, UpdateNotificationPreferencesAction $updatePreferences): RedirectResponse
+    public function updatePreferences(UpdateNotificationPreferencesRequest $request, UpdateNotificationPreferencesAction $updatePreferences): \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
     {
         $this->authorize('update', $this->user());
 
@@ -118,6 +118,12 @@ class ProfileController extends Controller
         $validated = $request->validated();
 
         $updatePreferences->execute($this->user(), $validated);
+
+        // Un client XHR qui suivrait la redirection rejouerait le PATCH sur
+        // /profile/edit (seul un 303 force GET) et recevrait un 405.
+        if ($request->expectsJson()) {
+            return response()->noContent();
+        }
 
         return Redirect::route('profile.edit')->with('status', 'notification-preferences-updated');
     }

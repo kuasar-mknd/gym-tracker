@@ -335,3 +335,37 @@ describe('UpdateNotificationPreferencesForm — jours de rappel', () => {
         wrapper.unmount()
     })
 })
+
+/**
+ * Le serveur gardait un abonnement que le navigateur avait perdu (PWA
+ * réinstallée) : la bannière restait cachée, les envois partaient dans le
+ * vide, et rien ne permettait de se réabonner (vu en production le
+ * 2026-09-04).
+ */
+describe('un abonnement que le navigateur a perdu', () => {
+    it('ramène la bannière quand le navigateur n’a plus d’abonnement alors que le serveur en garde un', async () => {
+        const wrapper = mountForm({ hasPushSubscription: true })
+        expect(banner(wrapper).exists()).toBe(false)
+
+        await flushPromises()
+
+        expect(banner(wrapper).text()).toContain('Activer les notifications Push')
+        expect(pushCheckboxes(wrapper)).toHaveLength(0)
+        wrapper.unmount()
+    })
+
+    it('garde les cases quand le navigateur a encore son abonnement', async () => {
+        const registration = await navigator.serviceWorker.ready
+        registration.pushManager.getSubscription.mockResolvedValueOnce({
+            endpoint: 'https://push.example/abc',
+            unsubscribe,
+        })
+
+        const wrapper = mountForm({ hasPushSubscription: true })
+        await flushPromises()
+
+        expect(banner(wrapper).exists()).toBe(false)
+        expect(pushCheckboxes(wrapper).length).toBeGreaterThan(0)
+        wrapper.unmount()
+    })
+})
