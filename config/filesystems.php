@@ -49,6 +49,16 @@ return [
             'report' => false,
         ],
 
+        // Les archives de sauvegarde : en production, un dossier de l'hôte
+        // monté dans le conteneur (BACKUP_PATH), lui-même un partage d'une
+        // autre machine ; jamais un volume Docker, qui disparaît avec la pile.
+        'sauvegardes' => [
+            'driver' => 'local',
+            'root' => env('BACKUP_PATH', storage_path('app/sauvegardes')),
+            'throw' => true,
+            'report' => true,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

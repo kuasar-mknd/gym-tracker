@@ -64,6 +64,13 @@ return [
                 1008 => env('MYSQL_ATTR_SSL_CA'), // Pdo\Mysql::ATTR_SSL_CA / PDO::MYSQL_ATTR_SSL_CA
                 1013 => filter_var(env('DB_SSL_VERIFY', true), FILTER_VALIDATE_BOOLEAN), // Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT / PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
             ], fn ($value): bool => ! is_null($value)) : [],
+            // Le dump de sauvegarde lit un instantané cohérent au lieu de
+            // verrouiller les tables : rien ne bloque l'application pendant
+            // la nocturne, ni le test qui tient une transaction ouverte.
+            'dump' => [
+                'useSingleTransaction' => true,
+                'timeout' => 300,
+            ],
         ],
 
         'mysql_dusk' => [
