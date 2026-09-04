@@ -189,7 +189,7 @@ class Workout extends Model
         /*
          * La date recopiee sur les lignes suit celle de la seance.
          *
-         * `started_at` est modifiable — `WorkoutUpdateRequest` l'accepte — et
+         * `started_at` est modifiable — `UpdateWorkoutRequest` l'accepte — et
          * une copie qui ne suit pas fait repondre a l'index une question
          * perimee.
          */

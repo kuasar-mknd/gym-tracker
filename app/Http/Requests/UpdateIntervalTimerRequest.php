@@ -9,16 +9,12 @@ use Illuminate\Foundation\Http\FormRequest;
 class UpdateIntervalTimerRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * L'autorisation vit dans le contrôleur ; le refus sur une ressource
+     * d'autrui, validation comprise, est rendu en 404 par bootstrap/app.php.
      */
     public function authorize(): bool
     {
-        $timer = $this->route('intervalTimer') ?? $this->route('interval_timer');
-
-        /** @var \App\Models\User|null $user */
-        $user = $this->user();
-
-        return $user?->can('update', $timer) ?? false;
+        return $this->user() !== null;
     }
 
     /**

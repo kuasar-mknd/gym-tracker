@@ -4,20 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Models\IntervalTimer;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreIntervalTimerRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * L'autorisation vit dans le contrôleur ; le refus sur une ressource
+     * d'autrui, validation comprise, est rendu en 404 par bootstrap/app.php.
      */
     public function authorize(): bool
     {
-        /** @var \App\Models\User|null $user */
-        $user = $this->user();
-
-        return $user?->can('create', IntervalTimer::class) ?? false;
+        return $this->user() !== null;
     }
 
     /**
