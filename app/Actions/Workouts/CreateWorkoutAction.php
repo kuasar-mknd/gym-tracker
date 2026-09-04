@@ -6,11 +6,11 @@ namespace App\Actions\Workouts;
 
 use App\Models\User;
 use App\Models\Workout;
-use App\Services\StatsService;
+use App\Services\Stats\StatsCacheManager;
 
 class CreateWorkoutAction
 {
-    public function __construct(protected StatsService $statsService)
+    public function __construct(protected StatsCacheManager $statsCache)
     {
     }
 
@@ -32,7 +32,7 @@ class CreateWorkoutAction
         $workout->user_id = $user->id;
         $workout->save();
 
-        $this->statsService->clearWorkoutRelatedStats($user);
+        $this->statsCache->clearWorkoutRelatedStats($user);
 
         return $workout;
     }

@@ -6,7 +6,9 @@ namespace Tests\Feature\Services;
 
 use App\Models\User;
 use App\Models\Workout;
-use App\Services\StatsService;
+use App\Services\Stats\ExerciseStatsService;
+use App\Services\Stats\StatsCacheManager;
+use App\Services\Stats\VolumeStatsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -14,14 +16,6 @@ use Tests\TestCase;
 class StatsCacheTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected StatsService $statsService;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->statsService = app(StatsService::class);
-    }
 
     public function test_weekly_volume_comparison_is_cached(): void
     {
@@ -31,7 +25,7 @@ class StatsCacheTest extends TestCase
 
         $this->assertFalse(Cache::has($key));
 
-        $this->statsService->getWeeklyVolumeComparison($user);
+        app(VolumeStatsService::class)->getWeeklyVolumeComparison($user);
 
         $this->assertTrue(Cache::has($key));
     }
@@ -136,14 +130,14 @@ class StatsCacheTest extends TestCase
         $exerciseId = 1;
 
         // Get initial 1RM progress (fills cache)
-        $this->statsService->getExercise1RMProgress($user, $exerciseId);
+        app(ExerciseStatsService::class)->getExercise1RMProgress($user, $exerciseId);
         $version = Cache::get("stats.1rm_version.{$user->id}", '1');
         $key = "stats.1rm.{$user->id}.{$exerciseId}.90.v{$version}";
 
         $this->assertTrue(Cache::has($key));
 
         // Clear workout related stats
-        $this->statsService->clearWorkoutRelatedStats($user);
+        app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
 
         // Check if version changed
         $newVersion = Cache::get("stats.1rm_version.{$user->id}");

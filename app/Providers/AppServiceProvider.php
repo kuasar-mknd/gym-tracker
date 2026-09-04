@@ -26,7 +26,6 @@ final class AppServiceProvider extends ServiceProvider
     #[\Override]
     public function register(): void
     {
-        $this->app->singleton(\App\Services\StatsService::class);
         $this->app->singleton(\App\Services\GoalService::class);
         $this->app->singleton(\App\Services\AchievementService::class);
         $this->app->singleton(\App\Services\NotificationService::class);

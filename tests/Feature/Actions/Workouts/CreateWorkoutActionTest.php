@@ -13,8 +13,7 @@ it('names a workout by its date alone, and clears caches', function (): void {
 
     $user = User::factory()->create();
 
-    // The StatsService class is final, and Mockery can't intercept its methods directly
-    // We test the cache invalidation by asserting on the cache state which StatsCacheManager alters.
+    // On vérifie l'invalidation par l'état du cache, que StatsCacheManager modifie.
 
     // Seed caches that should be cleared by clearWorkoutRelatedStats & clearWorkoutMetadataStats
     Cache::put("stats.weekly_volume.{$user->id}", ['some_data'], 600);

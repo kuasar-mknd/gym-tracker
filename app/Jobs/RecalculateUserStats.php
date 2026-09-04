@@ -21,14 +21,14 @@ final class RecalculateUserStats implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(\App\Services\StatsService $statsService): void
+    public function handle(\App\Services\Stats\StatsCacheManager $statsCache, \App\Services\Stats\VolumeStatsService $volumeStats, \App\Services\Stats\ExerciseStatsService $exerciseStats): void
     {
         // Invalidation ciblée : on ne touche pas au cache des mesures corporelles,
         // qu'un changement de données de séance ne périme pas.
-        $statsService->clearWorkoutRelatedStats($this->user);
+        $statsCache->clearWorkoutRelatedStats($this->user);
 
         // Warm up critical stats
-        $statsService->getVolumeTrend($this->user, 30);
-        $statsService->getMuscleDistribution($this->user, 30);
+        $volumeStats->getVolumeTrend($this->user, 30);
+        $exerciseStats->getMuscleDistribution($this->user, 30);
     }
 }

@@ -21,9 +21,10 @@ class BodyMeasurementController extends Controller
     /**
      * Create a new BodyMeasurementController instance.
      *
-     * @param  \App\Services\StatsService  $statsService  Service for fetching and clearing user measurement statistics.
+     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  Service for fetching user measurement statistics.
+     * @param  \App\Services\Stats\StatsCacheManager  $statsCache  Clears the cached measurement statistics.
      */
-    public function __construct(protected \App\Services\StatsService $statsService)
+    public function __construct(protected \App\Services\Stats\BodyStatsService $bodyStats, protected \App\Services\Stats\StatsCacheManager $statsCache)
     {
     }
 
@@ -52,7 +53,7 @@ class BodyMeasurementController extends Controller
             // ⚡ Bolt: PERFORMANCE OPTIMIZATION
             // Consolidate deferred body stats to reduce the number of async requests (from 2 to 1)
             // and use a single database query and cache key for both weight and body fat history.
-            'bodyStats' => Inertia::defer(fn (): array => $this->statsService->getBodyProgressOverview($this->user(), 365)),
+            'bodyStats' => Inertia::defer(fn (): array => $this->bodyStats->getBodyProgressOverview($this->user(), 365)),
         ]);
     }
 
@@ -74,7 +75,7 @@ class BodyMeasurementController extends Controller
 
         $this->user()->bodyMeasurements()->create($request->validated());
 
-        $this->statsService->clearBodyMeasurementStats($this->user());
+        $this->statsCache->clearBodyMeasurementStats($this->user());
 
         return redirect()->back();
     }
@@ -98,7 +99,7 @@ class BodyMeasurementController extends Controller
         $user = $this->user();
         $bodyMeasurement->delete();
 
-        $this->statsService->clearBodyMeasurementStats($user);
+        $this->statsCache->clearBodyMeasurementStats($user);
 
         return redirect()->back();
     }

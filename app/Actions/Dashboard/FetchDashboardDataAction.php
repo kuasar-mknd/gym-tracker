@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Actions\Dashboard;
 
 use App\Models\User;
-use App\Services\StatsService;
+use App\Services\Stats\BodyStatsService;
+use App\Services\Stats\VolumeStatsService;
+use App\Services\Stats\WorkoutStatsService;
 
 /**
  * Action class responsible for fetching and aggregating all necessary data
@@ -19,10 +21,14 @@ final class FetchDashboardDataAction
     /**
      * Create a new FetchDashboardDataAction instance.
      *
-     * @param  \App\Services\StatsService  $statsService  The statistics service used to calculate trends and comparisons.
+     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  The latest body metrics.
+     * @param  \App\Services\Stats\VolumeStatsService  $volumeStats  Weekly volume trend and comparison.
+     * @param  \App\Services\Stats\WorkoutStatsService  $workoutStats  Workout distributions.
      */
     public function __construct(
-        protected StatsService $statsService
+        protected BodyStatsService $bodyStats,
+        protected VolumeStatsService $volumeStats,
+        protected WorkoutStatsService $workoutStats
     ) {
     }
 
@@ -41,7 +47,7 @@ final class FetchDashboardDataAction
     public function getImmediateStats(User $user): array
     {
         // ⚡ Bolt: Use cached latest metrics instead of hitting DB on every dashboard load
-        $latestMetrics = $this->statsService->getLatestBodyMetrics($user);
+        $latestMetrics = $this->bodyStats->getLatestBodyMetrics($user);
 
         return [
             // ⚡ Bolt: Removed unused workoutsCount and thisWeekCount queries to prevent 2 unnecessary queries on dashboard load
@@ -60,14 +66,14 @@ final class FetchDashboardDataAction
      */
     public function getWeeklyVolumeData(User $user): array
     {
-        $stats = $this->statsService->getWeeklyVolumeComparison($user);
+        $stats = $this->volumeStats->getWeeklyVolumeComparison($user);
 
         return [
             'stats' => [
                 'current_week_volume' => $stats->current_volume,
                 'percentage' => $stats->percentage,
             ],
-            'trend' => $this->statsService->getWeeklyVolumeTrend($user),
+            'trend' => $this->volumeStats->getWeeklyVolumeTrend($user),
         ];
     }
 
@@ -101,7 +107,7 @@ final class FetchDashboardDataAction
      */
     public function getWorkoutDistributions(User $user): array
     {
-        return $this->statsService->getWorkoutDistributions($user, 90);
+        return $this->workoutStats->getWorkoutDistributions($user, 90);
     }
 
     /**
