@@ -11,11 +11,12 @@ use Illuminate\Validation\Rule;
 class ExerciseStoreRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * L'autorisation vit dans le contrôleur ; le refus sur une ressource
+     * d'autrui, validation comprise, est rendu en 404 par bootstrap/app.php.
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('create', \App\Models\Exercise::class) ?? false;
+        return $this->user() !== null;
     }
 
     /**

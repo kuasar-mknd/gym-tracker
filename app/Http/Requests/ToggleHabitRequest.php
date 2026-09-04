@@ -9,17 +9,12 @@ use Illuminate\Foundation\Http\FormRequest;
 class ToggleHabitRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * L'autorisation vit dans le contrôleur ; le refus sur une ressource
+     * d'autrui, validation comprise, est rendu en 404 par bootstrap/app.php.
      */
     public function authorize(): bool
     {
-        /** @var \App\Models\Habit|null $habit */
-        $habit = $this->route('habit');
-
-        /** @var \App\Models\User $user */
-        $user = $this->user();
-
-        return $habit !== null && $habit->user_id === $user->id;
+        return $this->user() !== null;
     }
 
     /**

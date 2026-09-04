@@ -8,16 +8,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateFastRequest extends FormRequest
 {
+    /**
+     * L'autorisation vit dans le contrôleur ; le refus sur une ressource
+     * d'autrui, validation comprise, est rendu en 404 par bootstrap/app.php.
+     */
     public function authorize(): bool
     {
-        $fast = $this->route('fast');
-        $user = $this->user();
-
-        if (! $user instanceof \App\Models\User || ! $fast instanceof \App\Models\Fast) {
-            return false;
-        }
-
-        return $user->id === $fast->user_id;
+        return $this->user() !== null;
     }
 
     /**
