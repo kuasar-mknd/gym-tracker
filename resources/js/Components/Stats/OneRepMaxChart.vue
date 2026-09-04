@@ -1,20 +1,7 @@
 <script setup>
-import { Line } from 'vue-chartjs'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
-import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-    Filler,
-} from 'chart.js'
 import { computed } from 'vue'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     data: {
@@ -23,81 +10,43 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    return {
-        labels: props.data.map((item) => item.date),
-        datasets: [
-            {
-                label: 'Estimé 1RM (kg)',
-                data: props.data.map((item) => item.one_rep_max),
-                fill: true,
-                tension: 0.4,
-                borderColor: jeton('accent-secondary'),
-                backgroundColor: (context) => {
-                    const chart = context.chart
-                    const { ctx, chartArea } = chart
-                    if (!chartArea) return null
-                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-                    gradient.addColorStop(0, jetonTransparent('accent-secondary', 0.2))
-                    gradient.addColorStop(1, jetonTransparent('accent-secondary', 0))
-                    return gradient
-                },
-                borderWidth: 3,
-                pointRadius: 3,
-                pointBackgroundColor: jeton('surface-card'),
-                pointBorderColor: jeton('accent-secondary'),
-                pointBorderWidth: 2,
-                pointHoverRadius: 6,
-                pointHoverBackgroundColor: jeton('accent-secondary'),
-                pointHoverBorderColor: jeton('surface-card'),
-                pointHoverBorderWidth: 2,
-            },
-        ],
-    }
-})
+const labels = computed(() => props.data.map((item) => item.date))
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            display: false,
+const datasets = computed(() => [
+    {
+        label: 'Estimé 1RM (kg)',
+        data: props.data.map((item) => item.one_rep_max),
+        fill: true,
+        tension: 0.4,
+        borderColor: jeton('accent-secondary'),
+        backgroundColor: (context) => {
+            const chart = context.chart
+            const { ctx, chartArea } = chart
+            if (!chartArea) return null
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+            gradient.addColorStop(0, jetonTransparent('accent-secondary', 0.2))
+            gradient.addColorStop(1, jetonTransparent('accent-secondary', 0))
+            return gradient
         },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.9),
-            titleColor: jeton('text-main'),
-            bodyColor: jeton('text-main'),
-            padding: 12,
-            cornerRadius: 12,
-            borderWidth: 1,
-            borderColor: jetonTransparent('accent-secondary', 0.1),
-        },
+        borderWidth: 3,
+        pointRadius: 3,
+        pointBackgroundColor: jeton('surface-card'),
+        pointBorderColor: jeton('accent-secondary'),
+        pointBorderWidth: 2,
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: jeton('accent-secondary'),
+        pointHoverBorderColor: jeton('surface-card'),
+        pointHoverBorderWidth: 2,
     },
-    scales: {
-        x: {
-            grid: {
-                display: false,
-            },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-            },
-        },
-        y: {
-            grid: {
-                color: jetonTransparent('shadow-cast', 0.03),
-            },
-            ticks: {
-                color: jeton('text-muted'),
-                font: { size: 10, weight: 'bold' },
-            },
-        },
-    },
-}))
+])
 </script>
 
 <template>
-    <div class="h-48 w-full">
-        <Line :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart
+        type="line"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48"
+        :infobulle="{ accent: 'accent-secondary' }"
+    />
 </template>
