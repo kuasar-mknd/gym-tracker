@@ -117,4 +117,46 @@ class NotificationServiceTest extends TestCase
         // Cache should be cleared and now return 0
         $this->assertEquals(0, $this->service->getUnreadCount($user));
     }
+
+    /**
+     * Le trophee en cache est oublie quand c'est un trophee qui arrive.
+     *
+     * `AppServiceProvider` appelle `clearCache()` en passant le type envoye :
+     * sans ce cas, la carte du dernier succes continuerait d'afficher le
+     * precedent pendant sept jours apres en avoir debloque un nouveau.
+     */
+    public function test_clear_cache_forgets_the_achievement_when_one_is_sent(): void
+    {
+        $user = User::factory()->create();
+        $user->notify(new AchievementUnlocked(Achievement::factory()->create()));
+
+        $this->assertNotNull($this->service->getLatestAchievement($user));
+
+        $user->unreadNotifications()->update(['read_at' => now()]);
+
+        $this->service->clearCache($user, AchievementUnlocked::class);
+
+        $this->assertNull($this->service->getLatestAchievement($user));
+    }
+
+    /**
+     * Et il n'est PAS oublie pour une notification qui n'en est pas un.
+     *
+     * Un record battu en envoie trois par serie : vider la cle du trophee a
+     * chacune ferait repartir la requete que ce cache existe pour eviter.
+     */
+    public function test_clear_cache_keeps_the_achievement_for_another_notification(): void
+    {
+        $user = User::factory()->create();
+        $user->notify(new AchievementUnlocked(Achievement::factory()->create()));
+
+        $this->assertNotNull($this->service->getLatestAchievement($user));
+
+        // Le trophee n'est plus en base : seul le cache peut encore le rendre.
+        $user->unreadNotifications()->update(['read_at' => now()]);
+
+        $this->service->clearCache($user, \App\Notifications\PersonalRecordAchieved::class);
+
+        $this->assertNotNull($this->service->getLatestAchievement($user));
+    }
 }
