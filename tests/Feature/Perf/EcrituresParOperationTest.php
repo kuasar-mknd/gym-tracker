@@ -67,7 +67,10 @@ it('crée une série en trois écritures : la série, le volume de la séance, l
         ->postJson(route('api.v1.sets.store'), ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true])
         ->assertCreated());
 
-    expect($mesure['ecritures'])->toBe(3, implode("\n", $mesure['sql']));
+    expect($mesure['ecritures'])->toBe(3, implode("\n", $mesure['sql']))
+        // Lectures comprises : le contrôleur ne cherche plus la ligne que l'action
+        // cherche déjà (#1676).
+        ->and($mesure['requetes'])->toBe(15);
 });
 
 it('modifie une série en trois écritures', function (): void {

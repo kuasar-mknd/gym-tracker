@@ -29,14 +29,13 @@ class SetController extends Controller
     {
         /** @var array{workout_line_id: int} $validated */
         $validated = $request->validated();
-        $workoutLine = \App\Models\WorkoutLine::findOrFail($validated['workout_line_id']);
-
-        $this->authorize('create', [Set::class, $workoutLine]);
 
         // Carried in a header rather than the body: it names the attempt, not
         // the resource, and has no business in the validated payload.
         $validated['idempotency_key'] = $request->header('Idempotency-Key');
 
+        // Un seul chemin : l'action cherche la ligne et vérifie le droit d'y
+        // écrire ; le contrôleur le faisait une première fois, pour rien.
         $set = $action->execute($this->user(), $validated);
 
         return new SetResource($set->loadMissing('personalRecord'));
