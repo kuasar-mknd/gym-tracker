@@ -39,6 +39,8 @@ x-app-env: &app-env
     VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
     VAPID_SUBJECT: ${VAPID_SUBJECT}
 
+    BACKUP_ARCHIVE_PASSWORD: ${BACKUP_ARCHIVE_PASSWORD:?mot de passe des archives de sauvegarde}
+
     # Monitoring (reduced sampling for DS218+ performance)
     SENTRY_DSN: ${SENTRY_DSN}
     SENTRY_DSN_PUBLIC: ${SENTRY_DSN_PUBLIC}
@@ -140,6 +142,8 @@ services:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
         restart: always
         command: php artisan horizon
+        volumes:
+            - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
         environment:
             <<: *app-env
         deploy:

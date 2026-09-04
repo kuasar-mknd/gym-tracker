@@ -115,3 +115,31 @@ it('surveille chaque tâche planifiée', function (): void {
         implode("\n- ", $nues),
     ));
 });
+
+it('transmet aux services ce que la sauvegarde exige', function (): void {
+    $services = compositionDeProduction();
+
+    foreach (['app', 'worker', 'scheduler'] as $nom) {
+        expect($services)->toHaveKey($nom);
+
+        /** @var array{environment?: array<string, mixed>, volumes?: list<string>} $service */
+        $service = $services[$nom];
+        $motDePasse = $service['environment']['BACKUP_ARCHIVE_PASSWORD'] ?? null;
+
+        expect($motDePasse)->toBeString()->toStartWith('${BACKUP_ARCHIVE_PASSWORD', sprintf(
+            'Le service `%s` ne reçoit pas BACKUP_ARCHIVE_PASSWORD : posé dans Portainer, le mot de passe '
+            ."n'atteindrait jamais l'application et chaque sauvegarde serait refusée.",
+            $nom,
+        ));
+
+        $montages = array_filter(
+            $service['volumes'] ?? [],
+            static fn (string $volume): bool => str_ends_with($volume, ':/app/storage/app/sauvegardes'),
+        );
+
+        expect($montages)->toHaveCount(1, sprintf(
+            'Le service `%s` ne monte pas le dossier des sauvegardes : une archive écrite là disparaîtrait au redéploiement.',
+            $nom,
+        ));
+    }
+});
