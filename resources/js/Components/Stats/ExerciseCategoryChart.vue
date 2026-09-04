@@ -1,10 +1,7 @@
 <script setup>
-import { couleurDeCategorie, jeton, jetonTransparent } from '@/Utils/couleurs'
-import { Doughnut } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement } from 'chart.js'
+import { couleurDeCategorie } from '@/Utils/couleurs'
 import { computed } from 'vue'
-
-ChartJS.register(Title, Tooltip, Legend, ArcElement)
+import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
     exercises: {
@@ -13,89 +10,42 @@ const props = defineProps({
     },
 })
 
-const chartData = computed(() => {
-    // Group exercises by category
+// Group exercises by category
+const comptes = computed(() => {
     const counts = {}
     props.exercises.forEach((ex) => {
         const cat = ex.category || 'Autres'
         counts[cat] = (counts[cat] || 0) + 1
     })
 
-    const labels = Object.keys(counts)
-    const data = Object.values(counts)
-    const backgroundColor = labels.map((cat) => couleurDeCategorie(cat))
-
-    return {
-        labels: labels,
-        datasets: [
-            {
-                data: data,
-                backgroundColor: backgroundColor,
-                borderWidth: 0,
-                hoverOffset: 10,
-                borderRadius: 4,
-            },
-        ],
-    }
+    return counts
 })
 
-const chartOptions = computed(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '65%',
-    plugins: {
-        legend: {
-            position: 'right',
-            labels: {
-                color: jeton('text-muted'), // text-muted
-                font: {
-                    family: "'Space Grotesk', sans-serif",
-                    size: 11,
-                    weight: 'bold',
-                },
-                padding: 15,
-                usePointStyle: true,
-                pointStyle: 'circle',
-            },
-        },
-        tooltip: {
-            backgroundColor: jetonTransparent('surface-card', 0.9),
-            titleColor: jeton('text-main'), // text-main
-            titleFont: {
-                family: "'Archivo', sans-serif",
-                size: 13,
-                weight: 'bold',
-            },
-            bodyColor: jeton('text-muted'), // text-muted
-            bodyFont: {
-                family: "'Inter', sans-serif",
-                size: 12,
-            },
-            padding: 12,
-            cornerRadius: 12,
-            boxPadding: 6,
-            borderColor: jetonTransparent('surface-card', 0.5),
-            borderWidth: 1,
-            displayColors: true,
-            callbacks: {
-                label: function (context) {
-                    const label = context.label || ''
-                    const value = context.raw || 0
-                    const total = context.chart._metasets[context.datasetIndex].total
-                    const percentage = Math.round((value / total) * 100) + '%'
-                    return `${label}: ${value} (${percentage})`
-                },
-            },
+const labels = computed(() => Object.keys(comptes.value))
+
+const datasets = computed(() => [
+    {
+        data: Object.values(comptes.value),
+        backgroundColor: labels.value.map((cat) => couleurDeCategorie(cat)),
+        borderWidth: 0,
+        hoverOffset: 10,
+        borderRadius: 4,
+    },
+])
+
+const infobulle = {
+    callbacks: {
+        label: function (context) {
+            const label = context.label || ''
+            const value = context.raw || 0
+            const total = context.chart._metasets[context.datasetIndex].total
+            const percentage = Math.round((value / total) * 100) + '%'
+            return `${label}: ${value} (${percentage})`
         },
     },
-    layout: {
-        padding: 10,
-    },
-}))
+}
 </script>
 
 <template>
-    <div class="h-48 w-full">
-        <Doughnut :data="chartData" :options="chartOptions" />
-    </div>
+    <BaseChart type="doughnut" :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" />
 </template>
