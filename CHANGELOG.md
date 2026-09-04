@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **« Tes préférences n'ont pas pu être enregistrées » alors qu'elles l'étaient** : la page enregistre en XHR et le serveur répondait par une redirection 302 que le navigateur rejouait en `PATCH /profile/edit`, donc 405 ; il répond désormais 204 à un client XHR. Et la bannière « Activer les notifications » revient quand le navigateur n'a plus d'abonnement push, même si le serveur en garde un.
+
 ### Modifié
 - **Le service worker et le manifeste sont des fichiers statiques** à la racine de `public/` (le manifeste est versionné, le worker construit) : plus de route Laravel pour les servir, donc plus de session ouverte ni de cookie posé à chaque vérification du worker (une écriture de moins sur le NAS par ouverture de l'application).
 - **La création d'une série suit un seul chemin** (#1676) : le contrôleur cherchait la ligne et vérifiait le droit d'y écrire, puis l'action refaisait les deux ; une lecture de moins par série, et une seule autorisation à relire.
