@@ -6,21 +6,12 @@ namespace Tests\Unit\Services;
 
 use App\Models\User;
 use App\Services\Stats\StatsCacheManager;
-use App\Services\StatsService;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Tests\TestCase;
 
-class StatsServiceCacheTest extends TestCase
+class StatsCacheManagerTest extends TestCase
 {
-    protected StatsService $statsService;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->statsService = app(StatsService::class);
-    }
-
     public function test_clear_volume_stats_clears_correct_keys(): void
     {
         $user = User::factory()->make(['id' => 123]);
@@ -46,13 +37,9 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.20");
         Cache::shouldReceive('forget')->once()->with("stats.volume_history.{$user->id}.30");
 
-        $this->statsService->clearVolumeStats($user);
+        app(StatsCacheManager::class)->clearVolumeStats($user);
     }
 
-    /**
-     * StatsService n'expose plus d'enveloppe pour les stats de durée : on vise
-     * directement le manager, que clearWorkoutRelatedStats() appelle en interne.
-     */
     public function test_clear_duration_stats_clears_correct_keys(): void
     {
         $user = User::factory()->make(['id' => 123]);
@@ -80,7 +67,7 @@ class StatsServiceCacheTest extends TestCase
         Cache::shouldReceive('forget')->atLeast()->once();
         Cache::shouldReceive('put')->atLeast()->once();
 
-        $this->statsService->clearWorkoutRelatedStats($user);
+        app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
     }
 
     public function test_clear_body_measurement_stats_clears_correct_keys(): void
@@ -94,7 +81,7 @@ class StatsServiceCacheTest extends TestCase
             Cache::shouldReceive('forget')->once()->with("stats.body_progress.{$user->id}.{$days}");
         }
 
-        $this->statsService->clearBodyMeasurementStats($user);
+        app(StatsCacheManager::class)->clearBodyMeasurementStats($user);
     }
 
     public function test_clear_workout_metadata_stats_clears_correct_keys(): void
@@ -109,6 +96,6 @@ class StatsServiceCacheTest extends TestCase
             Cache::shouldReceive('forget')->once()->with("stats.volume_trend.{$user->id}.{$days}");
         }
 
-        $this->statsService->clearWorkoutMetadataStats($user);
+        app(StatsCacheManager::class)->clearWorkoutMetadataStats($user);
     }
 }

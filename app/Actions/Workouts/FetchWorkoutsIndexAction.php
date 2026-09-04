@@ -7,7 +7,8 @@ namespace App\Actions\Workouts;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
-use App\Services\StatsService;
+use App\Services\Stats\VolumeStatsService;
+use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -15,9 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 final class FetchWorkoutsIndexAction
 {
-    public function __construct(protected StatsService $statsService)
+    public function __construct(protected VolumeStatsService $volumeStats, protected WorkoutStatsService $workoutStats)
     {
-        // Dependency injection
     }
 
     /**
@@ -63,9 +63,9 @@ final class FetchWorkoutsIndexAction
             'charts' => [
                 'monthly_frequency' => $this->getMonthlyFrequency($user),
                 'day_of_week_frequency' => $this->getDayOfWeekFrequency($user),
-                'monthly_volume' => $this->statsService->getMonthlyVolumeHistory($user, 6),
-                'duration_history' => $this->statsService->getDurationHistory($user, 20),
-                'volume_history' => $this->statsService->getVolumeHistory($user, 20),
+                'monthly_volume' => $this->volumeStats->getMonthlyVolumeHistory($user, 6),
+                'duration_history' => $this->workoutStats->getDurationHistory($user, 20),
+                'volume_history' => $this->volumeStats->getVolumeHistory($user, 20),
             ],
             'exercises' => Exercise::getCachedForUser($user->id),
         ];

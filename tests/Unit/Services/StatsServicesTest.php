@@ -9,21 +9,15 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use App\Services\StatsService;
+use App\Services\Stats\ExerciseStatsService;
+use App\Services\Stats\VolumeStatsService;
+use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class StatsServiceTest extends TestCase
+class StatsServicesTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected StatsService $statsService;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->statsService = app(StatsService::class);
-    }
 
     public function test_can_calculate_volume_trend(): void
     {
@@ -39,7 +33,7 @@ class StatsServiceTest extends TestCase
             'reps' => 10,
         ]);
 
-        $trend = $this->statsService->getVolumeTrend($user);
+        $trend = app(VolumeStatsService::class)->getVolumeTrend($user);
 
         $this->assertCount(1, $trend);
         $this->assertEquals(1000, $trend[0]->volume);
@@ -60,7 +54,7 @@ class StatsServiceTest extends TestCase
             'reps' => 10,
         ]);
 
-        $dist = $this->statsService->getMuscleDistribution($user);
+        $dist = app(ExerciseStatsService::class)->getMuscleDistribution($user);
 
         $this->assertCount(1, $dist);
         $this->assertEquals('Pectoraux', $dist[0]->category);
@@ -88,7 +82,7 @@ class StatsServiceTest extends TestCase
         $linePrev = WorkoutLine::factory()->create(['workout_id' => $workoutPrev->id]);
         Set::factory()->create(['workout_line_id' => $linePrev->id, 'weight' => 40, 'reps' => 10]); // 400
 
-        $comparison = $this->statsService->getMonthlyVolumeComparison($user);
+        $comparison = app(VolumeStatsService::class)->getMonthlyVolumeComparison($user);
 
         $this->assertEquals(500, $comparison->current_volume);
         $this->assertEquals(400, $comparison->previous_volume);
@@ -114,7 +108,7 @@ class StatsServiceTest extends TestCase
             'reps' => 10,
         ]); // 1000
 
-        $trend = $this->statsService->getWeeklyVolumeTrend($user);
+        $trend = app(VolumeStatsService::class)->getWeeklyVolumeTrend($user);
 
         $this->assertCount(7, $trend); // Should always return 7 days (Mon-Sun)
 
@@ -152,7 +146,7 @@ class StatsServiceTest extends TestCase
         $linePrev = WorkoutLine::factory()->create(['workout_id' => $workoutPrev->id]);
         Set::factory()->create(['workout_line_id' => $linePrev->id, 'weight' => 40, 'reps' => 10]); // 400
 
-        $comparison = $this->statsService->getWeeklyVolumeComparison($user);
+        $comparison = app(VolumeStatsService::class)->getWeeklyVolumeComparison($user);
 
         $this->assertEquals(500, $comparison->current_volume);
         $this->assertEquals(400, $comparison->previous_volume);
@@ -182,7 +176,7 @@ class StatsServiceTest extends TestCase
         $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
         Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 50, 'reps' => 10]);
 
-        $comparison = $this->statsService->getWeeklyVolumeComparison($user);
+        $comparison = app(VolumeStatsService::class)->getWeeklyVolumeComparison($user);
 
         $this->assertEquals(500, $comparison->current_volume);
         $this->assertEquals(0, $comparison->previous_volume);
@@ -203,7 +197,7 @@ class StatsServiceTest extends TestCase
             Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 50, 'reps' => 10]);
         }
 
-        $comparison = $this->statsService->getWeeklyVolumeComparison($user);
+        $comparison = app(VolumeStatsService::class)->getWeeklyVolumeComparison($user);
 
         $this->assertEquals(500, $comparison->current_volume);
         $this->assertEquals(500, $comparison->previous_volume);
@@ -234,7 +228,7 @@ class StatsServiceTest extends TestCase
         $line2 = WorkoutLine::factory()->create(['workout_id' => $workout2->id]);
         Set::factory()->create(['workout_line_id' => $line2->id, 'weight' => 50, 'reps' => 10]);
 
-        $history = $this->statsService->getVolumeHistory($user);
+        $history = app(VolumeStatsService::class)->getVolumeHistory($user);
 
         $this->assertCount(2, $history);
         // History is returned oldest first
@@ -269,7 +263,7 @@ class StatsServiceTest extends TestCase
             'ended_at' => now()->hour(10)->minute(0),
         ]);
 
-        $history = $this->statsService->getDurationHistory($user);
+        $history = app(WorkoutStatsService::class)->getDurationHistory($user);
 
         $this->assertCount(3, $history);
 
@@ -302,7 +296,7 @@ class StatsServiceTest extends TestCase
             'ended_at' => now()->subDay()->hour(10)->minute(1)->second(30),
         ]);
 
-        $history = $this->statsService->getDurationHistory($user);
+        $history = app(WorkoutStatsService::class)->getDurationHistory($user);
 
         $this->assertCount(1, $history);
         $this->assertSame(1, $history[0]->duration);

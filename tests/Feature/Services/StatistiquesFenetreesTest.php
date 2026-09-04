@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Exercise;
 use App\Models\User;
-use App\Services\StatsService;
+use App\Services\Stats\ExerciseStatsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -99,7 +99,7 @@ it('n’attire pas le catalogue ni les séances dans l’agrégation', function 
     Cache::flush();
     DB::flushQueryLog();
     DB::enableQueryLog();
-    app(StatsService::class)->getMuscleDistribution($user, 30);
+    app(ExerciseStatsService::class)->getMuscleDistribution($user, 30);
     $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
     DB::disableQueryLog();
 
@@ -125,7 +125,7 @@ it('répartit le volume de la fenêtre par catégorie', function (): void {
     semerSeances($user, 2, 0, $pectoraux);
     semerSeances($user, 3, 10, $dos);
 
-    $repartition = app(StatsService::class)->getMuscleDistribution($user, 30);
+    $repartition = app(ExerciseStatsService::class)->getMuscleDistribution($user, 30);
     $parCategorie = [];
 
     foreach ($repartition as $stat) {
@@ -143,7 +143,7 @@ it('ignore les séances hors de la fenêtre', function (): void {
     semerSeances($user, 1, 0, $exercice);
     semerSeances($user, 5, 100, $exercice);
 
-    $repartition = app(StatsService::class)->getMuscleDistribution($user, 30);
+    $repartition = app(ExerciseStatsService::class)->getMuscleDistribution($user, 30);
 
     expect($repartition)->toHaveCount(1)
         ->and($repartition[0]->volume)->toBe(500.0);

@@ -10,6 +10,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Modifié
 - **Le service worker et le manifeste sont des fichiers statiques** à la racine de `public/` (le manifeste est versionné, le worker construit) : plus de route Laravel pour les servir, donc plus de session ouverte ni de cookie posé à chaque vérification du worker (une écriture de moins sur le NAS par ouverture de l'application).
 - **La création d'une série suit un seul chemin** (#1676) : le contrôleur cherchait la ligne et vérifiait le droit d'y écrire, puis l'action refaisait les deux ; une lecture de moins par série, et une seule autorisation à relire.
+- **La façade `StatsService` disparaît** (#1676) : dix-sept de ses dix-huit méthodes relayaient vers les services de statistiques spécialisés ; chaque appelant reçoit désormais le service qu'il utilise, et la vue « performance » du tableau de bord est composée par l'action qui la sert, sous la même clef de cache.
 
 ## [1.5.9] - 2026-09-04
 

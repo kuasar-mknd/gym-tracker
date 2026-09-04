@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Actions\Stats\GetStatsDashboardAction;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\Stats\StatsCacheManager;
-use App\Services\StatsService;
+use App\Services\Stats\VolumeStatsService;
+use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Support\Facades\Cache;
 
 /*
@@ -64,16 +66,18 @@ it('n’oublie aucune clé de statistique qu’il a fait écrire', function (): 
 
     // On fait écrire l'application par ses vrais points d'entrée, sur toutes
     // les périodes qu'elle sait servir.
-    $stats = app(StatsService::class);
+    $tableauDeBord = app(GetStatsDashboardAction::class);
+    $volume = app(VolumeStatsService::class);
+    $seances = app(WorkoutStatsService::class);
     foreach ([7, 30, 90, 365] as $jours) {
-        $stats->getPerformanceOverview($user, $jours);
-        $stats->getVolumeTrend($user, $jours);
+        $tableauDeBord->performanceOverview($user, $jours);
+        $volume->getVolumeTrend($user, $jours);
     }
-    $stats->getVolumeHistory($user, 20);
-    $stats->getVolumeHistory($user, 30);
-    $stats->getDurationHistory($user, 20);
-    $stats->getDurationHistory($user, 30);
-    $stats->getWeeklyVolumeComparison($user);
+    $volume->getVolumeHistory($user, 20);
+    $volume->getVolumeHistory($user, 30);
+    $seances->getDurationHistory($user, 20);
+    $seances->getDurationHistory($user, 30);
+    $volume->getWeeklyVolumeComparison($user);
 
     $ecrites = clesDeStatistiques();
     expect($ecrites)->not->toBeEmpty('rien n’a été mis en cache : le test ne prouverait rien');

@@ -61,7 +61,7 @@ class WorkoutLineController extends Controller
          * SEANCE aussi — la ligne, entre les deux, avait ete oubliee (#1502).
          */
         if ($user !== null) {
-            app(\App\Services\StatsService::class)->clearWorkoutRelatedStats($user);
+            app(\App\Services\Stats\StatsCacheManager::class)->clearWorkoutRelatedStats($user);
         }
 
         return response()->noContent();

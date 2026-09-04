@@ -6,7 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Stats\GetStatsDashboardAction;
 use App\Models\Exercise;
-use App\Services\StatsService;
+use App\Services\Stats\ExerciseStatsService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -21,9 +21,9 @@ class StatsController extends Controller
     /**
      * Create a new StatsController instance.
      *
-     * @param  \App\Services\StatsService  $statsService  Service for retrieving stats data.
+     * @param  \App\Services\Stats\ExerciseStatsService  $exerciseStats  Service for retrieving exercise stats.
      */
-    public function __construct(protected StatsService $statsService)
+    public function __construct(protected ExerciseStatsService $exerciseStats)
     {
     }
 
@@ -63,7 +63,7 @@ class StatsController extends Controller
         $this->authorize('view', $exercise);
 
         return response()->json([
-            'progress' => $this->statsService->getExercise1RMProgress($this->user(), $exercise->id),
+            'progress' => $this->exerciseStats->getExercise1RMProgress($this->user(), $exercise->id),
         ]);
     }
 }

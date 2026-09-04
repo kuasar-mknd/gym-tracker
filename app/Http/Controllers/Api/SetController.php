@@ -9,7 +9,7 @@ use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Resources\SetResource;
 use App\Models\Set;
-use App\Services\StatsService;
+use App\Services\Stats\StatsCacheManager;
 
 /**
  * Les trois écritures de série que la page de séance fait en direct.
@@ -17,7 +17,7 @@ use App\Services\StatsService;
 class SetController extends Controller
 {
     public function __construct(
-        protected StatsService $statsService
+        protected StatsCacheManager $statsCache
     ) {
     }
 
@@ -51,7 +51,7 @@ class SetController extends Controller
         $set->update($request->validated());
 
         // Bolt: Only clear volume-related stats for set updates
-        $this->statsService->clearVolumeStats($this->user());
+        $this->statsCache->clearVolumeStats($this->user());
 
         return new SetResource($set->loadMissing('personalRecord'));
     }
@@ -67,7 +67,7 @@ class SetController extends Controller
         $set->delete();
 
         // Bolt: Only clear volume-related stats for set deletions
-        $this->statsService->clearVolumeStats($user);
+        $this->statsCache->clearVolumeStats($user);
 
         return response()->noContent();
     }

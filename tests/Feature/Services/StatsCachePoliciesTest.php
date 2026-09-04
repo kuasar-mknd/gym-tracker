@@ -8,8 +8,9 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\StatsCacheManager;
-use App\Services\StatsService;
+use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -77,7 +78,7 @@ it('garde la version de 1RM trente jours', function (): void {
 it('vide l’historique de durée avec les statistiques de séance', function (): void {
     $user = utilisateurAvecSeance();
 
-    app(StatsService::class)->getDurationHistory($user);
+    app(WorkoutStatsService::class)->getDurationHistory($user);
 
     $cle = "stats.duration_history.{$user->id}.20";
 
@@ -92,13 +93,12 @@ it('vide l’historique de durée avec les statistiques de séance', function ()
  * La vue d'ensemble delegue, et ce qu'elle delegue doit arriver.
  *
  * Le mutant qui faisait rendre un tableau vide a la repartition survivait :
- * `StatsService` n'est qu'une facade au-dessus des services specialises, et rien
- * ne verifiait que la facade transmet.
+ * rien ne verifiait que le service transmet la repartition telle quelle.
  */
 it('transmet la répartition des séances au lieu d’un tableau vide', function (): void {
     $user = utilisateurAvecSeance();
 
-    $repartitions = app(StatsService::class)->getWorkoutDistributions($user);
+    $repartitions = app(WorkoutStatsService::class)->getWorkoutDistributions($user);
 
     expect($repartitions)->toHaveKeys(['duration', 'time_of_day'])
         ->and($repartitions['duration'])->not->toBeEmpty()
@@ -129,7 +129,7 @@ it('date chaque point de l’historique de poids', function (): void {
         'weight' => 78.5,
     ]);
 
-    $historique = app(StatsService::class)->getBodyProgressOverview($user);
+    $historique = app(BodyStatsService::class)->getBodyProgressOverview($user);
 
     expect($historique['weightHistory'][0]->date)->toBe('03/06')
         ->and($historique['weightHistory'][0]->full_date)->toBe('2026-06-03');

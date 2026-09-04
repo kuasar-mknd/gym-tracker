@@ -7,13 +7,13 @@ namespace App\Actions\Workouts;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\WorkoutLine;
-use App\Services\StatsService;
+use App\Services\Stats\StatsCacheManager;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 
 final class CreateSetAction
 {
-    public function __construct(protected StatsService $statsService)
+    public function __construct(protected StatsCacheManager $statsCache)
     {
     }
 
@@ -86,7 +86,7 @@ final class CreateSetAction
         }
 
         // Bolt: Only clear volume-related stats for set additions
-        $this->statsService->clearVolumeStats($user);
+        $this->statsCache->clearVolumeStats($user);
 
         return $set;
     }

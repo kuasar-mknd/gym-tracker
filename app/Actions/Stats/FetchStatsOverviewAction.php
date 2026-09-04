@@ -6,12 +6,12 @@ namespace App\Actions\Stats;
 
 use App\Models\Exercise;
 use App\Models\User;
-use App\Services\StatsService;
+use App\Services\Stats\BodyStatsService;
 
 /**
  * Action responsible for fetching the necessary data to render the stats overview dashboard.
  *
- * It coordinates with the StatsService to retrieve immediate, lightweight statistics
+ * It coordinates with the body stats service to retrieve immediate, lightweight statistics
  * like current weight and basic activity counts, and provides parsing for date periods.
  */
 class FetchStatsOverviewAction
@@ -19,9 +19,9 @@ class FetchStatsOverviewAction
     /**
      * Create a new FetchStatsOverviewAction instance.
      *
-     * @param  \App\Services\StatsService  $statsService  The underlying service for retrieving stats.
+     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  The underlying service for the latest body metrics.
      */
-    public function __construct(protected StatsService $statsService)
+    public function __construct(protected BodyStatsService $bodyStats)
     {
     }
 
@@ -37,7 +37,7 @@ class FetchStatsOverviewAction
      */
     public function getImmediateStats(User $user, string $period): array
     {
-        $bodyMetrics = $this->statsService->getLatestBodyMetrics($user);
+        $bodyMetrics = $this->bodyStats->getLatestBodyMetrics($user);
 
         return [
             'latestWeight' => $bodyMetrics->latest_weight,

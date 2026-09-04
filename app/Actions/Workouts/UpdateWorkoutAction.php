@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Actions\Workouts;
 
 use App\Models\Workout;
-use App\Services\StatsService;
+use App\Services\Stats\StatsCacheManager;
 use Illuminate\Support\Arr;
 
 final class UpdateWorkoutAction
 {
-    public function __construct(protected StatsService $statsService)
+    public function __construct(protected StatsCacheManager $statsCache)
     {
     }
 
@@ -42,9 +42,9 @@ final class UpdateWorkoutAction
 
         if ($needsFullClear) {
             // started_at/ended_at change affects volume, duration and meta (histories)
-            $this->statsService->clearWorkoutRelatedStats($workout->user);
+            $this->statsCache->clearWorkoutRelatedStats($workout->user);
         } elseif ($needsMetaClear) {
-            $this->statsService->clearWorkoutMetadataStats($workout->user);
+            $this->statsCache->clearWorkoutMetadataStats($workout->user);
         }
 
         return $workout;

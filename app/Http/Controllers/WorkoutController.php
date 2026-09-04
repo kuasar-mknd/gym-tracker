@@ -22,7 +22,7 @@ use Inertia\Inertia;
  */
 class WorkoutController extends Controller
 {
-    public function __construct(protected \App\Services\StatsService $statsService)
+    public function __construct(protected \App\Services\Stats\StatsCacheManager $statsCache)
     {
     }
 
@@ -120,7 +120,7 @@ class WorkoutController extends Controller
 
         $workout->delete();
 
-        $this->statsService->clearWorkoutRelatedStats($this->user());
+        $this->statsCache->clearWorkoutRelatedStats($this->user());
 
         return redirect()->route('workouts.index');
     }
