@@ -2,6 +2,7 @@
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { grille } from './chartConfig'
 
 const props = defineProps({
     data: {
@@ -47,7 +48,7 @@ const infobulle = {
 const axeX = {
     min: 0,
     max: 100,
-    grid: { display: true, color: jetonTransparent('surface-card', 0.1) },
+    grid: { display: true, ...grille() },
     ticks: { callback: (value) => value + '%' },
 }
 </script>

@@ -2,6 +2,7 @@
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { grille } from './chartConfig'
 
 const props = defineProps({
     data: {
@@ -56,7 +57,7 @@ const infobulle = {
     },
 }
 
-const axeX = { grid: { display: true, color: jetonTransparent('shadow-cast', 0.05) } }
+const axeX = { grid: { display: true, ...grille() } }
 </script>
 
 <template>
