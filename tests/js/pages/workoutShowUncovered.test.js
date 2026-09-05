@@ -110,6 +110,10 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 import WorkoutShow from '@/Pages/Workouts/Show.vue'
+import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
+
+/** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
+const modale = (wrapper) => wrapper.findComponent(AjoutDExerciceModal).vm
 
 const STRENGTH = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
 const CARDIO = { id: 6, name: 'Course', type: 'cardio', category: 'Cardio', default_rest_time: 60 }
@@ -203,6 +207,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
                 GlassCard: passesSlot,
                 SwipeableRow: SwipeStub,
                 Modal: ModalStub,
+                AjoutDExerciceModal,
                 GlassButton: ButtonStub,
                 GlassIconButton: IconButtonStub,
                 GlassInput: FieldStub,
@@ -607,8 +612,8 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
 
         await click(wrapper, 'quick-create-exercise')
 
-        expect(wrapper.vm.showCreateForm).toBe(true)
-        expect(wrapper.vm.createExerciseForm.name).toBe('Rowing')
+        expect(modale(wrapper).showCreateForm).toBe(true)
+        expect(modale(wrapper).createExerciseForm.name).toBe('Rowing')
         // Kept across a reload of the modal, which is why it is written down.
         expect(localStorage.getItem('gymtracker_add_exercise_search')).toBe('Rowing')
     })
@@ -632,8 +637,8 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         expect(request.headers['X-CSRF-TOKEN']).toBe('tok-42')
         expect(JSON.parse(request.body)).toEqual({ name: 'Rowing', type: 'strength', category: 'Pectoraux' })
 
-        expect(wrapper.vm.showCreateForm).toBe(false)
-        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+        expect(modale(wrapper).showCreateForm).toBe(false)
+        expect(modale(wrapper).createExerciseForm.processing).toBe(false)
         expect(post).toHaveBeenCalledWith('/api/v1/workout-lines', { workout_id: 1, exercise_id: 77 })
         expect(lines(wrapper).map((line) => line.exercise.name)).toContain('Rowing')
 
@@ -653,8 +658,8 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         await form.trigger('submit')
         await flushPromises()
 
-        expect(wrapper.vm.createExerciseForm.errors.name).toBe('Ce nom est déjà pris.')
-        expect(wrapper.vm.showCreateForm).toBe(true)
+        expect(modale(wrapper).createExerciseForm.errors.name).toBe('Ce nom est déjà pris.')
+        expect(modale(wrapper).showCreateForm).toBe(true)
         expect(haptics.triggerHaptic).toHaveBeenCalledWith('error')
         expect(post).not.toHaveBeenCalled()
     })
@@ -675,13 +680,13 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         await form.trigger('submit')
         await flushPromises()
 
-        expect(wrapper.vm.createExerciseForm.processing, 'the button never went busy').toBe(true)
+        expect(modale(wrapper).createExerciseForm.processing, 'the button never went busy').toBe(true)
 
         answer.resolve({ ok: false, status: 500, json: async () => ({}) })
         await flushPromises()
 
-        expect(wrapper.vm.createExerciseForm.errors.name).toBe('La création a échoué. Réessaie dans un instant.')
-        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+        expect(modale(wrapper).createExerciseForm.errors.name).toBe('La création a échoué. Réessaie dans un instant.')
+        expect(modale(wrapper).createExerciseForm.processing).toBe(false)
     })
 
     it('blames the connection when the request never lands', async () => {
@@ -694,8 +699,10 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         await form.trigger('submit')
         await flushPromises()
 
-        expect(wrapper.vm.createExerciseForm.errors.name).toBe('Connexion impossible. Vérifie ta connexion réseau.')
-        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+        expect(modale(wrapper).createExerciseForm.errors.name).toBe(
+            'Connexion impossible. Vérifie ta connexion réseau.',
+        )
+        expect(modale(wrapper).createExerciseForm.processing).toBe(false)
 
         silenced.mockRestore()
     })
@@ -727,7 +734,7 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         await openCreateForm(wrapper)
         await wrapper.find('button[aria-label="Retour"]').trigger('click')
 
-        expect(wrapper.vm.showCreateForm).toBe(false)
+        expect(modale(wrapper).showCreateForm).toBe(false)
         expect(wrapper.find('#search-workout-exercise').exists()).toBe(true)
     })
 
@@ -738,8 +745,8 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
         await emitOn(wrapper, ModalStub, 'close')
 
         expect(wrapper.vm.showAddExercise).toBe(false)
-        expect(wrapper.vm.showCreateForm).toBe(false)
-        expect(wrapper.vm.searchQuery).toBe('')
+        expect(modale(wrapper).showCreateForm).toBe(false)
+        expect(modale(wrapper).searchQuery).toBe('')
     })
 })
 
