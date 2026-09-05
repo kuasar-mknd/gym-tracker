@@ -559,12 +559,6 @@ parameters:
 			path: tests/Feature/ActivityLogUpgradeTest.php
 
 		-
-			message: '#^Cannot access property \$id on mixed\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Api/V1/WorkoutLineControllerTest.php
-
-		-
 			message: '#^Parameter \#2 \$hashedValue of static method Illuminate\\Support\\Facades\\Hash\:\:check\(\) expects string, string\|null given\.$#'
 			identifier: argument.type
 			count: 1
