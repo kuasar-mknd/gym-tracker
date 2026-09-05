@@ -6,14 +6,10 @@ import { jsRoot } from './sourceFiles'
 /**
  * Une page qui grossit sans limite finit comme `Workouts/Show.vue` (#1675) :
  * 2 527 lignes et onze responsabilites, eclatees en huit passes. Le plafond
- * vaut pour toute page nouvelle ; celles qui le depassaient le jour de la pose
- * sont en sursis, chacune a son compte du moment, et ne peuvent que descendre.
+ * vaut pour toute page ; les cinq qui le dépassaient le jour de la pose sont
+ * descendues une à une la nuit suivante, et il n'y a plus d'exception.
  */
 const PLAFOND = 400
-
-const EN_SURSIS = {
-    'Exercises/Index.vue': 541,
-}
 
 const pages = join(jsRoot, 'Pages')
 
@@ -26,22 +22,11 @@ const lister = (dossier) =>
         return chemin.endsWith('.vue') ? [chemin] : []
     })
 
-it('ne laisse aucune page dépasser quatre cents lignes, et fait descendre celles en sursis', () => {
-    const fautes = []
-
-    for (const chemin of lister(pages)) {
-        const page = relative(pages, chemin)
-        const lignes = (readFileSync(chemin, 'utf8').match(/\n/g) ?? []).length
-        const sursis = EN_SURSIS[page]
-
-        if (sursis === undefined) {
-            if (lignes > PLAFOND) fautes.push(`${page} : ${lignes} lignes, au-dessus du plafond de ${PLAFOND}`)
-        } else if (lignes > sursis) {
-            fautes.push(`${page} : ${lignes} lignes, au-dessus de son sursis de ${sursis}`)
-        } else if (lignes <= PLAFOND) {
-            fautes.push(`${page} : ${lignes} lignes, sous le plafond — retire-la du sursis`)
-        }
-    }
+it('ne laisse aucune page dépasser quatre cents lignes', () => {
+    const fautes = lister(pages)
+        .map((chemin) => [relative(pages, chemin), (readFileSync(chemin, 'utf8').match(/\n/g) ?? []).length])
+        .filter(([, lignes]) => lignes > PLAFOND)
+        .map(([page, lignes]) => `${page} : ${lignes} lignes, au-dessus du plafond de ${PLAFOND}`)
 
     expect(fautes).toEqual([])
 })
