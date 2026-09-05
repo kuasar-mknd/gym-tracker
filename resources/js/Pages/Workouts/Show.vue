@@ -21,8 +21,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import GlassInput from '@/Components/UI/GlassInput.vue'
-import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import { useOrdreDeLaSeance } from '@/composables/useOrdreDeLaSeance'
 import { useBrouillonsDeSeries, NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
@@ -35,6 +33,7 @@ import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
 import Modal from '@/Components/UI/Modal.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
+import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { Head, useForm, router, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
@@ -46,7 +45,6 @@ const props = defineProps({
 })
 
 const page = usePage()
-import { EXERCISE_CATEGORIES, EXERCISE_TYPES } from '@/Utils/constants'
 
 // ⚡ Perf: Use a mutable reactive ref instead of computed to support optimistic UI updates
 const localWorkout = ref(JSON.parse(JSON.stringify(props.workout)))
@@ -520,11 +518,6 @@ const confirmFinishWorkout = async () => {
 }
 
 const showAddExercise = ref(false)
-const searchQuery = ref(localStorage.getItem('gymtracker_add_exercise_search') || '')
-watch(searchQuery, (newVal) => {
-    localStorage.setItem('gymtracker_add_exercise_search', newVal)
-})
-const showCreateForm = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
 const showConfirmModal = ref(false)
 const confirmAction = ref(null)
@@ -572,7 +565,6 @@ const addExercise = (exerciseId) => {
     }
     localWorkout.value.workout_lines.push(tempLine)
     showAddExercise.value = false
-    searchQuery.value = ''
 
     const creation = SyncService.post(route('api.v1.workout-lines.store'), {
         workout_id: localWorkout.value.id,
@@ -634,66 +626,6 @@ const addExercise = (exerciseId) => {
         })
 
     pendingIds.track(tempLine.id, creation)
-}
-
-const createAndAddExercise = async () => {
-    createExerciseForm.processing = true
-    createExerciseForm.clearErrors()
-    try {
-        const response = await fetch(route('exercises.store'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-            },
-            body: JSON.stringify({
-                name: createExerciseForm.name,
-                type: createExerciseForm.type,
-                category: createExerciseForm.category,
-            }),
-        })
-        if (response.ok) {
-            const data = await response.json()
-            const exercise = data.exercise
-            localExercises.value.push(exercise)
-            addExercise(exercise.id)
-            showCreateForm.value = false
-
-            return
-        }
-
-        // Anything other than 2xx used to fall through here and do nothing at
-        // all: the modal stayed open with no message, so the user just kept
-        // tapping. Surface the server's validation errors instead.
-        if (response.status === 422) {
-            const { errors = {} } = await response.json()
-
-            Object.entries(errors).forEach(([field, messages]) => {
-                createExerciseForm.setError(field, [].concat(messages)[0])
-            })
-        } else {
-            createExerciseForm.setError('name', 'La création a échoué. Réessaie dans un instant.')
-        }
-
-        triggerHaptic('error')
-    } catch (e) {
-        console.error(e)
-        createExerciseForm.setError('name', 'Connexion impossible. Vérifie ta connexion réseau.')
-        triggerHaptic('error')
-    } finally {
-        createExerciseForm.processing = false
-    }
-}
-
-const quickCreate = () => {
-    createExerciseForm.name = searchQuery.value
-    showCreateForm.value = true
-}
-const closeModal = () => {
-    showAddExercise.value = false
-    showCreateForm.value = false
-    searchQuery.value = ''
 }
 
 const removeLine = (lineId) => {
@@ -1237,8 +1169,6 @@ const removeSet = (setId) => {
     }
 }
 
-const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })
-
 /**
  * The duration is no longer parsed out of a string here.
  *
@@ -1319,11 +1249,6 @@ const toNumberOrNull = (value) => {
 
     return Number.isFinite(parsed) ? parsed : undefined
 }
-
-const filteredExercises = computed(() => {
-    const q = searchQuery.value.toLowerCase().trim()
-    return q ? localExercises.value.filter((e) => e.name.toLowerCase().includes(q)) : localExercises.value
-})
 
 const handleFabAddExercise = () => {
     showAddExercise.value = true
@@ -1766,105 +1691,13 @@ onUnmounted(() => {
         </div>
 
         <!-- Modals -->
-        <Modal :show="showAddExercise" @close="closeModal" max-width="lg" aria-labelledby="add-exercise-title">
-            <div class="p-6">
-                <h2
-                    id="add-exercise-title"
-                    class="font-display text-text-main mb-6 text-2xl font-black uppercase italic"
-                >
-                    Ajouter un exercice
-                </h2>
-                <div v-if="!showCreateForm">
-                    <div class="pb-4">
-                        <GlassInput
-                            id="search-workout-exercise"
-                            v-model="searchQuery"
-                            type="search"
-                            size="lg"
-                            label="Rechercher un exercice"
-                            hide-label
-                            placeholder="Rechercher..."
-                        />
-                    </div>
-                    <div class="max-h-[60vh] space-y-3 overflow-y-auto">
-                        <button
-                            v-if="filteredExercises.length === 0 && searchQuery"
-                            type="button"
-                            @click="quickCreate"
-                            dusk="quick-create-exercise"
-                            class="border-border hover:border-accent-state focus-visible:ring-accent-state flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                            <span class="text-text-muted mb-2 block text-sm italic"
-                                >Aucun résultat pour "{{ searchQuery }}"</span
-                            >
-                            <span class="text-accent-state-deep font-bold tracking-wider uppercase"
-                                >Créer "{{ searchQuery }}"</span
-                            >
-                        </button>
-
-                        <!-- button, not div: adding an exercise is the primary action of this
-                             screen and was unreachable by keyboard and screen readers.
-                             Spans rather than h4/p — flow content is invalid inside a button
-                             and produced a phantom heading level in the outline. -->
-                        <button
-                            v-for="exercise in filteredExercises"
-                            :key="exercise.id"
-                            type="button"
-                            @click="addExercise(exercise.id)"
-                            :dusk="`select-exercise-${exercise.id}`"
-                            class="glass-panel-light hover:border-accent-primary/50 focus-visible:ring-accent-primary block w-full cursor-pointer rounded-2xl p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
-                        >
-                            <span class="text-text-main block font-bold">{{ exercise.name }}</span>
-                            <span class="text-text-muted block text-xs uppercase">{{ exercise.category }}</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Create Form -->
-                <div v-else class="space-y-6">
-                    <div class="flex items-center gap-4">
-                        <GlassIconButton icon="arrow_back" label="Retour" @click="showCreateForm = false" />
-                        <h3 class="font-display text-text-main text-xl font-black uppercase italic">Nouvel Exercice</h3>
-                    </div>
-
-                    <form @submit.prevent="createAndAddExercise" class="space-y-4">
-                        <GlassInput
-                            v-model="createExerciseForm.name"
-                            label="Nom"
-                            dusk="new-exercise-name"
-                            :error="createExerciseForm.errors.name"
-                            required
-                        />
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <GlassSelect
-                                v-model="createExerciseForm.type"
-                                label="Type"
-                                :options="EXERCISE_TYPES"
-                                dusk="new-exercise-type"
-                            />
-                            <GlassSelect
-                                v-model="createExerciseForm.category"
-                                label="Catégorie"
-                                :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
-                                empty-label="— Aucune —"
-                                dusk="new-exercise-category"
-                            />
-                        </div>
-
-                        <GlassButton
-                            type="submit"
-                            variant="primary"
-                            class="w-full"
-                            :loading="createExerciseForm.processing"
-                            dusk="submit-new-exercise"
-                        >
-                            Créer et Ajouter
-                        </GlassButton>
-                    </form>
-                </div>
-            </div>
-        </Modal>
+        <AjoutDExerciceModal
+            :show="showAddExercise"
+            :exercises="localExercises"
+            @close="showAddExercise = false"
+            @add="addExercise"
+            @created="localExercises.push($event)"
+        />
 
         <WorkoutSettingsModal
             :show="showSettingsModal"

@@ -30,6 +30,7 @@ vi.mock('@inertiajs/vue3', () => ({
 }))
 
 import WorkoutShow from '@/Pages/Workouts/Show.vue'
+import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 
 const EXERCISE = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
 
@@ -74,6 +75,7 @@ const mountPage = async (workout = emptyWorkout) => {
                 GlassCard: passesSlot,
                 SwipeableRow: passesSlot,
                 Modal: passesSlot,
+                AjoutDExerciceModal,
                 GlassInput: passesSlot,
                 GlassSelect: passesSlot,
             },
