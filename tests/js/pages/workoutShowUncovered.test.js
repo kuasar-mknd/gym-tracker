@@ -111,6 +111,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
+import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 
 /** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
 const modale = (wrapper) => wrapper.findComponent(AjoutDExerciceModal).vm
@@ -208,6 +209,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
                 SwipeableRow: SwipeStub,
                 Modal: ModalStub,
                 AjoutDExerciceModal,
+                RangeeDeSerie,
                 GlassButton: ButtonStub,
                 GlassIconButton: IconButtonStub,
                 GlassInput: FieldStub,

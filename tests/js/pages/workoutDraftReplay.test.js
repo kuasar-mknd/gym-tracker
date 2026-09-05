@@ -26,6 +26,7 @@ vi.mock('@inertiajs/vue3', () => ({
 }))
 
 import WorkoutShow from '@/Pages/Workouts/Show.vue'
+import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 
 const DRAFT_KEY = 'draft_set_42'
 
@@ -62,7 +63,7 @@ const mountPage = async () => {
         shallow: true,
         global: {
             directives: { press: {} },
-            stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot, SwipeableRow: passesSlot },
+            stubs: { AuthenticatedLayout: passesSlot, GlassCard: passesSlot, SwipeableRow: passesSlot, RangeeDeSerie },
         },
     })
 
