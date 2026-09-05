@@ -114,6 +114,42 @@ describe('créer un exercice sur le champ', () => {
         wrapper.unmount()
     })
 
+    it('envoie le type et la catégorie choisis, pas les valeurs par défaut', async () => {
+        const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+            ok: true,
+            json: async () => ({ exercise: { id: 9, name: 'Rowing Haltère', category: 'Dos' } }),
+        })
+        const wrapper = monter()
+        wrapper.vm.createExerciseForm.name = 'Rowing Haltère'
+        wrapper.vm.createExerciseForm.type = 'cardio'
+        wrapper.vm.createExerciseForm.category = 'Dos'
+
+        await wrapper.vm.createAndAddExercise()
+
+        expect(JSON.parse(spy.mock.calls[0][1].body)).toEqual({
+            name: 'Rowing Haltère',
+            type: 'cardio',
+            category: 'Dos',
+        })
+        wrapper.unmount()
+    })
+
+    it('ne se fige pas sur un refus qui ne nomme aucun champ', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+            ok: false,
+            status: 422,
+            json: async () => ({ message: 'Requête invalide.' }),
+        })
+        const wrapper = monter()
+
+        await wrapper.vm.createAndAddExercise()
+
+        expect(wrapper.vm.createExerciseForm.errors).toEqual({})
+        expect(wrapper.vm.createExerciseForm.processing).toBe(false)
+        expect(wrapper.emitted('created')).toBeUndefined()
+        wrapper.unmount()
+    })
+
     it('affiche les erreurs de validation du serveur au lieu de se taire', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({
             ok: false,

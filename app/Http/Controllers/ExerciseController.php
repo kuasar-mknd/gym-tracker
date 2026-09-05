@@ -75,15 +75,7 @@ class ExerciseController extends Controller
         $data = $request->validated();
         $exercise = $createExerciseAction->execute($this->user(), $data);
 
-        /*
-         * `hasHeader()` plutot que `header()` : ce qui compte est la PRESENCE
-         * de l'en-tete, pas sa valeur. Lue comme un booleen, une valeur vide
-         * — `X-Quick-Create:` — passait pour absente, et l'appelant recevait
-         * une redirection HTML la ou il attendait du JSON. Les deux pages qui
-         * l'envoient posent `'true'`, donc rien ne casse aujourd'hui ; c'est la
-         * lecture qui etait fragile.
-         */
-        if ($request->wantsJson() || $request->hasHeader('X-Quick-Create')) {
+        if ($request->wantsJson()) {
             return response()->json(['exercise' => $exercise], 201);
         }
 

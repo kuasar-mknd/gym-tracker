@@ -187,18 +187,6 @@ parameters:
 			path: tests/Browser/ModalSemanticsTest.php
 
 		-
-			message: '#^Cannot access offset ''gapAbove'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: tests/Browser/ModalSemanticsTest.php
-
-		-
-			message: '#^Cannot access offset ''gapBelow'' on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: tests/Browser/ModalSemanticsTest.php
-
-		-
 			message: '#^Cannot access offset ''glassLayers'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1

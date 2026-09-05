@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **Les modèles de séance ajoutent leurs exercices par la même modale que la séance** (#1675) : `TemplateForm` abandonne sa propre modale (recherche, création sur le champ, bandeau d'erreur avec code HTTP) pour `AjoutDExerciceModal`, avec sa recherche mémorisée et ses erreurs en clair ; le contrôleur des exercices ne lit plus l'en-tête `X-Quick-Create`, la demande de JSON suffit
+
 ## [1.5.13] - 2026-09-05
 
 ### Corrigé

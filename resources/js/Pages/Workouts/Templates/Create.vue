@@ -8,14 +8,6 @@ defineProps({
         type: Array,
         default: () => [],
     },
-    categories: {
-        type: Array,
-        default: undefined,
-    },
-    types: {
-        type: Array,
-        default: undefined,
-    },
 })
 </script>
 
@@ -23,6 +15,6 @@ defineProps({
     <Head title="Nouveau Modèle" />
 
     <AuthenticatedLayout page-title="Nouveau Modèle" show-back back-route="templates.index">
-        <TemplateForm :exercises="exercises" :categories="categories" :types="types" />
+        <TemplateForm :exercises="exercises" />
     </AuthenticatedLayout>
 </template>

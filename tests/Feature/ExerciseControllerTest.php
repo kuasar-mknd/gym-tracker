@@ -77,39 +77,18 @@ test('storing an exercise fails with validation errors', function (): void {
         ->assertSessionHasErrors(['name', 'type']);
 });
 
-/*
- * La creation rapide depuis la page de seance.
- *
- * `Templates/Create.vue` et `Templates/Edit.vue` posent `X-Quick-Create` pour
- * recevoir l'exercice en JSON plutot qu'une redirection. Cette branche
- * n'etait couverte par aucun test, et le controleur lisait `header()` comme
- * un booleen : la PRESENCE de l'en-tete etait ce qui comptait, mais une
- * valeur vide se lisait comme une absence.
- */
-test('la création rapide répond en JSON quand l’en-tête est posé', function (): void {
+/* La creation rapide, depuis la seance comme depuis un modele, demande du JSON. */
+test('la création rapide répond en JSON à qui demande du JSON', function (): void {
     $user = User::factory()->create();
 
     actingAs($user)
-        ->post(route('exercises.store'), [
+        ->postJson(route('exercises.store'), [
             'name' => 'Rowing',
             'type' => 'strength',
             'category' => 'Dos',
-        ], ['X-Quick-Create' => 'true'])
+        ])
         ->assertCreated()
         ->assertJsonPath('exercise.name', 'Rowing');
-});
-
-test('la création rapide répond en JSON même si l’en-tête est vide', function (): void {
-    $user = User::factory()->create();
-
-    actingAs($user)
-        ->post(route('exercises.store'), [
-            'name' => 'Tirage',
-            'type' => 'strength',
-            'category' => 'Dos',
-        ], ['X-Quick-Create' => ''])
-        ->assertCreated()
-        ->assertJsonPath('exercise.name', 'Tirage');
 });
 
 test('authenticated user can update an exercise they own with valid data', function (): void {
