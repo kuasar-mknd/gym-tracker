@@ -128,12 +128,18 @@ describe('ticking a day', () => {
     })
 })
 
+/**
+ * The form lives in `FormulaireDHabitude`, which owns the Inertia form; the
+ * page only says which habit it opens on. `form` is the one the child asked
+ * for, and the child fills it on the tick after the page opens it.
+ */
 describe('the habit form', () => {
-    it('opens on an existing habit with its values already in place', () => {
+    it('opens on an existing habit with its values already in place', async () => {
         const wrapper = mountPage()
         const existing = habit({ id: 7, name: 'Lecture', description: 'Le soir', goal_times_per_week: 3 })
 
         wrapper.vm.editHabit(existing)
+        await wrapper.vm.$nextTick()
 
         expect(form.name).toBe('Lecture')
         expect(form.description).toBe('Le soir')
@@ -143,10 +149,11 @@ describe('the habit form', () => {
         expect(wrapper.vm.editingHabit.id).toBe(7)
     })
 
-    it('reads a habit with no description as an empty field, not as "null"', () => {
+    it('reads a habit with no description as an empty field, not as "null"', async () => {
         const wrapper = mountPage()
 
         wrapper.vm.editHabit(habit({ description: null }))
+        await wrapper.vm.$nextTick()
 
         // Without the fallback the textarea shows the word null, which the user
         // then has to delete before saving.
@@ -164,21 +171,23 @@ describe('the habit form', () => {
         expect(wrapper.vm.editingHabit).toBeNull()
     })
 
-    it('updates rather than creates when a habit is open', () => {
+    it('updates rather than creates when a habit is open', async () => {
         const wrapper = mountPage()
 
         wrapper.vm.editHabit(habit({ id: 7 }))
-        wrapper.vm.submit()
+        await wrapper.vm.$nextTick()
+        await wrapper.find('form').trigger('submit')
 
         expect(form.put).toHaveBeenCalledTimes(1)
         expect(form.post).not.toHaveBeenCalled()
     })
 
-    it('creates when nothing is open', () => {
+    it('creates when nothing is open', async () => {
         const wrapper = mountPage()
 
         wrapper.vm.openAddForm()
-        wrapper.vm.submit()
+        await wrapper.vm.$nextTick()
+        await wrapper.find('form').trigger('submit')
 
         expect(form.post).toHaveBeenCalledTimes(1)
         expect(form.put).not.toHaveBeenCalled()
