@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.13] - 2026-09-05
+
 ### Corrigé
 - **La sauvegarde de production échouait au dump** (#1740) : le client `mysqldump` de l'image est celui de MariaDB, qui vérifie le certificat du serveur MySQL, signé par lui-même, et refusait de se connecter ; le dump passe désormais sans TLS sur le réseau interne de la pile (`--loose-skip-ssl`, que le client MySQL du poste ignore) et sans lire les tablespaces, qui demandaient un privilège que l'utilisateur n'a pas
 
@@ -476,7 +478,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.12...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.13...HEAD
+[1.5.13]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.12...v1.5.13
 [1.5.12]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.11...v1.5.12
 [1.5.11]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.10...v1.5.11
 [1.5.10]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.9...v1.5.10
