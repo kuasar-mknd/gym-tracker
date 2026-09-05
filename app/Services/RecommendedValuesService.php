@@ -341,8 +341,7 @@ final class RecommendedValuesService
             $candidates = $candidatesByExercise->get($exerciseId, new Collection());
             $values = $this->calculateFromLines($candidates);
 
-            $cacheKey = "recommended_values:{$userId}:{$exerciseId}:{$workoutId}";
-            $cacheData[$cacheKey] = $values;
+            $cacheData[self::cleDeCache($userId, $exerciseId, $workoutId)] = $values;
             $results[$exerciseId] = $values;
         }
 

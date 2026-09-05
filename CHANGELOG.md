@@ -7,15 +7,16 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Modifié
-- **Un seul graphique de base pour les 48 cartes de statistiques** (#1675) : chaque carte recopiait l'enregistrement de Chart.js, l'habillage de son infobulle, de sa légende et de ses axes ; elle ne déclare plus que ses séries et ce qui la distingue. Huit listes d'enregistrement divergentes deviennent une, tenue par une garde, et les trois gris de grille, les cinq bordures d'infobulle et les polices de graduation qui avaient dérivé se rejoignent. La densité de l'ombre et la place de la légende restent réglables, elles portaient une intention. Solde : 1 788 lignes de moins
-
-## [1.5.11] - 2026-09-04
+## [1.5.11] - 2026-09-05
 
 ### Ajouté
 - **Une sauvegarde quotidienne de la base, chiffrée, hors du conteneur** (#1663) : à 02:30 le planificateur archive la base dans le dossier de l'hôte `BACKUP_HOST_PATH` (nettoyage à 02:00, contrôle de fraîcheur à 08:00, chaque tâche surveillée par Sentry) ; la pile exige `BACKUP_HOST_PATH` et `BACKUP_ARCHIVE_PASSWORD` au démarrage et les transmet à `app`, `worker` et `scheduler` ; sans mot de passe, aucune archive n'est écrite, que la demande vienne du planificateur, de Filament ou de `backup:run`
 
+### Corrigé
+- **Les recommandations pré-calculées par lot étaient écrites sous une clef que personne ne lisait** : la lecture passe par une clef versionnée par utilisateur, l'écriture par lot ne l'était pas, donc chaque ligne recalculait ses valeurs. Trouvé en tuant les mutants de `RecommendedValuesService`
+
 ### Modifié
+- **Un seul graphique de base pour les 48 cartes de statistiques** (#1675) : chaque carte recopiait l'enregistrement de Chart.js, l'habillage de son infobulle, de sa légende et de ses axes ; elle ne déclare plus que ses séries et ce qui la distingue. Huit listes d'enregistrement divergentes deviennent une, tenue par une garde, et les trois gris de grille, les cinq bordures d'infobulle et les polices de graduation qui avaient dérivé se rejoignent. La densité de l'ombre et la place de la légende restent réglables, elles portaient une intention. Solde : 1 788 lignes de moins
 - **Les statistiques en cache portent une version par utilisateur** (#1670) : invalider, c'est incrémenter la version (séances ou mesures), et toutes les entrées deviennent inatteignables d'un coup ; plus de liste de clefs à tenir à jour, celle qui avait déjà oublié une entrée (#1502). Renommer une séance recalcule aussi le volume hebdomadaire à la prochaine lecture.
 - **L'autorisation d'une ressource vit au contrôleur** (#1676) : dix requêtes de validation refaisaient la vérification que le contrôleur fait déjà ; elles ne vérifient plus que la connexion, sauf `goals.update` où la règle `exists` ferait travailler la base avant le refus (le contrat de non-divulgation le mesure). Une requête de validation morte est retirée.
 - **Un seul formulaire de modèle de séance** (#1675) : les pages de création et de modification, identiques à 95 %, partagent le composant `TemplateForm` ; deux pages de trente lignes au lieu de deux copies de 450.

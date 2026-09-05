@@ -237,7 +237,6 @@ final class GoalService
             ->selectRaw('SUM(sets.weight * sets.reps) as total_volume')
             ->groupBy('workout_lines.workout_id')
             ->orderByDesc('total_volume')
-            ->limit(1)
             ->value('total_volume');
 
         if ($maxVolume !== null && is_numeric($maxVolume)) {
