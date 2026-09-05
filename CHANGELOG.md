@@ -9,6 +9,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Modifié
 - **Les tests de navigateur n'attendent plus de durées** (#1674) : cinquante `pause()` fixes, 39,8 s par passe, deviennent des conditions nommées — l'écriture arrivée en base, l'identifiant serveur reçu par une ligne optimiste, la mise en page stabilisée, ou un clic qui attend que sa cible cesse de bouger ; une garde refuse leur retour
+- **Une seule hiérarchie de tests par contrôleur d'API** (#1674) : `tests/Feature/Api/V1` disparaît, ses cas rejoignent `tests/Feature/Api`, et quatre fichiers qui répétaient la création d'une série ou d'une ligne sont retirés ; le test du contrôleur des lignes couvre en plus l'ordre 0 de la première ligne, seul cas que les doublons tenaient encore
 
 ## [1.5.12] - 2026-09-05
 
