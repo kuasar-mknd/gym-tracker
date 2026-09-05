@@ -22,9 +22,6 @@ const datasets = computed(() => [
             jeton('accent-secondary'), // Mesure
             jeton('accent-state'), // Autres
         ],
-        borderWidth: 0,
-        hoverOffset: 15,
-        borderRadius: 4,
     },
 ])
 </script>

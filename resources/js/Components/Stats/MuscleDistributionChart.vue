@@ -30,9 +30,6 @@ const datasets = computed(() => [
          * que rien ne les tienne en accord.
          */
         backgroundColor: props.data.map((item) => couleurDeCategorie(item.category)),
-        borderWidth: 0,
-        hoverOffset: 15,
-        borderRadius: 4,
     },
 ])
 </script>

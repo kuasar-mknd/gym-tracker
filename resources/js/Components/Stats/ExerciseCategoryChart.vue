@@ -27,9 +27,6 @@ const datasets = computed(() => [
     {
         data: Object.values(comptes.value),
         backgroundColor: labels.value.map((cat) => couleurDeCategorie(cat)),
-        borderWidth: 0,
-        hoverOffset: 10,
-        borderRadius: 4,
     },
 ])
 

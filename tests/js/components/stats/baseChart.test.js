@@ -129,12 +129,13 @@ describe('BaseChart', () => {
         const anneau = options({ type: 'doughnut', infobulle: { boxPadding: 8, callbacks: { label } } }, 'Doughnut')
 
         expect(anneau.cutout).toBe('65%')
-        expect(anneau.plugins.legend.position).toBe('bottom')
+        expect(anneau.plugins.legend.display).toBe(false)
         expect(anneau.plugins.tooltip.callbacks.label({ parsed: 3 })).toBe('3 séances')
         expect(anneau.plugins.tooltip.boxPadding).toBe(8)
         expect(anneau).not.toHaveProperty('scales')
 
         expect(options({ type: 'doughnut', legende: false }, 'Doughnut').plugins.legend.display).toBe(false)
+        expect(monter({ type: 'doughnut', legende: false }).find('ul').exists()).toBe(false)
         const ajustee = options({ type: 'doughnut', legende: { position: 'right' } }, 'Doughnut').plugins.legend
         expect(ajustee.position).toBe('right')
         expect(ajustee.labels.usePointStyle).toBe(true)
@@ -156,23 +157,44 @@ describe('BaseChart', () => {
     it('garde à l’ombre la densité que la carte demande', () => {
         // Six cartes portaient une ombre plus dense ou plus pâle que 0,2 ; une
         // valeur figée dans le composant les aurait toutes alignées en silence.
-        expect(monter({ lueur: 'accent-danger', lueurOpacite: 0.25 }).find('div').attributes('style')).toContain(
+        expect(monter({ lueur: 'accent-danger', lueurOpacite: 0.25 }).find('.relative').attributes('style')).toContain(
             '--lueur-opacite: 0.25',
         )
-        expect(monter({ lueur: 'accent-danger' }).find('div').attributes('style')).toContain('--lueur-opacite: 0.2')
+        expect(monter({ lueur: 'accent-danger' }).find('.relative').attributes('style')).toContain(
+            '--lueur-opacite: 0.2',
+        )
     })
 
     it('pose la hauteur, la lueur et la surcouche', () => {
         const wrapper = monter({ hauteur: 'h-64', lueur: 'accent-info' }, { surcouche: '<span>centre</span>' })
-        const cadre = wrapper.find('div')
+        const cadre = wrapper.find('.relative')
 
         expect(cadre.classes()).toContain('h-64')
         expect(cadre.classes()).toContain('avec-lueur')
         expect(cadre.attributes('style')).toContain('--lueur: var(--color-accent-info)')
         expect(wrapper.text()).toContain('centre')
 
-        const sansLueur = monter().find('div')
+        const sansLueur = monter().find('.relative')
         expect(sansLueur.classes()).not.toContain('avec-lueur')
         expect(sansLueur.attributes('style')).toBeUndefined()
+    })
+
+    it('dessine la légende d’un anneau sous le canevas, et habille ses parts lui-même', () => {
+        const wrapper = monter({
+            type: 'doughnut',
+            labels: ['Matin', 'Soir'],
+            datasets: [{ data: [3, 1], backgroundColor: ['red', 'blue'], borderWidth: 2, hoverOffset: 4 }],
+        })
+
+        const entrees = wrapper.findAll('li')
+        expect(entrees.map((li) => li.text())).toEqual(['Matin', 'Soir'])
+        expect(entrees[1].find('span').attributes('style')).toContain('blue')
+
+        const dataset = trace(wrapper, 'Doughnut').props('data').datasets[0]
+        expect(dataset.borderWidth).toBe(0)
+        expect(dataset.hoverOffset).toBe(8)
+        expect(trace(monter({ datasets: [{ data: [1], borderWidth: 2 }] })).props('data').datasets[0].borderWidth).toBe(
+            2,
+        )
     })
 })
