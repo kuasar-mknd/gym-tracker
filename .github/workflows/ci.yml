@@ -45,7 +45,39 @@ jobs:
             - name: Install PHP Dependencies
               run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
-    frontend-build:
+    # Les actifs partent des que Vite les a construits : les tests PHP et les
+    # eclats Dusk n'attendent plus la minute et demie de Vitest. Le verdict
+    # `frontend-build` garde son identifiant, c'est lui que la protection de
+    # branche exige.
+    frontend-assets:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+
+            - name: Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: 'npm'
+
+            - name: Install Node Dependencies
+              run: npm ci
+
+            - name: Build Assets
+              run: npm run build
+
+            - name: Upload Build Artifacts
+              uses: actions/upload-artifact@v7
+              with:
+                  name: build-assets
+                  path: |
+                      public/build
+                      public/sw.js
+                  retention-days: 1
+
+    frontend-tests:
         runs-on: ubuntu-latest
         timeout-minutes: 20
         steps:
@@ -73,22 +105,21 @@ jobs:
             - name: Run JS Unit Tests (with coverage thresholds)
               run: npm run test:coverage
 
-            - name: Build Assets
-              run: npm run build
-
-            - name: Upload Build Artifacts
-              uses: actions/upload-artifact@v7
-              with:
-                  name: build-assets
-                  path: |
-                      public/build
-                      public/sw.js
-                  retention-days: 1
+    frontend-build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        needs: [frontend-assets, frontend-tests]
+        if: always()
+        steps:
+            - name: Verdict du frontend
+              run: |
+                  echo "actifs : ${{ needs.frontend-assets.result }}, tests : ${{ needs.frontend-tests.result }}"
+                  [ "${{ needs.frontend-assets.result }}" = "success" ] && [ "${{ needs.frontend-tests.result }}" = "success" ]
 
     laravel-tests:
         runs-on: ubuntu-latest
         timeout-minutes: 30
-        needs: [setup-php, frontend-build]
+        needs: [setup-php, frontend-assets]
         services:
             mysql:
                 image: mysql:8.4
@@ -193,7 +224,7 @@ jobs:
         name: browser-shard (${{ matrix.shard }})
         runs-on: ubuntu-latest
         timeout-minutes: 20
-        needs: [setup-php, frontend-build]
+        needs: [setup-php, frontend-assets]
         strategy:
             fail-fast: false
             matrix:
@@ -537,7 +568,7 @@ jobs:
         name: Build Image (${{ matrix.platform }})
         runs-on: ${{ matrix.runner }}
         timeout-minutes: 60
-        needs: [laravel-tests, browser-tests, lint, audit]
+        needs: [laravel-tests, browser-tests, frontend-build, lint, audit]
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         strategy:
             matrix:

@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Modifié
+- **Les éclats Dusk et les tests PHP partent dès que les actifs sont construits** (#1674) : le job `frontend-build` enchaînait Prettier, ESLint, Vitest avec couverture puis seulement Vite, et tout ce qui dépendait des actifs attendait la minute et demie des tests JavaScript ; la construction et les tests sont deux jobs parallèles, `frontend-build` n'est plus que leur verdict, et la répartition des éclats Dusk est remesurée (93/67/85 s de tests par éclat, désormais 82/82/82)
 - **Les tests de navigateur n'attendent plus de durées** (#1674) : cinquante `pause()` fixes, 39,8 s par passe, deviennent des conditions nommées — l'écriture arrivée en base, l'identifiant serveur reçu par une ligne optimiste, la mise en page stabilisée, ou un clic qui attend que sa cible cesse de bouger ; une garde refuse leur retour
 - **Une seule hiérarchie de tests par contrôleur d'API** (#1674) : `tests/Feature/Api/V1` disparaît, ses cas rejoignent `tests/Feature/Api`, et quatre fichiers qui répétaient la création d'une série ou d'une ligne sont retirés ; le test du contrôleur des lignes couvre en plus l'ordre 0 de la première ligne, seul cas que les doublons tenaient encore
 
