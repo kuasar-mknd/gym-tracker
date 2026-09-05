@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **La sauvegarde de production échouait au dump** (#1740) : le client `mysqldump` de l'image est celui de MariaDB, qui vérifie le certificat du serveur MySQL, signé par lui-même, et refusait de se connecter ; le dump passe désormais sans TLS sur le réseau interne de la pile (`--loose-skip-ssl`, que le client MySQL du poste ignore) et sans lire les tablespaces, qui demandaient un privilège que l'utilisateur n'a pas
+
 ### Modifié
 - **La page de séance passe sous quatre cents lignes, et une garde l'y tient** (#1675) : la fusion des props devient un util pur (`fusionnerLaSeance`), l'identité des rangées, le minuteur de repos et les réglages de la séance deviennent trois composables, le rapport de synchronisation pose lui-même ses écouteurs, et deux docblocks périmés s'effacent ; 2 527 lignes en début de chantier, 376 à l'arrivée. `tailleDesPages` refuse toute page au-dessus de quatre cents lignes et tient les cinq autres qui dépassent à leur compte du jour, qui ne peut que descendre
 - **Les lignes de la séance vivent dans un composable, et leur retrait passe par le dialogue commun** (#1675) : `useLignesDeLaSeance` porte l'ajout d'un exercice, l'attente de la file hors ligne et le retrait ; la page abandonne sa propre modale de confirmation pour `ConfirmDialog`, celle des autres écrans, et passe de 807 à 641 lignes

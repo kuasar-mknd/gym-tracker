@@ -70,6 +70,10 @@ return [
             'dump' => [
                 'useSingleTransaction' => true,
                 'timeout' => 300,
+                // Le client MariaDB de l'image vérifie le certificat du serveur,
+                // que MySQL signe lui-même ; le client MySQL local ignore l'option
+                // grâce à `loose-`. Les tablespaces demandent PROCESS, inutilement.
+                'addExtraOption' => '--loose-skip-ssl --no-tablespaces',
             ],
         ],
 
