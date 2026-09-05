@@ -182,7 +182,15 @@ final class User extends Authenticatable implements MustVerifyEmail
             'current_streak' => 'integer',
             'longest_streak' => 'integer',
             'last_workout_at' => 'datetime',
-            'total_volume' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Tout ce que l'utilisateur a souleve : la somme de ses seances, lue au
+     * moment ou on la demande, sans compteur a tenir a chaque serie.
+     */
+    public function volumeSouleve(): float
+    {
+        return (float) $this->workouts()->sum('workout_volume');
     }
 }

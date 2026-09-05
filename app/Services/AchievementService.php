@@ -159,7 +159,7 @@ final class AchievementService
      */
     private function calculateTotalVolume(User $user): float
     {
-        return (float) $user->total_volume;
+        return $user->volumeSouleve();
     }
 
     /**

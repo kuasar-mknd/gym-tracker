@@ -206,7 +206,7 @@ class SetTest extends TestCase
 
     public function test_it_increments_volumes_on_set_creation(): void
     {
-        $user = User::factory()->create(['total_volume' => 0]);
+        $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
         $exercise = Exercise::factory()->create();
         $workoutLine = WorkoutLine::factory()->create([
@@ -220,13 +220,13 @@ class SetTest extends TestCase
             'reps' => 10,
         ]);
 
-        $this->assertEquals(500, $user->refresh()->total_volume);
+        $this->assertEquals(500, $user->volumeSouleve());
         $this->assertEquals(500, $workout->refresh()->workout_volume);
     }
 
     public function test_it_updates_volumes_on_set_update(): void
     {
-        $user = User::factory()->create(['total_volume' => 0]);
+        $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
         $exercise = Exercise::factory()->create();
         $workoutLine = WorkoutLine::factory()->create([
@@ -242,13 +242,13 @@ class SetTest extends TestCase
 
         $set->update(['weight' => 60, 'reps' => 10]);
 
-        $this->assertEquals(600, $user->refresh()->total_volume);
+        $this->assertEquals(600, $user->volumeSouleve());
         $this->assertEquals(600, $workout->refresh()->workout_volume);
     }
 
     public function test_it_decrements_volumes_on_set_deletion(): void
     {
-        $user = User::factory()->create(['total_volume' => 0]);
+        $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
         $exercise = Exercise::factory()->create();
         $workoutLine = WorkoutLine::factory()->create([
@@ -264,13 +264,13 @@ class SetTest extends TestCase
 
         $set->delete();
 
-        $this->assertEquals(0, $user->refresh()->total_volume);
+        $this->assertEquals(0, $user->volumeSouleve());
         $this->assertEquals(0, $workout->refresh()->workout_volume);
     }
 
     public function test_it_handles_missing_relations_gracefully(): void
     {
-        $user = User::factory()->create(['total_volume' => 0]);
+        $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id, 'workout_volume' => 0]);
         $exercise = Exercise::factory()->create();
         $workoutLine = WorkoutLine::factory()->create([

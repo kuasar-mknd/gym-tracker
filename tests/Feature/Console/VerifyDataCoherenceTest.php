@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /*
  * Le controle de coherence doit trouver ce qu'aucun test ne cherche.
@@ -49,15 +50,15 @@ it('ne signale rien quand tout concorde', function (): void {
         ->expectsOutputToContain('Aucun écart');
 });
 
-it('signale un volume utilisateur qui a dérivé', function (): void {
+it('ne tient plus de total par utilisateur : le volume soulevé se lit dans les séances', function (): void {
     [$user] = compteCoherent();
 
-    // Directement en base : c'est ainsi qu'une derive arrive vraiment.
-    DB::table('users')->where('id', $user->id)->update(['total_volume' => 9999]);
+    expect(Schema::hasColumn('users', 'total_volume'))->toBeFalse()
+        ->and($user->volumeSouleve())->toBe((float) DB::table('workouts')->where('user_id', $user->id)->sum('workout_volume'));
 
     $this->artisan('app:verify-data-coherence')
-        ->assertExitCode(1)
-        ->expectsOutputToContain("utilisateur {$user->id}");
+        ->assertExitCode(0)
+        ->doesntExpectOutputToContain('utilisateurs');
 });
 
 it('signale un volume de séance qui a dérivé', function (): void {
@@ -136,7 +137,6 @@ it('reconstruit les records détachés et repasse au vert', function (): void {
     // decremente sur ce chemin. On les remet a leur valeur reelle pour que le
     // test porte sur le seul ecart qui l'interesse — le controle, lui, signale
     // bien les deux, et c'est ce qu'on veut de lui.
-    DB::table('users')->where('id', $user->id)->update(['total_volume' => 600]);
     DB::table('workouts')->where('id', $set->workoutLine->workout_id)->update(['workout_volume' => 600]);
 
     $this->artisan('app:verify-data-coherence')->assertExitCode(1);
@@ -167,11 +167,11 @@ it('annonce le nombre d’écarts, pas le nombre d’exemples cités', function 
         $derivants[] = $user->id;
     }
 
-    DB::table('users')->whereIn('id', $derivants)->update(['total_volume' => 9999]);
+    DB::table('workouts')->whereIn('user_id', $derivants)->update(['workout_volume' => 9999]);
 
     $this->artisan('app:verify-data-coherence', ['--limit' => 2])
         ->assertExitCode(1)
-        ->expectsOutputToContain('7 volume total des utilisateurs')
+        ->expectsOutputToContain('7 volume des séances')
         ->expectsOutputToContain('… et 5 autre(s), non cité(s)');
 });
 
@@ -186,7 +186,6 @@ it('voit encore une séance qui ment sur ses séries', function (): void {
     // La seance ET l'utilisateur portent le meme chiffre faux : leur somme
     // concorde, seule la comparaison aux series peut les demasquer.
     DB::table('workouts')->where('id', $workoutId)->update(['workout_volume' => 4242]);
-    DB::table('users')->where('id', $user->id)->update(['total_volume' => 4242]);
 
     $this->artisan('app:verify-data-coherence')
         ->assertExitCode(1)
@@ -296,7 +295,6 @@ it('repasse au vert après réparation', function (): void {
     DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_weight')->update(['value' => 500]);
     DB::table('users')->where('id', $user->id)->update([
         'last_workout_at' => $set->workoutLine->workout->started_at->copy()->addMonths(3),
-        'total_volume' => 99_999,
     ]);
     DB::table('workouts')->where('id', $set->workoutLine->workout_id)->update(['workout_volume' => 42]);
 

@@ -60,20 +60,20 @@ beforeEach(function (): void {
     Queue::fake();
 });
 
-it('crée une série en trois écritures : la série, le volume de la séance, le total de l utilisateur', function (): void {
+it('crée une série en deux écritures : la série et le volume de la séance', function (): void {
     [$user, , $line] = seanceOuvertePourLesEcritures();
 
     $mesure = ecrituresPendant(fn () => actingAs($user, 'sanctum')
         ->postJson(route('api.v1.sets.store'), ['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true])
         ->assertCreated());
 
-    expect($mesure['ecritures'])->toBe(3, implode("\n", $mesure['sql']))
+    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
         // Lectures comprises : le contrôleur ne cherche plus la ligne que l'action
         // cherche déjà (#1676).
-        ->and($mesure['requetes'])->toBe(15);
+        ->and($mesure['requetes'])->toBe(14);
 });
 
-it('modifie une série en trois écritures', function (): void {
+it('modifie une série en deux écritures', function (): void {
     [$user, , $line] = seanceOuvertePourLesEcritures();
     $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5]);
 
@@ -81,10 +81,10 @@ it('modifie une série en trois écritures', function (): void {
         ->patchJson(route('api.v1.sets.update', $set), ['weight' => 85])
         ->assertOk());
 
-    expect($mesure['ecritures'])->toBe(3, implode("\n", $mesure['sql']));
+    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']));
 });
 
-it('supprime une série en trois écritures', function (): void {
+it('supprime une série en deux écritures', function (): void {
     [$user, , $line] = seanceOuvertePourLesEcritures();
     $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5]);
 
@@ -92,10 +92,10 @@ it('supprime une série en trois écritures', function (): void {
         ->deleteJson(route('api.v1.sets.destroy', $set))
         ->assertNoContent());
 
-    expect($mesure['ecritures'])->toBe(3, implode("\n", $mesure['sql']));
+    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']));
 });
 
-it('retire un exercice de la séance en trois écritures, sans journal d activité', function (): void {
+it('retire un exercice de la séance en deux écritures, sans journal d activité', function (): void {
     [$user, , $line] = seanceOuvertePourLesEcritures();
     Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5]);
 
@@ -103,7 +103,7 @@ it('retire un exercice de la séance en trois écritures, sans journal d activit
         ->deleteJson(route('api.v1.workout-lines.destroy', $line))
         ->assertNoContent());
 
-    expect($mesure['ecritures'])->toBe(3, implode("\n", $mesure['sql']))
+    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
         ->and(implode("\n", $mesure['sql']))->not->toContain('activity_log');
 });
 

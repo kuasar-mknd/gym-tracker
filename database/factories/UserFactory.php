@@ -54,7 +54,6 @@ class UserFactory extends Factory
             'avatar' => null,
             'current_streak' => 0,
             'longest_streak' => 0,
-            'total_volume' => 0,
             'last_workout_at' => null,
             'default_rest_time' => 60,
             'provider' => null,

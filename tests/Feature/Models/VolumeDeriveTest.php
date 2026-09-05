@@ -30,45 +30,30 @@ it('tient le total de l’utilisateur egal a la somme de ses seances', function 
 
     $somme = (float) DB::table('workouts')->where('user_id', $user->id)->sum('workout_volume');
 
-    expect((float) $user->refresh()->total_volume)->toBe($somme)
+    expect($user->volumeSouleve())->toBe($somme)
         ->and($somme)->toBe(1300.0);
 });
 
 /**
- * Le total se recale a la FIN de la seance.
- *
- * Il l'etait a chaque serie, en resommant toutes les seances du compte : exact,
- * mais proportionnel a l'historique sur le chemin d'ecriture le plus chaud —
- * 202 des 208 lectures d'index de `recomputeVolume()` a 200 seances. Chaque
- * serie applique desormais son ECART, et la resomme n'a lieu qu'une fois, quand
- * la seance se termine.
- *
- * La propriete de recalage est donc conservee, a un moment defini : une derive
- * dure au plus une seance, contre une nuit avant qu'elle existe.
- *
- * On simule la derive plutot que la concurrence : le resultat observable est le
- * meme, et lui est deterministe.
+ * Le total de l'utilisateur n'est plus tenu a chaque serie : il se lit dans
+ * ses seances. Sur le serveur de production, chaque ecriture coute jusqu'a une
+ * seconde, et `update users` etait la plus chere des trois qu'une serie payait.
  */
-it('se recale a la fin de la seance apres une derive', function (): void {
+it('n’écrit plus le compte de l’utilisateur quand une série est validée', function (): void {
     $user = User::factory()->create();
     $seance = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
+    DB::flushQueryLog();
+    DB::enableQueryLog();
     serieValideeDe($seance, 100, 5);
+    $surLesUtilisateurs = array_filter(
+        array_map(fn (array $entree): string => mb_strtolower((string) $entree['query']), DB::getQueryLog()),
+        fn (string $sql): bool => str_contains($sql, 'update `users`') || str_contains($sql, 'insert into `users`'),
+    );
+    DB::disableQueryLog();
 
-    DB::table('users')->where('id', $user->id)->update(['total_volume' => 99_999]);
-
-    serieValideeDe($seance, 50, 2);
-
-    // Toujours faux tant que la seance dure : l'ecart ne corrige pas une valeur
-    // qu'il n'a pas produite.
-    expect((float) $user->refresh()->total_volume)->toBe(100_099.0);
-
-    $seance->update(['ended_at' => now()]);
-
-    $somme = (float) DB::table('workouts')->where('user_id', $user->id)->sum('workout_volume');
-
-    expect((float) $user->refresh()->total_volume)->toBe($somme)
-        ->and($somme)->toBe(600.0);
+    expect(array_values($surLesUtilisateurs))->toBe([])
+        ->and($user->volumeSouleve())->toBe(500.0);
 });
 
 /**
@@ -85,7 +70,7 @@ it('n’ajoute que l’écart, sans resommer l’historique', function (): void 
         serieValideeDe($ancienne, 10, 10);
     }
 
-    expect((float) $user->refresh()->total_volume)->toBe(900.0);
+    expect($user->volumeSouleve())->toBe(900.0);
 
     $seance = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
@@ -95,7 +80,7 @@ it('n’ajoute que l’écart, sans resommer l’historique', function (): void 
     $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
     DB::disableQueryLog();
 
-    expect((float) $user->refresh()->total_volume)->toBe(1000.0);
+    expect($user->volumeSouleve())->toBe(1000.0);
 
     foreach ($requetes as $sql) {
         expect($sql)->not->toContain('sum(workout_volume)');
@@ -108,5 +93,5 @@ it('compte les seances multiples du meme utilisateur', function (): void {
     serieValideeDe(Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]), 100, 5);
     serieValideeDe(Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]), 60, 5);
 
-    expect((float) $user->refresh()->total_volume)->toBe(800.0);
+    expect($user->volumeSouleve())->toBe(800.0);
 });

@@ -43,7 +43,6 @@ class VerifyDataCoherence extends Command
     {
         /** @var array<string, callable(): array{int, list<string>}> $controles */
         $controles = [
-            'volume total des utilisateurs' => $this->volumeUtilisateurs(...),
             'volume des séances' => $this->volumeSeances(...),
             'records rattachés à une série existante' => $this->recordsOrphelins(...),
             'valeur des records' => $this->valeurDesRecords(...),
@@ -132,30 +131,18 @@ class VerifyDataCoherence extends Command
     }
 
     /**
-     * Recale les compteurs de volume sur les series reellement faites.
+     * Recale le volume de chaque seance sur ses series reellement faites.
      *
-     * Le volume ne compte plus que les series cochees (#1499). Les compteurs
-     * accumules avant ce changement incluent le travail seulement prevu — dont
-     * la seance entiere qu'un modele creditait a l'ouverture. Sans chemin de
-     * reparation, ils resteraient faux et le controle nocturne les signalerait
-     * chaque nuit sans recours.
-     *
-     * Le recalcul part des faits : la somme des series validees par seance,
-     * puis la somme des seances par utilisateur. Rien n'est invente, et
-     * l'ecart total est affiche pour qu'il soit vu plutot que subi.
+     * Une ecriture qui contourne `recomputeVolume()` laisse le compteur faux ;
+     * sans chemin de reparation, le controle nocturne le signalerait chaque
+     * nuit sans recours. Le volume d'un utilisateur, lui, n'est plus stocke :
+     * il se lit dans ses seances.
      */
     private function recalculerLesVolumes(): void
     {
-        $avant = (float) DB::table('users')->sum('total_volume');
+        $recalees = 0;
 
-        /*
-         * Par le constructeur de requetes plutot qu'en SQL brut : la syntaxe
-         * `UPDATE ... JOIN` n'est pas portable, et ce projet tourne aussi sur
-         * SQLite — `AchievementService` adapte deja son format de date au
-         * pilote. Une commande de reparation qui echoue sur la moitie des
-         * installations ne repare rien.
-         */
-        DB::table('workouts')->orderBy('id')->chunkById(500, function (Collection $seances): void {
+        DB::table('workouts')->orderBy('id')->chunkById(500, function (Collection $seances) use (&$recalees): void {
             foreach ($seances as $seance) {
                 $reel = (float) DB::table('workout_lines')
                     ->join('sets', 'sets.workout_line_id', '=', 'workout_lines.id')
@@ -163,27 +150,18 @@ class VerifyDataCoherence extends Command
                     ->where('sets.is_completed', true)
                     ->sum(DB::raw('COALESCE(sets.weight, 0) * COALESCE(sets.reps, 0)'));
 
+                $stocke = is_numeric($seance->workout_volume) ? (float) $seance->workout_volume : 0.0;
+
+                if (abs($stocke - $reel) <= 0.01) {
+                    continue;
+                }
+
                 DB::table('workouts')->where('id', $seance->id)->update(['workout_volume' => $reel]);
+                $recalees++;
             }
         });
 
-        DB::table('users')->orderBy('id')->chunkById(500, function (Collection $utilisateurs): void {
-            foreach ($utilisateurs as $utilisateur) {
-                $reel = (float) DB::table('workouts')->where('user_id', $utilisateur->id)->sum('workout_volume');
-
-                DB::table('users')->where('id', $utilisateur->id)->update(['total_volume' => $reel]);
-            }
-        });
-
-        $apres = (float) DB::table('users')->sum('total_volume');
-        $ecart = $apres - $avant;
-
-        $this->line(sprintf(
-            '  <fg=yellow>%s</> kg de volume recale (%s -> %s)',
-            number_format($ecart, 2, ',', ' '),
-            number_format($avant, 2, ',', ' '),
-            number_format($apres, 2, ',', ' '),
-        ));
+        $this->line(sprintf('  <fg=yellow>%d</> séance(s) dont le volume a été recalé', $recalees));
         $this->newLine();
     }
 
@@ -279,41 +257,6 @@ class VerifyDataCoherence extends Command
         $limite = $this->option('limit');
 
         return is_numeric($limite) ? max(1, (int) $limite) : 5;
-    }
-
-    /**
-     * `users.total_volume` contre la somme des seances de l'utilisateur.
-     *
-     * Contre les SERIES, ce controle refaisait l'agregation que celui des
-     * seances fait deja : 29 167 lectures d'index contre 1 125 pour 12 000
-     * series. Il ne perd rien a s'arreter aux seances — si une seance ment sur
-     * ses series, c'est l'autre controle qui le dit.
-     *
-     * @return array{int, list<string>}
-     */
-    private function volumeUtilisateurs(): array
-    {
-        $requete = DB::table('users')
-            ->leftJoinSub(
-                DB::table('workouts')
-                    ->selectRaw('user_id, SUM(workout_volume) as reel')
-                    ->groupBy('user_id'),
-                'calcul',
-                'calcul.user_id',
-                '=',
-                'users.id',
-            )
-            ->selectRaw('users.id, users.total_volume as stocke, COALESCE(calcul.reel, 0) as reel')
-            // Les volumes sont des decimaux : un centieme d'ecart vient de
-            // l'arrondi, pas d'une derive.
-            ->whereRaw('ABS(users.total_volume - COALESCE(calcul.reel, 0)) > 0.01');
-
-        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
-            'utilisateur %s : stocké %s, calculé %s',
-            $this->colonne($ligne, 'id'),
-            $this->colonne($ligne, 'stocke'),
-            $this->colonne($ligne, 'reel'),
-        ));
     }
 
     /**

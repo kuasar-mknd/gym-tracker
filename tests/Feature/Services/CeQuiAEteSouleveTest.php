@@ -114,7 +114,7 @@ it('compte dans le volume une série postée sans le champ', function (): void {
     $seance = Workout::findOrFail($ligne->workout_id);
 
     expect((float) $seance->workout_volume)->toBe(600.0)
-        ->and((float) User::findOrFail($user->id)->total_volume)->toBe(600.0);
+        ->and(User::findOrFail($user->id)->volumeSouleve())->toBe(600.0);
 });
 
 it('respecte un `is_completed` explicitement faux', function (): void {
