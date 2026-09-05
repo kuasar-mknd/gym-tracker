@@ -134,28 +134,22 @@ class RestTimerTest extends DuskTestCase
                 ->assertMissing('[dusk="skip-rest-timer"]'); // Ensure timer is NOT visible initially
 
             // Add exercise
-            $browser->waitFor('[dusk="add-first-exercise"]', 15)
-                ->pause(500)
-                ->click('[dusk="add-first-exercise"]')
-                ->waitFor('input[placeholder="Rechercher..."]', 10)
+            $browser->clickWhenSettled('[dusk="add-first-exercise"]');
+            $browser->waitFor('input[placeholder="Rechercher..."]', 10)
                 ->type('input[placeholder="Rechercher..."]', $exercise->name)
                 ->waitFor('@select-exercise-'.$exercise->id, 10)
-                ->pause(500)
-                ->click('@select-exercise-'.$exercise->id)
+                ->clickWhenSettled('[dusk="select-exercise-'.$exercise->id.'"]')
                 ->waitFor('@exercise-card-0', 15);
 
             // Add set
-            $browser->pause(500)
-                ->click('[dusk="add-set-0"]')
-                ->waitFor('@weight-input-0-0', 15)
+            $browser->clickWhenSettled('[dusk="add-set-0"]');
+            $browser->waitFor('@weight-input-0-0', 15)
                 ->type('@weight-input-0-0', '50')
-                ->pause(300)
-                ->type('@reps-input-0-0', '10')
-                ->pause(500);
+                ->type('@reps-input-0-0', '10');
 
             // 1. Trigger timer by completing set
-            $browser->click('[dusk="complete-set-0-0"]')
-                ->waitFor('[dusk="skip-rest-timer"]', 15)
+            $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
+            $browser->waitFor('[dusk="skip-rest-timer"]', 15)
                 ->assertSee('REPOS');
 
             /*

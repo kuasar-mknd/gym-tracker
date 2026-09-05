@@ -54,7 +54,8 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
      *
      * Against a local server these answer in tens of milliseconds, long gone
      * before Dusk can click anything, so the overlap these tests exist to cover
-     * never happens and they pass on thoroughly broken code.
+     * never happens and they pass on thoroughly broken code. Once the held
+     * request has left, `window.__requeteRetenue` says so.
      */
     private function delayFirst(Browser $browser, string $method, string $urlPattern): void
     {
@@ -67,6 +68,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                         && {$urlPattern}.test(String(config.url));
 
                     if (matches && ++seen === 1) {
+                        window.__requeteRetenue = true;
                         return new Promise((resolve, reject) =>
                             setTimeout(() => original(config).then(resolve, reject), 3000)
                         );
@@ -129,7 +131,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
     {
         [$user, $workout, $line] = $this->aSessionWith('cardio');
 
-        $this->browse(function (Browser $browser) use ($user, $workout): void {
+        $this->browse(function (Browser $browser) use ($user, $workout, $line): void {
             $browser->loginAs(User::find($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
@@ -137,9 +139,11 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitFor('@add-set-0', 15)
                 ->click('@add-set-0')
-                ->waitFor('@distance-input-0-0', 15)
-                ->pause(2000)
-                ->assertNoConsoleExceptions();
+                ->waitFor('@distance-input-0-0', 15);
+
+            $this->waitForDatabase(fn (): bool => $line->sets()->exists());
+
+            $browser->assertNoConsoleExceptions();
         });
 
         $set = $line->sets()->first();
@@ -156,7 +160,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
     {
         [$user, $workout, $line] = $this->aSessionWith('strength');
 
-        $this->browse(function (Browser $browser) use ($user, $workout): void {
+        $this->browse(function (Browser $browser) use ($user, $workout, $line): void {
             $browser->loginAs(User::find($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
@@ -164,9 +168,11 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitFor('@add-set-0', 15)
                 ->click('@add-set-0')
-                ->waitFor('@weight-input-0-0', 15)
-                ->pause(2000)
-                ->assertNoConsoleExceptions();
+                ->waitFor('@weight-input-0-0', 15);
+
+            $this->waitForDatabase(fn (): bool => $line->sets()->exists());
+
+            $browser->assertNoConsoleExceptions();
         });
 
         $set = $line->sets()->first();
@@ -236,7 +242,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
     {
         [$user, $workout, $line] = $this->aSessionWith('timed');
 
-        $this->browse(function (Browser $browser) use ($user, $workout): void {
+        $this->browse(function (Browser $browser) use ($user, $workout, $line): void {
             $browser->loginAs(User::find($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
@@ -244,10 +250,12 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitFor('@add-set-0', 15)
                 ->click('@add-set-0')
-                ->waitFor('@duration-input-0-0', 15)
-                // The one difference from the test above: the create has landed.
-                ->pause(2000)
-                ->pickDuration('@duration-input-0-0', 0, 10, 0)
+                ->waitFor('@duration-input-0-0', 15);
+
+            // The one difference from the test above: the create has landed.
+            $this->waitForDatabase(fn (): bool => $line->sets()->exists());
+
+            $browser->pickDuration('@duration-input-0-0', 0, 10, 0)
                 ->assertSeeIn('@duration-input-0-0', '00:10:00')
                 ->click('#main-content');
 
@@ -290,9 +298,8 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
             $this->assertFalse($shown(), 'the row keeps a delete button a phone does not need');
 
             // Wide enough for a pointer, where the swipe is unavailable.
-            $browser->resize(900, 900)->pause(300);
-
-            $this->assertTrue($shown(), 'a pointer is left with no way to delete a set');
+            $browser->resize(900, 900)
+                ->waitUsing(10, 100, $shown, 'a pointer is left with no way to delete a set');
 
             // The swipe action is there either way, and reachable without one.
             $browser->assertPresent('@swipe-remove-set-0-0');
@@ -368,9 +375,8 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
 
             $browser->type('@weight-input-0-0', '100')
                 ->click('#main-content')
-                // Long enough for the debounce to fire, so this write is genuinely
-                // on the wire and held when the correction below is made.
-                ->pause(1500)
+                // The debounce has fired: this write is on the wire, held by delayFirst.
+                ->waitUntil('window.__requeteRetenue === true', 10)
                 ->type('@weight-input-0-0', '110')
                 ->click('#main-content');
 

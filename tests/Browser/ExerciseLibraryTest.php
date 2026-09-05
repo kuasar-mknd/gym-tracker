@@ -43,7 +43,7 @@ class ExerciseLibraryTest extends DuskTestCase
 
             // 2. Test Search
             $browser->type('@search-exercises', 'Bench')
-                ->pause(500)
+                ->waitUntilMissingText('SQUAT', 10)
                 ->assertSee('BENCH PRESS')
                 ->assertDontSee('SQUAT')
                 ->assertDontSee('DEADLIFT');
@@ -51,7 +51,7 @@ class ExerciseLibraryTest extends DuskTestCase
             $browser->clear('@search-exercises')
                 ->type('@search-exercises', ' ') // Clear properly
                 ->keys('@search-exercises', ['{backspace}'])
-                ->pause(500);
+                ->waitForText('SQUAT', 10);
 
             // 3. Test Filter by Category
             // Le filtrage est un re-rendu Vue : attendre son résultat, pas une durée.
@@ -92,13 +92,9 @@ class ExerciseLibraryTest extends DuskTestCase
             $exercise = Exercise::where('name', $newExerciseName)->firstOrFail();
             $updatedName = 'Updated Pull Up '.time().random_int(0, 999);
 
-            // Ensure card is visible
-            $browser->script("document.querySelector('[dusk=\"exercise-card-{$exercise->id}\"]').scrollIntoView({block: 'center'});");
-            $browser->pause(500);
-
             // Click the small edit button visible on mobile
-            $browser->click("[dusk='edit-exercise-btn-{$exercise->id}']")
-                ->waitFor('@edit-exercise-name', 10)
+            $browser->clickWhenSettled("[dusk='edit-exercise-btn-{$exercise->id}']");
+            $browser->waitFor('@edit-exercise-name', 10)
                 ->type('@edit-exercise-name', $updatedName)
                 ->click('@save-exercise-btn')
                 ->waitUntilMissing('@edit-exercise-name', 10)
@@ -111,8 +107,6 @@ class ExerciseLibraryTest extends DuskTestCase
 
             // 6. Delete Exercise
             // Click the delete button revealed by script (simulating swipe result)
-            $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').scrollIntoView({block: 'center'});");
-            $browser->pause(500);
             $browser->script("document.querySelector('[data-testid=\"delete-exercise-button-mobile\"]').click();");
 
             // La confirmation est un dialogue de l'application, plus la boite

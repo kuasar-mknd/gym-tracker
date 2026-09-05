@@ -36,17 +36,15 @@ class PaginationReachabilityTest extends DuskTestCase
                 ->visit(route('workouts.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@workouts-next', 15)
-                ->script('document.querySelector(\'[dusk="workouts-next"]\').scrollIntoView({block: "center"});');
+                ->waitFor('@workouts-next', 15);
 
             $firstPage = $browser->script(
                 'return Array.from(document.querySelectorAll(\'[dusk^="delete-workout-"]\'))'
                 .'.map(el => el.getAttribute("dusk"));'
             )[0];
 
-            $browser->pause(300)
-                ->click('@workouts-next')
-                ->waitForTextIn('nav[aria-label="Pagination de l\'historique"]', 'Page 2', 15);
+            $browser->clickWhenSettled('[dusk="workouts-next"]');
+            $browser->waitForTextIn('nav[aria-label="Pagination de l\'historique"]', 'Page 2', 15);
 
             $secondPage = $browser->script(
                 'return Array.from(document.querySelectorAll(\'[dusk^="delete-workout-"]\'))'
@@ -114,12 +112,10 @@ class PaginationReachabilityTest extends DuskTestCase
                 ->visit(route('tools.fasting.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@fasting-next', 15)
-                ->script('document.querySelector(\'[dusk="fasting-next"]\').scrollIntoView({block: "center"});');
+                ->waitFor('@fasting-next', 15);
 
-            $browser->pause(300)
-                ->click('@fasting-next')
-                ->waitForTextIn('nav[aria-label="Pagination de l\'historique des jeûnes"]', 'Page 2', 15);
+            $browser->clickWhenSettled('[dusk="fasting-next"]');
+            $browser->waitForTextIn('nav[aria-label="Pagination de l\'historique des jeûnes"]', 'Page 2', 15);
 
             $onPageTwo = $browser->script(
                 'return document.querySelectorAll(\'[aria-label^="Supprimer le jeûne"]\').length;'

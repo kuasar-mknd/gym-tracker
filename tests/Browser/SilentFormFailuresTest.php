@@ -27,11 +27,12 @@ class SilentFormFailuresTest extends DuskTestCase
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
                 ->waitFor('button[aria-label="Ajouter 250ml"]', 15)
-                ->click('button[aria-label="Ajouter 250ml"]')
-                ->pause(2500);
+                ->click('button[aria-label="Ajouter 250ml"]');
 
             // The form omitted consumed_at, which is required|date server-side, so
             // every tap 422'd and the page rendered no error at all.
+            $this->waitForDatabase(fn (): bool => WaterLog::where('user_id', $user->id)->exists());
+
             $this->assertSame(
                 1,
                 WaterLog::where('user_id', $user->id)->count(),

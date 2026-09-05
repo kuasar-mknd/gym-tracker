@@ -60,8 +60,6 @@ class ProfileEditTest extends DuskTestCase
 
             // Verify Password Section
             $browser->script("document.querySelector('input[autocomplete=\"current-password\"]').scrollIntoView({block: 'center'});");
-            $browser->pause(500);
-
             // Les sélecteurs par autocomplete ne suffisaient pas : chaque GlassInput
             // est un composant à part, donc input[autocomplete="new-password"]:last-of-type
             // matche AUSSI le premier champ. Dusk prenait la première occurrence et
@@ -94,8 +92,6 @@ class ProfileEditTest extends DuskTestCase
 
             // Verify Delete Account Section
             $browser->script("document.querySelector('[data-testid=\"delete-account-button\"]').scrollIntoView({block: 'center'});");
-            $browser->pause(500);
-
             $browser->assertSee('Supprimer le compte')
                 ->script("document.querySelector('[data-testid=\"delete-account-button\"]').click();");
 

@@ -117,7 +117,7 @@ class NoSidewaysScrollTest extends DuskTestCase
                 ->visit(route($routeName))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->pause(400);
+                ->waitForStableLayout();
 
             // html and body both carry overflow-x: hidden, so the page can never
             // report a sideways scroll — it clips instead, and the content that

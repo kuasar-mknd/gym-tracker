@@ -109,12 +109,6 @@ parameters:
 			path: tests/Browser/DeadControlsTest.php
 
 		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: tests/Browser/ExerciseFilterScopeTest.php
-
-		-
 			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
 			identifier: argument.type
 			count: 2

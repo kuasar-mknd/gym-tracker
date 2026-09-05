@@ -183,7 +183,11 @@ class KeyboardNavigationTest extends DuskTestCase
             );
 
             $browser->script('document.querySelector(\'[dusk="'.$selector.'"]\').focus();');
-            $browser->pause(400);
+            $browser->waitUntil(
+                'Number(getComputedStyle(document.querySelector(\'[dusk="'.$selector.'"]\').closest("[style*=opacity]")).opacity) > 0.9',
+                10,
+                'Focusing the delete action must reveal it instead of leaving focus on an invisible control.'
+            );
 
             $focused = $browser->script($measure)[0];
 
