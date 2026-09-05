@@ -1,34 +1,26 @@
 <script setup>
 /**
- * Exercises Index Page
- *
- * Displays the user's exercise library, categorized and searchable.
- * Supports creating, editing, and deleting exercises with optimistic UI updates
- * and haptic feedback. It uses a "Liquid Glass" design aesthetic.
+ * La bibliothèque d'exercices : recherche et catégorie dans `FiltresDeLaBibliotheque`,
+ * création dans `NouvelExerciceModal`, modification en place dans `ExerciseCard`,
+ * suppression optimiste ici.
  */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import GlassInput from '@/Components/UI/GlassInput.vue'
-import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, defineAsyncComponent, watch } from 'vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
-import Modal from '@/Components/UI/Modal.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
+import FiltresDeLaBibliotheque from '@/Components/Exercises/FiltresDeLaBibliotheque.vue'
+import NouvelExerciceModal from '@/Components/Exercises/NouvelExerciceModal.vue'
 import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
-import {
-    EXERCISE_CATEGORIES,
-    EXERCISE_TYPES,
-    CATEGORY_COLORS,
-    CATEGORY_BORDER_COLORS,
-    TYPE_ICONS,
-} from '@/Utils/constants'
+import { useFiltreDansLUrl } from '@/composables/useFiltreDansLUrl'
+import { EXERCISE_CATEGORIES, EXERCISE_TYPES, CATEGORY_BORDER_COLORS, TYPE_ICONS } from '@/Utils/constants'
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
@@ -42,65 +34,7 @@ const props = defineProps({
 const showAddForm = ref(false)
 const editingExercise = ref(null)
 const searchQuery = ref('')
-const searchInput = ref(null)
-
-/**
- * The filter lives in the URL, not in localStorage.
- *
- * Stored in localStorage it outlived the reason it was set: filter to "Jambes"
- * on leg day and the library still opens filtered weeks later, looking like
- * most of the exercises have disappeared — with no clue why if the category
- * chips have scrolled out of view. A filter chosen for one session was being
- * replayed as a permanent preference.
- *
- * In the URL it behaves the way a filter is expected to: it survives a reload,
- * it can be linked to, the back button steps out of it, and opening the library
- * fresh from the nav shows everything.
- */
-const CATEGORY_PARAM = 'category'
-
-const readCategoryFromUrl = () => new URLSearchParams(window.location.search).get(CATEGORY_PARAM) || 'all'
-
-const activeCategory = ref(readCategoryFromUrl())
-
-watch(activeCategory, (category) => {
-    const url = new URL(window.location.href)
-
-    if (category === 'all') {
-        url.searchParams.delete(CATEGORY_PARAM)
-    } else {
-        url.searchParams.set(CATEGORY_PARAM, category)
-    }
-
-    // The filtering is done client-side, so this must not become an Inertia
-    // visit. Passing the current history state back keeps Inertia's own
-    // back/forward restoration intact.
-    window.history.replaceState(window.history.state, '', url)
-})
-
-const handleKeyDown = (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        searchInput.value?.focus()
-    }
-
-    // `searchInput` porte le proxy exposé par GlassInput, pas son élément
-    // racine : la comparaison portait donc sur un objet JS et n'était jamais
-    // vraie, quel que soit l'état du focus. Le champ concerné se reconnaît par
-    // l'input que le composant expose.
-    if (e.key === 'Escape' && document.activeElement === searchInput.value?.el) {
-        searchInput.value.blur()
-        searchQuery.value = ''
-    }
-}
-
-onMounted(() => {
-    document.addEventListener('keydown', handleKeyDown)
-})
-
-onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeyDown)
-})
+const activeCategory = useFiltreDansLUrl('category')
 
 // Local state for optimistic updates to ensure immediate UI feedback before server confirmation
 const localExercises = ref([...props.exercises])
@@ -113,32 +47,11 @@ watch(
     },
 )
 
-const form = useForm({
-    name: '',
-    type: 'strength',
-    category: '',
-})
-
 const editForm = useForm({
     name: '',
     type: '',
     category: '',
 })
-
-/**
- * Submit the create exercise form.
- * Triggers haptic feedback on success or error.
- */
-const submit = () => {
-    form.post(route('exercises.store'), {
-        onSuccess: () => {
-            form.reset()
-            showAddForm.value = false
-            triggerHaptic('success')
-        },
-        onError: () => triggerHaptic('error'),
-    })
-}
 
 const startEdit = (exercise) => {
     editingExercise.value = exercise.id
@@ -304,116 +217,9 @@ const typeLabel = (type) => {
                 </GlassCard>
             </div>
 
-            <!-- Search Bar -->
-            <div class="animate-slide-up" style="animation-delay: 0.1s">
-                <GlassInput
-                    id="search-exercises-input"
-                    ref="searchInput"
-                    v-model="searchQuery"
-                    type="search"
-                    size="lg"
-                    label="Rechercher des exercices"
-                    hide-label
-                    dusk="search-exercises"
-                    placeholder="Recherche exercices..."
-                    :aria-label="'Rechercher des exercices (Raccourci : ⌘K)'"
-                >
-                    <template #suffix>
-                        <div
-                            class="text-text-muted/40 border-border hidden items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
-                            aria-hidden="true"
-                        >
-                            <span class="material-symbols-outlined text-sm" aria-hidden="true">keyboard</span>
-                            ⌘K
-                        </div>
-                    </template>
-                </GlassInput>
-            </div>
+            <FiltresDeLaBibliotheque v-model:recherche="searchQuery" v-model:categorie="activeCategory" />
 
-            <!-- Category Pills -->
-            <div class="hide-scrollbar animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.15s">
-                <button
-                    v-press="{ haptic: 'selection' }"
-                    @click="activeCategory = 'all'"
-                    dusk="category-pill-all"
-                    :class="[
-                        'category-pill shrink-0 transition-all',
-                        activeCategory === 'all'
-                            ? 'bg-text-main text-surface-card shadow-lg'
-                            : 'text-text-main border-border bg-surface-card border',
-                    ]"
-                    :aria-pressed="activeCategory === 'all'"
-                >
-                    <span class="material-symbols-outlined text-lg" aria-hidden="true">apps</span>
-                    Tous
-                </button>
-                <button
-                    v-for="cat in EXERCISE_CATEGORIES"
-                    :key="cat"
-                    v-press="{ haptic: 'selection' }"
-                    @click="activeCategory = cat"
-                    :dusk="`category-pill-${cat}`"
-                    :class="[
-                        'category-pill shrink-0 transition-all',
-                        activeCategory === cat
-                            ? (CATEGORY_COLORS[cat] ?? 'category-fill-other')
-                            : 'text-text-main border-border bg-surface-card border',
-                    ]"
-                    :aria-pressed="activeCategory === cat"
-                >
-                    {{ cat }}
-                </button>
-            </div>
-
-            <!-- Add Form Modal -->
-            <Modal :show="showAddForm" @close="showAddForm = false" max-width="sm" aria-labelledby="new-exercise-title">
-                <div class="p-6">
-                    <h3
-                        id="new-exercise-title"
-                        class="font-display text-text-main mb-5 text-xl font-black uppercase"
-                        dusk="exercise-modal-title"
-                    >
-                        Nouvel exercice
-                    </h3>
-                    <form @submit.prevent="submit" class="space-y-4">
-                        <GlassInput
-                            v-model="form.name"
-                            name="name"
-                            dusk="exercise-name-input"
-                            label="Nom de l'exercice"
-                            placeholder="Ex: Développé couché"
-                            :error="form.errors.name"
-                        />
-                        <div class="grid grid-cols-2 gap-4">
-                            <GlassSelect
-                                v-model="form.type"
-                                name="type"
-                                label="Type"
-                                :options="EXERCISE_TYPES"
-                                :error="form.errors.type"
-                                placeholder=""
-                            />
-                            <GlassSelect
-                                v-model="form.category"
-                                name="category"
-                                label="Catégorie"
-                                :options="EXERCISE_CATEGORIES.map((c) => ({ value: c, label: c }))"
-                                empty-label="— Aucune —"
-                            />
-                        </div>
-                        <GlassButton
-                            type="submit"
-                            variant="primary"
-                            class="w-full"
-                            :loading="form.processing"
-                            data-testid="submit-exercise-button"
-                            dusk="submit-exercise-btn"
-                        >
-                            Créer l'exercice
-                        </GlassButton>
-                    </form>
-                </div>
-            </Modal>
+            <NouvelExerciceModal :show="showAddForm" @close="showAddForm = false" />
 
             <!-- Error display -->
             <GlassCard v-if="$page.props.errors?.exercise" class="border-accent-danger bg-accent-danger/10">

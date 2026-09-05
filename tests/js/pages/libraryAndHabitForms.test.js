@@ -124,6 +124,12 @@ const byText = (wrapper, text) => wrapper.findAll('button').find((button) => but
 const byLabel = (wrapper, label) => wrapper.findAll('button').find((b) => b.attributes('aria-label') === label)
 
 describe('the library’s create form', () => {
+    /**
+     * The form belongs to `NouvelExerciceModal`, mounted after the page has
+     * asked for its own edit form: it is the last one handed out.
+     */
+    const createForm = () => forms.at(-1)
+
     const PECS = { id: 1, name: 'Développé couché', type: 'strength', category: 'Pectoraux' }
 
     const ExerciseCardStub = {
@@ -181,7 +187,7 @@ describe('the library’s create form', () => {
         await type.setValue('timed')
         await category.setValue('Dos')
 
-        const [form] = forms
+        const form = createForm()
         expect(form.name).toBe('Rowing barre')
         expect(form.type).toBe('timed')
         expect(form.category).toBe('Dos')
@@ -209,7 +215,7 @@ describe('the library’s create form', () => {
         await wrapper.find('[dusk="create-exercise-btn"]').trigger('click')
         await wrapper.find('form').trigger('submit')
 
-        const [form] = forms
+        const form = createForm()
         expect(form.post).toHaveBeenCalledTimes(1)
         expect(form.post.mock.calls[0][0]).toBe('/exercises.store/')
 
@@ -229,7 +235,7 @@ describe('the library’s create form', () => {
         await wrapper.find('[dusk="create-exercise-btn"]').trigger('click')
         await wrapper.find('form').trigger('submit')
 
-        forms[0].post.mock.calls[0][1].onError()
+        createForm().post.mock.calls[0][1].onError()
         await wrapper.vm.$nextTick()
 
         // Closing here would throw away what the user typed along with the
@@ -268,8 +274,8 @@ describe('editing an exercise in place', () => {
 
     const cards = (wrapper) => wrapper.findAllComponents(ExerciseCardStub)
 
-    /** The edit form is the second `useForm` the page builds. */
-    const editForm = () => forms[1]
+    /** The edit form is the page's own `useForm`; the create form belongs to the modal, mounted after it. */
+    const editForm = () => forms[0]
 
     it('opens the row that was asked for, and only that one', async () => {
         const wrapper = mountPage([PECS, GAINAGE])
