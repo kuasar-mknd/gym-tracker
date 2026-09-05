@@ -59,8 +59,8 @@ it('borne les deux cartes de fréquence à la même fenêtre', function (): void
     $action = app(FetchWorkoutsIndexAction::class);
     $graphiques = $action->getDeferredData($user)['charts'];
 
-    $totalParJour = $graphiques['day_of_week_frequency']->sum('count');
-    $totalParMois = $graphiques['monthly_frequency']->sum('count');
+    $totalParJour = $graphiques['day_of_week_frequency']->sum(fn (array $jour): int => $jour['count']);
+    $totalParMois = $graphiques['monthly_frequency']->sum(fn (array $mois): int => $mois['count']);
 
     expect($totalParJour)->toBe(1)
         ->and($totalParMois)->toBe(1);
