@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Corrigé
+- **Un téléchargement de ChromeDriver réinitialisé ne fait plus tomber un éclat Dusk** (#1752) : le manifeste des versions vient d'un site tiers, et une connexion coupée y a mis `main` au rouge ; l'installation se retente trois fois avant de conclure
 - **Le démarrage dit la vérité sur les migrations, et Horizon tient dans son conteneur** (#1630) : `migrate` n'est plus `--quiet`, donc la ligne où une série s'arrête se lit dans le journal ; Horizon passe de dix à trois processus en production, dans le plafond de 512 Mo du service `worker` au lieu d'en réclamer 1 280. Deux gardes tiennent ces deux faits
 
 ### Modifié
