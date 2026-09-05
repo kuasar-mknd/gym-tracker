@@ -42,16 +42,10 @@ class WorkoutCompletionTest extends DuskTestCase
                 ->disableAnimations()
                 ->waitFor('#main-content', 30);
 
-            // Ensure visibility by waiting for the element
-            $browser->waitFor('@finish-workout-mobile', 30);
-
-            $browser->pause(1000)
-                ->click('@finish-workout-mobile');
+            $browser->clickWhenSettled('[dusk="finish-workout-mobile"]', 30);
 
             $browser->waitFor('@finish-workout-modal-title', 15)
-                ->waitFor('#confirm-finish-button', 30)
-                ->pause(1000)
-                ->click('#confirm-finish-button');
+                ->clickWhenSettled('#confirm-finish-button', 30);
 
             $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::findOrFail($workout->id)->ended_at !== null);
 

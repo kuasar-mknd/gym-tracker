@@ -27,10 +27,7 @@ class ExerciseManagementTest extends DuskTestCase
                 ->disableAnimations()
                 ->waitFor('#main-content', 30);
 
-            $browser->waitFor('[dusk="create-exercise-btn"]', 15);
-
-            $browser->pause(1000)
-                ->click('[dusk="create-exercise-btn"]');
+            $browser->clickWhenSettled('[dusk="create-exercise-btn"]');
 
             $browser->waitFor('[dusk="exercise-modal-title"]', 15)
                 ->type('@exercise-name-input', 'New Exercise '.time())

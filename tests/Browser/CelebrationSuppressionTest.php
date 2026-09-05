@@ -36,7 +36,7 @@ class CelebrationSuppressionTest extends DuskTestCase
                 ->visit(route('dashboard'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->pause(500);
+                ->waitForStableLayout();
 
             $celebrationVisible = $browser->script(
                 'return document.querySelector("#achievement-title") !== null;'

@@ -58,7 +58,7 @@ class ExerciseFilterScopeTest extends DuskTestCase
             $browser->visit(route('exercises.index'))
                 ->waitFor('#main-content', 30)
                 ->waitFor('@category-pill-Jambes', 15)
-                ->pause(300);
+                ->waitForText('SQUAT', 10);
 
             $names = implode(' | ', $this->renderedExerciseNames($browser));
 
@@ -81,17 +81,15 @@ class ExerciseFilterScopeTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitFor('@category-pill-Jambes', 15)
                 ->click('@category-pill-Jambes')
-                ->pause(300);
-
-            $query = $browser->script('return window.location.search;')[0];
-            $this->assertStringContainsString('category=Jambes', (string) $query);
+                ->waitUntil('window.location.search.includes("category=Jambes")', 10, 'the chosen category never reached the URL');
 
             // Reloading keeps the filter — what localStorage was there to
             // provide, without outliving the session that chose it.
             $browser->refresh()
                 ->waitFor('#main-content', 30)
                 ->waitFor('@category-pill-Jambes', 15)
-                ->pause(300);
+                ->waitForText('SQUAT', 10)
+                ->waitUntilMissingText('CURL BICEPS', 10);
 
             $names = implode(' | ', $this->renderedExerciseNames($browser));
 

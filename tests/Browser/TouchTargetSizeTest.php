@@ -53,8 +53,7 @@ class TouchTargetSizeTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 // Icon glyphs fall back to wide text until the symbol font lands,
                 // which changes what elementFromPoint returns for a frame or two.
-                ->waitUntil('document.fonts.status === "loaded"', 10)
-                ->pause(400);
+                ->waitForStableLayout();
 
             /** @var array<int, string> $tooSmall */
             $tooSmall = $browser->script(

@@ -40,7 +40,7 @@ class TemplateExecutionTest extends DuskTestCase
                 .'[0].click();'
             );
 
-            $browser->pause(3000);
+            $browser->waitUntil('window.location.pathname.startsWith("/workouts/")', 15);
 
             $this->assertSame(
                 1,

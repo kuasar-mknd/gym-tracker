@@ -37,8 +37,7 @@ class PageBrowserTest extends DuskTestCase
                 $browser->visit($url)
                     ->disableAnimations()
                     ->waitFor('#main-content', 30)
-                    ->pause(1000)
-                    ->assertSee($text);
+                    ->waitForText($text, 15);
             }
             $browser->assertNoConsoleExceptions();
         } catch (\Exception $e) {
@@ -80,20 +79,14 @@ class PageBrowserTest extends DuskTestCase
                 $browser->loginAs(User::find($user->id))
                     ->{$sizeMacro}()
                     ->visit('/dashboard')
-                    ->waitFor('#main-content', 30)
-                    ->pause(1000);
+                    ->waitFor('#main-content', 30);
 
-                $browser->waitFor('[dusk="nav-workouts"]', 15)
-                    ->click('[dusk="nav-workouts"]')
-                    ->waitForLocation('/workouts', 15)
-                    ->pause(500)
-                    ->waitFor('[dusk="nav-profile"]', 15)
-                    ->click('[dusk="nav-profile"]')
-                    ->waitForLocation('/profile', 15)
-                    ->pause(500)
-                    ->waitFor('[dusk="nav-dashboard"]', 15)
-                    ->click('[dusk="nav-dashboard"]')
-                    ->waitForLocation('/dashboard', 15)
+                $browser->clickWhenSettled('[dusk="nav-workouts"]');
+                $browser->waitForLocation('/workouts', 15);
+                $browser->clickWhenSettled('[dusk="nav-profile"]');
+                $browser->waitForLocation('/profile', 15);
+                $browser->clickWhenSettled('[dusk="nav-dashboard"]');
+                $browser->waitForLocation('/dashboard', 15)
                     ->assertNoConsoleExceptions();
             } catch (\Exception $e) {
                 $browser->screenshot('nav-failure-'.$sizeMacro);

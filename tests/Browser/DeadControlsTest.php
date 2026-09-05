@@ -77,15 +77,13 @@ class DeadControlsTest extends DuskTestCase
                 ->visit(route('notifications.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@notifications-next', 15)
-                // Centred first: the floating bottom nav sits over the last 88px of
-                // the viewport, and WebDriver's own scrolling stops short of the
-                // padding that keeps the control clear of it for a real user.
-                ->script('document.querySelector(\'[dusk="notifications-next"]\').scrollIntoView({block: "center"});');
+                ->waitFor('@notifications-next', 15);
 
-            $browser->pause(300)
-                ->click('@notifications-next')
-                ->waitForTextIn('nav[aria-label="Pagination des notifications"]', 'Page 2', 15);
+            // Centred first: the floating bottom nav sits over the last 88px of
+            // the viewport, and WebDriver's own scrolling stops short of the
+            // padding that keeps the control clear of it for a real user.
+            $browser->clickWhenSettled('[dusk="notifications-next"]');
+            $browser->waitForTextIn('nav[aria-label="Pagination des notifications"]', 'Page 2', 15);
 
             $renderedIds = $browser->script(
                 'return Array.from(document.querySelectorAll("[data-notification-id]"))'

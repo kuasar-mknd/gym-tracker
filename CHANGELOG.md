@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **Les tests de navigateur n'attendent plus de durées** (#1674) : cinquante `pause()` fixes, 39,8 s par passe, deviennent des conditions nommées — l'écriture arrivée en base, l'identifiant serveur reçu par une ligne optimiste, la mise en page stabilisée, ou un clic qui attend que sa cible cesse de bouger ; une garde refuse leur retour
+
 ## [1.5.12] - 2026-09-05
 
 ### Corrigé

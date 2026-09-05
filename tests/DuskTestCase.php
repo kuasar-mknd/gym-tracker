@@ -156,6 +156,40 @@ abstract class DuskTestCase extends BaseTestCase
             return $this;
         });
 
+        /*
+         * Une ligne optimiste porte `temp-…` jusqu'a la reponse du serveur ;
+         * les tests l'attendaient par une pause. Le DOM le montre.
+         */
+        Browser::macro('waitForServerIds', function (int $seconds = 15): object {
+            /** @var Browser $this */
+            return $this->waitUntil(
+                'Array.from(document.querySelectorAll("[data-line-id]")).every((el) => !String(el.dataset.lineId).startsWith("temp-"))',
+                $seconds,
+                'une ligne attend encore son identifiant serveur',
+            );
+        });
+
+        /*
+         * Les mesures de mise en page attendaient la fin du rendu par une
+         * pause. Deux releves identiques de suite, polices chargees, le disent.
+         */
+        Browser::macro('waitForStableLayout', function (int $seconds = 10): object {
+            /** @var Browser $this */
+            $releve = 'return [document.fonts.status, document.documentElement.scrollWidth, document.documentElement.scrollHeight, document.getElementsByTagName("*").length].join();';
+            $precedent = null;
+
+            $this->waitUsing($seconds, 150, function () use ($releve, &$precedent): bool {
+                /** @var Browser $this */
+                $actuel = $this->script($releve)[0] ?? null;
+                $stable = is_string($actuel) && $actuel === $precedent && str_starts_with($actuel, 'loaded');
+                $precedent = $actuel;
+
+                return $stable;
+            }, 'la mise en page ne s\'est jamais stabilisee');
+
+            return $this;
+        });
+
         Browser::macro('disableAnimations', function (): object {
             /** @var Browser $this */
             $this->script("

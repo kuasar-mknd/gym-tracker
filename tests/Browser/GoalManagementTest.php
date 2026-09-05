@@ -35,19 +35,15 @@ class GoalManagementTest extends DuskTestCase
                 ->visit(route('goals.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor("@edit-goal-{$goal->id}", 15)
-                ->script("document.querySelector('[dusk=\"edit-goal-{$goal->id}\"]').scrollIntoView({block: 'center'});");
+                ->waitFor("@edit-goal-{$goal->id}", 15);
 
-            $browser->pause(300)
-                ->click("@edit-goal-{$goal->id}")
-                ->waitForLocation("/goals/{$goal->id}/edit", 15)
+            $browser->clickWhenSettled("[dusk=\"edit-goal-{$goal->id}\"]");
+            $browser->waitForLocation("/goals/{$goal->id}/edit", 15)
                 ->waitFor('@goal-submit', 15)
-                ->type('input[type="text"]:not([type="number"])', 'Objectif renommé')
-                ->script("document.querySelector('[dusk=\"goal-submit\"]').scrollIntoView({block: 'center'});");
+                ->type('input[type="text"]:not([type="number"])', 'Objectif renommé');
 
-            $browser->pause(300)
-                ->click('@goal-submit')
-                ->waitForLocation('/goals', 15);
+            $browser->clickWhenSettled('[dusk="goal-submit"]');
+            $browser->waitForLocation('/goals', 15);
 
             $this->assertSame('Objectif renommé', $goal->refresh()->title);
         });
@@ -70,12 +66,10 @@ class GoalManagementTest extends DuskTestCase
                 ->visit(route('goals.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor("@delete-goal-{$goal->id}", 15)
-                ->script("document.querySelector('[dusk=\"delete-goal-{$goal->id}\"]').scrollIntoView({block: 'center'});");
+                ->waitFor("@delete-goal-{$goal->id}", 15);
 
-            $browser->pause(300)
-                ->click("@delete-goal-{$goal->id}")
-                ->waitFor('@confirm-delete-goal', 15);
+            $browser->clickWhenSettled("[dusk=\"delete-goal-{$goal->id}\"]");
+            $browser->waitFor('@confirm-delete-goal', 15);
 
             // The goal survives the dialog opening: deletion is the confirm
             // button's job, not the delete button's.

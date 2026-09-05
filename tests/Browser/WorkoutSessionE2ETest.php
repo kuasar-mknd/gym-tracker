@@ -91,8 +91,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->clickWhenSettled('[dusk="add-exercise-existing"]', 15);
             $browser->waitFor('input[placeholder="Rechercher..."]', 15)->type('input[placeholder="Rechercher..."]', 'Brand New Exercise');
             $browser->waitFor('@quick-create-exercise', 15)->click('@quick-create-exercise');
-            $browser->pause(500)
-                ->waitFor('@new-exercise-name', 15)
+            $browser->waitFor('@new-exercise-name', 15)
                 ->assertInputValue('@new-exercise-name', 'Brand New Exercise')
                 ->select('@new-exercise-type', 'strength')
                 ->select('@new-exercise-category', 'Pectoraux')
@@ -107,7 +106,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             // Wait for all cards to be present and stabilize
             $browser->waitFor('@exercise-card-4', 25)
-                ->pause(2000) // Give API responses time to settle so Vue doesn't remount components mid-interaction
+                ->waitForServerIds()
                 ->assertSee('BRAND NEW EXERCISE')
                 ->assertSee('RECOMMENDER EX');
 
@@ -171,7 +170,6 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->script("document.querySelector('[dusk=\"add-set-4\"]').scrollIntoView({block: 'center'});");
             $browser->click('[dusk="add-set-4"]')
                 ->waitFor('@weight-input-4-0', 15)
-                ->pause(500)
                 ->assertInputValue('@weight-input-4-0', '110')
                 ->assertInputValue('@reps-input-4-0', '3');
 
@@ -180,8 +178,10 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->click('[dusk="add-set-0"]')
                 ->waitFor('@weight-input-0-1', 15)
                 ->type('@weight-input-0-1', '85')
-                ->type('@reps-input-0-1', '3')
-                ->pause(1500); // Wait for debounce to save
+                ->type('@reps-input-0-1', '3');
+
+            // Debounced write: the set is in the database before it is deleted.
+            $this->waitForDatabase(fn (): bool => Set::query()->where('weight', 85)->where('reps', 3)->exists());
 
             /**
              * The row's own delete is hidden at this width — a phone swipes
@@ -203,17 +203,13 @@ class WorkoutSessionE2ETest extends DuskTestCase
                 ->waitUntilMissing('@weight-input-0-1', 15);
 
             // 6d. Modify workout settings
-            $browser->script("window.scrollTo({ top: 0, behavior: 'smooth' });");
-            $browser->waitFor('@workout-settings-button', 15)
-                ->pause(500)
-                ->click('@workout-settings-button')
-                ->waitFor('@workout-name-input', 15)
+            $browser->clickWhenSettled('[dusk="workout-settings-button"]');
+            $browser->waitFor('@workout-name-input', 15)
                 ->clear('@workout-name-input')
                 ->type('@workout-name-input', 'Workout Updated')
                 ->click('@save-settings-button')
                 ->waitUntilMissing('[role="dialog"]', 15)
-                ->pause(1000)
-                ->assertSee('WORKOUT UPDATED');
+                ->waitForText('WORKOUT UPDATED', 15);
 
             // 6e. Delete Cardio exercise (Index 1)
             $browser->script("document.querySelector('[dusk=\"remove-line-1\"]').scrollIntoView({block: 'center'});");
@@ -223,8 +219,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
 
             $browser->click('@remove-line-1')
                 ->waitFor('@confirm-delete-button', 15)
-                ->pause(500)
-                ->click('@confirm-delete-button')
+                ->clickWhenSettled('[dusk="confirm-delete-button"]')
                 ->waitUntilMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]", 15);
 
             $browser->within('@exercise-list', function (Browser $list) use ($cardioLineId): void {
@@ -233,11 +228,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
             });
 
             // 7. Complete one set and verify PR trophy
-            $browser->script("document.querySelector('[dusk=\"complete-set-0-0\"]').scrollIntoView({block: 'center'});");
-            $browser->pause(1000);
-
-            // Use JS click to be sure it's triggered even if something overlaps slightly
-            $browser->script("document.querySelector('[dusk=\"complete-set-0-0\"]').click();");
+            $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
 
             // Le trophée était auparavant enveloppé dans un try/catch, au motif d'un
             // "job asynchrone". Il n'y en a pas : QUEUE_CONNECTION vaut sync en test,
@@ -330,22 +321,14 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $browser->waitFor('@pr-trophy-0-0', 15);
 
             $browser->waitFor('[dusk="skip-rest-timer"]', 20)
-                ->click('[dusk="skip-rest-timer"]');
-            $browser->pause(1000);
+                ->click('[dusk="skip-rest-timer"]')
+                ->waitUntilMissing('[dusk="skip-rest-timer"]', 15);
 
             // 8. Finish Workout
-            $browser->waitFor('@finish-workout-mobile', 20)
-                ->script([
-                    "document.querySelector('[dusk=\"finish-workout-mobile\"]').scrollIntoView({block: 'center'});",
-                    'window.scrollBy(0, 100);', // Extra scroll to ensure it's not behind a sticky footer or notch
-                ]);
-            $browser->pause(1000)
-                ->click('@finish-workout-mobile');
+            $browser->clickWhenSettled('[dusk="finish-workout-mobile"]', 20);
 
             $browser->waitFor('@finish-workout-modal-title', 15)
-                ->waitFor('#confirm-finish-button', 15)
-                ->pause(1000)
-                ->click('#confirm-finish-button');
+                ->clickWhenSettled('#confirm-finish-button');
 
             $browser->waitUsing(15, 500, fn (): bool => \App\Models\Workout::findOrFail($workout->id)->ended_at !== null);
 
