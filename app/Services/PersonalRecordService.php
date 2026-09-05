@@ -217,12 +217,17 @@ final class PersonalRecordService
         /** @var array<string, PersonalRecord> $records */
         $records = [];
 
+        // Les records a retirer partent en une seule instruction a la fin :
+        // chaque `delete()` separe coutait une ecriture sur le serveur.
+        /** @var list<int> $aSupprimer */
+        $aSupprimer = [];
+
         foreach ($tous as $existant) {
             $type = $existant->type->value;
 
             // Trie par `id` : on garde le plus recent, comme la migration.
             if (isset($records[$type])) {
-                $records[$type]->delete();
+                $aSupprimer[] = $records[$type]->id;
             }
 
             $records[$type] = $existant;
@@ -239,7 +244,9 @@ final class PersonalRecordService
 
             if ($meilleure === null) {
                 // Nothing left that qualifies; the record no longer stands.
-                $record?->delete();
+                if ($record !== null) {
+                    $aSupprimer[] = $record->id;
+                }
 
                 continue;
             }
@@ -260,6 +267,10 @@ final class PersonalRecordService
                 'set_id' => $meilleure['id'],
                 'achieved_at' => $meilleure['obtenu'] ?? now(),
             ])->save();
+        }
+
+        if ($aSupprimer !== []) {
+            PersonalRecord::query()->whereKey($aSupprimer)->delete();
         }
     }
 
