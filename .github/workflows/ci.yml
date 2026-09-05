@@ -282,7 +282,15 @@ jobs:
               run: composer install --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
 
             - name: Install Chrome Driver
-              run: php artisan dusk:chrome-driver --detect
+              # Le manifeste des versions vient d'un site tiers ; une connexion
+              # réinitialisée ne doit pas coûter un éclat entier.
+              run: |
+                  for essai in 1 2 3; do
+                      php artisan dusk:chrome-driver --detect && exit 0
+                      echo "téléchargement raté (essai $essai), nouvelle tentative dans 15 s"
+                      sleep 15
+                  done
+                  exit 1
 
             - name: Start Chrome Driver
               run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &

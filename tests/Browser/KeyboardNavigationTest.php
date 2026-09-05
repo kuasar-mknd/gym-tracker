@@ -7,6 +7,7 @@ namespace Tests\Browser;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use Illuminate\Support\Carbon;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
@@ -91,7 +92,24 @@ class KeyboardNavigationTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser): void {
             $user = User::factory()->create();
-            $today = now();
+
+            $browser->loginAs($user)
+                ->resizeToIphone15()
+                ->visit(route('calendar.index'))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30);
+
+            /*
+             * « Aujourd'hui » est décidé par le navigateur, dans le fuseau de
+             * la machine qui le lance ; la suite vit dans celui de
+             * l'application. Lire sa date, et y poser la séance à midi.
+             */
+            $dateDuNavigateur = $browser->script(
+                'const d = new Date();'
+                .'return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-");'
+            )[0];
+            assert(is_string($dateDuNavigateur));
+            $today = Carbon::parse($dateDuNavigateur.' 12:00:00', config()->string('app.timezone'));
 
             Workout::factory()->create([
                 'user_id' => $user->id,
@@ -101,9 +119,7 @@ class KeyboardNavigationTest extends DuskTestCase
 
             $selector = 'calendar-day-'.$today->format('Y-m-d');
 
-            $browser->loginAs($user)
-                ->resizeToIphone15()
-                ->visit(route('calendar.index'))
+            $browser->visit(route('calendar.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
                 ->waitFor("@{$selector}", 15);
