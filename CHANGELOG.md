@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **La page des séances tient en huit requêtes à froid au lieu de quatre-vingt-huit** (#1670) : le compte des exercices distincts sautait d'index en index par une requête par exercice ; le saut tourne désormais dans la base, en une seule instruction et avec les mêmes lectures. Un test tient la page sous quinze requêtes
+
 ## [1.5.11] - 2026-09-05
 
 ### Ajouté
