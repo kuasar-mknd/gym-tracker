@@ -25,6 +25,8 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
+import { useBrouillonsDeSeries, NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
+import { useRapportDeSynchronisation } from '@/composables/useRapportDeSynchronisation'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
@@ -600,27 +602,6 @@ const awaitReplay = (queueId) =>
     })
 
 /**
- * Says out loud that the server refused something.
- *
- * Every failure path on this screen used to do the same two things — put the
- * optimistic row back the way it was, and buzz. On a phone that is a vibration
- * with no words; on a desktop it is nothing at all. So a 500 was indis-
- * tinguable from a mis-tap, and an afternoon went by with the server rejecting
- * every write while the screen just kept quietly undoing them.
- *
- * The layout already renders a toast from `flash.error` and clears it after
- * eight seconds, so this borrows that rather than inventing a second channel.
- * Offline is deliberately excluded: the queue handles it, the value stays on
- * screen, and there is nothing for the user to do about it.
- */
-const reportSyncFailure = (message) => {
-    const flash = page.props.flash ?? (page.props.flash = {})
-
-    flash.error = message
-    triggerHaptic('error')
-}
-
-/**
  * The only two ways this screen may talk to the server about a set.
  *
  * Both wait out a creation still in flight, so the URL always carries an id the
@@ -650,13 +631,6 @@ const deleteSet = (setId) =>
 
         return SyncService.delete(route('api.v1.sets.destroy', { set: realId }))
     })
-
-/**
- * The set fields this screen edits. Every one of them is a number in the
- * database, so a value arriving from an input — always a string — is normalised
- * before it goes anywhere near the row or the payload.
- */
-const NUMERIC_SET_FIELDS = ['weight', 'reps', 'distance_km', 'duration_seconds']
 
 /**
  * What each kind of exercise measures — the same split the set row renders.
@@ -1326,167 +1300,22 @@ const addSet = (lineId) => {
     pendingIds.track(tempSet.id, creation)
 }
 
-/**
- * Sets whose value is on screen but not in the database.
- *
- * Drafts written while offline are replayed on mount. When the server refuses
- * one, the value stays — throwing away an edit the user made earlier, with no
- * feedback, is worse than showing it unsaved — so the row is marked instead.
- * A refusal is recorded in the draft itself so the next mount stops retrying
- * something a 4xx says will never be accepted.
- */
-const unsyncedSetIds = ref(new Set())
-
-/**
- * Clears the marker once the row genuinely reaches the database. Without this
- * the warning was add-only: a set that synced on the next drain kept telling
- * the user it had not been saved, for as long as the page stayed open.
- */
-const clearUnsynced = (...setIds) => {
-    setIds.forEach((setId) => unsyncedSetIds.value.delete(String(setId)))
-}
-
-const markUnsynced = (setId) => {
-    unsyncedSetIds.value.add(String(setId))
-}
-
-/**
- * SyncService keeps the mutations a server refused rather than dropping them,
- * and announces each one. Most of them are set updates, so this is where they
- * become visible instead of sitting in localStorage unread.
- */
-/**
- * La file hors-ligne a trouvé porte close (session ou jeton expirés) ou un
- * stockage plein. Ni l'un ni l'autre n'est un refus de l'écriture, mais
- * l'utilisateur doit savoir quoi faire : se reconnecter, ou ne pas recharger.
- */
-const handleSyncAuthRequired = (event) => {
-    const pending = event.detail?.pending ?? 0
-    reportEditFailure(
-        `Ta session a expiré : reconnecte-toi, ${pending > 1 ? `tes ${pending} modifications en attente` : 'ta modification en attente'} repartir${pending > 1 ? 'ont' : 'a'} ensuite.`,
-    )
-}
-
-const handleSyncStorageFull = (event) => {
-    const pending = event.detail?.pending ?? 0
-    reportEditFailure(
-        `Le stockage du téléphone est plein : ${pending} modification${pending > 1 ? 's' : ''} en attente ne survivr${pending > 1 ? 'ont' : 'a'} pas à un rechargement.`,
-    )
-}
-
-const handleSyncFailure = (event) => {
-    const url = event.detail?.url ?? ''
-    const setId = /\/sets\/(\d+)/.exec(url)?.[1]
-
-    if (setId) {
-        markUnsynced(setId)
-
-        return
-    }
-
-    /**
-     * Only an id-bearing URL could be attached to a row, so a refused CREATE —
-     * `POST /api/v1/sets`, `POST /api/v1/workout-lines` — matched nothing and
-     * the user was told nothing at all. The write is recorded in SyncService's
-     * failed bucket either way; this is the part they can see.
-     *
-     * There is no row to mark, because the thing that failed is the row itself,
-     * so the message has to carry the identification instead — and name the
-     * exercise. "An item of the session" leaves someone scrolling their own
-     * workout trying to work out which set never made it.
-     */
-    if (/\/(sets|workout-lines)(\?|$)/.test(url)) {
-        reportEditFailure(describeFailedCreate(url, event.detail?.data))
-    }
-}
-
-/** The request body, whether it was queued as an object or already serialised. */
-const payloadOf = (data) => {
-    if (typeof data !== 'string') {
-        return data ?? {}
-    }
-
-    try {
-        return JSON.parse(data) ?? {}
-    } catch {
-        return {}
-    }
-}
-
-const exerciseNamed = (exerciseId) =>
-    localExercises.value.find((exercise) => String(exercise.id) === String(exerciseId))?.name
-
-/**
- * Names what the server refused, falling back to the old wording only when the
- * payload cannot be tied to anything on screen — a set whose line has since been
- * removed, say. Being vague is better than being wrong about which set it was.
- */
-const describeFailedCreate = (url, data) => {
-    const payload = payloadOf(data)
-    const generic = "Un élément de la séance n'a pas pu être enregistré."
-
-    if (/\/workout-lines(\?|$)/.test(url)) {
-        const name = exerciseNamed(payload.exercise_id)
-
-        return name ? `« ${name} » n'a pas pu être ajouté à la séance.` : "Un exercice n'a pas pu être ajouté."
-    }
-
-    const line = localWorkout.value.workout_lines?.find(
-        (candidate) => String(candidate.id) === String(payload.workout_line_id),
-    )
-
-    if (!line) {
-        return generic
-    }
-
-    const position = (line.sets?.length ?? 0) || 1
-
-    return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
-}
-
-/**
- * A rejected edit reverts on screen, which is the right behaviour while the user
- * is looking at the field — but it needs to say why, in something you can read.
- */
-const editError = ref(null)
-let editErrorTimer = null
-
-const reportEditFailure = (message) => {
-    editError.value = message
-    triggerHaptic('error')
-
-    if (editErrorTimer) {
-        clearTimeout(editErrorTimer)
-    }
-
-    editErrorTimer = setTimeout(() => {
-        editError.value = null
-    }, 6000)
-}
-
-/**
- * Announces what was refused while the page was away — once.
- *
- * The failed bucket is written on every refusal and, until now, emptied by
- * nobody: `clearFailedRequests()` had no caller anywhere in the app. So a single
- * create the server turned down went on announcing itself on every single visit
- * to the session, for ever, with no way to acknowledge it. That is not a warning
- * any more, it is furniture, and the user reported it as exactly that.
- *
- * The payload goes through too, so the message can name what failed instead of
- * saying "an item of the session".
- */
-const markQueuedFailuresOnMount = () => {
-    const failures = SyncService.failedRequests()
-
-    if (failures.length === 0) {
-        return
-    }
-
-    failures.forEach((failure) => handleSyncFailure({ detail: { url: failure.url, data: failure.data } }))
-
-    SyncService.clearFailedRequests()
-}
+const {
+    unsyncedSetIds,
+    clearUnsynced,
+    markUnsynced,
+    editError,
+    reportEditFailure,
+    reportSyncFailure,
+    handleSyncAuthRequired,
+    handleSyncStorageFull,
+    handleSyncFailure,
+    markQueuedFailuresOnMount,
+} = useRapportDeSynchronisation({
+    page,
+    exercices: () => localExercises.value,
+    lignes: () => localWorkout.value.workout_lines,
+})
 
 /**
  * Counts the writes issued per set and field, so a reply can be checked against
@@ -1535,101 +1364,15 @@ const completionWrites = createWriteQueue()
  */
 const completionsEnVol = new Set()
 
-/**
- * The value the server last confirmed for a field, which is the only value a
- * rollback may restore.
- *
- * `previousValue` used to be read off the set at call time. Type B then C inside
- * the debounce window and the second call captures B — a value that never
- * reached the database — so a refusal of C "restored" B and the row ended up
- * showing something the server had never agreed to.
- */
-const confirmedValues = new Map()
-const confirmedKey = (setId, field) => `${setId}_${field}`
-
-/**
- * Ce que le serveur nous a dit, releve a chaque fois qu'il nous le dit.
- *
- * `confirmedValues` n'etait alimente que par une reponse ACCEPTEE. Tant qu'un
- * champ n'avait jamais ete enregistre depuis cette page, `lastConfirmed`
- * retombait donc sur son repli — la valeur a l'ecran, deja optimiste — et un
- * refus restaurait quelque chose que le serveur n'avait jamais eu.
- *
- * #1540 a ferme le cas de la rafale, en gardant la valeur d'avant la premiere
- * touche. Mais des qu'une salve est partie son minuteur est oublie, et la
- * salve suivante retombait sur l'ecran. Deux corrections coup sur coup, toutes
- * deux refusees, laissaient la premiere des deux a l'ecran.
- *
- * La charge utile du serveur EST ce que le serveur detient : la relever ici
- * donne toujours une valeur a restaurer. Les series encore provisoires n'en
- * ont pas — le serveur ne les connait pas.
- */
-const releverLesValeursDuServeur = (workout) => {
-    // Le serveur envoie parfois les lignes en objet plutot qu'en tableau, et la
-    // fusion s'en accommode deja ; ce releve doit en faire autant.
-    const lignes = workout?.workout_lines
-    const enTableau = Array.isArray(lignes) ? lignes : Object.values(lignes ?? {})
-
-    enTableau.forEach((line) =>
-        (Array.isArray(line?.sets) ? line.sets : []).forEach((set) => {
-            if (set === null || isTemporaryId(set.id)) {
-                return
-            }
-
-            NUMERIC_SET_FIELDS.forEach((field) => {
-                if (set[field] !== undefined) {
-                    rememberConfirmed(set.id, field, set[field])
-                }
-            })
-        }),
-    )
-}
-
-const rememberConfirmed = (setId, field, value) => {
-    confirmedValues.set(confirmedKey(setId, field), value)
-}
-
-const lastConfirmed = (set, field, fallback) => {
-    const key = confirmedKey(set.id, field)
-
-    return confirmedValues.has(key) ? confirmedValues.get(key) : fallback
-}
-
-/**
- * Keeps one draft per set holding only the fields still in flight.
- *
- * The draft was `JSON.stringify(set)` under a single key, removed outright the
- * moment ANY field came back accepted. Correcting a weight and then the reps
- * within the same second meant the weight's success deleted the draft that was
- * holding the reps, whose PATCH had not left yet — close the app in that window
- * and the entry is gone. Only the field that was actually confirmed is dropped
- * now, and the key disappears when nothing is left to protect.
- */
-const draftKey = (setId) => `draft_set_${setId}`
-
-const readDraft = (setId) => {
-    try {
-        return JSON.parse(localStorage.getItem(draftKey(setId)) || '{}')
-    } catch {
-        return {}
-    }
-}
-
-const writeDraftField = (setId, field, value) => {
-    localStorage.setItem(draftKey(setId), JSON.stringify({ ...readDraft(setId), [field]: value }))
-}
-
-const clearDraftField = (setId, field) => {
-    const { [field]: _dropped, ...rest } = readDraft(setId)
-
-    if (Object.keys(rest).filter((key) => key !== 'syncRejected').length === 0) {
-        localStorage.removeItem(draftKey(setId))
-
-        return
-    }
-
-    localStorage.setItem(draftKey(setId), JSON.stringify(rest))
-}
+const {
+    releverLesValeursDuServeur,
+    rememberConfirmed,
+    lastConfirmed,
+    writeDraftField,
+    clearDraftField,
+    oublierLaSerie,
+    rejouerLesBrouillons,
+} = useBrouillonsDeSeries()
 
 // ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
@@ -1771,12 +1514,9 @@ const removeSet = (setId) => {
         // Nothing may queue behind a row that no longer exists, and the entries
         // would otherwise outlive every set the page ever showed.
         fieldWrites.forget(timerKey)
-        confirmedValues.delete(timerKey)
     })
 
-    // The row is going away; its draft must not outlive it and be replayed
-    // against an id that no longer exists on the next mount.
-    localStorage.removeItem(draftKey(setId))
+    oublierLaSerie(setId)
 
     // Find the line and set
     for (const line of localWorkout.value.workout_lines) {
@@ -1897,74 +1637,20 @@ onMounted(() => {
     window.addEventListener('sync:storage-full', handleSyncStorageFull)
     markQueuedFailuresOnMount()
 
-    // Restore set drafts if any exist and haven't synced
-    const keysToRemove = []
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.startsWith('draft_set_')) {
-            const setId = key.replace('draft_set_', '')
-            try {
-                const draftData = JSON.parse(localStorage.getItem(key))
-                localWorkout.value.workout_lines?.forEach((line) => {
-                    const set = line.sets?.find((s) => String(s.id) === String(setId))
-                    if (set) {
-                        const payload = {}
-                        if (draftData.weight !== undefined) {
-                            set.weight = draftData.weight
-                            payload.weight = draftData.weight
-                        }
-                        if (draftData.reps !== undefined) {
-                            set.reps = draftData.reps
-                            payload.reps = draftData.reps
-                        }
-                        if (draftData.distance_km !== undefined) {
-                            set.distance_km = draftData.distance_km
-                            payload.distance_km = draftData.distance_km
-                        }
-                        if (draftData.duration_seconds !== undefined) {
-                            set.duration_seconds = draftData.duration_seconds
-                            payload.duration_seconds = draftData.duration_seconds
-                        }
-
-                        // Already refused once. Keep the value visible and marked,
-                        // but stop asking: a 4xx does not become a 2xx.
-                        if (draftData.syncRejected) {
-                            markUnsynced(set.id)
-
-                            return
-                        }
-
-                        patchSet(set, payload)
-                            .then(() => {
-                                localStorage.removeItem(key)
-                            })
-                            .catch((err) => {
-                                const kind = classifySyncError(err)
-
-                                if (kind === SYNC_OFFLINE) {
-                                    // SyncService queued it; the draft would be a
-                                    // second copy of the same pending write.
-                                    localStorage.removeItem(key)
-
-                                    return
-                                }
-
-                                if (kind === SYNC_PERMANENT) {
-                                    localStorage.setItem(key, JSON.stringify({ ...draftData, syncRejected: true }))
-                                }
-
-                                // Transient failures keep the draft untouched so the
-                                // next mount tries again.
-                                markUnsynced(set.id)
-                            })
-                    }
-                })
-            } catch (e) {
-                keysToRemove.push(key)
+    rejouerLesBrouillons({
+        trouverLaSerie: (setId) => {
+            for (const line of localWorkout.value.workout_lines ?? []) {
+                const set = line.sets?.find((s) => String(s.id) === String(setId))
+                if (set) {
+                    return set
+                }
             }
-        }
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k))
+
+            return null
+        },
+        envoyer: patchSet,
+        marquerNonSynchronisee: markUnsynced,
+    })
 })
 
 onUnmounted(() => {
@@ -1989,10 +1675,6 @@ onUnmounted(() => {
      * report to — and SyncService records a refusal durably either way.
      */
     flushAllPendingUpdates()
-
-    if (editErrorTimer) {
-        clearTimeout(editErrorTimer)
-    }
 })
 </script>
 
