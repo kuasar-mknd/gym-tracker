@@ -76,3 +76,22 @@ it('refuse d’écrire une archive sans mot de passe, d’où que vienne la dema
         File::deleteDirectory($dossier);
     }
 });
+
+/*
+ * Le client `mysqldump` de l'image est celui de MariaDB : il vérifie le
+ * certificat du serveur, que MySQL signe lui-même, et la sauvegarde de
+ * production tombait sur « self-signed certificate in certificate chain »
+ * (#1740). Le client MySQL du poste de travail ne connaît pas `--skip-ssl`,
+ * d'où le préfixe `loose-`, qu'il ignore avec un avertissement.
+ */
+it('dumpe sans vérifier le certificat du serveur ni lire les tablespaces', function (): void {
+    $dumper = \Spatie\Backup\Tasks\Backup\DbDumperFactory::createFromConnection('mysql');
+    expect($dumper)->toBeInstanceOf(\Spatie\DbDumper\Databases\MySql::class);
+    assert($dumper instanceof \Spatie\DbDumper\Databases\MySql);
+
+    $commande = $dumper->getDumpCommand('/tmp/dump.sql', '/tmp/identifiants.cnf');
+
+    expect($commande)->toContain('--loose-skip-ssl')
+        ->and($commande)->toContain('--no-tablespaces')
+        ->and($commande)->toContain('--single-transaction');
+});
