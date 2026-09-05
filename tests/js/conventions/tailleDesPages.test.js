@@ -14,7 +14,6 @@ const PLAFOND = 400
 const EN_SURSIS = {
     'Habits/Index.vue': 575,
     'Exercises/Index.vue': 541,
-    'Tools/IntervalTimer.vue': 548,
 }
 
 const pages = join(jsRoot, 'Pages')
