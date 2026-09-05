@@ -26,6 +26,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
 import { useBrouillonsDeSeries, NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
+import { useRapportDeSynchronisation } from '@/composables/useRapportDeSynchronisation'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
@@ -599,27 +600,6 @@ const awaitReplay = (queueId) =>
         replayListeners.add(onReplayed)
         window.addEventListener('sync:replayed', onReplayed)
     })
-
-/**
- * Says out loud that the server refused something.
- *
- * Every failure path on this screen used to do the same two things — put the
- * optimistic row back the way it was, and buzz. On a phone that is a vibration
- * with no words; on a desktop it is nothing at all. So a 500 was indis-
- * tinguable from a mis-tap, and an afternoon went by with the server rejecting
- * every write while the screen just kept quietly undoing them.
- *
- * The layout already renders a toast from `flash.error` and clears it after
- * eight seconds, so this borrows that rather than inventing a second channel.
- * Offline is deliberately excluded: the queue handles it, the value stays on
- * screen, and there is nothing for the user to do about it.
- */
-const reportSyncFailure = (message) => {
-    const flash = page.props.flash ?? (page.props.flash = {})
-
-    flash.error = message
-    triggerHaptic('error')
-}
 
 /**
  * The only two ways this screen may talk to the server about a set.
@@ -1320,167 +1300,22 @@ const addSet = (lineId) => {
     pendingIds.track(tempSet.id, creation)
 }
 
-/**
- * Sets whose value is on screen but not in the database.
- *
- * Drafts written while offline are replayed on mount. When the server refuses
- * one, the value stays — throwing away an edit the user made earlier, with no
- * feedback, is worse than showing it unsaved — so the row is marked instead.
- * A refusal is recorded in the draft itself so the next mount stops retrying
- * something a 4xx says will never be accepted.
- */
-const unsyncedSetIds = ref(new Set())
-
-/**
- * Clears the marker once the row genuinely reaches the database. Without this
- * the warning was add-only: a set that synced on the next drain kept telling
- * the user it had not been saved, for as long as the page stayed open.
- */
-const clearUnsynced = (...setIds) => {
-    setIds.forEach((setId) => unsyncedSetIds.value.delete(String(setId)))
-}
-
-const markUnsynced = (setId) => {
-    unsyncedSetIds.value.add(String(setId))
-}
-
-/**
- * SyncService keeps the mutations a server refused rather than dropping them,
- * and announces each one. Most of them are set updates, so this is where they
- * become visible instead of sitting in localStorage unread.
- */
-/**
- * La file hors-ligne a trouvé porte close (session ou jeton expirés) ou un
- * stockage plein. Ni l'un ni l'autre n'est un refus de l'écriture, mais
- * l'utilisateur doit savoir quoi faire : se reconnecter, ou ne pas recharger.
- */
-const handleSyncAuthRequired = (event) => {
-    const pending = event.detail?.pending ?? 0
-    reportEditFailure(
-        `Ta session a expiré : reconnecte-toi, ${pending > 1 ? `tes ${pending} modifications en attente` : 'ta modification en attente'} repartir${pending > 1 ? 'ont' : 'a'} ensuite.`,
-    )
-}
-
-const handleSyncStorageFull = (event) => {
-    const pending = event.detail?.pending ?? 0
-    reportEditFailure(
-        `Le stockage du téléphone est plein : ${pending} modification${pending > 1 ? 's' : ''} en attente ne survivr${pending > 1 ? 'ont' : 'a'} pas à un rechargement.`,
-    )
-}
-
-const handleSyncFailure = (event) => {
-    const url = event.detail?.url ?? ''
-    const setId = /\/sets\/(\d+)/.exec(url)?.[1]
-
-    if (setId) {
-        markUnsynced(setId)
-
-        return
-    }
-
-    /**
-     * Only an id-bearing URL could be attached to a row, so a refused CREATE —
-     * `POST /api/v1/sets`, `POST /api/v1/workout-lines` — matched nothing and
-     * the user was told nothing at all. The write is recorded in SyncService's
-     * failed bucket either way; this is the part they can see.
-     *
-     * There is no row to mark, because the thing that failed is the row itself,
-     * so the message has to carry the identification instead — and name the
-     * exercise. "An item of the session" leaves someone scrolling their own
-     * workout trying to work out which set never made it.
-     */
-    if (/\/(sets|workout-lines)(\?|$)/.test(url)) {
-        reportEditFailure(describeFailedCreate(url, event.detail?.data))
-    }
-}
-
-/** The request body, whether it was queued as an object or already serialised. */
-const payloadOf = (data) => {
-    if (typeof data !== 'string') {
-        return data ?? {}
-    }
-
-    try {
-        return JSON.parse(data) ?? {}
-    } catch {
-        return {}
-    }
-}
-
-const exerciseNamed = (exerciseId) =>
-    localExercises.value.find((exercise) => String(exercise.id) === String(exerciseId))?.name
-
-/**
- * Names what the server refused, falling back to the old wording only when the
- * payload cannot be tied to anything on screen — a set whose line has since been
- * removed, say. Being vague is better than being wrong about which set it was.
- */
-const describeFailedCreate = (url, data) => {
-    const payload = payloadOf(data)
-    const generic = "Un élément de la séance n'a pas pu être enregistré."
-
-    if (/\/workout-lines(\?|$)/.test(url)) {
-        const name = exerciseNamed(payload.exercise_id)
-
-        return name ? `« ${name} » n'a pas pu être ajouté à la séance.` : "Un exercice n'a pas pu être ajouté."
-    }
-
-    const line = localWorkout.value.workout_lines?.find(
-        (candidate) => String(candidate.id) === String(payload.workout_line_id),
-    )
-
-    if (!line) {
-        return generic
-    }
-
-    const position = (line.sets?.length ?? 0) || 1
-
-    return `La série ${position} de « ${line.exercise?.name ?? 'cet exercice'} » n'a pas pu être enregistrée.`
-}
-
-/**
- * A rejected edit reverts on screen, which is the right behaviour while the user
- * is looking at the field — but it needs to say why, in something you can read.
- */
-const editError = ref(null)
-let editErrorTimer = null
-
-const reportEditFailure = (message) => {
-    editError.value = message
-    triggerHaptic('error')
-
-    if (editErrorTimer) {
-        clearTimeout(editErrorTimer)
-    }
-
-    editErrorTimer = setTimeout(() => {
-        editError.value = null
-    }, 6000)
-}
-
-/**
- * Announces what was refused while the page was away — once.
- *
- * The failed bucket is written on every refusal and, until now, emptied by
- * nobody: `clearFailedRequests()` had no caller anywhere in the app. So a single
- * create the server turned down went on announcing itself on every single visit
- * to the session, for ever, with no way to acknowledge it. That is not a warning
- * any more, it is furniture, and the user reported it as exactly that.
- *
- * The payload goes through too, so the message can name what failed instead of
- * saying "an item of the session".
- */
-const markQueuedFailuresOnMount = () => {
-    const failures = SyncService.failedRequests()
-
-    if (failures.length === 0) {
-        return
-    }
-
-    failures.forEach((failure) => handleSyncFailure({ detail: { url: failure.url, data: failure.data } }))
-
-    SyncService.clearFailedRequests()
-}
+const {
+    unsyncedSetIds,
+    clearUnsynced,
+    markUnsynced,
+    editError,
+    reportEditFailure,
+    reportSyncFailure,
+    handleSyncAuthRequired,
+    handleSyncStorageFull,
+    handleSyncFailure,
+    markQueuedFailuresOnMount,
+} = useRapportDeSynchronisation({
+    page,
+    exercices: () => localExercises.value,
+    lignes: () => localWorkout.value.workout_lines,
+})
 
 /**
  * Counts the writes issued per set and field, so a reply can be checked against
@@ -1840,10 +1675,6 @@ onUnmounted(() => {
      * report to — and SyncService records a refusal durably either way.
      */
     flushAllPendingUpdates()
-
-    if (editErrorTimer) {
-        clearTimeout(editErrorTimer)
-    }
 })
 </script>
 
