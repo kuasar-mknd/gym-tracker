@@ -125,6 +125,7 @@ it('complète une ligne venue d’une collection sans charger sa séance à la v
     // liste, une ligne refuse tout chargement paresseux hors production : le
     // service doit demander la séance explicitement, pas la laisser venir.
     $relue = WorkoutLine::query()->whereKey([$ligneHier->id, $ligneDuJour->id])->get()->firstWhere('id', $ligneDuJour->id);
+    assert($relue instanceof WorkoutLine);
 
     expect(app(RecommendedValuesService::class)->getRecommendedValues($relue)['weight'])->toBe(50.0);
 });
