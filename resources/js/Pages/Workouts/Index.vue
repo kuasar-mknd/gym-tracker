@@ -4,7 +4,9 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, Link, Deferred, router } from '@inertiajs/vue3'
 import { defineAsyncComponent, ref, watch } from 'vue'
-import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
+import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
+import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
@@ -12,11 +14,6 @@ import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 
-const WorkoutFrequencyChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutFrequencyChart.vue'))
-const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
-const MonthlyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
-const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
-const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/Stats/VolumePerWorkoutChart.vue'))
 const WorkoutHistoryTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
 )
@@ -44,14 +41,6 @@ const form = useForm({})
 
 const createWorkout = () => {
     form.post(route('workouts.store'))
-}
-
-const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-    })
 }
 
 /**
@@ -122,39 +111,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
     <Head title="Mes Séances" />
 
     <AuthenticatedLayout page-title="Mes Séances">
-        <!-- Pull to Refresh Indicator -->
-        <div
-            class="pointer-events-none fixed top-0 left-0 z-50 flex w-full justify-center transition-transform duration-200 ease-out"
-            :style="{ transform: `translateY(${Math.min(pullDistance, 150)}px)` }"
-        >
-            <div
-                v-if="pullDistance > 0 || isRefreshing"
-                class="border-border bg-surface-card/90 mt-4 rounded-full border p-3 shadow-lg backdrop-blur-md"
-            >
-                <svg
-                    v-if="isRefreshing"
-                    class="text-accent-primary-deep h-6 w-6 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                >
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                </svg>
-                <span
-                    v-else
-                    class="material-symbols-outlined text-accent-primary-deep transition-transform duration-200"
-                    :style="{ transform: `rotate(${pullDistance > 100 ? 180 : 0}deg)` }"
-                    aria-hidden="true"
-                >
-                    arrow_downward
-                </span>
-            </div>
-        </div>
+        <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header-actions>
             <GlassButton
                 variant="primary"
@@ -234,57 +191,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         </div>
                     </template>
 
-                    <!-- Charts Grid -->
-                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <!-- Workout Frequency (Day of Week) Chart -->
-                        <GlassCard v-if="deferredData?.charts?.day_of_week_frequency?.length > 0">
-                            <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold">Fréquence par Jour</h3>
-                                <p class="text-text-muted text-xs">
-                                    Séances selon le jour de la semaine, 6 derniers mois
-                                </p>
-                            </div>
-                            <div class="h-48 w-full">
-                                <WorkoutFrequencyChart :data="deferredData.charts.day_of_week_frequency" />
-                            </div>
-                        </GlassCard>
-
-                        <!-- Frequency Chart -->
-                        <GlassCard v-if="deferredData?.charts?.monthly_frequency?.length > 0">
-                            <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold">Fréquence Mensuelle</h3>
-                                <p class="text-text-muted text-xs">Séances par mois, 6 derniers mois</p>
-                            </div>
-                            <WorkoutsPerMonthChart :data="deferredData.charts.monthly_frequency" />
-                        </GlassCard>
-
-                        <!-- Monthly Volume Chart -->
-                        <GlassCard v-if="deferredData?.charts?.monthly_volume?.length > 0">
-                            <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold">Volume Mensuel</h3>
-                                <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
-                            </div>
-                            <MonthlyVolumeChart :data="deferredData.charts.monthly_volume" />
-                        </GlassCard>
-
-                        <!-- Duration Chart -->
-                        <GlassCard v-if="deferredData?.charts?.duration_history?.length > 0">
-                            <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold">Durée</h3>
-                                <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
-                            </div>
-                            <WorkoutDurationChart :data="deferredData.charts.duration_history" />
-                        </GlassCard>
-
-                        <!-- Volume per Workout Chart -->
-                        <GlassCard v-if="deferredData?.charts?.volume_history?.length > 0">
-                            <div class="mb-4">
-                                <h3 class="text-text-main text-lg font-bold">Volume par Séance</h3>
-                                <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
-                            </div>
-                            <VolumePerWorkoutChart :data="deferredData.charts.volume_history" />
-                        </GlassCard>
-                    </div>
+                    <GraphiquesDesSeances :charts="deferredData?.charts" />
                 </Deferred>
             </div>
 
@@ -365,80 +272,12 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 </div>
 
                 <div v-else class="space-y-3">
-                    <SwipeableRow
+                    <CarteDeSeance
                         v-for="workout in workoutList"
                         :key="workout.id"
-                        class="mb-3 block"
-                        :action-threshold="80"
-                    >
-                        <template #action-right>
-                            <button
-                                type="button"
-                                @click="confirmDeletion(workout)"
-                                :dusk="`delete-workout-${workout.id}`"
-                                :aria-label="`Supprimer la séance ${workout.name || 'sans nom'}`"
-                                class="text-text-on-dark-accent flex h-full w-full items-center justify-center transition-all active:scale-95"
-                                style="
-                                    background: linear-gradient(
-                                        135deg,
-                                        var(--color-accent-danger) 0%,
-                                        var(--color-accent-danger-deep) 100%
-                                    );
-                                    box-shadow: inset 0 2px 4px rgb(from var(--color-surface-card) r g b / 0.2);
-                                "
-                            >
-                                <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">
-                                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
-                                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
-                                </div>
-                            </button>
-                        </template>
-
-                        <Link :href="route('workouts.show', { workout: workout.id })" class="block">
-                            <GlassCard class="hover:bg-surface-glass-strong transition active:scale-[0.99]">
-                                <div class="flex items-start justify-between">
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2">
-                                            <h4 class="text-text-main font-semibold">
-                                                {{ workout.name || 'Séance' }}
-                                            </h4>
-                                            <span class="glass-badge glass-badge-primary text-xs">
-                                                {{ workout.workout_lines.length }} exo
-                                            </span>
-                                        </div>
-                                        <div class="text-text-muted mt-1 text-sm">
-                                            {{ formatDate(workout.started_at) }}
-                                        </div>
-
-                                        <!-- Exercise preview -->
-                                        <div v-if="workout.workout_lines.length > 0" class="mt-3 flex flex-wrap gap-2">
-                                            <span
-                                                v-for="line in workout.workout_lines.slice(0, 3)"
-                                                :key="line.id"
-                                                class="text-text-muted border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
-                                            >
-                                                {{ line.exercise.name }}
-                                                <span class="text-text-muted/50">• {{ line.sets_count }} séries</span>
-                                            </span>
-                                            <span
-                                                v-if="workout.workout_lines.length > 3"
-                                                class="text-text-muted/50 border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
-                                            >
-                                                +{{ workout.workout_lines.length - 3 }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <span
-                                            class="material-symbols-outlined text-text-muted/30 shrink-0 text-xl"
-                                            aria-hidden="true"
-                                            >chevron_right</span
-                                        >
-                                    </div>
-                                </div>
-                            </GlassCard>
-                        </Link>
-                    </SwipeableRow>
+                        :seance="workout"
+                        @supprimer="confirmDeletion"
+                    />
                 </div>
 
                 <nav

@@ -77,6 +77,8 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 import WorkoutsIndex from '@/Pages/Workouts/Index.vue'
+import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
+import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
 
 /** La question passe par un dialogue de l'application, plus par `confirm()`. */
 const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
@@ -158,6 +160,10 @@ const stubs = {
     // row link and everything behind Deferred live inside their slots.
     Link: false,
     Deferred: false,
+    // Rendus pour de vrai : la rangée porte le bouton de suppression et le lien
+    // que les cas ci-dessous lisent, la grille porte les titres des graphiques.
+    CarteDeSeance,
+    GraphiquesDesSeances,
 }
 
 const mountPage = (overrides = {}) =>
