@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Admin;
 use App\Models\BodyMeasurement;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -50,6 +52,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         $this->registerAppleSocialiteDriver();
         $this->refuserLesArchivesEnClair();
+        $this->ouvrirLesSauvegardesAuSuperAdministrateur();
 
         if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
@@ -250,5 +253,21 @@ final class AppServiceProvider extends ServiceProvider
                 throw new RuntimeException('BACKUP_ARCHIVE_PASSWORD est vide : aucune archive en clair ne sera écrite.');
             }
         });
+    }
+
+    /**
+     * Le panneau demande `create-backup`, `download-backup` et `delete-backup` ;
+     * Shield ne les connaît pas et ne pose aucune porte pour le super
+     * administrateur, si bien que personne ne voyait le bouton.
+     */
+    private function ouvrirLesSauvegardesAuSuperAdministrateur(): void
+    {
+        $role = config('filament-shield.super_admin.name');
+        $superAdministrateur = is_string($role) ? $role : 'super_admin';
+
+        foreach (['create-backup', 'download-backup', 'delete-backup'] as $capacite) {
+            Gate::define($capacite, fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
+                && $utilisateur->hasRole($superAdministrateur));
+        }
     }
 }
