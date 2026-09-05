@@ -358,3 +358,58 @@ it('compte le volume d’une série comme un produit quand le travail passe seul
         // Les repetitions faites a ce poids, retenues sous le poids maximum.
         ->and((float) recordProvenance($user, 'max_weight')?->secondary_value)->toBe(10.0);
 });
+
+/**
+ * Le proprietaire qu'on donne est celui qu'on garde.
+ *
+ * `Set::saved` tient deja l'utilisateur — il vient de le lire pour decider de
+ * mettre le travail en file — et le passe au service. C'est la raison d'etre du
+ * parametre : ce qu'on lui donne suffit, et il ne repart pas chercher une autre
+ * copie de la meme personne.
+ *
+ * Une simple affectation a la place jetterait l'objet recu pour celui que rend
+ * la chaine, dont aucune relation n'est chargee : les preferences de
+ * notification que l'appelant tenait deja seraient relues, soit une lecture de
+ * plus par serie cochee — sur le chemin le plus frequent de l'application.
+ *
+ * Le test voisin compte les lectures quand personne ne les fournit ; celui-ci
+ * dit ce qui se passe quand quelqu'un les fournit.
+ */
+it('se contente du propriétaire qu’on lui donne', function (): void {
+    // L'envoi relit le destinataire pour choisir ses canaux : on l'ecarte pour
+    // ne compter que les lectures du service.
+    Notification::fake();
+
+    [$user, , $ligne] = scenePourProvenance();
+
+    NotificationPreference::factory()->create([
+        'user_id' => $user->id,
+        'type' => 'personal_record',
+        'is_enabled' => true,
+    ]);
+
+    $serie = serieMuette($ligne, 60, 5);
+
+    // L'appelant tient l'utilisateur ET ses preferences.
+    $porteur = User::with('notificationPreferences')->findOrFail($user->id);
+    $relue = Set::findOrFail($serie->id);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    app(PersonalRecordService::class)->syncSetPRs($relue, $porteur);
+
+    $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
+    DB::disableQueryLog();
+
+    $lectures = array_filter(
+        $requetes,
+        fn (string $sql): bool => preg_match('/from `?notification_preferences`?/', $sql) === 1
+    );
+
+    expect($lectures)->toBeEmpty()
+        // Et le record est bien porte au compte de cette personne-la.
+        ->and(recordProvenance($user, 'max_weight')?->user_id)->toBe($user->id);
+
+    Notification::assertSentToTimes($porteur, PersonalRecordAchieved::class, 3);
+});
