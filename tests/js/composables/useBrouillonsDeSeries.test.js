@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useBrouillonsDeSeries, NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 
 beforeEach(() => {
@@ -89,5 +89,97 @@ describe('les valeurs que le serveur détient', () => {
 
         expect(lastConfirmed({ id: 5 }, 'weight', 'repli')).toBe('repli')
         expect(localStorage.getItem('draft_set_5')).toBeNull()
+    })
+})
+
+describe('le rejeu des brouillons au montage', () => {
+    const page = (envoyer) => {
+        const serie = { id: 11, weight: 50, reps: 5 }
+        const marquerNonSynchronisee = vi.fn()
+        const { rejouerLesBrouillons } = useBrouillonsDeSeries()
+
+        rejouerLesBrouillons({
+            trouverLaSerie: (setId) => (String(setId) === '11' ? serie : null),
+            envoyer,
+            marquerNonSynchronisee,
+        })
+
+        return { serie, marquerNonSynchronisee }
+    }
+
+    it('applique le brouillon à la série, l’envoie, et efface la clef une fois accepté', async () => {
+        localStorage.setItem('draft_set_11', JSON.stringify({ weight: 60 }))
+        const envoyer = vi.fn().mockResolvedValue({})
+
+        const { serie } = page(envoyer)
+        await Promise.resolve()
+
+        expect(serie.weight).toBe(60)
+        expect(envoyer).toHaveBeenCalledWith(serie, { weight: 60 })
+        expect(localStorage.getItem('draft_set_11')).toBeNull()
+    })
+
+    it('ne renvoie pas un brouillon déjà refusé : il le marque seulement', () => {
+        localStorage.setItem('draft_set_11', JSON.stringify({ reps: 8, syncRejected: true }))
+        const envoyer = vi.fn()
+
+        const { serie, marquerNonSynchronisee } = page(envoyer)
+
+        expect(serie.reps).toBe(8)
+        expect(envoyer).not.toHaveBeenCalled()
+        expect(marquerNonSynchronisee).toHaveBeenCalledWith(11)
+        expect(localStorage.getItem('draft_set_11')).not.toBeNull()
+    })
+
+    it('laisse tomber la clef quand la file hors ligne a pris l’écriture', async () => {
+        localStorage.setItem('draft_set_11', JSON.stringify({ weight: 60 }))
+        const envoyer = vi.fn().mockRejectedValue({ isOffline: true })
+
+        const { marquerNonSynchronisee } = page(envoyer)
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(localStorage.getItem('draft_set_11')).toBeNull()
+        expect(marquerNonSynchronisee).not.toHaveBeenCalled()
+    })
+
+    it('note le refus définitif sur le brouillon et marque la série', async () => {
+        localStorage.setItem('draft_set_11', JSON.stringify({ weight: 60 }))
+        const envoyer = vi.fn().mockRejectedValue({ response: { status: 422 } })
+
+        const { marquerNonSynchronisee } = page(envoyer)
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(JSON.parse(localStorage.getItem('draft_set_11'))).toEqual({ weight: 60, syncRejected: true })
+        expect(marquerNonSynchronisee).toHaveBeenCalledWith(11)
+    })
+
+    it('garde le brouillon intact sur un échec passager, pour le montage suivant', async () => {
+        localStorage.setItem('draft_set_11', JSON.stringify({ weight: 60 }))
+        const envoyer = vi.fn().mockRejectedValue({ response: { status: 503 } })
+
+        const { marquerNonSynchronisee } = page(envoyer)
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(JSON.parse(localStorage.getItem('draft_set_11'))).toEqual({ weight: 60 })
+        expect(marquerNonSynchronisee).toHaveBeenCalledWith(11)
+    })
+
+    it('efface un brouillon illisible ou vide, et ignore celui d’une série absente', () => {
+        localStorage.setItem('draft_set_11', '{pas du json')
+        localStorage.setItem('draft_set_12', 'null')
+        localStorage.setItem('draft_set_99', JSON.stringify({ weight: 1 }))
+        localStorage.setItem('autre_clef', 'x')
+        const envoyer = vi.fn()
+
+        page(envoyer)
+
+        expect(envoyer).not.toHaveBeenCalled()
+        expect(localStorage.getItem('draft_set_11')).toBeNull()
+        expect(localStorage.getItem('draft_set_12')).toBeNull()
+        expect(localStorage.getItem('draft_set_99')).not.toBeNull()
+        expect(localStorage.getItem('autre_clef')).toBe('x')
     })
 })

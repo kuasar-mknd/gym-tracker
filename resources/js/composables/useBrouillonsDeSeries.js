@@ -1,4 +1,5 @@
 import { isTemporaryId } from '@/Utils/pendingIds'
+import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
 
 /**
  * Les champs d'une série que l'écran modifie. Tous sont des nombres en base :
@@ -90,6 +91,87 @@ export const useBrouillonsDeSeries = () => {
         localStorage.removeItem(draftKey(setId))
     }
 
+    /**
+     * Rejoue au montage les brouillons qu'un depart de la page a laisses.
+     *
+     * Un brouillon deja refuse reste visible et marque, mais n'est plus
+     * renvoye : un 4xx ne devient pas un 2xx. Une reponse hors ligne veut
+     * dire « en file d'attente », le brouillon en serait une seconde copie.
+     * Un echec passager garde le brouillon pour le montage suivant.
+     *
+     * @param {{
+     *   trouverLaSerie: (setId: string) => object | null,
+     *   envoyer: (set: object, payload: object) => Promise<unknown>,
+     *   marquerNonSynchronisee: (setId: unknown) => void,
+     * }} page
+     */
+    const rejouerLesBrouillons = ({ trouverLaSerie, envoyer, marquerNonSynchronisee }) => {
+        const illisibles = []
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+
+            if (!key?.startsWith('draft_set_')) {
+                continue
+            }
+
+            let brouillon
+
+            try {
+                brouillon = JSON.parse(localStorage.getItem(key))
+            } catch {
+                brouillon = null
+            }
+
+            if (brouillon === null || typeof brouillon !== 'object') {
+                illisibles.push(key)
+
+                continue
+            }
+
+            const set = trouverLaSerie(key.replace('draft_set_', ''))
+
+            if (!set) {
+                continue
+            }
+
+            const payload = {}
+
+            NUMERIC_SET_FIELDS.forEach((field) => {
+                if (brouillon[field] !== undefined) {
+                    set[field] = brouillon[field]
+                    payload[field] = brouillon[field]
+                }
+            })
+
+            if (brouillon.syncRejected) {
+                marquerNonSynchronisee(set.id)
+
+                continue
+            }
+
+            envoyer(set, payload)
+                .then(() => localStorage.removeItem(key))
+                .catch((err) => {
+                    const kind = classifySyncError(err)
+
+                    if (kind === SYNC_OFFLINE) {
+                        localStorage.removeItem(key)
+
+                        return
+                    }
+
+                    if (kind === SYNC_PERMANENT) {
+                        localStorage.setItem(key, JSON.stringify({ ...brouillon, syncRejected: true }))
+                    }
+
+                    marquerNonSynchronisee(set.id)
+                })
+        }
+
+        illisibles.forEach((key) => localStorage.removeItem(key))
+    }
+
     return {
         releverLesValeursDuServeur,
         rememberConfirmed,
@@ -98,5 +180,6 @@ export const useBrouillonsDeSeries = () => {
         writeDraftField,
         clearDraftField,
         oublierLaSerie,
+        rejouerLesBrouillons,
     }
 }

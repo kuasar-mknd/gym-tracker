@@ -1536,6 +1536,7 @@ const {
     writeDraftField,
     clearDraftField,
     oublierLaSerie,
+    rejouerLesBrouillons,
 } = useBrouillonsDeSeries()
 
 // ⚡ Perf: Optimistic updateSet — no router.reload
@@ -1801,74 +1802,20 @@ onMounted(() => {
     window.addEventListener('sync:storage-full', handleSyncStorageFull)
     markQueuedFailuresOnMount()
 
-    // Restore set drafts if any exist and haven't synced
-    const keysToRemove = []
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && key.startsWith('draft_set_')) {
-            const setId = key.replace('draft_set_', '')
-            try {
-                const draftData = JSON.parse(localStorage.getItem(key))
-                localWorkout.value.workout_lines?.forEach((line) => {
-                    const set = line.sets?.find((s) => String(s.id) === String(setId))
-                    if (set) {
-                        const payload = {}
-                        if (draftData.weight !== undefined) {
-                            set.weight = draftData.weight
-                            payload.weight = draftData.weight
-                        }
-                        if (draftData.reps !== undefined) {
-                            set.reps = draftData.reps
-                            payload.reps = draftData.reps
-                        }
-                        if (draftData.distance_km !== undefined) {
-                            set.distance_km = draftData.distance_km
-                            payload.distance_km = draftData.distance_km
-                        }
-                        if (draftData.duration_seconds !== undefined) {
-                            set.duration_seconds = draftData.duration_seconds
-                            payload.duration_seconds = draftData.duration_seconds
-                        }
-
-                        // Already refused once. Keep the value visible and marked,
-                        // but stop asking: a 4xx does not become a 2xx.
-                        if (draftData.syncRejected) {
-                            markUnsynced(set.id)
-
-                            return
-                        }
-
-                        patchSet(set, payload)
-                            .then(() => {
-                                localStorage.removeItem(key)
-                            })
-                            .catch((err) => {
-                                const kind = classifySyncError(err)
-
-                                if (kind === SYNC_OFFLINE) {
-                                    // SyncService queued it; the draft would be a
-                                    // second copy of the same pending write.
-                                    localStorage.removeItem(key)
-
-                                    return
-                                }
-
-                                if (kind === SYNC_PERMANENT) {
-                                    localStorage.setItem(key, JSON.stringify({ ...draftData, syncRejected: true }))
-                                }
-
-                                // Transient failures keep the draft untouched so the
-                                // next mount tries again.
-                                markUnsynced(set.id)
-                            })
-                    }
-                })
-            } catch (e) {
-                keysToRemove.push(key)
+    rejouerLesBrouillons({
+        trouverLaSerie: (setId) => {
+            for (const line of localWorkout.value.workout_lines ?? []) {
+                const set = line.sets?.find((s) => String(s.id) === String(setId))
+                if (set) {
+                    return set
+                }
             }
-        }
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k))
+
+            return null
+        },
+        envoyer: patchSet,
+        marquerNonSynchronisee: markUnsynced,
+    })
 })
 
 onUnmounted(() => {
