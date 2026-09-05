@@ -19,14 +19,13 @@
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { useOrdreDeLaSeance } from '@/composables/useOrdreDeLaSeance'
 import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
 import { useRapportDeSynchronisation } from '@/composables/useRapportDeSynchronisation'
 import { useSeriesDeLaSeance } from '@/composables/useSeriesDeLaSeance'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
-import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
+import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import SyncService from '@/Utils/SyncService'
 import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
 import Modal from '@/Components/UI/Modal.vue'
@@ -694,117 +693,30 @@ onUnmounted(() => {
                  it rebuilt the whole exercise card — every set input inside it
                  included — at the exact moment the user was filling in the first
                  set of the exercise they had just added. -->
-                <GlassCard
+                <CarteDExercice
                     v-for="(line, lineIndex) in localWorkout.workout_lines"
                     :key="rowKey(line)"
-                    :dusk="`exercise-card-${lineIndex}`"
-                    :data-line-id="line.id"
-                    :dusk-id="`exercise-line-${line.id}`"
-                    data-exercice
-                    class="carte-portable"
-                >
-                    <div class="mb-4 flex items-center justify-between gap-2">
-                        <div class="min-w-0">
-                            <!--
-                          text-text-main is near-black and has no dark variant of
-                          its own, so in dark mode the exercise name was rendered
-                          at 2.20:1 against the page and its category at 1.71:1 —
-                          both far under the 4.5:1 that ordinary text needs, and
-                          under even the 3:1 allowed for large text. The name of
-                          the exercise you are working on was effectively
-                          invisible.
-                        -->
-                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                                {{ line.exercise.name }}
-                            </h3>
-                            <p class="text-text-muted text-xs font-bold uppercase">
-                                {{ line.exercise.category }}
-                            </p>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-1">
-                            <!--
-                          Une poignee, et non la carte entiere : les rangees de
-                          series sont deja sensibles au glissement lateral, et
-                          laisser la bibliotheque ecouter toute la carte les
-                          rendrait inutilisables au doigt.
-                        -->
-                            <button
-                                v-if="!isFinished && localWorkout.workout_lines.length > 1"
-                                type="button"
-                                data-poignee-exercice
-                                class="text-text-muted focus-visible:ring-accent-primary min-h-touch min-w-touch inline-flex cursor-grab touch-none items-center justify-center rounded-lg transition-colors select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
-                                :dusk="`reorder-line-${lineIndex}`"
-                                :aria-label="`Déplacer ${line.exercise.name}`"
-                                @keydown.up.prevent="deplacerExercice(lineIndex, lineIndex - 1)"
-                                @keydown.down.prevent="deplacerExercice(lineIndex, lineIndex + 1)"
-                            >
-                                <span class="material-symbols-outlined text-lg" aria-hidden="true">drag_indicator</span>
-                            </button>
-
-                            <GlassIconButton
-                                v-press="{ haptic: 'warning' }"
-                                icon="delete"
-                                label="Supprimer l'exercice"
-                                ton="danger"
-                                compact
-                                :dusk="`remove-line-${lineIndex}`"
-                                @click="removeLine(line.id)"
-                            />
-                        </div>
-                    </div>
-
-                    <div :ref="poserLeConteneurDeSeries(line.id)" class="space-y-2">
-                        <!--
-                      Keyed on something that never changes for the life of the
-                      row. Folding the index in made the key change for every row
-                      below a deletion, so Vue destroyed and rebuilt them all:
-                      swipe state reset, inputs re-created, and a field being
-                      edited losing focus mid-keystroke.
-
-                      The set's id has the same defect and outlived that fix: an
-                      optimistic row wears a placeholder until the server answers,
-                      and `tempSet.id = realSetId` then changes the key, so Vue
-                      tears the row down and builds a new one — swipe state and
-                      inputs included — at the moment the user is most likely to
-                      be filling it in.
-
-                      Demonstrated, and no more than that: the guard in
-                      workoutSetEntry.test.js fails without this, showing the node
-                      really is replaced. It was written while chasing a lost
-                      duration entry and did NOT fix it, so nothing here should be
-                      read as a diagnosis of that.
-                    -->
-                        <RangeeDeSerie
-                            v-for="(set, index) in line.sets"
-                            :key="`${rowKey(set)}:${generationDesSeries.get(line.id) ?? 0}`"
-                            :set="set"
-                            :index="index"
-                            :line-index="lineIndex"
-                            :line="line"
-                            :is-finished="isFinished"
-                            :unsynced="unsyncedSetIds.has(String(set.id))"
-                            :reordonnable="peutReordonner(line)"
-                            :disabled="serieEnDeplacement === line.id"
-                            @pointerdown="ecarterLesCommandes"
-                            @toggle="toggleSetCompletion(set, line.exercise.default_rest_time)"
-                            @remove="removeSet(set.id)"
-                            @saisie-en-cours="(field, value) => saisieEnCours(set, field, value)"
-                            @saisie-terminee="(field, value) => saisieTerminee(set, field, value)"
-                            @update="(field, value) => updateSet(set, field, value)"
-                            @deplacer="(nouveau) => deplacerSerie(line, index, nouveau)"
-                        />
-                    </div>
-
-                    <button
-                        v-if="!isFinished"
-                        v-press
-                        @click="addSet(line.id)"
-                        :dusk="`add-set-${lineIndex}`"
-                        class="text-text-muted hover:border-accent-state border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition-all"
-                    >
-                        Ajouter une série
-                    </button>
-                </GlassCard>
+                    :line="line"
+                    :line-index="lineIndex"
+                    :is-finished="isFinished"
+                    :deplacable="localWorkout.workout_lines.length > 1"
+                    :reordonnable="peutReordonner(line)"
+                    :serie-en-vol="serieEnDeplacement === line.id"
+                    :generation="generationDesSeries.get(line.id) ?? 0"
+                    :clef="rowKey"
+                    :est-non-synchronisee="(set) => unsyncedSetIds.has(String(set.id))"
+                    :poser-le-conteneur="poserLeConteneurDeSeries(line.id)"
+                    @deplacer="(nouveau) => deplacerExercice(lineIndex, nouveau)"
+                    @retirer="removeLine(line.id)"
+                    @ajouter-serie="addSet(line.id)"
+                    @pointerdown="ecarterLesCommandes"
+                    @toggle="(set) => toggleSetCompletion(set, line.exercise.default_rest_time)"
+                    @remove="(set) => removeSet(set.id)"
+                    @saisie-en-cours="(set, field, value) => saisieEnCours(set, field, value)"
+                    @saisie-terminee="(set, field, value) => saisieTerminee(set, field, value)"
+                    @update="(set, field, value) => updateSet(set, field, value)"
+                    @deplacer-serie="(index, nouveau) => deplacerSerie(line, index, nouveau)"
+                />
             </div>
 
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
