@@ -34,7 +34,7 @@ php artisan event:cache
 if echo "$@" | grep -q "octane:frankenphp"; then
     # Un echec de migration arrete le conteneur : demarrer un code qui ne
     # correspond pas au schema a deja coute plusieurs pannes (#1630).
-    php artisan migrate --force --quiet
+    php artisan migrate --force
     php artisan filament:upgrade --no-interaction
 fi
 

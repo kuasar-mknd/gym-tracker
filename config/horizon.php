@@ -230,7 +230,9 @@ return [
     'environments' => [
         'production' => [
             'supervisor-1' => [
-                'maxProcesses' => 10,
+                // Le conteneur `worker` est plafonné à 512 Mo et chaque processus
+                // en prend jusqu'à 128 : dix en réclamaient 1 280 (#1630).
+                'maxProcesses' => 3,
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],

@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Le démarrage dit la vérité sur les migrations, et Horizon tient dans son conteneur** (#1630) : `migrate` n'est plus `--quiet`, donc la ligne où une série s'arrête se lit dans le journal ; Horizon passe de dix à trois processus en production, dans le plafond de 512 Mo du service `worker` au lieu d'en réclamer 1 280. Deux gardes tiennent ces deux faits
+
 ### Modifié
 - **Les modèles de séance ajoutent leurs exercices par la même modale que la séance** (#1675) : `TemplateForm` abandonne sa propre modale (recherche, création sur le champ, bandeau d'erreur avec code HTTP) pour `AjoutDExerciceModal`, avec sa recherche mémorisée et ses erreurs en clair ; le contrôleur des exercices ne lit plus l'en-tête `X-Quick-Create`, la demande de JSON suffit
 
