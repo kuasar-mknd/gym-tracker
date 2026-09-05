@@ -8,9 +8,6 @@ const WilksScoreChart = (await import('@/Components/Stats/WilksScoreChart.vue'))
 
 const mountChart = (data) => mount(WilksScoreChart, { props: { data } })
 
-/** The component's own label expression, so ordering is asserted and not the locale. */
-const dayLabel = (timestamp) => new Date(timestamp).toLocaleDateString()
-
 describe('WilksScoreChart', () => {
     it('trace l’historique du plus ancien au plus récent, quel que soit l’ordre reçu', () => {
         const wrapper = mountChart([
@@ -22,11 +19,7 @@ describe('WilksScoreChart', () => {
         const chart = chartDataOf(wrapper, 'Line')
 
         expect(chart.datasets[0].data).toEqual([300, 310.25, 320.5])
-        expect(chart.labels).toEqual([
-            dayLabel('2026-01-05T12:00:00Z'),
-            dayLabel('2026-02-01T12:00:00Z'),
-            dayLabel('2026-03-10T12:00:00Z'),
-        ])
+        expect(chart.labels).toEqual(['05/01', '01/02', '10/03'])
     })
 
     it('ne réordonne pas le tableau que la page lui a passé', () => {

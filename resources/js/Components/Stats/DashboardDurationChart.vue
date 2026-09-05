@@ -3,6 +3,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 import BaseChart from './BaseChart.vue'
+import { etiquetteDeDate } from '@/Utils/date'
 
 const props = defineProps({
     data: {
@@ -17,10 +18,7 @@ const reversedData = computed(() => [...props.data].reverse())
 const labels = computed(() =>
     reversedData.value.map((d) => {
         const date = new Date(d.started_at)
-        return date.toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'short',
-        })
+        return etiquetteDeDate(date)
     }),
 )
 

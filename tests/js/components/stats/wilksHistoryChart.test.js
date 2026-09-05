@@ -58,20 +58,20 @@ describe('WilksHistoryChart series', () => {
         const plotted = series.labels.map((label, index) => [label.match(/\d+/)[0], series.datasets[0].data[index]])
 
         expect(plotted).toEqual([
-            ['4', '312.46'],
+            ['04', '312.46'],
             ['18', '318.10'],
-            ['2', '305.90'],
+            ['02', '305.90'],
         ])
     })
 
-    it('labels the points with a day and a spelled month, never the raw timestamp', () => {
+    it('labels the points as day/month, never the raw timestamp', () => {
         const labels = seriesOf(mount(WilksHistoryChart, { props: { data: scores } })).labels
 
         labels.forEach((label) => {
             expect(label).not.toContain('T12:00:00Z')
-            // The month is spelled out, and the year — always the current one on
-            // a history chart — is left off the axis.
-            expect(label).toMatch(/\p{L}/u)
+            // `jj/mm`, comme tout axe de dates de l'application ; l'année,
+            // toujours celle en cours sur un historique, reste hors de l'axe.
+            expect(label).toMatch(/^\d{2}\/\d{2}$/)
             expect(label).not.toContain('2026')
         })
     })

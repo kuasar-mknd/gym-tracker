@@ -8,6 +8,7 @@ const props = defineProps({
         type: Array,
         required: true,
     },
+    hauteur: { type: String, default: 'h-40' },
 })
 
 const labels = computed(() => props.data.map((item) => item.date))
@@ -57,10 +58,9 @@ const infobulle = { accent: 'accent-secondary', callbacks: { label: (context) =>
         type="line"
         :labels="labels"
         :datasets="datasets"
-        hauteur="h-40"
+        :hauteur="hauteur"
         lueur="accent-secondary"
         :infobulle="infobulle"
-        :axe-x="false"
         :axe-y="{ grid: { display: false } }"
     />
 </template>

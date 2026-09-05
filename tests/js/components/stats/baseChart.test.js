@@ -165,6 +165,15 @@ describe('BaseChart', () => {
         )
     })
 
+    it('remplit la carte qui fixe sa hauteur, au lieu d’y laisser un vide', () => {
+        // `h-full` sur le cadre interne ne mesurait rien : le cadre externe n'avait
+        // pas de hauteur, et six cartes gardaient un vide sous leur graphique.
+        const cadre = monter({ hauteur: 'h-full' }).find('.relative')
+
+        expect(cadre.classes()).toContain('flex-1')
+        expect(cadre.classes()).not.toContain('h-full')
+    })
+
     it('pose la hauteur, la lueur et la surcouche', () => {
         const wrapper = monter({ hauteur: 'h-64', lueur: 'accent-info' }, { surcouche: '<span>centre</span>' })
         const cadre = wrapper.find('.relative')

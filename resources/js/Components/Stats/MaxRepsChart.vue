@@ -46,7 +46,7 @@ const datasets = computed(() => [
         type="line"
         :labels="labels"
         :datasets="datasets"
-        hauteur="h-48"
+        hauteur="h-full"
         :infobulle="{ accent: 'accent-info' }"
         :axe-y="{ ticks: { precision: 0 } }"
     />

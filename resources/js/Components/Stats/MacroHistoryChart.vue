@@ -2,6 +2,7 @@
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { etiquetteDeDate } from '@/Utils/date'
 
 const props = defineProps({
     data: {
@@ -15,10 +16,7 @@ const sortedData = computed(() => [...props.data].reverse())
 
 const labels = computed(() =>
     sortedData.value.map((item) => {
-        return new Date(item.created_at).toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-        })
+        return etiquetteDeDate(item.created_at)
     }),
 )
 

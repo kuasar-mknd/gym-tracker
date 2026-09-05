@@ -208,7 +208,7 @@ const scatterData = computed(() => {
                         <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
                     </div>
                     <div class="h-64">
-                        <VolumeTrendChart :data="volumeData" />
+                        <VolumeTrendChart :data="volumeData" hauteur="h-full" />
                     </div>
                 </GlassCard>
 

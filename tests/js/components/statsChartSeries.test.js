@@ -165,7 +165,7 @@ describe('RecentWorkoutsExercisesChart series', () => {
     it('reads chronologically, oldest bar on the left, counts following their date', () => {
         const series = seriesOf(mountChart(), 'Bar')
 
-        expect(series.labels).toEqual(['1 juil.', '5 juil.', '9 juil.'])
+        expect(series.labels).toEqual(['01/07', '05/07', '09/07'])
         expect(series.datasets[0].data).toEqual([1, 3, 5])
     })
 

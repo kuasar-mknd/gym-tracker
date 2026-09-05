@@ -175,8 +175,11 @@ const style = computed(() =>
 </script>
 
 <template>
-    <div class="w-full">
-        <div :class="['relative w-full', hauteur, { 'avec-lueur': lueur }]" :style="style">
+    <div class="flex h-full w-full flex-col">
+        <div
+            :class="['relative w-full', hauteur === 'h-full' ? 'min-h-0 flex-1' : hauteur, { 'avec-lueur': lueur }]"
+            :style="style"
+        >
             <slot v-if="vide" name="vide" />
             <template v-else>
                 <component :is="composant" :data="chartData" :options="chartOptions" :plugins="plugins" />

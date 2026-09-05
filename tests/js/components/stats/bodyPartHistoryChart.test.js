@@ -16,9 +16,8 @@ const BodyPartHistoryChart = (await import('@/Components/Stats/BodyPartHistoryCh
 
 const chartOf = (props) => mount(BodyPartHistoryChart, { props }).findComponent({ name: 'Line' })
 
-/** The same day, formatted the way the component formats it — locale-agnostic. */
-const dayLabel = (year, monthIndex, day) =>
-    new Date(year, monthIndex, day).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+/** Le même jour, tel que l'axe l'écrit : `jj/mm`, sans passer par la locale du navigateur. */
+const dayLabel = (year, monthIndex, day) => `${String(day).padStart(2, '0')}/${String(monthIndex + 1).padStart(2, '0')}`
 
 /**
  * A measurement is a calendar day, not an instant. Read in a timezone behind

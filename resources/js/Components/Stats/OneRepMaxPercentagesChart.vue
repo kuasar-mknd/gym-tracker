@@ -52,5 +52,5 @@ const infobulle = {
 </script>
 
 <template>
-    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" :axe-y="false" />
+    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" />
 </template>

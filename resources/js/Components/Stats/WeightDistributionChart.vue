@@ -53,7 +53,7 @@ const axeX = {
     <BaseChart
         :labels="labels"
         :datasets="datasets"
-        hauteur="h-48"
+        hauteur="h-full"
         :infobulle="infobulle"
         :axe-x="axeX"
         :axe-y="{ ticks: { stepSize: 1 } }"

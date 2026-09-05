@@ -49,7 +49,7 @@ defineProps({
                         <GlassSkeleton height="8rem" width="100%" class="rounded-xl" />
                     </div>
                 </template>
-                <WeightHistoryChart v-if="weightHistory?.length > 0" :data="weightHistory" />
+                <WeightHistoryChart v-if="weightHistory?.length > 0" compact :data="weightHistory" />
                 <div v-else class="flex h-full items-center justify-center text-center">
                     <p class="text-text-muted/50 text-sm italic">Pas encore de données de poids</p>
                 </div>
