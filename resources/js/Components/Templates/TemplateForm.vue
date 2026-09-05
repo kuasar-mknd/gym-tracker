@@ -3,10 +3,9 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import GlassSelect from '@/Components/UI/GlassSelect.vue'
-import Modal from '@/Components/UI/Modal.vue'
+import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { useForm } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps({
     // Absent à la création, présent à la modification : c'est la seule
@@ -18,18 +17,6 @@ const props = defineProps({
     exercises: {
         type: Array,
         default: () => [],
-    },
-    categories: {
-        type: Array,
-        default: () => ['Pectoraux', 'Dos', 'Jambes', 'Épaules', 'Bras', 'Abdominaux', 'Cardio'],
-    },
-    types: {
-        type: Array,
-        default: () => [
-            { value: 'strength', label: 'Force' },
-            { value: 'cardio', label: 'Cardio' },
-            { value: 'timed', label: 'Temps' },
-        ],
     },
 })
 
@@ -56,32 +43,14 @@ const form = useForm({
 
 const idDescription = `template-description-${props.template?.id ?? 'new'}`
 
-const searchQuery = ref('')
 const showAddExercise = ref(false)
-const showCreateForm = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
 
-const createExerciseForm = useForm({
-    name: '',
-    type: 'strength',
-    category: '',
-})
+const addExercise = (exerciseId) => {
+    const exercise = localExercises.value.find((e) => e.id === exerciseId)
 
-// Quick-create goes through fetch() rather than Inertia, so nothing routes a
-// non-422 failure anywhere. This is where it lands.
-const createError = ref(null)
+    if (!exercise) return
 
-const filteredExercises = computed(() => {
-    const exercises = localExercises.value
-    if (!searchQuery.value) return exercises
-    return exercises.filter((e) => e.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
-})
-
-const hasNoResults = computed(() => {
-    return searchQuery.value && filteredExercises.value.length === 0
-})
-
-const addExercise = (exercise) => {
     form.exercises.push({
         uid: nextUid++,
         id: exercise.id,
@@ -89,78 +58,12 @@ const addExercise = (exercise) => {
         sets: [{ reps: 10, weight: null, is_warmup: false }],
     })
     showAddExercise.value = false
-    searchQuery.value = ''
 }
 
-const createAndAddExercise = async () => {
-    createExerciseForm.processing = true
-    createExerciseForm.clearErrors()
-    createError.value = null
-
-    try {
-        const response = await fetch(route('exercises.store'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-Quick-Create': 'true',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-            },
-            body: JSON.stringify({
-                name: createExerciseForm.name,
-                type: createExerciseForm.type,
-                category: createExerciseForm.category,
-            }),
-        })
-
-        if (response.ok) {
-            const responseData = await response.json()
-            const exercise = responseData.exercise || responseData.data || responseData
-
-            if (!exercise || !exercise.id) {
-                createError.value = "La réponse du serveur n'a pas pu être lue. L'exercice n'a pas été créé."
-                createExerciseForm.processing = false
-                return
-            }
-
-            localExercises.value.push(exercise)
-            localExercises.value.sort((a, b) => a.name.localeCompare(b.name))
-
-            addExercise(exercise)
-
-            createExerciseForm.reset()
-            showCreateForm.value = false
-            createExerciseForm.processing = false
-        } else if (response.status === 422) {
-            const errors = await response.json()
-            if (errors.errors) {
-                Object.keys(errors.errors).forEach((key) => {
-                    createExerciseForm.setError(key, errors.errors[key][0])
-                })
-            }
-            createExerciseForm.processing = false
-        } else {
-            // 419 on an expired CSRF token, 403, 500, anything else. Resetting
-            // `processing` and stopping there just un-spun the button: the user
-            // pressed "Créer et ajouter" and the modal sat unchanged.
-            createError.value = `La création a échoué (erreur ${response.status}). Réessaie.`
-            createExerciseForm.processing = false
-        }
-    } catch {
-        createError.value = 'La création a échoué. Vérifie ta connexion et réessaie.'
-        createExerciseForm.processing = false
-    }
-}
-
-const quickCreate = () => {
-    createExerciseForm.name = searchQuery.value
-    showCreateForm.value = true
-}
-
-const closeAddModal = () => {
-    showAddExercise.value = false
-    showCreateForm.value = false
-    searchQuery.value = ''
+/** Cree sur le champ : il rejoint la bibliotheque a sa place, et la modale le choisit. */
+const ajouterALaBibliotheque = (exercise) => {
+    localExercises.value.push(exercise)
+    localExercises.value.sort((a, b) => a.name.localeCompare(b.name))
 }
 
 const addSet = (exerciseIndex) => {
@@ -357,105 +260,12 @@ const submit = () => {
             </div>
         </form>
 
-        <!-- Add Exercise Modal. Built out of bare divs it had no dialog role, no
-             Escape, and nothing keeping Tab from wandering into the form behind
-             it; Modal opens a native <dialog>, which supplies all three. -->
-        <Modal
+        <AjoutDExerciceModal
             :show="showAddExercise"
-            max-width="lg"
-            position="bottom"
-            aria-labelledby="add-exercise-title"
-            @close="closeAddModal"
-        >
-            <div>
-                <!-- Modal Header -->
-                <div class="border-border flex items-center justify-between border-b p-4">
-                    <h3 id="add-exercise-title" class="font-display text-text-main text-lg font-black uppercase italic">
-                        {{ showCreateForm ? 'Nouvel exercice' : 'Choisir un exercice' }}
-                    </h3>
-                    <GlassIconButton v-press icon="close" label="Fermer" @click="closeAddModal" />
-                </div>
-
-                <!-- Create Exercise Form -->
-                <div v-if="showCreateForm" class="p-4">
-                    <form @submit.prevent="createAndAddExercise" class="space-y-4">
-                        <GlassInput
-                            v-model="createExerciseForm.name"
-                            label="Nom de l'exercice"
-                            placeholder="Ex: Développé couché"
-                            :error="createExerciseForm.errors.name"
-                            autofocus
-                        />
-                        <div class="grid grid-cols-2 gap-3">
-                            <GlassSelect v-model="createExerciseForm.type" label="Type" :options="types" />
-                            <GlassSelect
-                                v-model="createExerciseForm.category"
-                                label="Catégorie"
-                                :options="categories"
-                                empty-label="— Aucune —"
-                            />
-                        </div>
-                        <p
-                            v-if="createError"
-                            class="text-accent-danger-deep text-sm font-bold"
-                            role="alert"
-                            dusk="quick-create-error"
-                        >
-                            {{ createError }}
-                        </p>
-
-                        <div class="flex gap-2">
-                            <GlassButton
-                                type="submit"
-                                variant="primary"
-                                class="flex-1"
-                                :loading="createExerciseForm.processing"
-                            >
-                                Créer et ajouter
-                            </GlassButton>
-                            <GlassButton type="button" variant="secondary" @click="showCreateForm = false">
-                                Annuler
-                            </GlassButton>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Search & List -->
-                <template v-else>
-                    <div class="p-4 uppercase">
-                        <GlassInput v-model="searchQuery" placeholder="Rechercher..." autofocus />
-                    </div>
-
-                    <div class="max-h-[50vh] overflow-y-auto p-4 pt-0">
-                        <!-- No Results - Quick Create -->
-                        <div v-if="hasNoResults" class="py-6 text-center">
-                            <p class="text-text-muted mb-3">Aucun exercice trouvé pour "{{ searchQuery }}"</p>
-                            <GlassButton variant="primary" type="button" @click="quickCreate">
-                                Créer "{{ searchQuery }}"
-                            </GlassButton>
-                        </div>
-
-                        <!-- Exercise List -->
-                        <div v-else class="space-y-2">
-                            <button
-                                v-for="ex in filteredExercises"
-                                :key="ex.id"
-                                type="button"
-                                @click="addExercise(ex)"
-                                class="hover:border-accent-primary border-border bg-surface-sunken hover:bg-surface-card flex w-full items-center justify-between rounded-2xl border p-4 transition"
-                            >
-                                <div class="text-left">
-                                    <div class="text-text-main font-bold">{{ ex.name }}</div>
-                                    <div class="text-text-muted text-xs">{{ ex.category }}</div>
-                                </div>
-                                <span class="material-symbols-outlined text-accent-primary-deep" aria-hidden="true"
-                                    >add_circle</span
-                                >
-                            </button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </Modal>
+            :exercises="localExercises"
+            @close="showAddExercise = false"
+            @add="addExercise"
+            @created="ajouterALaBibliotheque"
+        />
     </div>
 </template>

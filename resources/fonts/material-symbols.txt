@@ -13,7 +13,6 @@
 # without regenerating the font. All three draw a word where a glyph belongs,
 accessibility_new
 add
-add_circle
 apps
 arrow_back
 arrow_downward

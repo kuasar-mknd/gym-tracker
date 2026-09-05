@@ -33,6 +33,7 @@ vi.mock('@inertiajs/vue3', async () => {
 import TemplateCreate from '@/Pages/Workouts/Templates/Create.vue'
 import TemplateEdit from '@/Pages/Workouts/Templates/Edit.vue'
 import TemplateForm from '@/Components/Templates/TemplateForm.vue'
+import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { passesSlot } from './pageStubs'
 
 // Le formulaire vit dans TemplateForm, sous la page : ses internes se lisent là.
@@ -48,6 +49,7 @@ beforeAll(() => {
 
 beforeEach(() => {
     forms.length = 0
+    localStorage.clear()
     vi.restoreAllMocks()
 })
 
@@ -118,100 +120,29 @@ describe.each([
     ['creation', () => mountCreate()],
     ['edition', () => mountEdit({ name: 'T', description: '', workout_template_lines: [] })],
 ])('the exercise picker on %s', (_name, mountPage) => {
-    it('searches without regard to case', async () => {
-        const wrapper = mountPage()
-
-        interne(wrapper).searchQuery = 'squ'
-        await interne(wrapper).$nextTick()
-
-        expect(interne(wrapper).filteredExercises.map((e) => e.name)).toEqual(['Squat'])
-    })
-
-    it('only calls it a dead end once something has been typed', async () => {
-        const wrapper = mountPage()
-
-        // An empty library with an empty query is a first visit, not a failed
-        // search — offering "create this one" there names nothing.
-        //
-        // Falsy rather than false on purpose: the computed is `query && …`, so
-        // with nothing typed it hands back the empty string. `v-if` reads the
-        // two the same, and pinning it to `false` would fail on a rewrite that
-        // changed nothing a user could see.
-        expect(interne(wrapper).hasNoResults).toBeFalsy()
-
-        interne(wrapper).searchQuery = 'introuvable'
-        await interne(wrapper).$nextTick()
-
-        expect(interne(wrapper).hasNoResults).toBeTruthy()
-    })
-
     it('adds a working set with the exercise, not an empty row', () => {
         const wrapper = mountPage()
         const before = interne(wrapper).form.exercises.length
 
-        interne(wrapper).addExercise({ id: 2, name: 'Squat' })
+        interne(wrapper).addExercise(2)
 
         expect(interne(wrapper).form.exercises).toHaveLength(before + 1)
         expect(interne(wrapper).form.exercises.at(-1).sets).toEqual([{ reps: 10, weight: null, is_warmup: false }])
     })
 })
 
-describe('quick-creating an exercise from the template screen', () => {
-    const failWith = (status, body = {}) =>
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-            ok: status >= 200 && status < 300,
-            status,
-            json: async () => body,
-        })
-
-    it('names the status when the server refuses for anything but validation', async () => {
-        failWith(419)
-
+describe('an exercise created from the picker', () => {
+    it('joins the library where its name puts it, then the template', async () => {
         const wrapper = mountCreate()
-        await interne(wrapper).createAndAddExercise()
+        const modale = wrapper.findComponent(AjoutDExerciceModal)
+
+        modale.vm.$emit('created', { id: 9, name: 'Aabtiré' })
+        modale.vm.$emit('add', 9)
         await flushPromises()
 
-        // 419 on an expired token, 403, 500 — this branch used to only un-spin
-        // the button, so the user pressed the button and the modal sat there.
-        expect(interne(wrapper).createError).toContain('419')
-        expect(templateForm().exercises).toHaveLength(0)
-    })
-
-    it('puts a validation refusal on the field it belongs to', async () => {
-        failWith(422, { errors: { name: ['Ce nom existe déjà.'] } })
-
-        const wrapper = mountCreate()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        expect(interne(wrapper).createError).toBeNull()
-        expect(forms[1].errors.name).toBe('Ce nom existe déjà.')
-    })
-
-    it('refuses to add an exercise the server answered without an id', async () => {
-        failWith(200, { exercise: { name: 'Sans identifiant' } })
-
-        const wrapper = mountCreate()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        // Adding it anyway would put a row in the template that no save can
-        // ever reference.
-        expect(interne(wrapper).createError).toContain("n'a pas pu être lue")
-        expect(templateForm().exercises).toHaveLength(0)
-    })
-
-    it('adds it to both the library and the template when it works', async () => {
-        failWith(201, { exercise: { id: 9, name: 'Aabtiré' } })
-
-        const wrapper = mountCreate()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        expect(templateForm().exercises.at(-1).id).toBe(9)
-        // Sorted, so the new one is findable where its name puts it rather than
-        // stuck at the bottom of the picker.
         expect(interne(wrapper).localExercises[0].name).toBe('Aabtiré')
+        expect(templateForm().exercises.at(-1)).toMatchObject({ id: 9, name: 'Aabtiré' })
+        expect(interne(wrapper).showAddExercise).toBe(false)
     })
 })
 

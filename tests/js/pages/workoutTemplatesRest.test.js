@@ -45,6 +45,7 @@ import { router } from '@inertiajs/vue3'
 import TemplateCreate from '@/Pages/Workouts/Templates/Create.vue'
 import TemplateEdit from '@/Pages/Workouts/Templates/Edit.vue'
 import TemplateForm from '@/Components/Templates/TemplateForm.vue'
+import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import TemplateIndex from '@/Pages/Workouts/Templates/Index.vue'
 import { passesSlot, layoutStub } from './pageStubs'
 
@@ -69,6 +70,7 @@ beforeAll(() => {
 beforeEach(() => {
     forms.length = 0
     vi.restoreAllMocks()
+    localStorage.clear()
     router.post.mockClear()
     router.delete.mockClear()
 })
@@ -106,7 +108,6 @@ const mountIndex = (templates) =>
 
 /** The template's own form; the quick-create one is the second `useForm` made. */
 const templateForm = () => forms[0]
-const quickCreateForm = () => forms[1]
 
 /** Puts exercises into the form the way the picker would have. */
 const seed = async (wrapper, exercises) => {
@@ -120,16 +121,6 @@ const twoExercises = [
 ]
 
 const byLabel = (wrapper, label) => wrapper.findAll(`[aria-label="${label}"]`)
-
-/** A promise whose settling this test controls, so the in-flight window is real. */
-const deferred = () => {
-    let resolve
-    const promise = new Promise((res) => {
-        resolve = res
-    })
-
-    return { promise, resolve }
-}
 
 const openPicker = async (wrapper) => {
     const opener = wrapper.findAll('button').find((b) => b.text().includes('+ Ajouter un exercice'))
@@ -449,7 +440,8 @@ describe.each([
         await openPicker(wrapper)
 
         expect(interne(wrapper).showAddExercise).toBe(true)
-        expect(wrapper.get('#add-exercise-title').text()).toBe('Choisir un exercice')
+        expect(wrapper.get('#add-exercise-title').text()).toBe('Ajouter un exercice')
+        expect(wrapper.find('[dusk="new-exercise-name"]').exists()).toBe(false)
     })
 
     it('narrows the rendered list to what was typed in the search box', async () => {
@@ -477,152 +469,6 @@ describe.each([
         expect(interne(wrapper).showAddExercise).toBe(false)
     })
 
-    it('sends the type and the category that were picked, not the defaults', async () => {
-        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-            ok: true,
-            status: 201,
-            json: async () => ({ exercise: { id: 9, name: 'Rowing Haltère' } }),
-        })
-
-        const wrapper = mountPage()
-        interne(wrapper).showAddExercise = true
-        interne(wrapper).showCreateForm = true
-        await interne(wrapper).$nextTick()
-
-        await wrapper.get('input[placeholder="Ex: Développé couché"]').setValue('Rowing Haltère')
-        const [type, category] = wrapper.findAll('select')
-        await type.setValue('cardio')
-        await category.setValue('Dos')
-
-        await wrapper.findAll('form')[1].trigger('submit')
-        await flushPromises()
-
-        // The type defaults to 'strength' and the category to nothing, so a
-        // select wired to the wrong field still produces a valid request — and
-        // an exercise filed under something the user never chose.
-        expect(JSON.parse(fetchSpy.mock.calls[0][1].body)).toEqual({
-            name: 'Rowing Haltère',
-            type: 'cardio',
-            category: 'Dos',
-        })
-    })
-
-    it('carries the search text over as the name of the exercise being created', async () => {
-        const wrapper = mountPage()
-        interne(wrapper).searchQuery = 'Rowing Haltère'
-        await interne(wrapper).$nextTick()
-
-        interne(wrapper).quickCreate()
-        await interne(wrapper).$nextTick()
-
-        // Retyping a name that was just typed is the whole thing this saves.
-        expect(quickCreateForm().name).toBe('Rowing Haltère')
-        expect(wrapper.get('#add-exercise-title').text()).toBe('Nouvel exercice')
-    })
-
-    it('goes back to the list when the creation form is cancelled', async () => {
-        const wrapper = mountPage()
-        interne(wrapper).showAddExercise = true
-        interne(wrapper).showCreateForm = true
-        await interne(wrapper).$nextTick()
-
-        const cancel = wrapper.findAll('button').find((b) => b.text() === 'Annuler')
-        await cancel.trigger('click')
-
-        expect(interne(wrapper).showCreateForm).toBe(false)
-        expect(interne(wrapper).showAddExercise).toBe(true)
-        expect(wrapper.get('#add-exercise-title').text()).toBe('Choisir un exercice')
-    })
-
-    it('forgets the search and the half-filled form when it is closed', async () => {
-        const wrapper = mountPage()
-        interne(wrapper).showAddExercise = true
-        interne(wrapper).showCreateForm = true
-        interne(wrapper).searchQuery = 'introuvable'
-        await interne(wrapper).$nextTick()
-
-        await byLabel(wrapper, 'Fermer')[0].trigger('click')
-
-        expect(interne(wrapper).showAddExercise).toBe(false)
-        expect(interne(wrapper).showCreateForm).toBe(false)
-        // A leftover query reopens the modal on a filtered list nobody asked for.
-        expect(interne(wrapper).searchQuery).toBe('')
-    })
-
-    it('shows the failure inside the modal instead of only recording it', async () => {
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
-
-        const wrapper = mountPage()
-        interne(wrapper).showAddExercise = true
-        interne(wrapper).showCreateForm = true
-        await interne(wrapper).$nextTick()
-
-        await wrapper.findAll('form')[1].trigger('submit')
-        await flushPromises()
-
-        const message = wrapper.get('[dusk="quick-create-error"]')
-
-        expect(message.text()).toContain('500')
-        expect(message.attributes('role')).toBe('alert')
-    })
-
-    it('accepts an exercise returned inside a data envelope', async () => {
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-            ok: true,
-            status: 201,
-            json: async () => ({ data: { id: 12, name: 'Rowing Haltère' } }),
-        })
-
-        const wrapper = mountPage()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        // An API Resource wraps its payload in `data`; only reading `exercise`
-        // would drop the exercise the user just created on the floor.
-        expect(templateForm().exercises.at(-1)).toMatchObject({ id: 12, name: 'Rowing Haltère' })
-    })
-
-    it('accepts an exercise returned bare, with no envelope at all', async () => {
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-            ok: true,
-            status: 201,
-            json: async () => ({ id: 13, name: 'Rowing Haltère' }),
-        })
-
-        const wrapper = mountPage()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        expect(templateForm().exercises.at(-1)).toMatchObject({ id: 13, name: 'Rowing Haltère' })
-    })
-
-    it('stops spinning on a rejection that names no field', async () => {
-        const answer = deferred()
-        vi.spyOn(globalThis, 'fetch').mockReturnValue(answer.promise)
-
-        const wrapper = mountPage()
-        const submitted = interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        // Witnessed while the request is out. "Comes back to life" asserted on
-        // its own is satisfied by a button that never went busy in the first
-        // place, which is not the bug this guards.
-        expect(quickCreateForm().processing, 'the button never went busy').toBe(true)
-
-        answer.resolve({ ok: false, status: 422, json: async () => ({ message: 'Requête invalide.' }) })
-        await submitted
-        await flushPromises()
-
-        // Walking an absent `errors` bag throws, and the surrounding try/catch
-        // would then tell the user their connection is down — which it is not,
-        // and which sends them to reset a router over a validation refusal.
-        expect(interne(wrapper).createError).toBeNull()
-        // No bag to walk: the button must still come back to life.
-        expect(quickCreateForm().processing).toBe(false)
-        expect(quickCreateForm().errors).toEqual({})
-        expect(templateForm().exercises).toHaveLength(0)
-    })
-
     it('shows what the server said about a description it rejected', async () => {
         const wrapper = mountPage()
         templateForm().errors.description = 'La description ne peut pas dépasser 1000 caractères.'
@@ -630,23 +476,10 @@ describe.each([
 
         expect(wrapper.text()).toContain('La description ne peut pas dépasser 1000 caractères.')
     })
-
-    it('blames the connection rather than the user when the request never lands', async () => {
-        vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'))
-
-        const wrapper = mountPage()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        expect(interne(wrapper).createError).toContain('connexion')
-        // Leaving it spinning is what this branch exists to prevent.
-        expect(quickCreateForm().processing).toBe(false)
-        expect(templateForm().exercises).toHaveLength(0)
-    })
 })
 
 // ---------------------------------------------------------------------------
-// Quick-create on the edition screen, which only the creation screen had
+// Opening a template the server described sparsely
 // ---------------------------------------------------------------------------
 
 describe('opening a template the server described sparsely', () => {
@@ -685,56 +518,17 @@ describe('opening a template the server described sparsely', () => {
     })
 })
 
-describe('quick-creating an exercise while editing a template', () => {
-    const answerWith = (status, body = {}) =>
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-            ok: status >= 200 && status < 300,
-            status,
-            json: async () => body,
-        })
-
-    it('names the status when the server refuses for anything but validation', async () => {
-        answerWith(419)
-
+describe('an exercise created from the picker while editing', () => {
+    it('joins the library where its name puts it, then the template', async () => {
         const wrapper = mountEdit()
-        await interne(wrapper).createAndAddExercise()
+        const modale = wrapper.findComponent(AjoutDExerciceModal)
+
+        modale.vm.$emit('created', { id: 9, name: 'Aabtiré' })
+        modale.vm.$emit('add', 9)
         await flushPromises()
 
-        expect(interne(wrapper).createError).toContain('419')
-        expect(templateForm().exercises).toHaveLength(0)
-    })
-
-    it('puts a validation refusal on the field it belongs to', async () => {
-        answerWith(422, { errors: { name: ['Ce nom existe déjà.'] } })
-
-        const wrapper = mountEdit()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        expect(interne(wrapper).createError).toBeNull()
-        expect(quickCreateForm().errors.name).toBe('Ce nom existe déjà.')
-    })
-
-    it('refuses to add an exercise the server answered without an id', async () => {
-        answerWith(200, { exercise: { name: 'Sans identifiant' } })
-
-        const wrapper = mountEdit()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        expect(interne(wrapper).createError).toContain("n'a pas pu être lue")
-        expect(templateForm().exercises).toHaveLength(0)
-    })
-
-    it('adds it to both the library and the template when it works', async () => {
-        answerWith(201, { exercise: { id: 9, name: 'Aabtiré' } })
-
-        const wrapper = mountEdit()
-        await interne(wrapper).createAndAddExercise()
-        await flushPromises()
-
-        expect(templateForm().exercises.at(-1).id).toBe(9)
         expect(interne(wrapper).localExercises[0].name).toBe('Aabtiré')
+        expect(templateForm().exercises.at(-1)).toMatchObject({ id: 9, name: 'Aabtiré' })
     })
 })
 
