@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Les anneaux du tableau de bord n'ont plus deux allures** : l'un avait des bordures entre ses parts et l'autre non, et celui dont la légende passait sur deux lignes était plus fin. L'habillage des parts vient désormais du graphique de base, et la légende d'un anneau se dessine sous le canevas plutôt que dedans
+
 ### Modifié
 - **L'ajout d'exercice de la séance est un composant** (#1675) : `AjoutDExerciceModal` porte la recherche (dont la mémoire d'une séance à l'autre), le choix dans la bibliothèque et la création sur le champ avec ses erreurs ; la page ne fait plus qu'ajouter la ligne
 - **L'ordre de la séance vit dans un composable** (#1675) : `useOrdreDeLaSeance` porte le réordonnancement des exercices et des séries, au doigt comme aux flèches, l'écriture de l'ordre entier au serveur et son repli à l'ordre confirmé ; la page de séance passe sous deux mille lignes (2 527 → 1 745 depuis le début de son éclatement)

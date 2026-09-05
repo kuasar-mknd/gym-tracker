@@ -26,9 +26,6 @@ const datasets = computed(() => [
     {
         data: props.data.map((item) => item.count),
         backgroundColor: labels.value.map((label) => bucketColors[label] || jeton('text-muted')),
-        borderWidth: 0,
-        hoverOffset: 10,
-        borderRadius: 4,
     },
 ])
 
