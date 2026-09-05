@@ -1,20 +1,8 @@
 <script setup>
 /**
- * Workout Show Page (Active Workout View)
- *
- * This is the primary component for tracking an active workout session.
- * It manages the state of exercises, sets, and rest timers.
- *
- * Key Features:
- * - Optimistic UI updates for immediate feedback when completing sets.
- * - Background synchronization (`SyncService`) to persist changes to the backend.
- * - Integrated rest timer that automatically starts when a set is marked complete.
- * - Haptic feedback integration for a tactile user experience.
- *
- * @prop {Object} workout - The workout object containing metadata and nested `workout_lines` (which contain `sets`).
- * @prop {Array} exercises - List of all available exercises for adding to the workout.
- * @prop {Array} categories - Distinct list of exercise categories (e.g., Chest, Back, Legs) for filtering.
- * @prop {Array} types - Distinct list of exercise types (e.g., Barbell, Dumbbell, Machine) for filtering.
+ * La seance en cours : ce que la page garde apres son eclatement — la copie
+ * locale de la seance, sa fusion avec les props, et le cablage des composables
+ * qui font le reste.
  */
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
@@ -25,17 +13,18 @@ import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
 import { useRapportDeSynchronisation } from '@/composables/useRapportDeSynchronisation'
 import { useSeriesDeLaSeance } from '@/composables/useSeriesDeLaSeance'
 import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
+import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
+import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
+import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
-import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
+import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
-import { Head, useForm, router, usePage } from '@inertiajs/vue3'
+import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { formatToLocalISO, formatToUTC } from '@/Utils/date'
-import { triggerHaptic } from '@/composables/useHaptics'
 
 const props = defineProps({
     workout: { type: Object, required: true },
@@ -50,106 +39,16 @@ if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workou
     localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
 }
 
-/**
- * Rebuilds from the server's copy without discarding what it has not heard of.
- *
- * This watch used to assign the incoming props wholesale. Any ordinary Inertia
- * round trip on this page — renaming the session, correcting its start time —
- * therefore threw away every row still being created and every value the server
- * had refused, without a word. The user renamed their workout and the sets they
- * had just added disappeared.
- *
- * The server is authoritative for everything it knows about. It is not
- * authoritative about rows it has never been told of, nor about values it
- * rejected while the user kept theirs on screen.
- */
-const mergeServerWorkout = (server, local) => {
-    const merged = JSON.parse(JSON.stringify(server))
-
-    if (merged.workout_lines && !Array.isArray(merged.workout_lines)) {
-        merged.workout_lines = Object.values(merged.workout_lines)
-    }
-
-    if (!Array.isArray(merged.workout_lines)) {
-        merged.workout_lines = []
-    }
-
-    const localLines = Array.isArray(local?.workout_lines) ? local.workout_lines : []
-
-    merged.workout_lines.forEach((line) => {
-        if (!Array.isArray(line.sets)) line.sets = []
-
-        const localLine = localLines.find((candidate) => candidate.id === line.id)
-
-        if (!localLine) return
-
-        /*
-         * L'identite de la rangee survit au rafraichissement.
-         *
-         * Le serveur ne connait pas `_rowKey` : il est frappe ici, a la
-         * creation. La copie JSON ci-dessus le perdait donc a chaque
-         * rafraichissement de props — un renommage de seance, une correction
-         * d'heure, un « enregistrer comme modele ».
-         *
-         * Deux consequences, et la seconde ne se voit pas. `rowKey()` sert de
-         * `:key` au `v-for` : sans `_rowKey` il retombe sur l'id, donc la cle
-         * de CHAQUE rangee change et Vue detruit puis reconstruit des lignes
-         * qui n'ont pas bouge — etat de glissement perdu, champs recrees, focus
-         * qui saute en pleine frappe. Et l'ordonnancement des ecritures est
-         * indexe sur cette meme identite : deux appuis encadrant le
-         * rafraichissement reprenaient deux cles, et les deux garde-fous
-         * sautaient ensemble.
-         */
-        if (localLine._rowKey) line._rowKey = localLine._rowKey
-
-        const localSets = Array.isArray(localLine.sets) ? localLine.sets : []
-
-        // Still being created, or waiting in the offline queue.
-        localSets.filter((set) => isTemporaryId(set.id)).forEach((set) => line.sets.push(set))
-
-        // Marked unsynced means the server's copy is the stale one; taking it
-        // would quietly undo an edit the user can see on screen.
-        line.sets.forEach((set, index) => {
-            const localSet = localSets.find((candidate) => candidate.id === set.id)
-
-            if (!localSet) return
-
-            if (unsyncedSetIds.value.has(String(set.id))) {
-                line.sets[index] = localSet
-
-                return
-            }
-
-            if (localSet._rowKey) set._rowKey = localSet._rowKey
-
-            // La validation est partie, le serveur ne l'a pas encore : sa copie
-            // est la perimee des deux.
-            if (completionsEnVol.has(`completion:${rowKey(localSet)}`)) {
-                set.is_completed = localSet.is_completed
-            }
-        })
-    })
-
-    // Whole exercises the server has never heard of.
-    localLines.filter((line) => isTemporaryId(line.id)).forEach((line) => merged.workout_lines.push(line))
-
-    // L'ordre local est le plus recent des deux tant que le deplacement n'a pas
-    // atterri : le reprendre du serveur annulerait le geste a l'ecran.
-    if (ordreEnVol.value > 0) {
-        const rang = new Map(localLines.map((line, index) => [String(line.id), index]))
-
-        merged.workout_lines.sort((a, b) => (rang.get(String(a.id)) ?? Infinity) - (rang.get(String(b.id)) ?? Infinity))
-    }
-
-    return merged
-}
-
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(
     () => props.workout,
     (newVal) => {
         releverLesValeursDuServeur(newVal)
-        localWorkout.value = mergeServerWorkout(newVal, localWorkout.value)
+        localWorkout.value = fusionnerLaSeance(newVal, localWorkout.value, {
+            estNonSynchronisee: (set) => unsyncedSetIds.value.has(String(set.id)),
+            validationEnVol: (set) => completionsEnVol.has(`completion:${rowKey(set)}`),
+            ordreLocalPrime: ordreEnVol.value > 0,
+        })
 
         if (ordreEnVol.value === 0) {
             ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
@@ -159,169 +58,21 @@ watch(
     },
 )
 
-/**
- * A closed session is a record, not a workspace.
- *
- * The page had no idea a workout could be finished and rendered the full live
- * editor regardless. SetPolicy refuses every write to a closed session, so each
- * control answered 403 — and only the two that revert visibly said anything at
- * all. Adding an exercise, adding a set and deleting one simply did nothing.
- */
+/** Une seance close est un compte rendu, pas un espace de travail. */
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
-const showTimer = ref(false)
-const timerDuration = ref(90)
+const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
+    useMinuteurDeRepos()
 
-/**
- * Le reglage est tenu localement pour que l'interrupteur bouge tout de suite,
- * puis ecrit. La page reste sur place : basculer un reglage ne doit pas sortir
- * de la seance en cours.
- */
-const autoRestTimer = ref(usePage().props.auth.user.auto_rest_timer !== false)
-
-/**
- * Le repos, demande explicitement.
- *
- * Sans lui, couper le demarrage automatique fermait une porte a sens unique :
- * plus rien n'ouvrait le minuteur, et l'interrupteur qui le rallume vit DANS le
- * minuteur. Le reglage etait donc irreversible depuis l'interface.
- */
-const openRestTimer = () => {
-    timerDuration.value = usePage().props.auth.user.default_rest_time || 90
-    timerRun.value += 1
-    showTimer.value = true
-}
-
-const setAutoRestTimer = (valeur) => {
-    autoRestTimer.value = valeur
-
-    router.patch(
-        route('profile.rest-timer.update'),
-        { auto_rest_timer: valeur },
-        { preserveScroll: true, preserveState: true },
-    )
-}
-
-/**
- * Counts rest periods, so each one gets a fresh timer.
- *
- * The timer only reset itself while it was NOT running, and completing a set
- * while it was already counting down neither remounted it nor restarted it. The
- * second set of a superset was therefore given whatever was left of the first
- * one's rest — the shorter the gap between sets, the shorter the rest, which is
- * precisely backwards.
- */
-const timerRun = ref(0)
-
-let tempIdCounter = 0
-
-/**
- * A row's identity for Vue, which must not change while the row is on screen.
- *
- * Ids do change here: an optimistic row wears `temp-4` until the server answers
- * and is then given the real one. Keying a v-for on that made the key change
- * under a row the user was typing into, and Vue answers a changed key by
- * destroying the node and building a new one — the input, its half-typed value
- * and its focus with it.
- *
- * So optimistic rows carry a key issued once at creation, and rows that came
- * from the server fall back to their id, which for them never changes. The two
- * cannot collide: one is a string with a prefix, the other a number.
- */
-let rowKeyCounter = 0
-const newRowKey = () => `row-${++rowKeyCounter}`
-const rowKey = (row) => row._rowKey ?? row.id
-
-/**
- * Placeholder ids never leave this component. Every mutation that names a line
- * or a set asks here for the id to actually send, and waits if the creation is
- * still in flight — see Utils/pendingIds for what sending `temp-3` cost.
- */
-const pendingIds = new PendingIds()
-
-/**
- * Placeholders whose create is sitting in the offline queue rather than in
- * flight. Anything added on top of one has to wait for the drain, and say so
- * meanwhile.
- */
-const queuedLineIds = new Set()
-const savingTemplate = ref(false)
-const saveAsTemplate = () => {
-    savingTemplate.value = true
-    router.post(
-        route('templates.save-from-workout', { workout: localWorkout.value.id }),
-        {},
-        {
-            preserveScroll: true,
-            onFinish: () => (savingTemplate.value = false),
-        },
-    )
-}
-
-const showFinishModal = ref(false)
-const finishWorkout = () => {
-    showFinishModal.value = true
-}
-const confirmFinishWorkout = async () => {
-    /**
-     * Awaited, not merely started. Closing the session revokes the right to
-     * write to its sets, so the last value typed has to be accepted before the
-     * workout is finished — otherwise it arrives at a closed session, is refused
-     * 403, and is reverted on a page that has already navigated away.
-     */
-    await flushAllPendingUpdates()
-
-    router.patch(
-        route('workouts.update', { workout: localWorkout.value.id }),
-        { is_finished: true },
-        {
-            onStart: () => {
-                showFinishModal.value = false
-            },
-            onSuccess: () => {
-                triggerHaptic('success')
-            },
-        },
-    )
-}
-
+const { nouvelIdTemporaire, newRowKey, rowKey, pendingIds, queuedLineIds } = useIdentiteDesRangees()
 const showAddExercise = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
-const showSettingsModal = ref(false)
-
-const settingsForm = useForm({
-    name: localWorkout.value.name,
-    started_at: formatToLocalISO(localWorkout.value.started_at),
-    notes: localWorkout.value.notes || '',
-})
-
-const updateSettings = () => {
-    settingsForm
-        .transform((data) => ({ ...data, started_at: formatToUTC(data.started_at) }))
-        .patch(route('workouts.update', { workout: localWorkout.value.id }), {
-            preserveScroll: true,
-            onSuccess: () => {
-                showSettingsModal.value = false
-            },
-        })
-}
-
-const {
-    unsyncedSetIds,
-    clearUnsynced,
-    markUnsynced,
-    editError,
-    reportEditFailure,
-    reportSyncFailure,
-    handleSyncAuthRequired,
-    handleSyncStorageFull,
-    handleSyncFailure,
-    markQueuedFailuresOnMount,
-} = useRapportDeSynchronisation({
-    page,
-    exercices: () => localExercises.value,
-    lignes: () => localWorkout.value.workout_lines,
-})
+const { unsyncedSetIds, clearUnsynced, markUnsynced, editError, reportEditFailure, reportSyncFailure } =
+    useRapportDeSynchronisation({
+        page,
+        exercices: () => localExercises.value,
+        lignes: () => localWorkout.value.workout_lines,
+    })
 
 /**
  * Counts the writes issued per set and field, so a reply can be checked against
@@ -393,7 +144,7 @@ const {
     localWorkout,
     pendingIds,
     queuedLineIds,
-    nouvelIdTemporaire: () => `temp-${++tempIdCounter}`,
+    nouvelIdTemporaire,
     newRowKey,
     rowKey,
     nextWrite,
@@ -408,21 +159,26 @@ const {
     clearUnsynced,
     reportSyncFailure,
     reportEditFailure,
-    apresValidation: (exerciseRestTime) => {
-        if (!autoRestTimer.value) return
-
-        timerDuration.value = exerciseRestTime || usePage().props.auth.user.default_rest_time || 90
-        timerRun.value += 1
-        showTimer.value = true
-    },
+    apresValidation,
 })
+
+const {
+    savingTemplate,
+    saveAsTemplate,
+    showFinishModal,
+    finishWorkout,
+    confirmFinishWorkout,
+    showSettingsModal,
+    settingsForm,
+    updateSettings,
+} = useReglagesDeLaSeance({ localWorkout, viderLesEcritures: () => flushAllPendingUpdates() })
 
 const { addExercise, removeLine, retraitDemande, titreDuRetrait, annulerLeRetrait, confirmerLeRetrait } =
     useLignesDeLaSeance({
         localWorkout,
         pendingIds,
         queuedLineIds,
-        nouvelIdTemporaire: () => `temp-${++tempIdCounter}`,
+        nouvelIdTemporaire,
         newRowKey,
         localExercises,
         showAddExercise,
@@ -443,10 +199,6 @@ onMounted(() => {
     releverLesValeursDuServeur(props.workout)
 
     window.addEventListener('open-add-exercise', handleFabAddExercise)
-    window.addEventListener('sync:failed', handleSyncFailure)
-    window.addEventListener('sync:auth-required', handleSyncAuthRequired)
-    window.addEventListener('sync:storage-full', handleSyncStorageFull)
-    markQueuedFailuresOnMount()
 
     rejouerLesBrouillons({
         trouverLaSerie: (setId) => {
@@ -466,20 +218,8 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener('open-add-exercise', handleFabAddExercise)
-    window.removeEventListener('sync:failed', handleSyncFailure)
-    window.removeEventListener('sync:auth-required', handleSyncAuthRequired)
-    window.removeEventListener('sync:storage-full', handleSyncStorageFull)
 
-    /**
-     * Sends whatever is still sitting in the debounce.
-     *
-     * A value typed a fraction of a second before leaving the page is an edit
-     * the user made. It used to be left to fire on its own a second later, into
-     * a component that no longer exists: if the server refused it, the revert
-     * and the message landed on refs nobody was rendering, so the edit was lost
-     * without a word. Flushing here sends it while there is still something to
-     * report to — and SyncService records a refusal durably either way.
-     */
+    // Une valeur tapee juste avant de partir est une saisie : elle part maintenant.
     flushAllPendingUpdates()
 })
 </script>
@@ -539,11 +279,6 @@ onUnmounted(() => {
                     <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
                 </GlassCard>
 
-                <!-- Same reasoning as the set rows below: a line's id changes from
-                 placeholder to real one when its create lands, and re-keying on
-                 it rebuilt the whole exercise card — every set input inside it
-                 included — at the exact moment the user was filling in the first
-                 set of the exercise they had just added. -->
                 <CarteDExercice
                     v-for="(line, lineIndex) in localWorkout.workout_lines"
                     :key="rowKey(line)"
