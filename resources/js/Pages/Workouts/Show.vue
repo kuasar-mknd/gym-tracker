@@ -25,6 +25,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
+import { useBrouillonsDeSeries, NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 import SyncService from '@/Utils/SyncService'
@@ -650,13 +651,6 @@ const deleteSet = (setId) =>
 
         return SyncService.delete(route('api.v1.sets.destroy', { set: realId }))
     })
-
-/**
- * The set fields this screen edits. Every one of them is a number in the
- * database, so a value arriving from an input — always a string — is normalised
- * before it goes anywhere near the row or the payload.
- */
-const NUMERIC_SET_FIELDS = ['weight', 'reps', 'distance_km', 'duration_seconds']
 
 /**
  * What each kind of exercise measures — the same split the set row renders.
@@ -1535,101 +1529,14 @@ const completionWrites = createWriteQueue()
  */
 const completionsEnVol = new Set()
 
-/**
- * The value the server last confirmed for a field, which is the only value a
- * rollback may restore.
- *
- * `previousValue` used to be read off the set at call time. Type B then C inside
- * the debounce window and the second call captures B — a value that never
- * reached the database — so a refusal of C "restored" B and the row ended up
- * showing something the server had never agreed to.
- */
-const confirmedValues = new Map()
-const confirmedKey = (setId, field) => `${setId}_${field}`
-
-/**
- * Ce que le serveur nous a dit, releve a chaque fois qu'il nous le dit.
- *
- * `confirmedValues` n'etait alimente que par une reponse ACCEPTEE. Tant qu'un
- * champ n'avait jamais ete enregistre depuis cette page, `lastConfirmed`
- * retombait donc sur son repli — la valeur a l'ecran, deja optimiste — et un
- * refus restaurait quelque chose que le serveur n'avait jamais eu.
- *
- * #1540 a ferme le cas de la rafale, en gardant la valeur d'avant la premiere
- * touche. Mais des qu'une salve est partie son minuteur est oublie, et la
- * salve suivante retombait sur l'ecran. Deux corrections coup sur coup, toutes
- * deux refusees, laissaient la premiere des deux a l'ecran.
- *
- * La charge utile du serveur EST ce que le serveur detient : la relever ici
- * donne toujours une valeur a restaurer. Les series encore provisoires n'en
- * ont pas — le serveur ne les connait pas.
- */
-const releverLesValeursDuServeur = (workout) => {
-    // Le serveur envoie parfois les lignes en objet plutot qu'en tableau, et la
-    // fusion s'en accommode deja ; ce releve doit en faire autant.
-    const lignes = workout?.workout_lines
-    const enTableau = Array.isArray(lignes) ? lignes : Object.values(lignes ?? {})
-
-    enTableau.forEach((line) =>
-        (Array.isArray(line?.sets) ? line.sets : []).forEach((set) => {
-            if (set === null || isTemporaryId(set.id)) {
-                return
-            }
-
-            NUMERIC_SET_FIELDS.forEach((field) => {
-                if (set[field] !== undefined) {
-                    rememberConfirmed(set.id, field, set[field])
-                }
-            })
-        }),
-    )
-}
-
-const rememberConfirmed = (setId, field, value) => {
-    confirmedValues.set(confirmedKey(setId, field), value)
-}
-
-const lastConfirmed = (set, field, fallback) => {
-    const key = confirmedKey(set.id, field)
-
-    return confirmedValues.has(key) ? confirmedValues.get(key) : fallback
-}
-
-/**
- * Keeps one draft per set holding only the fields still in flight.
- *
- * The draft was `JSON.stringify(set)` under a single key, removed outright the
- * moment ANY field came back accepted. Correcting a weight and then the reps
- * within the same second meant the weight's success deleted the draft that was
- * holding the reps, whose PATCH had not left yet — close the app in that window
- * and the entry is gone. Only the field that was actually confirmed is dropped
- * now, and the key disappears when nothing is left to protect.
- */
-const draftKey = (setId) => `draft_set_${setId}`
-
-const readDraft = (setId) => {
-    try {
-        return JSON.parse(localStorage.getItem(draftKey(setId)) || '{}')
-    } catch {
-        return {}
-    }
-}
-
-const writeDraftField = (setId, field, value) => {
-    localStorage.setItem(draftKey(setId), JSON.stringify({ ...readDraft(setId), [field]: value }))
-}
-
-const clearDraftField = (setId, field) => {
-    const { [field]: _dropped, ...rest } = readDraft(setId)
-
-    if (Object.keys(rest).filter((key) => key !== 'syncRejected').length === 0) {
-        localStorage.removeItem(draftKey(setId))
-
-        return
-    }
-
-    localStorage.setItem(draftKey(setId), JSON.stringify(rest))
-}
+const {
+    releverLesValeursDuServeur,
+    rememberConfirmed,
+    lastConfirmed,
+    writeDraftField,
+    clearDraftField,
+    oublierLaSerie,
+} = useBrouillonsDeSeries()
 
 // ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
@@ -1771,12 +1678,9 @@ const removeSet = (setId) => {
         // Nothing may queue behind a row that no longer exists, and the entries
         // would otherwise outlive every set the page ever showed.
         fieldWrites.forget(timerKey)
-        confirmedValues.delete(timerKey)
     })
 
-    // The row is going away; its draft must not outlive it and be replayed
-    // against an id that no longer exists on the next mount.
-    localStorage.removeItem(draftKey(setId))
+    oublierLaSerie(setId)
 
     // Find the line and set
     for (const line of localWorkout.value.workout_lines) {

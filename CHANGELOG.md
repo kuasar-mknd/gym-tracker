@@ -9,6 +9,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Modifié
 - **Les records qui tombent partent en une seule écriture** (#1668) : retirer un exercice qui portait trois records coûtait trois `delete` séparés, un par record ; la reconstruction les regroupe désormais en une instruction. Le contrat d'écritures par opération couvre ce cas
+- **La page de séance confie ses brouillons et ses valeurs confirmées à un composable** (#1675) : premier pas de son éclatement, `useBrouillonsDeSeries` porte ce que le serveur détient de chaque série et ce que l'écran n'a pas encore réussi à lui faire accepter, avec ses propres tests ; la page perd cent lignes sans changer de comportement
 - **Le volume total d'un utilisateur se lit dans ses séances, il n'est plus tenu à chaque série** (#1670) : chaque série validée payait une écriture `update users` en plus de celle de la séance, la plus chère des trois sur le serveur de production ; le total se lit désormais par une somme, la colonne disparaît, et le contrôle nocturne ne surveille plus que les séances. Un test tient le contrat : valider une série n'écrit rien dans `users`
 - **La page des séances tient en huit requêtes à froid au lieu de quatre-vingt-huit** (#1670) : le compte des exercices distincts sautait d'index en index par une requête par exercice ; le saut tourne désormais dans la base, en une seule instruction et avec les mêmes lectures. Un test tient la page sous quinze requêtes
 
