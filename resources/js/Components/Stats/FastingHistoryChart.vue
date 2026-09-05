@@ -2,6 +2,7 @@
 import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { etiquetteDeDate } from '@/Utils/date'
 
 const props = defineProps({
     data: {
@@ -18,7 +19,7 @@ const jeunesTermines = computed(() =>
 const labels = computed(() =>
     jeunesTermines.value.map((fast) => {
         const date = new Date(fast.start_time)
-        return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+        return etiquetteDeDate(date)
     }),
 )
 

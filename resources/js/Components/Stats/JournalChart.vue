@@ -1,7 +1,7 @@
 <script setup>
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed, ref } from 'vue'
-import { parseCalendarDate } from '@/Utils/date'
+import { parseCalendarDate, etiquetteDeDate } from '@/Utils/date'
 import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
@@ -51,7 +51,7 @@ const sortedData = computed(() => [...props.data].sort((a, b) => String(a.date).
 const labels = computed(() =>
     sortedData.value.map((item) => {
         const date = parseCalendarDate(item.date)
-        return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+        return etiquetteDeDate(date)
     }),
 )
 

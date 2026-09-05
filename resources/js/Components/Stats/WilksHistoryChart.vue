@@ -2,6 +2,7 @@
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { etiquetteDeDate } from '@/Utils/date'
 
 const props = defineProps({
     data: {
@@ -10,14 +11,7 @@ const props = defineProps({
     },
 })
 
-const labels = computed(() =>
-    props.data.map((item) =>
-        new Date(item.created_at).toLocaleDateString(undefined, {
-            day: 'numeric',
-            month: 'short',
-        }),
-    ),
-)
+const labels = computed(() => props.data.map((item) => etiquetteDeDate(item.created_at)))
 
 const datasets = computed(() => [
     {

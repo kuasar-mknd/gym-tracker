@@ -74,3 +74,30 @@ export function formatToUTC(localDateString) {
 
     return d.toISOString()
 }
+
+/**
+ * L'étiquette d'une date sur un axe : `jj/mm`, comme le serveur les écrit.
+ *
+ * Quatre formats se côtoyaient d'une carte à l'autre (« 20/07 », « 20 juil. »,
+ * « lun. 20 juil. », « 05/09/2026 ») ; un seul, court, que le serveur produit
+ * déjà pour les séries denses.
+ *
+ * @param {Date|string|number} valeur une Date, une date calendaire `AAAA-MM-JJ` ou un horodatage
+ * @returns {string}
+ */
+export function etiquetteDeDate(valeur) {
+    if (valeur === null || valeur === undefined || valeur === '') {
+        return undefined
+    }
+
+    const date =
+        valeur instanceof Date
+            ? valeur
+            : typeof valeur === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(valeur)
+              ? parseCalendarDate(valeur)
+              : new Date(valeur)
+
+    return date && !Number.isNaN(date.getTime())
+        ? date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+        : undefined
+}

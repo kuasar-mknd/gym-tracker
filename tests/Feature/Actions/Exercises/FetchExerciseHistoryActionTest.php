@@ -65,7 +65,7 @@ it('fetches exercise history correctly', function (): void {
     expect($history[0]['best_1rm'])->toBe(139.33);
     expect($history[1]['best_1rm'])->toBe(133.33);
 
-    expect($history[0]['formatted_date'])->toBe($workout2->started_at->locale('fr')->isoFormat('ddd D MMM'));
+    expect($history[0]['formatted_date'])->toBe($workout2->started_at->format('d/m'));
 });
 
 it('only includes workouts for the given user', function (): void {
@@ -162,7 +162,7 @@ it('rend une entree et une serie avec exactement leurs cles', function (): void 
     expect($entree['id'])->toBe($line->id);
     expect($entree['workout_id'])->toBe($workout->id);
     expect($entree['workout_name'])->toBe('Haut du corps');
-    expect($entree['formatted_date'])->toBe('lun. 15 juin');
+    expect($entree['formatted_date'])->toBe('15/06');
     expect($entree['best_1rm'])->toBe(133.33);
 
     // Une serie comparee d'un bloc : `toBe` sur un tableau exige les memes

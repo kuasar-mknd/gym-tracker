@@ -1,7 +1,7 @@
 <script setup>
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
-import { parseCalendarDate } from '@/Utils/date'
+import { etiquetteDeDate } from '@/Utils/date'
 import BaseChart from './BaseChart.vue'
 
 const props = defineProps({
@@ -11,11 +11,7 @@ const props = defineProps({
     },
 })
 
-const labels = computed(() =>
-    props.data.map((item) =>
-        parseCalendarDate(item.date)?.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
-    ),
-)
+const labels = computed(() => props.data.map((item) => etiquetteDeDate(item.date)))
 
 const datasets = computed(() => [
     {
@@ -60,7 +56,6 @@ const infobulle = { accent: 'accent-state', callbacks: { label: (context) => `${
         :datasets="datasets"
         hauteur="h-48"
         :infobulle="infobulle"
-        :axe-x="false"
         :axe-y="{ ticks: { stepSize: 1, precision: 0 }, grid: { display: false }, beginAtZero: true }"
         :interaction="{ mode: 'index', intersect: false }"
     />

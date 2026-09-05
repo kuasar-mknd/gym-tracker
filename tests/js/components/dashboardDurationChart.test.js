@@ -29,13 +29,13 @@ describe('DashboardDurationChart', () => {
         )
 
         expect(chart.datasets[0].data).toEqual([45, 60, 90])
-        expect(chart.labels).toEqual(['29 juil.', '30 juil.', '31 juil.'])
+        expect(chart.labels).toEqual(['29/07', '30/07', '31/07'])
     })
 
-    it('étiquette les points en jour et mois abrégé français', () => {
+    it('étiquette les points en jour/mois', () => {
         const chart = chartDataOf(mountChart([workout('2026-01-05T12:00:00Z', '2026-01-05T13:00:00Z')]), 'Line')
 
-        expect(chart.labels).toEqual(['5 janv.'])
+        expect(chart.labels).toEqual(['05/01'])
     })
 
     it('donne l’unité dans l’infobulle', () => {

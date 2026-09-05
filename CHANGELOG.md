@@ -9,6 +9,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Corrigé
 - **Le bouton « Créer une sauvegarde » de Filament était caché à tout le monde** : le greffon demande une capacité `create-backup` que Shield ne connaît pas et ne pose aucune porte pour le super administrateur ; les trois capacités (créer, télécharger, supprimer) sont désormais ouvertes au super administrateur, et la garde « pas d'archive sans mot de passe » couvre ce chemin
+- **Les graphiques suivent trois règles communes, page après page** : les dates d'un axe s'écrivent `jj/mm` partout (quatre formats se côtoyaient), les cartes d'une page montrent leurs deux axes et seuls les encarts du tableau de bord et les vignettes de la page de statistiques restent nus, et un graphique remplit la hauteur de sa carte au lieu d'y laisser un vide
+- **Les anneaux du tableau de bord n'ont plus deux allures** : l'un avait des bordures entre ses parts et l'autre non, et celui dont la légende passait sur deux lignes était plus fin. L'habillage des parts vient désormais du graphique de base, et la légende d'un anneau se dessine sous le canevas plutôt que dedans
 
 ### Modifié
 - **L'ajout d'exercice de la séance est un composant** (#1675) : `AjoutDExerciceModal` porte la recherche (dont la mémoire d'une séance à l'autre), le choix dans la bibliothèque et la création sur le champ avec ses erreurs ; la page ne fait plus qu'ajouter la ligne

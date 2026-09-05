@@ -41,9 +41,6 @@ const datasets = computed(() => [
             jeton('accent-tertiary'),
             jeton('category-core'),
         ],
-        borderWidth: 2,
-        borderColor: jeton('surface-card'),
-        hoverOffset: 4,
     },
 ])
 

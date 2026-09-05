@@ -24,7 +24,7 @@ describe('RecentWorkoutsChart', () => {
     it('se lit de gauche à droite dans le sens du temps', () => {
         const wrapper = mount(RecentWorkoutsChart, { props: { data: workouts } })
 
-        expect(bar(wrapper).props('data').labels).toEqual(['28 févr.', '3 mars', '5 mars'])
+        expect(bar(wrapper).props('data').labels).toEqual(['28/02', '03/03', '05/03'])
     })
 
     it('garde chaque volume en face de sa séance', () => {

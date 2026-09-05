@@ -69,9 +69,31 @@ const props = defineProps({
 // vue-chartjs par un module qui n'exporte que le tracé qu'elles regardent.
 const composant = computed(() => VueChartJs[COMPOSANTS[props.type]])
 
-const chartData = computed(() => ({ labels: props.labels, datasets: props.datasets }))
-
 const estUnObjet = (valeur) => valeur !== null && typeof valeur === 'object'
+
+// Les parts d'un anneau se ressemblent d'une carte à l'autre : leur habillage
+// ne vient pas des cartes, sans quoi deux anneaux voisins divergent (#1316).
+const PARTS_D_ANNEAU = { borderWidth: 0, hoverOffset: 8 }
+
+const chartData = computed(() => ({
+    labels: props.labels,
+    datasets:
+        props.type === 'doughnut'
+            ? props.datasets.map((dataset) => ({ ...dataset, ...PARTS_D_ANNEAU }))
+            : props.datasets,
+}))
+
+// La légende d'un anneau se dessine sous le canevas, pas dedans : dans le
+// canevas, deux lignes d'étiquettes au lieu d'une rétrécissaient l'anneau.
+const legendeSousLAnneau = computed(() => {
+    if (props.type !== 'doughnut' || props.vide || props.legende === false || estUnObjet(props.legende)) {
+        return []
+    }
+
+    const fond = props.datasets[0]?.backgroundColor
+
+    return props.labels.map((label, index) => ({ label, couleur: Array.isArray(fond) ? fond[index] : fond }))
+})
 
 // Absente, la légende suit le tracé : cachée sur une courbe ou des barres,
 // visible sous un anneau.
@@ -120,11 +142,8 @@ const chartOptions = computed(() => {
 
     if (props.type === 'doughnut') {
         const anneau = optionsDAnneau(reglages.callbacks?.label)
-        const specifiques = { plugins: { tooltip: reglages } }
-        if (props.legende === false) {
-            specifiques.plugins.legend = { display: false }
-        } else if (estUnObjet(props.legende)) {
-            specifiques.plugins.legend = props.legende
+        const specifiques = {
+            plugins: { tooltip: reglages, legend: estUnObjet(props.legende) ? props.legende : { display: false } },
         }
         return fusionner(fusionner(anneau, specifiques), props.options)
     }
@@ -156,12 +175,31 @@ const style = computed(() =>
 </script>
 
 <template>
-    <div :class="['relative w-full', hauteur, { 'avec-lueur': lueur }]" :style="style">
-        <slot v-if="vide" name="vide" />
-        <template v-else>
-            <component :is="composant" :data="chartData" :options="chartOptions" :plugins="plugins" />
-            <slot name="surcouche" />
-        </template>
+    <div class="flex h-full w-full flex-col">
+        <div
+            :class="['relative w-full', hauteur === 'h-full' ? 'min-h-0 flex-1' : hauteur, { 'avec-lueur': lueur }]"
+            :style="style"
+        >
+            <slot v-if="vide" name="vide" />
+            <template v-else>
+                <component :is="composant" :data="chartData" :options="chartOptions" :plugins="plugins" />
+                <slot name="surcouche" />
+            </template>
+        </div>
+        <ul v-if="legendeSousLAnneau.length" class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1">
+            <li
+                v-for="entree in legendeSousLAnneau"
+                :key="entree.label"
+                class="font-display text-text-muted flex items-center gap-1.5 text-[11px] font-bold"
+            >
+                <span
+                    class="inline-block h-2 w-2 rounded-full"
+                    :style="{ backgroundColor: entree.couleur }"
+                    aria-hidden="true"
+                ></span>
+                {{ entree.label }}
+            </li>
+        </ul>
     </div>
 </template>
 

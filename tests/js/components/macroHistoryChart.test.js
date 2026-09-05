@@ -19,10 +19,8 @@ describe('MacroHistoryChart series', () => {
     it('reads chronologically, oldest revision on the left', () => {
         const series = chartDataOf(mountChart(), 'Line')
 
-        // The label is formatted with the browser's own locale, so its wording
-        // ("5 juil." in Paris, "Jul 5" in a US Chrome) is not this app's to
-        // pin. The day it names is: the day of created_at, oldest first.
-        expect(series.labels.map((label) => label.match(/\d+/)[0])).toEqual(['5', '17', '31'])
+        // `jj/mm`, comme tout axe de dates : le jour de created_at, du plus ancien au plus récent.
+        expect(series.labels.map((label) => label.match(/\d+/)[0])).toEqual(['05', '17', '31'])
     })
 
     it('keeps the target and the TDEE on separate lines, each following its own date', () => {

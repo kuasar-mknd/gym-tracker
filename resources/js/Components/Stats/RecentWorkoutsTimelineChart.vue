@@ -3,6 +3,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 import BaseChart from './BaseChart.vue'
+import { etiquetteDeDate } from '@/Utils/date'
 
 const props = defineProps({
     data: {
@@ -14,11 +15,7 @@ const props = defineProps({
 // We reverse the data to show chronological order from left to right
 const reversedData = computed(() => [...props.data].reverse())
 
-const labels = computed(() =>
-    reversedData.value.map((workout) =>
-        new Date(workout.started_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
-    ),
-)
+const labels = computed(() => reversedData.value.map((workout) => etiquetteDeDate(workout.started_at)))
 
 const datasets = computed(() => [
     {

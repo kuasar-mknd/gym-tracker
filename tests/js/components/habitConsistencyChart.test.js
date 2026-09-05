@@ -48,7 +48,7 @@ describe('HabitConsistencyChart', () => {
         )
 
         expect(chart.datasets[0].data).toEqual([1, 4, 2])
-        expect(chart.labels.map((label) => label.replace(/\D/g, ''))).toEqual(['29', '30', '31'])
+        expect(chart.labels).toEqual(['29/07', '30/07', '31/07'])
     })
 
     it('trace quand même le compte d’un jour sans date exploitable', () => {

@@ -244,6 +244,7 @@ const latestBodyFat = computed(() => {
                         </h3>
                         <div class="h-64">
                             <WeightHistoryChart
+                                hauteur="h-full"
                                 v-if="bodyStats?.weightHistory && bodyStats.weightHistory.length > 0"
                                 :data="bodyStats.weightHistory"
                             />
@@ -262,6 +263,7 @@ const latestBodyFat = computed(() => {
                         </h3>
                         <div class="h-64">
                             <BodyFatLineChart
+                                hauteur="h-full"
                                 v-if="bodyStats?.bodyFatHistory && bodyStats.bodyFatHistory.length > 0"
                                 :data="bodyStats.bodyFatHistory"
                             />

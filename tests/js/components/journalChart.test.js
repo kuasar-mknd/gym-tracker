@@ -53,7 +53,7 @@ describe('JournalChart', () => {
     it('remet les entrées dans l’ordre chronologique', () => {
         const wrapper = mount(JournalChart, { props: { data: entries } })
 
-        expect(line(wrapper).props('data').labels).toEqual(['12 janv.', '20 févr.', '5 mars'])
+        expect(line(wrapper).props('data').labels).toEqual(['12/01', '20/02', '05/03'])
     })
 
     it('garde chaque valeur en face de sa date', () => {
@@ -69,7 +69,7 @@ describe('JournalChart', () => {
         // il affiche le 4 mars partout où le navigateur est en retard sur UTC.
         const wrapper = mount(JournalChart, { props: { data: [{ date: '2026-03-05', mood_score: 3 }] } })
 
-        expect(line(wrapper).props('data').labels).toEqual(['5 mars'])
+        expect(line(wrapper).props('data').labels).toEqual(['05/03'])
     })
 
     it('ne réordonne pas le tableau reçu du parent', () => {

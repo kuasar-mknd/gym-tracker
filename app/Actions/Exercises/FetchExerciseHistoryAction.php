@@ -66,8 +66,7 @@ class FetchExerciseHistoryAction
                     'id' => $line->id,
                     'workout_id' => $workout->id,
                     'workout_name' => $workout->name,
-                    // @phpstan-ignore-next-line
-                    'formatted_date' => $workout->started_at->locale('fr')->isoFormat('ddd D MMM'),
+                    'formatted_date' => $workout->started_at?->format('d/m'),
                     'best_1rm' => $best1rm,
                     'sets' => $sets,
                     'started_at' => $workout->started_at, // For sorting

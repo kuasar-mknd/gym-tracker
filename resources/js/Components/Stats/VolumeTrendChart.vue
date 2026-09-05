@@ -9,6 +9,7 @@ const props = defineProps({
         type: Array,
         required: true,
     },
+    hauteur: { type: String, default: 'h-48' },
 })
 
 const labels = computed(() => props.data.map((item) => item.date))
@@ -36,7 +37,7 @@ const datasets = computed(() => [
     <BaseChart
         :labels="labels"
         :datasets="datasets"
-        hauteur="h-48"
+        :hauteur="hauteur"
         :infobulle="{ accent: 'accent-primary' }"
         :axe-y="{ ticks: { callback: formatVolumeTick } }"
     />

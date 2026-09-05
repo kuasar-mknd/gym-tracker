@@ -20,7 +20,7 @@ describe('WorkoutHistoryTimelineChart series', () => {
     it('reads chronologically, oldest session on the left, dated in French', () => {
         const series = chartDataOf(mountChart(), 'Bar')
 
-        expect(series.labels).toEqual(['5 juil.', '31 juil.'])
+        expect(series.labels).toEqual(['05/07', '31/07'])
     })
 
     it('keeps the duration line on its own axis, above the volume bars', () => {

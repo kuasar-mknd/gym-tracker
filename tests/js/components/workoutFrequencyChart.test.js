@@ -46,10 +46,10 @@ describe('WorkoutFrequencyChart series', () => {
 })
 
 describe('WorkoutFrequencyChart readouts', () => {
-    it('names what is being counted on hover, because the y axis is not drawn', () => {
+    it('names what is being counted on hover, and draws the y axis like its neighbours', () => {
         const wrapper = mountChart()
 
-        expect(chartOptionsOf(wrapper, 'Bar').scales.y.display).toBe(false)
+        expect(chartOptionsOf(wrapper, 'Bar').scales.y.display).toBe(true)
         expect(tooltipLabelOf(wrapper, 'Bar', { parsed: { y: 3 } })).toBe('3 séances')
     })
 
