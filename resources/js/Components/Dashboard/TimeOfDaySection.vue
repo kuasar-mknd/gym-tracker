@@ -20,7 +20,7 @@ defineProps({
         </div>
 
         <!-- Time of Day Chart -->
-        <div class="relative -mx-2 mt-2 h-48 w-auto">
+        <div class="relative -mx-2 mt-2 w-auto">
             <TimeOfDayChart
                 v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
                 :data="timeOfDayDistribution"
