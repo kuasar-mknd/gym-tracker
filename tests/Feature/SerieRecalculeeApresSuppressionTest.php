@@ -131,3 +131,55 @@ it('fait bien coincider les deux quand la serie en cours est la plus longue', fu
     expect($user->refresh()->current_streak)->toBe(3)
         ->and($user->longest_streak)->toBe(3);
 });
+
+/**
+ * Un record ramene a une seule journee vaut un jour, pas zero.
+ *
+ * Le record se met a jour DANS la boucle, a chaque paire de jours examinee :
+ * quand il ne reste qu'une journee, la boucle n'y passe pas et c'est la valeur
+ * de depart qui est ecrite telle quelle. Les autres cas de ce fichier gardent
+ * tous au moins deux journees, si bien qu'un depart a zero y serait rattrape
+ * par le premier `max()` et ne se verrait pas.
+ */
+it('ramène le record à un jour quand il ne reste qu’une journée', function (): void {
+    $user = User::factory()->create();
+
+    $premier = seanceLe($user, '2026-06-09');
+    $second = seanceLe($user, '2026-06-10');
+    seanceLe($user, '2026-06-11');
+
+    expect($user->refresh()->longest_streak)->toBe(3);
+
+    $premier->delete();
+    $second->delete();
+
+    expect($user->refresh()->current_streak)->toBe(1)
+        ->and($user->longest_streak)->toBe(1);
+});
+
+/**
+ * Le doublon du jour se saute ; il n'arrete pas la lecture.
+ *
+ * La boucle remonte le temps, et deux seances du meme jour y sont adjacentes.
+ * Quand le doublon porte sur le jour le PLUS RECENT, s'arreter au lieu de
+ * passer au suivant abandonne tout l'historique anterieur : la serie de deux
+ * jours retombe a un. Le cas ou le doublon est en fin de liste ne montre rien,
+ * puisqu'il n'y a plus rien a lire apres lui.
+ */
+it('saute la seconde séance du jour sans cesser de remonter le temps', function (): void {
+    $user = User::factory()->create();
+
+    seanceLe($user, '2026-06-10');
+    seanceLe($user, '2026-06-11');
+
+    // La seconde du 11, saisie le soir : c'est elle qui ouvre la lecture.
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::parse('2026-06-11 20:00:00'),
+    ]);
+
+    app(StreakService::class)->recalculerDepuisLesFaits($user);
+
+    expect($user->refresh()->current_streak)->toBe(2)
+        ->and($user->longest_streak)->toBe(2);
+});

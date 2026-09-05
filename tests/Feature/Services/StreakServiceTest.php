@@ -395,3 +395,39 @@ it('ne fait rien pour un compte sans aucune séance', function (): void {
         ->and($enBase->longest_streak)->toBe(0)
         ->and($enBase->last_workout_at)->toBeNull();
 });
+
+/**
+ * Un recalcul sans séance, le même jour, ne retouche pas la date connue.
+ *
+ * `last_workout_at` est la seule mémoire du service, et elle ne recule pas :
+ * `rememberIfMoreRecent()` le dit pour l'enregistrement d'une séance. Le
+ * recalcul sans séance, lui, reprend la date de la plus récente en base telle
+ * quelle — c'est légitime quand il y a quelque chose à revoir, mais le même
+ * jour il n'y a rien à revoir, et le retour anticipé le dit.
+ *
+ * Sans lui, un compte dont la journée compte deux séances verrait sa date
+ * ramenée à celle du MATIN à chaque recalcul, alors qu'il s'est entraîné le
+ * soir.
+ */
+it('ne ramène pas la date au matin quand on recalcule sans séance le même jour', function (): void {
+    $leSoir = Carbon::now()->startOfDay()->addHours(21);
+    $leMatin = Carbon::now()->startOfDay()->addHours(6);
+
+    $user = User::factory()->create([
+        'current_streak' => 1,
+        'longest_streak' => 1,
+        'last_workout_at' => $leSoir,
+    ]);
+
+    Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => $leMatin,
+    ]);
+
+    expect($user->refresh()->last_workout_at?->toDateTimeString())->toBe($leSoir->toDateTimeString());
+
+    $this->streakService->updateStreak($user->refresh());
+
+    expect($user->refresh()->last_workout_at?->toDateTimeString())->toBe($leSoir->toDateTimeString())
+        ->and($user->current_streak)->toBe(1);
+});

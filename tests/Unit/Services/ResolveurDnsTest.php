@@ -125,3 +125,31 @@ it('ne garde pas une réponse vide de toute adresse', function (): void {
     expect($resolveur->adressesDe('exemple.test'))->toBe([]);
     expect(Cache::has(ResolveurDns::cle('exemple.test')))->toBeFalse();
 });
+
+/*
+ * La clé porte l'hôte, et un préfixe qui dit de quoi il s'agit.
+ *
+ * Tous les cas ci-dessus passent par `cle()` des DEUX côtés : ils vérifient que
+ * le service se relit lui-même, ce qui reste vrai si la clé perd l'hôte, perd
+ * son préfixe, ou les échange. Or c'est la seule clé de ce cache : sans l'hôte
+ * elle confond deux domaines, sans préfixe elle entre en collision avec ce que
+ * l'application range ailleurs sous le même nom.
+ */
+it('nomme la clé de cache par son préfixe et son hôte', function (): void {
+    expect(ResolveurDns::cle('exemple.test'))->toBe('push-endpoint:dns:exemple.test');
+});
+
+/*
+ * Le corollaire, vu du service : deux hôtes ne se répondent pas l'un pour
+ * l'autre. Un endpoint de poussée serait alors validé contre les adresses d'un
+ * autre domaine.
+ */
+it('ne sert pas à un hôte la résolution d’un autre', function (): void {
+    resolveurQuiRepond([['ip' => '203.0.113.7']])->adressesDe('premier.test');
+
+    $appels = new AppelsAuReseau();
+    $adresses = resolveurQuiRepond([['ip' => '198.51.100.4']], $appels)->adressesDe('second.test');
+
+    expect($adresses)->toBe(['198.51.100.4'])
+        ->and($appels->total)->toBe(1);
+});
