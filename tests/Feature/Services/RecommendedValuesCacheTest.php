@@ -118,13 +118,13 @@ it('sert la recommandation en cache pendant cinq minutes, puis la recalcule', fu
     expect($service->getRecommendedValues($ligneDuJour)['weight'])->toBe(80.0);
 });
 
-it('recommande pour une ligne relue seule, sans sa séance', function (): void {
-    [, , , $ligneDuJour] = historiquePourRecommandation(50.0);
+it('complète une ligne venue d’une collection sans charger sa séance à la volée', function (): void {
+    [, , $ligneHier, $ligneDuJour] = historiquePourRecommandation(50.0);
 
-    // Relue sans sa seance : c'est ce que tient la ressource qui serialise une
-    // ligne. Le service ne peut donc pas supposer la relation deja chargee, il
-    // doit aller la chercher.
-    $relue = WorkoutLine::findOrFail($ligneDuJour->id);
+    // Hydratée avec d'autres, comme le fait une ressource qui sérialise une
+    // liste, une ligne refuse tout chargement paresseux hors production : le
+    // service doit demander la séance explicitement, pas la laisser venir.
+    $relue = WorkoutLine::query()->whereKey([$ligneHier->id, $ligneDuJour->id])->get()->firstWhere('id', $ligneDuJour->id);
 
     expect(app(RecommendedValuesService::class)->getRecommendedValues($relue)['weight'])->toBe(50.0);
 });
