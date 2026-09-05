@@ -1,4 +1,4 @@
-import { getCurrentInstance, onUnmounted, ref } from 'vue'
+import { getCurrentInstance, onMounted, onUnmounted, ref } from 'vue'
 import SyncService from '@/Utils/SyncService'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -146,6 +146,25 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         failures.forEach((failure) => handleSyncFailure({ detail: { url: failure.url, data: failure.data } }))
 
         SyncService.clearFailedRequests()
+    }
+
+    /*
+     * La page branchait ces trois ecouteurs a son montage : ils appartiennent au
+     * rapport, qui les pose et les retire lui-meme.
+     */
+    if (getCurrentInstance()) {
+        onMounted(() => {
+            window.addEventListener('sync:failed', handleSyncFailure)
+            window.addEventListener('sync:auth-required', handleSyncAuthRequired)
+            window.addEventListener('sync:storage-full', handleSyncStorageFull)
+            markQueuedFailuresOnMount()
+        })
+
+        onUnmounted(() => {
+            window.removeEventListener('sync:failed', handleSyncFailure)
+            window.removeEventListener('sync:auth-required', handleSyncAuthRequired)
+            window.removeEventListener('sync:storage-full', handleSyncStorageFull)
+        })
     }
 
     return {
