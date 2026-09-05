@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Modifié
+- **Le volume total d'un utilisateur se lit dans ses séances, il n'est plus tenu à chaque série** (#1670) : chaque série validée payait une écriture `update users` en plus de celle de la séance, la plus chère des trois sur le serveur de production ; le total se lit désormais par une somme, la colonne disparaît, et le contrôle nocturne ne surveille plus que les séances. Un test tient le contrat : valider une série n'écrit rien dans `users`
 - **La page des séances tient en huit requêtes à froid au lieu de quatre-vingt-huit** (#1670) : le compte des exercices distincts sautait d'index en index par une requête par exercice ; le saut tourne désormais dans la base, en une seule instruction et avec les mêmes lectures. Un test tient la page sous quinze requêtes
 
 ## [1.5.11] - 2026-09-05

@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  */
 function modeleDeQuatreSeries(): array
 {
-    $user = User::factory()->create(['total_volume' => 0]);
+    $user = User::factory()->create();
     $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
 
     $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
@@ -54,11 +54,11 @@ it('ne crédite rien quand on ouvre une séance depuis un modèle', function ():
 
     // Quatre séries de 100 kg × 10 attendent l'utilisateur. Il n'a rien soulevé.
     expect((float) $workout->refresh()->workout_volume)->toBe(0.0)
-        ->and((float) $user->refresh()->total_volume)->toBe(0.0);
+        ->and($user->volumeSouleve())->toBe(0.0);
 });
 
 it('crédite une série au moment où elle est validée, et pas avant', function (): void {
-    $user = User::factory()->create(['total_volume' => 0]);
+    $user = User::factory()->create();
     $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
@@ -75,11 +75,11 @@ it('crédite une série au moment où elle est validée, et pas avant', function
     $set->update(['is_completed' => true]);
 
     expect((float) $workout->refresh()->workout_volume)->toBe(1000.0)
-        ->and((float) $user->refresh()->total_volume)->toBe(1000.0);
+        ->and($user->volumeSouleve())->toBe(1000.0);
 });
 
 it('reprend le volume quand on dévalide une série', function (): void {
-    $user = User::factory()->create(['total_volume' => 0]);
+    $user = User::factory()->create();
     $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
@@ -98,7 +98,7 @@ it('reprend le volume quand on dévalide une série', function (): void {
     $set->update(['is_completed' => false]);
 
     expect((float) $workout->refresh()->workout_volume)->toBe(0.0)
-        ->and((float) $user->refresh()->total_volume)->toBe(0.0);
+        ->and($user->volumeSouleve())->toBe(0.0);
 });
 
 /*
@@ -110,7 +110,7 @@ it('reprend le volume quand on dévalide une série', function (): void {
  * finit par n'être plus lue.
  */
 it('ne signale aucun écart quand une série attend encore d’être faite', function (): void {
-    $user = User::factory()->create(['total_volume' => 0]);
+    $user = User::factory()->create();
     $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
     $workout = Workout::factory()->create(['user_id' => $user->id]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
@@ -146,12 +146,11 @@ it('recale les compteurs hérités sur les séries réellement faites', function
 
     // Un compteur hérité de l'ancienne formule : il comptait les deux séries.
     DB::table('workouts')->where('id', $workout->id)->update(['workout_volume' => 2000]);
-    DB::table('users')->where('id', $user->id)->update(['total_volume' => 2000]);
 
     $this->artisan('app:verify-data-coherence')->assertExitCode(1);
 
     $this->artisan('app:verify-data-coherence', ['--repair' => true])->assertExitCode(0);
 
     expect((float) $workout->refresh()->workout_volume)->toBe(1000.0)
-        ->and((float) $user->refresh()->total_volume)->toBe(1000.0);
+        ->and($user->volumeSouleve())->toBe(1000.0);
 });

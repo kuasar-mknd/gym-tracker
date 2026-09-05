@@ -36,7 +36,7 @@ function lineWithVolume(Workout $workout, Exercise $exercise, float $weight, int
  */
 function aSessionInProgress(): array
 {
-    $user = User::factory()->create(['total_volume' => 0]);
+    $user = User::factory()->create();
 
     return [
         $user,
@@ -50,8 +50,8 @@ function aSessionInProgress(): array
 }
 
 /**
- * users.total_volume and workouts.workout_volume are maintained by model events
- * on Set. sets.workout_line_id is ON DELETE CASCADE, so when a line or a whole
+ * workouts.workout_volume is maintained by model events on Set, and the
+ * user's lifetime total is read from it. sets.workout_line_id is ON DELETE CASCADE, so when a line or a whole
  * workout goes, the database removes those rows itself and Eloquent never hears
  * about it: Set::deleted does not fire and the volume stays in the counters
  * forever.
@@ -65,7 +65,7 @@ describe('volume counters survive a cascade', function (): void {
 
         [, $volume] = lineWithVolume($workout, $exercise, 100, 10);
 
-        expect((float) $user->refresh()->total_volume)->toBe($volume)
+        expect($user->volumeSouleve())->toBe($volume)
             ->and((float) $workout->refresh()->workout_volume)->toBe($volume);
     });
 
@@ -76,7 +76,7 @@ describe('volume counters survive a cascade', function (): void {
 
         $line->delete();
 
-        expect((float) $user->refresh()->total_volume)->toBe(0.0)
+        expect($user->volumeSouleve())->toBe(0.0)
             ->and((float) $workout->refresh()->workout_volume)->toBe(0.0);
     });
 
@@ -88,7 +88,7 @@ describe('volume counters survive a cascade', function (): void {
 
         $removed->delete();
 
-        expect((float) $user->refresh()->total_volume)->toBe($keptVolume)
+        expect($user->volumeSouleve())->toBe($keptVolume)
             ->and((float) $workout->refresh()->workout_volume)->toBe($keptVolume);
     });
 
@@ -100,7 +100,7 @@ describe('volume counters survive a cascade', function (): void {
 
         $workout->delete();
 
-        expect((float) $user->refresh()->total_volume)->toBe(0.0);
+        expect($user->volumeSouleve())->toBe(0.0);
     });
 
     it('does not double-count when the sets were removed first', function (): void {
@@ -111,7 +111,7 @@ describe('volume counters survive a cascade', function (): void {
         $line->sets()->each(fn (Set $set) => $set->delete());
         $line->delete();
 
-        expect((float) $user->refresh()->total_volume)->toBe(0.0)
+        expect($user->volumeSouleve())->toBe(0.0)
             ->and((float) $workout->refresh()->workout_volume)->toBe(0.0);
     });
 
@@ -131,7 +131,7 @@ describe('volume counters survive a cascade', function (): void {
 
         $line->delete();
 
-        expect((float) $user->refresh()->total_volume)->toBe(0.0);
+        expect($user->volumeSouleve())->toBe(0.0);
     });
 });
 
@@ -145,7 +145,7 @@ describe('volume counters survive a cascade', function (): void {
  */
 describe('volume counters survive concurrent edits', function (): void {
     it('matches the sets after two writes computed from the same snapshot', function (): void {
-        $user = User::factory()->create(['total_volume' => 0]);
+        $user = User::factory()->create();
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
             'ended_at' => null,
@@ -168,6 +168,6 @@ describe('volume counters survive concurrent edits', function (): void {
 
         // The row is now 100 x 8. Anything else is drift.
         expect((float) $workout->refresh()->workout_volume)->toBe(800.0)
-            ->and((float) $user->refresh()->total_volume)->toBe(800.0);
+            ->and($user->volumeSouleve())->toBe(800.0);
     });
 });
