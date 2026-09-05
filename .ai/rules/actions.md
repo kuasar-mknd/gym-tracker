@@ -13,3 +13,7 @@ Les deux paraissent équivalents, mais seul `min()` forme une plage sur l'index 
 Mesurer avec les deltas de `show session status like 'Handler_read%'`. `EXPLAIN.rows` est une estimation, et sommer un arbre `EXPLAIN ANALYZE` compte deux fois les nœuds imbriqués.
 
 Voir `FetchBodyPartMeasurementsIndexAction` et son témoin `MesuresIndexConstantTest`.
+
+## Le saut lui-même tourne dans la base, en une instruction
+
+Une boucle PHP qui répète `min(col) where col > curseur` coûte un aller-retour par valeur trouvée : quatre-vingt-un pour quatre-vingts exercices sur la page des séances, à chaque expiration du cache. La même marche s'écrit en une expression de table récursive (`with recursive saut as (select min(...) ... union all select (select min(...) where col > saut.col) from saut where saut.col is not null)`), avec exactement les mêmes lectures d'index et un seul aller-retour. `DB::scalar()` rend le compte ; le résultat est `mixed`, donc `is_numeric()` avant le `(int)`. Limite à connaître : MySQL borne la récursion à mille pas (`cte_max_recursion_depth`), largement au-dessus d'une bibliothèque d'exercices. Témoin : `WorkoutsIndexBudgetDeRequetesTest`, qui tient la page sous quinze requêtes à froid.

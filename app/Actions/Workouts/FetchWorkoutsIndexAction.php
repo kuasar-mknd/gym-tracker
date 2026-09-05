@@ -104,25 +104,24 @@ final class FetchWorkoutsIndexAction
      * `(user_id, exercise_id, workout_started_at)` et s'arrete a la premiere
      * entree. Neuf lectures aux deux profondeurs mesurees. Meme recette que
      * `FetchBodyPartMeasurementsIndexAction`, et meme raison.
+     *
+     * La boucle tourne dans la base, par une expression de table recursive :
+     * une instruction, quel que soit le nombre d'exercices, la ou une boucle
+     * PHP coutait un aller-retour par exercice trouve.
      */
     private function compterExercicesDistincts(User $user): int
     {
-        $compte = 0;
-        $curseur = 0;
+        $compte = DB::scalar(
+            'with recursive saut as ('
+            .'select min(exercise_id) as exercise_id from workout_lines where user_id = ? '
+            .'union all '
+            .'select (select min(exercise_id) from workout_lines where user_id = ? and exercise_id > saut.exercise_id) '
+            .'from saut where saut.exercise_id is not null'
+            .') select count(exercise_id) from saut',
+            [$user->id, $user->id],
+        );
 
-        while (true) {
-            $suivant = DB::table('workout_lines')
-                ->where('user_id', $user->id)
-                ->where('exercise_id', '>', $curseur)
-                ->min('exercise_id');
-
-            if (! is_numeric($suivant)) {
-                return $compte;
-            }
-
-            $curseur = (int) $suivant;
-            $compte++;
-        }
+        return is_numeric($compte) ? (int) $compte : 0;
     }
 
     /**
