@@ -143,3 +143,44 @@ it('transmet aux services ce que la sauvegarde exige', function (): void {
         ));
     }
 });
+
+/*
+ * Horizon tient dans le conteneur qui le porte. Dix processus de 128 Mo dans
+ * un `worker` plafonné à 512 Mo (#1630) : le noyau tuait le superviseur
+ * avant que Horizon ne recycle quoi que ce soit.
+ */
+it('donne à Horizon un budget mémoire qui tient dans son conteneur', function (): void {
+    $services = compositionDeProduction();
+    $limite = data_get($services, 'worker.deploy.resources.limits.memory');
+
+    expect($limite)->toBeString()->toEndWith('M');
+    assert(is_string($limite));
+
+    $plafond = (int) rtrim($limite, 'M');
+    $processus = config('horizon.environments.production.supervisor-1.maxProcesses');
+    $parProcessus = config('horizon.defaults.supervisor-1.memory');
+
+    expect($processus)->toBeInt()->and($parProcessus)->toBeInt();
+    assert(is_int($processus) && is_int($parProcessus));
+
+    expect($processus * $parProcessus)->toBeLessThanOrEqual($plafond - 64, sprintf(
+        'Horizon peut réclamer %d × %d = %d Mo, le conteneur `worker` en autorise %d ; il faut garder 64 Mo au superviseur.',
+        $processus,
+        $parProcessus,
+        $processus * $parProcessus,
+        $plafond,
+    ));
+});
+
+/*
+ * Le démarrage dit la vérité sur les migrations (#1630) : ni `|| true`, qui
+ * faisait passer un schéma incomplet pour un déploiement réussi, ni `--quiet`,
+ * qui cachait où la série s'était arrêtée.
+ */
+it('ne laisse ni avaler ni taire un échec de migration au démarrage', function (): void {
+    $entrypoint = (string) file_get_contents(base_path('entrypoint.sh'));
+
+    expect($entrypoint)->toContain('php artisan migrate --force')
+        ->and($entrypoint)->not->toMatch('/migrate[^\n]*\|\|\s*true/')
+        ->and($entrypoint)->not->toMatch('/migrate[^\n]*--quiet/');
+});
