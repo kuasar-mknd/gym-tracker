@@ -16,7 +16,6 @@ const EN_SURSIS = {
     'Exercises/Index.vue': 572,
     'Tools/IntervalTimer.vue': 548,
     'Workouts/Index.vue': 483,
-    'Profile/Partials/UpdateNotificationPreferencesForm.vue': 417,
 }
 
 const pages = join(jsRoot, 'Pages')
