@@ -24,7 +24,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
-import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
+import { useOrdreDeLaSeance } from '@/composables/useOrdreDeLaSeance'
 import { useBrouillonsDeSeries, NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 import { useRapportDeSynchronisation } from '@/composables/useRapportDeSynchronisation'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
@@ -67,31 +67,6 @@ if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workou
  * authoritative about rows it has never been told of, nor about values it
  * rejected while the user kept theirs on screen.
  */
-/**
- * Un deplacement d'exercice parti, dont le serveur n'a pas encore rendu compte.
- *
- * `mergeServerWorkout` reconstruit la liste depuis la copie du serveur, donc
- * dans SON ordre. Un rafraichissement de props pendant qu'un deplacement est en
- * vol — un renommage de seance, une correction d'heure — remettrait les
- * exercices comme ils etaient, sous les yeux de qui vient de les bouger.
- *
- * C'est le pendant, pour les lignes, de ce que `unsyncedSetIds` fait pour les
- * series.
- */
-const ordreEnVol = ref(0)
-
-/**
- * L'ordre que le serveur a accepte en dernier.
- *
- * Le repli d'un echec ne peut pas partir d'un instantane pris a l'appel : avec
- * deux deplacements enchaines, il rendrait l'etat d'avant le PREMIER et
- * effacerait le second sans un mot.
- */
-const ordreConfirme = ref([])
-
-/** Le meme, par exercice, pour ses series. */
-const ordreDesSeriesConfirme = new Map()
-
 const mergeServerWorkout = (server, local) => {
     const merged = JSON.parse(JSON.stringify(server))
 
@@ -219,301 +194,6 @@ const openRestTimer = () => {
     timerDuration.value = usePage().props.auth.user.default_rest_time || 90
     timerRun.value += 1
     showTimer.value = true
-}
-
-/*
- * Reordonner les exercices, au doigt, pendant la seance.
- *
- * Les cartes ne se replient PAS pendant le geste. C'est delibere : replier
- * raccourcissait la page de 400 px sous le doigt, et il fallait ensuite
- * rattraper le defilement, distinguer la tape du glissement, et devancer le
- * moment ou la bibliotheque photographie la carte. Trois mecanismes pour un
- * confort — et chacun ramenait un defaut.
- *
- * Une carte pleine se traine tres bien tant que le defilement automatique
- * fonctionne aux bords, ce que la configuration ci-dessous assure.
- */
-const listeDesExercices = ref(null)
-
-/** Ce qu'un lecteur d'ecran entend apres un deplacement. */
-const annonceReorganisation = ref('')
-
-/*
- * La bibliotheque mute CE tableau elle-meme : elle est donnee-d'abord, ce qui
- * laisse Vue proprietaire du DOM. C'est ce qui evite d'avoir a defaire ses
- * deplacements, et avec eux toute une classe de defauts.
- */
-const lignesReordonnables = computed({
-    get: () => localWorkout.value.workout_lines,
-    set: (valeur) => {
-        localWorkout.value.workout_lines = valeur
-    },
-})
-
-const { rafraichir: rafraichirLeDeplacement } = useListeReordonnable(listeDesExercices, {
-    valeurs: lignesReordonnables,
-    handle: '[data-poignee-exercice]',
-    estActif: () => !isFinished.value && localWorkout.value.workout_lines.length > 1,
-    auDebut: () => triggerHaptic('tap'),
-    aLaFin: () => persisterLOrdre(),
-})
-
-const memoriserLOrdreDesSeries = () => {
-    localWorkout.value.workout_lines.forEach((ligne) => {
-        if (!ordreDesSeriesConfirme.has(ligne.id) && Array.isArray(ligne.sets)) {
-            ordreDesSeriesConfirme.set(
-                ligne.id,
-                ligne.sets.map((serie) => serie.id),
-            )
-        }
-    })
-}
-
-onMounted(() => {
-    ordreConfirme.value = localWorkout.value.workout_lines.map((ligne) => ligne.id)
-    memoriserLOrdreDesSeries()
-    void rafraichirLesSeries()
-    rafraichirLeDeplacement()
-})
-
-watch(
-    () => [isFinished.value, localWorkout.value.workout_lines.length],
-    () => rafraichirLeDeplacement(),
-)
-
-/*
- * Les series se reordonnent aussi, mais elles vivent dans UNE liste par
- * exercice : il faut donc lier chaque conteneur separement, au fur et a mesure
- * qu'il apparait.
- */
-const conteneursDeSeries = new Map()
-
-const poserLeConteneurDeSeries = (lineId) => (element) => {
-    if (element === null) {
-        conteneursDeSeries.delete(lineId)
-        oublierLesSeries(lineId)
-
-        return
-    }
-
-    conteneursDeSeries.set(lineId, element)
-}
-
-/**
- * L'exercice dont une serie est en vol. Sa rangee cesse alors d'ecouter le
- * glissement lateral : les deux gestes partent du meme endroit et avanceraient
- * ensemble.
- */
-const serieEnDeplacement = ref(null)
-
-const generationDesSeries = ref(new Map())
-
-/**
- * La bibliotheque deplace le nœud elle-meme ; Vue, restee sur l'ancien
- * arrangement, ecrit ensuite les numeros dans les mauvaises rangees. Changer la
- * generation les reconstruit dans l'ordre du tableau.
- */
-const reconstruireLesSeries = (lineId) => {
-    const generations = new Map(generationDesSeries.value)
-
-    generations.set(lineId, (generations.get(lineId) ?? 0) + 1)
-    generationDesSeries.value = generations
-}
-
-const { rafraichir: rafraichirLesSeries, oublier: oublierLesSeries } = useSousListesReordonnables(
-    () =>
-        localWorkout.value.workout_lines.map((ligne) => ({
-            cle: ligne.id,
-            element: conteneursDeSeries.get(ligne.id) ?? null,
-            valeurs: computed({
-                get: () => ligne.sets,
-                set: (valeur) => {
-                    ligne.sets = valeur
-                },
-            }),
-        })),
-    {
-        handle: '[data-poignee-serie]',
-        estActif: () => !isFinished.value,
-        appuiLong: true,
-        auDebut: (lineId) => {
-            serieEnDeplacement.value = lineId
-            triggerHaptic('tap')
-        },
-        aLaFin: (lineId) => {
-            serieEnDeplacement.value = null
-            reconstruireLesSeries(lineId)
-            persisterLOrdreDesSeries(lineId)
-        },
-    },
-)
-
-watch(
-    () => localWorkout.value.workout_lines.map((ligne) => `${ligne.id}:${ligne.sets?.length ?? 0}`).join(),
-    () => rafraichirLesSeries(),
-    { flush: 'post' },
-)
-
-/**
- * L'ordre part en entier, pas par echange.
- *
- * Deux lignes d'une meme seance peuvent partager un rang : l'index n'est pas
- * unique, le client peut fournir `order`, et deux creations concurrentes lisent
- * le meme maximum. Echanger deux rangs egaux n'ecrirait rien ; renumeroter
- * depuis la liste soumise les departage.
- */
-const deplacerExercice = (ancien, nouveau) => {
-    const lignes = localWorkout.value.workout_lines
-
-    // Au doigt, la bibliotheque ne rend jamais un rang hors liste ; au clavier,
-    // le premier exercice recoit « monter » comme les autres.
-    if (nouveau < 0 || nouveau >= lignes.length || nouveau === ancien) {
-        return
-    }
-
-    lignes.splice(nouveau, 0, ...lignes.splice(ancien, 1))
-
-    annonceReorganisation.value = `${lignes[nouveau].exercise.name} déplacé en position ${nouveau + 1} sur ${lignes.length}`
-
-    persisterLOrdre()
-}
-
-/**
- * Ecrire l'ordre courant, sans y toucher.
- *
- * Au doigt, la bibliotheque a DEJA reordonne le tableau — muter ici
- * appliquerait le deplacement deux fois. Aux fleches et au clavier, c'est
- * `deplacerExercice` qui mute avant d'appeler.
- */
-const persisterLOrdre = () => {
-    const lignes = localWorkout.value.workout_lines
-
-    ordreEnVol.value += 1
-
-    const seq = nextWrite('line-order')
-
-    const envoyer = () => {
-        /*
-         * La charge est une permutation COMPLETE, donc un deplacement plus
-         * recent remplace exactement celui-ci : l'abandonner n'est pas une
-         * economie, c'est la seule facon de ne pas faire retenir au serveur un
-         * ordre perime.
-         */
-        if (!isLatestWrite('line-order', seq)) {
-            return Promise.resolve()
-        }
-
-        return Promise.all(lignes.map((ligne) => pendingIds.resolve(ligne.id)))
-            .then((realLineIds) => {
-                if (realLineIds.some((id) => id === null)) {
-                    throw Object.assign(new Error('exercice sans identifiant serveur'), { isOffline: false })
-                }
-
-                return SyncService.patch(route('api.v1.workouts.line-order', { workout: localWorkout.value.id }), {
-                    lines: realLineIds,
-                }).then(() => {
-                    ordreConfirme.value = realLineIds
-                })
-            })
-            .catch((err) => {
-                if (err.isOffline) {
-                    return
-                }
-
-                const parId = new Map(localWorkout.value.workout_lines.map((ligne) => [ligne.id, ligne]))
-
-                localWorkout.value.workout_lines = ordreConfirme.value
-                    .map((id) => parId.get(id))
-                    .filter((ligne) => ligne !== undefined)
-
-                reportSyncFailure('L’ordre des exercices n’a pas pu être enregistré. Réessaie.')
-            })
-    }
-
-    fieldWrites.queue('line-order', envoyer).finally(() => {
-        ordreEnVol.value = Math.max(0, ordreEnVol.value - 1)
-    })
-}
-
-/**
- * Ecrire l'ordre des series d'un exercice.
- *
- * La bibliotheque a deja reordonne le tableau : ce chemin ne fait qu'ecrire, et
- * la charge est la permutation COMPLETE — les series anciennes partagent un
- * rang, donc un echange n'ecrirait rien.
- */
-/**
- * Une commande qui prend le doigt pour elle ne demarre pas un deplacement : le
- * geste s'arrete a elle. Une seule regle plutot qu'un attribut sur chaque champ
- * — la rangee en compte jusqu'a six, et un ajout futur serait oublie.
- *
- * La pastille du numero fait exception. C'est un bouton pour porter les fleches
- * du clavier, rien de plus : elle ne repond a aucune tape, et l'ecarter du
- * geste rendait la rangee insaisissable a l'endroit le plus naturel.
- */
-const ecarterLesCommandes = (evenement) => {
-    const commande = evenement.target.closest('button, input, select, textarea, a')
-
-    if (commande !== null && !commande.hasAttribute('data-poignee-clavier')) {
-        evenement.stopPropagation()
-    }
-}
-
-/** Une seule serie ne se reordonne pas, et une seance close ne bouge plus. */
-const peutReordonner = (ligne) => !isFinished.value && ligne.sets.length > 1
-
-const deplacerSerie = (ligne, ancien, nouveau) => {
-    if (nouveau < 0 || nouveau >= ligne.sets.length || nouveau === ancien) {
-        return
-    }
-
-    ligne.sets.splice(nouveau, 0, ...ligne.sets.splice(ancien, 1))
-
-    persisterLOrdreDesSeries(ligne.id)
-}
-
-const persisterLOrdreDesSeries = (lineId) => {
-    const ligne = localWorkout.value.workout_lines.find((candidate) => candidate.id === lineId)
-
-    if (ligne === undefined) {
-        return
-    }
-
-    const avantEcriture = ordreDesSeriesConfirme.get(lineId) ?? ligne.sets.map((serie) => serie.id)
-    const cle = `set-order:${lineId}`
-    const seq = nextWrite(cle)
-
-    const envoyer = () => {
-        if (!isLatestWrite(cle, seq)) {
-            return Promise.resolve()
-        }
-
-        return Promise.all([pendingIds.resolve(lineId), ...ligne.sets.map((serie) => pendingIds.resolve(serie.id))])
-            .then(([realLineId, ...realSetIds]) => {
-                if (realLineId === null || realSetIds.some((id) => id === null)) {
-                    throw Object.assign(new Error('série sans identifiant serveur'), { isOffline: false })
-                }
-
-                return SyncService.patch(route('api.v1.workout-lines.set-order', { workoutLine: realLineId }), {
-                    sets: realSetIds,
-                }).then(() => {
-                    ordreDesSeriesConfirme.set(lineId, realSetIds)
-                })
-            })
-            .catch((err) => {
-                if (err.isOffline) {
-                    return
-                }
-
-                const parId = new Map(ligne.sets.map((serie) => [serie.id, serie]))
-
-                ligne.sets = avantEcriture.map((id) => parId.get(id)).filter((serie) => serie !== undefined)
-
-                reportSyncFailure('L’ordre des séries n’a pas pu être enregistré. Réessaie.')
-            })
-    }
-
-    fieldWrites.queue(cle, envoyer)
 }
 
 const setAutoRestTimer = (valeur) => {
@@ -1373,6 +1053,29 @@ const {
     oublierLaSerie,
     rejouerLesBrouillons,
 } = useBrouillonsDeSeries()
+
+const {
+    ordreEnVol,
+    ordreConfirme,
+    memoriserLOrdreDesSeries,
+    listeDesExercices,
+    annonceReorganisation,
+    poserLeConteneurDeSeries,
+    serieEnDeplacement,
+    generationDesSeries,
+    deplacerExercice,
+    deplacerSerie,
+    ecarterLesCommandes,
+    peutReordonner,
+} = useOrdreDeLaSeance({
+    localWorkout,
+    isFinished,
+    pendingIds,
+    nextWrite,
+    isLatestWrite,
+    fieldWrites,
+    reportSyncFailure,
+})
 
 // ⚡ Perf: Optimistic updateSet — no router.reload
 const updateTimers = {}
