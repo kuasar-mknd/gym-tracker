@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Exercise;
+use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -105,6 +106,28 @@ it('retire un exercice de la séance en deux écritures, sans journal d activit�
 
     expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
         ->and(implode("\n", $mesure['sql']))->not->toContain('activity_log');
+});
+
+it('retire un exercice qui portait des records en trois écritures : la ligne, ses records d un coup, le volume de la séance', function (): void {
+    [$user, $workout, $line] = seanceOuvertePourLesEcritures();
+    $sets = Set::factory()->count(3)->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true]);
+
+    foreach (['max_weight', 'max_1rm', 'max_volume_set'] as $type) {
+        PersonalRecord::factory()->create([
+            'user_id' => $user->id,
+            'exercise_id' => $line->exercise_id,
+            'workout_id' => $workout->id,
+            'set_id' => $sets->firstOrFail()->id,
+            'type' => $type,
+        ]);
+    }
+
+    $mesure = ecrituresPendant(fn () => actingAs($user, 'sanctum')
+        ->deleteJson(route('api.v1.workout-lines.destroy', $line))
+        ->assertNoContent());
+
+    expect($mesure['ecritures'])->toBe(3, implode("\n", $mesure['sql']))
+        ->and(PersonalRecord::query()->where('user_id', $user->id)->count())->toBe(0);
 });
 
 it('liste les séances en un nombre de requêtes qui ne dépend pas du nombre de séances', function (): void {
