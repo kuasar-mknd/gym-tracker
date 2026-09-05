@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.12] - 2026-09-05
+
 ### Corrigé
 - **Le bouton « Créer une sauvegarde » de Filament était caché à tout le monde** : le greffon demande une capacité `create-backup` que Shield ne connaît pas et ne pose aucune porte pour le super administrateur ; les trois capacités (créer, télécharger, supprimer) sont désormais ouvertes au super administrateur, et la garde « pas d'archive sans mot de passe » couvre ce chemin
 - **Les graphiques suivent trois règles communes, page après page** : les dates d'un axe s'écrivent `jj/mm` partout (quatre formats se côtoyaient), les cartes d'une page montrent leurs deux axes et seuls les encarts du tableau de bord et les vignettes de la page de statistiques restent nus, et un graphique remplit la hauteur de sa carte au lieu d'y laisser un vide
@@ -461,7 +463,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.11...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.12...HEAD
+[1.5.12]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.11...v1.5.12
 [1.5.11]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.10...v1.5.11
 [1.5.10]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.9...v1.5.10
 [1.5.5]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.4...v1.5.5
