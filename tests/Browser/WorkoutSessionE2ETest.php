@@ -218,8 +218,8 @@ class WorkoutSessionE2ETest extends DuskTestCase
             $cardioLineId = $browser->attribute('[dusk="exercise-card-1"]', 'data-line-id');
 
             $browser->click('@remove-line-1')
-                ->waitFor('@confirm-delete-button', 15)
-                ->clickWhenSettled('[dusk="confirm-delete-button"]')
+                ->waitFor('@confirm-dialog-confirm', 15)
+                ->clickWhenSettled('[dusk="confirm-dialog-confirm"]')
                 ->waitUntilMissing("[dusk-id=\"exercise-line-{$cardioLineId}\"]", 15);
 
             $browser->within('@exercise-list', function (Browser $list) use ($cardioLineId): void {

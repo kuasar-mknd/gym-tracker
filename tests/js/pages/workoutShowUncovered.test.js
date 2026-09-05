@@ -113,6 +113,7 @@ import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 
 /** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
 const modale = (wrapper) => wrapper.findComponent(AjoutDExerciceModal).vm
@@ -212,6 +213,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
                 AjoutDExerciceModal,
                 RangeeDeSerie,
                 CarteDExercice,
+                ConfirmDialog,
                 GlassButton: ButtonStub,
                 GlassIconButton: IconButtonStub,
                 GlassInput: FieldStub,
@@ -480,7 +482,7 @@ describe('Workouts/Show — removing an exercise', () => {
         await buttonLabelled(wrapper, 'Annuler').trigger('click')
         await flushPromises()
 
-        expect(wrapper.vm.showConfirmModal).toBe(false)
+        expect(wrapper.vm.retraitDemande).toBe(false)
         expect(lines(wrapper)).toHaveLength(1)
         expect(destroy).not.toHaveBeenCalled()
     })
@@ -495,7 +497,7 @@ describe('Workouts/Show — removing an exercise', () => {
         wrapper.findAllComponents(ModalStub)[1].vm.$emit('close')
         await flushPromises()
 
-        expect(wrapper.vm.showConfirmModal).toBe(false)
+        expect(wrapper.vm.retraitDemande).toBe(false)
         expect(lines(wrapper)).toHaveLength(1)
         expect(destroy).not.toHaveBeenCalled()
     })
@@ -504,7 +506,7 @@ describe('Workouts/Show — removing an exercise', () => {
         const wrapper = await mountPage()
 
         await click(wrapper, 'remove-line-0')
-        await click(wrapper, 'confirm-delete-button')
+        await click(wrapper, 'confirm-dialog-confirm')
 
         expect(lines(wrapper)).toHaveLength(0)
         expect(destroy).toHaveBeenCalledWith('/api/v1/workout-lines/10')
@@ -523,7 +525,7 @@ describe('Workouts/Show — removing an exercise', () => {
         await weight.trigger('change')
 
         await click(wrapper, 'remove-line-0')
-        await click(wrapper, 'confirm-delete-button')
+        await click(wrapper, 'confirm-dialog-confirm')
 
         await new Promise((resolve) => setTimeout(resolve, 1200))
         await flushPromises()
@@ -544,7 +546,7 @@ describe('Workouts/Show — removing an exercise', () => {
         )
 
         await click(wrapper, 'remove-line-0')
-        await click(wrapper, 'confirm-delete-button')
+        await click(wrapper, 'confirm-dialog-confirm')
 
         expect(lines(wrapper).map((line) => line.id)).toEqual([10, 11])
         expect(flash()).toBe('L’exercice n’a pas pu être retiré de la séance. Réessaie.')
@@ -556,7 +558,7 @@ describe('Workouts/Show — removing an exercise', () => {
         const wrapper = await mountPage()
 
         await click(wrapper, 'remove-line-0')
-        await click(wrapper, 'confirm-delete-button')
+        await click(wrapper, 'confirm-dialog-confirm')
 
         expect(lines(wrapper)).toHaveLength(0)
         expect(flash()).toBeUndefined()
@@ -578,7 +580,7 @@ describe('Workouts/Show — removing an exercise', () => {
         expect(String(lines(wrapper)[0].id)).toMatch(/^temp-/)
 
         await click(wrapper, 'remove-line-0')
-        await click(wrapper, 'confirm-delete-button')
+        await click(wrapper, 'confirm-dialog-confirm')
 
         expect(lines(wrapper)).toHaveLength(0)
         expect(destroy).not.toHaveBeenCalled()

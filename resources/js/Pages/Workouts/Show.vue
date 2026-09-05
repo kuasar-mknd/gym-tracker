@@ -24,11 +24,11 @@ import { useOrdreDeLaSeance } from '@/composables/useOrdreDeLaSeance'
 import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
 import { useRapportDeSynchronisation } from '@/composables/useRapportDeSynchronisation'
 import { useSeriesDeLaSeance } from '@/composables/useSeriesDeLaSeance'
+import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
-import SyncService from '@/Utils/SyncService'
 import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
-import Modal from '@/Components/UI/Modal.vue'
+import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
@@ -245,38 +245,6 @@ const pendingIds = new PendingIds()
  * meanwhile.
  */
 const queuedLineIds = new Set()
-const replayListeners = new Set()
-
-/**
- * Resolves to the id a queued create eventually produced, once the queue
- * actually drains.
- *
- * Without this, a create that went offline resolved to "no such row", so a set
- * added to an exercise that was still queued was refused on the spot and never
- * revisited: the queue drained, the exercise appeared on the server, and the
- * set belonged to nobody. It is the same shape as the placeholder-id bug one
- * level up, and it outlived the fix for it.
- */
-const awaitReplay = (queueId) =>
-    new Promise((resolve) => {
-        if (!queueId) {
-            resolve(null)
-
-            return
-        }
-
-        const onReplayed = (event) => {
-            if (event.detail?.queueId !== queueId) return
-
-            window.removeEventListener('sync:replayed', onReplayed)
-            replayListeners.delete(onReplayed)
-            resolve(event.detail.data?.id ?? null)
-        }
-
-        replayListeners.add(onReplayed)
-        window.addEventListener('sync:replayed', onReplayed)
-    })
-
 const savingTemplate = ref(false)
 const saveAsTemplate = () => {
     savingTemplate.value = true
@@ -319,15 +287,6 @@ const confirmFinishWorkout = async () => {
 
 const showAddExercise = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
-const showConfirmModal = ref(false)
-const confirmAction = ref(null)
-const confirmMessage = ref('')
-
-const executeConfirmAction = () => {
-    if (typeof confirmAction.value === 'function') {
-        confirmAction.value()
-    }
-}
 const showSettingsModal = ref(false)
 
 const settingsForm = useForm({
@@ -345,122 +304,6 @@ const updateSettings = () => {
                 showSettingsModal.value = false
             },
         })
-}
-
-// ⚡ Perf: addExercise via API call + optimistic UI instead of Inertia redirect
-const addExercise = (exerciseId) => {
-    const exercise = localExercises.value.find((e) => e.id === exerciseId)
-    if (!exercise) return
-
-    // Optimistic: add line immediately
-    const tempLine = {
-        id: `temp-${++tempIdCounter}`,
-        _rowKey: newRowKey(),
-        exercise_id: exerciseId,
-        exercise: { ...exercise },
-        sets: [],
-        order: localWorkout.value.workout_lines.length,
-        notes: null,
-        recommended_values: null,
-    }
-    localWorkout.value.workout_lines.push(tempLine)
-    showAddExercise.value = false
-
-    const creation = SyncService.post(route('api.v1.workout-lines.store'), {
-        workout_id: localWorkout.value.id,
-        exercise_id: exerciseId,
-    })
-        .then((response) => {
-            const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-            const created = response.data?.data
-
-            if (!created) {
-                return null
-            }
-
-            if (idx !== -1) {
-                /**
-                 * Mutated in place, never replaced.
-                 *
-                 * Assigning a new object into the slot fixed one bug and made a
-                 * subtler one: addSet captures `line` when the user taps, and
-                 * pushes its optimistic set into THAT object's sets array. Swap
-                 * the slot for a fresh object with a fresh array and addSet is
-                 * left holding a detached copy — its own findIndex then never
-                 * finds the set again, so the row stays on a placeholder id for
-                 * as long as the page lives.
-                 *
-                 * Keeping the object and the array identity means every closure,
-                 * debounce timer and v-model binding already pointing at this
-                 * line stays pointing at the real one.
-                 */
-                const { sets: createdSets, ...lineFields } = created
-                const line = localWorkout.value.workout_lines[idx]
-
-                Object.assign(line, lineFields)
-
-                // A line the server has just created has no sets of its own, but
-                // a replayed create can return one that does.
-                for (const set of createdSets ?? []) {
-                    if (!line.sets.some((existing) => existing.id === set.id)) line.sets.push(set)
-                }
-            }
-
-            return created.id
-        })
-        .catch((err) => {
-            if (err.isOffline) {
-                // Queued, not lost. Waiting for the drain to report the real id
-                // is what lets a set added onto this exercise reach the server
-                // at all; answering null here stranded it permanently.
-                queuedLineIds.add(tempLine.id)
-
-                return awaitReplay(err.queueId)
-            }
-
-            const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-            if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
-            reportSyncFailure('L’exercice n’a pas pu être ajouté à la séance. Réessaie.')
-
-            return null
-        })
-
-    pendingIds.track(tempLine.id, creation)
-}
-
-const removeLine = (lineId) => {
-    const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
-    confirmMessage.value = `Supprimer ${line?.exercise?.name || "l'exercice"} ?`
-
-    confirmAction.value = () => {
-        oublierLesEcrituresDeLaLigne(line)
-
-        // ⚡ Perf: Optimistic removal
-        const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === lineId)
-        const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
-        showConfirmModal.value = false
-
-        // Waits out a creation still in flight rather than deleting `temp-1`,
-        // which 404s and leaves the row on the server after the user removed it.
-        pendingIds
-            .resolve(lineId)
-            .then((realLineId) => {
-                if (realLineId === null) {
-                    pendingIds.forget(lineId)
-
-                    return
-                }
-
-                return SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: realLineId }))
-            })
-            .catch((err) => {
-                if (!err.isOffline && removedLine) {
-                    localWorkout.value.workout_lines.splice(idx, 0, removedLine)
-                    reportSyncFailure('L’exercice n’a pas pu être retiré de la séance. Réessaie.')
-                }
-            })
-    }
-    showConfirmModal.value = true
 }
 
 const {
@@ -574,6 +417,19 @@ const {
     },
 })
 
+const { addExercise, removeLine, retraitDemande, titreDuRetrait, annulerLeRetrait, confirmerLeRetrait } =
+    useLignesDeLaSeance({
+        localWorkout,
+        pendingIds,
+        queuedLineIds,
+        nouvelIdTemporaire: () => `temp-${++tempIdCounter}`,
+        newRowKey,
+        localExercises,
+        showAddExercise,
+        oublierLesEcrituresDeLaLigne,
+        reportSyncFailure,
+    })
+
 // Les tests vident le debounce d'une serie par ici.
 defineExpose({ flushPendingUpdates })
 
@@ -613,11 +469,6 @@ onUnmounted(() => {
     window.removeEventListener('sync:failed', handleSyncFailure)
     window.removeEventListener('sync:auth-required', handleSyncAuthRequired)
     window.removeEventListener('sync:storage-full', handleSyncStorageFull)
-
-    // One per create still waiting on the offline queue; the page may well be
-    // left before the drain ever comes.
-    replayListeners.forEach((listener) => window.removeEventListener('sync:replayed', listener))
-    replayListeners.clear()
 
     /**
      * Sends whatever is still sitting in the debounce.
@@ -769,28 +620,12 @@ onUnmounted(() => {
 
         <WorkoutFinishModal :show="showFinishModal" @close="showFinishModal = false" @confirm="confirmFinishWorkout" />
 
-        <Modal
-            :show="showConfirmModal"
-            @close="showConfirmModal = false"
-            max-width="sm"
-            aria-labelledby="confirm-title"
-        >
-            <div class="p-6 text-center">
-                <h3 id="confirm-title" class="text-text-main mb-6 text-xl font-bold">{{ confirmMessage }}</h3>
-                <div class="flex gap-3">
-                    <GlassButton variant="secondary" @click="showConfirmModal = false" class="flex-1"
-                        >Annuler</GlassButton
-                    >
-                    <GlassButton
-                        variant="danger"
-                        @click="executeConfirmAction"
-                        class="flex-1"
-                        dusk="confirm-delete-button"
-                        >Supprimer</GlassButton
-                    >
-                </div>
-            </div>
-        </Modal>
+        <ConfirmDialog
+            :ouvert="retraitDemande"
+            :titre="titreDuRetrait"
+            @confirmer="confirmerLeRetrait"
+            @annuler="annulerLeRetrait"
+        />
 
         <RestTimer
             v-if="showTimer"

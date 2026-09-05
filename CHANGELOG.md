@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Modifié
+- **Les lignes de la séance vivent dans un composable, et leur retrait passe par le dialogue commun** (#1675) : `useLignesDeLaSeance` porte l'ajout d'un exercice, l'attente de la file hors ligne et le retrait ; la page abandonne sa propre modale de confirmation pour `ConfirmDialog`, celle des autres écrans, et passe de 807 à 641 lignes
 - **La carte d'un exercice est un composant** (#1675) : `CarteDExercice` porte l'en-tête, la poignée de déplacement, les rangées de séries et le bouton qui en ajoute une, et relaie ce que chaque rangée dit en nommant la série ; la page passe de 894 à 807 lignes
 - **La rangée d'une série est un composant** (#1675) : `RangeeDeSerie` porte la coche et son trophée, le numéro qui sert de poignée au clavier, les mesures selon le type d'exercice, le retrait par bouton ou par glissement et la pastille « non enregistrée » ; la page ne fait que relier ses écritures aux évènements de la rangée, et passe de 1 074 à 894 lignes
 - **Les écritures des séries de la séance vivent dans un composable** (#1675) : `useSeriesDeLaSeance` porte l'ajout d'une série et sa chaîne de création, la saisie débouncée et son repli, la validation ordonnée derrière la saisie en attente, le retrait et sa remise en place ; la page ne garde que l'identité des rangées, le minuteur de repos et la fusion des props, et passe de 1 745 à 1 073 lignes
