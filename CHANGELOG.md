@@ -7,6 +7,12 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Ajouté
+- **Les erreurs du navigateur se lisent dans le panneau** (#1511) : la page rapporte elle-même les erreurs non rattrapées, les promesses rejetées et les erreurs de rendu Vue (une fois par empreinte, dix au plus par page) à `erreurs-navigateur.store`, gardées trente jours et lues sous « Système › Erreurs navigateur »
+
+### Retiré
+- **Le SDK Sentry du navigateur** (`@sentry/vue`, `SENTRY_DSN_PUBLIC`, le bloc `window.SENTRY_CONFIG`) : plus rien ne part du navigateur vers un tiers, et le morceau JavaScript principal s'allège d'autant. Sentry côté serveur reste en place
+
 ## [1.5.15] - 2026-09-06
 
 ### Ajouté
