@@ -15,6 +15,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 - **Checkpoint ne signale plus les 42 paquets connus qui enregistrent des fonctions par `autoload.files`** : chacun a été lu, ils sont inscrits nom par nom dans `config/checkpoint.php` (pas de joker par éditeur), et le prochain paquet inconnu ressortira seul
 
+- **Le seuil de couverture des branches JavaScript passe de 91 à 92 %** (mesuré 93,20 %) ; les trois autres seuils gardent leur point de marge (statements 96,04 %, functions 93,24 %, lines 96,63 %). Le README compte à nouveau les vrais tests : 1 748 Pest, 1 997 Vitest, 116 parcours Dusk
+
 ### Retiré
 - **Le SDK Sentry du navigateur** (`@sentry/vue`, `SENTRY_DSN_PUBLIC`, le bloc `window.SENTRY_CONFIG`) : plus rien ne part du navigateur vers un tiers, et le morceau JavaScript principal s'allège d'autant. Sentry côté serveur reste en place
 
