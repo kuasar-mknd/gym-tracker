@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.15] - 2026-09-06
+
 ### Ajouté
 - **Les journaux se lisent depuis le panneau, et les outils y ont leur porte** : `opcodesio/log-viewer` sert `laravel.log` sous `/backoffice/journaux`, derrière la session du panneau, sa liste blanche d'adresses et la capacité du super administrateur ; le menu « Système » gagne Journaux, Horizon et, sur le poste de développement, Telescope, à côté de Pulse
 - **Les tâches planifiées se lisent dans le panneau** (#1443) : `spatie/laravel-schedule-monitor` note chaque départ, fin ou échec des tâches quotidiennes, et « Système › Tâches planifiées » les montre avec leur fréquence en français, leur dernier passage et leur état (à l'heure, en retard au-delà de la marge, échouée) ; le planning se relit au déploiement et d'un bouton ; les trois tâches de santé, 1 728 passages par jour, restent hors moniteur pour épargner le NAS ; trente jours de journal, purgés
@@ -503,7 +505,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.14...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.15...HEAD
+[1.5.15]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.14...v1.5.15
 [1.5.14]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.13...v1.5.14
 [1.5.13]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.12...v1.5.13
 [1.5.12]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.11...v1.5.12
