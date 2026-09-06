@@ -70,3 +70,8 @@ coverage
 /.claude/skills/
 /.agents/
 /osv.json
+
+# Clefs et journaux : deux des quatre motifs que Checkpoint attend en toutes
+# lettres ; `.env.*` couvre déjà `.env.backup` et `.env.production`.
+*.pem
+/storage/logs

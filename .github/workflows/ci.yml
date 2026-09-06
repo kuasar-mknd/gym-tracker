@@ -542,6 +542,32 @@ jobs:
             - name: Unused Composer Dependencies
               run: ./vendor/bin/composer-unused --no-progress
 
+            # Doctor juge selon APP_ENV, « local » ici depuis .env.example :
+            # autoload PSR-4, fraîcheur du lock, chargement et mise en cache de
+            # la configuration, cohérence du débogage. Base, cache, files,
+            # session, stockage et planificateur n'existent pas dans ce job, et
+            # l'avis de sécurité Composer est déjà rendu plus haut.
+            - name: Laravel Doctor
+              run: |
+                  cp .env.example .env
+                  php artisan key:generate --no-interaction
+                  php artisan doctor --no-interaction --fail-on=fail --format=github \
+                      --except=database --except=cache --except=queue --except=session --except=storage --except=scheduler \
+                      --except="Laravel\\Doctor\\Diagnostics\\ComposerAuditPasses"
+
+            # Vingt-deux contrôles bloquants ; les deux audits de CVE sont déjà
+            # tenus par `composer audit` et OSV plus haut, et l'outillage de
+            # chaîne d'approvisionnement parle du poste, pas du dépôt.
+            - name: Checkpoint
+              run: php artisan checkpoint:scan --no-interaction --skip="Composer CVE Audit,NPM CVE Audit,Supply Chain Tooling,Package Freshness (Supply Chain)"
+
+            # La fraîcheur des paquets est un signal, pas un verdict : une montée
+            # Dependabot fusionnée le jour de sa publication le déclencherait
+            # trois jours de suite. Elle s'annonce, sans bloquer.
+            - name: Checkpoint, fraîcheur des paquets
+              continue-on-error: true
+              run: php artisan checkpoint:scan --no-interaction --only="Package Freshness (Supply Chain)"
+
             # Le lockfile entier (dev compris : plusieurs paquets marques dev sont
             # bundles par Vite et partent au navigateur) est scanne contre la base
             # OSV. `npm audit` dependait de l'endpoint des avis du registre npm,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Services\ResolveurDns;
 use Illuminate\Support\Facades\Cache;
+use Tests\Support\AppelsAuReseau;
 
 uses(Tests\TestCase::class);
 
@@ -20,19 +21,6 @@ uses(Tests\TestCase::class);
  * appel a `dns_get_record()`, et chaque cas le remplace par ce qu'il veut
  * eprouver.
  */
-
-/**
- * Combien de fois le reseau a ete sollicite.
- *
- * Un objet plutot qu'une propriete sur la classe anonyme : le type de retour
- * de `resolveurQuiRepond()` est `ResolveurDns`, qui ne connait pas de
- * compteur. Le passer separement le rend lisible pour l'analyse statique
- * autant que pour qui lit le test.
- */
-final class AppelsAuReseau
-{
-    public int $total = 0;
-}
 
 /**
  * Un resolveur dont la reponse DNS est dictee.

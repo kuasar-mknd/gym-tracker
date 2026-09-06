@@ -30,11 +30,13 @@
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
+        "andreapollastri/checkpoint": "^1.1",
         "barryvdh/laravel-ide-helper": "^3.6",
         "fakerphp/faker": "^1.23",
         "icanhazstring/composer-unused": "^0.9.6",
         "larastan/larastan": "^3.0",
         "laravel/boost": "^2.5",
+        "laravel/doctor": "^0.1.0",
         "laravel/dusk": "^8.3",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.24",
