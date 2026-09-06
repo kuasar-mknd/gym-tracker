@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **Les écritures d'une série sont quatre composables qui se prêtent ce qu'ils partagent** : `useTransportDeSerie` (les deux appels au serveur, garés derrière la création en vol), `useSaisieDeSerie` (la rafale fondue en une écriture, son repli, le vidage, l'oubli des rafales), `useValidationDeSerie` (la coche et sa file) et `useAjoutEtRetraitDeSerie` (la naissance, sa chaîne, le retrait) ; `useSeriesDeLaSeance` ne fait plus que les composer pour la page, et passe de 779 à 109 lignes, chaque composable ayant sa suite
+
 ## [1.5.14] - 2026-09-06
 
 ### Corrigé
