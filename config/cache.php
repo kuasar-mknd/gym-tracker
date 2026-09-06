@@ -144,7 +144,7 @@ return [
             fn (string $model): string => 'App\\Models\\'.$model,
             [
                 'Achievement', 'ActivityLog', 'Admin', 'BaseMeasurement', 'BodyMeasurement', 'BodyPartMeasurement',
-                'DailyJournal', 'Exercise', 'Fast', 'Goal', 'Habit', 'HabitLog', 'IntervalTimer',
+                'DailyJournal', 'ExceptionEnregistree', 'Exercise', 'Fast', 'Goal', 'Habit', 'HabitLog', 'IntervalTimer',
                 'MacroCalculation', 'NotificationPreference', 'PersonalRecord', 'Plate', 'Set',
                 'Supplement', 'SupplementLog', 'User', 'UserAchievement', 'WarmupPreference',
                 'WaterLog', 'WilksScore', 'Workout', 'WorkoutLine', 'WorkoutTemplate',

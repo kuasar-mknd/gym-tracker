@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use BezhanSalleh\FilamentExceptions\FilamentExceptionsPlugin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
@@ -65,6 +66,15 @@ final class AdminPanelProvider extends PanelProvider
         return [
             FilamentShieldPlugin::make(),
             FilamentSpatieLaravelBackupPlugin::make(),
+            // Trente jours d'exceptions suffisent à comprendre une panne ; au-delà,
+            // `model:prune` les efface. L'intervalle est pris au démarrage, ce qui
+            // convient au planificateur, lancé à neuf.
+            FilamentExceptionsPlugin::make()
+                ->navigationGroup('Système')
+                ->navigationLabel('Exceptions')
+                ->navigationSort(91)
+                ->navigationBadge()
+                ->modelPruneInterval(now()->subDays(30)),
             FilamentSpatieLaravelHealthPlugin::make()
                 ->navigationGroup('Système')
                 ->navigationLabel('Santé')
