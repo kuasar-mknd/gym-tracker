@@ -7,14 +7,14 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.16] - 2026-09-06
+
 ### Ajouté
 - **Les erreurs du navigateur se lisent dans le panneau** (#1511) : la page rapporte elle-même les erreurs non rattrapées, les promesses rejetées et les erreurs de rendu Vue (une fois par empreinte, dix au plus par page) à `erreurs-navigateur.store`, gardées trente jours et lues sous « Système › Erreurs navigateur »
 
 ### Modifié
 - **Les actifs de `/build/assets` sont servis avec `Cache-Control: public, max-age=31536000, immutable`** : un fichier haché dans son nom ne change jamais sous son URL, le navigateur ne le redemande plus. FrankenPHP lit `docker/octane/Caddyfile`, copie du gabarit d'Octane gardée en phase par un test
-
 - **Checkpoint ne signale plus les 42 paquets connus qui enregistrent des fonctions par `autoload.files`** : chacun a été lu, ils sont inscrits nom par nom dans `config/checkpoint.php` (pas de joker par éditeur), et le prochain paquet inconnu ressortira seul
-
 - **Le seuil de couverture des branches JavaScript passe de 91 à 92 %** (mesuré 93,20 %) ; les trois autres seuils gardent leur point de marge (statements 96,04 %, functions 93,24 %, lines 96,63 %). Le README compte à nouveau les vrais tests : 1 748 Pest, 1 997 Vitest, 116 parcours Dusk
 
 ### Retiré
@@ -518,7 +518,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.15...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.16...HEAD
+[1.5.16]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.15...v1.5.16
 [1.5.15]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.14...v1.5.15
 [1.5.14]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.13...v1.5.14
 [1.5.13]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.12...v1.5.13
