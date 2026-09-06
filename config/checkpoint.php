@@ -139,7 +139,6 @@ return [
             'scrivo/highlight.php',
             'sebastian/global-state',
             'sebastian/type',
-            'sentry/sentry',
             'spatie/invade',
             'spatie/laravel-activitylog',
             'spatie/laravel-backup',

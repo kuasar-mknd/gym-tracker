@@ -44,12 +44,6 @@ x-app-env: &app-env
     # Une adresse ici, et chaque contrôle de santé qui passe au rouge écrit (une fois par heure au plus).
     HEALTH_TO_ADDRESS: ${HEALTH_TO_ADDRESS:-}
 
-    # Monitoring (reduced sampling for DS218+ performance)
-    SENTRY_DSN: ${SENTRY_DSN}
-    SENTRY_TRACES_SAMPLE_RATE: 0.2
-    SENTRY_PROFILES_SAMPLE_RATE: 0.1
-    SENTRY_SEND_DEFAULT_PII: 'false'
-
 services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1

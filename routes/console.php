@@ -10,17 +10,14 @@ Artisan::command('inspire', function (): void {
 })->purpose('Display an inspiring quote');
 
 /*
- * `sentryMonitor()` est le seul mecanisme du depot capable de signaler qu'une
- * chose ne s'est PAS produite.
- *
- * Une tache planifiee qui cesse de tourner ne leve aucune erreur : elle se tait,
- * et le silence ressemble au calme. C'est ainsi que l'absence de service
- * `scheduler` est passee inapercue jusqu'a #1443 — la commande n'avait jamais
- * tourne. Le moniteur attend le battement et alerte quand il manque.
+ * Le moniteur local des taches est ce qui signale qu'une chose ne s'est PAS
+ * produite : une tache qui cesse de tourner ne leve aucune erreur, elle se
+ * tait, et le silence ressemble au calme (#1443). Toute tache est suivie sauf
+ * mention `doNotMonitor()`, et la sante met une tache en retard ou echouee au
+ * rouge.
  */
 \Illuminate\Support\Facades\Schedule::command('app:remind-training')
-    ->dailyAt('18:00')
-    ->sentryMonitor();
+    ->dailyAt('18:00');
 
 /*
  * Le controle de coherence tourne sur les donnees reelles, pas sur un scenario.
@@ -34,26 +31,21 @@ Artisan::command('inspire', function (): void {
  * aussi dire que le controle n'a PAS tourne.
  */
 \Illuminate\Support\Facades\Schedule::command('app:verify-data-coherence')
-    ->dailyAt('04:30')
-    ->sentryMonitor();
+    ->dailyAt('04:30');
 
 // Le journal d'activité ne garde plus que l'audit des comptes (User, Admin) ;
 // sans purge, la table ne faisait que grossir (#1670).
 \Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180])
-    ->dailyAt('03:30')
-    ->sentryMonitor();
+    ->dailyAt('03:30');
 
 \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])
-    ->dailyAt('02:00')
-    ->sentryMonitor();
+    ->dailyAt('02:00');
 
 \Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db' => true, '--disable-notifications' => true])
-    ->dailyAt('02:30')
-    ->sentryMonitor();
+    ->dailyAt('02:30');
 
 \Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
-    ->dailyAt('08:00')
-    ->sentryMonitor();
+    ->dailyAt('08:00');
 
 /*
  * La santé de l'application, lue dans le panneau (« Système › Santé »).
@@ -72,17 +64,13 @@ Artisan::command('inspire', function (): void {
  */
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\RunHealthChecksCommand::class)
     ->everyFiveMinutes()
-    ->sentryMonitor()
-    // @phpstan-ignore method.nonObject (deux macros que l'analyse ne type pas)
     ->doNotMonitor();
 
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\Spatie\ScheduleMonitor\Models\MonitoredScheduledTaskLogItem::class]])
-    ->dailyAt('03:15')
-    ->sentryMonitor();
+    ->dailyAt('03:15');
 
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\ErreurNavigateur::class]])
-    ->dailyAt('03:45')
-    ->sentryMonitor();
+    ->dailyAt('03:45');
 
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\DispatchQueueCheckJobsCommand::class)
     ->everyMinute()
