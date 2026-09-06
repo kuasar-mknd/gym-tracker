@@ -21,6 +21,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
+use ShuvroRoy\FilamentSpatieLaravelHealth\FilamentSpatieLaravelHealthPlugin;
 
 final class AdminPanelProvider extends PanelProvider
 {
@@ -64,6 +65,16 @@ final class AdminPanelProvider extends PanelProvider
         return [
             FilamentShieldPlugin::make(),
             FilamentSpatieLaravelBackupPlugin::make(),
+            FilamentSpatieLaravelHealthPlugin::make()
+                ->navigationGroup('Système')
+                ->navigationLabel('Santé')
+                ->navigationSort(90)
+                ->authorize(function (): bool {
+                    /** @var \App\Models\Admin|null $user */
+                    $user = auth('admin')->user();
+
+                    return $user?->can('view-health') ?? false;
+                }),
         ];
     }
 

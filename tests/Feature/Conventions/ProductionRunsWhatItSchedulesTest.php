@@ -104,6 +104,13 @@ it('surveille chaque tâche planifiée', function (): void {
         // Une declaration va jusqu'au point-virgule qui la termine.
         $instruction = explode(';', $declaration)[0];
 
+        // Les deux battements de laravel-health sont surveillés par les
+        // contrôles qui les attendent (`ScheduleCheck`, `QueueCheck`) : leur
+        // absence se lit sur la page de santé, sans moniteur extérieur.
+        if (str_contains($instruction, 'ScheduleCheckHeartbeatCommand') || str_contains($instruction, 'DispatchQueueCheckJobsCommand')) {
+            continue;
+        }
+
         if (! str_contains($instruction, 'sentryMonitor(')) {
             $nues[] = trim(explode(')', $instruction)[0], "'\" ");
         }
