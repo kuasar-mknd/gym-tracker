@@ -64,12 +64,26 @@ Artisan::command('inspire', function (): void {
  * battement du planificateur reste la dernière tâche du fichier, comme le
  * demande le paquet.
  */
+/*
+ * Le moniteur des tâches (« Système › Tâches planifiées ») écrit trois lignes
+ * par exécution. Les trois tâches de santé tournent 1 728 fois par jour :
+ * hors moniteur, sinon le NAS y passerait ses nuits (#1668). Leur absence se
+ * lit déjà sur la page de santé.
+ */
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\RunHealthChecksCommand::class)
     ->everyFiveMinutes()
+    ->sentryMonitor()
+    // @phpstan-ignore method.nonObject (deux macros que l'analyse ne type pas)
+    ->doNotMonitor();
+
+\Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\Spatie\ScheduleMonitor\Models\MonitoredScheduledTaskLogItem::class]])
+    ->dailyAt('03:15')
     ->sentryMonitor();
 
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\DispatchQueueCheckJobsCommand::class)
-    ->everyMinute();
+    ->everyMinute()
+    ->doNotMonitor();
 
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\ScheduleCheckHeartbeatCommand::class)
-    ->everyMinute();
+    ->everyMinute()
+    ->doNotMonitor();

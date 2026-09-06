@@ -146,7 +146,7 @@ return [
                 'Achievement', 'ActivityLog', 'Admin', 'BaseMeasurement', 'BodyMeasurement', 'BodyPartMeasurement',
                 'DailyJournal', 'ExceptionEnregistree', 'Exercise', 'Fast', 'Goal', 'Habit', 'HabitLog', 'IntervalTimer',
                 'MacroCalculation', 'NotificationPreference', 'PersonalRecord', 'Plate', 'Set',
-                'Supplement', 'SupplementLog', 'User', 'UserAchievement', 'WarmupPreference',
+                'Supplement', 'SupplementLog', 'TachePlanifiee', 'User', 'UserAchievement', 'WarmupPreference',
                 'WaterLog', 'WilksScore', 'Workout', 'WorkoutLine', 'WorkoutTemplate',
                 'WorkoutTemplateLine', 'WorkoutTemplateSet',
             ]

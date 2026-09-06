@@ -277,6 +277,8 @@ final class AppServiceProvider extends ServiceProvider
             'ViewAny:ExceptionEnregistree',
             'View:ExceptionEnregistree',
             'Delete:ExceptionEnregistree',
+            'ViewAny:TachePlanifiee',
+            'View:TachePlanifiee',
         ];
 
         foreach ($capacites as $capacite) {
