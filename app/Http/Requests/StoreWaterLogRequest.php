@@ -9,11 +9,12 @@ use Illuminate\Foundation\Http\FormRequest;
 class StoreWaterLogRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * La requête ne vérifie que la connexion ; l'autorisation vit dans le
+     * contrôleur, et son refus est rendu en 404 par bootstrap/app.php.
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user() !== null;
     }
 
     /**
