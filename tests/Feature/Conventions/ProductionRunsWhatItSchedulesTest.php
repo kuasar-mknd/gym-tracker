@@ -79,7 +79,7 @@ it('fait exécuter le planificateur par un service de production', function (): 
 });
 
 /**
- * Et le planificateur doit avoir quelque chose a executer, sous surveillance.
+ * Et le planificateur doit avoir quelque chose a executer, sous le moniteur local.
  *
  * Si la derniere tache disparaissait, le service ci-dessus deviendrait un
  * figurant que personne ne penserait a retirer.
@@ -89,37 +89,36 @@ it('fait exécuter le planificateur par un service de production', function (): 
  * garde a un detail interne de Laravel. La decision de surveiller une tache se
  * prend dans `routes/console.php`, c'est donc la qu'il faut regarder.
  */
-it('surveille chaque tâche planifiée', function (): void {
+it('laisse chaque tâche planifiée sous le moniteur local', function (): void {
     $source = file_get_contents(base_path('routes/console.php'));
-
     expect($source)->toBeString();
 
     $declarations = array_slice(explode('Schedule::command(', (string) $source), 1);
-
     expect($declarations)->not->toBeEmpty();
 
-    $nues = [];
+    $exemptees = [];
 
     foreach ($declarations as $declaration) {
         // Une declaration va jusqu'au point-virgule qui la termine.
         $instruction = explode(';', $declaration)[0];
 
-        // Les deux battements de laravel-health sont surveillés par les
-        // contrôles qui les attendent (`ScheduleCheck`, `QueueCheck`) : leur
-        // absence se lit sur la page de santé, sans moniteur extérieur.
-        if (str_contains($instruction, 'ScheduleCheckHeartbeatCommand') || str_contains($instruction, 'DispatchQueueCheckJobsCommand')) {
+        // Les deux battements et le contrôle de santé se surveillent eux-mêmes :
+        // `ScheduleCheck`, `QueueCheck` et la page de santé disent quand ils
+        // manquent, et trois lignes par passage, 1 728 fois par jour, ne
+        // diraient rien de plus.
+        if (str_contains($instruction, 'ScheduleCheckHeartbeatCommand') || str_contains($instruction, 'DispatchQueueCheckJobsCommand') || str_contains($instruction, 'RunHealthChecksCommand')) {
             continue;
         }
 
-        if (! str_contains($instruction, 'sentryMonitor(')) {
-            $nues[] = trim(explode(')', $instruction)[0], "'\" ");
+        if (str_contains($instruction, 'doNotMonitor(')) {
+            $exemptees[] = trim(explode(')', $instruction)[0], "'\" ");
         }
     }
 
-    expect($nues)->toBe([], sprintf(
-        'Ces taches planifiees ne sont surveillees par rien : si elles cessent de tourner, '
+    expect($exemptees)->toBe([], sprintf(
+        'Ces taches planifiees echappent au moniteur local : si elles cessent de tourner, '
         ."personne ne le saura, parce qu'une tache qui ne s'execute pas ne leve aucune erreur.\n- %s",
-        implode("\n- ", $nues),
+        implode("\n- ", $exemptees),
     ));
 });
 

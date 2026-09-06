@@ -87,7 +87,6 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 
 | Variable | Rôle |
 | --- | --- |
-| `SENTRY_DSN` | Erreurs côté serveur. |
 | `HEALTH_TO_ADDRESS` | Adresse qui reçoit un courriel quand un contrôle de santé passe au rouge (base, Redis, file, planificateur, tâche échouée, sauvegarde manquante, disque plein), une fois par heure au plus. Vide = rien ne part, la page « Santé » du panneau suffit. |
 | `HORIZON_ALLOWED_EMAILS` | Adresses autorisées à consulter Horizon, séparées par des virgules. Vide = fermé à tout le monde. |
 | `ADMIN_INITIAL_PASSWORD` | Mot de passe du premier administrateur, exigé par `php artisan db:seed --class=AdminSeeder` ; le seeder échoue sans lui et ne réécrit jamais un mot de passe existant. |
@@ -109,7 +108,7 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 | **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4 |
 | **Testing** | Pest 4, PHPUnit 12, Laravel Dusk 8 |
 | **DevOps** | Laravel Sail (Docker), GitHub Actions |
-| **Monitoring** | Laravel Pulse, Sentry, Telescope |
+| **Monitoring** | Le panneau (santé, exceptions, tâches planifiées, journaux, erreurs navigateur), Laravel Pulse, Telescope |
 
 ---
 

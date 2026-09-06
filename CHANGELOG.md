@@ -33,6 +33,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Le seuil de couverture des branches JavaScript passe de 91 à 92 %** (mesuré 93,20 %) ; les trois autres seuils gardent leur point de marge (statements 96,04 %, functions 93,24 %, lines 96,63 %). Le README compte à nouveau les vrais tests : 1 748 Pest, 1 997 Vitest, 116 parcours Dusk
 
 ### Retiré
+- **Sentry côté serveur** (`sentry/sentry-laravel`, `SENTRY_DSN` et ses variables de la pile, les `sentryMonitor()` des tâches) : les exceptions se lisent dans le panneau (#1761), les tâches dans le moniteur local (#1762) et la santé écrit dès qu'une adresse est posée (#1773). Plus rien ne sort de la machine (#1511)
 - **Le SDK Sentry du navigateur** (`@sentry/vue`, `SENTRY_DSN_PUBLIC`, le bloc `window.SENTRY_CONFIG`) : plus rien ne part du navigateur vers un tiers, et le morceau JavaScript principal s'allège d'autant. Sentry côté serveur reste en place
 
 ## [1.5.15] - 2026-09-06

@@ -79,8 +79,6 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        \Sentry\Laravel\Integration::handles($exceptions);
-
         /*
          * Whether this caller is served JSON rather than a page.
          *
@@ -148,9 +146,9 @@ return Application::configure(basePath: dirname(__DIR__))
          * `$exceptions->map()` would have converted the exception once, before
          * either render callback, and looked like the cleaner answer. It is not:
          * `mapException()` runs in `report()` as well as in `render()`, so the
-         * predicate below would be evaluated twice per refusal — and Sentry
-         * would receive a NotFoundHttpException instead of the refusal that
-         * actually happened. #1418 hides the existence from the caller, not the
+         * predicate below would be evaluated twice per refusal — and the
+         * exceptions log would receive a NotFoundHttpException instead of the
+         * refusal that actually happened. #1418 hides the existence from the caller, not the
          * reason from the operator.
          */
         $notFound = static fn (\Illuminate\Http\Request $request): \Symfony\Component\HttpFoundation\Response => $speaksJson($request)
