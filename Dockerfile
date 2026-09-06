@@ -74,8 +74,18 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
     && mkdir -p /data/caddy /config/caddy \
-    && touch storage/logs/laravel.log \
-    && chown -R www-data:www-data storage bootstrap/cache public /data /config \
+    && touch storage/logs/laravel.log
+
+# Ce qui ne dépend pas de l'environnement se calcule ici, une fois par image,
+# pas à chaque démarrage de chaque conteneur.
+RUN php artisan package:discover --ansi \
+    && php artisan storage:link \
+    && php artisan filament:assets \
+    && php artisan log-viewer:publish --no-interaction \
+    && php artisan view:cache \
+    && php artisan event:cache
+
+RUN chown -R www-data:www-data storage bootstrap/cache public /data /config \
     && chmod -R 775 storage bootstrap/cache public /data /config
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \

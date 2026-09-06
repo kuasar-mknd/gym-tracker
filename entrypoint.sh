@@ -15,28 +15,19 @@ until php -r "try { new PDO(\"mysql:host=\" . getenv(\"DB_HOST\") . \";port=\" .
     sleep 2
 done
 
-# Cache everything for maximum performance
+# Les vues, les évènements, les paquets, les actifs du panneau et le lien de
+# stockage sont figés dans l'image. Ici, seulement ce qui lit l'environnement.
 echo "Caching configuration..."
 php artisan config:cache
 
 echo "Caching routes..."
-php artisan package:discover --ansi
-php artisan storage:link
 php artisan route:cache
-
-echo "Caching views..."
-php artisan view:cache
-
-echo "Caching events..."
-php artisan event:cache
 
 # Run migrations ONLY for the app service (when command contains octane)
 if echo "$@" | grep -q "octane:frankenphp"; then
     # Un echec de migration arrete le conteneur : demarrer un code qui ne
     # correspond pas au schema a deja coute plusieurs pannes (#1630).
     php artisan migrate --force
-    php artisan filament:upgrade --no-interaction
-    php artisan log-viewer:publish --no-interaction
     # Le moniteur des tâches ne connaît que ce qu'on lui a fait lire.
     php artisan schedule-monitor:sync
 fi

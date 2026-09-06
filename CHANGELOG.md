@@ -7,10 +7,14 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Le conteneur `app` démarrait sans ses caches** : `filament:upgrade`, lancé après `config:cache`, `route:cache` et `view:cache` dans l'entrypoint, enchaîne `config:clear`, `route:clear` et `view:clear`. Il n'y est plus ; les caches survivent au démarrage
+
 ### Ajouté
 - **La santé surveille les tâches planifiées** (#1511) : une tâche échouée met le contrôle au rouge, une tâche en retard à l'orange, d'après le moniteur local
 - **Les alertes de santé par courriel** : poser `HEALTH_TO_ADDRESS` suffit ; un contrôle au rouge écrit, une fois par heure au plus, et rien ne part sans adresse
 - **Les pages « Tâches planifiées » et « Erreurs navigateur » ont une adresse courte** (`/backoffice/taches-planifiees`, `/backoffice/erreurs-navigateur`) au lieu du chemin déduit du nom de classe (`…/taches-planifiees/tache-planifiees`)
+- **Le démarrage des conteneurs se contente de lire l'environnement** : paquets, lien de stockage, actifs du panneau, lecteur de journaux, vues et évènements sont figés dans l'image ; l'entrypoint ne lance plus que `config:cache`, `route:cache`, et pour `app` les migrations et le moniteur des tâches (deux à quatre commandes au lieu de six à dix). Sur un CPU bridé à 20 %, `/up` répond en 20 s au lieu de 36,5 s
 - **La CI démarre l'image sur une base vide avant de la publier** : même entrypoint et même commande que la pile, contre un MySQL 8.4 et un Redis jetables ; l'image qui ne répond pas sur `/up` n'est ni étiquetée ni promue (#1767 aurait été vue là)
 
 ### Corrigé
