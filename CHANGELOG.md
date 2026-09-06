@@ -13,6 +13,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Modifié
 - **Les actifs de `/build/assets` sont servis avec `Cache-Control: public, max-age=31536000, immutable`** : un fichier haché dans son nom ne change jamais sous son URL, le navigateur ne le redemande plus. FrankenPHP lit `docker/octane/Caddyfile`, copie du gabarit d'Octane gardée en phase par un test
 
+- **Checkpoint ne signale plus les 42 paquets connus qui enregistrent des fonctions par `autoload.files`** : chacun a été lu, ils sont inscrits nom par nom dans `config/checkpoint.php` (pas de joker par éditeur), et le prochain paquet inconnu ressortira seul
+
 ### Retiré
 - **Le SDK Sentry du navigateur** (`@sentry/vue`, `SENTRY_DSN_PUBLIC`, le bloc `window.SENTRY_CONFIG`) : plus rien ne part du navigateur vers un tiers, et le morceau JavaScript principal s'allège d'autant. Sentry côté serveur reste en place
 
