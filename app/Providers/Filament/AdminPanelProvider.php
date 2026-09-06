@@ -120,18 +120,40 @@ final class AdminPanelProvider extends PanelProvider
      */
     private function getNavigationItems(): array
     {
+        $peut = static function (string $capacite): bool {
+            /** @var \App\Models\Admin|null $user */
+            $user = auth('admin')->user();
+
+            return $user?->can($capacite) ?? false;
+        };
+
         return [
             \Filament\Navigation\NavigationItem::make('Pulse Serveur')
                 ->url('/backoffice/pulse', shouldOpenInNewTab: true)
                 ->icon('heroicon-o-presentation-chart-line')
                 ->group('Système')
                 ->sort(100)
-                ->visible(function (): bool {
-                    /** @var \App\Models\Admin|null $user */
-                    $user = auth('admin')->user();
-
-                    return $user?->can('viewPulse') ?? false;
-                }),
+                ->visible(fn (): bool => $peut('viewPulse')),
+            \Filament\Navigation\NavigationItem::make('Journaux')
+                ->url('/backoffice/journaux', shouldOpenInNewTab: true)
+                ->icon('heroicon-o-document-text')
+                ->group('Système')
+                ->sort(93)
+                ->visible(fn (): bool => $peut('view-logs')),
+            \Filament\Navigation\NavigationItem::make('Horizon')
+                ->url('/horizon', shouldOpenInNewTab: true)
+                ->icon('heroicon-o-queue-list')
+                ->group('Système')
+                ->sort(101)
+                ->visible(fn (): bool => $peut('view-outils')),
+            // Telescope ferme sa porte hors du poste de développement (viewTelescope
+            // rend faux) : le lien n'a de sens qu'en local.
+            \Filament\Navigation\NavigationItem::make('Telescope')
+                ->url('/telescope', shouldOpenInNewTab: true)
+                ->icon('heroicon-o-magnifying-glass-circle')
+                ->group('Système')
+                ->sort(102)
+                ->visible(fn (): bool => app()->environment('local') && $peut('view-outils')),
         ];
     }
 

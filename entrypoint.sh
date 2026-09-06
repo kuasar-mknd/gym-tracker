@@ -36,6 +36,7 @@ if echo "$@" | grep -q "octane:frankenphp"; then
     # correspond pas au schema a deja coute plusieurs pannes (#1630).
     php artisan migrate --force
     php artisan filament:upgrade --no-interaction
+    php artisan log-viewer:publish --no-interaction
     # Le moniteur des tâches ne connaît que ce qu'on lui a fait lire.
     php artisan schedule-monitor:sync
 fi
