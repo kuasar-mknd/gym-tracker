@@ -7,6 +7,10 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Ajouté
+- **La santé surveille les tâches planifiées** (#1511) : une tâche échouée met le contrôle au rouge, une tâche en retard à l'orange, d'après le moniteur local
+- **Les alertes de santé par courriel** : poser `HEALTH_TO_ADDRESS` suffit ; un contrôle au rouge écrit, une fois par heure au plus, et rien ne part sans adresse
+
 ### Corrigé
 - **L'image démarre sur une base neuve** (#1767) : le client MariaDB 11.8 de l'image vérifiait le certificat auto-signé de MySQL et refusait de charger le dump de schéma au premier `migrate`, donc le conteneur redémarrait en boucle. Un fichier d'options `[client]` désactive cette vérification pour `mysql` et `mysqldump`
 

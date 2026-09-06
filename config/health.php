@@ -45,8 +45,8 @@ return [
         /*
          * Notifications will only get sent if this option is set to `true`.
          */
-        // Éteintes tant qu'aucune adresse n'est posée : la page du panneau suffit.
-        'enabled' => env('HEALTH_NOTIFICATIONS_ENABLED', false),
+        // Une adresse suffit à les allumer ; sans adresse, la page du panneau suffit.
+        'enabled' => env('HEALTH_TO_ADDRESS', '') !== '',
 
         'notifications' => [
             CheckFailedNotification::class => ['mail'],
@@ -72,7 +72,8 @@ return [
          * When set to true, notifications will only be sent when at least one
          * check has a 'failed' status. Warnings will be ignored.
          */
-        'only_on_failure' => false,
+        // Un rouge seulement : un orange qui dure (disque à 70 %) écrirait chaque heure.
+        'only_on_failure' => true,
 
         'mail' => [
             'to' => env('HEALTH_TO_ADDRESS', ''),

@@ -41,6 +41,9 @@ x-app-env: &app-env
 
     BACKUP_ARCHIVE_PASSWORD: ${BACKUP_ARCHIVE_PASSWORD:?mot de passe des archives de sauvegarde}
 
+    # Une adresse ici, et chaque contrôle de santé qui passe au rouge écrit (une fois par heure au plus).
+    HEALTH_TO_ADDRESS: ${HEALTH_TO_ADDRESS:-}
+
     # Monitoring (reduced sampling for DS218+ performance)
     SENTRY_DSN: ${SENTRY_DSN}
     SENTRY_TRACES_SAMPLE_RATE: 0.2
