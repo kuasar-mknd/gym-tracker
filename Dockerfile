@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Le client MariaDB vérifie le certificat du serveur depuis 11.4 ; MySQL signe le sien.
+RUN mkdir -p /etc/mysql/conf.d && printf '[client]\nskip-ssl-verify-server-cert\n' > /etc/mysql/conf.d/laravel.cnf
+
 
 # 2. Builder stage for Frontend assets
 # 24 is the active LTS line, and the one CI builds with. 25 and 26 are not LTS
