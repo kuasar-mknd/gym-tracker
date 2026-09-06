@@ -7,8 +7,11 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.17] - 2026-09-06
+
 ### Corrigé
 - **Le conteneur `app` démarrait sans ses caches** : `filament:upgrade`, lancé après `config:cache`, `route:cache` et `view:cache` dans l'entrypoint, enchaîne `config:clear`, `route:clear` et `view:clear`. Il n'y est plus ; les caches survivent au démarrage
+- **L'image démarre sur une base neuve** (#1767) : le client MariaDB 11.8 de l'image vérifiait le certificat auto-signé de MySQL et refusait de charger le dump de schéma au premier `migrate`, donc le conteneur redémarrait en boucle. Un fichier d'options `[client]` désactive cette vérification pour `mysql` et `mysqldump`
 
 ### Ajouté
 - **La santé surveille les tâches planifiées** (#1511) : une tâche échouée met le contrôle au rouge, une tâche en retard à l'orange, d'après le moniteur local
@@ -19,8 +22,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **MySQL de la pile synchronise son journal une fois par seconde** (`innodb_flush_log_at_trx_commit=2`) et n'écrit plus de journal binaire (`skip-log-bin`) : sur le disque dur du NAS, chaque écriture coûtait 250 à 500 ms de synchronisation. À appliquer dans Portainer ; une coupure brutale peut perdre jusqu'à une seconde d'écritures validées (#1668)
 - **La CI démarre l'image sur une base vide avant de la publier** : même entrypoint et même commande que la pile, contre un MySQL 8.4 et un Redis jetables ; l'image qui ne répond pas sur `/up` n'est ni étiquetée ni promue (#1767 aurait été vue là)
 
-### Corrigé
-- **L'image démarre sur une base neuve** (#1767) : le client MariaDB 11.8 de l'image vérifiait le certificat auto-signé de MySQL et refusait de charger le dump de schéma au premier `migrate`, donc le conteneur redémarrait en boucle. Un fichier d'options `[client]` désactive cette vérification pour `mysql` et `mysqldump`
+### Retiré
+- **Sentry côté serveur** (`sentry/sentry-laravel`, `SENTRY_DSN` et ses variables de la pile, les `sentryMonitor()` des tâches) : les exceptions se lisent dans le panneau (#1761), les tâches dans le moniteur local (#1762) et la santé écrit dès qu'une adresse est posée (#1773). Plus rien ne sort de la machine (#1511)
 
 ## [1.5.16] - 2026-09-06
 
@@ -33,7 +36,6 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Le seuil de couverture des branches JavaScript passe de 91 à 92 %** (mesuré 93,20 %) ; les trois autres seuils gardent leur point de marge (statements 96,04 %, functions 93,24 %, lines 96,63 %). Le README compte à nouveau les vrais tests : 1 748 Pest, 1 997 Vitest, 116 parcours Dusk
 
 ### Retiré
-- **Sentry côté serveur** (`sentry/sentry-laravel`, `SENTRY_DSN` et ses variables de la pile, les `sentryMonitor()` des tâches) : les exceptions se lisent dans le panneau (#1761), les tâches dans le moniteur local (#1762) et la santé écrit dès qu'une adresse est posée (#1773). Plus rien ne sort de la machine (#1511)
 - **Le SDK Sentry du navigateur** (`@sentry/vue`, `SENTRY_DSN_PUBLIC`, le bloc `window.SENTRY_CONFIG`) : plus rien ne part du navigateur vers un tiers, et le morceau JavaScript principal s'allège d'autant. Sentry côté serveur reste en place
 
 ## [1.5.15] - 2026-09-06
@@ -534,7 +536,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.16...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.17...HEAD
+[1.5.17]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.16...v1.5.17
 [1.5.16]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.15...v1.5.16
 [1.5.15]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.14...v1.5.15
 [1.5.14]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.13...v1.5.14
