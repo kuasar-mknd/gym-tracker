@@ -54,3 +54,22 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
     ->dailyAt('08:00')
     ->sentryMonitor();
+
+/*
+ * La santé de l'application, lue dans le panneau (« Système › Santé »).
+ *
+ * Les deux battements sont ce que `ScheduleCheck` et `QueueCheck` attendent :
+ * s'ils cessent, c'est le contrôle lui-même qui le dit, pas un moniteur
+ * extérieur. Le contrôle, lui, est surveillé comme toute autre tâche. Le
+ * battement du planificateur reste la dernière tâche du fichier, comme le
+ * demande le paquet.
+ */
+\Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\RunHealthChecksCommand::class)
+    ->everyFiveMinutes()
+    ->sentryMonitor();
+
+\Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\DispatchQueueCheckJobsCommand::class)
+    ->everyMinute();
+
+\Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\ScheduleCheckHeartbeatCommand::class)
+    ->everyMinute();

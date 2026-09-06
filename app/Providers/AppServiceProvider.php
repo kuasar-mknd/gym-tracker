@@ -52,7 +52,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         $this->registerAppleSocialiteDriver();
         $this->refuserLesArchivesEnClair();
-        $this->ouvrirLesSauvegardesAuSuperAdministrateur();
+        $this->ouvrirLesOutilsAuSuperAdministrateur();
 
         if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
@@ -256,16 +256,16 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Le panneau demande `create-backup`, `download-backup` et `delete-backup` ;
-     * Shield ne les connaît pas et ne pose aucune porte pour le super
-     * administrateur, si bien que personne ne voyait le bouton.
+     * Les greffons demandent `create-backup`, `download-backup`, `delete-backup`
+     * et `view-health` ; Shield ne les connaît pas et ne pose aucune porte pour
+     * le super administrateur, si bien que personne ne voyait le bouton.
      */
-    private function ouvrirLesSauvegardesAuSuperAdministrateur(): void
+    private function ouvrirLesOutilsAuSuperAdministrateur(): void
     {
         $role = config('filament-shield.super_admin.name');
         $superAdministrateur = is_string($role) ? $role : 'super_admin';
 
-        foreach (['create-backup', 'download-backup', 'delete-backup'] as $capacite) {
+        foreach (['create-backup', 'download-backup', 'delete-backup', 'view-health'] as $capacite) {
             Gate::define($capacite, fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
                 && $utilisateur->hasRole($superAdministrateur));
         }

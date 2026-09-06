@@ -23,10 +23,12 @@
         "laravel/tinker": "^3.0",
         "sentry/sentry-laravel": "^4.20",
         "shuvroroy/filament-spatie-laravel-backup": "dev-main",
+        "shuvroroy/filament-spatie-laravel-health": "^3.3",
         "socialiteproviders/apple": "^5.9.0",
         "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-backup": "^10.3",
         "spatie/laravel-csp": "^3.21",
+        "spatie/laravel-health": "^1.40",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {

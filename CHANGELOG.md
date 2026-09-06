@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Ajouté
+- **Une page « Santé » dans le panneau** : `spatie/laravel-health` regarde la base, Redis, le cache, la file, le battement du planificateur, Horizon, l'espace disque, l'âge de la dernière sauvegarde, le mode débogage, l'environnement et les caches de configuration, toutes les cinq minutes en production ; les résultats vivent dans le cache (chaque écriture SQL coûte cher sur le NAS) et se lisent sous « Système › Santé », ouvert au super administrateur ; les notifications restent éteintes tant qu'aucune adresse n'est posée (`HEALTH_TO_ADDRESS`, `HEALTH_NOTIFICATIONS_ENABLED`)
 - **Deux diagnostics de plus dans la CI** (#1491) : `laravel/doctor` vérifie l'autoload, le lock, la configuration et la cohérence du débogage (les contrôles d'infrastructure restent hors du job, qui n'a ni base ni cache), et `andreapollastri/checkpoint` passe vingt-deux contrôles de sécurité à la source et à la configuration, les audits de CVE restant à `composer audit` et OSV ; la fraîcheur des paquets s'annonce sans bloquer. Doctor a trouvé une classe d'aide de test hors PSR-4, déplacée dans `tests/Support`
 
 ### Modifié
