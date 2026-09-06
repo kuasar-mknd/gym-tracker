@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function (): void {
         Route::post('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'update'])->name('push-subscriptions.update');
         Route::post('/push-subscriptions/delete', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
 
+        Route::post('/erreurs-navigateur', [\App\Http\Controllers\ErreurNavigateurController::class, 'store'])->name('erreurs-navigateur.store');
+
         // 'create' is excluded on purpose: goals are created from a form that
         // expands on the index, so there is no create page and the generated
         // route pointed at a controller method that does not exist.

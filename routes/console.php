@@ -80,6 +80,10 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('03:15')
     ->sentryMonitor();
 
+\Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\ErreurNavigateur::class]])
+    ->dailyAt('03:45')
+    ->sentryMonitor();
+
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\DispatchQueueCheckJobsCommand::class)
     ->everyMinute()
     ->doNotMonitor();

@@ -8,7 +8,7 @@ import { createInertiaApp, router } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
-import * as Sentry from '@sentry/vue'
+import { installerLeRapporteurDErreurs } from '@/Utils/rapporteurDErreurs'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -59,38 +59,8 @@ createInertiaApp({
              */
             .use(ZiggyVue)
 
-        /*
-         * Le DSN vient du serveur, pas du build.
-         *
-         * `import.meta.env.VITE_SENTRY_DSN_PUBLIC` etait lu ici, et fourni nulle
-         * part : ni le Dockerfile ni la CI ne le passaient, donc la condition
-         * etait fausse dans chaque image et Sentry n'a jamais demarre (#1444).
-         *
-         * Le brancher au build aurait cuit le DSN dans l'image publiee — dépôt
-         * public, image publique : toute installation aurait envoyé ses erreurs
-         * au même projet. `window.SENTRY_CONFIG` est pose par app.blade.php a
-         * partir d'une variable d'environnement, donc propre a chaque
-         * deploiement. Le bloc etait deja rendu, et lu par personne.
-         */
-        const sentryConfig = window.SENTRY_CONFIG
-
-        if (sentryConfig?.dsn) {
-            Sentry.init({
-                app,
-                dsn: sentryConfig.dsn,
-                environment: sentryConfig.environment,
-                integrations: [Sentry.browserTracingIntegration()],
-                tracesSampleRate: 0.1, // 10% sampling for performance to stay in free tier
-                sendDefaultPii: false,
-            })
-
-            // L'identifiant suffit à relier les évènements d'un même compte ;
-            // l'e-mail et le nom n'ont rien à faire chez un tiers.
-            const user = props.initialPage.props.auth?.user
-            if (user) {
-                Sentry.setUser({ id: user.id })
-            }
-        }
+        // Les erreurs du navigateur restent chez nous : voir le rapporteur.
+        installerLeRapporteurDErreurs(app)
 
         // Register custom directives
         app.directive('press', vPress)

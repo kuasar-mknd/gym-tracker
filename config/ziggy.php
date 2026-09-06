@@ -33,6 +33,7 @@ return [
         'calendar.*',
         'notifications.*',
         'push-subscriptions.*',
+        'erreurs-navigateur.store',
         'api.v1.sets.store',
         'api.v1.sets.update',
         'api.v1.sets.destroy',
