@@ -104,6 +104,8 @@ vendor/bin/sail artisan test --coverage
 - **Pint** pour le formatage : `vendor/bin/sail bin pint`
 - **Rector** pour la modernisation : `vendor/bin/sail bin rector process`
 - **PHPStan** (Larastan) niveau Max : `vendor/bin/sail bin phpstan analyse --memory-limit=2G`
+- **PHP Insights** aux quatre seuils de 90 : `vendor/bin/sail bin phpinsights analyse --no-interaction`
+- **Doctor** et **Checkpoint** pour l'environnement et la sécurité : `vendor/bin/sail artisan doctor`, `vendor/bin/sail artisan checkpoint:scan`
 - Suit les conventions Laravel
 - Utilise les type hints PHP 8.5 stricts (`declare(strict_types=1);`)
 - Crée des Form Requests pour la validation
@@ -111,6 +113,7 @@ vendor/bin/sail artisan test --coverage
 ### JavaScript/Vue
 
 - **Prettier** pour le formatage : `vendor/bin/sail npm run format`
+- **ESLint** : `vendor/bin/sail npm run lint:js`
 - Composants Vue en `<script setup>`
 - Utilise les composants du design system (`GlassCard`, `GlassButton`, etc.)
 
@@ -133,12 +136,19 @@ vendor/bin/sail artisan test --coverage
 
 ### Avant de soumettre
 
-- [ ] Tests passent (`vendor/bin/sail artisan test`)
+La CI rejoue exactement ces portes (`.github/workflows/ci.yml`) ; les passer en local évite un aller-retour.
+
+- [ ] Tests passent, avec la couverture minimale de la CI (`vendor/bin/sail artisan test -p --coverage --min=94`)
 - [ ] Tests JavaScript et couverture (`vendor/bin/sail npm run test:coverage`)
 - [ ] Lint JavaScript (`vendor/bin/sail npm run lint:js`)
 - [ ] Code formaté (`vendor/bin/sail npm run format` & `vendor/bin/sail bin pint`)
 - [ ] Rector appliqué (`vendor/bin/sail bin rector process`)
 - [ ] PHPStan propre (`vendor/bin/sail bin phpstan analyse --memory-limit=2G`)
+- [ ] Insights aux seuils de la CI (`vendor/bin/sail bin phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90`)
+- [ ] Dépendances Composer toutes utilisées et sans avis (`vendor/bin/sail bin composer-unused`, `vendor/bin/sail composer audit`)
+- [ ] Diagnostics Doctor et Checkpoint (`vendor/bin/sail artisan doctor`, `vendor/bin/sail artisan checkpoint:scan`)
+- [ ] Tests navigateur si l'interface change (`vendor/bin/sail artisan dusk`)
+- [ ] `actionlint` si un workflow change (`docker run --rm -v "$PWD":/repo:ro -w /repo rhysd/actionlint:1.7.12`)
 - [ ] Pas de `console.log` ou `dd()` oubliés
 - [ ] Documentation mise à jour si nécessaire
 
