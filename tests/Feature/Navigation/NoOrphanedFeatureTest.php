@@ -75,7 +75,8 @@ function isBehindAuth(\Illuminate\Routing\Route $route): bool
  */
 function isThirdPartyPanel(string $name): bool
 {
-    return array_any(['api.', 'filament.', 'horizon.', 'telescope', 'pulse'], fn (string $prefix): bool => str_starts_with($name, $prefix));
+    // `log-viewer.` : le lecteur de journaux vit sous /backoffice, derrière les portes du panneau, et son entrée est dans le menu du panneau.
+    return array_any(['api.', 'filament.', 'horizon.', 'telescope', 'pulse', 'log-viewer.'], fn (string $prefix): bool => str_starts_with($name, $prefix));
 }
 
 /**

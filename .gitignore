@@ -50,6 +50,7 @@ frankenphp
 /storage/app/GymTracker
 /public/css/filament-spatie-backup
 /public/css/filament-spatie-health
+/public/vendor/log-viewer
 gym_tracker
 database/*.sqlite
 ci_failure*.log

@@ -54,6 +54,9 @@ final class AppServiceProvider extends ServiceProvider
         $this->refuserLesArchivesEnClair();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
+        // Le lecteur de journaux vit sous /backoffice mais hors du panneau : sa
+        // porte est la même, dite au paquet.
+        \Opcodes\LogViewer\Facades\LogViewer::auth(fn (\Illuminate\Http\Request $request): bool => $request->user('admin')?->can('view-logs') ?? false);
 
         if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
@@ -279,6 +282,8 @@ final class AppServiceProvider extends ServiceProvider
             'Delete:ExceptionEnregistree',
             'ViewAny:TachePlanifiee',
             'View:TachePlanifiee',
+            'view-logs',
+            'view-outils',
         ];
 
         foreach ($capacites as $capacite) {
