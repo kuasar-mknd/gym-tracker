@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Support\Sante\TachesPlanifieesCheck;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Health\Checks\Checks\BackupsCheck;
 use Spatie\Health\Checks\Checks\CacheCheck;
@@ -34,6 +35,7 @@ final class SanteServiceProvider extends ServiceProvider
             // Le battement passe par la file « default », celle qu'Horizon sert.
             QueueCheck::new()->onQueue('default')->failWhenHealthJobTakesLongerThanMinutes(5),
             ScheduleCheck::new()->heartbeatMaxAgeInMinutes(2),
+            TachesPlanifieesCheck::new(),
             HorizonCheck::new(),
             UsedDiskSpaceCheck::new()->warnWhenUsedSpaceIsAbovePercentage(70)->failWhenUsedSpaceIsAbovePercentage(90),
             // La sauvegarde nocturne tombe à 02 h 30 : vingt-six heures laissent une
