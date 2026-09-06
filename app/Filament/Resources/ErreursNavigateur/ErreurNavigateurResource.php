@@ -22,6 +22,9 @@ class ErreurNavigateurResource extends Resource
     protected static ?string $model = ErreurNavigateur::class;
 
     #[\Override]
+    protected static ?string $slug = 'erreurs-navigateur';
+
+    #[\Override]
     protected static ?string $modelLabel = 'Erreur navigateur';
 
     #[\Override]

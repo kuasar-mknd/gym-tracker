@@ -22,6 +22,9 @@ class TachePlanifieeResource extends Resource
     protected static ?string $model = TachePlanifiee::class;
 
     #[\Override]
+    protected static ?string $slug = 'taches-planifiees';
+
+    #[\Override]
     protected static ?string $modelLabel = 'Tâche planifiée';
 
     #[\Override]
