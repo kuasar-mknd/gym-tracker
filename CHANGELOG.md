@@ -15,6 +15,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Les alertes de santé par courriel** : poser `HEALTH_TO_ADDRESS` suffit ; un contrôle au rouge écrit, une fois par heure au plus, et rien ne part sans adresse
 - **Les pages « Tâches planifiées » et « Erreurs navigateur » ont une adresse courte** (`/backoffice/taches-planifiees`, `/backoffice/erreurs-navigateur`) au lieu du chemin déduit du nom de classe (`…/taches-planifiees/tache-planifiees`)
 - **Le démarrage des conteneurs se contente de lire l'environnement** : paquets, lien de stockage, actifs du panneau, lecteur de journaux, vues et évènements sont figés dans l'image ; l'entrypoint ne lance plus que `config:cache`, `route:cache`, et pour `app` les migrations et le moniteur des tâches (deux à quatre commandes au lieu de six à dix). Sur un CPU bridé à 20 %, `/up` répond en 20 s au lieu de 36,5 s
+- **La page « Sauvegardes » ne relit le partage qu'une fois par minute** au lieu de toutes les quatre secondes : c'était, page ouverte, la requête la plus fréquente de la semaine
 - **La CI démarre l'image sur une base vide avant de la publier** : même entrypoint et même commande que la pile, contre un MySQL 8.4 et un Redis jetables ; l'image qui ne répond pas sur `/up` n'est ni étiquetée ni promue (#1767 aurait été vue là)
 
 ### Corrigé
