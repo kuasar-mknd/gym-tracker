@@ -88,9 +88,15 @@ services:
     db:
         image: mysql:8.4
         restart: always
+        # Un disque dur synchronise chaque validation en 250 à 500 ms ; le journal
+        # est écrit à chaque validation et synchronisé une fois par seconde, au prix
+        # d'une seconde d'écritures sur une coupure brutale. Aucune réplication ne
+        # lit le journal binaire.
         command: >
             --innodb-buffer-pool-size=256M
             --innodb-log-file-size=64M
+            --innodb-flush-log-at-trx-commit=2
+            --skip-log-bin
             --max-connections=50
             --key-buffer-size=32M
             --tmp-table-size=32M

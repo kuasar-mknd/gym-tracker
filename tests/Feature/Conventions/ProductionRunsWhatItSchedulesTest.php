@@ -191,3 +191,17 @@ it('ne laisse ni avaler ni taire un échec de migration au démarrage', function
         ->and($entrypoint)->not->toMatch('/migrate[^\n]*\|\|\s*true/')
         ->and($entrypoint)->not->toMatch('/migrate[^\n]*--quiet/');
 });
+
+/*
+ * Sur le disque dur du NAS, chaque validation coûtait 250 à 500 ms de
+ * synchronisation du journal, et le journal binaire doublait chaque écriture
+ * pour une réplication qui n'existe pas (#1668). Les deux options tiennent
+ * dans la commande du service : les perdre, c'est retrouver la lenteur.
+ */
+it('fait synchroniser le journal de MySQL une fois par seconde, sans journal binaire', function (): void {
+    $services = compositionDeProduction();
+    $commande = data_get($services, 'db.command');
+    expect($commande)->toBeString()
+        ->toContain('--innodb-flush-log-at-trx-commit=2')
+        ->toContain('--skip-log-bin');
+});
