@@ -673,6 +673,86 @@ jobs:
     #
     # Ne s'applique qu'aux tags : sur `main`, `merge` publie `latest` et
     # `sha-*`, que la production ne tire pas.
+    demarrage:
+        name: L'image démarre sur une base vide
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: build
+        permissions:
+            contents: read
+            packages: read
+        env:
+            REGISTRY: ghcr.io
+            IMAGE_NAME: ${{ github.repository }}
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_ROOT_PASSWORD: racine
+                    MYSQL_DATABASE: gym_tracker
+                    MYSQL_USER: gym
+                    MYSQL_PASSWORD: secret
+                ports:
+                    - 3306:3306
+                options: >-
+                    --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pracine"
+                    --health-interval 5s
+                    --health-timeout 5s
+                    --health-retries 30
+            redis:
+                image: redis:7-alpine
+                ports:
+                    - 6379:6379
+        steps:
+            - name: Download digest (amd64)
+              uses: actions/download-artifact@v8
+              with:
+                  name: digests-amd64
+                  path: /tmp/digests
+
+            - name: Log in to the Container registry
+              uses: docker/login-action@v4
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            # Le premier `migrate` d'une base neuve charge le dump de schéma par
+            # le client mysql de l'image : c'est là que #1767 cassait, et rien
+            # avant la production ne le voyait. Même commande que la pile, même
+            # entrypoint ; seule la base est jetable.
+            - name: Lancer l'image contre une base vide
+              env:
+                  MYSQL_PWD: racine
+              run: |
+                  set -euo pipefail
+                  digest=$(ls /tmp/digests)
+                  image="$REGISTRY/$IMAGE_NAME@sha256:$digest"
+                  docker run -d --name app -p 8080:80 --add-host=host.docker.internal:host-gateway \
+                    -e APP_KEY="base64:$(head -c 32 /dev/urandom | base64)" \
+                    -e APP_URL=http://127.0.0.1:8080 -e ASSET_URL=http://127.0.0.1:8080 \
+                    -e DB_CONNECTION=mysql -e DB_HOST=host.docker.internal -e DB_PORT=3306 \
+                    -e DB_DATABASE=gym_tracker -e DB_USERNAME=gym -e DB_PASSWORD=secret \
+                    -e REDIS_HOST=host.docker.internal -e REDIS_PORT=6379 \
+                    -e SESSION_DRIVER=redis -e CACHE_STORE=redis -e QUEUE_CONNECTION=redis \
+                    -e OCTANE_SERVER=frankenphp -e LOG_CHANNEL=stderr -e BACKUP_ARCHIVE_PASSWORD=jetable \
+                    "$image"
+                  for i in $(seq 1 80); do
+                      if curl -fs -o /dev/null http://127.0.0.1:8080/up; then
+                          echo "L'image répond sur /up après $((i * 3)) s."
+                          docker logs app 2>&1 | grep -E "Loading stored database schemas|Running migrations|Nothing to migrate" || true
+                          exit 0
+                      fi
+                      if [ "$(docker inspect -f '{{.State.Running}}' app)" != "true" ]; then
+                          echo "::error::Le conteneur s'est arrêté avant de répondre."
+                          break
+                      fi
+                      sleep 3
+                  done
+                  docker logs app 2>&1 | tail -80
+                  echo "::error::L'image ne répond pas sur /up avec une base vide."
+                  exit 1
+
     promotion:
         if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
@@ -740,12 +820,12 @@ jobs:
     merge:
         runs-on: ubuntu-latest
         timeout-minutes: 15
-        needs: [build, promotion]
+        needs: [build, demarrage, promotion]
         # `promotion` est saute hors des tags, et un `needs` saute sauterait
         # `merge` avec lui — donc `latest` ne serait plus publie sur main. La
         # condition accepte explicitement les deux etats acceptables, et rien
         # d'autre.
-        if: always() && needs.build.result == 'success' && (needs.promotion.result == 'success' || needs.promotion.result == 'skipped')
+        if: always() && needs.build.result == 'success' && needs.demarrage.result == 'success' && (needs.promotion.result == 'success' || needs.promotion.result == 'skipped')
         permissions:
             contents: read
             packages: write
