@@ -10,6 +10,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Ajouté
 - **Les erreurs du navigateur se lisent dans le panneau** (#1511) : la page rapporte elle-même les erreurs non rattrapées, les promesses rejetées et les erreurs de rendu Vue (une fois par empreinte, dix au plus par page) à `erreurs-navigateur.store`, gardées trente jours et lues sous « Système › Erreurs navigateur »
 
+### Modifié
+- **Les actifs de `/build/assets` sont servis avec `Cache-Control: public, max-age=31536000, immutable`** : un fichier haché dans son nom ne change jamais sous son URL, le navigateur ne le redemande plus. FrankenPHP lit `docker/octane/Caddyfile`, copie du gabarit d'Octane gardée en phase par un test
+
 ### Retiré
 - **Le SDK Sentry du navigateur** (`@sentry/vue`, `SENTRY_DSN_PUBLIC`, le bloc `window.SENTRY_CONFIG`) : plus rien ne part du navigateur vers un tiers, et le morceau JavaScript principal s'allège d'autant. Sentry côté serveur reste en place
 
