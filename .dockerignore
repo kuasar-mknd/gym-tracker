@@ -30,3 +30,6 @@ yarn-error.log
 tests
 *.md
 docker-compose*
+
+# Caches générés en local : l'entrypoint les régénère.
+/bootstrap/cache/*.php
