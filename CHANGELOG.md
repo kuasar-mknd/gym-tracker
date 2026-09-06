@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **L'image démarre sur une base neuve** (#1767) : le client MariaDB 11.8 de l'image vérifiait le certificat auto-signé de MySQL et refusait de charger le dump de schéma au premier `migrate`, donc le conteneur redémarrait en boucle. Un fichier d'options `[client]` désactive cette vérification pour `mysql` et `mysqldump`
+
 ## [1.5.16] - 2026-09-06
 
 ### Ajouté
