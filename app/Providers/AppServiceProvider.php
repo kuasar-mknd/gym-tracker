@@ -53,6 +53,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->registerAppleSocialiteDriver();
         $this->refuserLesArchivesEnClair();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
+        \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
 
         if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
@@ -258,14 +259,27 @@ final class AppServiceProvider extends ServiceProvider
     /**
      * Les greffons demandent `create-backup`, `download-backup`, `delete-backup`
      * et `view-health` ; Shield ne les connaît pas et ne pose aucune porte pour
-     * le super administrateur, si bien que personne ne voyait le bouton.
+     * le super administrateur, si bien que personne ne voyait le bouton. Les
+     * quatre capacités des exceptions suivent le même chemin : la ressource
+     * s'ouvre au super administrateur sans passer par `shield:generate` en
+     * production, et une permission Shield accordée à un autre rôle marche aussi.
      */
     private function ouvrirLesOutilsAuSuperAdministrateur(): void
     {
         $role = config('filament-shield.super_admin.name');
         $superAdministrateur = is_string($role) ? $role : 'super_admin';
 
-        foreach (['create-backup', 'download-backup', 'delete-backup', 'view-health'] as $capacite) {
+        $capacites = [
+            'create-backup',
+            'download-backup',
+            'delete-backup',
+            'view-health',
+            'ViewAny:ExceptionEnregistree',
+            'View:ExceptionEnregistree',
+            'Delete:ExceptionEnregistree',
+        ];
+
+        foreach ($capacites as $capacite) {
             Gate::define($capacite, fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
                 && $utilisateur->hasRole($superAdministrateur));
         }
