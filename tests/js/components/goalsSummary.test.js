@@ -47,13 +47,13 @@ describe('GoalsSummary', () => {
         const wrapper = mountSummary([goals[0]])
         const bar = wrapper.get('[role="progressbar"]')
 
-        expect(wrapper.text()).toContain('42%')
+        expect(wrapper.text()).toContain('42 %')
         expect(bar.get('div').attributes('style')).toContain('width: 42.4%')
         expect(bar.attributes('aria-valuenow')).toBe('42.4')
     })
 
     it('rounds up past the halfway mark', () => {
-        expect(mountSummary([goals[1]]).text()).toContain('67%')
+        expect(mountSummary([goals[1]]).text()).toContain('67 %')
     })
 
     it('sends every row, and the "see all" link, to the goals page', () => {

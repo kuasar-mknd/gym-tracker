@@ -219,19 +219,19 @@ describe('Workouts/Index — the summary above the history', () => {
     it('counts every session ever recorded, not the twenty on this page', () => {
         const wrapper = mountPage()
 
-        expect(statistique(wrapper, 'Séances')).toBe(47)
+        expect(statistique(wrapper, 'Séances')).toBe('47')
     })
 
     it('falls back to the rows on screen when the paginator gives no total', () => {
         const wrapper = mountPage({ workouts: { ...structuredClone(paginator), total: undefined } })
 
-        expect(statistique(wrapper, 'Séances')).toBe(3)
+        expect(statistique(wrapper, 'Séances')).toBe('3')
     })
 
     it('shows a zero rather than a blank where the exercise count belongs', () => {
         const wrapper = mountPage({ totalExercises: undefined })
 
-        expect(statistique(wrapper, 'Exercices')).toBe(0)
+        expect(statistique(wrapper, 'Exercices')).toBe('0')
     })
 })
 

@@ -2,6 +2,7 @@
 import { computed, defineAsyncComponent } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { nombre } from '@/Utils/nombre'
+import { variation } from '@/Utils/nombre'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
@@ -60,7 +61,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
                         class="font-bold"
                     />
                     <template v-if="comparison === 0">Stable vs sem. passée</template>
-                    <template v-else>{{ comparison > 0 ? '+' : '' }}{{ comparison }}% vs sem. passée</template>
+                    <template v-else>{{ variation(comparison, '%') }} vs sem. passée</template>
                 </p>
             </div>
         </div>

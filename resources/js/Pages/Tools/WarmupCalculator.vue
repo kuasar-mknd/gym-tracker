@@ -58,7 +58,7 @@
                                     <div>
                                         <p class="text-text-main font-bold">
                                             <span v-if="set.label">{{ set.label }}</span>
-                                            <span v-else>{{ set.percent }}% du max</span>
+                                            <span v-else>{{ pourcentage(set.percent, 0) }} du max</span>
                                         </p>
                                         <p class="text-text-muted text-xs">{{ set.reps }} répétitions</p>
                                     </div>
@@ -171,7 +171,7 @@
                         <GlassSegmented
                             :model-value="form.rounding_increment"
                             @update:model-value="(valeur) => (form.rounding_increment = valeur)"
-                            :options="[0.5, 1, 2.5, 5].map((pas) => ({ value: pas, label: String(pas) }))"
+                            :options="[0.5, 1, 2.5, 5].map((pas) => ({ value: pas, label: nombre(pas) }))"
                             label="Arrondi"
                             size="sm"
                             bloc
@@ -193,6 +193,7 @@ import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import { nombre, pourcentage } from '@/Utils/nombre'
 
 const props = defineProps({
     preference: {

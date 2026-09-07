@@ -94,28 +94,30 @@
                             <div
                                 class="from-accent-primary to-accent-secondary font-display mt-1 bg-linear-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent italic"
                             >
-                                {{ calculatedResults.targetCalories }} kcal
+                                {{ entier(calculatedResults.targetCalories) }} kcal
                             </div>
-                            <p class="text-text-muted text-xs font-semibold">TDEE: {{ calculatedResults.tdee }} kcal</p>
+                            <p class="text-text-muted text-xs font-semibold">
+                                TDEE : {{ entier(calculatedResults.tdee) }} kcal
+                            </p>
                         </div>
 
                         <div class="border-border grid w-full grid-cols-3 gap-4 border-t pt-4">
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
                                 <p class="font-display text-text-main text-2xl font-black">
-                                    {{ calculatedResults.protein }}g
+                                    {{ entier(calculatedResults.protein) }} g
                                 </p>
                             </div>
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Glucides</p>
                                 <p class="font-display text-text-main text-2xl font-black">
-                                    {{ calculatedResults.carbs }}g
+                                    {{ entier(calculatedResults.carbs) }} g
                                 </p>
                             </div>
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Lipides</p>
                                 <p class="font-display text-text-main text-2xl font-black">
-                                    {{ calculatedResults.fat }}g
+                                    {{ entier(calculatedResults.fat) }} g
                                 </p>
                             </div>
                         </div>
@@ -172,7 +174,7 @@
                                 <div
                                     class="text-text-main bg-surface-sunken flex h-12 w-16 items-center justify-center rounded-xl text-lg font-bold"
                                 >
-                                    {{ entry.target_calories }}
+                                    {{ entier(entry.target_calories) }}
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">
@@ -233,6 +235,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
+import { entier } from '@/Utils/nombre'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 

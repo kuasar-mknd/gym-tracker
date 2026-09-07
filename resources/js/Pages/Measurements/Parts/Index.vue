@@ -10,6 +10,7 @@ import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassChip from '@/Components/UI/GlassChip.vue'
+import { nombre, variation } from '@/Utils/nombre'
 
 const BodyPartDiffChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartDiffChart.vue'))
 
@@ -153,7 +154,8 @@ const selectCommonPart = (part) => {
                                 <div
                                     class="from-accent-tertiary to-accent-secondary mt-1 bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent"
                                 >
-                                    {{ item.current }} <span class="text-text-muted text-sm">{{ item.unit }}</span>
+                                    {{ nombre(item.current, 2) }}
+                                    <span class="text-text-muted text-sm">{{ item.unit }}</span>
                                 </div>
                                 <div class="text-text-muted mt-1 text-xs">
                                     {{ parseCalendarDate(item.date)?.toLocaleDateString() }}
@@ -166,7 +168,7 @@ const selectCommonPart = (part) => {
                                     item.diff > 0 ? 'text-trend-up' : 'text-trend-down',
                                 ]"
                             >
-                                {{ item.diff > 0 ? '+' : '' }}{{ item.diff }}
+                                {{ variation(item.diff, null, 2) }}
                             </div>
                         </div>
                     </GlassCard>

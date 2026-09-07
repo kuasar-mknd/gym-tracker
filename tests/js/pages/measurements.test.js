@@ -571,8 +571,8 @@ describe('Measurements/Parts/Index cards', () => {
 
         // Green up, red down: on a waist and on a biceps those mean opposite
         // things, so the colour only claims direction, never progress.
-        expect(wrapper.find('div.text-trend-up').text()).toBe('+0.75')
-        expect(wrapper.find('.text-trend-down').text()).toBe('-1.5')
+        expect(wrapper.find('div.text-trend-up').text()).toBe('+0,75')
+        expect(wrapper.find('.text-trend-down').text()).toBe('-1,5')
     })
 
     it('says nothing at all about a part that has not moved', async () => {

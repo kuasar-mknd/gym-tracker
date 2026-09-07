@@ -92,8 +92,8 @@ const DOMAIN_TYPES = ['weight', 'volume', 'frequency', 'measurement']
 
 describe('GoalCard — progress', () => {
     it('rounds the percentage it shows', () => {
-        expect(percentText(mountCard({ progress_pct: 56.25 }))).toContain('56%')
-        expect(percentText(mountCard({ progress_pct: 56.75 }))).toContain('57%')
+        expect(percentText(mountCard({ progress_pct: 56.25 }))).toContain('56 %')
+        expect(percentText(mountCard({ progress_pct: 56.75 }))).toContain('57 %')
     })
 
     it('sizes the bar with the unrounded percentage and announces it', () => {
@@ -106,7 +106,7 @@ describe('GoalCard — progress', () => {
     it('reads zero, not NaN, for a goal the server sent no progress for', () => {
         const wrapper = mountCard({ progress_pct: null })
 
-        expect(percentText(wrapper)).toContain('0%')
+        expect(percentText(wrapper)).toContain('0 %')
         expect(fill(wrapper).attributes('style')).toContain('width: 0%')
     })
 })

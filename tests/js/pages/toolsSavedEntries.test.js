@@ -151,9 +151,9 @@ describe('the Wilks history', () => {
         const rows = wrapper.findAll('.space-y-3 > div')
 
         expect(rows).toHaveLength(2)
-        expect(rows[0].text()).toContain('600 kg / 90.5 kg')
+        expect(rows[0].text()).toContain('600 kg / 90,5 kg')
         expect(rows[0].text()).toContain('2026')
-        expect(rows[1].text()).toContain('405.5 lbs / 75 lbs')
+        expect(rows[1].text()).toContain('405,5 lbs / 75 lbs')
         expect(rows[1].text()).toContain('2024')
     })
 
@@ -289,11 +289,11 @@ describe('the macro history', () => {
         const rows = wrapper.findAll('.space-y-3 > div')
 
         expect(rows).toHaveLength(3)
-        expect(rows[0].text()).toContain('2100')
+        expect(rows[0].text()).toContain("2'100")
         expect(rows[0].text()).toContain('180P / 210C / 60L')
-        expect(rows[1].text()).toContain('2600')
+        expect(rows[1].text()).toContain("2'600")
         expect(rows[1].text()).toContain('160P / 300C / 80L')
-        expect(rows[2].text()).toContain('3100')
+        expect(rows[2].text()).toContain("3'100")
         expect(rows[2].text()).toContain('190P / 380C / 95L')
     })
 
@@ -384,13 +384,13 @@ describe('the water log', () => {
 
         expect(rows).toHaveLength(2)
         expect(rows[0].text()).toContain('250 ml')
-        expect(rows[1].text()).toContain('1000 ml')
+        expect(rows[1].text()).toContain("1'000 ml")
 
         // The bin is an icon; without the amount in its name a screen reader
         // hears "supprimer" twice with nothing to tell the two apart.
         expect(deleteButtons(wrapper, 'Supprimer').map((button) => button.attributes('aria-label'))).toEqual([
             "Supprimer l'entrée de 250 ml",
-            "Supprimer l'entrée de 1000 ml",
+            "Supprimer l'entrée de 1'000 ml",
         ])
     })
 

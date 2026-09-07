@@ -169,8 +169,8 @@
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">
-                                        {{ parseFloat(entry.lifted_weight) }} {{ entry.unit }} /
-                                        {{ parseFloat(entry.body_weight) }} {{ entry.unit }}
+                                        {{ nombre(entry.lifted_weight) }} {{ entry.unit }} /
+                                        {{ nombre(entry.body_weight) }} {{ entry.unit }}
                                     </p>
                                     <p class="text-text-muted text-xs tracking-wider uppercase">
                                         {{ new Date(entry.created_at).toLocaleDateString() }}
