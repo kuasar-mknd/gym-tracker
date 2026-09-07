@@ -63,7 +63,7 @@ class PersonalRecordTest extends TestCase
         ]);
 
         // Manually trigger service since factory doesn't
-        new \App\Services\PersonalRecordService()->syncSetPRs($set, $user);
+        new \App\Services\PersonalRecordService()->synchroniserLesRecordsDeLaSerie($set, $user);
 
         $this->patchJson(route('api.v1.sets.update', $set), [
             'reps' => 10,
@@ -196,6 +196,6 @@ class PersonalRecordTest extends TestCase
             'is_completed' => true,
         ] + $attributes);
 
-        app(\App\Services\PersonalRecordService::class)->syncSetPRs($set->refresh());
+        app(\App\Services\PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie($set->refresh());
     }
 }

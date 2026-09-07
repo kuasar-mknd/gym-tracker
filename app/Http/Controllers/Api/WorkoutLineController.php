@@ -22,18 +22,18 @@ class WorkoutLineController extends Controller
      */
     public function store(WorkoutLineStoreRequest $request, CreateWorkoutLineAction $action): WorkoutLineResource
     {
-        $validated = $request->validated();
+        $donneesValidees = $request->validated();
 
         /** @var \App\Models\Workout $workout */
-        $workout = Workout::findOrFail($validated['workout_id']);
+        $workout = Workout::findOrFail($donneesValidees['workout_id']);
 
         $this->authorize('create', [WorkoutLine::class, $workout]);
 
         // Transmise dans un en-tête plutôt que dans le corps : elle nomme la
         // tentative, pas la ressource, et n'a rien à faire dans le payload validé.
-        $validated['idempotency_key'] = $request->header('Idempotency-Key');
+        $donneesValidees['idempotency_key'] = $request->header('Idempotency-Key');
 
-        $workoutLine = $action->execute($workout, $validated);
+        $workoutLine = $action->execute($workout, $donneesValidees);
 
         $workoutLine->load(['exercise', 'sets']);
 

@@ -27,27 +27,27 @@ final class VolumeStatsService
      * La tendance du volume sur les derniers jours.
      *
      * @param  User  $user  L'utilisateur concerné.
-     * @param  int  $days  La profondeur d'historique, en jours.
+     * @param  int  $jours  La profondeur d'historique, en jours.
      * @return array<int, VolumeTrendPoint>
      */
-    public function getVolumeTrend(User $user, int $days = 30): array
+    public function getVolumeTrend(User $user, int $jours = 30): array
     {
         return Cache::remember(
-            ClesDeStats::seances($user, "volume_trend.{$days}"),
+            ClesDeStats::seances($user, "volume_trend.{$jours}"),
             now()->addMinutes(30),
-            function () use ($user, $days): array {
+            function () use ($user, $jours): array {
                 /*
                  * Le `toBase()` qui etait ici est parti.
                  *
                  * Il se reclamait d'une economie « pour de gros volumes », sur
-                 * une requete bornee a `$days` jours et limitee a trois
+                 * une requete bornee a `$jours` jours et limitee a trois
                  * colonnes : il n'evitait que l'hydratation de quelques
                  * dizaines de lignes, et il coutait deux entrees de baseline
                  * PHPStan. Eloquent caste `started_at` en Carbon et `name` en
                  * `?string`, ce qui supprime le reparsage a la main.
                  */
                 $workouts = $user->workouts()
-                    ->where('started_at', '>=', now()->subDays($days))
+                    ->where('started_at', '>=', now()->subDays($jours))
                     ->select(['id', 'started_at', 'name', 'workout_volume'])
                     ->orderBy('started_at')
                     ->get();
@@ -142,9 +142,9 @@ final class VolumeStatsService
                     ->limit($limit)
                     ->get();
 
-                $history = [];
+                $historique = [];
                 foreach ($workouts as $row) {
-                    $history[] = new VolumeHistoryPoint(
+                    $historique[] = new VolumeHistoryPoint(
                         $row->started_at->format('d/m'),
                         $row->workout_volume,
                         // Le meme repli que WorkoutStatsService:45. Sans lui,
@@ -155,7 +155,7 @@ final class VolumeStatsService
                     );
                 }
 
-                return $history;
+                return $historique;
             }
         );
     }

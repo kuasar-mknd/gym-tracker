@@ -18,19 +18,19 @@ class StoreSetAction
     }
 
     /**
-     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $donneesValidees
      *
      * @throws \Exception
      */
-    public function execute(User $user, array $validated): Set
+    public function execute(User $user, array $donneesValidees): Set
     {
         try {
             /** @var \App\Models\WorkoutLine $workoutLine */
-            $workoutLine = WorkoutLine::findOrFail($validated['workout_line_id']);
+            $workoutLine = WorkoutLine::findOrFail($donneesValidees['workout_line_id']);
 
             Gate::forUser($user)->authorize('create', [Set::class, $workoutLine]);
 
-            return $this->createSetAction->execute($user, $workoutLine, $validated);
+            return $this->createSetAction->execute($user, $workoutLine, $donneesValidees);
         } catch (\Exception $e) {
             // Ni pile ni charge utile : l'exception est relancée et le gestionnaire
             // la rapporte avec sa pile ; la charge utile n'a rien à faire en journal.

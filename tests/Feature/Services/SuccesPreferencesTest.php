@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Queue;
  *
  * `AchievementUnlocked::via()` demande a l'utilisateur si la poussee est
  * activee pour les trophees, et `via()` est appele EN SYNCHRONE a la mise en
- * file, meme pour une notification `ShouldQueue`. `User::isPushEnabled()` sert
+ * file, meme pour une notification `ShouldQueue`. `User::notificationsPoussesActivees()` sert
  * la relation quand elle est chargee et fait un `exists()` sinon : sans le
  * chargement prealable, c'est une requete par succes debloque.
  *

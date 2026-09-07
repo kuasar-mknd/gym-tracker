@@ -7,7 +7,7 @@ use App\Models\Workout;
 use App\Services\Stats\WorkoutStatsService;
 
 /*
- * Le corps entier de `getWorkoutDistributions` pouvait etre remplace par
+ * Le corps entier de `repartitionsDesSeances` pouvait etre remplace par
  * `return []` sans qu'un seul test ne tombe.
  *
  * Le mecanisme exact : `DashboardTest.php:44` assure que la prop
@@ -59,7 +59,7 @@ it('renvoie les quatre tranches de durée, dans l’ordre et avec leur compte', 
     seanceDe($user, 75);
     seanceDe($user, 120);
 
-    $distributions = app(WorkoutStatsService::class)->getWorkoutDistributions($user);
+    $distributions = app(WorkoutStatsService::class)->repartitionsDesSeances($user);
 
     expect($distributions)->toHaveKeys(['duration', 'time_of_day']);
 
@@ -80,7 +80,7 @@ it('garde une tranche vide présente, à zéro', function (): void {
     // se voit ici.
     seanceDe($user, 20);
 
-    $duree = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['duration'];
+    $duree = app(WorkoutStatsService::class)->repartitionsDesSeances($user)['duration'];
 
     expect($duree)->toHaveCount(4)
         ->and(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $duree))->toBe([1, 0, 0, 0]);
@@ -94,7 +94,7 @@ it('range les séances par moment de la journée', function (): void {
     seanceDe($user, 30, 19);  // soir
     seanceDe($user, 30, 23);  // nuit
 
-    $moments = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['time_of_day'];
+    $moments = app(WorkoutStatsService::class)->repartitionsDesSeances($user)['time_of_day'];
 
     expect($moments)->toHaveCount(4)
         ->and(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): string => $stat->label, $moments))->toBe([
@@ -116,7 +116,7 @@ it('place les durées et les heures limites du bon côté', function (): void {
     seanceDe($user, 30, 6);    // 30 min pile -> '30-60 min' ; 06h -> matin
     seanceDe($user, 90, 0);    // 90 min pile -> '90+ min'   ; 00h -> nuit
 
-    $distributions = app(WorkoutStatsService::class)->getWorkoutDistributions($user);
+    $distributions = app(WorkoutStatsService::class)->repartitionsDesSeances($user);
 
     expect(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $distributions['duration']))->toBe([0, 1, 0, 1])
         ->and(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $distributions['time_of_day']))->toBe([1, 0, 0, 1]);
@@ -137,7 +137,7 @@ it('range chaque heure limite du bon côté', function (int $heure, int $seau): 
 
     seanceDe($user, 10, $heure);
 
-    $moments = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['time_of_day'];
+    $moments = app(WorkoutStatsService::class)->repartitionsDesSeances($user)['time_of_day'];
 
     $comptes = array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $moments);
 
@@ -169,7 +169,7 @@ it('range chaque durée limite du bon côté', function (int $minutes, int $seau
 
     seanceDe($user, $minutes, 10);
 
-    $durees = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['duration'];
+    $durees = app(WorkoutStatsService::class)->repartitionsDesSeances($user)['duration'];
 
     $comptes = array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $durees);
 
@@ -208,7 +208,7 @@ it('mesure une séance qui franchit minuit', function (): void {
         'ended_at' => $debut->copy()->addMinutes(60),
     ]);
 
-    $durees = app(WorkoutStatsService::class)->getWorkoutDistributions($user)['duration'];
+    $durees = app(WorkoutStatsService::class)->repartitionsDesSeances($user)['duration'];
 
     expect(array_map(fn (\App\DTOs\Stats\DistributionStat $stat): int => $stat->count, $durees))
         ->toBe([0, 0, 1, 0]);
@@ -217,7 +217,7 @@ it('mesure une séance qui franchit minuit', function (): void {
 /**
  * Les deux graphiques de duree du tableau de bord doivent compter la meme chose.
  *
- * `getWorkoutDistributions` avait un « chemin rapide » qui lisait les heures et
+ * `repartitionsDesSeances` avait un « chemin rapide » qui lisait les heures et
  * les minutes a coups de `substr`, en sautant les SECONDES. Sa voisine
  * `getDurationHistory` tronque des minutes reelles. Une seance de 10:00:30 a
  * 10:30:00 valait donc trente minutes pour l'une et vingt-neuf pour l'autre —
@@ -242,7 +242,7 @@ it('compte la meme duree que la courbe voisine, secondes comprises', function ()
 
     $service = app(WorkoutStatsService::class);
 
-    $duree = $service->getWorkoutDistributions($user)['duration'];
+    $duree = $service->repartitionsDesSeances($user)['duration'];
     $historique = $service->getDurationHistory($user);
 
     // Vingt-neuf minutes et demie, tronquees a vingt-neuf : la seance est donc

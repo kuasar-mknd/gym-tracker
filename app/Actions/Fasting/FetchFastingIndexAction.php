@@ -26,7 +26,7 @@ class FetchFastingIndexAction
             ->latest('start_time')
             ->first();
 
-        $history = $user->fasts()
+        $historique = $user->fasts()
             ->where('status', '!=', 'active')
             ->latest('start_time')
             ->paginate(10)
@@ -34,7 +34,7 @@ class FetchFastingIndexAction
 
         return [
             'activeFast' => $activeFast,
-            'history' => $history,
+            'history' => $historique,
         ];
     }
 }

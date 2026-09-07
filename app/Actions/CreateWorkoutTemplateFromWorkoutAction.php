@@ -58,7 +58,7 @@ final class CreateWorkoutTemplateFromWorkoutAction
 
         $templateLines = $template->workoutTemplateLines()->orderBy('id')->get();
 
-        $setsData = [];
+        $donneesDesSeries = [];
 
         /*
          * `$sourceLine` et non `$line` : la boucle precedente laisse son `$line`
@@ -73,7 +73,7 @@ final class CreateWorkoutTemplateFromWorkoutAction
             $templateLine = $templateLines[$index];
 
             foreach ($sourceLine->sets as $set) {
-                $setsData[] = [
+                $donneesDesSeries[] = [
                     'workout_template_line_id' => $templateLine->id,
                     'reps' => $set->reps,
                     'weight' => $set->weight,
@@ -85,10 +85,10 @@ final class CreateWorkoutTemplateFromWorkoutAction
             }
         }
 
-        if ($setsData !== []) {
+        if ($donneesDesSeries !== []) {
             // Par lots : SQL plafonne le nombre de paramètres d'une instruction
             // (999 sous SQLite, en général).
-            foreach (array_chunk($setsData, 100) as $chunk) {
+            foreach (array_chunk($donneesDesSeries, 100) as $chunk) {
                 WorkoutTemplateSet::insert($chunk);
             }
         }

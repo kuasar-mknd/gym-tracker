@@ -133,7 +133,7 @@ class VerifyDataCoherence extends Command
     /**
      * Recale le volume de chaque seance sur ses series reellement faites.
      *
-     * Une ecriture qui contourne `recomputeVolume()` laisse le compteur faux ;
+     * Une ecriture qui contourne `recalculerLeVolume()` laisse le compteur faux ;
      * sans chemin de reparation, le controle nocturne le signalerait chaque
      * nuit sans recours. Le volume d'un utilisateur, lui, n'est plus stocke :
      * il se lit dans ses seances.
@@ -228,17 +228,17 @@ class VerifyDataCoherence extends Command
 
         foreach ($detaches as $record) {
             $user = $record->user;
-            $exerciseId = $record->exercise_id;
+            $idExercice = $record->exercise_id;
 
             // Un couple (utilisateur, exercice) ne se reconstruit qu'une fois :
             // `recompute()` traite les trois types d'un coup.
-            $cle = "{$record->user_id}:{$exerciseId}";
+            $cle = "{$record->user_id}:{$idExercice}";
 
             if ($user === null || isset($faits[$cle])) {
                 continue;
             }
 
-            $service->recompute($user, $exerciseId);
+            $service->recompute($user, $idExercice);
             $faits[$cle] = true;
         }
 
@@ -270,7 +270,7 @@ class VerifyDataCoherence extends Command
             ->leftJoinSub(
                 DB::table('workout_lines')
                     ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
-                    // Meme filtre que `Workout::recomputeVolume()` : le volume
+                    // Meme filtre que `Workout::recalculerLeVolume()` : le volume
                     // compte les series faites, pas celles qui attendent (#1499).
                     // Sans lui, une seance dont une serie n'est pas cochee
                     // serait signalee divergente alors qu'elle est juste.
@@ -285,11 +285,11 @@ class VerifyDataCoherence extends Command
             ->selectRaw('workouts.id, workouts.workout_volume as stocke, COALESCE(calcul.reel, 0) as reel')
             ->whereRaw('ABS(workouts.workout_volume - COALESCE(calcul.reel, 0)) > 0.01');
 
-        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             'séance %s : stocké %s, calculé %s',
-            $this->colonne($ligne, 'id'),
-            $this->colonne($ligne, 'stocke'),
-            $this->colonne($ligne, 'reel'),
+            $this->colonne($workoutLine, 'id'),
+            $this->colonne($workoutLine, 'stocke'),
+            $this->colonne($workoutLine, 'reel'),
         ));
     }
 
@@ -309,12 +309,12 @@ class VerifyDataCoherence extends Command
             ->orWhereNotIn('set_id', DB::table('sets')->select('id'))
             ->select(['id', 'user_id', 'type', 'value']);
 
-        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             "record %s (%s, %s) de l'utilisateur %s ne pointe sur aucune série",
-            $this->colonne($ligne, 'id'),
-            $this->colonne($ligne, 'type'),
-            $this->colonne($ligne, 'value'),
-            $this->colonne($ligne, 'user_id'),
+            $this->colonne($workoutLine, 'id'),
+            $this->colonne($workoutLine, 'type'),
+            $this->colonne($workoutLine, 'value'),
+            $this->colonne($workoutLine, 'user_id'),
         ));
     }
 
@@ -338,11 +338,11 @@ class VerifyDataCoherence extends Command
                 'sets.weight as reel',
             ]);
 
-        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             'record %s : annonce %s, la série porte %s',
-            $this->colonne($ligne, 'id'),
-            $this->colonne($ligne, 'stocke'),
-            $this->colonne($ligne, 'reel'),
+            $this->colonne($workoutLine, 'id'),
+            $this->colonne($workoutLine, 'stocke'),
+            $this->colonne($workoutLine, 'reel'),
         ));
     }
 
@@ -381,12 +381,12 @@ class VerifyDataCoherence extends Command
                 'personal_records.user_id',
             ]);
 
-        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             "record %s (%s, %s) de l'utilisateur %s s'appuie sur une série qui ne compte pas",
-            $this->colonne($ligne, 'id'),
-            $this->colonne($ligne, 'type'),
-            $this->colonne($ligne, 'value'),
-            $this->colonne($ligne, 'user_id'),
+            $this->colonne($workoutLine, 'id'),
+            $this->colonne($workoutLine, 'type'),
+            $this->colonne($workoutLine, 'value'),
+            $this->colonne($workoutLine, 'user_id'),
         ));
     }
 
@@ -416,11 +416,11 @@ class VerifyDataCoherence extends Command
             // date posee doit correspondre a la seance la plus recente.
             ->whereRaw('NOT (users.last_workout_at <=> calcul.reel)');
 
-        return $this->ecarts($requete, fn (array $ligne): string => sprintf(
+        return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             'utilisateur %s : stocké %s, dernière séance %s',
-            $this->colonne($ligne, 'id'),
-            $this->colonne($ligne, 'stocke'),
-            $this->colonne($ligne, 'reel'),
+            $this->colonne($workoutLine, 'id'),
+            $this->colonne($workoutLine, 'stocke'),
+            $this->colonne($workoutLine, 'reel'),
         ));
     }
 
@@ -440,8 +440,8 @@ class VerifyDataCoherence extends Command
         $nombre = (clone $requete)->count();
         $descriptions = [];
 
-        foreach ($requete->limit($this->limite())->get() as $ligne) {
-            $descriptions[] = $decrire(get_object_vars($ligne));
+        foreach ($requete->limit($this->limite())->get() as $workoutLine) {
+            $descriptions[] = $decrire(get_object_vars($workoutLine));
         }
 
         return [$nombre, $descriptions];
@@ -454,11 +454,11 @@ class VerifyDataCoherence extends Command
      * `get_object_vars()` plutot que par acces direct evite d'ajouter au baseline
      * PHPStan la famille meme que #1482 cherche a drainer.
      *
-     * @param  array<array-key, mixed>  $ligne
+     * @param  array<array-key, mixed>  $workoutLine
      */
-    private function colonne(array $ligne, string $nom, string $siVide = 'aucune'): string
+    private function colonne(array $workoutLine, string $nom, string $siVide = 'aucune'): string
     {
-        $valeur = $ligne[$nom] ?? null;
+        $valeur = $workoutLine[$nom] ?? null;
 
         return is_scalar($valeur) ? (string) $valeur : $siVide;
     }

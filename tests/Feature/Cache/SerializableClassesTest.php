@@ -95,7 +95,7 @@ final class SerializableClassesTest extends TestCase
         Exercise::factory()->count(3)->create(['user_id' => $user->id]);
 
         $this->assertSurvivesTheAllowList(
-            Exercise::getCachedForUser($user->id),
+            Exercise::enCachePourUtilisateur($user->id),
             'The cached exercise list'
         );
     }
@@ -105,7 +105,7 @@ final class SerializableClassesTest extends TestCase
         Achievement::factory()->count(3)->create();
 
         $this->assertSurvivesTheAllowList(
-            Achievement::getCachedAll(),
+            Achievement::enCachePourTous(),
             'The cached achievement list'
         );
     }

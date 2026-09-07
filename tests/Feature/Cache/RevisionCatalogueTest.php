@@ -35,11 +35,11 @@ it('sert la deuxième modification du catalogue faite dans la même seconde', fu
     $catalogue = Exercise::factory()->create(['user_id' => null, 'name' => 'Squat']);
 
     $catalogue->update(['name' => 'Squat avant']);
-    Exercise::getCachedForUser($user->id);
+    Exercise::enCachePourUtilisateur($user->id);
 
     $catalogue->update(['name' => 'Squat arrière']);
 
-    expect(Exercise::getCachedForUser($user->id)->pluck('name')->all())->toContain('Squat arrière');
+    expect(Exercise::enCachePourUtilisateur($user->id)->pluck('name')->all())->toContain('Squat arrière');
 });
 
 it('n’invalide pas la liste d’un autre utilisateur pour un exercice personnel', function (): void {
@@ -47,7 +47,7 @@ it('n’invalide pas la liste d’un autre utilisateur pour un exercice personne
     $second = User::factory()->create();
     Exercise::factory()->create(['user_id' => $second->id, 'name' => 'Tirage']);
 
-    $listeDuPremier = Exercise::getCachedForUser($premier->id);
+    $listeDuPremier = Exercise::enCachePourUtilisateur($premier->id);
     Exercise::factory()->create(['user_id' => $second->id, 'name' => 'Rowing']);
 
     expect(Cache::has('exercices_liste_'.$premier->id.'_r0'))->toBeTrue()
@@ -56,9 +56,9 @@ it('n’invalide pas la liste d’un autre utilisateur pour un exercice personne
 
 it('rend la liste à jour après la création d’un exercice personnel', function (): void {
     $user = User::factory()->create();
-    Exercise::getCachedForUser($user->id);
+    Exercise::enCachePourUtilisateur($user->id);
 
     Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Soulevé de terre']);
 
-    expect(Exercise::getCachedForUser($user->id)->pluck('name')->all())->toContain('Soulevé de terre');
+    expect(Exercise::enCachePourUtilisateur($user->id)->pluck('name')->all())->toContain('Soulevé de terre');
 });

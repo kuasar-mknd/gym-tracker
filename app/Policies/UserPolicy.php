@@ -21,63 +21,63 @@ final class UserPolicy
      * administrateur sans aucune permission agir sur le User qui partageait par
      * hasard son id.
      */
-    private function isSelf(AuthUser $authUser, User $user): bool
+    private function estLuiMeme(AuthUser $utilisateurConnecte, User $user): bool
     {
-        return $authUser instanceof User && $authUser->getKey() === $user->getKey();
+        return $utilisateurConnecte instanceof User && $utilisateurConnecte->getKey() === $user->getKey();
     }
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ViewAny:User');
+        return $utilisateurConnecte->can('ViewAny:User');
     }
 
-    public function view(AuthUser $authUser, User $user): bool
+    public function view(AuthUser $utilisateurConnecte, User $user): bool
     {
-        return $this->isSelf($authUser, $user) || $authUser->can('View:User');
+        return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('View:User');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Create:User');
+        return $utilisateurConnecte->can('Create:User');
     }
 
-    public function update(AuthUser $authUser, User $user): bool
+    public function update(AuthUser $utilisateurConnecte, User $user): bool
     {
-        return $this->isSelf($authUser, $user) || $authUser->can('Update:User');
+        return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('Update:User');
     }
 
-    public function delete(AuthUser $authUser, User $user): bool
+    public function delete(AuthUser $utilisateurConnecte, User $user): bool
     {
-        return $this->isSelf($authUser, $user) || $authUser->can('Delete:User');
+        return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('Delete:User');
     }
 
-    public function restore(AuthUser $authUser, User $user): bool
+    public function restore(AuthUser $utilisateurConnecte, User $user): bool
     {
-        return $this->isSelf($authUser, $user) || $authUser->can('Restore:User');
+        return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('Restore:User');
     }
 
-    public function forceDelete(AuthUser $authUser, User $user): bool
+    public function forceDelete(AuthUser $utilisateurConnecte, User $user): bool
     {
-        return $this->isSelf($authUser, $user) || $authUser->can('ForceDelete:User');
+        return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('ForceDelete:User');
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDeleteAny:User');
+        return $utilisateurConnecte->can('ForceDeleteAny:User');
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('RestoreAny:User');
+        return $utilisateurConnecte->can('RestoreAny:User');
     }
 
-    public function replicate(AuthUser $authUser, User $user): bool
+    public function replicate(AuthUser $utilisateurConnecte, User $user): bool
     {
-        return $this->isSelf($authUser, $user) || $authUser->can('Replicate:User');
+        return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('Replicate:User');
     }
 
-    public function reorder(AuthUser $authUser): bool
+    public function reorder(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Reorder:User');
+        return $utilisateurConnecte->can('Reorder:User');
     }
 }

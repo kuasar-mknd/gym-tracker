@@ -12,78 +12,78 @@ final class ExercisePolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('ViewAny:Exercise');
+        return $utilisateurConnecte->can('ViewAny:Exercise');
     }
 
-    public function view(AuthUser $authUser, Exercise $exercise): bool
+    public function view(AuthUser $utilisateurConnecte, Exercise $exercise): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $exercise->user_id === null || $authUser->id === $exercise->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $exercise->user_id === null || $utilisateurConnecte->id === $exercise->user_id;
         }
 
-        return $authUser->can('View:Exercise');
+        return $utilisateurConnecte->can('View:Exercise');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('Create:Exercise');
+        return $utilisateurConnecte->can('Create:Exercise');
     }
 
-    public function update(AuthUser $authUser, Exercise $exercise): bool
+    public function update(AuthUser $utilisateurConnecte, Exercise $exercise): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $exercise->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $exercise->user_id;
         }
 
-        return $authUser->can('Update:Exercise');
+        return $utilisateurConnecte->can('Update:Exercise');
     }
 
-    public function delete(AuthUser $authUser, Exercise $exercise): bool
+    public function delete(AuthUser $utilisateurConnecte, Exercise $exercise): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $exercise->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $exercise->user_id;
         }
 
-        return $authUser->can('Delete:Exercise');
+        return $utilisateurConnecte->can('Delete:Exercise');
     }
 
-    public function restore(AuthUser $authUser): bool
+    public function restore(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Restore:Exercise');
+        return $utilisateurConnecte->can('Restore:Exercise');
     }
 
-    public function forceDelete(AuthUser $authUser): bool
+    public function forceDelete(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDelete:Exercise');
+        return $utilisateurConnecte->can('ForceDelete:Exercise');
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDeleteAny:Exercise');
+        return $utilisateurConnecte->can('ForceDeleteAny:Exercise');
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('RestoreAny:Exercise');
+        return $utilisateurConnecte->can('RestoreAny:Exercise');
     }
 
-    public function replicate(AuthUser $authUser): bool
+    public function replicate(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Replicate:Exercise');
+        return $utilisateurConnecte->can('Replicate:Exercise');
     }
 
-    public function reorder(AuthUser $authUser): bool
+    public function reorder(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Reorder:Exercise');
+        return $utilisateurConnecte->can('Reorder:Exercise');
     }
 }

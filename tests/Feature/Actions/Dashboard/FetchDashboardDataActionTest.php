@@ -49,7 +49,7 @@ function scenePourTableauDeBord(): User
 it('rend les cinq entrees du tableau de bord, ni plus ni moins', function (): void {
     $user = scenePourTableauDeBord();
 
-    $stats = app(FetchDashboardDataAction::class)->getImmediateStats($user);
+    $stats = app(FetchDashboardDataAction::class)->chiffresImmediats($user);
 
     // Comparer les cles exactes, et non un echantillon : la page lit les
     // quatre, et retirer « recentPRs » du tableau ne se voyait nulle part.
@@ -77,7 +77,7 @@ it('rend exactement les deux records les plus recents, du plus recent au plus an
         'achieved_at' => Carbon::parse('2026-06-14 10:00:00'),
     ]);
 
-    $records = app(FetchDashboardDataAction::class)->getImmediateStats($user)['recentPRs'];
+    $records = app(FetchDashboardDataAction::class)->chiffresImmediats($user)['recentPRs'];
 
     // Deux, sur trois disponibles : c'est la seule assertion qui tienne la
     // borne. Avec trois records en base, `take(1)` comme `take(3)` passaient.
@@ -115,7 +115,7 @@ it('rend exactement les deux objectifs actifs les plus recents, unite comprise',
         'created_at' => Carbon::parse('2026-06-17 10:00:00'),
     ]);
 
-    $objectifs = app(FetchDashboardDataAction::class)->getImmediateStats($user)['activeGoals'];
+    $objectifs = app(FetchDashboardDataAction::class)->chiffresImmediats($user)['activeGoals'];
 
     expect($objectifs)->toHaveCount(2)
         ->and($objectifs->pluck('id')->all())->toBe([$recent->id, $milieu->id])
@@ -220,7 +220,7 @@ it('regarde exactement quatre-vingt-dix jours de seances', function (): void {
         'ended_at' => Carbon::parse('2026-03-19 21:40:00'),
     ]);
 
-    $distributions = app(FetchDashboardDataAction::class)->getWorkoutDistributions($user);
+    $distributions = app(FetchDashboardDataAction::class)->repartitionsDesSeances($user);
 
     // `array_column` plutot qu'un `array_map` a fermeture typee : il lit la
     // propriete publique du DTO, et l'analyse statique n'a pas a deduire le

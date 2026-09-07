@@ -30,7 +30,7 @@ class FetchWaterHistoryAction
             static fn (WaterLog $log): string => $log->consumed_at->format('Y-m-d')
         );
 
-        $history = [];
+        $historique = [];
         for ($i = 6; $i >= 0; $i--) {
             // `copy()` plutôt qu'une nouvelle instance de Carbon à chaque tour.
             $date = $now->copy()->subDays($i);
@@ -41,13 +41,13 @@ class FetchWaterHistoryAction
 
             $dayTotalValue = (float) $dayTotal;
 
-            $history[] = [
+            $historique[] = [
                 'date' => $dateString,
                 'day_name' => $date->dayName,
                 'total' => $dayTotalValue,
             ];
         }
 
-        return $history;
+        return $historique;
     }
 }

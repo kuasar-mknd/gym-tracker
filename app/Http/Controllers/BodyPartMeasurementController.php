@@ -35,15 +35,15 @@ class BodyPartMeasurementController extends Controller
 
         $user = $this->user();
 
-        $history = $action->execute($user, $part);
+        $historique = $action->execute($user, $part);
 
-        if ($history->isEmpty()) {
+        if ($historique->isEmpty()) {
             return redirect()->route('body-parts.index');
         }
 
         return Inertia::render('Measurements/Parts/Show', [
             'part' => $part,
-            'history' => $history,
+            'history' => $historique,
         ]);
     }
 

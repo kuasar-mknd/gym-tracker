@@ -104,11 +104,11 @@ it('n’interroge pas les séries pour un objectif de volume sans exercice', fun
     $user = User::factory()->create();
 
     $seance = Workout::factory()->create(['user_id' => $user->id]);
-    $ligne = WorkoutLine::factory()->create([
+    $workoutLine = WorkoutLine::factory()->create([
         'workout_id' => $seance->id,
         'exercise_id' => Exercise::factory()->create()->id,
     ]);
-    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 50, 'reps' => 10]);
+    Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 50, 'reps' => 10]);
 
     $objectif = objectifSuiviSeul($user, GoalType::Volume, ['exercise_id' => null]);
 
@@ -159,12 +159,12 @@ it('retient le meilleur volume d’une séance quand rien n’est pré-calculé'
 
     foreach ([[50, 10], [60, 10]] as [$poids, $repetitions]) {
         $seance = Workout::factory()->create(['user_id' => $user->id]);
-        $ligne = WorkoutLine::factory()->create([
+        $workoutLine = WorkoutLine::factory()->create([
             'workout_id' => $seance->id,
             'exercise_id' => $exercise->id,
         ]);
         Set::factory()->create([
-            'workout_line_id' => $ligne->id,
+            'workout_line_id' => $workoutLine->id,
             'weight' => $poids,
             'reps' => $repetitions,
         ]);

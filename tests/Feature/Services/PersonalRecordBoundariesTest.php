@@ -80,7 +80,7 @@ it('n’annonce pas un nouveau record quand on ne fait qu’égaler', function (
     Notification::fake();
     [$user, $exercise] = contexteRecord();
 
-    app(PersonalRecordService::class)->syncSetPRs(serieDe($user, $exercise, 100));
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie(serieDe($user, $exercise, 100));
 
     $record = PersonalRecord::where('type', 'max_weight')->firstOrFail();
     $dateInitiale = $record->achieved_at;
@@ -88,7 +88,7 @@ it('n’annonce pas un nouveau record quand on ne fait qu’égaler', function (
     Notification::assertSentToTimes($user, PersonalRecordAchieved::class, 3);
 
     // Meme poids, meme repetitions : rien n'est battu.
-    app(PersonalRecordService::class)->syncSetPRs(serieDe($user, $exercise, 100));
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie(serieDe($user, $exercise, 100));
 
     expect(PersonalRecord::where('type', 'max_weight')->firstOrFail()->achieved_at->equalTo($dateInitiale))
         ->toBeTrue();
@@ -111,8 +111,8 @@ it('met à jour le record au lieu d’en créer un second', function (): void {
 
     $service = app(PersonalRecordService::class);
 
-    $service->syncSetPRs(serieDe($user, $exercise, 50));
-    $service->syncSetPRs(serieDe($user, $exercise, 60));
+    $service->synchroniserLesRecordsDeLaSerie(serieDe($user, $exercise, 50));
+    $service->synchroniserLesRecordsDeLaSerie(serieDe($user, $exercise, 60));
 
     // Trois types suivis — max_weight, max_1rm, max_volume_set — donc trois
     // lignes, pas six.
@@ -152,7 +152,7 @@ it('retire le record quand le poids qui l’a établi est corrigé à zéro', fu
 
     $serie = serieDe($user, $exercise, 100);
 
-    app(PersonalRecordService::class)->syncSetPRs($serie);
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie($serie);
 
     expect((float) PersonalRecord::where('type', 'max_weight')->firstOrFail()->value)->toBe(100.0);
 

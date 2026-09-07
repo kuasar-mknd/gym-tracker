@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Cache;
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutLine> $workoutLines
  * @property-read \App\Models\User|null $user
  *
- * @method static \Illuminate\Database\Eloquent\Builder|Exercise forUser(int $userId)
+ * @method static \Illuminate\Database\Eloquent\Builder|Exercise forUser(int $idUtilisateur)
  */
 class Exercise extends Model
 {
@@ -54,9 +54,9 @@ class Exercise extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
      * @return \Illuminate\Database\Eloquent\Builder<$this>
      */
-    public function scopeForUser(Builder $query, int $userId): Builder
+    public function scopeForUser(Builder $query, int $idUtilisateur): Builder
     {
-        return $query->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $userId));
+        return $query->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $idUtilisateur));
     }
 
     /**
@@ -65,12 +65,12 @@ class Exercise extends Model
      *
      * @return Collection<int, Exercise>
      */
-    public static function getCachedForUser(int $userId): Collection
+    public static function enCachePourUtilisateur(int $idUtilisateur): Collection
     {
         return Cache::remember(
-            self::cleDeListe($userId),
+            self::cleDeListe($idUtilisateur),
             3600,
-            fn () => self::forUser($userId)
+            fn () => self::forUser($idUtilisateur)
                 ->orderBy('category')
                 ->orderBy('name')
                 ->get()
@@ -109,9 +109,9 @@ class Exercise extends Model
         return is_numeric($revision) ? (int) $revision : 0;
     }
 
-    private static function cleDeListe(int $userId): string
+    private static function cleDeListe(int $idUtilisateur): string
     {
-        return 'exercices_liste_'.$userId.'_r'.self::revisionDuCatalogue();
+        return 'exercices_liste_'.$idUtilisateur.'_r'.self::revisionDuCatalogue();
     }
 
     #[\Override]

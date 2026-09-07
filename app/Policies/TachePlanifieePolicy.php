@@ -11,14 +11,14 @@ final class TachePlanifieePolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ViewAny:TachePlanifiee');
+        return $utilisateurConnecte->can('ViewAny:TachePlanifiee');
     }
 
-    public function view(AuthUser $authUser): bool
+    public function view(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('View:TachePlanifiee');
+        return $utilisateurConnecte->can('View:TachePlanifiee');
     }
 
     public function create(): bool

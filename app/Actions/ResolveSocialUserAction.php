@@ -11,9 +11,9 @@ use Laravel\Socialite\Contracts\User as SocialUser;
 
 final class ResolveSocialUserAction
 {
-    public function execute(string $provider, SocialUser $socialUser): User
+    public function execute(string $fournisseur, SocialUser $utilisateurSocial): User
     {
-        $existingUser = User::where('email', $socialUser->getEmail())->first();
+        $existingUser = User::where('email', $utilisateurSocial->getEmail())->first();
 
         if ($existingUser !== null) {
             // Sécurité : pas de rattachement tant que le compte existant n'est
@@ -27,10 +27,10 @@ final class ResolveSocialUserAction
             // rendu par le fournisseur, la chaine vide n'en est pas un.
             if ($existingUser->provider_id === null || $existingUser->provider_id === '') {
                 $existingUser->forceFill([
-                    'provider' => $provider,
-                    'provider_id' => $socialUser->getId(),
+                    'provider' => $fournisseur,
+                    'provider_id' => $utilisateurSocial->getId(),
                 ])->update([
-                    'avatar' => $socialUser->getAvatar(),
+                    'avatar' => $utilisateurSocial->getAvatar(),
                 ]);
             }
 
@@ -38,15 +38,15 @@ final class ResolveSocialUserAction
         }
 
         $user = User::create([
-            'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
-            'email' => $socialUser->getEmail(),
+            'name' => $utilisateurSocial->getName() ?? $utilisateurSocial->getNickname() ?? 'Utilisateur',
+            'email' => $utilisateurSocial->getEmail(),
             'password' => bcrypt(Str::random(16)), // Mot de passe aléatoire : c'est le fournisseur qui authentifie.
-            'avatar' => $socialUser->getAvatar(),
+            'avatar' => $utilisateurSocial->getAvatar(),
         ]);
 
         $user->forceFill([
-            'provider' => $provider,
-            'provider_id' => $socialUser->getId(),
+            'provider' => $fournisseur,
+            'provider_id' => $utilisateurSocial->getId(),
             'email_verified_at' => now(), // Le fournisseur a déjà vérifié l'adresse.
         ])->save();
 

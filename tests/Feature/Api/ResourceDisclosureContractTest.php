@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
  * does not exist.
  *
  * The creation endpoints already behave that way, because they carry ownership
- * in the validation rule: `Rule::exists(...)->where('user_id', $userId)` answers
+ * in the validation rule: `Rule::exists(...)->where('user_id', $idUtilisateur)` answers
  * 422 whether the id belongs to someone else or to nobody. The endpoints that
  * resolve by model binding do not — they answer 403, which is distinguishable
  * from the 404 an unknown id produces.

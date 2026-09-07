@@ -66,15 +66,15 @@ final class WorkoutStatsService
      * ⚡ Bolt: Reduces 2 database queries to 1 and uses a single cache key.
      *
      * @param  User  $user  The user to fetch stats for.
-     * @param  int  $days  The number of days to look back.
+     * @param  int  $jours  The number of days to look back.
      * @return array{duration: array<int, DistributionStat>, time_of_day: array<int, DistributionStat>}
      */
-    public function getWorkoutDistributions(User $user, int $days = 90): array
+    public function repartitionsDesSeances(User $user, int $jours = 90): array
     {
         return Cache::remember(
-            ClesDeStats::seances($user, "workout_distributions.{$days}"),
+            ClesDeStats::seances($user, "workout_distributions.{$jours}"),
             now()->addMinutes(30),
-            function () use ($user, $days): array {
+            function () use ($user, $jours): array {
                 /*
                  * `toBase()` se justifie ici, contrairement a la methode voisine :
                  * cette requete balaie 90 jours et n'est bornee par rien.
@@ -86,7 +86,7 @@ final class WorkoutStatsService
                 $workouts = $user->workouts()
                     ->toBase()
                     ->select(['started_at', 'ended_at'])
-                    ->where('started_at', '>=', now()->subDays($days))
+                    ->where('started_at', '>=', now()->subDays($jours))
                     ->get();
 
                 $durationBuckets = [

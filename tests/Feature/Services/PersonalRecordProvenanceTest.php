@@ -40,16 +40,16 @@ function scenePourProvenance(): array
     $user = User::factory()->create();
     $exercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
     $seance = Workout::factory()->create(['user_id' => $user->id]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
 
-    return [$user, $exercice, $ligne];
+    return [$user, $exercice, $workoutLine];
 }
 
 /** Une serie faite, posee sans declencher le moindre hook. */
-function serieMuette(WorkoutLine $ligne, float $poids, int $repetitions, bool $echauffement = false): Set
+function serieMuette(WorkoutLine $workoutLine, float $poids, int $repetitions, bool $echauffement = false): Set
 {
     return Set::withoutEvents(fn (): Set => Set::factory()->create([
-        'workout_line_id' => $ligne->id,
+        'workout_line_id' => $workoutLine->id,
         'weight' => $poids,
         'reps' => $repetitions,
         'is_warmup' => $echauffement,
@@ -81,8 +81,8 @@ function recordProvenance(User $user, string $type): ?PersonalRecord
 it('établit un record complet, daté du jour du soulevé', function (): void {
     Carbon::setTestNow(Carbon::parse('2026-06-12 08:15:00'));
 
-    [$user, $exercice, $ligne] = scenePourProvenance();
-    $serie = serieMuette($ligne, 100, 7);
+    [$user, $exercice, $workoutLine] = scenePourProvenance();
+    $serie = serieMuette($workoutLine, 100, 7);
 
     // Trois mois plus tard, la reparation passe.
     Carbon::setTestNow(Carbon::parse('2026-09-04 21:00:00'));
@@ -101,7 +101,7 @@ it('établit un record complet, daté du jour du soulevé', function (): void {
         // Les sept repetitions faites a ce poids, affichees sous le chiffre.
         ->and((float) $record?->secondary_value)->toBe(7.0)
         // La seance d'ou vient le record, et la serie exacte.
-        ->and($record?->workout_id)->toBe($ligne->workout_id)
+        ->and($record?->workout_id)->toBe($workoutLine->workout_id)
         ->and($record?->set_id)->toBe($serie->id)
         // Le jour du souleve, pas le jour de la reparation.
         ->and($record?->achieved_at?->toDateTimeString())->toBe('2026-06-12 08:15:00');
@@ -117,12 +117,12 @@ it('établit un record complet, daté du jour du soulevé', function (): void {
  * rien et deux records sur trois disparaitraient.
  */
 it('tient trois records distincts issus de deux séries différentes', function (): void {
-    [$user, $exercice, $ligne] = scenePourProvenance();
+    [$user, $exercice, $workoutLine] = scenePourProvenance();
 
     // 100 kg en 1 rep : 1RM = 100, volume = 100.
-    $single = serieMuette($ligne, 100, 1);
+    $single = serieMuette($workoutLine, 100, 1);
     // 90 kg en 10 reps : 1RM = 90 x (1 + 10/30) = 120, volume = 900.
-    $longue = serieMuette($ligne, 90, 10);
+    $longue = serieMuette($workoutLine, 90, 10);
 
     app(PersonalRecordService::class)->recompute($user, $exercice->id);
 
@@ -144,14 +144,14 @@ it('tient trois records distincts issus de deux séries différentes', function 
  * (#1476).
  */
 it('renonce sans casser quand la ligne de séance a disparu', function (): void {
-    [$user, $exercice, $ligne] = scenePourProvenance();
-    $serie = serieMuette($ligne, 120, 5);
+    [$user, $exercice, $workoutLine] = scenePourProvenance();
+    $serie = serieMuette($workoutLine, 120, 5);
 
     app(PersonalRecordService::class)->recompute($user, $exercice->id);
     expect((float) recordProvenance($user, 'max_weight')?->value)->toBe(120.0);
 
     // La CASCADE, telle quelle : la ligne s'en va et emporte ses series.
-    DB::table('workout_lines')->where('id', $ligne->id)->delete();
+    DB::table('workout_lines')->where('id', $workoutLine->id)->delete();
 
     app(PersonalRecordService::class)->refreshFor($serie);
 
@@ -169,21 +169,21 @@ it('renonce sans casser quand la ligne de séance a disparu', function (): void 
  * recalcul avec un utilisateur nul.
  */
 it('renonce sans casser quand le propriétaire ne se laisse plus établir', function (): void {
-    [$user, $exercice, $ligne] = scenePourProvenance();
-    $serie = serieMuette($ligne, 150, 5);
+    [$user, $exercice, $workoutLine] = scenePourProvenance();
+    $serie = serieMuette($workoutLine, 150, 5);
 
     app(PersonalRecordService::class)->recompute($user, $exercice->id);
     expect((float) recordProvenance($user, 'max_weight')?->value)->toBe(150.0);
 
     // La ligne reste en memoire, la seance s'en va : c'est en la redemandant
     // que le service decouvre qu'elle n'est plus la.
-    $ligne->unsetRelation('workout');
-    $serie->setRelation('workoutLine', $ligne);
-    DB::table('workouts')->where('id', $ligne->workout_id)->delete();
+    $workoutLine->unsetRelation('workout');
+    $serie->setRelation('workoutLine', $workoutLine);
+    DB::table('workouts')->where('id', $workoutLine->workout_id)->delete();
 
     app(PersonalRecordService::class)->refreshFor($serie);
 
-    expect($ligne->exercise_id)->not->toBeNull()
+    expect($workoutLine->exercise_id)->not->toBeNull()
         ->and((float) recordProvenance($user, 'max_weight')?->value)->toBe(150.0);
 });
 
@@ -197,8 +197,8 @@ it('renonce sans casser quand le propriétaire ne se laisse plus établir', func
  * resterait affiche pour toujours : le defaut de #1476, mot pour mot.
  */
 it('reconstruit avec le propriétaire fourni quand la séance a disparu', function (): void {
-    [$user, $exercice, $ligne] = scenePourProvenance();
-    $lourde = serieMuette($ligne, 200, 5);
+    [$user, $exercice, $workoutLine] = scenePourProvenance();
+    $lourde = serieMuette($workoutLine, 200, 5);
 
     // Une seconde seance, qui elle survivra a la suppression.
     $autre = Workout::factory()->create(['user_id' => $user->id]);
@@ -209,9 +209,9 @@ it('reconstruit avec le propriétaire fourni quand la séance a disparu', functi
     expect((float) recordProvenance($user, 'max_weight')?->value)->toBe(200.0);
 
     // La seance qui portait le record s'en va, avec sa ligne et sa serie.
-    $ligne->unsetRelation('workout');
-    $lourde->setRelation('workoutLine', $ligne);
-    DB::table('workouts')->where('id', $ligne->workout_id)->delete();
+    $workoutLine->unsetRelation('workout');
+    $lourde->setRelation('workoutLine', $workoutLine);
+    DB::table('workouts')->where('id', $workoutLine->workout_id)->delete();
 
     app(PersonalRecordService::class)->refreshFor($lourde, $user);
 
@@ -239,19 +239,19 @@ function serieDansUnLot(Set $voulue, Set $voisine): Set
 }
 
 it('synchronise une série prise dans une collection', function (): void {
-    [$user, , $ligne] = scenePourProvenance();
-    $serie = serieMuette($ligne, 80, 5);
-    $voisine = serieMuette($ligne, 20, 5);
+    [$user, , $workoutLine] = scenePourProvenance();
+    $serie = serieMuette($workoutLine, 80, 5);
+    $voisine = serieMuette($workoutLine, 20, 5);
 
-    app(PersonalRecordService::class)->syncSetPRs(serieDansUnLot($serie, $voisine));
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie(serieDansUnLot($serie, $voisine));
 
     expect((float) recordProvenance($user, 'max_weight')?->value)->toBe(80.0);
 });
 
 it('reconstruit depuis une série prise dans une collection', function (): void {
-    [$user, , $ligne] = scenePourProvenance();
-    $serie = serieMuette($ligne, 90, 5);
-    $voisine = serieMuette($ligne, 20, 5);
+    [$user, , $workoutLine] = scenePourProvenance();
+    $serie = serieMuette($workoutLine, 90, 5);
+    $voisine = serieMuette($workoutLine, 20, 5);
 
     app(PersonalRecordService::class)->refreshFor(serieDansUnLot($serie, $voisine));
 
@@ -272,7 +272,7 @@ it('ne relit pas les préférences de notification une fois par record', functio
     // l'ecarte pour ne compter que les lectures du service.
     Notification::fake();
 
-    [$user, , $ligne] = scenePourProvenance();
+    [$user, , $workoutLine] = scenePourProvenance();
 
     NotificationPreference::factory()->create([
         'user_id' => $user->id,
@@ -280,7 +280,7 @@ it('ne relit pas les préférences de notification une fois par record', functio
         'is_enabled' => true,
     ]);
 
-    $serie = serieMuette($ligne, 70, 5);
+    $serie = serieMuette($workoutLine, 70, 5);
 
     $relue = Set::findOrFail($serie->id);
     $relu = User::findOrFail($user->id);
@@ -288,7 +288,7 @@ it('ne relit pas les préférences de notification une fois par record', functio
     DB::flushQueryLog();
     DB::enableQueryLog();
 
-    app(PersonalRecordService::class)->syncSetPRs($relue, $relu);
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie($relue, $relu);
 
     $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
     DB::disableQueryLog();
@@ -314,9 +314,9 @@ it('ne relit pas les préférences de notification une fois par record', functio
  * d'un jour de forme deviendrait un record personnel.
  */
 it('ne fait aucun record d’un échauffement, même coché', function (): void {
-    [, , $ligne] = scenePourProvenance();
+    [, , $workoutLine] = scenePourProvenance();
 
-    app(PersonalRecordService::class)->syncSetPRs(serieMuette($ligne, 500, 5, echauffement: true));
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie(serieMuette($workoutLine, 500, 5, echauffement: true));
 
     expect(PersonalRecord::count())->toBe(0);
 });
@@ -329,9 +329,9 @@ it('ne fait aucun record d’un échauffement, même coché', function (): void 
  * souvent le premier qu'on etablit.
  */
 it('fait un record d’une série d’un kilo', function (): void {
-    [$user, , $ligne] = scenePourProvenance();
+    [$user, , $workoutLine] = scenePourProvenance();
 
-    app(PersonalRecordService::class)->syncSetPRs(serieMuette($ligne, 1, 5));
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie(serieMuette($workoutLine, 1, 5));
 
     expect((float) recordProvenance($user, 'max_weight')?->value)->toBe(1.0);
 });
@@ -346,9 +346,9 @@ it('fait un record d’une série d’un kilo', function (): void {
  * ce que l'utilisateur voit.
  */
 it('compte le volume d’une série comme un produit quand le travail passe seul', function (): void {
-    [$user, , $ligne] = scenePourProvenance();
+    [$user, , $workoutLine] = scenePourProvenance();
 
-    app(PersonalRecordService::class)->syncSetPRs(serieMuette($ligne, 100, 10));
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie(serieMuette($workoutLine, 100, 10));
 
     expect((float) recordProvenance($user, 'max_volume_set')?->value)->toBe(1000.0)
         // 100 x (1 + 10/30), arrondi au centieme.
@@ -380,7 +380,7 @@ it('se contente du propriétaire qu’on lui donne', function (): void {
     // ne compter que les lectures du service.
     Notification::fake();
 
-    [$user, , $ligne] = scenePourProvenance();
+    [$user, , $workoutLine] = scenePourProvenance();
 
     NotificationPreference::factory()->create([
         'user_id' => $user->id,
@@ -388,7 +388,7 @@ it('se contente du propriétaire qu’on lui donne', function (): void {
         'is_enabled' => true,
     ]);
 
-    $serie = serieMuette($ligne, 60, 5);
+    $serie = serieMuette($workoutLine, 60, 5);
 
     // L'appelant tient l'utilisateur ET ses preferences.
     $porteur = User::with('notificationPreferences')->findOrFail($user->id);
@@ -397,7 +397,7 @@ it('se contente du propriétaire qu’on lui donne', function (): void {
     DB::flushQueryLog();
     DB::enableQueryLog();
 
-    app(PersonalRecordService::class)->syncSetPRs($relue, $porteur);
+    app(PersonalRecordService::class)->synchroniserLesRecordsDeLaSerie($relue, $porteur);
 
     $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
     DB::disableQueryLog();

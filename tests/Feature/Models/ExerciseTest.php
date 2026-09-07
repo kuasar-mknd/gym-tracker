@@ -177,10 +177,10 @@ class ExerciseTest extends TestCase
         $user = User::factory()->create();
         $exercise = Exercise::factory()->create(['user_id' => $user->id]);
 
-        Exercise::getCachedForUser($user->id);
+        Exercise::enCachePourUtilisateur($user->id);
         $exercise->update(['name' => 'Renommé']);
 
-        $this->assertContains('Renommé', Exercise::getCachedForUser($user->id)->pluck('name')->all());
+        $this->assertContains('Renommé', Exercise::enCachePourUtilisateur($user->id)->pluck('name')->all());
     }
 
     public function test_invalidate_cache_for_global_exercise(): void

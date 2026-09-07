@@ -17,7 +17,7 @@ class WilksScoreController extends Controller
 
         $user = $this->user();
 
-        $history = $user->wilksScores()
+        $historique = $user->wilksScores()
             // Borné à 100, comme `BodyMeasurementController` et
             // `DailyJournalController` : l'historique complet partait dans la
             // réponse, et il grandit à chaque usage.
@@ -26,7 +26,7 @@ class WilksScoreController extends Controller
             ->get();
 
         return Inertia::render('Tools/WilksCalculator', [
-            'history' => $history,
+            'history' => $historique,
         ]);
     }
 
@@ -34,10 +34,10 @@ class WilksScoreController extends Controller
     {
         $this->authorize('create', WilksScore::class);
 
-        /** @var array{body_weight: float, lifted_weight: float, gender: 'male'|'female', unit: 'kg'|'lbs'} $validated */
-        $validated = $request->validated();
+        /** @var array{body_weight: float, lifted_weight: float, gender: 'male'|'female', unit: 'kg'|'lbs'} $donneesValidees */
+        $donneesValidees = $request->validated();
 
-        $createWilksScoreAction->execute($this->user(), $validated);
+        $createWilksScoreAction->execute($this->user(), $donneesValidees);
 
         return redirect()->back();
     }

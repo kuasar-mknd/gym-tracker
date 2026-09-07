@@ -18,9 +18,9 @@ function scenePourDoublons(): array
     $user = User::factory()->create();
     $exercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
     $seance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDay()]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
 
-    return [$user, $exercice, $ligne];
+    return [$user, $exercice, $workoutLine];
 }
 
 /**
@@ -32,10 +32,10 @@ function scenePourDoublons(): array
  * dont un pose sur une serie jamais cochee, que la reparation ne corrigeait pas.
  */
 it('supprime le doublon et ne garde qu’un record par type', function (): void {
-    [$user, $exercice, $ligne] = scenePourDoublons();
+    [$user, $exercice, $workoutLine] = scenePourDoublons();
 
-    $faite = Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 20, 'reps' => 10, 'is_warmup' => false, 'is_completed' => true]);
-    $decochee = Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 27, 'reps' => 12, 'is_warmup' => false, 'is_completed' => false]);
+    $faite = Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 20, 'reps' => 10, 'is_warmup' => false, 'is_completed' => true]);
+    $decochee = Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 27, 'reps' => 12, 'is_warmup' => false, 'is_completed' => false]);
 
     // La contrainte est retiree le temps de fabriquer le doublon : c'est l'etat
     // d'une base d'AVANT `un_seul_record_par_type`, celui que la reparation
@@ -66,16 +66,16 @@ it('supprime le doublon et ne garde qu’un record par type', function (): void 
 it('refuse un second record du même type', function (): void {
     [$user, $exercice] = scenePourDoublons();
 
-    $ligne = ['user_id' => $user->id, 'exercise_id' => $exercice->id, 'type' => 'max_weight', 'value' => 100, 'achieved_at' => now(), 'created_at' => now(), 'updated_at' => now()];
-    DB::table('personal_records')->insert($ligne);
+    $workoutLine = ['user_id' => $user->id, 'exercise_id' => $exercice->id, 'type' => 'max_weight', 'value' => 100, 'achieved_at' => now(), 'created_at' => now(), 'updated_at' => now()];
+    DB::table('personal_records')->insert($workoutLine);
 
-    expect(fn () => DB::table('personal_records')->insert($ligne))->toThrow(QueryException::class);
+    expect(fn () => DB::table('personal_records')->insert($workoutLine))->toThrow(QueryException::class);
 });
 
 it('laisse coexister deux types sur le même exercice', function (): void {
-    [$user, $exercice, $ligne] = scenePourDoublons();
+    [$user, $exercice, $workoutLine] = scenePourDoublons();
 
-    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 30, 'reps' => 5, 'is_warmup' => false, 'is_completed' => true]);
+    Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 30, 'reps' => 5, 'is_warmup' => false, 'is_completed' => true]);
 
     app(PersonalRecordService::class)->recompute($user, $exercice->id);
 

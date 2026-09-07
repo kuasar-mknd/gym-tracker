@@ -120,7 +120,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(NotificationPreference::class);
     }
 
-    public function isNotificationEnabled(string $type): bool
+    public function notificationActivee(string $type): bool
     {
         if ($this->relationLoaded('notificationPreferences')) {
             return $this->notificationPreferences
@@ -135,7 +135,7 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->exists();
     }
 
-    public function isPushEnabled(string $type): bool
+    public function notificationsPoussesActivees(string $type): bool
     {
         if ($this->relationLoaded('notificationPreferences')) {
             return $this->notificationPreferences

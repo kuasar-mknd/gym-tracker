@@ -105,12 +105,12 @@ it('rapporte les exercices, les series et leurs records avec la seance', functio
     // lignes, pas sur un echantillon : retirer une seule des deux entrees du
     // tableau laisse l'autre en place, et un test qui ne regarde que la
     // premiere ligne ne voit rien.
-    foreach ($lignes as $ligne) {
-        expect($ligne->relationLoaded('exercise'))->toBeTrue();
-        expect($ligne->relationLoaded('sets'))->toBeTrue();
-        expect($ligne->sets)->toHaveCount(2);
+    foreach ($lignes as $workoutLine) {
+        expect($workoutLine->relationLoaded('exercise'))->toBeTrue();
+        expect($workoutLine->relationLoaded('sets'))->toBeTrue();
+        expect($workoutLine->sets)->toHaveCount(2);
 
-        foreach ($ligne->sets as $serie) {
+        foreach ($workoutLine->sets as $serie) {
             expect($serie->relationLoaded('personalRecord'))->toBeTrue();
         }
     }
@@ -155,11 +155,11 @@ it('pose les valeurs recommandees sur chaque ligne avant que la vue ne les lise'
         $requetes++;
     });
 
-    foreach ($donnees['workout']->workoutLines as $ligne) {
+    foreach ($donnees['workout']->workoutLines as $workoutLine) {
         // Aucun entrainement anterieur : la recommandation est la valeur par
         // defaut du service, posee ici plutot que recalculee.
-        expect($ligne->recommended_values['reps'])->toBe(10);
-        expect($ligne->recommended_values['duration_seconds'])->toBe(30);
+        expect($workoutLine->recommended_values['reps'])->toBe(10);
+        expect($workoutLine->recommended_values['duration_seconds'])->toBe(30);
     }
 
     expect($requetes)->toBe(0);

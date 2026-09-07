@@ -11,7 +11,7 @@ uses(Tests\TestCase::class);
 
 it('throws SocialAuthException when Socialite fails', function (): void {
     // Arrange
-    $provider = 'github';
+    $fournisseur = 'github';
 
     // Mock the Socialite provider to throw an exception
     $socialiteProvider = Mockery::mock(\Laravel\Socialite\Contracts\Provider::class);
@@ -20,7 +20,7 @@ it('throws SocialAuthException when Socialite fails', function (): void {
         ->andThrow(new \Exception('Connection failed'));
 
     Socialite::shouldReceive('driver')
-        ->with($provider)
+        ->with($fournisseur)
         ->once()
         ->andReturn($socialiteProvider);
 
@@ -31,5 +31,5 @@ it('throws SocialAuthException when Socialite fails', function (): void {
     $action = new HandleSocialCallbackAction($resolver);
 
     // Act & Assert
-    $action->execute($provider);
+    $action->execute($fournisseur);
 })->throws(SocialAuthException::class, 'Erreur lors de la connexion avec Github');

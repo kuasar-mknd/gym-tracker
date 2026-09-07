@@ -12,58 +12,58 @@ class SupplementLogPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('ViewAny:SupplementLog');
+        return $utilisateurConnecte->can('ViewAny:SupplementLog');
     }
 
-    public function view(AuthUser $authUser, SupplementLog $supplementLog): bool
+    public function view(AuthUser $utilisateurConnecte, SupplementLog $supplementLog): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $supplementLog->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $supplementLog->user_id;
         }
 
-        return $authUser->can('View:SupplementLog');
+        return $utilisateurConnecte->can('View:SupplementLog');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('Create:SupplementLog');
+        return $utilisateurConnecte->can('Create:SupplementLog');
     }
 
-    public function update(AuthUser $authUser, SupplementLog $supplementLog): bool
+    public function update(AuthUser $utilisateurConnecte, SupplementLog $supplementLog): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $supplementLog->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $supplementLog->user_id;
         }
 
-        return $authUser->can('Update:SupplementLog');
+        return $utilisateurConnecte->can('Update:SupplementLog');
     }
 
-    public function delete(AuthUser $authUser, SupplementLog $supplementLog): bool
+    public function delete(AuthUser $utilisateurConnecte, SupplementLog $supplementLog): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $supplementLog->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $supplementLog->user_id;
         }
 
-        return $authUser->can('Delete:SupplementLog');
+        return $utilisateurConnecte->can('Delete:SupplementLog');
     }
 
-    public function restore(AuthUser $authUser, SupplementLog $supplementLog): bool
+    public function restore(AuthUser $utilisateurConnecte, SupplementLog $supplementLog): bool
     {
-        return $authUser->can('Restore:SupplementLog');
+        return $utilisateurConnecte->can('Restore:SupplementLog');
     }
 
-    public function forceDelete(AuthUser $authUser, SupplementLog $supplementLog): bool
+    public function forceDelete(AuthUser $utilisateurConnecte, SupplementLog $supplementLog): bool
     {
-        return $authUser->can('ForceDelete:SupplementLog');
+        return $utilisateurConnecte->can('ForceDelete:SupplementLog');
     }
 }

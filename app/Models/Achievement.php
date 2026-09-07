@@ -46,7 +46,7 @@ class Achievement extends Model
      *
      * @return Collection<int, Achievement>
      */
-    public static function getCachedAll(): Collection
+    public static function enCachePourTous(): Collection
     {
         return Cache::rememberForever('achievements_all', fn (): Collection => self::all());
     }

@@ -12,78 +12,78 @@ final class GoalPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('ViewAny:Goal');
+        return $utilisateurConnecte->can('ViewAny:Goal');
     }
 
-    public function view(AuthUser $authUser, Goal $goal): bool
+    public function view(AuthUser $utilisateurConnecte, Goal $goal): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $goal->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $goal->user_id;
         }
 
-        return $authUser->can('View:Goal');
+        return $utilisateurConnecte->can('View:Goal');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('Create:Goal');
+        return $utilisateurConnecte->can('Create:Goal');
     }
 
-    public function update(AuthUser $authUser, Goal $goal): bool
+    public function update(AuthUser $utilisateurConnecte, Goal $goal): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $goal->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $goal->user_id;
         }
 
-        return $authUser->can('Update:Goal');
+        return $utilisateurConnecte->can('Update:Goal');
     }
 
-    public function delete(AuthUser $authUser, Goal $goal): bool
+    public function delete(AuthUser $utilisateurConnecte, Goal $goal): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $goal->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $goal->user_id;
         }
 
-        return $authUser->can('Delete:Goal');
+        return $utilisateurConnecte->can('Delete:Goal');
     }
 
-    public function restore(AuthUser $authUser): bool
+    public function restore(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Restore:Goal');
+        return $utilisateurConnecte->can('Restore:Goal');
     }
 
-    public function forceDelete(AuthUser $authUser): bool
+    public function forceDelete(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDelete:Goal');
+        return $utilisateurConnecte->can('ForceDelete:Goal');
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDeleteAny:Goal');
+        return $utilisateurConnecte->can('ForceDeleteAny:Goal');
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('RestoreAny:Goal');
+        return $utilisateurConnecte->can('RestoreAny:Goal');
     }
 
-    public function replicate(AuthUser $authUser): bool
+    public function replicate(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Replicate:Goal');
+        return $utilisateurConnecte->can('Replicate:Goal');
     }
 
-    public function reorder(AuthUser $authUser): bool
+    public function reorder(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Reorder:Goal');
+        return $utilisateurConnecte->can('Reorder:Goal');
     }
 }

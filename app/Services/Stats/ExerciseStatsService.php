@@ -16,12 +16,12 @@ final class ExerciseStatsService
     /**
      * @return array<int, MuscleDistributionStat>
      */
-    public function getMuscleDistribution(User $user, int $days = 30): array
+    public function getMuscleDistribution(User $user, int $jours = 30): array
     {
         return Cache::remember(
-            ClesDeStats::seances($user, "muscle_dist.{$days}"),
+            ClesDeStats::seances($user, "muscle_dist.{$jours}"),
             now()->addMinutes(30),
-            fn (): array => $this->repartitionParCategorie($user, $days),
+            fn (): array => $this->repartitionParCategorie($user, $jours),
         );
     }
 
@@ -43,13 +43,13 @@ final class ExerciseStatsService
      *
      * @return array<int, MuscleDistributionStat>
      */
-    private function repartitionParCategorie(User $user, int $days): array
+    private function repartitionParCategorie(User $user, int $jours): array
     {
         $parExercice = Set::query()
             ->toBase()
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->where('workout_lines.user_id', $user->id)
-            ->where('workout_lines.workout_started_at', '>=', now()->subDays($days))
+            ->where('workout_lines.workout_started_at', '>=', now()->subDays($jours))
             ->selectRaw('workout_lines.exercise_id, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('workout_lines.exercise_id')
             ->get();
@@ -61,14 +61,14 @@ final class ExerciseStatsService
 
         $volumes = [];
 
-        foreach ($parExercice as $ligne) {
-            $exerciceId = is_numeric($ligne->exercise_id) ? (int) $ligne->exercise_id : 0;
+        foreach ($parExercice as $workoutLine) {
+            $exerciceId = is_numeric($workoutLine->exercise_id) ? (int) $workoutLine->exercise_id : 0;
             $categorie = $categories[$exerciceId] ?? null;
             $cle = is_string($categorie) ? $categorie : 'Unknown';
 
             // `SUM()` rend NULL quand tout le groupe l'est : `sets.weight` et
             // `sets.reps` sont nullables.
-            $volumes[$cle] = ($volumes[$cle] ?? 0.0) + (is_numeric($ligne->volume) ? (float) $ligne->volume : 0.0);
+            $volumes[$cle] = ($volumes[$cle] ?? 0.0) + (is_numeric($workoutLine->volume) ? (float) $workoutLine->volume : 0.0);
         }
 
         $repartition = [];
@@ -83,17 +83,17 @@ final class ExerciseStatsService
     /**
      * @return array<int, Exercise1RMProgressPoint>
      */
-    public function getExercise1RMProgress(User $user, int $exerciseId, int $days = 90): array
+    public function getExercise1RMProgress(User $user, int $idExercice, int $jours = 90): array
     {
         return Cache::remember(
-            ClesDeStats::seances($user, "1rm.{$exerciseId}.{$days}"),
+            ClesDeStats::seances($user, "1rm.{$idExercice}.{$jours}"),
             now()->addMinutes(30),
             fn (): array => Set::query()
                 ->toBase()
                 ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
                 ->where('workout_lines.user_id', $user->id)
-                ->where('workout_lines.exercise_id', $exerciseId)
-                ->where('workout_lines.workout_started_at', '>=', now()->subDays($days))
+                ->where('workout_lines.exercise_id', $idExercice)
+                ->where('workout_lines.workout_started_at', '>=', now()->subDays($jours))
                 ->selectRaw('workout_lines.workout_started_at as started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
                 ->groupBy('workout_lines.workout_started_at')
                 ->orderBy('workout_lines.workout_started_at')

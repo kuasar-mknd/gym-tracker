@@ -29,12 +29,12 @@ class ExerciseController extends Controller
         $this->authorize('view', $exercise);
 
         $progress = $exerciseStats->getExercise1RMProgress($this->user(), $exercise->id, 365);
-        $history = $fetchExerciseHistory->execute($this->user(), $exercise);
+        $historique = $fetchExerciseHistory->execute($this->user(), $exercise);
 
         return Inertia::render('Exercises/Show', [
             'exercise' => $exercise,
             'progress' => $progress,
-            'history' => $history,
+            'history' => $historique,
         ]);
     }
 
@@ -42,7 +42,7 @@ class ExerciseController extends Controller
     {
         $this->authorize('viewAny', Exercise::class);
 
-        $exercises = Exercise::getCachedForUser($this->user()->id);
+        $exercises = Exercise::enCachePourUtilisateur($this->user()->id);
 
         return Inertia::render('Exercises/Index', [
             'exercises' => $exercises,

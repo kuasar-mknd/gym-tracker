@@ -11,14 +11,14 @@ final class ErreurNavigateurPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ViewAny:ErreurNavigateur');
+        return $utilisateurConnecte->can('ViewAny:ErreurNavigateur');
     }
 
-    public function view(AuthUser $authUser): bool
+    public function view(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('View:ErreurNavigateur');
+        return $utilisateurConnecte->can('View:ErreurNavigateur');
     }
 
     public function create(): bool
@@ -31,8 +31,8 @@ final class ErreurNavigateurPolicy
         return false;
     }
 
-    public function delete(AuthUser $authUser): bool
+    public function delete(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Delete:ErreurNavigateur');
+        return $utilisateurConnecte->can('Delete:ErreurNavigateur');
     }
 }

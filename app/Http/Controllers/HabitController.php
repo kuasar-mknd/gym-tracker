@@ -70,10 +70,10 @@ class HabitController extends Controller
     {
         $this->authorize('update', $habit);
 
-        $validated = $request->validated();
+        $donneesValidees = $request->validated();
 
         /** @var string $date */
-        $date = $validated['date'];
+        $date = $donneesValidees['date'];
 
         $toggleHabitAction->execute($habit, $date);
 

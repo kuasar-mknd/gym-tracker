@@ -23,27 +23,27 @@ final class HandleSocialCallbackAction
      *
      * @throws SocialAuthException
      */
-    public function execute(string $provider): User
+    public function execute(string $fournisseur): User
     {
         try {
-            $socialUser = Socialite::driver($provider)->user();
+            $utilisateurSocial = Socialite::driver($fournisseur)->user();
         } catch (\Exception) {
-            throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($provider));
+            throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($fournisseur));
         }
 
-        if (! $this->fournisseurAConfirmeLEmail($socialUser)) {
+        if (! $this->fournisseurAConfirmeLEmail($utilisateurSocial)) {
             if (app()->environment('local')) {
                 // SECURITY: Log when email verification is bypassed in local environment
                 Log::warning('Social auth email verification bypassed in local environment', [
-                    'provider' => $provider,
-                    'email' => $socialUser->getEmail(),
+                    'provider' => $fournisseur,
+                    'email' => $utilisateurSocial->getEmail(),
                 ]);
             } else {
-                throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($provider));
+                throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($fournisseur));
             }
         }
 
-        return $this->resolver->execute($provider, $socialUser);
+        return $this->resolver->execute($fournisseur, $utilisateurSocial);
     }
 
     /**
@@ -59,9 +59,9 @@ final class HandleSocialCallbackAction
      * n'importe quelle chaine non vide, « false » et « no » compris. Une
      * reponse mal formee ouvrait la porte au lieu de la fermer.
      */
-    private function fournisseurAConfirmeLEmail(SocialiteUser $socialUser): bool
+    private function fournisseurAConfirmeLEmail(SocialiteUser $utilisateurSocial): bool
     {
-        $brut = $this->attributsBruts($socialUser);
+        $brut = $this->attributsBruts($utilisateurSocial);
 
         return filter_var(
             $brut['email_verified'] ?? $brut['verified_email'] ?? $brut['verified'] ?? false,
@@ -82,8 +82,8 @@ final class HandleSocialCallbackAction
      *
      * @pest-mutate-ignore
      */
-    private function attributsBruts(SocialiteUser $socialUser): array
+    private function attributsBruts(SocialiteUser $utilisateurSocial): array
     {
-        return $socialUser instanceof AbstractUser ? $socialUser->getRaw() : [];
+        return $utilisateurSocial instanceof AbstractUser ? $utilisateurSocial->getRaw() : [];
     }
 }

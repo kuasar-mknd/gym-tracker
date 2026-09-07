@@ -57,9 +57,9 @@ function semerSeriesDe(User $user, int $seances): void
 
 it('pose le propriétaire à l’écriture', function (): void {
     $seance = Workout::factory()->create();
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $seance->id]);
 
-    $serie = Set::factory()->create(['workout_line_id' => $ligne->id]);
+    $serie = Set::factory()->create(['workout_line_id' => $workoutLine->id]);
 
     expect($serie->refresh()->user_id)->toBe($seance->user_id);
 });

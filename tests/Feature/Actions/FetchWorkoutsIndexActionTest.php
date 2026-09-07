@@ -197,7 +197,7 @@ it('associe chaque jour de la semaine a son propre compte', function (): void {
     $user = User::factory()->create();
 
     // Un compte DIFFERENT par jour. Avec le meme compte partout — ou avec un
-    // seul jour rempli — decaler une cle du tableau `$days` ne se verrait pas :
+    // seul jour rempli — decaler une cle du tableau `$jours` ne se verrait pas :
     // toutes les barres se ressembleraient. Ici, chaque jour porte sa signature.
     $seancesParJour = [
         '2026-06-08' => 1, // lundi
@@ -219,7 +219,7 @@ it('associe chaque jour de la semaine a son propre compte', function (): void {
 
     // Le tableau entier, dans l'ordre, avec ses deux cles et ses comptes.
     // `toBe()` compare a l'identique : cette ligne seule tient les sept cles de
-    // `$days` (DAYOFWEEK vaut 1 le dimanche et 7 le samedi, donc la semaine
+    // `$jours` (DAYOFWEEK vaut 1 le dimanche et 7 le samedi, donc la semaine
     // commence a 2), l'ordre des barres, la presence de `day` et de `count`,
     // et le fait qu'aucun compte ne parte chez le voisin.
     expect($frequence->all())->toBe([
@@ -263,8 +263,8 @@ it('pagine par vingt et precharge les lignes, leur exercice et leur compte de se
         seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour));
     }
     $derniere = seancePourIndex($user, '2026-06-21 10:00:00');
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $derniere->id]);
-    Set::factory()->count(3)->create(['workout_line_id' => $ligne->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $derniere->id]);
+    Set::factory()->count(3)->create(['workout_line_id' => $workoutLine->id]);
 
     $workouts = app(FetchWorkoutsIndexAction::class)->execute($user)['workouts'];
 

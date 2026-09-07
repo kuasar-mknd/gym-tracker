@@ -111,7 +111,7 @@ describe('PersonalRecordAchieved::via', function (): void {
 
     it('reads an eager-loaded preference relation the same way it reads the database', function (): void {
         // TrainingReminderCommand hydrates notificationPreferences to avoid an N+1,
-        // which takes the in-memory branch of User::isPushEnabled(). Both branches
+        // which takes the in-memory branch of User::notificationsPoussesActivees(). Both branches
         // must agree or the scheduled command silently stops pushing.
         $user = User::factory()->create();
         NotificationPreference::factory()->create([

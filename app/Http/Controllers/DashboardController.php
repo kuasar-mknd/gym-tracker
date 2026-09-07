@@ -19,7 +19,7 @@ class DashboardController extends Controller
     {
         $user = $this->user();
 
-        $data = $fetchDashboardData->getImmediateStats($user);
+        $data = $fetchDashboardData->chiffresImmediats($user);
 
         return Inertia::render('Dashboard', [
             ...$data,

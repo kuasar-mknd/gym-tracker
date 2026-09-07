@@ -12,78 +12,78 @@ final class WorkoutPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('ViewAny:Workout');
+        return $utilisateurConnecte->can('ViewAny:Workout');
     }
 
-    public function view(AuthUser $authUser, Workout $workout): bool
+    public function view(AuthUser $utilisateurConnecte, Workout $workout): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $workout->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $workout->user_id;
         }
 
-        return $authUser->can('View:Workout');
+        return $utilisateurConnecte->can('View:Workout');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('Create:Workout');
+        return $utilisateurConnecte->can('Create:Workout');
     }
 
-    public function update(AuthUser $authUser, Workout $workout): bool
+    public function update(AuthUser $utilisateurConnecte, Workout $workout): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $workout->user_id && is_null($workout->ended_at);
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $workout->user_id && is_null($workout->ended_at);
         }
 
-        return $authUser->can('Update:Workout');
+        return $utilisateurConnecte->can('Update:Workout');
     }
 
-    public function delete(AuthUser $authUser, Workout $workout): bool
+    public function delete(AuthUser $utilisateurConnecte, Workout $workout): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $workout->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $workout->user_id;
         }
 
-        return $authUser->can('Delete:Workout');
+        return $utilisateurConnecte->can('Delete:Workout');
     }
 
-    public function restore(AuthUser $authUser): bool
+    public function restore(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Restore:Workout');
+        return $utilisateurConnecte->can('Restore:Workout');
     }
 
-    public function forceDelete(AuthUser $authUser): bool
+    public function forceDelete(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDelete:Workout');
+        return $utilisateurConnecte->can('ForceDelete:Workout');
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDeleteAny:Workout');
+        return $utilisateurConnecte->can('ForceDeleteAny:Workout');
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('RestoreAny:Workout');
+        return $utilisateurConnecte->can('RestoreAny:Workout');
     }
 
-    public function replicate(AuthUser $authUser): bool
+    public function replicate(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Replicate:Workout');
+        return $utilisateurConnecte->can('Replicate:Workout');
     }
 
-    public function reorder(AuthUser $authUser): bool
+    public function reorder(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Reorder:Workout');
+        return $utilisateurConnecte->can('Reorder:Workout');
     }
 }

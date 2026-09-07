@@ -21,23 +21,23 @@ describe('WorkoutLinePolicy', function (): void {
         it('allows the user to view their own workout line', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 1]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->view($user, $workoutLine))->toBeTrue();
+            expect($policy->view($user, $ligne))->toBeTrue();
         });
 
         it('denies the user from viewing someone else\'s workout line', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 2]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->view($user, $workoutLine))->toBeFalse();
+            expect($policy->view($user, $ligne))->toBeFalse();
         });
     });
 
@@ -78,34 +78,34 @@ describe('WorkoutLinePolicy', function (): void {
         it('allows the user to update a workout line if it belongs to them and the workout is not ended', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 1, 'ended_at' => null]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->update($user, $workoutLine))->toBeTrue();
+            expect($policy->update($user, $ligne))->toBeTrue();
         });
 
         it('denies the user from updating a workout line if the workout does not belong to them', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 2, 'ended_at' => null]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->update($user, $workoutLine))->toBeFalse();
+            expect($policy->update($user, $ligne))->toBeFalse();
         });
 
         it('denies the user from updating a workout line if the workout has ended', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 1, 'ended_at' => now()]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->update($user, $workoutLine))->toBeFalse();
+            expect($policy->update($user, $ligne))->toBeFalse();
         });
     });
 
@@ -113,34 +113,34 @@ describe('WorkoutLinePolicy', function (): void {
         it('allows the user to delete a workout line if it belongs to them and the workout is not ended', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 1, 'ended_at' => null]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->delete($user, $workoutLine))->toBeTrue();
+            expect($policy->delete($user, $ligne))->toBeTrue();
         });
 
         it('denies the user from deleting a workout line if the workout does not belong to them', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 2, 'ended_at' => null]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->delete($user, $workoutLine))->toBeFalse();
+            expect($policy->delete($user, $ligne))->toBeFalse();
         });
 
         it('denies the user from deleting a workout line if the workout has ended', function (): void {
             $user = User::factory()->make(['id' => 1]);
             $workout = Workout::factory()->make(['user_id' => 1, 'ended_at' => now()]);
-            $workoutLine = WorkoutLine::factory()->make();
-            $workoutLine->setRelation('workout', $workout);
+            $ligne = WorkoutLine::factory()->make();
+            $ligne->setRelation('workout', $workout);
 
             $policy = new WorkoutLinePolicy();
 
-            expect($policy->delete($user, $workoutLine))->toBeFalse();
+            expect($policy->delete($user, $ligne))->toBeFalse();
         });
     });
 });

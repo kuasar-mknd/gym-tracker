@@ -27,16 +27,16 @@ class SetController extends Controller
      */
     public function store(SetStoreRequest $request, StoreSetAction $action): SetResource
     {
-        /** @var array{workout_line_id: int} $validated */
-        $validated = $request->validated();
+        /** @var array{workout_line_id: int} $donneesValidees */
+        $donneesValidees = $request->validated();
 
         // Transmise dans un en-tête plutôt que dans le corps : elle nomme la
         // tentative, pas la ressource, et n'a rien à faire dans le payload validé.
-        $validated['idempotency_key'] = $request->header('Idempotency-Key');
+        $donneesValidees['idempotency_key'] = $request->header('Idempotency-Key');
 
         // Un seul chemin : l'action cherche la ligne et vérifie le droit d'y
         // écrire ; le contrôleur le faisait une première fois, pour rien.
-        $set = $action->execute($this->user(), $validated);
+        $set = $action->execute($this->user(), $donneesValidees);
 
         return new SetResource($set->loadMissing('personalRecord'));
     }

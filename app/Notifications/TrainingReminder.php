@@ -27,7 +27,7 @@ final class TrainingReminder extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        if ($_notifiable->isPushEnabled('training_reminder')) {
+        if ($_notifiable->notificationsPoussesActivees('training_reminder')) {
             $channels[] = WebPushChannel::class;
         }
 

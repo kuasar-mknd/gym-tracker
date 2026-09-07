@@ -15,7 +15,7 @@ use Laravel\Sanctum\Sanctum;
 function exerciceAvecSeries(User $proprietaire, int $combien = 3): array
 {
     $seance = Workout::factory()->create(['user_id' => $proprietaire->id]);
-    $ligne = WorkoutLine::factory()->create([
+    $workoutLine = WorkoutLine::factory()->create([
         'workout_id' => $seance->id,
         'exercise_id' => Exercise::factory()->create()->id,
     ]);
@@ -24,25 +24,25 @@ function exerciceAvecSeries(User $proprietaire, int $combien = 3): array
 
     foreach (range(0, $combien - 1) as $rang) {
         $ids[] = Set::factory()->create([
-            'workout_line_id' => $ligne->id,
+            'workout_line_id' => $workoutLine->id,
             'order' => $rang,
         ])->id;
     }
 
-    return [$ligne, $ids];
+    return [$workoutLine, $ids];
 }
 
 it('renumerote les series depuis l ordre soumis', function (): void {
     $proprietaire = User::factory()->create();
     Sanctum::actingAs($proprietaire);
 
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire);
     $voulu = [$ids[2], $ids[0], $ids[1]];
 
-    $this->patchJson(route('api.v1.workout-lines.set-order', $ligne), ['sets' => $voulu])->assertOk();
+    $this->patchJson(route('api.v1.workout-lines.set-order', $workoutLine), ['sets' => $voulu])->assertOk();
 
-    expect($ligne->sets()->pluck('id')->all())->toBe($voulu)
-        ->and($ligne->sets()->pluck('order')->all())->toBe([0, 1, 2]);
+    expect($workoutLine->sets()->pluck('id')->all())->toBe($voulu)
+        ->and($workoutLine->sets()->pluck('order')->all())->toBe([0, 1, 2]);
 });
 
 /*
@@ -52,35 +52,35 @@ it('renumerote les series depuis l ordre soumis', function (): void {
  */
 it('demande un ordre total a la base', function (): void {
     $proprietaire = User::factory()->create();
-    [$ligne] = exerciceAvecSeries($proprietaire);
+    [$workoutLine] = exerciceAvecSeries($proprietaire);
 
-    expect($ligne->sets()->toSql())->toContain('order by `order` asc, `id` asc');
+    expect($workoutLine->sets()->toSql())->toContain('order by `order` asc, `id` asc');
 });
 
 it('place une serie ajoutee en derniere position', function (): void {
     $proprietaire = User::factory()->create();
     Sanctum::actingAs($proprietaire);
 
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire);
 
     // La colonne vaut zero par defaut : sans rang explicite, la nouvelle serie
     // se placerait EN TETE de l'exercice.
     $this->postJson(route('api.v1.sets.store'), [
-        'workout_line_id' => $ligne->id,
+        'workout_line_id' => $workoutLine->id,
         'weight' => 60,
         'reps' => 8,
     ])->assertCreated();
 
-    expect($ligne->sets()->pluck('id')->all())->toBe([...$ids, Set::max('id')]);
+    expect($workoutLine->sets()->pluck('id')->all())->toBe([...$ids, Set::max('id')]);
 });
 
 it('refuse une liste incomplete', function (): void {
     $proprietaire = User::factory()->create();
     Sanctum::actingAs($proprietaire);
 
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire);
 
-    $this->patchJson(route('api.v1.workout-lines.set-order', $ligne), ['sets' => [$ids[0], $ids[1]]])
+    $this->patchJson(route('api.v1.workout-lines.set-order', $workoutLine), ['sets' => [$ids[0], $ids[1]]])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('sets');
 });
@@ -89,37 +89,37 @@ it('refuse une serie qui appartient a un autre exercice', function (): void {
     $proprietaire = User::factory()->create();
     Sanctum::actingAs($proprietaire);
 
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire);
     [, $autres] = exerciceAvecSeries($proprietaire);
 
-    $this->patchJson(route('api.v1.workout-lines.set-order', $ligne), [
+    $this->patchJson(route('api.v1.workout-lines.set-order', $workoutLine), [
         'sets' => [$ids[0], $ids[1], $autres[0]],
     ])->assertUnprocessable();
 });
 
 it('refuse l exercice d autrui', function (): void {
     $proprietaire = User::factory()->create();
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire);
 
     Sanctum::actingAs(User::factory()->create());
 
-    $this->patchJson(route('api.v1.workout-lines.set-order', $ligne), ['sets' => $ids])
+    $this->patchJson(route('api.v1.workout-lines.set-order', $workoutLine), ['sets' => $ids])
         ->assertNotFound();
 });
 
 it('ecrit en une seule requete, quel que soit le nombre de series', function (): void {
     $proprietaire = User::factory()->create();
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 12);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire, combien: 12);
 
     \Illuminate\Support\Facades\DB::enableQueryLog();
-    app(\App\Actions\Workouts\ReorderAction::class)->execute($ligne->sets(), array_values(array_reverse($ids)), 'sets');
+    app(\App\Actions\Workouts\ReorderAction::class)->execute($workoutLine->sets(), array_values(array_reverse($ids)), 'sets');
     $ecritures = collect(\Illuminate\Support\Facades\DB::getQueryLog())
         ->filter(fn (array $r): bool => str_starts_with((string) $r['query'], 'update'));
     \Illuminate\Support\Facades\DB::disableQueryLog();
 
     // Une par serie rendrait un ordre intermediaire lisible entre deux ecritures.
     expect($ecritures)->toHaveCount(1)
-        ->and($ligne->sets()->pluck('id')->all())->toBe(array_reverse($ids));
+        ->and($workoutLine->sets()->pluck('id')->all())->toBe(array_reverse($ids));
 });
 
 /*
@@ -129,22 +129,22 @@ it('ecrit en une seule requete, quel que soit le nombre de series', function ():
  */
 it('accepte des identifiants en chaînes et ordonne selon les valeurs, pas les clefs', function (): void {
     $proprietaire = User::factory()->create();
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 3);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire, combien: 3);
 
     app(\App\Actions\Workouts\ReorderAction::class)->execute(
-        $ligne->sets(),
+        $workoutLine->sets(),
         [7 => (string) $ids[2], 3 => (string) $ids[0], 9 => (string) $ids[1]],
         'sets'
     );
 
-    expect($ligne->sets()->pluck('id')->all())->toBe([$ids[2], $ids[0], $ids[1]]);
+    expect($workoutLine->sets()->pluck('id')->all())->toBe([$ids[2], $ids[0], $ids[1]]);
 });
 
 it('refuse un identifiant qui n’est pas un nombre', function (): void {
     $proprietaire = User::factory()->create();
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 2);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire, combien: 2);
 
-    expect(fn () => app(\App\Actions\Workouts\ReorderAction::class)->execute($ligne->sets(), ['abc', $ids[1]], 'sets'))
+    expect(fn () => app(\App\Actions\Workouts\ReorderAction::class)->execute($workoutLine->sets(), ['abc', $ids[1]], 'sets'))
         ->toThrow(\Illuminate\Validation\ValidationException::class);
 });
 
@@ -155,11 +155,11 @@ it('refuse un identifiant qui n’est pas un nombre', function (): void {
  */
 it('accepte une permutation quand les séries ne sont plus rangées par identifiant', function (): void {
     $proprietaire = User::factory()->create();
-    [$ligne, $ids] = exerciceAvecSeries($proprietaire, combien: 3);
+    [$workoutLine, $ids] = exerciceAvecSeries($proprietaire, combien: 3);
     $action = app(\App\Actions\Workouts\ReorderAction::class);
 
-    $action->execute($ligne->sets(), array_reverse($ids), 'sets');
-    $action->execute($ligne->sets(), [$ids[1], $ids[0], $ids[2]], 'sets');
+    $action->execute($workoutLine->sets(), array_reverse($ids), 'sets');
+    $action->execute($workoutLine->sets(), [$ids[1], $ids[0], $ids[2]], 'sets');
 
-    expect($ligne->sets()->pluck('id')->all())->toBe([$ids[1], $ids[0], $ids[2]]);
+    expect($workoutLine->sets()->pluck('id')->all())->toBe([$ids[1], $ids[0], $ids[2]]);
 });

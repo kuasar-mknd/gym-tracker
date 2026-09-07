@@ -79,11 +79,11 @@ class ProfileController extends Controller
          *     preferences: array<string, bool>,
          *     push_preferences?: array<string, bool>,
          *     values?: array<string, mixed>
-         * } $validated
+         * } $donneesValidees
          */
-        $validated = $request->validated();
+        $donneesValidees = $request->validated();
 
-        $updatePreferences->execute($this->user(), $validated);
+        $updatePreferences->execute($this->user(), $donneesValidees);
 
         // Un client XHR qui suivrait la redirection rejouerait le PATCH sur
         // /profile/edit (seul un 303 force GET) et recevrait un 405.

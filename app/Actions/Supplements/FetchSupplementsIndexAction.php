@@ -60,9 +60,9 @@ final class FetchSupplementsIndexAction
      */
     private function getUsageHistory(User $user): array
     {
-        $days = 30;
+        $jours = 30;
         $usageHistoryRaw = SupplementLog::where('user_id', $user->id)
-            ->where('consumed_at', '>=', now()->subDays($days)->startOfDay())
+            ->where('consumed_at', '>=', now()->subDays($jours)->startOfDay())
             ->selectRaw('DATE(consumed_at) as date, SUM(quantity) as count')
             ->groupBy('date')
             ->get()
@@ -71,7 +71,7 @@ final class FetchSupplementsIndexAction
         /** @var Collection<string, float> $results */
         $results = $usageHistoryRaw;
 
-        return $this->fillUsageHistory($results, $days);
+        return $this->fillUsageHistory($results, $jours);
     }
 
     /**
@@ -81,22 +81,22 @@ final class FetchSupplementsIndexAction
      * @param  Collection<string, float>  $usageHistoryRaw
      * @return array<int, array{date: string, count: float}>
      */
-    private function fillUsageHistory(Collection $usageHistoryRaw, int $days): array
+    private function fillUsageHistory(Collection $usageHistoryRaw, int $jours): array
     {
-        $history = [];
-        for ($i = $days - 1; $i >= 0; $i--) {
+        $historique = [];
+        for ($i = $jours - 1; $i >= 0; $i--) {
             $carbonDate = now()->subDays($i);
             $dateKey = $carbonDate->format('Y-m-d');
             $dateString = $carbonDate->format('d/m');
 
             $rawTotal = $usageHistoryRaw[$dateKey] ?? 0.0;
 
-            $history[] = [
+            $historique[] = [
                 'date' => $dateString,
                 'count' => (float) $rawTotal,
             ];
         }
 
-        return $history;
+        return $historique;
     }
 }

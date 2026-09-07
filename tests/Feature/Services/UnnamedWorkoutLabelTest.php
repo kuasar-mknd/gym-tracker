@@ -56,11 +56,11 @@ it('étiquette une séance sans nom dans la tendance de volume', function (): vo
 it('étiquette une séance sans nom dans l’historique de volume', function (): void {
     [$user] = seanceSansNom();
 
-    $history = app(VolumeStatsService::class)->getVolumeHistory($user, 10);
+    $historique = app(VolumeStatsService::class)->getVolumeHistory($user, 10);
 
-    expect($history)->toHaveCount(1)
-        ->and($history[0]->name)->toBe(__('Workout'))
-        ->and($history[0]->name)->not->toBe('');
+    expect($historique)->toHaveCount(1)
+        ->and($historique[0]->name)->toBe(__('Workout'))
+        ->and($historique[0]->name)->not->toBe('');
 });
 
 /**
@@ -70,8 +70,8 @@ it('étiquette une séance sans nom dans l’historique de volume', function ():
 it('étiquette une séance sans nom dans l’historique de durée', function (): void {
     [$user] = seanceSansNom();
 
-    $history = app(WorkoutStatsService::class)->getDurationHistory($user);
+    $historique = app(WorkoutStatsService::class)->getDurationHistory($user);
 
-    expect($history)->toHaveCount(1)
-        ->and($history[0]->name)->toBe(__('Workout'));
+    expect($historique)->toHaveCount(1)
+        ->and($historique[0]->name)->toBe(__('Workout'));
 });

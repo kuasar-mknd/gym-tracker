@@ -27,10 +27,10 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('create', WorkoutTemplate::class);
 
-        $userId = $this->user()->id;
+        $idUtilisateur = $this->user()->id;
 
         return Inertia::render('Workouts/Templates/Create', [
-            'exercises' => Exercise::getCachedForUser($userId),
+            'exercises' => Exercise::enCachePourUtilisateur($idUtilisateur),
         ]);
     }
 
@@ -38,9 +38,9 @@ class WorkoutTemplateController extends Controller
     {
         $this->authorize('create', WorkoutTemplate::class);
 
-        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
-        $validated = $request->validated();
-        $createWorkoutTemplateAction->execute($this->user(), $validated);
+        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $donneesValidees */
+        $donneesValidees = $request->validated();
+        $createWorkoutTemplateAction->execute($this->user(), $donneesValidees);
 
         return redirect()->route('templates.index');
     }
@@ -99,7 +99,7 @@ class WorkoutTemplateController extends Controller
 
         return Inertia::render('Workouts/Templates/Edit', [
             'template' => $template,
-            'exercises' => Exercise::getCachedForUser($this->user()->id),
+            'exercises' => Exercise::enCachePourUtilisateur($this->user()->id),
         ]);
     }
 
@@ -114,10 +114,10 @@ class WorkoutTemplateController extends Controller
     ): \Illuminate\Http\RedirectResponse {
         $this->authorize('update', $template);
 
-        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $validated */
-        $validated = $request->validated();
+        /** @var array{name: string, description?: string|null, exercises?: array<int, array{id: int, sets?: array<int, array{reps?: int|null, weight?: float|null, is_warmup?: bool}>}>} $donneesValidees */
+        $donneesValidees = $request->validated();
 
-        $updateWorkoutTemplateAction->execute($template, $validated);
+        $updateWorkoutTemplateAction->execute($template, $donneesValidees);
 
         return redirect()->route('templates.index');
     }

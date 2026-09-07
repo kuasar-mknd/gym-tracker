@@ -87,14 +87,14 @@ class Set extends Model
         return $this->hasOne(PersonalRecord::class);
     }
 
-    public function updateVolumes(): void
+    public function mettreAJourLesVolumes(): void
     {
-        $this->syncVolumes();
+        $this->synchroniserLesVolumes();
     }
 
     public function decrementVolumes(): void
     {
-        $this->syncVolumes();
+        $this->synchroniserLesVolumes();
     }
 
     /**
@@ -108,11 +108,11 @@ class Set extends Model
      * étaient appliqués, et les totaux s'éloignaient des séries qu'ils
      * prétendent décrire, définitivement et sans rien laisser voir.
      */
-    private function syncVolumes(): void
+    private function synchroniserLesVolumes(): void
     {
         $this->loadMissing('workoutLine.workout.user');
 
-        $this->workoutLine?->workout?->recomputeVolume();
+        $this->workoutLine?->workout?->recalculerLeVolume();
     }
 
     #[\Override]
@@ -139,7 +139,7 @@ class Set extends Model
         });
 
         static::saved(function (Set $set): void {
-            $set->updateVolumes();
+            $set->mettreAJourLesVolumes();
         });
 
         static::deleted(function (Set $set): void {

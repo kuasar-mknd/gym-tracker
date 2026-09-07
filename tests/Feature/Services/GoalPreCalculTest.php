@@ -103,12 +103,12 @@ function recordDeForceDObjectif(User $user, Exercise $exercise, float $valeur): 
 function seanceDeVolumeDObjectif(User $user, Exercise $exercise, float $poids, int $repetitions): void
 {
     $seance = Workout::factory()->create(['user_id' => $user->id]);
-    $ligne = WorkoutLine::factory()->create([
+    $workoutLine = WorkoutLine::factory()->create([
         'workout_id' => $seance->id,
         'exercise_id' => $exercise->id,
     ]);
     Set::factory()->create([
-        'workout_line_id' => $ligne->id,
+        'workout_line_id' => $workoutLine->id,
         'weight' => $poids,
         'reps' => $repetitions,
     ]);

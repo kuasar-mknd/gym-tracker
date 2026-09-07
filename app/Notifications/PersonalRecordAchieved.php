@@ -27,7 +27,7 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
         $channels = ['database'];
 
         /** @var \App\Models\User $_notifiable */
-        if ($_notifiable->isPushEnabled('personal_record')) {
+        if ($_notifiable->notificationsPoussesActivees('personal_record')) {
             $channels[] = WebPushChannel::class;
         }
 

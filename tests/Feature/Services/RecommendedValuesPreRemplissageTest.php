@@ -47,7 +47,7 @@ function ligneDuJourApresUneSerieDHier(array $serieDHier): WorkoutLine
 }
 
 it('ignore une série validée sans qu’aucun poids n’ait été saisi', function (): void {
-    $ligne = ligneDuJourApresUneSerieDHier([
+    $workoutLine = ligneDuJourApresUneSerieDHier([
         'weight' => null,
         'reps' => 10,
         'distance_km' => 0.0,
@@ -56,11 +56,11 @@ it('ignore une série validée sans qu’aucun poids n’ait été saisi', funct
 
     // Sans poids saisi, la serie ne dit rien de l'exercice : la recommandation
     // doit remonter au 50 kg d'il y a une semaine, et surtout pas proposer 0.
-    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne)['weight'])->toBe(50.0);
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($workoutLine)['weight'])->toBe(50.0);
 });
 
 it('ignore une série laissée aux trente secondes que l’écran pré-remplit', function (): void {
-    $ligne = ligneDuJourApresUneSerieDHier([
+    $workoutLine = ligneDuJourApresUneSerieDHier([
         'weight' => 0.0,
         'reps' => 10,
         'distance_km' => 0.0,
@@ -70,11 +70,11 @@ it('ignore une série laissée aux trente secondes que l’écran pré-remplit',
     // 0 kg, 10 repetitions, 0 km, 30 s : exactement ce que l'ecran ajoute.
     // Une duree de 30 s doit etre lue comme du pre-remplissage au meme titre
     // qu'une duree restee vide.
-    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne)['weight'])->toBe(50.0);
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($workoutLine)['weight'])->toBe(50.0);
 });
 
 it('garde une série de course : une distance saisie n’est pas un pré-remplissage', function (): void {
-    $ligne = ligneDuJourApresUneSerieDHier([
+    $workoutLine = ligneDuJourApresUneSerieDHier([
         'weight' => 0.0,
         'reps' => 10,
         'distance_km' => 5.0,
@@ -83,12 +83,12 @@ it('garde une série de course : une distance saisie n’est pas un pré-remplis
 
     // Cinq kilometres, sans avoir touche aux repetitions : c'est un historique,
     // et la recommandation doit le reproposer.
-    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne))
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($workoutLine))
         ->toMatchArray(['weight' => 0.0, 'distance_km' => 5.0]);
 });
 
 it('garde une série chronométrée : une durée saisie n’est pas un pré-remplissage', function (): void {
-    $ligne = ligneDuJourApresUneSerieDHier([
+    $workoutLine = ligneDuJourApresUneSerieDHier([
         'weight' => 0.0,
         'reps' => 10,
         'distance_km' => 0.0,
@@ -96,6 +96,6 @@ it('garde une série chronométrée : une durée saisie n’est pas un pré-remp
     ]);
 
     // Deux minutes de gainage : la duree saisie fait de la serie un historique.
-    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne))
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($workoutLine))
         ->toMatchArray(['weight' => 0.0, 'duration_seconds' => 120]);
 });

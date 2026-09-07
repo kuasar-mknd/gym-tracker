@@ -50,27 +50,27 @@ final class BodyStatsService
      * séparées ne faisaient que doubler le travail.
      *
      * @param  User  $user  L'utilisateur dont on lit les mesures.
-     * @param  int  $days  La profondeur d'historique, en jours.
+     * @param  int  $jours  La profondeur d'historique, en jours.
      * @return array{weightHistory: array<int, WeightHistoryPoint>, bodyFatHistory: array<int, BodyFatHistoryPoint>}
      */
-    public function getBodyProgressOverview(User $user, int $days = 90): array
+    public function getBodyProgressOverview(User $user, int $jours = 90): array
     {
         return Cache::remember(
-            ClesDeStats::mesures($user, "body_progress.{$days}"),
+            ClesDeStats::mesures($user, "body_progress.{$jours}"),
             now()->addMinutes(30),
-            function () use ($user, $days): array {
+            function () use ($user, $jours): array {
                 /*
                  * Le `toBase()` qui etait ici se reclamait d'une economie de
                  * memoire « pour de gros volumes » — sans `select()`, donc en
                  * ramenant toutes les colonnes, sur une requete deja bornee a
-                 * `$days` jours. Il ne faisait economiser que l'hydratation, et
+                 * `$jours` jours. Il ne faisait economiser que l'hydratation, et
                  * il coutait trois entrees de baseline PHPStan : les valeurs
                  * revenaient non typees, d'ou deux casts vers `float` et un vers
                  * `string` pour reparser une date que le modele caste deja.
                  */
                 $measurements = $user->bodyMeasurements()
                     ->select(['weight', 'body_fat', 'measured_at'])
-                    ->where('measured_at', '>=', now()->subDays($days))
+                    ->where('measured_at', '>=', now()->subDays($jours))
                     ->orderBy('measured_at', 'asc')
                     ->get();
 

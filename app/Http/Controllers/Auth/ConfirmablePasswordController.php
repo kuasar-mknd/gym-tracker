@@ -38,7 +38,7 @@ class ConfirmablePasswordController extends Controller
             ]);
         }
 
-        $request->clearRateLimiter();
+        $request->viderLeCompteurDeTentatives();
 
         $request->session()->put('auth.password_confirmed_at', time());
 

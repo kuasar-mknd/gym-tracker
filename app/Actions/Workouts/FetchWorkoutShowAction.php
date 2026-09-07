@@ -25,7 +25,7 @@ class FetchWorkoutShowAction
      */
     public function execute(User $user, Workout $workout): array
     {
-        $exercises = Exercise::getCachedForUser($user->id);
+        $exercises = Exercise::enCachePourUtilisateur($user->id);
 
         $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']);
 

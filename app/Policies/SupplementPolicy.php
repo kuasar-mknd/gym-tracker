@@ -12,78 +12,78 @@ final class SupplementPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('ViewAny:Supplement');
+        return $utilisateurConnecte->can('ViewAny:Supplement');
     }
 
-    public function view(AuthUser $authUser, Supplement $supplement): bool
+    public function view(AuthUser $utilisateurConnecte, Supplement $supplement): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $supplement->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $supplement->user_id;
         }
 
-        return $authUser->can('View:Supplement');
+        return $utilisateurConnecte->can('View:Supplement');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('Create:Supplement');
+        return $utilisateurConnecte->can('Create:Supplement');
     }
 
-    public function update(AuthUser $authUser, Supplement $supplement): bool
+    public function update(AuthUser $utilisateurConnecte, Supplement $supplement): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $supplement->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $supplement->user_id;
         }
 
-        return $authUser->can('Update:Supplement');
+        return $utilisateurConnecte->can('Update:Supplement');
     }
 
-    public function delete(AuthUser $authUser, Supplement $supplement): bool
+    public function delete(AuthUser $utilisateurConnecte, Supplement $supplement): bool
     {
-        if ($authUser instanceof \App\Models\User) {
-            return $authUser->id === $supplement->user_id;
+        if ($utilisateurConnecte instanceof \App\Models\User) {
+            return $utilisateurConnecte->id === $supplement->user_id;
         }
 
-        return $authUser->can('Delete:Supplement');
+        return $utilisateurConnecte->can('Delete:Supplement');
     }
 
-    public function restore(AuthUser $authUser): bool
+    public function restore(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Restore:Supplement');
+        return $utilisateurConnecte->can('Restore:Supplement');
     }
 
-    public function forceDelete(AuthUser $authUser): bool
+    public function forceDelete(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDelete:Supplement');
+        return $utilisateurConnecte->can('ForceDelete:Supplement');
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDeleteAny:Supplement');
+        return $utilisateurConnecte->can('ForceDeleteAny:Supplement');
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('RestoreAny:Supplement');
+        return $utilisateurConnecte->can('RestoreAny:Supplement');
     }
 
-    public function replicate(AuthUser $authUser): bool
+    public function replicate(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Replicate:Supplement');
+        return $utilisateurConnecte->can('Replicate:Supplement');
     }
 
-    public function reorder(AuthUser $authUser): bool
+    public function reorder(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Reorder:Supplement');
+        return $utilisateurConnecte->can('Reorder:Supplement');
     }
 }

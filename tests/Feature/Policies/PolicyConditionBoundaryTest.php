@@ -280,7 +280,7 @@ describe('achievements are read only for the people who earn them', function ():
  * Un identifiant que jamais un administrateur ne portera.
  *
  * Les deux branches d'une policy repondent la meme chose quand elles regardent
- * le meme entier par hasard : la branche de propriete compare `$authUser->id`
+ * le meme entier par hasard : la branche de propriete compare `$utilisateurConnecte->id`
  * au `user_id` de l'enregistrement, et un administrateur fraichement cree porte
  * l'identifiant 1, comme le premier utilisateur. Un test ecrit sans y penser
  * passe alors AUSSI avec la garde `instanceof` retiree, et ne dit donc rien.

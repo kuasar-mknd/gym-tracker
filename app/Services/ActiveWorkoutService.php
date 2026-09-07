@@ -52,13 +52,13 @@ final class ActiveWorkoutService
             ->first();
     }
 
-    public function forget(int $userId): void
+    public function forget(int $idUtilisateur): void
     {
-        Cache::forget(self::cle($userId));
+        Cache::forget(self::cle($idUtilisateur));
     }
 
-    private static function cle(int $userId): string
+    private static function cle(int $idUtilisateur): string
     {
-        return "user_active_workout_{$userId}";
+        return "user_active_workout_{$idUtilisateur}";
     }
 }

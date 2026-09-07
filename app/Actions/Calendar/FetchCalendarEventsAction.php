@@ -29,7 +29,7 @@ final class FetchCalendarEventsAction
         $endOfMonth = $date->copy()->endOfMonth();
 
         return [
-            'workouts' => $this->getWorkouts($user, $startOfMonth, $endOfMonth),
+            'workouts' => $this->seancesDeLUtilisateur($user, $startOfMonth, $endOfMonth),
             'journals' => $this->getJournals($user, $startOfMonth, $endOfMonth),
         ];
     }
@@ -70,7 +70,7 @@ final class FetchCalendarEventsAction
             ->groupBy('workout_id')
             ->map(fn (\Illuminate\Support\Collection $duJour): array => $duJour
                 ->take(3)
-                ->map(fn (object $ligne): string => $noms[$ligne->exercise_id] ?? '')
+                ->map(fn (object $workoutLine): string => $noms[$workoutLine->exercise_id] ?? '')
                 ->values()
                 ->toArray())
             ->toArray();
@@ -85,7 +85,7 @@ final class FetchCalendarEventsAction
      * n'est jamais vide, le compte jamais negatif.
      */
     /** @return \Illuminate\Support\Collection<int, array{id: int, name: string, date: non-falsy-string, started_at: string, exercises_count: int<0, max>, preview_exercises: array<int, string>}> */
-    private function getWorkouts(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
+    private function seancesDeLUtilisateur(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
         /*
          * Sans `toBase()`, et le meme raisonnement qu'en #1474 : la requete est

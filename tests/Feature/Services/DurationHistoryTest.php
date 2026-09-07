@@ -139,5 +139,5 @@ it('garde les statistiques en cache trente minutes, pas plus', function (string 
     Carbon::setTestNow();
 })->with([
     'historique de durée' => ['getDurationHistory', 'duration_history.20'],
-    'répartitions' => ['getWorkoutDistributions', 'workout_distributions.90'],
+    'répartitions' => ['repartitionsDesSeances', 'workout_distributions.90'],
 ]);

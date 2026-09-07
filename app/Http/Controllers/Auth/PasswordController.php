@@ -12,14 +12,14 @@ class PasswordController extends Controller
 {
     public function update(UpdatePasswordRequest $request): RedirectResponse
     {
-        /** @var array{password: string} $validated */
-        $validated = $request->validated();
+        /** @var array{password: string} $donneesValidees */
+        $donneesValidees = $request->validated();
 
         $this->user()->update([
-            'password' => $validated['password'],
+            'password' => $donneesValidees['password'],
         ]);
 
-        $request->clearRateLimiter();
+        $request->viderLeCompteurDeTentatives();
 
         return back();
     }

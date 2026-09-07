@@ -26,10 +26,10 @@ class SupplementController extends Controller
     {
         $this->authorize('create', Supplement::class);
 
-        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
-        $validated = $request->validated();
+        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $donneesValidees */
+        $donneesValidees = $request->validated();
 
-        Supplement::create(array_merge($validated, ['user_id' => $this->user()->id]));
+        Supplement::create(array_merge($donneesValidees, ['user_id' => $this->user()->id]));
 
         return redirect()->back()->with('success', 'Complément ajouté.');
     }
@@ -41,10 +41,10 @@ class SupplementController extends Controller
     {
         $this->authorize('update', $supplement);
 
-        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $validated */
-        $validated = $request->validated();
+        /** @var array{name: string, brand?: string|null, dosage?: string|null, servings_remaining: int, low_stock_threshold: int} $donneesValidees */
+        $donneesValidees = $request->validated();
 
-        $supplement->update($validated);
+        $supplement->update($donneesValidees);
 
         return redirect()->back()->with('success', 'Complément mis à jour.');
     }

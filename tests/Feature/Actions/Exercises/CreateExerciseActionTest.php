@@ -19,14 +19,14 @@ it('creates an exercise and invalidates cache', function (): void {
 
     // La liste est mise en cache avant, pour que sa fraicheur apres soit une
     // preuve d'invalidation et non un premier remplissage.
-    Exercise::getCachedForUser($user->id);
+    Exercise::enCachePourUtilisateur($user->id);
 
     // Act
     $action = app(CreateExerciseAction::class);
     $exercise = $action->execute($user, $data);
 
     // Assert
-    expect(Exercise::getCachedForUser($user->id)->pluck('name')->all())->toContain('Bench Press')
+    expect(Exercise::enCachePourUtilisateur($user->id)->pluck('name')->all())->toContain('Bench Press')
         ->and($exercise)->toBeInstanceOf(Exercise::class)
         ->and($exercise->user_id)->toBe($user->id)
         ->and($exercise->name)->toBe('Bench Press')

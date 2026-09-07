@@ -56,9 +56,9 @@ class LesChiffresTiennentDansLeursChampsTest extends DuskTestCase
         $user = User::factory()->create();
         $exercice = Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Développé couché', 'type' => 'strength']);
         $seance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subMinutes(10)]);
-        $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id, 'order' => 0]);
+        $workoutLine = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id, 'order' => 0]);
         foreach ([0, 1] as $ordre) {
-            Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 142.5, 'reps' => 12, 'order' => $ordre, 'is_completed' => $ordre === 0]);
+            Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 142.5, 'reps' => 12, 'order' => $ordre, 'is_completed' => $ordre === 0]);
         }
 
         $this->browse(function (Browser $browser) use ($user, $seance): void {

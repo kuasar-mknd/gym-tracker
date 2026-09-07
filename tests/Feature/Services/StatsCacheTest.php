@@ -128,15 +128,15 @@ class StatsCacheTest extends TestCase
     public function test_clear_workout_related_stats_invalidates_1rm_cache(): void
     {
         $user = User::factory()->create();
-        $exerciseId = 1;
+        $idExercice = 1;
 
-        app(ExerciseStatsService::class)->getExercise1RMProgress($user, $exerciseId);
-        $avant = \App\Services\Stats\ClesDeStats::seances($user, "1rm.{$exerciseId}.90");
+        app(ExerciseStatsService::class)->getExercise1RMProgress($user, $idExercice);
+        $avant = \App\Services\Stats\ClesDeStats::seances($user, "1rm.{$idExercice}.90");
         $this->assertTrue(Cache::has($avant));
 
         app(StatsCacheManager::class)->clearWorkoutRelatedStats($user);
 
-        $apres = \App\Services\Stats\ClesDeStats::seances($user, "1rm.{$exerciseId}.90");
+        $apres = \App\Services\Stats\ClesDeStats::seances($user, "1rm.{$idExercice}.90");
         $this->assertNotSame($avant, $apres);
         $this->assertFalse(Cache::has($apres), 'La progression de 1RM se relit sous une clef neuve après invalidation');
     }
