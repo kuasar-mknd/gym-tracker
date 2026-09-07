@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.18] - 2026-09-07
+
 ### Ajouté
 - **Une invitation à installer l'application** (#1805) : elle est une PWA complète depuis longtemps et rien ne le disait. Sur Android, le bandeau propose l'installation ; sur iPhone, où le navigateur n'offre rien, il donne le geste — Partager, puis « Sur l'écran d'accueil ». Il ne revient pas après un refus, et ne s'affiche jamais dans une application déjà installée
 - **Une page « Raccourcis »** dans « Plus », et `?` pour l'ouvrir de n'importe où (#1817) : l'application n'en avait qu'un, ⌘K dans la bibliothèque, annoncé par une pastille et écrit nulle part. ⌘/Ctrl + Entrée ajoute une série au dernier exercice pendant une séance
@@ -571,7 +573,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.17...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.18...HEAD
+[1.5.18]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.17...v1.5.18
 [1.5.17]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.16...v1.5.17
 [1.5.16]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.15...v1.5.16
 [1.5.15]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.14...v1.5.15
