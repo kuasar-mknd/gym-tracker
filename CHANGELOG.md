@@ -8,6 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Ajouté
+- **Une invitation à installer l'application** (#1805) : elle est une PWA complète depuis longtemps et rien ne le disait. Sur Android, le bandeau propose l'installation ; sur iPhone, où le navigateur n'offre rien, il donne le geste — Partager, puis « Sur l'écran d'accueil ». Il ne revient pas après un refus, et ne s'affiche jamais dans une application déjà installée
 - **Une page « Raccourcis »** dans « Plus », et `?` pour l'ouvrir de n'importe où (#1817) : l'application n'en avait qu'un, ⌘K dans la bibliothèque, annoncé par une pastille et écrit nulle part. ⌘/Ctrl + Entrée ajoute une série au dernier exercice pendant une séance
 - **Un seul format par grandeur** (#1787) : `Utils/nombre.js` écrit les poids, volumes, variations et pourcentages en suisse romand — virgule décimale, apostrophe aux milliers. « 78.40 kg » et « 15,750 kg » disparaissent ; une garde interdit `toFixed(` et `toLocaleString(` ailleurs
 - **Un compte neuf reçoit le jeu de plaques olympique** (#1799) : 25, 20, 15, 10, 5, 2,5 et 1,25 kg par paire, au lieu d'un calculateur qui ouvrait sur « Impossible de charger ce poids »
