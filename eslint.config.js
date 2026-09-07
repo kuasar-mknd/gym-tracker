@@ -57,13 +57,13 @@ export default [
     },
     {
         // The service worker runs in its own global scope.
-        files: ['resources/js/sw.js'],
+        files: ['resources/js/sw.js', 'resources/js/sw/**/*.js'],
         languageOptions: {
             globals: { ...globals.serviceworker },
         },
     },
     {
-        files: ['tests/js/**/*.js', '*.config.js', 'vitest.setup.js'],
+        files: ['tests/js/**/*.js', '*.config.js', 'vitest.setup.js', 'scripts/**/*.mjs'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',

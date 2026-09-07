@@ -37,9 +37,26 @@ export default defineConfig({
             scope: '/',
             injectManifest: {
                 globDirectory: 'public/build',
-                // woff2 n'est pas dans le glob par défaut : les polices auto-hébergées
-                // sortaient du precache et le mode hors-ligne les perdait.
-                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+                /*
+                 * Ce que l'installation télécharge, et rien de plus.
+                 *
+                 * Le glob prenait tout : 142 fichiers, 1 249 Kio, dont les 200
+                 * Kio du graphique et le morceau de chaque page jamais visitée
+                 * (#1814). Les actifs portent leur hachage et un an de cache
+                 * immuable — le navigateur les garde déjà. Restent ici la
+                 * coquille commune, les polices latines, et les deux écrans qui
+                 * servent sans réseau : l'accueil et la séance en cours. Le
+                 * reste se met en cache à la première visite, dans le worker.
+                 */
+                globPatterns: [
+                    'assets/main-*.{js,css}',
+                    'assets/vue-*.js',
+                    'assets/Dashboard-*.js',
+                    'assets/Show-*.js',
+                    'assets/*latin-*.woff2',
+                    '*.{ico,png,svg,webp}',
+                ],
+                globIgnores: ['**/*latin-ext-*.woff2'],
                 manifestTransforms: [
                     (entries) => ({
                         manifest: entries.map((entry) =>

@@ -68,6 +68,12 @@ jobs:
             - name: Build Assets
               run: npm run build
 
+            # Le precache est ce que l'installation télécharge d'un coup. Il a
+            # valu 142 fichiers et 1 249 Kio avant #1814 ; la coquille en pèse
+            # 572. Un glob élargi par mégarde le referait grossir sans bruit.
+            - name: Le precache reste une coquille
+              run: node scripts/verifier-le-precache.mjs
+
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v7
               with:
