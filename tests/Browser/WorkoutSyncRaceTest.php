@@ -79,17 +79,19 @@ class WorkoutSyncRaceTest extends DuskTestCase
              */
             $browser->script(<<<'JS'
                     (function () {
-                        const original = window.axios;
-                        const delayed = function (config) {
-                            if (String(config.url).includes('workout-lines') && String(config.method).toLowerCase() === 'post') {
+                        const original = window.fetch.bind(window);
+
+                        window.fetch = function (url, options) {
+                            const methode = String((options && options.method) || 'get').toLowerCase();
+
+                            if (String(url).includes('workout-lines') && methode === 'post') {
                                 return new Promise((resolve, reject) =>
-                                    setTimeout(() => original(config).then(resolve, reject), 3000)
+                                    setTimeout(() => original(url, options).then(resolve, reject), 3000)
                                 );
                             }
-                            return original(config);
+
+                            return original(url, options);
                         };
-                        Object.assign(delayed, original);
-                        window.axios = delayed;
                     })();
                 JS);
 

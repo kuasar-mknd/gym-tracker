@@ -1,5 +1,5 @@
 import { onMounted, ref } from 'vue'
-import axios from 'axios'
+import { http } from '@/Utils/http'
 
 /**
  * L'abonnement aux notifications push : ce que le serveur en connait, ce que
@@ -115,9 +115,7 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement 
      * is no worse than the state before.
      */
     const forgetOnServer = async (endpoint) => {
-        const api = window.axios || axios
-
-        await api.post(route('push-subscriptions.destroy'), { endpoint }, { timeout: DELAI_ETAPE_MS }).catch(() => {})
+        await http.post(route('push-subscriptions.destroy'), { endpoint }, { timeout: DELAI_ETAPE_MS }).catch(() => {})
     }
 
     const enablePush = async () => {
@@ -168,10 +166,9 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement 
                 }),
             )
 
-            // Save subscription to backend using window.axios for CSRF/auth
+            // Le jeton CSRF et la session viennent de Utils/http.
             etapeEnCours.value = 'Enregistrement'
-            const api = window.axios || axios
-            await api.post(route('push-subscriptions.update'), subscription, { timeout: DELAI_ETAPE_MS })
+            await http.post(route('push-subscriptions.update'), subscription, { timeout: DELAI_ETAPE_MS })
 
             pushRegistered.value = true
             apresAbonnement()
