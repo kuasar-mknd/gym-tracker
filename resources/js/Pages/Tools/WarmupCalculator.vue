@@ -123,7 +123,7 @@
                                         type="number"
                                         v-model="step.percent"
                                         :aria-label="`Pourcentage, palier ${index + 1}`"
-                                        class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition outline-none focus:ring-1"
+                                        class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border py-2 pr-6 pl-2 text-center text-base font-bold tabular-nums transition outline-none focus:ring-1"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -135,7 +135,7 @@
                                     type="number"
                                     v-model="step.reps"
                                     :aria-label="`Répétitions, palier ${index + 1}`"
-                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition outline-none focus:ring-1"
+                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-2 py-2 text-center text-base font-bold tabular-nums transition outline-none focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -168,24 +168,14 @@
                         <span id="warmup-rounding-label" class="font-display-label text-text-muted mb-2 block"
                             >Arrondi (kg)</span
                         >
-                        <div class="flex gap-2" role="group" aria-labelledby="warmup-rounding-label">
-                            <button
-                                v-for="inc in [0.5, 1, 2.5, 5]"
-                                :key="inc"
-                                type="button"
-                                @click="form.rounding_increment = inc"
-                                :aria-label="`Arrondir au ${inc} kg`"
-                                :aria-pressed="form.rounding_increment === inc"
-                                class="flex-1 rounded-xl border py-2 text-sm font-bold backdrop-blur-md transition active:scale-95"
-                                :class="
-                                    form.rounding_increment === inc
-                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-glow-primary-soft'
-                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:bg-surface-card/80'
-                                "
-                            >
-                                {{ inc }}
-                            </button>
-                        </div>
+                        <GlassSegmented
+                            :model-value="form.rounding_increment"
+                            @update:model-value="(valeur) => (form.rounding_increment = valeur)"
+                            :options="[0.5, 1, 2.5, 5].map((pas) => ({ value: pas, label: String(pas) }))"
+                            label="Arrondi"
+                            size="sm"
+                            bloc
+                        />
                     </div>
                 </div>
             </GlassCard>
@@ -202,6 +192,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 
 const props = defineProps({
     preference: {

@@ -11,12 +11,18 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Six composants de la charte** (#1781, #1786, #1792, #1794) : `GlassSegmented` (choix exclusif, flèches au clavier), `GlassChip` (pilule de filtre, cible de 44 px même en petit), `GlassTile` (tuile de choix ou d'action), `GlassTextarea` (étiquette, compteur, erreur, hauteur qui suit le texte), `GlassStat` (chiffre, unité, libellé, tendance) et `GlassIcon` (sept tailles, remplissage, nom pour les lecteurs d'écran)
 
 ### Modifié
+- **Tout ce qui se clique se voit au clavier et se vise au doigt** (#1782, #1795) : anneau de focus sur les treize boutons qui n'en avaient pas, 44 px pour la petite taille de bouton, la bascule d'échauffement d'un modèle et les pastilles de couleur d'une habitude
+- **L'action principale d'un formulaire prend la largeur du téléphone** (#1793) : profil, mot de passe, notifications, journal, habitude et objectif ; « Annuler » passe sous elle au lieu de la serrer
+- **Un seul dessin pour « ajouter », « réessayer » et « fermer »** : la modale de célébration, la carte de progression, le formulaire de modèle, le journal et l'arrondi de l'échauffement passent par les composants de la charte
 - **Un seul titre par page** (#1789) : sur les six outils qui ont un grand titre dans la page, l'en-tête ne garde que la flèche et les actions ; « Minuteur », « Compléments » et « Modèle » remplacent trois titres qui se coupaient ; l'en-tête descend d'un cran au-delà de douze caractères
 - **« Poids » et « Mensurations »** au lieu de deux pages nommées « Mesures » (#1790)
 - **La barre basse dit ses onglets** : Accueil, Stats, Séances, Plus sous les icônes ; le « + » de l'en-tête des séances, qui doublait le bouton central, s'en va (#1796)
 - **La bannière de séance active tient sur une ligne** hors accueil et liste des séances (#1797), et ne compte jamais en négatif quand l'horloge du téléphone est décalée (#1798)
 - **Un seul dessin par rôle** : la période des stats, les métriques du journal, les onglets du minuteur, l'unité et le sexe des calculateurs, les catégories de badges, d'exercices et de mensurations passent par `GlassSegmented` et `GlassChip` ; les tuiles Homme/Femme et les ajouts rapides d'hydratation par `GlassTile` ; les trois champs multilignes par `GlassTextarea` ; les cartes de chiffres des séances et des mesures par `GlassStat` ; les 98 icônes hors composants de base par `GlassIcon`. La variation de poids n'est plus colorée par sa seule direction (#1801)
 - **La charte nomme ses échelles** (#1784, #1785, #1803, #1808, #1809) : un jeton `text-2xs` et un utilitaire `sur-titre` remplacent 57 `text-[10px]` et leurs combinaisons ; sept plans nommés (`z-collant`, `z-nav`, `z-flottant`, `z-modale`, `z-toast`, `z-alerte`, `z-evitement`) remplacent dix valeurs dont `z-[9999]` ; six ombres et une ombre portée entrent dans les jetons ; les arrondis ont un rôle chacun ; six pas `stagger-1…6` remplacent soixante délais d'animation inline ; `transition` remplace `transition-all` (109 fois) ; le rembourrage vertical des pages appartient au layout ; les exemples de champ ne sont plus en capitales grasses. Une garde Vitest refuse le retour de toute valeur arbitraire
+
+### Corrigé
+- **Un poids de trois chiffres se lisait à moitié dans sa case** (#1788) : les unités passent DANS les champs de la rangée d'une série, les flèches des champs numériques — que le doigt n'utilise jamais — libèrent leur douzaine de pixels, et une garde Dusk mesure le débordement réel du navigateur sur la séance, les plaques, le 1RM et l'échauffement
 
 ## [1.5.17] - 2026-09-06
 

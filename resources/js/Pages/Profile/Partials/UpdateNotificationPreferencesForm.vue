@@ -216,10 +216,16 @@ const updatePreferences = () => {
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
                 <!-- GlassButton defaults to type="button", so without this the click
                      never fires the form's @submit and nothing was ever saved. -->
-                <GlassButton variant="primary" type="submit" dusk="save-notification-preferences" :loading="isSaving">
+                <GlassButton
+                    variant="primary"
+                    type="submit"
+                    block
+                    dusk="save-notification-preferences"
+                    :loading="isSaving"
+                >
                     Enregistrer
                 </GlassButton>
 

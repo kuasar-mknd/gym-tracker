@@ -276,7 +276,7 @@ const getProgressPercent = (habit) => {
                                 :aria-pressed="isCompleted(habit, day.date)"
                                 :aria-label="`${habit.name}, ${day.day_short || day.day} ${day.day_num}`"
                                 :dusk="`habit-${habit.id}-${day.date}`"
-                                class="flex size-11 shrink-0 items-center justify-center rounded-full transition active:scale-95"
+                                class="focus-visible:ring-accent-primary flex size-11 shrink-0 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 :class="[
                                     isCompleted(habit, day.date)
                                         ? `${habit.color} text-text-on-dark-accent shadow-md`

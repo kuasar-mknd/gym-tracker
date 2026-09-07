@@ -297,8 +297,7 @@ describe.each([
         const wrapper = mountPage()
         await seed(wrapper, twoExercises)
 
-        const adders = wrapper.findAll('button').filter((b) => b.text() === '+ Ajouter une série')
-        await adders[1].trigger('click')
+        await wrapper.get('[dusk="add-set-1"]').trigger('click')
 
         expect(interne(wrapper).form.exercises[0].sets).toHaveLength(1)
         expect(interne(wrapper).form.exercises[1].sets).toHaveLength(2)

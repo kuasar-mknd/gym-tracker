@@ -178,7 +178,7 @@ const previewFromForm = () => {
                     <div class="mt-12 flex gap-4">
                         <button
                             @click="toggleTimer"
-                            class="text-text-main bg-surface-card flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95"
+                            class="text-text-main bg-surface-card focus-visible:ring-accent-primary flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :aria-label="status === 'running' ? 'Mettre en pause' : 'Démarrer'"
                         >
                             <GlassIcon :name="status === 'running' ? 'pause' : 'play_arrow'" size="lg" />
@@ -186,7 +186,7 @@ const previewFromForm = () => {
 
                         <button
                             @click="resetRunner"
-                            class="border-border bg-surface-card/50 text-text-muted flex h-16 w-16 items-center justify-center rounded-full border shadow-lg transition-transform hover:scale-110 active:scale-95"
+                            class="border-border bg-surface-card/50 text-text-muted focus-visible:ring-accent-primary flex h-16 w-16 items-center justify-center rounded-full border shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             aria-label="Réinitialiser"
                         >
                             <GlassIcon name="restart_alt" size="lg" />
@@ -294,7 +294,7 @@ const previewFromForm = () => {
                         <div class="relative z-10 flex items-center gap-2">
                             <button
                                 @click="loadTimer(timer)"
-                                class="text-text-muted hover:text-accent-primary-deep relative p-2 transition-colors before:absolute before:-inset-0.5 before:content-['']"
+                                class="text-text-muted hover:text-accent-primary-deep focus-visible:ring-accent-primary relative rounded-lg p-2 transition-colors before:absolute before:-inset-0.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                                 title="Charger & Lancer"
                                 aria-label="Charger et lancer"
                             >

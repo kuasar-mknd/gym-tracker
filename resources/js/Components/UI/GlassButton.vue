@@ -66,13 +66,18 @@ defineProps({
         type: String,
         default: null,
     },
+    /** L'action principale d'un formulaire : toute la largeur du téléphone, la sienne au-delà. */
+    block: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const sizeClasses = {
-    sm: 'min-h-[36px] px-4 py-2 text-sm rounded-xl',
+    sm: "relative min-h-10 px-4 py-2 text-sm rounded-xl before:absolute before:-inset-0.5 before:content-['']",
     md: 'min-h-touch px-5 py-2.5 text-base rounded-xl',
-    lg: 'min-h-[52px] px-6 py-3 text-lg rounded-2xl',
-    xl: 'min-h-[64px] px-8 py-4 text-xl rounded-2xl',
+    lg: 'min-h-13 px-6 py-3 text-lg rounded-2xl',
+    xl: 'min-h-16 px-8 py-4 text-xl rounded-2xl',
 }
 </script>
 
@@ -88,6 +93,7 @@ const sizeClasses = {
             'glass-button focus-visible:ring-accent-primary transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
             sizeClasses[size],
             {
+                'w-full sm:w-auto': block,
                 'glass-button-primary': variant === 'primary',
                 'glass-button-neon shadow-neon': variant === 'neon',
                 'glass-button-gradient-border': variant === 'gradient-border',

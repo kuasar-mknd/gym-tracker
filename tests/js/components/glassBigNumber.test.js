@@ -68,12 +68,12 @@ describe('GlassBigNumber', () => {
 
         expect(avec.get('span').text()).toBe('kg')
         expect(avec.get('span').attributes('aria-hidden')).toBe('true')
-        expect(champ(avec).classes()).toContain('pr-14')
+        expect(champ(avec).classes()).toContain('pr-11')
 
         const sans = monter()
 
         expect(sans.find('span').exists()).toBe(false)
-        expect(champ(sans).classes()).not.toContain('pr-14')
+        expect(champ(sans).classes()).not.toContain('pr-11')
     })
 
     it("transmet les bornes de saisie que l'appelant pose", () => {

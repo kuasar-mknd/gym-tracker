@@ -197,7 +197,7 @@ const submit = () => {
                             :aria-label="colorNames[color]"
                             :aria-pressed="form.color === color"
                             :dusk="`habit-color-${color}`"
-                            class="focus-visible:ring-accent-primary h-8 w-8 rounded-full border-2 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                            class="focus-visible:ring-accent-primary relative size-8 rounded-full border-2 transition before:absolute before:-inset-1.5 before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                             :class="[color, form.color === color ? 'border-text-main scale-110' : 'border-transparent']"
                         ></button>
                     </div>
@@ -236,9 +236,11 @@ const submit = () => {
                     :error="form.errors.goal_times_per_week"
                 />
 
-                <div class="flex justify-end gap-3 pt-4">
-                    <GlassButton type="button" variant="secondary" @click="$emit('close')">Annuler</GlassButton>
-                    <GlassButton type="submit" variant="primary" :loading="form.processing">Enregistrer</GlassButton>
+                <div class="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end">
+                    <GlassButton type="button" variant="secondary" block @click="$emit('close')">Annuler</GlassButton>
+                    <GlassButton type="submit" variant="primary" block :loading="form.processing"
+                        >Enregistrer</GlassButton
+                    >
                 </div>
             </form>
         </div>

@@ -30,7 +30,7 @@ const formatDate = (dateStr) =>
                 @click="$emit('supprimer', seance)"
                 :dusk="`delete-workout-${seance.id}`"
                 :aria-label="`Supprimer la séance ${seance.name || 'sans nom'}`"
-                class="text-text-on-dark-accent flex h-full w-full items-center justify-center transition active:scale-95"
+                class="text-text-on-dark-accent focus-visible:ring-accent-primary flex h-full w-full items-center justify-center transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                 style="
                     background: linear-gradient(
                         135deg,

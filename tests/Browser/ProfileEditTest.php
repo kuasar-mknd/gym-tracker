@@ -69,7 +69,7 @@ class ProfileEditTest extends DuskTestCase
                 ->type('@current-password-input', 'password123')
                 ->type('@new-password-input', 'newpassword123')
                 ->type('@confirm-password-input', 'newpassword123')
-                ->click('[data-testid="update-password-button"]');
+                ->clickWhenSettled('[data-testid="update-password-button"]');
 
             // Aucune attente sur « Enregistré ✓ » ici : UpdateProfileInformationForm
             // affiche EXACTEMENT le même texte, encore visible depuis l'étape

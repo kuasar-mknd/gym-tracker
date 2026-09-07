@@ -73,6 +73,7 @@ const updatePassword = () => {
 
             <div class="flex items-center gap-4">
                 <GlassButton
+                    block
                     type="submit"
                     variant="primary"
                     :loading="form.processing"
