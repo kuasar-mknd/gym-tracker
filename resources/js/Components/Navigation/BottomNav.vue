@@ -1,5 +1,6 @@
 <script setup>
 import { Link, router } from '@inertiajs/vue3'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -85,9 +86,7 @@ const isActiveRoute = (itemRoute) => {
                     :disabled="creationEnCours"
                     :aria-busy="creationEnCours"
                 >
-                    <span class="material-symbols-outlined text-4xl font-black" aria-hidden="true">{{
-                        fabConfig.icon
-                    }}</span>
+                    <GlassIcon :name="fabConfig.icon" size="xl" class="font-black" />
                 </button>
             </div>
 
@@ -104,13 +103,12 @@ const isActiveRoute = (itemRoute) => {
                 :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
                 :dusk="'nav-' + item.route.split('.')[0]"
             >
-                <span
-                    class="material-symbols-outlined group-hover:drop-shadow-glow-primary text-3xl transition"
-                    :style="{ fontVariationSettings: isActiveRoute(item.route) ? `'FILL' 1` : `'FILL' 0` }"
-                    aria-hidden="true"
-                >
-                    {{ item.icon }}
-                </span>
+                <GlassIcon
+                    :name="item.icon"
+                    size="lg"
+                    :fill="isActiveRoute(item.route)"
+                    class="group-hover:drop-shadow-glow-primary transition"
+                />
             </Link>
         </template>
     </nav>

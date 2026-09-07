@@ -31,6 +31,7 @@ const FastingHistoryChart = defineAsyncComponent(() => import('@/Components/Stat
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import duration from 'dayjs/plugin/duration'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 dayjs.extend(relativeTime)
 dayjs.extend(duration)
@@ -196,7 +197,7 @@ const formatHistoryDuration = (start, end) => {
                     :href="route('tools.index')"
                     class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors"
                 >
-                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    <GlassIcon name="arrow_back" />
                 </Link>
                 <h2 class="text-text-main text-xl font-semibold">Suivi de Jeûne</h2>
             </div>
@@ -303,9 +304,7 @@ const formatHistoryDuration = (start, end) => {
                 </div>
 
                 <div v-if="history.data.filter((f) => f.end_time).length === 0" class="py-8 text-center">
-                    <span class="material-symbols-outlined text-surface-sunken mb-2 text-4xl" aria-hidden="true"
-                        >show_chart</span
-                    >
+                    <GlassIcon name="show_chart" size="xl" class="text-surface-sunken mb-2" />
                     <p class="text-text-muted text-sm font-medium">Pas assez de données pour afficher le graphique.</p>
                 </div>
                 <div v-else>
@@ -365,7 +364,7 @@ const formatHistoryDuration = (start, end) => {
                         aria-label="Page précédente"
                         dusk="fasting-prev"
                     >
-                        <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                        <GlassIcon name="chevron_left" />
                     </GlassButton>
 
                     <span class="text-text-muted text-sm font-bold" aria-live="polite">
@@ -378,7 +377,7 @@ const formatHistoryDuration = (start, end) => {
                         aria-label="Page suivante"
                         dusk="fasting-next"
                     >
-                        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                        <GlassIcon name="chevron_right" />
                     </GlassButton>
                 </nav>
             </GlassCard>

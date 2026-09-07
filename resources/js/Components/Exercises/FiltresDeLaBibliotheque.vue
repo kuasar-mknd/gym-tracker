@@ -6,7 +6,9 @@
  */
 import { onMounted, onUnmounted, ref } from 'vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { CATEGORY_COLORS, EXERCISE_CATEGORIES } from '@/Utils/constants'
+import GlassChip from '@/Components/UI/GlassChip.vue'
 
 defineProps({
     recherche: { type: String, default: '' },
@@ -61,7 +63,7 @@ onUnmounted(() => {
                         class="text-text-muted/40 border-border text-2xs hidden items-center gap-1 rounded-lg border px-2 py-1 font-bold tracking-widest uppercase sm:flex"
                         aria-hidden="true"
                     >
-                        <span class="material-symbols-outlined text-sm" aria-hidden="true">keyboard</span>
+                        <GlassIcon name="keyboard" size="xs" />
                         ⌘K
                     </div>
                 </template>
@@ -69,37 +71,26 @@ onUnmounted(() => {
         </div>
 
         <div class="stagger-3 hide-scrollbar animate-slide-up flex gap-2 overflow-x-auto pb-2">
-            <button
+            <GlassChip
                 v-press="{ haptic: 'selection' }"
-                @click="$emit('update:categorie', 'all')"
                 dusk="category-pill-all"
-                :class="[
-                    'category-pill shrink-0 transition',
-                    categorie === 'all'
-                        ? 'bg-text-main text-surface-card shadow-lg'
-                        : 'text-text-main border-border bg-surface-card border',
-                ]"
-                :aria-pressed="categorie === 'all'"
+                icon="apps"
+                :active="categorie === 'all'"
+                @click="$emit('update:categorie', 'all')"
             >
-                <span class="material-symbols-outlined text-lg" aria-hidden="true">apps</span>
                 Tous
-            </button>
-            <button
+            </GlassChip>
+            <GlassChip
                 v-for="cat in EXERCISE_CATEGORIES"
                 :key="cat"
                 v-press="{ haptic: 'selection' }"
-                @click="$emit('update:categorie', cat)"
                 :dusk="`category-pill-${cat}`"
-                :class="[
-                    'category-pill shrink-0 transition',
-                    categorie === cat
-                        ? (CATEGORY_COLORS[cat] ?? 'category-fill-other')
-                        : 'text-text-main border-border bg-surface-card border',
-                ]"
-                :aria-pressed="categorie === cat"
+                :active="categorie === cat"
+                :classe-active="`${CATEGORY_COLORS[cat] ?? 'category-fill-other'} shadow-cast`"
+                @click="$emit('update:categorie', cat)"
             >
                 {{ cat }}
-            </button>
+            </GlassChip>
         </div>
     </div>
 </template>

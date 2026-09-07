@@ -1,5 +1,6 @@
 <script setup>
 import { computed, defineAsyncComponent } from 'vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
@@ -52,9 +53,11 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
                         comparison > 0 ? 'text-trend-up' : comparison < 0 ? 'text-trend-down' : 'text-text-muted',
                     ]"
                 >
-                    <span class="material-symbols-outlined text-sm font-bold" aria-hidden="true">
-                        {{ comparison > 0 ? 'trending_up' : comparison < 0 ? 'trending_down' : 'trending_flat' }}
-                    </span>
+                    <GlassIcon
+                        :name="comparison > 0 ? 'trending_up' : comparison < 0 ? 'trending_down' : 'trending_flat'"
+                        size="xs"
+                        class="font-bold"
+                    />
                     <template v-if="comparison === 0">Stable vs sem. passée</template>
                     <template v-else>{{ comparison > 0 ? '+' : '' }}{{ comparison }}% vs sem. passée</template>
                 </p>

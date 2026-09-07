@@ -26,8 +26,8 @@ class SilentFormFailuresTest extends DuskTestCase
                 ->visit(route('tools.water.index'))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('button[aria-label="Ajouter 250ml"]', 15)
-                ->click('button[aria-label="Ajouter 250ml"]');
+                ->waitFor('button[aria-label="Ajouter 250 ml"]', 15)
+                ->click('button[aria-label="Ajouter 250 ml"]');
 
             // The form omitted consumed_at, which is required|date server-side, so
             // every tap 422'd and the page rendered no error at all.

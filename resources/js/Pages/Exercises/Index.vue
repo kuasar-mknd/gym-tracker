@@ -6,6 +6,7 @@
  */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed, defineAsyncComponent, watch } from 'vue'
@@ -196,7 +197,7 @@ const typeLabel = (type) => {
                     data-testid="create-exercise-desktop"
                     dusk="create-exercise-btn-desktop"
                 >
-                    <span class="material-symbols-outlined mr-2" aria-hidden="true">add</span>
+                    <GlassIcon name="add" class="mr-2" />
                     Nouvel Exercice
                 </GlassButton>
             </div>
@@ -340,7 +341,7 @@ const typeLabel = (type) => {
                 dusk="create-exercise-btn"
                 aria-label="Nouvel exercice"
             >
-                <span class="material-symbols-outlined text-xl leading-none" aria-hidden="true">add</span>
+                <GlassIcon name="add" size="sm" class="leading-none" />
             </GlassButton>
         </template>
     </AuthenticatedLayout>

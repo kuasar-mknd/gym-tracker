@@ -1,4 +1,5 @@
 <script setup>
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 /**
  * InputError.vue
  *
@@ -30,7 +31,7 @@ defineProps({
         role="alert"
         class="animate-fade-in border-accent-danger/20 bg-accent-danger/10 hover:bg-accent-danger/20 mt-2 flex w-full cursor-default items-start gap-2 rounded-2xl border px-4 py-3 backdrop-blur-md transition duration-300"
     >
-        <span class="material-symbols-outlined text-accent-danger-deep mt-0.5 text-lg" aria-hidden="true">error</span>
+        <GlassIcon name="error" size="sm" class="text-accent-danger-deep mt-0.5" />
         <p class="text-accent-danger-deep text-sm font-bold">
             {{ message }}
         </p>

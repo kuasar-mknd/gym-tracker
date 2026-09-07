@@ -2,6 +2,7 @@
 import { Deferred, Link } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
@@ -32,9 +33,7 @@ defineProps({
                     weightChange > 0 ? 'bg-trend-down/10 text-trend-down' : 'bg-trend-up/10 text-trend-up',
                 ]"
             >
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">
-                    {{ weightChange > 0 ? 'trending_up' : 'trending_down' }}
-                </span>
+                <GlassIcon :name="weightChange > 0 ? 'trending_up' : 'trending_down'" size="xs" />
                 {{ weightChange > 0 ? '+' : '' }}{{ weightChange }} kg
             </div>
         </div>
@@ -59,7 +58,7 @@ defineProps({
             class="text-accent-info-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition hover:gap-3"
         >
             Voir tout l'historique
-            <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_forward</span>
+            <GlassIcon name="arrow_forward" size="xs" />
         </Link>
     </GlassCard>
 </template>

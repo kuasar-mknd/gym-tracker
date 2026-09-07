@@ -4,6 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, router } from '@inertiajs/vue3'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 defineProps({
     notifications: Object,
@@ -188,7 +189,7 @@ const formatDate = (date) => {
                     aria-label="Page précédente"
                     dusk="notifications-prev"
                 >
-                    <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                    <GlassIcon name="chevron_left" />
                 </GlassButton>
 
                 <span class="text-text-muted text-sm font-bold" aria-live="polite">
@@ -201,7 +202,7 @@ const formatDate = (date) => {
                     aria-label="Page suivante"
                     dusk="notifications-next"
                 >
-                    <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                    <GlassIcon name="chevron_right" />
                 </GlassButton>
             </nav>
         </div>

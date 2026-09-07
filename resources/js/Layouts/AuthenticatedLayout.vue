@@ -10,6 +10,7 @@ import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 defineProps({
     pageTitle: {
@@ -137,7 +138,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                     : 'bg-accent-danger/10 text-accent-danger-deep',
                             ]"
                         >
-                            <span class="material-symbols-outlined" aria-hidden="true">{{ cfg.icon }}</span>
+                            <GlassIcon :name="cfg.icon" />
                         </div>
                         <p class="text-text-main flex-1 text-sm font-bold">
                             {{ $page.props.flash[type] }}
@@ -205,7 +206,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                     : 'Notifications'
                             "
                         >
-                            <span class="material-symbols-outlined text-2xl" aria-hidden="true">notifications</span>
+                            <GlassIcon name="notifications" />
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
                                 class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
@@ -230,37 +231,25 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
                                         {{ $page.props.auth.user.name }}
-                                        <span
-                                            class="material-symbols-outlined text-text-muted text-lg"
-                                            aria-hidden="true"
-                                            >expand_more</span
-                                        >
+                                        <GlassIcon name="expand_more" size="sm" class="text-text-muted" />
                                     </button>
                                 </template>
 
                                 <template #content>
                                     <DropdownLink :href="route('profile.index')">
-                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
-                                            >person</span
-                                        >
+                                        <GlassIcon name="person" size="sm" class="mr-2" />
                                         Profil
                                     </DropdownLink>
                                     <DropdownLink :href="route('profile.edit')">
-                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
-                                            >settings</span
-                                        >
+                                        <GlassIcon name="settings" size="sm" class="mr-2" />
                                         Paramètres
                                     </DropdownLink>
                                     <DropdownLink :href="route('achievements.index')">
-                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
-                                            >emoji_events</span
-                                        >
+                                        <GlassIcon name="emoji_events" size="sm" class="mr-2" />
                                         Trophées
                                     </DropdownLink>
                                     <DropdownLink :href="route('logout')" method="post" as="button">
-                                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
-                                            >logout</span
-                                        >
+                                        <GlassIcon name="logout" size="sm" class="mr-2" />
                                         Déconnexion
                                     </DropdownLink>
                                 </template>
@@ -285,7 +274,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                     class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
                     aria-label="Retour"
                 >
-                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    <GlassIcon name="arrow_back" />
                 </Link>
                 <h1
                     v-if="pageTitle"
@@ -306,7 +295,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                             : 'Notifications'
                     "
                 >
-                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">notifications</span>
+                    <GlassIcon name="notifications" />
                     <span
                         v-if="$page.props.auth.user.unread_notifications_count > 0"
                         class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"

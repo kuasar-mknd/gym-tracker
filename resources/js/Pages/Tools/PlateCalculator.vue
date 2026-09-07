@@ -108,9 +108,7 @@
                         v-else-if="targetWeight > barWeight"
                         class="border-border bg-surface-sunken mt-8 rounded-3xl border py-8 text-center"
                     >
-                        <span class="material-symbols-outlined text-text-muted mb-3 text-5xl" aria-hidden="true"
-                            >error</span
-                        >
+                        <GlassIcon name="error" size="2xl" class="text-text-muted mb-3" />
                         <p class="text-text-muted font-medium">
                             Impossible de charger ce poids avec les plaques disponibles.
                         </p>
@@ -136,9 +134,7 @@
                     </div>
 
                     <div v-if="plates.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined text-surface-sunken mb-3 text-6xl" aria-hidden="true"
-                            >inventory_2</span
-                        >
+                        <GlassIcon name="inventory_2" size="hero" class="text-surface-sunken mb-3" />
                         <p class="text-text-muted font-medium">Aucune plaque dans l'inventaire.</p>
                         <p class="text-text-muted/70 mt-1 text-sm">Ajoute tes plaques pour commencer.</p>
                     </div>
@@ -259,6 +255,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import Modal from '@/Components/UI/Modal.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 const props = defineProps({
     plates: {

@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -77,7 +78,7 @@ const streakLabel = computed(() => {
                     dusk="dashboard-latest-weight"
                     class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary mt-1 inline-flex items-center gap-1 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:outline-none"
                 >
-                    <span class="material-symbols-outlined text-sm" aria-hidden="true">monitor_weight</span>
+                    <GlassIcon name="monitor_weight" size="xs" />
                     {{ formattedWeight }} kg
                 </Link>
             </div>
@@ -95,12 +96,11 @@ const streakLabel = computed(() => {
             :aria-label="streakLabel"
             class="streak-badge group focus-visible:ring-accent-primary min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-2xl border px-3 py-2 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none active:scale-95"
         >
-            <span
-                class="material-symbols-outlined text-accent-primary-deep text-2xl transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"
-                style="font-variation-settings: 'FILL' 1"
-                aria-hidden="true"
-                >local_fire_department</span
-            >
+            <GlassIcon
+                name="local_fire_department"
+                fill
+                class="text-accent-primary-deep transition-transform duration-300 group-hover:scale-110 group-hover:animate-pulse"
+            />
             <span class="text-text-main text-xl font-black italic" aria-hidden="true">
                 {{ streakDays }}
                 <span class="text-text-muted text-2xs ml-0.5 font-bold uppercase not-italic">

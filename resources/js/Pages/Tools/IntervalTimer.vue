@@ -14,6 +14,8 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import { useMinuteurDIntervalles } from '@/composables/useMinuteurDIntervalles'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 
 defineProps({
     timers: {
@@ -135,21 +137,15 @@ const previewFromForm = () => {
 
         <div class="space-y-6">
             <!-- Tabs -->
-            <div class="glass-panel-light flex space-x-1 rounded-xl p-1">
-                <button
-                    v-for="tab in ['timer', 'config']"
-                    :key="tab"
-                    @click="activeTab = tab"
-                    class="w-full rounded-lg py-2.5 text-sm leading-5 font-medium transition duration-200"
-                    :class="[
-                        activeTab === tab
-                            ? 'text-text-main bg-surface-card shadow'
-                            : 'text-text-muted hover:bg-surface-card/[0.12] hover:text-text-main',
-                    ]"
-                >
-                    {{ tab === 'timer' ? 'Minuteur' : 'Préréglages' }}
-                </button>
-            </div>
+            <GlassSegmented
+                v-model="activeTab"
+                :options="[
+                    { value: 'timer', label: 'Minuteur' },
+                    { value: 'config', label: 'Préréglages' },
+                ]"
+                label="Vue du minuteur"
+                bloc
+            />
 
             <!-- Timer Tab -->
             <div v-if="activeTab === 'timer'" class="space-y-6">
@@ -169,7 +165,7 @@ const previewFromForm = () => {
                     </div>
 
                     <div class="text-text-muted mt-8 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-sm" aria-hidden="true">repeat</span>
+                        <GlassIcon name="repeat" size="xs" />
                         <span class="font-bold">{{ currentRound }}</span>
                         <span class="text-xs">/ {{ timerConfig.rounds }}</span>
                     </div>
@@ -185,9 +181,7 @@ const previewFromForm = () => {
                             class="text-text-main bg-surface-card flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95"
                             :aria-label="status === 'running' ? 'Mettre en pause' : 'Démarrer'"
                         >
-                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">
-                                {{ status === 'running' ? 'pause' : 'play_arrow' }}
-                            </span>
+                            <GlassIcon :name="status === 'running' ? 'pause' : 'play_arrow'" size="lg" />
                         </button>
 
                         <button
@@ -195,7 +189,7 @@ const previewFromForm = () => {
                             class="border-border bg-surface-card/50 text-text-muted flex h-16 w-16 items-center justify-center rounded-full border shadow-lg transition-transform hover:scale-110 active:scale-95"
                             aria-label="Réinitialiser"
                         >
-                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">restart_alt</span>
+                            <GlassIcon name="restart_alt" size="lg" />
                         </button>
                     </div>
                 </GlassCard>
@@ -304,7 +298,7 @@ const previewFromForm = () => {
                                 title="Charger & Lancer"
                                 aria-label="Charger et lancer"
                             >
-                                <span class="material-symbols-outlined" aria-hidden="true">play_circle</span>
+                                <GlassIcon name="play_circle" />
                             </button>
                             <GlassIconButton
                                 icon="edit"

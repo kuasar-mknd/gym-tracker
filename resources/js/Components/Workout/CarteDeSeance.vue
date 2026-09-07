@@ -5,6 +5,7 @@
  */
 import { Link } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 
 defineProps({
@@ -40,7 +41,7 @@ const formatDate = (dateStr) =>
                 "
             >
                 <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">
-                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
+                    <GlassIcon name="delete" />
                     <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
                 </div>
             </button>
@@ -80,9 +81,7 @@ const formatDate = (dateStr) =>
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="material-symbols-outlined text-text-muted/30 shrink-0 text-xl" aria-hidden="true"
-                            >chevron_right</span
-                        >
+                        <GlassIcon name="chevron_right" size="sm" class="text-text-muted/30 shrink-0" />
                     </div>
                 </div>
             </GlassCard>

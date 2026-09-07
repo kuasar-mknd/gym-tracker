@@ -2,6 +2,7 @@
 import { ref, watch, defineAsyncComponent } from 'vue'
 import axios from 'axios'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
@@ -98,9 +99,7 @@ watch(selectedExercise, (newVal) => {
             role="alert"
             dusk="exercise-progress-error"
         >
-            <span class="material-symbols-outlined text-accent-danger-deep mb-2 text-4xl" aria-hidden="true"
-                >cloud_off</span
-            >
+            <GlassIcon name="cloud_off" size="xl" class="text-accent-danger-deep mb-2" />
             <p class="text-text-muted mb-3 text-sm">Impossible de charger la progression.</p>
             <button
                 type="button"
@@ -114,15 +113,11 @@ watch(selectedExercise, (newVal) => {
             <OneRepMaxChart :data="exerciseProgressData" />
         </div>
         <div v-else-if="selectedExercise" class="flex h-48 flex-col items-center justify-center text-center">
-            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl" aria-hidden="true"
-                >trending_up</span
-            >
+            <GlassIcon name="trending_up" size="xl" class="text-text-muted/30 mb-2" />
             <p class="text-text-muted text-sm">Pas assez de données pour cet exercice</p>
         </div>
         <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-            <span class="material-symbols-outlined text-text-muted/30 mb-2 text-4xl" aria-hidden="true"
-                >fitness_center</span
-            >
+            <GlassIcon name="fitness_center" size="xl" class="text-text-muted/30 mb-2" />
             <p class="text-text-muted text-sm">Choisis un exercice pour voir ton évolution</p>
         </div>
     </GlassCard>

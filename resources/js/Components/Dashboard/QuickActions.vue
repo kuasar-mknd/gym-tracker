@@ -1,5 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 defineProps({
     processing: { type: Boolean, default: false },
@@ -33,10 +34,8 @@ const emit = defineEmits(['startWorkout'])
                 <div
                     class="accent-fill shadow-accent-primary/30 flex size-16 items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-110"
                 >
-                    <span v-if="processing" class="material-symbols-outlined animate-spin text-4xl" aria-hidden="true"
-                        >autorenew</span
-                    >
-                    <span v-else class="material-symbols-outlined text-4xl" aria-hidden="true">fitness_center</span>
+                    <GlassIcon v-if="processing" name="autorenew" size="xl" class="animate-spin" />
+                    <GlassIcon v-else name="fitness_center" size="xl" />
                 </div>
                 <span
                     class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"
@@ -64,7 +63,7 @@ const emit = defineEmits(['startWorkout'])
                 <div
                     class="tertiary-fill shadow-accent-tertiary/30 flex size-16 items-center justify-center rounded-2xl shadow-lg transition-transform duration-300 group-hover:scale-110"
                 >
-                    <span class="material-symbols-outlined text-4xl" aria-hidden="true">assignment_add</span>
+                    <GlassIcon name="assignment_add" size="xl" />
                 </div>
                 <span
                     class="font-display text-text-main text-center text-xl leading-none font-black tracking-tight uppercase italic"

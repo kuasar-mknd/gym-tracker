@@ -10,6 +10,7 @@ import DurationHistoryCard from '@/Components/Stats/DurationHistoryCard.vue'
 import MuscleDistributionCard from '@/Components/Stats/MuscleDistributionCard.vue'
 import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
+import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 
 const props = defineProps({
     // ⚡ Bolt: Consolidated deferred data
@@ -63,26 +64,14 @@ const handlePeriodChange = (period) => {
                     </h1>
                 </div>
 
-                <!-- Period Selector -->
-                <div
-                    class="border-glass-border bg-surface-card/50 flex shrink-0 rounded-xl border p-1 shadow-sm backdrop-blur-sm"
-                >
-                    <button
-                        v-for="period in periods"
-                        :key="period.value"
-                        v-press="{ haptic: 'selection' }"
-                        @click="handlePeriodChange(period.value)"
-                        :class="[
-                            'text-2xs rounded-lg px-3 py-1.5 font-black tracking-wider uppercase transition',
-                            currentPeriod === period.value
-                                ? 'bg-accent-info text-text-main shadow-sm'
-                                : 'text-text-muted hover:text-text-main',
-                        ]"
-                        :aria-pressed="currentPeriod === period.value"
-                    >
-                        {{ period.label }}
-                    </button>
-                </div>
+                <GlassSegmented
+                    :model-value="currentPeriod"
+                    :options="periods"
+                    label="Période"
+                    size="sm"
+                    class="shrink-0"
+                    @update:model-value="handlePeriodChange"
+                />
             </header>
 
             <WeightEvolutionCard

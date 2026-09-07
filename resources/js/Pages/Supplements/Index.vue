@@ -9,6 +9,7 @@ import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 const SupplementUsageChart = defineAsyncComponent(() => import('@/Components/Stats/SupplementUsageChart.vue'))
 
@@ -131,7 +132,7 @@ const formatDate = (dateString) => {
                     variant="primary"
                     class="hidden size-11 shrink-0 items-center justify-center sm:flex"
                 >
-                    <span class="material-symbols-outlined mr-2" aria-hidden="true">add</span>
+                    <GlassIcon name="add" class="mr-2" />
                     Ajouter
                 </GlassButton>
             </div>
@@ -256,7 +257,7 @@ const formatDate = (dateString) => {
                                     <div
                                         class="info-fill flex size-10 items-center justify-center rounded-lg shadow-md"
                                     >
-                                        <span class="material-symbols-outlined" aria-hidden="true">medication</span>
+                                        <GlassIcon name="medication" />
                                     </div>
                                     <div>
                                         <h3 class="text-text-main leading-tight font-bold">{{ supplement.name }}</h3>
@@ -349,7 +350,7 @@ const formatDate = (dateString) => {
                 class="min-h-touch! flex h-11! w-11! items-center justify-center p-0!"
                 aria-label="Ajouter un complément"
             >
-                <span class="material-symbols-outlined text-xl leading-none" aria-hidden="true">add</span>
+                <GlassIcon name="add" size="sm" class="leading-none" />
             </GlassButton>
         </template>
     </AuthenticatedLayout>

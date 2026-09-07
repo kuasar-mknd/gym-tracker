@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Head, Link } from '@inertiajs/vue3'
 
 const menuGroups = [
@@ -181,20 +182,16 @@ const menuGroups = [
                                         item.color,
                                     ]"
                                 >
-                                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">{{
-                                        item.icon
-                                    }}</span>
+                                    <GlassIcon :name="item.icon" />
                                 </div>
                                 <div class="flex-1">
                                     <h4 class="text-text-main font-bold">{{ item.name }}</h4>
                                     <p class="text-text-muted text-xs">{{ item.description }}</p>
                                 </div>
-                                <span
-                                    class="material-symbols-outlined text-text-muted/30 group-hover:text-text-main transition group-hover:translate-x-1"
-                                    aria-hidden="true"
-                                >
-                                    chevron_right
-                                </span>
+                                <GlassIcon
+                                    name="chevron_right"
+                                    class="text-text-muted/30 group-hover:text-text-main transition group-hover:translate-x-1"
+                                />
                             </div>
                         </GlassCard>
                     </Link>

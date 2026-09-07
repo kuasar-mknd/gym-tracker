@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { computed, defineAsyncComponent } from 'vue'
 
@@ -164,7 +165,7 @@ const scatterData = computed(() => {
                     class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors"
                     aria-label="Retour aux exercices"
                 >
-                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    <GlassIcon name="arrow_back" />
                 </Link>
                 <div>
                     <h1 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
@@ -189,9 +190,7 @@ const scatterData = computed(() => {
                     <OneRepMaxChart :data="progress" />
                 </div>
                 <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
-                        >show_chart</span
-                    >
+                    <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
                     <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                 </div>
             </GlassCard>
@@ -305,9 +304,7 @@ const scatterData = computed(() => {
             </div>
             <GlassCard v-else class="stagger-1 animate-slide-up">
                 <div class="flex h-64 flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
-                        >bar_chart</span
-                    >
+                    <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
                     <p class="text-text-muted text-sm">Pas assez de données pour afficher les statistiques</p>
                 </div>
             </GlassCard>
@@ -325,9 +322,7 @@ const scatterData = computed(() => {
                         <SessionPerformanceChart :data="history" />
                     </div>
                     <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
-                            >bar_chart</span
-                        >
+                        <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
                         <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                     </div>
                 </GlassCard>
@@ -346,9 +341,7 @@ const scatterData = computed(() => {
                         <SessionVolumeLineChart :data="volumeData" />
                     </div>
                     <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
-                            >show_chart</span
-                        >
+                        <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
                         <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                     </div>
                 </GlassCard>
@@ -367,9 +360,7 @@ const scatterData = computed(() => {
                         <HistoryChart :data="history" />
                     </div>
                     <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
-                            >show_chart</span
-                        >
+                        <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
                         <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
                     </div>
                 </GlassCard>

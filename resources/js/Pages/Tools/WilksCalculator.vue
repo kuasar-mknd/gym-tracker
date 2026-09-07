@@ -21,32 +21,15 @@
                 <div class="space-y-6">
                     <!-- Unit Selection -->
                     <div class="flex justify-center">
-                        <div class="border-border bg-surface-card/50 inline-flex rounded-xl border p-1">
-                            <button
-                                @click="form.unit = 'kg'"
-                                :aria-pressed="form.unit === 'kg'"
-                                class="focus-visible:ring-accent-primary rounded-lg px-4 py-1 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none"
-                                :class="
-                                    form.unit === 'kg'
-                                        ? 'text-text-main bg-surface-card/80 shadow-sm'
-                                        : 'text-text-muted hover:text-text-main hover:bg-surface-card/30'
-                                "
-                            >
-                                KG
-                            </button>
-                            <button
-                                @click="form.unit = 'lbs'"
-                                :aria-pressed="form.unit === 'lbs'"
-                                class="focus-visible:ring-accent-primary rounded-lg px-4 py-1 text-sm font-bold transition focus-visible:ring-2 focus-visible:outline-none"
-                                :class="
-                                    form.unit === 'lbs'
-                                        ? 'text-text-main bg-surface-card/80 shadow-sm'
-                                        : 'text-text-muted hover:text-text-main hover:bg-surface-card/30'
-                                "
-                            >
-                                LBS
-                            </button>
-                        </div>
+                        <GlassSegmented
+                            v-model="form.unit"
+                            :options="[
+                                { value: 'kg', label: 'KG' },
+                                { value: 'lbs', label: 'LBS' },
+                            ]"
+                            label="Unité"
+                            size="sm"
+                        />
                     </div>
 
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -56,32 +39,17 @@
                                 >Sexe</span
                             >
                             <div class="grid grid-cols-2 gap-3" role="group" aria-labelledby="wilks-gender-label">
-                                <button
-                                    type="button"
+                                <GlassTile
+                                    label="Homme"
+                                    :active="form.gender === 'male'"
                                     @click="form.gender = 'male'"
-                                    :aria-pressed="form.gender === 'male'"
-                                    class="focus-visible:ring-accent-primary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
-                                    :class="
-                                        form.gender === 'male'
-                                            ? 'border-accent-primary bg-accent-primary/10 text-accent-primary-deep'
-                                            : 'text-text-muted border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
-                                    "
-                                >
-                                    <span class="font-display text-lg font-black uppercase">Homme</span>
-                                </button>
-                                <button
-                                    type="button"
+                                />
+                                <GlassTile
+                                    label="Femme"
+                                    ton="secondary"
+                                    :active="form.gender === 'female'"
                                     @click="form.gender = 'female'"
-                                    :aria-pressed="form.gender === 'female'"
-                                    class="focus-visible:ring-accent-secondary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
-                                    :class="
-                                        form.gender === 'female'
-                                            ? 'border-accent-secondary bg-accent-secondary/10 text-accent-secondary-deep'
-                                            : 'text-text-muted border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
-                                    "
-                                >
-                                    <span class="font-display text-lg font-black uppercase">Femme</span>
-                                </button>
+                                />
                             </div>
                         </div>
 
@@ -180,9 +148,7 @@
                     </div>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined text-surface-sunken mb-3 text-6xl" aria-hidden="true"
-                            >history</span
-                        >
+                        <GlassIcon name="history" size="hero" class="text-surface-sunken mb-3" />
                         <p class="text-text-muted font-medium">Aucun historique.</p>
                         <p class="text-text-muted/70 mt-1 text-sm">
                             Calcule ton score pour commencer à suivre tes progrès.
@@ -250,6 +216,9 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 // Aliased: this file also uses `wilksScore` as a route parameter name.
 import { wilksScore as calculateWilks } from '@/Utils/formulas'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import GlassTile from '@/Components/UI/GlassTile.vue'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))

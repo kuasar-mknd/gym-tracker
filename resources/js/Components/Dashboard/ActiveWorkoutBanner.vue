@@ -1,5 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
@@ -78,12 +79,7 @@ onUnmounted(() => {
             <div
                 class="bg-surface-card/20 flex size-14 shrink-0 items-center justify-center rounded-2xl backdrop-blur-sm transition-transform duration-300 group-hover:scale-110"
             >
-                <span
-                    class="material-symbols-outlined text-text-on-dark-accent text-3xl"
-                    style="font-variation-settings: 'FILL' 1"
-                    aria-hidden="true"
-                    >fitness_center</span
-                >
+                <GlassIcon name="fitness_center" size="lg" fill class="text-text-on-dark-accent" />
             </div>
 
             <!-- Content -->
@@ -94,14 +90,14 @@ onUnmounted(() => {
                 </h3>
                 <div class="mt-1 flex items-center gap-3">
                     <span class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold">
-                        <span class="material-symbols-outlined text-base" aria-hidden="true">timer</span>
+                        <GlassIcon name="timer" size="xs" />
                         {{ elapsed }}
                     </span>
                     <span
                         v-if="workout.workout_lines_count"
                         class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold"
                     >
-                        <span class="material-symbols-outlined text-base" aria-hidden="true">exercise</span>
+                        <GlassIcon name="exercise" size="xs" />
                         {{ workout.workout_lines_count }} exos
                     </span>
                 </div>
@@ -109,11 +105,10 @@ onUnmounted(() => {
 
             <!-- Arrow -->
             <div class="flex shrink-0 items-center">
-                <span
-                    class="material-symbols-outlined text-text-on-dark-accent/60 group-hover:text-text-on-dark-accent text-2xl transition-transform duration-300 group-hover:translate-x-1"
-                    aria-hidden="true"
-                    >arrow_forward_ios</span
-                >
+                <GlassIcon
+                    name="arrow_forward_ios"
+                    class="text-text-on-dark-accent/60 group-hover:text-text-on-dark-accent transition-transform duration-300 group-hover:translate-x-1"
+                />
             </div>
         </div>
     </Link>

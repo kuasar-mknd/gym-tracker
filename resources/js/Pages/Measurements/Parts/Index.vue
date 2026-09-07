@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
@@ -8,6 +9,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
+import GlassChip from '@/Components/UI/GlassChip.vue'
 
 const BodyPartDiffChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartDiffChart.vue'))
 
@@ -51,7 +53,7 @@ const selectCommonPart = (part) => {
                 :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
                 @click="showAddForm = !showAddForm"
             >
-                <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
+                <GlassIcon name="add" size="xs" />
             </GlassButton>
         </template>
 
@@ -59,7 +61,7 @@ const selectCommonPart = (part) => {
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Mesures</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
-                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
+                    <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
                 </GlassButton>
             </div>
@@ -73,20 +75,15 @@ const selectCommonPart = (part) => {
                     <div>
                         <label class="text-text-muted mb-1 block text-sm font-medium">Partie du corps</label>
                         <div class="mb-2 flex flex-wrap gap-2">
-                            <button
+                            <GlassChip
                                 v-for="part in commonParts"
                                 :key="part"
-                                type="button"
+                                size="sm"
+                                :active="form.part === part"
                                 @click="selectCommonPart(part)"
-                                :class="[
-                                    'rounded-full px-3 py-1 text-xs transition',
-                                    form.part === part
-                                        ? 'accent-fill'
-                                        : 'text-text-muted bg-surface-sunken hover:bg-surface-sunken',
-                                ]"
                             >
                                 {{ part }}
-                            </button>
+                            </GlassChip>
                         </div>
                         <GlassInput v-model="form.part" placeholder="Ex: Waist" :error="form.errors.part" required />
                     </div>

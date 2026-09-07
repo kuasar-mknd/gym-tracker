@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, Link, Deferred, router } from '@inertiajs/vue3'
 import { defineAsyncComponent, ref, watch } from 'vue'
@@ -13,6 +14,7 @@ import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassStat from '@/Components/UI/GlassStat.vue'
 
 const WorkoutHistoryTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
@@ -120,7 +122,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 @click="createWorkout"
                 aria-label="Nouvelle séance"
             >
-                <span class="material-symbols-outlined text-xl leading-none" aria-hidden="true">add</span>
+                <GlassIcon name="add" size="sm" class="leading-none" />
             </GlassButton>
         </template>
 
@@ -130,15 +132,13 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 <div class="flex gap-2">
                     <Link :href="route('calendar.index')">
                         <GlassButton>
-                            <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
-                                >calendar_month</span
-                            >
+                            <GlassIcon name="calendar_month" size="sm" class="mr-2" />
                             Calendrier
                         </GlassButton>
                     </Link>
                     <Link :href="route('templates.index')">
                         <GlassButton>
-                            <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true">inventory_2</span>
+                            <GlassIcon name="inventory_2" size="sm" class="mr-2" />
                             Modèles
                         </GlassButton>
                     </Link>
@@ -148,7 +148,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         @click="createWorkout"
                         aria-label="Nouvelle séance"
                     >
-                        <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true">add</span>
+                        <GlassIcon name="add" size="sm" class="mr-2" />
                         Nouvelle Séance
                     </GlassButton>
                 </div>
@@ -159,22 +159,8 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <!-- Stats Row -->
             <div v-if="workoutList.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <GlassCard padding="p-4">
-                        <div class="text-center">
-                            <div class="text-gradient text-2xl font-bold">
-                                {{ workouts.total ?? workoutList.length }}
-                            </div>
-                            <div class="text-text-muted mt-1 text-xs">Total séances</div>
-                        </div>
-                    </GlassCard>
-                    <GlassCard padding="p-4">
-                        <div class="text-center">
-                            <div class="text-accent-state-deep text-2xl font-bold">
-                                {{ totalExercises || 0 }}
-                            </div>
-                            <div class="text-text-muted mt-1 text-xs">Exercices</div>
-                        </div>
-                    </GlassCard>
+                    <GlassStat :valeur="workouts.total ?? workoutList.length" libelle="Séances" ton="text-gradient" />
+                    <GlassStat :valeur="totalExercises || 0" libelle="Exercices" ton="text-accent-state-deep" />
                 </div>
 
                 <!-- ⚡ Bolt: Consolidated Deferred Loading -->
@@ -291,7 +277,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         aria-label="Page précédente"
                         dusk="workouts-prev"
                     >
-                        <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                        <GlassIcon name="chevron_left" />
                     </GlassButton>
 
                     <span class="text-text-muted text-sm font-bold" aria-live="polite">
@@ -304,7 +290,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         aria-label="Page suivante"
                         dusk="workouts-next"
                     >
-                        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                        <GlassIcon name="chevron_right" />
                     </GlassButton>
                 </nav>
             </div>

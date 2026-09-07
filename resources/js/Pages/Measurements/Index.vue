@@ -10,6 +10,8 @@ import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { computed, ref, defineAsyncComponent } from 'vue'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassStat from '@/Components/UI/GlassStat.vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
@@ -121,9 +123,7 @@ const latestBodyFat = computed(() => {
                 :aria-label="showAddForm ? 'Annuler la saisie' : 'Ajouter une mesure'"
                 @click="showAddForm = !showAddForm"
             >
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">
-                    {{ showAddForm ? 'close' : 'add' }}
-                </span>
+                <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" />
             </GlassButton>
         </template>
 
@@ -131,9 +131,7 @@ const latestBodyFat = computed(() => {
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Mesures</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
-                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">
-                        {{ showAddForm ? 'close' : 'add' }}
-                    </span>
+                    <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}
                 </GlassButton>
             </div>
@@ -141,40 +139,29 @@ const latestBodyFat = computed(() => {
 
         <div class="space-y-6">
             <!-- Quick Stats -->
-            <div class="animate-slide-up grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div class="text-gradient text-3xl font-bold">
-                            {{ latestWeight ? `${latestWeight}` : '—' }}
-                        </div>
-                        <div class="text-text-muted mt-1 text-sm font-semibold">kg actuel</div>
-                    </div>
-                </GlassCard>
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div
-                            :class="[
-                                'text-3xl font-bold',
-                                weightDiff > 0
-                                    ? 'text-trend-down'
-                                    : weightDiff < 0
-                                      ? 'text-trend-up'
-                                      : 'text-text-muted',
-                            ]"
-                        >
-                            {{ weightDiff ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '—' }}
-                        </div>
-                        <div class="text-text-muted mt-1 text-sm font-semibold">kg évolution</div>
-                    </div>
-                </GlassCard>
-                <GlassCard padding="p-4">
-                    <div class="text-center">
-                        <div class="text-accent-secondary-deep text-3xl font-bold">
-                            {{ latestBodyFat ? `${latestBodyFat}%` : '—' }}
-                        </div>
-                        <div class="text-text-muted mt-1 text-sm font-semibold">Masse Grasse</div>
-                    </div>
-                </GlassCard>
+            <div class="animate-slide-up grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <GlassStat
+                    :valeur="latestWeight ?? '—'"
+                    :unite="latestWeight ? 'kg' : null"
+                    libelle="Poids"
+                    ton="text-gradient"
+                />
+                <GlassStat
+                    :valeur="weightDiff ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '—'"
+                    :unite="weightDiff ? 'kg' : null"
+                    libelle="Évolution"
+                    :tendance="
+                        weightDiff
+                            ? { texte: 'depuis la dernière pesée', sens: weightDiff > 0 ? 'hausse' : 'baisse' }
+                            : null
+                    "
+                />
+                <GlassStat
+                    :valeur="latestBodyFat ?? '—'"
+                    :unite="latestBodyFat ? '%' : null"
+                    libelle="Masse grasse"
+                    ton="text-accent-secondary-deep"
+                />
             </div>
 
             <!-- Add Form (collapsible) -->

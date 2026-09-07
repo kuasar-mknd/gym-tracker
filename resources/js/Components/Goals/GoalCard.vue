@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
 import { parseCalendarDate } from '@/Utils/date'
 
@@ -154,7 +155,7 @@ const statusColor = computed(() => {
                 v-if="goal.deadline"
                 class="text-text-muted text-2xs flex items-center gap-1.5 pt-1 font-bold tracking-wider uppercase"
             >
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">schedule</span>
+                <GlassIcon name="schedule" size="xs" />
                 <span>Échéance : {{ formattedDeadline }}</span>
             </div>
 
@@ -170,7 +171,7 @@ const statusColor = computed(() => {
                     :aria-label="`Modifier l'objectif ${goal.title}`"
                     class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
-                    <span class="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+                    <GlassIcon name="edit" size="sm" />
                     Modifier
                 </Link>
                 <button
@@ -180,7 +181,7 @@ const statusColor = computed(() => {
                     class="focus-visible:ring-accent-primary min-h-touch border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     @click="emit('delete', goal)"
                 >
-                    <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                    <GlassIcon name="delete" size="sm" />
                     Supprimer
                 </button>
             </div>

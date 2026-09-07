@@ -4,6 +4,7 @@ import { Head, useForm } from '@inertiajs/vue3'
 import GoalCard from '@/Components/Goals/GoalCard.vue'
 import GoalForm from '@/Components/Goals/GoalForm.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import Modal from '@/Components/UI/Modal.vue'
 import { ref, computed, defineAsyncComponent } from 'vue'
@@ -99,9 +100,7 @@ const goalDistribution = computed(() => {
                 :aria-label="showCreateForm ? 'Annuler la création d\'objectif' : 'Nouvel objectif'"
                 @click="showCreateForm = !showCreateForm"
             >
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">
-                    {{ showCreateForm ? 'close' : 'add' }}
-                </span>
+                <GlassIcon :name="showCreateForm ? 'close' : 'add'" size="xs" />
             </GlassButton>
         </template>
 

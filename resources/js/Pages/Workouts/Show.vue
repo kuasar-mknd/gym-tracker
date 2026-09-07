@@ -7,6 +7,7 @@
 import { createWriteSequencer, createWriteQueue } from '@/Utils/writeOrdering'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { useOrdreDeLaSeance } from '@/composables/useOrdreDeLaSeance'
 import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
@@ -258,7 +259,7 @@ onUnmounted(() => {
                 ]"
                 aria-label="Paramètres de la séance"
             >
-                <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                <GlassIcon name="settings" />
             </button>
         </template>
 

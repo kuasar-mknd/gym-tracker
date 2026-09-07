@@ -84,6 +84,10 @@ const primitives = [
     'Components/UI/GlassButton.vue',
     'Components/UI/GlassIconButton.vue',
     'Components/UI/GlassInput.vue',
+    // Les trois portent leur cible dans une classe calculée, vérifiée par leurs propres tests.
+    'Components/UI/GlassChip.vue',
+    'Components/UI/GlassSegmented.vue',
+    'Components/UI/GlassTile.vue',
 ]
 
 /**

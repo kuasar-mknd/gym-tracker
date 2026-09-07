@@ -77,8 +77,16 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 import WorkoutsIndex from '@/Pages/Workouts/Index.vue'
+import GlassStat from '@/Components/UI/GlassStat.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
 import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
+
+/** La valeur que la carte de chiffre reçoit pour ce libellé. */
+const statistique = (wrapper, libelle) =>
+    wrapper
+        .findAllComponents(GlassStat)
+        .find((carte) => carte.props('libelle') === libelle)
+        ?.props('valeur')
 
 /** La question passe par un dialogue de l'application, plus par `confirm()`. */
 const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
@@ -211,19 +219,19 @@ describe('Workouts/Index — the summary above the history', () => {
     it('counts every session ever recorded, not the twenty on this page', () => {
         const wrapper = mountPage()
 
-        expect(wrapper.find('.text-gradient').text()).toBe('47')
+        expect(statistique(wrapper, 'Séances')).toBe(47)
     })
 
     it('falls back to the rows on screen when the paginator gives no total', () => {
         const wrapper = mountPage({ workouts: { ...structuredClone(paginator), total: undefined } })
 
-        expect(wrapper.find('.text-gradient').text()).toBe('3')
+        expect(statistique(wrapper, 'Séances')).toBe(3)
     })
 
     it('shows a zero rather than a blank where the exercise count belongs', () => {
         const wrapper = mountPage({ totalExercises: undefined })
 
-        expect(wrapper.find('.text-accent-state-deep').text()).toBe('0')
+        expect(statistique(wrapper, 'Exercices')).toBe(0)
     })
 })
 

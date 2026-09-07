@@ -7,6 +7,7 @@
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 defineProps({
     line: { type: Object, required: true },
@@ -78,7 +79,7 @@ defineEmits([
                     @keydown.up.prevent="$emit('deplacer', lineIndex - 1)"
                     @keydown.down.prevent="$emit('deplacer', lineIndex + 1)"
                 >
-                    <span class="material-symbols-outlined text-lg" aria-hidden="true">drag_indicator</span>
+                    <GlassIcon name="drag_indicator" size="sm" />
                 </button>
 
                 <GlassIconButton

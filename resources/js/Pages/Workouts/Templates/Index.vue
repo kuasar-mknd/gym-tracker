@@ -8,6 +8,7 @@ import { ref } from 'vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 defineProps({
     templates: {
@@ -56,7 +57,7 @@ const {
         <template #header-actions>
             <Link :href="route('templates.create')">
                 <GlassButton variant="primary" size="sm" aria-label="Nouveau modèle">
-                    <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
+                    <GlassIcon name="add" size="xs" />
                 </GlassButton>
             </Link>
         </template>
@@ -66,7 +67,7 @@ const {
                 <h2 class="text-text-main text-xl font-semibold">Mes Modèles</h2>
                 <Link :href="route('templates.create')">
                     <GlassButton variant="primary">
-                        <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
+                        <GlassIcon name="add" size="xs" class="mr-2" />
                         Nouveau Modèle
                     </GlassButton>
                 </Link>
@@ -114,7 +115,7 @@ const {
                                     :aria-label="`Modifier ${template.name}`"
                                     class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken rounded-xl p-2 transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
-                                    <span class="material-symbols-outlined block text-xl" aria-hidden="true">edit</span>
+                                    <GlassIcon name="edit" size="sm" class="block" />
                                 </Link>
                                 <!-- title= is not a name on a touch device, where there
                                      is no hover to reveal it. -->

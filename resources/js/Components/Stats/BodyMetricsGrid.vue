@@ -2,6 +2,7 @@
 import { Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
@@ -28,9 +29,7 @@ defineProps({
                     </p>
                 </div>
                 <div class="bg-category-core/10 flex size-12 items-center justify-center rounded-xl">
-                    <span class="material-symbols-outlined text-accent-secondary-deep text-2xl" aria-hidden="true"
-                        >water_drop</span
-                    >
+                    <GlassIcon name="water_drop" class="text-accent-secondary-deep" />
                 </div>
             </div>
 
@@ -74,9 +73,10 @@ defineProps({
                                 : 'bg-trend-down/10 text-trend-down',
                         ]"
                     >
-                        <span class="material-symbols-outlined text-sm" aria-hidden="true">
-                            {{ (monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down' }}
-                        </span>
+                        <GlassIcon
+                            :name="(monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down'"
+                            size="xs"
+                        />
                         {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
                         }}{{ monthlyComparison?.percentage || 0 }}%
                     </div>
