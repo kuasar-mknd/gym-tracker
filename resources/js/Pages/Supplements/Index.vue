@@ -113,7 +113,7 @@ const formatDate = (dateString) => {
 <template>
     <Head title="Compléments" />
 
-    <AuthenticatedLayout liquid-variant="subtle" page-title="Mes Compléments">
+    <AuthenticatedLayout liquid-variant="subtle" page-title="Compléments">
         <div class="space-y-6">
             <!-- Header -->
             <div class="flex items-center justify-between">

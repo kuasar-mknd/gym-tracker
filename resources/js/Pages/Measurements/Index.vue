@@ -107,9 +107,9 @@ const latestBodyFat = computed(() => {
 </script>
 
 <template>
-    <Head title="Mesures" />
+    <Head title="Poids" />
 
-    <AuthenticatedLayout page-title="Mesures">
+    <AuthenticatedLayout page-title="Poids">
         <template #header-actions>
             <!--
                 Le variant suit l'ÉTAT : ce bouton bascule, et il dit
@@ -129,7 +129,7 @@ const latestBodyFat = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Mesures</h2>
+                <h2 class="text-text-main text-xl font-semibold">Poids</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}

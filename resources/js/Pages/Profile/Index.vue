@@ -54,7 +54,7 @@ const menuGroups = [
                 bgColor: 'bg-accent-state/50',
             },
             {
-                name: 'Mesures',
+                name: 'Poids',
                 icon: 'straighten',
                 route: 'body-measurements.index',
                 description: 'Évolution corporelle',

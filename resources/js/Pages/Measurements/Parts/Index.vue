@@ -43,9 +43,9 @@ const selectCommonPart = (part) => {
 </script>
 
 <template>
-    <Head title="Mesures" />
+    <Head title="Mensurations" />
 
-    <AuthenticatedLayout page-title="Mesures">
+    <AuthenticatedLayout page-title="Mensurations">
         <template #header-actions>
             <GlassButton
                 :variant="showAddForm ? 'secondary' : 'primary'"
@@ -59,7 +59,7 @@ const selectCommonPart = (part) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Mesures</h2>
+                <h2 class="text-text-main text-xl font-semibold">Mensurations</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter

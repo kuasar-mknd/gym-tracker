@@ -128,9 +128,9 @@ const previewFromForm = () => {
 </script>
 
 <template>
-    <Head title="Minuteur d'Intervalle" />
+    <Head title="Minuteur" />
 
-    <AuthenticatedLayout page-title="Minuteur d'Intervalle" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Minuteur" show-back back-route="tools.index">
         <template #header-actions>
             <!-- Mobile actions -->
         </template>

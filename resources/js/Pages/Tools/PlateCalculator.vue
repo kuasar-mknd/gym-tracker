@@ -1,7 +1,7 @@
 <template>
     <Head title="Calculateur de Plaques" />
 
-    <AuthenticatedLayout page-title="Calculateur de Plaques" show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">

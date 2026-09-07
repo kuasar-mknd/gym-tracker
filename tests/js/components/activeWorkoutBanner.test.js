@@ -118,3 +118,35 @@ describe('ActiveWorkoutBanner content', () => {
         expect(wrapper.text()).not.toContain('exos')
     })
 })
+
+describe('ActiveWorkoutBanner — horloge décalée et forme compacte', () => {
+    it('ne compte jamais en négatif quand la séance commence dans le futur', async () => {
+        const wrapper = mountBanner({ started_at: startedSecondsAgo(-90) })
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.text()).toContain('0m 00s')
+        expect(wrapper.text()).not.toContain('-')
+        wrapper.unmount()
+    })
+
+    it('tient sur une ligne en compact : le nom, le chronomètre, pas le compte d’exercices', async () => {
+        const wrapper = mount(ActiveWorkoutBanner, {
+            props: {
+                workout: { id: 12, name: 'Push A', started_at: startedSecondsAgo(125), lines_count: 3 },
+                compact: true,
+            },
+            global: {
+                directives: { press: {} },
+                mocks: { route: globalThis.route },
+                stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
+            },
+        })
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.text()).toContain('Push A')
+        expect(wrapper.text()).toContain('2m 05s')
+        expect(wrapper.text()).not.toContain('En cours')
+        expect(wrapper.get('a').attributes('href')).toBe('/workouts.show/12')
+        wrapper.unmount()
+    })
+})
