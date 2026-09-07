@@ -32,6 +32,7 @@ return [
         'achievements.*',
         'calendar.*',
         'notifications.*',
+        'shortcuts.index',
         'push-subscriptions.*',
         'erreurs-navigateur.store',
         'api.v1.sets.store',

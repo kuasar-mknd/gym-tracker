@@ -8,9 +8,10 @@ import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 
 defineProps({
     pageTitle: {
@@ -29,7 +30,29 @@ defineProps({
         type: String,
         default: 'default',
     },
+    /**
+     * La largeur du contenu sur grand écran.
+     *
+     * `large` (1280 px) convient à une grille de cartes. Un outil, lui, garde
+     * une colonne de formulaire : étirée sur 1 216 px, elle donne des champs
+     * d'un mètre de large et des tuiles de choix vides aux trois quarts
+     * (#1802, #1817).
+     */
+    largeur: {
+        type: String,
+        default: 'large',
+        validator: (valeur) => ['large', 'moyenne', 'etroite'].includes(valeur),
+    },
 })
+
+const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
+
+// `?` ouvre la liste des raccourcis, d'où qu'on soit — le seul moyen de la
+// découvrir sans passer par « Plus ».
+useRaccourciClavier(
+    (evenement) => evenement.key === '?',
+    () => router.visit(route('shortcuts.index')),
+)
 
 const page = usePage()
 
@@ -315,7 +338,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             v-if="$slots.header"
             class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 hidden border-b sm:block"
         >
-            <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <div class="mx-auto px-4 py-6 sm:px-6 lg:px-8" :class="LARGEURS[largeur]">
                 <slot name="header" />
             </div>
         </header>
@@ -326,7 +349,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             class="relative z-10 px-5 py-6 sm:px-6 lg:px-8"
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
         >
-            <div class="mx-auto mb-6 max-w-7xl" v-if="activeWorkout && !isWorkoutShow">
+            <div v-if="activeWorkout && !isWorkoutShow" class="mx-auto mb-6" :class="LARGEURS[largeur]">
                 <ActiveWorkoutBanner :workout="activeWorkout" :compact="banniereCompacte" />
             </div>
 
@@ -339,7 +362,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                 leave-to-class="opacity-0 -translate-y-4"
                 mode="out-in"
             >
-                <div :key="$page.url" class="mx-auto max-w-7xl">
+                <div :key="$page.url" class="mx-auto" :class="LARGEURS[largeur]">
                     <slot />
                 </div>
             </Transition>

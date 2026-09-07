@@ -107,7 +107,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
             </component>
 
             <template v-if="line.exercise.type === 'strength'">
-                <div class="relative min-w-0 flex-1">
+                <div class="relative min-w-0 flex-1 sm:max-w-32">
                     <input
                         type="number"
                         inputmode="decimal"
@@ -126,7 +126,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                         >kg</span
                     >
                 </div>
-                <div class="relative min-w-0 flex-1">
+                <div class="relative min-w-0 flex-1 sm:max-w-32">
                     <input
                         type="number"
                         inputmode="numeric"
@@ -148,7 +148,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
             </template>
 
             <template v-else-if="line.exercise.type === 'cardio'">
-                <div class="relative min-w-0 flex-1">
+                <div class="relative min-w-0 flex-1 sm:max-w-32">
                     <input
                         type="number"
                         step="0.1"

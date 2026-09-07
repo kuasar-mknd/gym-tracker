@@ -108,6 +108,14 @@ const menuGroups = [
                 color: 'text-text-main',
                 bgColor: 'bg-surface-sunken/50',
             },
+            {
+                name: 'Raccourcis',
+                icon: 'keyboard',
+                route: 'shortcuts.index',
+                description: 'Ce que le clavier sait faire',
+                color: 'text-text-main',
+                bgColor: 'bg-surface-sunken/50',
+            },
         ],
     },
 ]
