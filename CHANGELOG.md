@@ -7,6 +7,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.19] - 2026-09-07
+
 ### Retiré
 - **Les derniers restes du mode sombre** (#1806) : il n'y en aura pas, la décision est prise et l'issue fermée. Partent avec elle un thème sombre complet resté dans la page de la charte — sur la page même qui explique pourquoi il n'y en a plus —, les vues d'un paquet désinstallé en #1673, un en-tête de bloc CSS dont le corps était parti, un emplacement de sélecteur de thème vide dans le profil, et une clef `gymtracker-theme` qu'un test écrivait et que plus personne ne lisait
 
@@ -587,7 +589,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.18...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.19...HEAD
+[1.5.19]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.18...v1.5.19
 [1.5.18]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.17...v1.5.18
 [1.5.17]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.16...v1.5.17
 [1.5.16]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.15...v1.5.16
