@@ -57,6 +57,14 @@ final class AdminPanelProvider extends PanelProvider
             ->favicon(asset('favicon.ico'))
             ->authGuard('admin')
             ->colors($this->getPanelColors())
+            /*
+             * Le panneau suivait `prefers-color-scheme` et offrait un sélecteur
+             * clair/sombre/système, par simple défaut de Filament : personne ne
+             * l'avait demandé, et c'est exactement le mécanisme qui a décidé du
+             * retrait du mode sombre de l'application (#1580, #1806). Une seule
+             * apparence, ici comme ailleurs.
+             */
+            ->darkMode(false)
             ->multiFactorAuthentication([AppAuthentication::make()]);
     }
 

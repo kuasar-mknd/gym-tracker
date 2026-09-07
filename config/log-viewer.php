@@ -311,7 +311,7 @@ return [
         'per_page' => 25,
 
         // Color scheme for the Log Viewer. Other options: `System`, `Light`, `Dark`
-        'theme' => Theme::System,
+        'theme' => Theme::Light,
 
         // Whether to enable `Shorter Stack Traces` option by default
         'shorter_stack_traces' => false,

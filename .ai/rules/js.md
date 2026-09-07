@@ -2,6 +2,7 @@
 paths:
   - 'resources/js/**'
   - 'resources/js/**/*.vue'
+  - 'resources/css/**'
 ---
 
 # Js
@@ -49,3 +50,15 @@ Ce que la carte passe en props plutôt qu'en options recopiées : `type`, `haute
 Trois règles tenues à la main, parce qu'une factorisation « sans changement de comportement » a reproduit des divergences que personne n'avait comparées à l'écran (retour de Sam, 2026-09-05) : **les dates d'un axe s'écrivent `jj/mm`** (`etiquetteDeDate` côté client, `format('d/m')` côté serveur) ; **une carte de page montre ses deux axes**, seuls les encarts du tableau de bord (`RecentWorkouts*`, `RecentPRs`) et les vignettes de la page de statistiques (`compact`) restent nus ; **un anneau a ses parts habillées par `BaseChart` et sa légende sous le canevas**, et une carte qui fixe la hauteur de son graphique reçoit `hauteur="h-full"` plutôt que d'y laisser un vide. Avant de livrer une carte, la regarder à côté de ses voisines.
 
 Deux pièges payés pendant la migration des 48 cartes : `BaseChart` ne pose `beginAtZero` que sur des barres, donc une courbe qui l'attendait doit le redemander par `:axe-y` ; et le composant s'importe en chemin relatif depuis le dossier des cartes, jamais par l'alias, que la garde imposant `defineAsyncComponent` refuse sur tout fichier de graphique.
+
+## Il n'y aura pas de mode sombre : une seule apparence, partout
+
+Décision du propriétaire du 07/09/2026, définitive : #1806 est fermée comme non planifiée. Le mode sombre avait été retiré en #1580 parce qu'il s'écrivait paire par paire — `bg-white` et son jumeau `dark:bg-slate-800` — et que 238 utilitaires clairs sur 449 n'avaient aucun jumeau. Ce n'est plus un report en attendant mieux, c'est un choix qu'on tient.
+
+Interdits, et tenus par les quatre contrôles de `LeModeSombreNeRevientPasTest` : une variante `dark:`, un `@variant dark` ou un bloc `.dark` dans `app.css`, un `prefers-color-scheme: dark`, un sélecteur `[data-theme="dark"]`. Les deux derniers ont été ajoutés le 07/09/2026 : sans eux, un thème sombre complet a vécu des mois dans la page de la charte, sur la page même qui explique pourquoi il n'y en a plus.
+
+Le pendant positif compte autant. `color-scheme: light` est déclaré sur `html` dans `app.css` : sans lui, un téléphone réglé en sombre laisse le navigateur repeindre ce qu'il dessine lui-même, et les cases à cocher, listes déroulantes, ascenseurs et champs de saisie sortent en sombre au milieu de surfaces claires.
+
+**Le piège vaut hors de l'application Vue.** Un paquet qui rend une interface active souvent son mode sombre par défaut, sur `prefers-color-scheme` — exactement le « reçu sans l'avoir demandé » qui a coûté le mode sombre. D'où `->darkMode(false)` sur le panneau Filament et `Theme::Light` dans `config/log-viewer.php`, et le réflexe à garder pour tout nouveau paquet. Le manifeste PWA compte aussi : `theme_color` et `background_color` y sont restés en `#0f172a` longtemps après le retrait, si bien que l'écran de démarrage de l'application installée s'ouvrait en bleu nuit sur une application claire.
+
+Deux choses à ne PAS « corriger » au passage : `--color-text-on-dark-accent` sert les accents FONCÉS — un bouton orange — et non un thème ; et les `color-scheme: light` des gabarits de courriel sont la bonne déclaration, pas un reliquat.
