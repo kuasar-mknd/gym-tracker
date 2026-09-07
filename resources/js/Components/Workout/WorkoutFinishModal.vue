@@ -12,11 +12,7 @@ const emit = defineEmits(['close', 'confirm'])
 <template>
     <Modal :show="show" @close="emit('close')" max-width="sm" aria-labelledby="finish-workout-modal-title">
         <div class="p-6 text-center">
-            <h3
-                id="finish-workout-modal-title"
-                class="font-display text-text-main mb-6 text-xl font-black uppercase italic"
-                dusk="finish-workout-modal-title"
-            >
+            <h3 id="finish-workout-modal-title" class="titre-carte mb-6" dusk="finish-workout-modal-title">
                 Terminer la séance ?
             </h3>
             <div class="flex gap-3">

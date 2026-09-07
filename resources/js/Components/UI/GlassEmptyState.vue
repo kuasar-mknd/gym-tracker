@@ -129,7 +129,7 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
             </div>
 
             <!-- Content -->
-            <h3 v-if="taille === 'carte'" class="font-display text-text-main mb-2 text-xl font-black uppercase italic">
+            <h3 v-if="taille === 'carte'" class="titre-carte mb-2">
                 {{ title }}
             </h3>
             <p v-else class="text-text-muted text-sm font-medium">{{ title }}</p>

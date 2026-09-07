@@ -104,7 +104,7 @@ onUnmounted(() => {
             <!-- Content -->
             <div class="min-w-0 flex-1">
                 <p class="sur-titre text-text-on-dark-accent/70">Séance active</p>
-                <h3 class="font-display text-text-on-dark-accent truncate text-xl font-black uppercase italic">
+                <h3 class="text-text-on-dark-accent titre-carte truncate">
                     {{ workout.name || 'Séance' }}
                 </h3>
                 <div class="mt-1 flex items-center gap-3">

@@ -60,7 +60,7 @@ const formatDate = (date) => {
     <AuthenticatedLayout page-title="Notifications">
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Notifications</h2>
+                <h2 class="titre-carte">Notifications</h2>
                 <GlassButton
                     v-if="notifications.data.some((n) => !n.read_at)"
                     @click="markAllAsRead"

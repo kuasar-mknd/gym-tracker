@@ -56,9 +56,7 @@ const handlePeriodChange = (period) => {
                     même page.
                 -->
                 <div class="hidden sm:block">
-                    <h1
-                        class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-4xl"
-                    >
+                    <h1 class="titre-page">
                         Mon<br />
                         <span class="text-gradient-cyan-magenta">Évolution</span>
                     </h1>

@@ -303,7 +303,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                 </Link>
                 <h1
                     v-if="pageTitle"
-                    class="font-display text-text-main truncate font-black tracking-tight uppercase italic"
+                    class="titre-carte truncate"
                     :class="pageTitle.length > 12 ? 'text-xl' : 'text-2xl'"
                 >
                     {{ pageTitle }}

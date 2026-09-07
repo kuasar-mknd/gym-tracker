@@ -35,7 +35,7 @@ const filteredAchievements = computed(() => {
         <template #header>
             <div class="flex items-end justify-between">
                 <div>
-                    <h1 class="text-text-main flex items-center gap-2 text-2xl font-bold">Trophées 🏆</h1>
+                    <h1 class="titre-section flex items-center gap-2">Trophées 🏆</h1>
                     <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
                 </div>
                 <div class="text-right">
@@ -81,7 +81,7 @@ const filteredAchievements = computed(() => {
                         </div>
 
                         <!-- Name -->
-                        <h3 class="text-text-main mb-1 line-clamp-1 text-sm font-bold">
+                        <h3 class="titre-carte mb-1 line-clamp-1">
                             {{ achievement.name }}
                         </h3>
 

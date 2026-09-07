@@ -55,14 +55,20 @@ const gabaritNu = (source) => {
         reste = reste.slice(fin + 3)
     }
 
-    return (sansCommentaires + reste).replace(/<GlassEmptyState[\s\S]*?(?:\/>|<\/GlassEmptyState>)/g, '')
+    return (
+        (sansCommentaires + reste)
+            .replace(/<GlassEmptyState[\s\S]*?(?:\/>|<\/GlassEmptyState>)/g, '')
+            // Ce qui compte est ce qui se lit à l'écran : une infobulle ou une
+            // étiquette de lecteur d'écran dit « aucun » sans être un état vide.
+            .replace(/[:@]?[\w.-]+="[^"]*"/g, '')
+    )
 }
 
 it('ne dit « il n’y a rien » que par GlassEmptyState', () => {
     const fautifs = collectSourceFiles({ extensions: ['.vue'] }).flatMap((fichier) => {
         const nu = gabaritNu(readFileSync(fichier, 'utf8'))
 
-        return [...nu.matchAll(/(Aucune?|Pas encore de|Pas assez de|Rien)\b[^<>{]{0,60}/g)]
+        return [...nu.matchAll(/(Aucune?\b|Pas (?:encore|assez|de) |Rien\b)[^<>{]{0,60}/g)]
             .map((trouve) => trouve[0].trim())
             .filter((texte) => !EXCEPTIONS.some((exception) => exception.test(texte)))
             .map((texte) => `${fichier.replace(jsRoot, 'resources/js')} — « ${texte} »`)

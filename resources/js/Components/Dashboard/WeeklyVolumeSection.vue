@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { nombre } from '@/Utils/nombre'
 import { variation } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
@@ -28,7 +29,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
     >
         <div class="relative z-10 mb-6 flex items-start justify-between">
             <div>
-                <h3 class="sur-titre text-accent-primary-deep mb-1">Aperçu</h3>
+                <h3 class="text-accent-primary-deep sur-titre mb-1">Aperçu</h3>
                 <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Hebdo</p>
             </div>
             <div class="text-right">
@@ -69,9 +70,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
         <!-- Weekly Volume Chart -->
         <div class="relative -mx-2 mt-2 h-48 w-auto">
             <WeeklyVolumeChart v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0" :data="weeklyVolumeTrend" />
-            <div v-else class="text-text-muted flex h-full items-center justify-center">
-                <p class="text-sm">Pas de données cette semaine</p>
-            </div>
+            <GlassEmptyState v-else taille="ligne" icon="bar_chart" title="Pas de données cette semaine" />
         </div>
     </section>
 </template>

@@ -64,7 +64,7 @@ const {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Mes Modèles</h2>
+                <h2 class="titre-carte">Mes Modèles</h2>
                 <Link :href="route('templates.create')">
                     <GlassButton variant="primary">
                         <GlassIcon name="add" size="xs" class="mr-2" />
@@ -99,7 +99,7 @@ const {
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="font-display text-text-main text-xl font-black uppercase italic">
+                                <h3 class="titre-carte">
                                     {{ template.name }}
                                 </h3>
                                 <p v-if="template.description" class="text-text-muted mt-1 text-sm font-medium">

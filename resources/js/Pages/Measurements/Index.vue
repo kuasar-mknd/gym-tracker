@@ -132,7 +132,7 @@ const latestBodyFat = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Poids</h2>
+                <h2 class="titre-carte">Poids</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}
@@ -169,7 +169,7 @@ const latestBodyFat = computed(() => {
 
             <!-- Add Form (collapsible) -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">Nouvelle entrée</h3>
+                <h3 class="titre-carte mb-4">Nouvelle entrée</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-3 gap-4">
                         <GlassInput
@@ -227,11 +227,7 @@ const latestBodyFat = computed(() => {
                 <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <!-- Weight Chart -->
                     <GlassCard>
-                        <h3
-                            class="font-display text-accent-info-deep tracking-sur-titre mb-4 text-xs font-black uppercase"
-                        >
-                            Évolution Poids
-                        </h3>
+                        <h3 class="text-accent-info-deep sur-titre mb-4">Évolution Poids</h3>
                         <div class="h-64">
                             <WeightHistoryChart
                                 hauteur="h-full"
@@ -244,11 +240,7 @@ const latestBodyFat = computed(() => {
 
                     <!-- Body Fat Chart -->
                     <GlassCard>
-                        <h3
-                            class="font-display text-accent-secondary-deep tracking-sur-titre mb-4 text-xs font-black uppercase"
-                        >
-                            Évolution Masse Grasse
-                        </h3>
+                        <h3 class="text-accent-secondary-deep sur-titre mb-4">Évolution Masse Grasse</h3>
                         <div class="h-64">
                             <BodyFatLineChart
                                 hauteur="h-full"
@@ -263,9 +255,7 @@ const latestBodyFat = computed(() => {
 
             <!-- History -->
             <div class="stagger-4 animate-slide-up">
-                <h3 class="font-display text-accent-info-deep tracking-sur-titre mb-3 text-xs font-black uppercase">
-                    Historique
-                </h3>
+                <h3 class="text-accent-info-deep sur-titre mb-3">Historique</h3>
 
                 <GlassEmptyState
                     v-if="measurements.length === 0"

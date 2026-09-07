@@ -169,7 +169,7 @@ const scatterData = computed(() => {
                     <GlassIcon name="arrow_back" />
                 </Link>
                 <div>
-                    <h1 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
+                    <h1 class="titre-section">
                         {{ exercise.name }}
                     </h1>
                     <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
@@ -184,7 +184,7 @@ const scatterData = computed(() => {
             <!-- Progress Chart -->
             <GlassCard class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression 1RM</h3>
+                    <h3 class="titre-carte">Progression 1RM</h3>
                     <p class="text-text-muted text-xs font-semibold">Estimation sur 1 an</p>
                 </div>
                 <div v-if="progress.length > 0" class="h-64">
@@ -206,7 +206,7 @@ const scatterData = computed(() => {
             >
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume</h3>
+                        <h3 class="titre-carte">Volume</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
                     </div>
                     <div class="h-64">
@@ -216,7 +216,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Endurance</h3>
+                        <h3 class="titre-carte">Endurance</h3>
                         <p class="text-text-muted text-xs font-semibold">Max Reps par série</p>
                     </div>
                     <div class="h-64">
@@ -226,7 +226,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume (Reps)</h3>
+                        <h3 class="titre-carte">Volume (Reps)</h3>
                         <p class="text-text-muted text-xs font-semibold">Total des répétitions par séance</p>
                     </div>
                     <div class="h-64">
@@ -236,7 +236,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charges</h3>
+                        <h3 class="titre-carte">Charges</h3>
                         <p class="text-text-muted text-xs font-semibold">Distribution des poids utilisés</p>
                     </div>
                     <div class="h-64">
@@ -246,7 +246,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charge Max</h3>
+                        <h3 class="titre-carte">Charge Max</h3>
                         <p class="text-text-muted text-xs font-semibold">Maximum soulevé par séance (kg)</p>
                     </div>
                     <div class="h-64">
@@ -256,7 +256,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">1RM Estimé</h3>
+                        <h3 class="titre-carte">1RM Estimé</h3>
                         <p class="text-text-muted text-xs font-semibold">Meilleur 1RM estimé par séance</p>
                     </div>
                     <div class="h-64">
@@ -266,7 +266,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charge Moyenne</h3>
+                        <h3 class="titre-carte">Charge Moyenne</h3>
                         <p class="text-text-muted text-xs font-semibold">Poids moyen par série (kg)</p>
                     </div>
                     <div class="h-64">
@@ -276,7 +276,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Séries</h3>
+                        <h3 class="titre-carte">Séries</h3>
                         <p class="text-text-muted text-xs font-semibold">Nombre de séries par séance</p>
                     </div>
                     <div class="h-64">
@@ -286,7 +286,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Poids vs Reps</h3>
+                        <h3 class="titre-carte">Poids vs Reps</h3>
                         <p class="text-text-muted text-xs font-semibold">Répartition de toutes les séries</p>
                     </div>
                     <div class="h-64">
@@ -296,9 +296,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Progression par Série
-                        </h3>
+                        <h3 class="titre-carte">Progression par Série</h3>
                         <p class="text-text-muted text-xs font-semibold">Poids des 3 premières séries dans le temps</p>
                     </div>
                     <div class="h-64">
@@ -319,9 +317,7 @@ const scatterData = computed(() => {
             <div class="stagger-3 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Performance Historique
-                        </h3>
+                        <h3 class="titre-carte">Performance Historique</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume et 1RM au fil du temps</p>
                     </div>
                     <div v-if="history.length > 0" class="h-64">
@@ -341,9 +337,7 @@ const scatterData = computed(() => {
             <div class="stagger-4 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Évolution du Volume
-                        </h3>
+                        <h3 class="titre-carte">Évolution du Volume</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume total par séance</p>
                     </div>
                     <div v-if="volumeData.length > 0" class="h-64">
@@ -363,9 +357,7 @@ const scatterData = computed(() => {
             <div class="stagger-4 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Historique du 1RM
-                        </h3>
+                        <h3 class="titre-carte">Historique du 1RM</h3>
                         <p class="text-text-muted text-xs font-semibold">Évolution du meilleur 1RM estimé</p>
                     </div>
                     <div v-if="history.length > 0" class="h-64">

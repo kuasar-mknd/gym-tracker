@@ -47,7 +47,7 @@ const groupes = [
             </p>
 
             <GlassCard v-for="groupe in groupes" :key="groupe.titre" class="space-y-4">
-                <h2 class="font-display text-text-main text-lg font-black uppercase italic">{{ groupe.titre }}</h2>
+                <h2 class="titre-carte">{{ groupe.titre }}</h2>
 
                 <ul class="space-y-3">
                     <li

@@ -46,7 +46,7 @@ const cancel = () => {
     <AuthenticatedLayout page-title="Modifier l'objectif">
         <template #header>
             <div>
-                <h2 class="text-text-main text-2xl font-bold tracking-tight">Modifier l'objectif</h2>
+                <h2 class="titre-section">Modifier l'objectif</h2>
                 <p class="text-text-muted text-sm">Ajuste ta cible, son échéance ou son intitulé.</p>
             </div>
         </template>
@@ -62,7 +62,7 @@ const cancel = () => {
                 </Link>
 
                 <GlassCard class="p-6">
-                    <h3 class="text-text-main mb-6 text-lg font-bold">{{ goal.title }}</h3>
+                    <h3 class="titre-carte mb-6">{{ goal.title }}</h3>
 
                     <GoalForm
                         :form="form"

@@ -117,7 +117,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Mes Séances</h2>
+                <h2 class="titre-carte">Mes Séances</h2>
                 <div class="flex gap-2">
                     <Link :href="route('calendar.index')">
                         <GlassButton>
@@ -178,9 +178,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <div class="stagger-2 animate-slide-up">
                 <GlassCard v-if="workoutList.length > 0">
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Aperçu Historique
-                        </h3>
+                        <h3 class="titre-carte">Aperçu Historique</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume et Durée des dernières séances</p>
                     </div>
                     <WorkoutHistoryTimelineChart :data="workoutList" />
@@ -189,7 +187,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Available Exercises -->
             <div class="stagger-2 animate-slide-up">
-                <h3 class="text-text-main mb-3 font-semibold">Exercices disponibles</h3>
+                <h3 class="titre-carte mb-3">Exercices disponibles</h3>
 
                 <Deferred data="deferredData">
                     <template #fallback>
@@ -217,7 +215,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
             <!-- Workouts List -->
             <div class="stagger-4 animate-slide-up">
-                <h3 class="text-text-main mb-3 font-semibold">Historique</h3>
+                <h3 class="titre-carte mb-3">Historique</h3>
 
                 <!-- Skeleton Loading -->
                 <div v-if="!workouts" class="space-y-3">

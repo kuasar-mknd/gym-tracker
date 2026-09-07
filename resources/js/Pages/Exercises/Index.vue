@@ -181,9 +181,7 @@ const typeLabel = (type) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1
-                        class="font-display text-text-main hidden text-3xl leading-none font-black tracking-tighter uppercase italic sm:block sm:text-5xl"
-                    >
+                    <h1 class="titre-page hidden sm:block">
                         La<br />
                         <span class="text-gradient">Bibliothèque</span>
                     </h1>
@@ -207,9 +205,7 @@ const typeLabel = (type) => {
             <div v-if="exercises.length > 0" class="stagger-1 animate-slide-up">
                 <GlassCard padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
-                        <h3 class="font-display text-text-main text-sm font-black tracking-wider uppercase">
-                            Répartition
-                        </h3>
+                        <h3 class="sur-titre">Répartition</h3>
                     </div>
                     <div class="flex items-center gap-4">
                         <div class="flex-1">
@@ -286,7 +282,7 @@ const typeLabel = (type) => {
             <div v-else class="stagger-4 animate-slide-up space-y-6">
                 <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
                     <div class="mb-3 flex items-center gap-2 px-1">
-                        <h3 class="sur-titre text-text-muted/60">
+                        <h3 class="text-text-muted/60 sur-titre">
                             {{ category }}
                         </h3>
                         <div class="bg-surface-sunken h-px flex-1"></div>

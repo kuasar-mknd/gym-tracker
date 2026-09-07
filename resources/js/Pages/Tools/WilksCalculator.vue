@@ -5,9 +5,7 @@
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">Wilks</span>
                 </h1>
@@ -132,7 +130,7 @@
             <!-- Chart Section -->
             <GlassCard v-if="history.length > 0" class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression</h3>
+                    <h3 class="titre-carte">Progression</h3>
                     <p class="text-text-muted text-xs font-semibold">Évolution du score</p>
                 </div>
                 <WilksHistoryChart :data="[...history].reverse()" />
@@ -141,7 +139,7 @@
             <!-- History Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
-                    <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
+                    <h2 class="titre-carte">Historique</h2>
 
                     <div v-if="history.length > 0" class="mb-6">
                         <WilksScoreChart :data="history" />

@@ -5,9 +5,7 @@
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">Macros</span>
                 </h1>
@@ -148,7 +146,7 @@
             <!-- Trends Chart -->
             <GlassCard v-if="history.length > 1" class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Tendances</h3>
+                    <h3 class="titre-carte">Tendances</h3>
                     <p class="text-text-muted text-xs font-semibold">Évolution de vos objectifs</p>
                 </div>
                 <MacroHistoryChart :data="history" />
@@ -157,7 +155,7 @@
             <!-- History Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
-                    <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
+                    <h2 class="titre-carte">Historique</h2>
 
                     <GlassEmptyState
                         v-if="history.length === 0"

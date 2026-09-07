@@ -18,7 +18,7 @@ defineProps({
     <GlassCard class="stagger-4 animate-slide-up">
         <div class="mb-4 flex items-center justify-between">
             <div>
-                <h3 class="font-display text-text-main text-lg font-black uppercase italic">Durée des Séances</h3>
+                <h3 class="titre-carte">Durée des Séances</h3>
                 <p class="text-text-muted text-xs font-semibold">Historique des 30 dernières séances</p>
             </div>
         </div>

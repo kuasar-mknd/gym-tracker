@@ -5,9 +5,7 @@
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-4xl"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">d'Échauffement</span>
                 </h1>
@@ -39,9 +37,7 @@
 
                     <!-- Warmup Sets -->
                     <GlassCard class="mt-6">
-                        <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
-                            Séries d'échauffement
-                        </h3>
+                        <h3 class="titre-carte mb-4">Séries d'échauffement</h3>
 
                         <div class="space-y-3">
                             <div
@@ -81,9 +77,7 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="font-display text-text-main text-lg font-black uppercase italic">
-                                Configuration
-                            </h2>
+                            <h2 class="titre-carte">Configuration</h2>
                             <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
                                 Personnaliser les paliers
                             </p>

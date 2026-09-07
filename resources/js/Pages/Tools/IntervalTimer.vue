@@ -216,7 +216,7 @@ const previewFromForm = () => {
             <div v-else class="space-y-6">
                 <!-- Form -->
                 <GlassCard class="p-6">
-                    <h3 class="text-text-main mb-4 text-lg font-bold">
+                    <h3 class="titre-carte mb-4">
                         {{ isEditing ? 'Modifier le minuteur' : 'Nouveau minuteur' }}
                     </h3>
                     <form @submit.prevent="submitForm" class="space-y-4">
@@ -275,7 +275,7 @@ const previewFromForm = () => {
 
                 <!-- List of Timers -->
                 <div class="space-y-4">
-                    <h3 class="text-text-main px-2 text-lg font-bold">Mes Minuteurs</h3>
+                    <h3 class="titre-carte px-2">Mes Minuteurs</h3>
                     <GlassEmptyState
                         v-if="timers.length === 0"
                         taille="ligne"

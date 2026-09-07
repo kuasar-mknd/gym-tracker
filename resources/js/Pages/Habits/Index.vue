@@ -120,7 +120,7 @@ const getProgressPercent = (habit) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Habitudes</h2>
+                <h2 class="titre-carte">Habitudes</h2>
                 <GlassButton variant="primary" @click="openAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -157,7 +157,7 @@ const getProgressPercent = (habit) => {
                         class="animate-slide-up"
                     >
                         <div class="mb-4">
-                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Régularité</h3>
+                            <h3 class="titre-carte">Régularité</h3>
                             <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
                         </div>
                         <HabitConsistencyChart :data="stats.consistencyData" />
@@ -169,7 +169,7 @@ const getProgressPercent = (habit) => {
                         class="stagger-2 animate-slide-up"
                     >
                         <div class="mb-4">
-                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Constance</h3>
+                            <h3 class="titre-carte">Constance</h3>
                             <p class="text-text-muted text-xs font-semibold">Habitudes complétées (30 jours)</p>
                         </div>
                         <HabitHistoryChart :data="stats.history" />
@@ -237,7 +237,7 @@ const getProgressPercent = (habit) => {
                                     <GlassIcon :name="habit.icon" />
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <h3 class="text-text-main truncate font-bold">{{ habit.name }}</h3>
+                                    <h3 class="titre-carte truncate">{{ habit.name }}</h3>
                                     <div class="flex items-center gap-2">
                                         <div class="bg-surface-sunken h-1.5 w-16 overflow-hidden rounded-full">
                                             <div

@@ -277,7 +277,7 @@ onUnmounted(() => {
                     v-if="localWorkout.workout_lines.length === 0"
                     class="flex flex-col items-center justify-center p-12 text-center"
                 >
-                    <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
+                    <h3 class="titre-section mb-4">Séance vide</h3>
                     <GlassButton
                         v-if="!isFinished"
                         variant="primary"

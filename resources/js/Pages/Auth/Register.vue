@@ -26,9 +26,7 @@ const submit = () => {
         <Head title="Inscription" />
 
         <div class="mb-6 text-center">
-            <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
-                Bienvenue ! 💪
-            </h2>
+            <h2 class="titre-section">Bienvenue ! 💪</h2>
             <p class="text-text-muted mt-2">Crée ton compte pour commencer</p>
         </div>
 
