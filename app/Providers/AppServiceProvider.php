@@ -95,6 +95,37 @@ final class AppServiceProvider extends ServiceProvider
                 app(\App\Services\NotificationService::class)->clearCache($event->notifiable, $event->notification::class);
             }
         });
+
+        $this->registerWebPushFailureLog();
+    }
+
+    /**
+     * Un push refusé laissait la tâche en succès et ne s'écrivait nulle part.
+     *
+     * Le canal demande à Apple ou à Google de délivrer, lit leur rapport, et
+     * s'arrête là : `NotificationFailed` est bien émis, personne ne l'écoutait.
+     * Un appareil pouvait donc cesser de recevoir pendant des semaines sans
+     * qu'aucun journal, aucune trace et aucune alerte ne le disent — la panne
+     * n'était pas difficile à diagnostiquer, elle était invisible.
+     *
+     * Le journal seulement, jamais la base : chaque écriture SQL coûte de
+     * 350 ms à 1,7 s sur le NAS, et un abonnement mort en produit une par envoi.
+     * Le point de terminaison est réduit à son hôte, parce que l'URL entière est
+     * une capacité : qui la détient peut écrire à l'appareil.
+     */
+    private function registerWebPushFailureLog(): void
+    {
+        \Illuminate\Support\Facades\Event::listen(function (\NotificationChannels\WebPush\Events\NotificationFailed $event): void {
+            $rapport = $event->report;
+
+            \Illuminate\Support\Facades\Log::warning('Envoi push refusé.', [
+                'titre' => $event->message->toArray()['title'] ?? null,
+                'hote' => parse_url($rapport->getEndpoint(), PHP_URL_HOST),
+                'expire' => $rapport->isSubscriptionExpired(),
+                'statut' => $rapport->getResponse()?->getStatusCode(),
+                'raison' => $rapport->getReason(),
+            ]);
+        });
     }
 
     private function registerSetEvents(): void

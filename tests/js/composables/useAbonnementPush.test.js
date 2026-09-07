@@ -12,14 +12,18 @@ const abonnement = (endpoint = 'https://push.example/abc') => ({
     unsubscribe: vi.fn().mockResolvedValue(true),
 })
 
-const navigateur = ({ existant = null, souscrire = abonnement() } = {}) => {
+const navigateur = ({ existant = null, souscrire = abonnement(), workerMuet = false } = {}) => {
     const pushManager = {
         getSubscription: vi.fn().mockResolvedValue(existant),
         subscribe: vi.fn().mockResolvedValue(souscrire),
     }
     Object.defineProperty(navigator, 'serviceWorker', {
         configurable: true,
-        value: { ready: Promise.resolve({ pushManager }) },
+        value: {
+            ready: workerMuet
+                ? Promise.reject(new Error('le navigateur n’a pas répondu en 20 s'))
+                : Promise.resolve({ pushManager }),
+        },
     })
     globalThis.Notification = { requestPermission: vi.fn().mockResolvedValue('granted') }
     Object.defineProperty(window, 'Notification', {
@@ -142,5 +146,52 @@ describe('l’état de l’abonnement au montage', () => {
         await flushPromises()
 
         expect(push.pushRegistered.value).toBe(false)
+    })
+
+    it('rouvre la bannière quand le service worker ne répond pas', async () => {
+        navigateur({ workerMuet: true })
+        const push = monter({ dejaAbonne: true })
+        await flushPromises()
+
+        /*
+         * Le cas qui a piégé un iPhone, et l’inverse exact du choix précédent.
+         *
+         * `dejaAbonne` répond pour le COMPTE et non pour l’appareil : un
+         * abonnement pris sur un autre navigateur le rend vrai partout. Quand le
+         * worker ne répondait pas, l’ancien code gardait cette valeur « pour ne
+         * pas contredire le serveur » — et le téléphone se retrouvait sans
+         * bannière, donc sans le seul bouton qui demande l’autorisation, sans
+         * message, et sans aucun moyen d’en sortir.
+         *
+         * Un bandeau de trop se referme d’un clic ; un bandeau manquant ne se
+         * rattrape par rien. En cas de doute, on montre.
+         */
+        expect(push.pushRegistered.value).toBe(false)
+    })
+
+    it('rend au serveur un abonnement que le navigateur tient et qu’il ignore', async () => {
+        navigateur({ existant: abonnement('https://push.example/orphelin') })
+        const push = monter({ dejaAbonne: false })
+        await flushPromises()
+
+        // Sans cela, l’abonnement existe dans le navigateur, la bannière ne
+        // s’affiche pas puisque l’appareil est bien abonné, et aucun envoi ne
+        // part jamais vers lui : personne n’a de raison de s’en apercevoir.
+        expect(reseau.post).toHaveBeenCalledWith(
+            '/push-subscriptions.update',
+            expect.objectContaining({ endpoint: 'https://push.example/orphelin' }),
+            expect.any(Object),
+        )
+        expect(push.pushRegistered.value).toBe(true)
+    })
+
+    it('n’écrit rien quand le serveur et le navigateur sont déjà d’accord', async () => {
+        navigateur({ existant: abonnement() })
+        monter({ dejaAbonne: true })
+        await flushPromises()
+
+        // Chaque écriture coûte de 350 ms à 1,7 s sur le NAS : la page de profil
+        // n’a pas à en produire une à chaque ouverture.
+        expect(reseau.post).not.toHaveBeenCalled()
     })
 })

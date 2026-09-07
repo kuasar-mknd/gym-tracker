@@ -44,7 +44,8 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
             ->icon('/logo.svg')
             /** @phpstan-ignore-next-line */
             ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
-            ->action('Voir mes stats', url('/stats'));
+            ->action('Voir mes stats', url('/stats'))
+            ->data(['url' => '/stats']);
     }
 
     /**

@@ -53,6 +53,7 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
             ],
             'body' => "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg.",
             'icon' => '/logo.svg',
+            'data' => ['url' => '/stats'],
         ]);
     });
 
@@ -111,6 +112,7 @@ describe('AchievementUnlocked::toWebPush', function (): void {
             ],
             'body' => 'Félicitations ! Tu as déverrouillé le succès : Marathonien du Fer.',
             'icon' => '/logo.svg',
+            'data' => ['url' => '/achievements'],
         ]);
     });
 
@@ -138,6 +140,7 @@ describe('TrainingReminder::toWebPush', function (): void {
             ],
             'body' => "C'est le moment de s'entraîner ! 💪",
             'icon' => '/logo.svg',
+            'data' => ['url' => '/'],
         ]);
     });
 
@@ -155,6 +158,49 @@ describe('TrainingReminder::toWebPush', function (): void {
 
         expect(new TrainingReminder()->toWebPush($user, null)->toArray()['body'])
             ->toBe("C'est le moment de s'entraîner ! 💪");
+    });
+});
+
+/*
+ * La destination du clic voyage dans `data.url`, et c'est la SEULE clef que le
+ * service worker lise pour savoir où aller.
+ *
+ * Elle n'existait pas. Le worker cherchait un champ `action_url` qu'aucune des
+ * trois classes n'a jamais posé, si bien que toute notification touchée ouvrait
+ * l'accueil — le record qu'on venait de battre, le succès qu'on venait de
+ * débloquer, tous menaient au même endroit. La destination n'était pourtant pas
+ * perdue : elle était dans `actions[].action`, que seul un appui sur le BOUTON
+ * transmet, et qu'iOS n'affiche jamais.
+ *
+ * Ce contrôle et `tests/js/app/serviceWorker.test.js` tiennent les deux bouts du
+ * même contrat : changer l'un sans l'autre le rompt en silence.
+ */
+describe('la destination du clic', function (): void {
+    it('voyage dans data.url, là où le service worker la lit', function (): void {
+        $record = makePersonalRecordFixture(PersonalRecordType::MaxWeight, 'Squat', 140.0);
+        $user = User::factory()->create();
+        $achievement = Achievement::factory()->create(['name' => 'Marathonien du Fer']);
+
+        expect(new PersonalRecordAchieved($record)->toWebPush($record->user, null)->toArray()['data'])
+            ->toBe(['url' => '/stats']);
+        expect(new AchievementUnlocked($achievement)->toWebPush($user, null)->toArray()['data'])
+            ->toBe(['url' => '/achievements']);
+        expect(new TrainingReminder()->toWebPush($user, null)->toArray()['data'])
+            ->toBe(['url' => '/']);
+    });
+
+    it('reste relative, pour ne pas dépendre d\'un APP_URL mal renseigné', function (): void {
+        $record = makePersonalRecordFixture(PersonalRecordType::Max1RM, 'Squat', 140.0);
+
+        /** @var array{url: string} $donnees */
+        $donnees = new PersonalRecordAchieved($record)->toWebPush($record->user, null)->toArray()['data'];
+        $destination = $donnees['url'];
+
+        // `clients.navigate()` refuse une autre origine : une URL absolue bâtie
+        // sur un APP_URL faux renverrait le clic hors de l'application.
+        expect($destination)->toStartWith('/')
+            ->and($destination)->not->toStartWith('//')
+            ->and($destination)->not->toContain('://');
     });
 });
 
@@ -205,6 +251,7 @@ describe('end-to-end delivery through the real WebPushChannel', function (): voi
             ],
             'body' => "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg.",
             'icon' => '/logo.svg',
+            'data' => ['url' => '/stats'],
         ]);
     });
 

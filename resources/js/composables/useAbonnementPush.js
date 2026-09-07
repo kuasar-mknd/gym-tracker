@@ -61,36 +61,50 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement 
     }
 
     /**
-     * Whether the server holds a subscription for this user — the only thing that
-     * decides whether a push can actually be delivered.
+     * Cet appareil est-il abonné ? La valeur du serveur n'en est que la
+     * première approximation, corrigée dès le montage.
      *
-     * The interface used to key off Notification.permission instead, which the
-     * browser grants *before* the subscription reaches the server. When that
-     * request failed, the banner disappeared (its condition wanted permission !==
-     * 'granted') and the "Envoyer aussi en Push" checkboxes appeared. The user
-     * enabled them, saved, received nothing, and had no way back — the banner that
-     * would let them retry was gone.
+     * `dejaAbonne` vient de `pushSubscriptions()->exists()`, qui répond pour le
+     * COMPTE et non pour l'appareil : un abonnement pris sur un autre navigateur
+     * suffit à le rendre vrai partout. Sur le téléphone, le bandeau « Activer »
+     * disparaissait alors sans avoir jamais rien demandé, et avec lui le seul
+     * bouton de toute l'application qui réclame l'autorisation — un cul-de-sac
+     * dont l'utilisateur ne pouvait pas sortir.
+     *
+     * L'interface a aussi tenu cet état depuis `Notification.permission`, que le
+     * navigateur accorde AVANT que l'abonnement n'atteigne le serveur : quand
+     * cette requête échouait, le bandeau partait pareillement et les cases
+     * « Envoyer aussi en Push » prenaient sa place, pour des envois que personne
+     * ne recevait.
      */
     const pushRegistered = ref(dejaAbonne)
 
     /*
-     * Le serveur peut garder un abonnement que le navigateur a perdu (PWA
-     * réinstallée, données du site effacées) : les envois partent, rien n'arrive,
-     * et la bannière qui permettrait de se réabonner reste cachée. On vérifie
-     * donc aussi côté navigateur ; en cas de doute, l'état du serveur reste.
+     * Le navigateur tranche, parce qu'il est le seul à savoir ce que CET
+     * appareil détient. Trois cas, et aucun ne laisse l'utilisateur sans issue :
+     * pas d'abonnement ici, le bandeau s'affiche quoi qu'en dise le serveur ;
+     * un abonnement que le serveur ignore, on le lui rend, sinon les envois ne
+     * partiront jamais vers cet appareil ; et si le worker ne répond pas, on
+     * montre le bandeau plutôt que de le cacher. Ce dernier choix est l'inverse
+     * du précédent, et c'est tout l'objet du correctif : un bandeau de trop se
+     * referme d'un clic, un bandeau manquant ne se rattrape par rien.
      */
     onMounted(async () => {
-        if (!pushRegistered.value || !pushSupported) {
+        if (!pushSupported) {
             return
         }
+
         try {
             const registration = await avecDelai(navigator.serviceWorker.ready)
             const abonnement = await avecDelai(registration.pushManager.getSubscription())
-            if (!abonnement) {
-                pushRegistered.value = false
+
+            pushRegistered.value = abonnement !== null && abonnement !== undefined
+
+            if (pushRegistered.value && !dejaAbonne) {
+                await http.post(route('push-subscriptions.update'), abonnement, { timeout: DELAI_ETAPE_MS })
             }
         } catch {
-            // Le worker ne répond pas : on ne contredit pas le serveur.
+            pushRegistered.value = false
         }
     })
 

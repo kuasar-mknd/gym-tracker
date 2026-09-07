@@ -35,6 +35,26 @@ const openWindow = vi.fn(() => windowOpened)
 const skipWaiting = vi.fn()
 const listeners = {}
 
+/**
+ * Les fenetres que le worker trouvera au moment du clic. Un tableau vide est le
+ * cas « application fermee » ; le test le remplit pour le cas « deja ouverte ».
+ */
+const fenetresOuvertes = []
+const matchAll = vi.fn(() => Promise.resolve(fenetresOuvertes))
+
+/**
+ * Une fenetre cliente, telle que `clients.matchAll` en rend.
+ *
+ * `navigate` n'est offert qu'aux fenetres que ce worker controle : l'omettre
+ * reproduit une fenetre qu'il ne controle pas encore.
+ *
+ * @param {{navigate?: false|(() => Promise<unknown>)}} options
+ */
+const fenetreCliente = ({ navigate } = {}) => ({
+    focus: vi.fn(() => Promise.resolve('fenetre reprise')),
+    ...(navigate === false ? {} : { navigate: vi.fn(navigate ?? (() => Promise.resolve())) }),
+})
+
 const manifest = [{ url: '/assets/app.js', revision: 'abc' }]
 
 const originalClients = globalThis.clients
@@ -52,8 +72,19 @@ vi.spyOn(self, 'addEventListener').mockImplementation((type, handler) => {
 self.skipWaiting = skipWaiting
 self.__WB_MANIFEST = manifest
 self.registration = { showNotification }
-self.Notification = { permission: 'granted' }
-globalThis.clients = { openWindow }
+globalThis.clients = { openWindow, matchAll }
+
+/*
+ * `self.Notification` n'est deliberement pas pose.
+ *
+ * C'est l'interface globale de notification dans la PORTEE DU WORKER, qui n'est
+ * pas celle de la page, et rien ne garantit qu'un navigateur l'y expose. Le
+ * gestionnaire s'appuyait dessus pour decider s'il devait afficher quoi que ce
+ * soit ; le test, lui, la posait — donc le seul cas qui comptait, celui ou elle
+ * est absente, n'etait jamais joue, et la suite restait verte sur un worker qui
+ * n'affichait rien.
+ */
+delete self.Notification
 
 /**
  * Ce que le module a fait en s'important, relevé tout de suite.
@@ -81,7 +112,8 @@ afterAll(() => {
 beforeEach(() => {
     showNotification.mockClear()
     openWindow.mockClear()
-    self.Notification = { permission: 'granted' }
+    matchAll.mockClear()
+    fenetresOuvertes.length = 0
 })
 
 /**
@@ -122,19 +154,16 @@ describe('mise en service du worker', () => {
 })
 
 describe('réception d’une notification push', () => {
-    it('ne notifie pas tant que la permission n’a pas été accordée', () => {
-        self.Notification = { permission: 'default' }
-        listeners.push({ data: { json: () => ({ title: 'Séance' }) }, waitUntil: () => {} })
+    it('affiche même là où le worker n’expose pas Notification', () => {
+        // Le cas iOS, et la raison d’être du correctif. Le gestionnaire sortait
+        // sur `!(self.Notification && …)` : là où l’interface n’est pas exposée
+        // dans la portée du worker, la garde était fausse à CHAQUE push et rien
+        // ne s’affichait jamais. Elle ne protégeait de rien — la spécification
+        // interdit de délivrer un push à un abonnement dont la permission a été
+        // retirée — et elle coûtait tout, puisqu’un worker qui reçoit sans rien
+        // montrer se fait révoquer son abonnement.
+        expect(self.Notification).toBeUndefined()
 
-        self.Notification = { permission: 'denied' }
-        listeners.push({ data: { json: () => ({ title: 'Séance' }) }, waitUntil: () => {} })
-
-        expect(showNotification).not.toHaveBeenCalled()
-    })
-
-    it('notifie dès que la permission est accordée', () => {
-        // The other half of the gate: a handler that returns unconditionally
-        // passes the check above and shows nothing, ever.
         expect(pushed({ title: 'Séance' }).shown[0]).toBe('Séance')
     })
 
@@ -152,7 +181,7 @@ describe('réception d’une notification push', () => {
             title: 'Repos terminé',
             body: 'Série suivante',
             icon: '/timer.svg',
-            action_url: '/workouts/12',
+            data: { url: '/workouts/12' },
             actions: [{ action: 'open', title: 'Ouvrir' }],
         })
 
@@ -163,7 +192,7 @@ describe('réception d’une notification push', () => {
             body: 'Série suivante',
             icon: '/timer.svg',
             badge: '/badge.svg',
-            data: '/workouts/12',
+            data: { url: '/workouts/12' },
             actions: [{ action: 'open', title: 'Ouvrir' }],
         })
     })
@@ -178,7 +207,7 @@ describe('réception d’une notification push', () => {
             body: 'Nouvelle notification !',
             icon: '/logo.svg',
             badge: '/badge.svg',
-            data: '/',
+            data: { url: '/' },
             actions: [],
         })
     })
@@ -192,7 +221,25 @@ describe('réception d’une notification push', () => {
         } = pushed(undefined)
 
         expect(title).toBe('Gym Tracker')
-        expect(options.data).toBe('/')
+        expect(options.data).toEqual({ url: '/' })
+    })
+
+    it('survit à une charge utile que json() refuse de lire', () => {
+        // Troisième chemin muet : `json()` lève sur un corps qui n’est pas du
+        // JSON, l’exception traversait `waitUntil`, et le navigateur comptait
+        // une notification promise puis jamais montrée.
+        const waited = []
+        listeners.push({
+            data: {
+                json: () => {
+                    throw new SyntaxError('Unexpected token')
+                },
+            },
+            waitUntil: (promise) => waited.push(promise),
+        })
+
+        expect(showNotification).toHaveBeenCalledWith('Gym Tracker', expect.objectContaining({ data: { url: '/' } }))
+        expect(waited).toEqual([notificationShown])
     })
 })
 
@@ -200,15 +247,17 @@ describe('clic sur une notification', () => {
     /**
      * Drives the notificationclick handler the way the browser would.
      *
-     * @param {string|undefined} data - The target the notification carries.
+     * @param {{data?: object, action?: string}} evenement - Ce que la
+     *   notification transporte, et le bouton touché s’il y en a un.
      * @returns {{close: Function, waited: Array}} The close spy, and whatever
      *   the handler asked the browser to wait on.
      */
-    const clicked = (data) => {
+    const clicked = ({ data, action } = {}) => {
         const close = vi.fn()
         const waited = []
 
         listeners.notificationclick({
+            action,
             notification: { close, data },
             waitUntil: (promise) => waited.push(promise),
         })
@@ -216,18 +265,67 @@ describe('clic sur une notification', () => {
         return { close, waited }
     }
 
-    it('ferme la notification et ouvre la page qu’elle transportait', () => {
-        const { close } = clicked('/workouts/12')
+    it('ferme la notification et ouvre la page qu’elle transportait', async () => {
+        const { close, waited } = clicked({ data: { url: '/workouts/12' } })
+        await Promise.all(waited)
 
         // Opening a fixed '/' would drop the user on the dashboard for a
-        // notification that was about one specific session.
+        // notification that was about one specific session. La destination se
+        // lisait dans un champ `action_url` que le serveur n’a jamais envoyé.
         expect(close).toHaveBeenCalled()
         expect(openWindow).toHaveBeenCalledWith('/workouts/12')
     })
 
-    it('retient le worker en vie jusqu’à ce que la page soit ouverte', () => {
+    it('retient le worker en vie jusqu’à ce que la page soit ouverte', async () => {
         // openWindow is asynchronous: a worker shut down before it resolves
         // closes the notification and opens nothing.
-        expect(clicked('/workouts/12').waited).toEqual([windowOpened])
+        const { waited } = clicked({ data: { url: '/workouts/12' } })
+
+        expect(waited).toHaveLength(1)
+        await expect(waited[0]).resolves.toBe('window opened')
+    })
+
+    it('reprend la fenêtre déjà ouverte au lieu d’en empiler une seconde', async () => {
+        const fenetre = fenetreCliente()
+        fenetresOuvertes.push(fenetre)
+
+        const { waited } = clicked({ data: { url: '/stats' } })
+        await Promise.all(waited)
+
+        // En installé, `openWindow` pose un second exemplaire de l’application
+        // par-dessus celui que l’utilisateur avait déjà.
+        expect(openWindow).not.toHaveBeenCalled()
+        expect(fenetre.navigate).toHaveBeenCalledWith('/stats')
+        expect(fenetre.focus).toHaveBeenCalled()
+    })
+
+    it('met la fenêtre au premier plan même quand elle refuse de naviguer', async () => {
+        const fenetre = fenetreCliente({ navigate: () => Promise.reject(new Error('non contrôlée')) })
+        fenetresOuvertes.push(fenetre)
+
+        const { waited } = clicked({ data: { url: '/stats' } })
+        await Promise.all(waited)
+
+        // `navigate()` refuse une fenêtre que le worker ne contrôle pas encore.
+        // Son échec ne doit pas emporter le geste attendu, qui est de revenir à
+        // l’application.
+        expect(fenetre.focus).toHaveBeenCalled()
+        expect(openWindow).not.toHaveBeenCalled()
+    })
+
+    it('suit le bouton touché quand la notification en portait un', async () => {
+        const { waited } = clicked({ action: '/achievements', data: { url: '/' } })
+        await Promise.all(waited)
+
+        // Un bouton d’action porte sa propre destination ; iOS ne les affiche
+        // pas, d’où le repli sur celle que la notification transporte.
+        expect(openWindow).toHaveBeenCalledWith('/achievements')
+    })
+
+    it('retombe sur l’accueil quand la notification ne transporte rien', async () => {
+        const { waited } = clicked({})
+        await Promise.all(waited)
+
+        expect(openWindow).toHaveBeenCalledWith('/')
     })
 })
