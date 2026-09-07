@@ -14,8 +14,6 @@ final class CreateWorkoutTemplateAction
     use HandlesWorkoutTemplateSets;
 
     /**
-     * Create a new workout template with exercises and sets.
-     *
      * @param array{
      *     name: string,
      *     description?: string|null,
@@ -69,7 +67,8 @@ final class CreateWorkoutTemplateAction
 
         \App\Models\WorkoutTemplateLine::insert($linesData);
 
-        // Fetch the generated lines to get their IDs
+        // `insert()` ne rend pas les identifiants : les lignes sont relues pour
+        // y accrocher les séries.
         $lines = \App\Models\WorkoutTemplateLine::where('workout_template_id', $template->id)
             ->orderBy('id')
             ->get();

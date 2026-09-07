@@ -11,19 +11,12 @@ use App\Models\BodyPartMeasurement;
 use Inertia\Inertia;
 
 /**
- * Controller for managing user body part measurements.
- *
- * Handles the CRUD operations for tracking specific body part circumferences
- * or measurements over time.
+ * Les tours de bras, de taille, de cuisse — chaque partie est désignée par son
+ * nom en texte libre, à la différence du poids et de la masse grasse qui ont
+ * chacun leur colonne dans `BodyMeasurementController`.
  */
 class BodyPartMeasurementController extends Controller
 {
-    /**
-     * Display a listing of body part measurements.
-     *
-     * @param  \App\Actions\Measurements\FetchBodyPartMeasurementsIndexAction  $action  The action to fetch the measurements data.
-     * @return \Inertia\Response The Inertia response rendering the index view.
-     */
     public function index(FetchBodyPartMeasurementsIndexAction $action): \Inertia\Response
     {
         $this->authorize('viewAny', BodyPartMeasurement::class);
@@ -32,11 +25,9 @@ class BodyPartMeasurementController extends Controller
     }
 
     /**
-     * Display the measurement history for a specific body part.
-     *
-     * @param  string  $part  The name or identifier of the body part.
-     * @param  \App\Actions\Measurements\FetchBodyPartMeasurementShowAction  $action  The action to fetch specific body part data.
-     * @return \Illuminate\Http\RedirectResponse|\Inertia\Response The Inertia response rendering the show view, or a redirect if no history exists.
+     * La partie vient de l'URL, pas d'une table : un nom sans relevé donne un
+     * historique vide, et on renvoie à la liste plutôt que d'afficher une page
+     * de graphiques sans rien dedans.
      */
     public function show(string $part, FetchBodyPartMeasurementShowAction $action): \Illuminate\Http\RedirectResponse|\Inertia\Response
     {
@@ -56,12 +47,6 @@ class BodyPartMeasurementController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created body part measurement in storage.
-     *
-     * @param  \App\Http\Requests\BodyPartMeasurementStoreRequest  $request  The validated request containing measurement data.
-     * @return \Illuminate\Http\RedirectResponse A redirect back with a success message.
-     */
     public function store(BodyPartMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', BodyPartMeasurement::class);
@@ -73,12 +58,6 @@ class BodyPartMeasurementController extends Controller
         return redirect()->back()->with('success', 'Measurement added.');
     }
 
-    /**
-     * Remove the specified body part measurement from storage.
-     *
-     * @param  \App\Models\BodyPartMeasurement  $bodyPartMeasurement  The body part measurement to delete.
-     * @return \Illuminate\Http\RedirectResponse A redirect back with a success message.
-     */
     public function destroy(BodyPartMeasurement $bodyPartMeasurement): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $bodyPartMeasurement);

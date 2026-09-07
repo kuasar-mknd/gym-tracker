@@ -11,20 +11,17 @@ use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
 
 /**
- * Action class responsible for fetching and aggregating all necessary data
- * to populate the user dashboard.
+ * Ce que le tableau de bord affiche.
  *
- * This action separates immediate, lightweight data requirements from
- * heavier, deferred analytical queries.
+ * Le léger part avec la page ; les analyses coûteuses attendent une prop
+ * différée.
  */
 final class FetchDashboardDataAction
 {
     /**
-     * Create a new FetchDashboardDataAction instance.
-     *
-     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  The latest body metrics.
-     * @param  \App\Services\Stats\VolumeStatsService  $volumeStats  Weekly volume trend and comparison.
-     * @param  \App\Services\Stats\WorkoutStatsService  $workoutStats  Workout distributions.
+     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  Les dernières mesures corporelles.
+     * @param  \App\Services\Stats\VolumeStatsService  $volumeStats  Tendance et comparaison du volume hebdomadaire.
+     * @param  \App\Services\Stats\WorkoutStatsService  $workoutStats  Répartitions des séances.
      */
     public function __construct(
         protected BodyStatsService $bodyStats,
@@ -34,10 +31,9 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Fetch immediate dashboard data for the given user.
-     * These are lightweight queries or single-row fetches suitable for initial page load.
+     * Les données immédiates : des lectures légères, ou d'une seule ligne,
+     * tenables au premier rendu de la page.
      *
-     * @param  \App\Models\User  $user  The authenticated user for whom to fetch data.
      * @return array{
      *     latestWeight: float|string|null,
      *     recentWorkouts: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>,
@@ -47,11 +43,13 @@ final class FetchDashboardDataAction
      */
     public function getImmediateStats(User $user): array
     {
-        // ⚡ Bolt: Use cached latest metrics instead of hitting DB on every dashboard load
+        // Les mesures passent par le cache : sinon la base est lue à chaque
+        // ouverture du tableau de bord.
         $latestMetrics = $this->bodyStats->getLatestBodyMetrics($user);
 
         return [
-            // ⚡ Bolt: Removed unused workoutsCount and thisWeekCount queries to prevent 2 unnecessary queries on dashboard load
+            // `workoutsCount` et `thisWeekCount` sont partis : rien ne les
+            // lisait, et ils coûtaient deux requêtes à chaque ouverture.
             'latestWeight' => $latestMetrics->latest_weight ?? null,
             'recentWorkouts' => $this->getRecentWorkouts($user),
             'recentPRs' => $this->getRecentPRs($user),
@@ -60,9 +58,6 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get consolidated weekly volume data (stats + trend).
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
      * @return array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
      */
     public function getWeeklyVolumeData(User $user): array
@@ -79,10 +74,11 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get consolidated analytical stats for the dashboard.
-     * ⚡ Bolt: Reduces 2 deferred prop XHR requests to 1 and uses a single cache key.
+     * Les analyses du tableau de bord, réunies en une seule prop différée.
      *
-     * @param  User  $user  The authenticated user.
+     * Séparées, elles faisaient deux requêtes XHR et occupaient deux clefs de
+     * cache ; ensemble, une seule.
+     *
      * @return array{
      *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>},
      *     workoutDistributions: array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
@@ -101,9 +97,6 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get consolidated workout distributions (duration + time of day).
-     *
-     * @param  \App\Models\User  $user  The authenticated user.
      * @return array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
      */
     public function getWorkoutDistributions(User $user): array
@@ -112,11 +105,10 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get recent Personal Records.
-     * Optimized to fetch only the amount displayed on the dashboard (2).
+     * Les derniers records personnels : deux, soit exactement ce que le tableau
+     * de bord affiche.
      *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord> A collection of the most recent personal records.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\PersonalRecord>
      */
     private function getRecentPRs(User $user): \Illuminate\Database\Eloquent\Collection
     {
@@ -128,11 +120,10 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get active goals.
-     * Optimized to fetch only the amount displayed on the dashboard (2).
+     * Les objectifs en cours : deux, soit exactement ce que le tableau de bord
+     * affiche.
      *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal> A collection of currently active user goals.
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
      */
     private function getActiveGoals(User $user): \Illuminate\Database\Eloquent\Collection
     {
@@ -146,13 +137,12 @@ final class FetchDashboardDataAction
     }
 
     /**
-     * Get recent workouts.
-     * PERFORMANCE OPTIMIZATION: Uses withCount('workoutLines') instead of with('workoutLines')
-     * to avoid loading full collections when only the count is needed for UI logic.
-     * Limits to 3 items as per dashboard layout.
+     * Les dernières séances : trois, soit ce que la mise en page prévoit.
      *
-     * @param  \App\Models\User  $user  The authenticated user.
-     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout> A collection of the most recent workouts.
+     * `withCount('workoutLines')` et non `with()` : la carte n'affiche que le
+     * nombre de lignes, hydrater les collections entières ne servirait à rien.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\Workout>
      */
     private function getRecentWorkouts(User $user): \Illuminate\Database\Eloquent\Collection
     {

@@ -17,8 +17,8 @@ use Illuminate\Http\Response;
 class WorkoutLineController extends Controller
 {
     /**
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If the referenced workout does not exist.
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to add a line to the workout.
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Si la séance référencée n'existe pas.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit d'ajouter une ligne à cette séance.
      */
     public function store(WorkoutLineStoreRequest $request, CreateWorkoutLineAction $action): WorkoutLineResource
     {
@@ -29,22 +29,22 @@ class WorkoutLineController extends Controller
 
         $this->authorize('create', [WorkoutLine::class, $workout]);
 
-        // Carried in a header rather than the body: it names the attempt, not
-        // the resource, and has no business in the validated payload.
+        // Transmise dans un en-tête plutôt que dans le corps : elle nomme la
+        // tentative, pas la ressource, et n'a rien à faire dans le payload validé.
         $validated['idempotency_key'] = $request->header('Idempotency-Key');
 
         $workoutLine = $action->execute($workout, $validated);
 
         $workoutLine->load(['exercise', 'sets']);
 
-        // ⚡ Perf: Accessor uses cache automatically
+        // L'accesseur lit le cache tout seul : l'ajouter ici ne coûte pas de requête.
         $workoutLine->append('recommended_values');
 
         return new WorkoutLineResource($workoutLine);
     }
 
     /**
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the workout line.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de supprimer la ligne d'exercice.
      */
     public function destroy(WorkoutLine $workoutLine): Response
     {

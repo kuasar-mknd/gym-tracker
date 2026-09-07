@@ -10,18 +10,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 class ConditionalCspHeaders extends AddCspHeaders
 {
-    /**
-     * Handle an incoming request.
-     */
     #[\Override]
     public function handle(Request $request, \Closure $next, ?string $customPreset = null): Response
     {
         /** @var string $path */
         $path = config('pulse.path', 'backoffice/pulse');
 
-        // Skip global CSP for Pulse routes. Pulse routes have their own
-        // CSP middleware registered in config/pulse.php with a custom preset.
-        // We only want to skip the GLOBAL instance (which has no custom preset).
+        // Les routes Pulse ont leur propre middleware CSP, déclaré dans
+        // config/pulse.php avec un preset à elles : on saute donc la CSP
+        // globale, et elle seule — c'est l'instance sans preset.
         if ($request->is($path.'*') && $customPreset === null) {
             /*
              * `$next` est un `Closure` sans type de retour declare, donc son

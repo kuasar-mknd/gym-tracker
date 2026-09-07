@@ -11,9 +11,6 @@ use Laravel\Telescope\TelescopeApplicationServiceProvider;
 
 class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     #[\Override]
     public function register(): void
     {
@@ -28,17 +25,11 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $this->registerFilter();
     }
 
-    /**
-     * Register the Telescope filter.
-     */
     protected function registerFilter(): void
     {
         Telescope::filter(fn (IncomingEntry $entry): bool => $this->shouldFilterEntry($entry));
     }
 
-    /**
-     * Prevent sensitive request details from being logged by Telescope.
-     */
     protected function hideSensitiveRequestDetails(): void
     {
         if (config('app.env') === 'local') {
@@ -55,9 +46,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
     }
 
     /**
-     * Register the Telescope gate.
-     *
-     * This gate determines who can access Telescope in non-local environments.
+     * La porte de Telescope : qui y accède hors du poste de développement.
      */
     #[\Override]
     protected function gate(): void
@@ -78,9 +67,6 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         Gate::define('viewTelescope', fn (): bool => false);
     }
 
-    /**
-     * Determine if the given entry should be filtered.
-     */
     private function shouldFilterEntry(IncomingEntry $entry): bool
     {
         if (config('app.env') === 'local') {

@@ -11,22 +11,18 @@ use Laravel\Socialite\Contracts\User as SocialUser;
 
 final class ResolveSocialUserAction
 {
-    /**
-     * Resolve the user from the social provider.
-     */
     public function execute(string $provider, SocialUser $socialUser): User
     {
-        // Check if user already exists with this email
         $existingUser = User::where('email', $socialUser->getEmail())->first();
 
         if ($existingUser !== null) {
-            // Security: Prevent account linking if the existing account is not verified.
-            // Linking an unverified account via social login poses an account takeover risk.
+            // Sécurité : pas de rattachement tant que le compte existant n'est
+            // pas vérifié. Rattacher un compte non vérifié depuis un fournisseur
+            // social ouvre une prise de contrôle du compte.
             if (! $existingUser->hasVerifiedEmail()) {
                 throw new SocialAuthException(__('Your account must be verified before linking it with a social provider.'));
             }
 
-            // Update provider info if not set (linking account)
             // Non renseigne, et non « vide ou zero » : c'est un identifiant
             // rendu par le fournisseur, la chaine vide n'en est pas un.
             if ($existingUser->provider_id === null || $existingUser->provider_id === '') {
@@ -41,18 +37,17 @@ final class ResolveSocialUserAction
             return $existingUser;
         }
 
-        // Create new user
         $user = User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'Utilisateur',
             'email' => $socialUser->getEmail(),
-            'password' => bcrypt(Str::random(16)), // Random password since auth is handled by provider
+            'password' => bcrypt(Str::random(16)), // Mot de passe aléatoire : c'est le fournisseur qui authentifie.
             'avatar' => $socialUser->getAvatar(),
         ]);
 
         $user->forceFill([
             'provider' => $provider,
             'provider_id' => $socialUser->getId(),
-            'email_verified_at' => now(), // Assume email is verified by provider
+            'email_verified_at' => now(), // Le fournisseur a déjà vérifié l'adresse.
         ])->save();
 
         return $user;

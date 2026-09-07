@@ -12,13 +12,14 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 class FetchWorkoutTemplatesAction
 {
     /**
-     * Fetch all workout templates for the given user, with necessary relations for the index page preview.
+     * Les modèles de séance de l'utilisateur, avec le strict nécessaire à
+     * l'aperçu de la page d'index : le compte de lignes et les trois premiers
+     * exercices.
      *
      * @return Collection<int, WorkoutTemplate>
      */
     public function execute(User $user): Collection
     {
-        // ⚡ Bolt Optimization: Only load the line counts and the first few exercises for preview
         return WorkoutTemplate::withCount('workoutTemplateLines')
             ->with([
                 'workoutTemplateLines' => function (Relation $query): void {

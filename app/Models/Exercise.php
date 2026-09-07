@@ -48,7 +48,7 @@ class Exercise extends Model
     }
 
     /**
-     * Scope the query to include system exercises and exercises owned by the given user.
+     * Les exercices du catalogue commun et ceux de cet utilisateur.
      */
     /**
      * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
@@ -60,7 +60,8 @@ class Exercise extends Model
     }
 
     /**
-     * Centralized method to get the user's exercises list with caching.
+     * La liste des exercices de l'utilisateur, mise en cache une heure. Un seul
+     * point d'entrée, pour qu'une seule clef soit à invalider.
      *
      * @return Collection<int, Exercise>
      */
@@ -77,8 +78,11 @@ class Exercise extends Model
     }
 
     /**
-     * Clear the exercise list cache for the owner of this exercise.
-     * If it's a global exercise, increment the global version to invalidate all user caches.
+     * Vide la liste en cache du propriétaire de cet exercice.
+     *
+     * Un exercice du catalogue commun apparaît dans la liste de tout le monde :
+     * plutôt que d'énumérer les utilisateurs, la révision du catalogue avance
+     * d'un cran et toutes les clefs deviennent caduques d'un coup.
      */
     public function invalidateCache(): void
     {

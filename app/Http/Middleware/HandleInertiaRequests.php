@@ -11,7 +11,7 @@ use Inertia\Middleware;
 class HandleInertiaRequests extends Middleware
 {
     /**
-     * The root template that is loaded on the first page visit.
+     * Le gabarit racine, chargé à la première visite.
      *
      * @var string
      */
@@ -19,8 +19,6 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
-     * Define the props that are shared by default.
-     *
      * @return array<string, mixed>
      */
     #[\Override]
@@ -35,11 +33,12 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->hasSession() ? $request->session()->get('success') : null,
                 'error' => $request->hasSession() ? $request->session()->get('error') : null,
             ],
-            // CI builds its Dusk env with APP_ENV=testing but .env.dusk.local
-            // keeps APP_ENV=local, so the environment check alone held on CI and
-            // silently did not locally — where the celebration overlay this flag
-            // exists to suppress fired mid-test and swallowed clicks. The
-            // explicit flag makes both runs agree.
+            // La CI construit son environnement Dusk avec APP_ENV=testing, mais
+            // .env.dusk.local garde APP_ENV=local : le seul test d'environnement
+            // tenait donc en CI et lâchait sans bruit en local — où l'overlay de
+            // célébration que ce drapeau existe pour taire se déclenchait en
+            // plein test et avalait les clics. Le drapeau explicite met les deux
+            // exécutions d'accord.
             'is_testing' => app()->environment('testing') || config('app.running_browser_tests') === true,
             // Accompagne la route /__dev-login. Le serveur est le
             // seul à savoir qu'il est en local : import.meta.env.DEV vaut false
@@ -52,17 +51,18 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Which social sign-ins are actually usable, by provider.
+     * Les connexions sociales réellement utilisables, par fournisseur.
      *
-     * The login page already asked for this — `social_login_enabled?.apple ??
-     * true` — and nothing ever sent it, so the `?? true` won every time and all
-     * three buttons rendered unconditionally. Apple then answered 500 on every
-     * click, because the package was never wired to Socialite and no
-     * credentials were set either.
+     * La page de connexion le demandait déjà — `social_login_enabled?.apple ??
+     * true` — et personne ne l'envoyait : le `?? true` gagnait à chaque fois et
+     * les trois boutons s'affichaient sans condition. Apple répondait alors 500
+     * à chaque clic, le paquet n'ayant jamais été branché sur Socialite et
+     * aucun identifiant n'étant renseigné non plus.
      *
-     * A provider counts as usable only with both halves of its OAuth identity;
-     * a client id with no secret cannot complete the exchange, and offering the
-     * button anyway sends the user to an error page instead of to Apple.
+     * Un fournisseur ne compte comme utilisable qu'avec les deux moitiés de son
+     * identité OAuth : un client id sans secret ne peut pas mener l'échange à
+     * son terme, et proposer le bouton quand même envoie l'utilisateur sur une
+     * page d'erreur au lieu de chez Apple.
      *
      * @return array<string, bool>
      */
@@ -77,17 +77,18 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * How many migrations the database has not run, or null outside local.
+     * Le nombre de migrations que la base n'a pas jouées, ou null hors local.
      *
-     * A schema behind the code fails at the write, not at the read: the page
-     * renders, the request 500s on the insert, and the frontend rolls its
-     * optimistic update back. Every mutation in the app broke that way for an
-     * afternoon because activity_log was missing a column added days earlier,
-     * and nothing anywhere said so — the test suite cannot see it either, since
-     * it migrates a fresh database every run.
+     * Un schéma en retard sur le code échoue à l'écriture, pas à la lecture : la
+     * page s'affiche, la requête part en 500 sur l'insertion, et le front annule
+     * sa mise à jour optimiste. Toutes les écritures de l'application ont cassé
+     * ainsi pendant un après-midi parce qu'il manquait à activity_log une
+     * colonne ajoutée quelques jours plus tôt, sans que rien nulle part ne le
+     * dise — la suite de tests ne peut pas le voir non plus, puisqu'elle migre
+     * une base neuve à chaque exécution.
      *
-     * Counted only in local, and only for requests that will draw a page, so
-     * production never pays for it.
+     * Compté seulement en local, et seulement pour les requêtes qui vont rendre
+     * une page : la production n'en paie jamais le prix.
      */
     private function pendingMigrationCount(): ?int
     {
@@ -109,14 +110,12 @@ class HandleInertiaRequests extends Middleware
 
             return count(array_diff(array_keys($pending), $ran));
         } catch (\Throwable) {
-            // A database that cannot answer is its own, louder problem.
+            // Une base qui ne répond pas est un autre problème, plus bruyant.
             return null;
         }
     }
 
     /**
-     * Get the shared user data.
-     *
      * @return array<string, mixed>|null
      */
     private function getUserData(Request $request): ?array

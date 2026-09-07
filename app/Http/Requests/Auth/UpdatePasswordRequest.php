@@ -11,17 +11,12 @@ use Illuminate\Validation\ValidationException;
 
 class UpdatePasswordRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -32,9 +27,6 @@ class UpdatePasswordRequest extends FormRequest
         ];
     }
 
-    /**
-     * Configure the validator instance.
-     */
     public function withValidator(\Illuminate\Validation\Validator $validator): void
     {
         $validator->after(function (\Illuminate\Validation\Validator $validator): void {
@@ -44,9 +36,6 @@ class UpdatePasswordRequest extends FormRequest
         });
     }
 
-    /**
-     * Get the rate limiting throttle key for the request.
-     */
     public function throttleKey(): string
     {
         return 'update-password-'.$this->user()?->id;
@@ -63,9 +52,7 @@ class UpdatePasswordRequest extends FormRequest
     }
 
     /**
-     * Prepare the data for validation.
-     *
-     * Checks if the user has exceeded the allowed number of attempts.
+     * Coupe la requête avant validation quand le compteur d'essais est plein.
      */
     #[\Override]
     protected function prepareForValidation(): void
@@ -82,9 +69,6 @@ class UpdatePasswordRequest extends FormRequest
         }
     }
 
-    /**
-     * Handle a passed validation attempt.
-     */
     #[\Override]
     protected function passedValidation(): void
     {

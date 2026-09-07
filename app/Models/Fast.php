@@ -32,8 +32,6 @@ class Fast extends Model
     }
 
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     #[\Override]

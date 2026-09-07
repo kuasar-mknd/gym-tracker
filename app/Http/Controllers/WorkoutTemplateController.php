@@ -12,23 +12,8 @@ use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Inertia\Inertia;
 
-/**
- * Controller for managing Workout Templates.
- *
- * This controller handles the creation, retrieval, and deletion of workout templates.
- * It also facilitates the creation of new workouts based on existing templates
- * and the creation of templates from existing workouts.
- */
 class WorkoutTemplateController extends Controller
 {
-    /**
-     * Display a listing of the user's workout templates.
-     *
-     * Retrieves all templates belonging to the authenticated user, including
-     * their exercise lines and set details.
-     *
-     * @return \Inertia\Response The Inertia response rendering the Templates index page.
-     */
     public function index(\App\Actions\FetchWorkoutTemplatesAction $fetchWorkoutTemplatesAction): \Inertia\Response
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
@@ -38,13 +23,6 @@ class WorkoutTemplateController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new workout template.
-     *
-     * Preloads the user's exercises cache to populate the exercise selector in the form.
-     *
-     * @return \Inertia\Response The Inertia response rendering the Template creation page.
-     */
     public function create(): \Inertia\Response
     {
         $this->authorize('create', WorkoutTemplate::class);
@@ -56,16 +34,6 @@ class WorkoutTemplateController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created workout template in storage.
-     *
-     * Validates the request data and uses the CreateWorkoutTemplateAction to persist
-     * the template and its associated lines/sets.
-     *
-     * @param  \App\Http\Requests\StoreWorkoutTemplateRequest  $request  The validated request containing template data.
-     * @param  \App\Actions\CreateWorkoutTemplateAction  $createWorkoutTemplateAction  Action to handle template creation logic.
-     * @return \Illuminate\Http\RedirectResponse Redirects to the templates index page.
-     */
     public function store(\App\Http\Requests\StoreWorkoutTemplateRequest $request, CreateWorkoutTemplateAction $createWorkoutTemplateAction): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', WorkoutTemplate::class);
@@ -78,14 +46,7 @@ class WorkoutTemplateController extends Controller
     }
 
     /**
-     * Execute a workout template to start a new workout.
-     *
-     * Creates a new active workout session based on the provided template
-     * using the CreateWorkoutFromTemplateAction.
-     *
-     * @param  \App\Models\WorkoutTemplate  $template  The template to use.
-     * @param  \App\Actions\CreateWorkoutFromTemplateAction  $createWorkout  Action to create the workout from the template.
-     * @return \Illuminate\Http\RedirectResponse Redirects to the show page of the newly created workout.
+     * Ouvre une séance à partir du modèle et y envoie l'utilisateur.
      */
     public function execute(WorkoutTemplate $template, CreateWorkoutFromTemplateAction $createWorkout): \Illuminate\Http\RedirectResponse
     {
@@ -97,14 +58,7 @@ class WorkoutTemplateController extends Controller
     }
 
     /**
-     * Save an existing workout as a new template.
-     *
-     * Allows users to save a completed or in-progress workout as a template
-     * for future reuse.
-     *
-     * @param  \App\Models\Workout  $workout  The workout to base the template on.
-     * @param  \App\Actions\CreateWorkoutTemplateFromWorkoutAction  $createTemplate  Action to create the template from the workout.
-     * @return \Illuminate\Http\RedirectResponse Redirects to the templates index with a success message.
+     * Enregistre une séance, terminée ou en cours, comme modèle réutilisable.
      */
     public function saveFromWorkout(Workout $workout, CreateWorkoutTemplateFromWorkoutAction $createTemplate): \Illuminate\Http\RedirectResponse
     {
@@ -115,12 +69,6 @@ class WorkoutTemplateController extends Controller
         return redirect()->route('templates.index')->with('success', 'Modèle enregistré avec succès !');
     }
 
-    /**
-     * Remove the specified workout template from storage.
-     *
-     * @param  \App\Models\WorkoutTemplate  $template  The template to delete.
-     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
-     */
     public function destroy(WorkoutTemplate $template): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $template);
@@ -131,7 +79,8 @@ class WorkoutTemplateController extends Controller
     }
 
     /**
-     * Show a workout template (Not implemented in UI).
+     * Aucun écran ne montre un modèle seul : la route existe pour compléter la
+     * ressource, elle répond 404.
      */
     public function show(WorkoutTemplate $template): \Inertia\Response
     {
@@ -139,13 +88,8 @@ class WorkoutTemplateController extends Controller
     }
 
     /**
-     * Show the form for editing a workout template.
-     *
-     * Loads the template's lines with their exercise and sets, which is the
-     * shape Templates/Edit builds its form from.
-     *
-     * @param  \App\Models\WorkoutTemplate  $template  The template to edit.
-     * @return \Inertia\Response The Inertia response rendering the Templates edit page.
+     * Les lignes sont chargées avec leur exercice et leurs séries : c'est la
+     * forme à partir de laquelle Templates/Edit construit son formulaire.
      */
     public function edit(WorkoutTemplate $template): \Inertia\Response
     {
@@ -160,15 +104,8 @@ class WorkoutTemplateController extends Controller
     }
 
     /**
-     * Update a workout template in storage.
-     *
-     * Delegates to UpdateWorkoutTemplateAction, which rebuilds the lines from
-     * the submitted end state — the same action the API controller uses.
-     *
-     * @param  \App\Http\Requests\Api\WorkoutTemplateUpdateRequest  $request  The validated request containing template data.
-     * @param  \App\Models\WorkoutTemplate  $template  The template to update.
-     * @param  \App\Actions\UpdateWorkoutTemplateAction  $updateWorkoutTemplateAction  Action handling the update logic.
-     * @return \Illuminate\Http\RedirectResponse Redirects to the templates index page.
+     * Le travail revient à UpdateWorkoutTemplateAction, qui reconstruit les
+     * lignes depuis l'état final soumis — la même action que le contrôleur API.
      */
     public function update(
         \App\Http\Requests\Api\WorkoutTemplateUpdateRequest $request,

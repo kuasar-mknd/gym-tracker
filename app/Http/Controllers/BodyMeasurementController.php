@@ -9,35 +9,20 @@ use App\Models\BodyMeasurement;
 use Inertia\Inertia;
 
 /**
- * Controller for managing user body measurements.
+ * Le poids et la masse grasse, par opposition aux tours de bras et de taille
+ * qui vivent dans `BodyPartMeasurementController`.
  *
- * This controller handles the CRUD operations for overall body measurements
- * like weight and body fat percentage. It integrates with Inertia.js for
- * frontend rendering and manages the clearing of related statistics caches
- * upon updates or deletions.
+ * Toute écriture vide le cache des statistiques de mensuration : sans quoi les
+ * graphiques continuent d'afficher la courbe d'avant.
  */
 class BodyMeasurementController extends Controller
 {
-    /**
-     * Create a new BodyMeasurementController instance.
-     *
-     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  Service for fetching user measurement statistics.
-     * @param  \App\Services\Stats\StatsCacheManager  $statsCache  Clears the cached measurement statistics.
-     */
     public function __construct(protected \App\Services\Stats\BodyStatsService $bodyStats, protected \App\Services\Stats\StatsCacheManager $statsCache)
     {
     }
 
     /**
-     * Display a listing of the user's body measurements.
-     *
-     * Retrieves the most recent measurements for the authenticated user
-     * and fetches their historical weight data spanning the past year to
-     * populate the frontend graphs and list view.
-     *
-     * @return \Inertia\Response The Inertia response rendering the 'Measurements/Index' page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view measurements.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de consulter les mensurations.
      */
     public function index(): \Inertia\Response
     {
@@ -50,24 +35,16 @@ class BodyMeasurementController extends Controller
 
         return Inertia::render('Measurements/Index', [
             'measurements' => $measurements,
-            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-            // Consolidate deferred body stats to reduce the number of async requests (from 2 to 1)
-            // and use a single database query and cache key for both weight and body fat history.
+            // ⚡ Bolt : les statistiques corporelles tiennent en une seule prop
+            // différée plutôt que deux — une requête asynchrone au lieu de deux,
+            // et une seule requête SQL et clef de cache pour l'historique du
+            // poids comme pour celui de la masse grasse.
             'bodyStats' => Inertia::defer(fn (): array => $this->bodyStats->getBodyProgressOverview($this->user(), 365)),
         ]);
     }
 
     /**
-     * Store a newly created body measurement in storage.
-     *
-     * Creates a new body measurement record for the authenticated user based
-     * on the validated incoming request. After creation, clears the
-     * related body measurement stats cache to ensure fresh data.
-     *
-     * @param  \App\Http\Requests\BodyMeasurementStoreRequest  $request  The validated request containing measurement data.
-     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a measurement.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit d'enregistrer une mensuration.
      */
     public function store(BodyMeasurementStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
@@ -81,16 +58,7 @@ class BodyMeasurementController extends Controller
     }
 
     /**
-     * Remove the specified body measurement from storage.
-     *
-     * Deletes the given body measurement record, provided the authenticated
-     * user is authorized to do so (i.e., they own the measurement).
-     * Afterward, clears the relevant body measurement stats cache.
-     *
-     * @param  \App\Models\BodyMeasurement  $bodyMeasurement  The body measurement model instance to delete.
-     * @return \Illuminate\Http\RedirectResponse Redirects back to the previous page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the measurement.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si la mensuration n'est pas celle de l'utilisateur.
      */
     public function destroy(BodyMeasurement $bodyMeasurement): \Illuminate\Http\RedirectResponse
     {

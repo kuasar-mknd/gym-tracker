@@ -12,24 +12,15 @@ final class SyncUserGoals implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(public \App\Models\User $user)
     {
     }
 
-    /**
-     * The unique ID of the job.
-     */
     public function uniqueId(): string
     {
         return (string) $this->user->id;
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(\App\Services\GoalService $goalService): void
     {
         $goalService->syncGoals($this->user);

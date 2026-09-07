@@ -12,8 +12,6 @@ use Illuminate\Support\Arr;
 class CreateWorkoutLineAction
 {
     /**
-     * Create a new workout line for a workout.
-     *
      * @param  array<string, mixed>  $data
      */
     public function execute(Workout $workout, array $data): WorkoutLine
@@ -21,9 +19,9 @@ class CreateWorkoutLineAction
         $key = CreateSetAction::idempotencyKey($data);
 
         /**
-         * Scoped to the workout, never searched globally. The key arrives in a
-         * client-controlled header, and a global lookup would hand back another
-         * user's line to anyone replaying their key.
+         * La recherche est bornée à la séance, jamais globale. La clef arrive
+         * dans un en-tête que le client maîtrise, et une recherche globale
+         * rendrait la ligne d'un autre utilisateur à qui rejouerait sa clef.
          */
         if ($key !== null) {
             $existing = $workout->workoutLines()->where('idempotency_key', $key)->first();
@@ -46,7 +44,7 @@ class CreateWorkoutLineAction
         try {
             $line->save();
         } catch (UniqueConstraintViolationException $e) {
-            // Two replays of the same attempt raced and the index settled it.
+            // Deux rejeux de la même tentative se sont croisés, l'index a tranché.
             $winner = $workout->workoutLines()->where('idempotency_key', $key)->first();
 
             if (! $winner instanceof WorkoutLine) {

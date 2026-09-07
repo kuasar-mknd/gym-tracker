@@ -19,9 +19,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property float|null $distance_km
  * @property bool $is_warmup
  * @property bool $is_completed
- * @property string|null $idempotency_key names the client attempt that created this row, so a
- *                                        replayed create returns it instead of making a second one. Deliberately absent from
- *                                        $fillable: it identifies the attempt, never something a payload may set.
+ * @property string|null $idempotency_key nomme la tentative du client qui a créé cette ligne, pour
+ *                                        qu'une création rejouée la renvoie au lieu d'en fabriquer une seconde.
+ *                                        Volontairement absent de $fillable : il identifie la tentative, jamais
+ *                                        quelque chose qu'un payload peut poser.
  * @property-read \App\Models\WorkoutLine $workoutLine
  * @property-read \App\Models\PersonalRecord|null $personalRecord
  */
@@ -86,32 +87,26 @@ class Set extends Model
         return $this->hasOne(PersonalRecord::class);
     }
 
-    /**
-     * Update the total volume for the user and the workout.
-     */
     public function updateVolumes(): void
     {
         $this->syncVolumes();
     }
 
-    /**
-     * Decrement the total volume for the user and the workout.
-     */
     public function decrementVolumes(): void
     {
         $this->syncVolumes();
     }
 
     /**
-     * Brings both counters back in line with the sets that exist.
+     * Remet les deux compteurs d'accord avec les séries qui existent.
      *
-     * These used to accumulate a delta per save — the set's new volume minus the
-     * volume it had when the model was loaded. Two requests touching the same
-     * row at once, which is exactly what the per-field debounce produces when a
-     * user corrects a weight and a rep count together, each computed their delta
-     * from the same snapshot. Both were applied, and the totals drifted away
-     * from the sets they claim to describe, permanently and with nothing to show
-     * for it.
+     * Ils accumulaient un écart à chaque sauvegarde — le nouveau volume de la
+     * série moins celui qu'elle portait au chargement du modèle. Deux requêtes
+     * touchant la même ligne en même temps, ce que produit exactement
+     * l'anti-rebond par champ quand on corrige ensemble un poids et un nombre de
+     * répétitions, calculaient leur écart depuis le même instantané. Les deux
+     * étaient appliqués, et les totaux s'éloignaient des séries qu'ils
+     * prétendent décrire, définitivement et sans rien laisser voir.
      */
     private function syncVolumes(): void
     {

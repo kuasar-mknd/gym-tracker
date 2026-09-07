@@ -85,9 +85,9 @@ class Goal extends Model
             'target_value' => 'double',
             'current_value' => 'double',
             'start_value' => 'double',
-            // A deadline is a calendar day. Cast bare, it serialised as an
-            // instant in UTC and the card read a day early wherever the browser
-            // was not ahead of UTC.
+            // Une échéance est un jour de calendrier. Castée nue, elle se
+            // sérialisait en instant UTC et la carte affichait la veille partout
+            // où le navigateur n'était pas en avance sur UTC.
             'deadline' => 'date:Y-m-d',
             'completed_at' => 'datetime',
         ];

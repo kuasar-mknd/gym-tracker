@@ -15,7 +15,7 @@ class SocialAuthController extends Controller
     public const ALLOWED_PROVIDERS = ['github', 'google', 'apple'];
 
     /**
-     * Redirect the user to the provider authentication page.
+     * Envoie l'utilisateur sur la page d'authentification du fournisseur.
      */
     public function redirect(string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {
@@ -27,7 +27,7 @@ class SocialAuthController extends Controller
     }
 
     /**
-     * Obtain the user information from the provider.
+     * Récupère l'utilisateur auprès du fournisseur et le connecte.
      */
     public function callback(HandleSocialCallbackAction $action, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
     {

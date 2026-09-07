@@ -10,8 +10,8 @@ use Carbon\Carbon;
 final class FetchHabitsIndexAction
 {
     /**
-     * Get immediate data for fast initial rendering of the habits page.
-     * ⚡ Bolt: Fast queries only.
+     * De quoi rendre la page des habitudes tout de suite : des requêtes rapides,
+     * rien d'autre.
      *
      * @return array{
      *     habits: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Habit>,
@@ -45,8 +45,8 @@ final class FetchHabitsIndexAction
     }
 
     /**
-     * Get heavy statistical data for the habits dashboard.
-     * ⚡ Bolt: Consolidated into a single deferred prop to reduce XHR requests.
+     * Les statistiques lourdes des habitudes, réunies en une seule prop
+     * différée : séparées, elles faisaient chacune sa requête XHR.
      *
      * @return array{
      *     consistencyData: array<int, array{date: string, count: int}>,
@@ -55,7 +55,6 @@ final class FetchHabitsIndexAction
      */
     public function getStatsData(User $user): array
     {
-        // Calculate consistency for the last 30 days
         $now = Carbon::now();
         $past30Days = $now->copy()->subDays(29)->startOfDay();
 
@@ -71,8 +70,8 @@ final class FetchHabitsIndexAction
             ->selectRaw('date, count(*) as count')
             ->pluck('count', 'date');
 
-        $consistencyData = [];
-        $history = []; // For Bar Chart
+        $consistencyData = []; // Pour la courbe.
+        $history = []; // Pour l'histogramme.
 
         for ($i = 29; $i >= 0; $i--) {
             $dateObj = $now->copy()->subDays($i);
@@ -80,13 +79,11 @@ final class FetchHabitsIndexAction
             // @phpstan-ignore-next-line
             $count = (int) ($consistencyStats[$dateStr] ?? 0);
 
-            // For Line Chart (consistencyData)
             $consistencyData[] = [
                 'date' => $dateStr,
                 'count' => $count,
             ];
 
-            // For Bar Chart (history)
             $history[] = [
                 'date' => $dateObj->format('d/m'),
                 'full_date' => $dateStr,
@@ -101,8 +98,6 @@ final class FetchHabitsIndexAction
     }
 
     /**
-     * Get the dates for the current week.
-     *
      * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      */
     private function getWeekDates(): array

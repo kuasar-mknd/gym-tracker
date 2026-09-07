@@ -32,9 +32,10 @@ class BodyMeasurement extends BaseMeasurement
     protected function casts(): array
     {
         return [
-            // date:Y-m-d, as BodyPartMeasurement and DailyJournal already do.
-            // A bare date cast renders the day in UTC, so a weigh-in saved on
-            // 31 July was listed as 30 July — the day before, all year round.
+            // date:Y-m-d, comme le font déjà BodyPartMeasurement et
+            // DailyJournal. Un cast date nu rend le jour en UTC : une pesée
+            // enregistrée le 31 juillet était listée au 30 — la veille, toute
+            // l'année.
             'measured_at' => 'date:Y-m-d',
             'weight' => 'decimal:2',
             'body_fat' => 'decimal:2',

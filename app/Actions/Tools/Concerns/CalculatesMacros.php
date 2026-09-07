@@ -15,8 +15,6 @@ trait CalculatesMacros
     ];
 
     /**
-     * Perform the macro calculation logic.
-     *
      * @param  array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string}  $data
      * @return array<string, float|int>
      */
@@ -35,7 +33,7 @@ trait CalculatesMacros
     }
 
     /**
-     * Calculate Basal Metabolic Rate using Mifflin-St Jeor formula.
+     * Le métabolisme de base, par la formule de Mifflin-St Jeor.
      *
      * @param  array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string}  $data
      */
@@ -46,9 +44,6 @@ trait CalculatesMacros
         return $data['gender'] === 'male' ? $bmr + 5 : $bmr - 161;
     }
 
-    /**
-     * Calculate target calories based on goal and gender.
-     */
     protected function calculateTargetCalories(float $tdee, string $goal, string $gender): float
     {
         $target = match ($goal) {
@@ -63,8 +58,6 @@ trait CalculatesMacros
     }
 
     /**
-     * Calculate macros based on target calories and weight.
-     *
      * @return array<string, float|int>
      */
     protected function calculateMacros(float $targetCalories, float $weight): array

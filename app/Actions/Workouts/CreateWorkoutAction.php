@@ -15,13 +15,13 @@ class CreateWorkoutAction
     }
 
     /**
-     * The default name is the date, and nothing else.
+     * Le nom par défaut est la date, et rien d'autre.
      *
-     * It used to be "Séance du 04/08/2026". Every session is a séance, so the
-     * words carry no information — and they cost the part that does: the header
-     * truncates, so the date, the one thing that tells two sessions apart, was
-     * the half that got cut. A user who wants a real name gives it one from the
-     * session settings.
+     * C'était « Séance du 04/08/2026 ». Toute séance est une séance : ces mots
+     * n'apprennent rien, et ils coûtent la part qui apprend quelque chose. L'en-tête
+     * tronque, donc la date — la seule chose qui distingue deux séances — était
+     * la moitié coupée. Qui veut un vrai nom le donne depuis les réglages de la
+     * séance.
      */
     public function execute(User $user): Workout
     {

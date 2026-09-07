@@ -32,8 +32,6 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
     use InteractsWithAppAuthenticationRecovery;
 
     /**
-     * The attributes that are mass assignable.
-     *
      * @var list<string>
      */
     #[\Override]
@@ -44,8 +42,6 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
-     *
      * @var list<string>
      */
     #[\Override]
@@ -72,8 +68,6 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
     }
 
     /**
-     * Get the attributes that should be cast.
-     *
      * @return array<string, string>
      */
     #[\Override]

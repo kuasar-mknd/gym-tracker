@@ -22,16 +22,16 @@ class SetController extends Controller
     }
 
     /**
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized.
-     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If the workout line is not found.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'y est pas autorisé.
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException Si la ligne d'exercice n'existe pas.
      */
     public function store(SetStoreRequest $request, StoreSetAction $action): SetResource
     {
         /** @var array{workout_line_id: int} $validated */
         $validated = $request->validated();
 
-        // Carried in a header rather than the body: it names the attempt, not
-        // the resource, and has no business in the validated payload.
+        // Transmise dans un en-tête plutôt que dans le corps : elle nomme la
+        // tentative, pas la ressource, et n'a rien à faire dans le payload validé.
         $validated['idempotency_key'] = $request->header('Idempotency-Key');
 
         // Un seul chemin : l'action cherche la ligne et vérifie le droit d'y
@@ -42,7 +42,7 @@ class SetController extends Controller
     }
 
     /**
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the set.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de modifier la série.
      */
     public function update(SetUpdateRequest $request, Set $set): SetResource
     {
@@ -50,14 +50,14 @@ class SetController extends Controller
 
         $set->update($request->validated());
 
-        // Bolt: Only clear volume-related stats for set updates
+        // Modifier une série ne bouge que le volume : inutile de vider le reste du cache.
         $this->statsCache->clearVolumeStats($this->user());
 
         return new SetResource($set->loadMissing('personalRecord'));
     }
 
     /**
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the set.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de supprimer la série.
      */
     public function destroy(Set $set): \Illuminate\Http\Response
     {
@@ -66,7 +66,7 @@ class SetController extends Controller
         $user = $this->user();
         $set->delete();
 
-        // Bolt: Only clear volume-related stats for set deletions
+        // Supprimer une série ne bouge que le volume : inutile de vider le reste du cache.
         $this->statsCache->clearVolumeStats($user);
 
         return response()->noContent();

@@ -38,8 +38,11 @@ class Achievement extends Model
     ];
 
     /**
-     * ⚡ Bolt Optimization: Cache all achievements to prevent N+1 queries.
-     * Impact: Reduces database queries from O(N) to O(1) on high-traffic pages like Dashboard and Workouts.
+     * Tous les succès, mis en cache.
+     *
+     * Les pages les plus fréquentées — tableau de bord, séances — relisent la
+     * liste à chaque affichage : le cache ramène le nombre de requêtes de O(N) à
+     * O(1).
      *
      * @return Collection<int, Achievement>
      */

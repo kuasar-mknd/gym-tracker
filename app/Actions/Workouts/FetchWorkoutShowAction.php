@@ -10,18 +10,14 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 
 /**
- * Action class responsible for preparing the data necessary to display a specific workout.
+ * De quoi afficher une séance.
  *
- * This class fetches all relevant nested relationships (lines, sets, exercises, personal records)
- * and available reference data (exercise lists, categories) required by the frontend view.
+ * Toutes les relations imbriquées que la page lit — lignes, séries, exercices,
+ * records personnels — et la bibliothèque d'exercices où puiser pour en ajouter.
  */
 class FetchWorkoutShowAction
 {
     /**
-     * Prepare the data required for the workout show view.
-     *
-     * @param  \App\Models\User  $user  The authenticated user viewing the workout.
-     * @param  \App\Models\Workout  $workout  The workout to be displayed.
      * @return array{
      *     workout: \App\Models\Workout,
      *     exercises: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Exercise>|array<int, \App\Models\Exercise>
@@ -33,7 +29,8 @@ class FetchWorkoutShowAction
 
         $workout->load(['workoutLines.exercise', 'workoutLines.sets.personalRecord']);
 
-        // ⚡ Perf: Batch-load recommended values in 1-2 queries instead of N+1
+        // Les valeurs recommandées sont chargées en bloc, une ou deux requêtes,
+        // et non une par ligne.
         WorkoutLine::batchRecommendedValues($workout->workoutLines, $user->id);
 
         return [

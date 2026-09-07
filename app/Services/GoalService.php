@@ -9,21 +9,20 @@ use App\Models\Goal;
 use App\Models\User;
 
 /**
- * Service for managing user goals and tracking progress.
+ * Tient l'avancement des objectifs d'un utilisateur d'après son activité —
+ * séances et mesures — et décide s'ils sont atteints.
  *
- * This service is responsible for synchronizing goal progress based on user activity
- * (workouts, measurements) and determining if a goal has been achieved.
- * It handles different types of goals: weight (strength), frequency, volume, and body measurements.
+ * Quatre types cohabitent : la charge, la fréquence, le volume et les
+ * mensurations, et chacun se lit à un endroit différent.
  */
 final class GoalService
 {
     /**
-     * Synchronize all active goals for a user.
+     * Recalcule l'avancement de tous les objectifs d'un utilisateur.
      *
-     * Iterates through all the user's incomplete goals and triggers a progress update
-     * for each one. This is typically called after a workout is finished or a measurement is added.
+     * Appelé après l'enregistrement d'une séance ou d'une mesure.
      *
-     * @param  User  $user  The user whose goals should be synchronized.
+     * @param  User  $user  L'utilisateur concerné.
      */
     public function syncGoals(User $user): void
     {
@@ -43,8 +42,8 @@ final class GoalService
          */
         $goals = $user->goals()->get();
 
-        // ⚡ Bolt Optimization: Pre-calculate metrics for all active goals in batch to avoid N+1 queries.
-        // This reduces database queries from O(N) to a small constant number.
+        // Les métriques sont calculées en un lot pour tous les objectifs : sans
+        // cela, chacun repartait chercher les siennes, une requête par objectif.
         $metrics = $this->preCalculateMetrics($user, $goals);
 
         foreach ($goals as $goal) {
@@ -77,13 +76,10 @@ final class GoalService
     }
 
     /**
-     * Update progress for a specific goal.
+     * Recalcule un objectif : sa valeur courante, puis son état et sa barre.
      *
-     * Dispatches the update logic to the appropriate method based on the goal's type.
-     * After updating the progress value, it checks if the goal has been completed.
-     *
-     * @param  Goal  $goal  The goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics to avoid N+1 queries.
+     * @param  Goal  $goal  L'objectif à revoir.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
      */
     public function updateGoalProgress(Goal $goal, array $metrics = []): void
     {
@@ -98,9 +94,6 @@ final class GoalService
         $this->updateProgressPercentage($goal);
     }
 
-    /**
-     * Calculate and update the progress percentage.
-     */
     protected function updateProgressPercentage(Goal $goal): void
     {
         if ($goal->target_value === $goal->start_value) {
@@ -143,12 +136,10 @@ final class GoalService
     }
 
     /**
-     * Update progress for a weight (strength) goal.
+     * L'avancement d'un objectif de charge : le poids maximal sur l'exercice.
      *
-     * Finds the maximum weight lifted for the associated exercise across all user workouts.
-     *
-     * @param  Goal  $goal  The weight goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  Goal  $goal  L'objectif à revoir.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
      */
     protected function updateWeightGoal(Goal $goal, array $metrics = []): void
     {
@@ -180,12 +171,10 @@ final class GoalService
     }
 
     /**
-     * Update progress for a frequency goal.
+     * L'avancement d'un objectif de fréquence : le nombre de séances.
      *
-     * Counts the total number of workouts the user has completed.
-     *
-     * @param  Goal  $goal  The frequency goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  Goal  $goal  L'objectif à revoir.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
      */
     protected function updateFrequencyGoal(Goal $goal, array $metrics = []): void
     {
@@ -195,8 +184,8 @@ final class GoalService
             return;
         }
 
-        // ⚡ Bolt Optimization: Cache the workouts count on the User model natively.
-        // Impact: Reduces queries from N to 1 when a user has multiple frequency goals.
+        // Le compte est retenu sur le modèle : plusieurs objectifs de fréquence
+        // posent la même question, elle n'est posée qu'une fois.
         /** @phpstan-ignore assign.propertyReadOnly */
         $goal->user->workouts_count ??= $goal->user->workouts()->count();
 
@@ -204,13 +193,11 @@ final class GoalService
     }
 
     /**
-     * Update progress for a volume goal.
+     * L'avancement d'un objectif de volume : le meilleur volume (poids × reps)
+     * atteint sur l'exercice au cours d'une seule séance.
      *
-     * Finds the maximum volume (weight * reps) achieved in a single workout
-     * for the associated exercise.
-     *
-     * @param  Goal  $goal  The volume goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  Goal  $goal  L'objectif à revoir.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
      */
     protected function updateVolumeGoal(Goal $goal, array $metrics = []): void
     {
@@ -226,8 +213,8 @@ final class GoalService
             return;
         }
 
-        // ⚡ Bolt Optimization: Calculate max volume directly in SQL instead of loading into PHP memory.
-        // Impact: Reduces memory usage and improves performance for users with many workouts.
+        // Le maximum est calculé en SQL : sur un long historique, ramener toutes
+        // les séances en mémoire pour les additionner ne passe pas à l'échelle.
         // Memes regles que le chemin groupe, sinon les deux divergent.
         $maxVolume = \Illuminate\Support\Facades\DB::table('workout_lines')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
@@ -245,12 +232,10 @@ final class GoalService
     }
 
     /**
-     * Update progress for a body measurement goal.
+     * L'avancement d'un objectif de mensuration : la dernière valeur relevée.
      *
-     * Retrieves the most recent recorded value for the specified measurement type.
-     *
-     * @param  Goal  $goal  The measurement goal to update.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Optional pre-calculated metrics.
+     * @param  Goal  $goal  L'objectif à revoir.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
      */
     protected function updateMeasurementGoal(Goal $goal, array $metrics = []): void
     {
@@ -321,14 +306,12 @@ final class GoalService
     }
 
     /**
-     * Check if a goal has been completed.
+     * Marque l'objectif atteint, ou le dé-marque quand il ne l'est plus.
      *
-     * Compares the current value against the target value.
-     * Handles both "higher is better" (strength, frequency) and "lower is better"
-     * (e.g., weight loss) scenarios.
-     * Updates the `completed_at` timestamp if the condition is met.
+     * Les deux sens comptent : supprimer la séance ou la mesure qui avait
+     * déclenché un objectif doit le rouvrir.
      *
-     * @param  Goal  $goal  The goal to check.
+     * @param  Goal  $goal  L'objectif à revoir.
      */
     protected function checkCompletion(Goal $goal): void
     {
@@ -345,26 +328,27 @@ final class GoalService
         }
     }
 
-    /**
-     * Determine if the goal's target criteria has been met.
-     */
     protected function isGoalCriteriaMet(Goal $goal): bool
     {
-        // Handle "lower is better" for specific measurements (e.g., body weight loss)
+        // Une cible sous le départ est une cible qu'on atteint en descendant :
+        // c'est une perte de poids ou de tour de taille.
         if ($goal->type === GoalType::Measurement && $goal->target_value < $goal->start_value) {
             return $goal->current_value <= $goal->target_value && $goal->current_value > 0;
         }
 
-        // For most goals, higher is better
+        // Partout ailleurs, on monte vers la cible.
         return $goal->current_value >= $goal->target_value;
     }
 
     /**
-     * Pre-calculate metrics required for checking multiple goals efficiently.
+     * Les métriques dont les objectifs auront besoin, calculées en un lot.
      *
-     * @param  User  $user  The user to calculate metrics for.
-     * @param  \Illuminate\Support\Collection<int, Goal>  $goals  The goals that need metrics.
-     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null} A dictionary of pre-calculated metrics.
+     * Seuls les types réellement présents sont interrogés : un utilisateur sans
+     * objectif de mensuration ne paie pas cette lecture.
+     *
+     * @param  User  $user  L'utilisateur concerné.
+     * @param  \Illuminate\Support\Collection<int, Goal>  $goals  Les objectifs à servir.
+     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}
      */
     private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
     {
@@ -402,7 +386,7 @@ final class GoalService
     }
 
     /**
-     * Pre-calculate max weights for given exercise IDs.
+     * Le poids maximal de chacun des exercices demandés.
      *
      * @param  array<array-key, mixed>  $exerciseIds
      * @return array<int, float>
@@ -440,15 +424,15 @@ final class GoalService
     }
 
     /**
-     * Pre-calculate max volumes for given exercise IDs.
+     * Le meilleur volume sur une séance, pour chacun des exercices demandés.
      *
      * @param  array<array-key, mixed>  $exerciseIds
      * @return array<int, float>
      */
     private function preCalculateMaxVolumes(User $user, array $exerciseIds): array
     {
-        // ⚡ Bolt Optimization: Calculate max volumes directly in SQL using a subquery instead of pulling all records into memory.
-        // Impact: Prevents memory overflow and reduces execution time from O(N) to O(1) in PHP for users with many workouts.
+        // Le maximum se calcule en SQL, par sous-requête : sur un utilisateur à
+        // long historique, ramener toutes les séries en mémoire déborde.
         /*
          * `is_completed`, comme `Workout::recomputeVolume()` depuis #1499 : le
          * volume compte ce qui a ete souleve, pas ce qui etait prevu. Sans ce
