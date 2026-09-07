@@ -56,10 +56,14 @@ describe('RecentPRsChart', () => {
 
         const label = bar(wrapper).props('options').plugins.tooltip.callbacks.label
 
-        // Le record de volume se compte en répétitions ; l’afficher en kg
-        // annonce douze kilos de tractions.
+        /*
+         * Les deux records sont des kilos : `max_volume_set` vaut poids ×
+         * répétitions. L'infobulle l'annonçait en répétitions — « 1 200 reps »
+         * pour une série de 100 kg × 12 — et la carte de l'accueil ne lui
+         * donnait aucune unité.
+         */
         expect(label({ dataIndex: 0, parsed: { y: 140 } })).toBe('140 kg')
-        expect(label({ dataIndex: 1, parsed: { y: 12 } })).toBe('12 reps')
+        expect(label({ dataIndex: 1, parsed: { y: 1200 } })).toBe("1'200 kg")
     })
 
     it('ne trace aucune barre sans record', () => {

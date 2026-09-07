@@ -128,6 +128,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import { oneRepMax as epley } from '@/Utils/formulas'
+import { nombre } from '@/Utils/nombre'
 
 const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 
@@ -168,9 +169,5 @@ const percentages = computed(() => {
     }))
 })
 
-const formatWeight = (val) => {
-    // Round to nearest 0.5 or 1? usually 1RM is kept somewhat precise or rounded to nearest plate fraction.
-    // Let's keep 1 decimal if needed, but remove .0
-    return parseFloat(val.toFixed(1)).toString()
-}
+const formatWeight = (val) => nombre(val)
 </script>

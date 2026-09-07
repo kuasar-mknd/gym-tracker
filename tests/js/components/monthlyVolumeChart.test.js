@@ -20,7 +20,7 @@ describe('MonthlyVolumeChart series', () => {
 
         expect(series.labels).toEqual(['Mai', 'Juin', 'Juil'])
         expect(series.datasets).toHaveLength(1)
-        expect(series.datasets[0].label).toBe('Volume (kg)')
+        expect(series.datasets[0].label).toBe('Volume')
         expect(series.datasets[0].data).toEqual([41000, 52000, 48500])
     })
 
@@ -54,8 +54,8 @@ describe('MonthlyVolumeChart axis', () => {
         // VolumeTrendChart through Utils/volumeAxis.
         const tick = chartOptionsOf(mountChart(), 'Bar').scales.y.ticks.callback
 
-        expect(tick(1500)).toBe('1.5k')
-        expect(tick(2000)).toBe('2.0k')
+        expect(tick(1500)).toBe('1,5k')
+        expect(tick(2000)).toBe('2k')
         expect(tick(750)).toBe(750)
     })
 })

@@ -1,3 +1,5 @@
+import { volume } from '@/Utils/nombre'
+
 /**
  * L'habillage commun des graphiques : infobulles, axes, grilles.
  *
@@ -84,7 +86,7 @@ export const volumeTooltipCallback = function (context) {
         label += ': '
     }
     if (context.parsed.y !== null) {
-        label += context.parsed.y.toLocaleString() + ' kg'
+        label += volume(context.parsed.y)
     }
     return label
 }

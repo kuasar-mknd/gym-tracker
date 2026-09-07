@@ -2,6 +2,7 @@
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { poids } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -40,7 +41,7 @@ const datasets = computed(() => [
     },
 ])
 
-const infobulle = { accent: 'accent-tertiary', callbacks: { label: (context) => `${context.parsed.y} kg` } }
+const infobulle = { accent: 'accent-tertiary', callbacks: { label: (context) => poids(context.parsed.y) } }
 </script>
 
 <template>

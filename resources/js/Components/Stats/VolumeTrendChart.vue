@@ -16,7 +16,7 @@ const labels = computed(() => props.data.map((item) => item.date))
 
 const datasets = computed(() => [
     {
-        label: 'Volume (kg)',
+        label: 'Volume',
         data: props.data.map((item) => item.volume),
         backgroundColor: (context) => {
             const chart = context.chart

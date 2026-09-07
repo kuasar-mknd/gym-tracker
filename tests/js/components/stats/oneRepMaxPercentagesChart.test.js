@@ -73,20 +73,20 @@ describe('OneRepMaxPercentagesChart tooltip', () => {
     it('gives the weight one decimal and the reps that go with it', () => {
         const wrapper = mount(OneRepMaxPercentagesChart, { props: { data: percentages } })
 
-        expect(labelFor(wrapper, { label: '70%', parsed: { y: 84 } })).toBe('84.0 kg (12 reps)')
-        expect(labelFor(wrapper, { label: '90%', parsed: { y: 107.46 } })).toBe('107.5 kg (4 reps)')
+        expect(labelFor(wrapper, { label: '70%', parsed: { y: 84 } })).toBe('84 kg (12 reps)')
+        expect(labelFor(wrapper, { label: '90%', parsed: { y: 107.46 } })).toBe('107,5 kg (4 reps)')
     })
 
     it('says nothing about reps when the table has none to give', () => {
         const wrapper = mount(OneRepMaxPercentagesChart, { props: { data: [{ percent: 100, value: 120, reps: '-' }] } })
 
-        expect(labelFor(wrapper, { label: '100%', parsed: { y: 120 } })).toBe('120.0 kg')
+        expect(labelFor(wrapper, { label: '100%', parsed: { y: 120 } })).toBe('120 kg')
     })
 
     it('still names the weight of a bar whose percentage is not in the table', () => {
         const wrapper = mount(OneRepMaxPercentagesChart, { props: { data: percentages } })
 
-        expect(labelFor(wrapper, { label: '55%', parsed: { y: 66 } })).toBe('66.0 kg')
+        expect(labelFor(wrapper, { label: '55%', parsed: { y: 66 } })).toBe('66 kg')
     })
 
     it('reads the reps of the exercise now shown, not of the one before it', async () => {
@@ -94,6 +94,6 @@ describe('OneRepMaxPercentagesChart tooltip', () => {
 
         await wrapper.setProps({ data: [{ percent: 70, value: 56, reps: 10 }] })
 
-        expect(labelFor(wrapper, { label: '70%', parsed: { y: 56 } })).toBe('56.0 kg (10 reps)')
+        expect(labelFor(wrapper, { label: '70%', parsed: { y: 56 } })).toBe('56 kg (10 reps)')
     })
 })

@@ -36,11 +36,11 @@ describe('MonthlyVolumeChart Y axis', () => {
         // toFixed(0) rounded to the thousand before adding the k, so with the
         // 500 kg step Chart.js picks for smaller volumes the axis read
         // "1k, 2k, 2k, 3k, 3k" — duplicated labels, each 500 kg out.
-        expect(tickLabel(1500)).toBe('1.5k')
+        expect(tickLabel(1500)).toBe('1,5k')
     })
 
     it('still labels round thousands cleanly', () => {
-        expect(tickLabel(2000)).toBe('2.0k')
+        expect(tickLabel(2000)).toBe('2k')
     })
 
     it('leaves values under a thousand alone', () => {

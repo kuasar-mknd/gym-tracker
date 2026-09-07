@@ -2,6 +2,7 @@
 import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { poids, volume } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -49,8 +50,9 @@ const infobulle = {
     callbacks: {
         label: (context) => {
             const pr = props.data[context.dataIndex]
-            const unit = pr.type === 'max_volume_set' ? ' reps' : ' kg'
-            return `${context.parsed.y}${unit}`
+            // `max_volume_set` vaut poids × répétitions : c'est un volume en
+            // kilos, et l'infobulle l'annonçait en répétitions.
+            return pr.type === 'max_volume_set' ? volume(context.parsed.y) : poids(context.parsed.y)
         },
     },
 }

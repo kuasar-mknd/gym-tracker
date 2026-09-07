@@ -30,7 +30,7 @@ describe('WorkoutHistoryTimelineChart series', () => {
         const [duration, volume] = chartDataOf(mountChart(), 'Bar').datasets
 
         expect([duration.label, duration.type, duration.yAxisID]).toEqual(['Durée (min)', 'line', 'y1'])
-        expect([volume.label, volume.type, volume.yAxisID]).toEqual(['Volume (kg)', 'bar', 'y'])
+        expect([volume.label, volume.type, volume.yAxisID]).toEqual(['Volume', 'bar', 'y'])
         expect(duration.data).toEqual([90, 62])
         expect(volume.data).toEqual([4800, 5200])
     })
@@ -77,7 +77,7 @@ describe('WorkoutHistoryTimelineChart tooltip', () => {
         const readout = (datasetIndex, y) => label({ dataset: datasets[datasetIndex], datasetIndex, parsed: { y } })
 
         expect(readout(0, 62)).toBe('Durée (min): 62 min')
-        expect(readout(1, 5200)).toBe('Volume (kg): 5200 kg')
+        expect(readout(1, 5200)).toBe("Volume: 5'200 kg")
     })
 })
 

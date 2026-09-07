@@ -3,6 +3,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
 import { etiquetteDeDate } from '@/Utils/date'
+import { nombre } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -56,7 +57,7 @@ const datasets = computed(() => [
 
 const infobulle = {
     accent: 'accent-primary',
-    callbacks: { label: (context) => `Score: ${parseFloat(context.parsed.y).toFixed(2)}` },
+    callbacks: { label: (context) => `Score : ${nombre(context.parsed.y, 2, 2)}` },
 }
 </script>
 

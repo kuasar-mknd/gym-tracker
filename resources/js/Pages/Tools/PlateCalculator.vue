@@ -107,10 +107,19 @@
                     <div
                         v-else-if="targetWeight > barWeight"
                         class="border-border bg-surface-sunken mt-8 rounded-3xl border py-8 text-center"
+                        dusk="plates-cannot-load"
                     >
-                        <GlassIcon name="error" size="2xl" class="text-text-muted mb-3" />
+                        <GlassIcon
+                            :name="plates.length === 0 ? 'inventory_2' : 'error'"
+                            size="2xl"
+                            class="text-text-muted mb-3"
+                        />
                         <p class="text-text-muted font-medium">
-                            Impossible de charger ce poids avec les plaques disponibles.
+                            {{
+                                plates.length === 0
+                                    ? 'Ton inventaire est vide : ajoute tes plaques ci-dessous.'
+                                    : 'Impossible de charger ce poids avec les plaques disponibles.'
+                            }}
                         </p>
                     </div>
                 </div>

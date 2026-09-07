@@ -24,6 +24,7 @@ const datasets = computed(() => [
 
 <template>
     <BaseChart
+        entiers
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48 sm:h-64"

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, defineAsyncComponent } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { nombre } from '@/Utils/nombre'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
@@ -33,7 +34,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
                 <p
                     class="from-accent-primary to-accent-tertiary font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
                 >
-                    {{ weeklyVolumeStats?.current_week_volume?.toLocaleString() || 0 }}
+                    {{ nombre(weeklyVolumeStats?.current_week_volume ?? 0, 0) }}
                 </p>
                 <!--
                     Trois situations, et non deux.

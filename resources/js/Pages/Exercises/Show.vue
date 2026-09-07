@@ -97,7 +97,7 @@ const averageWeightData = computed(() => {
     return [...props.history].reverse().map((session) => {
         const setsWithWeight = session.sets.filter((s) => parseFloat(s.weight) > 0)
         const totalWeight = setsWithWeight.reduce((sum, s) => sum + parseFloat(s.weight), 0)
-        const average = setsWithWeight.length > 0 ? (totalWeight / setsWithWeight.length).toFixed(1) : 0
+        const average = setsWithWeight.length > 0 ? totalWeight / setsWithWeight.length : 0
         return {
             date: session.formatted_date.split('/').slice(0, 2).join('/'),
             weight: average,

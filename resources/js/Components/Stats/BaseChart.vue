@@ -24,6 +24,7 @@ import { computed } from 'vue'
 import { jeton } from '@/Utils/couleurs'
 import { optionsDAnneau } from '@/Utils/donut'
 import { fusionner, graduations, grille, infobulle as habillageInfobulle } from './chartConfig'
+import { LANGUE } from '@/Utils/nombre'
 
 ChartJS.register(
     ArcElement,
@@ -56,6 +57,13 @@ const props = defineProps({
     axeX: { type: [Boolean, Object], default: true },
     axeY: { type: [Boolean, Object], default: true },
     axeY1: { type: Object, default: null },
+    /**
+     * L'axe compte des objets : séances, répétitions, badges.
+     *
+     * Sans lui, Chart.js gradue « 0,2 – 0,4 … 2,0 » pour une fréquence de deux
+     * séances par jour, et une demi-séance n'existe pas (#1800).
+     */
+    entiers: { type: Boolean, default: false },
     indexAxis: { type: String, default: 'x' },
     interaction: { type: Object, default: null },
     lueur: { type: String, default: '' },
@@ -133,7 +141,7 @@ const axeY = (reglage) =>
         display: true,
         ...(props.type === 'bar' ? { beginAtZero: true } : {}),
         grid: grille(),
-        ticks: graduations(),
+        ticks: { ...graduations(), ...(props.entiers ? { precision: 0, stepSize: 1 } : {}) },
         border: { display: false },
     })
 
@@ -149,6 +157,12 @@ const chartOptions = computed(() => {
     }
 
     const base = {
+        /*
+         * Sans cette ligne, Chart.js met en forme toute graduation et toute
+         * infobulle sans rappel avec `Intl.NumberFormat(navigator.language)` :
+         * l'axe rendait « 15,750 » en anglais à côté des « 15'750 » de la page.
+         */
+        locale: LANGUE,
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: props.indexAxis,

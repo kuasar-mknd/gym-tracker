@@ -23,7 +23,7 @@ const labels = computed(() =>
 
 const datasets = computed(() => [
     {
-        label: 'Volume (kg)',
+        label: 'Volume',
         data: donneesChronologiques.value.map((d) => d.workout_volume || 0),
         backgroundColor: (context) => {
             const chart = context.chart

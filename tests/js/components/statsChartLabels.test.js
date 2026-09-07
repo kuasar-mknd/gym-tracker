@@ -33,13 +33,13 @@ describe('volumeTooltipCallback', () => {
 
     it('groups the thousands and suffixes the unit', () => {
         // Compared against toLocaleString rather than a hard-coded separator so
-        // the expectation holds whatever locale the runtime resolves to — but
-        // it still fails the moment the grouping is dropped.
-        expect(callback('Volume (kg)', 12500)).toBe(`Volume (kg): ${(12500).toLocaleString()} kg`)
+        // Le format vient de Utils/nombre : apostrophe suisse aux milliers,
+        // quelle que soit la langue du navigateur qui fait tourner le test.
+        expect(callback('Volume', 12500)).toBe("Volume: 12'500 kg")
     })
 
     it('never prints the raw digits of a five-figure volume', () => {
-        expect(callback('Volume (kg)', 12500)).not.toContain('12500')
+        expect(callback('Volume', 12500)).not.toContain('12500')
     })
 
     it('omits the separator when the dataset carries no label', () => {
@@ -47,7 +47,7 @@ describe('volumeTooltipCallback', () => {
     })
 
     it('leaves a gap in the series unlabelled instead of reading "null kg"', () => {
-        expect(callback('Volume (kg)', null)).toBe('Volume (kg): ')
+        expect(callback('Volume', null)).toBe('Volume: ')
     })
 })
 
@@ -58,11 +58,11 @@ describe('VolumePerWorkoutChart tooltip', () => {
         // Spreading commonTooltipOptions must not shadow the callbacks, and the
         // dataset label must be the one the callback prefixes with.
         const label = tooltipOf(wrapper, 'Bar').callbacks.label({
-            dataset: { label: 'Volume (kg)' },
+            dataset: { label: 'Volume' },
             parsed: { y: 8250 },
         })
 
-        expect(label).toBe(`Volume (kg): ${(8250).toLocaleString()} kg`)
+        expect(label).toBe("Volume: 8'250 kg")
     })
 
     it('keeps the shared tooltip chrome alongside its own callbacks', () => {

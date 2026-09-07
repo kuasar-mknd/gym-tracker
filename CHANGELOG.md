@@ -8,9 +8,13 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Ajouté
+- **Un seul format par grandeur** (#1787) : `Utils/nombre.js` écrit les poids, volumes, variations et pourcentages en suisse romand — virgule décimale, apostrophe aux milliers. « 78.40 kg » et « 15,750 kg » disparaissent ; une garde interdit `toFixed(` et `toLocaleString(` ailleurs
+- **Un compte neuf reçoit le jeu de plaques olympique** (#1799) : 25, 20, 15, 10, 5, 2,5 et 1,25 kg par paire, au lieu d'un calculateur qui ouvrait sur « Impossible de charger ce poids »
 - **Six composants de la charte** (#1781, #1786, #1792, #1794) : `GlassSegmented` (choix exclusif, flèches au clavier), `GlassChip` (pilule de filtre, cible de 44 px même en petit), `GlassTile` (tuile de choix ou d'action), `GlassTextarea` (étiquette, compteur, erreur, hauteur qui suit le texte), `GlassStat` (chiffre, unité, libellé, tendance) et `GlassIcon` (sept tailles, remplissage, nom pour les lecteurs d'écran)
 
 ### Modifié
+- **Les graphiques comptent dans la langue de l'application** : Chart.js graduait ses axes d'après celle du navigateur, donc « 15,750 » en anglais à côté de « 15'750 ». L'unité quitte le nom des séries pour la valeur : « Volume : 15'750 kg » au lieu de « Volume (kg) : 15'750 kg »
+- **Les axes qui comptent n'ont plus de décimale** (#1800) : la fréquence des séances, les répétitions et les séries se graduent en entiers
 - **Tout ce qui se clique se voit au clavier et se vise au doigt** (#1782, #1795) : anneau de focus sur les treize boutons qui n'en avaient pas, 44 px pour la petite taille de bouton, la bascule d'échauffement d'un modèle et les pastilles de couleur d'une habitude
 - **L'action principale d'un formulaire prend la largeur du téléphone** (#1793) : profil, mot de passe, notifications, journal, habitude et objectif ; « Annuler » passe sous elle au lieu de la serrer
 - **Un seul dessin pour « ajouter », « réessayer » et « fermer »** : la modale de célébration, la carte de progression, le formulaire de modèle, le journal et l'arrondi de l'échauffement passent par les composants de la charte
@@ -22,6 +26,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **La charte nomme ses échelles** (#1784, #1785, #1803, #1808, #1809) : un jeton `text-2xs` et un utilitaire `sur-titre` remplacent 57 `text-[10px]` et leurs combinaisons ; sept plans nommés (`z-collant`, `z-nav`, `z-flottant`, `z-modale`, `z-toast`, `z-alerte`, `z-evitement`) remplacent dix valeurs dont `z-[9999]` ; six ombres et une ombre portée entrent dans les jetons ; les arrondis ont un rôle chacun ; six pas `stagger-1…6` remplacent soixante délais d'animation inline ; `transition` remplace `transition-all` (109 fois) ; le rembourrage vertical des pages appartient au layout ; les exemples de champ ne sont plus en capitales grasses. Une garde Vitest refuse le retour de toute valeur arbitraire
 
 ### Corrigé
+- **Un record de volume s'annonçait en répétitions** : « 1 200 reps » pour une série de 100 kg × 12, et aucune unité du tout sur la carte de l'accueil. C'est une charge, en kilos
 - **Un poids de trois chiffres se lisait à moitié dans sa case** (#1788) : les unités passent DANS les champs de la rangée d'une série, les flèches des champs numériques — que le doigt n'utilise jamais — libèrent leur douzaine de pixels, et une garde Dusk mesure le débordement réel du navigateur sur la séance, les plaques, le 1RM et l'échauffement
 
 ## [1.5.17] - 2026-09-06

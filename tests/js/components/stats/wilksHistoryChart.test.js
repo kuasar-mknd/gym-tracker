@@ -30,7 +30,7 @@ describe('WilksHistoryChart series', () => {
     it('quotes the score to the two decimals a Wilks is quoted with', () => {
         const series = seriesOf(mount(WilksHistoryChart, { props: { data: scores } }))
 
-        expect(series.datasets[0].data).toEqual(['312.46', '318.10'])
+        expect(series.datasets[0].data).toEqual([312.46, 318.1])
     })
 
     it('reads a score that arrives as a decimal string from the database', () => {
@@ -40,7 +40,7 @@ describe('WilksHistoryChart series', () => {
             mount(WilksHistoryChart, { props: { data: [{ created_at: scores[0].created_at, score: '99.999' }] } }),
         )
 
-        expect(series.datasets[0].data).toEqual(['100.00'])
+        expect(series.datasets[0].data).toEqual([100])
     })
 
     it('keeps every score under its own date, in the order given', () => {
@@ -58,9 +58,9 @@ describe('WilksHistoryChart series', () => {
         const plotted = series.labels.map((label, index) => [label.match(/\d+/)[0], series.datasets[0].data[index]])
 
         expect(plotted).toEqual([
-            ['04', '312.46'],
-            ['18', '318.10'],
-            ['02', '305.90'],
+            ['04', 312.46],
+            ['18', 318.1],
+            ['02', 305.9],
         ])
     })
 
@@ -88,7 +88,7 @@ describe('WilksHistoryChart series', () => {
 
         await wrapper.setProps({ data: scores })
 
-        expect(seriesOf(wrapper).datasets[0].data).toEqual(['312.46', '318.10'])
+        expect(seriesOf(wrapper).datasets[0].data).toEqual([312.46, 318.1])
     })
 })
 

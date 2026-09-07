@@ -4,6 +4,7 @@ import { defineAsyncComponent, computed } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { nombre } from '@/Utils/nombre'
 
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 
@@ -40,7 +41,7 @@ const totalVolume = computed(() => {
             <div class="text-right">
                 <div class="text-text-muted text-xs font-black tracking-wider uppercase">Total</div>
                 <div class="font-display text-accent-primary-deep text-2xl font-black">
-                    {{ totalVolume.toLocaleString() }}
+                    {{ nombre(totalVolume, 0) }}
                     <span class="text-text-muted text-sm">kg</span>
                 </div>
             </div>
