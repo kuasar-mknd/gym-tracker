@@ -67,7 +67,7 @@ describe('the daily progress ring', () => {
         // 200 % of the goal would wind the ring past its own start and draw a
         // negative offset, which renders as an empty circle — the opposite of
         // what the day deserves.
-        expect(wrapper.text()).toContain('100%')
+        expect(wrapper.text()).toContain('100 %')
         expect(ringOffset(wrapper)).toBe(0)
     })
 
@@ -80,7 +80,7 @@ describe('the daily progress ring', () => {
     it('fills exactly half the ring at half the goal', () => {
         const wrapper = mountPage({ todayTotal: 1250, goal: 2500 })
 
-        expect(wrapper.text()).toContain('50%')
+        expect(wrapper.text()).toContain('50 %')
         expect(ringOffset(wrapper)).toBeCloseTo(Math.PI * 45, 5)
     })
 })

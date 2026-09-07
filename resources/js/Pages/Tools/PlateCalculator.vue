@@ -65,7 +65,7 @@
                                         width: '24px',
                                     }"
                                 >
-                                    <span class="-rotate-90 whitespace-nowrap">{{ plate.weight }}</span>
+                                    <span class="-rotate-90 whitespace-nowrap">{{ nombre(plate.weight) }}</span>
                                 </div>
                             </div>
 
@@ -81,7 +81,7 @@
                                         width: '24px',
                                     }"
                                 >
-                                    <span class="rotate-90 whitespace-nowrap">{{ plate.weight }}</span>
+                                    <span class="rotate-90 whitespace-nowrap">{{ nombre(plate.weight) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -90,14 +90,14 @@
                         <div class="mt-6 text-center">
                             <p class="text-text-main text-lg font-bold">
                                 Poids Total:
-                                <span class="font-display text-accent-primary-deep text-2xl font-black"
-                                    >{{ actualWeight }} kg</span
-                                >
+                                <span class="font-display text-accent-primary-deep text-2xl font-black">{{
+                                    poids(actualWeight)
+                                }}</span>
                             </p>
                             <p class="text-text-muted mt-2 text-sm">
                                 Plaques par côté:
                                 <span class="font-bold">{{
-                                    calculatedPlates.map((p) => p.weight + 'kg').join(' + ')
+                                    calculatedPlates.map((p) => poids(p.weight)).join(' + ')
                                 }}</span>
                             </p>
                         </div>
@@ -265,6 +265,7 @@ import Modal from '@/Components/UI/Modal.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { nombre, poids } from '@/Utils/nombre'
 
 const props = defineProps({
     plates: {

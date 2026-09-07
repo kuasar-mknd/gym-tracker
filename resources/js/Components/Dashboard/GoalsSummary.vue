@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import { pourcentage } from '@/Utils/nombre'
 
 defineProps({
     activeGoals: { type: Array, required: true },
@@ -30,9 +31,9 @@ defineProps({
                 <GlassCard :hover="true" padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
                         <span class="text-text-main line-clamp-1 text-sm font-bold">{{ goal.title }}</span>
-                        <span class="text-accent-primary-deep text-xs font-black"
-                            >{{ Math.round(goal.progress_pct) }}%</span
-                        >
+                        <span class="text-accent-primary-deep text-xs font-black">{{
+                            pourcentage(goal.progress_pct, 0)
+                        }}</span>
                     </div>
                     <div
                         class="bg-surface-sunken h-2 w-full overflow-hidden rounded-full"

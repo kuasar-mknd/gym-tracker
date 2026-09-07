@@ -473,7 +473,7 @@ describe('Goals/Index', () => {
         const wrapper = await mountGoals([goal({ id: 1, progress_pct: null })])
         const card = cardFor(wrapper, 1)
 
-        expect(card.text()).toContain('0%')
+        expect(card.text()).toContain('0 %')
         expect(card.find('[role="progressbar"]').attributes('aria-valuenow')).toBe('0')
         expect(card.find('[role="progressbar"]').html()).toContain('width: 0%')
 

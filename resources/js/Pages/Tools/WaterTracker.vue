@@ -63,10 +63,12 @@
                         <!-- Center Text -->
                         <div class="absolute flex flex-col items-center text-center">
                             <span class="font-display text-text-main text-5xl font-black tracking-tighter italic">
-                                {{ todayTotal }}
+                                {{ entier(todayTotal) }}
                             </span>
-                            <span class="text-text-muted text-sm font-bold uppercase"> / {{ goal }} ml </span>
-                            <span class="text-accent-info-deep mt-2 text-sm font-bold"> {{ percentage }}% </span>
+                            <span class="text-text-muted text-sm font-bold uppercase"> / {{ entier(goal) }} ml </span>
+                            <span class="text-accent-info-deep mt-2 text-sm font-bold">
+                                {{ pourcentage(percentage, 0) }}
+                            </span>
                         </div>
                     </div>
 
@@ -155,7 +157,7 @@
                                     <GlassIcon name="water_drop" size="sm" />
                                 </div>
                                 <div>
-                                    <p class="text-text-main font-bold">{{ log.amount }} ml</p>
+                                    <p class="text-text-main font-bold">{{ entier(log.amount) }} ml</p>
                                     <p class="text-text-muted text-xs">
                                         {{
                                             new Date(log.consumed_at).toLocaleTimeString([], {
@@ -168,7 +170,7 @@
                             </div>
                             <GlassIconButton
                                 icon="delete"
-                                :label="`Supprimer l'entrée de ${log.amount} ml`"
+                                :label="`Supprimer l'entrée de ${entier(log.amount)} ml`"
                                 ton="danger"
                                 @click="demanderSuppression(log)"
                             />
@@ -189,7 +191,9 @@
         <ConfirmDialog
             :ouvert="suppressionDemandee"
             titre="Supprimer cette prise ?"
-            :description="entreeASupprimer ? `${entreeASupprimer.amount} ml seront retires de ton total du jour.` : ''"
+            :description="
+                entreeASupprimer ? `${entier(entreeASupprimer.amount)} ml seront retires de ton total du jour.` : ''
+            "
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
         />
@@ -209,6 +213,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
+import { entier, pourcentage } from '@/Utils/nombre'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 

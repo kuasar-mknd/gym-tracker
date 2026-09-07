@@ -60,7 +60,7 @@ describe('the one-rep-max table', () => {
         await enter(wrapper, 100, 5)
 
         // Epley: 100 × (1 + 5/30) = 116.66…, rounded to one decimal for display.
-        expect(rows(wrapper)[0]).toEqual(['100%', '116,7 kg', '1'])
+        expect(rows(wrapper)[0]).toEqual(['100 %', '116,7 kg', '1'])
     })
 
     it('drops the decimal when there is nothing after it', async () => {
@@ -70,7 +70,7 @@ describe('the one-rep-max table', () => {
         // "100.0 kg" would be noise.
         await enter(wrapper, 100, 1)
 
-        expect(rows(wrapper)[0]).toEqual(['100%', '100 kg', '1'])
+        expect(rows(wrapper)[0]).toEqual(['100 %', '100 kg', '1'])
     })
 
     it('scales every row off the same estimate', async () => {
@@ -82,7 +82,7 @@ describe('the one-rep-max table', () => {
 
         expect(table).toHaveLength(11)
         expect(table[0][1]).toBe('120 kg')
-        expect(table.at(-1)).toEqual(['50%', '60 kg', '30+'])
+        expect(table.at(-1)).toEqual(['50 %', '60 kg', '30+'])
     })
 
     it('pairs each percentage with the reps it is worth', async () => {
@@ -93,17 +93,17 @@ describe('the one-rep-max table', () => {
         // The mapping is the point of the table: a lifter picks a row by the
         // rep count, not by the percentage.
         expect(rows(wrapper).map(([percent, , reps]) => [percent, reps])).toEqual([
-            ['100%', '1'],
-            ['95%', '2'],
-            ['90%', '4'],
-            ['85%', '6'],
-            ['80%', '8'],
-            ['75%', '10'],
-            ['70%', '12'],
-            ['65%', '15'],
-            ['60%', '20'],
-            ['55%', '25+'],
-            ['50%', '30+'],
+            ['100 %', '1'],
+            ['95 %', '2'],
+            ['90 %', '4'],
+            ['85 %', '6'],
+            ['80 %', '8'],
+            ['75 %', '10'],
+            ['70 %', '12'],
+            ['65 %', '15'],
+            ['60 %', '20'],
+            ['55 %', '25+'],
+            ['50 %', '30+'],
         ])
     })
 

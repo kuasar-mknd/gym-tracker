@@ -52,7 +52,7 @@ describe('WeeklyVolumeSection', () => {
         const comparison = comparisonOf(wrapper)
 
         expect(comparison.text()).toContain('trending_up')
-        expect(comparison.text()).toContain('+12% vs sem. passée')
+        expect(comparison.text()).toContain('+12 % vs sem. passée')
         expect(comparison.classes()).toContain('text-trend-up')
     })
 
@@ -64,7 +64,7 @@ describe('WeeklyVolumeSection', () => {
         const comparison = comparisonOf(wrapper)
 
         expect(comparison.text()).toContain('trending_down')
-        expect(comparison.text()).toContain('-8% vs sem. passée')
+        expect(comparison.text()).toContain('-8 % vs sem. passée')
         expect(comparison.text()).not.toContain('+')
         expect(comparison.classes()).toContain('text-trend-down')
     })

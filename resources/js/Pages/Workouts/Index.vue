@@ -15,6 +15,7 @@ import { usePullToRefresh } from '@/composables/usePullToRefresh'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassStat from '@/Components/UI/GlassStat.vue'
+import { entier } from '@/Utils/nombre'
 
 const WorkoutHistoryTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
@@ -147,8 +148,12 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             <!-- Stats Row -->
             <div v-if="workoutList.length > 0" class="animate-slide-up space-y-6">
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <GlassStat :valeur="workouts.total ?? workoutList.length" libelle="Séances" ton="text-gradient" />
-                    <GlassStat :valeur="totalExercises || 0" libelle="Exercices" ton="text-accent-state-deep" />
+                    <GlassStat
+                        :valeur="entier(workouts.total ?? workoutList.length)"
+                        libelle="Séances"
+                        ton="text-gradient"
+                    />
+                    <GlassStat :valeur="entier(totalExercises || 0)" libelle="Exercices" ton="text-accent-state-deep" />
                 </div>
 
                 <!-- ⚡ Bolt: Consolidated Deferred Loading -->

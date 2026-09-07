@@ -10,6 +10,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { nombre } from '@/Utils/nombre'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -141,7 +142,9 @@ const formatMeasuredAt = (measuredAt) =>
                     <div class="flex items-center justify-between">
                         <div>
                             <div class="flex items-baseline gap-2">
-                                <span class="text-text-main text-xl font-bold">{{ item.value }} {{ item.unit }}</span>
+                                <span class="text-text-main text-xl font-bold"
+                                    >{{ nombre(item.value, 2) }} {{ item.unit }}</span
+                                >
                             </div>
                             <div class="text-text-muted text-sm font-medium">
                                 {{ formatMeasuredAt(item.measured_at) }}

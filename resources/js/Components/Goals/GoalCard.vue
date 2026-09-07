@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
 import { parseCalendarDate } from '@/Utils/date'
+import { nombre, pourcentage } from '@/Utils/nombre'
 
 const props = defineProps({
     goal: {
@@ -91,7 +92,7 @@ const statusColor = computed(() => {
 
             <div class="text-right">
                 <div class="font-display text-lg font-black italic drop-shadow-sm" :class="statusColor">
-                    {{ Math.round(progress) }}%
+                    {{ pourcentage(progress, 0) }}
                 </div>
             </div>
         </div>
@@ -100,8 +101,8 @@ const statusColor = computed(() => {
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
                 <div class="text-text-muted text-2xs flex justify-between font-bold tracking-widest uppercase">
-                    <span>{{ goal.start_value }} {{ goal.unit }}</span>
-                    <span>{{ goal.target_value }} {{ goal.unit }}</span>
+                    <span>{{ nombre(goal.start_value) }} {{ goal.unit }}</span>
+                    <span>{{ nombre(goal.target_value) }} {{ goal.unit }}</span>
                 </div>
                 <div
                     class="border-surface-card/20 bg-surface-card/10 h-2 w-full overflow-hidden rounded-full border shadow-inner backdrop-blur-md"
@@ -136,7 +137,7 @@ const statusColor = computed(() => {
                 >
                     <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Actuel</p>
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
-                        {{ goal.current_value }}
+                        {{ nombre(goal.current_value) }}
                         <span class="text-text-muted text-2xs font-bold not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>
@@ -145,7 +146,7 @@ const statusColor = computed(() => {
                 >
                     <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Cible</p>
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
-                        {{ goal.target_value }}
+                        {{ nombre(goal.target_value) }}
                         <span class="text-text-muted text-2xs font-bold not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>

@@ -14,6 +14,7 @@
 import { computed } from 'vue'
 import { Deferred } from '@inertiajs/vue3'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { entier, variation } from '@/Utils/nombre'
 
 const props = defineProps({
     /**
@@ -69,7 +70,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
                 <div class="font-display text-text-main mt-1 text-2xl font-black">
-                    {{ volumeTrend?.length || 0 }}
+                    {{ entier(volumeTrend?.length ?? 0) }}
                 </div>
             </Deferred>
         </div>
@@ -95,7 +96,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
         >
             <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Exercices</div>
             <div class="font-display text-text-main mt-1 text-2xl font-black">
-                {{ exercises?.length || 0 }}
+                {{ entier(exercises?.length ?? 0) }}
             </div>
         </div>
 
@@ -128,7 +129,7 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
                         monthlyChange >= 0 ? 'text-trend-up' : 'text-trend-down',
                     ]"
                 >
-                    {{ monthlyChange >= 0 ? '+' : '' }}{{ monthlyChange }}%
+                    {{ variation(monthlyChange, '%') }}
                 </div>
             </Deferred>
         </div>

@@ -53,7 +53,7 @@ describe('calculateWarmupSets', () => {
         const sets = calculateWarmupSets([{ percent: 80 }], options)
 
         // 80 kg - 20 de barre = 60, soit 30 par côté.
-        expect(sets[0].plateLoad).toBe('30kg')
+        expect(sets[0].plateLoad).toBe('30 kg')
     })
 
     it('conserve les autres champs du palier', () => {

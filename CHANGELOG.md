@@ -13,6 +13,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Six composants de la charte** (#1781, #1786, #1792, #1794) : `GlassSegmented` (choix exclusif, flèches au clavier), `GlassChip` (pilule de filtre, cible de 44 px même en petit), `GlassTile` (tuile de choix ou d'action), `GlassTextarea` (étiquette, compteur, erreur, hauteur qui suit le texte), `GlassStat` (chiffre, unité, libellé, tendance) et `GlassIcon` (sept tailles, remplissage, nom pour les lecteurs d'écran)
 
 ### Modifié
+- **Les vingt écrans qui restaient écrivent leurs chiffres comme le reste** (#1787) : plaques, échauffement, hydratation, macros, Wilks, 1RM, objectifs, mensurations, cartes de stats et de l'accueil. Le pourcentage prend son espace insécable (« 56 % »), le millier son apostrophe (« 1'000 ml »)
 - **Les graphiques comptent dans la langue de l'application** : Chart.js graduait ses axes d'après celle du navigateur, donc « 15,750 » en anglais à côté de « 15'750 ». L'unité quitte le nom des séries pour la valeur : « Volume : 15'750 kg » au lieu de « Volume (kg) : 15'750 kg »
 - **Les axes qui comptent n'ont plus de décimale** (#1800) : la fréquence des séances, les répétitions et les séries se graduent en entiers
 - **Tout ce qui se clique se voit au clavier et se vise au doigt** (#1782, #1795) : anneau de focus sur les treize boutons qui n'en avaient pas, 44 px pour la petite taille de bouton, la bascule d'échauffement d'un modèle et les pastilles de couleur d'une habitude

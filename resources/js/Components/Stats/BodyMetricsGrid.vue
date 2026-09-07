@@ -4,7 +4,7 @@ import { defineAsyncComponent } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
-import { nombre } from '@/Utils/nombre'
+import { nombre, variation } from '@/Utils/nombre'
 
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
 
@@ -25,7 +25,7 @@ defineProps({
                 <div>
                     <h4 class="sur-titre text-accent-secondary-deep mb-1">Masse Grasse</h4>
                     <p class="font-display text-text-main text-3xl font-black">
-                        {{ bodyFat || '—' }}
+                        {{ bodyFat ? nombre(bodyFat) : '—' }}
                         <span class="text-text-muted text-sm">%</span>
                     </p>
                 </div>
@@ -78,8 +78,7 @@ defineProps({
                             :name="(monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down'"
                             size="xs"
                         />
-                        {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
-                        }}{{ monthlyComparison?.percentage || 0 }}%
+                        {{ variation(monthlyComparison?.percentage ?? 0, '%') }}
                     </div>
                 </div>
             </Deferred>
