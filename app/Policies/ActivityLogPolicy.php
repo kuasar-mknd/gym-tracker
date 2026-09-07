@@ -15,14 +15,14 @@ final class ActivityLogPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ViewAny:ActivityLog');
+        return $utilisateurConnecte->can('ViewAny:ActivityLog');
     }
 
-    public function view(AuthUser $authUser): bool
+    public function view(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('View:ActivityLog');
+        return $utilisateurConnecte->can('View:ActivityLog');
     }
 
     public function create(): bool

@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 function serieValideeDe(Workout $workout, float $poids, int $repetitions): Set
 {
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
 
     return Set::factory()->create([
-        'workout_line_id' => $ligne->id,
+        'workout_line_id' => $workoutLine->id,
         'weight' => $poids,
         'reps' => $repetitions,
         'is_completed' => true,

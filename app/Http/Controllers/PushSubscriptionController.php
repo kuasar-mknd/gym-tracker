@@ -15,13 +15,13 @@ class PushSubscriptionController extends Controller
      */
     public function update(UpdatePushSubscriptionRequest $request): JsonResponse
     {
-        /** @var array{endpoint: string, keys: array{auth: string, p256dh: string}} $validated */
-        $validated = $request->validated();
+        /** @var array{endpoint: string, keys: array{auth: string, p256dh: string}} $donneesValidees */
+        $donneesValidees = $request->validated();
 
         $this->user()->updatePushSubscription(
-            $validated['endpoint'],
-            $validated['keys']['p256dh'],
-            $validated['keys']['auth']
+            $donneesValidees['endpoint'],
+            $donneesValidees['keys']['p256dh'],
+            $donneesValidees['keys']['auth']
         );
 
         return response()->json(['message' => 'Abonnement enregistré avec succès.']);
@@ -32,10 +32,10 @@ class PushSubscriptionController extends Controller
      */
     public function destroy(DeletePushSubscriptionRequest $request): JsonResponse
     {
-        /** @var array{endpoint: string} $validated */
-        $validated = $request->validated();
+        /** @var array{endpoint: string} $donneesValidees */
+        $donneesValidees = $request->validated();
 
-        $this->user()->deletePushSubscription($validated['endpoint']);
+        $this->user()->deletePushSubscription($donneesValidees['endpoint']);
 
         return response()->json(['message' => 'Abonnement supprimé avec succès.']);
     }

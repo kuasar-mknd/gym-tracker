@@ -131,10 +131,10 @@ final class AppServiceProvider extends ServiceProvider
         });
 
         Set::deleted(function (Set $set): void {
-            $userId = $set->workoutLine?->workout?->user_id;
+            $idUtilisateur = $set->workoutLine?->workout?->user_id;
 
-            if ($userId !== null) {
-                app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $userId);
+            if ($idUtilisateur !== null) {
+                app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $idUtilisateur);
             }
         });
 

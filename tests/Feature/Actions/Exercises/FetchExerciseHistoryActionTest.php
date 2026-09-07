@@ -50,22 +50,22 @@ it('fetches exercise history correctly', function (): void {
     ]);
 
     $action = app(FetchExerciseHistoryAction::class);
-    $history = $action->execute($user, $exercise);
+    $historique = $action->execute($user, $exercise);
 
-    expect($history)->toHaveCount(2);
+    expect($historique)->toHaveCount(2);
 
     // Assert sorting (descending by started_at)
-    expect($history[0]['workout_id'])->toBe($workout2->id);
-    expect($history[1]['workout_id'])->toBe($workout1->id);
+    expect($historique[0]['workout_id'])->toBe($workout2->id);
+    expect($historique[1]['workout_id'])->toBe($workout1->id);
 
     // Assert Epley 1RM calculation: 100 * (1 + 10 / 30) = 133.33
     // 105 * (1 + 5 / 30) = 122.5
     // Max is 133.33 for workout 1
     // 110 * (1 + 8 / 30) = 139.33 for workout 2
-    expect($history[0]['best_1rm'])->toBe(139.33);
-    expect($history[1]['best_1rm'])->toBe(133.33);
+    expect($historique[0]['best_1rm'])->toBe(139.33);
+    expect($historique[1]['best_1rm'])->toBe(133.33);
 
-    expect($history[0]['formatted_date'])->toBe($workout2->started_at->format('d/m'));
+    expect($historique[0]['formatted_date'])->toBe($workout2->started_at->format('d/m'));
 });
 
 it('only includes workouts for the given user', function (): void {
@@ -94,10 +94,10 @@ it('only includes workouts for the given user', function (): void {
     ]);
 
     $action = app(FetchExerciseHistoryAction::class);
-    $history = $action->execute($user1, $exercise);
+    $historique = $action->execute($user1, $exercise);
 
-    expect($history)->toHaveCount(1)
-        ->and($history[0]['workout_id'])->toBe($workout1->id);
+    expect($historique)->toHaveCount(1)
+        ->and($historique[0]['workout_id'])->toBe($workout1->id);
 });
 
 /*

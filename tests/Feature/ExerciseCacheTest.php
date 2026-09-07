@@ -24,7 +24,7 @@ class ExerciseCacheTest extends TestCase
     /** @return array<int, string> */
     private function listeCachee(User $user): array
     {
-        return Exercise::getCachedForUser($user->id)
+        return Exercise::enCachePourUtilisateur($user->id)
             ->map(fn (Exercise $exercice): string => (string) $exercice->name)
             ->values()
             ->all();

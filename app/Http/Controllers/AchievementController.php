@@ -23,7 +23,7 @@ class AchievementController extends Controller
         // ⚡ Bolt : le catalogue passe par le cache (`rememberForever`). Il est
         // le même pour tout le monde et ne bouge qu'au réamorçage des données ;
         // le relire à chaque ouverture de la page était du gaspillage.
-        $achievements = Achievement::getCachedAll()->map(fn (Achievement $achievement): array => $this->formatAchievement($achievement, $userAchievements));
+        $achievements = Achievement::enCachePourTous()->map(fn (Achievement $achievement): array => $this->formatAchievement($achievement, $userAchievements));
 
         return Inertia::render('Achievements/Index', [
             'achievements' => $achievements,

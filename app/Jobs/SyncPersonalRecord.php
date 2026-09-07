@@ -28,6 +28,6 @@ final class SyncPersonalRecord implements ShouldBeUnique, ShouldQueue
 
     public function handle(PersonalRecordService $personalRecordService): void
     {
-        $personalRecordService->syncSetPRs($this->set, $this->user);
+        $personalRecordService->synchroniserLesRecordsDeLaSerie($this->set, $this->user);
     }
 }

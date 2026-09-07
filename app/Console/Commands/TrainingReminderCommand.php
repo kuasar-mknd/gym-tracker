@@ -43,7 +43,7 @@ class TrainingReminderCommand extends Command
 
         // 1. Join notification_preferences to fetch data directly, avoiding whereHas subqueries and eager load N+1 memory issues.
         // 2. Use chunkById to process users in batches (memory efficient), specifying users.id due to the join.
-        // 3. Manually hydrate the relation in the loop to prevent isPushEnabled from triggering an N+1 query.
+        // 3. Manually hydrate the relation in the loop to prevent notificationsPoussesActivees from triggering an N+1 query.
         User::query()
             ->select([
                 'users.*',
@@ -64,7 +64,7 @@ class TrainingReminderCommand extends Command
                 foreach ($users as $user) {
                     $joursChoisis = $this->joursChoisis($user->getAttribute('pref_days'));
 
-                    // Manually hydrate the relation to prevent N+1 in notify() -> isPushEnabled()
+                    // Manually hydrate the relation to prevent N+1 in notify() -> notificationsPoussesActivees()
                     $preference = new NotificationPreference([
                         'type' => 'training_reminder',
                         'is_enabled' => true,

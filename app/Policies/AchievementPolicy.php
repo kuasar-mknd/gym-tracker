@@ -11,74 +11,74 @@ final class AchievementPolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('ViewAny:Achievement');
+        return $utilisateurConnecte->can('ViewAny:Achievement');
     }
 
-    public function view(AuthUser $authUser): bool
+    public function view(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return true;
         }
 
-        return $authUser->can('View:Achievement');
+        return $utilisateurConnecte->can('View:Achievement');
     }
 
-    public function create(AuthUser $authUser): bool
+    public function create(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Create:Achievement');
+        return $utilisateurConnecte->can('Create:Achievement');
     }
 
-    public function update(AuthUser $authUser): bool
+    public function update(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return false;
         }
 
-        return $authUser->can('Update:Achievement');
+        return $utilisateurConnecte->can('Update:Achievement');
     }
 
-    public function delete(AuthUser $authUser): bool
+    public function delete(AuthUser $utilisateurConnecte): bool
     {
-        if ($authUser instanceof \App\Models\User) {
+        if ($utilisateurConnecte instanceof \App\Models\User) {
             return false;
         }
 
-        return $authUser->can('Delete:Achievement');
+        return $utilisateurConnecte->can('Delete:Achievement');
     }
 
-    public function restore(AuthUser $authUser): bool
+    public function restore(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Restore:Achievement');
+        return $utilisateurConnecte->can('Restore:Achievement');
     }
 
-    public function forceDelete(AuthUser $authUser): bool
+    public function forceDelete(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDelete:Achievement');
+        return $utilisateurConnecte->can('ForceDelete:Achievement');
     }
 
-    public function forceDeleteAny(AuthUser $authUser): bool
+    public function forceDeleteAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ForceDeleteAny:Achievement');
+        return $utilisateurConnecte->can('ForceDeleteAny:Achievement');
     }
 
-    public function restoreAny(AuthUser $authUser): bool
+    public function restoreAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('RestoreAny:Achievement');
+        return $utilisateurConnecte->can('RestoreAny:Achievement');
     }
 
-    public function replicate(AuthUser $authUser): bool
+    public function replicate(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Replicate:Achievement');
+        return $utilisateurConnecte->can('Replicate:Achievement');
     }
 
-    public function reorder(AuthUser $authUser): bool
+    public function reorder(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Reorder:Achievement');
+        return $utilisateurConnecte->can('Reorder:Achievement');
     }
 }

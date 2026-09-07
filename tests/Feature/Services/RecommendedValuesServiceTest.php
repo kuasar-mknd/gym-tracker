@@ -215,25 +215,25 @@ function recommandationApresUneLigneVide(): array
     Set::factory()->count(5)->create(['workout_line_id' => $ligneHier->id, 'weight' => 0.0, 'reps' => 10, 'is_completed' => true]);
 
     $aujourdhui = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
 
-    return [$user, $exercise, $ligne];
+    return [$user, $exercise, $workoutLine];
 }
 
 it('ignore une ligne récente dont les séries sont restées au pré-remplissage et remonte à la séance d’avant', function (): void {
-    [, , $ligne] = recommandationApresUneLigneVide();
+    [, , $workoutLine] = recommandationApresUneLigneVide();
 
-    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne)['weight'])->toBe(50.0);
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($workoutLine)['weight'])->toBe(50.0);
 });
 
 it('remonte aussi à la séance d’avant sur le chemin par lot', function (): void {
-    [$user, $exercise, $ligne] = recommandationApresUneLigneVide();
+    [$user, $exercise, $workoutLine] = recommandationApresUneLigneVide();
 
-    $values = app(RecommendedValuesService::class)->batchRecommendedValues(new \Illuminate\Database\Eloquent\Collection([$ligne]), $user->id);
+    $values = app(RecommendedValuesService::class)->batchRecommendedValues(new \Illuminate\Database\Eloquent\Collection([$workoutLine]), $user->id);
 
     // La valeur posee sur la ligne passe par JSON : 50.0 en ressort en entier.
     expect($values[$exercise->id]['weight'])->toBe(50.0)
-        ->and((float) $ligne->getRecommendedValuesAttribute()['weight'])->toBe(50.0);
+        ->and((float) $workoutLine->getRecommendedValuesAttribute()['weight'])->toBe(50.0);
 });
 
 it('garde une série de poids de corps comme historique', function (): void {
@@ -245,9 +245,9 @@ it('garde une série de poids de corps comme historique', function (): void {
     Set::factory()->count(3)->create(['workout_line_id' => $ligneHier->id, 'weight' => 0.0, 'reps' => 12]);
 
     $aujourdhui = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
 
-    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne))->toMatchArray(['weight' => 0.0, 'reps' => 12]);
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($workoutLine))->toMatchArray(['weight' => 0.0, 'reps' => 12]);
 });
 
 it('rend les valeurs par défaut quand les cinq dernières lignes sont toutes vides', function (): void {
@@ -264,7 +264,7 @@ it('rend les valeurs par défaut quand les cinq dernières lignes sont toutes vi
     }
 
     $aujourdhui = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $aujourdhui->id, 'exercise_id' => $exercise->id]);
 
-    expect(app(RecommendedValuesService::class)->getRecommendedValues($ligne)['weight'])->toBe(0.0);
+    expect(app(RecommendedValuesService::class)->getRecommendedValues($workoutLine)['weight'])->toBe(0.0);
 });

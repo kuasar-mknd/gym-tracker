@@ -66,9 +66,9 @@ class SocialAuthTest extends TestCase
                 'avatar' => 'https://example.com/avatar.jpg',
             ]);
 
-        $provider = $this->fournisseurRendant($socialiteUser);
+        $fournisseur = $this->fournisseurRendant($socialiteUser);
 
-        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($provider);
+        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($fournisseur);
 
         $response = $this->get(route('social.callback', 'github'));
 
@@ -100,9 +100,9 @@ class SocialAuthTest extends TestCase
                 'avatar' => 'https://example.com/avatar.jpg',
             ]);
 
-        $provider = $this->fournisseurRendant($socialiteUser);
+        $fournisseur = $this->fournisseurRendant($socialiteUser);
 
-        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('google')->andReturn($fournisseur);
 
         $response = $this->get(route('social.callback', 'google'));
 
@@ -128,9 +128,9 @@ class SocialAuthTest extends TestCase
                 'avatar' => 'https://example.com/avatar.jpg',
             ]);
 
-        $provider = $this->fournisseurRendant($socialiteUser);
+        $fournisseur = $this->fournisseurRendant($socialiteUser);
 
-        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($provider);
+        \Laravel\Socialite\Facades\Socialite::shouldReceive('driver')->with('github')->andReturn($fournisseur);
 
         $response = $this->get(route('social.callback', 'github'));
 

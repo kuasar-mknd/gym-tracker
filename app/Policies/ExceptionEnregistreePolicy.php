@@ -11,14 +11,14 @@ final class ExceptionEnregistreePolicy
 {
     use HandlesAuthorization;
 
-    public function viewAny(AuthUser $authUser): bool
+    public function viewAny(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('ViewAny:ExceptionEnregistree');
+        return $utilisateurConnecte->can('ViewAny:ExceptionEnregistree');
     }
 
-    public function view(AuthUser $authUser): bool
+    public function view(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('View:ExceptionEnregistree');
+        return $utilisateurConnecte->can('View:ExceptionEnregistree');
     }
 
     public function create(): bool
@@ -31,8 +31,8 @@ final class ExceptionEnregistreePolicy
         return false;
     }
 
-    public function delete(AuthUser $authUser): bool
+    public function delete(AuthUser $utilisateurConnecte): bool
     {
-        return $authUser->can('Delete:ExceptionEnregistree');
+        return $utilisateurConnecte->can('Delete:ExceptionEnregistree');
     }
 }

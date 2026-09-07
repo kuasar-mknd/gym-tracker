@@ -64,13 +64,13 @@ it('ne tient plus de total par utilisateur : le volume soulevé se lit dans les 
 it('signale un volume de séance qui a dérivé', function (): void {
     [, $set] = compteCoherent();
 
-    $workoutId = $set->workoutLine->workout_id;
+    $idSeance = $set->workoutLine->workout_id;
 
-    DB::table('workouts')->where('id', $workoutId)->update(['workout_volume' => 42]);
+    DB::table('workouts')->where('id', $idSeance)->update(['workout_volume' => 42]);
 
     $this->artisan('app:verify-data-coherence')
         ->assertExitCode(1)
-        ->expectsOutputToContain("séance {$workoutId}");
+        ->expectsOutputToContain("séance {$idSeance}");
 });
 
 /**
@@ -181,15 +181,15 @@ it('annonce le nombre d’écarts, pas le nombre d’exemples cités', function 
  */
 it('voit encore une séance qui ment sur ses séries', function (): void {
     [$user, $set] = compteCoherent();
-    $workoutId = $set->workoutLine->workout_id;
+    $idSeance = $set->workoutLine->workout_id;
 
     // La seance ET l'utilisateur portent le meme chiffre faux : leur somme
     // concorde, seule la comparaison aux series peut les demasquer.
-    DB::table('workouts')->where('id', $workoutId)->update(['workout_volume' => 4242]);
+    DB::table('workouts')->where('id', $idSeance)->update(['workout_volume' => 4242]);
 
     $this->artisan('app:verify-data-coherence')
         ->assertExitCode(1)
-        ->expectsOutputToContain("séance {$workoutId}");
+        ->expectsOutputToContain("séance {$idSeance}");
 });
 
 /**

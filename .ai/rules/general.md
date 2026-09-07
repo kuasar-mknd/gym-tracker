@@ -15,7 +15,7 @@ Commentaires, noms de méthodes, de propriétés et de variables : en français,
 Trois exceptions, parce qu'elles ne sont pas à nous :
 
 - **Ce que le framework nomme** : `handle`, `boot`, `rules`, `authorize`, `up`, `down`, `casts`, `render`, les accesseurs d'attribut, les méthodes de test que Pest appelle.
-- **Le schéma** : noms de tables, de colonnes, de relations Eloquent, et les clefs de charge utile d'une API. Les renommer casserait la base ou le contrat.
+- **Le schéma** : noms de tables, de colonnes, de relations Eloquent, et les clefs de charge utile d'une API. Les renommer casserait la base ou le contrat. Un **paramètre de méthode lié à un segment de route** en fait partie : Laravel apparie `{workout_line}` à `$workoutLine`, et le renommer injecte un modèle vide — la politique refuse alors en 403, sans que rien ne dise pourquoi.
 - **Les noms de classes** : ils portent des mots du domaine Laravel (`Controller`, `Policy`, `Request`, `Job`) et se lisent dans les traces d'erreur.
 
 Une garde (`tests/Feature/Conventions/LaLangueDuCodeTest.php`) refuse un nouveau commentaire anglais dans `app/`.

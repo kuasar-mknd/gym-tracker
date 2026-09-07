@@ -14,11 +14,11 @@ use Illuminate\Support\Carbon;
 function ligneDatee(User $user, Exercise $exercice, Carbon $quand): WorkoutLine
 {
     $seance = Workout::factory()->create(['user_id' => $user->id, 'started_at' => $quand]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    $workoutLine = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
 
-    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 100, 'reps' => 5]);
+    Set::factory()->create(['workout_line_id' => $workoutLine->id, 'weight' => 100, 'reps' => 5]);
 
-    return $ligne;
+    return $workoutLine;
 }
 
 /**

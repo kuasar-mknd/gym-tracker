@@ -24,7 +24,7 @@ test('authenticated user can update notification preferences', function (): void
         'achievement_unlocked' => false,
     ];
 
-    $days = [
+    $jours = [
         'daily_reminder' => [1, 3],
     ];
 
@@ -32,7 +32,7 @@ test('authenticated user can update notification preferences', function (): void
         ->patch(route('profile.preferences.update'), [
             'preferences' => $preferences,
             'push_preferences' => $pushPreferences,
-            'days' => $days,
+            'days' => $jours,
         ]);
 
     $response
@@ -84,7 +84,7 @@ test('preferences are upserted correctly', function (): void {
         'daily_reminder' => true,
     ];
 
-    $days = [
+    $jours = [
         'daily_reminder' => [7, 6],
     ];
 
@@ -92,7 +92,7 @@ test('preferences are upserted correctly', function (): void {
         ->patch(route('profile.preferences.update'), [
             'preferences' => $preferences,
             'push_preferences' => $pushPreferences,
-            'days' => $days,
+            'days' => $jours,
         ]);
 
     $response->assertRedirect(route('profile.edit'));

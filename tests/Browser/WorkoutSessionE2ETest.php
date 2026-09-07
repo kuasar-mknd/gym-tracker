@@ -139,7 +139,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
              */
             $this->waitForDatabase(
                 fn (): bool => Set::query()
-                    ->whereHas('workoutLine', fn ($ligne) => $ligne
+                    ->whereHas('workoutLine', fn ($workoutLine) => $workoutLine
                         ->where('workout_id', $workout->id)
                         ->where('exercise_id', $strengthEx->id))
                     ->exists(),
@@ -294,7 +294,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
              */
             $this->waitForDatabase(
                 fn (): bool => Set::query()
-                    ->whereHas('workoutLine', fn ($ligne) => $ligne
+                    ->whereHas('workoutLine', fn ($workoutLine) => $workoutLine
                         ->where('workout_id', $workout->id)
                         ->where('exercise_id', $strengthEx->id))
                     ->where('is_completed', true)
@@ -303,7 +303,7 @@ class WorkoutSessionE2ETest extends DuskTestCase
                     ->exists(),
                 message: 'la série validée n\'a pas atteint la base avec son poids et ses répétitions',
                 etatAuMomentDeLEchec: fn (): string => Set::query()
-                    ->whereHas('workoutLine', fn ($ligne) => $ligne
+                    ->whereHas('workoutLine', fn ($workoutLine) => $workoutLine
                         ->where('workout_id', $workout->id)
                         ->where('exercise_id', $strengthEx->id))
                     ->get(['id', 'weight', 'reps', 'is_completed'])

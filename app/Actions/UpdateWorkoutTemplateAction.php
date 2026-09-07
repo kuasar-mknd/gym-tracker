@@ -76,19 +76,19 @@ final class UpdateWorkoutTemplateAction
             ->orderBy('order')
             ->get();
 
-        $setsData = [];
+        $donneesDesSeries = [];
         foreach ($exercises as $index => $ex) {
             if (isset($ex['sets'])) {
                 /** @var \App\Models\WorkoutTemplateLine $line */
                 $line = $lines[$index] ?? null;
 
                 if ($line !== null) {
-                    $this->appendSetsData($setsData, $ex['sets'], $line->id, $now);
+                    $this->appendSetsData($donneesDesSeries, $ex['sets'], $line->id, $now);
                 }
             }
         }
 
-        $this->insertSetsData($setsData);
+        $this->insertSetsData($donneesDesSeries);
     }
 
     /** Les series partent avec leurs lignes, par la cascade de la base. */

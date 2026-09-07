@@ -44,7 +44,7 @@ class ConfirmPasswordRequest extends FormRequest
         RateLimiter::hit($this->throttleKey());
     }
 
-    public function clearRateLimiter(): void
+    public function viderLeCompteurDeTentatives(): void
     {
         RateLimiter::clear($this->throttleKey());
     }
@@ -67,6 +67,6 @@ class ConfirmPasswordRequest extends FormRequest
     #[\Override]
     protected function passedValidation(): void
     {
-        $this->clearRateLimiter();
+        $this->viderLeCompteurDeTentatives();
     }
 }

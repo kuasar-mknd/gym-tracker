@@ -69,9 +69,9 @@ class HandleInertiaRequests extends Middleware
     private function configuredSocialProviders(): array
     {
         return collect(['google', 'github', 'apple'])
-            ->mapWithKeys(fn (string $provider): array => [
-                $provider => filled(config("services.{$provider}.client_id"))
-                    && filled(config("services.{$provider}.client_secret")),
+            ->mapWithKeys(fn (string $fournisseur): array => [
+                $fournisseur => filled(config("services.{$fournisseur}.client_id"))
+                    && filled(config("services.{$fournisseur}.client_secret")),
             ])
             ->all();
     }

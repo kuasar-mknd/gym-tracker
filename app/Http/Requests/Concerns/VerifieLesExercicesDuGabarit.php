@@ -41,12 +41,12 @@ trait VerifieLesExercicesDuGabarit
             return;
         }
 
-        $userId = $this->user()?->id;
+        $idUtilisateur = $this->user()?->id;
 
         /** @var list<int> $autorises */
         $autorises = Exercise::query()
             ->whereIn('id', array_values(array_unique($identifiants)))
-            ->where(fn (Builder $requete): Builder => $requete->whereNull('user_id')->orWhere('user_id', $userId))
+            ->where(fn (Builder $requete): Builder => $requete->whereNull('user_id')->orWhere('user_id', $idUtilisateur))
             ->pluck('id')
             ->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
             ->all();

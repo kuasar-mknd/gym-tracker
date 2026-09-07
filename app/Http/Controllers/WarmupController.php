@@ -50,11 +50,11 @@ class WarmupController extends Controller
             $this->authorize('create', WarmupPreference::class);
         }
 
-        $validated = $request->validated();
+        $donneesValidees = $request->validated();
 
         $this->user()->warmupPreference()->updateOrCreate(
             ['user_id' => $this->user()->id],
-            $validated
+            $donneesValidees
         );
 
         return redirect()->back()->with('success', 'Préférences de récupération sauvegardées.');

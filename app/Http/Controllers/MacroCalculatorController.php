@@ -17,7 +17,7 @@ class MacroCalculatorController extends Controller
 
         $user = $this->user();
 
-        $history = $user->macroCalculations()
+        $historique = $user->macroCalculations()
             // Borné à 100, comme `BodyMeasurementController` et
             // `DailyJournalController` : l'historique complet partait dans la
             // réponse, et il grandit à chaque usage.
@@ -26,7 +26,7 @@ class MacroCalculatorController extends Controller
             ->get();
 
         return Inertia::render('Tools/MacroCalculator', [
-            'history' => $history,
+            'history' => $historique,
         ]);
     }
 
@@ -34,10 +34,10 @@ class MacroCalculatorController extends Controller
     {
         $this->authorize('create', MacroCalculation::class);
 
-        /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $validated */
-        $validated = $request->validated();
+        /** @var array{gender: string, age: int, height: float, weight: float, activity_level: string, goal: string} $donneesValidees */
+        $donneesValidees = $request->validated();
 
-        $createMacroCalculationAction->execute($this->user(), $validated);
+        $createMacroCalculationAction->execute($this->user(), $donneesValidees);
 
         return redirect()->back();
     }

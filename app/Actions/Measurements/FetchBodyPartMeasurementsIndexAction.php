@@ -64,14 +64,14 @@ class FetchBodyPartMeasurementsIndexAction
      *
      * @return Collection<int, BodyPartMeasurement>
      */
-    private function partieSuivante(int $userId, string $curseur): Collection
+    private function partieSuivante(int $idUtilisateur, string $curseur): Collection
     {
         return BodyPartMeasurement::query()
-            ->where('user_id', $userId)
+            ->where('user_id', $idUtilisateur)
             ->where('part', '=', fn (QueryBuilder $suivante) => $suivante
                 ->selectRaw('min(part)')
                 ->from('body_part_measurements')
-                ->where('user_id', $userId)
+                ->where('user_id', $idUtilisateur)
                 ->where('part', '>', $curseur))
             ->orderByDesc('measured_at')
             ->limit(2)

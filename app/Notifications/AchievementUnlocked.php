@@ -27,7 +27,7 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
         $channels = ['database'];
 
         /** @var \App\Models\User $_notifiable */
-        if ($_notifiable->isPushEnabled('achievement')) {
+        if ($_notifiable->notificationsPoussesActivees('achievement')) {
             $channels[] = WebPushChannel::class;
         }
 

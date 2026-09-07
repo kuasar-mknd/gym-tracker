@@ -34,16 +34,16 @@ final class RecommendedValuesService
      * série enregistrée incrémente la version et rend obsolètes d'un coup
      * toutes les recommandations de l'utilisateur, sans les énumérer.
      */
-    public static function cleDeCache(int $userId, int $exerciseId, int $workoutId): string
+    public static function cleDeCache(int $idUtilisateur, int $idExercice, int $idSeance): string
     {
-        $version = Cache::get("recommended_values:version:{$userId}", 0);
+        $version = Cache::get("recommended_values:version:{$idUtilisateur}", 0);
 
-        return "recommended_values:{$userId}:v".(is_numeric($version) ? (int) $version : 0).":{$exerciseId}:{$workoutId}";
+        return "recommended_values:{$idUtilisateur}:v".(is_numeric($version) ? (int) $version : 0).":{$idExercice}:{$idSeance}";
     }
 
-    public function invaliderPour(int $userId): void
+    public function invaliderPour(int $idUtilisateur): void
     {
-        Cache::increment("recommended_values:version:{$userId}");
+        Cache::increment("recommended_values:version:{$idUtilisateur}");
     }
 
     /**
@@ -104,26 +104,26 @@ final class RecommendedValuesService
      * sur les modèles reçus.
      *
      * @param  Collection<int, WorkoutLine>  $lines  Les lignes à pré-remplir.
-     * @param  int  $userId  Le propriétaire des lignes.
+     * @param  int  $idUtilisateur  Le propriétaire des lignes.
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> Indexé par exercice.
      */
-    public function batchRecommendedValues(Collection $lines, int $userId): array
+    public function batchRecommendedValues(Collection $lines, int $idUtilisateur): array
     {
         if ($lines->isEmpty()) {
             return [];
         }
 
-        $workoutId = $lines->first()->workout_id;
-        /** @var array<int, int> $exerciseIds */
-        $exerciseIds = $lines->pluck('exercise_id')->unique()->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)->values()->all();
+        $idSeance = $lines->first()->workout_id;
+        /** @var array<int, int> $idsExercices */
+        $idsExercices = $lines->pluck('exercise_id')->unique()->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)->values()->all();
 
-        $workout = $this->resolveWorkout($workoutId, $exerciseIds);
+        $workout = $this->resolveWorkout($idSeance, $idsExercices);
         if ($workout === null) {
             return [];
         }
 
         $defaults = $this->getDefaultValues();
-        $results = $this->getResultsFromCacheOrFetch($exerciseIds, $userId, (int) $workoutId, $workout);
+        $results = $this->getResultsFromCacheOrFetch($idsExercices, $idUtilisateur, (int) $idSeance, $workout);
 
         $this->applyRecommendedValuesToLines($lines, $results, $defaults);
 
@@ -136,16 +136,16 @@ final class RecommendedValuesService
      * Sans identifiant de séance ou sans exercice à servir, il n'y a rien à
      * chercher : la requête est évitée plutôt que lancée pour rien.
      *
-     * @param  int|null  $workoutId  L'identifiant de la séance.
-     * @param  array<int, int>  $exerciseIds  Les exercices à servir.
+     * @param  int|null  $idSeance  L'identifiant de la séance.
+     * @param  array<int, int>  $idsExercices  Les exercices à servir.
      */
-    private function resolveWorkout(?int $workoutId, array $exerciseIds): ?Workout
+    private function resolveWorkout(?int $idSeance, array $idsExercices): ?Workout
     {
-        if ($workoutId === null || count($exerciseIds) === 0) {
+        if ($idSeance === null || count($idsExercices) === 0) {
             return null;
         }
 
-        return Workout::find($workoutId);
+        return Workout::find($idSeance);
     }
 
     /**
@@ -240,21 +240,21 @@ final class RecommendedValuesService
      * Le cache est interrogé pour tous les exercices en une fois ; seuls les
      * absents redescendent en base, ensemble.
      *
-     * @param  array<int, int>  $exerciseIds  Les exercices à servir.
-     * @param  int  $userId  Le propriétaire des lignes.
-     * @param  int  $workoutId  La séance en cours.
+     * @param  array<int, int>  $idsExercices  Les exercices à servir.
+     * @param  int  $idUtilisateur  Le propriétaire des lignes.
+     * @param  int  $idSeance  La séance en cours.
      * @param  Workout  $workout  La séance en cours.
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> Indexé par exercice.
      */
-    private function getResultsFromCacheOrFetch(array $exerciseIds, int $userId, int $workoutId, Workout $workout): array
+    private function getResultsFromCacheOrFetch(array $idsExercices, int $idUtilisateur, int $idSeance, Workout $workout): array
     {
         $results = [];
         $uncachedExerciseIds = [];
         $cacheKeys = [];
 
-        foreach ($exerciseIds as $exerciseId) {
-            $exerciseIdInt = (int) $exerciseId;
-            $cacheKeys[$exerciseIdInt] = self::cleDeCache($userId, $exerciseIdInt, $workoutId);
+        foreach ($idsExercices as $idExercice) {
+            $exerciseIdInt = (int) $idExercice;
+            $cacheKeys[$exerciseIdInt] = self::cleDeCache($idUtilisateur, $exerciseIdInt, $idSeance);
         }
 
         /** @var array<string, array{weight: float, reps: int, distance_km: float, duration_seconds: int}|null> $cachedMany */
@@ -270,7 +270,7 @@ final class RecommendedValuesService
         }
 
         if (count($uncachedExerciseIds) > 0) {
-            $uncachedResults = $this->fetchUncachedRecommendedValues($uncachedExerciseIds, $workoutId, $userId, $workout);
+            $uncachedResults = $this->fetchUncachedRecommendedValues($uncachedExerciseIds, $idSeance, $idUtilisateur, $workout);
             foreach ($uncachedResults as $exerciseIdInt => $values) {
                 $results[$exerciseIdInt] = $values;
             }
@@ -287,12 +287,12 @@ final class RecommendedValuesService
      * valeurs, qui sont mises en cache au passage.
      *
      * @param  array<int, int>  $uncachedExerciseIds  Les exercices absents du cache.
-     * @param  int  $workoutId  La séance en cours, exclue de la recherche.
-     * @param  int  $userId  Le propriétaire des lignes.
+     * @param  int  $idSeance  La séance en cours, exclue de la recherche.
+     * @param  int  $idUtilisateur  Le propriétaire des lignes.
      * @param  Workout  $workout  La séance en cours, qui borne l'historique dans le temps.
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}> Indexé par exercice.
      */
-    private function fetchUncachedRecommendedValues(array $uncachedExerciseIds, int $workoutId, int $userId, Workout $workout): array
+    private function fetchUncachedRecommendedValues(array $uncachedExerciseIds, int $idSeance, int $idUtilisateur, Workout $workout): array
     {
         $results = [];
 
@@ -308,9 +308,9 @@ final class RecommendedValuesService
         $classement = WorkoutLine::query()
             ->select(['id', 'exercise_id'])
             ->selectRaw('ROW_NUMBER() OVER (PARTITION BY exercise_id ORDER BY workout_started_at DESC, id DESC) AS rang')
-            ->where('user_id', $userId)
+            ->where('user_id', $idUtilisateur)
             ->whereIn('exercise_id', $uncachedExerciseIds)
-            ->where('workout_id', '!=', $workoutId)
+            ->where('workout_id', '!=', $idSeance)
             ->where('workout_started_at', '<', $workout->started_at);
 
         $retenues = DB::query()
@@ -327,13 +327,13 @@ final class RecommendedValuesService
             ->groupBy('exercise_id');
 
         $cacheData = [];
-        foreach ($uncachedExerciseIds as $exerciseId) {
+        foreach ($uncachedExerciseIds as $idExercice) {
             /** @var Collection<int, WorkoutLine> $candidates */
-            $candidates = $candidatesByExercise->get($exerciseId, new Collection());
+            $candidates = $candidatesByExercise->get($idExercice, new Collection());
             $values = $this->calculateFromLines($candidates);
 
-            $cacheData[self::cleDeCache($userId, $exerciseId, $workoutId)] = $values;
-            $results[$exerciseId] = $values;
+            $cacheData[self::cleDeCache($idUtilisateur, $idExercice, $idSeance)] = $values;
+            $results[$idExercice] = $values;
         }
 
         if (count($cacheData) > 0) {

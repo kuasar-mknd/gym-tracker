@@ -75,7 +75,7 @@ final class CreateWorkoutFromTemplateAction
              *
              * L'increment qui suivait cet appel creditait le volume complet du
              * modele au moment ou la seance s'ouvrait — le defaut de #1499. Il
-             * est parti : `Workout::recomputeVolume()` s'en charge a la
+             * est parti : `Workout::recalculerLeVolume()` s'en charge a la
              * premiere serie cochee, et sur les faits plutot que sur un total
              * calcule en PHP.
              */

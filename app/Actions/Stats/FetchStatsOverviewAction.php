@@ -27,7 +27,7 @@ class FetchStatsOverviewAction
      * @param  string  $period  La période demandée, telle qu'elle arrive de la requête (« 30j »).
      * @return array<string, mixed>
      */
-    public function getImmediateStats(User $user, string $period): array
+    public function chiffresImmediats(User $user, string $period): array
     {
         $bodyMetrics = $this->bodyStats->getLatestBodyMetrics($user);
 
@@ -57,8 +57,8 @@ class FetchStatsOverviewAction
     /**
      * @return \Illuminate\Database\Eloquent\Collection<int, Exercise>
      */
-    private function getFilteredExercises(int $userId): \Illuminate\Database\Eloquent\Collection
+    private function getFilteredExercises(int $idUtilisateur): \Illuminate\Database\Eloquent\Collection
     {
-        return Exercise::getCachedForUser($userId);
+        return Exercise::enCachePourUtilisateur($idUtilisateur);
     }
 }

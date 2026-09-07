@@ -95,7 +95,7 @@ it('vide l’historique de durée avec les statistiques de séance', function ()
 it('transmet la répartition des séances au lieu d’un tableau vide', function (): void {
     $user = utilisateurAvecSeance();
 
-    $repartitions = app(WorkoutStatsService::class)->getWorkoutDistributions($user);
+    $repartitions = app(WorkoutStatsService::class)->repartitionsDesSeances($user);
 
     expect($repartitions)->toHaveKeys(['duration', 'time_of_day'])
         ->and($repartitions['duration'])->not->toBeEmpty()

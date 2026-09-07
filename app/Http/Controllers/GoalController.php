@@ -86,7 +86,7 @@ class GoalController extends Controller
                 ->limit(100)
                 ->get()
                 ->append(['unit']),
-            'exercises' => Exercise::getCachedForUser($this->user()->id),
+            'exercises' => Exercise::enCachePourUtilisateur($this->user()->id),
             'measurementTypes' => self::measurementTypes(),
         ]);
     }
@@ -120,7 +120,7 @@ class GoalController extends Controller
                 'measurement_type' => $goal->measurement_type ?? '',
                 'deadline' => $goal->deadline?->format('Y-m-d') ?? '',
             ],
-            'exercises' => Exercise::getCachedForUser($this->user()->id),
+            'exercises' => Exercise::enCachePourUtilisateur($this->user()->id),
             'measurementTypes' => self::measurementTypes(),
         ]);
     }

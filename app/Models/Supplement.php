@@ -53,9 +53,9 @@ class Supplement extends Model
      * @param  \Illuminate\Database\Eloquent\Builder<$this>  $query
      * @return \Illuminate\Database\Eloquent\Builder<$this>
      */
-    public function scopeForUser(Builder $query, int $userId): Builder
+    public function scopeForUser(Builder $query, int $idUtilisateur): Builder
     {
-        return $query->where('user_id', $userId);
+        return $query->where('user_id', $idUtilisateur);
     }
 
     #[\Override]

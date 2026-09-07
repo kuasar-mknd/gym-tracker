@@ -12,11 +12,11 @@ class CalendarController extends Controller
 {
     public function index(CalendarIndexRequest $request, FetchCalendarEventsAction $fetchCalendarEvents): \Inertia\Response
     {
-        /** @var array{year?: int|string|null, month?: int|string|null} $validated */
-        $validated = $request->validated();
+        /** @var array{year?: int|string|null, month?: int|string|null} $donneesValidees */
+        $donneesValidees = $request->validated();
 
-        $year = isset($validated['year']) ? (int) $validated['year'] : now()->year;
-        $month = isset($validated['month']) ? (int) $validated['month'] : now()->month;
+        $year = isset($donneesValidees['year']) ? (int) $donneesValidees['year'] : now()->year;
+        $month = isset($donneesValidees['month']) ? (int) $donneesValidees['month'] : now()->month;
 
         $data = $fetchCalendarEvents->execute($this->user(), $year, $month);
 

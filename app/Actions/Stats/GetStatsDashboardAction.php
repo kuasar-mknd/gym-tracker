@@ -30,15 +30,15 @@ class GetStatsDashboardAction
     public function execute(User $user, Request $request): array
     {
         $period = $request->query('period', '30j');
-        $days = $this->fetchStatsOverview->parsePeriod($period);
+        $jours = $this->fetchStatsOverview->parsePeriod($period);
 
-        $immediateData = $this->fetchStatsOverview->getImmediateStats($user, $period);
+        $immediateData = $this->fetchStatsOverview->chiffresImmediats($user, $period);
 
         return [
             ...$immediateData,
             'deferredData' => fn (): array => [
-                'performance' => $this->performanceOverview($user, $days),
-                'body' => $this->bodyStats->getBodyProgressOverview($user, $days),
+                'performance' => $this->performanceOverview($user, $jours),
+                'body' => $this->bodyStats->getBodyProgressOverview($user, $jours),
             ],
         ];
     }
@@ -50,14 +50,14 @@ class GetStatsDashboardAction
      *
      * @return array<string, mixed>
      */
-    public function performanceOverview(User $user, int $days = 30): array
+    public function performanceOverview(User $user, int $jours = 30): array
     {
         return Cache::remember(
-            ClesDeStats::seances($user, "performance_overview.{$days}"),
+            ClesDeStats::seances($user, "performance_overview.{$jours}"),
             now()->addMinutes(30),
             fn (): array => [
-                'volumeTrend' => $this->volumeStats->getVolumeTrend($user, $days),
-                'muscleDistribution' => $this->exerciseStats->getMuscleDistribution($user, $days),
+                'volumeTrend' => $this->volumeStats->getVolumeTrend($user, $jours),
+                'muscleDistribution' => $this->exerciseStats->getMuscleDistribution($user, $jours),
                 'monthlyComparison' => $this->volumeStats->getMonthlyVolumeComparison($user),
                 'durationHistory' => $this->workoutStats->getDurationHistory($user, 30),
             ]

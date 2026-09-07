@@ -71,7 +71,7 @@ final class FetchHabitsIndexAction
             ->pluck('count', 'date');
 
         $consistencyData = []; // Pour la courbe.
-        $history = []; // Pour l'histogramme.
+        $historique = []; // Pour l'histogramme.
 
         for ($i = 29; $i >= 0; $i--) {
             $dateObj = $now->copy()->subDays($i);
@@ -84,7 +84,7 @@ final class FetchHabitsIndexAction
                 'count' => $count,
             ];
 
-            $history[] = [
+            $historique[] = [
                 'date' => $dateObj->format('d/m'),
                 'full_date' => $dateStr,
                 'count' => $count,
@@ -93,7 +93,7 @@ final class FetchHabitsIndexAction
 
         return [
             'consistencyData' => $consistencyData,
-            'history' => $history,
+            'history' => $historique,
         ];
     }
 

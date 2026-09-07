@@ -36,9 +36,9 @@ class PlateController extends Controller
     {
         $this->authorize('create', Plate::class);
 
-        $validated = $request->validated();
+        $donneesValidees = $request->validated();
 
-        $plate = new Plate($validated);
+        $plate = new Plate($donneesValidees);
         $plate->user_id = $this->user()->id;
         $plate->save();
 

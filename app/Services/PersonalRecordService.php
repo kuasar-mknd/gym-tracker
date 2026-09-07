@@ -30,7 +30,7 @@ final class PersonalRecordService
      * @param  \App\Models\Set  $set  La série à évaluer.
      * @param  \App\Models\User|null  $user  L'auteur de la série ; déduit de la série si absent.
      */
-    public function syncSetPRs(Set $set, ?User $user = null): void
+    public function synchroniserLesRecordsDeLaSerie(Set $set, ?User $user = null): void
     {
         if ($this->shouldSkipSync($set)) {
             return;
@@ -40,7 +40,7 @@ final class PersonalRecordService
 
         /*
          * Trois gardes sont parties d'ici : `! $workout`, `! $user` et
-         * `! $exerciseId`. Aucune ne pouvait se declencher.
+         * `! $idExercice`. Aucune ne pouvait se declencher.
          *
          * `sets.workout_line_id`, `workout_lines.workout_id`,
          * `workout_lines.exercise_id` et `workouts.user_id` sont toutes NOT NULL
@@ -65,20 +65,20 @@ final class PersonalRecordService
      * Établit un record d'un type donné, s'il dépasse celui qui tient.
      *
      * @param  \App\Models\User  $user  L'auteur du record.
-     * @param  int  $exerciseId  L'exercice concerné.
+     * @param  int  $idExercice  L'exercice concerné.
      * @param  string  $type  Le type de record : 'max_weight', 'max_1rm' ou 'max_volume_set'.
      * @param  float  $value  La valeur du record.
      * @param  float|null  $secondary  La valeur qui l'accompagne, par exemple les répétitions du poids maximal.
      * @param  \App\Models\Set  $set  La série qui l'a établi.
      * @param  \App\Models\PersonalRecord|null  $pr  Le record en place, s'il y en a un.
      */
-    protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
+    protected function update(User $user, int $idExercice, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
     {
         if ($pr !== null && $value <= $pr->value) {
             return;
         }
 
-        $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
+        $pr ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
         /*
          * `secondary_value` et `workout_id` sont ecrases juste apres.
          *
@@ -96,7 +96,7 @@ final class PersonalRecordService
          */
         $pr->fill(['value' => $value, 'secondary_value' => $secondary, 'workout_id' => $set->workoutLine->workout_id, 'set_id' => $set->id, 'achieved_at' => now()])->save();
 
-        if ($user->isNotificationEnabled('personal_record')) {
+        if ($user->notificationActivee('personal_record')) {
             $user->notify(new PersonalRecordAchieved($pr));
         }
     }
@@ -183,9 +183,9 @@ final class PersonalRecordService
      *                                    Null les prend tous, ce qui est juste quand une série a disparu et
      *                                    que plus rien ne dit quels records elle détenait.
      */
-    public function recompute(User $user, int $exerciseId, ?array $types = null): void
+    public function recompute(User $user, int $idExercice, ?array $types = null): void
     {
-        $gagnantes = $this->gagnantes($user, $exerciseId);
+        $gagnantes = $this->gagnantes($user, $idExercice);
 
         /*
          * Les doublons sont supprimes avant d'indexer.
@@ -202,7 +202,7 @@ final class PersonalRecordService
          */
         $tous = PersonalRecord::query()
             ->where('user_id', $user->id)
-            ->where('exercise_id', $exerciseId)
+            ->where('exercise_id', $idExercice)
             ->orderBy('id')
             ->get();
 
@@ -245,7 +245,7 @@ final class PersonalRecordService
 
             [$valeur, $secondaire] = $this->mesurer($type, $meilleure['poids'], $meilleure['repetitions']);
 
-            $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
+            $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
 
             /**
              * Aucune notification ici. C'est une correction, pas un exploit —
@@ -271,16 +271,16 @@ final class PersonalRecordService
      *
      * @return array<string, array{id: int, poids: float, repetitions: int, seance: int, obtenu: string|null}>
      */
-    private function gagnantes(User $user, int $exerciseId): array
+    private function gagnantes(User $user, int $idExercice): array
     {
         $par = [];
 
-        foreach (DB::select(self::CLASSEMENT, [$user->id, $exerciseId]) as $ligne) {
-            if (! is_object($ligne)) {
+        foreach (DB::select(self::CLASSEMENT, [$user->id, $idExercice]) as $workoutLine) {
+            if (! is_object($workoutLine)) {
                 continue;
             }
 
-            $champs = get_object_vars($ligne);
+            $champs = get_object_vars($workoutLine);
 
             foreach (self::TYPES as $type) {
                 if (self::entier($champs['rang_'.$type] ?? null) !== 1) {
@@ -404,14 +404,14 @@ final class PersonalRecordService
     public function refreshFor(Set $set, ?User $user = null, ?array $types = null): void
     {
         $set->loadMissing(['workoutLine.workout.user']);
-        $exerciseId = $set->workoutLine?->exercise_id;
+        $idExercice = $set->workoutLine?->exercise_id;
         $user ??= $set->workoutLine?->workout?->user;
 
-        if (! $user instanceof User || $exerciseId === null) {
+        if (! $user instanceof User || $idExercice === null) {
             return;
         }
 
-        $this->recompute($user, (int) $exerciseId, $types);
+        $this->recompute($user, (int) $idExercice, $types);
     }
 
     /**
@@ -419,18 +419,18 @@ final class PersonalRecordService
      * ceux qui tiennent.
      *
      * @param  \App\Models\User  $user  L'auteur de la série.
-     * @param  int  $exerciseId  L'exercice concerné.
+     * @param  int  $idExercice  L'exercice concerné.
      * @param  \App\Models\Set  $set  La série, déjà jugée recevable.
      */
-    private function processUpdates(User $user, int $exerciseId, Set $set): void
+    private function processUpdates(User $user, int $idExercice, Set $set): void
     {
         $existingPRs = PersonalRecord::where('user_id', $user->id)
-            ->where('exercise_id', $exerciseId)
+            ->where('exercise_id', $idExercice)
             ->get()
             ->keyBy('type');
 
-        $this->update($user, $exerciseId, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
-        $this->update($user, $exerciseId, 'max_1rm', $this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
-        $this->update($user, $exerciseId, 'max_volume_set', (float) $set->weight * (int) $set->reps, null, $set, $existingPRs->get('max_volume_set'));
+        $this->update($user, $idExercice, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight'));
+        $this->update($user, $idExercice, 'max_1rm', $this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm'));
+        $this->update($user, $idExercice, 'max_volume_set', (float) $set->weight * (int) $set->reps, null, $set, $existingPRs->get('max_volume_set'));
     }
 }

@@ -44,11 +44,11 @@ final class GoalService
 
         // Les métriques sont calculées en un lot pour tous les objectifs : sans
         // cela, chacun repartait chercher les siennes, une requête par objectif.
-        $metrics = $this->preCalculateMetrics($user, $goals);
+        $mesures = $this->preCalculateMetrics($user, $goals);
 
         foreach ($goals as $goal) {
             $goal->setRelation('user', $user);
-            $this->updateGoalProgress($goal, $metrics);
+            $this->updateGoalProgress($goal, $mesures);
         }
 
         $dirtyGoals = $goals->filter->isDirty();
@@ -79,15 +79,15 @@ final class GoalService
      * Recalcule un objectif : sa valeur courante, puis son état et sa barre.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
      */
-    public function updateGoalProgress(Goal $goal, array $metrics = []): void
+    public function updateGoalProgress(Goal $goal, array $mesures = []): void
     {
         match ($goal->type) {
-            GoalType::Weight => $this->updateWeightGoal($goal, $metrics),
-            GoalType::Frequency => $this->updateFrequencyGoal($goal, $metrics),
-            GoalType::Volume => $this->updateVolumeGoal($goal, $metrics),
-            GoalType::Measurement => $this->updateMeasurementGoal($goal, $metrics),
+            GoalType::Weight => $this->updateWeightGoal($goal, $mesures),
+            GoalType::Frequency => $this->updateFrequencyGoal($goal, $mesures),
+            GoalType::Volume => $this->updateVolumeGoal($goal, $mesures),
+            GoalType::Measurement => $this->updateMeasurementGoal($goal, $mesures),
         };
 
         $this->checkCompletion($goal);
@@ -139,20 +139,20 @@ final class GoalService
      * L'avancement d'un objectif de charge : le poids maximal sur l'exercice.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
-    protected function updateWeightGoal(Goal $goal, array $metrics = []): void
+    protected function updateWeightGoal(Goal $goal, array $mesures = []): void
     {
         if ($goal->exercise_id === null) {
             return;
         }
 
-        if (isset($metrics['max_weights'][$goal->exercise_id])) {
+        if (isset($mesures['max_weights'][$goal->exercise_id])) {
             // Pas de repli : `preCalculateMaxWeights` declare un retour `float`
             // natif sur chaque valeur, donc `is_numeric()` y etait toujours vrai
             // et le `0.0` inatteignable — d'ou trois mutants qu'aucun test ne
             // pouvait tuer.
-            $goal->current_value = $metrics['max_weights'][$goal->exercise_id];
+            $goal->current_value = $mesures['max_weights'][$goal->exercise_id];
 
             return;
         }
@@ -174,12 +174,12 @@ final class GoalService
      * L'avancement d'un objectif de fréquence : le nombre de séances.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
-    protected function updateFrequencyGoal(Goal $goal, array $metrics = []): void
+    protected function updateFrequencyGoal(Goal $goal, array $mesures = []): void
     {
-        if (isset($metrics['workouts_count']) && is_int($metrics['workouts_count'])) {
-            $goal->current_value = $metrics['workouts_count'];
+        if (isset($mesures['workouts_count']) && is_int($mesures['workouts_count'])) {
+            $goal->current_value = $mesures['workouts_count'];
 
             return;
         }
@@ -197,18 +197,18 @@ final class GoalService
      * atteint sur l'exercice au cours d'une seule séance.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
-    protected function updateVolumeGoal(Goal $goal, array $metrics = []): void
+    protected function updateVolumeGoal(Goal $goal, array $mesures = []): void
     {
         if ($goal->exercise_id === null) {
             return;
         }
 
-        if (isset($metrics['max_volumes'][$goal->exercise_id])) {
+        if (isset($mesures['max_volumes'][$goal->exercise_id])) {
             // Meme raison qu'au-dessus : `preCalculateMaxVolumes` garantit le
             // float, le repli ne pouvait pas s'executer.
-            $goal->current_value = $metrics['max_volumes'][$goal->exercise_id];
+            $goal->current_value = $mesures['max_volumes'][$goal->exercise_id];
 
             return;
         }
@@ -235,9 +235,9 @@ final class GoalService
      * L'avancement d'un objectif de mensuration : la dernière valeur relevée.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $metrics  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
-    protected function updateMeasurementGoal(Goal $goal, array $metrics = []): void
+    protected function updateMeasurementGoal(Goal $goal, array $mesures = []): void
     {
         if ($goal->measurement_type === null || $goal->measurement_type === '') {
             return;
@@ -257,8 +257,8 @@ final class GoalService
             return;
         }
 
-        if (isset($metrics['latest_measurement']) && $metrics['latest_measurement'] instanceof \App\Models\BodyMeasurement) {
-            $m = $metrics['latest_measurement'];
+        if (isset($mesures['latest_measurement']) && $mesures['latest_measurement'] instanceof \App\Models\BodyMeasurement) {
+            $m = $mesures['latest_measurement'];
             $latestValue = $m->{$goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type};
         } else {
             $latestValue = $goal->user->bodyMeasurements()
@@ -356,42 +356,42 @@ final class GoalService
             return [];
         }
 
-        $metrics = [];
+        $mesures = [];
         $types = $goals->pluck('type')->unique();
-        $exerciseIds = $goals->whereIn('type', [GoalType::Weight, GoalType::Volume])
+        $idsExercices = $goals->whereIn('type', [GoalType::Weight, GoalType::Volume])
             ->pluck('exercise_id')
             ->filter()
             ->unique()
             ->toArray();
 
         if ($types->contains(GoalType::Frequency)) {
-            $metrics['workouts_count'] = $user->workouts()->count();
+            $mesures['workouts_count'] = $user->workouts()->count();
         }
 
-        if ($types->contains(GoalType::Weight) && $exerciseIds !== []) {
-            $metrics['max_weights'] = $this->preCalculateMaxWeights($user, $exerciseIds);
+        if ($types->contains(GoalType::Weight) && $idsExercices !== []) {
+            $mesures['max_weights'] = $this->preCalculateMaxWeights($user, $idsExercices);
         }
 
-        if ($types->contains(GoalType::Volume) && $exerciseIds !== []) {
-            $metrics['max_volumes'] = $this->preCalculateMaxVolumes($user, $exerciseIds);
+        if ($types->contains(GoalType::Volume) && $idsExercices !== []) {
+            $mesures['max_volumes'] = $this->preCalculateMaxVolumes($user, $idsExercices);
         }
 
         if ($types->contains(GoalType::Measurement)) {
-            $metrics['latest_measurement'] = $user->bodyMeasurements()
+            $mesures['latest_measurement'] = $user->bodyMeasurements()
                 ->latest('measured_at')
                 ->first();
         }
 
-        return $metrics;
+        return $mesures;
     }
 
     /**
      * Le poids maximal de chacun des exercices demandés.
      *
-     * @param  array<array-key, mixed>  $exerciseIds
+     * @param  array<array-key, mixed>  $idsExercices
      * @return array<int, float>
      */
-    private function preCalculateMaxWeights(User $user, array $exerciseIds): array
+    private function preCalculateMaxWeights(User $user, array $idsExercices): array
     {
         /*
          * Le record, pas une seconde derivation.
@@ -411,7 +411,7 @@ final class GoalService
         /** @var array<int, float> $maxWeights */
         $maxWeights = \Illuminate\Support\Facades\DB::table('personal_records')
             ->where('user_id', $user->id)
-            ->whereIn('exercise_id', $exerciseIds)
+            ->whereIn('exercise_id', $idsExercices)
             ->where('type', 'max_weight')
             ->pluck('value', 'exercise_id')
             // Un exercice sans record est ECARTE, pas ramene a zero.
@@ -426,15 +426,15 @@ final class GoalService
     /**
      * Le meilleur volume sur une séance, pour chacun des exercices demandés.
      *
-     * @param  array<array-key, mixed>  $exerciseIds
+     * @param  array<array-key, mixed>  $idsExercices
      * @return array<int, float>
      */
-    private function preCalculateMaxVolumes(User $user, array $exerciseIds): array
+    private function preCalculateMaxVolumes(User $user, array $idsExercices): array
     {
         // Le maximum se calcule en SQL, par sous-requête : sur un utilisateur à
         // long historique, ramener toutes les séries en mémoire déborde.
         /*
-         * `is_completed`, comme `Workout::recomputeVolume()` depuis #1499 : le
+         * `is_completed`, comme `Workout::recalculerLeVolume()` depuis #1499 : le
          * volume compte ce qui a ete souleve, pas ce qui etait prevu. Sans ce
          * filtre, l'objectif de volume et le volume de la seance repondaient
          * differemment sur les memes series.
@@ -445,7 +445,7 @@ final class GoalService
         $subQuery = \Illuminate\Support\Facades\DB::table('workout_lines')
             ->join('sets', 'workout_lines.id', '=', 'sets.workout_line_id')
             ->where('workout_lines.user_id', $user->id)
-            ->whereIn('workout_lines.exercise_id', $exerciseIds)
+            ->whereIn('workout_lines.exercise_id', $idsExercices)
             ->where('sets.is_completed', true)
             ->selectRaw('workout_lines.exercise_id, workout_lines.workout_id, SUM(sets.weight * sets.reps) as total_volume')
             ->groupBy('workout_lines.exercise_id', 'workout_lines.workout_id');

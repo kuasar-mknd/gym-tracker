@@ -49,10 +49,10 @@ it('throws exception if socialite driver throws exception', function (): void {
 });
 
 it('throws exception if email is not verified and environment is not local', function (): void {
-    $socialUser = new SocialiteUser();
-    $socialUser->user = ['email_verified' => false];
+    $utilisateurSocial = new SocialiteUser();
+    $utilisateurSocial->user = ['email_verified' => false];
 
-    $providerMock = fournisseurRendant($socialUser);
+    $providerMock = fournisseurRendant($utilisateurSocial);
 
     Socialite::shouldReceive('driver')
         ->with('google')
@@ -68,9 +68,9 @@ it('throws exception if email is not verified and environment is not local', fun
 });
 
 it('logs warning and proceeds if email is not verified but environment is local', function (): void {
-    $socialUser = new SocialiteUser();
-    $socialUser->user = ['email_verified' => false];
-    $socialUser->map([
+    $utilisateurSocial = new SocialiteUser();
+    $utilisateurSocial->user = ['email_verified' => false];
+    $utilisateurSocial->map([
         'id' => '123',
         'nickname' => 'testuser',
         'name' => 'Test User',
@@ -78,7 +78,7 @@ it('logs warning and proceeds if email is not verified but environment is local'
         'avatar' => 'avatar.jpg',
     ]);
 
-    $providerMock = fournisseurRendant($socialUser);
+    $providerMock = fournisseurRendant($utilisateurSocial);
 
     Socialite::shouldReceive('driver')
         ->with('google')
@@ -102,9 +102,9 @@ it('logs warning and proceeds if email is not verified but environment is local'
 });
 
 it('proceeds if email is verified', function (array $userData): void {
-    $socialUser = new SocialiteUser();
-    $socialUser->user = $userData;
-    $socialUser->map([
+    $utilisateurSocial = new SocialiteUser();
+    $utilisateurSocial->user = $userData;
+    $utilisateurSocial->map([
         'id' => '123',
         'nickname' => 'testuser',
         'name' => 'Test User',
@@ -112,7 +112,7 @@ it('proceeds if email is verified', function (array $userData): void {
         'avatar' => 'avatar.jpg',
     ]);
 
-    $providerMock = fournisseurRendant($socialUser);
+    $providerMock = fournisseurRendant($utilisateurSocial);
 
     Socialite::shouldReceive('driver')
         ->with('google')
@@ -157,10 +157,10 @@ it('throws exception if socialite user throws exception', function (): void {
  * Les entrees ci-dessous sont toutes des facons plausibles de dire « non ».
  */
 it('refuse une valeur de vérification qui n’est pas un vrai oui', function (mixed $valeur): void {
-    $socialUser = new SocialiteUser();
-    $socialUser->user = ['email_verified' => $valeur];
+    $utilisateurSocial = new SocialiteUser();
+    $utilisateurSocial->user = ['email_verified' => $valeur];
 
-    $providerMock = fournisseurRendant($socialUser);
+    $providerMock = fournisseurRendant($utilisateurSocial);
 
     Socialite::shouldReceive('driver')->with('google')->andReturn($providerMock);
     app()->detectEnvironment(fn (): string => 'production');
@@ -182,11 +182,11 @@ it('refuse une valeur de vérification qui n’est pas un vrai oui', function (m
  * monde et le test precedent serait vert pour la mauvaise raison.
  */
 it('accepte une valeur de vérification affirmative', function (mixed $valeur): void {
-    $socialUser = new SocialiteUser();
-    $socialUser->user = ['email_verified' => $valeur];
-    $socialUser->map(['id' => '123', 'email' => 'verifie@example.com', 'name' => 'Vérifié']);
+    $utilisateurSocial = new SocialiteUser();
+    $utilisateurSocial->user = ['email_verified' => $valeur];
+    $utilisateurSocial->map(['id' => '123', 'email' => 'verifie@example.com', 'name' => 'Vérifié']);
 
-    $providerMock = fournisseurRendant($socialUser);
+    $providerMock = fournisseurRendant($utilisateurSocial);
 
     Socialite::shouldReceive('driver')->with('google')->andReturn($providerMock);
     app()->detectEnvironment(fn (): string => 'production');

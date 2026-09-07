@@ -17,10 +17,10 @@ use Laravel\Socialite\Facades\Socialite;
  * button broken: that the driver resolves at all, and that the page only offers
  * providers whose credentials are complete.
  */
-it('resolves every provider the login page can offer', function (string $provider): void {
+it('resolves every provider the login page can offer', function (string $fournisseur): void {
     // Apple is a community package: Socialite has no createAppleDriver, so it
     // only exists once an event listener extends Socialite with it.
-    expect(fn () => Socialite::driver($provider))->not->toThrow(InvalidArgumentException::class);
+    expect(fn () => Socialite::driver($fournisseur))->not->toThrow(InvalidArgumentException::class);
 })->with(['google', 'github', 'apple']);
 
 it('offers a provider only when both halves of its credentials are set', function (): void {

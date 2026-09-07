@@ -31,19 +31,19 @@ final class AchievementService
 
         // ⚡ Bolt Optimization: Use cached all() collection and filter in-memory
         // Impact: Eliminates a database query during the frequently called sync operation
-        $locked = Achievement::getCachedAll()->whereNotIn('id', $unlockedIds)->values();
+        $locked = Achievement::enCachePourTous()->whereNotIn('id', $unlockedIds)->values();
 
         if ($locked->isEmpty()) {
             return;
         }
 
-        $metrics = $this->preCalculateMetrics($user, $locked);
+        $mesures = $this->preCalculateMetrics($user, $locked);
 
         $toUnlockIds = [];
         $unlockedAchievements = [];
 
         foreach ($locked as $achievement) {
-            if ($this->isUnlocked($achievement, $metrics)) {
+            if ($this->isUnlocked($achievement, $mesures)) {
                 $toUnlockIds[] = $achievement->id;
                 $unlockedAchievements[] = $achievement;
             }
@@ -87,15 +87,15 @@ final class AchievementService
      * n'empeche d'en mettre un en base — `achievements.type` est une colonne
      * texte libre — et il ne doit alors rien debloquer, seuil zero compris.
      *
-     * @param  array<string, int|float>  $metrics  Metriques pre-calculees, indexees par type de succes.
+     * @param  array<string, int|float>  $mesures  Metriques pre-calculees, indexees par type de succes.
      */
-    private function isUnlocked(Achievement $achievement, array $metrics): bool
+    private function isUnlocked(Achievement $achievement, array $mesures): bool
     {
-        if (! array_key_exists($achievement->type, $metrics)) {
+        if (! array_key_exists($achievement->type, $mesures)) {
             return false;
         }
 
-        return $metrics[$achievement->type] >= $achievement->threshold;
+        return $mesures[$achievement->type] >= $achievement->threshold;
     }
 
     /**
@@ -110,26 +110,26 @@ final class AchievementService
     private function preCalculateMetrics(User $user, Collection $achievements): array
     {
         $types = $achievements->pluck('type')->unique();
-        $metrics = [];
+        $mesures = [];
 
         if ($types->contains('count')) {
             // `toBase()` evite d'hydrater des modeles pour lire un compte.
-            $metrics['count'] = $user->workouts()->toBase()->count();
+            $mesures['count'] = $user->workouts()->toBase()->count();
         }
 
         if ($types->contains('weight_record')) {
-            $metrics['weight_record'] = $this->calculateMaxWeight($user);
+            $mesures['weight_record'] = $this->calculateMaxWeight($user);
         }
 
         if ($types->contains('volume_total')) {
-            $metrics['volume_total'] = $this->calculateTotalVolume($user);
+            $mesures['volume_total'] = $this->calculateTotalVolume($user);
         }
 
         if ($types->contains('streak')) {
-            $metrics['streak'] = $this->calculateMaxStreak($this->getUniqueWorkoutDates($user));
+            $mesures['streak'] = $this->calculateMaxStreak($this->getUniqueWorkoutDates($user));
         }
 
-        return $metrics;
+        return $mesures;
     }
 
     /**

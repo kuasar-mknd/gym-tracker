@@ -95,7 +95,7 @@ class Workout extends Model
      * Recalculer depuis les lignes coûte un agrégat au lieu d'un incrément et ne
      * peut pas dériver, quel que soit l'ordre d'arrivée des écritures.
      */
-    public function recomputeVolume(): void
+    public function recalculerLeVolume(): void
     {
         /*
          * L'ancien total est relu SOUS VERROU dans la transaction qui l'ecrit :
@@ -172,24 +172,24 @@ class Workout extends Model
              * fantome remonte aussi dans les succes, dont le seuil de poids lit
              * un `max('value')` sur ces memes lignes.
              */
-            $exerciseIds = [];
+            $idsExercices = [];
 
-            foreach ($workout->workoutLines()->whereNotNull('exercise_id')->pluck('exercise_id') as $exerciseId) {
+            foreach ($workout->workoutLines()->whereNotNull('exercise_id')->pluck('exercise_id') as $idExercice) {
                 // Le pilote peut rendre l'identifiant en entier ou en chaine
                 // selon la configuration PDO ; les deux sont acceptes plutot que
                 // de parier sur l'un et de sauter silencieusement l'autre.
-                if (! is_int($exerciseId) && ! is_string($exerciseId)) {
+                if (! is_int($idExercice) && ! is_string($idExercice)) {
                     continue;
                 }
 
-                $exerciseId = (int) $exerciseId;
+                $idExercice = (int) $idExercice;
 
-                if (! in_array($exerciseId, $exerciseIds, true)) {
-                    $exerciseIds[] = $exerciseId;
+                if (! in_array($idExercice, $idsExercices, true)) {
+                    $idsExercices[] = $idExercice;
                 }
             }
 
-            $workout->exerciseIdsToRecompute = $exerciseIds;
+            $workout->exerciseIdsToRecompute = $idsExercices;
         });
 
         static::deleted(function (self $workout): void {
@@ -201,8 +201,8 @@ class Workout extends Model
 
             $records = app(\App\Services\PersonalRecordService::class);
 
-            foreach ($workout->exerciseIdsToRecompute as $exerciseId) {
-                $records->recompute($user, $exerciseId);
+            foreach ($workout->exerciseIdsToRecompute as $idExercice) {
+                $records->recompute($user, $idExercice);
             }
         });
     }

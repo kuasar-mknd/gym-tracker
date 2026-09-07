@@ -228,14 +228,14 @@ class StatsServicesTest extends TestCase
         $line2 = WorkoutLine::factory()->create(['workout_id' => $workout2->id]);
         Set::factory()->create(['workout_line_id' => $line2->id, 'weight' => 50, 'reps' => 10]);
 
-        $history = app(VolumeStatsService::class)->getVolumeHistory($user);
+        $historique = app(VolumeStatsService::class)->getVolumeHistory($user);
 
-        $this->assertCount(2, $history);
+        $this->assertCount(2, $historique);
         // History is returned oldest first
-        $this->assertEquals('Workout 1', $history[0]->name);
-        $this->assertEquals(1000, $history[0]->volume);
-        $this->assertEquals('Workout 2', $history[1]->name);
-        $this->assertEquals(500, $history[1]->volume);
+        $this->assertEquals('Workout 1', $historique[0]->name);
+        $this->assertEquals(1000, $historique[0]->volume);
+        $this->assertEquals('Workout 2', $historique[1]->name);
+        $this->assertEquals(500, $historique[1]->volume);
     }
 
     public function test_can_retrieve_duration_history(): void
@@ -263,14 +263,14 @@ class StatsServicesTest extends TestCase
             'ended_at' => now()->hour(10)->minute(0),
         ]);
 
-        $history = app(WorkoutStatsService::class)->getDurationHistory($user);
+        $historique = app(WorkoutStatsService::class)->getDurationHistory($user);
 
-        $this->assertCount(3, $history);
+        $this->assertCount(3, $historique);
 
         // Check order (oldest first due to reverse())
-        $this->assertEquals(60, $history[0]->duration);
-        $this->assertEquals(90, $history[1]->duration);
-        $this->assertEquals(45, $history[2]->duration); // Should be absolute difference
+        $this->assertEquals(60, $historique[0]->duration);
+        $this->assertEquals(90, $historique[1]->duration);
+        $this->assertEquals(45, $historique[2]->duration); // Should be absolute difference
     }
 
     /**
@@ -296,9 +296,9 @@ class StatsServicesTest extends TestCase
             'ended_at' => now()->subDay()->hour(10)->minute(1)->second(30),
         ]);
 
-        $history = app(WorkoutStatsService::class)->getDurationHistory($user);
+        $historique = app(WorkoutStatsService::class)->getDurationHistory($user);
 
-        $this->assertCount(1, $history);
-        $this->assertSame(1, $history[0]->duration);
+        $this->assertCount(1, $historique);
+        $this->assertSame(1, $historique[0]->duration);
     }
 }

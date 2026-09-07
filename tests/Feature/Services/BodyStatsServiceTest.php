@@ -43,13 +43,13 @@ it('calcule la variation de poids entre les deux dernières mesures', function (
         'measured_at' => '2026-03-11',
     ]);
 
-    $metrics = app(BodyStatsService::class)->getLatestBodyMetrics($user);
+    $mesures = app(BodyStatsService::class)->getLatestBodyMetrics($user);
 
-    expect((float) $metrics->latest_weight)->toBe(80.25)
-        ->and((float) $metrics->latest_body_fat)->toBe(18.4)
+    expect((float) $mesures->latest_weight)->toBe(80.25)
+        ->and((float) $mesures->latest_body_fat)->toBe(18.4)
         // 80,25 - 79,50 = 0,75, arrondi a 0,8. Une soustraction inversee
         // donnerait 159,8, un skip(0) donnerait 0,0.
-        ->and($metrics->weight_change)->toBe(0.8);
+        ->and($mesures->weight_change)->toBe(0.8);
 });
 
 it('n’annonce aucune variation quand il n’y a qu’une mesure', function (): void {
@@ -62,12 +62,12 @@ it('n’annonce aucune variation quand il n’y a qu’une mesure', function ():
         'measured_at' => '2026-03-11',
     ]);
 
-    $metrics = app(BodyStatsService::class)->getLatestBodyMetrics($user);
+    $mesures = app(BodyStatsService::class)->getLatestBodyMetrics($user);
 
     // Zero, et non -1 ou 1 : il n'y a rien a comparer, pas une variation d'un
     // kilo dans un sens ou dans l'autre.
-    expect($metrics->weight_change)->toBe(0.0)
-        ->and((float) $metrics->latest_weight)->toBe(80.0);
+    expect($mesures->weight_change)->toBe(0.0)
+        ->and((float) $mesures->latest_weight)->toBe(80.0);
 });
 
 it('ne regarde que les deux dernières mesures, pas les plus anciennes', function (): void {
@@ -88,9 +88,9 @@ it('ne regarde que les deux dernières mesures, pas les plus anciennes', functio
 });
 
 it('ne renvoie rien quand aucune mesure n’existe', function (): void {
-    $metrics = app(BodyStatsService::class)->getLatestBodyMetrics(User::factory()->create());
+    $mesures = app(BodyStatsService::class)->getLatestBodyMetrics(User::factory()->create());
 
-    expect($metrics->latest_weight)->toBeNull()
-        ->and($metrics->latest_body_fat)->toBeNull()
-        ->and($metrics->weight_change)->toBe(0.0);
+    expect($mesures->latest_weight)->toBeNull()
+        ->and($mesures->latest_body_fat)->toBeNull()
+        ->and($mesures->weight_change)->toBe(0.0);
 });

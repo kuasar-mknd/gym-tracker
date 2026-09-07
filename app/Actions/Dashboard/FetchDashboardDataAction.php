@@ -41,7 +41,7 @@ final class FetchDashboardDataAction
      *     activeGoals: \Illuminate\Database\Eloquent\Collection<int, \App\Models\Goal>
      * }
      */
-    public function getImmediateStats(User $user): array
+    public function chiffresImmediats(User $user): array
     {
         // Les mesures passent par le cache : sinon la base est lue à chaque
         // ouverture du tableau de bord.
@@ -91,7 +91,7 @@ final class FetchDashboardDataAction
             now()->addMinutes(10),
             fn (): array => [
                 'weeklyVolume' => $this->getWeeklyVolumeData($user),
-                'workoutDistributions' => $this->getWorkoutDistributions($user),
+                'workoutDistributions' => $this->repartitionsDesSeances($user),
             ]
         );
     }
@@ -99,9 +99,9 @@ final class FetchDashboardDataAction
     /**
      * @return array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
      */
-    public function getWorkoutDistributions(User $user): array
+    public function repartitionsDesSeances(User $user): array
     {
-        return $this->workoutStats->getWorkoutDistributions($user, 90);
+        return $this->workoutStats->repartitionsDesSeances($user, 90);
     }
 
     /**

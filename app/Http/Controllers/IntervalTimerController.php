@@ -32,9 +32,9 @@ class IntervalTimerController extends Controller
     {
         $this->authorize('create', IntervalTimer::class);
 
-        $validated = $request->validated();
+        $donneesValidees = $request->validated();
 
-        $this->user()->intervalTimers()->create($validated);
+        $this->user()->intervalTimers()->create($donneesValidees);
 
         return redirect()->route('tools.interval-timer.index')
             ->with('success', 'Timer created successfully.');
@@ -47,9 +47,9 @@ class IntervalTimerController extends Controller
     {
         $this->authorize('update', $intervalTimer);
 
-        $validated = $request->validated();
+        $donneesValidees = $request->validated();
 
-        $intervalTimer->update($validated);
+        $intervalTimer->update($donneesValidees);
 
         return redirect()->route('tools.interval-timer.index')
             ->with('success', 'Timer updated successfully.');

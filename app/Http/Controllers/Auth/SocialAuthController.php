@@ -17,25 +17,25 @@ class SocialAuthController extends Controller
     /**
      * Envoie l'utilisateur sur la page d'authentification du fournisseur.
      */
-    public function redirect(string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function redirect(string $fournisseur): \Symfony\Component\HttpFoundation\RedirectResponse
     {
-        if (! in_array($provider, self::ALLOWED_PROVIDERS, true)) {
+        if (! in_array($fournisseur, self::ALLOWED_PROVIDERS, true)) {
             abort(404);
         }
 
-        return Socialite::driver($provider)->redirect();
+        return Socialite::driver($fournisseur)->redirect();
     }
 
     /**
      * Récupère l'utilisateur auprès du fournisseur et le connecte.
      */
-    public function callback(HandleSocialCallbackAction $action, string $provider): \Symfony\Component\HttpFoundation\RedirectResponse
+    public function callback(HandleSocialCallbackAction $action, string $fournisseur): \Symfony\Component\HttpFoundation\RedirectResponse
     {
-        if (! in_array($provider, self::ALLOWED_PROVIDERS, true)) {
+        if (! in_array($fournisseur, self::ALLOWED_PROVIDERS, true)) {
             abort(404);
         }
         try {
-            $user = $action->execute($provider);
+            $user = $action->execute($fournisseur);
         } catch (SocialAuthException $e) {
             return redirect()->route('login')->with('status', $e->getMessage());
         }

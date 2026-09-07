@@ -14,13 +14,13 @@ it('sets order to 0 when no workout lines exist and order is not provided', func
     $exercise = Exercise::factory()->create();
 
     $action = app(CreateWorkoutLineAction::class);
-    $workoutLine = $action->execute($workout, [
+    $ligne = $action->execute($workout, [
         'exercise_id' => $exercise->id,
     ]);
 
-    expect($workoutLine->order)->toBe(0)
-        ->and($workoutLine->workout_id)->toBe($workout->id)
-        ->and($workoutLine->exercise_id)->toBe($exercise->id);
+    expect($ligne->order)->toBe(0)
+        ->and($ligne->workout_id)->toBe($workout->id)
+        ->and($ligne->exercise_id)->toBe($exercise->id);
 });
 
 it('auto-increments order based on max order when order is not provided', function (): void {
@@ -40,11 +40,11 @@ it('auto-increments order based on max order when order is not provided', functi
     ]);
 
     $action = app(CreateWorkoutLineAction::class);
-    $workoutLine = $action->execute($workout, [
+    $ligne = $action->execute($workout, [
         'exercise_id' => $exercise->id,
     ]);
 
-    expect($workoutLine->order)->toBe(5);
+    expect($ligne->order)->toBe(5);
 });
 
 it('respects explicitly provided order', function (): void {
@@ -58,12 +58,12 @@ it('respects explicitly provided order', function (): void {
     ]);
 
     $action = app(CreateWorkoutLineAction::class);
-    $workoutLine = $action->execute($workout, [
+    $ligne = $action->execute($workout, [
         'exercise_id' => $exercise->id,
         'order' => 10,
     ]);
 
-    expect($workoutLine->order)->toBe(10);
+    expect($ligne->order)->toBe(10);
 });
 
 /*

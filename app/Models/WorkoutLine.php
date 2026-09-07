@@ -138,9 +138,9 @@ class WorkoutLine extends Model
      * @param  \Illuminate\Database\Eloquent\Collection<int, WorkoutLine>  $lines
      * @return array<int, array{weight: float, reps: int, distance_km: float, duration_seconds: int}>
      */
-    public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $userId): array
+    public static function batchRecommendedValues(\Illuminate\Database\Eloquent\Collection $lines, int $idUtilisateur): array
     {
-        return app(RecommendedValuesService::class)->batchRecommendedValues($lines, $userId);
+        return app(RecommendedValuesService::class)->batchRecommendedValues($lines, $idUtilisateur);
     }
 
     #[\Override]
@@ -201,7 +201,7 @@ class WorkoutLine extends Model
          * compteurs ne s'intéressent qu'au total.
          */
         static::deleted(function (self $line): void {
-            $line->workout?->recomputeVolume();
+            $line->workout?->recalculerLeVolume();
         });
     }
 

@@ -32,7 +32,7 @@ final class FetchWorkoutsIndexAction
     public function execute(User $user): array
     {
         return [
-            'workouts' => $this->getWorkouts($user),
+            'workouts' => $this->seancesDeLUtilisateur($user),
             // Distinct exercises, not workout lines. The card sits beside
             // "Total séances" and is labelled "Exercices", so it reads as a
             // count of entities — but workoutLines() is every line of every
@@ -68,7 +68,7 @@ final class FetchWorkoutsIndexAction
                 'duration_history' => $this->workoutStats->getDurationHistory($user, 20),
                 'volume_history' => $this->volumeStats->getVolumeHistory($user, 20),
             ],
-            'exercises' => Exercise::getCachedForUser($user->id),
+            'exercises' => Exercise::enCachePourUtilisateur($user->id),
         ];
     }
 
@@ -222,7 +222,7 @@ final class FetchWorkoutsIndexAction
             ->get()
             ->keyBy('day_of_week');
 
-        $days = [
+        $jours = [
             2 => 'Lun',
             3 => 'Mar',
             4 => 'Mer',
@@ -232,7 +232,7 @@ final class FetchWorkoutsIndexAction
             1 => 'Dim',
         ];
 
-        return collect($days)->map(function (string $dayName, int $dayIndex) use ($results): array {
+        return collect($jours)->map(function (string $dayName, int $dayIndex) use ($results): array {
             $data = $results->get($dayIndex);
 
             return [
@@ -243,7 +243,7 @@ final class FetchWorkoutsIndexAction
     }
 
     /** @return \Illuminate\Pagination\LengthAwarePaginator<int, \App\Models\Workout> */
-    private function getWorkouts(
+    private function seancesDeLUtilisateur(
         User $user
     ): \Illuminate\Pagination\LengthAwarePaginator {
         return Workout::with([
