@@ -8,7 +8,7 @@
                     aria-label="Retour au profil"
                     v-press
                 >
-                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                    <GlassIcon name="arrow_back" />
                 </Link>
                 <h2 class="text-text-main text-xl font-semibold">Outils</h2>
             </div>
@@ -115,9 +115,7 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-state/20 text-accent-state-deep rounded-full p-4">
-                            <span class="material-symbols-outlined text-3xl" aria-hidden="true"
-                                >local_fire_department</span
-                            >
+                            <GlassIcon name="local_fire_department" size="lg" />
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Calculateur de Macros</h3>
                         <p class="text-text-muted text-sm">
@@ -165,7 +163,7 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
-                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">water_drop</span>
+                            <GlassIcon name="water_drop" size="lg" />
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Suivi Hydratation</h3>
                         <p class="text-text-muted text-sm">Suis ta consommation d'eau quotidienne et reste hydraté.</p>
@@ -180,7 +178,7 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
-                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
+                            <GlassIcon name="timer" size="lg" />
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Minuteur d'Intervalle</h3>
                         <p class="text-text-muted text-sm">
@@ -197,7 +195,7 @@
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
-                            <span class="material-symbols-outlined text-3xl" aria-hidden="true">timer</span>
+                            <GlassIcon name="timer" size="lg" />
                         </div>
                         <h3 class="text-text-main text-xl font-bold">Suivi de Jeûne</h3>
                         <p class="text-text-muted text-sm">
@@ -215,4 +213,5 @@ import { Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 </script>

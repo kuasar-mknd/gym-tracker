@@ -10,6 +10,7 @@
 import Modal from '@/Components/UI/Modal.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
 
 defineProps({
     show: { type: Boolean, required: true },
@@ -38,28 +39,15 @@ const emit = defineEmits(['close', 'submit'])
                 />
 
                 <div>
-                    <div class="mb-2 flex items-center justify-between">
-                        <label for="workout-notes" class="font-display-label text-text-muted block text-sm">
-                            Notes
-                        </label>
-                        <span
-                            id="workout-notes-counter"
-                            class="text-2xs font-bold tracking-wider uppercase"
-                            :class="form.notes?.length > 1000 ? 'text-accent-danger-deep' : 'text-text-muted/50'"
-                        >
-                            {{ form.notes?.length || 0 }} / 1000
-                        </span>
-                    </div>
-                    <textarea
-                        id="workout-notes"
+                    <GlassTextarea
                         v-model="form.notes"
-                        rows="4"
-                        maxlength="1000"
-                        aria-describedby="workout-notes-counter"
-                        class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-glow-card w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition duration-300 focus:ring-0 focus:outline-none"
+                        label="Notes"
+                        :rows="4"
+                        :maxlength="1000"
                         placeholder="Notes sur la séance..."
                         dusk="workout-notes-input"
-                    ></textarea>
+                        :error="form.errors.notes"
+                    />
                     <p v-if="form.errors.notes" class="text-accent-danger-deep mt-2 text-sm font-medium">
                         {{ form.errors.notes }}
                     </p>

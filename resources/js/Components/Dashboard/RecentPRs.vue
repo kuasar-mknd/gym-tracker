@@ -1,5 +1,6 @@
 <script setup>
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { defineAsyncComponent } from 'vue'
 
 const RecentPRsChart = defineAsyncComponent(() => import('@/Components/Stats/RecentPRsChart.vue'))
@@ -32,9 +33,7 @@ defineProps({
                         <div
                             class="from-accent-warning to-accent-primary flex size-12 items-center justify-center rounded-xl bg-linear-to-br shadow-lg"
                         >
-                            <span class="material-symbols-outlined text-text-on-accent text-2xl" aria-hidden="true"
-                                >star</span
-                            >
+                            <GlassIcon name="star" class="text-text-on-accent" />
                         </div>
                         <div>
                             <div class="text-text-main font-bold">{{ pr.exercise?.name }}</div>

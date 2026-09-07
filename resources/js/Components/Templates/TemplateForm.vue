@@ -6,6 +6,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
 
 const props = defineProps({
     // Absent à la création, présent à la modification : c'est la seule
@@ -40,8 +41,6 @@ const form = useForm({
     description: props.template?.description || '',
     exercises: initialExercises,
 })
-
-const idDescription = `template-description-${props.template?.id ?? 'new'}`
 
 const showAddExercise = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
@@ -116,29 +115,14 @@ const submit = () => {
                     />
 
                     <div>
-                        <div class="mb-1 flex items-center justify-between">
-                            <label :for="idDescription" class="text-text-muted block text-sm font-medium"
-                                >Description (optionnel)</label
-                            >
-                            <span
-                                :id="`${idDescription}-counter`"
-                                class="text-2xs font-bold tracking-wider uppercase"
-                                :class="
-                                    form.description?.length > 1000 ? 'text-accent-danger-deep' : 'text-text-muted/50'
-                                "
-                            >
-                                {{ form.description?.length || 0 }} / 1000
-                            </span>
-                        </div>
-                        <textarea
-                            :id="idDescription"
+                        <GlassTextarea
                             v-model="form.description"
-                            rows="2"
-                            maxlength="1000"
-                            :aria-describedby="`${idDescription}-counter`"
-                            class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-glow-card w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition duration-300 focus:ring-0 focus:outline-none"
+                            label="Description (optionnel)"
+                            :rows="2"
+                            :maxlength="1000"
                             placeholder="Détails de la séance..."
-                        ></textarea>
+                            :error="form.errors.description"
+                        />
                         <p v-if="form.errors.description" class="text-accent-danger-deep mt-2 text-sm font-medium">
                             {{ form.errors.description }}
                         </p>

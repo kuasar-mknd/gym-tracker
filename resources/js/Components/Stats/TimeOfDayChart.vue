@@ -1,5 +1,6 @@
 <script setup>
 import { jeton } from '@/Utils/couleurs'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref } from 'vue'
 import { pluginCentreDAnneau } from '@/Utils/donut'
 import BaseChart from './BaseChart.vue'
@@ -86,7 +87,7 @@ const plugins = [pluginCentreDAnneau((position) => (centre.value = position))]
                 class="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
                 :style="centre ? { left: `${centre.x}px`, top: `${centre.y}px` } : { left: '50%', top: '50%' }"
             >
-                <span class="material-symbols-outlined text-text-muted/20 text-4xl" aria-hidden="true">schedule</span>
+                <GlassIcon name="schedule" size="xl" class="text-text-muted/20" />
             </div>
         </template>
     </BaseChart>

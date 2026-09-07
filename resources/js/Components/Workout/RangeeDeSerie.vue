@@ -5,6 +5,7 @@
  * la page ; la rangee dit ce que l'utilisateur a fait.
  */
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import DurationWheel from '@/Components/Workout/DurationWheel.vue'
 
 defineProps({
@@ -36,7 +37,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 class="bg-accent-danger text-text-on-accent flex h-full w-full items-center justify-center"
             >
                 <span class="flex flex-col items-center" aria-hidden="true">
-                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
+                    <GlassIcon name="delete" />
                     <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
                 </span>
             </button>
@@ -73,7 +74,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     class="bg-accent-warning text-text-on-accent absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full shadow-sm"
                     :dusk="`pr-trophy-${lineIndex}-${index}`"
                 >
-                    <span class="material-symbols-outlined text-xs font-bold" aria-hidden="true">stars</span>
+                    <GlassIcon name="stars" class="text-xs font-bold" />
                 </div>
             </button>
             <!-- Le numero porte le deplacement au CLAVIER. Le
@@ -101,7 +102,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     role="img"
                     :aria-label="`Série ${index + 1} non enregistrée`"
                 >
-                    <span class="material-symbols-outlined text-2xs" aria-hidden="true">cloud_off</span>
+                    <GlassIcon name="cloud_off" class="text-2xs" />
                 </span>
             </component>
 
@@ -185,7 +186,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 ]"
                 aria-label="Supprimer la série"
             >
-                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                <GlassIcon name="delete" />
             </button>
         </div>
     </SwipeableRow>

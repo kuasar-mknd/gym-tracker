@@ -24,6 +24,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 defineProps({
     /** The exercise object to display. */
@@ -67,7 +68,7 @@ const emit = defineEmits([
                 data-testid="edit-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
-                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">edit</span>
+                    <GlassIcon name="edit" />
                     <span class="text-2xs font-bold tracking-wider uppercase">Modifier</span>
                 </div>
             </button>
@@ -80,7 +81,7 @@ const emit = defineEmits([
                 data-testid="delete-exercise-button-mobile"
             >
                 <div class="flex flex-col items-center">
-                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
+                    <GlassIcon name="delete" />
                     <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
                 </div>
             </button>
@@ -117,9 +118,7 @@ const emit = defineEmits([
                                   : 'bg-accent-info/10 text-accent-info-deep',
                         ]"
                     >
-                        <span class="material-symbols-outlined text-3xl" aria-hidden="true">
-                            {{ typeIcons[exercise.type] || 'fitness_center' }}
-                        </span>
+                        <GlassIcon :name="typeIcons[exercise.type] || 'fitness_center'" size="lg" />
                     </div>
                     <div>
                         <div class="font-display text-text-main text-lg leading-tight font-bold uppercase italic">

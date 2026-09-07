@@ -69,7 +69,15 @@ import WeightHistoryChart from '@/Components/Stats/WeightHistoryChart.vue'
 import BodyFatLineChart from '@/Components/Stats/BodyFatLineChart.vue'
 import BodyPartDiffChart from '@/Components/Stats/BodyPartDiffChart.vue'
 import MeasurementsIndex from '@/Pages/Measurements/Index.vue'
+import GlassStat from '@/Components/UI/GlassStat.vue'
 import BodyPartsIndex from '@/Pages/Measurements/Parts/Index.vue'
+
+/** La valeur que la carte de chiffre reçoit pour ce libellé. */
+const statistique = (wrapper, libelle) =>
+    wrapper
+        .findAllComponents(GlassStat)
+        .find((carte) => carte.props('libelle') === libelle)
+        ?.props('valeur')
 
 beforeAll(() => {
     globalThis.route = (name, params) => {
@@ -186,7 +194,7 @@ describe('Measurements/Index headline figures', () => {
         expect(wrapper.vm.previousWeight).toBe('76.00')
         expect(wrapper.vm.weightDiff).toBe('-1.5')
         // Green is the whole point of the tile: it says the trend is the one wanted.
-        expect(wrapper.find('div.text-trend-up').text()).toBe('-1.5')
+        expect(statistique(wrapper, 'Évolution')).toBe('-1.5')
     })
 
     it('signs a gain, since "1.5" on its own reads like a loss', async () => {
@@ -194,7 +202,7 @@ describe('Measurements/Index headline figures', () => {
 
         const wrapper = await mountPage(MeasurementsIndex, { measurements: gaining })
 
-        expect(wrapper.find('.text-trend-down').text()).toBe('+1.5')
+        expect(statistique(wrapper, 'Évolution')).toBe('+1.5')
     })
 
     it('has nothing to compare after a first weigh-in, and says so instead of showing a zero', async () => {
@@ -465,8 +473,8 @@ describe('Measurements/Parts/Index part picker', () => {
         await click(wrapper, 'Chest')
 
         const highlighted = wrapper
-            .findAll('button.rounded-full')
-            .filter((chip) => chip.classes().includes('accent-fill'))
+            .findAll('button[aria-pressed]')
+            .filter((chip) => chip.attributes('aria-pressed') === 'true')
 
         expect(highlighted).toHaveLength(1)
         expect(highlighted[0].text()).toBe('Chest')

@@ -23,32 +23,13 @@
                     <div>
                         <span id="macro-gender-label" class="font-display-label text-text-muted mb-2 block">Sexe</span>
                         <div class="grid grid-cols-2 gap-3" role="group" aria-labelledby="macro-gender-label">
-                            <button
-                                type="button"
-                                @click="form.gender = 'male'"
-                                :aria-pressed="form.gender === 'male'"
-                                class="focus-visible:ring-accent-primary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
-                                :class="
-                                    form.gender === 'male'
-                                        ? 'border-accent-primary accent-fill shadow-glow-primary-soft'
-                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
-                                "
-                            >
-                                <span class="font-display text-lg font-black uppercase">Homme</span>
-                            </button>
-                            <button
-                                type="button"
+                            <GlassTile label="Homme" :active="form.gender === 'male'" @click="form.gender = 'male'" />
+                            <GlassTile
+                                label="Femme"
+                                ton="secondary"
+                                :active="form.gender === 'female'"
                                 @click="form.gender = 'female'"
-                                :aria-pressed="form.gender === 'female'"
-                                class="focus-visible:ring-accent-secondary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
-                                :class="
-                                    form.gender === 'female'
-                                        ? 'border-accent-secondary secondary-fill shadow-glow-secondary-soft'
-                                        : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
-                                "
-                            >
-                                <span class="font-display text-lg font-black uppercase">Femme</span>
-                            </button>
+                            />
                         </div>
                     </div>
 
@@ -177,9 +158,7 @@
                     <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
                     <div v-if="history.length === 0" class="py-12 text-center">
-                        <span class="material-symbols-outlined text-surface-sunken mb-3 text-6xl" aria-hidden="true"
-                            >history</span
-                        >
+                        <GlassIcon name="history" size="hero" class="text-surface-sunken mb-3" />
                         <p class="text-text-muted font-medium">Aucun historique.</p>
                     </div>
 
@@ -252,6 +231,8 @@ import { triggerHaptic } from '@/composables/useHaptics'
 import { macroTargets } from '@/Utils/formulas'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassTile from '@/Components/UI/GlassTile.vue'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 

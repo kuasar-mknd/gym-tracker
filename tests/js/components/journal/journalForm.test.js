@@ -187,14 +187,18 @@ describe('the daily figures', () => {
 })
 
 describe('the notes box', () => {
+    /** Le compteur est celui que le champ désigne par `aria-describedby`. */
+    const counterOf = (wrapper) =>
+        wrapper.find(`#${wrapper.find('textarea').attributes('aria-describedby').split(' ')[0]}`)
+
     it('counts what has been written, starting from nothing', async () => {
         const { wrapper } = mountForm()
 
-        expect(wrapper.find('#journal-content-counter').text()).toBe('0 / 1000')
+        expect(counterOf(wrapper).text()).toBe('0 / 1000')
 
-        await wrapper.find('#journal-content').setValue('Bonne séance.')
+        await wrapper.find('textarea').setValue('Bonne séance.')
 
-        expect(wrapper.find('#journal-content-counter').text()).toBe('13 / 1000')
+        expect(counterOf(wrapper).text()).toBe('13 / 1000')
     })
 
     it('keeps the counter tied to the box that feeds it', () => {
@@ -202,8 +206,8 @@ describe('the notes box', () => {
 
         // Without the reference the count is read out as a stray number, or not
         // at all, when the textarea takes focus.
-        expect(wrapper.find('#journal-content').attributes('aria-describedby')).toBe('journal-content-counter')
-        expect(wrapper.find('#journal-content').attributes('maxlength')).toBe('1000')
+        expect(wrapper.find('textarea').attributes('aria-describedby')).toBe(counterOf(wrapper).attributes('id'))
+        expect(wrapper.find('textarea').attributes('maxlength')).toBe('1000')
     })
 
     it('warns only once the limit is actually passed', () => {
@@ -212,15 +216,15 @@ describe('the notes box', () => {
 
         // 1000 is the limit, not one past it: a `>=` here would paint a full
         // but perfectly valid note red.
-        expect(atLimit.wrapper.find('#journal-content-counter').classes()).toContain('text-text-muted/50')
-        expect(atLimit.wrapper.find('#journal-content-counter').classes()).not.toContain('text-accent-danger-deep')
-        expect(over.wrapper.find('#journal-content-counter').classes()).toContain('text-accent-danger-deep')
+        expect(counterOf(atLimit.wrapper).classes()).toContain('text-text-muted')
+        expect(counterOf(atLimit.wrapper).classes()).not.toContain('text-accent-danger-deep')
+        expect(counterOf(over.wrapper).classes()).toContain('text-accent-danger-deep')
     })
 
     it('reads an entry with no note at all as zero, not as NaN', () => {
         const { wrapper } = mountForm({ form: makeForm({ content: null }) })
 
-        expect(wrapper.find('#journal-content-counter').text()).toBe('0 / 1000')
+        expect(counterOf(wrapper).text()).toBe('0 / 1000')
     })
 
     it('shows the error the server raised against the note', () => {

@@ -10,6 +10,7 @@ import { Head, router, Deferred } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 const HabitHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HabitHistoryChart.vue'))
 const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
@@ -113,7 +114,7 @@ const getProgressPercent = (habit) => {
                 aria-label="Ajouter une habitude"
                 dusk="add-habit"
             >
-                <span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>
+                <GlassIcon name="add" size="xs" />
             </GlassButton>
         </template>
 
@@ -121,7 +122,7 @@ const getProgressPercent = (habit) => {
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Habitudes</h2>
                 <GlassButton variant="primary" @click="openAddForm">
-                    <span class="material-symbols-outlined mr-2 text-sm" aria-hidden="true">add</span>
+                    <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
                 </GlassButton>
             </div>
@@ -223,7 +224,7 @@ const getProgressPercent = (habit) => {
                                     class="text-text-on-dark-accent hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex"
                                     :class="habit.color"
                                 >
-                                    <span class="material-symbols-outlined" aria-hidden="true">{{ habit.icon }}</span>
+                                    <GlassIcon :name="habit.icon" />
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <h3 class="text-text-main truncate font-bold">{{ habit.name }}</h3>
@@ -282,7 +283,7 @@ const getProgressPercent = (habit) => {
                                         : 'bg-surface-sunken text-text-muted hover:bg-surface-sunken',
                                 ]"
                             >
-                                <span class="material-symbols-outlined text-lg" aria-hidden="true">check</span>
+                                <GlassIcon name="check" size="sm" />
                             </button>
                         </div>
                     </div>

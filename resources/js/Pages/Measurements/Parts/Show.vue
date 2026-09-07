@@ -9,6 +9,7 @@ import { todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -78,7 +79,7 @@ const formatMeasuredAt = (measuredAt) =>
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">{{ part }}</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
-                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
+                    <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
                 </GlassButton>
             </div>

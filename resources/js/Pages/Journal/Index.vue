@@ -11,6 +11,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import JournalForm from '@/Components/Journal/JournalForm.vue'
@@ -156,7 +157,7 @@ const journalsByMonth = computed(() => {
     <AuthenticatedLayout page-title="Journal">
         <template #header-actions>
             <GlassButton variant="primary" size="sm" aria-label="Nouvelle entrée" @click="openAddForm">
-                <span class="material-symbols-outlined text-base" aria-hidden="true">add</span>
+                <GlassIcon name="add" size="xs" />
             </GlassButton>
         </template>
 
@@ -164,7 +165,7 @@ const journalsByMonth = computed(() => {
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Journal</h2>
                 <GlassButton variant="primary" @click="openAddForm" aria-label="Nouvelle entrée">
-                    <span class="material-symbols-outlined mr-2 text-base" aria-hidden="true">add</span>
+                    <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
                 </GlassButton>
             </div>

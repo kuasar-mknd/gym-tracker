@@ -10,6 +10,7 @@ import Modal from '@/Components/UI/Modal.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
 const props = defineProps({
     show: { type: Boolean, default: false },
@@ -221,7 +222,7 @@ const submit = () => {
                             ]"
                         >
                             <!-- Without this the button announces the raw ligature. -->
-                            <span class="material-symbols-outlined" aria-hidden="true">{{ icon }}</span>
+                            <GlassIcon :name="icon" />
                         </button>
                     </div>
                 </div>

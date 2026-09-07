@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
+import GlassChip from '@/Components/UI/GlassChip.vue'
 
 const props = defineProps({
     achievements: Array,
@@ -48,19 +49,14 @@ const filteredAchievements = computed(() => {
         <div class="space-y-6 pb-24">
             <!-- Categories -->
             <div class="stagger-2 animate-slide-up flex scrollbar-none gap-2 overflow-x-auto pb-2">
-                <button
+                <GlassChip
                     v-for="cat in categories"
                     :key="cat.value"
+                    :active="currentCategory === cat.value"
                     @click="currentCategory = cat.value"
-                    class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition"
-                    :class="
-                        currentCategory === cat.value
-                            ? 'accent-fill shadow-lg'
-                            : 'text-text-muted border-border bg-surface-card/50 hover:bg-surface-card/80 border'
-                    "
                 >
                     {{ cat.label }}
-                </button>
+                </GlassChip>
             </div>
 
             <!-- Achievements Grid -->

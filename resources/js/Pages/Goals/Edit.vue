@@ -11,6 +11,7 @@
  */
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GoalForm from '@/Components/Goals/GoalForm.vue'
 import { Head, Link, useForm, router } from '@inertiajs/vue3'
 
@@ -56,7 +57,7 @@ const cancel = () => {
                     :href="route('goals.index')"
                     class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch inline-flex items-center gap-1 rounded-xl text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
                 >
-                    <span class="material-symbols-outlined text-xl" aria-hidden="true">arrow_back</span>
+                    <GlassIcon name="arrow_back" size="sm" />
                     Retour aux objectifs
                 </Link>
 

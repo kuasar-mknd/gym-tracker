@@ -116,6 +116,21 @@ function iconNamesInSource(): array
             $depth = max($depth, 0);
         }
 
+        /**
+         * `<GlassIcon>` porte son nom dans un attribut, sur une balise que
+         * Prettier étale sur plusieurs lignes : la ligne du `name` ne contient
+         * plus le mot « icon ». Les deux formes, littérale et liée.
+         */
+        preg_match_all('/<GlassIcon\b[^>]*?\bname="([a-z][a-z0-9_]{2,40})"/s', $source, $literals);
+        $names = [...$names, ...$literals[1]];
+
+        preg_match_all('/<GlassIcon\b[^>]*?:name="([^"]*)"/s', $source, $bound);
+
+        foreach ($bound[1] as $expression) {
+            preg_match_all('/(?<![a-zA-Z])[\'"`]([a-z][a-z0-9_]{2,30})[\'"`]/', $expression, $branch);
+            $names = [...$names, ...$branch[1]];
+        }
+
         // The habit picker is a bare array of names with no `icon` on the lines.
         if (preg_match('/const icons = \[(.*?)\]/s', $source, $picker)) {
             preg_match_all('/(?<![a-zA-Z])[\'"]([a-z][a-z0-9_]{2,30})[\'"]/', $picker[1], $chosen);
@@ -140,6 +155,8 @@ const NOT_ICONS = [
     // `{{ status === 'running' ? 'pause' : 'play_arrow' }}` — the operand of the
     // comparison, not one of the two names the branch can render.
     'running',
+    // `size="hero"` sur une ligne `<GlassIcon>`, `v-if="processing"` sur la même balise.
+    'hero', 'processing', 'block',
     // The goal types switched on in GoalCard's `typeIcon`. That computed does
     // carry the word icon, so following its block reaches the `case` labels —
     // but what it returns is an emoji, never a ligature.

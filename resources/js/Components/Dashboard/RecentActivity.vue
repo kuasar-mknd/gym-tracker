@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { defineAsyncComponent } from 'vue'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 
@@ -85,9 +86,7 @@ const emit = defineEmits(['startWorkout'])
                                   : 'text-accent-secondary-deep border-accent-secondary/20 bg-accent-secondary/10',
                         ]"
                     >
-                        <span class="material-symbols-outlined" aria-hidden="true">
-                            {{ (workout.workout_lines_count || 0) > 3 ? 'timer' : 'fitness_center' }}
-                        </span>
+                        <GlassIcon :name="(workout.workout_lines_count || 0) > 3 ? 'timer' : 'fitness_center'" />
                     </div>
                     <div>
                         <h4 class="font-display text-text-main text-lg leading-tight font-bold uppercase italic">

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { parseCalendarDate } from '@/Utils/date'
 
@@ -223,7 +224,7 @@ const formatDateFull = (dateStr) => {
             <!-- Calendar Navigation -->
             <div class="flex items-center justify-between">
                 <GlassButton @click="changeMonth(-1)" class="px-3!" aria-label="Mois précédent">
-                    <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                    <GlassIcon name="chevron_left" />
                 </GlassButton>
 
                 <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic" dusk="calendar-heading">
@@ -231,7 +232,7 @@ const formatDateFull = (dateStr) => {
                 </h2>
 
                 <GlassButton @click="changeMonth(1)" class="px-3!" aria-label="Mois suivant">
-                    <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                    <GlassIcon name="chevron_right" />
                 </GlassButton>
             </div>
 
@@ -325,7 +326,7 @@ const formatDateFull = (dateStr) => {
                                     <div
                                         class="bg-accent-tertiary/20 text-accent-tertiary-deep flex h-10 w-10 items-center justify-center rounded-xl"
                                     >
-                                        <span class="material-symbols-outlined" aria-hidden="true">fitness_center</span>
+                                        <GlassIcon name="fitness_center" />
                                     </div>
                                     <div>
                                         <div class="text-text-main font-bold">{{ workout.name }}</div>
@@ -337,9 +338,7 @@ const formatDateFull = (dateStr) => {
                                         </div>
                                     </div>
                                 </div>
-                                <span class="material-symbols-outlined text-text-on-dark-accent/30" aria-hidden="true"
-                                    >chevron_right</span
-                                >
+                                <GlassIcon name="chevron_right" class="text-text-on-dark-accent/30" />
                             </div>
                         </GlassCard>
                     </Link>
@@ -353,7 +352,7 @@ const formatDateFull = (dateStr) => {
                             <div
                                 class="bg-accent-state/20 text-accent-state-deep flex h-10 w-10 items-center justify-center rounded-xl"
                             >
-                                <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
+                                <GlassIcon name="menu_book" />
                             </div>
                             <div>
                                 <div class="flex items-center gap-2">
@@ -379,15 +378,13 @@ const formatDateFull = (dateStr) => {
                     v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal"
                     class="text-text-muted/60 py-8 text-center"
                 >
-                    <span class="material-symbols-outlined mb-2 text-4xl opacity-50" aria-hidden="true"
-                        >event_busy</span
-                    >
+                    <GlassIcon name="event_busy" size="xl" class="mb-2 opacity-50" />
                     <p>Aucune activité ce jour-là.</p>
                 </div>
             </div>
 
             <div v-else class="text-text-muted/40 py-12 text-center">
-                <span class="material-symbols-outlined mb-2 animate-pulse text-4xl" aria-hidden="true">touch_app</span>
+                <GlassIcon name="touch_app" size="xl" class="mb-2 animate-pulse" />
                 <p>Sélectionne une date pour voir les détails</p>
             </div>
         </div>

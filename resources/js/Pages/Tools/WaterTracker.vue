@@ -72,48 +72,33 @@
 
                     <!-- Quick Add Buttons -->
                     <div class="grid w-full grid-cols-3 gap-4">
-                        <button
+                        <GlassTile
+                            v-press
+                            icon="local_drink"
+                            label="250 ml"
+                            ton="info"
+                            aria-label="Ajouter 250 ml"
+                            :disabled="form.processing"
                             @click="addWater(250)"
-                            :disabled="form.processing"
+                        />
+                        <GlassTile
                             v-press
-                            aria-label="Ajouter 250ml"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition"
-                        >
-                            <span
-                                class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
-                                aria-hidden="true"
-                                >local_drink</span
-                            >
-                            <span class="text-text-main text-xs font-bold">250ml</span>
-                        </button>
-                        <button
+                            icon="water_drop"
+                            label="500 ml"
+                            ton="info"
+                            aria-label="Ajouter 500 ml"
+                            :disabled="form.processing"
                             @click="addWater(500)"
-                            :disabled="form.processing"
+                        />
+                        <GlassTile
                             v-press
-                            aria-label="Ajouter 500ml"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition"
-                        >
-                            <span
-                                class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
-                                aria-hidden="true"
-                                >water_drop</span
-                            >
-                            <span class="text-text-main text-xs font-bold">500ml</span>
-                        </button>
-                        <button
+                            icon="water_bottle"
+                            label="1 L"
+                            ton="info"
+                            aria-label="Ajouter 1 L"
+                            :disabled="form.processing"
                             @click="addWater(1000)"
-                            :disabled="form.processing"
-                            v-press
-                            aria-label="Ajouter 1L"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition"
-                        >
-                            <span
-                                class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
-                                aria-hidden="true"
-                                >water_bottle</span
-                            >
-                            <span class="text-text-main text-xs font-bold">1L</span>
-                        </button>
+                        />
                     </div>
 
                     <!-- Custom Input -->
@@ -138,7 +123,7 @@
                             class="h-12 !px-4"
                             variant="primary"
                         >
-                            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                            <GlassIcon name="add" />
                         </GlassButton>
                     </div>
                 </div>
@@ -153,9 +138,7 @@
                     </h2>
 
                     <div v-if="logs.length === 0" class="py-8 text-center">
-                        <span class="material-symbols-outlined text-surface-sunken mb-2 text-4xl" aria-hidden="true"
-                            >water_drop</span
-                        >
+                        <GlassIcon name="water_drop" size="xl" class="text-surface-sunken mb-2" />
                         <p class="text-text-muted text-sm font-medium">Aucune consommation aujourd'hui.</p>
                     </div>
 
@@ -169,7 +152,7 @@
                                 <div
                                     class="bg-accent-info/15 text-accent-info-deep flex h-10 w-10 items-center justify-center rounded-full"
                                 >
-                                    <span class="material-symbols-outlined text-xl" aria-hidden="true">water_drop</span>
+                                    <GlassIcon name="water_drop" size="sm" />
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">{{ log.amount }} ml</p>
@@ -224,6 +207,8 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassTile from '@/Components/UI/GlassTile.vue'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 

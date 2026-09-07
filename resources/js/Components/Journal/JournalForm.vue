@@ -21,6 +21,7 @@
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
 
 defineProps({
     form: { type: Object, required: true },
@@ -142,25 +143,14 @@ const emit = defineEmits(['close', 'submit'])
             </div>
 
             <div>
-                <div class="mb-1 flex items-center justify-between">
-                    <label for="journal-content" class="text-text-muted block text-sm font-medium">Notes</label>
-                    <span
-                        id="journal-content-counter"
-                        class="text-2xs font-bold tracking-wider uppercase"
-                        :class="form.content?.length > 1000 ? 'text-accent-danger-deep' : 'text-text-muted/50'"
-                    >
-                        {{ form.content?.length || 0 }} / 1000
-                    </span>
-                </div>
-                <textarea
-                    id="journal-content"
+                <GlassTextarea
                     v-model="form.content"
-                    rows="4"
-                    maxlength="1000"
-                    aria-describedby="journal-content-counter"
-                    class="text-text-main placeholder-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-glow-card w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition duration-300 focus:ring-0 focus:outline-none"
+                    label="Notes"
+                    :rows="4"
+                    :maxlength="1000"
                     placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
-                ></textarea>
+                    :error="form.errors.content"
+                />
                 <div v-if="form.errors.content" class="text-accent-danger-deep mt-1 text-xs">
                     {{ form.errors.content }}
                 </div>

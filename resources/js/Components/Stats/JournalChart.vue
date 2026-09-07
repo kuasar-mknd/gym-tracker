@@ -3,6 +3,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed, ref } from 'vue'
 import { parseCalendarDate, etiquetteDeDate } from '@/Utils/date'
 import BaseChart from './BaseChart.vue'
+import GlassChip from '@/Components/UI/GlassChip.vue'
 
 const props = defineProps({
     data: {
@@ -106,21 +107,15 @@ const axeY = computed(() => ({
     <div class="flex flex-col gap-4">
         <!-- Metric Selector -->
         <div class="flex flex-wrap gap-2">
-            <button
+            <GlassChip
                 v-for="metric in metrics"
                 :key="metric.value"
+                size="sm"
+                :active="selectedMetric === metric.value"
                 @click="selectedMetric = metric.value"
-                :aria-pressed="selectedMetric === metric.value"
-                :class="[
-                    'focus-visible:ring-accent-primary rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition focus-visible:ring-2 focus-visible:outline-none',
-                    selectedMetric === metric.value
-                        ? 'text-text-on-dark-accent scale-105 shadow-lg'
-                        : 'text-text-muted hover:text-text-main bg-surface-card/50 hover:bg-surface-card/80',
-                ]"
-                :style="selectedMetric === metric.value ? { backgroundColor: metric.color } : {}"
             >
                 {{ metric.label }}
-            </button>
+            </GlassChip>
         </div>
 
         <!-- Chart -->

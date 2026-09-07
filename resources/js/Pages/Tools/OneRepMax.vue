@@ -113,9 +113,7 @@
                     </GlassCard>
                 </div>
                 <GlassCard v-else class="animate-slide-up mt-8 py-12 text-center shadow-2xl">
-                    <span class="material-symbols-outlined text-text-muted mb-3 text-5xl" aria-hidden="true"
-                        >calculate</span
-                    >
+                    <GlassIcon name="calculate" size="2xl" class="text-text-muted mb-3" />
                     <p class="text-text-muted font-medium">Entre un poids et des répétitions pour voir les résultats</p>
                 </GlassCard>
             </div>
@@ -127,6 +125,7 @@
 import { ref, computed, defineAsyncComponent } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import { oneRepMax as epley } from '@/Utils/formulas'
 

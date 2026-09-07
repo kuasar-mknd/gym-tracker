@@ -407,16 +407,16 @@ describe('the water log', () => {
 
         // Each shortcut is checked against the amount in its own name, one at a
         // time. Three buttons that all sent 250 would look right on a count.
-        await shortcut('Ajouter 250ml').trigger('click')
+        await shortcut('Ajouter 250 ml').trigger('click')
         expect(form.amount).toBe(250)
 
-        await shortcut('Ajouter 500ml').trigger('click')
+        await shortcut('Ajouter 500 ml').trigger('click')
         expect(form.amount).toBe(500)
 
         // Named in litres, stored in millilitres — the one place the two units
         // meet, and the only shortcut where the name cannot be read off the
         // value.
-        await shortcut('Ajouter 1L').trigger('click')
+        await shortcut('Ajouter 1 L').trigger('click')
         expect(form.amount).toBe(1000)
 
         expect(post).toHaveBeenCalledTimes(3)

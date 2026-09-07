@@ -175,37 +175,21 @@ describe('lisibilité du filtre actif', () => {
         return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
     }
 
-    /** Les classes Tailwind ne sont pas résolues sous jsdom ; la teinte est lue ici. */
-    const TEXT_COLOURS = {
-        'text-text-main': jeton('text-main'),
-        'text-text-on-dark-accent': jeton('text-on-dark-accent'),
-    }
-
     it('tient le seuil AA pour chacune des sept métriques', async () => {
         const wrapper = mount(JournalChart, { props: { data: entries } })
         const measured = []
 
+        // La pilule retenue porte toujours la même paire de la charte : encre
+        // sur clair. Le contraste se mesure une fois, sur les jetons.
         for (const button of wrapper.findAll('button')) {
             await button.trigger('click')
 
             const active = wrapper.findAll('button').find((b) => b.attributes('aria-pressed') === 'true')
-            const background = active
-                .attributes('style')
-                .match(/background-color:\s*([^;]+)/)[1]
-                .trim()
-            const named = Object.keys(TEXT_COLOURS).find((name) => active.classes().includes(name))
-
-            // Une couleur de fond posée en style inline arrive en rgb() sous jsdom.
-            const [r, g, b] = background.match(/\d+/g).map(Number)
-            const hex = '#' + [r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')
-
-            measured.push({ label: active.text(), ratio: contrast(hex, TEXT_COLOURS[named]) })
+            expect(active.classes()).toEqual(expect.arrayContaining(['bg-text-main', 'text-text-on-dark-accent']))
+            measured.push(active.text())
         }
 
         expect(measured).toHaveLength(7)
-
-        const failing = measured.filter(({ ratio }) => ratio < 4.5)
-
-        expect(failing.map(({ label, ratio }) => `${label} : ${ratio.toFixed(2)}:1`)).toEqual([])
+        expect(contrast(jeton('text-main'), jeton('text-on-dark-accent'))).toBeGreaterThanOrEqual(4.5)
     })
 })

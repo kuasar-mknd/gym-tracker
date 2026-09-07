@@ -2,6 +2,7 @@
 import { Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 
 const DurationHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/DurationHistoryChart.vue'))
@@ -30,9 +31,7 @@ defineProps({
                     <DurationHistoryChart :data="durationHistory" />
                 </div>
                 <div v-else class="flex h-full flex-col items-center justify-center text-center">
-                    <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
-                        >timer_off</span
-                    >
+                    <GlassIcon name="timer_off" size="2xl" class="text-text-muted/30 mb-2" />
                     <p class="text-text-muted text-sm">Pas encore de données de durée</p>
                 </div>
             </Deferred>

@@ -589,6 +589,10 @@
     z-index: var(--z-evitement);
 }
 
+@utility icone-pleine {
+    font-variation-settings: 'FILL' 1;
+}
+
 @utility sur-titre {
     font-size: var(--text-2xs);
     line-height: var(--text-2xs--line-height);
@@ -1262,31 +1266,6 @@
     max-height: 85vh;
     overflow-y: auto;
     box-shadow: 0 25px 50px rgb(from var(--color-shadow-cast) r g b / 0.15);
-}
-
-@utility category-pill {
-    /* ===== CATEGORY PILLS ===== */
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1.25rem;
-    border-radius: 9999px;
-    font-weight: 700;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: var(--color-text-on-dark-accent);
-    box-shadow: 0 4px 14px rgb(from var(--color-shadow-cast) r g b / 0.1);
-    transition: all 0.2s ease;
-    white-space: nowrap;
-
-    &:hover {
-        filter: brightness(1.1);
-    }
-
-    &:active {
-        transform: scale(0.95);
-    }
 }
 
 @utility glass-skeleton {
