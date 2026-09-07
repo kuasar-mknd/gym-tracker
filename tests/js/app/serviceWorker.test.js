@@ -39,18 +39,38 @@ const manifest = [{ url: '/assets/app.js', revision: 'abc' }]
 
 const originalClients = globalThis.clients
 
+/*
+ * Les globales du worker sont posées AVANT toute importation, pas dans un
+ * `beforeAll` : Vitest 5 évalue le module de test — et donc son graphe — avant
+ * de lancer les crochets, si bien que `sw.js` tournait sur un `self` encore nu
+ * et ses quatre appels de tête ne touchaient plus les espions.
+ */
+vi.spyOn(self, 'addEventListener').mockImplementation((type, handler) => {
+    listeners[type] = handler
+})
+
+self.skipWaiting = skipWaiting
+self.__WB_MANIFEST = manifest
+self.registration = { showNotification }
+self.Notification = { permission: 'granted' }
+globalThis.clients = { openWindow }
+
+/**
+ * Ce que le module a fait en s'important, relevé tout de suite.
+ *
+ * Vitest 5 vide l'historique des espions avant chaque test : le relever dans le
+ * test, c'est le relever après l'effacement, et l'assertion échoue sur un
+ * module qui a pourtant bien tourné.
+ */
+const auDemarrage = {}
+
 beforeAll(async () => {
-    vi.spyOn(self, 'addEventListener').mockImplementation((type, handler) => {
-        listeners[type] = handler
-    })
-
-    self.skipWaiting = skipWaiting
-    self.__WB_MANIFEST = manifest
-    self.registration = { showNotification }
-    self.Notification = { permission: 'granted' }
-    globalThis.clients = { openWindow }
-
     await import('@/sw.js')
+
+    auDemarrage.skipWaiting = skipWaiting.mock.calls.length
+    auDemarrage.clientsClaim = clientsClaim.mock.calls.length
+    auDemarrage.cleanupOutdatedCaches = cleanupOutdatedCaches.mock.calls.length
+    auDemarrage.precache = precacheAndRoute.mock.calls[0]
 })
 
 afterAll(() => {
@@ -86,18 +106,18 @@ describe('mise en service du worker', () => {
         // Without these two the new worker sits in "waiting" forever: an
         // installed PWA is suspended, never closed, so it kept serving the build
         // it was installed with.
-        expect(skipWaiting).toHaveBeenCalled()
-        expect(clientsClaim).toHaveBeenCalled()
+        expect(auDemarrage.skipWaiting).toBeGreaterThan(0)
+        expect(auDemarrage.clientsClaim).toBeGreaterThan(0)
     })
 
     it('jette les précaches des versions précédentes', () => {
-        expect(cleanupOutdatedCaches).toHaveBeenCalled()
+        expect(auDemarrage.cleanupOutdatedCaches).toBeGreaterThan(0)
     })
 
     it('précache le manifeste que le build lui injecte', () => {
         // Precaching a literal list instead would freeze the worker on whatever
         // asset names existed the day it was written.
-        expect(precacheAndRoute).toHaveBeenCalledWith(manifest)
+        expect(auDemarrage.precache).toEqual([manifest])
     })
 })
 
