@@ -1,5 +1,6 @@
 import { clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
 
 /**
  * vite.config.js asks for registerType: 'autoUpdate'. With the generateSW
@@ -25,6 +26,23 @@ cleanupOutdatedCaches()
 
 // Precache assets
 precacheAndRoute(self.__WB_MANIFEST)
+
+/**
+ * Ce que l'installation n'a pas pris, la première visite le garde.
+ *
+ * Les morceaux de page ne sont plus préchargés : un compte qui n'ouvre jamais
+ * les statistiques n'a pas à télécharger le graphique (#1814). Mais une page
+ * ouverte une fois doit se rouvrir sans réseau, donc son morceau entre au cache
+ * dès qu'il sert. La décision et la coupe vivent dans un module à part, parce
+ * qu'un fichier de worker ne se teste pas.
+ */
+self.addEventListener('fetch', (event) => {
+    if (!estUnActif(event.request, self.location.origin)) {
+        return
+    }
+
+    event.respondWith(servirDepuisLeCache(event, caches, (requete) => fetch(requete)))
+})
 
 // Handle Push notifications
 self.addEventListener('push', (event) => {
