@@ -150,7 +150,7 @@ const NOT_ICONS = [
     'icon', 'icons', 'class', 'true', 'false', 'null', 'string', 'number', 'object',
     'default', 'template', 'div', 'span', 'button', 'type', 'name', 'color', 'size',
     'label', 'title', 'text', 'small', 'medium', 'large', 'left', 'right', 'center',
-    'top', 'bottom', 'dark', 'light', 'system', 'strength', 'cardio', 'timed',
+    'top', 'bottom', 'strength', 'cardio', 'timed',
     'distance', 'primary', 'secondary', 'danger', 'emerald', 'red', 'ghost', 'value',
     // `{{ status === 'running' ? 'pause' : 'play_arrow' }}` — the operand of the
     // comparison, not one of the two names the branch can render.

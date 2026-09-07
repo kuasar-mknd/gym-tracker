@@ -1,8 +1,6 @@
 import '../css/app.css'
 import { jeton } from '@/Utils/couleurs'
 
-// Initialize theme early to prevent flash of wrong theme
-
 import { createInertiaApp, router } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'

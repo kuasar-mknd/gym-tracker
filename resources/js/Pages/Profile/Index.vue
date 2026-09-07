@@ -156,9 +156,6 @@ const menuGroups = [
                 </div>
             </div>
 
-            <!-- Theme Toggle -->
-            <div class="animate-fade-in"></div>
-
             <!-- Menu Groups -->
             <div
                 v-for="(group, gIdx) in menuGroups"

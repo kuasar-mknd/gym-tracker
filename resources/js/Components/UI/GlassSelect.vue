@@ -3,7 +3,7 @@
  * GlassSelect.vue
  *
  * A reusable select component implementing the "Liquid Glass" aesthetic.
- * Consistent styling with GlassInput, supports dark mode, labels, errors.
+ * Consistent styling with GlassInput: labels, errors.
  *
  * `aria-describedby` is emitted only when there is an error to describe. Sent
  * unconditionally it pointed at a hidden element on every healthy field, so a

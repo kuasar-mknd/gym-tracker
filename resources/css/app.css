@@ -1466,8 +1466,6 @@
         --safe-area-top: env(safe-area-inset-top, 0px);
     }
 
-    /* Dark Mode Variables */
-
     /*
      * The page scrolls here, and only here. Both declarations belong on the
      * root: the viewport takes its overflow and its overscroll behaviour from
@@ -1475,6 +1473,16 @@
      * rubber-band and pull-to-refresh.
      */
     html {
+        /*
+         * L'application n'a qu'un theme, et il est clair. Sans cette
+         * declaration, un telephone regle en sombre laisse le navigateur
+         * repeindre lui-meme ce qu'il dessine : cases a cocher, listes
+         * deroulantes, ascenseurs et champs de saisie sortaient en sombre au
+         * milieu de surfaces claires, sans qu'aucune regle du depot ne le
+         * demande. C'est la contrepartie du retrait du mode sombre (#1580) :
+         * ne plus le supporter, c'est le dire au navigateur.
+         */
+        color-scheme: light;
         font-family: 'Space Grotesk', 'Inter', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;

@@ -3,7 +3,6 @@
  * GlassToggle.vue
  *
  * A reusable toggle switch component with the "Liquid Glass" aesthetic.
- * Supports light/dark mode with proper contrast in both states.
  *
  * Usage:
  *   <GlassToggle v-model="isEnabled" label="Feature" description="Enable this feature" />

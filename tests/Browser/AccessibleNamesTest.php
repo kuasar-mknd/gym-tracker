@@ -116,14 +116,14 @@ class AccessibleNamesTest extends DuskTestCase
     /**
      * A control that is named but invisible is no more usable than an unnamed
      * one. The session's settings button was `bg-white/10 text-white` with no
-     * light-mode counterpart, so on the light theme it was a white glyph on a
-     * white header — announced perfectly, and impossible to see.
+     * light-mode counterpart, so it was a white glyph on a white header —
+     * announced perfectly, and impossible to see.
      *
      * Contrast is computed from what the browser actually paints rather than
      * asserted against class names, which would only restate the markup. The
      * bar is WCAG AA for a user interface component, 3:1.
      */
-    public function test_the_session_header_controls_can_be_seen_on_the_light_theme(): void
+    public function test_the_session_header_controls_can_be_seen(): void
     {
         $user = User::factory()->create(['email_verified_at' => now()]);
         $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
@@ -132,23 +132,22 @@ class AccessibleNamesTest extends DuskTestCase
             $browser->loginAs(User::find($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
-                ->waitFor('#main-content', 30);
-
-            /**
-             * Ask for the light theme through the preference the app reads, and
-             * reload so it is applied on mount. Stripping the `dark` class from
-             * the root instead does nothing lasting: the app puts it straight
-             * back, and the measurement below then quietly reports the dark
-             * theme — which is how the first version of this guard passed on the
-             * very markup it was written to catch.
-             */
-            $browser->script("localStorage.setItem('gymtracker-theme', 'light');");
-
-            $browser->visit('/workouts/'.$workout->id)
-                ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor('@workout-settings-button', 15)
-                ->assertScript("document.documentElement.classList.contains('dark')", false);
+                ->disableAnimations()
+                ->waitFor('@workout-settings-button', 15);
+
+            /*
+             * Ce controle mettait en scene une bascule de theme : il ecrivait une
+             * preference `gymtracker-theme` puis rechargeait pour l'appliquer.
+             * Plus personne ne lit cette clef depuis le retrait du mode sombre
+             * (#1580) — un seul fichier du depot l'ecrivait, celui-ci — donc la
+             * mise en scene coutait une visite de page pour ne rien changer.
+             *
+             * L'assertion, elle, reste : elle ne coute rien et dit qu'aucun code
+             * ne repose une classe `dark` a l'execution, ce que la garde
+             * `LeModeSombreNeRevientPasTest` ne peut pas voir depuis les sources.
+             */
+            $browser->assertScript("document.documentElement.classList.contains('dark')", false);
 
             $ratios = $browser->script(<<<'MEASURE'
                 return (function () {

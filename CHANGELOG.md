@@ -7,10 +7,19 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Retiré
+- **Les derniers restes du mode sombre** (#1806) : il n'y en aura pas, la décision est prise et l'issue fermée. Partent avec elle un thème sombre complet resté dans la page de la charte — sur la page même qui explique pourquoi il n'y en a plus —, les vues d'un paquet désinstallé en #1673, un en-tête de bloc CSS dont le corps était parti, un emplacement de sélecteur de thème vide dans le profil, et une clef `gymtracker-theme` qu'un test écrivait et que plus personne ne lisait
+
 ### Corrigé
 - **Les notifications push arrivent enfin sur iPhone** (#1849) : deux causes se cumulaient. L'autorisation n'était jamais demandée, parce que le serveur répondait « déjà abonné » dès qu'un abonnement existait quelque part sur le compte — un abonnement pris sur un autre navigateur masquait donc le bandeau « Activer » sur le téléphone, seul endroit de l'application qui réclame l'autorisation, et le rattrapage prévu avalait ses échecs en silence. Et rien n'arrivait de toute façon : le service worker vérifiait `self.Notification.permission`, une interface que WebKit n'expose pas dans la portée d'un worker, si bien que chaque push repartait sans rien afficher — ce qui fait révoquer l'abonnement par iOS, la panne s'aggravant d'elle-même
 - **Une notification touchée ouvre la page qu'elle annonce** : le worker cherchait sa destination dans un champ que le serveur n'a jamais envoyé, donc tout clic ouvrait l'accueil. Le clic reprend aussi la fenêtre ouverte au lieu d'empiler un second exemplaire de l'application
 - **Un envoi push refusé laisse une trace** : le canal émet bien l'événement, personne ne l'écoutait, et un appareil pouvait cesser de recevoir pendant des semaines sans qu'aucun journal ne le dise
+- **L'application installée n'ouvre plus sur un écran bleu nuit** : le manifeste PWA annonçait `#0f172a` en fond et en couleur de thème, la couleur du thème retiré, alors que la page déclare `#f8faff` deux lignes plus loin
+- **Les contrôles de formulaire ne sortent plus en sombre sur un téléphone réglé en sombre** : sans `color-scheme: light`, le navigateur repeint lui-même cases à cocher, listes déroulantes, ascenseurs et champs de saisie
+- **Le back-office et le lecteur de journaux suivaient le réglage du système** : Filament et log-viewer activent leur mode sombre par défaut, ce qui rendait au panneau le comportement « reçu sans l'avoir demandé » qui avait justement fait retirer le mode sombre de l'application
+
+### Modifié
+- **La garde du mode sombre voit enfin ce qu'elle prétendait tenir** : elle ne cherchait que les variantes `dark:` et la bascule Tailwind, d'où le thème sombre resté des mois dans la charte sous une CI verte. Elle refuse désormais aussi `prefers-color-scheme: dark` et `[data-theme="dark"]`, et exige la déclaration `color-scheme: light`
 
 ## [1.5.18] - 2026-09-07
 

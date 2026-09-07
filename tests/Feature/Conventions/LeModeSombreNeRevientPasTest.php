@@ -23,9 +23,16 @@ declare(strict_types=1);
  * fois, et avec elle exactement le meme defaut — puisque plus rien, ni CSS ni
  * bascule, ne la ferait fonctionner.
  *
- * Si le mode sombre doit revenir un jour, c'est par des jetons semantiques
- * renverses au seul endroit qui les declare, pas par des variantes posees a la
- * main. Ce test devra alors etre retire sciemment, ce qui est le but.
+ * La decision est desormais prise et elle est definitive : il n'y aura pas de
+ * mode sombre (#1806, ferme comme non planifie le 07/09/2026). Ce controle n'est
+ * donc plus une precaution en attendant mieux, c'est la tenue d'un choix.
+ *
+ * Il a longtemps ete plus etroit que son titre. Il ne cherchait que les
+ * utilitaires `dark:` et la bascule Tailwind, si bien qu'un theme sombre complet
+ * a vecu des mois dans la page de la charte — monte sur `prefers-color-scheme`,
+ * c'est-a-dire le mecanisme meme que l'en-tete ci-dessus designe comme la cause
+ * du retrait — sans qu'aucune CI ne s'en apercoive. D'ou les deux controles
+ * suivants.
  */
 
 use Symfony\Component\Finder\Finder;
@@ -91,5 +98,51 @@ it('ne laisse pas revenir la bascule elle-meme', function (): void {
     expect(preg_match('/(?<![\w&.-])\.dark\b/', $css))->toBe(0,
         'Un bloc `.dark` est revenu dans `app.css`. La classe n\'est plus posee sur la racine par '
         .'personne : ces regles seraient du CSS mort.'
+    );
+});
+
+it('ne laisse pas revenir un theme sombre par la requete de media', function (): void {
+    $fichiers = Finder::create()
+        ->files()
+        ->in([resource_path('js'), resource_path('css'), resource_path('views')])
+        ->name(['*.vue', '*.js', '*.css', '*.blade.php']);
+
+    $coupables = [];
+
+    foreach ($fichiers as $fichier) {
+        $contenu = $fichier->getContents();
+
+        // `prefers-color-scheme: dark` renverse la page sans que personne ne
+        // l'ait demande ; `[data-theme="dark"]` fait la meme chose sur un
+        // attribut que plus rien ne pose.
+        if (preg_match('/prefers-color-scheme\s*:\s*dark/i', $contenu) === 1
+            || preg_match('/\[data-theme\s*=\s*[\'"]dark[\'"]\]/i', $contenu) === 1) {
+            $coupables[] = $fichier->getRelativePathname();
+        }
+    }
+
+    expect($coupables)->toBe([], sprintf(
+        "Un theme sombre est revenu dans %d fichier(s) :\n  %s\n\n"
+        .'Le theme suivait `prefers-color-scheme` par defaut, donc tout visiteur dont le systeme '
+        .'est en sombre recevait cette version-la sans l\'avoir demandee : c\'est ce qui a decide '
+        ."du retrait (#1580) plutot que d'une reparation.\n\n"
+        .'Ce controle a ete ajoute parce qu\'il manquait : la page de la charte a porte une palette '
+        .'sombre complete pendant des mois, sur la page meme qui explique pourquoi il n\'y en a plus.',
+        count($coupables),
+        implode("\n  ", $coupables)
+    ));
+});
+
+it('declare au navigateur que l\'application n\'a qu\'un theme', function (): void {
+    $css = (string) file_get_contents(resource_path('css/app.css'));
+
+    // `toContain` prend ses arguments comme autant de chaines a chercher : un
+    // message passe en second y devient un motif, et le controle echoue sur un
+    // fichier pourtant conforme.
+    expect(str_contains($css, 'color-scheme: light'))->toBeTrue(
+        'Sans `color-scheme: light` sur `html`, un telephone regle en sombre laisse le navigateur '
+        .'repeindre ce qu\'il dessine lui-meme : cases a cocher, listes deroulantes, ascenseurs et '
+        .'champs de saisie sortent en sombre au milieu de surfaces claires. Ne plus supporter le '
+        .'mode sombre, c\'est aussi le dire au navigateur.'
     );
 });
