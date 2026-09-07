@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, defineAsyncComponent } from 'vue'
-import axios from 'axios'
+import { http } from '@/Utils/http'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
@@ -47,7 +47,7 @@ const fetchExerciseProgress = async (exerciseId) => {
     loadFailed.value = false
     exerciseProgressData.value = []
     try {
-        const response = await axios.get(route('stats.exercise', { exercise: exerciseId }))
+        const response = await http.get(route('stats.exercise', { exercise: exerciseId }))
 
         if (exerciseId !== selectedExercise.value) {
             return

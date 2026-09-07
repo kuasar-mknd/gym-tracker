@@ -14,6 +14,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - **Six composants de la charte** (#1781, #1786, #1792, #1794) : `GlassSegmented` (choix exclusif, flèches au clavier), `GlassChip` (pilule de filtre, cible de 44 px même en petit), `GlassTile` (tuile de choix ou d'action), `GlassTextarea` (étiquette, compteur, erreur, hauteur qui suit le texte), `GlassStat` (chiffre, unité, libellé, tendance) et `GlassIcon` (sept tailles, remplissage, nom pour les lecteurs d'écran)
 
 ### Modifié
+- **`axios` quitte le paquet** (#1815) : Inertia 3 s'en passe, et il ne restait que pour quatre fichiers tout en partant dans le morceau principal de chaque page. `Utils/http.js` rend la même forme d'appel et la même forme d'erreur — la file hors-ligne garde ses requêtes en attente d'une version à l'autre. Le morceau principal passe de 80 à 31 Ko
 - **Le bureau ne s'étire plus** (#1802, #1817) : les huit outils et la page d'une séance gardent une colonne au lieu des 1 280 px du conteneur, et les champs d'une série s'arrêtent à 128 px au lieu de 470
 - **L'en-tête des jours suit la liste des habitudes** (#1807) : collé sous l'en-tête de l'application, il reste au-dessus des cases qu'il nomme
 - **Une seule façon de dire « il n'y a rien »** (#1791) : trente écrans écrivaient la leur — carte complète, icône et deux lignes, ou phrase grise seule. `GlassEmptyState` prend une taille `ligne` pour l'intérieur d'une carte déjà titrée, et une garde Vitest refuse le prochain « Aucun… » écrit à la main
@@ -33,6 +34,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Corrigé
 - **Un record de volume s'annonçait en répétitions** : « 1 200 reps » pour une série de 100 kg × 12, et aucune unité du tout sur la carte de l'accueil. C'est une charge, en kilos
 - **Un poids de trois chiffres se lisait à moitié dans sa case** (#1788) : les unités passent DANS les champs de la rangée d'une série, les flèches des champs numériques — que le doigt n'utilise jamais — libèrent leur douzaine de pixels, et une garde Dusk mesure le débordement réel du navigateur sur la séance, les plaques, le 1RM et l'échauffement
+
+### Sécurité
+- **Le manifeste de Vite ne répond plus** (#1816) : il listait tous les morceaux, leurs noms hachés et leurs imports — la carte de l'application, servie à qui la demandait. Laravel le lit sur disque
 
 ## [1.5.17] - 2026-09-06
 

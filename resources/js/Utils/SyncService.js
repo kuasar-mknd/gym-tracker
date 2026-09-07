@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { http } from '@/Utils/http'
 import { classifySyncError, SYNC_AUTH, SYNC_OFFLINE } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
@@ -83,11 +83,10 @@ class SyncService {
      * user, and a true value never did prove reachability. So we always attempt
      * the request; the catch below queues it when the network genuinely refuses.
      *
-     * @param {Object} config Axios request config
+     * @param {Object} config La requête, au format de `Utils/http`
      * @returns {Promise}
      */
     async request(config) {
-        const api = window.axios || axios
         const stamped = this.stampIdempotency(config)
 
         /*
@@ -109,7 +108,7 @@ class SyncService {
         }
 
         try {
-            return await api(stamped)
+            return await http(stamped)
         } catch (error) {
             // Auto-retry once on 429 Too Many Requests (rate limiting)
             if (error.response?.status === 429) {
@@ -123,7 +122,7 @@ class SyncService {
                      * a 429 means the server was busy, not that it refused, and
                      * the first attempt may well have been written.
                      */
-                    return await api(stamped)
+                    return await http(stamped)
                 } catch (retryError) {
                     return this.queueOrThrow(retryError, stamped)
                 }
@@ -238,15 +237,13 @@ class SyncService {
      * and overwrite it.
      */
     async drainQueue() {
-        const api = window.axios || axios
-
         while (this.queue.length > 0) {
             const config = this.queue[0]
 
             try {
                 // Remove internal queue ID before sending
-                const { id, timestamp, authAttempts, ...axiosConfig } = config
-                const response = await api(axiosConfig)
+                const { id, timestamp, authAttempts, ...requete } = config
+                const response = await http(requete)
 
                 /**
                  * Says what this write finally produced.

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const request = vi.fn()
 
-vi.mock('axios', () => ({ default: (...args) => request(...args) }))
+vi.mock('@/Utils/http', () => ({ http: (...args) => request(...args) }))
 
 const setOnline = (value) => {
     Object.defineProperty(navigator, 'onLine', { writable: true, configurable: true, value })
@@ -30,7 +30,6 @@ beforeEach(() => {
     localStorage.clear()
     request.mockReset()
     setOnline(true)
-    delete window.axios
 })
 
 afterEach(() => {

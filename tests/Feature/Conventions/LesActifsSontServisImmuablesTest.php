@@ -23,11 +23,26 @@ it('rend les actifs hachés immuables, et rien d’autre', function (): void {
         ->and(substr_count($caddyfile, 'Cache-Control'))->toBe(1);
 });
 
+/**
+ * Le manifeste de Vite liste tous les morceaux, leurs noms hachés et leurs
+ * imports : la carte de l'application, servie en 200 à qui la demandait (#1816).
+ * Laravel le lit sur disque, jamais par HTTP.
+ */
+it('ne sert pas le manifeste de Vite', function (): void {
+    $caddyfile = (string) file_get_contents(base_path('docker/octane/Caddyfile'));
+
+    expect($caddyfile)->toContain('respond /build/manifest.json 404');
+});
+
 it('reste le gabarit d’Octane, à notre bloc près', function (): void {
     $notre = (string) file_get_contents(base_path('docker/octane/Caddyfile'));
     $gabarit = (string) file_get_contents(base_path('vendor/laravel/octane/src/Commands/stubs/Caddyfile'));
 
-    $sansNotreBloc = (string) preg_replace("/\n\t\t# Les actifs de \/build\/assets.*?immutable\"\n/s", '', $notre);
+    $sansNotreBloc = (string) preg_replace(
+        ["/\n\t\t# Les actifs de \/build\/assets.*?immutable\"\n/s", "/\n\t\t# Le manifeste de Vite.*?manifest\.json 404\n/s"],
+        '',
+        $notre
+    );
 
     expect($sansNotreBloc)->toBe($gabarit);
 });

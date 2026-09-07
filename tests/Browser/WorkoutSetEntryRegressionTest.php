@@ -59,25 +59,25 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
      */
     private function delayFirst(Browser $browser, string $method, string $urlPattern): void
     {
+        // Le transport est `fetch` depuis #1815 : c'est lui qu'on retient.
         $browser->script(<<<JS
             (function () {
-                const original = window.axios;
+                const original = window.fetch.bind(window);
                 let seen = 0;
-                const delayed = function (config) {
-                    const matches = String(config.method).toLowerCase() === '{$method}'
-                        && {$urlPattern}.test(String(config.url));
+
+                window.fetch = function (url, options) {
+                    const methode = String((options && options.method) || 'get').toLowerCase();
+                    const matches = methode === '{$method}' && {$urlPattern}.test(String(url));
 
                     if (matches && ++seen === 1) {
                         window.__requeteRetenue = true;
                         return new Promise((resolve, reject) =>
-                            setTimeout(() => original(config).then(resolve, reject), 3000)
+                            setTimeout(() => original(url, options).then(resolve, reject), 3000)
                         );
                     }
 
-                    return original(config);
+                    return original(url, options);
                 };
-                Object.assign(delayed, original);
-                window.axios = delayed;
             })();
         JS);
     }

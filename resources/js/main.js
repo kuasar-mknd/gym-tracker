@@ -1,6 +1,5 @@
 import '../css/app.css'
 import { jeton } from '@/Utils/couleurs'
-import './bootstrap'
 
 // Initialize theme early to prevent flash of wrong theme
 

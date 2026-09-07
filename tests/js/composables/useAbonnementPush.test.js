@@ -3,7 +3,7 @@ import { defineComponent, h } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 
 const reseau = vi.hoisted(() => ({ post: vi.fn() }))
-vi.mock('axios', () => ({ default: { post: (...args) => reseau.post(...args) } }))
+vi.mock('@/Utils/http', () => ({ http: { post: (...args) => reseau.post(...args) } }))
 
 import { useAbonnementPush } from '@/composables/useAbonnementPush'
 
@@ -53,9 +53,7 @@ beforeEach(() => {
     globalThis.route = (nom) => `/${nom}`
 })
 
-afterEach(() => {
-    delete window.axios
-})
+afterEach(() => {})
 
 describe('activer les notifications push', () => {
     it('s’abonne, enregistre l’abonnement, puis rend la main au formulaire', async () => {
