@@ -7,6 +7,11 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Les notifications push arrivent enfin sur iPhone** (#1849) : deux causes se cumulaient. L'autorisation n'était jamais demandée, parce que le serveur répondait « déjà abonné » dès qu'un abonnement existait quelque part sur le compte — un abonnement pris sur un autre navigateur masquait donc le bandeau « Activer » sur le téléphone, seul endroit de l'application qui réclame l'autorisation, et le rattrapage prévu avalait ses échecs en silence. Et rien n'arrivait de toute façon : le service worker vérifiait `self.Notification.permission`, une interface que WebKit n'expose pas dans la portée d'un worker, si bien que chaque push repartait sans rien afficher — ce qui fait révoquer l'abonnement par iOS, la panne s'aggravant d'elle-même
+- **Une notification touchée ouvre la page qu'elle annonce** : le worker cherchait sa destination dans un champ que le serveur n'a jamais envoyé, donc tout clic ouvrait l'accueil. Le clic reprend aussi la fenêtre ouverte au lieu d'empiler un second exemplaire de l'application
+- **Un envoi push refusé laisse une trace** : le canal émet bien l'événement, personne ne l'écoutait, et un appareil pouvait cesser de recevoir pendant des semaines sans qu'aucun journal ne le dise
+
 ## [1.5.18] - 2026-09-07
 
 ### Ajouté
