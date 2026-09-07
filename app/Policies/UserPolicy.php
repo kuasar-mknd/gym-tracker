@@ -13,12 +13,13 @@ final class UserPolicy
     use HandlesAuthorization;
 
     /**
-     * Whether the authenticated identity is the very user being acted upon.
+     * L'identité connectée est-elle l'utilisateur même sur lequel on agit.
      *
-     * The instanceof check is load-bearing: the back-office authenticates
-     * App\Models\Admin on the "admin" guard, a separate table with its own id
-     * sequence. Comparing identifiers alone let an admin holding no permission
-     * act on the User that happened to share their id.
+     * Le test `instanceof` porte tout le poids : le back-office authentifie
+     * App\Models\Admin sur le gardien « admin », une table à part avec sa propre
+     * séquence d'identifiants. Comparer les seuls identifiants laissait un
+     * administrateur sans aucune permission agir sur le User qui partageait par
+     * hasard son id.
      */
     private function isSelf(AuthUser $authUser, User $user): bool
     {

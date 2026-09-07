@@ -8,18 +8,21 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Rebuilds the self-hosted Material Symbols subset from the icon list.
+ * Reconstruit le sous-ensemble Material Symbols auto-hébergé à partir de la
+ * liste d'icônes.
  *
- * The subset carries only the icons this app draws — around 10 KiB against the
- * 1,099 KiB variable face it used to fetch from Google on every cold start. The
- * saving is worth having, but it introduced a way to be silently wrong: the
- * list is the intent, the .woff2 is the artifact, and nothing tied them
- * together. An icon added to the list without regenerating the font renders as
- * its own name spelled out in the interface.
+ * Le sous-ensemble ne porte que les icônes que l'application dessine — environ
+ * 10 Kio contre les 1 099 Kio de la fonte variable qu'elle allait chercher chez
+ * Google à chaque démarrage à froid. L'économie vaut d'être prise, mais elle a
+ * ouvert une façon d'avoir tort en silence : la liste est l'intention, le
+ * .woff2 est l'artefact, et rien ne les liait. Une icône ajoutée à la liste
+ * sans régénérer la fonte s'affiche dans l'interface sous la forme de son
+ * propre nom en toutes lettres.
  *
- * So this command writes both the font and a checksum of the list that produced
- * it, and IconSubsetTest fails when the two drift apart. Regenerating is now one
- * command rather than a curl incantation in a comment.
+ * Cette commande écrit donc la fonte ET une empreinte de la liste qui l'a
+ * produite, et IconSubsetTest échoue quand les deux divergent. Régénérer tient
+ * désormais en une commande plutôt qu'en une incantation curl cachée dans un
+ * commentaire.
  */
 class SyncIconFont extends Command
 {
@@ -30,9 +33,9 @@ class SyncIconFont extends Command
     protected $description = 'Rebuild the self-hosted Material Symbols subset from resources/fonts/material-symbols.txt';
 
     /**
-     * Google serves woff2 only to user agents it believes support it; the
-     * default client string gets a ttf back, which the @font-face rule then
-     * fails to load.
+     * Google ne sert le woff2 qu'aux navigateurs qu'il croit capables de le
+     * lire ; la chaîne cliente par défaut rapporte un ttf, que la règle
+     * `@font-face` n'arrive alors pas à charger.
      */
     private const string USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36';
 
@@ -64,8 +67,9 @@ class SyncIconFont extends Command
             return self::FAILURE;
         }
 
-        // The URL no longer ends in .woff2 — Google now serves subsets from
-        // /l/font?kit=…, so the format is read from the rule, not the path.
+        // L'URL ne finit plus par .woff2 — Google sert désormais les
+        // sous-ensembles depuis /l/font?kit=…, donc le format se lit dans la
+        // règle et non dans le chemin.
         if (preg_match("/url\((https:\/\/[^)]+)\).*?format\('woff2'\)/s", $css->body(), $rule) !== 1) {
             $this->error('No woff2 source in the returned @font-face rule.');
 
@@ -124,7 +128,7 @@ class SyncIconFont extends Command
             fn (string $line): bool => $line !== '' && ! str_starts_with($line, '#')
         );
 
-        // sort() reindexes, so what comes back is already a list.
+        // sort() réindexe, donc ce qui revient est déjà une liste.
         sort($names);
 
         return $names;

@@ -14,21 +14,21 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Service for calculating and aggregating workout volume statistics.
+ * Les statistiques de volume : tendances par jour, par semaine et par mois, et
+ * les comparaisons d'une période à la précédente.
  *
- * This class handles the computation of volume-related metrics such as daily,
- * weekly, and monthly trends, as well as period-over-period comparisons.
- * It leverages caching and database-level aggregations (via `toBase()`)
- * to ensure high performance even with large datasets.
+ * Tout ce qui peut s'agréger le fait en base, et chaque résultat est mis en
+ * cache : ces chiffres sont recalculés à chaque ouverture de l'écran des
+ * statistiques, sur un historique qui ne cesse de grandir.
  */
 final class VolumeStatsService
 {
     /**
-     * Retrieve the volume trend over a specified number of days.
+     * La tendance du volume sur les derniers jours.
      *
-     * @param  User  $user  The user for whom to calculate the volume trend.
-     * @param  int  $days  The number of past days to include in the trend (default: 30).
-     * @return array<int, VolumeTrendPoint> A list of volume trend data points.
+     * @param  User  $user  L'utilisateur concerné.
+     * @param  int  $days  La profondeur d'historique, en jours.
+     * @return array<int, VolumeTrendPoint>
      */
     public function getVolumeTrend(User $user, int $days = 30): array
     {
@@ -36,9 +36,6 @@ final class VolumeStatsService
             ClesDeStats::seances($user, "volume_trend.{$days}"),
             now()->addMinutes(30),
             function () use ($user, $days): array {
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models and instantiating Carbon objects.
-                // Consolidate map/filter/values chains into a single foreach loop to prevent multiple O(N) iterations.
                 /*
                  * Le `toBase()` qui etait ici est parti.
                  *
@@ -75,12 +72,13 @@ final class VolumeStatsService
     }
 
     /**
-     * Retrieve the volume trend for the current week.
+     * Le volume de chaque jour de la semaine en cours, du lundi au dimanche.
      *
-     * Calculates the daily volume for each day of the current week (Monday to Sunday).
+     * Les sept jours sortent toujours, y compris ceux sans séance : la courbe
+     * doit montrer les creux, pas les sauter.
      *
-     * @param  User  $user  The user for whom to calculate the weekly trend.
-     * @return array<int, WeeklyVolumeTrendPoint> A list of daily volume points for the current week.
+     * @param  User  $user  L'utilisateur concerné.
+     * @return array<int, WeeklyVolumeTrendPoint>
      */
     public function getWeeklyVolumeTrend(User $user): array
     {
@@ -91,8 +89,8 @@ final class VolumeStatsService
                 $startOfWeek = now()->startOfWeek();
                 $endOfWeek = now()->endOfWeek();
 
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Use toBase() to avoid hydrating Eloquent models.
+                // `toBase()` : la somme sort déjà agrégée, aucun modèle à
+                // hydrater derrière.
                 $workouts = $user->workouts()
                     ->toBase()
                     ->whereBetween('started_at', [$startOfWeek, $endOfWeek])
@@ -119,13 +117,11 @@ final class VolumeStatsService
     }
 
     /**
-     * Retrieve the recent volume history for individual workouts.
+     * Le volume des dernières séances terminées, une par point.
      *
-     * Fetches the volume of the most recent workouts up to the specified limit.
-     *
-     * @param  User  $user  The user for whom to retrieve the history.
-     * @param  int  $limit  The maximum number of workouts to return (default: 20).
-     * @return array<int, VolumeHistoryPoint> A list of recent workout volume points.
+     * @param  User  $user  L'utilisateur concerné.
+     * @param  int  $limit  Le nombre de séances au plus.
+     * @return array<int, VolumeHistoryPoint>
      */
     public function getVolumeHistory(User $user, int $limit = 20): array
     {
@@ -165,10 +161,9 @@ final class VolumeStatsService
     }
 
     /**
-     * Compare the total volume of the current month against the previous month.
+     * Le volume du mois en cours contre celui du mois précédent.
      *
-     * @param  User  $user  The user to compare volume for.
-     * @return VolumeComparison An object containing the current, previous, and comparison metrics.
+     * @param  User  $user  L'utilisateur concerné.
      */
     public function getMonthlyVolumeComparison(User $user): VolumeComparison
     {
@@ -188,10 +183,9 @@ final class VolumeStatsService
     }
 
     /**
-     * Compare the total volume of the current week against the previous week.
+     * Le volume de la semaine en cours contre celui de la semaine précédente.
      *
-     * @param  User  $user  The user to compare volume for.
-     * @return VolumeComparison An object containing the current, previous, and comparison metrics.
+     * @param  User  $user  L'utilisateur concerné.
      */
     public function getWeeklyVolumeComparison(User $user): VolumeComparison
     {
@@ -217,13 +211,11 @@ final class VolumeStatsService
     }
 
     /**
-     * Retrieve the aggregated monthly volume history over a given period.
+     * Le volume total de chacun des derniers mois.
      *
-     * Calculates the total volume per month for the specified number of past months.
-     *
-     * @param  User  $user  The user for whom to calculate the monthly history.
-     * @param  int  $months  The number of months to include (default: 6).
-     * @return array<int, MonthlyVolumePoint> A list of aggregated monthly volume points.
+     * @param  User  $user  L'utilisateur concerné.
+     * @param  int  $months  Le nombre de mois couverts.
+     * @return array<int, MonthlyVolumePoint>
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
@@ -231,9 +223,10 @@ final class VolumeStatsService
             ClesDeStats::seances($user, "monthly_volume_history.{$months}"),
             now()->addMinutes(30),
             function () use ($user, $months): array {
-                // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-                // Perform grouping and summation directly in SQL to reduce memory usage and CPU cycles in PHP.
-                // Uses toBase() to bypass Eloquent model hydration and a driver-aware format for database portability.
+                // Le regroupement et la somme se font en SQL : ramener des mois
+                // entiers de séances en PHP pour les additionner ne tiendrait pas
+                // sur un long historique. Le format de date dépend du pilote,
+                // MySQL et SQLite ne l'écrivant pas pareil.
                 $driver = \Illuminate\Support\Facades\DB::getDriverName();
                 $monthFormat = $driver === 'sqlite' ? "strftime('%Y-%m', started_at)" : "DATE_FORMAT(started_at, '%Y-%m')";
 
@@ -271,22 +264,19 @@ final class VolumeStatsService
     }
 
     /**
-     * Calculate a period-over-period volume comparison.
+     * Compare le volume d'une période à celui de la précédente.
      *
-     * Aggregates total workout volume for a current period and a previous period,
-     * computing the absolute difference and percentage change.
-     *
-     * @param  User  $user  The user to calculate the comparison for.
-     * @param  Carbon  $currentStart  The start date/time of the current period.
-     * @param  Carbon  $prevStart  The start date/time of the previous period.
-     * @param  Carbon  $prevEnd  The end date/time of the previous period.
-     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null} The calculated metrics, with a null percentage when there is nothing to compare against.
+     * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon  $currentStart  Le début de la période courante.
+     * @param  Carbon  $prevStart  Le début de la période précédente.
+     * @param  Carbon  $prevEnd  La fin de la période précédente.
+     * @return array{current_volume: float, previous_volume: float, difference: float, percentage: float|null} Le pourcentage est nul quand il n'y a rien à comparer.
      */
     private function calculateComparison(User $user, Carbon $currentStart, Carbon $prevStart, Carbon $prevEnd): array
     {
-        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-        // Consolidate two SUM queries into a single database query using conditional aggregation.
-        // Also uses toBase() to bypass Eloquent overhead.
+        // Les deux sommes tiennent dans une seule requête, par agrégation
+        // conditionnelle : les deux périodes se suivent, donc une seule plage
+        // les couvre.
         $query = $user->workouts()
             ->toBase()
             ->where('started_at', '>=', $prevStart);

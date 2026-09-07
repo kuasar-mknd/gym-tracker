@@ -11,7 +11,7 @@ use Carbon\Carbon;
 class FetchWaterHistoryAction
 {
     /**
-     * Get the water consumption history for the last 7 days.
+     * L'hydratation des sept derniers jours.
      *
      * @return array<int, array{date: string, day_name: string, total: float}>
      */
@@ -23,14 +23,16 @@ class FetchWaterHistoryAction
             ->where('consumed_at', '>=', $startDate)
             ->get();
 
-        // ⚡ Bolt: Group by date string to change O(n*7) collection filtering into O(n) + O(1) lookups
+        // Groupé une fois par date : filtrer la collection jour après jour
+        // coûtait O(n×7), là où un groupement coûte O(n) puis sept lectures
+        // directes.
         $groupedLogs = $historyLogs->groupBy(
             static fn (WaterLog $log): string => $log->consumed_at->format('Y-m-d')
         );
 
         $history = [];
         for ($i = 6; $i >= 0; $i--) {
-            // ⚡ Bolt: Use copy() instead of new Carbon instance inside loop
+            // `copy()` plutôt qu'une nouvelle instance de Carbon à chaque tour.
             $date = $now->copy()->subDays($i);
             $dateString = $date->format('Y-m-d');
 

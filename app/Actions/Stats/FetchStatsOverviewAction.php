@@ -9,31 +9,23 @@ use App\Models\User;
 use App\Services\Stats\BodyStatsService;
 
 /**
- * Action responsible for fetching the necessary data to render the stats overview dashboard.
+ * Ce que la vue d'ensemble des statistiques affiche d'emblée.
  *
- * It coordinates with the body stats service to retrieve immediate, lightweight statistics
- * like current weight and basic activity counts, and provides parsing for date periods.
+ * Les mesures corporelles et la liste d'exercices en cache, plus la lecture de
+ * la période demandée ; les calculs lourds restent dans les services.
  */
 class FetchStatsOverviewAction
 {
-    /**
-     * Create a new FetchStatsOverviewAction instance.
-     *
-     * @param  \App\Services\Stats\BodyStatsService  $bodyStats  The underlying service for the latest body metrics.
-     */
     public function __construct(protected BodyStatsService $bodyStats)
     {
     }
 
     /**
-     * Get lightweight stats for immediate display on the dashboard.
+     * Les chiffres légers, affichables tout de suite : dernières mesures
+     * corporelles et liste d'exercices en cache.
      *
-     * This method fetches metrics that are fast to calculate, such as the user's
-     * latest body measurements and cached exercise list.
-     *
-     * @param  \App\Models\User  $user  The user to fetch stats for.
-     * @param  string  $period  The requested time period (e.g., '30j').
-     * @return array<string, mixed> An array of immediate statistics.
+     * @param  string  $period  La période demandée, telle qu'elle arrive de la requête (« 30j »).
+     * @return array<string, mixed>
      */
     public function getImmediateStats(User $user, string $period): array
     {
@@ -49,12 +41,7 @@ class FetchStatsOverviewAction
     }
 
     /**
-     * Parse a human-readable period string into an integer number of days.
-     *
-     * Defaults to 30 days if the provided period string is unrecognized.
-     *
-     * @param  string  $period  The period string (e.g., '7j', '30j', '90j', '1a').
-     * @return int The equivalent number of days.
+     * La période en nombre de jours ; trente pour tout ce qui n'est pas reconnu.
      */
     public function parsePeriod(string $period): int
     {
@@ -68,10 +55,7 @@ class FetchStatsOverviewAction
     }
 
     /**
-     * Retrieve the list of available exercises for the user, usually cached.
-     *
-     * @param  int  $userId  The ID of the user.
-     * @return \Illuminate\Database\Eloquent\Collection<int, Exercise> A collection of exercises.
+     * @return \Illuminate\Database\Eloquent\Collection<int, Exercise>
      */
     private function getFilteredExercises(int $userId): \Illuminate\Database\Eloquent\Collection
     {

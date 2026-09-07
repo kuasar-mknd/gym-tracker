@@ -15,10 +15,11 @@ class CustomPolicy extends Basic
     #[\Override]
     public function configure(Policy $policy): void
     {
-        // Don't call parent::configure() because Basic preset adds a nonce to STYLE,
-        // which completely breaks 'unsafe-inline' for style attributes (required by Filament).
+        // parent::configure() n'est pas appelé : le préréglage Basic pose un
+        // nonce sur STYLE, ce qui annule complètement 'unsafe-inline' pour les
+        // attributs de style, dont Filament a besoin.
 
-        // Replicate Basic preset but without style nonce
+        // Le préréglage Basic est donc rejoué ici, sans le nonce de style.
         $policy
             ->add(Directive::BASE, Keyword::SELF)
             ->add(Directive::CONNECT, Keyword::SELF)
@@ -67,10 +68,10 @@ class CustomPolicy extends Basic
             $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
         }
 
-        // Filament Style Attributes: Instead of adding 'unsafe-inline' only to
-        // the global style-src directive, we also use style-src-attr to specifically allow
-        // inline attributes on elements.
-        // NOTE: Style nonces are disabled because Filament injects <style> tags at runtime.
+        // 'unsafe-inline' ne suffit pas sur le seul style-src global :
+        // style-src-attr est posé en plus pour autoriser les attributs de style
+        // portés par les éléments. Les nonces de style restent désactivés,
+        // Filament injectant ses balises <style> à l'exécution.
         $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
         $policy->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE);
     }
@@ -78,13 +79,14 @@ class CustomPolicy extends Basic
     protected function configureExternalResources(Policy $policy): void
     {
         /**
-         * fonts.googleapis.com and fonts.gstatic.com are gone with the fonts
-         * themselves — those are self-hosted now, so the app has no reason to
-         * let a page reach Google for a stylesheet or a face.
+         * fonts.googleapis.com et fonts.gstatic.com sont partis avec les fontes
+         * elles-mêmes — elles sont auto-hébergées désormais, donc l'application
+         * n'a plus de raison de laisser une page joindre Google pour une feuille
+         * de style ou une police.
          *
-         * fonts.bunny.net stays: Horizon, Telescope, Pulse and Filament all
-         * pull their dashboard font from it, and none of them are ours to
-         * re-host.
+         * fonts.bunny.net reste : Horizon, Telescope, Pulse et Filament y
+         * prennent tous la fonte de leur tableau de bord, et aucun d'eux n'est à
+         * nous pour qu'on la ré-héberge.
          */
         $policy
             ->add(Directive::STYLE, 'https://fonts.bunny.net')

@@ -15,22 +15,8 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/**
- * Controller for managing user profiles.
- *
- * This controller handles viewing, editing, updating user profile data,
- * managing notification preferences, and securely handling user account deletion.
- */
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile menu hub.
-     *
-     * Renders the main profile navigation index page.
-     *
-     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
-     * @return \Inertia\Response The Inertia response rendering the 'Profile/Index' page.
-     */
     public function index(Request $request): Response
     {
         $this->authorize('view', $this->user());
@@ -38,15 +24,6 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Index');
     }
 
-    /**
-     * Display the user's profile form.
-     *
-     * Renders the edit profile page and passes the user's current
-     * notification preferences to the frontend.
-     *
-     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
-     * @return \Inertia\Response The Inertia response rendering the 'Profile/Edit' page with preference data.
-     */
     public function edit(Request $request): Response
     {
         $this->authorize('view', $this->user());
@@ -54,10 +31,11 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => true,
             'status' => session('status'),
-            // Whether *we* hold a subscription, which is not the same thing as the
-            // browser having granted permission. The page used to infer one from
-            // the other, so a subscription the server never stored still switched
-            // the interface into its "push is on" state.
+            // Est-ce que NOUS détenons un abonnement, ce qui n'est pas la même
+            // chose que le navigateur ayant accordé la permission. La page
+            // déduisait l'un de l'autre : un abonnement que le serveur n'avait
+            // jamais enregistré basculait quand même l'interface en « push
+            // activé ».
             'hasPushSubscription' => $this->user()->pushSubscriptions()->exists(),
             'notificationPreferences' => $this->user()->notificationPreferences()->get()->mapWithKeys(fn ($pref): array => [
                 $pref->type => [
@@ -71,13 +49,8 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's profile information.
-     *
-     * Validates and updates the authenticated user's name and email address.
-     * If the email address is changed, it resets the email verification state.
-     *
-     * @param  \App\Http\Requests\ProfileUpdateRequest  $request  The validated profile update request.
-     * @return \Illuminate\Http\RedirectResponse A redirect response back to the profile edit route.
+     * Changer d'adresse annule la vérification : sans quoi n'importe qui
+     * pourrait se donner une adresse déjà marquée comme vérifiée.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -95,13 +68,6 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's notification preferences.
-     *
-     * Validates and delegates the updating of notification settings (email, push, and values)
-     * to the UpdateNotificationPreferencesAction.
-     *
-     * @param  \App\Http\Requests\UpdateNotificationPreferencesRequest  $request  The validated notification preferences request.
-     * @param  \App\Actions\Profile\UpdateNotificationPreferencesAction  $updatePreferences  The action handling the preference updates.
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response 204 pour un client XHR, sinon retour au profil.
      */
     public function updatePreferences(UpdateNotificationPreferencesRequest $request, UpdateNotificationPreferencesAction $updatePreferences): \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
@@ -129,11 +95,11 @@ class ProfileController extends Controller
     }
 
     /**
-     * Bascule le demarrage automatique du minuteur de repos.
+     * Bascule le démarrage automatique du minuteur de repos.
      *
-     * Renvoie en arriere plutot que vers le profil : l'interrupteur vit dans le
-     * panneau du minuteur, donc pendant une seance. Un redirect vers
-     * `profile.edit` sortirait l'utilisateur de sa seance pour un basculement.
+     * Renvoie en arrière plutôt que vers le profil : l'interrupteur vit dans le
+     * panneau du minuteur, donc pendant une séance. Un redirect vers
+     * `profile.edit` sortirait l'utilisateur de sa séance pour un basculement.
      */
     public function updateRestTimerPreference(\App\Http\Requests\UpdateRestTimerPreferenceRequest $request): RedirectResponse
     {
@@ -145,13 +111,8 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's account.
-     *
-     * Validates the password, logs the user out, deletes their account
-     * data from the database, and invalidates their current session.
-     *
-     * @param  \App\Http\Requests\DeleteUserRequest  $request  The validated request ensuring user authorization.
-     * @return \Illuminate\Http\RedirectResponse A redirect response to the application homepage.
+     * L'utilisateur est déconnecté avant d'être supprimé, et la session est
+     * invalidée après : le mot de passe est vérifié par `DeleteUserRequest`.
      */
     public function destroy(DeleteUserRequest $request): RedirectResponse
     {

@@ -11,8 +11,6 @@ use Symfony\Component\HttpFoundation\Response;
 class SecurityHeaders
 {
     /**
-     * Handle an incoming request.
-     *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
@@ -26,12 +24,13 @@ class SecurityHeaders
         $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
         /**
-         * `vr` was the draft name and is not in the Permissions Policy registry:
-         * browsers reject the token and log "Unrecognized feature: 'vr'" on
-         * every single response — 154 times across one browser-test run. The
-         * registered name for the capability it was meant to deny is
-         * `xr-spatial-tracking`, so until this line said so, WebXR was not
-         * actually being denied.
+         * `vr` était le nom du brouillon et ne figure pas au registre
+         * Permissions Policy : les navigateurs rejettent le jeton et consignent
+         * "Unrecognized feature: 'vr'" sur chacune des réponses — 154 fois sur
+         * une seule exécution des tests navigateur. Le nom enregistré de la
+         * capacité qu'il s'agissait d'interdire est `xr-spatial-tracking` :
+         * tant que cette ligne ne le disait pas, WebXR n'était pas réellement
+         * interdit.
          */
         $response->headers->set(
             'Permissions-Policy',

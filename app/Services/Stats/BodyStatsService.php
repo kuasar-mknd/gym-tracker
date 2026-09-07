@@ -44,11 +44,13 @@ final class BodyStatsService
     }
 
     /**
-     * Get consolidated body progress data (weight and body fat history).
-     * ⚡ Bolt: Reduces 2 database queries to 1 and uses a single cache key.
+     * L'historique du poids et celui de la masse grasse, en une lecture.
      *
-     * @param  User  $user  The user to fetch stats for.
-     * @param  int  $days  The number of days to look back.
+     * Les deux sortent des mêmes lignes : deux requêtes et deux clefs de cache
+     * séparées ne faisaient que doubler le travail.
+     *
+     * @param  User  $user  L'utilisateur dont on lit les mesures.
+     * @param  int  $days  La profondeur d'historique, en jours.
      * @return array{weightHistory: array<int, WeightHistoryPoint>, bodyFatHistory: array<int, BodyFatHistoryPoint>}
      */
     public function getBodyProgressOverview(User $user, int $days = 90): array

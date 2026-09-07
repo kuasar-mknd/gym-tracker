@@ -11,9 +11,6 @@ use Inertia\Inertia;
 
 class MacroCalculatorController extends Controller
 {
-    /**
-     * Display a listing of macro calculations.
-     */
     public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', MacroCalculation::class);
@@ -21,9 +18,9 @@ class MacroCalculatorController extends Controller
         $user = $this->user();
 
         $history = $user->macroCalculations()
-            // Borne a 100, comme `BodyMeasurementController` et
+            // Borné à 100, comme `BodyMeasurementController` et
             // `DailyJournalController` : l'historique complet partait dans la
-            // reponse, et il grandit a chaque usage.
+            // réponse, et il grandit à chaque usage.
             ->orderBy('created_at', 'desc')
             ->limit(100)
             ->get();
@@ -33,9 +30,6 @@ class MacroCalculatorController extends Controller
         ]);
     }
 
-    /**
-     * Store a new macro calculation.
-     */
     public function store(StoreMacroCalculationRequest $request, CreateMacroCalculationAction $createMacroCalculationAction): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', MacroCalculation::class);
@@ -48,9 +42,6 @@ class MacroCalculatorController extends Controller
         return redirect()->back();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(MacroCalculation $macroCalculation): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $macroCalculation);

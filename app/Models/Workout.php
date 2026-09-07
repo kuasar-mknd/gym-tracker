@@ -56,12 +56,12 @@ class Workout extends Model
     }
 
     /**
-     * The exercises of this session, in the order they were added.
+     * Les exercices de cette séance, dans l'ordre où ils ont été ajoutés.
      *
-     * `order` alone does not settle it: the column defaults to 0, so every line
-     * written before CreateWorkoutLineAction started assigning max+1 shares the
-     * same value and their relative order is whatever the database feels like.
-     * `id` breaks the tie the only way that means anything here.
+     * `order` seul ne tranche pas : la colonne vaut 0 par défaut, donc toutes
+     * les lignes écrites avant que `CreateWorkoutLineAction` n'attribue max+1
+     * partagent la même valeur et leur ordre relatif est celui qui arrange la
+     * base. `id` les départage de la seule façon qui ait un sens ici.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutLine, $this>
      */
@@ -81,18 +81,19 @@ class Workout extends Model
     }
 
     /**
-     * Recomputes this session's volume from its sets, and moves the user's
-     * lifetime total by the difference.
+     * Recalcule le volume de cette séance depuis ses séries, et déplace d'autant
+     * le total de l'utilisateur.
      *
-     * The counters used to be maintained by accumulating a delta per set save:
-     * new volume minus the volume that set had when the model was loaded. Two
-     * requests touching the same set at once — the weight and the reps of one
-     * row, which the debounce sends as separate PATCHes — each computed their
-     * delta from the same snapshot. Applying both left the totals adrift from
-     * the sets they claim to describe, permanently and invisibly.
+     * Les compteurs étaient tenus en accumulant un écart à chaque sauvegarde de
+     * série : le nouveau volume moins celui que la série portait au chargement
+     * du modèle. Deux requêtes touchant la même série en même temps — le poids
+     * et les répétitions d'une même ligne, que l'anti-rebond envoie en deux
+     * PATCH séparés — calculaient leur écart depuis le même instantané. Les
+     * appliquer tous les deux éloignait les totaux des séries qu'ils prétendent
+     * décrire, définitivement et sans que rien ne le montre.
      *
-     * Recomputing from the rows costs one aggregate instead of an increment and
-     * cannot drift, whatever order the writes land in.
+     * Recalculer depuis les lignes coûte un agrégat au lieu d'un incrément et ne
+     * peut pas dériver, quel que soit l'ordre d'arrivée des écritures.
      */
     public function recomputeVolume(): void
     {

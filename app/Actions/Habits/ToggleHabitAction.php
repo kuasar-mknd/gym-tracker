@@ -9,12 +9,6 @@ use Illuminate\Support\Carbon;
 
 class ToggleHabitAction
 {
-    /**
-     * Toggle the completion status of a habit for a specific date.
-     *
-     * @param  \App\Models\Habit  $habit  The habit to toggle.
-     * @param  string  $date  The date to toggle.
-     */
     public function execute(Habit $habit, string $date): void
     {
         /*

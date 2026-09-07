@@ -18,9 +18,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Illuminate\Support\Carbon|null $workout_started_at
  * @property int $order
  * @property string|null $notes
- * @property string|null $idempotency_key names the client attempt that created this row, so a
- *                                        replayed create returns it instead of making a second one. Deliberately absent from
- *                                        $fillable: it identifies the attempt, never something a payload may set.
+ * @property string|null $idempotency_key nomme la tentative du client qui a créé cette ligne, pour
+ *                                        qu'une création rejouée la renvoie au lieu d'en fabriquer une seconde.
+ *                                        Volontairement absent de $fillable : il identifie la tentative, jamais
+ *                                        quelque chose qu'un payload peut poser.
  * @property-read \App\Models\Workout $workout
  * @property-read \App\Models\Exercise $exercise
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Set> $sets
@@ -88,17 +89,18 @@ class WorkoutLine extends Model
     }
 
     /**
-     * The sets of this line, in the order they were added.
+     * Les séries de cette ligne, dans l'ordre où elles ont été ajoutées.
      *
-     * Ordered explicitly, because without an ORDER BY the database is free to
-     * hand back whatever the index it picked happens to give. This table carries
-     * sets_workout_line_id_weight_reps_index (workout_line_id, weight, reps)
-     * alongside the plain workout_line_id one, and when the optimiser chooses it
-     * the sets come back sorted BY WEIGHT — so correcting the weight of a set
-     * moved it up or down the list on the next load. Creation order is the only
-     * order a set has, and every caller of this relation renders it as such: the
-     * session screen, the API, the exercise history, and the template copied out
-     * of a workout.
+     * L'ordre est posé explicitement : sans ORDER BY, la base rend ce que
+     * l'index qu'elle a choisi lui donne. Cette table porte
+     * `sets_workout_line_id_weight_reps_index` (workout_line_id, weight, reps) à
+     * côté de l'index simple sur `workout_line_id`, et quand l'optimiseur retient
+     * le premier, les séries reviennent triées PAR POIDS — corriger le poids
+     * d'une série la faisait donc monter ou descendre dans la liste au
+     * chargement suivant. L'ordre de création est le seul ordre qu'une série
+     * possède, et tous les appelants de cette relation l'affichent ainsi :
+     * l'écran de séance, l'API, l'historique d'exercice et le modèle copié
+     * depuis une séance.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\Set, $this>
      */
@@ -186,18 +188,17 @@ class WorkoutLine extends Model
         static::deleted($clearCache);
 
         /**
-         * Gives back the volume of the sets this line is about to take with it.
+         * Rend le volume des séries que cette ligne va emporter avec elle.
          *
-         * sets.workout_line_id is ON DELETE CASCADE, so the database removes
-         * those rows itself and Eloquent never hears about it — Set::deleted
-         * does not fire, and the volume they contributed stays in
-         * users.total_volume and workouts.workout_volume for good. Every
-         * exercise ever removed from a session has been inflating those two
-         * counters since.
+         * `sets.workout_line_id` est en ON DELETE CASCADE : la base efface ces
+         * lignes elle-même et Eloquent n'en entend jamais parler — `Set::deleted`
+         * ne part pas, et le volume qu'elles apportaient reste pour de bon dans
+         * `users.total_volume` et `workouts.workout_volume`. Chaque exercice
+         * retiré d'une séance gonflait ces deux compteurs depuis toujours.
          *
-         * Summed in one query and released once, rather than deleting each set
-         * through the model: the rows are going regardless, and the counters
-         * only care about the total.
+         * Sommé en une requête et rendu une seule fois, plutôt que de supprimer
+         * chaque série par le modèle : les lignes partent de toute façon, et les
+         * compteurs ne s'intéressent qu'au total.
          */
         static::deleted(function (self $line): void {
             $line->workout?->recomputeVolume();

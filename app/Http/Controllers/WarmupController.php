@@ -8,21 +8,12 @@ use App\Http\Requests\UpdateWarmupPreferenceRequest;
 use App\Models\WarmupPreference;
 use Inertia\Inertia;
 
-/**
- * Controller for managing warmup preferences and rendering the warmup calculator tool.
- *
- * This controller allows users to configure and save their preferred warmup
- * configurations (e.g., bar weight, percentages, reps) for strength training.
- */
 class WarmupController extends Controller
 {
     /**
-     * Display the warmup calculator tool and the user's current warmup preferences.
-     *
-     * Retrieves the authenticated user's saved warmup preferences. If none exist,
-     * initializes a new WarmupPreference instance with sensible default values.
-     *
-     * @return \Inertia\Response The Inertia response rendering the 'Tools/WarmupCalculator' page.
+     * Qui n'a rien réglé reçoit une préférence non enregistrée, garnie de
+     * valeurs par défaut : le calculateur montre une montée en charge complète
+     * dès la première visite, au lieu d'un formulaire vide.
      */
     public function index(): \Inertia\Response
     {
@@ -45,13 +36,9 @@ class WarmupController extends Controller
     }
 
     /**
-     * Update or create the authenticated user's warmup preferences.
-     *
-     * Validates the incoming request and updates the user's existing preferences
-     * or creates a new record if one does not already exist.
-     *
-     * @param  \App\Http\Requests\UpdateWarmupPreferenceRequest  $request  The validated HTTP request containing warmup preference data.
-     * @return \Illuminate\Http\RedirectResponse A redirect response back to the previous page with a success message.
+     * L'autorisation dépend de ce qui existe : `update` si la préférence est
+     * déjà enregistrée, `create` sinon — un `updateOrCreate` traverse les deux
+     * cas, la policy doit donc être choisie avant.
      */
     public function update(UpdateWarmupPreferenceRequest $request): \Illuminate\Http\RedirectResponse
     {

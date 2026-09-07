@@ -11,8 +11,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class PersonalRecordResource extends JsonResource
 {
     /**
-     * Transform the resource into an array.
-     *
      * @return array<string, mixed>
      */
     #[\Override]
@@ -31,7 +29,8 @@ class PersonalRecordResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'exercise' => new ExerciseResource($this->whenLoaded('exercise')),
-            // We can load other relationships if needed, but exercise is most important for context
+            // On pourrait charger d'autres relations, mais l'exercice est ce
+            // qui donne le contexte.
         ];
     }
 }

@@ -19,16 +19,15 @@ class UpdatePushSubscriptionRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            // `url` alone accepts any scheme and any host, so the stored endpoint
-            // could point the server at its own network — the WebPush channel
-            // POSTs to it on every notification. See App\Rules\PublicPushEndpoint.
+            // `url` seul accepte n'importe quel schéma et n'importe quel hôte :
+            // l'endpoint stocké pourrait diriger le serveur vers son propre
+            // réseau, puisque le canal WebPush y poste à chaque notification.
+            // Voir App\Rules\PublicPushEndpoint.
             'endpoint' => ['required', 'url', new PublicPushEndpoint()],
             'keys.auth' => 'required',
             'keys.p256dh' => 'required',

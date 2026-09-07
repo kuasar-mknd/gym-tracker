@@ -11,10 +11,9 @@ use Illuminate\Support\Carbon;
 class SaveDailyJournalAction
 {
     /**
-     * Create or update a daily journal entry for the user.
+     * Écrit l'entrée du jour, ou la crée si elle n'existe pas encore.
      *
-     * @param  User  $user  The user who owns the journal.
-     * @param  array<string, mixed>  $data  The data to save, including the 'date'.
+     * @param  array<string, mixed>  $data  Les données à écrire, dont la clef `date`.
      */
     public function execute(User $user, array $data): DailyJournal
     {

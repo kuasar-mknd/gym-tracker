@@ -13,12 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 final class CreateWorkoutTemplateFromWorkoutAction
 {
-    /**
-     * Create a new workout template from an existing workout.
-     */
     public function execute(User $user, Workout $workout): WorkoutTemplate
     {
-        // Eager load relationships to prevent N+1 queries during iteration
+        // Chargement anticipé : la copie parcourt chaque ligne et chacune de ses
+        // séries, et les relirait une par une sinon.
         $workout->load(['workoutLines.sets']);
 
         return DB::transaction(function () use ($user, $workout): \App\Models\WorkoutTemplate {
@@ -80,7 +78,7 @@ final class CreateWorkoutTemplateFromWorkoutAction
                     'reps' => $set->reps,
                     'weight' => $set->weight,
                     'is_warmup' => $set->is_warmup,
-                    'order' => $set->id, // Simple order for now
+                    'order' => $set->id, // Un ordre grossier, faute de mieux pour l'instant.
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
@@ -88,7 +86,8 @@ final class CreateWorkoutTemplateFromWorkoutAction
         }
 
         if ($setsData !== []) {
-            // Chunking to avoid parameter limits in SQL (SQLite max is 999 typically)
+            // Par lots : SQL plafonne le nombre de paramètres d'une instruction
+            // (999 sous SQLite, en général).
             foreach (array_chunk($setsData, 100) as $chunk) {
                 WorkoutTemplateSet::insert($chunk);
             }

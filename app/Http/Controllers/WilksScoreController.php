@@ -15,14 +15,12 @@ class WilksScoreController extends Controller
     {
         $this->authorize('viewAny', WilksScore::class);
 
-        // Check if user is authenticated (should be covered by route middleware, but good practice)
         $user = $this->user();
 
-        // Fetch history
         $history = $user->wilksScores()
-            // Borne a 100, comme `BodyMeasurementController` et
+            // Borné à 100, comme `BodyMeasurementController` et
             // `DailyJournalController` : l'historique complet partait dans la
-            // reponse, et il grandit a chaque usage.
+            // réponse, et il grandit à chaque usage.
             ->orderBy('created_at', 'desc')
             ->limit(100)
             ->get();

@@ -9,14 +9,16 @@ use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * Rejects push endpoints that would make the server call its own network.
+ * Refuse les points d'accès push qui feraient appeler au serveur son propre
+ * réseau.
  *
- * The endpoint is supplied by the client and stored verbatim, then POSTed to by
- * the WebPush channel every time a notification fires. Laravel's `url` rule
- * accepts any scheme and any host, so on its own it let an authenticated user
- * point the server at loopback, private ranges, link-local — the cloud metadata
- * endpoint included. Blind SSRF: the response never comes back to the caller,
- * but the request is made.
+ * Le point d'accès vient du client, est stocké tel quel, puis le canal WebPush
+ * l'interroge en POST à chaque notification. La règle `url` de Laravel accepte
+ * n'importe quel schéma et n'importe quel hôte : seule, elle laissait un
+ * utilisateur authentifié pointer le serveur vers la boucle locale, les plages
+ * privées, le lien-local — et le point d'accès de métadonnées du nuage. SSRF
+ * aveugle : la réponse ne revient jamais à l'appelant, mais la requête, elle,
+ * est bien partie.
  */
 class PublicPushEndpoint implements ValidationRule
 {
@@ -71,10 +73,11 @@ class PublicPushEndpoint implements ValidationRule
     }
 
     /**
-     * Every address the host resolves to — the literal itself when it is an IP.
+     * Toutes les adresses auxquelles l'hôte se résout — l'adresse elle-même
+     * quand c'en est déjà une.
      *
-     * A hostname is checked through DNS because `https://internal.example.com`
-     * looks public and may resolve to 10.0.0.5.
+     * Un nom d'hôte passe par le DNS parce que `https://internal.example.com` a
+     * l'air public et peut se résoudre en 10.0.0.5.
      *
      * La resolution elle-meme est deleguee a `ResolveurDns`, qui la met en
      * cache et que les tests remplacent : depuis que cette regle refuse un hote
@@ -84,9 +87,9 @@ class PublicPushEndpoint implements ValidationRule
      */
     private function addressesFor(string $host): array
     {
-        // parse_url keeps the brackets around an IPv6 literal, and FILTER_VALIDATE_IP
-        // rejects them — without this, https://[::1]/ fell through to DNS, resolved
-        // to nothing, and was accepted.
+        // parse_url garde les crochets autour d'une adresse IPv6 littérale, et
+        // FILTER_VALIDATE_IP les refuse — sans ceci, https://[::1]/ tombait dans
+        // le DNS, ne se résolvait en rien, et passait.
         $literal = trim($host, '[]');
 
         if (filter_var($literal, FILTER_VALIDATE_IP) !== false) {
@@ -97,7 +100,7 @@ class PublicPushEndpoint implements ValidationRule
     }
 
     /**
-     * Private, loopback, link-local and otherwise reserved ranges.
+     * Plages privées, boucle locale, lien-local et autres plages réservées.
      */
     private function isReserved(string $address): bool
     {

@@ -16,9 +16,6 @@ class NotificationController extends Controller
     ) {
     }
 
-    /**
-     * Display a listing of notifications.
-     */
     public function index(Request $request): Response
     {
         return Inertia::render('Notifications/Index', [
@@ -27,7 +24,8 @@ class NotificationController extends Controller
     }
 
     /**
-     * Mark a notification as read.
+     * Le compteur de non-lues est en cache : sans l'invalider, la pastille
+     * resterait allumée sur une notification qu'on vient d'ouvrir.
      */
     public function markAsRead(Request $request, string $id): \Illuminate\Http\RedirectResponse
     {
@@ -37,9 +35,6 @@ class NotificationController extends Controller
         return back();
     }
 
-    /**
-     * Mark all notifications as read.
-     */
     public function markAllAsRead(Request $request): \Illuminate\Http\RedirectResponse
     {
         $this->user()->unreadNotifications()->update(['read_at' => now()]);

@@ -8,21 +8,16 @@ use App\Models\Plate;
 use Inertia\Inertia;
 
 /**
- * Controller for managing Plates.
- *
- * This controller handles the CRUD operations for user's weight plates,
- * which are used in the plate calculator tool to determine how to load a barbell.
+ * L'inventaire de disques de l'utilisateur, dont le calculateur se sert pour
+ * dire comment charger une barre.
  */
 class PlateController extends Controller
 {
     /**
-     * Display a listing of the user's plates.
+     * Du plus lourd au plus léger : c'est l'ordre dans lequel le calculateur
+     * les essaie, et celui dans lequel on les enfile sur la barre.
      *
-     * Retrieves all plates for the authenticated user, ordered by weight descending.
-     *
-     * @return \Inertia\Response The Inertia response rendering the Tools/PlateCalculator page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to view plates.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de consulter ses disques.
      */
     public function index(): \Inertia\Response
     {
@@ -37,14 +32,6 @@ class PlateController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created plate in storage.
-     *
-     * Validates and creates a new plate for the authenticated user.
-     *
-     * @param  \App\Http\Requests\PlateRequest  $request  The validated request containing plate details.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
-     */
     public function store(\App\Http\Requests\PlateRequest $request): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', Plate::class);
@@ -59,13 +46,7 @@ class PlateController extends Controller
     }
 
     /**
-     * Update the specified plate in storage.
-     *
-     * @param  \App\Http\Requests\PlateRequest  $request  The validated request containing updated fields.
-     * @param  \App\Models\Plate  $plate  The plate to update.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this plate.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si le disque n'est pas celui de l'utilisateur.
      */
     public function update(\App\Http\Requests\PlateRequest $request, Plate $plate): \Illuminate\Http\RedirectResponse
     {
@@ -77,12 +58,7 @@ class PlateController extends Controller
     }
 
     /**
-     * Remove the specified plate from storage.
-     *
-     * @param  \App\Models\Plate  $plate  The plate to delete.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the previous page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete this plate.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si le disque n'est pas celui de l'utilisateur.
      */
     public function destroy(Plate $plate): \Illuminate\Http\RedirectResponse
     {

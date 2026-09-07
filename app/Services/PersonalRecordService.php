@@ -12,25 +12,23 @@ use App\Traits\CalculatesOneRepMax;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Service for managing Personal Records (PRs).
+ * Tient les records personnels : poids maximal, 1RM estimé et meilleur volume
+ * sur une série, pour chaque exercice.
  *
- * This service calculates and updates a user's personal records (e.g., max weight,
- * max 1RM, max volume set) after a workout set is completed. It also handles
- * dispatching notifications when new records are achieved.
+ * Les records se mettent à jour quand une série est validée, et se
+ * reconstruisent quand la série qui les portait change ou disparaît. La
+ * notification d'un nouveau record part d'ici aussi.
  */
 final class PersonalRecordService
 {
     use CalculatesOneRepMax;
 
     /**
-     * Synchronize personal records based on a completed set.
+     * Confronte une série terminée aux records de son exercice, et crée ou met
+     * à jour ceux qu'elle bat.
      *
-     * Evaluates the given set against the user's existing personal records for the
-     * associated exercise. If the set establishes a new record for any tracked metric,
-     * the corresponding PersonalRecord is created or updated.
-     *
-     * @param  \App\Models\Set  $set  The workout set to evaluate for potential PRs.
-     * @param  \App\Models\User|null  $user  The user who performed the set (optional, resolved from set if null).
+     * @param  \App\Models\Set  $set  La série à évaluer.
+     * @param  \App\Models\User|null  $user  L'auteur de la série ; déduit de la série si absent.
      */
     public function syncSetPRs(Set $set, ?User $user = null): void
     {
@@ -64,19 +62,15 @@ final class PersonalRecordService
     }
 
     /**
-     * Create or update a specific personal record type.
+     * Établit un record d'un type donné, s'il dépasse celui qui tient.
      *
-     * Compares the new value against the existing record (if any). If the new value
-     * is greater, it persists the new record and optionally sends a notification
-     * to the user if they have PR notifications enabled.
-     *
-     * @param  \App\Models\User  $user  The user achieving the PR.
-     * @param  int  $exerciseId  The ID of the exercise.
-     * @param  string  $type  The type of PR (e.g., 'max_weight', 'max_1rm', 'max_volume_set').
-     * @param  float  $value  The primary value of the new record.
-     * @param  float|null  $secondary  An optional secondary value (e.g., reps associated with max weight).
-     * @param  \App\Models\Set  $set  The set that achieved this record.
-     * @param  \App\Models\PersonalRecord|null  $pr  The existing personal record, if any.
+     * @param  \App\Models\User  $user  L'auteur du record.
+     * @param  int  $exerciseId  L'exercice concerné.
+     * @param  string  $type  Le type de record : 'max_weight', 'max_1rm' ou 'max_volume_set'.
+     * @param  float  $value  La valeur du record.
+     * @param  float|null  $secondary  La valeur qui l'accompagne, par exemple les répétitions du poids maximal.
+     * @param  \App\Models\Set  $set  La série qui l'a établi.
+     * @param  \App\Models\PersonalRecord|null  $pr  Le record en place, s'il y en a un.
      */
     protected function update(User $user, int $exerciseId, string $type, float $value, ?float $secondary, Set $set, ?PersonalRecord $pr): void
     {
@@ -108,13 +102,9 @@ final class PersonalRecordService
     }
 
     /**
-     * Determine if a set should be excluded from PR evaluation.
+     * Les séries qui ne peuvent pas établir de record.
      *
-     * Warmup sets, or sets missing either weight or reps, are not considered
-     * valid for setting personal records.
-     *
-     * @param  \App\Models\Set  $set  The set to check.
-     * @return bool True if the set should be skipped, false otherwise.
+     * @param  \App\Models\Set  $set  La série à examiner.
      */
     private function shouldSkipSync(Set $set): bool
     {
@@ -136,19 +126,20 @@ final class PersonalRecordService
     }
 
     /**
-     * Rebuilds an exercise's records from the sets that actually exist.
+     * Reconstruit les records d'un exercice à partir des séries qui existent
+     * vraiment.
      *
-     * update() only ever raises a record, and nothing ever lowered one. A single
-     * mistyped weight — 500 for 50 — became that exercise's personal record
-     * permanently: correcting the set did nothing, deleting it did nothing, and
-     * the figure stayed on the user's profile for good.
+     * `update()` ne fait que monter un record, et rien ne l'abaissait jamais.
+     * Un seul poids mal saisi — 500 pour 50 — devenait le record de l'exercice
+     * pour de bon : corriger la série n'y changeait rien, la supprimer non plus,
+     * et le chiffre restait affiché sur le profil.
      *
-     * Only called when the set behind a record changes or goes, so the cost is
-     * paid on the rare event rather than on every save.
+     * Appelé seulement quand la série derrière un record change ou disparaît :
+     * le coût est payé sur l'événement rare, pas à chaque enregistrement.
      *
-     * @param  list<string>|null  $types  Limit the rebuild to these records. Null
-     *                                    means all of them, which is right when a set has gone and there is no
-     *                                    longer any way to know which records it was holding.
+     * @param  list<string>|null  $types  Limite la reconstruction à ces records.
+     *                                    Null les prend tous, ce qui est juste quand une série a disparu et
+     *                                    que plus rien ne dit quels records elle détenait.
      */
     /** @var list<string> */
     private const array TYPES = ['max_weight', 'max_1rm', 'max_volume_set'];
@@ -180,16 +171,17 @@ final class PersonalRecordService
         SQL;
 
     /**
-     * Rebuilds an exercise's records from the sets that actually exist.
+     * Reconstruit les records d'un exercice à partir des séries qui existent
+     * vraiment.
      *
-     * update() only ever raises a record, and nothing ever lowered one. A single
-     * mistyped weight — 500 for 50 — became that exercise's personal record
-     * permanently: correcting the set did nothing, deleting it did nothing, and
-     * the figure stayed on the user's profile for good.
+     * `update()` ne fait que monter un record, et rien ne l'abaissait jamais.
+     * Un seul poids mal saisi — 500 pour 50 — devenait le record de l'exercice
+     * pour de bon : corriger la série n'y changeait rien, la supprimer non plus,
+     * et le chiffre restait affiché sur le profil.
      *
-     * @param  list<string>|null  $types  Limit the rebuild to these records. Null
-     *                                    means all of them, which is right when a set has gone and there is no
-     *                                    longer any way to know which records it was holding.
+     * @param  list<string>|null  $types  Limite la reconstruction à ces records.
+     *                                    Null les prend tous, ce qui est juste quand une série a disparu et
+     *                                    que plus rien ne dit quels records elle détenait.
      */
     public function recompute(User $user, int $exerciseId, ?array $types = null): void
     {
@@ -243,7 +235,7 @@ final class PersonalRecordService
             $meilleure = $gagnantes[$type] ?? null;
 
             if ($meilleure === null) {
-                // Nothing left that qualifies; the record no longer stands.
+                // Plus une seule série ne qualifie : le record ne tient plus.
                 if ($record !== null) {
                     $aSupprimer[] = $record->id;
                 }
@@ -256,9 +248,9 @@ final class PersonalRecordService
             $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $exerciseId, 'type' => $type]);
 
             /**
-             * No notification here. This is a correction, not an achievement —
-             * telling someone they have set a personal record because they just
-             * fixed a typo would be worse than saying nothing.
+             * Aucune notification ici. C'est une correction, pas un exploit —
+             * annoncer un record personnel à quelqu'un qui vient de rattraper
+             * une faute de frappe serait pire que de se taire.
              */
             $record->fill([
                 'value' => $valeur,
@@ -351,18 +343,18 @@ final class PersonalRecordService
     }
 
     /**
-     * Recomputes only when the set that changed is the one a record points at.
+     * Ne reconstruit que si la série modifiée est celle qu'un record désigne.
      *
-     * Safe to call on every save: the lookup is a single indexed existence
-     * check, and almost every save is of a set holding nothing.
+     * Appelable à chaque enregistrement sans crainte : la question tient en une
+     * lecture d'index, et la quasi-totalité des séries ne détiennent rien.
      */
     public function refreshRecordsHeldBy(Set $set, ?User $user = null): void
     {
         /**
-         * Only the records this set is actually holding. Rebuilding all three
-         * would reach past the change and reset records that nothing about this
-         * set affects — a set that beats the 1RM but not the max weight would
-         * drag the max weight down with it.
+         * Seulement les records que cette série détient vraiment. Reconstruire
+         * les trois irait au-delà du changement et remettrait à plat des records
+         * que cette série ne touche pas — une série qui bat le 1RM sans battre
+         * le poids maximal entraînerait ce dernier avec elle.
          */
         /*
          * Les valeurs de l'enumeration, pas ses instances : `type` est cast, donc
@@ -399,11 +391,12 @@ final class PersonalRecordService
     }
 
     /**
-     * Recomputes unconditionally, for when the set is on its way out.
+     * Reconstruit sans condition, pour la série qui s'en va.
      *
-     * The gate above cannot be used after a deletion: personal_records.set_id is
-     * resolved by the database the moment the row goes, so by the time the
-     * `deleted` event fires nothing still admits the set held anything.
+     * La garde ci-dessus ne sert à rien après une suppression :
+     * `personal_records.set_id` est remis à null par la base à l'instant où la
+     * ligne part, si bien qu'au moment où `deleted` se déclenche, plus rien
+     * n'avoue que la série détenait quoi que ce soit.
      */
     /**
      * @param  list<string>|null  $types
@@ -422,14 +415,12 @@ final class PersonalRecordService
     }
 
     /**
-     * Process all tracked PR metrics for a valid set.
+     * Confronte la série aux trois records suivis, en une seule lecture de
+     * ceux qui tiennent.
      *
-     * Retrieves existing PRs for the user and exercise, then evaluates the set
-     * against each tracked metric (max weight, estimated 1RM, max volume per set).
-     *
-     * @param  \App\Models\User  $user  The user who performed the set.
-     * @param  int  $exerciseId  The ID of the exercise.
-     * @param  \App\Models\Set  $set  The completed valid set.
+     * @param  \App\Models\User  $user  L'auteur de la série.
+     * @param  int  $exerciseId  L'exercice concerné.
+     * @param  \App\Models\Set  $set  La série, déjà jugée recevable.
      */
     private function processUpdates(User $user, int $exerciseId, Set $set): void
     {

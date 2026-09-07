@@ -10,41 +10,23 @@ use App\Services\Stats\ExerciseStatsService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-/**
- * Controller for displaying user statistics dashboards.
- *
- * This controller aggregates and formats data related to user workouts,
- * volume, and body measurements to be presented on the frontend.
- */
 class StatsController extends Controller
 {
-    /**
-     * Create a new StatsController instance.
-     *
-     * @param  \App\Services\Stats\ExerciseStatsService  $exerciseStats  Service for retrieving exercise stats.
-     */
     public function __construct(protected ExerciseStatsService $exerciseStats)
     {
     }
 
     /**
-     * Display the main statistics dashboard with Deferred Loading (Inertia 2.0).
-     *
-     * Retrieves immediate data for fast initial rendering and uses Inertia's
-     * deferred loading for heavier analytical queries (like trends and distributions).
-     *
-     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
-     * @param  \App\Actions\Stats\GetStatsDashboardAction  $getStatsDashboard  Action to fetch overview stats.
-     * @return \Inertia\Response The Inertia response rendering the 'Stats/Index' page.
+     * La page part avec le strict nécessaire ; les calculs lourds — tendances,
+     * répartitions — arrivent en prop différée, une fois l'écran affiché.
      */
     public function index(Request $request, GetStatsDashboardAction $getStatsDashboard): \Inertia\Response
     {
         $data = $getStatsDashboard->execute($this->user(), $request);
 
-        // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-        // Consolidate deferred props to reduce the number of async requests and backend executions.
-        // This reduces HTTP overhead (1 XHR instead of 2) and ensures related visualizations
-        // appear together for a better user experience.
+        // ⚡ Bolt : une seule prop différée plutôt que deux — une requête XHR au
+        // lieu de deux, et des graphiques apparentés qui apparaissent ensemble
+        // au lieu de s'afficher l'un après l'autre.
         /** @var callable(): mixed $deferredDataCallable */
         $deferredDataCallable = $data['deferredData'];
         $data['deferredData'] = Inertia::defer($deferredDataCallable);
@@ -53,10 +35,8 @@ class StatsController extends Controller
     }
 
     /**
-     * Get 1RM (One Rep Max) progress for a specific exercise as JSON.
-     *
-     * @param  \App\Models\Exercise  $exercise  The exercise to get progress for.
-     * @return \Illuminate\Http\JsonResponse JSON response containing the progress data.
+     * La progression du 1RM d'un exercice, en JSON : le graphique la redemande
+     * quand on change d'exercice, sans recharger la page.
      */
     public function exercise(Exercise $exercise): \Illuminate\Http\JsonResponse
     {

@@ -13,27 +13,12 @@ use App\Models\Workout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-/**
- * Controller for managing Workouts.
- *
- * This controller handles the CRUD operations for workouts, including
- * listing user's workouts, displaying a specific workout, and creating a new one.
- * It integrates with Inertia.js for the frontend.
- */
 class WorkoutController extends Controller
 {
     public function __construct(protected \App\Services\Stats\StatsCacheManager $statsCache)
     {
     }
 
-    /**
-     * Display a listing of the user's workouts.
-     *
-     * Retrieves all workouts for the authenticated user, eager loading
-     * related workout lines, exercises, and sets.
-     *
-     * @return \Inertia\Response The Inertia response rendering the Workouts/Index page.
-     */
     public function index(Request $request, FetchWorkoutsIndexAction $fetchWorkouts): \Inertia\Response
     {
         $this->authorize('viewAny', Workout::class);
@@ -43,24 +28,16 @@ class WorkoutController extends Controller
 
         return Inertia::render('Workouts/Index', [
             ...$data,
-            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-            // Consolidate heavy chart data and exercise list into a single deferred prop
-            // to reduce the number of XHR requests (from 2 to 1) and ensure consistent
-            // loading states on the frontend.
+            // ⚡ Bolt : les données lourdes du graphique et la liste des
+            // exercices tiennent en une seule prop différée — une requête XHR au
+            // lieu de deux, et un seul état de chargement à l'écran plutôt que
+            // deux qui se terminent à des moments différents.
             'deferredData' => Inertia::defer(fn (): array => $fetchWorkouts->getDeferredData($user)),
         ]);
     }
 
     /**
-     * Display the specified workout.
-     *
-     * Shows the details of a specific workout, including its exercises and sets.
-     * Ensures that the authenticated user owns the workout.
-     *
-     * @param  \App\Models\Workout  $workout  The workout to display.
-     * @return \Inertia\Response The Inertia response rendering the Workouts/Show page.
-     *
-     * @throws \Symfony\Component\HttpKernel\Exception\HttpException If the user is not authorized to view the workout (403).
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException Si la séance n'est pas celle de l'utilisateur (403).
      */
     public function show(Workout $workout, FetchWorkoutShowAction $fetchWorkoutShow): \Inertia\Response
     {
@@ -70,12 +47,8 @@ class WorkoutController extends Controller
     }
 
     /**
-     * Store a newly created workout in storage.
-     *
-     * Creates a new workout for the authenticated user with the current date
-     * as the start date and a default name. Redirects to the show page of the new workout.
-     *
-     * @return \Illuminate\Http\RedirectResponse A redirect to the newly created workout.
+     * Démarrer une séance quand une autre est déjà ouverte renvoie vers
+     * celle-là, plutôt que d'en ouvrir une deuxième.
      */
     public function store(CreateWorkoutAction $createWorkout): \Illuminate\Http\RedirectResponse
     {
@@ -94,7 +67,8 @@ class WorkoutController extends Controller
     }
 
     /**
-     * Update the specified workout in storage.
+     * Terminer une séance ramène au tableau de bord ; toute autre modification
+     * reste sur place, puisqu'elle est faite depuis la séance elle-même.
      */
     public function update(UpdateWorkoutRequest $request, Workout $workout, UpdateWorkoutAction $updateWorkout): \Illuminate\Http\RedirectResponse
     {
@@ -111,9 +85,6 @@ class WorkoutController extends Controller
         return back();
     }
 
-    /**
-     * Remove the specified workout from storage.
-     */
     public function destroy(Workout $workout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $workout);

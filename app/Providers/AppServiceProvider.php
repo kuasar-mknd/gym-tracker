@@ -24,9 +24,6 @@ use Spatie\Backup\Events\BackupManifestWasCreated;
 
 final class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     #[\Override]
     public function register(): void
     {
@@ -45,9 +42,6 @@ final class AppServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         $this->registerAppleSocialiteDriver();
@@ -64,22 +58,23 @@ final class AppServiceProvider extends ServiceProvider
 
         Vite::useCspNonce();
 
-        // Vite::prefetch is deliberately absent.
+        // L'absence de Vite::prefetch est voulue.
         //
-        // It injected a <link rel="prefetch"> for every asset in the manifest, so
-        // each page load pulled the entire build in the background. Measured on
-        // /workouts: 141 asset requests totalling 1350 KB, of which 120 were
-        // prefetches the page did not need, against the 21 it did.
+        // Il injectait un <link rel="prefetch"> pour chaque fichier du manifeste,
+        // si bien que chaque page tirait tout le build en arrière-plan. Mesuré
+        // sur /workouts : 141 requêtes pour 1350 Ko, dont 120 préchargements dont
+        // la page n'avait pas besoin, contre les 21 qu'elle utilisait.
         //
-        // The service worker already precaches that same build — 131 entries,
-        // 1.1 MB — so the prefetch fetched a second copy of what the app had
-        // committed to caching anyway. On a phone on cellular data that is the
-        // whole bundle, twice, on every page.
+        // Le service worker garde déjà la coquille de ce build — onze entrées
+        // depuis #1814 — donc le préchargement rapportait une seconde copie de ce
+        // que l'application s'était engagée à garder, et le reste par-dessus. Sur
+        // un téléphone en données mobiles, c'est le paquet entier à chaque page.
         //
-        // What it bought was an instant first navigation to each page. In an
-        // Inertia app a navigation needs only that page's chunk, tens of
-        // kilobytes, so the trade was megabytes spent to save one small request —
-        // and the service worker covers the repeat visits regardless.
+        // Ce qu'il achetait, c'était une première navigation instantanée vers
+        // chaque page. Dans une application Inertia, une navigation ne demande
+        // que le morceau de cette page, quelques dizaines de kilo-octets : on
+        // dépensait donc des méga-octets pour économiser une petite requête — et
+        // le service worker couvre les visites suivantes de toute manière.
 
         Model::shouldBeStrict(config('app.env') !== 'production');
 
@@ -119,20 +114,18 @@ final class AppServiceProvider extends ServiceProvider
                 if (config('app.env') === 'testing' || config('database.connections.mysql.database') === 'gym_tracker_testing') {
                     \App\Jobs\SyncPersonalRecord::dispatchSync($set, $user);
                 } else {
-                    // ⚡ Bolt: Offload PR sync to background job
                     \App\Jobs\SyncPersonalRecord::dispatch($set, $user)->afterCommit();
                 }
             }
 
             /**
-             * A record only ever went up. Correcting a mistyped weight left the
-             * inflated figure standing on the user's profile for good, because
-             * nothing recomputed the record the corrected set was holding.
+             * Un record ne faisait que monter. Corriger un poids mal saisi
+             * laissait le chiffre gonflé sur le profil pour de bon, parce que
+             * rien ne recalculait le record que la série corrigée détenait.
              */
             app(\App\Services\PersonalRecordService::class)->refreshRecordsHeldBy($set, $user);
             app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $user->id);
 
-            // ⚡ Bolt: Offload heavy sync to background jobs
             \App\Jobs\SyncUserAchievements::dispatch($user);
             \App\Jobs\SyncUserGoals::dispatch($user);
         });
@@ -164,10 +157,10 @@ final class AppServiceProvider extends ServiceProvider
 
         \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {
             /**
-             * Removing an exercise takes its sets with it through an ON DELETE
-             * CASCADE, which fires no model events at all — so without this, a
-             * record set during a session the user then deleted stood forever,
-             * pointing at a row that no longer exists.
+             * Retirer un exercice emporte ses séries par un ON DELETE CASCADE,
+             * qui ne déclenche aucun événement de modèle — sans ceci, un record
+             * établi pendant une séance ensuite supprimée tenait indéfiniment,
+             * en pointant vers une ligne qui n'existe plus.
              */
             $user = $line->workout?->user;
 
@@ -187,12 +180,12 @@ final class AppServiceProvider extends ServiceProvider
     private function registerWorkoutEvents(): void
     {
         Workout::saved(function (Workout $workout): void {
-            // Streak is only updated when a workout is "finished" or has a date
+            // La série ne bouge qu'à la création de la séance ou au changement
+            // de sa date : renommer une séance ne change rien au calendrier.
             if ($workout->wasRecentlyCreated || $workout->wasChanged('started_at')) {
                 app(StreakService::class)->updateStreak($workout->user, $workout);
             }
 
-            // ⚡ Bolt: Offload heavy sync to background jobs
             \App\Jobs\SyncUserAchievements::dispatch($workout->user);
             \App\Jobs\SyncUserGoals::dispatch($workout->user);
         });
@@ -225,19 +218,19 @@ final class AppServiceProvider extends ServiceProvider
 
     private function registerMeasurementEvents(): void
     {
-        // ⚡ Bolt: Offload heavy goal sync to background jobs
         BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
         BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
     }
 
     /**
-     * Teaches Socialite about Apple, which it does not ship.
+     * Apprend Apple à Socialite, qui ne le fournit pas.
      *
-     * `socialiteproviders/apple` was in composer.json and nothing ever told
-     * Socialite it was there, so `Socialite::driver('apple')` threw
-     * "Driver [apple] not supported" — a 500 on the login page's third button,
-     * with or without credentials configured. Community providers announce
-     * themselves through this event; without a listener the package is inert.
+     * `socialiteproviders/apple` était dans composer.json et rien n'avait jamais
+     * dit à Socialite qu'il était là : `Socialite::driver('apple')` levait
+     * « Driver [apple] not supported » — une erreur 500 sur le troisième bouton
+     * de la page de connexion, avec ou sans identifiants configurés. Les
+     * fournisseurs communautaires s'annoncent par cet événement ; sans écouteur,
+     * le paquet est inerte.
      */
     private function registerAppleSocialiteDriver(): void
     {

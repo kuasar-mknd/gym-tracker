@@ -11,9 +11,6 @@ use Inertia\Inertia;
 
 class DailyJournalController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(): \Inertia\Response
     {
         $this->authorize('viewAny', DailyJournal::class);
@@ -28,9 +25,6 @@ class DailyJournalController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(DailyJournalStoreRequest $request, SaveDailyJournalAction $action): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('create', DailyJournal::class);
@@ -40,9 +34,6 @@ class DailyJournalController extends Controller
         return redirect()->back();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(DailyJournal $dailyJournal): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('delete', $dailyJournal);

@@ -10,39 +10,32 @@ use App\Models\Goal;
 use App\Services\GoalService;
 use Inertia\Inertia;
 
-/**
- * Controller for managing user goals.
- *
- * This controller handles the creation, retrieval, updating, and deletion
- * of user fitness and measurement goals. It interfaces with the GoalService
- * to recalculate goal progress whenever a goal is updated.
- */
 class GoalController extends Controller
 {
     /**
-     * The measurement goals a user can set. The create form and the edit form
-     * both fill their select from this list, so it lives in one place — a
-     * second hand-written copy is how the two screens drift apart.
+     * Les mensurations sur lesquelles un objectif peut réellement porter.
      *
-     * No @var here: PHP Insights rejects any @var on a class constant outright,
-     * and PHPStan reads the shape off the literal anyway.
-     */
-    /**
-     * Les mensurations sur lesquelles un objectif peut reellement porter.
+     * Le formulaire de création et celui de modification remplissent tous deux
+     * leur liste déroulante ici : une seconde copie écrite à la main est
+     * exactement la façon dont les deux écrans finissent par diverger.
      *
-     * Trois de plus etaient proposees — tour de taille, de poitrine, de bras —
-     * et chacune provoquait une erreur 500 des que la progression etait
-     * calculee : `GoalService::updateMeasurementGoal` lit une COLONNE de
-     * `body_measurements`, qui n'a que `weight` et `body_fat`. Mesure :
-     * « SQLSTATE[42S22]: Column not found: 1054 Unknown column 'waist' ».
+     * Trois mensurations de plus étaient proposées — tour de taille, de
+     * poitrine, de bras — et chacune provoquait une erreur 500 dès que la
+     * progression était calculée : `GoalService::updateMeasurementGoal` lit une
+     * COLONNE de `body_measurements`, qui n'a que `weight` et `body_fat`.
+     * Mesure : « SQLSTATE[42S22]: Column not found: 1054 Unknown column
+     * 'waist' ».
      *
-     * Le calcul se declenche a chaque pesee enregistree (SyncUserGoals) et a
-     * l'ouverture de la page des objectifs, donc l'objectif etait casse des sa
-     * creation.
+     * Le calcul se déclenche à chaque pesée enregistrée (SyncUserGoals) et à
+     * l'ouverture de la page des objectifs, donc l'objectif était cassé dès sa
+     * création.
      *
      * Ces trois mesures existent bien, mais dans `body_part_measurements`,
-     * indexees par nom de partie en texte libre. Les y raccorder est une
-     * fonctionnalite a part entiere, pas un correctif : voir #1454.
+     * indexées par nom de partie en texte libre. Les y raccorder est une
+     * fonctionnalité à part entière, pas un correctif : voir #1454.
+     *
+     * Pas de `@var` ici : PHP Insights refuse toute annotation de ce genre sur
+     * une constante de classe, et PHPStan lit la forme sur le littéral.
      */
     public const array MEASUREMENT_TYPES = [
         ['value' => 'weight', 'label' => 'Poids de corps'],
@@ -50,12 +43,12 @@ class GoalController extends Controller
     ];
 
     /**
-     * Les deux premieres se lisent dans une COLONNE de `body_measurements` ; les
-     * suivantes dans une LIGNE de `body_part_measurements`, designee par son nom
-     * de partie. Le nom sert donc de valeur, tel qu'il est propose a la saisie —
-     * aucun tableau de correspondance a tenir a jour, et la collation
+     * Les deux premières se lisent dans une COLONNE de `body_measurements` ; les
+     * suivantes dans une LIGNE de `body_part_measurements`, désignée par son nom
+     * de partie. Le nom sert donc de valeur, tel qu'il est proposé à la saisie —
+     * aucun tableau de correspondance à tenir à jour, et la collation
      * `utf8mb4_unicode_ci` de la colonne fait le rapprochement quelle que soit
-     * la casse, sans fonction qui ecarterait l'index.
+     * la casse, sans fonction qui écarterait l'index.
      *
      * @return list<array{value: string, label: string}>
      */
@@ -78,30 +71,16 @@ class GoalController extends Controller
         return array_column(self::measurementTypes(), 'value');
     }
 
-    /**
-     * Create a new GoalController instance.
-     *
-     * @param  \App\Services\GoalService  $goalService  The service responsible for updating goal progress.
-     */
     public function __construct(protected GoalService $goalService)
     {
     }
 
-    /**
-     * Display a listing of the user's goals.
-     *
-     * Retrieves all goals for the authenticated user, along with available
-     * exercises and predefined measurement types for the creation form.
-     * Eager loads the associated exercise for each goal.
-     *
-     * @return \Inertia\Response The Inertia response rendering the 'Goals/Index' page.
-     */
     public function index(): \Inertia\Response
     {
         return Inertia::render('Goals/Index', [
             'goals' => $this->user()->goals()
                 ->with('exercise')
-                // Rien n'archive un objectif termine : la liste ne fait que
+                // Rien n'archive un objectif terminé : la liste ne fait que
                 // grandir, et `latest()` trie sur `created_at` que rien n'indexe.
                 ->latest()
                 ->limit(100)
@@ -113,16 +92,14 @@ class GoalController extends Controller
     }
 
     /**
-     * Show the form for editing an existing goal.
+     * L'échéance est castée en date, donc sérialisée en horodatage ISO complet.
      *
-     * The deadline is cast to a date, so it serialises as a full ISO timestamp.
-     * An `<input type="date">` only accepts `Y-m-d`, and silently renders blank
-     * for anything else — which would have looked like a goal that never had a
-     * deadline, and quietly cleared it on the next save. It is formatted here.
+     * Un `<input type="date">` n'accepte que `Y-m-d` et s'affiche vide, sans
+     * rien dire, pour tout le reste — l'objectif aurait donc eu l'air de n'avoir
+     * jamais eu d'échéance, et l'aurait effacée en silence à l'enregistrement
+     * suivant. D'où le formatage ici.
      *
-     * @return \Inertia\Response The Inertia response rendering the 'Goals/Edit' page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the goal is not the user's.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'objectif n'est pas celui de l'utilisateur.
      */
     public function edit(Goal $goal): \Inertia\Response
     {
@@ -135,9 +112,10 @@ class GoalController extends Controller
                 'type' => $goal->type->value,
                 'target_value' => $goal->target_value,
                 'start_value' => $goal->start_value,
-                // Empty string rather than null: these feed inputs whose value
-                // is typed String|Number, and the create form seeds them the
-                // same way. The request middleware turns them back into null.
+                // Chaîne vide plutôt que null : ces valeurs alimentent des
+                // champs typés String|Number, et le formulaire de création les
+                // amorce de la même façon. Le middleware de la requête les
+                // ramène à null.
                 'exercise_id' => $goal->exercise_id ?? '',
                 'measurement_type' => $goal->measurement_type ?? '',
                 'deadline' => $goal->deadline?->format('Y-m-d') ?? '',
@@ -148,15 +126,7 @@ class GoalController extends Controller
     }
 
     /**
-     * Store a newly created goal in storage.
-     *
-     * Validates the request data, sets a default start value if none is provided,
-     * creates the goal, and immediately calculates its initial progress.
-     *
-     * @param  \App\Http\Requests\GoalStoreRequest  $request  The validated request containing goal details.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the goals index.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to create a goal.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de créer un objectif.
      */
     public function store(GoalStoreRequest $request): \Illuminate\Http\RedirectResponse
     {
@@ -170,16 +140,16 @@ class GoalController extends Controller
         $goal->user_id = $this->user()->id;
 
         /*
-         * La progression est calculee AVANT l'enregistrement, et non apres.
+         * La progression est calculée AVANT l'enregistrement, et non après.
          *
          * `updateGoalProgress()` ne persiste rien — c'est `syncGoals()` qui
-         * ecrit, par un upsert groupe. L'appel qui suivait le `save()` calculait
-         * donc `current_value` et `progress_pct` pour les jeter aussitot : un
-         * objectif « developpe 100 kg » cree par quelqu'un qui souleve deja 80 kg
-         * s'affichait a 0 %, jusqu'a ce qu'un enregistrement de seance declenche
-         * le job et remette les compteurs d'aplomb.
+         * écrit, par un upsert groupé. L'appel qui suivait le `save()` calculait
+         * donc `current_value` et `progress_pct` pour les jeter aussitôt : un
+         * objectif « développé 100 kg » créé par quelqu'un qui soulève déjà
+         * 80 kg s'affichait à 0 %, jusqu'à ce qu'un enregistrement de séance
+         * déclenche le job et remette les compteurs d'aplomb.
          *
-         * Calculer d'abord evite en prime la seconde ecriture.
+         * Calculer d'abord évite en prime la seconde écriture.
          */
         $this->goalService->updateGoalProgress($goal);
 
@@ -189,27 +159,18 @@ class GoalController extends Controller
     }
 
     /**
-     * Update the specified goal in storage.
-     *
-     * Validates the incoming data, updates the goal's attributes, and recalculates
-     * its progress to reflect the new target or criteria.
-     *
-     * @param  \App\Http\Requests\GoalStoreRequest  $request  The validated request containing updated goal details.
-     * @param  \App\Models\Goal  $goal  The goal instance to update.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the goals index.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update the goal.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de modifier l'objectif.
      */
     public function update(GoalStoreRequest $request, Goal $goal): \Illuminate\Http\RedirectResponse
     {
         // L'autorisation est faite par `GoalStoreRequest::authorize()`, qui
-        // s'execute avant les regles. La redemander ici evaluait la policy deux
-        // fois pour le proprietaire legitime sans jamais pouvoir refuser : quand
-        // ce corps s'execute, la requete a deja ete autorisee.
+        // s'exécute avant les règles. La redemander ici évaluait la policy deux
+        // fois pour le propriétaire légitime sans jamais pouvoir refuser : quand
+        // ce corps s'exécute, la requête a déjà été autorisée.
 
-        // Meme raison qu'a la creation : `updateGoalProgress()` ne persiste pas.
+        // Même raison qu'à la création : `updateGoalProgress()` ne persiste pas.
         // Un `update()` suivi de l'appel enregistrait les champs soumis et jetait
-        // la progression recalculee — changer la cible d'un objectif laissait donc
+        // la progression recalculée — changer la cible d'un objectif laissait donc
         // le pourcentage d'avant.
         $goal->fill($request->validated());
 
@@ -221,14 +182,7 @@ class GoalController extends Controller
     }
 
     /**
-     * Remove the specified goal from storage.
-     *
-     * Permanently deletes the given goal from the database.
-     *
-     * @param  \App\Models\Goal  $goal  The goal instance to delete.
-     * @return \Illuminate\Http\RedirectResponse A redirect back to the goals index.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete the goal.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'utilisateur n'a pas le droit de supprimer l'objectif.
      */
     public function destroy(Goal $goal): \Illuminate\Http\RedirectResponse
     {

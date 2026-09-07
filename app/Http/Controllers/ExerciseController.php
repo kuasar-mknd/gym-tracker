@@ -16,12 +16,11 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Controller for managing Exercises.
+ * La bibliothèque d'exercices de l'utilisateur.
  *
- * This controller handles CRUD operations for exercises.
- * It manages the user's exercise library, supports categorization,
- * and handles cache invalidation for exercise lists.
- * It supports both standard Inertia responses and JSON responses for quick creation.
+ * Toute écriture invalide le cache de la liste, par les crochets `saved` et
+ * `deleted` du modèle : cette liste est lue à l'ouverture de chaque séance, et
+ * périmée, elle ne montre pas l'exercice qu'on vient de créer.
  */
 class ExerciseController extends Controller
 {
@@ -39,14 +38,6 @@ class ExerciseController extends Controller
         ]);
     }
 
-    /**
-     * Display a listing of the user's exercises.
-     *
-     * Retrieves all exercises for the authenticated user, ordered by category and name.
-     * Returns an Inertia response with the exercises list and available metadata (categories, types).
-     *
-     * @return Response The Inertia response rendering the Exercises/Index page.
-     */
     public function index(): Response
     {
         $this->authorize('viewAny', Exercise::class);
@@ -59,14 +50,10 @@ class ExerciseController extends Controller
     }
 
     /**
-     * Store a newly created exercise in storage.
+     * Répond en JSON à qui le demande : la fenêtre de création rapide, ouverte
+     * au milieu d'une séance, a besoin de l'exercice créé sans quitter la page.
      *
-     * Validates and creates a new exercise for the authenticated user.
-     * Invalidates the 'exercises_list_{userId}' cache.
-     * Returns JSON if requested (e.g., from a workout creation modal) or redirects back.
-     *
-     * @param  ExerciseStoreRequest  $request  The validated request containing name, type, and category.
-     * @return RedirectResponse|JsonResponse JSON response with the created exercise or a redirect back.
+     * @return RedirectResponse|JsonResponse L'exercice créé en JSON, ou un retour en arrière.
      */
     public function store(ExerciseStoreRequest $request, CreateExerciseAction $createExerciseAction): RedirectResponse|JsonResponse
     {
@@ -83,15 +70,7 @@ class ExerciseController extends Controller
     }
 
     /**
-     * Update the specified exercise in storage.
-     *
-     * Updates the exercise details and invalidates the user's exercise cache.
-     *
-     * @param  ExerciseUpdateRequest  $request  The validated request containing updated fields.
-     * @param  Exercise  $exercise  The exercise to update.
-     * @return RedirectResponse A redirect back to the previous page.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to update this exercise.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'exercice n'est pas celui de l'utilisateur.
      */
     public function update(ExerciseUpdateRequest $request, Exercise $exercise): RedirectResponse
     {
@@ -104,15 +83,12 @@ class ExerciseController extends Controller
     }
 
     /**
-     * Remove the specified exercise from storage.
+     * Un exercice déjà utilisé dans une séance est refusé ici plutôt que
+     * supprimé : `workout_lines.exercise_id` est une clef étrangère sans
+     * ON DELETE, donc la base rejetterait l'effacement de toute façon — mais
+     * par une erreur de contrainte, c'est-à-dire un 500 au lieu d'un message.
      *
-     * Deletes the exercise if it is not linked to any existing workout lines.
-     * Invalidates the user's exercise cache upon successful deletion.
-     *
-     * @param  Exercise  $exercise  The exercise to delete.
-     * @return RedirectResponse A redirect back with potential error messages if deletion fails.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException If the user is not authorized to delete this exercise.
+     * @throws \Illuminate\Auth\Access\AuthorizationException Si l'exercice n'est pas celui de l'utilisateur.
      */
     public function destroy(Exercise $exercise): RedirectResponse
     {

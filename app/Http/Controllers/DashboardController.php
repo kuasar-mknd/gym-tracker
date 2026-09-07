@@ -9,45 +9,23 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 /**
- * Controller for the Dashboard landing page.
- *
- * This controller aggregates key user statistics and recent activity
- * to be displayed on the main dashboard. It utilizes Deferred props (Inertia 2.0)
- * to load heavy charts asynchronously, ensuring fast initial page rendering.
+ * La première page après la connexion, donc celle dont le temps d'affichage se
+ * remarque le plus : les compteurs et les listes récentes partent avec la
+ * réponse, les graphiques suivent en prop différée.
  */
 class DashboardController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     *
-     * Aggregates the following data for the authenticated user:
-     * - Total workout count (Immediate)
-     * - Weekly workout count (Immediate)
-     * - Latest body weight measurement (Immediate)
-     * - Recent workouts (Immediate)
-     * - Recent Personal Records (Immediate)
-     * - Active goals (Immediate)
-     *
-     * Deferred data (loaded asynchronously):
-     * - Weekly volume stats
-     * - Volume trends
-     * - Duration distribution
-     *
-     * @param  \Illuminate\Http\Request  $request  The incoming HTTP request.
-     * @return \Inertia\Response The Inertia response rendering the 'Dashboard' page.
-     */
     public function __invoke(Request $request, FetchDashboardDataAction $fetchDashboardData): \Inertia\Response
     {
         $user = $this->user();
 
-        // Fetch immediate data (fast queries)
         $data = $fetchDashboardData->getImmediateStats($user);
 
         return Inertia::render('Dashboard', [
             ...$data,
-            // ⚡ Bolt: PERFORMANCE OPTIMIZATION
-            // Consolidate deferred props to reduce the number of async requests and backend executions.
-            // Related chart data is fetched together to ensure consistent loading states and fewer DB queries.
+            // ⚡ Bolt : les graphiques apparentés tiennent en une seule prop
+            // différée — moins de requêtes asynchrones, moins de requêtes SQL,
+            // et un seul état de chargement à l'écran.
             'analyticalStats' => Inertia::defer(fn (): array => $fetchDashboardData->getAnalyticalStats($user)),
         ]);
     }

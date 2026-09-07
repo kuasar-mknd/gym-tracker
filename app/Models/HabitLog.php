@@ -75,9 +75,9 @@ class HabitLog extends Model
      */
     public function scopeWhereDateBetween(Builder $query, ...$dates): Builder
     {
-        // Spatie QueryBuilder passes arguments as an array if they come from a single filter parameter,
-        // or as individual arguments if configured that way.
-        // To be safe and handle the array wrapper often sent by Spatie:
+        // Spatie QueryBuilder passe les arguments dans un tableau quand ils
+        // viennent d'un seul paramètre de filtre, et un par un lorsqu'il est
+        // configuré ainsi : les deux formes sont acceptées.
         $dates = is_array($dates[0]) ? $dates[0] : $dates;
 
         if (count($dates) >= 2) {
@@ -88,14 +88,16 @@ class HabitLog extends Model
     }
 
     /**
-     * `date:Y-m-d`, not `date`. A bare date cast serialises through Carbon's
-     * toJSON, which reads the value in the app timezone and renders it in UTC:
-     * a log for 2026-07-31 left here as "2026-07-30T22:00:00.000000Z". The week
-     * grid compares that string to the plain Y-m-d it builds for each column,
-     * so no day could ever match and no box was ever drawn as done — while the
-     * counter beside it, reading logs.length, kept saying "3/7".
+     * `date:Y-m-d`, et non `date`. Un cast `date` nu sérialise par le `toJSON`
+     * de Carbon, qui lit la valeur dans le fuseau de l'application et la rend en
+     * UTC : un journal du 31/07/2026 partait d'ici en
+     * « 2026-07-30T22:00:00.000000Z ». La grille de la semaine compare cette
+     * chaîne au Y-m-d simple qu'elle fabrique pour chaque colonne, donc aucun
+     * jour ne pouvait correspondre et aucune case n'était jamais cochée — tandis
+     * que le compteur d'à côté, qui lit `logs.length`, affichait « 3/7 ».
      *
-     * The column holds a calendar day, not an instant. It must not move.
+     * La colonne porte un jour de calendrier, pas un instant. Elle ne doit pas
+     * bouger.
      */
     #[\Override]
     protected function casts(): array
