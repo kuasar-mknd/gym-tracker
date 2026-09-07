@@ -22,7 +22,7 @@ defineProps({
     <GlassCard class="stagger-1 animate-slide-up relative overflow-hidden">
         <div class="mb-4 flex items-start justify-between">
             <div>
-                <h3 class="sur-titre text-accent-info-deep mb-1">Poids Corporel</h3>
+                <h3 class="text-accent-info-deep sur-titre mb-1">Poids Corporel</h3>
                 <p class="font-display text-text-main text-5xl font-black tracking-tighter">
                     {{ latestWeight ? nombre(latestWeight) : '—' }}
                     <span class="text-text-muted text-lg">kg</span>

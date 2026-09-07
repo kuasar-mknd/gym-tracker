@@ -163,7 +163,7 @@ const journalsByMonth = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Journal</h2>
+                <h2 class="titre-carte">Journal</h2>
                 <GlassButton variant="primary" @click="openAddForm" aria-label="Nouvelle entrée">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -175,7 +175,7 @@ const journalsByMonth = computed(() => {
             <!-- Stats Chart -->
             <GlassCard v-if="journals.length > 1" class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Tendances</h3>
+                    <h3 class="titre-carte">Tendances</h3>
                     <p class="text-text-muted text-xs font-semibold">Évolution de vos métriques</p>
                 </div>
                 <JournalChart :data="journals" />

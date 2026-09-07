@@ -33,7 +33,7 @@ class ProfileEditTest extends DuskTestCase
             $browser->assertSee('MON PROFIL');
 
             // Verify Profile Info Section
-            $browser->assertSee('Informations du profil')
+            $browser->assertSee('INFORMATIONS DU PROFIL')
                 ->waitFor('@profile-name-input', 15)
                 ->assertInputValue('@profile-name-input', 'Original Name')
                 ->assertInputValue('input[autocomplete="username"]', $user->email);
@@ -65,7 +65,7 @@ class ProfileEditTest extends DuskTestCase
             // matche AUSSI le premier champ. Dusk prenait la première occurrence et
             // laissait la confirmation vide, donc la validation échouait — sans que
             // personne ne le voie, faute d'assertion sur la base.
-            $browser->assertSee('Mot de passe')
+            $browser->assertSee('MOT DE PASSE')
                 ->type('@current-password-input', 'password123')
                 ->type('@new-password-input', 'newpassword123')
                 ->type('@confirm-password-input', 'newpassword123')
@@ -92,14 +92,14 @@ class ProfileEditTest extends DuskTestCase
 
             // Verify Delete Account Section
             $browser->script("document.querySelector('[data-testid=\"delete-account-button\"]').scrollIntoView({block: 'center'});");
-            $browser->assertSee('Supprimer le compte')
+            $browser->assertSee('SUPPRIMER LE COMPTE')
                 ->script("document.querySelector('[data-testid=\"delete-account-button\"]').click();");
 
-            $browser->waitForText('Confirmer la suppression', 15)
+            $browser->waitForText('CONFIRMER LA SUPPRESSION', 15)
                 ->assertSee('Cette action est irréversible.')
                 ->script("document.querySelector('[data-testid=\"cancel-delete-button\"]').click();");
 
-            $browser->waitUntilMissing('Confirmer la suppression', 15);
+            $browser->waitUntilMissing('CONFIRMER LA SUPPRESSION', 15);
 
             $browser->assertNoConsoleExceptions();
         } catch (\Exception $e) {

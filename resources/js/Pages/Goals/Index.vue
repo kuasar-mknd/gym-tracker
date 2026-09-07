@@ -108,7 +108,7 @@ const goalDistribution = computed(() => {
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-text-main text-2xl font-bold tracking-tight">Mes Objectifs 🎯</h2>
+                    <h2 class="titre-section">Mes Objectifs 🎯</h2>
                     <p class="text-text-muted text-sm">Fixe tes cibles et dépasse tes limites.</p>
                 </div>
                 <GlassButton
@@ -127,7 +127,7 @@ const goalDistribution = computed(() => {
                 <div v-if="goalDistribution.length > 0" class="animate-slide-up">
                     <GlassCard>
                         <div class="mb-4">
-                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Répartition</h3>
+                            <h3 class="titre-carte">Répartition</h3>
                             <p class="text-text-muted text-xs font-semibold">Type d'objectifs</p>
                         </div>
                         <GoalTypeChart :data="goalDistribution" />
@@ -145,7 +145,7 @@ const goalDistribution = computed(() => {
                 >
                     <div v-if="showCreateForm">
                         <GlassCard class="p-6">
-                            <h3 class="text-text-main mb-6 text-lg font-bold">Nouvel Objectif</h3>
+                            <h3 class="titre-carte mb-6">Nouvel Objectif</h3>
                             <div dusk="goal-create-form">
                                 <GoalForm
                                     :form="form"
@@ -163,7 +163,7 @@ const goalDistribution = computed(() => {
 
                 <!-- Active Goals -->
                 <div class="space-y-4">
-                    <h3 class="text-text-main flex items-center gap-2 text-lg font-bold">
+                    <h3 class="titre-carte flex items-center gap-2">
                         En cours ⚡
                         <span class="text-text-muted text-xs font-normal">({{ activeGoals.length }})</span>
                     </h3>
@@ -186,7 +186,7 @@ const goalDistribution = computed(() => {
 
                 <!-- Completed Goals -->
                 <div v-if="completedGoals.length > 0" class="space-y-4 opacity-70">
-                    <h3 class="text-text-main flex items-center gap-2 text-lg font-bold">
+                    <h3 class="titre-carte flex items-center gap-2">
                         Accomplis 🏆
                         <span class="text-text-muted text-xs font-normal">({{ completedGoals.length }})</span>
                     </h3>
@@ -209,7 +209,7 @@ const goalDistribution = computed(() => {
             @close="closeDeletion"
         >
             <div class="p-6">
-                <h2 id="delete-goal-title" class="text-text-main text-lg font-semibold">Supprimer cet objectif ?</h2>
+                <h2 id="delete-goal-title" class="titre-carte">Supprimer cet objectif ?</h2>
                 <p class="text-text-muted mt-2 text-sm">
                     « {{ goalPendingDeletion?.title }} » sera définitivement effacé, avec sa progression.
                 </p>

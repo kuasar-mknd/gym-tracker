@@ -78,7 +78,7 @@ const formatMeasuredAt = (measuredAt) =>
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">{{ part }}</h2>
+                <h2 class="titre-carte">{{ part }}</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -89,15 +89,13 @@ const formatMeasuredAt = (measuredAt) =>
         <div class="space-y-6">
             <!-- Chart -->
             <GlassCard class="animate-slide-up">
-                <h3 class="font-display text-accent-tertiary-deep tracking-sur-titre mb-4 text-xs font-black uppercase">
-                    History
-                </h3>
+                <h3 class="text-accent-tertiary-deep sur-titre mb-4">History</h3>
                 <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="part" :unit="history[0].unit" />
             </GlassCard>
 
             <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">Nouvelle mesure</h3>
+                <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput

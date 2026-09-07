@@ -31,9 +31,7 @@ const submit = () => {
         <Head title="Connexion" />
 
         <div class="mb-6 text-center">
-            <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
-                Bon retour ! 👋
-            </h2>
+            <h2 class="titre-section">Bon retour ! 👋</h2>
             <p class="text-text-muted mt-2">Connecte-toi pour continuer</p>
         </div>
 

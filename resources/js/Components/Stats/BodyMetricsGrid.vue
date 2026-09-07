@@ -5,6 +5,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre, variation } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
 
@@ -41,9 +42,7 @@ defineProps({
                         <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                     </template>
                     <BodyFatChart v-if="bodyFatHistory?.length > 0" :data="bodyFatHistory" />
-                    <div v-else class="flex h-full items-center justify-center">
-                        <p class="text-text-muted/30 text-2xs italic">Pas de données historiques</p>
-                    </div>
+                    <GlassEmptyState v-else taille="ligne" icon="query_stats" title="Pas de données historiques" />
                 </Deferred>
             </div>
         </GlassCard>

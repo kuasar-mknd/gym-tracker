@@ -200,7 +200,7 @@ const formatHistoryDuration = (start, end) => {
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h2 class="text-text-main text-xl font-semibold">Suivi de Jeûne</h2>
+                <h2 class="titre-carte">Suivi de Jeûne</h2>
             </div>
         </template>
 
@@ -259,7 +259,7 @@ const formatHistoryDuration = (start, end) => {
 
             <!-- Start Fast Section -->
             <GlassCard v-else class="mx-auto max-w-md">
-                <h3 class="text-text-main mb-6 text-lg font-semibold">Démarrer un jeûne</h3>
+                <h3 class="titre-carte mb-6">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
@@ -300,7 +300,7 @@ const formatHistoryDuration = (start, end) => {
             <!-- History Analytics Chart Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Durée des jeûnes</h3>
+                    <h3 class="titre-carte">Durée des jeûnes</h3>
                     <p class="text-text-muted text-xs font-semibold">Historique récent (heures)</p>
                 </div>
 
@@ -318,7 +318,7 @@ const formatHistoryDuration = (start, end) => {
 
             <!-- History Details Section -->
             <GlassCard>
-                <h3 class="text-text-main mb-4 text-lg font-semibold">Historique détaillé</h3>
+                <h3 class="titre-carte mb-4">Historique détaillé</h3>
                 <GlassEmptyState
                     v-if="history.data.length === 0"
                     taille="ligne"

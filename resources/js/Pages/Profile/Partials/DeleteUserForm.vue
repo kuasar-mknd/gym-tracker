@@ -36,7 +36,7 @@ const closeModal = () => {
 <template>
     <GlassCard as="section" class="space-y-6">
         <header>
-            <h2 class="text-text-main text-lg font-semibold">Supprimer le compte</h2>
+            <h2 class="titre-carte">Supprimer le compte</h2>
             <p class="text-text-muted mt-1 text-sm">
                 Une fois ton compte supprimé, toutes tes données seront définitivement effacées.
             </p>
@@ -55,7 +55,7 @@ const closeModal = () => {
         -->
         <Modal :show="confirmingUserDeletion" max-width="md" aria-labelledby="delete-account-title" @close="closeModal">
             <div class="p-6">
-                <h2 id="delete-account-title" class="text-text-main text-lg font-semibold">Confirmer la suppression</h2>
+                <h2 id="delete-account-title" class="titre-carte">Confirmer la suppression</h2>
 
                 <p class="text-text-muted mt-2 text-sm">
                     Cette action est irréversible. Entre ton mot de passe pour confirmer.

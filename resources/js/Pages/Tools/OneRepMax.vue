@@ -5,9 +5,7 @@
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculatrice<br />
                     <span class="text-gradient">1RM</span>
                 </h1>
@@ -74,9 +72,7 @@
                 <div v-if="oneRepMax > 0">
                     <GlassCard class="stagger-2 animate-slide-up h-full shadow-2xl">
                         <div class="p-6">
-                            <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
-                                Pourcentages d'Entraînement
-                            </h2>
+                            <h2 class="titre-carte mb-4">Pourcentages d'Entraînement</h2>
 
                             <!-- Chart Component -->
                             <div class="mb-6 h-48 w-full">

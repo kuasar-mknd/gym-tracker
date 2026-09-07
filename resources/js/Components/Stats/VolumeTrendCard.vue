@@ -24,7 +24,7 @@ const totalVolume = computed(() => {
     <GlassCard class="stagger-3 animate-slide-up">
         <div class="mb-4 flex items-center justify-between">
             <div>
-                <h3 class="font-display text-text-main text-lg font-black uppercase italic">Évolution du Volume</h3>
+                <h3 class="titre-carte">Évolution du Volume</h3>
                 <p class="text-text-muted text-xs font-semibold">
                     {{
                         currentPeriod === '7j'

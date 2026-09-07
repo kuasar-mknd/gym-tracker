@@ -138,7 +138,7 @@ const menuGroups = [
                     </div>
                 </div>
                 <div>
-                    <h2 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
+                    <h2 class="titre-section">
                         {{ $page.props.auth.user.name }}
                     </h2>
                     <p class="text-text-muted text-sm font-bold">{{ $page.props.auth.user.email }}</p>
@@ -166,7 +166,7 @@ const menuGroups = [
                 class="animate-slide-up"
                 :style="{ animationDelay: `${0.1 + gIdx * 0.1}s` }"
             >
-                <h3 class="sur-titre text-text-muted mb-4 ml-1">
+                <h3 class="text-text-muted sur-titre mb-4 ml-1">
                     {{ group.title }}
                 </h3>
 

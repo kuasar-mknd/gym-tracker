@@ -131,7 +131,7 @@ const submit = () => {
             </GlassCard>
 
             <div class="stagger-2 animate-slide-up">
-                <h3 class="text-text-main mb-3 font-semibold">Exercices</h3>
+                <h3 class="titre-carte mb-3">Exercices</h3>
 
                 <div class="space-y-4">
                     <div v-for="(exercise, exIndex) in form.exercises" :key="exercise.uid">

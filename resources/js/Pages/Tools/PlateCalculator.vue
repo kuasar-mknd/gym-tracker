@@ -5,9 +5,7 @@
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">de Plaques</span>
                 </h1>
@@ -130,9 +128,7 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="font-display text-text-main text-lg font-black uppercase italic">
-                                Mon Inventaire
-                            </h2>
+                            <h2 class="titre-carte">Mon Inventaire</h2>
                             <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
                                 Plaques disponibles
                             </p>
@@ -203,9 +199,7 @@
         <!-- Add Plate Modal -->
         <Modal :show="addingPlate" @close="addingPlate = false" aria-labelledby="add-plate-title">
             <div class="space-y-6 p-6">
-                <h2 id="add-plate-title" class="font-display text-text-main text-xl font-black uppercase italic">
-                    Ajouter une plaque
-                </h2>
+                <h2 id="add-plate-title" class="titre-carte">Ajouter une plaque</h2>
 
                 <div class="space-y-4">
                     <!-- GlassInput renders this exact label markup itself, and wires

@@ -98,7 +98,7 @@ const startWorkout = () => {
                 class="stagger-6 animate-slide-up relative overflow-hidden"
             >
                 <div class="relative z-10 mb-6">
-                    <h3 class="sur-titre text-accent-primary-deep mb-1">Visualisation</h3>
+                    <h3 class="text-accent-primary-deep sur-titre mb-1">Visualisation</h3>
                     <p class="font-display text-text-main text-2xl font-black uppercase italic">
                         Progression des Objectifs
                     </p>

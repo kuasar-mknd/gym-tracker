@@ -36,7 +36,7 @@ const emit = defineEmits(['close', 'submit'])
 <template>
     <GlassCard class="animate-slide-up">
         <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-text-main font-semibold">
+            <h3 class="titre-carte">
                 {{ editingJournal ? "Modifier l'entrée" : 'Nouvelle entrée' }}
             </h3>
             <GlassIconButton v-press icon="close" label="Fermer le formulaire" @click="emit('close')" />

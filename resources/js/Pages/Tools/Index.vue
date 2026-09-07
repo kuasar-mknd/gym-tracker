@@ -10,7 +10,7 @@
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h2 class="text-text-main text-xl font-semibold">Outils</h2>
+                <h2 class="titre-carte">Outils</h2>
             </div>
         </template>
 
@@ -38,7 +38,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Calculateur de Plaques</h3>
+                        <h3 class="titre-carte">Calculateur de Plaques</h3>
                         <p class="text-text-muted text-sm">
                             Calcule quelles plaques charger sur la barre pour un poids spécifique.
                         </p>
@@ -69,7 +69,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Calculateur 1RM</h3>
+                        <h3 class="titre-carte">Calculateur 1RM</h3>
                         <p class="text-text-muted text-sm">
                             Estime ton maximum sur une répétition basé sur le poids soulevé et les répétitions.
                         </p>
@@ -100,7 +100,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Calculateur Wilks</h3>
+                        <h3 class="titre-carte">Calculateur Wilks</h3>
                         <p class="text-text-muted text-sm">
                             Calcule ton score de force relative indépendamment de ton poids de corps.
                         </p>
@@ -117,7 +117,7 @@
                         <div class="bg-accent-state/20 text-accent-state-deep rounded-full p-4">
                             <GlassIcon name="local_fire_department" size="lg" />
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Calculateur de Macros</h3>
+                        <h3 class="titre-carte">Calculateur de Macros</h3>
                         <p class="text-text-muted text-sm">
                             Estime tes besoins quotidiens en calories et macros selon tes objectifs.
                         </p>
@@ -148,7 +148,7 @@
                                 />
                             </svg>
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Calculateur d'Échauffement</h3>
+                        <h3 class="titre-carte">Calculateur d'Échauffement</h3>
                         <p class="text-text-muted text-sm">
                             Calcule tes séries d'échauffement basées sur ton poids de travail.
                         </p>
@@ -165,7 +165,7 @@
                         <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
                             <GlassIcon name="water_drop" size="lg" />
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Suivi Hydratation</h3>
+                        <h3 class="titre-carte">Suivi Hydratation</h3>
                         <p class="text-text-muted text-sm">Suis ta consommation d'eau quotidienne et reste hydraté.</p>
                     </div>
                 </GlassCard>
@@ -180,7 +180,7 @@
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <GlassIcon name="timer" size="lg" />
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Minuteur d'Intervalle</h3>
+                        <h3 class="titre-carte">Minuteur d'Intervalle</h3>
                         <p class="text-text-muted text-sm">
                             Créez et lancez vos propres minuteurs pour vos entraînements HIIT ou Tabata.
                         </p>
@@ -197,7 +197,7 @@
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
                             <GlassIcon name="timer" size="lg" />
                         </div>
-                        <h3 class="text-text-main text-xl font-bold">Suivi de Jeûne</h3>
+                        <h3 class="titre-carte">Suivi de Jeûne</h3>
                         <p class="text-text-muted text-sm">
                             Suis tes fenêtres de jeûne intermittent et ta progression.
                         </p>
