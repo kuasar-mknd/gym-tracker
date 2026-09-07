@@ -161,9 +161,9 @@ watch(
             </div>
         </div>
 
-        <div class="border-surface-card/5 flex justify-end gap-3 border-t pt-4">
-            <GlassButton type="button" variant="secondary" @click="emit('cancel')">Annuler</GlassButton>
-            <GlassButton variant="primary" type="submit" :loading="form.processing" dusk="goal-submit">{{
+        <div class="border-surface-card/5 flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:justify-end">
+            <GlassButton type="button" variant="secondary" block @click="emit('cancel')">Annuler</GlassButton>
+            <GlassButton variant="primary" type="submit" block :loading="form.processing" dusk="goal-submit">{{
                 submitLabel
             }}</GlassButton>
         </div>

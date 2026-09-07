@@ -553,6 +553,23 @@
     }
 }
 
+@layer base {
+    /*
+     * Les flèches d'un champ numérique réservent une douzaine de pixels que le
+     * doigt n'utilise jamais — un téléphone ouvre son clavier — et ces pixels
+     * manquaient à « 142.5 » dans la rangée d'une série (#1788).
+     */
+    input[type='number'] {
+        appearance: textfield;
+    }
+
+    input[type='number']::-webkit-outer-spin-button,
+    input[type='number']::-webkit-inner-spin-button {
+        appearance: none;
+        margin: 0;
+    }
+}
+
 /*
  * Les plans, du contenu au lien d'évitement. Une valeur posée à la main
  * (z-[9999]) gagne toujours, jusqu'au jour où deux le font.

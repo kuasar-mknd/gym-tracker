@@ -22,6 +22,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
+import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 
 defineProps({
     form: { type: Object, required: true },
@@ -38,14 +39,7 @@ const emit = defineEmits(['close', 'submit'])
             <h3 class="text-text-main font-semibold">
                 {{ editingJournal ? "Modifier l'entrée" : 'Nouvelle entrée' }}
             </h3>
-            <button
-                v-press
-                @click="emit('close')"
-                class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary rounded-md focus-visible:ring-2 focus-visible:outline-none"
-                aria-label="Fermer le formulaire"
-            >
-                ✕
-            </button>
+            <GlassIconButton v-press icon="close" label="Fermer le formulaire" @click="emit('close')" />
         </div>
 
         <form @submit.prevent="emit('submit')" class="space-y-4">
@@ -156,9 +150,11 @@ const emit = defineEmits(['close', 'submit'])
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3">
-                <GlassButton type="button" variant="secondary" @click="emit('close')"> Annuler </GlassButton>
-                <GlassButton type="submit" variant="primary" :loading="form.processing"> Enregistrer </GlassButton>
+            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <GlassButton type="button" variant="secondary" block @click="emit('close')"> Annuler </GlassButton>
+                <GlassButton type="submit" variant="primary" block :loading="form.processing">
+                    Enregistrer
+                </GlassButton>
             </div>
         </form>
     </GlassCard>

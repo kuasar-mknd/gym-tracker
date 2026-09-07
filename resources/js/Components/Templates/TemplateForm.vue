@@ -192,7 +192,7 @@ const submit = () => {
                                         v-press="{ haptic: 'selection' }"
                                         @click="set.is_warmup = !set.is_warmup"
                                         type="button"
-                                        class="focus-visible:ring-accent-primary text-2xs h-10 rounded-lg px-2 py-1 font-bold transition focus-visible:ring-2 focus-visible:outline-none"
+                                        class="focus-visible:ring-accent-primary text-2xs relative h-10 min-w-10 rounded-lg px-2 py-1 font-bold transition before:absolute before:-inset-0.5 before:content-[''] focus-visible:ring-2 focus-visible:outline-none"
                                         :class="
                                             set.is_warmup
                                                 ? 'bg-accent-primary/20 text-accent-primary-deep'
@@ -213,14 +213,16 @@ const submit = () => {
                                         @click="removeSet(exIndex, setIndex)"
                                     />
                                 </div>
-                                <button
+                                <GlassButton
                                     v-press
+                                    variant="primary"
+                                    size="sm"
+                                    icon="add"
+                                    :dusk="`add-set-${exIndex}`"
                                     @click="addSet(exIndex)"
-                                    type="button"
-                                    class="text-accent-primary-deep focus-visible:ring-accent-primary rounded-lg text-xs transition hover:underline focus-visible:ring-2 focus-visible:outline-none"
                                 >
-                                    + Ajouter une série
-                                </button>
+                                    Ajouter une série
+                                </GlassButton>
                             </div>
                         </GlassCard>
                     </div>

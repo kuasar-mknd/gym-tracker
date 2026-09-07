@@ -255,7 +255,7 @@ onUnmounted(() => {
                 :class="[
                     'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
                     'border-surface-card bg-surface-card/60 border transition',
-                    ' ',
+                    'focus-visible:ring-accent-primary focus-visible:ring-2 focus-visible:outline-none',
                 ]"
                 aria-label="Paramètres de la séance"
             >

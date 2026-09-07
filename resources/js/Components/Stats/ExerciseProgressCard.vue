@@ -4,6 +4,7 @@ import axios from 'axios'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 
@@ -101,13 +102,9 @@ watch(selectedExercise, (newVal) => {
         >
             <GlassIcon name="cloud_off" size="xl" class="text-accent-danger-deep mb-2" />
             <p class="text-text-muted mb-3 text-sm">Impossible de charger la progression.</p>
-            <button
-                type="button"
-                @click="fetchExerciseProgress(selectedExercise)"
-                class="focus-visible:ring-accent-primary text-accent-primary-deep rounded-lg px-3 py-1 text-sm font-bold underline focus-visible:ring-2 focus-visible:outline-none"
-            >
+            <GlassButton variant="ghost" size="sm" icon="refresh" @click="fetchExerciseProgress(selectedExercise)">
                 Réessayer
-            </button>
+            </GlassButton>
         </div>
         <div v-else-if="selectedExercise && exerciseProgressData.length > 0" class="h-48">
             <OneRepMaxChart :data="exerciseProgressData" />

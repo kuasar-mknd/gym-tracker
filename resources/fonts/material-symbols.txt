@@ -70,6 +70,7 @@ person_edit
 pie_chart
 play_arrow
 play_circle
+refresh
 repeat
 restart_alt
 restaurant

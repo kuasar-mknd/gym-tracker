@@ -34,7 +34,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 @click="$emit('remove')"
                 :dusk="`swipe-remove-set-${lineIndex}-${index}`"
                 :aria-label="`Supprimer la série ${index + 1}`"
-                class="bg-accent-danger text-text-on-accent flex h-full w-full items-center justify-center"
+                class="bg-accent-danger text-text-on-accent focus-visible:ring-accent-primary flex h-full w-full items-center justify-center focus-visible:ring-2 focus-visible:outline-none"
             >
                 <span class="flex flex-col items-center" aria-hidden="true">
                     <GlassIcon name="delete" />
@@ -61,7 +61,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 @click="$emit('toggle')"
                 :disabled="isFinished"
                 :dusk="`complete-set-${lineIndex}-${index}`"
-                class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition"
+                class="group focus-visible:ring-accent-primary relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition focus-visible:ring-2 focus-visible:outline-none"
                 :class="set.is_completed ? 'bg-accent-state text-text-main' : 'bg-surface-sunken text-text-muted'"
                 :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
             >
@@ -107,49 +107,67 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
             </component>
 
             <template v-if="line.exercise.type === 'strength'">
-                <input
-                    type="number"
-                    inputmode="decimal"
-                    :value="set.weight"
-                    @focus="$event.target.select()"
-                    @input="(e) => $emit('saisie-en-cours', 'weight', e.target.value)"
-                    @change="(e) => $emit('saisie-terminee', 'weight', e.target.value)"
-                    :disabled="isFinished"
-                    :dusk="`weight-input-${lineIndex}-${index}`"
-                    :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
-                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
-                />
-                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">kg</span>
-                <input
-                    type="number"
-                    inputmode="numeric"
-                    :value="set.reps"
-                    @focus="$event.target.select()"
-                    @input="(e) => $emit('saisie-en-cours', 'reps', e.target.value)"
-                    @change="(e) => $emit('saisie-terminee', 'reps', e.target.value)"
-                    :disabled="isFinished"
-                    :dusk="`reps-input-${lineIndex}-${index}`"
-                    :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
-                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
-                />
-                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">réps</span>
+                <div class="relative min-w-0 flex-1">
+                    <input
+                        type="number"
+                        inputmode="decimal"
+                        :value="set.weight"
+                        @focus="$event.target.select()"
+                        @input="(e) => $emit('saisie-en-cours', 'weight', e.target.value)"
+                        @change="(e) => $emit('saisie-terminee', 'weight', e.target.value)"
+                        :disabled="isFinished"
+                        :dusk="`weight-input-${lineIndex}-${index}`"
+                        :aria-label="`Poids en kg, série ${index + 1}, ${line.exercise.name}`"
+                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums"
+                    />
+                    <span
+                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold"
+                        aria-hidden="true"
+                        >kg</span
+                    >
+                </div>
+                <div class="relative min-w-0 flex-1">
+                    <input
+                        type="number"
+                        inputmode="numeric"
+                        :value="set.reps"
+                        @focus="$event.target.select()"
+                        @input="(e) => $emit('saisie-en-cours', 'reps', e.target.value)"
+                        @change="(e) => $emit('saisie-terminee', 'reps', e.target.value)"
+                        :disabled="isFinished"
+                        :dusk="`reps-input-${lineIndex}-${index}`"
+                        :aria-label="`Répétitions, série ${index + 1}, ${line.exercise.name}`"
+                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums"
+                    />
+                    <span
+                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold"
+                        aria-hidden="true"
+                        >réps</span
+                    >
+                </div>
             </template>
 
             <template v-else-if="line.exercise.type === 'cardio'">
-                <input
-                    type="number"
-                    step="0.1"
-                    inputmode="decimal"
-                    :value="set.distance_km"
-                    @focus="$event.target.select()"
-                    @input="(e) => $emit('saisie-en-cours', 'distance_km', e.target.value)"
-                    @change="(e) => $emit('saisie-terminee', 'distance_km', e.target.value)"
-                    :disabled="isFinished"
-                    :dusk="`distance-input-${lineIndex}-${index}`"
-                    :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
-                    class="text-text-main border-border h-11 w-full min-w-0 flex-1 rounded-xl border-2 text-center font-bold"
-                />
-                <span class="text-text-muted shrink-0 text-xs font-bold" aria-hidden="true">km</span>
+                <div class="relative min-w-0 flex-1">
+                    <input
+                        type="number"
+                        step="0.1"
+                        inputmode="decimal"
+                        :value="set.distance_km"
+                        @focus="$event.target.select()"
+                        @input="(e) => $emit('saisie-en-cours', 'distance_km', e.target.value)"
+                        @change="(e) => $emit('saisie-terminee', 'distance_km', e.target.value)"
+                        :disabled="isFinished"
+                        :dusk="`distance-input-${lineIndex}-${index}`"
+                        :aria-label="`Distance en km, série ${index + 1}, ${line.exercise.name}`"
+                        class="text-text-main border-border h-11 w-full rounded-xl border-2 pr-6 pl-1 text-center font-bold tabular-nums"
+                    />
+                    <span
+                        class="text-text-muted text-2xs absolute top-1/2 right-1.5 -translate-y-1/2 font-bold"
+                        aria-hidden="true"
+                        >km</span
+                    >
+                </div>
                 <DurationWheel
                     :model-value="set.duration_seconds"
                     @update:model-value="(seconds) => $emit('update', 'duration_seconds', seconds)"
@@ -176,7 +194,8 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 @click="$emit('remove')"
                 :dusk="`remove-set-${lineIndex}-${index}`"
                 :class="[
-                    'hover:text-accent-danger-deep text-text-muted relative ml-auto',
+                    'hover:text-accent-danger-deep text-text-muted relative ml-auto rounded-lg',
+                    'focus-visible:ring-accent-primary focus-visible:ring-2 focus-visible:outline-none',
                     'before:absolute before:-inset-2.5 before:content-[\'\']',
                     // Redundant on a phone, where the row swipes.
                     // Kept from sm up, where there is no swipe at

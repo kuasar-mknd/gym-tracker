@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
+import GlassButton from '@/Components/UI/GlassButton.vue'
 
 const show = ref(false)
 const achievement = ref(null)
@@ -138,15 +139,15 @@ const close = () => {
                         </p>
 
                         <!-- Action -->
-                        <button
-                            v-press
-                            type="button"
-                            @click="close"
+                        <GlassButton
+                            variant="primary"
+                            size="lg"
+                            class="w-full"
                             dusk="celebration-dismiss"
-                            class="bg-accent-state text-text-on-accent w-full rounded-2xl border py-3 font-bold shadow-lg backdrop-blur-md transition hover:brightness-95 active:scale-95"
+                            @click="close"
                         >
                             Génial ! 🤩
-                        </button>
+                        </GlassButton>
                     </div>
                 </div>
             </div>
