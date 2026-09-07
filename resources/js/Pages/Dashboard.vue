@@ -15,6 +15,7 @@ import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
 import { defineAsyncComponent } from 'vue'
+import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 
 const ActiveGoalsChart = defineAsyncComponent(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
@@ -56,6 +57,8 @@ const startWorkout = () => {
             <DashboardHeader :user="$page.props.auth.user" :latest-weight="latestWeight" />
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
+
+            <InvitationDInstallation />
 
             <Deferred data="analyticalStats">
                 <template #fallback>

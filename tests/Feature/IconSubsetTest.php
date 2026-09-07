@@ -159,6 +159,8 @@ const NOT_ICONS = [
     'hero', 'processing', 'block',
     // `taille="carte"` et `taille="ligne"` de GlassEmptyState, sur la ligne qui porte aussi son `icon`.
     'carte', 'ligne',
+    // Les gestionnaires français d'un bouton d'icône : `@click="refuser"` sur la balise qui porte `icon`.
+    'refuser', 'installer',
     // The goal types switched on in GoalCard's `typeIcon`. That computed does
     // carry the word icon, so following its block reaches the `case` labels —
     // but what it returns is an emoji, never a ligature.

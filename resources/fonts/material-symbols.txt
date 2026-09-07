@@ -51,6 +51,7 @@ grid_view
 group
 handyman
 history
+install_mobile
 inventory_2
 keyboard
 library_books
