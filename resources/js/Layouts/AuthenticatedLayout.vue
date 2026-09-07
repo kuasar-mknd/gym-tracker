@@ -75,6 +75,8 @@ watch(
 
 const activeWorkout = computed(() => page.props.auth?.user?.active_workout)
 const isWorkoutShow = computed(() => route().current('workouts.show'))
+// La grande bannière n'a sa place que là où la séance est le sujet ; ailleurs, une ligne.
+const banniereCompacte = computed(() => !route().current('dashboard') && !route().current('workouts.index'))
 
 onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>
@@ -278,7 +280,8 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                 </Link>
                 <h1
                     v-if="pageTitle"
-                    class="font-display text-text-main truncate text-2xl font-black tracking-tight uppercase italic"
+                    class="font-display text-text-main truncate font-black tracking-tight uppercase italic"
+                    :class="pageTitle.length > 12 ? 'text-xl' : 'text-2xl'"
                 >
                     {{ pageTitle }}
                 </h1>
@@ -324,7 +327,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
         >
             <div class="mx-auto mb-6 max-w-7xl" v-if="activeWorkout && !isWorkoutShow">
-                <ActiveWorkoutBanner :workout="activeWorkout" />
+                <ActiveWorkoutBanner :workout="activeWorkout" :compact="banniereCompacte" />
             </div>
 
             <Transition

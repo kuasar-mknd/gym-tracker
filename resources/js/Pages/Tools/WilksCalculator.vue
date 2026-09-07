@@ -1,7 +1,7 @@
 <template>
     <Head title="Calculateur Wilks" />
 
-    <AuthenticatedLayout page-title="Calculateur Wilks" show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">

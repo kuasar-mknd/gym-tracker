@@ -5,6 +5,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
     workout: { type: Object, required: true },
+    /** Une ligne au lieu d'une carte : partout où la séance n'est pas le sujet. */
+    compact: { type: Boolean, default: false },
 })
 
 const elapsed = ref('')
@@ -13,7 +15,8 @@ let intervalId = null
 const updateElapsed = () => {
     const start = new Date(props.workout.started_at)
     const now = new Date()
-    const diff = Math.floor((now - start) / 1000)
+    // Une horloge décalée ou un fuseau changé ne donnent jamais une durée négative.
+    const diff = Math.max(0, Math.floor((now - start) / 1000))
     const h = Math.floor(diff / 3600)
     const m = Math.floor((diff % 3600) / 60)
     const s = diff % 60
@@ -52,6 +55,22 @@ onUnmounted(() => {
 -->
 <template>
     <Link
+        v-if="compact"
+        v-press
+        :href="route('workouts.show', { workout: workout.id })"
+        class="from-session-from via-session-via to-session-to border-session-from/40 text-text-on-dark-accent focus-visible:ring-session-from focus-visible:ring-offset-surface-page flex min-h-12 items-center gap-3 rounded-2xl border bg-linear-to-r px-4 py-2 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
+        dusk="active-workout-banner"
+    >
+        <GlassIcon name="fitness_center" size="sm" fill />
+        <span class="min-w-0 flex-1 truncate text-sm font-black uppercase italic">{{ workout.name || 'Séance' }}</span>
+        <span class="flex items-center gap-1 text-xs font-bold tabular-nums">
+            <GlassIcon name="timer" size="xs" />
+            {{ elapsed }}
+        </span>
+        <GlassIcon name="chevron_right" size="sm" class="opacity-70" />
+    </Link>
+    <Link
+        v-else
         v-press
         :href="route('workouts.show', { workout: workout.id })"
         class="animate-fade-in group border-session-from/40 focus-visible:ring-session-from focus-visible:ring-offset-surface-page relative block overflow-hidden rounded-3xl border-2 transition duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"

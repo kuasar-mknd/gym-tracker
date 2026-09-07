@@ -99,7 +99,6 @@ const isActiveRoute = (itemRoute) => {
                     'glass-nav-item group focus-visible:ring-accent-primary rounded-xl transition focus-visible:ring-2 focus-visible:outline-none',
                     { active: isActiveRoute(item.route) },
                 ]"
-                :aria-label="item.name"
                 :aria-current="isActiveRoute(item.route) ? 'page' : undefined"
                 :dusk="'nav-' + item.route.split('.')[0]"
             >
@@ -109,6 +108,7 @@ const isActiveRoute = (itemRoute) => {
                     :fill="isActiveRoute(item.route)"
                     class="group-hover:drop-shadow-glow-primary transition"
                 />
+                <span class="text-2xs font-bold">{{ item.name }}</span>
             </Link>
         </template>
     </nav>

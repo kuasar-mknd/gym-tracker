@@ -47,6 +47,10 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => hoisted.haptics(...args) }))
+vi.mock('@/Components/Stats/ExerciseCategoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'ExerciseCategoryChart', props: ['data'], template: '<div />' },
+}))
 
 /*
  * The two habit charts are pulled in with `defineAsyncComponent`, so they

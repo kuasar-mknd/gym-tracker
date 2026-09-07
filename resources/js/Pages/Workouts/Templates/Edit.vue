@@ -16,9 +16,9 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Modifier le Modèle" />
+    <Head title="Modifier le modèle" />
 
-    <AuthenticatedLayout page-title="Modifier le Modèle" show-back back-route="templates.index">
+    <AuthenticatedLayout page-title="Modèle" show-back back-route="templates.index">
         <TemplateForm :template="template" :exercises="exercises" />
     </AuthenticatedLayout>
 </template>

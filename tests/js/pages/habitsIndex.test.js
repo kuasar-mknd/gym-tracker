@@ -1,4 +1,13 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+
+vi.mock('@/Components/Stats/HabitConsistencyChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'HabitConsistencyChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/HabitHistoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'HabitHistoryChart', props: ['data'], template: '<div />' },
+}))
 import { mount } from '@vue/test-utils'
 
 const post = vi.fn()

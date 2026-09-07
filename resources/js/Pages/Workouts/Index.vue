@@ -114,18 +114,6 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
     <AuthenticatedLayout page-title="Mes Séances">
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
-        <template #header-actions>
-            <GlassButton
-                variant="primary"
-                class="min-h-touch! flex h-11! w-11! items-center justify-center p-0!"
-                :loading="form.processing"
-                @click="createWorkout"
-                aria-label="Nouvelle séance"
-            >
-                <GlassIcon name="add" size="sm" class="leading-none" />
-            </GlassButton>
-        </template>
-
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="text-text-main text-xl font-semibold">Mes Séances</h2>

@@ -37,7 +37,7 @@ const fab = (wrapper) => wrapper.get('button')
 const activeLabels = (wrapper) =>
     wrapper
         .findAll('a[aria-current="page"]')
-        .map((link) => link.attributes('aria-label'))
+        .map((link) => link.findAll('span').at(-1).text().trim())
         .sort()
 
 beforeEach(() => {

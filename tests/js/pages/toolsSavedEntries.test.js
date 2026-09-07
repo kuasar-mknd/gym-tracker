@@ -33,6 +33,22 @@ vi.mock('@inertiajs/vue3', async () => {
 
 const haptic = vi.fn()
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...a) => haptic(...a) }))
+vi.mock('@/Components/Stats/MacroHistoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'MacroHistoryChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WaterHistoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'WaterHistoryChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WilksHistoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'WilksHistoryChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WilksScoreChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'WilksScoreChart', props: ['data'], template: '<div />' },
+}))
 
 import WilksCalculator from '@/Pages/Tools/WilksCalculator.vue'
 import MacroCalculator from '@/Pages/Tools/MacroCalculator.vue'

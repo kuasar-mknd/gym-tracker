@@ -8,6 +8,10 @@ import { mount, flushPromises } from '@vue/test-utils'
 const get = vi.fn()
 
 vi.mock('axios', () => ({ default: { get: (...args) => get(...args) } }))
+vi.mock('@/Components/Stats/OneRepMaxChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'OneRepMaxChart', props: ['data'], template: '<div />' },
+}))
 
 import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'

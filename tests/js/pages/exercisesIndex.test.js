@@ -31,6 +31,10 @@ vi.mock('@inertiajs/vue3', () => ({
 }))
 
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => hoisted.haptics(...args) }))
+vi.mock('@/Components/Stats/ExerciseCategoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'ExerciseCategoryChart', props: ['data'], template: '<div />' },
+}))
 
 import ExercisesIndex from '@/Pages/Exercises/Index.vue'
 
