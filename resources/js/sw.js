@@ -44,28 +44,79 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(servirDepuisLeCache(event, caches, (requete) => fetch(requete)))
 })
 
-// Handle Push notifications
+/**
+ * Chaque push reçu affiche quelque chose. Aucune exception.
+ *
+ * C'est la contrepartie de `userVisibleOnly: true`, la seule forme d'abonnement
+ * que les navigateurs acceptent : recevoir un push sans rien montrer est une
+ * rupture de contrat, et WebKit y répond en RÉVOQUANT l'abonnement au bout de
+ * quelques manquements. L'appareil cesse alors de recevoir, définitivement,
+ * sans que rien côté serveur ne l'apprenne.
+ *
+ * Ce gestionnaire sortait par deux chemins muets. Une garde de permission
+ * d'abord, qui interrogeait `self.Notification` — l'interface globale dans la
+ * PORTÉE DU WORKER, qui n'est pas celle de la page. WebKit ne l'y expose pas :
+ * `api.Notification.worker_support` vaut `false` pour Safari dans les données de
+ * compatibilité de MDN, et iOS en est le miroir. Sur iPhone, la garde était donc
+ * fausse à CHAQUE push et rien ne s'affichait, jamais. Elle ne protégeait
+ * d'ailleurs de rien : la spécification Push interdit de délivrer un push à un
+ * abonnement dont la permission a été retirée, si bien que la condition était
+ * soit vraie, soit posée sur un événement impossible. Une charge utile illisible
+ * ensuite : `json()` lève sur un corps qui n'est pas du JSON, et l'exception
+ * traversait `waitUntil`.
+ */
 self.addEventListener('push', (event) => {
-    if (!(self.Notification && self.Notification.permission === 'granted')) {
-        return
+    let charge = {}
+
+    try {
+        charge = event.data?.json() ?? {}
+    } catch {
+        // Un message qu'on ne sait pas lire reste un message à annoncer.
     }
 
-    const data = event.data?.json() ?? {}
-    const title = data.title || 'Gym Tracker'
-    const options = {
-        body: data.body || 'Nouvelle notification !',
-        icon: data.icon || '/logo.svg',
-        badge: '/badge.svg',
-        data: data.action_url || '/',
-        actions: data.actions || [],
-    }
-
-    event.waitUntil(self.registration.showNotification(title, options))
+    event.waitUntil(
+        self.registration.showNotification(charge.title || 'Gym Tracker', {
+            body: charge.body || 'Nouvelle notification !',
+            icon: charge.icon || '/logo.svg',
+            badge: '/badge.svg',
+            data: { url: charge.data?.url || '/' },
+            actions: charge.actions || [],
+        }),
+    )
 })
 
-// Handle Notification clicks
+/**
+ * Reprendre la fenêtre ouverte, plutôt que d'en empiler une seconde.
+ *
+ * `openWindow` seul ouvre un second exemplaire de l'application par-dessus celui
+ * que l'utilisateur avait déjà, ce qui se voit surtout en installé : la séance
+ * en cours disparaît derrière sa propre copie.
+ *
+ * La destination voyage dans `data.url`. Elle se lisait auparavant dans un
+ * champ `action_url` qu'aucune notification n'a jamais porté — les trois
+ * classes d'envoi mettent leur destination ailleurs — donc chaque clic ouvrait
+ * l'accueil. `event.action` la prend de vitesse quand l'utilisateur a touché un
+ * bouton d'action ; iOS ne les affiche pas, d'où le repli.
+ */
 self.addEventListener('notificationclick', (event) => {
     event.notification.close()
 
-    event.waitUntil(clients.openWindow(event.notification.data))
+    const destination = event.action || event.notification.data?.url || '/'
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((fenetres) => {
+            const ouverte = fenetres.find((fenetre) => 'focus' in fenetre)
+
+            if (!ouverte) {
+                return clients.openWindow(destination)
+            }
+
+            // `navigate()` n'est offert qu'aux fenêtres que ce worker contrôle,
+            // et refuse une origine étrangère : son échec ne doit pas empêcher
+            // la mise au premier plan, qui est le geste attendu.
+            return Promise.resolve(ouverte.navigate?.(destination))
+                .catch(() => undefined)
+                .then(() => ouverte.focus())
+        }),
+    )
 })

@@ -43,7 +43,8 @@ final class TrainingReminder extends Notification implements ShouldQueue
             ->title('Prêt pour ta séance ? 💪')
             ->icon('/logo.svg')
             ->body($this->message ?? '')
-            ->action('Ouvrir Gym Tracker', url('/'));
+            ->action('Ouvrir Gym Tracker', url('/'))
+            ->data(['url' => '/']);
     }
 
     /**

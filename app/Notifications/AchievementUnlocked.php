@@ -44,7 +44,8 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
             ->icon('/logo.svg')
             /** @phpstan-ignore-next-line */
             ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
-            ->action('Voir mes succès', url('/achievements'));
+            ->action('Voir mes succès', url('/achievements'))
+            ->data(['url' => '/achievements']);
     }
 
     /**
