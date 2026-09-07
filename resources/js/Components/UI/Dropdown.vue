@@ -56,7 +56,7 @@ const open = ref(false)
         </div>
 
         <!-- Full Screen Dropdown Overlay -->
-        <div v-show="open" class="fixed inset-0 z-40" @click="open = false"></div>
+        <div v-show="open" class="z-nav fixed inset-0" @click="open = false"></div>
 
         <Transition
             enter-active-class="transition ease-out duration-200"
@@ -68,7 +68,7 @@ const open = ref(false)
         >
             <div
                 v-show="open"
-                class="absolute z-50 mt-2 rounded-2xl"
+                class="z-modale absolute mt-2 rounded-2xl"
                 :class="[widthClass, alignmentClasses]"
                 @click="open = false"
             >

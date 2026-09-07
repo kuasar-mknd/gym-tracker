@@ -94,14 +94,14 @@ const close = () => {
             aria-describedby="achievement-description"
             @close="close"
         >
-            <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div v-if="show" class="z-modale fixed inset-0 flex items-center justify-center px-4">
                 <!-- Backdrop -->
                 <div class="animate-fade-in bg-overlay absolute inset-0 backdrop-blur-sm" @click="close"></div>
 
                 <!-- Modal. No role or aria-modal here: the <dialog> above is the
                      dialog, and nesting a second one would announce two. -->
                 <div
-                    class="animate-bounce-in border-border bg-surface-card relative w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl transition-all duration-300"
+                    class="animate-bounce-in border-border bg-surface-card relative w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl transition duration-300"
                 >
                     <!-- Glow Effect -->
                     <div
@@ -143,7 +143,7 @@ const close = () => {
                             type="button"
                             @click="close"
                             dusk="celebration-dismiss"
-                            class="bg-accent-state text-text-on-accent w-full rounded-2xl border py-3 font-bold shadow-lg backdrop-blur-md transition-all hover:brightness-95 active:scale-95"
+                            class="bg-accent-state text-text-on-accent w-full rounded-2xl border py-3 font-bold shadow-lg backdrop-blur-md transition hover:brightness-95 active:scale-95"
                         >
                             Génial ! 🤩
                         </button>

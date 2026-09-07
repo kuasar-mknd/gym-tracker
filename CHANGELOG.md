@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Modifié
+- **La charte nomme ses échelles** (#1784, #1785, #1803, #1808, #1809) : un jeton `text-2xs` et un utilitaire `sur-titre` remplacent 57 `text-[10px]` et leurs combinaisons ; sept plans nommés (`z-collant`, `z-nav`, `z-flottant`, `z-modale`, `z-toast`, `z-alerte`, `z-evitement`) remplacent dix valeurs dont `z-[9999]` ; six ombres et une ombre portée entrent dans les jetons ; les arrondis ont un rôle chacun ; six pas `stagger-1…6` remplacent soixante délais d'animation inline ; `transition` remplace `transition-all` (109 fois) ; le rembourrage vertical des pages appartient au layout ; les exemples de champ ne sont plus en capitales grasses. Une garde Vitest refuse le retour de toute valeur arbitraire
+
 ## [1.5.17] - 2026-09-06
 
 ### Corrigé

@@ -17,7 +17,7 @@
             </header>
 
             <!-- Calculator Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
+            <GlassCard class="stagger-1 animate-slide-up">
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassBigNumber
@@ -119,7 +119,7 @@
             </GlassCard>
 
             <!-- Inventory Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+            <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
@@ -146,7 +146,7 @@
                     <div v-else class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                         <div v-for="plate in plates" :key="plate.id" class="group relative">
                             <div
-                                class="rounded-2xl border-2 p-4 text-center transition-all hover:shadow-md"
+                                class="rounded-2xl border-2 p-4 text-center transition hover:shadow-md"
                                 :class="[
                                     getPlateColor(parseFloat(plate.weight)),
                                     parseFloat(plate.weight) >= 5 && parseFloat(plate.weight) < 10

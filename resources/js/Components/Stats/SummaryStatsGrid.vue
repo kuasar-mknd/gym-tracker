@@ -58,12 +58,12 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
 <template>
     <!-- Summary Stats -->
-    <div class="animate-slide-up grid grid-cols-4 gap-3" style="animation-delay: 0.25s">
+    <div class="stagger-5 animate-slide-up grid grid-cols-4 gap-3">
         <!-- Number of Sessions Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
-            <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Séances</div>
+            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Séances</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
@@ -76,9 +76,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Number of Muscles Targeted Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
-            <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Muscles</div>
+            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Muscles</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
@@ -91,9 +91,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Number of Exercises Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
-            <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">Exercices</div>
+            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Exercices</div>
             <div class="font-display text-text-main mt-1 text-2xl font-black">
                 {{ exercises?.length || 0 }}
             </div>
@@ -101,9 +101,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
 
         <!-- Monthly Comparison Volume Change Card -->
         <div
-            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+            class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-4 text-center backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
         >
-            <div class="text-text-muted text-[10px] font-black tracking-wider uppercase">vs Mois -1</div>
+            <div class="text-text-muted text-2xs font-black tracking-wider uppercase">vs Mois -1</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="3rem" class="mx-auto mt-1" />

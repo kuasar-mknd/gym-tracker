@@ -229,7 +229,7 @@ const formatHistoryDuration = (start, end) => {
                                 :stroke-dasharray="2 * Math.PI * 45"
                                 :stroke-dashoffset="2 * Math.PI * 45 * (1 - progressPercentage / 100)"
                                 stroke-linecap="round"
-                                class="transition-all duration-1000 ease-linear"
+                                class="transition duration-1000 ease-linear"
                             />
                             <defs>
                                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -296,7 +296,7 @@ const formatHistoryDuration = (start, end) => {
             </GlassCard>
 
             <!-- History Analytics Chart Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+            <GlassCard class="stagger-2 animate-slide-up">
                 <div class="mb-4">
                     <h3 class="font-display text-text-main text-lg font-black uppercase italic">Durée des jeûnes</h3>
                     <p class="text-text-muted text-xs font-semibold">Historique récent (heures)</p>
@@ -323,7 +323,7 @@ const formatHistoryDuration = (start, end) => {
                     <div
                         v-for="fast in history.data"
                         :key="fast.id"
-                        class="border-border bg-surface-card/50 flex items-center justify-between rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
+                        class="border-border bg-surface-card/50 flex items-center justify-between rounded-2xl border p-3 transition duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
                     >
                         <div>
                             <p class="text-text-main font-medium">{{ fast.type }}</p>

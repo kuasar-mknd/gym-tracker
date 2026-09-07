@@ -369,11 +369,17 @@
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;
 
+    /* Arrondis par rôle : md détail dans une carte, lg petit contrôle, xl contrôle et champ, 2xl tuile et modale, 3xl carte, full pilule. */
     --radius: 0.5rem;
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
     --radius-2xl: 2rem;
     --radius-3xl: 2.5rem;
+
+    /* Le sur-titre : la plus petite taille de la charte, en capitales espacées. */
+    --text-2xs: 0.625rem;
+    --text-2xs--line-height: 0.875rem;
+    --tracking-sur-titre: 0.2em;
 
     --spacing-touch: 44px;
     --spacing-nav: 70px;
@@ -432,6 +438,13 @@
     --shadow-glass-out: 0 8px 32px rgb(from var(--color-accent-tertiary) r g b / 0.1);
     --shadow-glass-card: 0 8px 32px 0 rgb(from var(--color-shadow-ambient) r g b / 0.07);
     --shadow-plate-shadow: 2px 0 4px rgb(from var(--color-shadow-cast) r g b / 0.2);
+    --shadow-glow-primary-soft: 0 0 15px rgb(from var(--color-accent-primary) r g b / 0.3);
+    --shadow-glow-primary-sharp: 0 0 8px rgb(from var(--color-accent-primary) r g b / 0.5);
+    --shadow-glow-secondary-soft: 0 0 15px rgb(from var(--color-accent-secondary) r g b / 0.3);
+    --shadow-glow-tertiary-sharp: 0 0 4px rgb(from var(--color-accent-tertiary) r g b / 0.8);
+    --shadow-glow-state-sharp: 0 0 4px rgb(from var(--color-accent-state) r g b / 0.8);
+    --shadow-glow-card: 0 0 15px rgb(from var(--color-surface-card) r g b / 0.1);
+    --drop-shadow-glow-primary: 0 0 8px rgb(from var(--color-accent-primary) r g b / 0.5);
 
     /*
      * Les degrades ne portent plus d'hexadecimal : ils citent les jetons.
@@ -538,6 +551,70 @@
     ::file-selector-button {
         border-color: var(--color-gray-200, currentcolor);
     }
+}
+
+/*
+ * Les plans, du contenu au lien d'évitement. Une valeur posée à la main
+ * (z-[9999]) gagne toujours, jusqu'au jour où deux le font.
+ */
+:root {
+    --z-collant: 30;
+    --z-nav: 40;
+    --z-flottant: 45;
+    --z-modale: 50;
+    --z-toast: 60;
+    --z-alerte: 90;
+    --z-evitement: 100;
+}
+
+@utility z-collant {
+    z-index: var(--z-collant);
+}
+@utility z-nav {
+    z-index: var(--z-nav);
+}
+@utility z-flottant {
+    z-index: var(--z-flottant);
+}
+@utility z-modale {
+    z-index: var(--z-modale);
+}
+@utility z-toast {
+    z-index: var(--z-toast);
+}
+@utility z-alerte {
+    z-index: var(--z-alerte);
+}
+@utility z-evitement {
+    z-index: var(--z-evitement);
+}
+
+@utility sur-titre {
+    font-size: var(--text-2xs);
+    line-height: var(--text-2xs--line-height);
+    font-weight: 900;
+    letter-spacing: var(--tracking-sur-titre);
+    text-transform: uppercase;
+}
+
+/* La cascade d'apparition : six pas de 50 ms, au lieu d'un délai inline par élément. */
+@utility stagger-1 {
+    animation-delay: 50ms;
+}
+@utility stagger-2 {
+    animation-delay: 100ms;
+}
+@utility stagger-3 {
+    animation-delay: 150ms;
+}
+@utility stagger-4 {
+    animation-delay: 200ms;
+}
+@utility stagger-5 {
+    animation-delay: 250ms;
+}
+@utility stagger-6 {
+    animation-delay: 300ms;
 }
 
 @utility material-symbols-outlined {
@@ -1041,9 +1118,6 @@
 
     &::placeholder {
         color: var(--color-text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 600;
     }
 
     &:focus-visible {

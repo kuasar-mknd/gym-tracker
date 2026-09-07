@@ -17,7 +17,7 @@
             </header>
 
             <!-- Calculator Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
+            <GlassCard class="stagger-1 animate-slide-up">
                 <div class="space-y-6">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassBigNumber
@@ -47,7 +47,7 @@
                             <div
                                 v-for="(set, index) in calculatedSets"
                                 :key="index"
-                                class="border-border bg-surface-card/50 flex items-center justify-between rounded-xl border p-4 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
+                                class="border-border bg-surface-card/50 flex items-center justify-between rounded-xl border p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
                             >
                                 <div class="flex items-center gap-4">
                                     <div
@@ -77,7 +77,7 @@
             </GlassCard>
 
             <!-- Configuration Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+            <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
@@ -123,7 +123,7 @@
                                         type="number"
                                         v-model="step.percent"
                                         :aria-label="`Pourcentage, palier ${index + 1}`"
-                                        class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition-all outline-none focus:ring-1"
+                                        class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition outline-none focus:ring-1"
                                     />
                                     <span class="text-text-muted absolute top-1/2 right-2 -translate-y-1/2 text-xs"
                                         >%</span
@@ -135,7 +135,7 @@
                                     type="number"
                                     v-model="step.reps"
                                     :aria-label="`Répétitions, palier ${index + 1}`"
-                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition-all outline-none focus:ring-1"
+                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base font-bold transition outline-none focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-5">
@@ -144,7 +144,7 @@
                                     v-model="step.label"
                                     :aria-label="`Label, palier ${index + 1}`"
                                     placeholder="ex: Barre vide"
-                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 placeholder-text-muted hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base transition-all outline-none focus:ring-1"
+                                    class="text-text-main focus:border-accent-primary focus:ring-accent-primary/30 border-border bg-surface-card/50 placeholder-text-muted hover:bg-surface-card/80 w-full rounded-xl border px-3 py-2 text-base transition outline-none focus:ring-1"
                                 />
                             </div>
                             <div class="col-span-1 flex items-center justify-center">
@@ -176,10 +176,10 @@
                                 @click="form.rounding_increment = inc"
                                 :aria-label="`Arrondir au ${inc} kg`"
                                 :aria-pressed="form.rounding_increment === inc"
-                                class="flex-1 rounded-xl border py-2 text-sm font-bold backdrop-blur-md transition-all active:scale-95"
+                                class="flex-1 rounded-xl border py-2 text-sm font-bold backdrop-blur-md transition active:scale-95"
                                 :class="
                                     form.rounding_increment === inc
-                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
+                                        ? 'border-accent-primary bg-accent-primary/20 text-accent-primary-deep shadow-glow-primary-soft'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:bg-surface-card/80'
                                 "
                             >

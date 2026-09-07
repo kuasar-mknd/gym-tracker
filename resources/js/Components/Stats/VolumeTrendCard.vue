@@ -19,7 +19,7 @@ const totalVolume = computed(() => {
 
 <template>
     <!-- Volume Trend Chart -->
-    <GlassCard class="animate-slide-up" style="animation-delay: 0.15s">
+    <GlassCard class="stagger-3 animate-slide-up">
         <div class="mb-4 flex items-center justify-between">
             <div>
                 <h3 class="font-display text-text-main text-lg font-black uppercase italic">Évolution du Volume</h3>

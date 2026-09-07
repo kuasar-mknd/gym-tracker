@@ -82,7 +82,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
     <div class="bg-surface-page relative min-h-dvh w-full">
         <a
             href="#main-content"
-            class="accent-fill absolute top-0 left-0 z-[100] -translate-y-full rounded-br-xl px-4 py-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
+            class="accent-fill z-evitement absolute top-0 left-0 -translate-y-full rounded-br-xl px-4 py-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
         >
             Aller au contenu principal
         </a>
@@ -98,7 +98,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         -->
         <div
             v-if="$page.props.pending_migrations > 0"
-            class="bg-accent-warning text-text-main sticky top-0 z-[90] px-4 py-2 text-center text-sm font-bold"
+            class="bg-accent-warning text-text-main z-alerte sticky top-0 px-4 py-2 text-center text-sm font-bold"
             role="alert"
             data-testid="pending-migrations-banner"
         >
@@ -119,7 +119,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             >
                 <div
                     v-if="$page.props.flash?.[type]"
-                    class="fixed top-20 right-4 left-4 z-[60] sm:right-6 sm:left-auto sm:w-80"
+                    class="z-toast fixed top-20 right-4 left-4 sm:right-6 sm:left-auto sm:w-80"
                     role="alert"
                     :aria-live="type === 'error' ? 'assertive' : 'polite'"
                 >
@@ -155,7 +155,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 
         <!-- Desktop Navigation -->
         <nav
-            class="bg-surface-page/80 border-surface-card/40 sticky top-0 z-40 hidden border-b backdrop-blur-xl sm:block"
+            class="bg-surface-page/80 border-surface-card/40 z-nav sticky top-0 hidden border-b backdrop-blur-xl sm:block"
         >
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
@@ -198,17 +198,17 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
-                            class="text-text-muted hover:text-accent-primary-deep border-surface-card bg-surface-card/60 hover:bg-surface-card relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition-all hover:shadow-md"
+                            class="text-text-muted hover:text-accent-primary-deep border-surface-card bg-surface-card/60 hover:bg-surface-card relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition hover:shadow-md"
                             :aria-label="
                                 $page.props.auth.user.unread_notifications_count > 0
                                     ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
                                     : 'Notifications'
                             "
                         >
-                            <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
+                            <span class="material-symbols-outlined text-2xl" aria-hidden="true">notifications</span>
                             <span
                                 v-if="$page.props.auth.user.unread_notifications_count > 0"
-                                class="accent-fill absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
+                                class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
                             >
                                 {{ $page.props.auth.user.unread_notifications_count }}
                             </span>
@@ -222,7 +222,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
                                             class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
@@ -274,7 +274,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/80 border-surface-card/40 sticky top-0 z-30 flex items-center justify-between border-b px-5 py-4 backdrop-blur-xl sm:hidden"
+            class="bg-surface-page/80 border-surface-card/40 z-collant sticky top-0 flex items-center justify-between border-b px-5 py-4 backdrop-blur-xl sm:hidden"
             :style="{ paddingTop: 'calc(1rem + var(--safe-area-top))' }"
         >
             <div class="flex min-w-0 items-center gap-4">
@@ -299,17 +299,17 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                 <Link
                     v-press
                     :href="route('notifications.index')"
-                    class="text-text-muted border-surface-card bg-surface-card/60 relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition-all"
+                    class="text-text-muted border-surface-card bg-surface-card/60 relative flex size-11 shrink-0 items-center justify-center rounded-xl border transition"
                     :aria-label="
                         $page.props.auth.user.unread_notifications_count > 0
                             ? `Notifications (${$page.props.auth.user.unread_notifications_count} non lues)`
                             : 'Notifications'
                     "
                 >
-                    <span class="material-symbols-outlined text-[22px]" aria-hidden="true">notifications</span>
+                    <span class="material-symbols-outlined text-2xl" aria-hidden="true">notifications</span>
                     <span
                         v-if="$page.props.auth.user.unread_notifications_count > 0"
-                        class="accent-fill absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black"
+                        class="accent-fill text-2xs absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full font-black"
                     >
                         {{ $page.props.auth.user.unread_notifications_count }}
                     </span>

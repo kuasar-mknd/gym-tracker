@@ -9,12 +9,12 @@ defineProps({
 
 <template>
     <!-- Goals Summary (Compact) -->
-    <section v-if="activeGoals.length > 0" class="animate-slide-up" style="animation-delay: 0.25s">
+    <section v-if="activeGoals.length > 0" class="stagger-5 animate-slide-up">
         <div class="mb-4 flex items-center justify-between px-1">
-            <h3 class="text-text-muted text-xs font-black tracking-[0.2em] uppercase">Objectifs en cours</h3>
+            <h3 class="text-text-muted tracking-sur-titre text-xs font-black uppercase">Objectifs en cours</h3>
             <Link
                 :href="route('goals.index')"
-                class="text-accent-primary-deep focus-visible:ring-accent-primary rounded-sm text-xs font-bold tracking-wider uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="text-accent-primary-deep focus-visible:ring-accent-primary rounded-md text-xs font-bold tracking-wider uppercase focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 Voir tout
             </Link>
@@ -42,7 +42,7 @@ defineProps({
                         aria-valuemax="100"
                     >
                         <div
-                            class="glow-orange bg-gradient-main h-full transition-all duration-1000"
+                            class="glow-orange bg-gradient-main h-full transition duration-1000"
                             :style="{ width: goal.progress_pct + '%' }"
                         ></div>
                     </div>

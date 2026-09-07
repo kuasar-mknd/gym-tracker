@@ -122,7 +122,7 @@ const submit = () => {
                             >
                             <span
                                 :id="`${idDescription}-counter`"
-                                class="text-[10px] font-bold tracking-wider uppercase"
+                                class="text-2xs font-bold tracking-wider uppercase"
                                 :class="
                                     form.description?.length > 1000 ? 'text-accent-danger-deep' : 'text-text-muted/50'
                                 "
@@ -136,7 +136,7 @@ const submit = () => {
                             rows="2"
                             maxlength="1000"
                             :aria-describedby="`${idDescription}-counter`"
-                            class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:shadow-[0_0_15px_rgb(from_var(--color-surface-card)_r_g_b_/_0.1)] focus:ring-0 focus:outline-none"
+                            class="text-text-main placeholder:text-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-glow-card w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition duration-300 focus:ring-0 focus:outline-none"
                             placeholder="Détails de la séance..."
                         ></textarea>
                         <p v-if="form.errors.description" class="text-accent-danger-deep mt-2 text-sm font-medium">
@@ -146,7 +146,7 @@ const submit = () => {
                 </div>
             </GlassCard>
 
-            <div class="animate-slide-up" style="animation-delay: 0.1s">
+            <div class="stagger-2 animate-slide-up">
                 <h3 class="text-text-main mb-3 font-semibold">Exercices</h3>
 
                 <div class="space-y-4">
@@ -208,7 +208,7 @@ const submit = () => {
                                         v-press="{ haptic: 'selection' }"
                                         @click="set.is_warmup = !set.is_warmup"
                                         type="button"
-                                        class="focus-visible:ring-accent-primary h-10 rounded-lg px-2 py-1 text-[10px] font-bold transition focus-visible:ring-2 focus-visible:outline-none"
+                                        class="focus-visible:ring-accent-primary text-2xs h-10 rounded-lg px-2 py-1 font-bold transition focus-visible:ring-2 focus-visible:outline-none"
                                         :class="
                                             set.is_warmup
                                                 ? 'bg-accent-primary/20 text-accent-primary-deep'
@@ -233,7 +233,7 @@ const submit = () => {
                                     v-press
                                     @click="addSet(exIndex)"
                                     type="button"
-                                    class="text-accent-primary-deep focus-visible:ring-accent-primary rounded-lg text-xs transition-all hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                                    class="text-accent-primary-deep focus-visible:ring-accent-primary rounded-lg text-xs transition hover:underline focus-visible:ring-2 focus-visible:outline-none"
                                 >
                                     + Ajouter une série
                                 </button>
@@ -253,7 +253,7 @@ const submit = () => {
                 </div>
             </div>
 
-            <div class="animate-slide-up pt-6" style="animation-delay: 0.2s">
+            <div class="stagger-4 animate-slide-up pt-6">
                 <GlassButton variant="primary" size="lg" class="w-full" :loading="form.processing" type="submit">
                     {{ template ? 'Mettre à jour le modèle' : 'Enregistrer le modèle' }}
                 </GlassButton>

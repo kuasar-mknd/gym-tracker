@@ -140,7 +140,7 @@ defineEmits([
             v-press
             @click="$emit('ajouter-serie')"
             :dusk="`add-set-${lineIndex}`"
-            class="text-text-muted hover:border-accent-state border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition-all"
+            class="text-text-muted hover:border-accent-state border-border mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed py-3 text-sm font-bold uppercase transition"
         >
             Ajouter une série
         </button>

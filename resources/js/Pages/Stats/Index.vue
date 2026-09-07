@@ -73,7 +73,7 @@ const handlePeriodChange = (period) => {
                         v-press="{ haptic: 'selection' }"
                         @click="handlePeriodChange(period.value)"
                         :class="[
-                            'rounded-lg px-3 py-1.5 text-[10px] font-black tracking-wider uppercase transition-all',
+                            'text-2xs rounded-lg px-3 py-1.5 font-black tracking-wider uppercase transition',
                             currentPeriod === period.value
                                 ? 'bg-accent-info text-text-main shadow-sm'
                                 : 'text-text-muted hover:text-text-main',
@@ -110,7 +110,7 @@ const handlePeriodChange = (period) => {
                 :deferred-data="deferredData"
             />
 
-            <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.2s">
+            <div class="stagger-4 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <MuscleDistributionCard
                     :muscle-distribution="deferredData?.performance?.muscleDistribution"
                     :deferred-data="deferredData"

@@ -190,7 +190,7 @@ const style = computed(() =>
             <li
                 v-for="entree in legendeSousLAnneau"
                 :key="entree.label"
-                class="font-display text-text-muted flex items-center gap-1.5 text-[11px] font-bold"
+                class="font-display text-text-muted flex items-center gap-1.5 text-xs font-bold"
             >
                 <span
                     class="inline-block h-2 w-2 rounded-full"

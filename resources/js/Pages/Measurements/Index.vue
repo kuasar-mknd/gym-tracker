@@ -224,7 +224,7 @@ const latestBodyFat = computed(() => {
             <!-- Charts -->
             <Deferred data="bodyStats">
                 <template #fallback>
-                    <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
+                    <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <GlassCard v-for="i in 2" :key="i">
                             <GlassSkeleton width="120px" height="1rem" class="mb-4" />
                             <div class="h-64">
@@ -234,11 +234,11 @@ const latestBodyFat = computed(() => {
                     </div>
                 </template>
 
-                <div class="animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2" style="animation-delay: 0.1s">
+                <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <!-- Weight Chart -->
                     <GlassCard>
                         <h3
-                            class="font-display text-accent-info-deep mb-4 text-xs font-black tracking-[0.2em] uppercase"
+                            class="font-display text-accent-info-deep tracking-sur-titre mb-4 text-xs font-black uppercase"
                         >
                             Évolution Poids
                         </h3>
@@ -257,7 +257,7 @@ const latestBodyFat = computed(() => {
                     <!-- Body Fat Chart -->
                     <GlassCard>
                         <h3
-                            class="font-display text-accent-secondary-deep mb-4 text-xs font-black tracking-[0.2em] uppercase"
+                            class="font-display text-accent-secondary-deep tracking-sur-titre mb-4 text-xs font-black uppercase"
                         >
                             Évolution Masse Grasse
                         </h3>
@@ -276,8 +276,8 @@ const latestBodyFat = computed(() => {
             </Deferred>
 
             <!-- History -->
-            <div class="animate-slide-up" style="animation-delay: 0.2s">
-                <h3 class="font-display text-accent-info-deep mb-3 text-xs font-black tracking-[0.2em] uppercase">
+            <div class="stagger-4 animate-slide-up">
+                <h3 class="font-display text-accent-info-deep tracking-sur-titre mb-3 text-xs font-black uppercase">
                     Historique
                 </h3>
 

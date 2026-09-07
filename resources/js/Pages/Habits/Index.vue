@@ -165,8 +165,7 @@ const getProgressPercent = (habit) => {
                     <!-- Stats Chart -->
                     <GlassCard
                         v-if="stats?.history && stats.history.some((d) => d.count > 0)"
-                        class="animate-slide-up"
-                        style="animation-delay: 0.1s"
+                        class="stagger-2 animate-slide-up"
                     >
                         <div class="mb-4">
                             <h3 class="font-display text-text-main text-lg font-black uppercase italic">Constance</h3>
@@ -187,7 +186,7 @@ const getProgressPercent = (habit) => {
                         class="border-border flex flex-col items-center justify-center border-l p-2 text-center"
                         :class="{ 'bg-accent-primary/5': day.is_today }"
                     >
-                        <div class="text-text-muted text-[10px] uppercase">{{ day.day_short || day.day }}</div>
+                        <div class="text-text-muted text-2xs uppercase">{{ day.day_short || day.day }}</div>
                         <div
                             class="text-sm font-bold"
                             :class="day.is_today ? 'text-accent-primary-deep' : 'text-text-main'"
@@ -231,12 +230,12 @@ const getProgressPercent = (habit) => {
                                     <div class="flex items-center gap-2">
                                         <div class="bg-surface-sunken h-1.5 w-16 overflow-hidden rounded-full">
                                             <div
-                                                class="h-full rounded-full transition-all duration-500"
+                                                class="h-full rounded-full transition duration-500"
                                                 :class="habit.color"
                                                 :style="{ width: getProgressPercent(habit) + '%' }"
                                             ></div>
                                         </div>
-                                        <span class="text-text-muted text-[10px]"
+                                        <span class="text-text-muted text-2xs"
                                             >{{ getCompletionCount(habit) }}/{{ habit.goal_times_per_week }}</span
                                         >
                                     </div>
@@ -276,7 +275,7 @@ const getProgressPercent = (habit) => {
                                 :aria-pressed="isCompleted(habit, day.date)"
                                 :aria-label="`${habit.name}, ${day.day_short || day.day} ${day.day_num}`"
                                 :dusk="`habit-${habit.id}-${day.date}`"
-                                class="flex size-11 shrink-0 items-center justify-center rounded-full transition-all active:scale-95"
+                                class="flex size-11 shrink-0 items-center justify-center rounded-full transition active:scale-95"
                                 :class="[
                                     isCompleted(habit, day.date)
                                         ? `${habit.color} text-text-on-dark-accent shadow-md`

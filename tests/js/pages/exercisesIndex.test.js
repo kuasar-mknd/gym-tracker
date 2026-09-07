@@ -113,7 +113,7 @@ describe('Exercises/Index — filtrage et regroupement', () => {
 
         // Read off the count element itself rather than the group's whole text:
         // any digit anywhere under the heading would satisfy a `toContain`.
-        const groups = wrapper.findAll('.space-y-8 > div').map((group) => ({
+        const groups = wrapper.findAll('.animate-slide-up.space-y-6 > div').map((group) => ({
             category: group.get('h3').text(),
             count: group.get('.mb-3 span').text(),
         }))

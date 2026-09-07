@@ -140,7 +140,7 @@ const previewFromForm = () => {
                     v-for="tab in ['timer', 'config']"
                     :key="tab"
                     @click="activeTab = tab"
-                    class="w-full rounded-lg py-2.5 text-sm leading-5 font-medium transition-all duration-200"
+                    class="w-full rounded-lg py-2.5 text-sm leading-5 font-medium transition duration-200"
                     :class="[
                         activeTab === tab
                             ? 'text-text-main bg-surface-card shadow'
@@ -157,12 +157,12 @@ const previewFromForm = () => {
                     class="flex flex-col items-center justify-center border-2 px-4 py-12 transition-colors duration-500"
                     :class="phaseBg"
                 >
-                    <div class="mb-4 text-sm font-black tracking-[0.2em] uppercase" :class="phaseColor">
+                    <div class="tracking-sur-titre mb-4 text-sm font-black uppercase" :class="phaseColor">
                         {{ phaseLabel }}
                     </div>
 
                     <div
-                        class="font-display text-[6rem] leading-none font-black tracking-tighter tabular-nums"
+                        class="font-display text-8xl leading-none font-black tracking-tighter tabular-nums"
                         :class="phaseColor"
                     >
                         {{ formattedTime }}

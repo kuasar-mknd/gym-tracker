@@ -37,7 +37,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
             >
                 <span class="flex flex-col items-center" aria-hidden="true">
                     <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
-                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
                 </span>
             </button>
         </template>
@@ -60,7 +60,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                 @click="$emit('toggle')"
                 :disabled="isFinished"
                 :dusk="`complete-set-${lineIndex}-${index}`"
-                class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition-all"
+                class="group relative flex size-11 shrink-0 items-center justify-center rounded-xl border-2 transition"
                 :class="set.is_completed ? 'bg-accent-state text-text-main' : 'bg-surface-sunken text-text-muted'"
                 :aria-label="set.is_completed ? 'Annuler la série' : 'Valider la série'"
             >
@@ -73,7 +73,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     class="bg-accent-warning text-text-on-accent absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full shadow-sm"
                     :dusk="`pr-trophy-${lineIndex}-${index}`"
                 >
-                    <span class="material-symbols-outlined text-[12px] font-bold" aria-hidden="true">stars</span>
+                    <span class="material-symbols-outlined text-xs font-bold" aria-hidden="true">stars</span>
                 </div>
             </button>
             <!-- Le numero porte le deplacement au CLAVIER. Le
@@ -101,7 +101,7 @@ defineEmits(['toggle', 'remove', 'saisie-en-cours', 'saisie-terminee', 'update',
                     role="img"
                     :aria-label="`Série ${index + 1} non enregistrée`"
                 >
-                    <span class="material-symbols-outlined text-[10px]" aria-hidden="true">cloud_off</span>
+                    <span class="material-symbols-outlined text-2xs" aria-hidden="true">cloud_off</span>
                 </span>
             </component>
 

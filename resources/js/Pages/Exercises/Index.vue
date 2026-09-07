@@ -202,7 +202,7 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Stats Chart -->
-            <div v-if="exercises.length > 0" class="animate-slide-up" style="animation-delay: 0.05s">
+            <div v-if="exercises.length > 0" class="stagger-1 animate-slide-up">
                 <GlassCard padding="p-4">
                     <div class="mb-2 flex items-center justify-between">
                         <h3 class="font-display text-text-main text-sm font-black tracking-wider uppercase">
@@ -281,14 +281,14 @@ const typeLabel = (type) => {
             </div>
 
             <!-- Exercises List by Category -->
-            <div v-else class="animate-slide-up space-y-8" style="animation-delay: 0.2s">
+            <div v-else class="stagger-4 animate-slide-up space-y-6">
                 <div v-for="(exercisesInCat, category) in groupedExercises" :key="category">
                     <div class="mb-3 flex items-center gap-2 px-1">
-                        <h3 class="text-text-muted/60 text-[10px] font-black tracking-[0.25em] uppercase">
+                        <h3 class="sur-titre text-text-muted/60">
                             {{ category }}
                         </h3>
                         <div class="bg-surface-sunken h-px flex-1"></div>
-                        <span class="text-text-muted/30 text-[10px] font-black">
+                        <span class="text-text-muted/30 text-2xs font-black">
                             {{ exercisesInCat.length }}
                         </span>
                     </div>

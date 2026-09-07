@@ -64,7 +64,7 @@ const emit = defineEmits(['close', 'submit'])
                         :aria-label="mood.label"
                         :title="mood.label"
                         :class="[
-                            'focus-visible:ring-accent-primary border-surface-card/20 flex-1 rounded-2xl border p-2 text-center text-sm backdrop-blur-md transition-all duration-300 focus-visible:ring-2 focus-visible:outline-none',
+                            'focus-visible:ring-accent-primary border-surface-card/20 flex-1 rounded-2xl border p-2 text-center text-sm backdrop-blur-md transition duration-300 focus-visible:ring-2 focus-visible:outline-none',
                             form.mood_score === mood.value
                                 ? 'accent-fill border-transparent shadow-lg'
                                 : 'text-text-muted bg-surface-card/10 hover:bg-surface-card/20',
@@ -146,7 +146,7 @@ const emit = defineEmits(['close', 'submit'])
                     <label for="journal-content" class="text-text-muted block text-sm font-medium">Notes</label>
                     <span
                         id="journal-content-counter"
-                        class="text-[10px] font-bold tracking-wider uppercase"
+                        class="text-2xs font-bold tracking-wider uppercase"
                         :class="form.content?.length > 1000 ? 'text-accent-danger-deep' : 'text-text-muted/50'"
                     >
                         {{ form.content?.length || 0 }} / 1000
@@ -158,7 +158,7 @@ const emit = defineEmits(['close', 'submit'])
                     rows="4"
                     maxlength="1000"
                     aria-describedby="journal-content-counter"
-                    class="text-text-main placeholder-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-300 focus:shadow-[0_0_15px_rgb(from_var(--color-surface-card)_r_g_b_/_0.1)] focus:ring-0 focus:outline-none"
+                    class="text-text-main placeholder-text-muted/50 border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 focus:border-surface-card/50 focus:bg-surface-card/20 focus:shadow-glow-card w-full rounded-2xl border px-4 py-3 backdrop-blur-md transition duration-300 focus:ring-0 focus:outline-none"
                     placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
                 ></textarea>
                 <div v-if="form.errors.content" class="text-accent-danger-deep mt-1 text-xs">

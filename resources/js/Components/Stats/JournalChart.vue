@@ -112,7 +112,7 @@ const axeY = computed(() => ({
                 @click="selectedMetric = metric.value"
                 :aria-pressed="selectedMetric === metric.value"
                 :class="[
-                    'focus-visible:ring-accent-primary rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition-all focus-visible:ring-2 focus-visible:outline-none',
+                    'focus-visible:ring-accent-primary rounded-lg px-3 py-1.5 text-xs font-bold tracking-wider uppercase transition focus-visible:ring-2 focus-visible:outline-none',
                     selectedMetric === metric.value
                         ? 'text-text-on-dark-accent scale-105 shadow-lg'
                         : 'text-text-muted hover:text-text-main bg-surface-card/50 hover:bg-surface-card/80',

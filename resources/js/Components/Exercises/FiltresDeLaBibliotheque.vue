@@ -42,7 +42,7 @@ onUnmounted(() => {
 
 <template>
     <div class="space-y-6">
-        <div class="animate-slide-up" style="animation-delay: 0.1s">
+        <div class="stagger-2 animate-slide-up">
             <GlassInput
                 id="search-exercises-input"
                 ref="searchInput"
@@ -58,7 +58,7 @@ onUnmounted(() => {
             >
                 <template #suffix>
                     <div
-                        class="text-text-muted/40 border-border hidden items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold tracking-widest uppercase sm:flex"
+                        class="text-text-muted/40 border-border text-2xs hidden items-center gap-1 rounded-lg border px-2 py-1 font-bold tracking-widest uppercase sm:flex"
                         aria-hidden="true"
                     >
                         <span class="material-symbols-outlined text-sm" aria-hidden="true">keyboard</span>
@@ -68,13 +68,13 @@ onUnmounted(() => {
             </GlassInput>
         </div>
 
-        <div class="hide-scrollbar animate-slide-up flex gap-2 overflow-x-auto pb-2" style="animation-delay: 0.15s">
+        <div class="stagger-3 hide-scrollbar animate-slide-up flex gap-2 overflow-x-auto pb-2">
             <button
                 v-press="{ haptic: 'selection' }"
                 @click="$emit('update:categorie', 'all')"
                 dusk="category-pill-all"
                 :class="[
-                    'category-pill shrink-0 transition-all',
+                    'category-pill shrink-0 transition',
                     categorie === 'all'
                         ? 'bg-text-main text-surface-card shadow-lg'
                         : 'text-text-main border-border bg-surface-card border',
@@ -91,7 +91,7 @@ onUnmounted(() => {
                 @click="$emit('update:categorie', cat)"
                 :dusk="`category-pill-${cat}`"
                 :class="[
-                    'category-pill shrink-0 transition-all',
+                    'category-pill shrink-0 transition',
                     categorie === cat
                         ? (CATEGORY_COLORS[cat] ?? 'category-fill-other')
                         : 'text-text-main border-border bg-surface-card border',

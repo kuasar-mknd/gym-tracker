@@ -52,7 +52,7 @@ defineProps({
     <component
         :is="as"
         :class="[
-            'glass-panel-light animate-fade-in transition-all duration-300',
+            'glass-panel-light animate-fade-in transition duration-300',
             padding,
             rounded,
             {

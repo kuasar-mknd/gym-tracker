@@ -212,10 +212,10 @@ watch(
 </script>
 
 <template>
-    <div class="animate-bounce-in fixed right-4 bottom-36 left-4 z-[9999] sm:right-4 sm:left-auto sm:w-80">
+    <div class="animate-bounce-in z-flottant fixed right-4 bottom-36 left-4 sm:right-4 sm:left-auto sm:w-80">
         <!-- Liquid Glass Card -->
         <div
-            class="border-surface-card/20 bg-surface-card/10 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition-all duration-300"
+            class="border-surface-card/20 bg-surface-card/10 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition duration-300"
         >
             <!-- Progress bar -->
             <div
@@ -227,7 +227,7 @@ watch(
                 :aria-valuetext="formatTime(timeLeft)"
             >
                 <div
-                    class="bg-accent-primary h-full transition-all duration-1000 ease-linear"
+                    class="bg-accent-primary h-full transition duration-1000 ease-linear"
                     :style="{ width: `${progress}%` }"
                 ></div>
             </div>

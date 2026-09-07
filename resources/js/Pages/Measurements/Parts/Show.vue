@@ -87,7 +87,7 @@ const formatMeasuredAt = (measuredAt) =>
         <div class="space-y-6">
             <!-- Chart -->
             <GlassCard class="animate-slide-up">
-                <h3 class="font-display text-accent-tertiary-deep mb-4 text-xs font-black tracking-[0.2em] uppercase">
+                <h3 class="font-display text-accent-tertiary-deep tracking-sur-titre mb-4 text-xs font-black uppercase">
                     History
                 </h3>
                 <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="part" :unit="history[0].unit" />
@@ -135,7 +135,7 @@ const formatMeasuredAt = (measuredAt) =>
             </GlassCard>
 
             <!-- List -->
-            <div class="animate-slide-up space-y-2" style="animation-delay: 0.1s">
+            <div class="stagger-2 animate-slide-up space-y-2">
                 <GlassCard v-for="item in [...history].reverse()" :key="item.id" padding="p-4" class="group">
                     <div class="flex items-center justify-between">
                         <div>

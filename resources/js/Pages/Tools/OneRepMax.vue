@@ -19,7 +19,7 @@
             <div class="grid gap-6 lg:grid-cols-2">
                 <!-- Calculator Input -->
                 <div class="space-y-6">
-                    <GlassCard class="animate-slide-up shadow-2xl" style="animation-delay: 0.05s">
+                    <GlassCard class="stagger-1 animate-slide-up shadow-2xl">
                         <div class="space-y-6 p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <GlassBigNumber
@@ -56,8 +56,7 @@
                     <!-- Result Card -->
                     <GlassCard
                         v-if="oneRepMax > 0"
-                        class="animate-slide-up mt-6 flex flex-col items-center justify-center p-8 text-center"
-                        style="animation-delay: 0.08s"
+                        class="stagger-2 animate-slide-up mt-6 flex flex-col items-center justify-center p-8 text-center"
                     >
                         <p class="text-text-muted text-sm font-bold tracking-wider uppercase">1RM Estimé</p>
                         <div
@@ -73,7 +72,7 @@
 
                 <!-- Percentages Table -->
                 <div v-if="oneRepMax > 0">
-                    <GlassCard class="animate-slide-up h-full shadow-2xl" style="animation-delay: 0.1s">
+                    <GlassCard class="stagger-2 animate-slide-up h-full shadow-2xl">
                         <div class="p-6">
                             <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
                                 Pourcentages d'Entraînement

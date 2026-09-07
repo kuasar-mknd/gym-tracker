@@ -29,7 +29,7 @@ const formatDate = (dateStr) =>
                 @click="$emit('supprimer', seance)"
                 :dusk="`delete-workout-${seance.id}`"
                 :aria-label="`Supprimer la séance ${seance.name || 'sans nom'}`"
-                class="text-text-on-dark-accent flex h-full w-full items-center justify-center transition-all active:scale-95"
+                class="text-text-on-dark-accent flex h-full w-full items-center justify-center transition active:scale-95"
                 style="
                     background: linear-gradient(
                         135deg,
@@ -41,7 +41,7 @@ const formatDate = (dateStr) =>
             >
                 <div class="flex flex-col items-center drop-shadow-md" aria-hidden="true">
                     <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
-                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
                 </div>
             </button>
         </template>
