@@ -1,7 +1,7 @@
 <template>
     <Head title="Suivi Hydratation" />
 
-    <AuthenticatedLayout show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">

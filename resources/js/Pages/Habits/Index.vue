@@ -177,26 +177,36 @@ const getProgressPercent = (habit) => {
                 </div>
             </Deferred>
 
-            <!-- Weekly Calendar Header -->
-            <GlassCard class="overflow-hidden p-0">
-                <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
-                    <div class="text-text-main col-span-7 p-4 font-bold sm:col-span-1">Habitude</div>
-                    <div
-                        v-for="day in weekDates"
-                        :key="day.date"
-                        class="border-border flex flex-col items-center justify-center border-l p-2 text-center"
-                        :class="{ 'bg-accent-primary/5': day.is_today }"
-                    >
-                        <div class="text-text-muted text-2xs uppercase">{{ day.day_short || day.day }}</div>
+            <!--
+                L'en-tête des jours suit la liste.
+
+                Il vivait dans une carte à part, au-dessus des habitudes : dès
+                qu'on faisait défiler, les sept cases n'avaient plus rien pour
+                les nommer, et cocher « mardi » revenait à compter les colonnes
+                de tête (#1807). Collé sous l'en-tête de l'application, il reste
+                au-dessus des cases qu'il décrit.
+            -->
+            <div class="bg-surface-page z-collant sticky top-16 sm:top-20">
+                <GlassCard class="overflow-hidden p-0">
+                    <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
+                        <div class="text-text-main col-span-7 p-4 font-bold sm:col-span-1">Habitude</div>
                         <div
-                            class="text-sm font-bold"
-                            :class="day.is_today ? 'text-accent-primary-deep' : 'text-text-main'"
+                            v-for="day in weekDates"
+                            :key="day.date"
+                            class="border-border flex flex-col items-center justify-center border-l p-2 text-center"
+                            :class="{ 'bg-accent-primary/5': day.is_today }"
                         >
-                            {{ day.day_num }}
+                            <div class="text-text-muted text-2xs uppercase">{{ day.day_short || day.day }}</div>
+                            <div
+                                class="text-sm font-bold"
+                                :class="day.is_today ? 'text-accent-primary-deep' : 'text-text-main'"
+                            >
+                                {{ day.day_num }}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </GlassCard>
+                </GlassCard>
+            </div>
 
             <!-- Habits List -->
             <GlassEmptyState

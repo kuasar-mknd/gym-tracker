@@ -131,7 +131,7 @@ const previewFromForm = () => {
 <template>
     <Head title="Minuteur" />
 
-    <AuthenticatedLayout page-title="Minuteur" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Minuteur" show-back back-route="tools.index" largeur="etroite">
         <template #header-actions>
             <!-- Mobile actions -->
         </template>

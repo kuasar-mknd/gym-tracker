@@ -119,6 +119,29 @@ afterEach(() => {
     vi.useRealTimers()
 })
 
+describe('la largeur du contenu', () => {
+    /**
+     * Un outil garde une colonne de formulaire. Étirée sur les 1 280 px du
+     * conteneur, elle donne des champs et des tuiles de choix vides aux trois
+     * quarts (#1802, #1817).
+     */
+    const conteneur = (wrapper) => wrapper.get('[data-testid="page-content"]').element.parentElement
+
+    it('laisse la page occuper toute la largeur par défaut', () => {
+        expect(conteneur(mountLayout()).className).toContain('max-w-7xl')
+    })
+
+    it.each([
+        ['moyenne', 'max-w-3xl'],
+        ['etroite', 'max-w-2xl'],
+    ])('resserre la page à %s', (largeur, classe) => {
+        const rendu = conteneur(mountLayout({ props: { largeur } })).className
+
+        expect(rendu).toContain(classe)
+        expect(rendu).not.toContain('max-w-7xl')
+    })
+})
+
 describe('AuthenticatedLayout — flash messages', () => {
     it('says nothing when the server flashed nothing', () => {
         expect(toasts(mountLayout())).toHaveLength(0)

@@ -8,11 +8,14 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Ajouté
+- **Une page « Raccourcis »** dans « Plus », et `?` pour l'ouvrir de n'importe où (#1817) : l'application n'en avait qu'un, ⌘K dans la bibliothèque, annoncé par une pastille et écrit nulle part. ⌘/Ctrl + Entrée ajoute une série au dernier exercice pendant une séance
 - **Un seul format par grandeur** (#1787) : `Utils/nombre.js` écrit les poids, volumes, variations et pourcentages en suisse romand — virgule décimale, apostrophe aux milliers. « 78.40 kg » et « 15,750 kg » disparaissent ; une garde interdit `toFixed(` et `toLocaleString(` ailleurs
 - **Un compte neuf reçoit le jeu de plaques olympique** (#1799) : 25, 20, 15, 10, 5, 2,5 et 1,25 kg par paire, au lieu d'un calculateur qui ouvrait sur « Impossible de charger ce poids »
 - **Six composants de la charte** (#1781, #1786, #1792, #1794) : `GlassSegmented` (choix exclusif, flèches au clavier), `GlassChip` (pilule de filtre, cible de 44 px même en petit), `GlassTile` (tuile de choix ou d'action), `GlassTextarea` (étiquette, compteur, erreur, hauteur qui suit le texte), `GlassStat` (chiffre, unité, libellé, tendance) et `GlassIcon` (sept tailles, remplissage, nom pour les lecteurs d'écran)
 
 ### Modifié
+- **Le bureau ne s'étire plus** (#1802, #1817) : les huit outils et la page d'une séance gardent une colonne au lieu des 1 280 px du conteneur, et les champs d'une série s'arrêtent à 128 px au lieu de 470
+- **L'en-tête des jours suit la liste des habitudes** (#1807) : collé sous l'en-tête de l'application, il reste au-dessus des cases qu'il nomme
 - **Une seule façon de dire « il n'y a rien »** (#1791) : trente écrans écrivaient la leur — carte complète, icône et deux lignes, ou phrase grise seule. `GlassEmptyState` prend une taille `ligne` pour l'intérieur d'une carte déjà titrée, et une garde Vitest refuse le prochain « Aucun… » écrit à la main
 - **Les vingt écrans qui restaient écrivent leurs chiffres comme le reste** (#1787) : plaques, échauffement, hydratation, macros, Wilks, 1RM, objectifs, mensurations, cartes de stats et de l'accueil. Le pourcentage prend son espace insécable (« 56 % »), le millier son apostrophe (« 1'000 ml »)
 - **Les graphiques comptent dans la langue de l'application** : Chart.js graduait ses axes d'après celle du navigateur, donc « 15,750 » en anglais à côté de « 15'750 ». L'unité quitte le nom des séries pour la valeur : « Volume : 15'750 kg » au lieu de « Volume (kg) : 15'750 kg »

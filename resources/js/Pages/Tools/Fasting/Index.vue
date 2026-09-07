@@ -191,7 +191,7 @@ const formatHistoryDuration = (start, end) => {
 <template>
     <Head title="Suivi de Jeûne" />
 
-    <AuthenticatedLayout page-title="Suivi de Jeûne" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Suivi de Jeûne" show-back back-route="tools.index" largeur="etroite">
         <template #header>
             <div class="flex items-center gap-4">
                 <Link
