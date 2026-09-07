@@ -1,5 +1,6 @@
 <script setup>
 import { defineAsyncComponent } from 'vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const RecentWorkoutsExercisesChart = defineAsyncComponent(
     () => import('@/Components/Stats/RecentWorkoutsExercisesChart.vue'),
@@ -26,9 +27,7 @@ defineProps({
                 v-if="recentWorkouts && recentWorkouts.some((w) => w.workout_lines_count > 0)"
                 :data="recentWorkouts"
             />
-            <div v-else class="text-text-muted flex h-full items-center justify-center">
-                <p class="text-sm">Pas assez de données d'exercices</p>
-            </div>
+            <GlassEmptyState v-else taille="ligne" icon="exercise" title="Pas assez de données d'exercices" />
         </div>
     </section>
 </template>

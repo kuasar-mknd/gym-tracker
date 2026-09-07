@@ -4,6 +4,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { defineAsyncComponent } from 'vue'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const RecentWorkoutsTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/RecentWorkoutsTimelineChart.vue'),
@@ -31,17 +32,18 @@ const emit = defineEmits(['startWorkout'])
         </div>
 
         <!-- Empty State -->
-        <div
+        <GlassEmptyState
             v-if="recentWorkouts.length === 0"
-            class="border-surface-card/20 bg-surface-card/10 rounded-3xl border p-8 text-center backdrop-blur-md"
+            icon="🏋️"
+            title="Aucune séance pour l'instant"
+            description="Commence ton parcours fitness !"
         >
-            <div class="mb-3 text-5xl" aria-hidden="true">🏋️</div>
-            <p class="text-text-main font-bold">Aucune séance pour l'instant</p>
-            <p class="text-text-muted mt-1 mb-5 text-sm">Commence ton parcours fitness !</p>
-            <GlassButton variant="primary" @click="emit('startWorkout')" :loading="processing" class="mx-auto">
-                Démarrer une séance
-            </GlassButton>
-        </div>
+            <template #action>
+                <GlassButton variant="primary" :loading="processing" class="mx-auto" @click="emit('startWorkout')">
+                    Démarrer une séance
+                </GlassButton>
+            </template>
+        </GlassEmptyState>
 
         <!-- Activity Cards and Chart -->
         <div v-else class="flex flex-col gap-3">

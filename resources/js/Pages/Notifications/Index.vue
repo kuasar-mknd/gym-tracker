@@ -5,6 +5,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, router } from '@inertiajs/vue3'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 defineProps({
     notifications: Object,
@@ -71,31 +72,13 @@ const formatDate = (date) => {
         </template>
 
         <div class="space-y-4">
-            <div
+            <GlassEmptyState
                 v-if="notifications.data.length === 0"
-                class="flex flex-col items-center justify-center py-12 text-center"
-            >
-                <div
-                    class="text-text-muted/20 bg-surface-sunken mb-4 flex h-16 w-16 items-center justify-center rounded-full"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-8 w-8"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                        />
-                    </svg>
-                </div>
-                <h3 class="text-text-main text-lg font-medium">Aucune notification</h3>
-                <p class="text-text-muted mt-1">Tu es à jour !</p>
-            </div>
+                icon="notifications_off"
+                color="cyan"
+                title="Aucune notification"
+                description="Tu es à jour !"
+            />
 
             <div v-else class="space-y-3">
                 <GlassCard

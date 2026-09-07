@@ -1,5 +1,6 @@
 <script setup>
 import { defineAsyncComponent } from 'vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const TimeOfDayChart = defineAsyncComponent(() => import('@/Components/Stats/TimeOfDayChart.vue'))
 
@@ -24,9 +25,7 @@ defineProps({
                 v-if="timeOfDayDistribution && timeOfDayDistribution.some((d) => d.count > 0)"
                 :data="timeOfDayDistribution"
             />
-            <div v-else class="text-text-muted flex h-full items-center justify-center">
-                <p class="text-sm">Pas assez de données (90j)</p>
-            </div>
+            <GlassEmptyState v-else taille="ligne" icon="schedule" title="Pas assez de données (90j)" />
         </div>
     </section>
 </template>

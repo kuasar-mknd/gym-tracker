@@ -15,6 +15,22 @@ const glowOf = (wrapper) => wrapper.get('.blur-3xl')
 const iconSpans = (wrapper) => wrapper.findAll('.h-20 span')
 
 describe('GlassEmptyState', () => {
+    /**
+     * Dix-sept écrans écrivaient leur propre « Aucun… » parce que la carte
+     * complète était trop lourde à l'intérieur d'une carte déjà titrée : la
+     * taille `ligne` rend le même état sans carte, sans halo ni gros titre.
+     */
+    it('tient dans une carte déjà titrée, sans en dessiner une seconde', () => {
+        const carte = mountState()
+        const ligne = mountState({ taille: 'ligne' })
+
+        expect(carte.findAll('.blur-3xl')).toHaveLength(1)
+        expect(ligne.findAll('.blur-3xl')).toHaveLength(0)
+        expect(carte.findAll('h3')).toHaveLength(1)
+        expect(ligne.findAll('h3')).toHaveLength(0)
+        expect(ligne.text()).toContain('Aucune séance')
+    })
+
     it('shows the description only when the caller supplies one', () => {
         const withText = mountState({ description: 'Commence ton aventure' })
         const without = mountState()

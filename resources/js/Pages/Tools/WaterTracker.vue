@@ -139,10 +139,12 @@
                         Journal du jour
                     </h2>
 
-                    <div v-if="logs.length === 0" class="py-8 text-center">
-                        <GlassIcon name="water_drop" size="xl" class="text-surface-sunken mb-2" />
-                        <p class="text-text-muted text-sm font-medium">Aucune consommation aujourd'hui.</p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="logs.length === 0"
+                        taille="ligne"
+                        icon="water_drop"
+                        title="Aucune consommation aujourd'hui"
+                    />
 
                     <div v-else class="max-h-[300px] space-y-3 overflow-y-auto pr-2">
                         <div
@@ -214,6 +216,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
 import { entier, pourcentage } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 

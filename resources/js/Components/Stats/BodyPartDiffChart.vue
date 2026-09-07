@@ -3,6 +3,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
 import { grille } from './chartConfig'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
     data: {
@@ -75,9 +76,7 @@ const axeX = { grid: { display: true, ...grille() } }
         :vide="labels.length === 0"
     >
         <template #vide>
-            <div class="text-text-muted flex h-full items-center justify-center font-medium">
-                Aucun changement enregistré
-            </div>
+            <GlassEmptyState taille="ligne" icon="straighten" title="Aucun changement enregistré" />
         </template>
     </BaseChart>
 </template>

@@ -147,13 +147,13 @@
                         <WilksScoreChart :data="history" />
                     </div>
 
-                    <div v-if="history.length === 0" class="py-12 text-center">
-                        <GlassIcon name="history" size="hero" class="text-surface-sunken mb-3" />
-                        <p class="text-text-muted font-medium">Aucun historique.</p>
-                        <p class="text-text-muted/70 mt-1 text-sm">
-                            Calcule ton score pour commencer à suivre tes progrès.
-                        </p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="history.length === 0"
+                        taille="ligne"
+                        icon="history"
+                        title="Aucun historique"
+                        description="Calcule ton score pour commencer à suivre tes progrès."
+                    />
 
                     <div v-else class="space-y-3">
                         <div
@@ -216,10 +216,10 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 // Aliased: this file also uses `wilksScore` as a route parameter name.
 import { wilksScore as calculateWilks } from '@/Utils/formulas'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
 import { nombre } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))

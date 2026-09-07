@@ -168,8 +168,8 @@ describe('the Wilks history', () => {
         const empty = await mountPage(WilksCalculator, { history: [] })
         const stocked = await mountPage(WilksCalculator, { history: entries })
 
-        expect(empty.text()).toContain('Aucun historique.')
-        expect(stocked.text()).not.toContain('Aucun historique.')
+        expect(empty.text()).toContain('Aucun historique')
+        expect(stocked.text()).not.toContain('Aucun historique')
     })
 
     it('deletes the row that was clicked, not the first one', async () => {

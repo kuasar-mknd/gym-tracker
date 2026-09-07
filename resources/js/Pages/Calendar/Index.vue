@@ -6,6 +6,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { parseCalendarDate } from '@/Utils/date'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
     year: Number,
@@ -374,13 +375,12 @@ const formatDateFull = (dateStr) => {
                 </div>
 
                 <!-- Empty State -->
-                <div
+                <GlassEmptyState
                     v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal"
-                    class="text-text-muted/60 py-8 text-center"
-                >
-                    <GlassIcon name="event_busy" size="xl" class="mb-2 opacity-50" />
-                    <p>Aucune activité ce jour-là.</p>
-                </div>
+                    taille="ligne"
+                    icon="event_busy"
+                    title="Aucune activité ce jour-là"
+                />
             </div>
 
             <div v-else class="text-text-muted/40 py-12 text-center">

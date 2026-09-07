@@ -1,5 +1,6 @@
 <script setup>
 import { defineAsyncComponent } from 'vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const DashboardDurationChart = defineAsyncComponent(() => import('@/Components/Stats/DashboardDurationChart.vue'))
 
@@ -24,9 +25,7 @@ defineProps({
                 v-if="recentWorkouts && recentWorkouts.some((w) => w.ended_at)"
                 :data="recentWorkouts"
             />
-            <div v-else class="text-text-muted flex h-full items-center justify-center">
-                <p class="text-sm">Pas assez de données de durée</p>
-            </div>
+            <GlassEmptyState v-else taille="ligne" icon="timer" title="Pas assez de données de durée" />
         </div>
     </section>
 </template>

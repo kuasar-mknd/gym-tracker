@@ -32,6 +32,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import duration from 'dayjs/plugin/duration'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 dayjs.extend(relativeTime)
 dayjs.extend(duration)
@@ -303,10 +304,13 @@ const formatHistoryDuration = (start, end) => {
                     <p class="text-text-muted text-xs font-semibold">Historique récent (heures)</p>
                 </div>
 
-                <div v-if="history.data.filter((f) => f.end_time).length === 0" class="py-8 text-center">
-                    <GlassIcon name="show_chart" size="xl" class="text-surface-sunken mb-2" />
-                    <p class="text-text-muted text-sm font-medium">Pas assez de données pour afficher le graphique.</p>
-                </div>
+                <GlassEmptyState
+                    v-if="history.data.filter((f) => f.end_time).length === 0"
+                    taille="ligne"
+                    icon="show_chart"
+                    title="Pas assez de données pour afficher le graphique"
+                    class="h-64"
+                />
                 <div v-else>
                     <FastingHistoryChart :data="history.data" />
                 </div>
@@ -315,9 +319,12 @@ const formatHistoryDuration = (start, end) => {
             <!-- History Details Section -->
             <GlassCard>
                 <h3 class="text-text-main mb-4 text-lg font-semibold">Historique détaillé</h3>
-                <div v-if="history.data.length === 0" class="text-text-muted py-4 text-center">
-                    Aucun historique de jeûne.
-                </div>
+                <GlassEmptyState
+                    v-if="history.data.length === 0"
+                    taille="ligne"
+                    icon="history"
+                    title="Aucun historique de jeûne"
+                />
                 <div v-else class="space-y-3">
                     <div
                         v-for="fast in history.data"

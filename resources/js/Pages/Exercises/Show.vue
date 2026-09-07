@@ -4,6 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { computed, defineAsyncComponent } from 'vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
@@ -189,10 +190,13 @@ const scatterData = computed(() => {
                 <div v-if="progress.length > 0" class="h-64">
                     <OneRepMaxChart :data="progress" />
                 </div>
-                <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                    <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                    <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                </div>
+                <GlassEmptyState
+                    v-else
+                    taille="ligne"
+                    icon="show_chart"
+                    title="Pas assez de données pour afficher le graphique"
+                    class="h-64"
+                />
             </GlassCard>
 
             <!-- Analytics Grid -->
@@ -303,10 +307,12 @@ const scatterData = computed(() => {
                 </GlassCard>
             </div>
             <GlassCard v-else class="stagger-1 animate-slide-up">
-                <div class="flex h-64 flex-col items-center justify-center text-center">
-                    <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                    <p class="text-text-muted text-sm">Pas assez de données pour afficher les statistiques</p>
-                </div>
+                <GlassEmptyState
+                    taille="ligne"
+                    icon="bar_chart"
+                    title="Pas assez de données pour afficher les statistiques"
+                    class="h-64"
+                />
             </GlassCard>
 
             <!-- Session Performance Chart -->
@@ -321,10 +327,13 @@ const scatterData = computed(() => {
                     <div v-if="history.length > 0" class="h-64">
                         <SessionPerformanceChart :data="history" />
                     </div>
-                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                    </div>
+                    <GlassEmptyState
+                        v-else
+                        taille="ligne"
+                        icon="bar_chart"
+                        title="Pas assez de données pour afficher le graphique"
+                        class="h-64"
+                    />
                 </GlassCard>
             </div>
 
@@ -340,10 +349,13 @@ const scatterData = computed(() => {
                     <div v-if="volumeData.length > 0" class="h-64">
                         <SessionVolumeLineChart :data="volumeData" />
                     </div>
-                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                    </div>
+                    <GlassEmptyState
+                        v-else
+                        taille="ligne"
+                        icon="show_chart"
+                        title="Pas assez de données pour afficher le graphique"
+                        class="h-64"
+                    />
                 </GlassCard>
             </div>
 
@@ -359,10 +371,13 @@ const scatterData = computed(() => {
                     <div v-if="history.length > 0" class="h-64">
                         <HistoryChart :data="history" />
                     </div>
-                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                    </div>
+                    <GlassEmptyState
+                        v-else
+                        taille="ligne"
+                        icon="show_chart"
+                        title="Pas assez de données pour afficher le graphique"
+                        class="h-64"
+                    />
                 </GlassCard>
             </div>
         </div>
