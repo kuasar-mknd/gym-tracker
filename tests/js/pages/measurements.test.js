@@ -192,9 +192,9 @@ describe('Measurements/Index headline figures', () => {
         const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
 
         expect(wrapper.vm.previousWeight).toBe('76.00')
-        expect(wrapper.vm.weightDiff).toBe('-1.5')
+        expect(wrapper.vm.weightDiff).toBe(-1.5)
         // Green is the whole point of the tile: it says the trend is the one wanted.
-        expect(statistique(wrapper, 'Évolution')).toBe('-1.5')
+        expect(statistique(wrapper, 'Évolution')).toBe('-1,5')
     })
 
     it('signs a gain, since "1.5" on its own reads like a loss', async () => {
@@ -202,7 +202,7 @@ describe('Measurements/Index headline figures', () => {
 
         const wrapper = await mountPage(MeasurementsIndex, { measurements: gaining })
 
-        expect(statistique(wrapper, 'Évolution')).toBe('+1.5')
+        expect(statistique(wrapper, 'Évolution')).toBe('+1,5')
     })
 
     it('has nothing to compare after a first weigh-in, and says so instead of showing a zero', async () => {

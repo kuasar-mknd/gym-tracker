@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
+import { nombre } from '@/Utils/nombre'
 
 const props = defineProps({
     user: { type: Object, required: true },
@@ -18,13 +19,9 @@ const props = defineProps({
  * figure on the page.
  */
 const formattedWeight = computed(() => {
-    if (props.latestWeight === null || props.latestWeight === '') {
-        return null
-    }
+    const formate = nombre(props.latestWeight)
 
-    const value = Number(props.latestWeight)
-
-    return Number.isFinite(value) ? value.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) : null
+    return formate === '—' ? null : formate
 })
 
 const streakDays = computed(() => props.user.current_streak || 0)

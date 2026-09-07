@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 import BaseChart from './BaseChart.vue'
 import { etiquetteDeDate } from '@/Utils/date'
+import { entier, volume } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -38,7 +39,7 @@ const datasets = computed(() => [
     },
     {
         type: 'bar',
-        label: 'Volume (kg)',
+        label: 'Volume',
         data: seances.value.map((d) => d.workout_volume || 0),
         backgroundColor: (context) => {
             const chart = context.chart
@@ -63,10 +64,12 @@ const infobulle = {
     callbacks: {
         label: (context) => {
             const label = context.dataset.label || ''
+
             if (context.datasetIndex === 0) {
-                return `${label}: ${context.parsed.y} min`
+                return `${label}: ${entier(context.parsed.y)} min`
             }
-            return `${label}: ${context.parsed.y} kg`
+
+            return `${label}: ${volume(context.parsed.y)}`
         },
     },
 }

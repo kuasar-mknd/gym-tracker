@@ -7,8 +7,12 @@ namespace App\Actions;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 
-final class CreateUserAction
+final readonly class CreateUserAction
 {
+    public function __construct(private CreerLesPlaquesParDefautAction $plaquesParDefaut)
+    {
+    }
+
     /**
      * Create a new user instance after a valid registration.
      *
@@ -21,6 +25,8 @@ final class CreateUserAction
             'email' => $input['email'],
             'password' => $input['password'],
         ]);
+
+        $this->plaquesParDefaut->execute($user);
 
         event(new Registered($user));
 

@@ -60,7 +60,7 @@ describe('the one-rep-max table', () => {
         await enter(wrapper, 100, 5)
 
         // Epley: 100 × (1 + 5/30) = 116.66…, rounded to one decimal for display.
-        expect(rows(wrapper)[0]).toEqual(['100%', '116.7 kg', '1'])
+        expect(rows(wrapper)[0]).toEqual(['100%', '116,7 kg', '1'])
     })
 
     it('drops the decimal when there is nothing after it', async () => {

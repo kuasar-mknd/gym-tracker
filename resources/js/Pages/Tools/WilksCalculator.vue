@@ -102,7 +102,7 @@
                         <div
                             class="from-accent-primary to-accent-secondary font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
                         >
-                            {{ calculatedScore }}
+                            {{ scoreAffiche }}
                         </div>
 
                         <div class="mt-6">
@@ -165,7 +165,7 @@
                                 <div
                                     class="text-text-main border-border bg-surface-card/80 flex h-12 w-12 items-center justify-center rounded-xl border text-xl font-bold"
                                 >
-                                    {{ parseFloat(entry.score).toFixed(0) }}
+                                    {{ nombre(entry.score, 0) }}
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">
@@ -219,6 +219,7 @@ import { wilksScore as calculateWilks } from '@/Utils/formulas'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
+import { nombre } from '@/Utils/nombre'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))
@@ -251,8 +252,11 @@ const calculatedScore = computed(() =>
         lifted: form.lifted_weight,
         gender: form.gender,
         unit: form.unit,
-    }).toFixed(2),
+    }),
 )
+
+/** Deux décimales : la présentation de la page, pas le calcul. */
+const scoreAffiche = computed(() => nombre(calculatedScore.value, 2, 2))
 
 const saveScore = () => {
     if (!isValid.value) return

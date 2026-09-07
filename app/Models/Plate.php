@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @property int $user_id
+ * @property numeric-string $weight Le cast `decimal:2` rend une chaîne, pas un flottant.
+ * @property int $quantity
  */
 class Plate extends Model
 {

@@ -18,7 +18,7 @@ describe('FastingHistoryChart', () => {
     it('mesure la durée en heures, à la décimale', () => {
         const chart = chartDataOf(mountChart([completedFast]), 'Bar')
 
-        expect(chart.datasets[0].data).toEqual(['16.5'])
+        expect(chart.datasets[0].data).toEqual([16.5])
     })
 
     it('arrondit une durée qui ne tombe pas juste', () => {
@@ -28,7 +28,7 @@ describe('FastingHistoryChart', () => {
             'Bar',
         )
 
-        expect(chart.datasets[0].data).toEqual(['3.3'])
+        expect(chart.datasets[0].data).toEqual([3.3])
     })
 
     it('laisse le jeûne en cours hors du graphique', () => {
@@ -40,7 +40,7 @@ describe('FastingHistoryChart', () => {
         )
 
         expect(chart.labels).toHaveLength(1)
-        expect(chart.datasets[0].data).toEqual(['16.5'])
+        expect(chart.datasets[0].data).toEqual([16.5])
     })
 
     it('trace du plus ancien au plus récent, quel que soit l’ordre reçu', () => {
@@ -53,7 +53,7 @@ describe('FastingHistoryChart', () => {
             'Bar',
         )
 
-        expect(chart.datasets[0].data).toEqual(['8.0', '9.0', '10.0'])
+        expect(chart.datasets[0].data).toEqual([8, 9, 10])
         expect(chart.labels).toEqual(['05/01', '01/02', '10/03'])
     })
 

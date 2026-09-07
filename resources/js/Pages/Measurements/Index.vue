@@ -12,6 +12,7 @@ import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassStat from '@/Components/UI/GlassStat.vue'
+import { poids, nombre, variation, pourcentage } from '@/Utils/nombre'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
@@ -93,7 +94,8 @@ const previousWeight = computed(() => {
 
 const weightDiff = computed(() => {
     if (!latestWeight.value || !previousWeight.value) return null
-    return (latestWeight.value - previousWeight.value).toFixed(1)
+
+    return Number(latestWeight.value) - Number(previousWeight.value)
 })
 
 const latestBodyFat = computed(() => {
@@ -141,13 +143,13 @@ const latestBodyFat = computed(() => {
             <!-- Quick Stats -->
             <div class="animate-slide-up grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <GlassStat
-                    :valeur="latestWeight ?? '—'"
+                    :valeur="latestWeight ? nombre(latestWeight) : '—'"
                     :unite="latestWeight ? 'kg' : null"
                     libelle="Poids"
                     ton="text-gradient"
                 />
                 <GlassStat
-                    :valeur="weightDiff ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '—'"
+                    :valeur="weightDiff ? variation(weightDiff, null) : '—'"
                     :unite="weightDiff ? 'kg' : null"
                     libelle="Évolution"
                     :tendance="
@@ -157,7 +159,7 @@ const latestBodyFat = computed(() => {
                     "
                 />
                 <GlassStat
-                    :valeur="latestBodyFat ?? '—'"
+                    :valeur="latestBodyFat ? nombre(latestBodyFat) : '—'"
                     :unite="latestBodyFat ? '%' : null"
                     libelle="Masse grasse"
                     ton="text-accent-secondary-deep"
@@ -282,11 +284,13 @@ const latestBodyFat = computed(() => {
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="flex items-baseline gap-2">
-                                    <span class="text-text-main text-xl font-bold">{{ measurement.weight }} kg</span>
+                                    <span class="text-text-main text-xl font-bold">{{
+                                        poids(measurement.weight)
+                                    }}</span>
                                     <span
                                         v-if="measurement.body_fat"
                                         class="bg-accent-secondary/15 text-accent-secondary-deep rounded-full px-2 py-0.5 text-xs font-bold"
-                                        >{{ measurement.body_fat }}% BF</span
+                                        >{{ pourcentage(measurement.body_fat) }} BF</span
                                     >
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">

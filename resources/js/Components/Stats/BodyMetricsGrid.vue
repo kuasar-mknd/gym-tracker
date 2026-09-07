@@ -4,6 +4,7 @@ import { defineAsyncComponent } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { nombre } from '@/Utils/nombre'
 
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
 
@@ -61,7 +62,7 @@ defineProps({
                     <div>
                         <h4 class="sur-titre text-accent-tertiary-deep mb-1">Volume Mois</h4>
                         <p class="font-display text-text-main text-3xl font-black">
-                            {{ Math.round(monthlyComparison?.current_volume || 0).toLocaleString() }}
+                            {{ nombre(monthlyComparison?.current_volume ?? 0, 0) }}
                             <span class="text-text-muted text-sm">kg</span>
                         </p>
                     </div>

@@ -36,7 +36,7 @@ describe('WeeklyVolumeSection', () => {
     it('groups the thousands in the week volume instead of printing a raw integer', async () => {
         const wrapper = await mountSection({ weeklyVolumeStats: { current_week_volume: 21500, percentage: 0 } })
 
-        expect(volumeText(wrapper)).toBe((21500).toLocaleString())
+        expect(volumeText(wrapper)).toBe("21'500")
         expect(volumeText(wrapper)).not.toBe('21500')
     })
 
@@ -100,7 +100,7 @@ describe('WeeklyVolumeSection', () => {
         expect(wrapper.find('p.justify-end').exists()).toBe(false)
         expect(wrapper.text()).not.toContain('vs sem. passée')
         // Le volume de la semaine, lui, reste affiche : il est mesure, pas compare.
-        expect(volumeText(wrapper)).toBe((21500).toLocaleString())
+        expect(volumeText(wrapper)).toBe("21'500")
     })
 
     it('ne compare rien non plus quand la cle manque tout court', async () => {

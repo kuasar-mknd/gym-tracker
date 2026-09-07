@@ -30,22 +30,25 @@ describe('RecentPRs', () => {
         expect(cards(wrapper)).toHaveLength(2)
         expect(cards(wrapper)[0].text()).toContain('Développé couché')
         expect(cards(wrapper)[0].text()).toContain('Poids Max')
-        expect(cards(wrapper)[0].text()).toContain('120kg')
+        expect(cards(wrapper)[0].text()).toContain('120 kg')
         expect(cards(wrapper)[1].text()).toContain('Squat')
         expect(cards(wrapper)[1].text()).toContain('1RM Estimé')
-        expect(cards(wrapper)[1].text()).toContain('137.5kg')
+        expect(cards(wrapper)[1].text()).toContain('137,5 kg')
     })
 
-    it('leaves the kilos off a best set, whose value is a volume and not a load', async () => {
-        // max_volume_set stores weight × reps. Suffixing 'kg' would read as a
-        // 1 200 kg lift.
+    it('dit en kilos le volume d’une série, qui est un poids soulevé et non un compte', async () => {
+        /*
+         * `max_volume_set` vaut poids × répétitions (PersonalRecordService, la
+         * requête des trois classements) : c'est bien une charge, en kilos. La
+         * carte n'affichait aucune unité, et le graphique voisin l'annonçait en
+         * répétitions — deux lectures fausses de la même donnée.
+         */
         const wrapper = await mountSection([
             { id: 3, type: 'max_volume_set', value: 1200, exercise: { name: 'Rowing' } },
         ])
 
         expect(cards(wrapper)[0].text()).toContain('Volume')
-        expect(cards(wrapper)[0].text()).toContain('1200')
-        expect(cards(wrapper)[0].text()).not.toContain('1200kg')
+        expect(cards(wrapper)[0].text()).toContain("1'200 kg")
     })
 
     it('disappears entirely rather than showing an empty podium', async () => {
@@ -59,7 +62,7 @@ describe('RecentPRs', () => {
         const wrapper = await mountSection([{ id: 4, type: 'max_weight', value: 60, exercise: null }])
 
         expect(cards(wrapper)).toHaveLength(1)
-        expect(cards(wrapper)[0].text()).toContain('60kg')
+        expect(cards(wrapper)[0].text()).toContain('60 kg')
     })
 
     it('feeds the same records to the chart it lists below it', async () => {
