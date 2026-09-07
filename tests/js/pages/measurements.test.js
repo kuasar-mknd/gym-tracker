@@ -236,7 +236,7 @@ describe('Measurements/Index headline figures', () => {
         expect(wrapper.vm.latestWeight).toBeNull()
         expect(wrapper.vm.latestBodyFat).toBeNull()
         expect(occurrences(wrapper, '—')).toBe(3)
-        expect(wrapper.text()).toContain("Aucune mesure pour l'instant")
+        expect(wrapper.text()).toContain('Aucune mesure')
     })
 })
 
@@ -272,7 +272,7 @@ describe('Measurements/Index charts', () => {
 
         expect(wrapper.findComponent(WeightHistoryChart).exists()).toBe(true)
         expect(wrapper.findComponent(BodyFatLineChart).exists()).toBe(false)
-        expect(occurrences(wrapper, 'Aucune donnée disponible')).toBe(1)
+        expect(occurrences(wrapper, 'Aucune donnée')).toBe(1)
     })
 
     it('holds both cards while the deferred stats are still on their way', async () => {
@@ -281,7 +281,7 @@ describe('Measurements/Index charts', () => {
 
         expect(wrapper.findComponent(WeightHistoryChart).exists()).toBe(false)
         expect(wrapper.findComponent(BodyFatLineChart).exists()).toBe(false)
-        expect(occurrences(wrapper, 'Aucune donnée disponible')).toBe(2)
+        expect(occurrences(wrapper, 'Aucune donnée')).toBe(2)
     })
 })
 

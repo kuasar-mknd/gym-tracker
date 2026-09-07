@@ -340,7 +340,7 @@ describe('the panel under the grid', () => {
         const empty = await openTenth({})
         const busy = await openTenth({ workouts: [workout()] })
 
-        expect(empty.find('[dusk="calendar-day-details"]').text()).toContain('Aucune activité ce jour-là.')
+        expect(empty.find('[dusk="calendar-day-details"]').text()).toContain('Aucune activité ce jour-là')
         // Only then: the message above a list of sessions would contradict it.
         expect(busy.find('[dusk="calendar-day-details"]').text()).not.toContain('Aucune activité')
     })

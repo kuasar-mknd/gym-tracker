@@ -5,6 +5,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre, variation } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 
@@ -48,9 +49,7 @@ defineProps({
                     </div>
                 </template>
                 <WeightHistoryChart v-if="weightHistory?.length > 0" compact :data="weightHistory" />
-                <div v-else class="flex h-full items-center justify-center text-center">
-                    <p class="text-text-muted/50 text-sm italic">Pas encore de données de poids</p>
-                </div>
+                <GlassEmptyState v-else taille="ligne" icon="monitor_weight" title="Pas encore de données de poids" />
             </Deferred>
         </div>
 

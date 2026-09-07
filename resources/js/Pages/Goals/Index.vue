@@ -8,6 +8,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import Modal from '@/Components/UI/Modal.vue'
 import { ref, computed, defineAsyncComponent } from 'vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const GoalTypeChart = defineAsyncComponent(() => import('@/Components/Stats/GoalTypeChart.vue'))
 
@@ -167,14 +168,16 @@ const goalDistribution = computed(() => {
                         <span class="text-text-muted text-xs font-normal">({{ activeGoals.length }})</span>
                     </h3>
 
-                    <div
+                    <GlassEmptyState
                         v-if="activeGoals.length === 0 && !showCreateForm"
-                        class="border-border bg-surface-card/30 rounded-3xl border border-dashed p-6 py-12 text-center"
-                    >
-                        <p class="text-text-muted italic">
-                            Aucun objectif actif pour le moment. C'est le moment d'en fixer un !
-                        </p>
-                    </div>
+                        icon="flag"
+                        color="violet"
+                        title="Aucun objectif actif"
+                        description="Fixe-toi une cible : un poids, un volume, une régularité."
+                        action-label="Fixer un objectif"
+                        action-id="empty-state-goal"
+                        @action="showCreateForm = true"
+                    />
 
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                         <GoalCard v-for="goal in activeGoals" :key="goal.id" :goal="goal" @delete="confirmDeletion" />

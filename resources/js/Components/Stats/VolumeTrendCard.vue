@@ -2,9 +2,9 @@
 import { Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent, computed } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 
@@ -54,10 +54,7 @@ const totalVolume = computed(() => {
                 <div v-if="volumeTrend && volumeTrend.length > 0" class="h-full">
                     <VolumeTrendChart :data="volumeTrend" />
                 </div>
-                <div v-else class="flex h-full flex-col items-center justify-center text-center">
-                    <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                    <p class="text-text-muted text-sm">Pas encore de données de volume</p>
-                </div>
+                <GlassEmptyState v-else taille="ligne" icon="bar_chart" title="Pas encore de données de volume" />
             </Deferred>
         </div>
     </GlassCard>

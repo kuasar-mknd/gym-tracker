@@ -13,6 +13,7 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassStat from '@/Components/UI/GlassStat.vue'
 import { poids, nombre, variation, pourcentage } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
@@ -237,9 +238,7 @@ const latestBodyFat = computed(() => {
                                 v-if="bodyStats?.weightHistory && bodyStats.weightHistory.length > 0"
                                 :data="bodyStats.weightHistory"
                             />
-                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                                Aucune donnée disponible
-                            </div>
+                            <GlassEmptyState v-else taille="ligne" icon="query_stats" title="Aucune donnée" />
                         </div>
                     </GlassCard>
 
@@ -256,9 +255,7 @@ const latestBodyFat = computed(() => {
                                 v-if="bodyStats?.bodyFatHistory && bodyStats.bodyFatHistory.length > 0"
                                 :data="bodyStats.bodyFatHistory"
                             />
-                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                                Aucune donnée disponible
-                            </div>
+                            <GlassEmptyState v-else taille="ligne" icon="query_stats" title="Aucune donnée" />
                         </div>
                     </GlassCard>
                 </div>
@@ -270,14 +267,16 @@ const latestBodyFat = computed(() => {
                     Historique
                 </h3>
 
-                <div v-if="measurements.length === 0">
-                    <GlassCard>
-                        <div class="py-8 text-center">
-                            <div class="mb-2 text-4xl">⚖️</div>
-                            <p class="text-text-muted">Aucune mesure pour l'instant</p>
-                        </div>
-                    </GlassCard>
-                </div>
+                <GlassEmptyState
+                    v-if="measurements.length === 0"
+                    icon="⚖️"
+                    title="Aucune mesure"
+                    description="Pèse-toi une première fois pour ouvrir la courbe."
+                    action-label="Ajouter une mesure"
+                    action-id="empty-state-measurement"
+                    color="cyan"
+                    @action="showAddForm = true"
+                />
 
                 <div v-else class="space-y-2">
                     <GlassCard v-for="measurement in measurements" :key="measurement.id" padding="p-4" class="group">

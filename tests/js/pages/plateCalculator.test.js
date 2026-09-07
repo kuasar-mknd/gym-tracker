@@ -159,7 +159,7 @@ describe('PlateCalculator inventory', () => {
     it('says the inventory is empty rather than showing a bare grid', () => {
         const wrapper = mountCalculator([])
 
-        expect(wrapper.text()).toContain("Aucune plaque dans l'inventaire.")
+        expect(wrapper.text()).toContain("Aucune plaque dans l'inventaire")
     })
 
     /** Two plates, and the second one's cross: with one, any id would pass. */

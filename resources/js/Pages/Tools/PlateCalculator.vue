@@ -142,11 +142,13 @@
                         </GlassButton>
                     </div>
 
-                    <div v-if="plates.length === 0" class="py-12 text-center">
-                        <GlassIcon name="inventory_2" size="hero" class="text-surface-sunken mb-3" />
-                        <p class="text-text-muted font-medium">Aucune plaque dans l'inventaire.</p>
-                        <p class="text-text-muted/70 mt-1 text-sm">Ajoute tes plaques pour commencer.</p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="plates.length === 0"
+                        taille="ligne"
+                        icon="inventory_2"
+                        title="Aucune plaque dans l'inventaire"
+                        description="Ajoute tes plaques pour commencer."
+                    />
 
                     <div v-else class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                         <div v-for="plate in plates" :key="plate.id" class="group relative">
@@ -266,6 +268,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { nombre, poids } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
     plates: {

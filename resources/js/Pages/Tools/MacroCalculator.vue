@@ -159,10 +159,13 @@
                 <div class="space-y-5">
                     <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
-                    <div v-if="history.length === 0" class="py-12 text-center">
-                        <GlassIcon name="history" size="hero" class="text-surface-sunken mb-3" />
-                        <p class="text-text-muted font-medium">Aucun historique.</p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="history.length === 0"
+                        taille="ligne"
+                        icon="history"
+                        title="Aucun historique"
+                        description="Calcule tes macros pour garder une trace de tes objectifs."
+                    />
 
                     <div v-else class="space-y-3">
                         <div
@@ -233,9 +236,9 @@ import { triggerHaptic } from '@/composables/useHaptics'
 import { macroTargets } from '@/Utils/formulas'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
 import { entier } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 

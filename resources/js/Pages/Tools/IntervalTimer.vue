@@ -16,6 +16,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import { useMinuteurDIntervalles } from '@/composables/useMinuteurDIntervalles'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 defineProps({
     timers: {
@@ -275,9 +276,13 @@ const previewFromForm = () => {
                 <!-- List of Timers -->
                 <div class="space-y-4">
                     <h3 class="text-text-main px-2 text-lg font-bold">Mes Minuteurs</h3>
-                    <div v-if="timers.length === 0" class="text-text-muted py-8 text-center">
-                        Aucun minuteur enregistré.
-                    </div>
+                    <GlassEmptyState
+                        v-if="timers.length === 0"
+                        taille="ligne"
+                        icon="timer"
+                        title="Aucun minuteur enregistré"
+                        description="Règle tes intervalles ci-dessus, puis enregistre-les."
+                    />
                     <GlassCard
                         v-for="timer in timers"
                         :key="timer.id"
