@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', fn () => redirect()->route('dashboard'));
 
@@ -14,6 +15,7 @@ Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
 Route::middleware('auth')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/raccourcis', fn (): \Inertia\Response => Inertia::render('Raccourcis'))->name('shortcuts.index');
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index'])->name('achievements.index');
     Route::get('/workouts', [\App\Http\Controllers\WorkoutController::class, 'index'])->name('workouts.index');

@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { parseCalendarDate, etiquetteDeDate } from '@/Utils/date'
 import BaseChart from './BaseChart.vue'
 import GlassChip from '@/Components/UI/GlassChip.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
     data: {
@@ -132,9 +133,7 @@ const axeY = computed(() => ({
             :vide="data.length === 0"
         >
             <template #vide>
-                <div class="text-text-muted flex h-full items-center justify-center">
-                    Pas assez de données pour afficher le graphique
-                </div>
+                <GlassEmptyState taille="ligne" icon="mood" title="Pas assez de données pour afficher le graphique" />
             </template>
         </BaseChart>
     </div>

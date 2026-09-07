@@ -10,6 +10,7 @@ import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassChip from '@/Components/UI/GlassChip.vue'
+import { nombre, variation } from '@/Utils/nombre'
 
 const BodyPartDiffChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartDiffChart.vue'))
 
@@ -59,7 +60,7 @@ const selectCommonPart = (part) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Mensurations</h2>
+                <h2 class="titre-carte">Mensurations</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -70,7 +71,7 @@ const selectCommonPart = (part) => {
         <div class="space-y-6">
             <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">Nouvelle mesure</h3>
+                <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
                         <label class="text-text-muted mb-1 block text-sm font-medium">Partie du corps</label>
@@ -129,9 +130,7 @@ const selectCommonPart = (part) => {
 
             <!-- Chart -->
             <GlassCard v-if="latestMeasurements.some((m) => m.diff !== 0)" class="animate-slide-up">
-                <h3 class="font-display text-accent-state-deep tracking-sur-titre mb-4 text-xs font-black uppercase">
-                    Évolution Récente
-                </h3>
+                <h3 class="text-accent-state-deep sur-titre mb-4">Évolution Récente</h3>
                 <BodyPartDiffChart :data="latestMeasurements" />
             </GlassCard>
 
@@ -149,11 +148,12 @@ const selectCommonPart = (part) => {
                     >
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="text-text-main font-bold">{{ item.part }}</h3>
+                                <h3 class="titre-carte">{{ item.part }}</h3>
                                 <div
                                     class="from-accent-tertiary to-accent-secondary mt-1 bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent"
                                 >
-                                    {{ item.current }} <span class="text-text-muted text-sm">{{ item.unit }}</span>
+                                    {{ nombre(item.current, 2) }}
+                                    <span class="text-text-muted text-sm">{{ item.unit }}</span>
                                 </div>
                                 <div class="text-text-muted mt-1 text-xs">
                                     {{ parseCalendarDate(item.date)?.toLocaleDateString() }}
@@ -166,7 +166,7 @@ const selectCommonPart = (part) => {
                                     item.diff > 0 ? 'text-trend-up' : 'text-trend-down',
                                 ]"
                             >
-                                {{ item.diff > 0 ? '+' : '' }}{{ item.diff }}
+                                {{ variation(item.diff, null, 2) }}
                             </div>
                         </div>
                     </GlassCard>

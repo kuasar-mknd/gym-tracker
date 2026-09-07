@@ -284,11 +284,11 @@ describe('Goals/Index', () => {
     it("retire l'invitation à créer un objectif pendant qu'on en crée un", async () => {
         const wrapper = await mountGoals([])
 
-        expect(wrapper.text()).toContain('Aucun objectif actif pour le moment')
+        expect(wrapper.findComponent(GlassEmptyState).props('title')).toBe('Aucun objectif actif')
 
         await toggle(wrapper).trigger('click')
 
-        expect(wrapper.text()).not.toContain('Aucun objectif actif pour le moment')
+        expect(wrapper.findComponent(GlassEmptyState).exists()).toBe(false)
 
         wrapper.unmount()
     })
@@ -297,7 +297,7 @@ describe('Goals/Index', () => {
     it("garde l'invitation quand tous les objectifs sont accomplis", async () => {
         const wrapper = await mountGoals([goal({ completed_at: '2026-03-01T10:00:00.000000Z' })])
 
-        expect(wrapper.text()).toContain('Aucun objectif actif pour le moment')
+        expect(wrapper.findComponent(GlassEmptyState).props('title')).toBe('Aucun objectif actif')
 
         wrapper.unmount()
     })
@@ -473,7 +473,7 @@ describe('Goals/Index', () => {
         const wrapper = await mountGoals([goal({ id: 1, progress_pct: null })])
         const card = cardFor(wrapper, 1)
 
-        expect(card.text()).toContain('0%')
+        expect(card.text()).toContain('0 %')
         expect(card.find('[role="progressbar"]').attributes('aria-valuenow')).toBe('0')
         expect(card.find('[role="progressbar"]').html()).toContain('width: 0%')
 

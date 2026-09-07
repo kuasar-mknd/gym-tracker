@@ -273,8 +273,8 @@ describe('IntervalTimer presets', () => {
         await openPresets(empty)
         await openPresets(stocked)
 
-        expect(empty.text()).toContain('Aucun minuteur enregistré.')
-        expect(stocked.text()).not.toContain('Aucun minuteur enregistré.')
+        expect(empty.text()).toContain('Aucun minuteur enregistré')
+        expect(stocked.text()).not.toContain('Aucun minuteur enregistré')
     })
 
     it('ne supprime un minuteur qu’une fois la confirmation donnée', async () => {

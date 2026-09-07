@@ -43,6 +43,7 @@ const datasets = computed(() => [
 
 <template>
     <BaseChart
+        entiers
         type="line"
         :labels="labels"
         :datasets="datasets"

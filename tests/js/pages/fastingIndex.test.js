@@ -288,15 +288,15 @@ describe('Fasting — historique', () => {
 
         const withoutChart = await mountPage({ history: history([stillRunning]) })
         expect(withoutChart.findComponent({ name: 'FastingHistoryChart' }).exists()).toBe(false)
-        expect(withoutChart.text()).toContain('Pas assez de données pour afficher le graphique.')
+        expect(withoutChart.text()).toContain('Pas assez de données pour afficher le graphique')
     })
 
     it('annonce un historique vide, et se tait dès qu’il y a quelque chose', async () => {
-        expect((await mountPage({ history: history([]) })).text()).toContain('Aucun historique de jeûne.')
+        expect((await mountPage({ history: history([]) })).text()).toContain('Aucun historique de jeûne')
 
         // Without this half the assertion above holds for a message rendered
         // unconditionally, which is not what "annonce un historique vide" claims.
-        expect((await mountPage({ history: history([completed]) })).text()).not.toContain('Aucun historique de jeûne.')
+        expect((await mountPage({ history: history([completed]) })).text()).not.toContain('Aucun historique de jeûne')
     })
 
     it('demande confirmation avant de supprimer', async () => {

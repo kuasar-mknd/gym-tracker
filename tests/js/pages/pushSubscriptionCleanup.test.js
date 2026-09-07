@@ -32,7 +32,7 @@ vi.mock('@inertiajs/vue3', async () => {
     }
 })
 
-vi.mock('axios', () => ({ default: { post: (...args) => post(...args) } }))
+vi.mock('@/Utils/http', () => ({ http: { post: (...args) => post(...args) } }))
 
 import UpdateNotificationPreferencesForm from '@/Pages/Profile/Partials/UpdateNotificationPreferencesForm.vue'
 
@@ -79,12 +79,9 @@ beforeEach(() => {
             ? Promise.reject(new Error('réseau'))
             : Promise.resolve({ data: {} }),
     )
-    window.axios = { post: (...args) => post(...args) }
 })
 
-afterEach(() => {
-    delete window.axios
-})
+afterEach(() => {})
 
 const mountForm = (props = {}) =>
     mount(UpdateNotificationPreferencesForm, {

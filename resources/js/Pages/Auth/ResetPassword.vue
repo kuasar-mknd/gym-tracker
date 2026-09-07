@@ -28,7 +28,7 @@ const submit = () => {
         <Head title="Réinitialiser le mot de passe" />
 
         <div class="mb-6 text-center">
-            <h2 class="text-text-main text-2xl font-bold">Nouveau mot de passe</h2>
+            <h2 class="titre-section">Nouveau mot de passe</h2>
             <p class="text-text-muted mt-1">Choisis un nouveau mot de passe sécurisé</p>
         </div>
 

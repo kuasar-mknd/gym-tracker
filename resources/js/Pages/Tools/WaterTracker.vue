@@ -1,13 +1,11 @@
 <template>
     <Head title="Suivi Hydratation" />
 
-    <AuthenticatedLayout show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Suivi<br />
                     <span class="text-gradient from-accent-info to-accent-tertiary">Hydratation</span>
                 </h1>
@@ -63,10 +61,12 @@
                         <!-- Center Text -->
                         <div class="absolute flex flex-col items-center text-center">
                             <span class="font-display text-text-main text-5xl font-black tracking-tighter italic">
-                                {{ todayTotal }}
+                                {{ entier(todayTotal) }}
                             </span>
-                            <span class="text-text-muted text-sm font-bold uppercase"> / {{ goal }} ml </span>
-                            <span class="text-accent-info-deep mt-2 text-sm font-bold"> {{ percentage }}% </span>
+                            <span class="text-text-muted text-sm font-bold uppercase"> / {{ entier(goal) }} ml </span>
+                            <span class="text-accent-info-deep mt-2 text-sm font-bold">
+                                {{ pourcentage(percentage, 0) }}
+                            </span>
                         </div>
                     </div>
 
@@ -133,14 +133,14 @@
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <!-- Today's Logs -->
                 <GlassCard class="stagger-2 animate-slide-up h-full">
-                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
-                        Journal du jour
-                    </h2>
+                    <h2 class="titre-carte mb-4">Journal du jour</h2>
 
-                    <div v-if="logs.length === 0" class="py-8 text-center">
-                        <GlassIcon name="water_drop" size="xl" class="text-surface-sunken mb-2" />
-                        <p class="text-text-muted text-sm font-medium">Aucune consommation aujourd'hui.</p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="logs.length === 0"
+                        taille="ligne"
+                        icon="water_drop"
+                        title="Aucune consommation aujourd'hui"
+                    />
 
                     <div v-else class="max-h-[300px] space-y-3 overflow-y-auto pr-2">
                         <div
@@ -155,7 +155,7 @@
                                     <GlassIcon name="water_drop" size="sm" />
                                 </div>
                                 <div>
-                                    <p class="text-text-main font-bold">{{ log.amount }} ml</p>
+                                    <p class="text-text-main font-bold">{{ entier(log.amount) }} ml</p>
                                     <p class="text-text-muted text-xs">
                                         {{
                                             new Date(log.consumed_at).toLocaleTimeString([], {
@@ -168,7 +168,7 @@
                             </div>
                             <GlassIconButton
                                 icon="delete"
-                                :label="`Supprimer l'entrée de ${log.amount} ml`"
+                                :label="`Supprimer l'entrée de ${entier(log.amount)} ml`"
                                 ton="danger"
                                 @click="demanderSuppression(log)"
                             />
@@ -178,9 +178,7 @@
 
                 <!-- Weekly History -->
                 <GlassCard class="stagger-3 animate-slide-up h-full">
-                    <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
-                        7 derniers jours
-                    </h2>
+                    <h2 class="titre-carte mb-4">7 derniers jours</h2>
 
                     <WaterHistoryChart :data="history" :goal="goal" />
                 </GlassCard>
@@ -189,7 +187,9 @@
         <ConfirmDialog
             :ouvert="suppressionDemandee"
             titre="Supprimer cette prise ?"
-            :description="entreeASupprimer ? `${entreeASupprimer.amount} ml seront retires de ton total du jour.` : ''"
+            :description="
+                entreeASupprimer ? `${entier(entreeASupprimer.amount)} ml seront retires de ton total du jour.` : ''
+            "
             @confirmer="confirmerSuppression"
             @annuler="annulerSuppression"
         />
@@ -209,6 +209,8 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
+import { entier, pourcentage } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 

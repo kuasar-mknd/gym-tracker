@@ -108,7 +108,7 @@ describe('Achievements/Index', () => {
 
         await filterBy(wrapper, 'Volume')
 
-        expect(wrapper.text()).toContain('Aucun badge dans cette catégorie.')
+        expect(wrapper.text()).toContain('Aucun badge dans cette catégorie')
     })
 
     it('keeps the empty-state copy away from a category that has badges', async () => {
@@ -116,7 +116,7 @@ describe('Achievements/Index', () => {
 
         await filterBy(wrapper, 'Volume')
 
-        expect(wrapper.text()).not.toContain('Aucun badge dans cette catégorie.')
+        expect(wrapper.text()).not.toContain('Aucun badge dans cette catégorie')
     })
 
     it('dates a won badge the French way round', () => {

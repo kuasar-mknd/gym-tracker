@@ -9,6 +9,8 @@
 import { computed } from 'vue'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import BaseChart from './BaseChart.vue'
+import { volume } from '@/Utils/nombre'
+import { formatVolumeTick } from '@/Utils/volumeAxis'
 
 const props = defineProps({
     data: {
@@ -40,7 +42,7 @@ const datasets = computed(() => [
     },
     {
         type: 'bar',
-        label: 'Volume Total (kg)',
+        label: 'Volume total',
         data: seances.value.map((session) =>
             session.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0),
         ),
@@ -62,7 +64,7 @@ const infobulle = {
                 label += ': '
             }
             if (context.parsed.y !== null) {
-                label += context.parsed.y.toLocaleString()
+                label += volume(context.parsed.y)
             }
             return label
         },
@@ -73,12 +75,7 @@ const axeY = {
     position: 'left',
     grid: { color: jetonTransparent('surface-sunken', 0.5) },
     ticks: {
-        callback: function (value) {
-            if (value >= 1000) {
-                return (value / 1000).toFixed(1) + 'k'
-            }
-            return value
-        },
+        callback: formatVolumeTick,
     },
 }
 

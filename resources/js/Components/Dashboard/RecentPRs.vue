@@ -2,6 +2,7 @@
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { defineAsyncComponent } from 'vue'
+import { poids, volume } from '@/Utils/nombre'
 
 const RecentPRsChart = defineAsyncComponent(() => import('@/Components/Stats/RecentPRsChart.vue'))
 
@@ -17,7 +18,7 @@ defineProps({
         class="stagger-6 animate-slide-up border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-6 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
     >
         <div class="relative z-10 mb-6">
-            <h3 class="sur-titre text-accent-primary-deep mb-1">Réussites</h3>
+            <h3 class="text-accent-primary-deep sur-titre mb-1">Réussites</h3>
             <p class="font-display text-text-main text-2xl font-black uppercase italic">Records Personnels</p>
         </div>
 
@@ -50,10 +51,7 @@ defineProps({
                     </div>
                     <div class="text-right">
                         <div class="font-display text-accent-primary-deep text-2xl font-black">
-                            {{ pr.value
-                            }}<span class="text-text-muted text-sm">{{
-                                pr.type === 'max_volume_set' ? '' : 'kg'
-                            }}</span>
+                            {{ pr.type === 'max_volume_set' ? volume(pr.value) : poids(pr.value) }}
                         </div>
                     </div>
                 </div>

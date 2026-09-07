@@ -111,9 +111,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
 <template>
     <Modal :show="show" @close="fermer" max-width="lg" aria-labelledby="add-exercise-title">
         <div class="p-6">
-            <h2 id="add-exercise-title" class="font-display text-text-main mb-6 text-2xl font-black uppercase italic">
-                Ajouter un exercice
-            </h2>
+            <h2 id="add-exercise-title" class="titre-section mb-6">Ajouter un exercice</h2>
             <div v-if="!showCreateForm">
                 <div class="pb-4">
                     <GlassInput
@@ -162,7 +160,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
             <div v-else class="space-y-6">
                 <div class="flex items-center gap-4">
                     <GlassIconButton icon="arrow_back" label="Retour" @click="showCreateForm = false" />
-                    <h3 class="font-display text-text-main text-xl font-black uppercase italic">Nouvel Exercice</h3>
+                    <h3 class="titre-carte">Nouvel Exercice</h3>
                 </div>
 
                 <form @submit.prevent="createAndAddExercise" class="space-y-4">

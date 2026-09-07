@@ -2,8 +2,9 @@
 import { Deferred } from '@inertiajs/vue3'
 import { defineAsyncComponent, computed } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { nombre } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 
@@ -23,7 +24,7 @@ const totalVolume = computed(() => {
     <GlassCard class="stagger-3 animate-slide-up">
         <div class="mb-4 flex items-center justify-between">
             <div>
-                <h3 class="font-display text-text-main text-lg font-black uppercase italic">Évolution du Volume</h3>
+                <h3 class="titre-carte">Évolution du Volume</h3>
                 <p class="text-text-muted text-xs font-semibold">
                     {{
                         currentPeriod === '7j'
@@ -40,7 +41,7 @@ const totalVolume = computed(() => {
             <div class="text-right">
                 <div class="text-text-muted text-xs font-black tracking-wider uppercase">Total</div>
                 <div class="font-display text-accent-primary-deep text-2xl font-black">
-                    {{ totalVolume.toLocaleString() }}
+                    {{ nombre(totalVolume, 0) }}
                     <span class="text-text-muted text-sm">kg</span>
                 </div>
             </div>
@@ -53,10 +54,7 @@ const totalVolume = computed(() => {
                 <div v-if="volumeTrend && volumeTrend.length > 0" class="h-full">
                     <VolumeTrendChart :data="volumeTrend" />
                 </div>
-                <div v-else class="flex h-full flex-col items-center justify-center text-center">
-                    <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                    <p class="text-text-muted text-sm">Pas encore de données de volume</p>
-                </div>
+                <GlassEmptyState v-else taille="ligne" icon="bar_chart" title="Pas encore de données de volume" />
             </Deferred>
         </div>
     </GlassCard>

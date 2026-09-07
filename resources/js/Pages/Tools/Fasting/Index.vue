@@ -32,6 +32,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import duration from 'dayjs/plugin/duration'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 dayjs.extend(relativeTime)
 dayjs.extend(duration)
@@ -190,7 +191,7 @@ const formatHistoryDuration = (start, end) => {
 <template>
     <Head title="Suivi de Jeûne" />
 
-    <AuthenticatedLayout page-title="Suivi de Jeûne" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Suivi de Jeûne" show-back back-route="tools.index" largeur="etroite">
         <template #header>
             <div class="flex items-center gap-4">
                 <Link
@@ -199,7 +200,7 @@ const formatHistoryDuration = (start, end) => {
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h2 class="text-text-main text-xl font-semibold">Suivi de Jeûne</h2>
+                <h2 class="titre-carte">Suivi de Jeûne</h2>
             </div>
         </template>
 
@@ -258,7 +259,7 @@ const formatHistoryDuration = (start, end) => {
 
             <!-- Start Fast Section -->
             <GlassCard v-else class="mx-auto max-w-md">
-                <h3 class="text-text-main mb-6 text-lg font-semibold">Démarrer un jeûne</h3>
+                <h3 class="titre-carte mb-6">Démarrer un jeûne</h3>
 
                 <form @submit.prevent="startFast" class="space-y-4">
                     <GlassSelect
@@ -299,14 +300,17 @@ const formatHistoryDuration = (start, end) => {
             <!-- History Analytics Chart Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Durée des jeûnes</h3>
+                    <h3 class="titre-carte">Durée des jeûnes</h3>
                     <p class="text-text-muted text-xs font-semibold">Historique récent (heures)</p>
                 </div>
 
-                <div v-if="history.data.filter((f) => f.end_time).length === 0" class="py-8 text-center">
-                    <GlassIcon name="show_chart" size="xl" class="text-surface-sunken mb-2" />
-                    <p class="text-text-muted text-sm font-medium">Pas assez de données pour afficher le graphique.</p>
-                </div>
+                <GlassEmptyState
+                    v-if="history.data.filter((f) => f.end_time).length === 0"
+                    taille="ligne"
+                    icon="show_chart"
+                    title="Pas assez de données pour afficher le graphique"
+                    class="h-64"
+                />
                 <div v-else>
                     <FastingHistoryChart :data="history.data" />
                 </div>
@@ -314,10 +318,13 @@ const formatHistoryDuration = (start, end) => {
 
             <!-- History Details Section -->
             <GlassCard>
-                <h3 class="text-text-main mb-4 text-lg font-semibold">Historique détaillé</h3>
-                <div v-if="history.data.length === 0" class="text-text-muted py-4 text-center">
-                    Aucun historique de jeûne.
-                </div>
+                <h3 class="titre-carte mb-4">Historique détaillé</h3>
+                <GlassEmptyState
+                    v-if="history.data.length === 0"
+                    taille="ligne"
+                    icon="history"
+                    title="Aucun historique de jeûne"
+                />
                 <div v-else class="space-y-3">
                     <div
                         v-for="fast in history.data"

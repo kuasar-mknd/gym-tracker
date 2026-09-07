@@ -105,7 +105,8 @@ describe('the Wilks page', () => {
 
         // The formula returns a long float; two decimals is this page's
         // presentation of it, and a raw 320.4517293... would read as noise.
-        expect(wrapper.text()).toMatch(/\d+\.\d{2}(?!\d)/)
+        // La virgule est celle de la charte des nombres (#1787).
+        expect(wrapper.text()).toMatch(/\d+,\d{2}(?!\d)/)
     })
 
     it('says so with a buzz when the server refuses', async () => {

@@ -12,6 +12,8 @@ import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassStat from '@/Components/UI/GlassStat.vue'
+import { poids, nombre, variation, pourcentage } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
@@ -93,7 +95,8 @@ const previousWeight = computed(() => {
 
 const weightDiff = computed(() => {
     if (!latestWeight.value || !previousWeight.value) return null
-    return (latestWeight.value - previousWeight.value).toFixed(1)
+
+    return Number(latestWeight.value) - Number(previousWeight.value)
 })
 
 const latestBodyFat = computed(() => {
@@ -129,7 +132,7 @@ const latestBodyFat = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Poids</h2>
+                <h2 class="titre-carte">Poids</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}
@@ -141,13 +144,13 @@ const latestBodyFat = computed(() => {
             <!-- Quick Stats -->
             <div class="animate-slide-up grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <GlassStat
-                    :valeur="latestWeight ?? '—'"
+                    :valeur="latestWeight ? nombre(latestWeight) : '—'"
                     :unite="latestWeight ? 'kg' : null"
                     libelle="Poids"
                     ton="text-gradient"
                 />
                 <GlassStat
-                    :valeur="weightDiff ? `${weightDiff > 0 ? '+' : ''}${weightDiff}` : '—'"
+                    :valeur="weightDiff ? variation(weightDiff, null) : '—'"
                     :unite="weightDiff ? 'kg' : null"
                     libelle="Évolution"
                     :tendance="
@@ -157,7 +160,7 @@ const latestBodyFat = computed(() => {
                     "
                 />
                 <GlassStat
-                    :valeur="latestBodyFat ?? '—'"
+                    :valeur="latestBodyFat ? nombre(latestBodyFat) : '—'"
                     :unite="latestBodyFat ? '%' : null"
                     libelle="Masse grasse"
                     ton="text-accent-secondary-deep"
@@ -166,7 +169,7 @@ const latestBodyFat = computed(() => {
 
             <!-- Add Form (collapsible) -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">Nouvelle entrée</h3>
+                <h3 class="titre-carte mb-4">Nouvelle entrée</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-3 gap-4">
                         <GlassInput
@@ -224,39 +227,27 @@ const latestBodyFat = computed(() => {
                 <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                     <!-- Weight Chart -->
                     <GlassCard>
-                        <h3
-                            class="font-display text-accent-info-deep tracking-sur-titre mb-4 text-xs font-black uppercase"
-                        >
-                            Évolution Poids
-                        </h3>
+                        <h3 class="text-accent-info-deep sur-titre mb-4">Évolution Poids</h3>
                         <div class="h-64">
                             <WeightHistoryChart
                                 hauteur="h-full"
                                 v-if="bodyStats?.weightHistory && bodyStats.weightHistory.length > 0"
                                 :data="bodyStats.weightHistory"
                             />
-                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                                Aucune donnée disponible
-                            </div>
+                            <GlassEmptyState v-else taille="ligne" icon="query_stats" title="Aucune donnée" />
                         </div>
                     </GlassCard>
 
                     <!-- Body Fat Chart -->
                     <GlassCard>
-                        <h3
-                            class="font-display text-accent-secondary-deep tracking-sur-titre mb-4 text-xs font-black uppercase"
-                        >
-                            Évolution Masse Grasse
-                        </h3>
+                        <h3 class="text-accent-secondary-deep sur-titre mb-4">Évolution Masse Grasse</h3>
                         <div class="h-64">
                             <BodyFatLineChart
                                 hauteur="h-full"
                                 v-if="bodyStats?.bodyFatHistory && bodyStats.bodyFatHistory.length > 0"
                                 :data="bodyStats.bodyFatHistory"
                             />
-                            <div v-else class="text-text-muted/50 flex h-full items-center justify-center font-medium">
-                                Aucune donnée disponible
-                            </div>
+                            <GlassEmptyState v-else taille="ligne" icon="query_stats" title="Aucune donnée" />
                         </div>
                     </GlassCard>
                 </div>
@@ -264,29 +255,31 @@ const latestBodyFat = computed(() => {
 
             <!-- History -->
             <div class="stagger-4 animate-slide-up">
-                <h3 class="font-display text-accent-info-deep tracking-sur-titre mb-3 text-xs font-black uppercase">
-                    Historique
-                </h3>
+                <h3 class="text-accent-info-deep sur-titre mb-3">Historique</h3>
 
-                <div v-if="measurements.length === 0">
-                    <GlassCard>
-                        <div class="py-8 text-center">
-                            <div class="mb-2 text-4xl">⚖️</div>
-                            <p class="text-text-muted">Aucune mesure pour l'instant</p>
-                        </div>
-                    </GlassCard>
-                </div>
+                <GlassEmptyState
+                    v-if="measurements.length === 0"
+                    icon="⚖️"
+                    title="Aucune mesure"
+                    description="Pèse-toi une première fois pour ouvrir la courbe."
+                    action-label="Ajouter une mesure"
+                    action-id="empty-state-measurement"
+                    color="cyan"
+                    @action="showAddForm = true"
+                />
 
                 <div v-else class="space-y-2">
                     <GlassCard v-for="measurement in measurements" :key="measurement.id" padding="p-4" class="group">
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="flex items-baseline gap-2">
-                                    <span class="text-text-main text-xl font-bold">{{ measurement.weight }} kg</span>
+                                    <span class="text-text-main text-xl font-bold">{{
+                                        poids(measurement.weight)
+                                    }}</span>
                                     <span
                                         v-if="measurement.body_fat"
                                         class="bg-accent-secondary/15 text-accent-secondary-deep rounded-full px-2 py-0.5 text-xs font-bold"
-                                        >{{ measurement.body_fat }}% BF</span
+                                        >{{ pourcentage(measurement.body_fat) }} BF</span
                                     >
                                 </div>
                                 <div class="text-text-muted text-sm font-medium">

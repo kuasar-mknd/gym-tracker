@@ -4,6 +4,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { defineAsyncComponent } from 'vue'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const RecentWorkoutsTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/RecentWorkoutsTimelineChart.vue'),
@@ -21,7 +22,7 @@ const emit = defineEmits(['startWorkout'])
     <!-- Recent Activity -->
     <section class="stagger-4 animate-slide-up">
         <div class="mb-5 flex items-center justify-between px-1">
-            <h3 class="text-text-muted tracking-sur-titre text-xs font-black uppercase">Activité Récente</h3>
+            <h3 class="text-text-muted sur-titre">Activité Récente</h3>
             <Link
                 :href="route('workouts.index')"
                 class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary rounded-md text-xs font-bold tracking-wider uppercase transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
@@ -31,17 +32,18 @@ const emit = defineEmits(['startWorkout'])
         </div>
 
         <!-- Empty State -->
-        <div
+        <GlassEmptyState
             v-if="recentWorkouts.length === 0"
-            class="border-surface-card/20 bg-surface-card/10 rounded-3xl border p-8 text-center backdrop-blur-md"
+            icon="🏋️"
+            title="Aucune séance pour l'instant"
+            description="Commence ton parcours fitness !"
         >
-            <div class="mb-3 text-5xl" aria-hidden="true">🏋️</div>
-            <p class="text-text-main font-bold">Aucune séance pour l'instant</p>
-            <p class="text-text-muted mt-1 mb-5 text-sm">Commence ton parcours fitness !</p>
-            <GlassButton variant="primary" @click="emit('startWorkout')" :loading="processing" class="mx-auto">
-                Démarrer une séance
-            </GlassButton>
-        </div>
+            <template #action>
+                <GlassButton variant="primary" :loading="processing" class="mx-auto" @click="emit('startWorkout')">
+                    Démarrer une séance
+                </GlassButton>
+            </template>
+        </GlassEmptyState>
 
         <!-- Activity Cards and Chart -->
         <div v-else class="flex flex-col gap-3">

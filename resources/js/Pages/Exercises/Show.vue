@@ -4,6 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { computed, defineAsyncComponent } from 'vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
@@ -97,7 +98,7 @@ const averageWeightData = computed(() => {
     return [...props.history].reverse().map((session) => {
         const setsWithWeight = session.sets.filter((s) => parseFloat(s.weight) > 0)
         const totalWeight = setsWithWeight.reduce((sum, s) => sum + parseFloat(s.weight), 0)
-        const average = setsWithWeight.length > 0 ? (totalWeight / setsWithWeight.length).toFixed(1) : 0
+        const average = setsWithWeight.length > 0 ? totalWeight / setsWithWeight.length : 0
         return {
             date: session.formatted_date.split('/').slice(0, 2).join('/'),
             weight: average,
@@ -168,7 +169,7 @@ const scatterData = computed(() => {
                     <GlassIcon name="arrow_back" />
                 </Link>
                 <div>
-                    <h1 class="font-display text-text-main text-2xl font-black tracking-tight uppercase italic">
+                    <h1 class="titre-section">
                         {{ exercise.name }}
                     </h1>
                     <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
@@ -183,16 +184,19 @@ const scatterData = computed(() => {
             <!-- Progress Chart -->
             <GlassCard class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression 1RM</h3>
+                    <h3 class="titre-carte">Progression 1RM</h3>
                     <p class="text-text-muted text-xs font-semibold">Estimation sur 1 an</p>
                 </div>
                 <div v-if="progress.length > 0" class="h-64">
                     <OneRepMaxChart :data="progress" />
                 </div>
-                <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                    <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                    <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                </div>
+                <GlassEmptyState
+                    v-else
+                    taille="ligne"
+                    icon="show_chart"
+                    title="Pas assez de données pour afficher le graphique"
+                    class="h-64"
+                />
             </GlassCard>
 
             <!-- Analytics Grid -->
@@ -202,7 +206,7 @@ const scatterData = computed(() => {
             >
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume</h3>
+                        <h3 class="titre-carte">Volume</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume total par séance (kg)</p>
                     </div>
                     <div class="h-64">
@@ -212,7 +216,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Endurance</h3>
+                        <h3 class="titre-carte">Endurance</h3>
                         <p class="text-text-muted text-xs font-semibold">Max Reps par série</p>
                     </div>
                     <div class="h-64">
@@ -222,7 +226,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Volume (Reps)</h3>
+                        <h3 class="titre-carte">Volume (Reps)</h3>
                         <p class="text-text-muted text-xs font-semibold">Total des répétitions par séance</p>
                     </div>
                     <div class="h-64">
@@ -232,7 +236,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charges</h3>
+                        <h3 class="titre-carte">Charges</h3>
                         <p class="text-text-muted text-xs font-semibold">Distribution des poids utilisés</p>
                     </div>
                     <div class="h-64">
@@ -242,7 +246,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charge Max</h3>
+                        <h3 class="titre-carte">Charge Max</h3>
                         <p class="text-text-muted text-xs font-semibold">Maximum soulevé par séance (kg)</p>
                     </div>
                     <div class="h-64">
@@ -252,7 +256,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">1RM Estimé</h3>
+                        <h3 class="titre-carte">1RM Estimé</h3>
                         <p class="text-text-muted text-xs font-semibold">Meilleur 1RM estimé par séance</p>
                     </div>
                     <div class="h-64">
@@ -262,7 +266,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Charge Moyenne</h3>
+                        <h3 class="titre-carte">Charge Moyenne</h3>
                         <p class="text-text-muted text-xs font-semibold">Poids moyen par série (kg)</p>
                     </div>
                     <div class="h-64">
@@ -272,7 +276,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Séries</h3>
+                        <h3 class="titre-carte">Séries</h3>
                         <p class="text-text-muted text-xs font-semibold">Nombre de séries par séance</p>
                     </div>
                     <div class="h-64">
@@ -282,7 +286,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">Poids vs Reps</h3>
+                        <h3 class="titre-carte">Poids vs Reps</h3>
                         <p class="text-text-muted text-xs font-semibold">Répartition de toutes les séries</p>
                     </div>
                     <div class="h-64">
@@ -292,9 +296,7 @@ const scatterData = computed(() => {
 
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Progression par Série
-                        </h3>
+                        <h3 class="titre-carte">Progression par Série</h3>
                         <p class="text-text-muted text-xs font-semibold">Poids des 3 premières séries dans le temps</p>
                     </div>
                     <div class="h-64">
@@ -303,28 +305,31 @@ const scatterData = computed(() => {
                 </GlassCard>
             </div>
             <GlassCard v-else class="stagger-1 animate-slide-up">
-                <div class="flex h-64 flex-col items-center justify-center text-center">
-                    <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                    <p class="text-text-muted text-sm">Pas assez de données pour afficher les statistiques</p>
-                </div>
+                <GlassEmptyState
+                    taille="ligne"
+                    icon="bar_chart"
+                    title="Pas assez de données pour afficher les statistiques"
+                    class="h-64"
+                />
             </GlassCard>
 
             <!-- Session Performance Chart -->
             <div class="stagger-3 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Performance Historique
-                        </h3>
+                        <h3 class="titre-carte">Performance Historique</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume et 1RM au fil du temps</p>
                     </div>
                     <div v-if="history.length > 0" class="h-64">
                         <SessionPerformanceChart :data="history" />
                     </div>
-                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <GlassIcon name="bar_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                    </div>
+                    <GlassEmptyState
+                        v-else
+                        taille="ligne"
+                        icon="bar_chart"
+                        title="Pas assez de données pour afficher le graphique"
+                        class="h-64"
+                    />
                 </GlassCard>
             </div>
 
@@ -332,18 +337,19 @@ const scatterData = computed(() => {
             <div class="stagger-4 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Évolution du Volume
-                        </h3>
+                        <h3 class="titre-carte">Évolution du Volume</h3>
                         <p class="text-text-muted text-xs font-semibold">Volume total par séance</p>
                     </div>
                     <div v-if="volumeData.length > 0" class="h-64">
                         <SessionVolumeLineChart :data="volumeData" />
                     </div>
-                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                    </div>
+                    <GlassEmptyState
+                        v-else
+                        taille="ligne"
+                        icon="show_chart"
+                        title="Pas assez de données pour afficher le graphique"
+                        class="h-64"
+                    />
                 </GlassCard>
             </div>
 
@@ -351,18 +357,19 @@ const scatterData = computed(() => {
             <div class="stagger-4 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
-                        <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                            Historique du 1RM
-                        </h3>
+                        <h3 class="titre-carte">Historique du 1RM</h3>
                         <p class="text-text-muted text-xs font-semibold">Évolution du meilleur 1RM estimé</p>
                     </div>
                     <div v-if="history.length > 0" class="h-64">
                         <HistoryChart :data="history" />
                     </div>
-                    <div v-else class="flex h-64 flex-col items-center justify-center text-center">
-                        <GlassIcon name="show_chart" size="2xl" class="text-text-muted/30 mb-2" />
-                        <p class="text-text-muted text-sm">Pas assez de données pour afficher le graphique</p>
-                    </div>
+                    <GlassEmptyState
+                        v-else
+                        taille="ligne"
+                        icon="show_chart"
+                        title="Pas assez de données pour afficher le graphique"
+                        class="h-64"
+                    />
                 </GlassCard>
             </div>
         </div>

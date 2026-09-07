@@ -6,17 +6,18 @@ describe('formatVolumeTick', () => {
         // The defect this rule exists for: toFixed(0) labelled 1500 as "2k",
         // and with the 500 kg step Chart.js picks for smaller volumes the axis
         // read "1k, 2k, 2k, 3k, 3k" — duplicated labels, each 500 kg out.
-        expect(formatVolumeTick(1500)).toBe('1.5k')
-        expect(formatVolumeTick(2500)).toBe('2.5k')
+        expect(formatVolumeTick(1500)).toBe('1,5k')
+        expect(formatVolumeTick(2500)).toBe('2,5k')
     })
 
     it('still labels round thousands cleanly', () => {
-        expect(formatVolumeTick(2000)).toBe('2.0k')
-        expect(formatVolumeTick(12000)).toBe('12.0k')
+        // Sans décimale morte : « 2k », pas « 2,0k ».
+        expect(formatVolumeTick(2000)).toBe('2k')
+        expect(formatVolumeTick(12000)).toBe('12k')
     })
 
     it('shortens from a thousand up, not from the tick after it', () => {
-        expect(formatVolumeTick(1000)).toBe('1.0k')
+        expect(formatVolumeTick(1000)).toBe('1k')
         expect(formatVolumeTick(999)).toBe(999)
     })
 

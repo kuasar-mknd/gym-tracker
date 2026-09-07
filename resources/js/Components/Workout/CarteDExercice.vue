@@ -55,7 +55,7 @@ defineEmits([
               the exercise you are working on was effectively
               invisible.
             -->
-                <h3 class="font-display text-text-main text-lg font-black uppercase italic">
+                <h3 class="titre-carte">
                     {{ line.exercise.name }}
                 </h3>
                 <p class="text-text-muted text-xs font-bold uppercase">

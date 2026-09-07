@@ -12,7 +12,7 @@ const post = vi.fn()
 const patch = vi.fn()
 
 vi.mock('@inertiajs/vue3', () => ({ usePage: () => page }))
-vi.mock('axios', () => ({ default: { post: (...args) => post(...args) } }))
+vi.mock('@/Utils/http', () => ({ http: { post: (...args) => post(...args) } }))
 vi.mock('@/Utils/SyncService', () => ({ default: { patch: (...args) => patch(...args) } }))
 
 import UpdateNotificationPreferencesForm from '@/Pages/Profile/Partials/UpdateNotificationPreferencesForm.vue'

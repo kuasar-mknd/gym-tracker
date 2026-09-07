@@ -1,3 +1,4 @@
+import { poids } from '@/Utils/nombre'
 /**
  * Progression d'échauffement : quel poids pour chaque palier.
  *
@@ -54,7 +55,7 @@ export function calculateWarmupSets(steps, { targetWeight, barWeight, roundingIn
         return {
             ...step,
             weight,
-            plateLoad: perSide > 0 ? `${perSide}kg` : 'Vide',
+            plateLoad: perSide > 0 ? poids(perSide) : 'Vide',
         }
     })
 }

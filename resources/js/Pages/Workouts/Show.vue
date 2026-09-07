@@ -26,6 +26,7 @@ import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
 
 const props = defineProps({
     workout: { type: Object, required: true },
@@ -163,6 +164,8 @@ const {
     apresValidation,
 })
 
+useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })
+
 const {
     savingTemplate,
     saveAsTemplate,
@@ -227,7 +230,12 @@ onUnmounted(() => {
 
 <template>
     <Head :title="localWorkout.name || 'Séance'" />
-    <AuthenticatedLayout :page-title="localWorkout.name" :show-back="true" back-route="workouts.index">
+    <AuthenticatedLayout
+        :page-title="localWorkout.name"
+        :show-back="true"
+        back-route="workouts.index"
+        largeur="moyenne"
+    >
         <!-- Fixed rather than in the flow: the set being edited can be anywhere
              down a long session, and a message that scrolls out of view is the
              same as no message. -->
@@ -269,7 +277,7 @@ onUnmounted(() => {
                     v-if="localWorkout.workout_lines.length === 0"
                     class="flex flex-col items-center justify-center p-12 text-center"
                 >
-                    <h3 class="font-display text-text-main mb-4 text-2xl font-black uppercase italic">Séance vide</h3>
+                    <h3 class="titre-section mb-4">Séance vide</h3>
                     <GlassButton
                         v-if="!isFinished"
                         variant="primary"

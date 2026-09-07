@@ -28,6 +28,17 @@ defineProps({
         default: 'orange', // orange, violet, pink, cyan
         validator: (value) => ['orange', 'violet', 'pink', 'cyan', 'green'].includes(value),
     },
+    /**
+     * `carte` occupe une page ; `ligne` tient dans une carte déjà titrée.
+     *
+     * Dix-sept écrans écrivaient leur propre « Aucun… » parce que la carte
+     * complète était trop lourde à l'intérieur d'un graphique (#1791).
+     */
+    taille: {
+        type: String,
+        default: 'carte',
+        validator: (valeur) => ['carte', 'ligne'].includes(valeur),
+    },
 })
 
 defineEmits(['action'])
@@ -75,9 +86,18 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
 </script>
 
 <template>
-    <GlassCard class="relative overflow-hidden p-8 text-center" variant="default">
+    <component
+        :is="taille === 'carte' ? GlassCard : 'div'"
+        :class="
+            taille === 'carte'
+                ? 'relative overflow-hidden p-8 text-center'
+                : 'flex h-full flex-col items-center justify-center py-6 text-center'
+        "
+        :variant="taille === 'carte' ? 'default' : undefined"
+    >
         <!-- Liquid Glow Background behind Icon -->
         <div
+            v-if="taille === 'carte'"
             class="absolute top-1/2 left-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-3xl"
             :class="glowColors[color]"
         ></div>
@@ -85,14 +105,22 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
         <div class="relative z-10 flex flex-col items-center">
             <!-- Icon Wrapper -->
             <div
-                class="border-surface-card/50 bg-surface-card/30 mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg backdrop-blur-md"
+                :class="
+                    taille === 'carte'
+                        ? 'border-surface-card/50 bg-surface-card/30 mb-4 flex h-20 w-20 items-center justify-center rounded-3xl border shadow-lg backdrop-blur-md'
+                        : 'mb-2 flex items-center justify-center'
+                "
             >
                 <!-- Emoji -->
-                <span v-if="icon && !isLigatureName(icon)" class="text-5xl drop-shadow-sm">{{ icon }}</span>
+                <span
+                    v-if="icon && !isLigatureName(icon)"
+                    :class="taille === 'carte' ? 'text-5xl drop-shadow-sm' : 'text-3xl'"
+                    >{{ icon }}</span
+                >
                 <span
                     v-else-if="icon"
-                    class="material-symbols-outlined text-4xl"
-                    :class="iconColors[color]"
+                    class="material-symbols-outlined"
+                    :class="[iconColors[color], taille === 'carte' ? 'text-4xl' : 'text-3xl']"
                     aria-hidden="true"
                 >
                     {{ icon }}
@@ -101,11 +129,16 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
             </div>
 
             <!-- Content -->
-            <h3 class="font-display text-text-main mb-2 text-xl font-black uppercase italic">
+            <h3 v-if="taille === 'carte'" class="titre-carte mb-2">
                 {{ title }}
             </h3>
+            <p v-else class="text-text-muted text-sm font-medium">{{ title }}</p>
 
-            <p v-if="description" class="text-text-muted mb-6 max-w-xs text-sm font-medium">
+            <p
+                v-if="description"
+                class="text-text-muted max-w-xs text-sm font-medium"
+                :class="taille === 'carte' ? 'mb-6' : 'mt-1 text-xs'"
+            >
                 {{ description }}
             </p>
 
@@ -118,5 +151,5 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
                 </slot>
             </div>
         </div>
-    </GlassCard>
+    </component>
 </template>

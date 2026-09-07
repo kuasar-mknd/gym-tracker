@@ -15,6 +15,7 @@ import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
 import { defineAsyncComponent } from 'vue'
+import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 
 const ActiveGoalsChart = defineAsyncComponent(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
@@ -57,6 +58,8 @@ const startWorkout = () => {
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
 
+            <InvitationDInstallation />
+
             <Deferred data="analyticalStats">
                 <template #fallback>
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -98,7 +101,7 @@ const startWorkout = () => {
                 class="stagger-6 animate-slide-up relative overflow-hidden"
             >
                 <div class="relative z-10 mb-6">
-                    <h3 class="sur-titre text-accent-primary-deep mb-1">Visualisation</h3>
+                    <h3 class="text-accent-primary-deep sur-titre mb-1">Visualisation</h3>
                     <p class="font-display text-text-main text-2xl font-black uppercase italic">
                         Progression des Objectifs
                     </p>

@@ -1,10 +1,11 @@
 <script setup>
 import { ref, watch, defineAsyncComponent } from 'vue'
-import axios from 'axios'
+import { http } from '@/Utils/http'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 
@@ -46,7 +47,7 @@ const fetchExerciseProgress = async (exerciseId) => {
     loadFailed.value = false
     exerciseProgressData.value = []
     try {
-        const response = await axios.get(route('stats.exercise', { exercise: exerciseId }))
+        const response = await http.get(route('stats.exercise', { exercise: exerciseId }))
 
         if (exerciseId !== selectedExercise.value) {
             return
@@ -79,7 +80,7 @@ watch(selectedExercise, (newVal) => {
     <!-- Exercise Progress (1RM) -->
     <GlassCard>
         <div class="mb-4">
-            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression 1RM</h3>
+            <h3 class="titre-carte">Progression 1RM</h3>
             <div class="mt-3">
                 <GlassSelect
                     v-model="selectedExercise"
@@ -109,13 +110,11 @@ watch(selectedExercise, (newVal) => {
         <div v-else-if="selectedExercise && exerciseProgressData.length > 0" class="h-48">
             <OneRepMaxChart :data="exerciseProgressData" />
         </div>
-        <div v-else-if="selectedExercise" class="flex h-48 flex-col items-center justify-center text-center">
-            <GlassIcon name="trending_up" size="xl" class="text-text-muted/30 mb-2" />
-            <p class="text-text-muted text-sm">Pas assez de données pour cet exercice</p>
+        <div v-else-if="selectedExercise" class="h-48">
+            <GlassEmptyState taille="ligne" icon="trending_up" title="Pas assez de données pour cet exercice" />
         </div>
-        <div v-else class="flex h-48 flex-col items-center justify-center text-center">
-            <GlassIcon name="fitness_center" size="xl" class="text-text-muted/30 mb-2" />
-            <p class="text-text-muted text-sm">Choisis un exercice pour voir ton évolution</p>
+        <div v-else class="h-48">
+            <GlassEmptyState taille="ligne" icon="fitness_center" title="Choisis un exercice pour voir ton évolution" />
         </div>
     </GlassCard>
 </template>

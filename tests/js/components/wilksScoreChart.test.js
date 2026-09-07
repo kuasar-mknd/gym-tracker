@@ -45,7 +45,7 @@ describe('WilksScoreChart', () => {
     it('annonce le score au centième dans l’infobulle', () => {
         const wrapper = mountChart([{ created_at: '2026-01-05T12:00:00Z', score: 320.5 }])
 
-        expect(tooltipLabelOf(wrapper, 'Line', { parsed: { y: 320.5 } })).toBe('Score: 320.50')
-        expect(tooltipLabelOf(wrapper, 'Line', { parsed: { y: 300 } })).toBe('Score: 300.00')
+        expect(tooltipLabelOf(wrapper, 'Line', { parsed: { y: 320.5 } })).toBe('Score : 320,50')
+        expect(tooltipLabelOf(wrapper, 'Line', { parsed: { y: 300 } })).toBe('Score : 300,00')
     })
 })

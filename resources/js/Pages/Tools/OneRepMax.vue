@@ -1,13 +1,11 @@
 <template>
     <Head title="Calculatrice 1RM" />
 
-    <AuthenticatedLayout show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculatrice<br />
                     <span class="text-gradient">1RM</span>
                 </h1>
@@ -62,10 +60,10 @@
                         <div
                             class="from-accent-primary to-accent-secondary font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
                         >
-                            {{ formatWeight(oneRepMax) }}
+                            {{ nombre(oneRepMax) }}
                         </div>
                         <div class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                            Basé sur {{ weight }} x {{ reps }}
+                            Basé sur {{ poids(weight) }} × {{ entier(reps) }}
                         </div>
                     </GlassCard>
                 </div>
@@ -74,9 +72,7 @@
                 <div v-if="oneRepMax > 0">
                     <GlassCard class="stagger-2 animate-slide-up h-full shadow-2xl">
                         <div class="p-6">
-                            <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
-                                Pourcentages d'Entraînement
-                            </h2>
+                            <h2 class="titre-carte mb-4">Pourcentages d'Entraînement</h2>
 
                             <!-- Chart Component -->
                             <div class="mb-6 h-48 w-full">
@@ -102,8 +98,10 @@
                                             :key="p.percent"
                                             class="hover:bg-surface-sunken transition-colors duration-200"
                                         >
-                                            <td class="text-text-main px-6 py-4 font-medium">{{ p.percent }}%</td>
-                                            <td class="text-text-main px-6 py-4">{{ formatWeight(p.value) }} kg</td>
+                                            <td class="text-text-main px-6 py-4 font-medium">
+                                                {{ pourcentage(p.percent, 0) }}
+                                            </td>
+                                            <td class="text-text-main px-6 py-4">{{ poids(p.value) }}</td>
                                             <td class="px-6 py-4">{{ p.reps }}</td>
                                         </tr>
                                     </tbody>
@@ -128,6 +126,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import { oneRepMax as epley } from '@/Utils/formulas'
+import { entier, nombre, poids, pourcentage } from '@/Utils/nombre'
 
 const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 
@@ -167,10 +166,4 @@ const percentages = computed(() => {
         reps: repMap[p] || '-',
     }))
 })
-
-const formatWeight = (val) => {
-    // Round to nearest 0.5 or 1? usually 1RM is kept somewhat precise or rounded to nearest plate fraction.
-    // Let's keep 1 decimal if needed, but remove .0
-    return parseFloat(val.toFixed(1)).toString()
-}
 </script>

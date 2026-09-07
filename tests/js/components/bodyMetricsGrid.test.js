@@ -55,7 +55,7 @@ describe('BodyMetricsGrid', () => {
     })
 
     it('affiche la masse grasse mesurée', async () => {
-        expect(readings(await mountGrid({ bodyFat: 18.5 }))[0]).toBe('18.5 %')
+        expect(readings(await mountGrid({ bodyFat: 18.5 }))[0]).toBe('18,5 %')
     })
 
     it('arrondit le volume du mois au kilo', async () => {
@@ -75,7 +75,7 @@ describe('BodyMetricsGrid', () => {
         const wrapper = await mountGrid({ monthlyComparison: { current_volume: 1000, percentage: 12 } })
 
         expect(wrapper.findAll('span.material-symbols-outlined').at(-1).text()).toBe('trending_up')
-        expect(trendBadge(wrapper).text().replace(/\s+/g, ' ')).toContain('+12%')
+        expect(trendBadge(wrapper).text().replace(/\s+/g, ' ')).toContain('+12 %')
         expect(trendBadge(wrapper).classes()).toContain('text-trend-up')
     })
 
@@ -84,7 +84,7 @@ describe('BodyMetricsGrid', () => {
 
         expect(wrapper.findAll('span.material-symbols-outlined').at(-1).text()).toBe('trending_down')
         const badge = trendBadge(wrapper).text().replace(/\s+/g, ' ')
-        expect(badge).toContain('-8%')
+        expect(badge).toContain('-8 %')
         expect(badge).not.toContain('+')
         expect(trendBadge(wrapper).classes()).toContain('text-trend-down')
     })
@@ -95,7 +95,7 @@ describe('BodyMetricsGrid', () => {
         const wrapper = await mountGrid({ monthlyComparison: { current_volume: 1000, percentage: 0 } })
 
         expect(wrapper.findAll('span.material-symbols-outlined').at(-1).text()).toBe('trending_up')
-        expect(trendBadge(wrapper).text().replace(/\s+/g, ' ')).toContain('+0%')
+        expect(trendBadge(wrapper).text().replace(/\s+/g, ' ')).toContain('0 %')
         expect(trendBadge(wrapper).classes()).toContain('text-trend-up')
     })
 

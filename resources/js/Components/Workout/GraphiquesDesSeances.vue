@@ -22,7 +22,7 @@ defineProps({
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <GlassCard v-if="charts?.day_of_week_frequency?.length > 0">
             <div class="mb-4">
-                <h3 class="text-text-main text-lg font-bold">Fréquence par Jour</h3>
+                <h3 class="titre-carte">Fréquence par Jour</h3>
                 <p class="text-text-muted text-xs">Séances selon le jour de la semaine, 6 derniers mois</p>
             </div>
             <div class="h-48 w-full">
@@ -32,7 +32,7 @@ defineProps({
 
         <GlassCard v-if="charts?.monthly_frequency?.length > 0">
             <div class="mb-4">
-                <h3 class="text-text-main text-lg font-bold">Fréquence Mensuelle</h3>
+                <h3 class="titre-carte">Fréquence Mensuelle</h3>
                 <p class="text-text-muted text-xs">Séances par mois, 6 derniers mois</p>
             </div>
             <WorkoutsPerMonthChart :data="charts.monthly_frequency" />
@@ -40,7 +40,7 @@ defineProps({
 
         <GlassCard v-if="charts?.monthly_volume?.length > 0">
             <div class="mb-4">
-                <h3 class="text-text-main text-lg font-bold">Volume Mensuel</h3>
+                <h3 class="titre-carte">Volume Mensuel</h3>
                 <p class="text-text-muted text-xs">Total soulevé par mois (kg)</p>
             </div>
             <MonthlyVolumeChart :data="charts.monthly_volume" />
@@ -48,7 +48,7 @@ defineProps({
 
         <GlassCard v-if="charts?.duration_history?.length > 0">
             <div class="mb-4">
-                <h3 class="text-text-main text-lg font-bold">Durée</h3>
+                <h3 class="titre-carte">Durée</h3>
                 <p class="text-text-muted text-xs">Temps d'entraînement (min)</p>
             </div>
             <WorkoutDurationChart :data="charts.duration_history" />
@@ -56,7 +56,7 @@ defineProps({
 
         <GlassCard v-if="charts?.volume_history?.length > 0">
             <div class="mb-4">
-                <h3 class="text-text-main text-lg font-bold">Volume par Séance</h3>
+                <h3 class="titre-carte">Volume par Séance</h3>
                 <p class="text-text-muted text-xs">Volume total soulevé (kg)</p>
             </div>
             <VolumePerWorkoutChart :data="charts.volume_history" />

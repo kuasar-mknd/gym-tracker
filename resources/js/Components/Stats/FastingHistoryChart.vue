@@ -30,7 +30,7 @@ const datasets = computed(() => [
             const start = new Date(fast.start_time)
             const end = new Date(fast.end_time)
             const diffMs = end - start
-            return (diffMs / (1000 * 60 * 60)).toFixed(1)
+            return Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10
         }),
         backgroundColor: (context) => {
             const chart = context.chart

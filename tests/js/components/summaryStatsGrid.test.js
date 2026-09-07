@@ -69,7 +69,7 @@ describe('SummaryStatsGrid monthly comparison', () => {
     it('signs a better month and paints it green', () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: 12 } }))
 
-        expect(value.text()).toBe('+12%')
+        expect(value.text()).toBe('+12 %')
         expect(value.classes()).toContain('text-trend-up')
         expect(value.classes()).not.toContain('text-trend-down')
     })
@@ -77,7 +77,7 @@ describe('SummaryStatsGrid monthly comparison', () => {
     it('paints a worse month red and does not add a plus in front of the minus', () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: -8 } }))
 
-        expect(value.text()).toBe('-8%')
+        expect(value.text()).toBe('-8 %')
         expect(value.classes()).toContain('text-trend-down')
         expect(value.classes()).not.toContain('text-trend-up')
     })
@@ -85,7 +85,7 @@ describe('SummaryStatsGrid monthly comparison', () => {
     it('treats an unchanged month as not-a-drop', () => {
         const value = comparison(mountGrid({ monthlyComparison: { percentage: 0 } }))
 
-        expect(value.text()).toBe('+0%')
+        expect(value.text()).toBe('0 %')
         expect(value.classes()).toContain('text-trend-up')
     })
 

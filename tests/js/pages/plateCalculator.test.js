@@ -77,7 +77,7 @@ describe('PlateCalculator loading', () => {
 
         // 80 kg of plates, 40 per side: two 20s.
         expect(drawnPlates(wrapper).map((p) => p.weight)).toEqual(['20', '20', '20', '20'])
-        expect(wrapper.text()).toContain('20kg + 20kg')
+        expect(wrapper.text()).toContain('20 kg + 20 kg')
     })
 
     it('reports the weight actually loaded, not the one that was asked for', async () => {
@@ -95,7 +95,7 @@ describe('PlateCalculator loading', () => {
         await setWeights(wrapper, 65, 20)
 
         // 22.5 per side: 20 + 2.5, and the total lands exactly on 65.
-        expect(drawnPlates(wrapper).map((p) => p.weight)).toEqual(['20', '2.5', '20', '2.5'])
+        expect(drawnPlates(wrapper).map((p) => p.weight)).toEqual(['20', '2,5', '20', '2,5'])
         expect(wrapper.text()).toContain('65 kg')
     })
 
@@ -159,7 +159,7 @@ describe('PlateCalculator inventory', () => {
     it('says the inventory is empty rather than showing a bare grid', () => {
         const wrapper = mountCalculator([])
 
-        expect(wrapper.text()).toContain("Aucune plaque dans l'inventaire.")
+        expect(wrapper.text()).toContain("Aucune plaque dans l'inventaire")
     })
 
     /** Two plates, and the second one's cross: with one, any id would pass. */

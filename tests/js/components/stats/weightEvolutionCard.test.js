@@ -44,7 +44,7 @@ describe('WeightEvolutionCard headline', () => {
     it('shows the latest weight it was given', async () => {
         const card = await mountCard({ latestWeight: '82.5', weightHistory: [] })
 
-        expect(card.text()).toContain('82.5')
+        expect(card.text()).toContain('82,5')
         expect(card.text()).toContain('kg')
     })
 
@@ -76,8 +76,8 @@ describe('WeightEvolutionCard trend badge', () => {
         const gained = await mountCard({ latestWeight: '82.5', weightChange: 1.2 })
         const lost = await mountCard({ latestWeight: '82.5', weightChange: -1.2 })
 
-        expect(gained.text()).toContain('+1.2 kg')
-        expect(lost.text()).toContain('-1.2 kg')
+        expect(gained.text()).toContain('+1,2 kg')
+        expect(lost.text()).toContain('-1,2 kg')
         expect(lost.text()).not.toContain('+')
     })
 

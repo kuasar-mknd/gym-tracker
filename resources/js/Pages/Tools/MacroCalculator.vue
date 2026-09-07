@@ -1,13 +1,11 @@
 <template>
     <Head title="Calculateur de Macros" />
 
-    <AuthenticatedLayout show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">Macros</span>
                 </h1>
@@ -94,28 +92,30 @@
                             <div
                                 class="from-accent-primary to-accent-secondary font-display mt-1 bg-linear-to-r bg-clip-text text-5xl font-black tracking-tighter text-transparent italic"
                             >
-                                {{ calculatedResults.targetCalories }} kcal
+                                {{ entier(calculatedResults.targetCalories) }} kcal
                             </div>
-                            <p class="text-text-muted text-xs font-semibold">TDEE: {{ calculatedResults.tdee }} kcal</p>
+                            <p class="text-text-muted text-xs font-semibold">
+                                TDEE : {{ entier(calculatedResults.tdee) }} kcal
+                            </p>
                         </div>
 
                         <div class="border-border grid w-full grid-cols-3 gap-4 border-t pt-4">
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Protéines</p>
                                 <p class="font-display text-text-main text-2xl font-black">
-                                    {{ calculatedResults.protein }}g
+                                    {{ entier(calculatedResults.protein) }} g
                                 </p>
                             </div>
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Glucides</p>
                                 <p class="font-display text-text-main text-2xl font-black">
-                                    {{ calculatedResults.carbs }}g
+                                    {{ entier(calculatedResults.carbs) }} g
                                 </p>
                             </div>
                             <div>
                                 <p class="text-text-muted text-xs font-bold uppercase">Lipides</p>
                                 <p class="font-display text-text-main text-2xl font-black">
-                                    {{ calculatedResults.fat }}g
+                                    {{ entier(calculatedResults.fat) }} g
                                 </p>
                             </div>
                         </div>
@@ -146,7 +146,7 @@
             <!-- Trends Chart -->
             <GlassCard v-if="history.length > 1" class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Tendances</h3>
+                    <h3 class="titre-carte">Tendances</h3>
                     <p class="text-text-muted text-xs font-semibold">Évolution de vos objectifs</p>
                 </div>
                 <MacroHistoryChart :data="history" />
@@ -155,12 +155,15 @@
             <!-- History Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
-                    <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
+                    <h2 class="titre-carte">Historique</h2>
 
-                    <div v-if="history.length === 0" class="py-12 text-center">
-                        <GlassIcon name="history" size="hero" class="text-surface-sunken mb-3" />
-                        <p class="text-text-muted font-medium">Aucun historique.</p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="history.length === 0"
+                        taille="ligne"
+                        icon="history"
+                        title="Aucun historique"
+                        description="Calcule tes macros pour garder une trace de tes objectifs."
+                    />
 
                     <div v-else class="space-y-3">
                         <div
@@ -172,7 +175,7 @@
                                 <div
                                     class="text-text-main bg-surface-sunken flex h-12 w-16 items-center justify-center rounded-xl text-lg font-bold"
                                 >
-                                    {{ entry.target_calories }}
+                                    {{ entier(entry.target_calories) }}
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">
@@ -231,8 +234,9 @@ import { triggerHaptic } from '@/composables/useHaptics'
 import { macroTargets } from '@/Utils/formulas'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
+import { entier } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 

@@ -4,6 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import GlassChip from '@/Components/UI/GlassChip.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
     achievements: Array,
@@ -34,7 +35,7 @@ const filteredAchievements = computed(() => {
         <template #header>
             <div class="flex items-end justify-between">
                 <div>
-                    <h1 class="text-text-main flex items-center gap-2 text-2xl font-bold">Trophées 🏆</h1>
+                    <h1 class="titre-section flex items-center gap-2">Trophées 🏆</h1>
                     <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
                 </div>
                 <div class="text-right">
@@ -80,7 +81,7 @@ const filteredAchievements = computed(() => {
                         </div>
 
                         <!-- Name -->
-                        <h3 class="text-text-main mb-1 line-clamp-1 text-sm font-bold">
+                        <h3 class="titre-carte mb-1 line-clamp-1">
                             {{ achievement.name }}
                         </h3>
 
@@ -137,9 +138,12 @@ const filteredAchievements = computed(() => {
             </div>
 
             <!-- Empty State -->
-            <div v-if="filteredAchievements.length === 0" class="text-text-muted py-12 text-center">
-                Aucun badge dans cette catégorie.
-            </div>
+            <GlassEmptyState
+                v-if="filteredAchievements.length === 0"
+                taille="ligne"
+                icon="military_tech"
+                title="Aucun badge dans cette catégorie"
+            />
         </div>
     </AuthenticatedLayout>
 </template>

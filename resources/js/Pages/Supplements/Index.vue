@@ -118,11 +118,7 @@ const formatDate = (dateString) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1
-                        class="font-display text-text-main hidden text-4xl leading-none font-black tracking-tighter uppercase italic sm:block"
-                    >
-                        Mes <span class="text-gradient">Compléments</span>
-                    </h1>
+                    <h1 class="titre-page hidden sm:block">Mes <span class="text-gradient">Compléments</span></h1>
                     <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                         {{ supplements.length }} produits suivis
                     </p>
@@ -140,9 +136,7 @@ const formatDate = (dateString) => {
             <!-- Usage Chart -->
             <GlassCard v-if="usageHistory && usageHistory.some((d) => d.count > 0)" class="animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">
-                        Consommation Mensuelle
-                    </h3>
+                    <h3 class="titre-carte">Consommation Mensuelle</h3>
                     <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
                 </div>
                 <SupplementUsageChart :data="usageHistory" />
@@ -150,7 +144,7 @@ const formatDate = (dateString) => {
 
             <!-- Add Form -->
             <GlassCard v-if="showAddForm" class="animate-scale-in" variant="solid">
-                <h3 class="font-display text-text-main mb-5 text-xl font-black uppercase">Nouveau Complément</h3>
+                <h3 class="titre-carte mb-5">Nouveau Complément</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <GlassInput
                         v-model="form.name"
@@ -219,7 +213,7 @@ const formatDate = (dateString) => {
                 >
                     <!-- Edit Mode -->
                     <div v-if="editingSupplement === supplement.id" class="space-y-4 p-4">
-                        <h3 class="text-text-main font-bold">Modifier</h3>
+                        <h3 class="titre-carte">Modifier</h3>
                         <GlassInput v-model="editForm.name" placeholder="Nom" :error="editForm.errors.name" />
                         <GlassInput v-model="editForm.brand" placeholder="Marque" :error="editForm.errors.brand" />
                         <div class="grid grid-cols-2 gap-2">
@@ -260,7 +254,7 @@ const formatDate = (dateString) => {
                                         <GlassIcon name="medication" />
                                     </div>
                                     <div>
-                                        <h3 class="text-text-main leading-tight font-bold">{{ supplement.name }}</h3>
+                                        <h3 class="titre-carte">{{ supplement.name }}</h3>
                                         <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
                                             {{ supplement.brand || 'Générique' }}
                                         </p>

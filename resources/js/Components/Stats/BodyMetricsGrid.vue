@@ -4,6 +4,8 @@ import { defineAsyncComponent } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import { nombre, variation } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
 
@@ -24,7 +26,7 @@ defineProps({
                 <div>
                     <h4 class="sur-titre text-accent-secondary-deep mb-1">Masse Grasse</h4>
                     <p class="font-display text-text-main text-3xl font-black">
-                        {{ bodyFat || '—' }}
+                        {{ bodyFat ? nombre(bodyFat) : '—' }}
                         <span class="text-text-muted text-sm">%</span>
                     </p>
                 </div>
@@ -40,9 +42,7 @@ defineProps({
                         <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                     </template>
                     <BodyFatChart v-if="bodyFatHistory?.length > 0" :data="bodyFatHistory" />
-                    <div v-else class="flex h-full items-center justify-center">
-                        <p class="text-text-muted/30 text-2xs italic">Pas de données historiques</p>
-                    </div>
+                    <GlassEmptyState v-else taille="ligne" icon="query_stats" title="Pas de données historiques" />
                 </Deferred>
             </div>
         </GlassCard>
@@ -61,7 +61,7 @@ defineProps({
                     <div>
                         <h4 class="sur-titre text-accent-tertiary-deep mb-1">Volume Mois</h4>
                         <p class="font-display text-text-main text-3xl font-black">
-                            {{ Math.round(monthlyComparison?.current_volume || 0).toLocaleString() }}
+                            {{ nombre(monthlyComparison?.current_volume ?? 0, 0) }}
                             <span class="text-text-muted text-sm">kg</span>
                         </p>
                     </div>
@@ -77,8 +77,7 @@ defineProps({
                             :name="(monthlyComparison?.percentage || 0) >= 0 ? 'trending_up' : 'trending_down'"
                             size="xs"
                         />
-                        {{ (monthlyComparison?.percentage || 0) >= 0 ? '+' : ''
-                        }}{{ monthlyComparison?.percentage || 0 }}%
+                        {{ variation(monthlyComparison?.percentage ?? 0, '%') }}
                     </div>
                 </div>
             </Deferred>

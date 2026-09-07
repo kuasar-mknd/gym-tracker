@@ -1,13 +1,11 @@
 <template>
     <Head title="Calculateur Wilks" />
 
-    <AuthenticatedLayout show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">Wilks</span>
                 </h1>
@@ -102,7 +100,7 @@
                         <div
                             class="from-accent-primary to-accent-secondary font-display mt-2 bg-linear-to-r bg-clip-text text-6xl font-black tracking-tighter text-transparent italic"
                         >
-                            {{ calculatedScore }}
+                            {{ scoreAffiche }}
                         </div>
 
                         <div class="mt-6">
@@ -132,7 +130,7 @@
             <!-- Chart Section -->
             <GlassCard v-if="history.length > 0" class="stagger-2 animate-slide-up">
                 <div class="mb-4">
-                    <h3 class="font-display text-text-main text-lg font-black uppercase italic">Progression</h3>
+                    <h3 class="titre-carte">Progression</h3>
                     <p class="text-text-muted text-xs font-semibold">Évolution du score</p>
                 </div>
                 <WilksHistoryChart :data="[...history].reverse()" />
@@ -141,19 +139,19 @@
             <!-- History Section -->
             <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
-                    <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
+                    <h2 class="titre-carte">Historique</h2>
 
                     <div v-if="history.length > 0" class="mb-6">
                         <WilksScoreChart :data="history" />
                     </div>
 
-                    <div v-if="history.length === 0" class="py-12 text-center">
-                        <GlassIcon name="history" size="hero" class="text-surface-sunken mb-3" />
-                        <p class="text-text-muted font-medium">Aucun historique.</p>
-                        <p class="text-text-muted/70 mt-1 text-sm">
-                            Calcule ton score pour commencer à suivre tes progrès.
-                        </p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="history.length === 0"
+                        taille="ligne"
+                        icon="history"
+                        title="Aucun historique"
+                        description="Calcule ton score pour commencer à suivre tes progrès."
+                    />
 
                     <div v-else class="space-y-3">
                         <div
@@ -165,12 +163,12 @@
                                 <div
                                     class="text-text-main border-border bg-surface-card/80 flex h-12 w-12 items-center justify-center rounded-xl border text-xl font-bold"
                                 >
-                                    {{ parseFloat(entry.score).toFixed(0) }}
+                                    {{ nombre(entry.score, 0) }}
                                 </div>
                                 <div>
                                     <p class="text-text-main font-bold">
-                                        {{ parseFloat(entry.lifted_weight) }} {{ entry.unit }} /
-                                        {{ parseFloat(entry.body_weight) }} {{ entry.unit }}
+                                        {{ nombre(entry.lifted_weight) }} {{ entry.unit }} /
+                                        {{ nombre(entry.body_weight) }} {{ entry.unit }}
                                     </p>
                                     <p class="text-text-muted text-xs tracking-wider uppercase">
                                         {{ new Date(entry.created_at).toLocaleDateString() }}
@@ -216,9 +214,10 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 // Aliased: this file also uses `wilksScore` as a route parameter name.
 import { wilksScore as calculateWilks } from '@/Utils/formulas'
-import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
+import { nombre } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
 const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))
@@ -251,8 +250,11 @@ const calculatedScore = computed(() =>
         lifted: form.lifted_weight,
         gender: form.gender,
         unit: form.unit,
-    }).toFixed(2),
+    }),
 )
+
+/** Deux décimales : la présentation de la page, pas le calcul. */
+const scoreAffiche = computed(() => nombre(calculatedScore.value, 2, 2))
 
 const saveScore = () => {
     if (!isValid.value) return

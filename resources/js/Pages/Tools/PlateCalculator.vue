@@ -1,13 +1,11 @@
 <template>
     <Head title="Calculateur de Plaques" />
 
-    <AuthenticatedLayout show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-4xl leading-none font-black tracking-tighter uppercase italic"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">de Plaques</span>
                 </h1>
@@ -65,7 +63,7 @@
                                         width: '24px',
                                     }"
                                 >
-                                    <span class="-rotate-90 whitespace-nowrap">{{ plate.weight }}</span>
+                                    <span class="-rotate-90 whitespace-nowrap">{{ nombre(plate.weight) }}</span>
                                 </div>
                             </div>
 
@@ -81,7 +79,7 @@
                                         width: '24px',
                                     }"
                                 >
-                                    <span class="rotate-90 whitespace-nowrap">{{ plate.weight }}</span>
+                                    <span class="rotate-90 whitespace-nowrap">{{ nombre(plate.weight) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -90,14 +88,14 @@
                         <div class="mt-6 text-center">
                             <p class="text-text-main text-lg font-bold">
                                 Poids Total:
-                                <span class="font-display text-accent-primary-deep text-2xl font-black"
-                                    >{{ actualWeight }} kg</span
-                                >
+                                <span class="font-display text-accent-primary-deep text-2xl font-black">{{
+                                    poids(actualWeight)
+                                }}</span>
                             </p>
                             <p class="text-text-muted mt-2 text-sm">
                                 Plaques par côté:
                                 <span class="font-bold">{{
-                                    calculatedPlates.map((p) => p.weight + 'kg').join(' + ')
+                                    calculatedPlates.map((p) => poids(p.weight)).join(' + ')
                                 }}</span>
                             </p>
                         </div>
@@ -107,10 +105,19 @@
                     <div
                         v-else-if="targetWeight > barWeight"
                         class="border-border bg-surface-sunken mt-8 rounded-3xl border py-8 text-center"
+                        dusk="plates-cannot-load"
                     >
-                        <GlassIcon name="error" size="2xl" class="text-text-muted mb-3" />
+                        <GlassIcon
+                            :name="plates.length === 0 ? 'inventory_2' : 'error'"
+                            size="2xl"
+                            class="text-text-muted mb-3"
+                        />
                         <p class="text-text-muted font-medium">
-                            Impossible de charger ce poids avec les plaques disponibles.
+                            {{
+                                plates.length === 0
+                                    ? 'Ton inventaire est vide : ajoute tes plaques ci-dessous.'
+                                    : 'Impossible de charger ce poids avec les plaques disponibles.'
+                            }}
                         </p>
                     </div>
                 </div>
@@ -121,9 +128,7 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="font-display text-text-main text-lg font-black uppercase italic">
-                                Mon Inventaire
-                            </h2>
+                            <h2 class="titre-carte">Mon Inventaire</h2>
                             <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
                                 Plaques disponibles
                             </p>
@@ -133,11 +138,13 @@
                         </GlassButton>
                     </div>
 
-                    <div v-if="plates.length === 0" class="py-12 text-center">
-                        <GlassIcon name="inventory_2" size="hero" class="text-surface-sunken mb-3" />
-                        <p class="text-text-muted font-medium">Aucune plaque dans l'inventaire.</p>
-                        <p class="text-text-muted/70 mt-1 text-sm">Ajoute tes plaques pour commencer.</p>
-                    </div>
+                    <GlassEmptyState
+                        v-if="plates.length === 0"
+                        taille="ligne"
+                        icon="inventory_2"
+                        title="Aucune plaque dans l'inventaire"
+                        description="Ajoute tes plaques pour commencer."
+                    />
 
                     <div v-else class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                         <div v-for="plate in plates" :key="plate.id" class="group relative">
@@ -192,9 +199,7 @@
         <!-- Add Plate Modal -->
         <Modal :show="addingPlate" @close="addingPlate = false" aria-labelledby="add-plate-title">
             <div class="space-y-6 p-6">
-                <h2 id="add-plate-title" class="font-display text-text-main text-xl font-black uppercase italic">
-                    Ajouter une plaque
-                </h2>
+                <h2 id="add-plate-title" class="titre-carte">Ajouter une plaque</h2>
 
                 <div class="space-y-4">
                     <!-- GlassInput renders this exact label markup itself, and wires
@@ -256,6 +261,8 @@ import Modal from '@/Components/UI/Modal.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { nombre, poids } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
     plates: {

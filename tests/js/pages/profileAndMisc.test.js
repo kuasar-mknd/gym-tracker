@@ -228,7 +228,7 @@ describe('Measurements/Parts/Show — the unit a new entry inherits', () => {
 
         await openAddForm(wrapper)
 
-        expect(wrapper.text()).toContain('15.7 in')
+        expect(wrapper.text()).toContain('15,7 in')
         expect(wrapper.find('form').element.parentElement.textContent).toContain('in')
         expect(wrapper.vm.form.unit).toBe('in')
     })
@@ -247,7 +247,7 @@ describe('Measurements/Parts/Show — the history list', () => {
         const { wrapper } = mountPart()
         const text = wrapper.text()
 
-        expect(text.indexOf('15.7 in')).toBeLessThan(text.indexOf('38 cm'))
+        expect(text.indexOf('15,7 in')).toBeLessThan(text.indexOf('38 cm'))
     })
 
     /**

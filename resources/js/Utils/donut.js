@@ -11,6 +11,7 @@
  */
 
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
+import { LANGUE } from '@/Utils/nombre'
 
 /**
  * Les options communes aux anneaux du tableau de bord.
@@ -24,6 +25,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
  * @param {(context: object) => string} etiquetteInfobulle ce que dit l'infobulle
  */
 export const optionsDAnneau = (etiquetteInfobulle) => ({
+    locale: LANGUE,
     responsive: true,
     maintainAspectRatio: false,
     cutout: '65%',

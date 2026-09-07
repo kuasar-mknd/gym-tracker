@@ -64,7 +64,7 @@ describe('SessionPerformanceChart', () => {
             }),
         ])
 
-        expect(seriesOf(chart, 'Volume Total (kg)')).toEqual([1300])
+        expect(seriesOf(chart, 'Volume total')).toEqual([1300])
     })
 
     it('compte pour zéro une série au poids ou aux répétitions manquants', () => {
@@ -80,7 +80,7 @@ describe('SessionPerformanceChart', () => {
             }),
         ])
 
-        expect(seriesOf(chart, 'Volume Total (kg)')).toEqual([600])
+        expect(seriesOf(chart, 'Volume total')).toEqual([600])
     })
 
     it('trace zéro quand la séance n’a pas de 1RM estimé', () => {
@@ -102,8 +102,8 @@ describe('SessionPerformanceChart', () => {
 
         // Les deux séries partagent un graphe mais pas une unité : les
         // confondre écraserait la courbe de 1RM au ras de l'axe.
-        expect(datasetOf('Volume Total (kg)').yAxisID).toBe('y')
-        expect(datasetOf('Volume Total (kg)').type).toBe('bar')
+        expect(datasetOf('Volume total').yAxisID).toBe('y')
+        expect(datasetOf('Volume total').type).toBe('bar')
         expect(datasetOf('Meilleur 1RM (kg)').yAxisID).toBe('y1')
         expect(datasetOf('Meilleur 1RM (kg)').type).toBe('line')
         expect(chart.props('options').scales.y.position).toBe('left')
@@ -117,12 +117,12 @@ describe('SessionPerformanceChart', () => {
                 .scales.y.ticks.callback(value)
 
         it('abrège les milliers sans les arrondir au millier', () => {
-            expect(tick(1500)).toBe('1.5k')
-            expect(tick(12750)).toBe('12.8k')
+            expect(tick(1500)).toBe('1,5k')
+            expect(tick(12750)).toBe('12,8k')
         })
 
         it('marque le premier millier', () => {
-            expect(tick(1000)).toBe('1.0k')
+            expect(tick(1000)).toBe('1k')
         })
 
         it('laisse les volumes plus faibles tels quels', () => {
@@ -135,19 +135,17 @@ describe('SessionPerformanceChart', () => {
         const tooltip = () => chartOf([session({})]).props('options').plugins.tooltip.callbacks.label
 
         it('préfixe la valeur du nom de la série', () => {
-            const label = tooltip()({ dataset: { label: 'Volume Total (kg)' }, parsed: { y: 12000 } })
+            const label = tooltip()({ dataset: { label: 'Volume total' }, parsed: { y: 12000 } })
 
-            expect(label).toBe(`Volume Total (kg): ${(12000).toLocaleString()}`)
+            expect(label).toBe("Volume total: 12'000 kg")
         })
 
         it('n’ajoute pas de séparateur quand la série n’a pas de nom', () => {
-            expect(tooltip()({ dataset: {}, parsed: { y: 42 } })).toBe('42')
+            expect(tooltip()({ dataset: {}, parsed: { y: 42 } })).toBe('42 kg')
         })
 
         it('n’annonce rien pour un point absent', () => {
-            expect(tooltip()({ dataset: { label: 'Volume Total (kg)' }, parsed: { y: null } })).toBe(
-                'Volume Total (kg): ',
-            )
+            expect(tooltip()({ dataset: { label: 'Volume total' }, parsed: { y: null } })).toBe('Volume total: ')
         })
     })
 })

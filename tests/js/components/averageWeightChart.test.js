@@ -34,7 +34,7 @@ describe('AverageWeightChart', () => {
             line(wrapper)
                 .props('options')
                 .plugins.tooltip.callbacks.label({ parsed: { y: 62.5 } }),
-        ).toBe('62.5 kg')
+        ).toBe('62,5 kg')
     })
 
     it('n’écrase pas l’écart en partant de zéro', () => {

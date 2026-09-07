@@ -16,7 +16,7 @@ const labels = computed(() => props.data.map((item) => etiquetteDeDate(item.crea
 const datasets = computed(() => [
     {
         label: 'Score Wilks',
-        data: props.data.map((item) => parseFloat(item.score).toFixed(2)),
+        data: props.data.map((item) => Math.round(Number(item.score) * 100) / 100),
         fill: true,
         tension: 0.4,
         borderColor: (context) => {

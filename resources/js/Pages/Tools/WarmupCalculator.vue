@@ -1,13 +1,11 @@
 <template>
     <Head title="Calculateur d'Échauffement" />
 
-    <AuthenticatedLayout show-back back-route="tools.index">
+    <AuthenticatedLayout show-back back-route="tools.index" largeur="etroite">
         <div class="space-y-6">
             <!-- Header -->
             <header class="animate-fade-in">
-                <h1
-                    class="font-display text-text-main text-3xl leading-none font-black tracking-tighter uppercase italic sm:text-4xl"
-                >
+                <h1 class="titre-page">
                     Calculateur<br />
                     <span class="text-gradient">d'Échauffement</span>
                 </h1>
@@ -39,9 +37,7 @@
 
                     <!-- Warmup Sets -->
                     <GlassCard class="mt-6">
-                        <h3 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
-                            Séries d'échauffement
-                        </h3>
+                        <h3 class="titre-carte mb-4">Séries d'échauffement</h3>
 
                         <div class="space-y-3">
                             <div
@@ -58,7 +54,7 @@
                                     <div>
                                         <p class="text-text-main font-bold">
                                             <span v-if="set.label">{{ set.label }}</span>
-                                            <span v-else>{{ set.percent }}% du max</span>
+                                            <span v-else>{{ pourcentage(set.percent, 0) }} du max</span>
                                         </p>
                                         <p class="text-text-muted text-xs">{{ set.reps }} répétitions</p>
                                     </div>
@@ -81,9 +77,7 @@
                 <div class="space-y-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h2 class="font-display text-text-main text-lg font-black uppercase italic">
-                                Configuration
-                            </h2>
+                            <h2 class="titre-carte">Configuration</h2>
                             <p class="text-text-muted mt-1 text-xs font-bold tracking-wider uppercase">
                                 Personnaliser les paliers
                             </p>
@@ -171,7 +165,7 @@
                         <GlassSegmented
                             :model-value="form.rounding_increment"
                             @update:model-value="(valeur) => (form.rounding_increment = valeur)"
-                            :options="[0.5, 1, 2.5, 5].map((pas) => ({ value: pas, label: String(pas) }))"
+                            :options="[0.5, 1, 2.5, 5].map((pas) => ({ value: pas, label: nombre(pas) }))"
                             label="Arrondi"
                             size="sm"
                             bloc
@@ -193,6 +187,7 @@ import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import { nombre, pourcentage } from '@/Utils/nombre'
 
 const props = defineProps({
     preference: {

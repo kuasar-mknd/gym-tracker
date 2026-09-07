@@ -301,7 +301,7 @@ describe('VolumePerWorkoutChart series', () => {
         )
 
         expect(series.labels).toEqual(['01/07', '03/07'])
-        expect(series.datasets[0].label).toBe('Volume (kg)')
+        expect(series.datasets[0].label).toBe('Volume')
         expect(series.datasets[0].data).toEqual([8250, 12500])
     })
 })

@@ -120,7 +120,7 @@ const getProgressPercent = (habit) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">Habitudes</h2>
+                <h2 class="titre-carte">Habitudes</h2>
                 <GlassButton variant="primary" @click="openAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -157,7 +157,7 @@ const getProgressPercent = (habit) => {
                         class="animate-slide-up"
                     >
                         <div class="mb-4">
-                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Régularité</h3>
+                            <h3 class="titre-carte">Régularité</h3>
                             <p class="text-text-muted text-xs font-semibold">30 derniers jours</p>
                         </div>
                         <HabitConsistencyChart :data="stats.consistencyData" />
@@ -169,7 +169,7 @@ const getProgressPercent = (habit) => {
                         class="stagger-2 animate-slide-up"
                     >
                         <div class="mb-4">
-                            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Constance</h3>
+                            <h3 class="titre-carte">Constance</h3>
                             <p class="text-text-muted text-xs font-semibold">Habitudes complétées (30 jours)</p>
                         </div>
                         <HabitHistoryChart :data="stats.history" />
@@ -177,26 +177,36 @@ const getProgressPercent = (habit) => {
                 </div>
             </Deferred>
 
-            <!-- Weekly Calendar Header -->
-            <GlassCard class="overflow-hidden p-0">
-                <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
-                    <div class="text-text-main col-span-7 p-4 font-bold sm:col-span-1">Habitude</div>
-                    <div
-                        v-for="day in weekDates"
-                        :key="day.date"
-                        class="border-border flex flex-col items-center justify-center border-l p-2 text-center"
-                        :class="{ 'bg-accent-primary/5': day.is_today }"
-                    >
-                        <div class="text-text-muted text-2xs uppercase">{{ day.day_short || day.day }}</div>
+            <!--
+                L'en-tête des jours suit la liste.
+
+                Il vivait dans une carte à part, au-dessus des habitudes : dès
+                qu'on faisait défiler, les sept cases n'avaient plus rien pour
+                les nommer, et cocher « mardi » revenait à compter les colonnes
+                de tête (#1807). Collé sous l'en-tête de l'application, il reste
+                au-dessus des cases qu'il décrit.
+            -->
+            <div class="bg-surface-page z-collant sticky top-16 sm:top-20">
+                <GlassCard class="overflow-hidden p-0">
+                    <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
+                        <div class="text-text-main col-span-7 p-4 font-bold sm:col-span-1">Habitude</div>
                         <div
-                            class="text-sm font-bold"
-                            :class="day.is_today ? 'text-accent-primary-deep' : 'text-text-main'"
+                            v-for="day in weekDates"
+                            :key="day.date"
+                            class="border-border flex flex-col items-center justify-center border-l p-2 text-center"
+                            :class="{ 'bg-accent-primary/5': day.is_today }"
                         >
-                            {{ day.day_num }}
+                            <div class="text-text-muted text-2xs uppercase">{{ day.day_short || day.day }}</div>
+                            <div
+                                class="text-sm font-bold"
+                                :class="day.is_today ? 'text-accent-primary-deep' : 'text-text-main'"
+                            >
+                                {{ day.day_num }}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </GlassCard>
+                </GlassCard>
+            </div>
 
             <!-- Habits List -->
             <GlassEmptyState
@@ -227,7 +237,7 @@ const getProgressPercent = (habit) => {
                                     <GlassIcon :name="habit.icon" />
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <h3 class="text-text-main truncate font-bold">{{ habit.name }}</h3>
+                                    <h3 class="titre-carte truncate">{{ habit.name }}</h3>
                                     <div class="flex items-center gap-2">
                                         <div class="bg-surface-sunken h-1.5 w-16 overflow-hidden rounded-full">
                                             <div

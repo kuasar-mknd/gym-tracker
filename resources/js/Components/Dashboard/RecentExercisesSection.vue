@@ -1,5 +1,6 @@
 <script setup>
 import { defineAsyncComponent } from 'vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const RecentWorkoutsExercisesChart = defineAsyncComponent(
     () => import('@/Components/Stats/RecentWorkoutsExercisesChart.vue'),
@@ -16,7 +17,7 @@ defineProps({
         class="stagger-4 animate-slide-up border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-6 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
     >
         <div class="relative z-10 mb-6">
-            <h3 class="sur-titre text-accent-info-deep mb-1">Complexité</h3>
+            <h3 class="text-accent-info-deep sur-titre mb-1">Complexité</h3>
             <p class="font-display text-text-main text-2xl font-black uppercase italic">Exercices / Séance</p>
         </div>
 
@@ -26,9 +27,7 @@ defineProps({
                 v-if="recentWorkouts && recentWorkouts.some((w) => w.workout_lines_count > 0)"
                 :data="recentWorkouts"
             />
-            <div v-else class="text-text-muted flex h-full items-center justify-center">
-                <p class="text-sm">Pas assez de données d'exercices</p>
-            </div>
+            <GlassEmptyState v-else taille="ligne" icon="exercise" title="Pas assez de données d'exercices" />
         </div>
     </section>
 </template>

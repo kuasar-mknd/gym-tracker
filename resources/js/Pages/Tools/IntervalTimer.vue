@@ -16,6 +16,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import { useMinuteurDIntervalles } from '@/composables/useMinuteurDIntervalles'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 defineProps({
     timers: {
@@ -130,7 +131,7 @@ const previewFromForm = () => {
 <template>
     <Head title="Minuteur" />
 
-    <AuthenticatedLayout page-title="Minuteur" show-back back-route="tools.index">
+    <AuthenticatedLayout page-title="Minuteur" show-back back-route="tools.index" largeur="etroite">
         <template #header-actions>
             <!-- Mobile actions -->
         </template>
@@ -215,7 +216,7 @@ const previewFromForm = () => {
             <div v-else class="space-y-6">
                 <!-- Form -->
                 <GlassCard class="p-6">
-                    <h3 class="text-text-main mb-4 text-lg font-bold">
+                    <h3 class="titre-carte mb-4">
                         {{ isEditing ? 'Modifier le minuteur' : 'Nouveau minuteur' }}
                     </h3>
                     <form @submit.prevent="submitForm" class="space-y-4">
@@ -274,10 +275,14 @@ const previewFromForm = () => {
 
                 <!-- List of Timers -->
                 <div class="space-y-4">
-                    <h3 class="text-text-main px-2 text-lg font-bold">Mes Minuteurs</h3>
-                    <div v-if="timers.length === 0" class="text-text-muted py-8 text-center">
-                        Aucun minuteur enregistré.
-                    </div>
+                    <h3 class="titre-carte px-2">Mes Minuteurs</h3>
+                    <GlassEmptyState
+                        v-if="timers.length === 0"
+                        taille="ligne"
+                        icon="timer"
+                        title="Aucun minuteur enregistré"
+                        description="Règle tes intervalles ci-dessus, puis enregistre-les."
+                    />
                     <GlassCard
                         v-for="timer in timers"
                         :key="timer.id"

@@ -33,7 +33,7 @@ class ModalSemanticsTest extends DuskTestCase
                 ->waitFor('[data-testid="delete-account-button"]', 15)
                 ->script('document.querySelector(\'[data-testid="delete-account-button"]\').click();');
 
-            $browser->waitForText('Confirmer la suppression', 15);
+            $browser->waitForText('CONFIRMER LA SUPPRESSION', 15);
 
             $state = $browser->script(
                 'const dialog = document.querySelector("dialog[open]");'
@@ -69,7 +69,7 @@ class ModalSemanticsTest extends DuskTestCase
                 ->waitFor('[data-testid="delete-account-button"]', 15)
                 ->script('document.querySelector(\'[data-testid="delete-account-button"]\').click();');
 
-            $browser->waitForText('Confirmer la suppression', 15);
+            $browser->waitForText('CONFIRMER LA SUPPRESSION', 15);
 
             // <html>, not <body>: the viewport takes its overflow from the root
             // element, and only falls back to <body> when the root's own is
@@ -85,7 +85,7 @@ class ModalSemanticsTest extends DuskTestCase
             // element that stopped being interactable mid-gesture.
             $browser->driver->action()->sendKeys(null, WebDriverKeys::ESCAPE)->perform();
 
-            $browser->waitUntilMissingText('Confirmer la suppression', 15);
+            $browser->waitUntilMissingText('CONFIRMER LA SUPPRESSION', 15);
 
             /**
              * Escape is a close request the browser answers itself: it closes

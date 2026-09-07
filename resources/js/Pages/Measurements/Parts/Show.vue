@@ -10,6 +10,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { nombre } from '@/Utils/nombre'
 
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
@@ -77,7 +78,7 @@ const formatMeasuredAt = (measuredAt) =>
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="text-text-main text-xl font-semibold">{{ part }}</h2>
+                <h2 class="titre-carte">{{ part }}</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -88,15 +89,13 @@ const formatMeasuredAt = (measuredAt) =>
         <div class="space-y-6">
             <!-- Chart -->
             <GlassCard class="animate-slide-up">
-                <h3 class="font-display text-accent-tertiary-deep tracking-sur-titre mb-4 text-xs font-black uppercase">
-                    History
-                </h3>
+                <h3 class="text-accent-tertiary-deep sur-titre mb-4">History</h3>
                 <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="part" :unit="history[0].unit" />
             </GlassCard>
 
             <!-- Formulaire d'ajout -->
             <GlassCard v-if="showAddForm" class="animate-slide-up">
-                <h3 class="text-text-main mb-4 font-semibold">Nouvelle mesure</h3>
+                <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <GlassInput
@@ -141,7 +140,9 @@ const formatMeasuredAt = (measuredAt) =>
                     <div class="flex items-center justify-between">
                         <div>
                             <div class="flex items-baseline gap-2">
-                                <span class="text-text-main text-xl font-bold">{{ item.value }} {{ item.unit }}</span>
+                                <span class="text-text-main text-xl font-bold"
+                                    >{{ nombre(item.value, 2) }} {{ item.unit }}</span
+                                >
                             </div>
                             <div class="text-text-muted text-sm font-medium">
                                 {{ formatMeasuredAt(item.measured_at) }}

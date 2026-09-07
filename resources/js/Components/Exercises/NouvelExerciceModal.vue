@@ -39,13 +39,7 @@ const submit = () => {
 <template>
     <Modal :show="show" @close="$emit('close')" max-width="sm" aria-labelledby="new-exercise-title">
         <div class="p-6">
-            <h3
-                id="new-exercise-title"
-                class="font-display text-text-main mb-5 text-xl font-black uppercase"
-                dusk="exercise-modal-title"
-            >
-                Nouvel exercice
-            </h3>
+            <h3 id="new-exercise-title" class="titre-carte mb-5" dusk="exercise-modal-title">Nouvel exercice</h3>
             <form @submit.prevent="submit" class="space-y-4">
                 <GlassInput
                     v-model="form.name"

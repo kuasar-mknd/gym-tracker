@@ -6,6 +6,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { parseCalendarDate } from '@/Utils/date'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
     year: Number,
@@ -227,7 +228,7 @@ const formatDateFull = (dateStr) => {
                     <GlassIcon name="chevron_left" />
                 </GlassButton>
 
-                <h2 class="text-text-main text-xl font-black tracking-tighter uppercase italic" dusk="calendar-heading">
+                <h2 class="titre-carte" dusk="calendar-heading">
                     {{ currentMonthName }} <span class="text-accent-primary-deep">{{ currentYear }}</span>
                 </h2>
 
@@ -305,7 +306,7 @@ const formatDateFull = (dateStr) => {
             <div v-if="selectedDayDetails" dusk="calendar-day-details" class="animate-slide-up space-y-4">
                 <div class="flex items-center gap-2">
                     <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
-                    <h3 class="font-display text-text-main text-lg font-bold capitalize">
+                    <h3 class="titre-carte">
                         {{ formatDateFull(selectedDayDetails.dateStr) }}
                     </h3>
                     <div class="via-text-muted/10 h-px flex-1 bg-linear-to-r from-transparent to-transparent"></div>
@@ -374,13 +375,12 @@ const formatDateFull = (dateStr) => {
                 </div>
 
                 <!-- Empty State -->
-                <div
+                <GlassEmptyState
                     v-if="!selectedDayDetails.workouts.length && !selectedDayDetails.journal"
-                    class="text-text-muted/60 py-8 text-center"
-                >
-                    <GlassIcon name="event_busy" size="xl" class="mb-2 opacity-50" />
-                    <p>Aucune activité ce jour-là.</p>
-                </div>
+                    taille="ligne"
+                    icon="event_busy"
+                    title="Aucune activité ce jour-là"
+                />
             </div>
 
             <div v-else class="text-text-muted/40 py-12 text-center">

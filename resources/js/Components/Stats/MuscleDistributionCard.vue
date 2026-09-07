@@ -17,7 +17,7 @@ defineProps({
     <!-- Muscle Distribution -->
     <GlassCard>
         <div class="mb-4">
-            <h3 class="font-display text-text-main text-lg font-black uppercase italic">Répartition Musculaire</h3>
+            <h3 class="titre-carte">Répartition Musculaire</h3>
             <p class="text-text-muted text-xs font-semibold">Volume par groupe musculaire</p>
         </div>
         <div class="min-h-52">

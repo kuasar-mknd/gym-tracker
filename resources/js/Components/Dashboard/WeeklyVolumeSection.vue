@@ -1,6 +1,9 @@
 <script setup>
 import { computed, defineAsyncComponent } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { nombre } from '@/Utils/nombre'
+import { variation } from '@/Utils/nombre'
+import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
@@ -26,14 +29,14 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
     >
         <div class="relative z-10 mb-6 flex items-start justify-between">
             <div>
-                <h3 class="sur-titre text-accent-primary-deep mb-1">Aperçu</h3>
+                <h3 class="text-accent-primary-deep sur-titre mb-1">Aperçu</h3>
                 <p class="font-display text-text-main text-2xl font-black uppercase italic">Volume Hebdo</p>
             </div>
             <div class="text-right">
                 <p
                     class="from-accent-primary to-accent-tertiary font-display bg-linear-to-r bg-clip-text text-4xl font-black tracking-tighter text-transparent"
                 >
-                    {{ weeklyVolumeStats?.current_week_volume?.toLocaleString() || 0 }}
+                    {{ nombre(weeklyVolumeStats?.current_week_volume ?? 0, 0) }}
                 </p>
                 <!--
                     Trois situations, et non deux.
@@ -59,7 +62,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
                         class="font-bold"
                     />
                     <template v-if="comparison === 0">Stable vs sem. passée</template>
-                    <template v-else>{{ comparison > 0 ? '+' : '' }}{{ comparison }}% vs sem. passée</template>
+                    <template v-else>{{ variation(comparison, '%') }} vs sem. passée</template>
                 </p>
             </div>
         </div>
@@ -67,9 +70,7 @@ const comparison = computed(() => props.weeklyVolumeStats?.percentage ?? null)
         <!-- Weekly Volume Chart -->
         <div class="relative -mx-2 mt-2 h-48 w-auto">
             <WeeklyVolumeChart v-if="weeklyVolumeTrend && weeklyVolumeTrend.length > 0" :data="weeklyVolumeTrend" />
-            <div v-else class="text-text-muted flex h-full items-center justify-center">
-                <p class="text-sm">Pas de données cette semaine</p>
-            </div>
+            <GlassEmptyState v-else taille="ligne" icon="bar_chart" title="Pas de données cette semaine" />
         </div>
     </section>
 </template>

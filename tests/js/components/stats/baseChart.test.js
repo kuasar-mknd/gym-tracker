@@ -69,6 +69,19 @@ describe('BaseChart', () => {
         expect(reglee).not.toHaveProperty('opaque')
     })
 
+    /**
+     * Une demi-séance n'existe pas : l'axe de « Fréquence par jour » graduait
+     * 0,2 – 0,4 … 2,0 pour un nombre de séances (#1800).
+     */
+    it('gradue en entiers quand l’axe compte des objets', () => {
+        expect(options().scales.y.ticks.precision).toBeUndefined()
+
+        const compte = options({ entiers: true }).scales.y.ticks
+
+        expect(compte.precision).toBe(0)
+        expect(compte.stepSize).toBe(1)
+    })
+
     it('pose les axes par défaut, les cache ou fusionne leurs réglages', () => {
         const { x, y } = options().scales
         expect(x.grid.display).toBe(false)

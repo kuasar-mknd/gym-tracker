@@ -192,9 +192,9 @@ describe('Measurements/Index headline figures', () => {
         const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
 
         expect(wrapper.vm.previousWeight).toBe('76.00')
-        expect(wrapper.vm.weightDiff).toBe('-1.5')
+        expect(wrapper.vm.weightDiff).toBe(-1.5)
         // Green is the whole point of the tile: it says the trend is the one wanted.
-        expect(statistique(wrapper, 'Évolution')).toBe('-1.5')
+        expect(statistique(wrapper, 'Évolution')).toBe('-1,5')
     })
 
     it('signs a gain, since "1.5" on its own reads like a loss', async () => {
@@ -202,7 +202,7 @@ describe('Measurements/Index headline figures', () => {
 
         const wrapper = await mountPage(MeasurementsIndex, { measurements: gaining })
 
-        expect(statistique(wrapper, 'Évolution')).toBe('+1.5')
+        expect(statistique(wrapper, 'Évolution')).toBe('+1,5')
     })
 
     it('has nothing to compare after a first weigh-in, and says so instead of showing a zero', async () => {
@@ -236,7 +236,7 @@ describe('Measurements/Index headline figures', () => {
         expect(wrapper.vm.latestWeight).toBeNull()
         expect(wrapper.vm.latestBodyFat).toBeNull()
         expect(occurrences(wrapper, '—')).toBe(3)
-        expect(wrapper.text()).toContain("Aucune mesure pour l'instant")
+        expect(wrapper.text()).toContain('Aucune mesure')
     })
 })
 
@@ -272,7 +272,7 @@ describe('Measurements/Index charts', () => {
 
         expect(wrapper.findComponent(WeightHistoryChart).exists()).toBe(true)
         expect(wrapper.findComponent(BodyFatLineChart).exists()).toBe(false)
-        expect(occurrences(wrapper, 'Aucune donnée disponible')).toBe(1)
+        expect(occurrences(wrapper, 'Aucune donnée')).toBe(1)
     })
 
     it('holds both cards while the deferred stats are still on their way', async () => {
@@ -281,7 +281,7 @@ describe('Measurements/Index charts', () => {
 
         expect(wrapper.findComponent(WeightHistoryChart).exists()).toBe(false)
         expect(wrapper.findComponent(BodyFatLineChart).exists()).toBe(false)
-        expect(occurrences(wrapper, 'Aucune donnée disponible')).toBe(2)
+        expect(occurrences(wrapper, 'Aucune donnée')).toBe(2)
     })
 })
 
@@ -571,8 +571,8 @@ describe('Measurements/Parts/Index cards', () => {
 
         // Green up, red down: on a waist and on a biceps those mean opposite
         // things, so the colour only claims direction, never progress.
-        expect(wrapper.find('div.text-trend-up').text()).toBe('+0.75')
-        expect(wrapper.find('.text-trend-down').text()).toBe('-1.5')
+        expect(wrapper.find('div.text-trend-up').text()).toBe('+0,75')
+        expect(wrapper.find('.text-trend-down').text()).toBe('-1,5')
     })
 
     it('says nothing at all about a part that has not moved', async () => {
