@@ -7668,16 +7668,16 @@
         },
         {
             "name": "spatie/laravel-csp",
-            "version": "3.27.0",
+            "version": "3.28.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/spatie/laravel-csp.git",
-                "reference": "ab5d537e813aa782ce59430107cfbef14427cb98"
+                "reference": "4b5b9f37a7c11aa8194515aec71092a0f708a1d8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-csp/zipball/ab5d537e813aa782ce59430107cfbef14427cb98",
-                "reference": "ab5d537e813aa782ce59430107cfbef14427cb98",
+                "url": "https://api.github.com/repos/spatie/laravel-csp/zipball/4b5b9f37a7c11aa8194515aec71092a0f708a1d8",
+                "reference": "4b5b9f37a7c11aa8194515aec71092a0f708a1d8",
                 "shasum": ""
             },
             "require": {
@@ -7687,6 +7687,7 @@
                 "spatie/laravel-package-tools": "^1.17"
             },
             "require-dev": {
+                "laravel/pint": "^1.30",
                 "mockery/mockery": "^1.6",
                 "orchestra/testbench": "^9.9|^10.0|^11.0",
                 "pestphp/pest": "^4.0|^5.0"
@@ -7741,7 +7742,7 @@
             ],
             "support": {
                 "issues": "https://github.com/spatie/laravel-csp/issues",
-                "source": "https://github.com/spatie/laravel-csp/tree/3.27.0"
+                "source": "https://github.com/spatie/laravel-csp/tree/3.28.3"
             },
             "funding": [
                 {
@@ -7749,7 +7750,7 @@
                     "type": "custom"
                 }
             ],
-            "time": "2026-08-17T07:19:36+00:00"
+            "time": "2026-09-03T13:39:06+00:00"
         },
         {
             "name": "spatie/laravel-health",
@@ -7847,16 +7848,16 @@
         },
         {
             "name": "spatie/laravel-package-tools",
-            "version": "1.93.1",
+            "version": "1.93.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/spatie/laravel-package-tools.git",
-                "reference": "d5552849801f2642aea710557463234b59ef65eb"
+                "reference": "e927d5b5b05e9fecae098e559e51918aa608ad02"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-package-tools/zipball/d5552849801f2642aea710557463234b59ef65eb",
-                "reference": "d5552849801f2642aea710557463234b59ef65eb",
+                "url": "https://api.github.com/repos/spatie/laravel-package-tools/zipball/e927d5b5b05e9fecae098e559e51918aa608ad02",
+                "reference": "e927d5b5b05e9fecae098e559e51918aa608ad02",
                 "shasum": ""
             },
             "require": {
@@ -7896,7 +7897,7 @@
             ],
             "support": {
                 "issues": "https://github.com/spatie/laravel-package-tools/issues",
-                "source": "https://github.com/spatie/laravel-package-tools/tree/1.93.1"
+                "source": "https://github.com/spatie/laravel-package-tools/tree/1.93.2"
             },
             "funding": [
                 {
@@ -7904,7 +7905,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-19T14:06:37+00:00"
+            "time": "2026-08-26T09:13:25+00:00"
         },
         {
             "name": "spatie/laravel-permission",
