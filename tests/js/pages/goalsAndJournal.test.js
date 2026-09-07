@@ -1,4 +1,13 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest'
+
+vi.mock('@/Components/Stats/GoalTypeChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'GoalTypeChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/JournalChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'JournalChart', props: ['data'], template: '<div />' },
+}))
 import { mount, flushPromises } from '@vue/test-utils'
 import { reactive } from 'vue'
 

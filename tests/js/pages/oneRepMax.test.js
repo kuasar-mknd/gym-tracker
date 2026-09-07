@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
+
+vi.mock('@/Components/Stats/OneRepMaxPercentagesChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'OneRepMaxPercentagesChart', props: ['data'], template: '<div />' },
+}))
 import { mount } from '@vue/test-utils'
 
 vi.mock('@inertiajs/vue3', () => ({

@@ -1,4 +1,61 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
+
+vi.mock('@/Components/Stats/AverageWeightChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'AverageWeightChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/Estimated1RMHistoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'Estimated1RMHistoryChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/HistoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'HistoryChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/MaxRepsChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'MaxRepsChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/MaxWeightChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'MaxWeightChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/OneRepMaxChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'OneRepMaxChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/SessionPerformanceChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'SessionPerformanceChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/SessionVolumeLineChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'SessionVolumeLineChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/SetWeightProgressionChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'SetWeightProgressionChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/SetsPerSessionChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'SetsPerSessionChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/TotalRepsChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'TotalRepsChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/VolumeTrendChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'VolumeTrendChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WeightDistributionChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'WeightDistributionChart', props: ['data'], template: '<div />' },
+}))
+vi.mock('@/Components/Stats/WeightRepsScatterChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'WeightRepsScatterChart', props: ['data'], template: '<div />' },
+}))
 import { mount, flushPromises } from '@vue/test-utils'
 
 vi.mock('@inertiajs/vue3', () => ({

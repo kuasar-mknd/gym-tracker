@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
+
+vi.mock('@/Components/Stats/ActiveGoalsChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'ActiveGoalsChart', props: ['data'], template: '<div />' },
+}))
 import { mount as monterVraiment, flushPromises } from '@vue/test-utils'
 
 /*

@@ -17,6 +17,10 @@ vi.mock('@inertiajs/vue3', () => ({
 
 const haptic = vi.fn()
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...a) => haptic(...a) }))
+vi.mock('@/Components/Stats/WaterHistoryChart.vue', () => ({
+    __esModule: true,
+    default: { name: 'WaterHistoryChart', props: ['data'], template: '<div />' },
+}))
 
 import WaterTracker from '@/Pages/Tools/WaterTracker.vue'
 import { passesSlot } from './pageStubs'
