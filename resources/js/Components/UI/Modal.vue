@@ -188,13 +188,13 @@ const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
 <template>
     <Teleport to="body">
         <dialog
-            class="z-[100] m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
+            class="z-modale m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
             ref="dialog"
             :aria-labelledby="ariaLabelledby"
             @close="onDialogClose"
             @cancel="onDialogCancel"
         >
-            <div class="fixed inset-0 z-[100] overflow-y-auto px-4 py-6 sm:px-0" :class="containerClass" scroll-region>
+            <div class="z-modale fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0" :class="containerClass" scroll-region>
                 <Transition
                     enter-active-class="ease-out duration-300"
                     enter-from-class="opacity-0"
@@ -203,7 +203,7 @@ const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
                     leave-from-class="opacity-100"
                     leave-to-class="opacity-0"
                 >
-                    <div v-show="show" class="fixed inset-0 transform transition-all" @click="close">
+                    <div v-show="show" class="fixed inset-0 transform transition" @click="close">
                         <div class="glass-overlay" />
                     </div>
                 </Transition>
@@ -225,7 +225,7 @@ const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
                     -->
                     <div
                         v-show="show"
-                        class="glass-modal text-text-main border-surface-card/20 bg-surface-card/80 transform overflow-y-auto rounded-3xl border shadow-2xl backdrop-blur-xl transition-all sm:mx-auto sm:w-full"
+                        class="glass-modal text-text-main border-surface-card/20 bg-surface-card/80 transform overflow-y-auto rounded-3xl border shadow-2xl backdrop-blur-xl transition sm:mx-auto sm:w-full"
                         :class="[maxWidthClass, panelSpacingClass]"
                     >
                         <slot v-if="showSlot" />

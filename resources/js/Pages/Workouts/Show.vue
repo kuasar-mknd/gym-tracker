@@ -240,7 +240,7 @@ onUnmounted(() => {
                 v-if="editError"
                 role="alert"
                 dusk="set-edit-error"
-                class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent fixed inset-x-3 top-20 z-50 rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
+                class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent z-toast fixed inset-x-3 top-20 rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
             >
                 {{ editError }}
             </div>
@@ -253,7 +253,7 @@ onUnmounted(() => {
                 dusk="workout-settings-button"
                 :class="[
                     'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
-                    'border-surface-card bg-surface-card/60 border transition-all',
+                    'border-surface-card bg-surface-card/60 border transition',
                     ' ',
                 ]"
                 aria-label="Paramètres de la séance"

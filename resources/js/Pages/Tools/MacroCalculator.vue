@@ -17,7 +17,7 @@
             </header>
 
             <!-- Calculator Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
+            <GlassCard class="stagger-1 animate-slide-up">
                 <div class="space-y-6">
                     <!-- Gender Selection -->
                     <div>
@@ -27,10 +27,10 @@
                                 type="button"
                                 @click="form.gender = 'male'"
                                 :aria-pressed="form.gender === 'male'"
-                                class="focus-visible:ring-accent-primary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'male'
-                                        ? 'border-accent-primary accent-fill shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
+                                        ? 'border-accent-primary accent-fill shadow-glow-primary-soft'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
@@ -40,10 +40,10 @@
                                 type="button"
                                 @click="form.gender = 'female'"
                                 :aria-pressed="form.gender === 'female'"
-                                class="focus-visible:ring-accent-secondary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-secondary flex h-16 items-center justify-center rounded-2xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.gender === 'female'
-                                        ? 'border-accent-secondary secondary-fill shadow-[0_0_15px_rgb(from_var(--color-accent-secondary)_r_g_b_/_0.3)]'
+                                        ? 'border-accent-secondary secondary-fill shadow-glow-secondary-soft'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
@@ -87,10 +87,10 @@
                                 type="button"
                                 @click="form.goal = goalOption"
                                 :aria-pressed="form.goal === goalOption"
-                                class="focus-visible:ring-accent-primary flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition-all focus-visible:ring-2 focus-visible:outline-none"
+                                class="focus-visible:ring-accent-primary flex h-12 items-center justify-center rounded-xl border backdrop-blur-md transition focus-visible:ring-2 focus-visible:outline-none"
                                 :class="
                                     form.goal === goalOption
-                                        ? 'border-accent-primary accent-fill shadow-[0_0_15px_rgb(from_var(--color-accent-primary)_r_g_b_/_0.3)]'
+                                        ? 'border-accent-primary accent-fill shadow-glow-primary-soft'
                                         : 'text-text-muted hover:text-text-main border-border bg-surface-card/50 hover:border-border-strong hover:bg-surface-card/80'
                                 "
                             >
@@ -163,7 +163,7 @@
             </GlassCard>
 
             <!-- Trends Chart -->
-            <GlassCard v-if="history.length > 1" class="animate-slide-up" style="animation-delay: 0.08s">
+            <GlassCard v-if="history.length > 1" class="stagger-2 animate-slide-up">
                 <div class="mb-4">
                     <h3 class="font-display text-text-main text-lg font-black uppercase italic">Tendances</h3>
                     <p class="text-text-muted text-xs font-semibold">Évolution de vos objectifs</p>
@@ -172,7 +172,7 @@
             </GlassCard>
 
             <!-- History Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+            <GlassCard class="stagger-2 animate-slide-up">
                 <div class="space-y-5">
                     <h2 class="font-display text-text-main text-lg font-black uppercase italic">Historique</h2>
 
@@ -187,7 +187,7 @@
                         <div
                             v-for="entry in history"
                             :key="entry.id"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 relative flex flex-col justify-between rounded-2xl border p-4 transition-all hover:shadow-lg sm:flex-row sm:items-center"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 relative flex flex-col justify-between rounded-2xl border p-4 transition hover:shadow-lg sm:flex-row sm:items-center"
                         >
                             <div class="flex items-center gap-4">
                                 <div

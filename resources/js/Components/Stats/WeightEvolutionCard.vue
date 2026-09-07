@@ -16,12 +16,10 @@ defineProps({
 
 <template>
     <!-- Weight Evolution Card -->
-    <GlassCard class="animate-slide-up relative overflow-hidden" style="animation-delay: 0.05s">
+    <GlassCard class="stagger-1 animate-slide-up relative overflow-hidden">
         <div class="mb-4 flex items-start justify-between">
             <div>
-                <h3 class="text-accent-info-deep mb-1 text-[10px] font-black tracking-[0.2em] uppercase">
-                    Poids Corporel
-                </h3>
+                <h3 class="sur-titre text-accent-info-deep mb-1">Poids Corporel</h3>
                 <p class="font-display text-text-main text-5xl font-black tracking-tighter">
                     {{ latestWeight || '—' }}
                     <span class="text-text-muted text-lg">kg</span>
@@ -58,7 +56,7 @@ defineProps({
 
         <Link
             :href="route('body-measurements.index')"
-            class="text-accent-info-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition-all hover:gap-3"
+            class="text-accent-info-deep mt-4 inline-flex items-center gap-2 text-xs font-bold tracking-wider uppercase transition hover:gap-3"
         >
             Voir tout l'historique
             <span class="material-symbols-outlined text-base" aria-hidden="true">arrow_forward</span>

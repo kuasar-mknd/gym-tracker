@@ -89,11 +89,11 @@ const {
                 </template>
             </GlassEmptyState>
 
-            <div v-else class="animate-slide-up grid gap-4 md:grid-cols-2" style="animation-delay: 0.1s">
+            <div v-else class="stagger-2 animate-slide-up grid gap-4 md:grid-cols-2">
                 <GlassCard
                     v-for="template in templates"
                     :key="template.id"
-                    class="group flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
+                    class="group flex flex-col transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
                 >
                     <div class="flex-1">
                         <div class="flex items-start justify-between">
@@ -112,7 +112,7 @@ const {
                                     :href="route('templates.edit', { template: template.id })"
                                     :dusk="`edit-template-${template.id}`"
                                     :aria-label="`Modifier ${template.name}`"
-                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken rounded-xl p-2 transition-all duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken rounded-xl p-2 transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
                                     <span class="material-symbols-outlined block text-xl" aria-hidden="true">edit</span>
                                 </Link>
@@ -132,7 +132,7 @@ const {
                             <div
                                 v-for="line in template.workout_template_lines"
                                 :key="line.id"
-                                class="text-text-muted border-border bg-surface-card/50 flex items-center gap-2 rounded-xl border px-2 py-1 text-xs transition-all duration-300 hover:-translate-y-0.5 active:scale-95"
+                                class="text-text-muted border-border bg-surface-card/50 flex items-center gap-2 rounded-xl border px-2 py-1 text-xs transition duration-300 hover:-translate-y-0.5 active:scale-95"
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
                                 <span class="text-text-muted/50"

@@ -132,17 +132,14 @@ const selectCommonPart = (part) => {
 
             <!-- Chart -->
             <GlassCard v-if="latestMeasurements.some((m) => m.diff !== 0)" class="animate-slide-up">
-                <h3 class="font-display text-accent-state-deep mb-4 text-xs font-black tracking-[0.2em] uppercase">
+                <h3 class="font-display text-accent-state-deep tracking-sur-titre mb-4 text-xs font-black uppercase">
                     Évolution Récente
                 </h3>
                 <BodyPartDiffChart :data="latestMeasurements" />
             </GlassCard>
 
             <!-- Grid -->
-            <div
-                class="animate-slide-up grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                style="animation-delay: 0.1s"
-            >
+            <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Link
                     v-press
                     v-for="item in latestMeasurements"
@@ -151,7 +148,7 @@ const selectCommonPart = (part) => {
                     class="block"
                 >
                     <GlassCard
-                        class="h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
+                        class="h-full overflow-hidden transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-[0.99]"
                     >
                         <div class="flex items-start justify-between">
                             <div>

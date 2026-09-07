@@ -16,14 +16,12 @@ defineProps({
 
 <template>
     <!-- Body Metrics Grid -->
-    <div class="animate-slide-up grid grid-cols-2 gap-4" style="animation-delay: 0.1s">
+    <div class="stagger-2 animate-slide-up grid grid-cols-2 gap-4">
         <!-- Body Fat -->
         <GlassCard padding="p-5">
             <div class="flex items-start justify-between">
                 <div>
-                    <h4 class="text-accent-secondary-deep mb-1 text-[10px] font-black tracking-[0.15em] uppercase">
-                        Masse Grasse
-                    </h4>
+                    <h4 class="sur-titre text-accent-secondary-deep mb-1">Masse Grasse</h4>
                     <p class="font-display text-text-main text-3xl font-black">
                         {{ bodyFat || '—' }}
                         <span class="text-text-muted text-sm">%</span>
@@ -44,7 +42,7 @@ defineProps({
                     </template>
                     <BodyFatChart v-if="bodyFatHistory?.length > 0" :data="bodyFatHistory" />
                     <div v-else class="flex h-full items-center justify-center">
-                        <p class="text-text-muted/30 text-[10px] italic">Pas de données historiques</p>
+                        <p class="text-text-muted/30 text-2xs italic">Pas de données historiques</p>
                     </div>
                 </Deferred>
             </div>
@@ -62,9 +60,7 @@ defineProps({
                 </template>
                 <div class="flex items-start justify-between">
                     <div>
-                        <h4 class="text-accent-tertiary-deep mb-1 text-[10px] font-black tracking-[0.15em] uppercase">
-                            Volume Mois
-                        </h4>
+                        <h4 class="sur-titre text-accent-tertiary-deep mb-1">Volume Mois</h4>
                         <p class="font-display text-text-main text-3xl font-black">
                             {{ Math.round(monthlyComparison?.current_volume || 0).toLocaleString() }}
                             <span class="text-text-muted text-sm">kg</span>

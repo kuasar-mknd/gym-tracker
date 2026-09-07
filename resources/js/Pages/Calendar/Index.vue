@@ -242,7 +242,7 @@ const formatDateFull = (dateStr) => {
                     <div
                         v-for="day in weekDays"
                         :key="day"
-                        class="text-text-muted text-center text-[10px] font-bold tracking-wider uppercase"
+                        class="text-text-muted text-2xs text-center font-bold tracking-wider uppercase"
                     >
                         {{ day }}
                     </div>
@@ -268,7 +268,7 @@ const formatDateFull = (dateStr) => {
                             :aria-current="day.isToday ? 'date' : undefined"
                             :class="[
                                 ...cellBorderClasses(index),
-                                'focus-visible:ring-accent-primary hover:bg-surface-sunken cursor-pointer transition-all focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
+                                'focus-visible:ring-accent-primary hover:bg-surface-sunken cursor-pointer transition focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset',
                                 selectedDate?.dateStr === day.dateStr ? 'bg-surface-sunken shadow-inner' : '',
                             ]"
                         >
@@ -288,11 +288,11 @@ const formatDateFull = (dateStr) => {
                             <div class="mt-1 flex gap-1" aria-hidden="true">
                                 <span
                                     v-if="day.hasWorkout"
-                                    class="bg-accent-tertiary h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgb(from_var(--color-accent-tertiary)_r_g_b_/_0.8)]"
+                                    class="bg-accent-tertiary shadow-glow-tertiary-sharp h-1.5 w-1.5 rounded-full"
                                 ></span>
                                 <span
                                     v-if="day.hasJournal"
-                                    class="bg-accent-state h-1.5 w-1.5 rounded-full shadow-[0_0_4px_rgb(from_var(--color-accent-state)_r_g_b_/_0.8)]"
+                                    class="bg-accent-state shadow-glow-state-sharp h-1.5 w-1.5 rounded-full"
                                 ></span>
                             </div>
                         </button>
@@ -360,7 +360,7 @@ const formatDateFull = (dateStr) => {
                                     <span class="text-text-main font-bold">Entrée Journal</span>
                                     <span
                                         v-if="selectedDayDetails.journal.mood_score"
-                                        class="text-text-main bg-surface-sunken rounded px-1.5 py-0.5 text-[10px] font-bold"
+                                        class="text-text-main bg-surface-sunken text-2xs rounded px-1.5 py-0.5 font-bold"
                                     >
                                         Humeur: {{ selectedDayDetails.journal.mood_score }}/10
                                     </span>

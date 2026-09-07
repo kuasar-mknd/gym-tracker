@@ -108,7 +108,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.google"
                     :href="route('social.redirect', 'google')"
-                    class="border-surface-sunken bg-surface-card flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-surface-sunken bg-surface-card flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec Google"
                 >
                     <img
@@ -121,7 +121,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.github"
                     :href="route('social.redirect', 'github')"
-                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec GitHub"
                 >
                     <img
@@ -134,7 +134,7 @@ const submit = () => {
                 <a
                     v-if="$page.props.social_login_enabled?.apple"
                     :href="route('social.redirect', 'apple')"
-                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition-all hover:scale-105 hover:shadow-md active:scale-95"
+                    class="border-text-main bg-text-main flex h-12 w-12 items-center justify-center rounded-xl border shadow-sm transition hover:scale-105 hover:shadow-md active:scale-95"
                     aria-label="Continuer avec Apple"
                 >
                     <img

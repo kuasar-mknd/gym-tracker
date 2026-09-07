@@ -30,12 +30,12 @@ const props = defineProps({
             </GlassCard>
 
             <!-- Password -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.1s">
+            <GlassCard class="stagger-2 animate-slide-up">
                 <UpdatePasswordForm />
             </GlassCard>
 
             <!-- Notification Preferences -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.15s">
+            <GlassCard class="stagger-3 animate-slide-up">
                 <UpdateNotificationPreferencesForm
                     :preferences="notificationPreferences"
                     :has-push-subscription="props.hasPushSubscription"
@@ -43,7 +43,7 @@ const props = defineProps({
             </GlassCard>
 
             <!-- Delete Account -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.2s">
+            <GlassCard class="stagger-4 animate-slide-up">
                 <DeleteUserForm />
             </GlassCard>
         </div>

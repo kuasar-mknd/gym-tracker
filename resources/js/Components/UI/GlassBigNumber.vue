@@ -88,7 +88,7 @@ const reste = computed(() => {
                 :id="champId"
                 type="number"
                 :value="modelValue"
-                class="font-display text-text-main placeholder-text-muted/50 focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition-all outline-none focus:ring-2"
+                class="font-display text-text-main placeholder-text-muted/50 focus:border-accent-primary focus:ring-accent-primary/20 border-border bg-surface-card/50 hover:bg-surface-card/80 focus:bg-surface-card/80 h-16 w-full rounded-2xl border px-4 text-center text-3xl font-black backdrop-blur-md transition outline-none focus:ring-2"
                 :class="{ 'pr-14': unite }"
                 @input="emit('update:modelValue', enNombre($event.target.value))"
             />

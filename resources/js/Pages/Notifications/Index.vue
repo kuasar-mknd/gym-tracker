@@ -159,7 +159,7 @@ const formatDate = (date) => {
                             <div>
                                 <h4 class="text-text-main font-semibold">{{ notification.data.title }}</h4>
                                 <p class="text-text-muted text-sm">{{ notification.data.message }}</p>
-                                <span class="text-text-muted/30 mt-2 block text-[10px] tracking-wider uppercase">
+                                <span class="text-text-muted/30 text-2xs mt-2 block tracking-wider uppercase">
                                     {{ formatDate(notification.created_at) }}
                                 </span>
                             </div>

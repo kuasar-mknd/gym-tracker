@@ -14,7 +14,7 @@ defineProps({
 
 <template>
     <!-- Duration History Chart -->
-    <GlassCard class="animate-slide-up" style="animation-delay: 0.18s">
+    <GlassCard class="stagger-4 animate-slide-up">
         <div class="mb-4 flex items-center justify-between">
             <div>
                 <h3 class="font-display text-text-main text-lg font-black uppercase italic">Durée des Séances</h3>

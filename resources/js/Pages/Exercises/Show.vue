@@ -199,8 +199,7 @@ const scatterData = computed(() => {
             <!-- Analytics Grid -->
             <div
                 v-if="history && history.length > 0"
-                class="animate-slide-up grid grid-cols-1 gap-6 md:grid-cols-2"
-                style="animation-delay: 0.05s"
+                class="stagger-1 animate-slide-up grid grid-cols-1 gap-6 md:grid-cols-2"
             >
                 <GlassCard>
                     <div class="mb-4">
@@ -304,7 +303,7 @@ const scatterData = computed(() => {
                     </div>
                 </GlassCard>
             </div>
-            <GlassCard v-else class="animate-slide-up" style="animation-delay: 0.05s">
+            <GlassCard v-else class="stagger-1 animate-slide-up">
                 <div class="flex h-64 flex-col items-center justify-center text-center">
                     <span class="material-symbols-outlined text-text-muted/30 mb-2 text-5xl" aria-hidden="true"
                         >bar_chart</span
@@ -314,7 +313,7 @@ const scatterData = computed(() => {
             </GlassCard>
 
             <!-- Session Performance Chart -->
-            <div class="animate-slide-up" style="animation-delay: 0.15s">
+            <div class="stagger-3 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">
@@ -335,7 +334,7 @@ const scatterData = computed(() => {
             </div>
 
             <!-- Session Volume Line Chart -->
-            <div class="animate-slide-up" style="animation-delay: 0.18s">
+            <div class="stagger-4 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">
@@ -356,7 +355,7 @@ const scatterData = computed(() => {
             </div>
 
             <!-- History Chart -->
-            <div class="animate-slide-up" style="animation-delay: 0.2s">
+            <div class="stagger-4 animate-slide-up">
                 <GlassCard>
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">

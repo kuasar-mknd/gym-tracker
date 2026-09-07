@@ -15,8 +15,8 @@
             </header>
 
             <!-- Main Tracker Section -->
-            <GlassCard class="animate-slide-up" style="animation-delay: 0.05s">
-                <div class="flex flex-col items-center space-y-8 p-4">
+            <GlassCard class="stagger-1 animate-slide-up">
+                <div class="flex flex-col items-center space-y-6 p-4">
                     <!-- Progress Circle/Tank -->
                     <div
                         class="relative flex h-64 w-64 items-center justify-center"
@@ -50,7 +50,7 @@
                                 stroke-linecap="round"
                                 stroke-dasharray="283"
                                 :stroke-dashoffset="dashOffset"
-                                class="transition-all duration-1000 ease-out"
+                                class="transition duration-1000 ease-out"
                             />
                             <defs>
                                 <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -77,7 +77,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 250ml"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition"
                         >
                             <span
                                 class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
@@ -91,7 +91,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 500ml"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition"
                         >
                             <span
                                 class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
@@ -105,7 +105,7 @@
                             :disabled="form.processing"
                             v-press
                             aria-label="Ajouter 1L"
-                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition-all"
+                            class="group border-border bg-surface-card/50 hover:bg-surface-card/80 flex flex-col items-center justify-center rounded-2xl border py-4 transition"
                         >
                             <span
                                 class="material-symbols-outlined text-accent-info-deep mb-1 text-2xl"
@@ -147,7 +147,7 @@
             <!-- History Section -->
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <!-- Today's Logs -->
-                <GlassCard class="animate-slide-up h-full" style="animation-delay: 0.1s">
+                <GlassCard class="stagger-2 animate-slide-up h-full">
                     <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
                         Journal du jour
                     </h2>
@@ -163,7 +163,7 @@
                         <div
                             v-for="log in logs"
                             :key="log.id"
-                            class="border-border bg-surface-card/50 hover:bg-surface-card/80 flex items-center justify-between rounded-2xl border p-3 transition-all"
+                            class="border-border bg-surface-card/50 hover:bg-surface-card/80 flex items-center justify-between rounded-2xl border p-3 transition"
                         >
                             <div class="flex items-center gap-3">
                                 <div
@@ -194,7 +194,7 @@
                 </GlassCard>
 
                 <!-- Weekly History -->
-                <GlassCard class="animate-slide-up h-full" style="animation-delay: 0.15s">
+                <GlassCard class="stagger-3 animate-slide-up h-full">
                     <h2 class="font-display text-text-main mb-4 text-lg font-black uppercase italic">
                         7 derniers jours
                     </h2>

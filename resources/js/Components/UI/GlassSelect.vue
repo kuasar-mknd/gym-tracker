@@ -152,7 +152,7 @@ const isRequired = computed(() => {
                 class="text-text-muted pointer-events-none absolute top-1/2 right-3 -translate-y-1/2"
                 aria-hidden="true"
             >
-                <span class="material-symbols-outlined text-[20px]" aria-hidden="true">expand_more</span>
+                <span class="material-symbols-outlined text-xl" aria-hidden="true">expand_more</span>
             </div>
         </div>
 

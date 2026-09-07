@@ -130,7 +130,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 <div class="flex gap-2">
                     <Link :href="route('calendar.index')">
                         <GlassButton>
-                            <span class="material-symbols-outlined mr-2 text-[18px]" aria-hidden="true"
+                            <span class="material-symbols-outlined mr-2 text-lg" aria-hidden="true"
                                 >calendar_month</span
                             >
                             Calendrier
@@ -196,7 +196,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             </div>
 
             <!-- Timeline Chart -->
-            <div class="animate-slide-up" style="animation-delay: 0.08s">
+            <div class="stagger-2 animate-slide-up">
                 <GlassCard v-if="workoutList.length > 0">
                     <div class="mb-4">
                         <h3 class="font-display text-text-main text-lg font-black uppercase italic">
@@ -209,7 +209,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             </div>
 
             <!-- Available Exercises -->
-            <div class="animate-slide-up" style="animation-delay: 0.1s">
+            <div class="stagger-2 animate-slide-up">
                 <h3 class="text-text-main mb-3 font-semibold">Exercices disponibles</h3>
 
                 <Deferred data="deferredData">
@@ -237,7 +237,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
             </div>
 
             <!-- Workouts List -->
-            <div class="animate-slide-up" style="animation-delay: 0.2s">
+            <div class="stagger-4 animate-slide-up">
                 <h3 class="text-text-main mb-3 font-semibold">Historique</h3>
 
                 <!-- Skeleton Loading -->

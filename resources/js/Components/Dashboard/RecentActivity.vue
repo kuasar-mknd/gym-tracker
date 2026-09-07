@@ -18,12 +18,12 @@ const emit = defineEmits(['startWorkout'])
 
 <template>
     <!-- Recent Activity -->
-    <section class="animate-slide-up" style="animation-delay: 0.2s">
+    <section class="stagger-4 animate-slide-up">
         <div class="mb-5 flex items-center justify-between px-1">
-            <h3 class="text-text-muted text-xs font-black tracking-[0.2em] uppercase">Activité Récente</h3>
+            <h3 class="text-text-muted tracking-sur-titre text-xs font-black uppercase">Activité Récente</h3>
             <Link
                 :href="route('workouts.index')"
-                class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary rounded-sm text-xs font-bold tracking-wider uppercase transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="text-accent-primary-deep hover:text-accent-tertiary-deep focus-visible:ring-accent-primary rounded-md text-xs font-bold tracking-wider uppercase transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
                 Voir tout
             </Link>
@@ -47,9 +47,7 @@ const emit = defineEmits(['startWorkout'])
             <div
                 class="border-surface-card/20 bg-surface-card/10 relative mb-2 overflow-hidden rounded-3xl border p-4 backdrop-blur-md"
             >
-                <div class="text-accent-tertiary-deep mb-4 text-[10px] font-black tracking-[0.2em] uppercase">
-                    Durée des séances
-                </div>
+                <div class="sur-titre text-accent-tertiary-deep mb-4">Durée des séances</div>
                 <RecentWorkoutsTimelineChart :data="recentWorkouts" />
             </div>
 
@@ -58,7 +56,7 @@ const emit = defineEmits(['startWorkout'])
                 :key="workout.id"
                 v-press
                 :href="route('workouts.show', { workout: workout.id })"
-                class="group focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative flex items-center justify-between rounded-3xl border p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
+                class="group focus-visible:ring-accent-primary border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative flex items-center justify-between rounded-3xl border p-4 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-95"
             >
                 <!-- Color indicator -->
                 <div

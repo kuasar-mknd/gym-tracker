@@ -68,7 +68,7 @@ const emit = defineEmits([
             >
                 <div class="flex flex-col items-center">
                     <span class="material-symbols-outlined text-2xl" aria-hidden="true">edit</span>
-                    <span class="text-[10px] font-bold tracking-wider uppercase">Modifier</span>
+                    <span class="text-2xs font-bold tracking-wider uppercase">Modifier</span>
                 </div>
             </button>
         </template>
@@ -81,7 +81,7 @@ const emit = defineEmits([
             >
                 <div class="flex flex-col items-center">
                     <span class="material-symbols-outlined text-2xl" aria-hidden="true">delete</span>
-                    <span class="text-[10px] font-bold tracking-wider uppercase">Supprimer</span>
+                    <span class="text-2xs font-bold tracking-wider uppercase">Supprimer</span>
                 </div>
             </button>
         </template>
@@ -90,7 +90,7 @@ const emit = defineEmits([
             padding="p-4"
             :dusk="`exercise-card-${exercise.id}`"
             :class="[
-                'group relative overflow-hidden transition-all duration-300',
+                'group relative overflow-hidden transition duration-300',
                 'border-l-[6px]',
                 categoryBorderColors[category] || 'border-l-border-strong',
             ]"

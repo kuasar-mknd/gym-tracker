@@ -9,7 +9,7 @@ const emit = defineEmits(['startWorkout'])
 </script>
 
 <template>
-    <section class="animate-slide-up grid grid-cols-2 gap-4" style="animation-delay: 0.1s">
+    <section class="stagger-2 animate-slide-up grid grid-cols-2 gap-4">
         <!-- Start Workout -->
         <button
             v-press
@@ -19,7 +19,7 @@ const emit = defineEmits(['startWorkout'])
             aria-label="Démarrer une nouvelle séance d'entraînement"
             id="start-workout-button"
             dusk="start-workout-button"
-            class="hover:shadow-glow-orange/70 group shadow-glow-orange focus-visible:ring-accent-primary relative h-52 overflow-hidden rounded-3xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            class="hover:shadow-glow-orange/70 group shadow-glow-orange focus-visible:ring-accent-primary relative h-52 overflow-hidden rounded-3xl transition duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             :class="{ 'cursor-wait': processing }"
         >
             <div class="bg-surface-card/60 absolute inset-0 z-0 backdrop-blur-md"></div>
@@ -51,7 +51,7 @@ const emit = defineEmits(['startWorkout'])
             v-press
             :href="route('templates.index')"
             aria-label="Voir mes programmes d'entraînement"
-            class="hover:shadow-glow-violet/70 group shadow-glow-violet focus-visible:ring-accent-primary relative h-52 overflow-hidden rounded-3xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            class="hover:shadow-glow-violet/70 group shadow-glow-violet focus-visible:ring-accent-primary relative h-52 overflow-hidden rounded-3xl transition duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
             <div class="bg-surface-card/60 absolute inset-0 z-0 backdrop-blur-md"></div>
             <div

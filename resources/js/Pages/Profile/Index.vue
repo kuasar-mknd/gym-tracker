@@ -116,14 +116,14 @@ const menuGroups = [
     <Head title="Menu" />
 
     <AuthenticatedLayout page-title="Plus">
-        <div class="space-y-8">
+        <div class="space-y-6">
             <!-- User Profile Quick View -->
             <div class="animate-fade-in flex items-center gap-4 py-2">
                 <div
                     class="bg-gradient-main shadow-accent-primary/20 flex h-20 w-20 items-center justify-center rounded-3xl p-[3px] shadow-lg"
                 >
                     <div
-                        class="bg-surface-card flex h-full w-full items-center justify-center rounded-[1.2rem] text-3xl font-black"
+                        class="bg-surface-card flex h-full w-full items-center justify-center rounded-xl text-3xl font-black"
                     >
                         {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                     </div>
@@ -157,7 +157,7 @@ const menuGroups = [
                 class="animate-slide-up"
                 :style="{ animationDelay: `${0.1 + gIdx * 0.1}s` }"
             >
-                <h3 class="text-text-muted mb-4 ml-1 text-[10px] font-black tracking-[0.2em] uppercase">
+                <h3 class="sur-titre text-text-muted mb-4 ml-1">
                     {{ group.title }}
                 </h3>
 
@@ -166,7 +166,7 @@ const menuGroups = [
                         v-for="item in group.items"
                         :key="item.name"
                         :href="route(item.route)"
-                        class="group focus-visible:ring-accent-primary block rounded-2xl transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        class="group focus-visible:ring-accent-primary block rounded-2xl transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     >
                         <GlassCard
                             padding="p-4"
@@ -190,7 +190,7 @@ const menuGroups = [
                                     <p class="text-text-muted text-xs">{{ item.description }}</p>
                                 </div>
                                 <span
-                                    class="material-symbols-outlined text-text-muted/30 group-hover:text-text-main transition-all group-hover:translate-x-1"
+                                    class="material-symbols-outlined text-text-muted/30 group-hover:text-text-main transition group-hover:translate-x-1"
                                     aria-hidden="true"
                                 >
                                     chevron_right

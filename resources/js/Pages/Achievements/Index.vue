@@ -47,12 +47,12 @@ const filteredAchievements = computed(() => {
 
         <div class="space-y-6 pb-24">
             <!-- Categories -->
-            <div class="animate-slide-up flex scrollbar-none gap-2 overflow-x-auto pb-2" style="animation-delay: 0.1s">
+            <div class="stagger-2 animate-slide-up flex scrollbar-none gap-2 overflow-x-auto pb-2">
                 <button
                     v-for="cat in categories"
                     :key="cat.value"
                     @click="currentCategory = cat.value"
-                    class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-all"
+                    class="rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition"
                     :class="
                         currentCategory === cat.value
                             ? 'accent-fill shadow-lg'
@@ -64,11 +64,11 @@ const filteredAchievements = computed(() => {
             </div>
 
             <!-- Achievements Grid -->
-            <div class="animate-slide-up grid grid-cols-2 gap-4 sm:grid-cols-3" style="animation-delay: 0.2s">
+            <div class="stagger-4 animate-slide-up grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <div v-for="achievement in filteredAchievements" :key="achievement.id" class="group relative">
                     <GlassCard
                         padding="p-4"
-                        class="flex h-full flex-col items-center text-center transition-all duration-300"
+                        class="flex h-full flex-col items-center text-center transition duration-300"
                         :class="[
                             achievement.is_unlocked
                                 ? 'bg-surface-glass-strong border-accent-primary/20'
@@ -89,13 +89,13 @@ const filteredAchievements = computed(() => {
                         </h3>
 
                         <!-- Description -->
-                        <p class="text-text-muted line-clamp-2 text-[10px]">
+                        <p class="text-text-muted text-2xs line-clamp-2">
                             {{ achievement.description }}
                         </p>
 
                         <!-- Tooltip Overlay -->
                         <div
-                            class="bg-text-main/80 pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[20px] p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
+                            class="bg-text-main/80 pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
                             <!--
                                 Le nom s'ecrit en CLAIR : cette infobulle est un
@@ -106,12 +106,12 @@ const filteredAchievements = computed(() => {
                                 fond pose par une classe voisine.
                             -->
                             <span class="text-text-on-dark-accent mb-1 text-xs font-bold">{{ achievement.name }}</span>
-                            <span class="text-text-on-dark-accent/80 text-[10px] leading-tight">{{
+                            <span class="text-text-on-dark-accent/80 text-2xs leading-tight">{{
                                 achievement.description
                             }}</span>
                             <div
                                 v-if="achievement.is_unlocked"
-                                class="text-text-on-dark-accent/30 mt-2 text-[8px] italic"
+                                class="text-text-on-dark-accent/30 text-2xs mt-2 italic"
                             >
                                 Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
                             </div>

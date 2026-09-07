@@ -18,7 +18,7 @@
             <!-- Plate Calculator -->
             <Link :href="route('plates.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
@@ -49,7 +49,7 @@
             <!-- 1RM Calculator -->
             <Link :href="route('tools.1rm')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-secondary/20 text-accent-secondary-deep rounded-full p-4">
@@ -80,7 +80,7 @@
             <!-- Wilks Calculator -->
             <Link :href="route('tools.wilks')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-primary/20 text-accent-primary-deep rounded-full p-4">
@@ -111,7 +111,7 @@
             <!-- Macro Calculator -->
             <Link :href="route('tools.macro-calculator')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-state/20 text-accent-state-deep rounded-full p-4">
@@ -130,7 +130,7 @@
             <!-- Warmup Calculator -->
             <Link :href="route('tools.warmup')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
@@ -161,7 +161,7 @@
             <!-- Water Tracker -->
             <Link :href="route('tools.water.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-info/20 text-accent-info-deep rounded-full p-4">
@@ -176,7 +176,7 @@
             <!-- Interval Timer -->
             <Link :href="route('tools.interval-timer.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">
@@ -193,7 +193,7 @@
             <!-- Fasting Tracker -->
             <Link :href="route('tools.fasting.index')" class="group block" v-press>
                 <GlassCard
-                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
+                    class="border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative h-full overflow-hidden rounded-3xl border backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl active:scale-95"
                 >
                     <div class="flex flex-col items-center space-y-4 text-center">
                         <div class="bg-accent-tertiary/20 text-accent-tertiary-deep rounded-full p-4">

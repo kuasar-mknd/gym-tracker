@@ -58,7 +58,7 @@ const statusColor = computed(() => {
 <template>
     <div
         v-press
-        class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-5 shadow-lg backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+        class="group border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 relative overflow-hidden rounded-3xl border p-5 shadow-lg backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:shadow-xl"
     >
         <!-- Liquid Glow Background behind the card (subtle) -->
         <div
@@ -68,7 +68,7 @@ const statusColor = computed(() => {
         <!-- Completion Badge -->
         <div
             v-if="isCompleted"
-            class="bg-accent-state text-text-on-accent absolute -top-2 -right-2 z-10 rotate-12 px-3 py-1.5 text-[10px] font-bold shadow-lg"
+            class="bg-accent-state text-text-on-accent text-2xs absolute -top-2 -right-2 z-10 rotate-12 px-3 py-1.5 font-bold shadow-lg"
         >
             COMPLÉTÉ
         </div>
@@ -84,7 +84,7 @@ const statusColor = computed(() => {
                     <h4 class="font-display text-text-main line-clamp-1 text-lg font-black uppercase italic">
                         {{ goal.title }}
                     </h4>
-                    <span class="text-text-muted text-[10px] font-bold tracking-wider uppercase">{{ typeLabel }}</span>
+                    <span class="text-text-muted text-2xs font-bold tracking-wider uppercase">{{ typeLabel }}</span>
                 </div>
             </div>
 
@@ -98,7 +98,7 @@ const statusColor = computed(() => {
         <div class="relative z-10 space-y-4">
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
-                <div class="text-text-muted flex justify-between text-[10px] font-bold tracking-widest uppercase">
+                <div class="text-text-muted text-2xs flex justify-between font-bold tracking-widest uppercase">
                     <span>{{ goal.start_value }} {{ goal.unit }}</span>
                     <span>{{ goal.target_value }} {{ goal.unit }}</span>
                 </div>
@@ -110,7 +110,7 @@ const statusColor = computed(() => {
                     aria-valuemax="100"
                 >
                     <div
-                        class="relative h-full transition-all duration-1000 ease-out"
+                        class="relative h-full transition duration-1000 ease-out"
                         :class="
                             isCompleted
                                 ? // Le vert acide ne se detache d'aucune piste claire : 1,13:1
@@ -133,28 +133,28 @@ const statusColor = computed(() => {
                 <div
                     class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 rounded-2xl border p-3 shadow-sm backdrop-blur-md transition-colors"
                 >
-                    <p class="text-text-muted text-[10px] font-black tracking-widest uppercase">Actuel</p>
+                    <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Actuel</p>
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ goal.current_value }}
-                        <span class="text-text-muted text-[10px] font-bold not-italic">{{ goal.unit }}</span>
+                        <span class="text-text-muted text-2xs font-bold not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>
                 <div
                     class="border-surface-card/20 bg-surface-card/10 group-hover:bg-surface-card/20 rounded-2xl border p-3 shadow-sm backdrop-blur-md transition-colors"
                 >
-                    <p class="text-text-muted text-[10px] font-black tracking-widest uppercase">Cible</p>
+                    <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Cible</p>
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ goal.target_value }}
-                        <span class="text-text-muted text-[10px] font-bold not-italic">{{ goal.unit }}</span>
+                        <span class="text-text-muted text-2xs font-bold not-italic">{{ goal.unit }}</span>
                     </p>
                 </div>
             </div>
 
             <div
                 v-if="goal.deadline"
-                class="text-text-muted flex items-center gap-1.5 pt-1 text-[10px] font-bold tracking-wider uppercase"
+                class="text-text-muted text-2xs flex items-center gap-1.5 pt-1 font-bold tracking-wider uppercase"
             >
-                <span class="material-symbols-outlined text-[14px]" aria-hidden="true">schedule</span>
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">schedule</span>
                 <span>Échéance : {{ formattedDeadline }}</span>
             </div>
 
@@ -170,7 +170,7 @@ const statusColor = computed(() => {
                     :aria-label="`Modifier l'objectif ${goal.title}`"
                     class="text-text-muted hover:text-text-main focus-visible:ring-accent-primary min-h-touch border-surface-card/20 bg-surface-card/10 hover:bg-surface-card/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">edit</span>
+                    <span class="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
                     Modifier
                 </Link>
                 <button
@@ -180,7 +180,7 @@ const statusColor = computed(() => {
                     class="focus-visible:ring-accent-primary min-h-touch border-accent-danger/30 bg-accent-danger/10 text-accent-danger-deep hover:bg-accent-danger/20 inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border text-xs font-bold uppercase transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     @click="emit('delete', goal)"
                 >
-                    <span class="material-symbols-outlined text-[18px]" aria-hidden="true">delete</span>
+                    <span class="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
                     Supprimer
                 </button>
             </div>

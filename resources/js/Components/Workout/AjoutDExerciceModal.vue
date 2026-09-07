@@ -132,7 +132,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         type="button"
                         @click="quickCreate"
                         dusk="quick-create-exercise"
-                        class="border-border hover:border-accent-state focus-visible:ring-accent-state flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all focus-visible:ring-2 focus-visible:outline-none"
+                        class="border-border hover:border-accent-state focus-visible:ring-accent-state flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition focus-visible:ring-2 focus-visible:outline-none"
                     >
                         <span class="text-text-muted mb-2 block text-sm italic"
                             >Aucun résultat pour "{{ searchQuery }}"</span
@@ -151,7 +151,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         type="button"
                         @click="choisir(exercise.id)"
                         :dusk="`select-exercise-${exercise.id}`"
-                        class="glass-panel-light hover:border-accent-primary/50 focus-visible:ring-accent-primary block w-full cursor-pointer rounded-2xl p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
+                        class="glass-panel-light hover:border-accent-primary/50 focus-visible:ring-accent-primary block w-full cursor-pointer rounded-2xl p-4 text-left transition focus-visible:ring-2 focus-visible:outline-none"
                     >
                         <span class="text-text-main block font-bold">{{ exercise.name }}</span>
                         <span class="text-text-muted block text-xs uppercase">{{ exercise.category }}</span>

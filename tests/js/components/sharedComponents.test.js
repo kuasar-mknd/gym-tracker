@@ -91,11 +91,11 @@ describe('Dropdown', () => {
             },
         })
 
-    /** The floating panel; `.z-50` is the only element carrying the menu. */
-    const panel = (wrapper) => wrapper.get('.z-50')
+    /** The floating panel; `.z-modale` is the only element carrying the menu. */
+    const panel = (wrapper) => wrapper.get('.z-modale')
 
     /** The full-screen catcher sitting between the page and the panel. */
-    const backdrop = (wrapper) => wrapper.get('.z-40')
+    const backdrop = (wrapper) => wrapper.get('.z-nav')
 
     const pressEscape = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
 

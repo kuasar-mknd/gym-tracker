@@ -121,8 +121,8 @@ const goalDistribution = computed(() => {
             </div>
         </template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-7xl space-y-8 sm:px-6 lg:px-8">
+        <div>
+            <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
                 <!-- Stats Section -->
                 <div v-if="goalDistribution.length > 0" class="animate-slide-up">
                     <GlassCard>
