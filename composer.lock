@@ -7133,16 +7133,16 @@
         },
         {
             "name": "socialiteproviders/apple",
-            "version": "5.11.0",
+            "version": "5.12.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SocialiteProviders/Apple.git",
-                "reference": "b60bb191f12a6dc13290d5ab7fec708303c79bf5"
+                "reference": "bd89d1202d429770c537a01306b11a20139a7be0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SocialiteProviders/Apple/zipball/b60bb191f12a6dc13290d5ab7fec708303c79bf5",
-                "reference": "b60bb191f12a6dc13290d5ab7fec708303c79bf5",
+                "url": "https://api.github.com/repos/SocialiteProviders/Apple/zipball/bd89d1202d429770c537a01306b11a20139a7be0",
+                "reference": "bd89d1202d429770c537a01306b11a20139a7be0",
                 "shasum": ""
             },
             "require": {
@@ -7200,7 +7200,7 @@
                 "issues": "https://github.com/socialiteproviders/providers/issues",
                 "source": "https://github.com/socialiteproviders/providers"
             },
-            "time": "2026-09-03T07:23:44+00:00"
+            "time": "2026-09-05T01:53:56+00:00"
         },
         {
             "name": "socialiteproviders/manager",
