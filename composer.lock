@@ -11759,16 +11759,16 @@
     "packages-dev": [
         {
             "name": "andreapollastri/checkpoint",
-            "version": "1.1.7",
+            "version": "1.1.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andreapollastri/checkpoint.git",
-                "reference": "3121ff6b58d74c634242d50b533a61202b22cc77"
+                "reference": "be3b70607a0e9136ae9513a4da96f97c85baf33b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andreapollastri/checkpoint/zipball/3121ff6b58d74c634242d50b533a61202b22cc77",
-                "reference": "3121ff6b58d74c634242d50b533a61202b22cc77",
+                "url": "https://api.github.com/repos/andreapollastri/checkpoint/zipball/be3b70607a0e9136ae9513a4da96f97c85baf33b",
+                "reference": "be3b70607a0e9136ae9513a4da96f97c85baf33b",
                 "shasum": ""
             },
             "require": {
@@ -11797,12 +11797,22 @@
             "license": [
                 "MIT"
             ],
+            "authors": [
+                {
+                    "name": "Andrea Pollastri",
+                    "homepage": "https://andreapollastri.net",
+                    "role": "Developer"
+                }
+            ],
             "description": "Laravel security scanner — checks CVEs, hardcoded secrets, SQL injection, XSS and more via a single Artisan command.",
+            "homepage": "https://github.com/andreapollastri/checkpoint",
             "support": {
+                "docs": "https://github.com/andreapollastri/checkpoint#readme",
                 "issues": "https://github.com/andreapollastri/checkpoint/issues",
-                "source": "https://github.com/andreapollastri/checkpoint/tree/1.1.7"
+                "security": "https://github.com/andreapollastri/checkpoint/security/advisories",
+                "source": "https://github.com/andreapollastri/checkpoint"
             },
-            "time": "2026-08-14T21:42:00+00:00"
+            "time": "2026-09-17T23:38:37+00:00"
         },
         {
             "name": "barryvdh/laravel-ide-helper",
