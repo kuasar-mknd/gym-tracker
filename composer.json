@@ -25,7 +25,7 @@
         "opcodesio/log-viewer": "^3.24",
         "shuvroroy/filament-spatie-laravel-backup": "dev-main",
         "shuvroroy/filament-spatie-laravel-health": "^3.3",
-        "socialiteproviders/apple": "^5.9.0",
+        "socialiteproviders/apple": "^6.0.0",
         "spatie/laravel-activitylog": "^5.0",
         "spatie/laravel-backup": "^10.3",
         "spatie/laravel-csp": "^3.21",
