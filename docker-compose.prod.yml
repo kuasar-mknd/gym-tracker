@@ -28,7 +28,9 @@ x-app-env: &app-env
     MAIL_PORT: ${MAIL_PORT}
     MAIL_USERNAME: ${MAIL_USERNAME}
     MAIL_PASSWORD: ${MAIL_PASSWORD}
-    MAIL_ENCRYPTION: ${MAIL_ENCRYPTION}
+    # Laravel lit MAIL_SCHEME, pas MAIL_ENCRYPTION, que rien ne lisait. Vide, le
+    # schéma se déduit du port : smtps sur 465, smtp (STARTTLS si offert) ailleurs.
+    MAIL_SCHEME: ${MAIL_SCHEME:-}
     MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
     MAIL_FROM_NAME: '${MAIL_FROM_NAME}'
 
@@ -56,9 +58,14 @@ services:
             <<: *app-env
             # Security & Admin
             ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS}
+            # Le panneau Horizon et le seeder du premier administrateur ne
+            # tournent que dans app. Sans ces deux lignes, les poser dans la pile
+            # ne servait à rien : Horizon restait fermé à tous, et le seeder
+            # échouait faute de mot de passe.
+            HORIZON_ALLOWED_EMAILS: ${HORIZON_ALLOWED_EMAILS:-}
+            ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
             # Server Optimization
             OCTANE_SERVER: frankenphp
-            FRANKENPHP_WAIT_FOR_WORKER: '60s'
             LOG_CHANNEL: stderr
         deploy:
             resources:

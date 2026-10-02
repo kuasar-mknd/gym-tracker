@@ -49,9 +49,11 @@ return [
             'report' => false,
         ],
 
-        // Les archives de sauvegarde : en production, un dossier de l'hôte
-        // monté dans le conteneur (BACKUP_PATH), lui-même un partage d'une
-        // autre machine ; jamais un volume Docker, qui disparaît avec la pile.
+        // Les archives de sauvegarde : en production, le dossier de l'hôte
+        // BACKUP_HOST_PATH, monté exactement sur cette racine par défaut et
+        // lui-même un partage d'une autre machine ; jamais un volume Docker,
+        // qui disparaît avec la pile. La production ne transmet pas
+        // BACKUP_PATH : la racine doit y rester la cible du montage.
         'sauvegardes' => [
             'driver' => 'local',
             'root' => env('BACKUP_PATH', storage_path('app/sauvegardes')),
