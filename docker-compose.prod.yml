@@ -87,6 +87,14 @@ services:
             # échouait faute de mot de passe.
             HORIZON_ALLOWED_EMAILS: ${HORIZON_ALLOWED_EMAILS:-}
             ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
+            # Connexion sociale (#1908) : un bouton n'apparaît qu'avec
+            # l'identifiant ET le secret de son fournisseur ; vides, rien ne
+            # change. L'URL de rappel se déduit d'APP_URL (config/services.php).
+            # Apple demande davantage et reste hors de la pile pour l'instant.
+            GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+            GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+            GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+            GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
             # Server Optimization
             OCTANE_SERVER: frankenphp
             LOG_DAILY_NAME: app

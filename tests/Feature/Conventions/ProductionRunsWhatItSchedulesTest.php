@@ -329,3 +329,22 @@ it('nomme le fichier de journal du jour d\'après LOG_DAILY_NAME', function (): 
         unset($_SERVER['LOG_DAILY_NAME'], $_ENV['LOG_DAILY_NAME']);
     }
 });
+
+/*
+ * La connexion sociale n'avait aucun moyen de s'activer en production : ses
+ * identifiants n'atteignaient aucun conteneur (#1908). Ils vont à app, qui
+ * seul sert les pages et les rappels ; worker et scheduler n'en ont pas
+ * l'usage, et un secret de moins dans un conteneur est un secret de moins.
+ */
+it('transmet les identifiants de la connexion sociale à app seul', function (): void {
+    $services = compositionServicesDeLApplication();
+    $identifiants = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'];
+
+    foreach ($identifiants as $nom) {
+        expect(data_get($services, "app.environment.{$nom}"))->toBe("\${{$nom}:-}");
+
+        foreach (['worker', 'scheduler'] as $service) {
+            expect(data_get($services, "{$service}.environment.{$nom}"))->toBeNull();
+        }
+    }
+});
