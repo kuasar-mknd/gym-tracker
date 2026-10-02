@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "534f55dc1482f5eb7f5451de36665a68",
+    "content-hash": "8206058c151e837eddbe0d4347a3d0df",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -7095,16 +7095,16 @@
         },
         {
             "name": "shuvroroy/filament-spatie-laravel-backup",
-            "version": "dev-main",
+            "version": "v4.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/shuvroroy/filament-spatie-laravel-backup.git",
-                "reference": "758ab69fad6b00954603cf5237911216a3cdbf7b"
+                "reference": "46aedff7fe4f9e547e3a927f65f7831276cffb15"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/shuvroroy/filament-spatie-laravel-backup/zipball/758ab69fad6b00954603cf5237911216a3cdbf7b",
-                "reference": "758ab69fad6b00954603cf5237911216a3cdbf7b",
+                "url": "https://api.github.com/repos/shuvroroy/filament-spatie-laravel-backup/zipball/46aedff7fe4f9e547e3a927f65f7831276cffb15",
+                "reference": "46aedff7fe4f9e547e3a927f65f7831276cffb15",
                 "shasum": ""
             },
             "require": {
@@ -7127,7 +7127,6 @@
                 "phpstan/phpstan-deprecation-rules": "^2.0",
                 "phpstan/phpstan-phpunit": "^2.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -7161,7 +7160,7 @@
             ],
             "support": {
                 "issues": "https://github.com/shuvroroy/filament-spatie-laravel-backup/issues",
-                "source": "https://github.com/shuvroroy/filament-spatie-laravel-backup/tree/main"
+                "source": "https://github.com/shuvroroy/filament-spatie-laravel-backup/tree/v4.0.2"
             },
             "funding": [
                 {
@@ -7169,7 +7168,7 @@
                     "type": "buy_me_a_coffee"
                 }
             ],
-            "time": "2026-09-29T14:26:47+00:00"
+            "time": "2026-08-27T18:26:49+00:00"
         },
         {
             "name": "shuvroroy/filament-spatie-laravel-health",
@@ -20803,8 +20802,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "roave/security-advisories": 20,
-        "shuvroroy/filament-spatie-laravel-backup": 20
+        "roave/security-advisories": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,
