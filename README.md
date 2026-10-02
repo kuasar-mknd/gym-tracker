@@ -89,6 +89,12 @@ Une fois la nuit verte, rien ne relance la publication tout seul : relancer les 
 
 Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow.
 
+La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul sur le serveur de production ; comme les autres contrôles, ces trois-là écrivent à `HEALTH_TO_ADDRESS` quand ils passent au rouge :
+
+- **Dossier des sauvegardes** écrit puis efface une sonde dans le partage monté (#1812). Au démarrage, chaque conteneur fait la même vérification et, en cas d'échec, écrit dans `docker logs` « ATTENTION : le dossier des sauvegardes … n'est pas inscriptible par uid … » sans s'arrêter.
+- **Versions des conteneurs** compare l'image qu'exécutent `app`, `worker` et `scheduler`, chacun l'annonçant à son démarrage (#1813). Un conteneur garde l'image avec laquelle il a été créé : au rouge, mettre à jour la pile en retéléchargeant l'image. `docker exec <conteneur> printenv APP_VERSION APP_REVISION` donne la version d'un conteneur ; pour une image plus ancienne, l'étiquette `org.opencontainers.image.revision` de `docker inspect`.
+- **Réglages de la base** relit en production `innodb_flush_log_at_trx_commit` et `log_bin` dans MySQL, et l'état de Pulse (#1668) : rouge si une écriture repaie la synchronisation du disque, orange si Pulse enregistre.
+
 `docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge.
 
 Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
@@ -197,6 +203,15 @@ Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur 
 | `LOG_CHANNEL`, `LOG_STACK` | `stack`, `stderr,daily` | Chaque ligne va dans `docker logs` et dans le fichier du jour du conteneur, gardé quatorze jours dans le volume `journaux` (#1907). |
 | `LOG_DAILY_NAME` | `app`, `worker` ou `scheduler`, selon le service | Nom du fichier de journal du conteneur : la page « Journaux » du panneau dit ainsi qui a écrit quoi. |
 | `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` | Variables de l'image mysql du service `db`, lues à l'initialisation d'un volume vide. |
+
+### Fixées par l'image
+
+Posées par le `Dockerfile` à partir des arguments que la CI passe au build : les poser dans la pile ne change rien, et un conteneur dit ainsi l'image qu'il exécute, pas celle qu'on croit avoir déployée.
+
+| Variable | Valeur | Rôle |
+| --- | --- | --- |
+| `APP_VERSION` | le tag construit (`v1.5.20`), `main` sur `main` ; `dev` hors CI | Version que chaque conteneur annonce à son démarrage, la même que l'étiquette `org.opencontainers.image.version` de l'image ; le contrôle « Versions des conteneurs » compare celles d'`app`, `worker` et `scheduler` (#1813). |
+| `APP_REVISION` | le commit construit ; `inconnue` hors CI | Révision annoncée avec la version : deux images de `main` portent la même version et ne diffèrent que par elle. |
 
 ### Lues par l'application, non transmises en production
 

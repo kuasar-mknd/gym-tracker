@@ -4,8 +4,16 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Support\Sante\AnnonceDeVersion;
+use App\Support\Sante\DossierDesSauvegardesCheck;
+use App\Support\Sante\ReglagesDeLaBaseCheck;
 use App\Support\Sante\TachesPlanifieesCheck;
+use App\Support\Sante\VersionsDesConteneursCheck;
+use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Queue\Events\WorkerStarting as DemarrageDUnTravailleurDeFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Octane\Events\WorkerStarting as DemarrageDUnTravailleurOctane;
 use Spatie\Health\Checks\Checks\BackupsCheck;
 use Spatie\Health\Checks\Checks\CacheCheck;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
@@ -30,6 +38,7 @@ final class SanteServiceProvider extends ServiceProvider
     {
         Health::checks([
             DatabaseCheck::new(),
+            ReglagesDeLaBaseCheck::new(),
             RedisCheck::new(),
             CacheCheck::new(),
             // Le battement passe par la file « default », celle qu'Horizon sert.
@@ -37,7 +46,9 @@ final class SanteServiceProvider extends ServiceProvider
             ScheduleCheck::new()->heartbeatMaxAgeInMinutes(2),
             TachesPlanifieesCheck::new(),
             HorizonCheck::new(),
+            VersionsDesConteneursCheck::new(),
             UsedDiskSpaceCheck::new()->warnWhenUsedSpaceIsAbovePercentage(70)->failWhenUsedSpaceIsAbovePercentage(90),
+            DossierDesSauvegardesCheck::new(),
             // La sauvegarde nocturne tombe à 02 h 30 : vingt-six heures laissent une
             // nuit de marge. La date est prise au démarrage du processus, ce qui
             // convient à `health:check`, lancé à neuf par le planificateur. Par
@@ -51,5 +62,28 @@ final class SanteServiceProvider extends ServiceProvider
             EnvironmentCheck::new(),
             OptimizedAppCheck::new(),
         ]);
+
+        $this->annoncerLesVersions();
+    }
+
+    /**
+     * Chaque conteneur annonce l'image qu'il exécute quand il démarre (#1813) :
+     * app quand Octane démarre un travailleur, worker quand Horizon démarre un
+     * processus de file, scheduler à chaque tâche, donc au moins une fois par
+     * minute avec les battements. Dans le cache, jamais en base.
+     */
+    private function annoncerLesVersions(): void
+    {
+        $conteneurs = [
+            DemarrageDUnTravailleurOctane::class => 'app',
+            DemarrageDUnTravailleurDeFile::class => 'worker',
+            ScheduledTaskStarting::class => 'scheduler',
+        ];
+
+        foreach ($conteneurs as $evenement => $conteneur) {
+            Event::listen($evenement, static function () use ($conteneur): void {
+                AnnonceDeVersion::annoncer($conteneur);
+            });
+        }
     }
 }

@@ -93,6 +93,16 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 
 # Expose production port
 EXPOSE 80
+
+# La version et la révision de l'image, que la CI passe au build : chaque
+# conteneur les annonce à son démarrage, et la page « Santé » compare app,
+# worker et scheduler (#1813). Après le dernier RUN : un RUN placé après un
+# ARG reçoit sa valeur, et un commit neuf le relancerait à chaque construction.
+ARG APP_VERSION=dev
+ARG APP_REVISION=inconnue
+ENV APP_VERSION=${APP_VERSION}
+ENV APP_REVISION=${APP_REVISION}
+
 USER www-data
 
 ENTRYPOINT ["entrypoint.sh"]

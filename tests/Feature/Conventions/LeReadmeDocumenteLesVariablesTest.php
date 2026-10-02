@@ -79,6 +79,20 @@ function readmeVariablesDesConteneursDeLApplication(): array
 }
 
 /**
+ * Les variables que pose l'image elle-même, par les `ENV` du `Dockerfile`.
+ *
+ * @return list<string>
+ */
+function readmeVariablesDeLImage(): array
+{
+    $dockerfile = (string) file_get_contents(base_path('Dockerfile'));
+
+    preg_match_all('/^ENV\s+([A-Z][A-Z0-9_]*)[=\s]/m', $dockerfile, $correspondances);
+
+    return array_values(array_unique($correspondances[1]));
+}
+
+/**
  * Les variables déclarées dans `.env.example`, lignes commentées comprises.
  *
  * @return list<string>
@@ -153,6 +167,16 @@ it('nomme dans le README chaque variable que la production lit', function (): vo
     expect($variables)->toContain('APP_KEY', 'DB_ROOT_PASSWORD', 'BACKUP_ARCHIVE_PASSWORD', 'OCTANE_SERVER')
         ->and(readmeVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
             "docker-compose.prod.yml transmet ces variables, que la section « Variables d'environnement » du README ne nomme pas :\n- %s",
+            implode("\n- ", readmeVariablesAbsentesDuReadme($variables)),
+        ));
+});
+
+it('nomme dans le README chaque variable que pose l’image', function (): void {
+    $variables = readmeVariablesDeLImage();
+
+    expect($variables)->toContain('APP_ENV', 'APP_DEBUG')
+        ->and(readmeVariablesAbsentesDuReadme($variables))->toBe([], sprintf(
+            "Le Dockerfile pose ces variables dans l'image, que le README ne nomme pas :\n- %s",
             implode("\n- ", readmeVariablesAbsentesDuReadme($variables)),
         ));
 });
