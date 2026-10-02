@@ -9,9 +9,11 @@ use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverKeys;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
 use RuntimeException;
+use Tests\Support\GardeDesParcours;
 
 abstract class DuskTestCase extends BaseTestCase
 {
@@ -278,6 +280,30 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
+     * Juge la configuration du parcours avant que les traits ne touchent à la base.
+     *
+     * `DatabaseTruncation` lance `migrate:fresh` dès le premier test, et sous
+     * Sail `artisan dusk` visait la base de développement (#1909). Ici, et non
+     * dans `beforeTruncatingDatabase()` : la méthode vide du trait, que porte
+     * la classe de test, masquerait celle-ci. La base est celle de la connexion
+     * par défaut, que `migrate:fresh` vide, et l'adresse celle que reçoit le
+     * navigateur.
+     *
+     * @return array<mixed>
+     */
+    #[\Override]
+    protected function setUpTraits(): array
+    {
+        GardeDesParcours::verifier(
+            DB::connection()->getDatabaseName(),
+            $this->baseUrl(),
+            $this->urlDuPilote(),
+        );
+
+        return parent::setUpTraits();
+    }
+
+    /**
      * Prepare for Dusk test execution.
      *
      * @beforeClass
@@ -355,6 +381,20 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
+     * L'adresse du pilote qui commande le navigateur : ChromeDriver sur la
+     * machine (la CI), ou le Selenium de Sail.
+     *
+     * Une seule lecture pour `driver()` et pour la garde des parcours : la
+     * garde juge ainsi l'adresse que le parcours emploiera vraiment.
+     */
+    protected function urlDuPilote(): string
+    {
+        $url = $_ENV['DUSK_DRIVER_URL'] ?? env('DUSK_DRIVER_URL');
+
+        return is_string($url) && $url !== '' ? $url : 'http://127.0.0.1:9515';
+    }
+
+    /**
      * Create the RemoteWebDriver instance.
      */
     #[\Override]
@@ -380,7 +420,7 @@ abstract class DuskTestCase extends BaseTestCase
         ]))->all());
 
         return RemoteWebDriver::create(
-            $_ENV['DUSK_DRIVER_URL'] ?? env('DUSK_DRIVER_URL') ?? 'http://127.0.0.1:9515',
+            $this->urlDuPilote(),
             DesiredCapabilities::chrome()
                 ->setCapability('goog:loggingPrefs', ['browser' => 'ALL'])
                 ->setCapability(

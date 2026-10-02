@@ -337,12 +337,6 @@ parameters:
 			path: tests/DuskTestCase.php
 
 		-
-			message: '#^Parameter \#1 \$selenium_server_url of static method Facebook\\WebDriver\\Remote\\RemoteWebDriver\:\:create\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/DuskTestCase.php
-
-		-
 			message: '#^Parameter \#1 \$html of function viewportContentFrom expects string, mixed given\.$#'
 			identifier: argument.type
 			count: 2

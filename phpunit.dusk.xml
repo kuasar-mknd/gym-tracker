@@ -10,11 +10,17 @@
         </testsuite>
     </testsuites>
     <php>
+        <!-- Ni la base, ni son hôte, ni l'URL de l'application ne se règlent ici (#1909).
+             `artisan dusk` démarre Laravel, qui charge le .env (ou .env.dusk.local, qu'il met à
+             sa place le temps de la passe), puis lance Pest dans cet environnement : PHPUnit ne
+             remplace pas une variable déjà posée, et même avec force="true" il laisse $_SERVER,
+             que Laravel lit en premier. Une valeur posée ici ne vaudrait donc que pour un Pest
+             lancé à la main, et séparerait alors le parcours du serveur qui répond au navigateur,
+             qui lit le .env : le navigateur agirait sur les comptes de l'autre base. La CI les pose
+             dans le .env du job browser-shard, Sail dans .env.dusk.local (README), et
+             tests/Support/GardeDesParcours.php refuse une base dont le nom ne finit pas par _dusk. -->
         <env name="APP_ENV" value="testing"/>
-        <env name="APP_URL" value="http://127.0.0.1"/>
         <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_DATABASE" value="gym_tracker_dusk"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="3306"/>
         <env name="DB_USERNAME" value="sail"/>
         <env name="DB_PASSWORD" value="password"/>

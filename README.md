@@ -237,7 +237,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 | `PHP_CLI_SERVER_WORKERS` | commentée | Processus de `artisan serve`, que Sail lance pour servir l'application. |
 | `BCRYPT_ROUNDS` | `12` | Coût du hachage des mots de passe ; phpunit.xml le baisse à 4. |
 | `LOG_CHANNEL`, `LOG_STACK`, `LOG_LEVEL`, `LOG_DEPRECATIONS_CHANNEL` | `stack`, `single`, `debug`, `null` | Journaux dans storage/logs/laravel.log, dépréciations ignorées. Avec `LOG_STACK=daily`, `LOG_DAILY_NAME` (défaut `laravel`) nomme le fichier du jour. |
-| `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | `mysql`, `mysql`, `3306`, `gym_tracker`, `sail`, `password` | Le MySQL de Sail, qui crée la base et l'utilisateur au premier démarrage du volume. Les tests gardent l'hôte mais visent la base `gym_tracker_testing`, que le premier démarrage du volume crée aussi. |
+| `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | `mysql`, `mysql`, `3306`, `gym_tracker`, `sail`, `password` | Le MySQL de Sail, qui crée la base et l'utilisateur au premier démarrage du volume. Les tests gardent l'hôte mais visent la base `gym_tracker_testing`, les parcours navigateur la base `gym_tracker_dusk` par `.env.dusk.local` ; le premier démarrage du volume crée les deux. |
 | `SESSION_DRIVER`, `SESSION_LIFETIME`, `SESSION_ENCRYPT`, `SESSION_PATH`, `SESSION_DOMAIN` | `database`, `120`, `false`, `/`, `null` | Sessions en base. |
 | `CACHE_STORE`, `CACHE_PREFIX`, `QUEUE_CONNECTION`, `FILESYSTEM_DISK` | `database`, commentée, `database`, `local` | Cache et file en base, fichiers sur le disque local. Les tâches en file attendent `queue:listen` (lancé par `sail composer dev`) : Horizon ne sert que la connexion `redis`. |
 | `REDIS_CLIENT`, `REDIS_HOST`, `REDIS_PASSWORD`, `REDIS_PORT` | `phpredis`, `redis`, `null`, `6379` | Le Redis de Sail, dont Horizon a besoin. |
@@ -246,7 +246,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 | `OCTANE_SERVER` | `frankenphp` | Serveur que visent les commandes `octane:*` ; Sail, lui, sert l'application par `artisan serve`. |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vides | Comme en production : sans clés, pas de notifications. |
 | `APP_PORT` | `80` | Port de l'hôte publié par Sail. |
-| `DUSK_DRIVER_URL` | `http://selenium:4444/wd/hub` | Le Selenium de Sail, pour `sail artisan dusk`. |
+| `DUSK_DRIVER_URL` | `http://selenium:4444/wd/hub` | Le Selenium de Sail, pour `sail artisan dusk`. Le navigateur tourne alors dans le conteneur `selenium` : `APP_URL` doit y désigner l'application, ce que ne font ni `localhost` ni `127.0.0.1` (voir « Parcours navigateur »). |
 | `ADMIN_ALLOWED_IPS`, `HORIZON_ALLOWED_EMAILS`, `ADMIN_INITIAL_PASSWORD`, `HEALTH_TO_ADDRESS`, `BACKUP_ARCHIVE_PASSWORD` | vides | Celles de la production. Vides en local : panneau et Horizon ouverts, aucun courriel de santé, et une sauvegarde échoue faute de mot de passe d'archive. |
 
 `compose.yaml` lit aussi les réglages propres à Sail, à ajouter au `.env` au besoin : `FORWARD_DB_PORT`, `FORWARD_REDIS_PORT`, `FORWARD_MAILPIT_PORT`, `FORWARD_MAILPIT_DASHBOARD_PORT`, `VITE_PORT`, `SAIL_XDEBUG_MODE`, `SAIL_XDEBUG_CONFIG` et `MYSQL_EXTRA_OPTIONS`. Le script sail pose lui-même `WWWUSER` et `WWWGROUP`.
@@ -325,7 +325,11 @@ cp .env.example .env
 ./vendor/bin/sail npm run build
 ```
 
-`migrate --seed` crée un compte de démonstration, `test@example.com` / `password` ; en local, `/__dev-login` s'y connecte d'un clic. Le premier démarrage du MySQL de Sail crée aussi la base des tests, `gym_tracker_testing` : sur un volume plus ancien, `./vendor/bin/sail down -v` la fait recréer, au prix des données de développement.
+`migrate --seed` crée un compte de démonstration, `test@example.com` / `password` ; en local, `/__dev-login` s'y connecte d'un clic. Le premier démarrage du MySQL de Sail crée aussi les bases des tests, `gym_tracker_testing` et `gym_tracker_dusk`. Sur un volume plus ancien, le script d'initialisation se rejoue sans toucher aux données de développement :
+
+```bash
+./vendor/bin/sail exec mysql bash /docker-entrypoint-initdb.d/20-create-parallel-testing-databases.sh
+```
 
 ---
 
@@ -338,10 +342,31 @@ cp .env.example .env
 | `./vendor/bin/sail npm run dev` | Lance Vite avec Hot Reload |
 | `./vendor/bin/sail artisan test -p` | Suite backend en parallèle |
 | `./vendor/bin/sail npx vitest run` | Suite frontend |
-| `./vendor/bin/sail artisan dusk` | Parcours navigateur ; `phpunit.dusk.xml` suit encore la disposition de la CI (#1909) |
+| `./vendor/bin/sail artisan dusk` | Parcours navigateur, sur la base `gym_tracker_dusk` : demande `.env.dusk.local`, voir ci-dessous |
 | `./vendor/bin/sail bin pint` | Formate le code |
 | `./vendor/bin/sail php vendor/bin/phpstan analyse --memory-limit=2G` | Analyse statique, `level: max` |
 | `./vendor/bin/sail php vendor/bin/rector process --dry-run` | Modernisation en attente |
+
+### Parcours navigateur
+
+`artisan dusk` lance les parcours avec le `.env`. Tel quel, sous Sail, ils viseraient la base de développement, et ceux qui vident leur base au premier test la videraient ; le navigateur, qui tourne dans le conteneur `selenium`, chercherait l'application sur `localhost`, c'est-à-dire chez lui. Une garde refuse les deux avant toute écriture (#1909) : la base doit finir par `_dusk`, et `APP_URL` ne peut viser ni `localhost` ni `127.0.0.1` quand le navigateur tourne ailleurs. Une fois, dériver du `.env` la configuration des parcours :
+
+```bash
+sed -e 's#^APP_URL=.*#APP_URL=http://laravel.test#' \
+    -e 's#^DB_HOST=.*#DB_HOST=mysql#' \
+    -e 's#^DB_DATABASE=.*#DB_DATABASE=gym_tracker_dusk#' \
+    -e 's#^DUSK_DRIVER_URL=.*#DUSK_DRIVER_URL=http://selenium:4444/wd/hub#' \
+    .env > .env.dusk.local
+```
+
+Puis, à chaque passe :
+
+```bash
+./vendor/bin/sail npm run build   # Selenium ne joint pas le serveur de Vite
+./vendor/bin/sail artisan dusk
+```
+
+`artisan dusk` met `.env.dusk.local` à la place du `.env` le temps de la passe, puis le remet ; il cherche `.env.dusk.` suivi de l'`APP_ENV` du `.env`, `local` sous Sail. Les parcours et le serveur de Sail, qui relit le `.env` à chaque requête, visent ainsi ensemble `gym_tracker_dusk` ; pendant la passe, `http://localhost` sert donc cette base. La CI tourne autrement : serveur et ChromeDriver sur le même exécuteur, `APP_URL=http://127.0.0.1:8000`, dans le `.env` qu'écrit le job `browser-shard`.
 
 ### Mutation testing
 
