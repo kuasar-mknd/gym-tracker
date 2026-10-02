@@ -6,7 +6,11 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta property="csp-nonce" content="{{ Vite::cspNonce() }}">
+    {{-- Le nonce va dans l'attribut nonce : c'est lui que lit l'aide de
+         préchargement de Vite (`.nonce`, puis getAttribute('nonce')), et lui
+         que le navigateur masque au DOM. Dans `content`, rien ne le lisait,
+         sauf un sélecteur CSS d'attribut (#1904). --}}
+    <meta property="csp-nonce" nonce="{{ Vite::cspNonce() }}">
     <meta name="theme-color" content="{{ \App\Support\Charte::jeton('surface-page') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">

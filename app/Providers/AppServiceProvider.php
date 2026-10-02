@@ -14,7 +14,6 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use RuntimeException;
@@ -56,7 +55,9 @@ final class AppServiceProvider extends ServiceProvider
             Gate::define('viewPulse', fn ($user = null): bool => true);
         }
 
-        Vite::useCspNonce();
+        // Le nonce CSP n'est plus tiré ici mais à chaque requête, par
+        // NonceCspParRequete : sous Octane, boot() ne tourne qu'une fois par
+        // worker, et son nonce servait à tous les utilisateurs (#1904).
 
         // L'absence de Vite::prefetch est voulue.
         //

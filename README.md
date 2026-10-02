@@ -43,7 +43,7 @@
 ### 🔐 Sécurité & Outils
 - **OAuth Social** — Connexion via Google et GitHub, dès que l'identifiant et le secret du fournisseur sont posés ; Apple attend encore son câblage (#1911).
 - **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
-- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce par worker Octane, pas par requête, tant que #1904 est ouvert).
+- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce neuf à chaque requête, Octane compris).
 
 ---
 

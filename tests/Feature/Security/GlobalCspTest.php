@@ -40,8 +40,8 @@ class GlobalCspTest extends TestCase
         // Le même nonce doit se retrouver dans la page : balise meta et scripts en ligne.
         $content = (string) $response->getContent();
 
-        // Check meta tag nonce (from app.blade.php line 9)
-        $this->assertStringContainsString('<meta property="csp-nonce" content="'.$nonce.'">', $content);
+        // La meta que lit l'aide de préchargement de Vite, dans son attribut nonce.
+        $this->assertStringContainsString('<meta property="csp-nonce" nonce="'.$nonce.'">', $content);
 
         // Check Ziggy script nonce (from app.blade.php line 38 - @routes)
         $this->assertStringContainsString('nonce="'.$nonce.'"', $content);

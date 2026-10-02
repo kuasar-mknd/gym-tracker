@@ -21,6 +21,17 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->prepend(\App\Http\Middleware\SecurityHeaders::class);
 
+        /*
+         * Le nonce CSP se tire ici, en tête de la pile globale, et non dans le
+         * groupe `web` : le panneau Filament, Pulse, Horizon et les mises à jour
+         * de Livewire ont leur propre pile, et tous lisent le nonce. Ajouté
+         * après `SecurityHeaders`, ce `prepend` passe devant lui ; seul le
+         * maillon qu'Inertia ajoute depuis son fournisseur reste devant, et il
+         * ne lit pas le nonce. Le docbloc du middleware dit pourquoi pas dans
+         * `boot()` (#1904).
+         */
+        $middleware->prepend(\App\Http\Middleware\NonceCspParRequete::class);
+
         $middleware->statefulApi();
 
         $middleware->api(append: [
