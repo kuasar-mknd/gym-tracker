@@ -4,12 +4,20 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Models\Workout;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Vite;
 use Illuminate\Routing\Route as RouteLaravel;
+use Illuminate\Routing\ViewController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Inertia\Controller as InertiaController;
 use Inertia\Testing\AssertableInertia;
 use Symfony\Component\HttpFoundation\Response;
+
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\get;
+use function Pest\Laravel\post;
+use function Pest\Laravel\withCookie;
 
 /**
  * Les en-têtes d'une page complète tiennent dans le tampon du proxy de DSM.
@@ -51,13 +59,12 @@ function enTetesHoteDeProduction(): string
  *
  * `(string) $reponse->headers` ne convient pas : il aligne les noms en les
  * complétant d'espaces, ce qui gonfle le compte de plusieurs centaines d'octets.
+ *
+ * @param  TestResponse<Response>  $reponseDeTest
  */
-function enTetesTailleDuBloc(TestResponse|Response $reponse): int
+function enTetesTailleDuBloc(TestResponse $reponseDeTest): int
 {
-    // Après `followingRedirects()`, la réponse de base est elle-même enveloppée.
-    while ($reponse instanceof TestResponse) {
-        $reponse = $reponse->baseResponse;
-    }
+    $reponse = $reponseDeTest->baseResponse;
 
     $taille = strlen(sprintf(
         'HTTP/%s %d %s',
@@ -83,11 +90,11 @@ function enTetesTailleDuBloc(TestResponse|Response $reponse): int
  * les fermetures de `routes/web.php`, et les pages déclarées directement par
  * `Route::inertia()` ou `Route::view()`.
  *
- * @return list<RouteLaravel>
+ * @return array<int, RouteLaravel>
  */
 function enTetesPagesDeLApplication(): array
 {
-    $controleursDePage = ['Inertia\\Controller', 'Illuminate\\Routing\\ViewController'];
+    $controleursDePage = [InertiaController::class, ViewController::class];
 
     return collect(Route::getRoutes()->getRoutes())
         ->filter(fn (RouteLaravel $route): bool => in_array('GET', $route->methods(), true))
@@ -119,6 +126,17 @@ function enTetesExigeUneConnexion(RouteLaravel $route): bool
 function enTetesRedirectionsAttendues(): array
 {
     return ['/', '/verify-email'];
+}
+
+/**
+ * La garde web, celle qui lit le cookie « se souvenir de moi ».
+ */
+function enTetesGardeWeb(): SessionGuard
+{
+    /** @var SessionGuard $garde */
+    $garde = auth()->guard('web');
+
+    return $garde;
 }
 
 /**
@@ -155,24 +173,25 @@ it('garde les en-têtes de chaque page complète sous le budget', function (): v
         enTetesRemettreAZeroCommeOctane();
 
         $chemin = '/'.ltrim($route->uri(), '/');
-        $requete = enTetesExigeUneConnexion($route) ? $this->actingAs($utilisateur) : $this;
-        $reponse = $requete->get(enTetesHoteDeProduction().$chemin);
+        $url = enTetesHoteDeProduction().$chemin;
+        $reponse = enTetesExigeUneConnexion($route) ? actingAs($utilisateur)->get($url) : get($url);
         $taille = enTetesTailleDuBloc($reponse);
+        $base = $reponse->baseResponse;
 
         /*
          * Une mesure ne vaut que sur la page que `@vite` a rendue : un 500, ou
          * une redirection due au mauvais état de connexion, passerait sous le
          * budget sans rien prouver.
          */
-        $renduParVite = $reponse->isOk() && str_contains((string) $reponse->getContent(), 'modulepreload');
-        $redirectionAttendue = $reponse->isRedirect() && in_array($chemin, enTetesRedirectionsAttendues(), true);
+        $renduParVite = $base->isOk() && str_contains((string) $base->getContent(), 'modulepreload');
+        $redirectionAttendue = $base->isRedirect() && in_array($chemin, enTetesRedirectionsAttendues(), true);
 
         if (! $renduParVite && ! $redirectionAttendue) {
-            $nonRendues[] = "{$chemin} ({$reponse->status()})";
+            $nonRendues[] = "{$chemin} ({$base->getStatusCode()})";
         }
 
         if ($taille > enTetesBudgetEnOctets()) {
-            $tropLourdes[] = "{$chemin} ({$reponse->status()}) : {$taille} octets";
+            $tropLourdes[] = "{$chemin} ({$base->getStatusCode()}) : {$taille} octets";
         }
     }
 
@@ -203,9 +222,9 @@ it('garde les en-têtes de chaque page complète sous le budget', function (): v
 it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » sous le budget', function (): void {
     $utilisateur = User::factory()->create();
 
-    $nomDuCookie = $this->app['auth']->guard('web')->getRecallerName();
+    $nomDuCookie = enTetesGardeWeb()->getRecallerName();
 
-    $connexion = $this->post(enTetesHoteDeProduction().'/login', [
+    $connexion = post(enTetesHoteDeProduction().'/login', [
         'email' => $utilisateur->email,
         'password' => 'password',
         'remember' => true,
@@ -219,7 +238,7 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
     // Des semaines plus tard : la session a expiré, seul le cookie reste.
     enTetesRemettreAZeroCommeOctane();
 
-    $redirection = $this->withCookie($nomDuCookie, (string) $cookie?->getValue())
+    $redirection = withCookie($nomDuCookie, (string) $cookie?->getValue())
         ->get(enTetesHoteDeProduction().'/');
 
     $redirection->assertRedirect(enTetesHoteDeProduction().'/dashboard');
@@ -228,13 +247,13 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
 
     enTetesRemettreAZeroCommeOctane();
 
-    $reponse = $this->get((string) $redirection->headers->get('Location'));
+    $reponse = get((string) $redirection->baseResponse->headers->get('Location'));
 
     $reponse->assertOk()
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->component('Dashboard'));
 
-    expect($this->app['auth']->guard('web')->viaRemember())->toBeTrue()
-        ->and((string) $reponse->getContent())->toContain('modulepreload')
+    expect(enTetesGardeWeb()->viaRemember())->toBeTrue()
+        ->and((string) $reponse->baseResponse->getContent())->toContain('modulepreload')
         ->and(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 });
 
@@ -246,7 +265,7 @@ it('garde la séance en cours sous le budget', function (): void {
     $utilisateur = User::factory()->create();
     $seance = Workout::factory()->for($utilisateur)->create(['ended_at' => null]);
 
-    $reponse = $this->actingAs($utilisateur)
+    $reponse = actingAs($utilisateur)
         ->get(enTetesHoteDeProduction().route('workouts.show', $seance, absolute: false));
 
     $reponse->assertOk();
