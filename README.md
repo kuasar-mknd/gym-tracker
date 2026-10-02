@@ -106,7 +106,7 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 | --- | --- |
 | **Backend** | Laravel 13, PHP 8.5 (Strict Types), MySQL |
 | **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4 |
-| **Testing** | Pest 4, PHPUnit 12, Laravel Dusk 8 |
+| **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |
 | **DevOps** | Laravel Sail (Docker), GitHub Actions |
 | **Monitoring** | Le panneau (santé, exceptions, tâches planifiées, journaux, erreurs navigateur), Laravel Pulse, Telescope |
 
