@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 1 778 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 1 782 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 087 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -255,7 +255,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 
 | Secret | Obligatoire | Rôle |
 | --- | --- | --- |
-| `GITHUB_TOKEN` | fourni par GitHub | Publie l'image sur ghcr.io, crée les releases, ouvre les issues d'échec de `main`, ferme les issues inactives. Une fusion ou une PR faites avec lui ne déclenchent aucun workflow. |
+| `GITHUB_TOKEN` | fourni par GitHub | Publie l'image sur ghcr.io, crée les releases, ouvre les issues d'échec de `main`, ferme les issues inactives, et crée les labels que `.github/dependabot.yml` demande et qui manquent sur le dépôt (`.github/workflows/labels-dependabot.yml`, #1905). Une fusion ou une PR faites avec lui ne déclenchent aucun workflow. |
 | `AUTO_MERGE_TOKEN` | non | Jeton personnel à granularité fine du job `dependabot` de `.github/workflows/auto-merge.yml`. Une fusion faite avec lui relance la CI sur `main`, ce que `GITHUB_TOKEN` ne fait pas (#1672) ; absent, le workflow retombe sur `GITHUB_TOKEN`. |
 | `AVIS_HORS_LIGNE_TOKEN` | non | Jeton personnel limité à ce dépôt — Contents et Pull requests en lecture et écriture, surtout pas Workflows — qui laisse `.github/workflows/avis-hors-ligne.yml` ouvrir lui-même la PR de rafraîchissement de `roave/security-advisories`, avec une CI qui tourne. Absent, le workflow se contente d'avertir, puis échoue passé quatorze jours. |
 
