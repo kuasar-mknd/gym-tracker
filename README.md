@@ -69,7 +69,7 @@ Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](d
 
 ## 📦 Mise en production
 
-La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml up -d` (ou la mise à jour de la pile dans Portainer) : `pull_policy: always` retélécharge l'image et recrée les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé, et un simple redémarrage ne télécharge rien (#1813). Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml up -d` (ou la mise à jour de la pile) : `pull_policy: always` retélécharge l'image et recrée les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé, et un simple redémarrage ne télécharge rien (#1813). Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
 
 **Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
 
@@ -91,11 +91,11 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 
 `docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge.
 
-Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque dur du NAS, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent le défaut calibré pour un SSD : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
+Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
 
 Les journaux des trois conteneurs de l'application vont dans `docker logs` et, un fichier par conteneur (`app`, `worker`, `scheduler`), dans le volume `journaux` que lit la page « Journaux » du panneau. Le fichier est indispensable au planificateur, qui envoie la sortie de chaque tâche dans /dev/null.
 
-L'application s'ouvre **par le proxy inverse HTTPS du DSM**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
 
 ---
 
@@ -105,18 +105,18 @@ Une variable se déclare dans `.env.example` pour le développement et se docume
 
 ### Production : à poser dans la pile
 
-Elles se posent dans l'environnement de la pile : les variables de la pile Portainer, ou un fichier `.env` à côté de `docker-compose.prod.yml`. Trois règles valent pour toutes :
+Elles se posent dans l'environnement de la pile : les variables de la pile, ou un fichier `.env` à côté de `docker-compose.prod.yml`. Trois règles valent pour toutes :
 
 - **Seules celles que `docker-compose.prod.yml` transmet atteignent les conteneurs.** Une variable lue par `config/` mais absente de ce fichier garde son défaut, quoi qu'on pose dans la pile (voir « Lues par l'application, non transmises »).
 - **Une variable oubliée arrive vide, pas absente.** Compose avertit et la remplace par une chaîne vide ; Laravel retient cette chaîne vide, pas le défaut de sa configuration. La colonne « Défaut » dit ce que reçoit le conteneur quand la variable manque. Seules `BACKUP_ARCHIVE_PASSWORD` et `BACKUP_HOST_PATH` empêchent la pile de démarrer ; les autres obligatoires la laissent démarrer, puis un service tombe.
-- **La configuration est figée au démarrage du conteneur** : `entrypoint.sh` lance `php artisan config:cache`. Une variable changée n'agit qu'une fois les conteneurs recréés (`docker compose up -d`, ou « Mettre à jour la pile » dans Portainer) ; un redémarrage garde l'ancien environnement, et `docker exec -e` ne change pas la configuration.
+- **La configuration est figée au démarrage du conteneur** : `entrypoint.sh` lance `php artisan config:cache`. Une variable changée n'agit qu'une fois les conteneurs recréés (`docker compose up -d`, ou la mise à jour de la pile) ; un redémarrage garde l'ancien environnement, et `docker exec -e` ne change pas la configuration.
 
 #### Application
 
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
 | `APP_KEY` | oui | vide : chaque page échoue (`MissingAppKeyException`) | Clé de chiffrement des cookies et des URL signées, au format `base64:…` : `echo "base64:$(openssl rand -base64 32)"` en produit une. En changer déconnecte tout le monde et invalide les liens de vérification d'adresse déjà envoyés ; `APP_PREVIOUS_KEYS`, qui permettrait une rotation sans casse, n'est pas transmise. |
-| `APP_URL` | oui | vide | Adresse publique en `https://`, celle du proxy du DSM. La composition la recopie dans `ASSET_URL` : une adresse fausse fait charger CSS et JavaScript depuis une mauvaise origine, et la page s'affiche sans style ni script. Elle sert aussi aux liens produits hors d'une requête (worker, planificateur), à l'origine CORS de l'API et d'identité Web Push quand `VAPID_SUBJECT` est vide. |
+| `APP_URL` | oui | vide | Adresse publique en `https://`, celle du proxy inverse. La composition la recopie dans `ASSET_URL` : une adresse fausse fait charger CSS et JavaScript depuis une mauvaise origine, et la page s'affiche sans style ni script. Elle sert aussi aux liens produits hors d'une requête (worker, planificateur), à l'origine CORS de l'API et d'identité Web Push quand `VAPID_SUBJECT` est vide. |
 | `APP_DEBUG` | non | `false` | Pages d'erreur détaillées : code source, requêtes SQL avec leurs valeurs, en-têtes (cookies compris) et champs envoyés, mots de passe saisis compris. Jamais en production, où le contrôle du mode debug de la page « Santé » passe alors au rouge. Le `Dockerfile` pose aussi `false`. |
 
 #### Base de données
@@ -158,18 +158,18 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
 | `BACKUP_ARCHIVE_PASSWORD` | oui, la pile refuse de démarrer | aucun | Mot de passe AES-256 des archives, transmis à `app`, `worker` et `scheduler`. Sans lui, aucune archive n'est écrite, que la sauvegarde vienne du planificateur, du panneau ou de `backup:run` : une archive en clair sur une autre machine serait une fuite. Le perdre rend les archives illisibles. |
-| `BACKUP_HOST_PATH` | oui, la pile refuse de démarrer | aucun | Dossier de l'hôte monté sur `/app/storage/app/sauvegardes` dans `app`, `worker` et `scheduler` : un partage d'une autre machine monté par le DSM, jamais un volume Docker. Il doit être inscriptible par l'utilisateur du conteneur, `www-data` (uid 33), sans quoi aucune archive ne s'écrit (#1812). |
+| `BACKUP_HOST_PATH` | oui, la pile refuse de démarrer | aucun | Dossier de l'hôte monté sur `/app/storage/app/sauvegardes` dans `app`, `worker` et `scheduler` : un dossier partagé d'une autre machine, monté sur l'hôte, jamais un volume Docker. Il doit être inscriptible par l'utilisateur du conteneur, `www-data` (uid 33), sans quoi aucune archive ne s'écrit (#1812). |
 
 #### Administration et supervision
 
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
-| `ADMIN_ALLOWED_IPS` | pour ouvrir le panneau | vide : tout répond 404 | Adresses autorisées sur `/backoffice`, `/backoffice/pulse` et `/backoffice/journaux`, séparées par des virgules : adresses exactes ou plages CIDR, IPv4 et IPv6 (`192.168.1.0/24,100.76.239.32`). Transmise à `app` seul. |
+| `ADMIN_ALLOWED_IPS` | pour ouvrir le panneau | vide : tout répond 404 | Adresses autorisées sur `/backoffice`, `/backoffice/pulse` et `/backoffice/journaux`, séparées par des virgules : adresses exactes ou plages CIDR, IPv4 et IPv6 (`192.168.1.0/24,203.0.113.32`). Transmise à `app` seul. |
 | `HORIZON_ALLOWED_EMAILS` | pour ouvrir Horizon | vide : fermé à tous | Adresses des comptes **utilisateurs** de l'application, pas des administrateurs du panneau, admis sur `/horizon`, séparées par des virgules. `/horizon` ne passe pas par `ADMIN_ALLOWED_IPS`. Transmise à `app` seul. |
-| `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | vide : le seeder échoue | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` dans le conteneur `app` (console de Portainer ou `docker exec`). Le seeder ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. Transmise à `app` seul. |
+| `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | vide : le seeder échoue | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` dans le conteneur `app` (`docker exec`). Le seeder ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. Transmise à `app` seul. |
 | `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge : base, Redis, cache, file, planificateur, tâches planifiées, Horizon, disque, sauvegardes, mode debug, environnement, caches de l'application. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
 | `LOG_LEVEL` | non | `info` | Niveau minimal des journaux : `debug` pour un dépannage, `warning` pour n'écrire que les incidents. |
-| `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; sur le disque du NAS, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable, sans nouvelles données tant qu'il est coupé. |
+| `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; en production, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable, sans nouvelles données tant qu'il est coupé. |
 
 ### Fixées par la composition
 
@@ -198,7 +198,7 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | `APP_NAME` | `GymTracker` ; `laravel` pour les préfixes | Nom de l'application et du dossier des archives que vérifie la page « Santé ». Les préfixes des clés Redis, du cache et d'Horizon et le nom du cookie de session se calculent, eux, sur `laravel` : transmettre `APP_NAME` les changerait tous — déconnexion générale, cache et métriques d'Horizon repartis de zéro. |
 | `APP_TIMEZONE` | `Europe/Paris` | Fuseau de l'application et des heures du planificateur : rappel d'entraînement à 18 h, sauvegarde à 02 h 30. |
 | `APP_PREVIOUS_KEYS` | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY` ; sans elle, une rotation déconnecte tout le monde. |
-| `SESSION_SECURE_COOKIE` | `true` en production | Le cookie de session n'est envoyé qu'en HTTPS : d'où le passage obligé par le proxy du DSM. |
+| `SESSION_SECURE_COOKIE` | `true` en production | Le cookie de session n'est envoyé qu'en HTTPS : d'où le passage obligé par le proxy inverse. |
 | `SESSION_LIFETIME` | `120` | Minutes d'inactivité avant que la session expire ; « Se souvenir de moi » reconnecte ensuite sans mot de passe. |
 | `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
 | `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |

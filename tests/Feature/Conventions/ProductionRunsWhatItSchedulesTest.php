@@ -133,7 +133,7 @@ it('transmet aux services ce que la sauvegarde exige', function (): void {
         $motDePasse = $service['environment']['BACKUP_ARCHIVE_PASSWORD'] ?? null;
 
         expect($motDePasse)->toBeString()->toStartWith('${BACKUP_ARCHIVE_PASSWORD', sprintf(
-            'Le service `%s` ne reçoit pas BACKUP_ARCHIVE_PASSWORD : posé dans Portainer, le mot de passe '
+            'Le service `%s` ne reçoit pas BACKUP_ARCHIVE_PASSWORD : posé dans la pile, le mot de passe '
             ."n'atteindrait jamais l'application et chaque sauvegarde serait refusée.",
             $nom,
         ));
@@ -192,7 +192,7 @@ it('ne laisse ni avaler ni taire un échec de migration au démarrage', function
 });
 
 /*
- * Sur le disque dur du NAS, chaque validation coûtait 250 à 500 ms de
+ * Sur le disque de production, chaque validation coûtait 250 à 500 ms de
  * synchronisation du journal, et le journal binaire doublait chaque écriture
  * pour une réplication qui n'existe pas (#1668). Les deux options tiennent
  * dans la commande du service : les perdre, c'est retrouver la lenteur.
@@ -207,11 +207,12 @@ it('fait synchroniser le journal de MySQL une fois par seconde, sans journal bin
 
 /*
  * La pile déployée tourne avec ces réglages depuis le 03/09, vérifiés par
- * SHOW VARIABLES : le défaut de MySQL 8.4 suppose un SSD (io_capacity 10 000),
- * et le disque du NAS synchronise une écriture en 310 ms (#1668). Le dépôt ne
+ * SHOW VARIABLES : le défaut de MySQL 8.4 suppose un stockage rapide
+ * (io_capacity 10 000), et le disque de production synchronise une écriture en
+ * 310 ms (#1668). Le dépôt ne
  * les portait pas : réaligner la pile sur ce fichier les aurait perdus.
  */
-it('donne à MySQL la capacité d\'un disque dur, comme la pile déployée', function (): void {
+it('donne à MySQL la capacité d\'entrée-sortie de la pile déployée', function (): void {
     $commande = data_get(compositionDeProduction(), 'db.command');
 
     expect($commande)->toBeString()
@@ -243,8 +244,8 @@ function compositionServicesDeLApplication(): array
 }
 
 /*
- * Un conteneur garde l'image avec laquelle il a été créé : le scheduler du NAS
- * a tourné des semaines sur une vieille image pendant que app suivait les
+ * Un conteneur garde l'image avec laquelle il a été créé : le scheduler de
+ * production a tourné des semaines sur une vieille image pendant que app suivait les
  * versions (#1813). Avec `pull_policy: always`, toute mise à jour de la pile
  * retélécharge l'image et recrée ce qui a changé, pour les trois.
  */
@@ -297,7 +298,7 @@ it('journalise les trois conteneurs dans docker logs et dans un fichier partagé
 
 /*
  * Pulse écrivait ses agrégats en base à chaque requête et chaque job : 145
- * attentes de verrou en 205 s sur le disque du NAS, toutes sur
+ * attentes de verrou en 205 s en production, toutes sur
  * pulse_aggregates, aucune une fois coupé (#1668). Coupé par défaut, comme sur
  * la pile déployée, et réglable dans la pile.
  */

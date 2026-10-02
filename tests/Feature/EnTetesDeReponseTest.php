@@ -20,13 +20,11 @@ use function Pest\Laravel\post;
 use function Pest\Laravel\withCookie;
 
 /**
- * Les en-têtes d'une page complète tiennent dans le tampon du proxy de DSM.
+ * Les en-têtes d'une page complète tiennent dans le tampon du proxy inverse.
  *
- * En production, l'application répond derrière le proxy inverse de DSM. Son
- * nginx lit tous les en-têtes d'une réponse dans un tampon de 4 Kio
- * (`proxy_buffer_size`, une page mémoire, que le gabarit de DSM ne change pas) :
- * au-delà, il consigne « upstream sent too big header » et rend un 502, que DSM
- * habille de sa page « Désolé, la page que vous recherchez est introuvable ».
+ * En production, l'application répond derrière un proxy inverse qui lit tous
+ * les en-têtes d'une réponse dans un tampon de 4 Kio : au-delà, il rend un 502
+ * avec sa propre page d'erreur, jamais celle de l'application.
  *
  * C'est arrivé : l'en-tête `Link` de `AddLinkHeadersForPreloadedAssets` portait
  * 2 293 octets sur l'accueil, et `/dashboard` chargé en entier envoyait 4 355
@@ -45,16 +43,16 @@ function enTetesBudgetEnOctets(): int
 }
 
 /**
- * Un nom d'hôte de NAS plausible, plutôt long : toute URL absolue d'un en-tête
- * (`Location`, ou un `Link` qui reviendrait) grandit avec lui.
+ * Un nom d'hôte de production plausible, plutôt long : toute URL absolue d'un
+ * en-tête (`Location`, ou un `Link` qui reviendrait) grandit avec lui.
  */
 function enTetesHoteDeProduction(): string
 {
-    return 'https://gym-tracker.un-nas-au-nom-assez-long.synology.me';
+    return 'https://gym-tracker.un-serveur-au-nom-assez-long.example.org';
 }
 
 /**
- * La taille du bloc d'en-têtes tel que nginx le lit : ligne de statut, une
+ * La taille du bloc d'en-têtes tel que le proxy le lit : ligne de statut, une
  * ligne « Nom: valeur » par en-tête et par cookie, puis la ligne vide.
  *
  * `(string) $reponse->headers` ne convient pas : il aligne les noms en les
@@ -201,7 +199,7 @@ it('garde les en-têtes de chaque page complète sous le budget', function (): v
             .'. Une redirection voulue s’ajoute à enTetesRedirectionsAttendues().'
         )
         ->and($tropLourdes)->toBeEmpty(
-            'Ces réponses dépassent '.enTetesBudgetEnOctets().' octets d’en-têtes, et le proxy de DSM rend un 502 '
+            'Ces réponses dépassent '.enTetesBudgetEnOctets().' octets d’en-têtes, et le proxy inverse rend un 502 '
             .'au-delà de 4 Kio : '.implode(', ', $tropLourdes)
             .'. Un en-tête `Link` qui liste les actifs préchargés est le suspect habituel.'
         );

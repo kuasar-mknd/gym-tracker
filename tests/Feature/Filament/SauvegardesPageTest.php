@@ -35,7 +35,7 @@ it('refuse la page à un administrateur ordinaire', function (): void {
 
 /**
  * Le greffon sondait toutes les quatre secondes, et chaque sondage relit le
- * partage monté depuis le NAS : c'était la transaction la plus fréquente de
+ * partage monté depuis l'hôte : c'était la transaction la plus fréquente de
  * la semaine tant que la page restait ouverte.
  */
 it('ne sonde le partage des sauvegardes qu’une fois par minute', function (): void {
