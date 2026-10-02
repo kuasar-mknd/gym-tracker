@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c9fccae4c590559c5dddc256181effd0",
+    "content-hash": "534f55dc1482f5eb7f5451de36665a68",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -2793,16 +2793,16 @@
         },
         {
             "name": "laravel-notification-channels/webpush",
-            "version": "12.1.0",
+            "version": "13.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel-notification-channels/webpush.git",
-                "reference": "6e9bea3965584fdaa29eb724368adbe7d622fe22"
+                "reference": "53d950ca03b16bb49c45e3332c07a87c7d06a3b1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel-notification-channels/webpush/zipball/6e9bea3965584fdaa29eb724368adbe7d622fe22",
-                "reference": "6e9bea3965584fdaa29eb724368adbe7d622fe22",
+                "url": "https://api.github.com/repos/laravel-notification-channels/webpush/zipball/53d950ca03b16bb49c45e3332c07a87c7d06a3b1",
+                "reference": "53d950ca03b16bb49c45e3332c07a87c7d06a3b1",
                 "shasum": ""
             },
             "require": {
@@ -2857,9 +2857,9 @@
             "homepage": "https://github.com/laravel-notification-channels/webpush",
             "support": {
                 "issues": "https://github.com/laravel-notification-channels/webpush/issues",
-                "source": "https://github.com/laravel-notification-channels/webpush/tree/12.1.0"
+                "source": "https://github.com/laravel-notification-channels/webpush/tree/13.0.1"
             },
-            "time": "2026-08-17T18:02:26+00:00"
+            "time": "2026-09-08T18:36:50+00:00"
         },
         {
             "name": "laravel/framework",
@@ -7249,16 +7249,16 @@
         },
         {
             "name": "socialiteproviders/apple",
-            "version": "5.12.0",
+            "version": "6.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SocialiteProviders/Apple.git",
-                "reference": "bd89d1202d429770c537a01306b11a20139a7be0"
+                "reference": "af08a49f3290f866caae08f08287c37a939eb110"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SocialiteProviders/Apple/zipball/bd89d1202d429770c537a01306b11a20139a7be0",
-                "reference": "bd89d1202d429770c537a01306b11a20139a7be0",
+                "url": "https://api.github.com/repos/SocialiteProviders/Apple/zipball/af08a49f3290f866caae08f08287c37a939eb110",
+                "reference": "af08a49f3290f866caae08f08287c37a939eb110",
                 "shasum": ""
             },
             "require": {
@@ -7316,7 +7316,7 @@
                 "issues": "https://github.com/socialiteproviders/providers/issues",
                 "source": "https://github.com/socialiteproviders/providers"
             },
-            "time": "2026-09-05T01:53:56+00:00"
+            "time": "2026-09-19T11:35:12+00:00"
         },
         {
             "name": "socialiteproviders/manager",
