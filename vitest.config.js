@@ -23,8 +23,13 @@ export default defineConfig({
      *
      * CI never saw it — worktrees only exist on a developer's machine — which
      * is exactly why it survived.
+     *
+     * vendor/ suit la même logique : Livewire, Ziggy et le site de PHPStan y
+     * livrent leurs propres *.spec.js, et `npx vitest run` échouait en local
+     * dès le premier, faute de leurs dépendances. Le job de la CI n'installe
+     * pas vendor/, d'où le même silence.
      */
-    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '.claude/**', 'vendor/**'],
     coverage: {
       provider: 'v8',
       /*

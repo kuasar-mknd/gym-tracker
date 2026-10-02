@@ -104,7 +104,7 @@ vendor/bin/sail artisan test --coverage
 - **Pint** pour le formatage : `vendor/bin/sail bin pint`
 - **Rector** pour la modernisation : `vendor/bin/sail bin rector process`
 - **PHPStan** (Larastan) niveau Max : `vendor/bin/sail bin phpstan analyse --memory-limit=2G`
-- **PHP Insights** aux quatre seuils de 90 : `vendor/bin/sail bin phpinsights analyse --no-interaction`
+- **PHP Insights** aux quatre seuils de 90 : `vendor/bin/sail bin phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90` (`phpinsights.php` ne déclare aucun seuil : sans ces options, rien n'est imposé)
 - **Doctor** et **Checkpoint** pour l'environnement et la sécurité : `vendor/bin/sail artisan doctor`, `vendor/bin/sail artisan checkpoint:scan`
 - Suit les conventions Laravel
 - Utilise les type hints PHP 8.5 stricts (`declare(strict_types=1);`)

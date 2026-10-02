@@ -34,9 +34,10 @@ x-app-env: &app-env
     MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS}
     MAIL_FROM_NAME: '${MAIL_FROM_NAME}'
 
-    # Web Push : sans ces trois valeurs, le navigateur ne peut pas s'abonner et
-    # rien ne part. Les cles se generent une fois (`npx web-push generate-vapid-keys`) ;
-    # en changer invalide tous les abonnements existants.
+    # Web Push : sans les deux clés, le navigateur ne peut pas s'abonner et rien
+    # ne part ; vide, VAPID_SUBJECT retombe sur APP_URL. Les clés se génèrent une
+    # fois (`npx web-push generate-vapid-keys`) ; en changer invalide tous les
+    # abonnements existants.
     VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
     VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
     VAPID_SUBJECT: ${VAPID_SUBJECT}

@@ -1,7 +1,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-13-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13" />
   <img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3" />
-  <img src="https://img.shields.io/badge/Tailwind-CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4" />
   <img src="https://img.shields.io/badge/Inertia.js-3-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
   <img src="https://img.shields.io/badge/PHPStan-level%20max-blue?style=for-the-badge" alt="PHPStan level max" />
 </p>
@@ -16,9 +16,10 @@
 
 <p align="center">
   <a href="#-fonctionnalités">Fonctionnalités</a> •
-  <a href="#-screenshots">Screenshots</a> •
-  <a href="#-installation">Installation</a> •
-  <a href="#-qualité--performance">Qualité</a> •
+  <a href="#-qualité">Qualité</a> •
+  <a href="#-mise-en-production">Mise en production</a> •
+  <a href="#-variables-denvironnement">Variables d'environnement</a> •
+  <a href="#-installation-via-laravel-sail">Installation</a> •
   <a href="#-développement">Développement</a> •
   <a href="#-contribution">Contribution</a>
 </p>
@@ -36,13 +37,13 @@
 ### 📊 Statistiques & Santé
 - **Graphiques de progression** — Visualisation interactive de ton volume et de tes max.
 - **Habits Tracking** — Suivi de tes routines (Créatine, Méditation, Sommeil...).
-- **Vitals & Composition** — Enregistre ta tension, fréquence cardiaque et % de masse grasse (US Navy).
+- **Composition corporelle** — Saisis ton % de masse grasse avec tes mesures et suis-le en graphique.
 - **Mesures corporelles** — Suivi complet de ton évolution physique.
 
 ### 🔐 Sécurité & Outils
-- **OAuth Social** — Connexion via Google, GitHub, Apple.
-- **Calculateurs** — Plaques de fonte et estimation 1RM.
-- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection.
+- **OAuth Social** — Connexion via Google, GitHub, Apple, dès que l'identifiant et le secret du fournisseur sont posés — pas encore possible en production (#1908).
+- **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
+- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce par worker Octane, pas par requête, tant que #1904 est ouvert).
 
 ---
 
@@ -53,14 +54,14 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 1 748 tests, couverture ≥ **94 %** | bloquant par PR |
-| **Tests frontend** | 1 997 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
-| **Tests navigateur** | 116 parcours Dusk sous Chrome headless | bloquant par PR |
+| **Tests backend** | 1 778 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests frontend** | 2 087 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
+| **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
 | **Mutation testing** | ≥ 80 % `App\Services`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
 
-S'y ajoutent une vingtaine de **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur.
+S'y ajoutent plus de quarante **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur, variables d'environnement documentées.
 
 Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](docs/charte.html). La feuille de route vit dans les issues GitHub et le journal des modifications, pas dans un document qui vieillit.
 
@@ -68,12 +69,15 @@ Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](d
 
 ## 📦 Mise en production
 
-La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé.
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml pull` puis `up -d` (ou la mise à jour de la pile dans Portainer, image retéléchargée). Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
 
-**Ce tag ne publie rien tant que tout n'est pas vert.** La publication exige, sur le commit exact du tag :
+**Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
 
-1. une **CI verte** — les 16 contrôles ;
-2. une **passe nocturne verte** — chacune de ses parts, seuils de mutation compris.
+1. les tests backend, frontend et navigateur, le lint, l'audit et la construction multi-architecture sont verts ;
+2. l'image démarre sur une base MySQL vide et répond sur `/up` (job `demarrage`) ;
+3. la **passe nocturne** est verte, chacune de ses parts, seuils de mutation compris (job `promotion`).
+
+La release GitHub exige en plus la CI entière, `semgrep`, `secrets` et `workflows` compris.
 
 La nuit tourne sur la pointe de `main` à 03h17 UTC : un tag posé après elle n'est pas encore couvert. Pour le débloquer :
 
@@ -81,74 +85,130 @@ La nuit tourne sur la pointe de `main` à 03h17 UTC : un tag posé après elle n
 gh workflow run mutation.yml --ref v1.2.3
 ```
 
+Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), puis le run de `release.yml`.
+
 Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow.
 
-`docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, elles ne tournent pas, et rien ne le signale : une tâche qui ne s'exécute pas ne lève aucune erreur.
+`docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge.
 
 Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque dur du NAS, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées.
 
-L'application s'ouvre **par le proxy inverse HTTPS du DSM**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session, et la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+L'application s'ouvre **par le proxy inverse HTTPS du DSM**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
 
 ---
 
 ## 🔧 Variables d'environnement
 
-Une variable se déclare dans `.env.example` pour le développement, et se documente ici. `LeReadmeDocumenteLesVariablesTest` refuse une variable de `docker-compose.prod.yml`, de `.env.example` ou un secret de CI que cette section ne nomme pas, et une variable du tableau « Production » que la composition ne transmet pas.
+Une variable se déclare dans `.env.example` pour le développement et se documente ici, dans la PR qui l'ajoute, la renomme, la retire ou en change le rôle. `LeReadmeDocumenteLesVariablesTest` refuse une variable de `docker-compose.prod.yml`, de `.env.example` ou un secret de CI que cette section ne nomme pas, et une variable du tableau « Production » que la composition ne transmet pas.
 
 ### Production : à poser dans la pile
 
-Elles se posent dans l'environnement de la pile — les variables de Portainer, ou un fichier `.env` à côté de `docker-compose.prod.yml`. **Seules celles que `docker-compose.prod.yml` transmet atteignent les conteneurs** : une variable lue par `config/` mais absente de ce fichier garde sa valeur par défaut, quoi qu'on pose dans la pile.
+Elles se posent dans l'environnement de la pile : les variables de la pile Portainer, ou un fichier `.env` à côté de `docker-compose.prod.yml`. Trois règles valent pour toutes :
 
-Une variable oubliée arrive **vide**, pas absente, sauf quand le tableau donne un défaut : Laravel retient alors la chaîne vide, pas le défaut de sa configuration. Seules `BACKUP_ARCHIVE_PASSWORD` et `BACKUP_HOST_PATH` empêchent la pile de démarrer quand elles manquent ; les autres obligatoires laissent la pile démarrer et l'application en panne.
+- **Seules celles que `docker-compose.prod.yml` transmet atteignent les conteneurs.** Une variable lue par `config/` mais absente de ce fichier garde son défaut, quoi qu'on pose dans la pile (voir « Lues par l'application, non transmises »).
+- **Une variable oubliée arrive vide, pas absente.** Compose avertit et la remplace par une chaîne vide ; Laravel retient cette chaîne vide, pas le défaut de sa configuration. La colonne « Défaut » dit ce que reçoit le conteneur quand la variable manque. Seules `BACKUP_ARCHIVE_PASSWORD` et `BACKUP_HOST_PATH` empêchent la pile de démarrer ; les autres obligatoires la laissent démarrer, puis un service tombe.
+- **La configuration est figée au démarrage du conteneur** : `entrypoint.sh` lance `php artisan config:cache`. Une variable changée n'agit qu'une fois les conteneurs recréés (`docker compose up -d`, ou « Mettre à jour la pile » dans Portainer) ; un redémarrage garde l'ancien environnement, et `docker exec -e` ne change pas la configuration.
 
-| Variable | Obligatoire | Défaut | Rôle |
+#### Application
+
+| Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
-| `APP_KEY` | oui | — | Clé de chiffrement des sessions, des cookies et des données chiffrées, au format `base64:…` : `echo "base64:$(openssl rand -base64 32)"` en produit une. En changer déconnecte tout le monde et rend illisible ce qui a été chiffré avec l'ancienne. |
-| `APP_URL` | oui | — | Adresse publique, en `https://` : celle du proxy du DSM. Elle sert aux liens des courriels, aux URL des actifs (`ASSET_URL` en est la copie) et d'identité Web Push quand `VAPID_SUBJECT` est vide. |
-| `APP_DEBUG` | non | `false` | Pages d'erreur détaillées. Jamais en production : elles affichent la configuration, mots de passe compris. |
-| `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | oui | — | Base MySQL de l'application. Au premier démarrage d'un volume vide, le service `db` crée la base et l'utilisateur avec ces valeurs ; `DB_USERNAME` ne peut donc pas valoir `root`, que l'image mysql refuse. Les changer ensuite ne modifie pas l'utilisateur déjà créé. |
-| `DB_ROOT_PASSWORD` | au premier démarrage | — | Mot de passe root de MySQL, lu seulement à l'initialisation d'un volume vide. |
-| `REDIS_PASSWORD` | oui | — | Mot de passe de Redis, qui porte les sessions, le cache et les files ; le service `redis` démarre avec. |
-| `MAIL_HOST`, `MAIL_PORT` | oui | — | Serveur SMTP de tous les courriels : vérification d'adresse, mot de passe oublié, alertes de santé. |
-| `MAIL_USERNAME`, `MAIL_PASSWORD` | si le relais l'exige | — | Authentification SMTP. |
-| `MAIL_SCHEME` | non | déduit du port | `smtps` (TLS implicite) ou `smtp` (STARTTLS quand le serveur le propose). Vide : `smtps` sur le port 465, `smtp` ailleurs. Remplace `MAIL_ENCRYPTION`, que Laravel ne lit plus. |
-| `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | oui | — | Expéditeur des courriels. Oubliées, elles arrivent vides. |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | pour les notifications | — | Web Push. Sans elles, la page Profil affiche « Le service de notifications n'est pas encore configuré sur le serveur. » et rien ne part. Générées une fois par `npx web-push generate-vapid-keys` ; en changer invalide les abonnements existants. |
+| `APP_KEY` | oui | vide : chaque page échoue (`MissingAppKeyException`) | Clé de chiffrement des cookies et des URL signées, au format `base64:…` : `echo "base64:$(openssl rand -base64 32)"` en produit une. En changer déconnecte tout le monde et invalide les liens de vérification d'adresse déjà envoyés ; `APP_PREVIOUS_KEYS`, qui permettrait une rotation sans casse, n'est pas transmise. |
+| `APP_URL` | oui | vide | Adresse publique en `https://`, celle du proxy du DSM. La composition la recopie dans `ASSET_URL` : une adresse fausse fait charger CSS et JavaScript depuis une mauvaise origine, et la page s'affiche sans style ni script. Elle sert aussi aux liens produits hors d'une requête (worker, planificateur), à l'origine CORS de l'API et d'identité Web Push quand `VAPID_SUBJECT` est vide. |
+| `APP_DEBUG` | non | `false` | Pages d'erreur détaillées : code source, requêtes SQL avec leurs valeurs, en-têtes (cookies compris) et champs envoyés, mots de passe saisis compris. Jamais en production, où le contrôle du mode debug de la page « Santé » passe alors au rouge. Le `Dockerfile` pose aussi `false`. |
+
+#### Base de données
+
+Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_PASSWORD` sous les noms `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD` et `MYSQL_ROOT_PASSWORD`, et ne les lit **qu'à l'initialisation d'un volume vide** : les changer ensuite ne modifie ni la base ni ses comptes, et un `DB_PASSWORD` changé dans la pile sans `ALTER USER` dans MySQL coupe l'application.
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `DB_DATABASE` | oui | vide : aucune base n'est créée, la migration échoue et `app` s'arrête | Nom de la base de l'application. |
+| `DB_USERNAME` | oui | vide : aucun utilisateur n'est créé | Utilisateur MySQL de l'application, créé au premier démarrage. Pas `root` : l'image mysql refuse `MYSQL_USER=root` et le service `db` s'arrête. |
+| `DB_PASSWORD` | oui | vide : l'utilisateur n'est pas créé | Mot de passe de cet utilisateur, aussi celui de la sonde de santé de `db`. Faux ou vide, `app`, `worker` et `scheduler` attendent la base vingt minutes (« Waiting for DB ») puis s'arrêtent. |
+| `DB_ROOT_PASSWORD` | au premier démarrage | vide : `db` refuse d'initialiser un volume neuf | Mot de passe root de MySQL. L'application ne s'en sert jamais. |
+
+#### Redis
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `REDIS_PASSWORD` | oui | vide : Redis refuse de démarrer | Mot de passe imposé au service `redis` (`--requirepass`) et utilisé par `app`, `worker` et `scheduler` pour les sessions, le cache, les files et Horizon. Vide, `redis-server` s'arrête sur « wrong number of arguments » et redémarre en boucle : `worker` et `scheduler` ne démarrent pas, et chaque page de `app` échoue. |
+
+#### Courriel
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `MAIL_HOST`, `MAIL_PORT` | oui | vides : aucun courriel ne part | Serveur SMTP de tous les courriels : vérification d'adresse, mot de passe oublié, alertes de santé, notifications des sauvegardes manuelles. `MAIL_PORT` décide aussi du chiffrement quand `MAIL_SCHEME` est vide. |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | si le relais l'exige | vides : pas d'authentification | Authentification SMTP. |
+| `MAIL_SCHEME` | non | vide : déduit du port | `smtps` (TLS implicite) ou `smtp` (STARTTLS quand le serveur le propose). Vide : `smtps` sur le port 465, `smtp` ailleurs. Remplace `MAIL_ENCRYPTION`, que Laravel ne lit plus : une pile qui la pose encore n'en tire rien. |
+| `MAIL_FROM_ADDRESS` | oui | vide : l'envoi échoue | Expéditeur de tous les courriels, et destinataire des notifications de sauvegarde faute de `BACKUP_NOTIFICATION_EMAIL`. |
+| `MAIL_FROM_NAME` | conseillé | vide : courriels sans nom d'expéditeur | Nom de l'expéditeur. Le défaut de la configuration ne s'applique pas : la composition transmet une chaîne vide. |
+
+#### Notifications Web Push
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | pour les notifications | vides : aucune notification | Clés VAPID, générées une fois par `npx web-push generate-vapid-keys`. Sans la clé publique, la page Profil affiche « Le service de notifications n'est pas encore configuré sur le serveur. » ; la clé privée signe chaque envoi du worker. En changer invalide tous les abonnements existants. |
 | `VAPID_SUBJECT` | non | `APP_URL` | Identité de l'expéditeur auprès du service push : une adresse `mailto:` ou une URL. |
-| `BACKUP_ARCHIVE_PASSWORD` | oui, la pile refuse de démarrer | — | Mot de passe AES-256 des archives de sauvegarde, transmis à `app`, `worker` et `scheduler`. Sans lui, aucune archive n'est écrite, que la sauvegarde vienne du planificateur, de Filament ou de `backup:run` : une archive en clair sur une autre machine serait une fuite. |
-| `BACKUP_HOST_PATH` | oui, la pile refuse de démarrer | — | Dossier de l'hôte monté dans `app`, `worker` et `scheduler` pour les archives : un partage d'une autre machine monté par le DSM, jamais un volume Docker. |
-| `ADMIN_ALLOWED_IPS` | pour ouvrir le panneau | vide = fermé | Adresses IP autorisées sur le panneau `/backoffice`, séparées par des virgules : adresses exactes ou plages CIDR, IPv4 et IPv6 (`192.168.1.0/24,100.76.239.32`). |
-| `HORIZON_ALLOWED_EMAILS` | pour ouvrir Horizon | vide = fermé | Adresses des comptes autorisés sur `/horizon`, séparées par des virgules. |
-| `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | — | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` lancé dans le conteneur `app` (console de Portainer ou `docker exec`). Le seeder échoue sans lui et ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. |
-| `HEALTH_TO_ADDRESS` | non | vide = aucun courriel | Adresse qui reçoit un courriel quand un contrôle de santé passe au rouge (base, Redis, file, planificateur, tâche échouée, sauvegarde manquante, disque plein), une fois par heure au plus. Vide, la page « Santé » du panneau suffit. |
+
+#### Sauvegardes
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `BACKUP_ARCHIVE_PASSWORD` | oui, la pile refuse de démarrer | aucun | Mot de passe AES-256 des archives, transmis à `app`, `worker` et `scheduler`. Sans lui, aucune archive n'est écrite, que la sauvegarde vienne du planificateur, du panneau ou de `backup:run` : une archive en clair sur une autre machine serait une fuite. Le perdre rend les archives illisibles. |
+| `BACKUP_HOST_PATH` | oui, la pile refuse de démarrer | aucun | Dossier de l'hôte monté sur `/app/storage/app/sauvegardes` dans `app`, `worker` et `scheduler` : un partage d'une autre machine monté par le DSM, jamais un volume Docker. Il doit être inscriptible par l'utilisateur du conteneur, `www-data` (uid 33), sans quoi aucune archive ne s'écrit (#1812). |
+
+#### Administration et supervision
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `ADMIN_ALLOWED_IPS` | pour ouvrir le panneau | vide : tout répond 404 | Adresses autorisées sur `/backoffice`, `/backoffice/pulse` et `/backoffice/journaux`, séparées par des virgules : adresses exactes ou plages CIDR, IPv4 et IPv6 (`192.168.1.0/24,100.76.239.32`). Transmise à `app` seul. |
+| `HORIZON_ALLOWED_EMAILS` | pour ouvrir Horizon | vide : fermé à tous | Adresses des comptes **utilisateurs** de l'application, pas des administrateurs du panneau, admis sur `/horizon`, séparées par des virgules. `/horizon` ne passe pas par `ADMIN_ALLOWED_IPS`. Transmise à `app` seul. |
+| `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | vide : le seeder échoue | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` dans le conteneur `app` (console de Portainer ou `docker exec`). Le seeder ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. Transmise à `app` seul. |
+| `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge : base, Redis, cache, file, planificateur, tâches planifiées, Horizon, disque, sauvegardes, mode debug, environnement, caches de l'application. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
 
 ### Fixées par la composition
 
-Écrites en dur dans `docker-compose.prod.yml` : les poser dans la pile ne change rien.
+Écrites en dur dans `docker-compose.prod.yml` : les poser dans la pile ne change rien. L'image pose de son côté `APP_ENV=production`, `APP_DEBUG=false` et `SERVER_NAME=:80` ; cette dernière est sans effet, le Caddyfile de l'application lisant l'adresse qu'Octane lui passe.
 
-| Variable | Valeur | Pourquoi |
+| Variable | Valeur | Rôle |
 | --- | --- | --- |
-| `APP_ENV` | `production` | Active ce qui ne vaut qu'en production : cookie de session réservé à HTTPS, panneau fermé sans `ADMIN_ALLOWED_IPS`, Horizon et Telescope derrière leur porte, mots de passe à casse mixte et absents des fuites connues. |
+| `APP_ENV` | `production`, aussi posée par le `Dockerfile` | Cookie de session réservé à HTTPS, panneau fermé sans `ADMIN_ALLOWED_IPS`, Horizon fermé hors liste, mots de passe à casse mixte et absents des fuites connues. Telescope, dépendance de développement, n'est pas dans l'image. |
 | `ASSET_URL` | la valeur d'`APP_URL` | Les actifs se servent depuis l'adresse publique. |
-| `DB_CONNECTION`, `DB_HOST`, `DB_PORT` | `mysql`, `db`, `3306` | Le service `db` de la pile. |
-| `REDIS_HOST`, `REDIS_PORT` | `redis`, `6379` | Le service `redis` de la pile. |
-| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions, cache et files partagés par les trois conteneurs de l'application. |
+| `DB_CONNECTION`, `DB_HOST`, `DB_PORT` | `mysql`, `db`, `3306` | Le service `db` ; `entrypoint.sh` l'attend jusqu'à vingt minutes avant d'abandonner. |
+| `REDIS_HOST`, `REDIS_PORT` | `redis`, `6379` | Le service `redis`. |
+| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions, cache, résultats des contrôles de santé et file d'Horizon, partagés par les trois conteneurs de l'application. |
 | `MAIL_MAILER` | `smtp` | Les courriels partent par le serveur de `MAIL_HOST`. |
 | `GOMAXPROCS` | `2` | Plafonne les threads Go de FrankenPHP dans `app` ; `worker` et `scheduler`, en PHP CLI, l'ignorent. |
-| `OCTANE_SERVER` | `frankenphp`, dans `app` seulement | Le serveur d'Octane. |
-| `LOG_CHANNEL` | `stderr`, dans `app` seulement | Les journaux de `app` vont dans `docker logs`. Ceux de `worker` et `scheduler` vont dans storage/logs/laravel.log de leur propre conteneur, qui n'est ni monté ni affiché (#1907). |
+| `OCTANE_SERVER` | `frankenphp`, dans `app` seulement | Serveur que visent `octane:status` et `octane:reload` ; l'image lance `octane:frankenphp` directement. |
+| `LOG_CHANNEL` | `stderr`, dans `app` seulement | Les journaux de `app` vont dans `docker logs`. Ceux de `worker` et `scheduler` vont dans storage/logs/laravel.log de leur propre conteneur, ni monté ni affiché (#1907). |
+| `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` | Variables de l'image mysql du service `db`, lues à l'initialisation d'un volume vide. |
 
 ### Lues par l'application, non transmises en production
 
-`config/` les lit, mais la composition ne les transmet pas : la production applique leur défaut, quoi qu'on pose dans la pile.
+`config/` les lit, mais la composition ne les transmet pas : la production applique leur défaut, quoi qu'on pose dans la pile. Pour en régler une, l'ajouter à `docker-compose.prod.yml` avec un défaut (`${NOM:-valeur}`), puis la déplacer dans le tableau « Production ».
 
 | Variable | Défaut appliqué | Effet |
 | --- | --- | --- |
+| `APP_NAME` | `GymTracker` ; `laravel` pour les préfixes | Nom de l'application et du dossier des archives que vérifie la page « Santé ». Les préfixes des clés Redis, du cache et d'Horizon et le nom du cookie de session se calculent, eux, sur `laravel` : transmettre `APP_NAME` les changerait tous — déconnexion générale, cache et métriques d'Horizon repartis de zéro. |
+| `APP_TIMEZONE` | `Europe/Paris` | Fuseau de l'application et des heures du planificateur : rappel d'entraînement à 18 h, sauvegarde à 02 h 30. |
+| `APP_PREVIOUS_KEYS` | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY` ; sans elle, une rotation déconnecte tout le monde. |
 | `SESSION_SECURE_COOKIE` | `true` en production | Le cookie de session n'est envoyé qu'en HTTPS : d'où le passage obligé par le proxy du DSM. |
 | `SESSION_LIFETIME` | `120` | Minutes d'inactivité avant que la session expire ; « Se souvenir de moi » reconnecte ensuite sans mot de passe. |
-| `APP_TIMEZONE` | `Europe/Paris` | Fuseau de l'application et des heures du planificateur (sauvegarde à 02 h 30). |
 | `LOG_LEVEL` | `debug` | Tout est journalisé (#1907). |
-| `GOOGLE_CLIENT_ID` et les autres variables de connexion sociale | vides | Les boutons Google, GitHub et Apple restent masqués : la connexion sociale ne s'active pas en production (#1908). |
+| `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
+| `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |
+| `HORIZON_HEARTBEAT_URL`, `SCHEDULE_HEARTBEAT_URL` | vides | URL qu'un contrôle réussi d'Horizon ou du planificateur appellerait, pour qu'une surveillance externe s'alarme quand les appels cessent — y compris planificateur arrêté, ce que `HEALTH_TO_ADDRESS` ne peut pas signaler. |
+| `PULSE_ENABLED` | `true` | Pulse enregistre en production. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | vides | Les boutons Google, GitHub et Apple restent masqués : la connexion sociale ne s'active pas en production (#1908). |
+
+### Front : variables de build
+
+Vite recopie les variables `VITE_*` dans les fichiers servis au navigateur : elles sont **publiques** et ne portent jamais de secret. L'image se construit sans `.env` : en production, chacune prend le repli du code.
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `VITE_APP_NAME` | non, et non réglable : figée au build de l'image | `GymTracker` | Suffixe du titre de chaque page. En développement, `.env.example` la recopie d'`APP_NAME`. |
 
 ### Développement local
 
@@ -156,37 +216,35 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 
 | Variable | Valeur du gabarit | Rôle |
 | --- | --- | --- |
-| `APP_NAME` | `GymTracker` | Nom de l'application. `VITE_APP_NAME` le recopie pour les titres de page ; Vite fige cette valeur dans les fichiers au build, et l'image de production, construite sans `.env`, retombe sur GymTracker. |
-| `APP_ENV`, `APP_DEBUG` | `local`, `true` | Environnement local : pages d'erreur détaillées, panneau, Horizon et Telescope ouverts, connexion de développement. |
+| `APP_NAME` | `GymTracker` | Nom de l'application ; `VITE_APP_NAME` et `MAIL_FROM_NAME` le recopient. |
+| `APP_ENV`, `APP_DEBUG` | `local`, `true` | Pages d'erreur détaillées ; panneau, Horizon et Telescope ouverts ; connexion de développement par `/__dev-login`. |
 | `APP_KEY`, `APP_URL` | vide, `http://localhost` | `sail artisan key:generate` remplit la clé. |
 | `APP_LOCALE`, `APP_FALLBACK_LOCALE`, `APP_FAKER_LOCALE` | `fr`, `en`, `fr_FR` | Langue de l'interface, langue de repli, langue des données factices. |
 | `APP_MAINTENANCE_DRIVER`, `APP_MAINTENANCE_STORE` | `file`, commentée | Où se mémorise le mode maintenance. |
-| `PHP_CLI_SERVER_WORKERS` | commentée | Processus de `artisan serve`. |
+| `PHP_CLI_SERVER_WORKERS` | commentée | Processus de `artisan serve`, que Sail lance pour servir l'application. |
 | `BCRYPT_ROUNDS` | `12` | Coût du hachage des mots de passe ; phpunit.xml le baisse à 4. |
 | `LOG_CHANNEL`, `LOG_STACK`, `LOG_LEVEL`, `LOG_DEPRECATIONS_CHANNEL` | `stack`, `single`, `debug`, `null` | Journaux dans storage/logs/laravel.log, dépréciations ignorées. |
-| `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | `mysql`, `mysql`, `3306`, `gym_tracker`, `sail`, `password` | Le MySQL de Sail. Les tests gardent l'hôte et visent la base `gym_tracker_testing`. |
+| `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | `mysql`, `mysql`, `3306`, `gym_tracker`, `sail`, `password` | Le MySQL de Sail, qui crée la base et l'utilisateur au premier démarrage du volume. Les tests gardent l'hôte mais visent la base `gym_tracker_testing`, que le premier démarrage du volume crée aussi. |
 | `SESSION_DRIVER`, `SESSION_LIFETIME`, `SESSION_ENCRYPT`, `SESSION_PATH`, `SESSION_DOMAIN` | `database`, `120`, `false`, `/`, `null` | Sessions en base. |
-| `CACHE_STORE`, `CACHE_PREFIX`, `QUEUE_CONNECTION`, `FILESYSTEM_DISK` | `database`, commentée, `database`, `local` | Cache et files en base, fichiers sur le disque local. |
+| `CACHE_STORE`, `CACHE_PREFIX`, `QUEUE_CONNECTION`, `FILESYSTEM_DISK` | `database`, commentée, `database`, `local` | Cache et file en base, fichiers sur le disque local. Les tâches en file attendent `queue:listen` (lancé par `sail composer dev`) : Horizon ne sert que la connexion `redis`. |
 | `REDIS_CLIENT`, `REDIS_HOST`, `REDIS_PASSWORD`, `REDIS_PORT` | `phpredis`, `redis`, `null`, `6379` | Le Redis de Sail, dont Horizon a besoin. |
 | `MAIL_MAILER`, `MAIL_SCHEME`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Mailpit | Les courriels arrivent dans Mailpit, sur le port 8025. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`, `APPLE_REDIRECT_URI` | vides | Connexion sociale : un bouton n'apparaît qu'avec l'identifiant et le secret de son fournisseur. L'URL de rappel à déclarer chez lui est `APP_URL` suivie de `/auth/{fournisseur}/callback`. |
-| `OCTANE_SERVER` | `frankenphp` | `sail artisan octane:start` sert l'application comme en production. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`, `APPLE_REDIRECT_URI` | vides, URL de rappel dérivées d'`APP_URL` | Connexion sociale : un bouton n'apparaît qu'avec l'identifiant et le secret de son fournisseur. L'URL de rappel à déclarer chez lui est `APP_URL` suivie de `/auth/{fournisseur}/callback`. |
+| `OCTANE_SERVER` | `frankenphp` | Serveur que visent les commandes `octane:*` ; Sail, lui, sert l'application par `artisan serve`. |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vides | Comme en production : sans clés, pas de notifications. |
 | `APP_PORT` | `80` | Port de l'hôte publié par Sail. |
 | `DUSK_DRIVER_URL` | `http://selenium:4444/wd/hub` | Le Selenium de Sail, pour `sail artisan dusk`. |
-| `ADMIN_ALLOWED_IPS`, `HORIZON_ALLOWED_EMAILS`, `ADMIN_INITIAL_PASSWORD`, `HEALTH_TO_ADDRESS`, `BACKUP_ARCHIVE_PASSWORD`, `BACKUP_HOST_PATH` | vides | Celles de la production, pour l'essayer en local. |
+| `ADMIN_ALLOWED_IPS`, `HORIZON_ALLOWED_EMAILS`, `ADMIN_INITIAL_PASSWORD`, `HEALTH_TO_ADDRESS`, `BACKUP_ARCHIVE_PASSWORD` | vides | Celles de la production. Vides en local : panneau et Horizon ouverts, aucun courriel de santé, et une sauvegarde échoue faute de mot de passe d'archive. |
 
-Le front ne lit qu'une variable, `VITE_APP_NAME`. Une variable `VITE_*` est **publique** : Vite la recopie dans les fichiers servis au navigateur, elle ne porte donc jamais de secret.
-
-`compose.yaml` lit aussi les réglages propres à Sail, à ajouter au `.env` au besoin : `FORWARD_DB_PORT`, `FORWARD_REDIS_PORT`, `FORWARD_MAILPIT_PORT`, `FORWARD_MAILPIT_DASHBOARD_PORT`, `VITE_PORT`, `SAIL_XDEBUG_MODE` et `SAIL_XDEBUG_CONFIG`.
+`compose.yaml` lit aussi les réglages propres à Sail, à ajouter au `.env` au besoin : `FORWARD_DB_PORT`, `FORWARD_REDIS_PORT`, `FORWARD_MAILPIT_PORT`, `FORWARD_MAILPIT_DASHBOARD_PORT`, `VITE_PORT`, `SAIL_XDEBUG_MODE`, `SAIL_XDEBUG_CONFIG` et `MYSQL_EXTRA_OPTIONS`. Le script sail pose lui-même `WWWUSER` et `WWWGROUP`.
 
 ### Secrets de CI
 
 | Secret | Obligatoire | Rôle |
 | --- | --- | --- |
-| `GITHUB_TOKEN` | fourni par GitHub | Publie l'image sur ghcr.io, crée les releases, ouvre les issues d'échec de `main`, ferme les issues inactives. |
+| `GITHUB_TOKEN` | fourni par GitHub | Publie l'image sur ghcr.io, crée les releases, ouvre les issues d'échec de `main`, ferme les issues inactives. Une fusion ou une PR faites avec lui ne déclenchent aucun workflow. |
 | `AUTO_MERGE_TOKEN` | non | Jeton personnel à granularité fine du job `dependabot` de `.github/workflows/auto-merge.yml`. Une fusion faite avec lui relance la CI sur `main`, ce que `GITHUB_TOKEN` ne fait pas (#1672) ; absent, le workflow retombe sur `GITHUB_TOKEN`. |
-| `AVIS_HORS_LIGNE_TOKEN` | non | Jeton personnel qui laisse `.github/workflows/avis-hors-ligne.yml` ouvrir lui-même la PR de rafraîchissement de `roave/security-advisories`, avec une CI qui tourne. Absent, le workflow se contente d'avertir, puis échoue passé quatorze jours. |
+| `AVIS_HORS_LIGNE_TOKEN` | non | Jeton personnel limité à ce dépôt — Contents et Pull requests en lecture et écriture, surtout pas Workflows — qui laisse `.github/workflows/avis-hors-ligne.yml` ouvrir lui-même la PR de rafraîchissement de `roave/security-advisories`, avec une CI qui tourne. Absent, le workflow se contente d'avertir, puis échoue passé quatorze jours. |
 
 ---
 
@@ -194,11 +252,12 @@ Le front ne lit qu'une variable, `VITE_APP_NAME`. Une variable `VITE_*` est **pu
 
 | Catégorie | Technologies |
 | --- | --- |
-| **Backend** | Laravel 13, PHP 8.5 (Strict Types), MySQL |
-| **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4 |
+| **Backend** | Laravel 13, PHP 8.5 (Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4, Redis et Laravel Horizon |
+| **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4, Vite 8 |
+| **Backoffice** | Filament 5 |
 | **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |
-| **DevOps** | Laravel Sail (Docker), GitHub Actions |
-| **Monitoring** | Le panneau (santé, exceptions, tâches planifiées, journaux, erreurs navigateur), Laravel Pulse, Telescope |
+| **DevOps** | Docker (image multi-architecture sur ghcr.io), Laravel Sail en développement, GitHub Actions |
+| **Monitoring** | Le panneau (santé, exceptions, tâches planifiées, journaux, erreurs navigateur), Laravel Pulse, Horizon ; Telescope en développement seulement |
 
 ---
 
@@ -225,8 +284,7 @@ Deux règles valent d'être connues avant de toucher au style :
 ## 🚀 Installation (via Laravel Sail)
 
 ### Prérequis
-- Docker Desktop
-- PHP & Composer (uniquement pour l'installation initiale de Sail si besoin)
+- Docker Desktop : PHP et Composer tournent dans des conteneurs.
 
 ### Installation Rapide
 ```bash
@@ -234,22 +292,27 @@ Deux règles valent d'être connues avant de toucher au style :
 git clone https://github.com/kuasar-mknd/gym-tracker.git
 cd gym-tracker
 
-# Installation des dépendances via Docker
+# Installation des dépendances via Docker. Il n'existe pas d'image
+# laravelsail/…-composer à la version de PHP du projet : celle-ci ne sert
+# qu'à amorcer Sail, sans exécuter les scripts de Composer.
 docker run --rm \
     -u "$(id -u):$(id -g)" \
     -v "$(pwd):/var/www/html" \
     -w /var/www/html \
     laravelsail/php84-composer:latest \
-    composer install --ignore-platform-reqs
+    composer install --ignore-platform-reqs --no-scripts
 
 # Configuration
 cp .env.example .env
 ./vendor/bin/sail up -d
+./vendor/bin/sail composer install   # rejoue les scripts, à la bonne version de PHP
 ./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate --seed
 ./vendor/bin/sail npm install
 ./vendor/bin/sail npm run build
 ```
+
+`migrate --seed` crée un compte de démonstration, `test@example.com` / `password` ; en local, `/__dev-login` s'y connecte d'un clic. Le premier démarrage du MySQL de Sail crée aussi la base des tests, `gym_tracker_testing` : sur un volume plus ancien, `./vendor/bin/sail down -v` la fait recréer, au prix des données de développement.
 
 ---
 
@@ -260,11 +323,11 @@ cp .env.example .env
 | --- | --- |
 | `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit, Selenium) |
 | `./vendor/bin/sail npm run dev` | Lance Vite avec Hot Reload |
-| `./vendor/bin/sail artisan test -p` | Suite backend en parallèle (~25 s) |
+| `./vendor/bin/sail artisan test -p` | Suite backend en parallèle |
 | `./vendor/bin/sail npx vitest run` | Suite frontend |
-| `./vendor/bin/sail artisan dusk` | Parcours navigateur |
+| `./vendor/bin/sail artisan dusk` | Parcours navigateur ; `phpunit.dusk.xml` suit encore la disposition de la CI (#1909) |
 | `./vendor/bin/sail bin pint` | Formate le code |
-| `./vendor/bin/sail php vendor/bin/phpstan analyse` | Analyse statique, `level: max` |
+| `./vendor/bin/sail php vendor/bin/phpstan analyse --memory-limit=2G` | Analyse statique, `level: max` |
 | `./vendor/bin/sail php vendor/bin/rector process --dry-run` | Modernisation en attente |
 
 ### Mutation testing
@@ -273,7 +336,7 @@ Le seuil n'est appliqué que par `vendor/bin/pest` : `artisan test --mutate --mi
 
 ```bash
 ./vendor/bin/sail php vendor/bin/pest --mutate --parallel --covered-only \
-  --class='App\Policies' --min=92
+  --class='App\Policies' --min=99
 ```
 
 `--parallel` suppose que les bases par processus existent ; `artisan test -p` les crée au passage, un `artisan test -p` préalable suffit donc.
@@ -301,6 +364,6 @@ Le nocturne n'est pas concerné : un runner GitHub à quatre cœurs ne lance que
 
 Les contributions sont les bienvenues !
 1. Assure-toi que les tests passent : `./vendor/bin/sail artisan test`
-2. Vérifie la qualité : `./vendor/bin/sail artisan insights`
+2. Vérifie la qualité aux seuils de la CI : `./vendor/bin/sail php vendor/bin/phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90`
 3. Formate ton code : `./vendor/bin/sail bin pint`
 4. Voir le [Guide de Contribution](CONTRIBUTING.md) pour plus de détails.
