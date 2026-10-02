@@ -2,6 +2,24 @@
 
 declare(strict_types=1);
 
+/*
+ * L'URL de rappel d'un fournisseur social se déduit d'APP_URL quand rien ne la
+ * fixe (#1908) : sans elle, Google et Apple refusent l'échange. Une variable
+ * vide compte comme absente : docker-compose.prod.yml transmet une chaîne vide
+ * pour une variable que la pile ne pose pas, et env() rend alors cette chaîne,
+ * pas son défaut. Dérivée d'APP_URL plutôt que relative, l'URL ne dépend pas
+ * des en-têtes que le proxy du DSM transmet.
+ */
+$urlDeRappelSociale = static function (string $fournisseur): string {
+    $posee = env(strtoupper($fournisseur).'_REDIRECT_URI');
+
+    if (is_string($posee) && $posee !== '') {
+        return $posee;
+    }
+
+    return rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/'.$fournisseur.'/callback';
+};
+
 return [
 
     /*
@@ -40,19 +58,19 @@ return [
     'github' => [
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect' => env('GITHUB_REDIRECT_URI'),
+        'redirect' => $urlDeRappelSociale('github'),
     ],
 
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => $urlDeRappelSociale('google'),
     ],
 
     'apple' => [
         'client_id' => env('APPLE_CLIENT_ID'),
         'client_secret' => env('APPLE_CLIENT_SECRET'),
-        'redirect' => env('APPLE_REDIRECT_URI'),
+        'redirect' => $urlDeRappelSociale('apple'),
     ],
 
 ];

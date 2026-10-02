@@ -7,6 +7,7 @@ namespace App\Actions;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Socialite\AbstractUser;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
@@ -27,7 +28,9 @@ final class HandleSocialCallbackAction
     {
         try {
             $utilisateurSocial = Socialite::driver($fournisseur)->user();
-        } catch (\Exception) {
+        } catch (\Exception $exception) {
+            $this->journaliserLEchecDuFournisseur($fournisseur, $exception);
+
             throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($fournisseur));
         }
 
@@ -44,6 +47,23 @@ final class HandleSocialCallbackAction
         }
 
         return $this->resolver->execute($fournisseur, $utilisateurSocial);
+    }
+
+    /**
+     * Garde la trace d'un échange refusé par le fournisseur.
+     *
+     * L'utilisateur ne voit qu'« Erreur lors de la connexion », et l'exception
+     * était avalée : un `redirect_uri_mismatch` ou un `invalid_client` de
+     * production ne laissait rien derrière lui (#1908). Le message du
+     * fournisseur dit la cause ; il ne porte ni jeton ni code d'autorisation.
+     */
+    private function journaliserLEchecDuFournisseur(string $fournisseur, \Exception $exception): void
+    {
+        Log::warning('Connexion sociale refusée par le fournisseur', [
+            'fournisseur' => $fournisseur,
+            'exception' => $exception::class,
+            'message' => Str::limit($exception->getMessage(), 500),
+        ]);
     }
 
     /**

@@ -41,7 +41,7 @@
 - **Mesures corporelles** — Suivi complet de ton évolution physique.
 
 ### 🔐 Sécurité & Outils
-- **OAuth Social** — Connexion via Google, GitHub, Apple, dès que l'identifiant et le secret du fournisseur sont posés — pas encore possible en production (#1908).
+- **OAuth Social** — Connexion via Google et GitHub, dès que l'identifiant et le secret du fournisseur sont posés ; Apple attend encore son câblage (#1911).
 - **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
 - **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce par worker Octane, pas par requête, tant que #1904 est ouvert).
 
@@ -160,6 +160,15 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | `BACKUP_ARCHIVE_PASSWORD` | oui, la pile refuse de démarrer | aucun | Mot de passe AES-256 des archives, transmis à `app`, `worker` et `scheduler`. Sans lui, aucune archive n'est écrite, que la sauvegarde vienne du planificateur, du panneau ou de `backup:run` : une archive en clair sur une autre machine serait une fuite. Le perdre rend les archives illisibles. |
 | `BACKUP_HOST_PATH` | oui, la pile refuse de démarrer | aucun | Dossier de l'hôte monté sur `/app/storage/app/sauvegardes` dans `app`, `worker` et `scheduler` : un dossier partagé d'une autre machine, monté sur l'hôte, jamais un volume Docker. Il doit être inscriptible par l'utilisateur du conteneur, `www-data` (uid 33), sans quoi aucune archive ne s'écrit (#1812). |
 
+#### Connexion sociale
+
+Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur ; vides, rien ne change. L'URL de rappel à déclarer chez le fournisseur est `APP_URL` suivie de `/auth/google/callback` ou `/auth/github/callback`. Un échange refusé par le fournisseur (`redirect_uri_mismatch`, `invalid_client`…) laisse une ligne « Connexion sociale refusée par le fournisseur » dans les journaux.
+
+| Variable | Obligatoire en production | Défaut | Rôle |
+| --- | --- | --- | --- |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | pour proposer Google | vides : bouton masqué | Client OAuth « Application Web » de la console Google Cloud. Transmises à `app` seul. |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | pour proposer GitHub | vides : bouton masqué | OAuth App de GitHub (Settings › Developer settings). Transmises à `app` seul. |
+
 #### Administration et supervision
 
 | Variable | Obligatoire en production | Défaut | Rôle |
@@ -203,7 +212,8 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
 | `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |
 | `HORIZON_HEARTBEAT_URL`, `SCHEDULE_HEARTBEAT_URL` | vides | URL qu'un contrôle réussi d'Horizon ou du planificateur appellerait, pour qu'une surveillance externe s'alarme quand les appels cessent — y compris planificateur arrêté, ce que `HEALTH_TO_ADDRESS` ne peut pas signaler. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | vides | Les boutons Google, GitHub et Apple restent masqués : la connexion sociale ne s'active pas en production (#1908). |
+| `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | vides | Le bouton Apple reste masqué : son rappel arrive en POST et son secret doit être signé, ce que l'application ne sait pas encore faire (#1911). |
+| `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI` | `APP_URL` suivie de `/auth/google/callback` ou `/auth/github/callback` | L'URL de rappel à déclarer chez le fournisseur. |
 
 ### Front : variables de build
 

@@ -198,3 +198,24 @@ it('accepte une valeur de vérification affirmative', function (mixed $valeur): 
     'l’entier un' => [1],
     'le un en chaîne' => ['1'],
 ]);
+
+/*
+ * L'utilisateur ne voit qu'« Erreur lors de la connexion » : sans trace, un
+ * redirect_uri_mismatch de production restait invisible (#1908).
+ */
+it('journalise l\'échange que le fournisseur refuse, avec sa cause', function (): void {
+    $providerMock = Mockery::mock(Provider::class);
+    $providerMock->shouldReceive('user')->andThrow(new RuntimeException('redirect_uri_mismatch'));
+    Socialite::shouldReceive('driver')->with('github')->andReturn($providerMock);
+
+    Log::shouldReceive('warning')
+        ->once()
+        ->with('Connexion sociale refusée par le fournisseur', Mockery::on(
+            static fn (array $contexte): bool => $contexte['fournisseur'] === 'github'
+                && $contexte['exception'] === RuntimeException::class
+                && $contexte['message'] === 'redirect_uri_mismatch',
+        ));
+
+    expect(fn () => app(HandleSocialCallbackAction::class)->execute('github'))
+        ->toThrow(SocialAuthException::class, 'Erreur lors de la connexion avec Github');
+});
