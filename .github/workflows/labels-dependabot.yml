@@ -15,7 +15,11 @@ name: Labels de Dependabot
 # l'ouverture d'une PR : la fusion suffit, la passe suivante les trouve.
 #
 # Jamais `--force` : un label existant garde la couleur et la description qu'on
-# lui a choisies. `LesLabelsDeDependabotExistentTest` tient ces règles.
+# lui a choisies. Un label présent sous une autre casse (« PHP » pour « php »)
+# fait échouer le run : Dependabot compare les noms exactement et l'omettrait,
+# GitHub refuse d'en créer le doublon, et seul un humain peut choisir entre
+# renommer le label et corriger `.github/dependabot.yml`.
+# `LesLabelsDeDependabotExistentTest` tient ces règles et exécute ce script.
 
 on:
     push:
@@ -64,36 +68,72 @@ jobs:
                   # passer pour une liste vide.
                   demandes=$(yq '.updates[].labels[]' .github/dependabot.yml | sort -u)
 
-                  # GitHub ne distingue pas la casse des noms de label : « php »
-                  # ne se crée pas à côté d'un « PHP » existant, qui en tient
-                  # lieu. La pagination compte, le dépôt a plus de trente labels.
-                  existants=$(gh api --paginate "repos/$REPO/labels?per_page=100" --jq '.[].name' \
-                    | tr '[:upper:]' '[:lower:]')
+                  # Le fichier demande au moins `dependencies` : une liste vide
+                  # veut dire que l'expression ne lit plus le fichier, et le run
+                  # passerait vert sans rien créer.
+                  if [ -z "$demandes" ]; then
+                      echo "::error::Aucun label lu dans .github/dependabot.yml : l'expression yq ne correspond plus au fichier"
+                      exit 1
+                  fi
+
+                  # Les noms tels quels, casse comprise. La pagination compte, le
+                  # dépôt a plus de trente labels.
+                  existants=$(gh api --paginate "repos/$REPO/labels?per_page=100" --jq '.[].name')
 
                   crees=()
+                  autre_casse=()
 
                   while IFS= read -r label; do
                       [ -n "$label" ] || continue
 
-                      if grep -Fqx -- "${label,,}" <<<"$existants"; then
+                      if grep -Fqx -- "$label" <<<"$existants"; then
+                          continue
+                      fi
+
+                      # Dependabot ne pose que les labels dont le nom est
+                      # exactement celui demandé : un « PHP » n'en tient pas
+                      # lieu pour « php ». GitHub refuserait pourtant de créer
+                      # « php » à côté (422) : seul un humain peut trancher.
+                      homonyme=$(grep -Fix -m 1 -- "$label" <<<"$existants" || true)
+
+                      if [ -n "$homonyme" ]; then
+                          echo "::error::Le label « $homonyme » existe, mais Dependabot attend exactement « $label » : renommer le label (gh label edit \"$homonyme\" --name \"$label\") ou aligner .github/dependabot.yml"
+                          autre_casse+=("\`$homonyme\` → \`$label\`")
                           continue
                       fi
 
                       gh label create "$label" --repo "$REPO" \
                         --color 0366d6 --description "Demandé par .github/dependabot.yml"
 
-                      existants+=$'\n'"${label,,}"
+                      existants+=$'\n'"$label"
                       crees+=("$label")
                   done <<<"$demandes"
 
                   {
                       echo "### Labels de Dependabot"
                       echo
+                      echo "Demandés par \`.github/dependabot.yml\` :"
+                      while IFS= read -r label; do
+                          printf -- "- \`%s\`\n" "$label"
+                      done <<<"$demandes"
+                      echo
 
-                      if [ "${#crees[@]}" -eq 0 ]; then
-                          echo "Tous les labels de \`.github/dependabot.yml\` existent déjà."
-                      else
+                      if [ "${#crees[@]}" -eq 0 ] && [ "${#autre_casse[@]}" -eq 0 ]; then
+                          echo "Tous existent déjà."
+                      fi
+
+                      if [ "${#crees[@]}" -gt 0 ]; then
                           echo "Créés :"
                           printf -- "- \`%s\`\n" "${crees[@]}"
                       fi
+
+                      if [ "${#autre_casse[@]}" -gt 0 ]; then
+                          echo
+                          echo "À renommer, sans quoi Dependabot les omettra :"
+                          printf -- "- %s\n" "${autre_casse[@]}"
+                      fi
                   } >>"$GITHUB_STEP_SUMMARY"
+
+                  if [ "${#autre_casse[@]}" -gt 0 ]; then
+                      exit 1
+                  fi
