@@ -8,7 +8,7 @@ declare(strict_types=1);
  * vide compte comme absente : docker-compose.prod.yml transmet une chaîne vide
  * pour une variable que la pile ne pose pas, et env() rend alors cette chaîne,
  * pas son défaut. Dérivée d'APP_URL plutôt que relative, l'URL ne dépend pas
- * des en-têtes que le proxy du DSM transmet.
+ * des en-têtes que le proxy inverse transmet.
  */
 $urlDeRappelSociale = static function (string $fournisseur): string {
     $posee = env(strtoupper($fournisseur).'_REDIRECT_URI');
