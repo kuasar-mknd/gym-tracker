@@ -30,7 +30,7 @@ class ExerciseLibraryTest extends DuskTestCase
         Exercise::factory()->create(['user_id' => $user->id, 'name' => 'Deadlift', 'category' => 'Dos']);
 
         try {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->{$sizeMacro}()
                 ->visit('/exercises')
                 ->disableAnimations()
@@ -161,7 +161,7 @@ class ExerciseLibraryTest extends DuskTestCase
             $sizes = ['resizeToIphoneMini', 'resizeToIphone15', 'resizeToIphoneMax'];
 
             foreach ($sizes as $size) {
-                $browser->loginAs(User::find($user->id))
+                $browser->loginAs(User::findOrFail($user->id))
                     ->{$size}()
                     ->visit('/exercises')
                     ->disableAnimations()

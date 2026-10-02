@@ -42,5 +42,5 @@ it('ne sonde le partage des sauvegardes qu’une fois par minute', function (): 
     /** @var \ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin $greffon */
     $greffon = filament()->getPlugin('filament-spatie-backup');
 
-    expect($greffon->getPolingInterval())->toBe('60s');
+    expect($greffon->getPollingInterval())->toBe('60s');
 });

@@ -57,7 +57,7 @@ class WorkoutSyncRaceTest extends DuskTestCase
         [$user, $workout, $exercise] = $this->anEmptySession();
 
         $this->browse(function (Browser $browser) use ($user, $workout, $exercise): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -139,7 +139,7 @@ class WorkoutSyncRaceTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
             foreach (['resizeToIphoneMini', 'resizeToIphone15', 'resizeToIphoneMax'] as $size) {
-                $browser->loginAs(User::find($user->id))
+                $browser->loginAs(User::findOrFail($user->id))
                     ->{$size}()
                     ->visit('/workouts/'.$workout->id)
                     ->disableAnimations()

@@ -52,7 +52,7 @@ describe('PersonalRecordType : aller-retour par le cast du modèle', function ()
         $reloaded = PersonalRecord::findOrFail($record->id);
 
         expect($reloaded->type)->toBe($type)
-            ->and($reloaded->toArray()['type'])->toBe($type->value);
+            ->and($reloaded->toArray())->toHaveKey('type', $type->value);
     })->with([
         'max_weight' => [PersonalRecordType::MaxWeight],
         'max_1rm' => [PersonalRecordType::Max1RM],

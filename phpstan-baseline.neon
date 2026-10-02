@@ -85,12 +85,6 @@ parameters:
 			path: tests/Browser/AccessibleNamesTest.php
 
 		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Browser/AccessibleNamesTest.php
-
-		-
 			message: '#^Part \$index \(mixed\) of encapsed string cannot be cast to string\.$#'
 			identifier: encapsedStringPart.nonString
 			count: 2
@@ -107,18 +101,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: tests/Browser/DeadControlsTest.php
-
-		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: tests/Browser/ExerciseLibraryTest.php
-
-		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Browser/ExerciseManagementTest.php
 
 		-
 			message: '#^Cannot access offset ''current'' on mixed\.$#'
@@ -217,12 +199,6 @@ parameters:
 			path: tests/Browser/ModalSemanticsTest.php
 
 		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: tests/Browser/PageBrowserTest.php
-
-		-
 			message: '#^Cannot access offset ''bodyHasSlackToScroll'' on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -283,12 +259,6 @@ parameters:
 			path: tests/Browser/PaginationReachabilityTest.php
 
 		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Browser/RestTimerTest.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
 			count: 1
@@ -337,12 +307,6 @@ parameters:
 			path: tests/Browser/WorkoutRowOverflowTest.php
 
 		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 8
-			path: tests/Browser/WorkoutSetEntryRegressionTest.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>duration_seconds" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 3
@@ -353,12 +317,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: tests/Browser/WorkoutSetEntryRegressionTest.php
-
-		-
-			message: '#^Parameter \#1 \$userId of method Laravel\\Dusk\\Browser\:\:loginAs\(\) expects object\|string, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: tests/Browser/WorkoutSyncRaceTest.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>weight" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -669,12 +627,6 @@ parameters:
 		-
 			message: '#^Cannot cast Illuminate\\Contracts\\Support\\Htmlable\|string\|null to string\.$#'
 			identifier: cast.string
-			count: 1
-			path: tests/Feature/Filament/DashboardWidgetsTest.php
-
-		-
-			message: '#^Function filamentStatsOverviewValues\(\) should return array\<string, int\|string\> but returns array\<bool\|float\|Illuminate\\Contracts\\Support\\Htmlable\|int\|string\>\.$#'
-			identifier: return.type
 			count: 1
 			path: tests/Feature/Filament/DashboardWidgetsTest.php
 

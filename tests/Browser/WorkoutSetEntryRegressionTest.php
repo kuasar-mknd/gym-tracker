@@ -94,7 +94,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         [$user, $workout, $line] = $this->aSessionWith('cardio');
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -132,7 +132,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         [$user, $workout, $line] = $this->aSessionWith('cardio');
 
         $this->browse(function (Browser $browser) use ($user, $workout, $line): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -161,7 +161,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         [$user, $workout, $line] = $this->aSessionWith('strength');
 
         $this->browse(function (Browser $browser) use ($user, $workout, $line): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -193,7 +193,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         [$user, $workout, $line] = $this->aSessionWith('timed');
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -243,7 +243,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         [$user, $workout, $line] = $this->aSessionWith('timed');
 
         $this->browse(function (Browser $browser) use ($user, $workout, $line): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -282,7 +282,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         [$user, $workout] = $this->aSessionWith('strength');
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -320,7 +320,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         [$user, $workout, $line] = $this->aSessionWith('strength');
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
@@ -364,7 +364,7 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
         $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()
