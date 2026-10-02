@@ -9,6 +9,10 @@ vi.mock('@inertiajs/vue3', () => ({
     usePage: () => page,
 }))
 
+/** Le rapprochement se teste dans useAbonnementPush.test.js ; ici, seulement l'appel. */
+const rapprocherLAbonnementPush = vi.hoisted(() => vi.fn())
+vi.mock('@/composables/useAbonnementPush', () => ({ rapprocherLAbonnementPush }))
+
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 /** Ziggy, including the wildcard patterns the desktop nav matches on. */
@@ -321,6 +325,24 @@ describe('AuthenticatedLayout — the session in progress', () => {
         const wrapper = mountLayout()
 
         expect(wrapper.findComponent({ name: 'ActiveWorkoutBanner' }).exists()).toBe(false)
+    })
+})
+
+describe('AuthenticatedLayout — l’abonnement push', () => {
+    beforeEach(() => {
+        rapprocherLAbonnementPush.mockClear()
+    })
+
+    /*
+     * Le profil était le seul endroit où l'abonnement du navigateur rejoignait
+     * le serveur. Sur iPhone, où le worker ne reçoit pas
+     * `pushsubscriptionchange`, un abonnement révoqué ou remplacé ne se
+     * réparait donc qu'en rouvrant le profil (#1847).
+     */
+    it('rapproche l’abonnement du compte connecté, quelle que soit la page', () => {
+        mountLayout({ auth: { user: user({ id: 42 }) }, onPage: 'stats.index' })
+
+        expect(rapprocherLAbonnementPush).toHaveBeenCalledWith(42)
     })
 })
 

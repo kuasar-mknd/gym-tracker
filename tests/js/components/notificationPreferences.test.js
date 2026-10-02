@@ -368,4 +368,30 @@ describe('un abonnement que le navigateur a perdu', () => {
         expect(pushCheckboxes(wrapper).length).toBeGreaterThan(0)
         wrapper.unmount()
     })
+
+    it('rend au serveur, pour le compte connecté, l’abonnement qu’il ignore', async () => {
+        // Le rapprochement est tenu par compte (#1847) : sans l'identifiant du
+        // compte connecté, le formulaire ne rendrait plus rien au serveur.
+        const registration = await navigator.serviceWorker.ready
+        registration.pushManager.getSubscription.mockResolvedValue({
+            endpoint: 'https://push.example/orphelin',
+            unsubscribe,
+        })
+        page.props.auth = { user: { id: 42 } }
+
+        try {
+            const wrapper = mountForm({ hasPushSubscription: false })
+            await flushPromises()
+
+            expect(post).toHaveBeenCalledWith(
+                '/push-subscriptions.update',
+                expect.objectContaining({ endpoint: 'https://push.example/orphelin' }),
+                expect.any(Object),
+            )
+            wrapper.unmount()
+        } finally {
+            delete page.props.auth
+            registration.pushManager.getSubscription.mockResolvedValue(null)
+        }
+    })
 })

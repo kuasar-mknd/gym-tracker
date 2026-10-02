@@ -1,5 +1,5 @@
 <script setup>
-import { watch, onUnmounted } from 'vue'
+import { watch, onMounted, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
@@ -12,6 +12,7 @@ import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
+import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 
 defineProps({
     pageTitle: {
@@ -100,6 +101,15 @@ const activeWorkout = computed(() => page.props.auth?.user?.active_workout)
 const isWorkoutShow = computed(() => route().current('workouts.show'))
 // La grande bannière n'a sa place que là où la séance est le sujet ; ailleurs, une ligne.
 const banniereCompacte = computed(() => !route().current('dashboard') && !route().current('workouts.index'))
+
+/*
+ * L'abonnement push du navigateur rejoint le serveur à l'ouverture de
+ * l'application, sur n'importe quelle page, et plus seulement sur le profil.
+ * C'est la seule réparation sur iPhone, où le worker ne reçoit pas
+ * `pushsubscriptionchange` (#1847). Une fois par chargement : le layout se
+ * remonte à chaque page, la fonction s'en souvient.
+ */
+onMounted(() => rapprocherLAbonnementPush(page.props.auth?.user?.id))
 
 onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>

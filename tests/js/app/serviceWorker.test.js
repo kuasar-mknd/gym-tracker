@@ -11,6 +11,18 @@ vi.mock('workbox-precaching', () => ({
 }))
 
 /**
+ * Le renouvellement lui-même se teste dans renouvellementDAbonnement.test.js ;
+ * ici, seulement le branchement : le bon évènement, le bon gestionnaire de push,
+ * et la promesse remise à `waitUntil`.
+ */
+const abonnementRenouvele = Promise.resolve('abonnement renouvelé')
+const renouvelerLAbonnement = vi.fn(() => abonnementRenouvele)
+
+vi.mock('@/sw/renouvellementDAbonnement', () => ({
+    renouvelerLAbonnement: (...args) => renouvelerLAbonnement(...args),
+}))
+
+/**
  * The worker is a module of side effects: importing it *is* running it. So the
  * globals a worker scope would provide are put in place first, the two
  * `addEventListener` calls are captured off the spy, and the handlers are then
@@ -71,7 +83,8 @@ vi.spyOn(self, 'addEventListener').mockImplementation((type, handler) => {
 
 self.skipWaiting = skipWaiting
 self.__WB_MANIFEST = manifest
-self.registration = { showNotification }
+const pushManager = { getSubscription: vi.fn(), subscribe: vi.fn() }
+self.registration = { showNotification, pushManager }
 globalThis.clients = { openWindow, matchAll }
 
 /*
@@ -327,5 +340,30 @@ describe('clic sur une notification', () => {
         await Promise.all(waited)
 
         expect(openWindow).toHaveBeenCalledWith('/')
+    })
+})
+
+describe('abonnement remplacé ou retiré par le navigateur', () => {
+    it('écoute pushsubscriptionchange', () => {
+        // Sans cet écouteur, un abonnement révoqué ou renouvelé ne se répare
+        // jamais : l'appareil cesse de recevoir, et le serveur continue d'écrire
+        // vers une adresse morte (#1847).
+        expect(listeners.pushsubscriptionchange).toBeTypeOf('function')
+    })
+
+    it('confie le renouvellement à waitUntil, avec le gestionnaire de push du worker', () => {
+        const waited = []
+        const evenement = {
+            oldSubscription: { endpoint: 'https://push.example/ancien' },
+            newSubscription: { endpoint: 'https://push.example/nouveau' },
+            waitUntil: (promesse) => waited.push(promesse),
+        }
+
+        listeners.pushsubscriptionchange(evenement)
+
+        // Sans `waitUntil`, le navigateur peut arrêter le worker avant que le
+        // serveur n'ait appris la nouvelle adresse.
+        expect(renouvelerLAbonnement).toHaveBeenCalledWith(evenement, { pushManager })
+        expect(waited).toEqual([abonnementRenouvele])
     })
 })

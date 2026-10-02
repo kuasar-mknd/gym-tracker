@@ -5,11 +5,27 @@ import { mount, flushPromises } from '@vue/test-utils'
 const reseau = vi.hoisted(() => ({ post: vi.fn() }))
 vi.mock('@/Utils/http', () => ({ http: { post: (...args) => reseau.post(...args) } }))
 
-import { useAbonnementPush } from '@/composables/useAbonnementPush'
+/**
+ * Le module garde ce que le chargement en cours a déjà transmis, pour ne pas
+ * écrire deux fois quand le layout et le profil rapprochent ensemble. Chaque
+ * test part donc d'un chargement neuf, et `chargementSuivant()` simule la
+ * réouverture de l'application : le module repart de zéro, le `localStorage`
+ * reste.
+ */
+let useAbonnementPush
+let rapprocherLAbonnementPush
+
+const chargementSuivant = async () => {
+    vi.resetModules()
+    ;({ useAbonnementPush, rapprocherLAbonnementPush } = await import('@/composables/useAbonnementPush'))
+}
+
+const UTILISATEUR = 42
 
 const abonnement = (endpoint = 'https://push.example/abc') => ({
     endpoint,
     unsubscribe: vi.fn().mockResolvedValue(true),
+    toJSON: () => ({ endpoint, keys: { p256dh: 'p', auth: 'a' } }),
 })
 
 const navigateur = ({ existant = null, souscrire = abonnement(), workerMuet = false } = {}) => {
@@ -35,13 +51,13 @@ const navigateur = ({ existant = null, souscrire = abonnement(), workerMuet = fa
     return pushManager
 }
 
-const monter = ({ dejaAbonne = false, vapidPublicKey = 'BAbc' } = {}) => {
+const monter = ({ dejaAbonne = false, vapidPublicKey = 'BAbc', utilisateurId = UTILISATEUR } = {}) => {
     const apresAbonnement = vi.fn()
     let push
     const wrapper = mount(
         defineComponent({
             setup() {
-                push = useAbonnementPush({ vapidPublicKey, dejaAbonne, apresAbonnement })
+                push = useAbonnementPush({ vapidPublicKey, dejaAbonne, apresAbonnement, utilisateurId })
 
                 return () => h('div')
             },
@@ -51,13 +67,30 @@ const monter = ({ dejaAbonne = false, vapidPublicKey = 'BAbc' } = {}) => {
     return { wrapper, apresAbonnement, ...push }
 }
 
-beforeEach(() => {
+/** Les écritures parties, par route : `[[route, adresse], …]`. */
+const ecritures = () => reseau.post.mock.calls.map(([url, corps]) => [url.slice(1), corps.endpoint])
+
+/** Un chargement précédent a transmis cet abonnement pour ce compte. */
+const dejaTransmis = async (endpoint, utilisateur = UTILISATEUR) => {
+    const pushManager = navigateur({ existant: abonnement(endpoint) })
+    await rapprocherLAbonnementPush(utilisateur)
+    await chargementSuivant()
+    reseau.post.mockClear()
+
+    return pushManager
+}
+
+beforeEach(async () => {
     vi.clearAllMocks()
+    window.localStorage.clear()
+    await chargementSuivant()
     reseau.post.mockResolvedValue({})
     globalThis.route = (nom) => `/${nom}`
 })
 
-afterEach(() => {})
+afterEach(() => {
+    vi.restoreAllMocks()
+})
 
 describe('activer les notifications push', () => {
     it('s’abonne, enregistre l’abonnement, puis rend la main au formulaire', async () => {
@@ -129,6 +162,45 @@ describe('activer les notifications push', () => {
         expect(push.pushError.value).toContain('HTTP 500')
         expect(push.apresAbonnement).not.toHaveBeenCalled()
     })
+
+    it('se souvient de l’abonnement activé : l’ouverture suivante n’écrit rien', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/vieux')
+        const neuf = abonnement('https://push.example/neuf')
+        gestionnaire.subscribe.mockResolvedValue(neuf)
+        const push = monter({ dejaAbonne: true })
+        await flushPromises()
+
+        await push.enablePush()
+        gestionnaire.getSubscription.mockResolvedValue(neuf)
+        await chargementSuivant()
+        reseau.post.mockClear()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        // L'activation a déjà enregistré le nouveau et fait oublier l'ancien ;
+        // sans mémo à jour, l'ouverture suivante referait les deux écritures.
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('n’a plus rien à faire oublier à l’ouverture suivante après une activation manquée', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/vieux')
+        const push = monter({ dejaAbonne: true })
+        await flushPromises()
+        reseau.post.mockImplementation((url) =>
+            url.endsWith('push-subscriptions.update')
+                ? Promise.reject({ response: { status: 500, data: {} } })
+                : Promise.resolve({}),
+        )
+
+        await push.enablePush()
+        gestionnaire.getSubscription.mockResolvedValue(null)
+        await chargementSuivant()
+        reseau.post.mockReset()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        // L'activation a déjà fait oublier l'ancienne adresse au serveur ; le
+        // navigateur n'en tient plus aucune, et il n'y a rien à refaire.
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
 })
 
 describe('l’état de l’abonnement au montage', () => {
@@ -170,28 +242,203 @@ describe('l’état de l’abonnement au montage', () => {
     })
 
     it('rend au serveur un abonnement que le navigateur tient et qu’il ignore', async () => {
-        navigateur({ existant: abonnement('https://push.example/orphelin') })
+        await dejaTransmis('https://push.example/orphelin')
         const push = monter({ dejaAbonne: false })
         await flushPromises()
 
-        // Sans cela, l’abonnement existe dans le navigateur, la bannière ne
-        // s’affiche pas puisque l’appareil est bien abonné, et aucun envoi ne
-        // part jamais vers lui : personne n’a de raison de s’en apercevoir.
-        expect(reseau.post).toHaveBeenCalledWith(
-            '/push-subscriptions.update',
-            expect.objectContaining({ endpoint: 'https://push.example/orphelin' }),
-            expect.any(Object),
-        )
+        // Le serveur dit ne rien avoir pour ce compte : le mémo de l'appareil
+        // est démenti (base restaurée, ligne supprimée à la main), et c'est le
+        // serveur qui a raison. Sans cela, l’abonnement existe dans le
+        // navigateur, la bannière ne s’affiche pas puisque l’appareil est bien
+        // abonné, et aucun envoi ne part jamais vers lui.
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/orphelin']])
         expect(push.pushRegistered.value).toBe(true)
     })
 
     it('n’écrit rien quand le serveur et le navigateur sont déjà d’accord', async () => {
-        navigateur({ existant: abonnement() })
+        await dejaTransmis('https://push.example/abc')
         monter({ dejaAbonne: true })
         await flushPromises()
 
         // Chaque écriture coûte de 350 ms à 1,7 s en production : la page de profil
         // n’a pas à en produire une à chaque ouverture.
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('n’écrit qu’une fois quand le profil et le layout rapprochent ensemble', async () => {
+        navigateur({ existant: abonnement('https://push.example/abc') })
+
+        // Le profil monte avant le layout qui l'entoure ; les deux rapprochent.
+        monter({ dejaAbonne: false })
+        await rapprocherLAbonnementPush(UTILISATEUR)
+        await flushPromises()
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/abc']])
+    })
+})
+
+describe('le rapprochement à l’ouverture de l’application', () => {
+    it('transmet un abonnement que cet appareil n’a jamais transmis, même si le compte en a un', async () => {
+        // `dejaAbonne` répond pour le compte : un autre appareil, ou l'ancienne
+        // adresse de celui-ci, suffisait à taire l'envoi. Un abonnement remplacé
+        // n'était alors jamais transmis (#1847).
+        navigateur({ existant: abonnement('https://push.example/remplacant') })
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/remplacant']])
+    })
+
+    it('n’écrit rien quand l’abonnement est celui déjà transmis', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/abc')
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(gestionnaire.getSubscription).toHaveBeenCalled()
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('enregistre le nouvel abonnement puis fait oublier l’ancien quand le navigateur en a changé', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/ancien')
+        gestionnaire.getSubscription.mockResolvedValue(abonnement('https://push.example/nouveau'))
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        // Le cas d'iPhone, où le worker ne reçoit pas `pushsubscriptionchange` :
+        // la réparation se fait ici, à l'ouverture suivante.
+        expect(ecritures()).toEqual([
+            ['push-subscriptions.update', 'https://push.example/nouveau'],
+            ['push-subscriptions.destroy', 'https://push.example/ancien'],
+        ])
+    })
+
+    it('fait oublier au serveur un abonnement que le navigateur a perdu, une seule fois', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/revoque')
+        gestionnaire.getSubscription.mockResolvedValue(null)
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+        await chargementSuivant()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        // WebKit révoque sans prévenir : sans cela, le serveur écrit à chaque
+        // notification vers une adresse que plus personne ne lit.
+        expect(ecritures()).toEqual([['push-subscriptions.destroy', 'https://push.example/revoque']])
+    })
+
+    it('tient un mémo propre à chaque compte', async () => {
+        // Deux comptes sur le même téléphone : le serveur réattribue l'adresse
+        // au dernier qui l'enregistre. Celui qui revient doit la reprendre.
+        await dejaTransmis('https://push.example/partage', 7)
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        // Et rien à faire oublier : l'adresse est la même, et la ligne de
+        // l'autre compte n'est pas à celui-ci.
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/partage']])
+
+        await chargementSuivant()
+        reseau.post.mockClear()
+        await rapprocherLAbonnementPush(7)
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/partage']])
+    })
+
+    it('ne fait rien oublier pour le compte d’un autre', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/de-l-autre', 7)
+        gestionnaire.getSubscription.mockResolvedValue(null)
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('ne rapproche qu’une fois par chargement, le layout se remontant à chaque page', async () => {
+        const gestionnaire = navigateur({ existant: abonnement() })
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(gestionnaire.getSubscription).toHaveBeenCalledTimes(1)
+        expect(reseau.post).toHaveBeenCalledTimes(1)
+    })
+
+    it('réessaie à l’ouverture suivante quand le serveur a refusé', async () => {
+        navigateur({ existant: abonnement('https://push.example/abc') })
+        reseau.post.mockRejectedValueOnce({ response: { status: 500, data: {} } })
+
+        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBeUndefined()
+        await chargementSuivant()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(ecritures()).toEqual([
+            ['push-subscriptions.update', 'https://push.example/abc'],
+            ['push-subscriptions.update', 'https://push.example/abc'],
+        ])
+    })
+
+    it('garde l’adresse à oublier tant que le serveur ne l’a pas oubliée', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/revoque')
+        gestionnaire.getSubscription.mockResolvedValue(null)
+        reseau.post.mockRejectedValueOnce(new Error('réseau'))
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+        await chargementSuivant()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(ecritures()).toEqual([
+            ['push-subscriptions.destroy', 'https://push.example/revoque'],
+            ['push-subscriptions.destroy', 'https://push.example/revoque'],
+        ])
+    })
+
+    it('ne casse rien quand le stockage est bloqué', async () => {
+        // Navigation privée de Safari, stockage refusé : on transmet à chaque
+        // ouverture, une écriture de trop plutôt qu'un abonnement perdu.
+        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+            throw new DOMException('refusé', 'SecurityError')
+        })
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new DOMException('refusé', 'SecurityError')
+        })
+        navigateur({ existant: abonnement('https://push.example/abc') })
+
+        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBeUndefined()
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/abc']])
+    })
+
+    it('lit un mémo illisible comme une absence de mémo', async () => {
+        window.localStorage.setItem('gym-tracker:abonnement-push-transmis', '{pas du json')
+        navigateur({ existant: abonnement('https://push.example/abc') })
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/abc']])
+    })
+
+    it('se tait quand le service worker ne répond pas', async () => {
+        navigateur({ workerMuet: true })
+
+        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBeUndefined()
+
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('ne fait rien sans compte connu', async () => {
+        const gestionnaire = navigateur({ existant: abonnement() })
+
+        await rapprocherLAbonnementPush(undefined)
+
+        expect(gestionnaire.getSubscription).not.toHaveBeenCalled()
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('ne fait rien là où le navigateur ne connaît pas le push', async () => {
+        navigateur({ existant: abonnement() })
+        delete window.Notification
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
         expect(reseau.post).not.toHaveBeenCalled()
     })
 })
