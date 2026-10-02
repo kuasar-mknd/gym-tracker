@@ -8,6 +8,7 @@ use Illuminate\Foundation\Vite;
 use Illuminate\Routing\Route as RouteLaravel;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -78,55 +79,108 @@ function enTetesTailleDuBloc(TestResponse|Response $reponse): int
  * Les pages GET de l'application, sans paramètre, servies par le groupe web.
  *
  * Le panneau d'administration a sa propre pile de middlewares, et les routes
- * des paquets ne rendent pas nos pages : seules les actions de `App\` comptent,
- * plus les fermetures de `routes/web.php`.
+ * des paquets ne rendent pas nos pages : seules comptent les actions de `App\`,
+ * les fermetures de `routes/web.php`, et les pages déclarées directement par
+ * `Route::inertia()` ou `Route::view()`.
  *
  * @return list<RouteLaravel>
  */
 function enTetesPagesDeLApplication(): array
 {
+    $controleursDePage = ['Inertia\\Controller', 'Illuminate\\Routing\\ViewController'];
+
     return collect(Route::getRoutes()->getRoutes())
         ->filter(fn (RouteLaravel $route): bool => in_array('GET', $route->methods(), true))
         ->filter(fn (RouteLaravel $route): bool => ! str_contains($route->uri(), '{'))
         ->filter(fn (RouteLaravel $route): bool => in_array('web', $route->gatherMiddleware(), true))
         ->filter(fn (RouteLaravel $route): bool => str_starts_with($route->getActionName(), 'App\\')
+            || in_array(ltrim($route->getActionName(), '\\'), $controleursDePage, true)
             || ($route->getActionName() === 'Closure' && ! str_starts_with($route->uri(), '_')))
         ->values()
         ->all();
 }
 
+/**
+ * Si la route exige une connexion, garde nommée ou non (`auth`, `auth:web`).
+ */
 function enTetesExigeUneConnexion(RouteLaravel $route): bool
 {
-    return in_array('auth', $route->gatherMiddleware(), true);
+    return collect($route->gatherMiddleware())
+        ->contains(fn (mixed $middleware): bool => $middleware === 'auth'
+            || (is_string($middleware) && str_starts_with($middleware, 'auth:')));
+}
+
+/**
+ * Les pages qui redirigent même visitées dans le bon état : `/` mène toujours
+ * à l'accueil, et la demande de vérification renvoie un compte déjà vérifié.
+ *
+ * @return list<string>
+ */
+function enTetesRedirectionsAttendues(): array
+{
+    return ['/', '/verify-email'];
+}
+
+/**
+ * Ce qu'Octane remet à zéro entre deux requêtes, et que la suite de tests garde
+ * sinon d'une requête à l'autre : la garde, la session, les actifs préchargés
+ * par Vite (`FlushVite`) et les cookies mis en file (`FlushQueuedCookies`).
+ * Sans eux, une page mesurerait aussi ce que la précédente a laissé.
+ */
+function enTetesRemettreAZeroCommeOctane(): void
+{
+    app('auth')->forgetGuards();
+    app(Vite::class)->flush();
+    app('cookie')->flushQueuedCookies();
+    app('session')->flush();
 }
 
 beforeEach(function (): void {
     // Comme en production : le cookie de session y porte l'attribut `secure`.
     config(['session.secure' => true]);
+
+    // Toujours le manifeste construit, jamais le serveur de développement : un
+    // `npm run dev` ouvert remplacerait les préchargements par une seule
+    // balise, et le test ne mesurerait plus ce qui part en production.
+    $this->app->make(Vite::class)->useHotFile(storage_path('framework/testing/vite-hot-absent'));
 });
 
 it('garde les en-têtes de chaque page complète sous le budget', function (): void {
     $utilisateur = User::factory()->create();
     $pages = enTetesPagesDeLApplication();
     $tropLourdes = [];
+    $nonRendues = [];
 
     foreach ($pages as $route) {
-        // Ce qu'Octane remet à zéro entre deux requêtes : sans `FlushVite`,
-        // les actifs préchargés d'une page s'ajouteraient à ceux de la suivante.
-        $this->app['auth']->forgetGuards();
-        $this->app->make(Vite::class)->flush();
-        $this->flushSession();
+        enTetesRemettreAZeroCommeOctane();
 
+        $chemin = '/'.ltrim($route->uri(), '/');
         $requete = enTetesExigeUneConnexion($route) ? $this->actingAs($utilisateur) : $this;
-        $reponse = $requete->get(enTetesHoteDeProduction().'/'.ltrim($route->uri(), '/'));
+        $reponse = $requete->get(enTetesHoteDeProduction().$chemin);
         $taille = enTetesTailleDuBloc($reponse);
 
+        /*
+         * Une mesure ne vaut que sur la page que `@vite` a rendue : un 500, ou
+         * une redirection due au mauvais état de connexion, passerait sous le
+         * budget sans rien prouver.
+         */
+        $renduParVite = $reponse->isOk() && str_contains((string) $reponse->getContent(), 'modulepreload');
+        $redirectionAttendue = $reponse->isRedirect() && in_array($chemin, enTetesRedirectionsAttendues(), true);
+
+        if (! $renduParVite && ! $redirectionAttendue) {
+            $nonRendues[] = "{$chemin} ({$reponse->status()})";
+        }
+
         if ($taille > enTetesBudgetEnOctets()) {
-            $tropLourdes[] = '/'.ltrim($route->uri(), '/')." ({$reponse->status()}) : {$taille} octets";
+            $tropLourdes[] = "{$chemin} ({$reponse->status()}) : {$taille} octets";
         }
     }
 
     expect($pages)->not->toBeEmpty()
+        ->and($nonRendues)->toBeEmpty(
+            'Ces pages n’ont pas été rendues en entier, leur mesure ne prouve rien : '.implode(', ', $nonRendues)
+            .'. Une redirection voulue s’ajoute à enTetesRedirectionsAttendues().'
+        )
         ->and($tropLourdes)->toBeEmpty(
             'Ces réponses dépassent '.enTetesBudgetEnOctets().' octets d’en-têtes, et le proxy de DSM rend un 502 '
             .'au-delà de 4 Kio : '.implode(', ', $tropLourdes)
@@ -154,15 +208,16 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
     expect($cookie)->not->toBeNull();
 
     // Des semaines plus tard : la session a expiré, seul le cookie reste.
-    $this->app['auth']->forgetGuards();
-    $this->flushSession();
+    enTetesRemettreAZeroCommeOctane();
 
     $reponse = $this->withCookie($nomDuCookie, (string) $cookie?->getValue())
         ->followingRedirects()
         ->get(enTetesHoteDeProduction().'/');
 
     $reponse->assertOk()
-        ->assertInertia(fn ($page) => $page->component('Dashboard'));
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->component('Dashboard'));
+
+    expect($this->app['auth']->guard('web')->viaRemember())->toBeTrue();
 
     expect((string) $reponse->getContent())->toContain('modulepreload')
         ->and(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
