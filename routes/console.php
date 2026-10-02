@@ -59,7 +59,7 @@ Artisan::command('inspire', function (): void {
 /*
  * Le moniteur des tâches (« Système › Tâches planifiées ») écrit trois lignes
  * par exécution. Les trois tâches de santé tournent 1 728 fois par jour :
- * hors moniteur, sinon le NAS y passerait ses nuits (#1668). Leur absence se
+ * hors moniteur, sinon la base y passerait ses nuits (#1668). Leur absence se
  * lit déjà sur la page de santé.
  */
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\RunHealthChecksCommand::class)

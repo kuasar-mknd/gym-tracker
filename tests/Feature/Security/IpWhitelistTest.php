@@ -73,7 +73,7 @@ it('repond 403 hors production a une adresse hors liste, en nommant l adresse', 
 });
 
 /**
- * Un réseau local ou un tailnet ne se liste pas appareil par appareil : la
+ * Un réseau local ou privé ne se liste pas appareil par appareil : la
  * liste accepte les plages CIDR, IPv4 et IPv6, à côté des adresses exactes.
  * Avec l'ancienne comparaison stricte, `192.168.1.0/24` ne correspondait à
  * rien et fermait le panneau à tout le réseau.
@@ -98,14 +98,14 @@ it('refuse une adresse hors de la plage CIDR', function (): void {
 });
 
 it('accepte un mélange d adresses exactes et de plages', function (): void {
-    config(['app.admin_allowed_ips' => ['192.168.1.0/24', '100.76.239.32']]);
+    config(['app.admin_allowed_ips' => ['192.168.1.0/24', '203.0.113.32']]);
     $this->app->detectEnvironment(fn (): string => 'production');
 
-    expect(reponseDeLaListeBlanche('100.76.239.32'))->toBe(200)
+    expect(reponseDeLaListeBlanche('203.0.113.32'))->toBe(200)
         ->and(reponseDeLaListeBlanche('192.168.1.7'))->toBe(200);
 
     try {
-        reponseDeLaListeBlanche('100.76.239.33');
+        reponseDeLaListeBlanche('203.0.113.33');
         $this->fail('La requete aurait du etre refusee.');
     } catch (HttpException $e) {
         expect($e->getStatusCode())->toBe(404);

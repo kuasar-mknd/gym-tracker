@@ -14,7 +14,7 @@ return [
     'result_stores' => [
         /*
          * Dans le cache, pas en base : la page ne lit que le dernier passage,
-         * et chaque écriture SQL coûte cher sur le NAS. Le magasin est celui
+         * et chaque écriture SQL coûte cher en production. Le magasin est celui
          * de l'application (redis en production).
          */
         Spatie\Health\ResultStores\CacheHealthResultStore::class => [

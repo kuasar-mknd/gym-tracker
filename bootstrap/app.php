@@ -33,11 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
          * Il recopiait dans un en-tete `Link` chaque morceau que `@vite`
          * precharge, chacun avec son URL absolue et son nonce : 2 293 octets
          * sur l'accueil, 14 entrees, davantage sur les pages plus lourdes. Le
-         * proxy inverse de DSM lit tous les en-tetes d'une reponse dans un
-         * tampon de 4 Kio (`proxy_buffer_size`, une page memoire, que son
-         * gabarit ne change pas). Au-dela, nginx consigne « upstream sent too
-         * big header » et rend un 502, que DSM habille de sa page « Desole, la
-         * page que vous recherchez est introuvable ».
+         * proxy inverse de production lit tous les en-tetes d'une reponse dans
+         * un tampon de 4 Kio. Au-dela, il rend un 502 avec sa propre page
+         * d'erreur, jamais celle de l'application.
          *
          * Seul un chargement COMPLET portait l'en-tete : une navigation Inertia
          * rend du JSON sans passer par `@vite`. D'ou le symptome trompeur :

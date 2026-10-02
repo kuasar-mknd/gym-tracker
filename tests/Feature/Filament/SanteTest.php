@@ -18,8 +18,8 @@ use Spatie\Permission\Models\Role;
 
 /**
  * La page « Santé » du panneau : le pendant en production de ce que Doctor
- * regarde dans la CI. Les résultats vivent dans le cache, pas en base : le
- * NAS paie chaque écriture SQL entre 350 ms et 1,7 s, et neuf lignes toutes
+ * regarde dans la CI. Les résultats vivent dans le cache, pas en base : la
+ * production paie chaque écriture SQL entre 350 ms et 1,7 s, et neuf lignes toutes
  * les cinq minutes n'apprendraient rien que le dernier passage ne dise déjà.
  */
 it('ouvre la page de santé au super administrateur, et à lui seul', function (): void {

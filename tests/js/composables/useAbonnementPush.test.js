@@ -190,7 +190,7 @@ describe('l’état de l’abonnement au montage', () => {
         monter({ dejaAbonne: true })
         await flushPromises()
 
-        // Chaque écriture coûte de 350 ms à 1,7 s sur le NAS : la page de profil
+        // Chaque écriture coûte de 350 ms à 1,7 s en production : la page de profil
         // n’a pas à en produire une à chaque ouverture.
         expect(reseau.post).not.toHaveBeenCalled()
     })

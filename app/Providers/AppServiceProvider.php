@@ -109,7 +109,7 @@ final class AppServiceProvider extends ServiceProvider
      * n'était pas difficile à diagnostiquer, elle était invisible.
      *
      * Le journal seulement, jamais la base : chaque écriture SQL coûte de
-     * 350 ms à 1,7 s sur le NAS, et un abonnement mort en produit une par envoi.
+     * 350 ms à 1,7 s en production, et un abonnement mort en produit une par envoi.
      * Le point de terminaison est réduit à son hôte, parce que l'URL entière est
      * une capacité : qui la détient peut écrire à l'appareil.
      */

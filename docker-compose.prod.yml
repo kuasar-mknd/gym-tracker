@@ -56,8 +56,8 @@ x-app-env: &app-env
     LOG_STACK: stderr,daily
     LOG_LEVEL: ${LOG_LEVEL:-info}
 
-    # Pulse écrit ses agrégats en base à chaque requête et chaque job : sur le
-    # disque du NAS, 145 attentes de verrou en 205 s, toutes sur pulse_aggregates,
+    # Pulse écrit ses agrégats en base à chaque requête et chaque job : en
+    # production, 145 attentes de verrou en 205 s, toutes sur pulse_aggregates,
     # et aucune une fois coupé (mesures du 03/09, #1668). Coupé par défaut, comme
     # sur la pile déployée ; réglable dans la pile.
     PULSE_ENABLED: ${PULSE_ENABLED:-false}
@@ -66,8 +66,8 @@ services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
         # Un conteneur garde l'image avec laquelle il a été créé : retélécharger
-        # `:v1` ne met à jour aucun conteneur existant, et le scheduler du NAS a
-        # ainsi tourné des semaines sur une vieille image (#1813). Toute mise à
+        # `:v1` ne met à jour aucun conteneur existant, et le scheduler de
+        # production a ainsi tourné des semaines sur une vieille image (#1813). Toute mise à
         # jour de la pile retélécharge l'image et recrée ce qui a changé. Un
         # simple redémarrage, lui, ne télécharge rien.
         pull_policy: always
@@ -112,13 +112,13 @@ services:
     db:
         image: mysql:8.4
         restart: always
-        # Un disque dur synchronise chaque validation en 250 à 500 ms (310 ms par
-        # écriture synchronisée, mesuré par dd sur le NAS le 03/09) ; le journal
-        # est écrit à chaque validation et synchronisé une fois par seconde, au prix
+        # Le disque de production synchronise chaque validation en 250 à 500 ms
+        # (310 ms par écriture synchronisée, mesuré le 03/09) ; le journal est
+        # écrit à chaque validation et synchronisé une fois par seconde, au prix
         # d'une seconde d'écritures sur une coupure brutale. Aucune réplication ne
-        # lit le journal binaire. La capacité d'entrée-sortie est celle d'un disque
-        # dur partagé, pas le défaut calibré pour un SSD ; ces réglages sont ceux
-        # appliqués et vérifiés sur la pile déployée (#1668).
+        # lit le journal binaire. La capacité d'entrée-sortie est celle de ce
+        # disque, pas le défaut de MySQL ; ces réglages sont ceux appliqués et
+        # vérifiés sur la pile déployée (#1668).
         command: >
             --innodb-buffer-pool-size=256M
             --innodb-redo-log-capacity=256M
