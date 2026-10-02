@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Rules\PublicPushEndpoint;
 use Illuminate\Foundation\Http\FormRequest;
+use NotificationChannels\WebPush\PushSubscription;
 
 class UpdatePushSubscriptionRequest extends FormRequest
 {
@@ -27,8 +28,9 @@ class UpdatePushSubscriptionRequest extends FormRequest
             // `url` seul accepte n'importe quel schéma et n'importe quel hôte :
             // l'endpoint stocké pourrait diriger le serveur vers son propre
             // réseau, puisque le canal WebPush y poste à chaque notification.
-            // Voir App\Rules\PublicPushEndpoint.
-            'endpoint' => ['required', 'url', new PublicPushEndpoint()],
+            // Voir App\Rules\PublicPushEndpoint. La longueur est celle de la
+            // colonne : au-delà, la base refusait l'écriture et rendait un 500.
+            'endpoint' => ['required', 'url', 'max:'.PushSubscription::ENDPOINT_MAX_LENGTH, new PublicPushEndpoint()],
             'keys.auth' => 'required',
             'keys.p256dh' => 'required',
         ];

@@ -155,3 +155,46 @@ it('validates required fields for deleting a push subscription', function (array
         ['endpoint'],
     ],
 ]);
+
+/**
+ * Une adresse d'abonnement Windows (WNS) qui dépasse 500 caractères.
+ *
+ * La colonne en prenait 500, et l'écriture partait en « Data too long » : un
+ * 500 au lieu d'un abonnement. Elle en prend 1 024 depuis la migration qui
+ * accompagne webpush 12.1, et la requête refuse ce qui ne tiendrait pas.
+ */
+function adresseDAbonnementWindows(int $longueur): string
+{
+    $debut = 'https://wns2-par02p.notify.windows.com/w/?token=';
+
+    return $debut.str_repeat('A', $longueur - strlen($debut));
+}
+
+it('enregistre une adresse d’abonnement de plus de 500 caractères', function (): void {
+    $utilisateur = aPushSubscriber();
+    $adresse = adresseDAbonnementWindows(1024);
+
+    actingAs($utilisateur)
+        ->postJson(route('push-subscriptions.update'), [
+            'endpoint' => $adresse,
+            'keys' => ['auth' => 'test-auth-key', 'p256dh' => 'test-p256dh-key'],
+        ])
+        ->assertOk();
+
+    $this->assertDatabaseHas('push_subscriptions', [
+        'subscribable_id' => $utilisateur->id,
+        'endpoint' => $adresse,
+    ]);
+});
+
+it('refuse en 422 une adresse d’abonnement plus longue que la colonne', function (): void {
+    actingAs(aPushSubscriber())
+        ->postJson(route('push-subscriptions.update'), [
+            'endpoint' => adresseDAbonnementWindows(1025),
+            'keys' => ['auth' => 'test-auth-key', 'p256dh' => 'test-p256dh-key'],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['endpoint']);
+
+    $this->assertDatabaseCount('push_subscriptions', 0);
+});
