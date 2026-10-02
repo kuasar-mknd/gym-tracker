@@ -11,6 +11,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Filament/** | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/** | .ai/rules/js.md |
+| bootstrap/app.php, app/Http/Middleware/** | .ai/rules/middleware.md |
 | app/Models/** | .ai/rules/models.md |
 | app/Providers/**, routes/console.php | .ai/rules/providers.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
