@@ -8,6 +8,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | routes/api.php, app/Http/Controllers/Api/** | .ai/rules/api.md |
 | tests/Browser/** | .ai/rules/browser.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
+| package.json, package-lock.json, composer.json, composer.lock | .ai/rules/dependencies.md |
 | app/Filament/** | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/** | .ai/rules/js.md |
