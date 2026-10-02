@@ -69,7 +69,7 @@ Voir aussi les [décisions d'architecture](docs/adr/) et la [charte graphique](d
 
 ## 📦 Mise en production
 
-La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml pull` puis `up -d` (ou la mise à jour de la pile dans Portainer, image retéléchargée). Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
+La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand un tag `v*` est poussé. `v1` suit chaque v1.x.y : une mise à jour, c'est `docker compose -f docker-compose.prod.yml up -d` (ou la mise à jour de la pile dans Portainer) : `pull_policy: always` retélécharge l'image et recrée les conteneurs dont l'image a changé. Un conteneur garde sinon l'image avec laquelle il a été créé, et un simple redémarrage ne télécharge rien (#1813). Au démarrage, `app` joue les migrations, et une migration qui échoue l'arrête plutôt que de servir un code qui ne correspond pas au schéma.
 
 **Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
 
@@ -91,7 +91,9 @@ Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une is
 
 `docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge.
 
-Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque dur du NAS, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées.
+Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque dur du NAS, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent le défaut calibré pour un SSD : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
+
+Les journaux des trois conteneurs de l'application vont dans `docker logs` et, un fichier par conteneur (`app`, `worker`, `scheduler`), dans le volume `journaux` que lit la page « Journaux » du panneau. Le fichier est indispensable au planificateur, qui envoie la sortie de chaque tâche dans /dev/null.
 
 L'application s'ouvre **par le proxy inverse HTTPS du DSM**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
 
@@ -166,6 +168,8 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | `HORIZON_ALLOWED_EMAILS` | pour ouvrir Horizon | vide : fermé à tous | Adresses des comptes **utilisateurs** de l'application, pas des administrateurs du panneau, admis sur `/horizon`, séparées par des virgules. `/horizon` ne passe pas par `ADMIN_ALLOWED_IPS`. Transmise à `app` seul. |
 | `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | vide : le seeder échoue | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` dans le conteneur `app` (console de Portainer ou `docker exec`). Le seeder ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. Transmise à `app` seul. |
 | `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge : base, Redis, cache, file, planificateur, tâches planifiées, Horizon, disque, sauvegardes, mode debug, environnement, caches de l'application. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
+| `LOG_LEVEL` | non | `info` | Niveau minimal des journaux : `debug` pour un dépannage, `warning` pour n'écrire que les incidents. |
+| `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; sur le disque du NAS, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable, sans nouvelles données tant qu'il est coupé. |
 
 ### Fixées par la composition
 
@@ -181,7 +185,8 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | `MAIL_MAILER` | `smtp` | Les courriels partent par le serveur de `MAIL_HOST`. |
 | `GOMAXPROCS` | `2` | Plafonne les threads Go de FrankenPHP dans `app` ; `worker` et `scheduler`, en PHP CLI, l'ignorent. |
 | `OCTANE_SERVER` | `frankenphp`, dans `app` seulement | Serveur que visent `octane:status` et `octane:reload` ; l'image lance `octane:frankenphp` directement. |
-| `LOG_CHANNEL` | `stderr`, dans `app` seulement | Les journaux de `app` vont dans `docker logs`. Ceux de `worker` et `scheduler` vont dans storage/logs/laravel.log de leur propre conteneur, ni monté ni affiché (#1907). |
+| `LOG_CHANNEL`, `LOG_STACK` | `stack`, `stderr,daily` | Chaque ligne va dans `docker logs` et dans le fichier du jour du conteneur, gardé quatorze jours dans le volume `journaux` (#1907). |
+| `LOG_DAILY_NAME` | `app`, `worker` ou `scheduler`, selon le service | Nom du fichier de journal du conteneur : la page « Journaux » du panneau dit ainsi qui a écrit quoi. |
 | `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` | Variables de l'image mysql du service `db`, lues à l'initialisation d'un volume vide. |
 
 ### Lues par l'application, non transmises en production
@@ -195,11 +200,9 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 | `APP_PREVIOUS_KEYS` | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY` ; sans elle, une rotation déconnecte tout le monde. |
 | `SESSION_SECURE_COOKIE` | `true` en production | Le cookie de session n'est envoyé qu'en HTTPS : d'où le passage obligé par le proxy du DSM. |
 | `SESSION_LIFETIME` | `120` | Minutes d'inactivité avant que la session expire ; « Se souvenir de moi » reconnecte ensuite sans mot de passe. |
-| `LOG_LEVEL` | `debug` | Tout est journalisé (#1907). |
 | `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
 | `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |
 | `HORIZON_HEARTBEAT_URL`, `SCHEDULE_HEARTBEAT_URL` | vides | URL qu'un contrôle réussi d'Horizon ou du planificateur appellerait, pour qu'une surveillance externe s'alarme quand les appels cessent — y compris planificateur arrêté, ce que `HEALTH_TO_ADDRESS` ne peut pas signaler. |
-| `PULSE_ENABLED` | `true` | Pulse enregistre en production. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | vides | Les boutons Google, GitHub et Apple restent masqués : la connexion sociale ne s'active pas en production (#1908). |
 
 ### Front : variables de build
@@ -223,7 +226,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 | `APP_MAINTENANCE_DRIVER`, `APP_MAINTENANCE_STORE` | `file`, commentée | Où se mémorise le mode maintenance. |
 | `PHP_CLI_SERVER_WORKERS` | commentée | Processus de `artisan serve`, que Sail lance pour servir l'application. |
 | `BCRYPT_ROUNDS` | `12` | Coût du hachage des mots de passe ; phpunit.xml le baisse à 4. |
-| `LOG_CHANNEL`, `LOG_STACK`, `LOG_LEVEL`, `LOG_DEPRECATIONS_CHANNEL` | `stack`, `single`, `debug`, `null` | Journaux dans storage/logs/laravel.log, dépréciations ignorées. |
+| `LOG_CHANNEL`, `LOG_STACK`, `LOG_LEVEL`, `LOG_DEPRECATIONS_CHANNEL` | `stack`, `single`, `debug`, `null` | Journaux dans storage/logs/laravel.log, dépréciations ignorées. Avec `LOG_STACK=daily`, `LOG_DAILY_NAME` (défaut `laravel`) nomme le fichier du jour. |
 | `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | `mysql`, `mysql`, `3306`, `gym_tracker`, `sail`, `password` | Le MySQL de Sail, qui crée la base et l'utilisateur au premier démarrage du volume. Les tests gardent l'hôte mais visent la base `gym_tracker_testing`, que le premier démarrage du volume crée aussi. |
 | `SESSION_DRIVER`, `SESSION_LIFETIME`, `SESSION_ENCRYPT`, `SESSION_PATH`, `SESSION_DOMAIN` | `database`, `120`, `false`, `/`, `null` | Sessions en base. |
 | `CACHE_STORE`, `CACHE_PREFIX`, `QUEUE_CONNECTION`, `FILESYSTEM_DISK` | `database`, commentée, `database`, `local` | Cache et file en base, fichiers sur le disque local. Les tâches en file attendent `queue:listen` (lancé par `sail composer dev`) : Horizon ne sert que la connexion `redis`. |
@@ -257,7 +260,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 | **Backoffice** | Filament 5 |
 | **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |
 | **DevOps** | Docker (image multi-architecture sur ghcr.io), Laravel Sail en développement, GitHub Actions |
-| **Monitoring** | Le panneau (santé, exceptions, tâches planifiées, journaux, erreurs navigateur), Laravel Pulse, Horizon ; Telescope en développement seulement |
+| **Monitoring** | Le panneau (santé, exceptions, tâches planifiées, journaux, erreurs navigateur), Horizon, Laravel Pulse (coupé par défaut en production) ; Telescope en développement seulement |
 
 ---
 

@@ -204,3 +204,127 @@ it('fait synchroniser le journal de MySQL une fois par seconde, sans journal bin
         ->toContain('--innodb-flush-log-at-trx-commit=2')
         ->toContain('--skip-log-bin');
 });
+
+/*
+ * La pile déployée tourne avec ces réglages depuis le 03/09, vérifiés par
+ * SHOW VARIABLES : le défaut de MySQL 8.4 suppose un SSD (io_capacity 10 000),
+ * et le disque du NAS synchronise une écriture en 310 ms (#1668). Le dépôt ne
+ * les portait pas : réaligner la pile sur ce fichier les aurait perdus.
+ */
+it('donne à MySQL la capacité d\'un disque dur, comme la pile déployée', function (): void {
+    $commande = data_get(compositionDeProduction(), 'db.command');
+
+    expect($commande)->toBeString()
+        ->toContain('--innodb-redo-log-capacity=256M')
+        ->toContain('--innodb-io-capacity=200')
+        ->toContain('--innodb-io-capacity-max=1000');
+    assert(is_string($commande));
+    expect(str_contains($commande, '--innodb-log-file-size'))->toBeFalse('`--innodb-log-file-size` est déprécié depuis MySQL 8.0.30 au profit de `--innodb-redo-log-capacity`.');
+});
+
+/**
+ * Les services qui font tourner l'image de l'application, par nom.
+ *
+ * @return array<string, array<string, mixed>>
+ */
+function compositionServicesDeLApplication(): array
+{
+    $services = array_filter(
+        compositionDeProduction(),
+        static fn (mixed $service): bool => is_array($service)
+            && is_string($service['image'] ?? null)
+            && str_starts_with($service['image'], 'ghcr.io/kuasar-mknd/gym-tracker'),
+    );
+
+    expect(array_keys($services))->toEqualCanonicalizing(['app', 'worker', 'scheduler']);
+
+    /** @var array<string, array<string, mixed>> $services */
+    return $services;
+}
+
+/*
+ * Un conteneur garde l'image avec laquelle il a été créé : le scheduler du NAS
+ * a tourné des semaines sur une vieille image pendant que app suivait les
+ * versions (#1813). Avec `pull_policy: always`, toute mise à jour de la pile
+ * retélécharge l'image et recrée ce qui a changé, pour les trois.
+ */
+it('fait retélécharger l\'image à chaque mise à jour, pour les trois conteneurs de l\'application', function (): void {
+    $images = [];
+
+    foreach (compositionServicesDeLApplication() as $nom => $service) {
+        expect($service['pull_policy'] ?? null)->toBe('always', sprintf(
+            'Le service `%s` ne retélécharge pas son image : il peut rester sur une ancienne version pendant que les autres avancent.',
+            $nom,
+        ));
+
+        $images[] = is_string($service['image'] ?? null) ? $service['image'] : '';
+    }
+
+    expect(array_unique($images))->toHaveCount(1);
+});
+
+/*
+ * worker et scheduler journalisaient dans un fichier de leur propre
+ * conteneur, ni monté ni affiché, et app sur stderr seul (#1907). stderr seul
+ * ne suffit pas : le planificateur envoie la sortie de chaque tâche dans
+ * /dev/null. Il faut donc, pour les trois, la même pile de canaux avec un
+ * fichier, sur un volume que le visualiseur du panneau lit.
+ */
+it('journalise les trois conteneurs dans docker logs et dans un fichier partagé', function (): void {
+    $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
+    expect($composition)->toBeArray()->toHaveKey('volumes');
+    assert(is_array($composition));
+    expect($composition['volumes'])->toBeArray()->toHaveKey('journaux');
+
+    $nomsDeFichier = [];
+
+    foreach (compositionServicesDeLApplication() as $nom => $service) {
+        $environnement = $service['environment'] ?? [];
+        expect($environnement)->toBeArray();
+        assert(is_array($environnement));
+
+        expect($environnement['LOG_CHANNEL'] ?? null)->toBe('stack', "`{$nom}` ne journalise pas par la pile de canaux.")
+            ->and(explode(',', is_string($environnement['LOG_STACK'] ?? null) ? $environnement['LOG_STACK'] : ''))->toContain('stderr', 'daily')
+            ->and($environnement['LOG_LEVEL'] ?? null)->toBeString()->toStartWith('${LOG_LEVEL');
+
+        expect($service['volumes'] ?? [])->toContain('journaux:/app/storage/logs');
+
+        $nomsDeFichier[] = $environnement['LOG_DAILY_NAME'] ?? null;
+    }
+
+    expect($nomsDeFichier)->toEqualCanonicalizing(['app', 'worker', 'scheduler']);
+});
+
+/*
+ * Pulse écrivait ses agrégats en base à chaque requête et chaque job : 145
+ * attentes de verrou en 205 s sur le disque du NAS, toutes sur
+ * pulse_aggregates, aucune une fois coupé (#1668). Coupé par défaut, comme sur
+ * la pile déployée, et réglable dans la pile.
+ */
+it('coupe Pulse par défaut dans les trois conteneurs de l\'application', function (): void {
+    foreach (compositionServicesDeLApplication() as $nom => $service) {
+        expect(data_get($service, 'environment.PULSE_ENABLED'))->toBe('${PULSE_ENABLED:-false}', sprintf(
+            'Pulse n\'est pas coupé par défaut dans `%s`.',
+            $nom,
+        ));
+    }
+});
+
+it('nomme le fichier de journal du jour d\'après LOG_DAILY_NAME', function (): void {
+    $lireLeChemin = static function (): mixed {
+        /** @var array{channels: array{daily: array{path: string}}} $configuration */
+        $configuration = require config_path('logging.php');
+
+        return $configuration['channels']['daily']['path'];
+    };
+
+    expect($lireLeChemin())->toBe(storage_path('logs/laravel.log'));
+
+    $_SERVER['LOG_DAILY_NAME'] = $_ENV['LOG_DAILY_NAME'] = 'worker';
+
+    try {
+        expect($lireLeChemin())->toBe(storage_path('logs/worker.log'));
+    } finally {
+        unset($_SERVER['LOG_DAILY_NAME'], $_ENV['LOG_DAILY_NAME']);
+    }
+});

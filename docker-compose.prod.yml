@@ -47,11 +47,33 @@ x-app-env: &app-env
     # Une adresse ici, et chaque contrôle de santé qui passe au rouge écrit (une fois par heure au plus).
     HEALTH_TO_ADDRESS: ${HEALTH_TO_ADDRESS:-}
 
+    # Les journaux vont dans `docker logs` ET dans un fichier par conteneur, sur
+    # le volume `journaux` que lit le visualiseur du panneau. stderr seul ne
+    # suffit pas : le planificateur lance chaque tâche avec sa sortie envoyée
+    # dans /dev/null, et worker et scheduler écrivaient jusqu'ici dans un fichier
+    # de leur propre conteneur, ni monté ni affiché (#1907).
+    LOG_CHANNEL: stack
+    LOG_STACK: stderr,daily
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+
+    # Pulse écrit ses agrégats en base à chaque requête et chaque job : sur le
+    # disque du NAS, 145 attentes de verrou en 205 s, toutes sur pulse_aggregates,
+    # et aucune une fois coupé (mesures du 03/09, #1668). Coupé par défaut, comme
+    # sur la pile déployée ; réglable dans la pile.
+    PULSE_ENABLED: ${PULSE_ENABLED:-false}
+
 services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        # Un conteneur garde l'image avec laquelle il a été créé : retélécharger
+        # `:v1` ne met à jour aucun conteneur existant, et le scheduler du NAS a
+        # ainsi tourné des semaines sur une vieille image (#1813). Toute mise à
+        # jour de la pile retélécharge l'image et recrée ce qui a changé. Un
+        # simple redémarrage, lui, ne télécharge rien.
+        pull_policy: always
         volumes:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
+            - journaux:/app/storage/logs
         restart: always
         ports:
             - 8888:80
@@ -67,7 +89,7 @@ services:
             ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:-}
             # Server Optimization
             OCTANE_SERVER: frankenphp
-            LOG_CHANNEL: stderr
+            LOG_DAILY_NAME: app
         deploy:
             resources:
                 limits:
@@ -90,13 +112,18 @@ services:
     db:
         image: mysql:8.4
         restart: always
-        # Un disque dur synchronise chaque validation en 250 à 500 ms ; le journal
+        # Un disque dur synchronise chaque validation en 250 à 500 ms (310 ms par
+        # écriture synchronisée, mesuré par dd sur le NAS le 03/09) ; le journal
         # est écrit à chaque validation et synchronisé une fois par seconde, au prix
         # d'une seconde d'écritures sur une coupure brutale. Aucune réplication ne
-        # lit le journal binaire.
+        # lit le journal binaire. La capacité d'entrée-sortie est celle d'un disque
+        # dur partagé, pas le défaut calibré pour un SSD ; ces réglages sont ceux
+        # appliqués et vérifiés sur la pile déployée (#1668).
         command: >
             --innodb-buffer-pool-size=256M
-            --innodb-log-file-size=64M
+            --innodb-redo-log-capacity=256M
+            --innodb-io-capacity=200
+            --innodb-io-capacity-max=1000
             --innodb-flush-log-at-trx-commit=2
             --skip-log-bin
             --max-connections=50
@@ -150,12 +177,15 @@ services:
 
     worker:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        pull_policy: always
         restart: always
         command: php artisan horizon
         volumes:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
+            - journaux:/app/storage/logs
         environment:
             <<: *app-env
+            LOG_DAILY_NAME: worker
         deploy:
             resources:
                 limits:
@@ -190,12 +220,15 @@ services:
     # le conteneur, se redemarre avec lui, et n'ajoute pas de crontab a tenir.
     scheduler:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
+        pull_policy: always
         volumes:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
+            - journaux:/app/storage/logs
         restart: always
         command: php artisan schedule:work
         environment:
             <<: *app-env
+            LOG_DAILY_NAME: scheduler
         deploy:
             resources:
                 limits:
@@ -222,3 +255,6 @@ networks:
 volumes:
     db_data:
     redis_data:
+    # Un volume nommé neuf reprend le contenu et le propriétaire (www-data) du
+    # dossier de l'image, sans le problème de droits d'un dossier de l'hôte.
+    journaux:

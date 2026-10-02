@@ -67,9 +67,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+         * En production, app, worker et scheduler écrivent chacun leur
+         * fichier (LOG_DAILY_NAME, posé par docker-compose.prod.yml) dans le
+         * volume partagé storage/logs : le visualiseur du panneau, qui tourne
+         * dans app, les lit tous, et dit qui a écrit quoi.
+         */
         'daily' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => storage_path('logs/'.env('LOG_DAILY_NAME', 'laravel').'.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
