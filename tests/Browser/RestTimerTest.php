@@ -126,7 +126,7 @@ class RestTimerTest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->{$sizeMacro}()
                 ->visit('/workouts/'.$workout->id)
                 ->disableAnimations()

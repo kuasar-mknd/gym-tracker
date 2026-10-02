@@ -59,7 +59,7 @@ describe('GoalType : aller-retour par le cast du modèle', function (): void {
         $reloaded = Goal::findOrFail($goal->id);
 
         expect($reloaded->type)->toBe($type)
-            ->and($reloaded->toArray()['type'])->toBe($type->value);
+            ->and($reloaded->toArray())->toHaveKey('type', $type->value);
     })->with([
         'weight' => [GoalType::Weight],
         'volume' => [GoalType::Volume],

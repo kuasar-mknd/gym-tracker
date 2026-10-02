@@ -54,7 +54,7 @@ describe('ExerciseCategory : aller-retour par le cast du modèle', function (): 
 
         // toBe() compare par identité : sans le cast on récupérerait une string.
         expect($reloaded->category)->toBe($category)
-            ->and($reloaded->toArray()['category'])->toBe($category->value);
+            ->and($reloaded->toArray())->toHaveKey('category', $category->value);
     })->with([
         'Pectoraux' => [ExerciseCategory::Pectoraux],
         'Épaules' => [ExerciseCategory::Epaules],

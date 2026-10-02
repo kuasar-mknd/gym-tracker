@@ -133,7 +133,6 @@ return [
             'phpunit/phpunit',
             'pragmarx/google2fa',
             'psy/psysh',
-            'ralouphie/getallheaders',
             'react/promise',
             'rector/rector',
             'scrivo/highlight.php',

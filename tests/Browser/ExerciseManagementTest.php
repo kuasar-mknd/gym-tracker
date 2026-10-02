@@ -21,7 +21,7 @@ class ExerciseManagementTest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->{$sizeMacro}()
                 ->visit('/exercises')
                 ->disableAnimations()

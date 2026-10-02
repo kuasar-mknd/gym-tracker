@@ -21,7 +21,7 @@ class PageBrowserTest extends DuskTestCase
         ]);
 
         try {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->{$sizeMacro}();
 
             $pages = [
@@ -76,7 +76,7 @@ class PageBrowserTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $sizeMacro): void {
             try {
-                $browser->loginAs(User::find($user->id))
+                $browser->loginAs(User::findOrFail($user->id))
                     ->{$sizeMacro}()
                     ->visit('/dashboard')
                     ->waitFor('#main-content', 30);

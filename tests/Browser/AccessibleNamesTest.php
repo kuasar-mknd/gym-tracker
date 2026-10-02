@@ -129,7 +129,7 @@ class AccessibleNamesTest extends DuskTestCase
         $workout = \App\Models\Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
 
         $this->browse(function (Browser $browser) use ($user, $workout): void {
-            $browser->loginAs(User::find($user->id))
+            $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
                 ->waitFor('#main-content', 30)

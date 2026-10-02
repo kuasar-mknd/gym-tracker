@@ -20,7 +20,7 @@ beforeEach(function (): void {
  * getStats() est protégé : on l'appelle depuis une closure liée à l'instance du
  * widget, ce qui exécute le vrai calcul sans passer par du mock.
  *
- * @return array<string, int|string>
+ * @return array<array-key, bool|float|\Illuminate\Contracts\Support\Htmlable|int|string|null>
  */
 function filamentStatsOverviewValues(): array
 {

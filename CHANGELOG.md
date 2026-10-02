@@ -9,9 +9,13 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Corrigé
 - **L'application installée s'ouvre de nouveau après quelques semaines d'absence** (#1902) : elle tombait sur la page « Désolé, la page que vous recherchez est introuvable » du NAS, et `/login` y menait aussi. Ce n'étaient pas les cookies. Le proxy de DSM lit les en-têtes d'une réponse dans 4 Kio, et l'en-tête `Link` qui recopiait chaque morceau préchargé en portait à lui seul 2,3 Kio : un accueil chargé en entier dépassait la limite et repartait en 502. Une navigation dans l'application ne porte pas cet en-tête, d'où une panne visible seulement à l'ouverture, quand « Se souvenir de moi » connecte directement — et un effacement des cookies qui semblait réparer. L'en-tête disparaît, les mêmes indications restent dans la page, et chaque page complète repasse à 2 Kio d'en-têtes
+- **Un abonnement push venu de Windows s'enregistre** (#1903) : la colonne des adresses d'abonnement était restée à 500 caractères, quand webpush la porte à 1 024 depuis sa 12.1 — la migration qui l'accompagnait n'avait jamais été publiée. Une adresse WNS plus longue partait en erreur 500 ; elle est désormais enregistrée, et une adresse qui dépasserait encore la colonne est refusée proprement
 
 ### Sécurité
 - **`brace-expansion` passe en 5.0.12 et `fast-uri` en 3.1.8** (#1902) : trois avis publiés le 29/09 visent `brace-expansion` 5.0.9 — deux dénis de service par récursion non bornée (CVSS 7,5) et un par expansion quadratique (5,3) —, un quatrième la normalisation des hôtes de `fast-uri` 3.1.7 (4,8). Les deux ne servent qu'à la construction (eslint, workbox-build), mais l'audit OSV de la CI refusait toute PR
+
+### Modifié
+- **Toutes les dépendances sont à jour, majeures comprises** (#1903) : Laravel 13.34, Filament 5.9, inertia-laravel 3.5 avec @inertiajs/vue3 3.8, Livewire 4.4.7, Vite 8.3.2, Vitest 5.0.3, larastan 3.12 et phpstan 2.2.16, Dusk 8.7, et trois majeures : webpush 13, socialiteproviders/apple 6 (le nonce de la connexion Apple est désormais vérifié au retour) et Pest 5 avec PHPUnit 13. Le greffon de sauvegarde du panneau suivait une branche de développement, qui venait d'y amener sa version 4 et de casser le démarrage du panneau : il est figé sur `^4.0`. Une dépendance se met désormais à jour sans attendre d'accord, majeures comprises (`.ai/rules/dependencies.md`)
 
 ## [1.5.19] - 2026-09-07
 

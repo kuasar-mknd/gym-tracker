@@ -60,7 +60,7 @@ final class FamillesDeLaCharte
         $familles = [];
 
         foreach (self::definitions() as $titre => [$sous, $appartient]) {
-            $membres = array_filter($restants, $appartient, ARRAY_FILTER_USE_KEY);
+            $membres = array_filter($restants, static fn (string $cle): bool => $appartient($cle), ARRAY_FILTER_USE_KEY);
 
             if ($membres === []) {
                 continue;
