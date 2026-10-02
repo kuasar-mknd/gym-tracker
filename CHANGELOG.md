@@ -7,6 +7,12 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **L'application installée s'ouvre de nouveau après quelques semaines d'absence** (#1902) : elle tombait sur la page « Désolé, la page que vous recherchez est introuvable » du NAS, et `/login` y menait aussi. Ce n'étaient pas les cookies. Le proxy de DSM lit les en-têtes d'une réponse dans 4 Kio, et l'en-tête `Link` qui recopiait chaque morceau préchargé en portait à lui seul 2,3 Kio : un accueil chargé en entier dépassait la limite et repartait en 502. Une navigation dans l'application ne porte pas cet en-tête, d'où une panne visible seulement à l'ouverture, quand « Se souvenir de moi » connecte directement — et un effacement des cookies qui semblait réparer. L'en-tête disparaît, les mêmes indications restent dans la page, et chaque page complète repasse à 2 Kio d'en-têtes
+
+### Sécurité
+- **`brace-expansion` passe en 5.0.12 et `fast-uri` en 3.1.8** (#1902) : trois avis publiés le 29/09 visent `brace-expansion` 5.0.9 — deux dénis de service par récursion non bornée (CVSS 7,5) et un par expansion quadratique (5,3) —, un quatrième la normalisation des hôtes de `fast-uri` 3.1.7 (4,8). Les deux ne servent qu'à la construction (eslint, workbox-build), mais l'audit OSV de la CI refusait toute PR
+
 ## [1.5.19] - 2026-09-07
 
 ### Retiré

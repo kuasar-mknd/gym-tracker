@@ -27,14 +27,38 @@ return Application::configure(basePath: dirname(__DIR__))
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
 
+        /*
+         * Pas d'`AddLinkHeadersForPreloadedAssets` ici, et c'est voulu.
+         *
+         * Il recopiait dans un en-tete `Link` chaque morceau que `@vite`
+         * precharge, chacun avec son URL absolue et son nonce : 2 293 octets
+         * sur l'accueil, 14 entrees, davantage sur les pages plus lourdes. Le
+         * proxy inverse de DSM lit tous les en-tetes d'une reponse dans un
+         * tampon de 4 Kio (`proxy_buffer_size`, une page memoire, que son
+         * gabarit ne change pas). Au-dela, nginx consigne « upstream sent too
+         * big header » et rend un 502, que DSM habille de sa page « Desole, la
+         * page que vous recherchez est introuvable ».
+         *
+         * Seul un chargement COMPLET portait l'en-tete : une navigation Inertia
+         * rend du JSON sans passer par `@vite`. D'ou le symptome trompeur :
+         * l'application marchait tant qu'on y naviguait, et cassait a
+         * l'ouverture de la PWA des que le cookie « se souvenir de moi »
+         * authentifiait directement — `/` et `/login` menaient alors a un
+         * `/dashboard` complet, 4 355 octets d'en-tetes. Effacer les cookies
+         * semblait reparer : la page de connexion passait encore sous la
+         * limite, et la connexion suivante chargeait l'accueil en Inertia.
+         *
+         * Les memes indications de prechargement restent dans le `<head>`,
+         * ecrites par `@vite` : l'en-tete ne faisait que les doubler.
+         * `EnTetesDeReponseTest` tient le budget.
+         */
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\ConditionalCspHeaders::class,
         ]);
 
         /*
-         * Les trois decorateurs ci-dessus doivent envelopper la liaison de
+         * Les deux decorateurs ci-dessus doivent envelopper la liaison de
          * modele, pas etre enveloppes par elle.
          *
          * `web(append:)` les place en fin de groupe, donc a l'INTERIEUR de
@@ -58,12 +82,11 @@ return Application::configure(basePath: dirname(__DIR__))
          * raisonnement qu'en #1433 pris dans l'autre sens, faute de pouvoir
          * retirer un travail qui est ici legitime.
          *
-         * Aucun des trois ne lit la route : verifie avant de les deplacer, sans
+         * Aucun des deux ne lit la route : verifie avant de les deplacer, sans
          * quoi remonter au-dessus de la liaison leur retirerait ce qu'ils lisent.
          */
         foreach ([
             \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\ConditionalCspHeaders::class,
         ] as $decorateur) {
             $middleware->prependToPriorityList(
