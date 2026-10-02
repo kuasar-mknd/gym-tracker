@@ -19,3 +19,6 @@ Trois exceptions, parce qu'elles ne sont pas à nous :
 - **Les noms de classes** : ils portent des mots du domaine Laravel (`Controller`, `Policy`, `Request`, `Job`) et se lisent dans les traces d'erreur.
 
 Une garde (`tests/Feature/Conventions/LaLangueDuCodeTest.php`) refuse un nouveau commentaire anglais dans `app/`.
+
+## Un problème trouvé en chemin s'ouvre en issue, pas seulement dans la conversation
+Décision du propriétaire du dépôt (2026-10-02) : ne pas hésiter à ouvrir des issues. Un défaut repéré hors du sujet de la tâche — faille, bogue, dette, configuration incohérente, comportement de production douteux — devient une issue GitHub plutôt qu'une remarque perdue dans une conversation ou un commentaire de PR. Elle porte la preuve (fichier:ligne, mesure ou reproduction), l'impact, le correctif proposé et le test qui le prouverait, avec un titre au format des autres (`type(portée): constat`, en français) et un label existant (`security`, `ci`, `infra`, `frontend`…). Ce qui relève de la tâche en cours se corrige dans la PR ; seul ce qui l'élargirait part en issue. Exemples : #1904 (nonce CSP figé sous Octane), #1905 (labels de Dependabot absents).
