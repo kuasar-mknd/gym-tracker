@@ -189,37 +189,52 @@ it('garde les en-têtes de chaque page complète sous le budget', function (): v
 });
 
 /**
- * Le cas du signalement, de bout en bout : la PWA s'ouvre sur `/` avec un
- * cookie « se souvenir de moi » et sans session, puis suit les redirections
- * jusqu'à un accueil chargé en entier — c'est-à-dire rendu par `@vite`, là où
- * l'en-tête `Link` se remplissait.
+ * Le cas du signalement, de bout en bout et étape par étape : la connexion
+ * avec « se souvenir de moi », puis, des semaines plus tard, la PWA qui s'ouvre
+ * sur `/` avec ce seul cookie et suit la redirection jusqu'à un accueil chargé
+ * en entier — c'est-à-dire rendu par `@vite`, là où l'en-tête `Link` se
+ * remplissait.
+ *
+ * La réponse à la connexion est la plus chargée de l'application : elle pose
+ * trois cookies (session, XSRF, et celui qui se souvient). Si elle passait la
+ * limite, le 502 tomberait à la connexion même, et effacer les cookies ne
+ * suffirait plus.
  */
 it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » sous le budget', function (): void {
     $utilisateur = User::factory()->create();
 
     $nomDuCookie = $this->app['auth']->guard('web')->getRecallerName();
 
-    $cookie = $this->post('/login', [
+    $connexion = $this->post(enTetesHoteDeProduction().'/login', [
         'email' => $utilisateur->email,
         'password' => 'password',
         'remember' => true,
-    ])->getCookie($nomDuCookie);
+    ]);
+    $cookie = $connexion->getCookie($nomDuCookie);
 
-    expect($cookie)->not->toBeNull();
+    expect($cookie)->not->toBeNull()
+        ->and($connexion->baseResponse->headers->getCookies())->toHaveCount(3)
+        ->and(enTetesTailleDuBloc($connexion))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 
     // Des semaines plus tard : la session a expiré, seul le cookie reste.
     enTetesRemettreAZeroCommeOctane();
 
-    $reponse = $this->withCookie($nomDuCookie, (string) $cookie?->getValue())
-        ->followingRedirects()
+    $redirection = $this->withCookie($nomDuCookie, (string) $cookie?->getValue())
         ->get(enTetesHoteDeProduction().'/');
+
+    $redirection->assertRedirect(enTetesHoteDeProduction().'/dashboard');
+
+    expect(enTetesTailleDuBloc($redirection))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+
+    enTetesRemettreAZeroCommeOctane();
+
+    $reponse = $this->get((string) $redirection->headers->get('Location'));
 
     $reponse->assertOk()
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->component('Dashboard'));
 
-    expect($this->app['auth']->guard('web')->viaRemember())->toBeTrue();
-
-    expect((string) $reponse->getContent())->toContain('modulepreload')
+    expect($this->app['auth']->guard('web')->viaRemember())->toBeTrue()
+        ->and((string) $reponse->getContent())->toContain('modulepreload')
         ->and(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 });
 
