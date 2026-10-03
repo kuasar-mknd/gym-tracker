@@ -220,6 +220,8 @@ describe('l’activation des envois push des records', function (): void {
         'les rappels' => [['types' => ['training_reminder']], 'types.0'],
         'un type inconnu' => [['types' => ['personal_record', 'inconnu']], 'types.1'],
         'deux fois les records' => [['types' => ['personal_record', 'personal_record']], 'types.0'],
+        'une table au lieu d’une liste' => [['types' => ['a' => 'personal_record']], 'types'],
+        'un seul mot' => [['types' => 'personal_record'], 'types'],
         'aucun type' => [['types' => []], 'types'],
         'rien' => [[], 'types'],
     ]);

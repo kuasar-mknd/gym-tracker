@@ -30,7 +30,7 @@ class ActiverLesEnvoisPushRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'types' => ['required', 'array', 'min:1'],
+            'types' => ['required', 'list', 'min:1'],
             'types.*' => ['string', 'distinct', Rule::in(['personal_record'])],
         ];
     }
