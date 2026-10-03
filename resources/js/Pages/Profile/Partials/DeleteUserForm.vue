@@ -47,8 +47,9 @@ const closeModal = () => {
     <GlassCard as="section" class="space-y-6">
         <header>
             <h2 class="titre-carte">Supprimer le compte</h2>
-            <p class="text-text-muted mt-1 text-sm">
-                Une fois ton compte supprimé, toutes tes données seront définitivement effacées.
+            <p class="text-text-muted mt-1 text-sm" data-testid="delete-account-promise">
+                Une fois ton compte supprimé, toutes tes données sont effacées de l'application. Seules les sauvegardes
+                de la base en gardent une copie, le temps qu'elles expirent.
             </p>
         </header>
 
