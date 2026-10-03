@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'tests/Browser/**'
+  - 'tests/Browser/**, tests/DuskTestCase.php'
 ---
 
 # Browser
