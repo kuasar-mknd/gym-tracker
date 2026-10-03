@@ -13,6 +13,7 @@ import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
+import { seDeconnecter } from '@/composables/useDeconnexion'
 
 defineProps({
     pageTitle: {
@@ -283,7 +284,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                         <GlassIcon name="emoji_events" size="sm" class="mr-2" />
                                         Trophées
                                     </DropdownLink>
-                                    <DropdownLink :href="route('logout')" method="post" as="button">
+                                    <DropdownLink @click="seDeconnecter">
                                         <GlassIcon name="logout" size="sm" class="mr-2" />
                                         Déconnexion
                                     </DropdownLink>

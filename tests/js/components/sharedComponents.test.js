@@ -13,6 +13,13 @@ const hoisted = vi.hoisted(() => ({
     /** Every form handed out by the mocked `useForm`, newest last. */
     forms: [],
     formDelete: vi.fn(),
+    detacherLAppareil: vi.fn(),
+}))
+
+/** Le détachement se teste dans useDeconnexion.test.js ; ici, seulement l'appel. */
+vi.mock('@/composables/useAbonnementPush', async (importOriginal) => ({
+    ...(await importOriginal()),
+    detacherLAppareil: (...args) => hoisted.detacherLAppareil(...args),
 }))
 
 /*
@@ -288,6 +295,26 @@ describe('DropdownLink', () => {
 
     it('prend le jeton de couleur de texte plutôt qu’une teinte en dur', () => {
         expect(classes()).toContain('text-text-main')
+    })
+
+    /*
+     * La déconnexion ne peut pas être un lien : elle détache d'abord l'appareil
+     * du compte, ce qu'un lien Inertia ne sait pas attendre (#1926). Sans
+     * adresse, l'entrée est un bouton qui ne fait que transmettre le clic, avec
+     * l'habillage des autres entrées du menu.
+     */
+    it('devient un bouton qui transmet le clic quand il n’a pas d’adresse', async () => {
+        const auClic = vi.fn()
+        const bouton = mount(DropdownLink, { attrs: { onClick: auClic }, slots: { default: 'Déconnexion' }, global })
+
+        expect(bouton.element.tagName).toBe('BUTTON')
+        expect(bouton.attributes('type')).toBe('button')
+        expect(bouton.attributes('href')).toBeUndefined()
+        expect(bouton.classes().join(' ')).toBe(classes())
+
+        await bouton.trigger('click')
+
+        expect(auClic).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -1085,6 +1112,40 @@ describe('DeleteUserForm', () => {
         await wrapper.vm.$nextTick()
 
         expect(wrapper.find('.modal').exists()).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    /*
+     * Le compte n'existe plus, et sa session non plus : l'appareil ne doit
+     * plus rien recevoir à son nom (#1926). Le serveur n'a pas à être prévenu,
+     * l'oubli répondrait 401 à une session close.
+     */
+    it('détache l’appareil, sans prévenir le serveur, une fois le compte supprimé', async () => {
+        hoisted.detacherLAppareil.mockClear()
+        const wrapper = mountForm()
+        await openConfirmation(wrapper)
+        await wrapper.get('[data-testid="confirm-delete-button"]').trigger('click')
+
+        expect(hoisted.detacherLAppareil).not.toHaveBeenCalled()
+
+        hoisted.formDelete.mock.calls[0][1].onSuccess()
+
+        expect(hoisted.detacherLAppareil).toHaveBeenCalledWith({ prevenirLeServeur: false })
+
+        wrapper.unmount()
+    })
+
+    it('garde l’appareil abonné quand le serveur refuse la suppression', async () => {
+        hoisted.detacherLAppareil.mockClear()
+        const wrapper = mountForm()
+        await openConfirmation(wrapper)
+        await wrapper.get('[data-testid="confirm-delete-button"]').trigger('click')
+
+        hoisted.formDelete.mock.calls[0][1].onError()
+        hoisted.formDelete.mock.calls[0][1].onFinish()
+
+        expect(hoisted.detacherLAppareil).not.toHaveBeenCalled()
 
         wrapper.unmount()
     })

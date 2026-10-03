@@ -13,6 +13,10 @@ vi.mock('@inertiajs/vue3', () => ({
 const rapprocherLAbonnementPush = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useAbonnementPush', () => ({ rapprocherLAbonnementPush }))
 
+/** La déconnexion se teste dans useDeconnexion.test.js ; ici, seulement l'appel. */
+const seDeconnecter = vi.hoisted(() => vi.fn())
+vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
+
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 
 /** Ziggy, including the wildcard patterns the desktop nav matches on. */
@@ -343,6 +347,28 @@ describe('AuthenticatedLayout — l’abonnement push', () => {
         mountLayout({ auth: { user: user({ id: 42 }) }, onPage: 'stats.index' })
 
         expect(rapprocherLAbonnementPush).toHaveBeenCalledWith(42)
+    })
+})
+
+describe('AuthenticatedLayout — la déconnexion', () => {
+    beforeEach(() => {
+        seDeconnecter.mockClear()
+    })
+
+    /*
+     * L'entrée était un lien Inertia vers `logout` : la déconnexion partait
+     * sans détacher l'appareil, qui gardait les notifications du compte parti
+     * (#1926).
+     */
+    it('passe par seDeconnecter, qui détache l’appareil avant de partir', async () => {
+        const wrapper = mountLayout()
+        const entree = wrapper.findAll('a').find((lien) => lien.text().includes('Déconnexion'))
+
+        expect(entree.attributes('href')).toBeUndefined()
+
+        await entree.trigger('click')
+
+        expect(seDeconnecter).toHaveBeenCalledTimes(1)
     })
 })
 

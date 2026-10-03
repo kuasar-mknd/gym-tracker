@@ -83,6 +83,10 @@ vi.mock('@/Components/Stats/BodyPartHistoryChart.vue', () => ({
     },
 }))
 
+/** La déconnexion se teste dans useDeconnexion.test.js ; ici, seulement l'appel. */
+const seDeconnecter = vi.hoisted(() => vi.fn())
+vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
+
 import { passesSlot, layoutStub } from './pageStubs'
 
 import PartShow from '@/Pages/Measurements/Parts/Show.vue'
@@ -644,15 +648,23 @@ describe('Profile/Index — the menu', () => {
 
     /**
      * A GET on the logout route is a 405 at best, and a link a browser is free
-     * to prefetch at worst.
+     * to prefetch at worst. Le bouton n'a donc pas d'adresse : il appelle
+     * seDeconnecter, qui détache l'appareil du compte puis poste la
+     * déconnexion (#1926) ; le POST se vérifie dans useDeconnexion.test.js.
      */
-    it('logs out with a POST', () => {
+    it('logs out through seDeconnecter, never through a link', async () => {
+        seDeconnecter.mockClear()
         const wrapper = mountProfile()
         const logout = wrapper.get('[data-testid="logout-button"]')
 
         expect(declaredRouteNames.has('logout')).toBe(true)
-        expect(logout.attributes('href')).toBe('/routes/logout')
-        expect(logout.attributes('data-method')).toBe('post')
+        expect(logout.element.tagName).toBe('BUTTON')
+        expect(logout.attributes('type')).toBe('button')
+        expect(logout.attributes('href')).toBeUndefined()
+
+        await logout.trigger('click')
+
+        expect(seDeconnecter).toHaveBeenCalledTimes(1)
     })
 })
 

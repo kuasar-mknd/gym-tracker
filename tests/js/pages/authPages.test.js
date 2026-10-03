@@ -58,6 +58,10 @@ vi.mock('@inertiajs/vue3', async () => {
 
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => haptic(...args) }))
 
+/** La déconnexion se teste dans useDeconnexion.test.js ; ici, seulement l'appel. */
+const seDeconnecter = vi.hoisted(() => vi.fn())
+vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
+
 import ConfirmPassword from '@/Pages/Auth/ConfirmPassword.vue'
 import ForgotPassword from '@/Pages/Auth/ForgotPassword.vue'
 import Login from '@/Pages/Auth/Login.vue'
@@ -471,10 +475,22 @@ describe('VerifyEmail', () => {
         expect(none.text()).not.toContain('Un nouveau lien de vérification a été envoyé')
     })
 
-    it('déconnecte en POST, pas par un lien que le navigateur peut préfetcher', () => {
+    /*
+     * Un compte qui n'a pas encore vérifié son adresse peut déjà activer le
+     * push depuis son profil : sa déconnexion détache l'appareil comme les
+     * autres (#1926). Un bouton sans adresse, que le navigateur ne peut pas
+     * préfetcher, et qui ne soumet pas le formulaire de renvoi qui l'entoure.
+     */
+    it('déconnecte par seDeconnecter, pas par un lien que le navigateur peut préfetcher', async () => {
         const wrapper = mountPage(VerifyEmail)
-        const logout = wrapper.find('a[href="/logout"]')
+        const logout = wrapper.findAll('button').find((bouton) => bouton.text() === 'Se déconnecter')
 
-        expect(logout.attributes('data-method')).toBe('post')
+        expect(logout.attributes('type')).toBe('button')
+        expect(wrapper.find('a[href="/logout"]').exists()).toBe(false)
+
+        await logout.trigger('click')
+
+        expect(seDeconnecter).toHaveBeenCalledTimes(1)
+        expect(formPost).not.toHaveBeenCalled()
     })
 })

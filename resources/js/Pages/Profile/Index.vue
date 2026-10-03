@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Head, Link } from '@inertiajs/vue3'
+import { seDeconnecter } from '@/composables/useDeconnexion'
 
 const menuGroups = [
     {
@@ -143,15 +144,19 @@ const menuGroups = [
                     </h2>
                     <p class="text-text-muted text-sm font-bold">{{ $page.props.auth.user.email }}</p>
                     <div class="mt-2 flex gap-2">
-                        <Link
-                            :href="route('logout')"
-                            method="post"
-                            as="button"
+                        <!--
+                            Le bouton que rendait `<Link as="button">`, à l'identique : la
+                            déconnexion détache d'abord l'appareil du compte (#1926), ce
+                            qu'un lien Inertia ne sait pas attendre.
+                        -->
+                        <button
+                            type="button"
                             class="text-accent-danger-deep hover:text-accent-danger-deep text-xs font-black tracking-widest uppercase"
                             data-testid="logout-button"
+                            @click="seDeconnecter"
                         >
                             Déconnexion
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </div>
