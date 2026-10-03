@@ -213,6 +213,30 @@ it("garde le compte et toutes ses traces quand l'effacement échoue en route", f
 
     expect(fn (): ?bool => $compte->delete())->toThrow(RuntimeException::class, 'panne simulée');
 
+    // Le compte qui reste journalise de nouveau ses changements.
     expect(User::query()->whereKey($compte->id)->exists())->toBeTrue()
-        ->and(compteSupprimeSesTracesRestantes($compte->getMorphClass(), $compte->id))->toBe($avant);
+        ->and(compteSupprimeSesTracesRestantes($compte->getMorphClass(), $compte->id))->toBe($avant)
+        ->and($compte->enableLoggingModelsEvents)->toBeTrue();
+});
+
+/*
+ * L'entrée « deleted » du journal recopierait le nom et le courriel du compte
+ * au moment même où on les efface. L'effacement la rattraperait aujourd'hui,
+ * parce qu'il passe après elle ; mais avec le tampon du paquet activé
+ * (`activitylog.buffer.enabled`), elle ne serait écrite qu'à la fin de la
+ * requête, APRÈS l'effacement, et resterait. Rien ne doit donc l'écrire.
+ */
+it("n'écrit rien dans le journal d'activité en supprimant le compte", function (): void {
+    $compte = User::factory()->create();
+    $ecritures = 0;
+
+    DB::listen(function (QueryExecuted $requete) use (&$ecritures): void {
+        if (str_starts_with($requete->sql, 'insert into `activity_log`')) {
+            $ecritures++;
+        }
+    });
+
+    $compte->delete();
+
+    expect($ecritures)->toBe(0);
 });
