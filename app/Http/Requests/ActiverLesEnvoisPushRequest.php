@@ -21,9 +21,9 @@ class ActiverLesEnvoisPushRequest extends FormRequest
     /**
      * Les types dont l'envoi push s'allume.
      *
-     * Les records seuls, par décision du 2026-10-03 (#1848) : l'invitation de
-     * fin de séance parle d'un record à annoncer, et les rappels d'entraînement
-     * restent à activer dans le profil, avec leurs jours.
+     * Les records seuls (#1848) : l'invitation de fin de séance parle d'un
+     * record à annoncer, et les rappels d'entraînement restent à activer dans
+     * le profil, avec leurs jours. Ouvrir un autre type se décide ici.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
