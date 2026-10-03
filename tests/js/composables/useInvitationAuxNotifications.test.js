@@ -329,6 +329,34 @@ describe('l’activation', () => {
         expect(invitation.activee.value).toBe(true)
     })
 
+    it('nomme l’étape en cours, jusqu’à l’écriture des records', async () => {
+        navigateur()
+        let ecrire
+        reseau.patch.mockImplementationOnce(
+            () =>
+                new Promise((resolve) => {
+                    ecrire = resolve
+                }),
+        )
+        const invitation = await monterEtVerifier()
+
+        const activation = invitation.activer()
+
+        // Le bouton dit où l'on en est : une étape muette tourne sans fin.
+        expect(invitation.enCours.value).toBe(true)
+        expect(invitation.etapeEnCours.value).toBe('Permission')
+
+        await flushPromises()
+
+        expect(invitation.etapeEnCours.value).toBe('Préférences')
+
+        ecrire({ status: 204, data: null })
+        await activation
+
+        expect(invitation.enCours.value).toBe(false)
+        expect(invitation.etapeEnCours.value).toBeNull()
+    })
+
     it('ne lance qu’une activation sur un double appui', async () => {
         const { notification } = navigateur()
         const invitation = await monterEtVerifier()
