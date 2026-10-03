@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 1 849 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 1 974 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 087 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -88,6 +88,12 @@ gh workflow run mutation.yml --ref v1.2.3
 Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), puis le run de `release.yml`.
 
 Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow.
+
+La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul sur le serveur de production ; comme les autres contrôles, ces trois-là écrivent à `HEALTH_TO_ADDRESS` quand ils passent au rouge :
+
+- **Dossier des sauvegardes** écrit puis efface une sonde dans le partage monté (#1812). Chaque accès est borné à dix secondes : un partage qui ne répond plus met le contrôle au rouge (« Sans réponse ») et suspend « Backups », dont le parcours des archives n'a pas de délai, au lieu de figer tous les contrôles. Au démarrage, chaque conteneur fait la même vérification, bornée elle aussi, et, en cas d'échec, écrit dans `docker logs` « ATTENTION : le dossier des sauvegardes … n'est pas inscriptible par uid … » sans s'arrêter.
+- **Versions des conteneurs** compare l'image qu'exécutent `app`, `worker` et `scheduler`, chacun l'annonçant à son démarrage (#1813). Un conteneur garde l'image avec laquelle il a été créé : au rouge, mettre à jour la pile en retéléchargeant l'image. `docker exec <conteneur> printenv APP_VERSION APP_REVISION` donne la version d'un conteneur ; pour une image plus ancienne, l'étiquette `org.opencontainers.image.revision` de `docker inspect`.
+- **Réglages de la base** relit en production `innodb_flush_log_at_trx_commit` et `log_bin` dans MySQL, et l'état de Pulse (#1668) : rouge si une écriture repaie la synchronisation du disque, orange si Pulse enregistre ou si MySQL ne rend pas l'un des deux réglages.
 
 `docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge.
 
@@ -176,7 +182,7 @@ Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur 
 | `ADMIN_ALLOWED_IPS` | pour ouvrir le panneau | vide : tout répond 404 | Adresses autorisées sur `/backoffice`, `/backoffice/pulse` et `/backoffice/journaux`, séparées par des virgules : adresses exactes ou plages CIDR, IPv4 et IPv6 (`192.168.1.0/24,203.0.113.32`). Transmise à `app` seul. |
 | `HORIZON_ALLOWED_EMAILS` | pour ouvrir Horizon | vide : fermé à tous | Adresses des comptes **utilisateurs** de l'application, pas des administrateurs du panneau, admis sur `/horizon`, séparées par des virgules. `/horizon` ne passe pas par `ADMIN_ALLOWED_IPS`. Transmise à `app` seul. |
 | `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | vide : le seeder échoue | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` dans le conteneur `app` (`docker exec`). Le seeder ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. Transmise à `app` seul. |
-| `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge : base, Redis, cache, file, planificateur, tâches planifiées, Horizon, disque, sauvegardes, mode debug, environnement, caches de l'application. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
+| `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge : base et ses réglages, Redis, cache, file, planificateur, tâches planifiées, Horizon, versions des conteneurs, disque, dossier des sauvegardes, sauvegardes, mode debug, environnement, caches de l'application. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
 | `LOG_LEVEL` | non | `info` | Niveau minimal des journaux : `debug` pour un dépannage, `warning` pour n'écrire que les incidents. |
 | `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; en production, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable, sans nouvelles données tant qu'il est coupé. |
 
@@ -190,13 +196,22 @@ Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur 
 | `ASSET_URL` | la valeur d'`APP_URL` | Les actifs se servent depuis l'adresse publique. |
 | `DB_CONNECTION`, `DB_HOST`, `DB_PORT` | `mysql`, `db`, `3306` | Le service `db` ; `entrypoint.sh` l'attend jusqu'à vingt minutes avant d'abandonner. |
 | `REDIS_HOST`, `REDIS_PORT` | `redis`, `6379` | Le service `redis`. |
-| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions, cache, résultats des contrôles de santé et file d'Horizon, partagés par les trois conteneurs de l'application. |
+| `SESSION_DRIVER`, `CACHE_STORE`, `QUEUE_CONNECTION` | `redis` | Sessions, cache, résultats des contrôles de santé, versions annoncées par les conteneurs et file d'Horizon, partagés par les trois conteneurs de l'application. |
 | `MAIL_MAILER` | `smtp` | Les courriels partent par le serveur de `MAIL_HOST`. |
 | `GOMAXPROCS` | `2` | Plafonne les threads Go de FrankenPHP dans `app` ; `worker` et `scheduler`, en PHP CLI, l'ignorent. |
 | `OCTANE_SERVER` | `frankenphp`, dans `app` seulement | Serveur que visent `octane:status` et `octane:reload` ; l'image lance `octane:frankenphp` directement. |
 | `LOG_CHANNEL`, `LOG_STACK` | `stack`, `stderr,daily` | Chaque ligne va dans `docker logs` et dans le fichier du jour du conteneur, gardé quatorze jours dans le volume `journaux` (#1907). |
 | `LOG_DAILY_NAME` | `app`, `worker` ou `scheduler`, selon le service | Nom du fichier de journal du conteneur : la page « Journaux » du panneau dit ainsi qui a écrit quoi. |
 | `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` | Variables de l'image mysql du service `db`, lues à l'initialisation d'un volume vide. |
+
+### Fixées par l'image
+
+Posées par le `Dockerfile` à partir des arguments que la CI passe au build : les poser dans la pile ne change rien, et un conteneur dit ainsi l'image qu'il exécute, pas celle qu'on croit avoir déployée.
+
+| Variable | Valeur | Rôle |
+| --- | --- | --- |
+| `APP_VERSION` | le tag construit (`v1.5.20`), `main` sur `main` ; `dev` hors CI | Version que chaque conteneur annonce à son démarrage, la même que l'étiquette `org.opencontainers.image.version` de l'image ; le contrôle « Versions des conteneurs » compare celles d'`app`, `worker` et `scheduler` (#1813). |
+| `APP_REVISION` | le commit construit ; `inconnue` hors CI | Révision annoncée avec la version : deux images de `main` portent la même version et ne diffèrent que par elle. |
 
 ### Lues par l'application, non transmises en production
 

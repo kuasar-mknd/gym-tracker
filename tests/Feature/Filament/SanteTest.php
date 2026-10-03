@@ -35,20 +35,28 @@ it('ouvre la page de santé au super administrateur, et à lui seul', function (
         ->assertForbidden();
 });
 
-it('regarde la base, le cache, la file, le planificateur, Horizon, le disque, les sauvegardes et la configuration', function (): void {
+/**
+ * Trois contrôles disent ce que le dépôt ne peut pas corriger seul sur le
+ * serveur de production : les réglages de MySQL (#1668), les versions des conteneurs (#1813) et
+ * le dossier des sauvegardes (#1812).
+ */
+it('regarde la base et ses réglages, le cache, la file, le planificateur, Horizon, les versions, le disque, les sauvegardes et la configuration', function (): void {
     $noms = Health::registeredChecks()
         ->map(fn (Check $check): string => $check->getName())
         ->all();
 
     expect($noms)->toBe([
         'Database',
+        'ReglagesDeLaBase',
         'Redis',
         'Cache',
         'Queue',
         'Schedule',
         'TachesPlanifiees',
         'Horizon',
+        'VersionsDesConteneurs',
         'UsedDiskSpace',
+        'DossierDesSauvegardes',
         'Backups',
         'DebugMode',
         'Environment',

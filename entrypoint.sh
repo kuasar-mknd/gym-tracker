@@ -23,6 +23,14 @@ php artisan config:cache
 echo "Caching routes..."
 php artisan route:cache
 
+# Le dossier des sauvegardes est un dossier de l'hôte que le dépôt ne tient pas
+# (#1812). Un échec avertit dans `docker logs` sans arrêter le conteneur :
+# l'application doit démarrer même si le partage est cassé, et la page
+# « Santé » le dira aussi. Le script borne lui-même son attente.
+if ! bash /app/docker/verifier-sauvegardes.sh; then
+    echo "Le démarrage continue : aucune sauvegarde ne s'écrira tant que le dossier ne sera pas inscriptible."
+fi
+
 # Run migrations ONLY for the app service (when command contains octane)
 if echo "$@" | grep -q "octane:frankenphp"; then
     # Un echec de migration arrete le conteneur : demarrer un code qui ne

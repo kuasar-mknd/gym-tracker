@@ -653,6 +653,12 @@ jobs:
                   context: .
                   platforms: ${{ matrix.platform }}
                   labels: ${{ steps.meta.outputs.labels }}
+                  # La version (celle de l'étiquette OCI) et le commit construits :
+                  # chaque conteneur les annonce, et la page « Santé » compare
+                  # app, worker et scheduler (#1813).
+                  build-args: |
+                      APP_VERSION=${{ steps.meta.outputs.version }}
+                      APP_REVISION=${{ github.sha }}
                   outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
                   cache-from: type=gha,scope=build-${{ matrix.platform }}
                   cache-to: type=gha,mode=max,scope=build-${{ matrix.platform }}
@@ -677,7 +683,8 @@ jobs:
     # ne protegeait rien : pousser un tag `v*` declenche DEUX workflows
     # independants — celui-ci, qui publie l'image, et release.yml, qui cree
     # l'objet release. La production tire `ghcr.io/.../gym-tracker:v1`
-    # (docker-compose.prod.yml:43 et :130), c'est-a-dire un tag produit ICI.
+    # (services app, worker et scheduler de docker-compose.prod.yml), c'est-a-dire
+    # un tag produit ICI.
     # L'image serait donc partie meme avec la release bloquee.
     #
     # Ne s'applique qu'aux tags : sur `main`, `merge` publie `latest` et

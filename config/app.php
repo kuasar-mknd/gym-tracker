@@ -32,6 +32,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Version de l'image
+    |--------------------------------------------------------------------------
+    |
+    | Posées par la CI au build de l'image (ARG du Dockerfile recopiés en ENV) :
+    | le tag ou la branche construits, et leur commit. Chaque conteneur les
+    | annonce à son démarrage, et la page « Santé » compare app, worker et
+    | scheduler (#1813). Hors d'une image construite par la CI : « dev » et
+    | « inconnue ».
+    |
+    */
+
+    'version' => env('APP_VERSION', 'dev'),
+
+    'revision' => env('APP_REVISION', 'inconnue'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Browser Test Run
     |--------------------------------------------------------------------------
     |
