@@ -51,4 +51,34 @@ class PulseCspTest extends TestCase
         $this->assertStringContainsString('<script nonce="'.$nonce.'">', $content);
         $this->assertStringContainsString('<style nonce="'.$nonce.'">', $content);
     }
+
+    /**
+     * Pulse a sa propre pile et lit `app('csp-nonce')` : deux requêtes servies
+     * par la même application doivent quand même porter deux nonces, chacun
+     * celui de son en-tête (#1904).
+     */
+    public function test_pulse_tire_un_nonce_neuf_a_chaque_requete(): void
+    {
+        $nomDuRole = config('filament-shield.super_admin.name');
+        $nomDuRole = is_string($nomDuRole) ? $nomDuRole : 'super_admin';
+        Role::create(['name' => $nomDuRole, 'guard_name' => 'admin']);
+        $administrateur = Admin::factory()->create();
+        $administrateur->assignRole($nomDuRole);
+
+        $nonces = [];
+
+        foreach ([1, 2] as $requete) {
+            $reponse = $this->actingAs($administrateur, 'admin')->get('/backoffice/pulse');
+
+            $reponse->assertStatus(200);
+            if (preg_match("/'nonce-([^']+)'/", (string) $reponse->headers->get('Content-Security-Policy'), $trouve) !== 1) {
+                $this->fail('Aucun nonce dans la Content-Security-Policy.');
+            }
+
+            $this->assertStringContainsString('<script nonce="'.$trouve[1].'">', (string) $reponse->getContent());
+            $nonces[$requete] = $trouve[1];
+        }
+
+        $this->assertNotSame($nonces[1], $nonces[2]);
+    }
 }
