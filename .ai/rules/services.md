@@ -24,3 +24,6 @@ Deux occurrences réelles, même forme : les préférences d'échauffement (rela
 `$x ??= new Model(...)` sur un couple non unique est une course : deux écritures concurrentes créent deux lignes.
 
 Donc, dès qu'un code lit UNE ligne pour un couple de colonnes : poser l'index unique en base, et faire écarter les doublons par le code de recalcul lui-même — il doit pouvoir réparer une base d'avant la contrainte, et ne dépendre d'aucune garantie qu'il ne vérifie pas.
+
+## Un service qui écrit une valeur dérivée stockée figure dans la liste de ses écrivains
+Les écrivains des valeurs dérivées stockées (série de jours, avancement d'objectif, records, succès, valeurs proposées en cache…) sont figés dans `tests/Feature/Conventions/LesProjectionsGardentLeursEcrivainsTest.php`, avec leur dette quand ils sont plusieurs (#1513). Un service qui se met à écrire l'une d'elles fait tomber ce test : passer par l'écrivain existant, ou l'ajouter à la liste en disant pourquoi. Chaque clef de statistique en cache n'a qu'un `Cache::remember()` ; le même test le vérifie. La règle complète est dans `.ai/rules/models.md`, « Une valeur dérivée stockée garde ses écrivains ».
