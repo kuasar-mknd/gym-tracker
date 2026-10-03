@@ -173,6 +173,20 @@ describe('se déconnecter détache l’appareil', () => {
 
         expect(routeur.post).toHaveBeenCalledTimes(2)
     })
+
+    it('permet de réessayer quand l’envoi de la déconnexion a échoué', async () => {
+        navigateur()
+        routeur.post.mockImplementationOnce(() => {
+            throw new Error('envoi impossible')
+        })
+
+        await expect(seDeconnecter()).rejects.toThrow('envoi impossible')
+        await seDeconnecter()
+
+        // Sans quoi chaque clic suivant rendrait le même échec, et personne ne
+        // pourrait plus se déconnecter sans recharger la page.
+        expect(routeur.post).toHaveBeenCalledTimes(2)
+    })
 })
 
 describe('rien ne retient la déconnexion', () => {
@@ -298,6 +312,21 @@ describe('rien à détacher', () => {
 
         expect(reseau.post).not.toHaveBeenCalled()
         expect(memo()).not.toBeNull()
+        expect(routeur.post).toHaveBeenCalledTimes(1)
+    })
+
+    it('part sans attendre quand aucun worker n’est enregistré', async () => {
+        vi.useFakeTimers()
+        const { serviceWorker } = navigateur()
+        serviceWorker.getRegistration.mockResolvedValue(undefined)
+        // `ready` ne se règle jamais sans worker : l'attendre ferait payer tout
+        // le délai à chaque déconnexion.
+        serviceWorker.ready = new Promise(() => {})
+
+        seDeconnecter()
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(reseau.post).not.toHaveBeenCalled()
         expect(routeur.post).toHaveBeenCalledTimes(1)
     })
 

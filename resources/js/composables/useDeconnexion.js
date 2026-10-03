@@ -18,18 +18,21 @@ let deconnexionEnCours = null
  * @returns {Promise<void>} Réglée quand la requête de déconnexion est envoyée.
  */
 export const seDeconnecter = () => {
-    deconnexionEnCours ??= detacherLAppareil().then(() => {
-        router.post(
-            route('logout'),
-            {},
-            {
-                // Une déconnexion qui échoue (réseau coupé) doit pouvoir être relancée.
-                onFinish: () => {
-                    deconnexionEnCours = null
-                },
-            },
-        )
-    })
+    // Une déconnexion qui échoue, à l'envoi ou en route (réseau coupé), doit
+    // pouvoir être relancée : sinon chaque clic suivant rendrait le même échec.
+    const liberer = () => {
+        deconnexionEnCours = null
+    }
+
+    deconnexionEnCours ??= detacherLAppareil()
+        .then(() => {
+            router.post(route('logout'), {}, { onFinish: liberer })
+        })
+        .catch((erreur) => {
+            liberer()
+
+            throw erreur
+        })
 
     return deconnexionEnCours
 }
