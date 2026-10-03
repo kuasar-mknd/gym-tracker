@@ -10,9 +10,10 @@ name: Labels de Dependabot
 #
 # Les créer une fois à la main aurait réglé ces trois-là, pas le suivant. Ce
 # workflow lit la liste dans le fichier lui-même, au lieu de la recopier, et
-# crée ce qui manque chaque fois que le fichier change sur main. Les labels
-# doivent exister avant la passe de Dependabot, qui n'étiquette qu'à
-# l'ouverture d'une PR : la fusion suffit, la passe suivante les trouve.
+# crée ce qui manque chaque fois que le fichier change sur main, ou qu'un
+# label du dépôt est supprimé ou renommé. Les labels doivent exister avant la
+# passe de Dependabot, qui n'étiquette qu'à l'ouverture d'une PR : la fusion
+# suffit, la passe suivante les trouve.
 #
 # Jamais `--force` : un label existant garde la couleur et la description qu'on
 # lui a choisies. Un label présent sous une autre casse (« PHP » pour « php »)
@@ -30,6 +31,15 @@ on:
             # sans quoi les labels manquants attendraient la prochaine
             # modification de dependabot.yml.
             - '.github/workflows/labels-dependabot.yml'
+    # Un label supprimé ou renommé depuis l'interface ne touche aucun fichier :
+    # sans cet événement, Dependabot recommencerait à l'omettre en silence
+    # jusqu'à la prochaine modification de dependabot.yml. Supprimé ou renommé,
+    # il est recréé aussitôt ; seulement changé de casse (« PHP »), le run
+    # échoue. Pour se passer d'un label, retirer d'abord sa ligne de
+    # dependabot.yml. Les créations de ce workflow, faites avec GITHUB_TOKEN,
+    # ne le relancent pas.
+    label:
+        types: [deleted, edited]
     workflow_dispatch:
 
 # Créer un label passe par l'API des issues : `issues: write` suffit, sans
