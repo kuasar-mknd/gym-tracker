@@ -78,6 +78,26 @@ it('donne une recette Sail que la garde laisse passer', function (): void {
         ->and((string) file_get_contents(base_path('README.md')))->toContain('.env > .env.dusk.local');
 });
 
+/**
+ * `artisan dusk` met .env.dusk.local à la place du .env entier le temps de la
+ * passe. Un .env.dusk.local réduit à la ligne DB_DATABASE, comme le refus le
+ * laissait entendre, passe la garde mais prive le serveur de sa clé et de sa
+ * connexion : le refus renvoie donc à la recette, par le titre de sa section.
+ */
+it('renvoie chaque refus à la recette du README, par une section qui existe', function (): void {
+    $motifs = GardeDesParcours::motifsDeRefus('gym_tracker', 'http://localhost', 'http://selenium:4444/wd/hub');
+
+    preg_match_all('/^#{2,4} (.+)$/mu', (string) file_get_contents(base_path('README.md')), $titres);
+
+    expect($motifs)->toHaveCount(2)
+        ->and($motifs[0])->toContain('à la place du .env');
+
+    foreach ($motifs as $motif) {
+        expect(preg_match('/README, « ([^»]+) »/u', $motif, $section))->toBe(1)
+            ->and($titres[1])->toContain($section[1] ?? null);
+    }
+});
+
 it('fait créer la base des parcours par le MySQL de Sail, et l’ouvre à son utilisateur', function (): void {
     $base = parcoursDuskRecetteDuReadme()['DB_DATABASE'] ?? 'absente du README';
     $script = (string) file_get_contents(base_path('docker/mysql/create-parallel-testing-databases.sh'));

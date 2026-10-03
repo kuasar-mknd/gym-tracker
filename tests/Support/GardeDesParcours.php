@@ -42,8 +42,9 @@ final class GardeDesParcours
             $motifs[] = sprintf(
                 'La base « %s » n’est pas une base de parcours : son nom ne finit pas par %s. Les parcours y '
                 .'créent leurs comptes, et ceux qui portent DatabaseTruncation la vident au premier test '
-                .'(migrate:fresh). `artisan dusk` lit le .env : sous Sail, créez .env.dusk.local avec '
-                .'DB_DATABASE=gym_tracker_dusk (README, section Développement).',
+                .'(migrate:fresh). `artisan dusk` lit le .env ; sous Sail, il met .env.dusk.local à la place '
+                .'du .env le temps de la passe : dérivez-le du .env entier avec DB_DATABASE=gym_tracker_dusk, '
+                .'par la recette du README, « Parcours navigateur ».',
                 $base,
                 self::SUFFIXE_DES_BASES,
             );
@@ -72,8 +73,8 @@ final class GardeDesParcours
             && ! self::designeLaMachineQuiLeLit($hoteDuPilote)) {
             $motifs[] = sprintf(
                 'APP_URL vise %s, mais le navigateur tourne sur %s (DUSK_DRIVER_URL) : de là-bas, %s désigne '
-                .'sa propre machine, pas l’application. Sous Sail, posez APP_URL=http://laravel.test dans '
-                .'.env.dusk.local.',
+                .'sa propre machine, pas l’application. Sous Sail, APP_URL=http://laravel.test, dans le '
+                .'.env.dusk.local que donne la recette du README, « Parcours navigateur ».',
                 $hoteDeLApplication,
                 $hoteDuPilote,
                 $hoteDeLApplication,
