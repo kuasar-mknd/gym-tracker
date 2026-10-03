@@ -42,6 +42,25 @@ function compteCoherent(): array
     return [$user->refresh(), $set];
 }
 
+/**
+ * Un record d'un type que l'application n'écrit pas, planté en base à côté des
+ * siens et posé sur la même série saine : aucun autre contrôle ne le voit.
+ */
+function recordDeTypeHeritePlanteEnBase(User $user, Set $set, string $type): int
+{
+    return DB::table('personal_records')->insertGetId([
+        'user_id' => $user->id,
+        'exercise_id' => $set->workoutLine->exercise_id,
+        'workout_id' => $set->workoutLine->workout_id,
+        'set_id' => $set->id,
+        'type' => $type,
+        'value' => 100,
+        'achieved_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+
 it('ne signale rien quand tout concorde', function (): void {
     compteCoherent();
 
@@ -102,6 +121,108 @@ it('signale un record dont la valeur ne correspond pas à sa série', function (
     $this->artisan('app:verify-data-coherence')
         ->assertExitCode(1)
         ->expectsOutputToContain("record {$record->id}");
+});
+
+/**
+ * L'enum garde quatre types que plus rien n'écrit (#1811), faute de savoir si
+ * la production en porte. Retirer un cas tant qu'une ligne le porte ferait
+ * lever une ValueError à chaque relecture par le modèle : le tableau de bord du
+ * compte, la reconstruction des records de l'exercice. Le contrôle nocturne
+ * doit donc le dire avant, en nommant le type et le nombre de lignes.
+ */
+it('signale les records d’un type que l’application ne tient plus, avec leur type et leur nombre', function (): void {
+    [$user, $set] = compteCoherent();
+
+    recordDeTypeHeritePlanteEnBase($user, $set, 'strength');
+    recordDeTypeHeritePlanteEnBase($user, $set, '1RM');
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('2 type des records')
+        ->expectsOutputToContain("type '1RM', que l'application ne tient plus : 1 record(s) sur 1 compte(s)")
+        ->expectsOutputToContain("type 'strength', que l'application ne tient plus : 1 record(s) sur 1 compte(s)")
+        // Posés sur une série saine, ils ne doivent rien faire signaler d'autre.
+        ->expectsOutputToContain('2 écart(s)');
+});
+
+/**
+ * `--limit` borne les exemples cités. Lus ligne à ligne et triés par type, six
+ * records '1RM' remplissaient les cinq places, et le seul 'cardio' disparaissait
+ * dans « … et 2 autre(s) » : or 'cardio', le seul type hérité sans équivalent
+ * parmi les types suivis, est celui qui décide entre archiver et convertir. Le
+ * contrôle décrit donc chaque TYPE, avec son nombre de records et de comptes.
+ */
+it('nomme chaque type hérité même quand un autre type dépasse la limite d’exemples', function (): void {
+    [$user, $set] = compteCoherent();
+    recordDeTypeHeritePlanteEnBase($user, $set, 'cardio');
+    recordDeTypeHeritePlanteEnBase($user, $set, '1RM');
+
+    for ($i = 0; $i < 5; $i++) {
+        [$autreCompte, $autreSerie] = compteCoherent();
+        recordDeTypeHeritePlanteEnBase($autreCompte, $autreSerie, '1RM');
+    }
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain("type 'cardio', que l'application ne tient plus : 1 record(s) sur 1 compte(s)")
+        ->expectsOutputToContain("type '1RM', que l'application ne tient plus : 6 record(s) sur 6 compte(s)")
+        ->expectsOutputToContain('2 type des records')
+        ->doesntExpectOutputToContain('non cité');
+});
+
+/**
+ * Le contrôle doit tenir APRÈS le retrait des cas hérités : il lit la colonne
+ * brute, sans le cast qui lèverait sur une valeur que l'enum ne connaît pas.
+ */
+it('signale aussi un type que l’enum ne connaît pas, sans passer par le cast', function (): void {
+    [$user, $set] = compteCoherent();
+
+    recordDeTypeHeritePlanteEnBase($user, $set, 'inconnu');
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain("type 'inconnu', que l'application ne tient plus : 1 record(s) sur 1 compte(s)");
+});
+
+/**
+ * La colonne est en utf8mb4_unicode_ci : insensible à la casse, et PAD SPACE,
+ * qui ignore les espaces finales. Pour MySQL, 'MAX_WEIGHT' et 'max_weight '
+ * valent 'max_weight' ; pour `PersonalRecordType::from()`, ce sont des valeurs
+ * inconnues, et le modèle ne peut pas relire la ligne. Le contrôle doit voir
+ * exactement les lignes que le cast refuse, donc comparer octet par octet.
+ */
+it('signale un type que la collation de la colonne confond avec un type suivi', function (string $typeAltere): void {
+    [$user] = compteCoherent();
+
+    $idRecord = PersonalRecord::query()
+        ->where('user_id', $user->id)
+        ->where('type', 'max_weight')
+        ->firstOrFail()
+        ->id;
+
+    DB::table('personal_records')->where('id', $idRecord)->update(['type' => $typeAltere]);
+
+    // La ligne est bien de celles que le modèle ne relit pas.
+    expect(fn (): mixed => PersonalRecord::query()->findOrFail($idRecord)->type)
+        ->toThrow(ValueError::class);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain("type '{$typeAltere}', que l'application ne tient plus : 1 record(s) sur 1 compte(s)");
+})->with([
+    'en majuscules' => ['MAX_WEIGHT'],
+    'avec une espace finale' => ['max_weight '],
+]);
+
+it('laisse passer les records des trois types suivis', function (): void {
+    [$user] = compteCoherent();
+
+    expect(DB::table('personal_records')->where('user_id', $user->id)->pluck('type')->all())
+        ->toEqualCanonicalizing(['max_weight', 'max_1rm', 'max_volume_set']);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(0)
+        ->expectsOutputToContain('OK type des records');
 });
 
 it('signale une date de dernière séance en retard', function (): void {

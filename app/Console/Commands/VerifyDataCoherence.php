@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\PersonalRecordType;
 use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Services\PersonalRecordService;
@@ -47,6 +48,7 @@ class VerifyDataCoherence extends Command
             'records rattachés à une série existante' => $this->recordsOrphelins(...),
             'valeur des records' => $this->valeurDesRecords(...),
             'records assis sur une série éligible' => $this->recordsSurSerieInegible(...),
+            'type des records' => $this->typeDesRecords(...),
             'date de dernière séance' => $this->dateDerniereSeance(...),
         ];
 
@@ -387,6 +389,55 @@ class VerifyDataCoherence extends Command
             $this->colonne($workoutLine, 'type'),
             $this->colonne($workoutLine, 'value'),
             $this->colonne($workoutLine, 'user_id'),
+        ));
+    }
+
+    /**
+     * Un record doit porter l'un des types que l'application tient.
+     *
+     * L'enum garde quatre cas hérités ('1RM', 'strength', 'cardio', 'volume')
+     * que plus aucun code n'écrit, parce qu'on ne sait pas si la production en
+     * porte encore (#1811). Les retirer tant qu'une ligne les porte ferait
+     * lever une ValueError à chaque relecture par le modèle : le tableau de
+     * bord du compte, la reconstruction des records de l'exercice. Ce contrôle
+     * les compte chaque nuit, plutôt que de le supposer.
+     *
+     * Il lit la colonne brute, sans le cast : il doit encore voir ces lignes
+     * le jour où l'enum ne connaîtra plus leur valeur.
+     *
+     * Il compare octet par octet, comme `PersonalRecordType::from()`. La
+     * colonne est en utf8mb4_unicode_ci, insensible à la casse et PAD SPACE :
+     * pour elle, 'MAX_WEIGHT' et 'max_weight ' valent 'max_weight', alors que
+     * le cast les refuse. utf8mb4_bin ne suffirait pas, il ignore lui aussi
+     * les espaces finales. Le regroupement suit la même règle, sans quoi
+     * 'Cardio' se fondrait dans 'cardio'.
+     *
+     * Il décrit chaque TYPE, pas chaque ligne : `--limit` borne les exemples,
+     * et six lignes '1RM' suffisaient à cacher le seul 'cardio' derrière
+     * « … et N autre(s) ». C'est pourtant le type qui décide entre archiver et
+     * convertir, puisqu'il n'a pas d'équivalent parmi les types suivis. Le
+     * décompte annoncé est donc celui des types, et chacun dit son nombre de
+     * records et de comptes. La valeur est citée entre apostrophes, pour qu'une
+     * espace finale se voie. La requête groupée passe dans une sous-requête,
+     * parce que `ecarts()` compte par `count()`, qui rendrait sur elle la
+     * taille du premier groupe.
+     *
+     * @return array{int, list<string>}
+     */
+    private function typeDesRecords(): array
+    {
+        $parType = DB::table('personal_records')
+            ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)
+            ->selectRaw('CAST(type AS BINARY) as type_brut, COUNT(*) as lignes, COUNT(DISTINCT user_id) as comptes')
+            ->groupBy('type_brut');
+
+        $requete = DB::query()->fromSub($parType, 'par_type')->orderBy('type_brut');
+
+        return $this->ecarts($requete, fn (array $type): string => sprintf(
+            "type '%s', que l'application ne tient plus : %s record(s) sur %s compte(s)",
+            $this->colonne($type, 'type_brut'),
+            $this->colonne($type, 'lignes'),
+            $this->colonne($type, 'comptes'),
         ));
     }
 

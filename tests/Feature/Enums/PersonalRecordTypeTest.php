@@ -11,10 +11,13 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * personal_records.type est un varchar sans contrainte, et l'enum traîne
- * quatre valeurs héritées ('1RM', 'strength', 'cardio', 'volume') encore
- * présentes dans les bases existantes. Supprimer ou renommer l'un de ces cases
- * ne casse rien à l'écriture : ça casse à la relecture, quand le cast
- * rencontre une ligne historique et lève un ValueError.
+ * quatre valeurs héritées ('1RM', 'strength', 'cardio', 'volume'). Plus aucun
+ * code de l'application ne les écrit ; la fabrique de tests écrivait encore
+ * 'strength' et 'cardio' jusqu'à #1811. On ne sait pas si la production en
+ * porte : `app:verify-data-coherence` les compte chaque nuit.
+ * Supprimer ou renommer l'un de ces cas ne casse rien à l'écriture : ça casse
+ * à la relecture, quand le cast rencontre une ligne historique et lève une
+ * ValueError.
  */
 describe('PersonalRecordType : valeurs persistées', function (): void {
     it('garde la valeur stockée de chaque type courant', function (): void {
@@ -23,7 +26,7 @@ describe('PersonalRecordType : valeurs persistées', function (): void {
             ->and(PersonalRecordType::MaxVolumeSet->value)->toBe('max_volume_set');
     });
 
-    it('garde les valeurs héritées encore présentes en base', function (): void {
+    it('garde les valeurs héritées tant que la base n’a pas été vérifiée', function (): void {
         expect(PersonalRecordType::OneRM->value)->toBe('1RM')
             ->and(PersonalRecordType::Strength->value)->toBe('strength')
             ->and(PersonalRecordType::Cardio->value)->toBe('cardio')
@@ -35,6 +38,34 @@ describe('PersonalRecordType : valeurs persistées', function (): void {
             fn (PersonalRecordType $type): string => $type->value,
             PersonalRecordType::cases(),
         ))->toBe(['max_weight', 'max_1rm', 'max_volume_set', '1RM', 'strength', 'cardio', 'volume']);
+    });
+});
+
+/**
+ * Les types que l'application tient ne s'écrivent qu'à un endroit.
+ *
+ * Le service les tenait dans une constante privée, et le contrôle de
+ * cohérence en a besoin pour compter les autres : deux listes finiraient par
+ * diverger. Elles se lisent désormais sur l'enum.
+ */
+describe('PersonalRecordType : les types suivis', function (): void {
+    it('nomme exactement les trois types que l’application écrit, dans cet ordre', function (): void {
+        expect(PersonalRecordType::SUIVIS)->toBe(['max_weight', 'max_1rm', 'max_volume_set']);
+    });
+
+    /*
+     * La fabrique tirait au sort 'strength' ou 'cardio' : des types
+     * d'exercice, que l'application n'écrit pas comme records. Tout test
+     * qui ne précisait pas le type remplissait la base de valeurs héritées, et
+     * un tirage ne prouve rien.
+     */
+    it('fait écrire par la fabrique un type suivi, toujours le même', function (): void {
+        PersonalRecord::factory()->count(6)->create();
+
+        $ecrits = DB::table('personal_records')->distinct()->pluck('type')->all();
+
+        expect($ecrits)->toBe([PersonalRecordType::MaxWeight->value])
+            ->and(PersonalRecordType::SUIVIS)->toContain(PersonalRecordType::MaxWeight->value);
     });
 });
 

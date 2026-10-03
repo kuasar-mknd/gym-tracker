@@ -21,6 +21,7 @@ declare(strict_types=1);
  */
 
 use App\Actions\Workouts\FetchWorkoutShowAction;
+use App\Enums\PersonalRecordType;
 use App\Models\Exercise;
 use App\Models\PersonalRecord;
 use App\Models\Set;
@@ -38,6 +39,13 @@ use function PHPUnit\Framework\assertNotNull;
  *
  * Trois lignes et non une : un chargement anticipe retire ne se distingue d'un
  * chargement paresseux que lorsqu'il y a plusieurs lignes a charger.
+ *
+ * Le record est de poids maximal, un type que l'application ecrit : il
+ * portait 'strength', une valeur heritee que l'enum perdra (#1811). Creer une
+ * serie synchronise deja ses records, et l'index unique (utilisateur,
+ * exercice, type) refuserait un second record de poids maximal : on accroche
+ * donc celui de la synchronisation a la premiere serie, plutot que de
+ * dependre de la facon dont elle departage deux series egales.
  *
  * @return array{0: User, 1: Workout}
  */
@@ -68,14 +76,19 @@ function seancePourAffichage(): array
             ]);
 
             if ($rang === 1 && $numero === 1) {
-                PersonalRecord::factory()->create([
-                    'user_id' => $user->id,
-                    'exercise_id' => $exercise->id,
-                    'workout_id' => $workout->id,
-                    'set_id' => $set->id,
-                    'type' => 'strength',
-                    'value' => 40.0,
-                ]);
+                PersonalRecord::query()->updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'exercise_id' => $exercise->id,
+                        'type' => PersonalRecordType::MaxWeight,
+                    ],
+                    [
+                        'workout_id' => $workout->id,
+                        'set_id' => $set->id,
+                        'value' => 40.0,
+                        'achieved_at' => now(),
+                    ],
+                );
             }
         }
     }
