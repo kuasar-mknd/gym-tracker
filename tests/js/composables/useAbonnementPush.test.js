@@ -97,7 +97,7 @@ describe('activer les notifications push', () => {
         const gestionnaire = navigateur()
         const push = monter()
 
-        await push.enablePush()
+        expect(await push.enablePush()).toBe('abonne')
 
         expect(gestionnaire.subscribe).toHaveBeenCalledWith(expect.objectContaining({ userVisibleOnly: true }))
         expect(reseau.post).toHaveBeenCalledWith(
@@ -116,7 +116,9 @@ describe('activer les notifications push', () => {
         globalThis.Notification.requestPermission.mockResolvedValue('denied')
         const push = monter()
 
-        await push.enablePush()
+        // Un refus se distingue d'une panne : l'invitation de l'accueil ne se
+        // représente pas après un refus, et reste après une panne.
+        expect(await push.enablePush()).toBe('refuse')
 
         expect(push.pushError.value).toContain('refusé')
         expect(reseau.post).not.toHaveBeenCalled()
@@ -149,7 +151,7 @@ describe('activer les notifications push', () => {
         )
         const push = monter()
 
-        await push.enablePush()
+        expect(await push.enablePush()).toBe('echoue')
 
         expect(neuf.unsubscribe).toHaveBeenCalledTimes(1)
         expect(reseau.post).toHaveBeenCalledWith(
@@ -204,6 +206,22 @@ describe('activer les notifications push', () => {
 })
 
 describe('l’état de l’abonnement au montage', () => {
+    it('dit quand le navigateur a répondu sur l’état de l’appareil, même muet', async () => {
+        navigateur({ existant: abonnement() })
+        const repondu = monter()
+
+        // Avant la réponse, `pushRegistered` n'est que la valeur du serveur.
+        expect(repondu.appareilVerifie.value).toBe(false)
+        await flushPromises()
+        expect(repondu.appareilVerifie.value).toBe(true)
+
+        navigateur({ workerMuet: true })
+        const muet = monter()
+        await flushPromises()
+
+        expect(muet.appareilVerifie.value).toBe(true)
+    })
+
     it('ne contredit pas le serveur quand le navigateur tient encore l’abonnement', async () => {
         navigateur({ existant: abonnement() })
         const push = monter({ dejaAbonne: true })
