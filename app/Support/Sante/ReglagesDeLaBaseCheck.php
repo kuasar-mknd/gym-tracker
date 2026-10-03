@@ -70,7 +70,7 @@ final class ReglagesDeLaBaseCheck extends Check
         $illisibles = array_diff(['innodb_flush_log_at_trx_commit', 'log_bin'], array_keys($variables));
 
         if ($illisibles !== []) {
-            $oranges[] = sprintf('%s illisible dans SHOW GLOBAL VARIABLES : le réglage n\'a pas pu être vérifié.', implode(' et ', $illisibles));
+            $oranges[] = sprintf('Non vérifié : SHOW GLOBAL VARIABLES n\'a pas rendu %s.', implode(' ni ', $illisibles));
         }
 
         $result = Result::make()

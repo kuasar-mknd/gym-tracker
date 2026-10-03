@@ -144,7 +144,7 @@ it('met les réglages de la base à l’orange quand MySQL ne les rend pas, plut
 
     expect($resultat->status->value)->toBe('warning')
         ->and($resultat->shortSummary)->toBe('flush 2 · log_bin ? · Pulse coupé')
-        ->and($resultat->notificationMessage)->toContain('log_bin')->toContain('illisible');
+        ->and($resultat->notificationMessage)->toBe('Non vérifié : SHOW GLOBAL VARIABLES n\'a pas rendu log_bin.');
 });
 
 it('lit les deux réglages dans MySQL, sans rien y écrire', function (): void {
