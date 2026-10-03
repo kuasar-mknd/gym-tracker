@@ -11,9 +11,18 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
+import { watch } from 'vue'
 import { useInvitationDInstallation } from '@/composables/useInvitationDInstallation'
 
+/**
+ * `visibilite` : la carte se montre ou se retire. L'accueil n'en montre qu'une
+ * à la fois, et celle-ci passe avant l'invitation aux notifications (#1848).
+ */
+const emit = defineEmits(['visibilite'])
+
 const { visible, forme, installer, refuser } = useInvitationDInstallation()
+
+watch(visible, (estVisible) => emit('visibilite', estVisible))
 </script>
 
 <template>
