@@ -142,7 +142,7 @@ final class RequestForgeryProtectionTest extends TestCase
 
     /**
      * `same-site` aussi : bootstrap/app.php n'active pas `allowSameSite`, et un
-     * sous-domaine voisin du NAS n'a pas à écrire chez nous.
+     * sous-domaine voisin, servi par le même serveur, n'a pas à écrire chez nous.
      *
      * @return array<string, array{0: ?string}>
      */

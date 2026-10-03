@@ -23,7 +23,8 @@ const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker' in na
  * Le dernier abonnement que CET appareil a transmis, et pour quel compte.
  *
  * Il dit au rapprochement s'il y a quelque chose à écrire : chaque écriture
- * coûte de 350 ms à 1,7 s sur le NAS, et l'application s'ouvre souvent.
+ * coûte de 350 ms à 1,7 s sur le disque de production, et l'application
+ * s'ouvre souvent.
  *
  * Il nomme le compte parce que le serveur réattribue une adresse au dernier
  * compte qui l'enregistre, en retirant la ligne de l'autre. Sur un téléphone
