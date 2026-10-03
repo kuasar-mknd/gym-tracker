@@ -39,6 +39,8 @@ it('inscrit la version et la révision dans l’image après le dernier RUN, pou
     // Un RUN placé après un ARG reçoit sa valeur : un commit neuf le relancerait,
     // et tout ce qui suit, à chaque construction.
     expect(min($arguments))->toBeGreaterThan(max($executions), 'Les ARG de version doivent suivre le dernier RUN du Dockerfile.')
+        // Un ENV placé avant son ARG recopierait une valeur vide.
+        ->and(min($environnement))->toBeGreaterThan(max($arguments), 'Les ENV de version doivent suivre leurs ARG : avant eux, ${APP_VERSION} est vide.')
         ->and(max($environnement))->toBeLessThan($utilisateur[0]);
 });
 
