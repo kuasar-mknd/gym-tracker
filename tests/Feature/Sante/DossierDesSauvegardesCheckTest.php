@@ -3,8 +3,16 @@
 declare(strict_types=1);
 
 use App\Support\Sante\DossierDesSauvegardesCheck;
+use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use Illuminate\Process\FakeProcessResult;
+use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process as Processus;
+use Spatie\Health\Checks\Check;
+use Spatie\Health\Checks\Result;
+use Spatie\Health\Facades\Health;
+use Symfony\Component\Process\Exception\ProcessTimedOutException as DelaiDepasse;
 use Symfony\Component\Process\Process;
 
 /*
@@ -50,15 +58,83 @@ function sauvegardesUidCourant(): string
 }
 
 /**
- * Le vrai script du démarrage, lancé sur le dossier donné.
+ * Le vrai script du démarrage, lancé sur le dossier donné, avec son délai
+ * et son PATH quand le test les donne.
+ *
+ * @param  list<string>  $arguments
+ * @param  array<string, string>  $environnement
  */
-function sauvegardesVerificationDuDemarrage(string $dossier): Process
+function sauvegardesVerificationDuDemarrage(string $dossier, array $arguments = [], array $environnement = []): Process
 {
-    $processus = new Process(['bash', base_path('docker/verifier-sauvegardes.sh'), $dossier], base_path());
+    $processus = new Process(['bash', base_path('docker/verifier-sauvegardes.sh'), $dossier, ...$arguments], base_path(), $environnement);
     $processus->setTimeout(60);
     $processus->run();
 
     return $processus;
+}
+
+/**
+ * Un dossier de commandes qui ne rendent jamais la main, comme `mkdir` ou
+ * `ls` sur un partage réseau qui ne répond plus : placé en tête du PATH, il
+ * remplace les commandes du même nom.
+ *
+ * @param  list<string>  $commandes
+ */
+function sauvegardesCommandesEndormies(array $commandes): string
+{
+    $dossier = sauvegardesDossierJetable();
+
+    foreach ($commandes as $commande) {
+        File::put($dossier.'/'.$commande, "#!/bin/sh\nexec sleep 30\n");
+        chmod($dossier.'/'.$commande, 0755);
+    }
+
+    return $dossier;
+}
+
+/**
+ * Lance le test avec le dossier donné en tête du PATH que les sous-processus
+ * héritent, puis rend le PATH d'origine.
+ *
+ * @template T
+ *
+ * @param  Closure(): T  $test
+ * @return T
+ */
+function sauvegardesAvecEnTeteDuPath(string $dossier, Closure $test): mixed
+{
+    $origine = (string) getenv('PATH');
+    $dansEnv = array_key_exists('PATH', $_ENV);
+    $chemin = $dossier.':'.$origine;
+
+    putenv('PATH='.$chemin);
+    $_SERVER['PATH'] = $chemin;
+
+    if ($dansEnv) {
+        $_ENV['PATH'] = $chemin;
+    }
+
+    try {
+        return $test();
+    } finally {
+        putenv('PATH='.$origine);
+        $_SERVER['PATH'] = $origine;
+
+        if ($dansEnv) {
+            $_ENV['PATH'] = $origine;
+        }
+    }
+}
+
+/**
+ * Le contrôle « Backups » tel que le provider l'enregistre.
+ */
+function sauvegardesControleDesArchives(): Check
+{
+    $controle = Health::registeredChecks()->first(fn (Check $check): bool => $check->getName() === 'Backups');
+    assert($controle instanceof Check);
+
+    return $controle;
 }
 
 it('met le dossier des sauvegardes au vert quand le conteneur y écrit, sans y laisser de sonde', function (): void {
@@ -139,5 +215,108 @@ it('avertit au démarrage, avec le chemin et l’uid, quand le dossier des sauve
             ->toContain('BACKUP_HOST_PATH');
     } finally {
         @unlink(dirname($racine));
+    }
+});
+
+/*
+ * Un partage réseau qui ne répond plus ne rend pas d'erreur : il fait
+ * attendre, sans fin, chaque accès. Sans délai, la sonde aurait figé
+ * `health:check` dans le planificateur — et les résultats de la page avec
+ * lui — ou un des travailleurs d'Octane quand la page se rafraîchit.
+ */
+it('met le dossier des sauvegardes au rouge sans attendre quand le partage ne répond plus', function (): void {
+    $dossier = sauvegardesDossierJetable();
+    $endormies = sauvegardesCommandesEndormies(['mkdir', 'touch', 'rm']);
+    Config::set('filesystems.disks.sauvegardes.root', $dossier);
+
+    try {
+        $debut = microtime(true);
+        $resultat = sauvegardesAvecEnTeteDuPath($endormies, fn (): Result => DossierDesSauvegardesCheck::new()->delai(1)->run());
+
+        expect(microtime(true) - $debut)->toBeLessThan(10)
+            ->and($resultat->status->value)->toBe('failed')
+            ->and($resultat->shortSummary)->toBe('Sans réponse')
+            ->and($resultat->notificationMessage)
+            ->toContain($dossier)
+            ->toContain("n'a pas répondu en 1 s")
+            ->toContain('BACKUP_HOST_PATH');
+    } finally {
+        File::deleteDirectory($dossier);
+        File::deleteDirectory($endormies);
+    }
+});
+
+it('borne chaque accès de la sonde à dix secondes', function (): void {
+    Processus::fake();
+    Config::set('filesystems.disks.sauvegardes.root', '/sauvegardes');
+
+    DossierDesSauvegardesCheck::new()->run();
+
+    Processus::assertRanTimes(fn (PendingProcess $processus): bool => $processus->timeout === 10, 3);
+});
+
+it('dit que le partage ne répond pas quand le délai de la sonde est dépassé', function (): void {
+    Processus::fake(fn () => throw new ProcessTimedOutException(
+        new DelaiDepasse(new Process(['touch', '/sauvegardes/.sonde']), DelaiDepasse::TYPE_GENERAL),
+        new FakeProcessResult(),
+    ));
+    Config::set('filesystems.disks.sauvegardes.root', '/sauvegardes');
+
+    $resultat = DossierDesSauvegardesCheck::new()->run();
+
+    expect($resultat->status->value)->toBe('failed')
+        ->and($resultat->shortSummary)->toBe('Sans réponse')
+        ->and($resultat->notificationMessage)->toContain("n'a pas répondu en 10 s");
+});
+
+/*
+ * « Backups » parcourt le dossier par `glob()`, sans délai : sur un partage
+ * endormi, il figerait `health:check` juste après la sonde, et le rouge de
+ * la sonde ne serait jamais rangé ni envoyé.
+ */
+it('dit si le dossier répond, présent ou non, et pas s’il ne répond plus', function (): void {
+    $endormies = sauvegardesCommandesEndormies(['ls']);
+
+    try {
+        expect(DossierDesSauvegardesCheck::repond(sys_get_temp_dir(), 1))->toBeTrue()
+            ->and(DossierDesSauvegardesCheck::repond(sys_get_temp_dir().'/absent-'.uniqid(), 1))->toBeTrue();
+
+        $debut = microtime(true);
+
+        expect(sauvegardesAvecEnTeteDuPath($endormies, fn (): bool => DossierDesSauvegardesCheck::repond(sys_get_temp_dir(), 1)))->toBeFalse()
+            ->and(microtime(true) - $debut)->toBeLessThan(10);
+    } finally {
+        File::deleteDirectory($endormies);
+    }
+});
+
+it('ne parcourt pas les archives d’un partage qui ne répond plus', function (): void {
+    expect(sauvegardesControleDesArchives()->shouldRun())->toBeTrue();
+
+    Processus::fake(fn () => throw new ProcessTimedOutException(
+        new DelaiDepasse(new Process(['ls', '-A', '/sauvegardes']), DelaiDepasse::TYPE_GENERAL),
+        new FakeProcessResult(),
+    ));
+
+    expect(sauvegardesControleDesArchives()->shouldRun())->toBeFalse();
+});
+
+it('rend la main au démarrage quand le partage des sauvegardes ne répond plus', function (): void {
+    $dossier = sauvegardesDossierJetable();
+    $endormies = sauvegardesCommandesEndormies(['mkdir']);
+
+    try {
+        $debut = microtime(true);
+        $processus = sauvegardesVerificationDuDemarrage($dossier, ['1'], ['PATH' => $endormies.':'.getenv('PATH')]);
+
+        expect(microtime(true) - $debut)->toBeLessThan(10)
+            ->and($processus->getExitCode())->toBe(1)
+            ->and($processus->getErrorOutput())
+            ->toContain($dossier)
+            ->toContain("le partage n'a pas répondu en 1 s")
+            ->toContain('BACKUP_HOST_PATH');
+    } finally {
+        File::deleteDirectory($dossier);
+        File::deleteDirectory($endormies);
     }
 });

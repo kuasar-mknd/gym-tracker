@@ -36,6 +36,8 @@ final class SanteServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
+        $archives = config()->string('filesystems.disks.sauvegardes.root').'/'.config()->string('backup.backup.name');
+
         Health::checks([
             DatabaseCheck::new(),
             ReglagesDeLaBaseCheck::new(),
@@ -54,10 +56,14 @@ final class SanteServiceProvider extends ServiceProvider
             // convient à `health:check`, lancé à neuf par le planificateur. Par
             // chemin plutôt que par `onDisk()`, qui résoudrait le disque à chaque
             // démarrage et figerait sa racine avant qu'un test ne la déplace.
+            // Son `glob()` n'a pas de délai : sur un partage qui ne répond plus,
+            // il figerait tout le passage, et le rouge de « Dossier des
+            // sauvegardes » avec lui. Il ne tourne que si le dossier répond.
             BackupsCheck::new()
-                ->locatedAt(config()->string('filesystems.disks.sauvegardes.root').'/'.config()->string('backup.backup.name').'/*.zip')
+                ->locatedAt($archives.'/*.zip')
                 ->numberOfBackups(min: 1)
-                ->youngestBackShouldHaveBeenMadeBefore(now()->subHours(26)),
+                ->youngestBackShouldHaveBeenMadeBefore(now()->subHours(26))
+                ->if(static fn (): bool => DossierDesSauvegardesCheck::repond($archives)),
             DebugModeCheck::new(),
             EnvironmentCheck::new(),
             OptimizedAppCheck::new(),
