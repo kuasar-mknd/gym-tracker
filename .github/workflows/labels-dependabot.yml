@@ -1,0 +1,139 @@
+name: Labels de Dependabot
+
+# Créer sur le dépôt chaque label que `.github/dependabot.yml` demande.
+#
+# Dependabot ne pose sur ses PR que les labels qui existent déjà : il n'en crée
+# aucun. `php`, `composer` et `docker` manquaient (#1905), si bien que chaque PR
+# Composer arrivait sans eux, avec un commentaire « The following labels could
+# not be found » que personne ne lisait, et que le filtrage par écosystème que
+# la configuration promettait ne marchait pas.
+#
+# Les créer une fois à la main aurait réglé ces trois-là, pas le suivant. Ce
+# workflow lit la liste dans le fichier lui-même, au lieu de la recopier, et
+# crée ce qui manque chaque fois que le fichier change sur main. Les labels
+# doivent exister avant la passe de Dependabot, qui n'étiquette qu'à
+# l'ouverture d'une PR : la fusion suffit, la passe suivante les trouve.
+#
+# Jamais `--force` : un label existant garde la couleur et la description qu'on
+# lui a choisies. Un label présent sous une autre casse (« PHP » pour « php »)
+# fait échouer le run : Dependabot compare les noms exactement et l'omettrait,
+# GitHub refuse d'en créer le doublon, et seul un humain peut choisir entre
+# renommer le label et corriger `.github/dependabot.yml`.
+# `LesLabelsDeDependabotExistentTest` tient ces règles et exécute ce script.
+
+on:
+    push:
+        branches: ['main']
+        paths:
+            - '.github/dependabot.yml'
+            # La fusion qui ajoute ou modifie ce workflow doit aussi le lancer :
+            # sans quoi les labels manquants attendraient la prochaine
+            # modification de dependabot.yml.
+            - '.github/workflows/labels-dependabot.yml'
+    workflow_dispatch:
+
+# Créer un label passe par l'API des issues : `issues: write` suffit, sans
+# toucher aux PR ni au code.
+permissions:
+    contents: read
+    issues: write
+
+# Deux runs simultanés liraient la même liste et tenteraient de créer le même
+# label ; le second échouerait sur un label que le premier vient de poser.
+concurrency:
+    group: labels-dependabot
+    cancel-in-progress: false
+
+jobs:
+    creer:
+        name: Créer les labels manquants
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v7
+              with:
+                  # Le jeton ne sert qu'à l'API, jamais à git.
+                  persist-credentials: false
+
+            - name: Créer les labels manquants
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  set -euo pipefail
+
+                  # Lue avant la boucle, et non par substitution de processus :
+                  # un dependabot.yml illisible doit faire échouer le run, pas
+                  # passer pour une liste vide.
+                  demandes=$(yq '.updates[].labels[]' .github/dependabot.yml | sort -u)
+
+                  # Le fichier demande au moins `dependencies` : une liste vide
+                  # veut dire que l'expression ne lit plus le fichier, et le run
+                  # passerait vert sans rien créer.
+                  if [ -z "$demandes" ]; then
+                      echo "::error::Aucun label lu dans .github/dependabot.yml : l'expression yq ne correspond plus au fichier"
+                      exit 1
+                  fi
+
+                  # Les noms tels quels, casse comprise. La pagination compte, le
+                  # dépôt a plus de trente labels.
+                  existants=$(gh api --paginate "repos/$REPO/labels?per_page=100" --jq '.[].name')
+
+                  crees=()
+                  autre_casse=()
+
+                  while IFS= read -r label; do
+                      [ -n "$label" ] || continue
+
+                      if grep -Fqx -- "$label" <<<"$existants"; then
+                          continue
+                      fi
+
+                      # Dependabot ne pose que les labels dont le nom est
+                      # exactement celui demandé : un « PHP » n'en tient pas
+                      # lieu pour « php ». GitHub refuserait pourtant de créer
+                      # « php » à côté (422) : seul un humain peut trancher.
+                      homonyme=$(grep -Fix -m 1 -- "$label" <<<"$existants" || true)
+
+                      if [ -n "$homonyme" ]; then
+                          echo "::error::Le label « $homonyme » existe, mais Dependabot attend exactement « $label » : renommer le label (gh label edit \"$homonyme\" --name \"$label\") ou aligner .github/dependabot.yml"
+                          autre_casse+=("\`$homonyme\` → \`$label\`")
+                          continue
+                      fi
+
+                      gh label create "$label" --repo "$REPO" \
+                        --color 0366d6 --description "Demandé par .github/dependabot.yml"
+
+                      existants+=$'\n'"$label"
+                      crees+=("$label")
+                  done <<<"$demandes"
+
+                  {
+                      echo "### Labels de Dependabot"
+                      echo
+                      echo "Demandés par \`.github/dependabot.yml\` :"
+                      while IFS= read -r label; do
+                          printf -- "- \`%s\`\n" "$label"
+                      done <<<"$demandes"
+                      echo
+
+                      if [ "${#crees[@]}" -eq 0 ] && [ "${#autre_casse[@]}" -eq 0 ]; then
+                          echo "Tous existent déjà."
+                      fi
+
+                      if [ "${#crees[@]}" -gt 0 ]; then
+                          echo "Créés :"
+                          printf -- "- \`%s\`\n" "${crees[@]}"
+                      fi
+
+                      if [ "${#autre_casse[@]}" -gt 0 ]; then
+                          echo
+                          echo "À renommer, sans quoi Dependabot les omettra :"
+                          printf -- "- %s\n" "${autre_casse[@]}"
+                      fi
+                  } >>"$GITHUB_STEP_SUMMARY"
+
+                  if [ "${#autre_casse[@]}" -gt 0 ]; then
+                      exit 1
+                  fi
