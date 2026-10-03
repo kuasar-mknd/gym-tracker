@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 1 974 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 1 999 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 087 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -185,6 +185,7 @@ Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur 
 | `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge : base et ses réglages, Redis, cache, file, planificateur, tâches planifiées, Horizon, versions des conteneurs, disque, dossier des sauvegardes, sauvegardes, mode debug, environnement, caches de l'application. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
 | `LOG_LEVEL` | non | `info` | Niveau minimal des journaux : `debug` pour un dépannage, `warning` pour n'écrire que les incidents. |
 | `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; en production, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable, sans nouvelles données tant qu'il est coupé. |
+| `SERVER_TIMING_ENABLED` | non | `false` | En-tête `Server-Timing` sur les réponses d'un utilisateur connecté ou d'un administrateur du panneau : durée de l'application, découpée en `routage`, `controleur` et `rendu`, puis nombre et durée cumulée des requêtes SQL (`sql;dur=12.4;desc="7 requetes"`), lisibles dans l'onglet réseau du navigateur. Jamais pour un invité, ni sur une réponse d'authentification ou un 404 : la durée dirait si un compte ou une ressource existe. Seule une valeur vraie (`true`, `1`) l'allume, vide ou absente le coupe. À allumer le temps d'une mesure (#1315), puis à couper. |
 
 ### Fixées par la composition
 
@@ -260,6 +261,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`, `APPLE_REDIRECT_URI` | vides, URL de rappel dérivées d'`APP_URL` | Connexion sociale : un bouton n'apparaît qu'avec l'identifiant et le secret de son fournisseur. L'URL de rappel à déclarer chez lui est `APP_URL` suivie de `/auth/{fournisseur}/callback`. |
 | `OCTANE_SERVER` | `frankenphp` | Serveur que visent les commandes `octane:*` ; Sail, lui, sert l'application par `artisan serve`. |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vides | Comme en production : sans clés, pas de notifications. |
+| `SERVER_TIMING_ENABLED` | `false` | `true` ajoute l'en-tête `Server-Timing` aux pages d'un compte connecté, comme en production : le temps serveur se lit dans l'onglet réseau du navigateur. |
 | `APP_PORT` | `80` | Port de l'hôte publié par Sail. |
 | `DUSK_DRIVER_URL` | `http://selenium:4444/wd/hub` | Le Selenium de Sail, pour `sail artisan dusk`. Le navigateur tourne alors dans le conteneur `selenium` : `APP_URL` doit y désigner l'application, ce que ne font ni `localhost` ni `127.0.0.1` (voir « Parcours navigateur »). |
 | `ADMIN_ALLOWED_IPS`, `HORIZON_ALLOWED_EMAILS`, `ADMIN_INITIAL_PASSWORD`, `HEALTH_TO_ADDRESS`, `BACKUP_ARCHIVE_PASSWORD` | vides | Celles de la production. Vides en local : panneau et Horizon ouverts, aucun courriel de santé, et une sauvegarde échoue faute de mot de passe d'archive. |

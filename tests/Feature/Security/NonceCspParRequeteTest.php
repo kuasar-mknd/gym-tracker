@@ -150,9 +150,14 @@ it('signe le script en ligne de Horizon du nonce de son en-tête', function (): 
  * Global, et non dans le groupe `web` : le panneau Filament, Pulse, Horizon et
  * les mises à jour de Livewire ont chacun leur pile, et toutes lisent le nonce.
  *
- * Un seul maillon passe devant : celui qu'Inertia ajoute en tête depuis son
- * fournisseur, au démarrage, après `bootstrap/app.php`. Il ne fait que marquer
- * les rappels différés d'une réponse 409, sans rien rendre ni lire de nonce.
+ * Deux maillons seulement passent devant, et aucun ne lit de nonce ni ne rend
+ * de page. Celui qu'Inertia ajoute en tête depuis son fournisseur, au
+ * démarrage, après `bootstrap/app.php`, ne fait que marquer les rappels
+ * différés d'une réponse 409. `TempsDuServeur` (#1315) ouvre la pile pour
+ * chronométrer tout ce qui suit, nonce compris : il note une heure en entrant
+ * et ajoute l'en-tête `Server-Timing` au retour, sans rien lire d'autre de la
+ * réponse. La liste reste exacte : tout autre maillon placé devant le nonce
+ * fait tomber ce test.
  */
 it('ouvre la pile globale, donc passe avant toute pile de route', function (): void {
     $noyau = app(\Illuminate\Contracts\Http\Kernel::class);
@@ -163,7 +168,10 @@ it('ouvre la pile globale, donc passe avant toute pile de route', function (): v
     $rang = array_search(NonceCspParRequete::class, $pileGlobale, true);
 
     expect($rang)->toBeInt()
-        ->and(array_slice($pileGlobale, 0, (int) $rang))->toBe([\Inertia\Middleware\EnsureDeferredCallbacksRun::class]);
+        ->and(array_slice($pileGlobale, 0, (int) $rang))->toBe([
+            \Inertia\Middleware\EnsureDeferredCallbacksRun::class,
+            \App\Http\Middleware\TempsDuServeur::class,
+        ]);
 });
 
 it('pose le nonce avant le reste de la pile, et le même pour Vite, la CSP et Horizon', function (): void {

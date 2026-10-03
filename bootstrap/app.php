@@ -32,6 +32,16 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $middleware->prepend(\App\Http\Middleware\NonceCspParRequete::class);
 
+        /*
+         * L'en-tête `Server-Timing` (#1315) se mesure de plus haut encore,
+         * devant le nonce, pour chronométrer toute la pile : ce `prepend`, le
+         * dernier, passe devant les deux autres. Seul le maillon d'Inertia,
+         * ajouté depuis son fournisseur, reste devant. Il ne lit aucun nonce et
+         * ne rend rien : il note une heure en entrant, ajoute l'en-tête au
+         * retour, et coupé, ne fait que passer la main.
+         */
+        $middleware->prepend(\App\Http\Middleware\TempsDuServeur::class);
+
         $middleware->statefulApi();
 
         $middleware->api(append: [

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Admin;
 use App\Models\User;
 use App\Models\Workout;
+use App\Providers\TempsDuServeurServiceProvider;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Vite;
 use Illuminate\Routing\Route as RouteLaravel;
@@ -153,6 +154,17 @@ function enTetesRemettreAZeroCommeOctane(): void
     app('session')->flush();
 }
 
+/**
+ * Allume l'en-tête `Server-Timing` (#1315) comme un démarrage avec
+ * `SERVER_TIMING_ENABLED=true` : il s'ajoute aux en-têtes d'une page connectée,
+ * et le budget doit le tenir aussi, puisque c'est en production qu'on l'allume.
+ */
+function enTetesAllumerLeTempsServeur(): void
+{
+    config(['app.temps_serveur' => true]);
+    app()->register(TempsDuServeurServiceProvider::class, force: true);
+}
+
 beforeEach(function (): void {
     // Comme en production : le cookie de session y porte l'attribut `secure`.
     config(['session.secure' => true]);
@@ -163,11 +175,16 @@ beforeEach(function (): void {
     $this->app->make(Vite::class)->useHotFile(storage_path('framework/testing/vite-hot-absent'));
 });
 
-it('garde les en-têtes de chaque page complète sous le budget', function (): void {
+it('garde les en-têtes de chaque page complète sous le budget', function (bool $tempsServeur): void {
+    if ($tempsServeur) {
+        enTetesAllumerLeTempsServeur();
+    }
+
     $utilisateur = User::factory()->create();
     $pages = enTetesPagesDeLApplication();
     $tropLourdes = [];
     $nonRendues = [];
+    $mesurees = [];
 
     foreach ($pages as $route) {
         enTetesRemettreAZeroCommeOctane();
@@ -193,6 +210,18 @@ it('garde les en-têtes de chaque page complète sous le budget', function (): v
         if ($taille > enTetesBudgetEnOctets()) {
             $tropLourdes[] = "{$chemin} ({$base->getStatusCode()}) : {$taille} octets";
         }
+
+        if ($base->headers->has('Server-Timing')) {
+            $mesurees[] = $chemin;
+        }
+    }
+
+    // Allumé, l'en-tête doit être dans la mesure, sans quoi le budget le
+    // tiendrait sans l'avoir vu ; coupé, il n'y est nulle part.
+    if ($tempsServeur) {
+        expect($mesurees)->toContain('/dashboard', '/workouts', '/stats');
+    } else {
+        expect($mesurees)->toBe([]);
     }
 
     expect($pages)->not->toBeEmpty()
@@ -205,7 +234,10 @@ it('garde les en-têtes de chaque page complète sous le budget', function (): v
             .'au-delà de 4 Kio : '.implode(', ', $tropLourdes)
             .'. Un en-tête `Link` qui liste les actifs préchargés est le suspect habituel.'
         );
-});
+})->with([
+    'Server-Timing coupé' => [false],
+    'Server-Timing allumé' => [true],
+]);
 
 /**
  * Le cas du signalement, de bout en bout et étape par étape : la connexion
@@ -261,7 +293,11 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
  * La séance en cours est l'autre écran qui s'ouvre sans réseau, et le plus
  * lourd en morceaux : on la recharge en pleine séance.
  */
-it('garde la séance en cours sous le budget', function (): void {
+it('garde la séance en cours sous le budget', function (bool $tempsServeur): void {
+    if ($tempsServeur) {
+        enTetesAllumerLeTempsServeur();
+    }
+
     $utilisateur = User::factory()->create();
     $seance = Workout::factory()->for($utilisateur)->create(['ended_at' => null]);
 
@@ -270,21 +306,31 @@ it('garde la séance en cours sous le budget', function (): void {
 
     $reponse->assertOk();
 
-    expect(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
-});
+    expect($reponse->baseResponse->headers->has('Server-Timing'))->toBe($tempsServeur)
+        ->and(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+})->with([
+    'Server-Timing coupé' => [false],
+    'Server-Timing allumé' => [true],
+]);
 
 /**
  * Le panneau d'administration a sa propre pile, et porte depuis #1920 la CSP
  * de l'application, un des plus longs en-têtes de la réponse. Sa connexion,
  * qui pose les cookies de session et XSRF, et son tableau de bord tiennent
- * sous le même budget que les pages de l'application.
+ * sous le même budget que les pages de l'application, `Server-Timing` allumé
+ * compris : un administrateur connecté le reçoit, la page de connexion jamais.
  */
-it('garde le panneau d’administration sous le budget, CSP comprise', function (): void {
+it('garde le panneau d’administration sous le budget, CSP comprise', function (bool $tempsServeur): void {
+    if ($tempsServeur) {
+        enTetesAllumerLeTempsServeur();
+    }
+
     $connexion = get(enTetesHoteDeProduction().'/backoffice/login');
 
     $connexion->assertOk()->assertHeader('Content-Security-Policy');
 
-    expect($connexion->baseResponse->headers->getCookies())->not->toBeEmpty()
+    expect($connexion->baseResponse->headers->has('Server-Timing'))->toBeFalse()
+        ->and($connexion->baseResponse->headers->getCookies())->not->toBeEmpty()
         ->and(enTetesTailleDuBloc($connexion))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 
     enTetesRemettreAZeroCommeOctane();
@@ -296,5 +342,9 @@ it('garde le panneau d’administration sous le budget, CSP comprise', function 
 
     $tableauDeBord->assertOk()->assertHeader('Content-Security-Policy');
 
-    expect(enTetesTailleDuBloc($tableauDeBord))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
-});
+    expect($tableauDeBord->baseResponse->headers->has('Server-Timing'))->toBe($tempsServeur)
+        ->and(enTetesTailleDuBloc($tableauDeBord))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+})->with([
+    'Server-Timing coupé' => [false],
+    'Server-Timing allumé' => [true],
+]);

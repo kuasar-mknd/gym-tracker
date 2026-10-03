@@ -62,6 +62,11 @@ x-app-env: &app-env
     # sur la pile déployée ; réglable dans la pile.
     PULSE_ENABLED: ${PULSE_ENABLED:-false}
 
+    # L'en-tête `Server-Timing` (#1315) : durée de l'application, de ses étapes
+    # et des requêtes SQL, sur les réponses d'un utilisateur connecté ou d'un
+    # administrateur seulement. Coupé par défaut ; `true` le temps d'une mesure.
+    SERVER_TIMING_ENABLED: ${SERVER_TIMING_ENABLED:-false}
+
 services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
