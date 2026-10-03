@@ -38,11 +38,11 @@ use Spatie\Activitylog\Support\LogOptions;
 final class User extends Authenticatable implements MustVerifyEmail
 {
     use EffaceSesTracesPolymorphes;
-
     use HasApiTokens;
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
+
     use HasFitnessData;
     use HasPushSubscriptions;
     use HasToolsData;
