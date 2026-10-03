@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Actions\Profile\ActiverLesEnvoisPushAction;
 use App\Actions\Profile\UpdateNotificationPreferencesAction;
+use App\Http\Requests\ActiverLesEnvoisPushRequest;
 use App\Http\Requests\DeleteUserRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UpdateNotificationPreferencesRequest;
@@ -92,6 +94,22 @@ class ProfileController extends Controller
         }
 
         return Redirect::route('profile.edit')->with('status', 'notification-preferences-updated');
+    }
+
+    /**
+     * Allume l'envoi push des types demandés, sans toucher au reste (#1848).
+     *
+     * L'invitation de fin de séance l'appelle en XHR, une fois l'appareil
+     * abonné : sans elle, l'abonnement serait pris et aucun record ne partirait
+     * en push. D'où un 204 et jamais de redirection (.ai/rules/controllers.md).
+     */
+    public function activerLesEnvoisPush(ActiverLesEnvoisPushRequest $request, ActiverLesEnvoisPushAction $activerLesEnvoisPush): \Illuminate\Http\Response
+    {
+        $this->authorize('update', $this->user());
+
+        $activerLesEnvoisPush->execute($this->user(), $request->types());
+
+        return response()->noContent();
     }
 
     /**
