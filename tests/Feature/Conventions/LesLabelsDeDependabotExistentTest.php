@@ -19,11 +19,15 @@ use Symfony\Component\Yaml\Yaml;
  * Aucun test ne voit les labels du dépôt sans réseau ; ces gardes tiennent ce
  * qui rend le défaut impossible : le workflow se déclenche quand
  * `dependabot.yml` change — et quand il change lui-même, sans quoi la fusion
- * qui l'ajoute ne créerait rien —, il lit la liste dans le fichier au lieu de
- * la recopier, et il crée sans `--force`, qui écraserait la couleur et la
- * description d'un label choisi à la main.
+ * qui l'ajoute ne créerait rien —, et quand un label est supprimé ou renommé
+ * depuis l'interface, qui ne change aucun fichier ; il lit la liste dans le
+ * fichier au lieu de la recopier, et il crée sans `--force`, qui écraserait la
+ * couleur et la description d'un label choisi à la main.
  *
- * Le script lui-même tourne ici, contre un faux `yq` et un faux `gh`.
+ * Le script lui-même tourne ici, contre un faux `yq` et un faux `gh`. Aucun
+ * attendu ne dépend des labels que `dependabot.yml` nomme : en ajouter ou en
+ * retirer est le cas que le workflow absorbe seul, et ne doit pas rougir la
+ * garde.
  * Dependabot ne garde que les labels dont le nom est exactement celui demandé,
  * casse comprise, alors que GitHub refuse de créer « php » à côté d'un « PHP » :
  * un label qui n'existe que sous une autre casse doit faire échouer le run, au
@@ -187,16 +191,19 @@ function labelsDependabotExecuter(array $demandes, array $existants, array $refu
     }
 }
 
-it('crée les labels de dependabot.yml dès que le fichier ou le workflow change sur main', function (): void {
+it('crée les labels de dependabot.yml dès que le fichier ou le workflow change sur main, ou qu’un label est renommé ou supprimé', function (): void {
     $workflow = labelsDependabotWorkflow();
 
-    expect(labelsDependabotDemandes())->toContain('dependencies', 'php', 'composer', 'docker')
-        ->and(data_get($workflow, 'on'))->toBeArray()->toHaveKeys(['push', 'workflow_dispatch'])
+    // Quels labels, c'est l'affaire de dependabot.yml : la garde ne fige que l'existence d'une liste, sans laquelle le run échoue.
+    expect(labelsDependabotDemandes())->not->toBeEmpty('dependabot.yml ne demande aucun label : le workflow échouerait à chaque run')
+        ->and(data_get($workflow, 'on'))->toBeArray()->toHaveKeys(['push', 'label', 'workflow_dispatch'])
         ->and(data_get($workflow, 'on.push.branches'))->toBe(['main'])
         ->and(data_get($workflow, 'on.push.paths'))->toBeArray()->toContain(
             '.github/dependabot.yml',
             '.github/workflows/labels-dependabot.yml',
-        );
+        )
+        // Un label supprimé ou renommé depuis l'interface ne change aucun fichier : sans cet événement, Dependabot l'omettrait jusqu'à la prochaine modification de dependabot.yml.
+        ->and(data_get($workflow, 'on.label.types'))->toBeArray()->toContain('deleted', 'edited');
 });
 
 it('lit les labels dans dependabot.yml au lieu de les recopier', function (): void {
@@ -235,8 +242,10 @@ it('ne demande que le droit de créer un label', function (): void {
 });
 
 it('crée les labels demandés qui manquent, et eux seuls', function (): void {
+    // Une liste fixe, pas celle de dependabot.yml : ajouter ou retirer un label y est le cas que le workflow absorbe, pas une raison de rougir.
+    // Deux écosystèmes demandent souvent le même label : il n'est créé qu'une fois.
     $run = labelsDependabotExecuter(
-        labelsDependabotDemandes(),
+        ['dependencies', 'php', 'composer', 'dependencies', 'docker', 'php'],
         ['bug', 'ci', 'dependencies', 'github-actions', 'javascript', 'npm', 'security'],
     );
 
@@ -255,7 +264,7 @@ it('ne crée rien quand chaque label existe sous son nom exact', function (): vo
 
 it('échoue quand un label n’existe que sous une autre casse, que Dependabot ne poserait pas', function (): void {
     $run = labelsDependabotExecuter(
-        labelsDependabotDemandes(),
+        ['dependencies', 'php', 'composer', 'docker'],
         ['ci', 'dependencies', 'github-actions', 'javascript', 'npm', 'PHP'],
     );
 
