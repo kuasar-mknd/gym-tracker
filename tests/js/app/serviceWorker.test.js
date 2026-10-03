@@ -191,7 +191,7 @@ describe('réception d’une notification push', () => {
         expect(options).toEqual({
             body: 'Série suivante',
             icon: '/timer.svg',
-            badge: '/badge.svg',
+            badge: '/badge-96x96.png',
             data: { url: '/workouts/12' },
             actions: [{ action: 'open', title: 'Ouvrir' }],
         })
@@ -205,8 +205,8 @@ describe('réception d’une notification push', () => {
         expect(title).toBe('Gym Tracker')
         expect(options).toEqual({
             body: 'Nouvelle notification !',
-            icon: '/logo.svg',
-            badge: '/badge.svg',
+            icon: '/pwa-192x192.png',
+            badge: '/badge-96x96.png',
             data: { url: '/' },
             actions: [],
         })

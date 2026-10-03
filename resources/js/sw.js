@@ -64,6 +64,11 @@ self.addEventListener('fetch', (event) => {
  * soit vraie, soit posée sur un événement impossible. Une charge utile illisible
  * ensuite : `json()` lève sur un corps qui n'est pas du JSON, et l'exception
  * traversait `waitUntil`.
+ *
+ * L'icône et le badge sont des PNG de public/, que pwa-assets.config.js tire de
+ * public/logo.svg et de public/badge.svg (#1850). Le badge, la petite icône de
+ * la barre d'état, est blanc sur transparent : Android n'en lit que l'alpha, et
+ * un fond plein y ferait un carré.
  */
 self.addEventListener('push', (event) => {
     let charge = {}
@@ -77,8 +82,8 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
         self.registration.showNotification(charge.title || 'Gym Tracker', {
             body: charge.body || 'Nouvelle notification !',
-            icon: charge.icon || '/logo.svg',
-            badge: '/badge.svg',
+            icon: charge.icon || '/pwa-192x192.png',
+            badge: '/badge-96x96.png',
             data: { url: charge.data?.url || '/' },
             actions: charge.actions || [],
         }),

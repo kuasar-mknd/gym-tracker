@@ -41,7 +41,7 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
     {
         return new WebPushMessage()
             ->title('Succès Déverrouillé ! 🏆')
-            ->icon('/logo.svg')
+            ->icon('/pwa-192x192.png')
             /** @phpstan-ignore-next-line */
             ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
             ->action('Voir mes succès', url('/achievements'))

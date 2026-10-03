@@ -10,7 +10,12 @@
     <meta name="theme-color" content="{{ \App\Support\Charte::jeton('surface-page') }}">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="apple-touch-icon" href="/logo.svg">
+    {{-- iOS ne lit pas un SVG en apple-touch-icon : sans PNG, l'écran
+         d'accueil montrait une capture de la page (#1850). Il peint aussi en
+         noir tout pixel transparent, d'où une icône opaque, sans marge. --}}
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="icon" href="/logo.svg" sizes="any" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
     <link rel="manifest" href="/manifest.webmanifest">
 
     <title inertia>{{ config('app.name', 'GymTracker') }}</title>

@@ -1,0 +1,12 @@
+<svg width="336" height="336" viewBox="88 88 336 336" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Le badge des notifications : les tracés de logo.svg, en blanc, sans le fond.
+    Android ne lit que l'alpha de cette petite icône de la barre d'état ; un
+    fond plein y donnerait un carré. Le cadre est resserré sur le cercle, avec
+    la marge d'un douzième que la barre d'état laisse autour d'une icône.
+    Le worker sert badge-96x96.png, que pwa-assets.config.js en tire.
+  -->
+  <path d="M128 256C128 185.308 185.308 128 256 128C326.692 128 384 185.308 384 256C384 326.692 326.692 384 256 384C185.308 384 128 326.692 128 256Z" stroke="#ffffff" stroke-width="24"/>
+  <path d="M256 160V352M160 256H352" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
+  <path d="M210 210L302 302M302 210L210 302" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+</svg>
