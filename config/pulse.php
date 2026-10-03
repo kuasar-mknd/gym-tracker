@@ -121,9 +121,11 @@ return [
     |
     */
 
+    // Les balises que Pulse écrit sans nonce sont signées à la compilation de
+    // ses gabarits (SigneLesScriptsEnLigneDesPaquets), jamais en réécrivant la
+    // réponse.
     'middleware' => [
         \Spatie\Csp\AddCspHeaders::class.':'.\App\Support\Csp\Policies\PulsePolicy::class,
-        \App\Http\Middleware\PulseNonceMiddleware::class,
         'web',
         'auth:admin,web',
         \App\Http\Middleware\IpWhitelist::class,
