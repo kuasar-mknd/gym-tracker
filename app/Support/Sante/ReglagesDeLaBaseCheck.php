@@ -65,6 +65,14 @@ final class ReglagesDeLaBaseCheck extends Check
                 .'Poser PULSE_ENABLED=false dans la pile, ou l\'en retirer : la composition le coupe par défaut.']
             : [];
 
+        // Un réglage que MySQL n'a pas rendu n'est pas un bon réglage : le vert
+        // dirait vérifié ce que personne n'a lu.
+        $illisibles = array_diff(['innodb_flush_log_at_trx_commit', 'log_bin'], array_keys($variables));
+
+        if ($illisibles !== []) {
+            $oranges[] = sprintf('%s illisible dans SHOW GLOBAL VARIABLES : le réglage n\'a pas pu être vérifié.', implode(' et ', $illisibles));
+        }
+
         $result = Result::make()
             ->meta([
                 'innodb_flush_log_at_trx_commit' => $synchronisation,

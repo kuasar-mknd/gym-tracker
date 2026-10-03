@@ -132,6 +132,21 @@ it('dit tout ce qui ne va pas, le rouge l’emportant sur l’orange', function 
         ->toContain('Pulse enregistre');
 });
 
+/*
+ * Un réglage que la lecture n'a pas rendu n'est pas un bon réglage : le vert
+ * dirait « vérifié » de ce que personne n'a lu.
+ */
+it('met les réglages de la base à l’orange quand MySQL ne les rend pas, plutôt que de les croire bons', function (): void {
+    reglagesDeLaBaseLus(['innodb_flush_log_at_trx_commit' => '2']);
+    Config::set('pulse.enabled', false);
+
+    $resultat = reglagesDeLaBaseEnProduction()->run();
+
+    expect($resultat->status->value)->toBe('warning')
+        ->and($resultat->shortSummary)->toBe('flush 2 · log_bin ? · Pulse coupé')
+        ->and($resultat->notificationMessage)->toContain('log_bin')->toContain('illisible');
+});
+
 it('lit les deux réglages dans MySQL, sans rien y écrire', function (): void {
     DB::enableQueryLog();
 
