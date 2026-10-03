@@ -60,10 +60,12 @@ final class ReglagesDeLaBaseCheck extends Check
                 .'Remettre --skip-log-bin dans la commande du service db.';
         }
 
-        $oranges = $pulse
-            ? ['Pulse enregistre : chaque requête et chaque job écrivent leurs agrégats en base, ce qui provoquait un convoi de verrous. '
-                .'Poser PULSE_ENABLED=false dans la pile, ou l\'en retirer : la composition le coupe par défaut.']
-            : [];
+        $oranges = [];
+
+        if ($pulse) {
+            $oranges[] = 'Pulse enregistre : chaque requête et chaque job écrivent leurs agrégats en base, ce qui provoquait un convoi de verrous. '
+                .'Poser PULSE_ENABLED=false dans la pile, ou l\'en retirer : la composition le coupe par défaut.';
+        }
 
         // Un réglage que MySQL n'a pas rendu n'est pas un bon réglage : le vert
         // dirait vérifié ce que personne n'a lu.
