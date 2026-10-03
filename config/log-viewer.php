@@ -102,8 +102,9 @@ return [
     */
 
     // La porte du panneau (qui renvoie un invité vers sa connexion), sa liste
-    // blanche d'adresses, puis la porte du paquet : les journaux ne s'ouvrent
-    // qu'au super administrateur, d'une adresse admise, comme /backoffice.
+    // blanche d'adresses, puis la porte du paquet, viewLogViewer, définie dans
+    // AppServiceProvider::ouvrirLeLecteurDeJournaux() : les journaux ne
+    // s'ouvrent qu'à qui a view-logs, d'une adresse admise, comme /backoffice.
     'middleware' => [
         'web',
         Filament\Http\Middleware\Authenticate::class,

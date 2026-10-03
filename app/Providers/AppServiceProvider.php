@@ -47,9 +47,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->refuserLesArchivesEnClair();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
-        // Le lecteur de journaux vit sous /backoffice mais hors du panneau : sa
-        // porte est la même, dite au paquet.
-        \Opcodes\LogViewer\Facades\LogViewer::auth(fn (\Illuminate\Http\Request $request): bool => $request->user('admin')?->can('view-logs') ?? false);
+        $this->ouvrirLeLecteurDeJournaux();
 
         if (config('app.env') === 'testing') {
             Gate::define('viewPulse', fn ($user = null): bool => true);
@@ -282,6 +280,30 @@ final class AppServiceProvider extends ServiceProvider
                 throw new RuntimeException('BACKUP_ARCHIVE_PASSWORD est vide : aucune archive en clair ne sera écrite.');
             }
         });
+    }
+
+    /**
+     * Le lecteur de journaux vit sous /backoffice mais hors du panneau : sa porte
+     * est `view-logs`, celle qui montre son lien dans le menu.
+     *
+     * Une porte du Gate, et non le rappel de `LogViewer::auth()` : le paquet lie
+     * son service en `scoped`, qu'Octane oublie après chaque requête. Le rappel
+     * posé au démarrage ne servait que la première requête d'un worker ; ensuite
+     * `AuthorizeLogViewer` ne trouvait ni rappel ni porte, refusait tout le monde
+     * en production (403, page et API), et laissait passer tout administrateur
+     * du panneau ailleurs. Les définitions du Gate vivent dans l'application de
+     * base, d'où chaque requête est clonée.
+     *
+     * Le paquet l'évalue par `Gate::authorize()`, donc pour l'utilisateur de la
+     * garde par défaut, que `Filament\Http\Middleware\Authenticate` vient de
+     * régler sur celle du panneau (`config/log-viewer.php`) : seul un
+     * administrateur passe, même si un compte de l'application est connecté à
+     * côté.
+     */
+    private function ouvrirLeLecteurDeJournaux(): void
+    {
+        Gate::define('viewLogViewer', fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
+            && $utilisateur->can('view-logs'));
     }
 
     /**
