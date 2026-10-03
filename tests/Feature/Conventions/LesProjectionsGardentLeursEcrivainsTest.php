@@ -70,7 +70,9 @@ use Symfony\Component\Finder\Finder;
  * - ce que la base écrit elle-même : `ON DELETE SET NULL` détache un record
  *   quand sa série disparaît, `ON DELETE CASCADE` emporte des lignes ;
  * - le code hors de app/ et de routes/ : migrations de données, seeders,
- *   fabriques et tests écrivent ces valeurs à bon droit.
+ *   fabriques et tests écrivent ces valeurs à bon droit ;
+ * - un second calcul ajouté DANS une méthode déjà listée : la garde compte
+ *   les écrivains par méthode, pas par instruction.
  *
  * Elle peut aussi se tromper dans l'autre sens, sur un nom qu'elle prend pour
  * une colonne d'ici : une colonne homonyme ajoutée à une autre table, une
@@ -465,7 +467,7 @@ function projectionsLaMethodeEcrit(array $jetons, array $methodes, string $metho
         return true;
     }
 
-    $verbes = projectionsVerbes()['chaine'];
+    $verbes = [...projectionsVerbes()['argument'], 'save', 'saveQuietly'];
 
     return array_any(
         $jetons,
@@ -955,8 +957,9 @@ it('n’accepte aucun nouvel écrivain d’une valeur dérivée stockée', funct
             $fautes[] = sprintf(
                 "« %s » (%s) est écrite par %s() — %s —, qui n'est pas l'un de ses écrivains.\n"
                 ."    Ses écrivains : %s.\n"
-                ."    Passez par l'un d'eux plutôt que d'écrire la valeur vous-même. Si ce nouvel écrivain est vraiment\n"
-                .'    nécessaire, ajoutez-le à projectionsLInventaire() avec la raison qui le justifie : il devient une dette nommée.',
+                ."    Passez par l'un d'eux plutôt que d'écrire la valeur vous-même. Si l'endroit n'est qu'une étape d'un\n"
+                ."    écrivain existant, ajoutez sa méthode à cet écrivain dans projectionsLInventaire(). Si c'est un nouvel\n"
+                .'    écrivain, ajoutez-le avec la raison qui le justifie : il devient une dette nommée.',
                 $nom,
                 $inventaire[$nom]['stockage'],
                 $endroit,
@@ -1091,11 +1094,11 @@ it('ne laisse qu’un reconstructeur à chaque statistique en cache', function (
         $jetons = projectionsJetonsDuCode((string) file_get_contents(base_path($chemin)));
 
         foreach (projectionsMethodesEtCache($jetons, projectionsMethodesDesJetons($jetons)) as $methode => $texte) {
-            if ($texte['indice'] === null) {
-                continue;
-            }
-
-            preg_match_all('/ClesDeStats\s*::\s*(?:seances|mesures)\s*\(\s*\$\w+\s*,\s*["\']\s*([a-z0-9_]+)/', $texte['texte'], $familles);
+            preg_match_all(
+                '/Cache\s*::\s*(?:remember|rememberForever|flexible|put|add|forever)\s*\(\s*\S*ClesDeStats\s*::\s*(?:seances|mesures)\s*\(\s*\$\w+\s*,\s*["\']\s*([a-z0-9_]+)/',
+                $texte['texte'],
+                $familles,
+            );
 
             foreach (array_unique($familles[1]) as $famille) {
                 $parFamille[$famille][] = "{$chemin}::{$methode}()";
