@@ -66,10 +66,14 @@ const tenter = async (envoi) => {
 /**
  * L'abonnement qui remplace l'ancien, d'où qu'il vienne.
  *
- * Le navigateur le fournit d'ordinaire. Firefox avant la 137 n'envoie que
- * l'ancien : on se réabonne alors avec ses options, qui portent la clef VAPID
- * qu'un worker ne connaît pas autrement (elle n'est connue qu'à l'exécution).
- * Sans l'un ni l'autre, l'abonnement courant fait foi.
+ * Le navigateur le fournit d'ordinaire. Quand il n'a pas pu se réabonner
+ * lui-même, il n'envoie que l'ancien : on se réabonne alors avec ses options,
+ * qui portent la clef VAPID qu'un worker ne connaît pas autrement (elle n'est
+ * connue qu'à l'exécution). Sans l'un ni l'autre, l'abonnement courant fait
+ * foi : c'est le cas de Firefox avant la 137, qui émet l'évènement sans
+ * `oldSubscription` ni `newSubscription` selon MDN, et dont l'abonnement courant
+ * est alors le plus souvent absent. L'adresse morte reste alors au serveur,
+ * jusqu'au rapprochement fait à l'ouverture de l'application.
  *
  * @param {{oldSubscription?: PushSubscription|null, newSubscription?: PushSubscription|null}} evenement
  * @param {PushManager} pushManager

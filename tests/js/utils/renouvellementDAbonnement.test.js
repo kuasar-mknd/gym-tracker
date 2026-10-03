@@ -72,7 +72,8 @@ describe('le renouvellement d’un abonnement par le worker', () => {
     })
 
     it('se réabonne avec les options de l’ancien quand le navigateur ne fournit que lui', async () => {
-        // Firefox avant la 137 émet l'évènement sans `newSubscription`.
+        // Un navigateur qui n'a pas pu se réabonner lui-même n'envoie que
+        // l'ancien abonnement, `newSubscription` restant nul.
         const ancien = abonnementDuNavigateur('https://push.example/revoque')
         const reabonnement = abonnementDuNavigateur('https://push.example/reabonne')
         const pushManager = gestionnaireDePush({ reabonnement })

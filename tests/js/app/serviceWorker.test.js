@@ -364,6 +364,9 @@ describe('abonnement remplacé ou retiré par le navigateur', () => {
         // Sans `waitUntil`, le navigateur peut arrêter le worker avant que le
         // serveur n'ait appris la nouvelle adresse.
         expect(renouvelerLAbonnement).toHaveBeenCalledWith(evenement, { pushManager })
-        expect(waited).toEqual([abonnementRenouvele])
+        // `toBe` et non `toEqual` : deux promesses quelconques sont égales pour
+        // `toEqual`, qui ne compare que des propriétés qu'elles n'ont pas.
+        expect(waited).toHaveLength(1)
+        expect(waited[0]).toBe(abonnementRenouvele)
     })
 })

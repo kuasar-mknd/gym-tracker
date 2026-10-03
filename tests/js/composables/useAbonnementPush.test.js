@@ -275,6 +275,45 @@ describe('l’état de l’abonnement au montage', () => {
 
         expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/abc']])
     })
+
+    it('rend au serveur l’abonnement que le layout a jugé à jour, quand le serveur dit n’en tenir aucun', async () => {
+        await dejaTransmis('https://push.example/abc')
+
+        // L'ordre d'un chargement complet du profil : le layout rapproche le
+        // premier, dès son montage, et sur la foi du mémo il n'écrit rien ; le
+        // formulaire ne rapproche qu'après avoir interrogé le navigateur, et
+        // c'est lui qui sait que le serveur a perdu la ligne.
+        const layout = rapprocherLAbonnementPush(UTILISATEUR)
+        const push = monter({ dejaAbonne: false })
+        await layout
+        await flushPromises()
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/abc']])
+        expect(push.pushRegistered.value).toBe(true)
+    })
+
+    it('rouvre la bannière quand le serveur refuse l’abonnement que le navigateur tient', async () => {
+        navigateur({ existant: abonnement('https://push.example/orphelin') })
+        reseau.post.mockRejectedValue({ response: { status: 422, data: {} } })
+        const push = monter({ dejaAbonne: false })
+        await flushPromises()
+
+        // Adresse refusée, serveur en panne, réseau coupé : le serveur ne tient
+        // rien pour cet appareil. Sans bandeau, les cases « Envoyer aussi en
+        // Push » s'afficheraient pour des envois que personne ne reçoit.
+        expect(push.pushRegistered.value).toBe(false)
+    })
+
+    it('propose l’activation sur un appareil qui reçoit pour un autre compte, sans le lui prendre', async () => {
+        await dejaTransmis('https://push.example/partage', 7)
+        const push = monter({ dejaAbonne: false })
+        await flushPromises()
+
+        // L'appareil ne reçoit pas pour ce compte : le bandeau reste, et c'est
+        // par lui, d'un geste, que l'appareil change de compte.
+        expect(reseau.post).not.toHaveBeenCalled()
+        expect(push.pushRegistered.value).toBe(false)
+    })
 })
 
 describe('le rapprochement à l’ouverture de l’application', () => {
@@ -325,22 +364,62 @@ describe('le rapprochement à l’ouverture de l’application', () => {
         expect(ecritures()).toEqual([['push-subscriptions.destroy', 'https://push.example/revoque']])
     })
 
-    it('tient un mémo propre à chaque compte', async () => {
-        // Deux comptes sur le même téléphone : le serveur réattribue l'adresse
-        // au dernier qui l'enregistre. Celui qui revient doit la reprendre.
+    it('laisse à son compte l’abonnement que cet appareil a transmis pour un autre', async () => {
+        // Deux comptes sur le même téléphone. Le serveur réattribue une adresse
+        // au dernier compte qui l'enregistre : la transmettre pour celui qui se
+        // connecte enverrait SES notifications sur l'écran verrouillé de
+        // l'autre, même après sa déconnexion, et l'autre cesserait de recevoir.
         await dejaTransmis('https://push.example/partage', 7)
 
         await rapprocherLAbonnementPush(UTILISATEUR)
 
-        // Et rien à faire oublier : l'adresse est la même, et la ligne de
-        // l'autre compte n'est pas à celui-ci.
-        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/partage']])
+        expect(reseau.post).not.toHaveBeenCalled()
 
+        // Celui qui revient retrouve l'appareil tel qu'il l'avait laissé.
+        await chargementSuivant()
+        await rapprocherLAbonnementPush(7)
+
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('garde à son compte un abonnement renouvelé pendant qu’un autre est connecté', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/ancien', 7)
+        gestionnaire.getSubscription.mockResolvedValue(abonnement('https://push.example/nouveau'))
+
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(reseau.post).not.toHaveBeenCalled()
+
+        // La réparation attend le compte à qui l'appareil a transmis.
+        await chargementSuivant()
+        await rapprocherLAbonnementPush(7)
+
+        expect(ecritures()).toEqual([
+            ['push-subscriptions.update', 'https://push.example/nouveau'],
+            ['push-subscriptions.destroy', 'https://push.example/ancien'],
+        ])
+    })
+
+    it('ne fait changer l’appareil de compte que par l’activation', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/de-7', 7)
+        const neuf = abonnement('https://push.example/de-42')
+        gestionnaire.subscribe.mockResolvedValue(neuf)
+        const push = monter({ dejaAbonne: false })
+        await flushPromises()
+
+        await push.enablePush()
+
+        expect(push.pushRegistered.value).toBe(true)
+
+        gestionnaire.getSubscription.mockResolvedValue(neuf)
         await chargementSuivant()
         reseau.post.mockClear()
         await rapprocherLAbonnementPush(7)
+        await rapprocherLAbonnementPush(UTILISATEUR)
 
-        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/partage']])
+        // L'appareil est désormais au compte qui l'a activé : celui d'avant ne
+        // le reprend pas en revenant, et le nouveau n'a rien à refaire.
+        expect(reseau.post).not.toHaveBeenCalled()
     })
 
     it('ne fait rien oublier pour le compte d’un autre', async () => {
@@ -366,7 +445,8 @@ describe('le rapprochement à l’ouverture de l’application', () => {
         navigateur({ existant: abonnement('https://push.example/abc') })
         reseau.post.mockRejectedValueOnce({ response: { status: 500, data: {} } })
 
-        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBeUndefined()
+        // Rien n'est rejeté : le refus se dit par un `false`, qui rouvre le bandeau du profil.
+        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBe(false)
         await chargementSuivant()
         await rapprocherLAbonnementPush(UTILISATEUR)
 
@@ -402,7 +482,7 @@ describe('le rapprochement à l’ouverture de l’application', () => {
         })
         navigateur({ existant: abonnement('https://push.example/abc') })
 
-        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBeUndefined()
+        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBe(true)
 
         expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/abc']])
     })
@@ -419,7 +499,7 @@ describe('le rapprochement à l’ouverture de l’application', () => {
     it('se tait quand le service worker ne répond pas', async () => {
         navigateur({ workerMuet: true })
 
-        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBeUndefined()
+        await expect(rapprocherLAbonnementPush(UTILISATEUR)).resolves.toBe(false)
 
         expect(reseau.post).not.toHaveBeenCalled()
     })

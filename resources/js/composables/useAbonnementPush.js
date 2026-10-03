@@ -23,10 +23,16 @@ const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker' in na
  * Le dernier abonnement que CET appareil a transmis, et pour quel compte.
  *
  * Il dit au rapprochement s'il y a quelque chose à écrire : chaque écriture
- * coûte de 350 ms à 1,7 s sur le NAS, et l'application s'ouvre souvent. Il
- * nomme le compte parce que le serveur réattribue une adresse au dernier compte
- * qui l'enregistre : sur un téléphone partagé, celui qui revient doit la
- * reprendre, et il ne le ferait pas si chaque compte gardait son propre mémo.
+ * coûte de 350 ms à 1,7 s sur le NAS, et l'application s'ouvre souvent.
+ *
+ * Il nomme le compte parce que le serveur réattribue une adresse au dernier
+ * compte qui l'enregistre, en retirant la ligne de l'autre. Sur un téléphone
+ * partagé, transmettre pour celui qui vient de se connecter enverrait SES
+ * notifications, records et rappels compris, sur l'écran verrouillé du
+ * propriétaire, même après sa déconnexion, qui ne retire rien ; et le
+ * propriétaire cesserait de recevoir sans le savoir. Un seul mémo par appareil
+ * dit donc à qui l'appareil a été donné : l'abonnement reste à ce compte, et
+ * seule l'activation, un geste fait sur l'appareil, le fait changer de mains.
  *
  * Le stockage peut être bloqué (navigation privée) ou illisible : on transmet
  * alors à chaque ouverture, une écriture de trop plutôt qu'un abonnement perdu.
@@ -77,12 +83,20 @@ const oublierSurLeServeur = (endpoint) =>
 /**
  * @param {string} utilisateur
  * @param {boolean} serveurSansAbonnement
+ * @returns {Promise<boolean>} Vrai quand le serveur tient l'abonnement de ce
+ *   navigateur pour ce compte.
  */
 const rapprocher = async (utilisateur, serveurSansAbonnement) => {
     const registration = await avecDelai(navigator.serviceWorker.ready)
     const abonnement = await avecDelai(registration.pushManager.getSubscription())
     const memo = lireLeMemo()
-    const dejaTransmis = memo?.utilisateur === utilisateur ? memo.endpoint : null
+
+    // Transmis depuis cet appareil pour un autre compte : il reste à ce compte.
+    if (memo !== null && memo.utilisateur !== utilisateur) {
+        return false
+    }
+
+    const dejaTransmis = memo?.endpoint ?? null
 
     if (!abonnement) {
         // Révoqué par WebKit, permission retirée : le serveur écrirait à chaque
@@ -92,7 +106,7 @@ const rapprocher = async (utilisateur, serveurSansAbonnement) => {
             ecrireLeMemo(null)
         }
 
-        return
+        return false
     }
 
     /*
@@ -105,7 +119,7 @@ const rapprocher = async (utilisateur, serveurSansAbonnement) => {
         : dejaTransmis === abonnement.endpoint
 
     if (aJour) {
-        return
+        return true
     }
 
     await http.post(route('push-subscriptions.update'), abonnement, { timeout: DELAI_ETAPE_MS })
@@ -116,6 +130,8 @@ const rapprocher = async (utilisateur, serveurSansAbonnement) => {
     if (dejaTransmis !== null && dejaTransmis !== abonnement.endpoint) {
         await oublierSurLeServeur(dejaTransmis).catch(() => {})
     }
+
+    return true
 }
 
 /**
@@ -129,20 +145,25 @@ const rapprocher = async (utilisateur, serveurSansAbonnement) => {
  * aucun : un abonnement remplacé sur un appareil dont le compte gardait une
  * autre ligne n'était jamais transmis.
  *
- * Trois cas : un abonnement que cet appareil n'a pas encore transmis pour ce
+ * Quatre cas : un abonnement que cet appareil n'a pas encore transmis pour ce
  * compte est enregistré, et l'adresse transmise avant lui oubliée ; un
  * abonnement disparu fait oublier l'adresse transmise ; un abonnement inchangé
- * ne coûte aucune écriture. Une fois par chargement et par compte ; ne rejette
- * jamais.
+ * ne coûte aucune écriture ; et un abonnement que cet appareil a transmis pour
+ * un AUTRE compte reste à cet autre compte, sans aucune écriture (voir le mémo).
+ * Une fois par chargement et par compte ; ne rejette jamais.
  *
  * @param {number|string|null|undefined} utilisateurId
  * @param {{serveurSansAbonnement?: boolean}} options `true` quand le serveur
- *   vient de dire que le compte n'a aucun abonnement : le mémo est alors ignoré.
- * @returns {Promise<void>}
+ *   vient de dire que le compte n'a aucun abonnement : le mémo ne dispense plus
+ *   alors d'écrire, mais dit toujours à quel compte l'appareil a été donné.
+ * @returns {Promise<boolean>} Vrai quand le serveur tient, à notre connaissance,
+ *   l'abonnement de ce navigateur pour ce compte. Faux sinon : pas d'abonnement,
+ *   transmission refusée ou injoignable, appareil d'un autre compte, ou aucun
+ *   compte à rapprocher.
  */
 export const rapprocherLAbonnementPush = (utilisateurId, { serveurSansAbonnement = false } = {}) => {
     if (utilisateurId === null || utilisateurId === undefined || !pushPrisEnCharge()) {
-        return Promise.resolve()
+        return Promise.resolve(false)
     }
 
     const utilisateur = String(utilisateurId)
@@ -155,7 +176,7 @@ export const rapprocherLAbonnementPush = (utilisateurId, { serveurSansAbonnement
     // À la suite du précédent, pour qu'il ait déjà noté ce qu'il a transmis.
     const suivant = (precedent ?? Promise.resolve())
         .then(() => rapprocher(utilisateur, serveurSansAbonnement))
-        .catch(() => {})
+        .catch(() => false)
 
     rapprochementsDuChargement.set(utilisateur, suivant)
 
@@ -227,34 +248,44 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
 
     /*
      * Le navigateur tranche, parce qu'il est le seul à savoir ce que CET
-     * appareil détient. Trois cas, et aucun ne laisse l'utilisateur sans issue :
-     * pas d'abonnement ici, le bandeau s'affiche quoi qu'en dise le serveur ;
-     * un abonnement que le serveur ignore, on le lui rend, sinon les envois ne
-     * partiront jamais vers cet appareil ; et si le worker ne répond pas, on
-     * montre le bandeau plutôt que de le cacher. Ce dernier choix est l'inverse
-     * du précédent, et c'est tout l'objet du correctif : un bandeau de trop se
-     * referme d'un clic, un bandeau manquant ne se rattrape par rien.
+     * appareil détient. Quatre cas, et aucun ne laisse l'utilisateur sans
+     * issue : pas d'abonnement ici, le bandeau s'affiche quoi qu'en dise le
+     * serveur ; un abonnement que le serveur ignore, on le lui rend, et s'il le
+     * refuse ou ne répond pas, le bandeau revient, sinon les cases « Envoyer
+     * aussi en Push » s'afficheraient pour un appareil que le serveur ne
+     * connaît pas ; un abonnement que cet appareil a donné à un autre compte, le
+     * bandeau s'affiche aussi, et c'est par lui seul que l'appareil change de
+     * compte ; et si le worker ne répond pas, on montre le bandeau plutôt que
+     * de le cacher. Un bandeau de trop se referme d'un clic, un bandeau
+     * manquant ne se rattrape par rien.
      *
      * Rendre l'abonnement au serveur passe par le rapprochement que fait aussi
-     * le layout, pour qu'une même ouverture n'écrive qu'une fois.
+     * le layout, pour qu'une même ouverture n'écrive qu'une fois. Sans compte
+     * connu, il n'y a rien à rapprocher et le navigateur décide seul.
      */
     onMounted(async () => {
         if (!pushSupported) {
             return
         }
 
+        let abonnementIci = false
+
         try {
             const registration = await avecDelai(navigator.serviceWorker.ready)
             const abonnement = await avecDelai(registration.pushManager.getSubscription())
 
-            pushRegistered.value = abonnement !== null && abonnement !== undefined
+            abonnementIci = abonnement !== null && abonnement !== undefined
         } catch {
-            pushRegistered.value = false
+            // Le worker ne répond pas : on montre le bandeau.
+        }
+
+        if (!abonnementIci || utilisateurId === null || utilisateurId === undefined) {
+            pushRegistered.value = abonnementIci
 
             return
         }
 
-        await rapprocherLAbonnementPush(utilisateurId, { serveurSansAbonnement: !dejaAbonne })
+        pushRegistered.value = await rapprocherLAbonnementPush(utilisateurId, { serveurSansAbonnement: !dejaAbonne })
     })
 
     const urlBase64ToUint8Array = (base64String) => {
