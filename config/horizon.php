@@ -11,9 +11,11 @@ return [
     | Acces au tableau de bord
     |--------------------------------------------------------------------------
     |
-    | Adresses autorisees a consulter Horizon hors environnement local, separees
-    | par des virgules. Vide par defaut : une installation qui ne configure rien
-    | reste fermee. Voir HorizonServiceProvider::gate().
+    | Adresses des comptes de l'application autorises a consulter Horizon hors
+    | environnement local, separees par des virgules. Vide par defaut : une
+    | installation qui ne configure rien reste fermee a ces comptes. Le super
+    | administrateur du panneau entre sans y figurer, depuis une adresse de
+    | ADMIN_ALLOWED_IPS. Voir HorizonServiceProvider::authorization().
     |
     */
 
