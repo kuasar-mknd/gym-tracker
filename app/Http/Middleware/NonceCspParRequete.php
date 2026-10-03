@@ -32,7 +32,12 @@ use Symfony\Component\HttpFoundation\Response;
  * Horizon écrit son JavaScript dans un `<script type="module">` en ligne, servi
  * sous la pile `web` donc sous cette CSP : il reçoit le même nonce. Son état est
  * statique, mais réécrit ici à chaque requête, donc rien ne passe d'une requête
- * à l'autre.
+ * à l'autre. Ce nonce est nécessaire, mais il ne suffit pas à rendre son tableau
+ * de bord : la racine Vue de Horizon n'a ni gabarit ni rendu, Vue compile donc
+ * au montage le contenu de `#horizon` avec `new Function`, et la CSP de
+ * production ne permet `'unsafe-eval'` qu'au panneau et à Pulse. Horizon reste
+ * vide en production tant que son chemin ne l'autorise pas, ce qui se décide
+ * hors #1904.
  *
  * Global et en tête de pile, plutôt que dans le groupe `web` : le panneau
  * Filament, Pulse, Horizon et les mises à jour de Livewire ont chacun leur propre

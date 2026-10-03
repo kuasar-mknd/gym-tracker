@@ -127,6 +127,11 @@ it('tire aussi un nonce neuf à chaque page du panneau Filament', function (): v
         ->and($noncesDeLaPremiere[0])->toHaveLength(40);
 });
 
+/**
+ * Ce test ne tient que le nonce, pas le tableau de bord. Il tourne sous
+ * `testing`, où la CSP permet `'unsafe-eval'` : en production, Vue n'y compile
+ * pas le gabarit de `#horizon`, et la page reste vide malgré le nonce.
+ */
 it('signe le script en ligne de Horizon du nonce de son en-tête', function (): void {
     config(['horizon.allowed_emails' => 'ops@example.org']);
     $autorise = User::factory()->create(['email' => 'ops@example.org']);
@@ -190,7 +195,7 @@ it('pose le nonce avant le reste de la pile, et le même pour Vite, la CSP et Ho
  * processus de test, qui prend le conteneur global et la racine des façades :
  * le `finally` les rend à l'application du test.
  */
-it('tire un nonce neuf à chaque requête d un vrai cycle de worker Octane', function (): void {
+it('tire un nonce neuf à chaque requête d’un vrai cycle de worker Octane', function (): void {
     $applicationDuTest = app();
     $client = new FakeClient([Request::create('/login'), Request::create('/login')]);
     $worker = new FakeWorker(new ApplicationFactory(base_path()), $client);
