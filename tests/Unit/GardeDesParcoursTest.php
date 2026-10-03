@@ -82,9 +82,11 @@ it('lève une exception qui cite chaque motif, et laisse passer la disposition d
  * La garde ne sert que si elle passe avant les traits : `DatabaseTruncation`
  * lance `migrate:fresh` dès le premier test. Elle juge la base que la connexion
  * visera, pas le nom qu'affiche DB_DATABASE : une DB_URL l'emporte sur lui dans
- * la configuration de la connexion. Le parcours fictif vise une base SQLite en
- * mémoire, ou un hôte en .invalid, qui ne se résout jamais (RFC 2606) : une garde
- * débranchée ne détruirait rien, le test échouerait seulement.
+ * la configuration de la connexion. Le parcours fictif vise toujours une base
+ * SQLite en mémoire : une garde débranchée ne détruirait rien, le test échouerait
+ * seulement. Pas de MySQL injoignable pour le cas DB_URL : sous `artisan test -p`,
+ * Laravel ouvre la base d'un parcours avant les traits pour créer sa copie de
+ * processus, et le cas échouerait sur la connexion avant que la garde ne parle.
  */
 it('arrête un parcours avant que DatabaseTruncation ne touche à la base', function (array $configuration, string $baseVisee): void {
     $parcours = new class('parcoursFictif') extends DuskTestCase
@@ -163,10 +165,10 @@ it('arrête un parcours avant que DatabaseTruncation ne touche à la base', func
     ],
     'une DB_URL qui contredit DB_DATABASE' => [
         [
-            'database.default' => 'mysql',
-            'database.connections.mysql.url' => 'mysql://sail:password@hote-des-parcours.invalid:3306/gym_tracker',
-            'database.connections.mysql.database' => 'gym_tracker_dusk',
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.url' => 'sqlite:///:memory:',
+            'database.connections.sqlite.database' => 'gym_tracker_dusk',
         ],
-        'gym_tracker',
+        ':memory:',
     ],
 ]);
