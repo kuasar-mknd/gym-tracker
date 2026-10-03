@@ -259,6 +259,69 @@ describe('Dashboard', () => {
 
         expect(wrapper.findComponent({ name: 'RecentActivity' }).props('recentWorkouts')).toEqual(workouts)
     })
+
+    describe('les invitations de l’accueil', () => {
+        /**
+         * L'invitation d'installation, qui dit quand elle se montre. Elle se
+         * montre ici dès son montage, comme sur iPhone.
+         */
+        const installationQuiSeMontre = {
+            name: 'InvitationDInstallation',
+            emits: ['visibilite'],
+            mounted() {
+                this.$emit('visibilite', true)
+            },
+            template: '<div />',
+        }
+
+        const monterLAccueil = ({
+            flash = {},
+            installation = { name: 'InvitationDInstallation', template: '<div />' },
+        } = {}) =>
+            mount(Dashboard, {
+                global: {
+                    directives: { press: {} },
+                    mocks: {
+                        route: globalThis.route,
+                        $page: { props: { auth: { user: { name: 'Sam' } } }, flash },
+                    },
+                    stubs: {
+                        AuthenticatedLayout: layoutStub,
+                        GlassCard: passesSlot,
+                        QuickActions: quickActions,
+                        RecentActivity: recentActivity,
+                        GoalsSummary: goalsSummary,
+                        ActiveGoalsChart: activeGoalsChart,
+                        InvitationDInstallation: installation,
+                        InvitationAuxNotifications: recording('InvitationAuxNotifications', [
+                            'uneAutreInvitationPasseAvant',
+                        ]),
+                    },
+                },
+            })
+
+        it('ne propose les notifications qu’au retour d’une fin de séance', () => {
+            expect(monterLAccueil().findComponent({ name: 'InvitationAuxNotifications' }).exists()).toBe(false)
+
+            const apresLaSeance = monterLAccueil({ flash: { proposerLesNotifications: true } })
+            const invitation = apresLaSeance.findComponent({ name: 'InvitationAuxNotifications' })
+
+            expect(invitation.exists()).toBe(true)
+            expect(invitation.props('uneAutreInvitationPasseAvant')).toBe(false)
+        })
+
+        it('fait passer l’invitation d’installation avant celle des notifications', async () => {
+            const wrapper = monterLAccueil({
+                flash: { proposerLesNotifications: true },
+                installation: installationQuiSeMontre,
+            })
+            await nextTick()
+
+            expect(
+                wrapper.findComponent({ name: 'InvitationAuxNotifications' }).props('uneAutreInvitationPasseAvant'),
+            ).toBe(true)
+        })
+    })
 })
 
 describe('Stats/Index', () => {

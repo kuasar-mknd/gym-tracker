@@ -17,7 +17,8 @@ const avecDelai = (promesse) => {
     return Promise.race([promesse, expiration]).finally(() => clearTimeout(minuteur))
 }
 
-const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker' in navigator
+/** Faux dans Safari sur iPhone hors de l'application installée : `Notification` n'y existe pas. */
+export const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker' in navigator
 
 /**
  * Le dernier abonnement que CET appareil a transmis, et pour quel compte.
@@ -76,6 +77,21 @@ const transmisPendantLeChargement = new Set()
 const noterLaTransmission = (utilisateur, endpoint) => {
     transmisPendantLeChargement.add(`${utilisateur} ${endpoint}`)
     ecrireLeMemo({ utilisateur, endpoint })
+}
+
+/**
+ * Cet appareil a-t-il été donné à un AUTRE compte que celui-ci ?
+ *
+ * Seule l'activation du profil le fait changer de mains : l'invitation de
+ * l'accueil se tait donc sur un tel appareil plutôt que d'y inviter un autre
+ * compte d'un seul appui (#1848).
+ *
+ * @param {number|string|null|undefined} utilisateurId
+ */
+export const appareilDonneAUnAutreCompte = (utilisateurId) => {
+    const memo = lireLeMemo()
+
+    return memo !== null && memo.utilisateur !== String(utilisateurId)
 }
 
 /**
@@ -352,6 +368,13 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
      */
     const pushRegistered = ref(dejaAbonne)
 
+    /**
+     * Le navigateur a-t-il répondu sur ce que tient CET appareil ? Jusque-là,
+     * `pushRegistered` n'est que la valeur du serveur. L'invitation de l'accueil
+     * l'attend pour ne pas apparaître puis disparaître aussitôt.
+     */
+    const appareilVerifie = ref(false)
+
     /*
      * Le navigateur tranche, parce qu'il est le seul à savoir ce que CET
      * appareil détient. Quatre cas, et aucun ne laisse l'utilisateur sans
@@ -369,7 +392,7 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
      * le layout, pour qu'une même ouverture n'écrive qu'une fois. Sans compte
      * connu, il n'y a rien à rapprocher et le navigateur décide seul.
      */
-    onMounted(async () => {
+    const verifierLAppareil = async () => {
         if (!pushSupported) {
             return
         }
@@ -392,7 +415,13 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
         }
 
         pushRegistered.value = await rapprocherLAbonnementPush(utilisateurId, { serveurSansAbonnement: !dejaAbonne })
-    })
+    }
+
+    onMounted(() =>
+        verifierLAppareil().finally(() => {
+            appareilVerifie.value = true
+        }),
+    )
 
     const urlBase64ToUint8Array = (base64String) => {
         if (!base64String) return new Uint8Array(0)
@@ -429,6 +458,19 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
             .catch(() => {})
     }
 
+    /**
+     * Demande la permission, abonne cet appareil et le transmet au serveur.
+     *
+     * La permission est demandée AVANT toute attente : iOS n'ouvre l'invite que
+     * dans le geste de l'utilisateur, et un `await` placé devant la ferait
+     * partir hors du geste. L'appelant ne doit donc rien attendre non plus
+     * avant d'appeler.
+     *
+     * @returns {Promise<'abonne'|'refuse'|'echoue'>} `refuse` quand l'invite n'a
+     *   pas accordé la permission, qu'elle ait été refusée ou écartée ;
+     *   `echoue` pour une panne, nommée dans `pushError`. L'invitation de
+     *   l'accueil ne se représente pas après un refus, et reste après une panne.
+     */
     const enablePush = async () => {
         isSubscribing.value = true
         pushError.value = null
@@ -446,7 +488,7 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
                 pushError.value =
                     'Ton navigateur a refusé les notifications. Autorise-les dans ses réglages, puis réessaie.'
 
-                return
+                return 'refuse'
             }
 
             etapeEnCours.value = 'Service worker'
@@ -488,6 +530,8 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
 
             pushRegistered.value = true
             apresAbonnement()
+
+            return 'abonne'
         } catch (err) {
             // A browser subscription the server does not hold can never deliver
             // anything, and every later attempt discards it anyway (see the
@@ -501,11 +545,13 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
 
             pushRegistered.value = false
             pushError.value = messageDEchec(err)
+
+            return 'echoue'
         } finally {
             isSubscribing.value = false
             etapeEnCours.value = null
         }
     }
 
-    return { pushSupported, isSubscribing, pushError, etapeEnCours, pushRegistered, enablePush }
+    return { pushSupported, isSubscribing, pushError, etapeEnCours, pushRegistered, appareilVerifie, enablePush }
 }

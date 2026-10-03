@@ -53,6 +53,18 @@ describe('InvitationDInstallation', () => {
         expect(wrapper.find('[dusk="installer-application"]').exists()).toBe(false)
     })
 
+    /** L'accueil ne montre qu'une invitation à la fois, et celle-ci passe d'abord. */
+    it('dit à l’accueil quand elle se montre et quand elle se retire', async () => {
+        const wrapper = monter()
+
+        inviter()
+        await wrapper.vm.$nextTick()
+        await wrapper.get('button[aria-label="Ne plus proposer l\'installation"]').trigger('click')
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.emitted('visibilite')).toEqual([[true], [false]])
+    })
+
     it('se retire quand on la refuse', async () => {
         const wrapper = monter()
 

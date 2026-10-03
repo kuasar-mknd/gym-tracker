@@ -14,8 +14,9 @@ import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDu
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, ref } from 'vue'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
+import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
 
 const ActiveGoalsChart = defineAsyncComponent(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
@@ -47,6 +48,12 @@ const form = useForm({})
 const startWorkout = () => {
     form.post(route('workouts.store'))
 }
+
+/**
+ * Une seule invitation à la fois : celle d'installation passe d'abord, celle
+ * des notifications attend une autre fin de séance (#1848).
+ */
+const installationProposee = ref(false)
 </script>
 
 <template>
@@ -58,7 +65,13 @@ const startWorkout = () => {
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
 
-            <InvitationDInstallation />
+            <InvitationDInstallation @visibilite="installationProposee = $event" />
+
+            <!-- La donnée flash d'une fin de séance : une visite, jamais rejouée par l'historique. -->
+            <InvitationAuxNotifications
+                v-if="$page.flash?.proposerLesNotifications === true"
+                :une-autre-invitation-passe-avant="installationProposee"
+            />
 
             <Deferred data="analyticalStats">
                 <template #fallback>

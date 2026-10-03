@@ -69,6 +69,10 @@ class WorkoutController extends Controller
     /**
      * Terminer une séance ramène au tableau de bord ; toute autre modification
      * reste sur place, puisqu'elle est faite depuis la séance elle-même.
+     *
+     * La fin de séance porte aussi, en donnée flash, l'invitation aux
+     * notifications : l'accueil la reçoit une fois, et une navigation arrière
+     * ne la rejoue pas, Inertia ne gardant pas le flash dans l'historique.
      */
     public function update(UpdateWorkoutRequest $request, Workout $workout, UpdateWorkoutAction $updateWorkout): \Illuminate\Http\RedirectResponse
     {
@@ -79,10 +83,38 @@ class WorkoutController extends Controller
         $updateWorkout->execute($workout, $data);
 
         if ($request->boolean('is_finished')) {
+            if ($this->doitProposerLesNotifications()) {
+                Inertia::flash('proposerLesNotifications', true);
+            }
+
             return redirect()->route('dashboard');
         }
 
         return back();
+    }
+
+    /**
+     * Faut-il proposer les notifications au retour sur l'accueil (#1848) ?
+     *
+     * Rien ne les proposait hors du profil. La fin d'une séance est le moment
+     * où elles ont un sens : un record à annoncer, plutôt qu'une demande à
+     * froid au premier écran.
+     *
+     * Le serveur ne répond que pour le COMPTE : aucun abonnement tenu, et les
+     * records pas coupés dans le profil — l'activation les ferait partir en
+     * push sans y toucher, donc n'enverrait rien. Ce que tient l'appareil
+     * (permission, abonnement, refus mémorisé), seul le navigateur le sait :
+     * `useInvitationAuxNotifications` le juge à son tour.
+     */
+    private function doitProposerLesNotifications(): bool
+    {
+        $user = $this->user();
+
+        return ! $user->pushSubscriptions()->exists()
+            && ! $user->notificationPreferences()
+                ->where('type', 'personal_record')
+                ->where('is_enabled', false)
+                ->exists();
     }
 
     public function destroy(Workout $workout): \Illuminate\Http\RedirectResponse
