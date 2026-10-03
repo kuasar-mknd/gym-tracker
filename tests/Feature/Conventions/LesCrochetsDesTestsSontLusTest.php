@@ -10,12 +10,14 @@ use Symfony\Component\Finder\Finder;
  * ne le dise (#1927).
  *
  * `DuskTestCase::prepare()` devait démarrer ChromeDriver et poser
- * APP_ENV=testing avant chaque classe de parcours. Elle ne tenait qu'à une
- * étiquette de docblock, que PHPUnit ne lit plus depuis sa version 12, et
- * rien d'autre ne l'appelait : elle n'a jamais tourné. tests/Pest.php liait
- * de son côté DatabaseTruncation au dossier tests/Browser, où `in()` ne
- * trouvait aucun fichier Pest — seulement des classes, que la liaison
- * n'atteint pas.
+ * APP_ENV=testing avant chaque classe de parcours. Elle ne tenait plus qu'à
+ * une étiquette de docblock, que PHPUnit ne lit plus depuis sa version 12, et
+ * rien d'autre ne l'appelait : elle ne tournait plus depuis mars 2026, quand
+ * son attribut `#[BeforeClass]` est devenu cette étiquette dans le commit
+ * même qui lui ajoutait APP_ENV=testing, pose qui n'a donc jamais eu lieu.
+ * tests/Pest.php liait de son côté DatabaseTruncation au dossier
+ * tests/Browser, où `in()` ne trouvait plus aucun fichier Pest depuis mars
+ * 2026 — seulement des classes, que la liaison n'atteint pas.
  *
  * Les deux défauts ont la même forme : un réglage qui se lit comme actif et
  * que l'outil ignore. Ces gardes refusent leur retour.
