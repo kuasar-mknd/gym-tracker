@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\Exercise;
 use App\Models\User;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Models\Role;
@@ -17,11 +16,12 @@ use Tests\Support\FilamentAdminPanel;
  * The list is read from the router at runtime, so a resource added tomorrow is covered by
  * the boundary tests below without touching this file.
  *
- * Two routes are deliberately left out:
- * - filament.admin.auth.login, the panel login page, public by design;
- * - pulse, which only shares the URL prefix: it is a Laravel Pulse route with its own
- *   middleware stack ('auth:admin,web' + the viewPulse gate, see config/pulse.php) and not
- *   a Filament panel route. It has its own test below.
+ * Seule la page de connexion du panneau, filament.admin.auth.login, publique par nature,
+ * est laissée de côté. Pulse et le lecteur de journaux ne sont pas des routes du panneau,
+ * mais vivent sous le même préfixe et portent son middleware d'authentification
+ * (config/pulse.php, config/log-viewer.php) : ils tiennent la même frontière. Pulse en
+ * était exclu, derrière 'auth:admin,web', qui renvoyait un invité vers la connexion de
+ * l'application et laissait un compte de l'application aller jusqu'à la porte.
  *
  * @return array<string, string>
  */
@@ -40,7 +40,7 @@ function backofficeGuardedRoutes(): array
             continue;
         }
 
-        if (in_array($route->getName(), ['filament.admin.auth.login', 'pulse'], true)) {
+        if ($route->getName() === 'filament.admin.auth.login') {
             continue;
         }
 

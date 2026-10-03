@@ -121,13 +121,16 @@ return [
     |
     */
 
-    // Les balises que Pulse écrit sans nonce sont signées à la compilation de
-    // ses gabarits (SigneLesScriptsEnLigneDesPaquets), jamais en réécrivant la
-    // réponse.
+    // Comme le lecteur de journaux : la porte du panneau (qui renvoie un invité
+    // vers sa connexion et fait de l'administrateur l'utilisateur que la porte
+    // viewPulse évalue), sa liste blanche d'adresses, puis la porte de Pulse.
+    // Pulse déclare cette liste persistante : Livewire la rejoue sur chaque
+    // mise à jour d'une carte. Les balises que Pulse écrit sans nonce sont
+    // signées à la compilation de ses gabarits (SigneLesScriptsEnLigneDesPaquets).
     'middleware' => [
         \Spatie\Csp\AddCspHeaders::class.':'.\App\Support\Csp\Policies\PulsePolicy::class,
         'web',
-        'auth:admin,web',
+        Filament\Http\Middleware\Authenticate::class,
         \App\Http\Middleware\IpWhitelist::class,
         Laravel\Pulse\Http\Middleware\Authorize::class,
     ],

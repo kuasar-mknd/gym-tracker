@@ -49,10 +49,6 @@ final class AppServiceProvider extends ServiceProvider
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
         $this->ouvrirLeLecteurDeJournaux();
 
-        if (config('app.env') === 'testing') {
-            Gate::define('viewPulse', fn ($user = null): bool => true);
-        }
-
         // Le nonce CSP n'est plus tiré ici mais à chaque requête, par
         // NonceCspParRequete : sous Octane, boot() ne tourne qu'une fois par
         // worker, et son nonce servait à tous les utilisateurs (#1904).
@@ -313,6 +309,12 @@ final class AppServiceProvider extends ServiceProvider
      * quatre capacités des exceptions suivent le même chemin : la ressource
      * s'ouvre au super administrateur sans passer par `shield:generate` en
      * production, et une permission Shield accordée à un autre rôle marche aussi.
+     *
+     * `viewPulse` aussi : Pulse pose sa propre porte, ouverte au seul
+     * environnement `local`, si bien que `/backoffice/pulse` répondait 403 en
+     * production et que son lien restait caché. La nôtre est définie après la
+     * sienne (Pulse la pose dès que le Gate est résolu, donc avant notre premier
+     * `Gate::define`) et la remplace, en local compris.
      */
     private function ouvrirLesOutilsAuSuperAdministrateur(): void
     {
@@ -334,6 +336,7 @@ final class AppServiceProvider extends ServiceProvider
             'View:TachePlanifiee',
             'view-logs',
             'view-outils',
+            'viewPulse',
         ];
 
         foreach ($capacites as $capacite) {
