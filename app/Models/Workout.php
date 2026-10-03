@@ -132,6 +132,31 @@ class Workout extends Model
     protected static function booted(): void
     {
         /*
+         * Le propriétaire d'une séance est fixé à sa création (#1933).
+         *
+         * `workout_lines.user_id` et `sets.user_id` le recopient, et leurs
+         * écrivains ne le relisent que quand la ligne change de séance, ou la
+         * série de ligne : c'est ce qui leur permet d'être seuls. Changer le
+         * propriétaire laissait lignes et séries à l'ancien compte, avec la
+         * série de jours et les records des deux comptes. Aucun chemin de
+         * l'application n'en a besoin ; celui que le panneau ouvrait est
+         * fermé, et ce refus tient pour ceux qui viendraient. Il ne voit ni
+         * `saveQuietly()` ni le constructeur de requêtes, qui sautent les
+         * événements.
+         */
+        static::updating(function (self $workout): void {
+            if (! $workout->isDirty('user_id')) {
+                return;
+            }
+
+            throw new \LogicException(sprintf(
+                'Le propriétaire de la séance %d ne change pas après sa création : ses lignes, ses séries, '
+                .'ses records et la série de jours des deux comptes resteraient à l’ancien (#1933).',
+                $workout->id,
+            ));
+        });
+
+        /*
          * La date recopiee sur les lignes suit celle de la seance.
          *
          * `started_at` est modifiable — `UpdateWorkoutRequest` l'accepte — et

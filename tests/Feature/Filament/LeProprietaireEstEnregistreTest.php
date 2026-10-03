@@ -9,7 +9,10 @@ use App\Filament\Resources\Goals\Pages\EditGoal;
 use App\Filament\Resources\Workouts\Pages\CreateWorkout;
 use App\Filament\Resources\Workouts\Pages\EditWorkout;
 use App\Models\Exercise;
+use App\Models\Set;
 use App\Models\User;
+use App\Models\Workout;
+use App\Models\WorkoutLine;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -115,6 +118,9 @@ it('enregistre le propriétaire choisi à la création d’une séance', functio
  * couvert que pour les exercices : la mesure de couverture donnait 33 % sur
  * `EditWorkout`, exactement les lignes ajoutees. Trois copies d'une meme regle
  * dont une seule est tenue, c'est deux qui derivent.
+ *
+ * La seance a cesse d'en etre une copie avec #1933 : son proprietaire est fixe
+ * a la creation, et son cas prouve desormais l'inverse.
  */
 it('enregistre le changement de propriétaire d’un objectif', function (): void {
     $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Goal')), 'admin');
@@ -131,17 +137,32 @@ it('enregistre le changement de propriétaire d’un objectif', function (): voi
     expect($goal->refresh()->user_id)->toBe($apres->getKey());
 });
 
-it('enregistre le changement de propriétaire d’une séance', function (): void {
+/*
+ * Changer le proprietaire d'une seance laissait ses lignes et ses series a
+ * l'ancien compte (#1933). Le champ est desactive a la modification, mais
+ * Livewire accepte toujours qu'on ecrive sa valeur : `set()` fait ici ce que
+ * ferait une requete forgee. Le reste du formulaire s'enregistre, le
+ * proprietaire ne bouge pas, ni sur la seance ni sur ses copies.
+ */
+it('ne change pas le propriétaire d’une séance, même par une requête forgée', function (): void {
     $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Workout')), 'admin');
 
     $avant = User::factory()->create();
     $apres = User::factory()->create();
-    $workout = \App\Models\Workout::factory()->create(['user_id' => $avant->getKey()]);
+    $workout = Workout::factory()->create(['user_id' => $avant->getKey(), 'name' => 'Avant']);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $workout->getKey()]);
+    $serie = Set::factory()->create(['workout_line_id' => $ligne->getKey()]);
 
     Livewire::test(EditWorkout::class, ['record' => $workout->getKey()])
-        ->fillForm(['user_id' => $apres->getKey()])
+        ->set('data.user_id', $apres->getKey())
+        ->set('data.name', 'Après')
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($workout->refresh()->user_id)->toBe($apres->getKey());
+    $workout->refresh();
+
+    expect($workout->name)->toBe('Après')
+        ->and($workout->user_id)->toBe($avant->getKey())
+        ->and($ligne->refresh()->user_id)->toBe($avant->getKey())
+        ->and($serie->refresh()->user_id)->toBe($avant->getKey());
 });

@@ -112,6 +112,24 @@ it("charge la séance existante dans le formulaire d'édition", function (): voi
         ]);
 });
 
+/*
+ * Le propriétaire se choisit à la création, puis se lit seulement (#1933).
+ *
+ * Désactivé plutôt que masqué : l'exploitant voit toujours à qui appartient la
+ * séance qu'il modifie. La page de création, elle, doit garder le choix.
+ */
+it('laisse choisir le propriétaire à la création et le fige à la modification', function (): void {
+    $owner = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $owner->getKey()]);
+
+    Livewire::test(CreateWorkout::class)
+        ->assertFormFieldEnabled('user_id');
+
+    Livewire::test(EditWorkout::class, ['record' => $workout->getKey()])
+        ->assertFormFieldDisabled('user_id')
+        ->assertFormSet(['user_id' => (string) $owner->id]);
+});
+
 it('interdit la gestion des séances à un admin sans les permissions Workout', function (): void {
     $workout = Workout::factory()->create();
 
