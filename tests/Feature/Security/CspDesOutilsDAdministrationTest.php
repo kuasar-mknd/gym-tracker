@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Admin;
+use Opcodes\LogViewer\Facades\LogViewer;
 use PHPUnit\Framework\Assert;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
@@ -104,7 +105,17 @@ it('signe chaque script en ligne des pages du panneau ouvertes à un administrat
         ->and(cspOutilsScriptsEnLigneSansNonce($reponse))->toBe([]);
 })->with(['/backoffice', '/backoffice/profile']);
 
+/**
+ * Comme en production, où l'image publie les fichiers du lecteur
+ * (`log-viewer:publish`, tenu par LeDemarrageNeDefaitPasSesCachesTest) : la
+ * page charge alors app.js par `src`. Sans eux, comme sur un poste ou en CI, le
+ * paquet recopie tout app.js dans un `<script>` en ligne, depuis son code et
+ * non depuis le gabarit, que rien ne signe.
+ */
 it('signe le script en ligne du lecteur de journaux du nonce de son en-tête', function (): void {
+    $this->withoutMix();
+    LogViewer::partialMock()->shouldReceive('assetsArePublished')->andReturn(true);
+
     $reponse = actingAs(cspOutilsSuperAdministrateur(), 'admin')->get('/backoffice/journaux')->assertOk()->baseResponse;
     $corps = (string) $reponse->getContent();
 
