@@ -119,6 +119,40 @@ class CustomPolicyTest extends TestCase
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $this->getDirectivesFromPolicy($policy)[$this->getDirectiveKey(Directive::SCRIPT)]);
     }
 
+    /**
+     * Horizon monte un composant Vue sans gabarit : Vue compile le contenu de
+     * `#horizon` avec new Function, et le tableau de bord restait vide en
+     * production (#1921). Son chemin, et lui seul, reçoit 'unsafe-eval'.
+     *
+     * @return array<string, array{0: string, 1: bool}>
+     */
+    public static function cheminsDeHorizon(): array
+    {
+        return [
+            'tableau de bord' => ['/horizon', true],
+            'page interne' => ['/horizon/jobs/failed', true],
+            'api' => ['/horizon/api/stats', true],
+            'voisin au même préfixe' => ['/horizons', false],
+            'application' => ['/workouts', false],
+            'connexion' => ['/login', false],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('cheminsDeHorizon')]
+    public function test_production_policy_allows_unsafe_eval_on_horizon_only(string $chemin, bool $attendu): void
+    {
+        Config::set('app.env', 'production');
+        Config::set('horizon.path', 'horizon');
+        $this->app['env'] = 'production';
+        $this->app->instance('request', Request::create($chemin));
+
+        $policy = new Policy();
+        new CustomPolicy()->configure($policy);
+        $script = $this->getDirectivesFromPolicy($policy)[$this->getDirectiveKey(Directive::SCRIPT)];
+
+        $this->assertSame($attendu, in_array($this->formatKeyword(Keyword::UNSAFE_EVAL), $script, true));
+    }
+
     public function test_custom_policy_has_correct_external_resources(): void
     {
         $policy = new Policy();

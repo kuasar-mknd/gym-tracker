@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Admin;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Auth\SessionGuard;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Inertia\Controller as InertiaController;
 use Inertia\Testing\AssertableInertia;
+use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
 
 use function Pest\Laravel\actingAs;
@@ -269,4 +271,30 @@ it('garde la séance en cours sous le budget', function (): void {
     $reponse->assertOk();
 
     expect(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+});
+
+/**
+ * Le panneau d'administration a sa propre pile, et porte depuis #1920 la CSP
+ * de l'application, un des plus longs en-têtes de la réponse. Sa connexion,
+ * qui pose les cookies de session et XSRF, et son tableau de bord tiennent
+ * sous le même budget que les pages de l'application.
+ */
+it('garde le panneau d’administration sous le budget, CSP comprise', function (): void {
+    $connexion = get(enTetesHoteDeProduction().'/backoffice/login');
+
+    $connexion->assertOk()->assertHeader('Content-Security-Policy');
+
+    expect($connexion->baseResponse->headers->getCookies())->not->toBeEmpty()
+        ->and(enTetesTailleDuBloc($connexion))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+
+    enTetesRemettreAZeroCommeOctane();
+
+    $administrateur = Admin::factory()->create();
+    $administrateur->assignRole(Role::findOrCreate('super_admin', 'admin'));
+
+    $tableauDeBord = actingAs($administrateur, 'admin')->get(enTetesHoteDeProduction().'/backoffice');
+
+    $tableauDeBord->assertOk()->assertHeader('Content-Security-Policy');
+
+    expect(enTetesTailleDuBloc($tableauDeBord))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 });

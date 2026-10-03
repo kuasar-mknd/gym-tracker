@@ -64,7 +64,7 @@ class CustomPolicy extends Basic
         // Alpine, que Filament embarque, compile ses expressions avec new Function :
         // il lui faut 'unsafe-eval'. L'application Vue n'en a pas besoin, donc le
         // mot-clef ne sort que sur le panneau.
-        if (request()->is(Filament::getPanel('admin')->getPath().'*')) {
+        if (request()->is(Filament::getPanel('admin')->getPath().'*') || $this->estUnePageDeHorizon()) {
             $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
         }
 
@@ -74,6 +74,20 @@ class CustomPolicy extends Basic
         // Filament injectant ses balises <style> à l'exécution.
         $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
         $policy->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE);
+    }
+
+    /**
+     * Horizon monte un composant Vue sans gabarit ni rendu : Vue compile alors
+     * le contenu de `#horizon` à l'exécution, avec new Function, et sans
+     * 'unsafe-eval' le tableau de bord restait vide en production (#1921).
+     * Pulse l'a déjà, par sa propre politique. Le chemin exact ou ses sous-pages,
+     * pas un voisin qui en partagerait le préfixe.
+     */
+    private function estUnePageDeHorizon(): bool
+    {
+        $chemin = trim(config()->string('horizon.path', 'horizon'), '/');
+
+        return $chemin !== '' && request()->is($chemin, $chemin.'/*');
     }
 
     protected function configureExternalResources(Policy $policy): void

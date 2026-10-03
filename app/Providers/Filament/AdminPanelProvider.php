@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\ConditionalCspHeaders;
+use App\Support\Csp\Nonce\SigneLesScriptsEnLigneDesPaquets;
 use BezhanSalleh\FilamentExceptions\FilamentExceptionsPlugin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
@@ -20,12 +22,23 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use ShuvroRoy\FilamentSpatieLaravelHealth\FilamentSpatieLaravelHealthPlugin;
 
 final class AdminPanelProvider extends PanelProvider
 {
+    /**
+     * Filament et le lecteur de journaux, qui vit sous le panneau, écrivent des
+     * scripts en ligne sans nonce, que la CSP bloquerait : ils sont signés à la
+     * compilation de leurs gabarits (#1920, #1922).
+     */
+    public function boot(): void
+    {
+        Blade::precompiler(new SigneLesScriptsEnLigneDesPaquets());
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $this->configurePanel($panel)
@@ -168,11 +181,18 @@ final class AdminPanelProvider extends PanelProvider
     }
 
     /**
+     * La pile du panneau ne passe pas par le groupe `web` : la CSP qu'il pose,
+     * `ConditionalCspHeaders`, y est donc reprise, sans quoi le panneau, la
+     * partie la plus sensible de l'application, répondait sans aucune CSP et le
+     * nonce de ses scripts ne protégeait rien (#1920). Le nonce est tiré plus
+     * haut, par `NonceCspParRequete`, en tête de la pile globale.
+     *
      * @return array<int, class-string>
      */
     private function getMiddleware(): array
     {
         return [
+            ConditionalCspHeaders::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
