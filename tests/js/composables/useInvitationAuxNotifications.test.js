@@ -83,6 +83,11 @@ const navigateur = ({
 
     globalThis.Notification = notification
     Object.defineProperty(window, 'Notification', { configurable: true, writable: true, value: notification })
+    Object.defineProperty(window, 'PushManager', {
+        configurable: true,
+        writable: true,
+        value: function PushManager() {},
+    })
 
     return { pushManager, notification }
 }
@@ -91,6 +96,7 @@ const navigateur = ({
 const navigateurSansPush = () => {
     delete window.Notification
     delete globalThis.Notification
+    delete window.PushManager
     Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: undefined })
     delete navigator.serviceWorker
 }
@@ -175,6 +181,15 @@ describe('quand l’invitation se propose', () => {
         navigateurSansPush()
 
         expect((await monterEtVerifier()).visible.value).toBe(false)
+    })
+
+    it('se tait quand le navigateur sait les notifications mais pas le push', async () => {
+        const { pushManager } = navigateur()
+        delete window.PushManager
+
+        // Safari sur macOS avant la 16 : l'activation échouerait à coup sûr.
+        expect((await monterEtVerifier()).visible.value).toBe(false)
+        expect(pushManager.getSubscription).not.toHaveBeenCalled()
     })
 
     it('se tait quand le serveur n’a pas de clé VAPID', async () => {

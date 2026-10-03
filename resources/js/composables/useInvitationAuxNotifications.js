@@ -62,13 +62,17 @@ const memoriserLeRefus = () => {
  */
 export const useInvitationAuxNotifications = ({ vapidPublicKey, utilisateurId, uneAutreInvitationPasseAvant }) => {
     /*
-     * Ce qui se sait sans attendre le navigateur. Une permission déjà refusée
-     * ne peut plus être redemandée par la page : elle vaut refus définitif. Un
-     * appareil donné à un autre compte ne change de mains que par l'activation
-     * du profil (.ai/rules/js.md) : la carte n'y invite pas d'un seul appui.
+     * Ce qui se sait sans attendre le navigateur. `PushManager` en plus de ce
+     * que le profil vérifie : Safari sur macOS avant la 16 expose
+     * `Notification` et le worker sans le push, et la carte promettrait alors
+     * une activation vouée à l'échec. Une permission déjà refusée ne peut plus
+     * être redemandée par la page : elle vaut refus définitif. Un appareil
+     * donné à un autre compte ne change de mains que par l'activation du
+     * profil (.ai/rules/js.md) : la carte n'y invite pas d'un seul appui.
      */
     const proposable =
         pushPrisEnCharge() &&
+        'PushManager' in window &&
         Boolean(vapidPublicKey) &&
         window.Notification.permission !== 'denied' &&
         !aDejaRefuse() &&
