@@ -50,7 +50,8 @@ final class SanteServiceProvider extends ServiceProvider
             HorizonCheck::new(),
             VersionsDesConteneursCheck::new(),
             UsedDiskSpaceCheck::new()->warnWhenUsedSpaceIsAbovePercentage(70)->failWhenUsedSpaceIsAbovePercentage(90),
-            DossierDesSauvegardesCheck::new(),
+            // Le délai du script de démarrage : au-delà, le partage est tenu pour endormi.
+            DossierDesSauvegardesCheck::new()->delai(DossierDesSauvegardesCheck::DELAI_EN_SECONDES),
             // La sauvegarde nocturne tombe à 02 h 30 : vingt-six heures laissent une
             // nuit de marge. La date est prise au démarrage du processus, ce qui
             // convient à `health:check`, lancé à neuf par le planificateur. Par
