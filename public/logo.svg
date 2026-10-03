@@ -1,6 +1,13 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="100" fill="#0f172a"/>
-  <path d="M128 256C128 185.308 185.308 128 256 128C326.692 128 384 185.308 384 256C384 326.692 326.692 384 256 384C185.308 384 128 326.692 128 256Z" stroke="#38bdf8" stroke-width="24"/>
-  <path d="M256 160V352M160 256H352" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
-  <path d="M210 210L302 302M302 210L210 302" stroke="#38bdf8" stroke-width="12" stroke-linecap="round"/>
+  <!--
+    Les couleurs sont le couple de l'utilitaire accent-fill de resources/css/app.css :
+    le fond est le jeton color-accent-primary-fill, les tracés le jeton
+    color-text-on-dark-accent. Un SVG ne lit pas les variables CSS, d'où les
+    valeurs en clair ; tests/Feature/IconesDeLApplicationTest.php les compare à la
+    charte. Les PNG de public/ en sont tirés par pwa-assets.config.js.
+  -->
+  <rect width="512" height="512" rx="100" fill="#ce4400"/>
+  <path d="M128 256C128 185.308 185.308 128 256 128C326.692 128 384 185.308 384 256C384 326.692 326.692 384 256 384C185.308 384 128 326.692 128 256Z" stroke="#ffffff" stroke-width="24"/>
+  <path d="M256 160V352M160 256H352" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
+  <path d="M210 210L302 302M302 210L210 302" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
 </svg>

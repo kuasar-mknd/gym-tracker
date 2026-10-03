@@ -52,7 +52,7 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
                 ['title' => 'Voir mes stats', 'action' => url('/stats')],
             ],
             'body' => "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg.",
-            'icon' => '/logo.svg',
+            'icon' => '/pwa-192x192.png',
             'data' => ['url' => '/stats'],
         ]);
     });
@@ -111,7 +111,7 @@ describe('AchievementUnlocked::toWebPush', function (): void {
                 ['title' => 'Voir mes succès', 'action' => url('/achievements')],
             ],
             'body' => 'Félicitations ! Tu as déverrouillé le succès : Marathonien du Fer.',
-            'icon' => '/logo.svg',
+            'icon' => '/pwa-192x192.png',
             'data' => ['url' => '/achievements'],
         ]);
     });
@@ -139,7 +139,7 @@ describe('TrainingReminder::toWebPush', function (): void {
                 ['title' => 'Ouvrir Gym Tracker', 'action' => url('/')],
             ],
             'body' => "C'est le moment de s'entraîner ! 💪",
-            'icon' => '/logo.svg',
+            'icon' => '/pwa-192x192.png',
             'data' => ['url' => '/'],
         ]);
     });
@@ -250,7 +250,7 @@ describe('end-to-end delivery through the real WebPushChannel', function (): voi
                 ['title' => 'Voir mes stats', 'action' => url('/stats')],
             ],
             'body' => "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg.",
-            'icon' => '/logo.svg',
+            'icon' => '/pwa-192x192.png',
             'data' => ['url' => '/stats'],
         ]);
     });

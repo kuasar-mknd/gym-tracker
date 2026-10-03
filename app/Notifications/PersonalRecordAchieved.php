@@ -41,7 +41,7 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     {
         return new WebPushMessage()
             ->title('Nouveau Record ! 🏆')
-            ->icon('/logo.svg')
+            ->icon('/pwa-192x192.png')
             /** @phpstan-ignore-next-line */
             ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
             ->action('Voir mes stats', url('/stats'))
