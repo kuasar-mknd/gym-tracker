@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\PersonalRecordType;
 use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
@@ -126,25 +127,6 @@ final class PersonalRecordService
     }
 
     /**
-     * Reconstruit les records d'un exercice à partir des séries qui existent
-     * vraiment.
-     *
-     * `update()` ne fait que monter un record, et rien ne l'abaissait jamais.
-     * Un seul poids mal saisi — 500 pour 50 — devenait le record de l'exercice
-     * pour de bon : corriger la série n'y changeait rien, la supprimer non plus,
-     * et le chiffre restait affiché sur le profil.
-     *
-     * Appelé seulement quand la série derrière un record change ou disparaît :
-     * le coût est payé sur l'événement rare, pas à chaque enregistrement.
-     *
-     * @param  list<string>|null  $types  Limite la reconstruction à ces records.
-     *                                    Null les prend tous, ce qui est juste quand une série a disparu et
-     *                                    que plus rien ne dit quels records elle détenait.
-     */
-    /** @var list<string> */
-    private const array TYPES = ['max_weight', 'max_1rm', 'max_volume_set'];
-
-    /**
      * Une seule passe sur les series, trois classements.
      *
      * Trois requetes `ORDER BY … LIMIT 1` seraient trois balayages : aucun index
@@ -178,6 +160,13 @@ final class PersonalRecordService
      * Un seul poids mal saisi — 500 pour 50 — devenait le record de l'exercice
      * pour de bon : corriger la série n'y changeait rien, la supprimer non plus,
      * et le chiffre restait affiché sur le profil.
+     *
+     * Appelé seulement quand la série derrière un record change ou disparaît :
+     * le coût est payé sur l'événement rare, pas à chaque enregistrement.
+     *
+     * Seuls les types suivis (`PersonalRecordType::SUIVIS`) sont reconstruits ;
+     * une ligne d'un type hérité n'est ni recalculée ni supprimée, c'est le
+     * contrôle de cohérence qui la signale.
      *
      * @param  list<string>|null  $types  Limite la reconstruction à ces records.
      *                                    Null les prend tous, ce qui est juste quand une série a disparu et
@@ -225,7 +214,7 @@ final class PersonalRecordService
             $records[$type] = $existant;
         }
 
-        foreach (self::TYPES as $type) {
+        foreach (PersonalRecordType::SUIVIS as $type) {
             if ($types !== null && ! in_array($type, $types, true)) {
                 continue;
             }
@@ -282,7 +271,7 @@ final class PersonalRecordService
 
             $champs = get_object_vars($workoutLine);
 
-            foreach (self::TYPES as $type) {
+            foreach (PersonalRecordType::SUIVIS as $type) {
                 if (self::entier($champs['rang_'.$type] ?? null) !== 1) {
                     continue;
                 }
