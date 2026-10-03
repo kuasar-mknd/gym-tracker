@@ -78,27 +78,35 @@ final class TempsDuServeurServiceProvider extends ServiceProvider
         }
 
         $evenements->listen(QueryExecuted::class, static function (QueryExecuted $requete): void {
-            self::mesure()->compterUneRequeteSql($requete->time);
+            self::mesure()?->compterUneRequeteSql($requete->time);
         });
 
         $evenements->listen(RouteMatched::class, static function (): void {
-            self::mesure()->noterLaRouteTrouvee();
+            self::mesure()?->noterLaRouteTrouvee();
         });
 
         $evenements->listen(PreparingResponse::class, static function (): void {
-            self::mesure()->noterLaReponseDuControleur();
+            self::mesure()?->noterLaReponseDuControleur();
         });
 
         $evenements->listen(self::EVENEMENTS_D_AUTHENTIFICATION, static function (): void {
-            self::mesure()->noterUneAuthentification();
+            self::mesure()?->noterUneAuthentification();
         });
     }
 
     /**
-     * La mesure de la requête en cours, dans le conteneur courant.
+     * La mesure de la requête en cours, si le middleware en a ouvert une dans
+     * le conteneur courant ; jamais une mesure neuve. Hors d'une requête — une
+     * tâche de file, une commande, une requête SQL du worker sur l'application
+     * de base —, la créer ici la laisserait dans cette application, d'où
+     * Octane la recopierait dans chaque requête suivante.
      */
-    private static function mesure(): MesureDuTempsServeur
+    private static function mesure(): ?MesureDuTempsServeur
     {
-        return Container::getInstance()->make(MesureDuTempsServeur::class);
+        $conteneur = Container::getInstance();
+
+        return $conteneur->resolved(MesureDuTempsServeur::class)
+            ? $conteneur->make(MesureDuTempsServeur::class)
+            : null;
     }
 }

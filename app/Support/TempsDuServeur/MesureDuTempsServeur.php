@@ -15,9 +15,11 @@ namespace App\Support\TempsDuServeur;
  * Liée en `scoped` : Octane l'oublie à la fin de chaque requête, une file à la
  * fin de chaque tâche, et rien ici n'est statique. `demarrer()` remet de plus
  * tout à zéro, pour un processus long qui servirait plusieurs requêtes sans
- * rien oublier — la suite de tests en est un. Avant d'être démarrée, elle ne
- * compte aucune requête SQL : un worker de file ou le planificateur, qui
- * reçoivent la même variable, n'y accumulent rien.
+ * rien oublier — la suite de tests en est un. Les écouteurs ne la créent
+ * jamais : seul le middleware l'ouvre, et une requête SQL faite ailleurs — un
+ * worker de file ou le planificateur, qui reçoivent la même variable — ne
+ * touche à rien. Avant d'être démarrée, elle ne compte d'ailleurs aucune
+ * requête SQL.
  *
  * Les instants viennent de `hrtime()`, monotone : une horloge murale corrigée
  * pendant la requête fausserait la mesure.

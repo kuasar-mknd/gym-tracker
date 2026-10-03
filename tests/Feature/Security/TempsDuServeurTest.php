@@ -202,6 +202,20 @@ it('mesure la page d’un utilisateur connecté : application, étapes et requê
         ->and($durees['sql'])->toBeLessThanOrEqual($durees['app']);
 });
 
+/**
+ * Une requête SQL hors de toute requête HTTP — une tâche de file, une commande,
+ * le démarrage d'un worker Octane — ne doit pas créer de mesure : créée dans
+ * l'application de base d'Octane, elle passerait à chaque clone, donc à toutes
+ * les requêtes suivantes.
+ */
+it('ne crée aucune mesure pour une requête SQL faite hors d’une requête HTTP', function (): void {
+    tempsServeurAllumer();
+
+    DB::select('select 1');
+
+    expect(app()->resolved(MesureDuTempsServeur::class))->toBeFalse();
+});
+
 it('compte les requêtes SQL de chaque requête, et d’elle seule', function (): void {
     tempsServeurAllumer();
     tempsServeurRouteDeMesure(app('router'));
@@ -342,8 +356,10 @@ it('ouvre la pile globale pour mesurer tout ce qui suit', function (): void {
  * variable allumée, puis trois requêtes clonées depuis lui. Chacune annonce ses
  * requêtes et aucune de celles d'avant ; la troisième, sans utilisateur, ne
  * porte rien de la connexion des deux premières. L'application de base, d'où
- * chaque requête est clonée, ne tient jamais de mesure : l'écouteur posé au
- * démarrage cherche celle de la requête en cours, et il n'est posé qu'une fois.
+ * chaque requête est clonée, ne tient jamais de mesure, même quand le worker y
+ * fait une requête SQL hors de toute requête HTTP : l'écouteur posé au
+ * démarrage ne note que dans la mesure de la requête en cours, et il n'est
+ * posé qu'une fois.
  */
 it('ne garde rien d’une requête à l’autre dans un vrai cycle de worker Octane, ni n’empile d’écouteur', function (): void {
     $applicationDuTest = app();
@@ -360,6 +376,9 @@ it('ne garde rien d’une requête à l’autre dans un vrai cycle de worker Oct
         $base = $worker->application();
         tempsServeurRouteDeMesure($base->make('router'));
         $ecouteursAuDemarrage = tempsServeurEcouteursSql($base->make('events'));
+
+        // Une requête SQL du worker entre deux requêtes, sur l'application de base.
+        $base->make('db')->select('select 1');
 
         $worker->run();
 
