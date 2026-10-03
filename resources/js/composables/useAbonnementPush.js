@@ -30,7 +30,7 @@ const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker' in na
  * compte qui l'enregistre, en retirant la ligne de l'autre. Sur un téléphone
  * partagé, transmettre pour celui qui vient de se connecter enverrait SES
  * notifications, records et rappels compris, sur l'écran verrouillé du
- * propriétaire, même après sa déconnexion, qui ne retire rien ; et le
+ * propriétaire, tant qu'il ne se déconnecte pas par `detacherLAppareil` ; et le
  * propriétaire cesserait de recevoir sans le savoir. Un seul mémo par appareil
  * dit donc à qui l'appareil a été donné : l'abonnement reste à ce compte, et
  * seule l'activation, un geste fait sur l'appareil, le fait changer de mains.
@@ -78,8 +78,12 @@ const noterLaTransmission = (utilisateur, endpoint) => {
     ecrireLeMemo({ utilisateur, endpoint })
 }
 
-const oublierSurLeServeur = (endpoint) =>
-    http.post(route('push-subscriptions.destroy'), { endpoint }, { timeout: DELAI_ETAPE_MS })
+/**
+ * @param {string} endpoint
+ * @param {{signal?: AbortSignal}} options `signal` abandonne la requête.
+ */
+const oublierSurLeServeur = (endpoint, { signal } = {}) =>
+    http.post(route('push-subscriptions.destroy'), { endpoint }, { timeout: DELAI_ETAPE_MS, signal })
 
 /**
  * @param {string} utilisateur
@@ -182,6 +186,107 @@ export const rapprocherLAbonnementPush = (utilisateurId, { serveurSansAbonnement
     rapprochementsDuChargement.set(utilisateur, suivant)
 
     return suivant
+}
+
+/**
+ * Ce que la déconnexion accorde au détachement de l'appareil, au plus.
+ *
+ * Lire l'abonnement ne coûte que quelques millisecondes ; l'oubli côté serveur
+ * est une écriture, de 350 ms à 1,7 s sur le disque de production. Passé ce
+ * délai, la déconnexion part : l'oubli en cours est abandonné, et le
+ * désabonnement, qui suffit seul à faire taire l'appareil, se fait après coup.
+ */
+export const DELAI_DE_DETACHEMENT_MS = 600
+
+/**
+ * @param {AbortSignal} signal Levé quand la déconnexion part sans attendre.
+ * @param {boolean} prevenirLeServeur
+ */
+const detacher = async (signal, prevenirLeServeur) => {
+    // Un rapprochement encore en vol écrirait son mémo APRÈS l'effacement.
+    await Promise.allSettled(rapprochementsDuChargement.values())
+
+    let abonnement = null
+
+    try {
+        const registration = await navigator.serviceWorker.getRegistration()
+        abonnement = (await registration?.pushManager.getSubscription()) ?? null
+    } catch {
+        // Worker introuvable : il n'y a rien à détacher que l'on puisse voir.
+    }
+
+    if (abonnement !== null) {
+        /*
+         * La session est close ou sur le point de l'être quand le délai est
+         * passé : une écriture partie maintenant croiserait la déconnexion, et
+         * sa réponse pourrait rendre au navigateur le cookie de la session
+         * close.
+         */
+        if (prevenirLeServeur && !signal.aborted) {
+            try {
+                await oublierSurLeServeur(abonnement.endpoint, { signal })
+            } catch {
+                // Le désabonnement qui suit suffit : le service push répondra
+                // 410 au prochain envoi, et le canal retirera la ligne.
+            }
+        }
+
+        try {
+            await abonnement.unsubscribe()
+        } catch {
+            // Le serveur a oublié l'adresse : il n'y enverra plus rien.
+        }
+
+        ecrireLeMemo(null)
+    }
+
+    // Ce que ce chargement a transmis ne vaut plus pour le compte qui part.
+    rapprochementsDuChargement.clear()
+    transmisPendantLeChargement.clear()
+}
+
+/**
+ * Détache cet appareil du compte qui se déconnecte (#1926).
+ *
+ * Le serveur ne retire aucun abonnement à la déconnexion : il ne sait pas quel
+ * appareil se déconnecte. Sans ce détachement, l'appareil continuait de
+ * recevoir les records, les rappels et les succès du compte parti, sur l'écran
+ * verrouillé ; sur un appareil partagé, la personne suivante les voyait.
+ *
+ * Trois étapes, dans cet ordre : le serveur oublie l'adresse de CET appareil
+ * (il n'oublie que les lignes du compte connecté), le navigateur se désabonne,
+ * et le mémo est effacé. Le compte suivant devra donc activer lui-même les
+ * notifications, depuis son profil. Le désabonnement a lieu même quand le
+ * mémo nomme un autre compte : après une déconnexion, l'appareil ne sert plus
+ * personne.
+ *
+ * Rien de tout cela ne doit retenir la déconnexion : chaque étape avale son
+ * échec, la promesse se règle au plus tard après `DELAI_DE_DETACHEMENT_MS`, et
+ * un navigateur sans push ou sans abonnement n'appelle rien.
+ *
+ * @param {{prevenirLeServeur?: boolean}} options `false` quand la session
+ *   n'existe déjà plus, après la suppression du compte : l'oubli répondrait 401.
+ * @returns {Promise<void>} Ne rejette jamais.
+ */
+export const detacherLAppareil = ({ prevenirLeServeur = true } = {}) => {
+    if (!pushPrisEnCharge()) {
+        return Promise.resolve()
+    }
+
+    const arret = new AbortController()
+    let minuteur
+
+    const echeance = new Promise((resolve) => {
+        minuteur = setTimeout(resolve, DELAI_DE_DETACHEMENT_MS)
+    })
+
+    const detachement = detacher(arret.signal, prevenirLeServeur).catch(() => {})
+
+    return Promise.race([detachement, echeance]).finally(() => {
+        clearTimeout(minuteur)
+        // Sans effet sur un détachement fini ; sinon, abandonne l'oubli en vol.
+        arret.abort()
+    })
 }
 
 /**

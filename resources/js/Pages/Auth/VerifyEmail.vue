@@ -1,8 +1,9 @@
 <script setup>
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
-import { Head, Link, useForm } from '@inertiajs/vue3'
+import { Head, useForm } from '@inertiajs/vue3'
 import { computed } from 'vue'
+import { seDeconnecter } from '@/composables/useDeconnexion'
 
 const props = defineProps({
     status: String,
@@ -38,9 +39,10 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
                 Renvoyer l'email
             </GlassButton>
 
-            <Link :href="route('logout')" method="post" as="button" class="glass-button w-full justify-center">
+            <!-- Détache l'appareil du compte avant de partir (#1926) ; ne soumet pas le renvoi. -->
+            <GlassButton type="button" class="w-full justify-center" @click="seDeconnecter">
                 Se déconnecter
-            </Link>
+            </GlassButton>
         </form>
     </GuestLayout>
 </template>

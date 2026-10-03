@@ -5,6 +5,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import Modal from '@/Components/UI/Modal.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import { detacherLAppareil } from '@/composables/useAbonnementPush'
 
 const confirmingUserDeletion = ref(false)
 const passwordInput = ref(null)
@@ -17,10 +18,19 @@ const confirmUserDeletion = () => {
     confirmingUserDeletion.value = true
 }
 
+/**
+ * Le serveur déconnecte le compte en le supprimant. L'appareil s'en détache
+ * ensuite, comme à toute déconnexion (#1926), mais sans prévenir le serveur :
+ * la session n'existe déjà plus. Rien avant la réponse, pour qu'un mot de passe
+ * refusé ne coûte pas l'abonnement d'un compte qui reste.
+ */
 const deleteUser = () => {
     form.delete(route('profile.destroy'), {
         preserveScroll: true,
-        onSuccess: () => closeModal(),
+        onSuccess: () => {
+            closeModal()
+            detacherLAppareil({ prevenirLeServeur: false })
+        },
         onError: () => passwordInput.value?.focus(),
         onFinish: () => form.reset(),
     })
