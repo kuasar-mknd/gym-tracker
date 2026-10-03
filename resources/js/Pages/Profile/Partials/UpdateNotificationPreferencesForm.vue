@@ -19,7 +19,8 @@ const props = defineProps({
     },
 })
 
-const vapidPublicKey = usePage().props.vapidPublicKey
+const page = usePage()
+const vapidPublicKey = page.props.vapidPublicKey
 
 const form = reactive({
     preferences: {
@@ -73,6 +74,7 @@ onUnmounted(() => clearTimeout(minuteurDeSucces))
 const { pushSupported, isSubscribing, pushError, etapeEnCours, pushRegistered, enablePush } = useAbonnementPush({
     vapidPublicKey,
     dejaAbonne: props.hasPushSubscription,
+    utilisateurId: page.props.auth?.user?.id,
     apresAbonnement: () => {
         // Les envois push s'activent avec l'abonnement, et partent tout de suite.
         form.push_preferences.personal_record = true

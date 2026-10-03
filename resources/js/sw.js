@@ -1,6 +1,7 @@
 import { clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
+import { renouvelerLAbonnement } from '@/sw/renouvellementDAbonnement'
 
 /**
  * vite.config.js asks for registerType: 'autoUpdate'. With the generateSW
@@ -88,6 +89,21 @@ self.addEventListener('push', (event) => {
             actions: charge.actions || [],
         }),
     )
+})
+
+/**
+ * Un abonnement que le navigateur remplace ou retire se répare sans attendre
+ * que l'utilisateur repasse par son profil (#1847).
+ *
+ * Le worker prévient lui-même le serveur, SANS jeton CSRF : il n'a pas de
+ * document où le lire, et c'est l'en-tête `Sec-Fetch-Site: same-origin`, posé
+ * par le navigateur, que PreventRequestForgery accepte à sa place — la même
+ * vérification que pour toutes les routes web, pas une exemption. Le détail,
+ * et ce qui reste au rapprochement fait à l'ouverture de l'application (iOS
+ * n'émet pas cet évènement selon MDN), vivent dans le module.
+ */
+self.addEventListener('pushsubscriptionchange', (event) => {
+    event.waitUntil(renouvelerLAbonnement(event, { pushManager: self.registration.pushManager }))
 })
 
 /**

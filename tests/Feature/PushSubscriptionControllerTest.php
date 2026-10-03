@@ -140,4 +140,53 @@ describe('PushSubscriptionController', function (): void {
             $response->assertUnauthorized();
         });
     });
+
+    /*
+     * Le service worker renvoie lui-même un abonnement que le navigateur a
+     * remplacé (#1847). Il n'a pas Ziggy : ses deux adresses sont écrites en
+     * dur dans resources/js/sw/renouvellementDAbonnement.js, et rien d'autre
+     * ne les relie aux routes. Une route renommée laisserait le worker poster
+     * dans le vide, sans une erreur visible nulle part.
+     */
+    describe('le renouvellement depuis le service worker', function (): void {
+        it('poste aux adresses que le serveur expose', function (string $constante, string $nomDeRoute): void {
+            $source = (string) file_get_contents(resource_path('js/sw/renouvellementDAbonnement.js'));
+
+            expect(preg_match("/export const {$constante} = '([^']+)'/", $source, $correspondance))
+                ->toBe(1, "`{$constante}` est introuvable dans le module du worker : si sa forme a changé, ce contrôle doit suivre.");
+
+            expect($correspondance[1])->toBe(route($nomDeRoute, absolute: false));
+        })->with([
+            'enregistrement' => ['URL_D_ENREGISTREMENT', 'push-subscriptions.update'],
+            'oubli' => ['URL_D_OUBLI', 'push-subscriptions.destroy'],
+        ]);
+
+        it('accepte l’abonnement tel que toJSON() le rend', function (): void {
+            $utilisateur = User::factory()->create();
+
+            // `expirationTime` en plus des clefs : le worker envoie l'objet du
+            // navigateur sans le retailler.
+            $this->actingAs($utilisateur)
+                ->postJson(route('push-subscriptions.update'), [
+                    'endpoint' => 'https://fcm.googleapis.com/fcm/send/renouvele',
+                    'expirationTime' => null,
+                    'keys' => ['p256dh' => 'cle-p256dh', 'auth' => 'jeton-auth'],
+                ])
+                ->assertOk();
+
+            $this->assertDatabaseHas('push_subscriptions', [
+                'subscribable_id' => $utilisateur->id,
+                'endpoint' => 'https://fcm.googleapis.com/fcm/send/renouvele',
+            ]);
+        });
+
+        it('répond 401 en JSON à un worker dont la session a expiré', function (): void {
+            // Une redirection vers la page de connexion serait suivie par
+            // `fetch` et finirait en 200 : le worker croirait avoir réussi.
+            $this->withHeader('Sec-Fetch-Site', 'same-origin')
+                ->postJson(route('push-subscriptions.destroy'), ['endpoint' => 'https://fcm.googleapis.com/fcm/send/ancien'])
+                ->assertUnauthorized()
+                ->assertHeader('Content-Type', 'application/json');
+        });
+    });
 });

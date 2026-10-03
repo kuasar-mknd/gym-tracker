@@ -2,6 +2,189 @@ import { onMounted, ref } from 'vue'
 import { http } from '@/Utils/http'
 
 /**
+ * Ni serviceWorker.ready ni pushManager.subscribe() ne promettent de se
+ * régler ; passé ce délai on abandonne l'étape et on le dit.
+ */
+const DELAI_ETAPE_MS = 20_000
+
+const avecDelai = (promesse) => {
+    let minuteur
+
+    const expiration = new Promise((_, reject) => {
+        minuteur = setTimeout(() => reject(new Error('le navigateur n’a pas répondu en 20 s')), DELAI_ETAPE_MS)
+    })
+
+    return Promise.race([promesse, expiration]).finally(() => clearTimeout(minuteur))
+}
+
+const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker' in navigator
+
+/**
+ * Le dernier abonnement que CET appareil a transmis, et pour quel compte.
+ *
+ * Il dit au rapprochement s'il y a quelque chose à écrire : chaque écriture
+ * coûte de 350 ms à 1,7 s sur le disque de production, et l'application
+ * s'ouvre souvent.
+ *
+ * Il nomme le compte parce que le serveur réattribue une adresse au dernier
+ * compte qui l'enregistre, en retirant la ligne de l'autre. Sur un téléphone
+ * partagé, transmettre pour celui qui vient de se connecter enverrait SES
+ * notifications, records et rappels compris, sur l'écran verrouillé du
+ * propriétaire, même après sa déconnexion, qui ne retire rien ; et le
+ * propriétaire cesserait de recevoir sans le savoir. Un seul mémo par appareil
+ * dit donc à qui l'appareil a été donné : l'abonnement reste à ce compte, et
+ * seule l'activation, un geste fait sur l'appareil, le fait changer de mains.
+ *
+ * Le stockage peut être bloqué (navigation privée) ou illisible : on transmet
+ * alors à chaque ouverture, une écriture de trop plutôt qu'un abonnement perdu.
+ */
+const CLEF_DU_MEMO = 'gym-tracker:abonnement-push-transmis'
+
+/** @returns {{utilisateur: string, endpoint: string}|null} */
+const lireLeMemo = () => {
+    try {
+        const memo = JSON.parse(window.localStorage.getItem(CLEF_DU_MEMO) ?? 'null')
+
+        return typeof memo?.utilisateur === 'string' && typeof memo.endpoint === 'string' ? memo : null
+    } catch {
+        return null
+    }
+}
+
+/** @param {{utilisateur: string, endpoint: string}|null} memo */
+const ecrireLeMemo = (memo) => {
+    try {
+        if (memo === null) {
+            window.localStorage.removeItem(CLEF_DU_MEMO)
+        } else {
+            window.localStorage.setItem(CLEF_DU_MEMO, JSON.stringify(memo))
+        }
+    } catch {
+        // Stockage bloqué : l'ouverture suivante transmettra de nouveau, sans plus.
+    }
+}
+
+/**
+ * Ce que le chargement en cours a déjà fait, pour qu'un même chargement
+ * n'écrive pas deux fois : le layout se remonte à chaque page, et sur le profil
+ * le formulaire rapproche aussi, avant même le layout qui l'entoure.
+ */
+const rapprochementsDuChargement = new Map()
+const transmisPendantLeChargement = new Set()
+
+/** Note qu'un abonnement a atteint le serveur pour ce compte. */
+const noterLaTransmission = (utilisateur, endpoint) => {
+    transmisPendantLeChargement.add(`${utilisateur} ${endpoint}`)
+    ecrireLeMemo({ utilisateur, endpoint })
+}
+
+const oublierSurLeServeur = (endpoint) =>
+    http.post(route('push-subscriptions.destroy'), { endpoint }, { timeout: DELAI_ETAPE_MS })
+
+/**
+ * @param {string} utilisateur
+ * @param {boolean} serveurSansAbonnement
+ * @returns {Promise<boolean>} Vrai quand le serveur tient l'abonnement de ce
+ *   navigateur pour ce compte.
+ */
+const rapprocher = async (utilisateur, serveurSansAbonnement) => {
+    const registration = await avecDelai(navigator.serviceWorker.ready)
+    const abonnement = await avecDelai(registration.pushManager.getSubscription())
+    const memo = lireLeMemo()
+
+    // Transmis depuis cet appareil pour un autre compte : il reste à ce compte.
+    if (memo !== null && memo.utilisateur !== utilisateur) {
+        return false
+    }
+
+    const dejaTransmis = memo?.endpoint ?? null
+
+    if (!abonnement) {
+        // Révoqué par WebKit, permission retirée : le serveur écrirait à chaque
+        // notification vers une adresse que plus personne ne lit.
+        if (dejaTransmis !== null) {
+            await oublierSurLeServeur(dejaTransmis)
+            ecrireLeMemo(null)
+        }
+
+        return false
+    }
+
+    /*
+     * Quand le serveur dit n'avoir AUCUN abonnement pour ce compte, le mémo est
+     * démenti (base restaurée, ligne supprimée) : seule une transmission faite
+     * pendant ce chargement-ci dispense alors d'écrire.
+     */
+    const aJour = serveurSansAbonnement
+        ? transmisPendantLeChargement.has(`${utilisateur} ${abonnement.endpoint}`)
+        : dejaTransmis === abonnement.endpoint
+
+    if (aJour) {
+        return true
+    }
+
+    await http.post(route('push-subscriptions.update'), abonnement, { timeout: DELAI_ETAPE_MS })
+    noterLaTransmission(utilisateur, abonnement.endpoint)
+
+    // L'adresse que cet appareil avait transmise est morte, puisque le
+    // navigateur en tient une autre. Son oubli n'est qu'un ménage.
+    if (dejaTransmis !== null && dejaTransmis !== abonnement.endpoint) {
+        await oublierSurLeServeur(dejaTransmis).catch(() => {})
+    }
+
+    return true
+}
+
+/**
+ * Rapproche l'abonnement que tient le navigateur de celui que le serveur
+ * connaît, à l'ouverture de l'application, sur n'importe quelle page (#1847).
+ *
+ * Le worker répare de lui-même un abonnement remplacé, quand le navigateur le
+ * lui dit. iOS ne le dit pas, selon MDN ; une session expirée ou un proxy peut
+ * aussi faire échouer son envoi. Le profil était alors le seul endroit où
+ * l'abonnement rejoignait le serveur, et seulement quand le COMPTE n'en avait
+ * aucun : un abonnement remplacé sur un appareil dont le compte gardait une
+ * autre ligne n'était jamais transmis.
+ *
+ * Quatre cas : un abonnement que cet appareil n'a pas encore transmis pour ce
+ * compte est enregistré, et l'adresse transmise avant lui oubliée ; un
+ * abonnement disparu fait oublier l'adresse transmise ; un abonnement inchangé
+ * ne coûte aucune écriture ; et un abonnement que cet appareil a transmis pour
+ * un AUTRE compte reste à cet autre compte, sans aucune écriture (voir le mémo).
+ * Une fois par chargement et par compte ; ne rejette jamais.
+ *
+ * @param {number|string|null|undefined} utilisateurId
+ * @param {{serveurSansAbonnement?: boolean}} options `true` quand le serveur
+ *   vient de dire que le compte n'a aucun abonnement : le mémo ne dispense plus
+ *   alors d'écrire, mais dit toujours à quel compte l'appareil a été donné.
+ * @returns {Promise<boolean>} Vrai quand le serveur tient, à notre connaissance,
+ *   l'abonnement de ce navigateur pour ce compte. Faux sinon : pas d'abonnement,
+ *   transmission refusée ou injoignable, appareil d'un autre compte, ou aucun
+ *   compte à rapprocher.
+ */
+export const rapprocherLAbonnementPush = (utilisateurId, { serveurSansAbonnement = false } = {}) => {
+    if (utilisateurId === null || utilisateurId === undefined || !pushPrisEnCharge()) {
+        return Promise.resolve(false)
+    }
+
+    const utilisateur = String(utilisateurId)
+    const precedent = rapprochementsDuChargement.get(utilisateur)
+
+    if (precedent && !serveurSansAbonnement) {
+        return precedent
+    }
+
+    // À la suite du précédent, pour qu'il ait déjà noté ce qu'il a transmis.
+    const suivant = (precedent ?? Promise.resolve())
+        .then(() => rapprocher(utilisateur, serveurSansAbonnement))
+        .catch(() => false)
+
+    rapprochementsDuChargement.set(utilisateur, suivant)
+
+    return suivant
+}
+
+/**
  * L'abonnement aux notifications push : ce que le serveur en connait, ce que
  * le navigateur en tient, et l'activation etape par etape avec ses echecs
  * nommes. Le formulaire garde ses preferences ; il ne recoit qu'un rappel une
@@ -11,10 +194,11 @@ import { http } from '@/Utils/http'
  *   vapidPublicKey: string|null|undefined,
  *   dejaAbonne: boolean,
  *   apresAbonnement: () => void,
+ *   utilisateurId?: number|string|null,
  * }} page
  */
-export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement }) => {
-    const pushSupported = 'Notification' in window && 'serviceWorker' in navigator
+export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement, utilisateurId = null }) => {
+    const pushSupported = pushPrisEnCharge()
     const isSubscribing = ref(false)
     const pushError = ref(null)
 
@@ -24,22 +208,6 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement 
      * répond jamais laisse le bouton tourner sans fin.
      */
     const etapeEnCours = ref(null)
-
-    /**
-     * Ni serviceWorker.ready ni pushManager.subscribe() ne promettent de se
-     * régler ; passé ce délai on abandonne l'étape et on le dit.
-     */
-    const DELAI_ETAPE_MS = 20_000
-
-    const avecDelai = (promesse) => {
-        let minuteur
-
-        const expiration = new Promise((_, reject) => {
-            minuteur = setTimeout(() => reject(new Error('le navigateur n’a pas répondu en 20 s')), DELAI_ETAPE_MS)
-        })
-
-        return Promise.race([promesse, expiration]).finally(() => clearTimeout(minuteur))
-    }
 
     const messageDEchec = (err) => {
         const etape = etapeEnCours.value ?? 'activation'
@@ -81,31 +249,44 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement 
 
     /*
      * Le navigateur tranche, parce qu'il est le seul à savoir ce que CET
-     * appareil détient. Trois cas, et aucun ne laisse l'utilisateur sans issue :
-     * pas d'abonnement ici, le bandeau s'affiche quoi qu'en dise le serveur ;
-     * un abonnement que le serveur ignore, on le lui rend, sinon les envois ne
-     * partiront jamais vers cet appareil ; et si le worker ne répond pas, on
-     * montre le bandeau plutôt que de le cacher. Ce dernier choix est l'inverse
-     * du précédent, et c'est tout l'objet du correctif : un bandeau de trop se
-     * referme d'un clic, un bandeau manquant ne se rattrape par rien.
+     * appareil détient. Quatre cas, et aucun ne laisse l'utilisateur sans
+     * issue : pas d'abonnement ici, le bandeau s'affiche quoi qu'en dise le
+     * serveur ; un abonnement que le serveur ignore, on le lui rend, et s'il le
+     * refuse ou ne répond pas, le bandeau revient, sinon les cases « Envoyer
+     * aussi en Push » s'afficheraient pour un appareil que le serveur ne
+     * connaît pas ; un abonnement que cet appareil a donné à un autre compte, le
+     * bandeau s'affiche aussi, et c'est par lui seul que l'appareil change de
+     * compte ; et si le worker ne répond pas, on montre le bandeau plutôt que
+     * de le cacher. Un bandeau de trop se referme d'un clic, un bandeau
+     * manquant ne se rattrape par rien.
+     *
+     * Rendre l'abonnement au serveur passe par le rapprochement que fait aussi
+     * le layout, pour qu'une même ouverture n'écrive qu'une fois. Sans compte
+     * connu, il n'y a rien à rapprocher et le navigateur décide seul.
      */
     onMounted(async () => {
         if (!pushSupported) {
             return
         }
 
+        let abonnementIci = false
+
         try {
             const registration = await avecDelai(navigator.serviceWorker.ready)
             const abonnement = await avecDelai(registration.pushManager.getSubscription())
 
-            pushRegistered.value = abonnement !== null && abonnement !== undefined
-
-            if (pushRegistered.value && !dejaAbonne) {
-                await http.post(route('push-subscriptions.update'), abonnement, { timeout: DELAI_ETAPE_MS })
-            }
+            abonnementIci = abonnement !== null && abonnement !== undefined
         } catch {
-            pushRegistered.value = false
+            // Le worker ne répond pas : on montre le bandeau.
         }
+
+        if (!abonnementIci || utilisateurId === null || utilisateurId === undefined) {
+            pushRegistered.value = abonnementIci
+
+            return
+        }
+
+        pushRegistered.value = await rapprocherLAbonnementPush(utilisateurId, { serveurSansAbonnement: !dejaAbonne })
     })
 
     const urlBase64ToUint8Array = (base64String) => {
@@ -129,7 +310,18 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement 
      * is no worse than the state before.
      */
     const forgetOnServer = async (endpoint) => {
-        await http.post(route('push-subscriptions.destroy'), { endpoint }, { timeout: DELAI_ETAPE_MS }).catch(() => {})
+        await oublierSurLeServeur(endpoint)
+            .then(() => {
+                // Le rapprochement n'a plus à faire oublier cette adresse. Le
+                // serveur n'oublie que les lignes de ce compte : le mémo d'un
+                // autre reste.
+                const memo = lireLeMemo()
+
+                if (memo?.utilisateur === String(utilisateurId) && memo.endpoint === endpoint) {
+                    ecrireLeMemo(null)
+                }
+            })
+            .catch(() => {})
     }
 
     const enablePush = async () => {
@@ -183,6 +375,11 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement 
             // Le jeton CSRF et la session viennent de Utils/http.
             etapeEnCours.value = 'Enregistrement'
             await http.post(route('push-subscriptions.update'), subscription, { timeout: DELAI_ETAPE_MS })
+
+            // Sans cela, l'ouverture suivante transmettrait de nouveau.
+            if (utilisateurId !== null && utilisateurId !== undefined) {
+                noterLaTransmission(String(utilisateurId), subscription.endpoint)
+            }
 
             pushRegistered.value = true
             apresAbonnement()
