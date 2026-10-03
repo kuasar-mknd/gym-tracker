@@ -332,9 +332,12 @@ jobs:
 
                   php artisan key:generate
 
-                  # Dusk automatically uses .env.testing if present, we must override it
+                  # APP_ENV=testing : le processus de Pest charge .env.testing s'il
+                  # existe, il doit donc dire la même chose que .env. Pas de
+                  # .env.dusk.local ici : `artisan dusk` ne lit que .env.dusk.{APP_ENV}
+                  # (ici .env.dusk.testing) ou .env.dusk, et ce .env convient tel quel :
+                  # la garde des parcours l'accepte (#1909).
                   cp .env .env.testing
-                  cp .env .env.dusk.local
 
                   chmod -R 777 storage bootstrap/cache
                   php artisan config:clear
