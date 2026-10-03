@@ -19,8 +19,6 @@ abstract class DuskTestCase extends BaseTestCase
 {
     protected function setUp(): void
     {
-        // In setUp rather than prepare(): PHPUnit 12 dropped docblock annotations,
-        // so the @beforeClass hook never fires.
         static::assertViteIsNotInDevMode();
 
         parent::setUp();
@@ -304,30 +302,17 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
-     * Prepare for Dusk test execution.
-     *
-     * @beforeClass
-     */
-    public static function prepare(): void
-    {
-        if (! static::runningInSail()) {
-            static::startChromeDriver(['--port=9515']);
-        }
-
-        putenv('APP_ENV=testing');
-        $_ENV['APP_ENV'] = 'testing';
-    }
-
-    /**
      * `npm run dev` writes public/hot, which points @vite at http://localhost:5173.
      * The browser driving these tests runs in the Selenium container, where
      * localhost is itself — so no asset ever loads and every test dies on a
      * 30-second wait for #main-content. Fail loudly instead.
+     *
+     * Appelée en tête de `setUp()`, avant que l'application ne démarre : le
+     * chemin se résout donc depuis `__DIR__`, `base_path()` n'ayant encore
+     * aucune application à interroger.
      */
     protected static function assertViteIsNotInDevMode(): void
     {
-        // Resolved from __DIR__, not base_path(): this runs in @beforeClass, before
-        // the application container is booted.
         if (! file_exists(dirname(__DIR__).'/public/hot')) {
             return;
         }
@@ -386,6 +371,11 @@ abstract class DuskTestCase extends BaseTestCase
      *
      * Une seule lecture pour `driver()` et pour la garde des parcours : la
      * garde juge ainsi l'adresse que le parcours emploiera vraiment.
+     *
+     * La suite ne démarre aucun pilote, elle se branche sur celui qui écoute
+     * déjà : la CI lance ChromeDriver dans une étape à part du job
+     * browser-shard, Sail fournit le conteneur selenium. Un démarrage de plus
+     * ici ferait double emploi avec la CI (#1927).
      */
     protected function urlDuPilote(): string
     {
