@@ -80,16 +80,23 @@ it('lève une exception qui cite chaque motif, et laisse passer la disposition d
 
 /**
  * La garde ne sert que si elle passe avant les traits : `DatabaseTruncation`
- * lance `migrate:fresh` dès le premier test. Le parcours fictif vise une base
- * SQLite en mémoire, si bien qu'une garde débranchée ne détruirait rien — le
- * test échouerait seulement, sur le témoin de la troncature.
+ * lance `migrate:fresh` dès le premier test. Elle juge la base que la connexion
+ * visera, pas le nom qu'affiche DB_DATABASE : une DB_URL l'emporte sur lui dans
+ * la configuration de la connexion. Le parcours fictif vise une base SQLite en
+ * mémoire, ou un hôte en .invalid, qui ne se résout jamais (RFC 2606) : une garde
+ * débranchée ne détruirait rien, le test échouerait seulement.
  */
-it('arrête un parcours avant que DatabaseTruncation ne touche à la base', function (): void {
+it('arrête un parcours avant que DatabaseTruncation ne touche à la base', function (array $configuration, string $baseVisee): void {
     $parcours = new class('parcoursFictif') extends DuskTestCase
     {
         use DatabaseTruncation;
 
         public bool $troncatureCommencee = false;
+
+        /**
+         * @var array<string, string>
+         */
+        public array $configurationDuParcours = [];
 
         public function parcoursFictif(): void
         {
@@ -111,8 +118,7 @@ it('arrête un parcours avant que DatabaseTruncation ne touche à la base', func
             $application = parent::createApplication();
 
             $application->make(Repository::class)->set([
-                'database.default' => 'sqlite',
-                'database.connections.sqlite.database' => ':memory:',
+                ...$this->configurationDuParcours,
                 'app.url' => 'http://127.0.0.1:8000',
             ]);
 
@@ -134,15 +140,33 @@ it('arrête un parcours avant que DatabaseTruncation ne touche à la base', func
         }
     };
 
+    /** @var array<string, string> $configuration */
+    $parcours->configurationDuParcours = $configuration;
     $migreeAvant = RefreshDatabaseState::$migrated;
 
     try {
         expect(fn () => $parcours->demarrerLeParcours())
-            ->toThrow(RuntimeException::class, '« :memory: »');
+            ->toThrow(RuntimeException::class, "« {$baseVisee} »");
 
         expect($parcours->troncatureCommencee)->toBeFalse();
     } finally {
         $parcours->arreterLeParcours();
         RefreshDatabaseState::$migrated = $migreeAvant;
     }
-});
+})->with([
+    'une base SQLite en mémoire' => [
+        [
+            'database.default' => 'sqlite',
+            'database.connections.sqlite.database' => ':memory:',
+        ],
+        ':memory:',
+    ],
+    'une DB_URL qui contredit DB_DATABASE' => [
+        [
+            'database.default' => 'mysql',
+            'database.connections.mysql.url' => 'mysql://sail:password@hote-des-parcours.invalid:3306/gym_tracker',
+            'database.connections.mysql.database' => 'gym_tracker_dusk',
+        ],
+        'gym_tracker',
+    ],
+]);
