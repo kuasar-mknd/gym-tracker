@@ -12,12 +12,16 @@ import { mount, flushPromises } from '@vue/test-utils'
  */
 const journal = []
 
+/**
+ * L'abonnement part par `Utils/http`, comme depuis le profil ; l'écriture des
+ * records par la file hors ligne, comme les préférences du profil.
+ */
 const reseau = vi.hoisted(() => ({ post: vi.fn(), patch: vi.fn() }))
 vi.mock('@/Utils/http', () => ({
-    http: {
-        post: (...args) => reseau.post(...args),
-        patch: (...args) => reseau.patch(...args),
-    },
+    http: { post: (...args) => reseau.post(...args) },
+}))
+vi.mock('@/Utils/SyncService', () => ({
+    default: { patch: (...args) => reseau.patch(...args) },
 }))
 
 /**
@@ -389,6 +393,19 @@ describe('l’activation', () => {
         expect(notification.requestPermission).toHaveBeenCalledTimes(1)
         expect(pushManager.subscribe).toHaveBeenCalledTimes(1)
         expect(reseau.patch).toHaveBeenCalledTimes(2)
+        expect(invitation.activee.value).toBe(true)
+        expect(invitation.erreur.value).toBeNull()
+    })
+
+    it('confie à la file hors ligne l’écriture des records quand le réseau lâche après l’abonnement', async () => {
+        navigateur()
+        reseau.patch.mockRejectedValueOnce({ isOffline: true, queueId: 'file-1' })
+        const invitation = await monterEtVerifier()
+
+        await invitation.activer()
+
+        // La file la rejouera au retour du réseau : l'appareil, abonné, ne
+        // restera pas sans rien d'allumé.
         expect(invitation.activee.value).toBe(true)
         expect(invitation.erreur.value).toBeNull()
     })

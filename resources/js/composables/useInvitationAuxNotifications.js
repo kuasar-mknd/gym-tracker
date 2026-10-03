@@ -1,5 +1,5 @@
 import { computed, ref, toValue, watch } from 'vue'
-import { http } from '@/Utils/http'
+import SyncService from '@/Utils/SyncService'
 import { appareilDonneAUnAutreCompte, pushPrisEnCharge, useAbonnementPush } from '@/composables/useAbonnementPush'
 
 /**
@@ -132,17 +132,30 @@ export const useInvitationAuxNotifications = ({ vapidPublicKey, utilisateurId, u
         fermee.value = true
     }
 
+    /**
+     * Par la file hors ligne, comme les préférences du profil : l'appareil est
+     * déjà abonné à ce moment, et une écriture perdue le laisserait abonné sans
+     * rien d'allumé, sans que la carte revienne jamais, puisque le serveur
+     * tient désormais un abonnement. Un réseau qui lâche met l'écriture en
+     * file, rejouée au retour du réseau ; un refus du serveur garde la carte.
+     */
     const allumerLesRecords = async () => {
         ecritureEnCours.value = true
 
         try {
-            await http.patch(
+            await SyncService.patch(
                 route('profile.push-preferences.update'),
                 { types: TYPES_ACTIVES },
                 { timeout: DELAI_D_ECRITURE_MS },
             )
             activee.value = true
-        } catch {
+        } catch (echec) {
+            if (echec?.isOffline) {
+                activee.value = true
+
+                return
+            }
+
             erreur.value = 'Tes notifications de records n’ont pas pu être activées. Réessaie.'
         } finally {
             ecritureEnCours.value = false
