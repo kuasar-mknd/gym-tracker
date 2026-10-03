@@ -48,14 +48,19 @@ it('vérifie le dossier des sauvegardes au démarrage dans un if, sans jamais ar
             $numero + 1,
         ));
 
-        $bloc = [];
+        // Le bloc commence après le `then` de la ligne même : `if ! …; then exit 1; fi`
+        // tient sur une ligne, et arrêterait le conteneur aussi sûrement.
+        $suite = preg_split('/\bthen\b/', $lignes[$numero], 2)[1] ?? '';
+        $bloc = [$suite];
 
-        foreach (array_slice($lignes, $numero + 1) as $ligne) {
-            if (preg_match('/^\s*fi\b/', $ligne) === 1) {
-                break;
+        if (preg_match('/(^|[;\s])fi\b/', $suite) !== 1) {
+            foreach (array_slice($lignes, $numero + 1) as $ligne) {
+                if (preg_match('/^\s*fi\b/', $ligne) === 1) {
+                    break;
+                }
+
+                $bloc[] = $ligne;
             }
-
-            $bloc[] = $ligne;
         }
 
         expect(preg_grep('/\b(exit|return)\b/', $bloc))->toBe([], sprintf(
