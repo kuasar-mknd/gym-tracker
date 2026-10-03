@@ -154,6 +154,9 @@ it('n’envoie aucun en-tête et ne pose aucun écouteur tant que la variable n�
         ->assertOk()
         ->assertHeaderMissing('Server-Timing');
 
+    // Coupé, le middleware ne fait que lire la configuration : aucune mesure ouverte.
+    expect(app()->resolved(MesureDuTempsServeur::class))->toBeFalse();
+
     tempsServeurAllumer();
 
     expect(tempsServeurEcouteursSql(app('events')))->toBe($ecouteurs + 1);
@@ -276,6 +279,19 @@ it('ne mesure aucune route d’authentification, même pour un utilisateur conne
     actingAs($utilisateur)->get('/confirm-password')->assertOk()->assertHeaderMissing('Server-Timing');
     actingAs($utilisateur)->post('/confirm-password', ['password' => 'pas-le-bon'])->assertHeaderMissing('Server-Timing');
     actingAs($utilisateur)->post('/logout')->assertRedirect()->assertHeaderMissing('Server-Timing');
+});
+
+/**
+ * Les pages d'authentification du panneau ne sont pas sous `guest` : c'est leur
+ * espace de noms, `Filament\Auth`, qui les désigne.
+ */
+it('ne mesure aucune page d’authentification du panneau, même pour un administrateur connecté', function (): void {
+    tempsServeurAllumer();
+    $administrateur = FilamentAdminPanel::admin(['ViewAny:User']);
+
+    actingAs($administrateur, 'admin')->get('/backoffice/login')
+        ->assertRedirect()
+        ->assertHeaderMissing('Server-Timing');
 });
 
 /**
