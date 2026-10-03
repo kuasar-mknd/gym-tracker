@@ -311,6 +311,21 @@ it('coupe Pulse par défaut dans les trois conteneurs de l\'application', functi
     }
 });
 
+/*
+ * L'en-tête `Server-Timing` (#1315) dit à un utilisateur connecté combien de
+ * temps et de requêtes SQL sa page a coûté : on l'allume le temps d'une
+ * mesure, jamais par oubli. Sans défaut dans la composition, une variable non
+ * posée arriverait vide ; le défaut écrit ici dit `false` en toutes lettres.
+ */
+it('coupe Server-Timing par défaut dans les trois conteneurs de l\'application', function (): void {
+    foreach (compositionServicesDeLApplication() as $nom => $service) {
+        expect(data_get($service, 'environment.SERVER_TIMING_ENABLED'))->toBe('${SERVER_TIMING_ENABLED:-false}', sprintf(
+            'Server-Timing n\'est pas coupé par défaut dans `%s`.',
+            $nom,
+        ));
+    }
+});
+
 it('nomme le fichier de journal du jour d\'après LOG_DAILY_NAME', function (): void {
     $lireLeChemin = static function (): mixed {
         /** @var array{channels: array{daily: array{path: string}}} $configuration */

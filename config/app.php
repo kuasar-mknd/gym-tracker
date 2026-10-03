@@ -166,4 +166,9 @@ return [
     // Pas de valeur par defaut : un secret par defaut dans un depot public n'en est pas un.
     'admin_initial_password' => env('ADMIN_INITIAL_PASSWORD'),
 
+    // L'en-tête `Server-Timing` (#1315), coupé par défaut : on l'allume le temps
+    // d'une mesure. Lu strictement, pour que seule une valeur vraie l'allume :
+    // la pile transmet une variable oubliée vide, et `(bool) 'non'` vaudrait vrai.
+    'temps_serveur' => filter_var(env('SERVER_TIMING_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+
 ];
