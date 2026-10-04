@@ -42,6 +42,16 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('03:30');
 
 /*
+ * Un jeton de réinitialisation du mot de passe expire au bout de 60 minutes
+ * (`config/auth.php`), mais sa ligne restait en base, sous l'adresse de
+ * courriel, que le compte existe encore ou non (#1938). La commande ne demande
+ * aucune confirmation en production. 01:45 : avant la sauvegarde de 02:30, et
+ * hors de l'heure que les changements d'heure sautent ou répètent.
+ */
+\Illuminate\Support\Facades\Schedule::command('auth:clear-resets')
+    ->dailyAt('01:45');
+
+/*
  * Les trois tâches de sauvegarde touchent le partage des sauvegardes, qui peut
  * cesser de répondre sans rendre d'erreur : au premier plan, un seul accès qui
  * attendait figeait le passage du planificateur, et les tâches suivantes de la
