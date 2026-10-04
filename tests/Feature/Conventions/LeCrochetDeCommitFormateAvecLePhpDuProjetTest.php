@@ -15,8 +15,10 @@ use Symfony\Component\Process\Process;
  * La règle passe désormais par `scripts/formater-le-php.sh`, qui prend le
  * conteneur de Sail s'il tourne, sinon le PHP de l'hôte s'il atteint la
  * contrainte de `composer.json`, et sinon s'arrête en disant quoi faire. Le
- * script tourne ici contre un faux `docker` et un faux PHP ; un dernier test
- * le laisse formater pour de vrai, avec le PHP de la suite.
+ * script tourne ici contre un faux `docker` et un faux PHP, qui peut aussi
+ * échouer : le code d'échec de Pint doit arrêter le commit, par l'une et
+ * l'autre voie. Deux tests le lancent enfin avec le PHP de la suite, sur un
+ * fichier illisible, qui doit refuser le commit, et sur un fichier à formater.
  */
 
 /**
@@ -67,11 +69,13 @@ function crochetPhpDuProjet(): array
  * de `PINT_PHP`, qui note dans `php.log` tout appel autre que la question de
  * sa version : c'est Pint qu'on lui aurait fait lancer. Sans version,
  * `PINT_PHP` vise un fichier absent ; avec `$phpReel`, le vrai PHP de la suite.
+ * `$codeDePint` est le code que rend ce faux Pint, dans le conteneur
+ * (`compose exec`) comme avec le faux PHP.
  *
  * @param  list<string>  $fichiers
  * @return array{code: int|null, sortie: string, erreurs: string, docker: string, php: string}
  */
-function crochetFormater(array $fichiers, bool $sailTourne, ?string $versionDuPhp, bool $phpReel = false): array
+function crochetFormater(array $fichiers, bool $sailTourne, ?string $versionDuPhp, bool $phpReel = false, int $codeDePint = 0): array
 {
     $dossier = storage_path('framework/testing/crochet-'.uniqid());
     File::ensureDirectoryExists($dossier);
@@ -83,6 +87,7 @@ function crochetFormater(array $fichiers, bool $sailTourne, ?string $versionDuPh
             printf '%s\\n' "\$*" >> '{$dossier}/docker.log'
             case "\$*" in
                 'compose ps'*) printf '%s\\n' '{$conteneur}' ;;
+                'compose exec'*) exit {$codeDePint} ;;
             esac
             exit 0
             BASH);
@@ -94,7 +99,7 @@ function crochetFormater(array $fichiers, bool $sailTourne, ?string $versionDuPh
                 exit 0
             fi
             printf '%s\\n' "\$*" >> '{$dossier}/php.log'
-            exit 0
+            exit {$codeDePint}
             BASH);
 
         chmod($dossier.'/docker', 0755);
@@ -216,6 +221,39 @@ it('s’arrête en échec en disant de lancer Sail quand aucun PHP ne répond', 
     expect($resultat['code'])->toBe(1)
         ->and($resultat['erreurs'])->toContain('aucun PHP ne répond')
         ->toContain('./vendor/bin/sail up -d');
+});
+
+it('rend le code d’échec de Pint, sans jamais le changer en succès', function (bool $sailTourne): void {
+    $projet = crochetPhpDuProjet();
+    $resultat = crochetFormater(
+        [crochetCheminAbsolu('app/Models/User.php')],
+        sailTourne: $sailTourne,
+        versionDuPhp: "{$projet['majeur']}.{$projet['mineur']}.0",
+        codeDePint: 3,
+    );
+
+    // Pint a échoué : un succès laisserait passer le commit sans formatage.
+    expect($resultat['code'])->toBe(3, 'Le script a avalé le code de sortie de Pint. '.$resultat['erreurs'])
+        ->and($sailTourne ? $resultat['docker'] : $resultat['php'])->toContain('vendor/bin/pint app/Models/User.php');
+})->with([
+    'dans le conteneur de Sail' => [true],
+    'avec le PHP de l’hôte' => [false],
+]);
+
+it('refuse vraiment le commit quand Pint ne peut pas lire un fichier', function (): void {
+    $dossier = storage_path('framework/testing/crochet-pint-'.uniqid());
+    File::ensureDirectoryExists($dossier);
+    $fichier = $dossier.'/Illisible.php';
+    File::put($fichier, "<?php\n\nfunction (\n");
+
+    try {
+        $resultat = crochetFormater([$fichier], sailTourne: false, versionDuPhp: null, phpReel: true);
+
+        expect($resultat['code'])->toBeGreaterThan(0, 'Pint a échoué sur une erreur de syntaxe, et le script a rendu un succès.')
+            ->and(File::get($fichier))->toBe("<?php\n\nfunction (\n");
+    } finally {
+        File::deleteDirectory($dossier);
+    }
 });
 
 it('formate vraiment avec un PHP assez récent', function (): void {
