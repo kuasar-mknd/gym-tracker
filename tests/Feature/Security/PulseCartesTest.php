@@ -80,6 +80,21 @@ it('refuse de charger une carte à l’administrateur qui a perdu les outils dep
     pulseCartesCharger($carte)->assertForbidden();
 });
 
+/**
+ * Le mot de passe changé ailleurs invalide la session, comme sur le panneau :
+ * `Filament\Http\Middleware\AuthenticateSession`, persistant comme le reste de
+ * la pile de Pulse, compare l'empreinte que la session a gardée de l'ouverture
+ * de la page.
+ */
+it('refuse de charger une carte une fois le mot de passe changé depuis l’ouverture de la page', function (): void {
+    $superAdministrateur = pulseCartesSuperAdministrateur();
+    $carte = pulseCartesPremiereCarte((string) actingAs($superAdministrateur, 'admin')->get('/backoffice/pulse')->assertOk()->getContent());
+
+    $superAdministrateur->forceFill(['password' => 'Un-autre-mot-de-passe-2026!'])->save();
+
+    pulseCartesCharger($carte)->assertUnauthorized();
+});
+
 it('refuse de charger une carte depuis une adresse hors de la liste blanche', function (): void {
     $carte = pulseCartesPremiereCarte((string) actingAs(pulseCartesSuperAdministrateur(), 'admin')->get('/backoffice/pulse')->assertOk()->getContent());
 

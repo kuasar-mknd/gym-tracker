@@ -79,14 +79,7 @@ function horizonSuperAdministrateur(): Admin
     return $admin->fresh() ?? $admin;
 }
 
-/**
- * La session telle que la connexion du panneau la laisse : la garde `admin`
- * seule. La garde par défaut reste `web`, ce qu'`actingAs($admin, 'admin')`
- * changerait, en masquant le défaut.
- *
- * @return array<string, mixed>
- */
-function horizonSessionDuPanneau(Admin $admin): array
+function horizonGardeDuPanneau(): SessionGuard
 {
     $garde = Auth::guard('admin');
 
@@ -94,7 +87,30 @@ function horizonSessionDuPanneau(Admin $admin): array
         throw new LogicException('La garde du panneau tient sa connexion en session.');
     }
 
-    return [$garde->getName() => $admin->getAuthIdentifier()];
+    return $garde;
+}
+
+/**
+ * L'empreinte du mot de passe que la connexion au panneau pose en session
+ * (`SessionGuard::login()`), et que `AuthenticateSession` y tient à jour.
+ *
+ * @return array{password_hash_admin: string}
+ */
+function horizonEmpreinteDuPanneau(Admin $admin): array
+{
+    return ['password_hash_admin' => horizonGardeDuPanneau()->hashPasswordForCookie($admin->getAuthPassword())];
+}
+
+/**
+ * La session telle que la connexion du panneau la laisse : la garde `admin`
+ * seule, et l'empreinte du mot de passe. La garde par défaut reste `web`, ce
+ * qu'`actingAs($admin, 'admin')` changerait, en masquant le défaut.
+ *
+ * @return array<string, mixed>
+ */
+function horizonSessionDuPanneau(Admin $admin): array
+{
+    return [horizonGardeDuPanneau()->getName() => $admin->getAuthIdentifier(), ...horizonEmpreinteDuPanneau($admin)];
 }
 
 /**
@@ -191,6 +207,37 @@ it('ferme Horizon à un invité, même depuis une adresse admise', function (): 
 });
 
 /**
+ * Le panneau pose l'empreinte du mot de passe à la connexion : une session qui
+ * ne la porte pas n'a jamais été validée par lui. Le cas d'une empreinte
+ * périmée est dans `tests/Feature/Security/SessionPerimeeDesOutilsTest.php`.
+ */
+it('ferme Horizon à une session du panneau qui ne porte pas l’empreinte du mot de passe', function (): void {
+    horizonEnProductionDepuis('203.0.113.5', ['203.0.113.5']);
+    horizonSansRedis();
+    $admin = horizonSuperAdministrateur();
+
+    withSession([horizonGardeDuPanneau()->getName() => $admin->getAuthIdentifier()]);
+
+    get('/horizon')->assertForbidden();
+    get('/horizon/api/masters')->assertForbidden();
+});
+
+/**
+ * La page de profil de Filament, quand l'administrateur change son mot de
+ * passe, écrit en session le hachage lui-même et non son HMAC : Horizon
+ * l'admet, comme `AuthenticateSession`, sans attendre une autre page du panneau.
+ */
+it('ouvre Horizon juste après que la page de profil a changé le mot de passe', function (): void {
+    horizonEnProductionDepuis('203.0.113.5', ['203.0.113.5']);
+    $admin = horizonSuperAdministrateur();
+    $admin->forceFill(['password' => 'Un-autre-mot-de-passe-2026!'])->save();
+
+    withSession([horizonGardeDuPanneau()->getName() => $admin->getAuthIdentifier(), 'password_hash_admin' => $admin->getAuthPassword()]);
+
+    get('/horizon')->assertOk();
+});
+
+/**
  * L'adresse n'ouvre que la voie de l'administrateur : elle n'est pas une porte
  * à elle seule, et un compte de l'application non listé reste dehors.
  */
@@ -218,8 +265,10 @@ it('garde la voie des comptes listés, hors de toute liste d’adresses', functi
  */
 it('répond à l’administrateur même quand la garde par défaut est celle du panneau', function (): void {
     horizonEnProductionDepuis('203.0.113.5', ['203.0.113.5']);
+    $admin = horizonSuperAdministrateur();
+    withSession(horizonEmpreinteDuPanneau($admin));
 
-    actingAs(horizonSuperAdministrateur(), 'admin')->get('/horizon')->assertOk();
+    actingAs($admin, 'admin')->get('/horizon')->assertOk();
     expect(Gate::forUser(horizonSuperAdministrateur())->allows('viewHorizon'))->toBeFalse();
 });
 
@@ -232,8 +281,9 @@ it('répond à l’administrateur même quand la garde par défaut est celle du 
  * démarrage, ou un administrateur gardé d'une requête à l'autre, ferait mentir
  * l'une des quatre réponses.
  *
- * L'administrateur est posé sur la garde `admin` au début de chaque requête qui
- * porte l'en-tête `X-Test-Admin`, à la manière de la session du panneau.
+ * L'administrateur est connecté au panneau au début de chaque requête qui
+ * porte l'en-tête `X-Test-Admin`, empreinte du mot de passe comprise, à la
+ * manière de la session du panneau.
  */
 it('juge chaque requête d’un worker Octane avec le rappel posé à son démarrage', function (): void {
     $administrateur = horizonSuperAdministrateur();
@@ -253,7 +303,7 @@ it('juge chaque requête d’un worker Octane avec le rappel posé à son démar
             $evenements = $base->make('events');
             $evenements->listen(RequestReceived::class, static function (RequestReceived $evenement) use ($administrateur): void {
                 if ($evenement->request->headers->has('X-Test-Admin')) {
-                    $evenement->sandbox->make('auth')->guard('admin')->setUser($administrateur);
+                    WorkerOctane::connecterAuPanneau($evenement->sandbox, $administrateur);
                 }
             });
             $evenements->listen(RequestTerminated::class, static function () use (&$rappels): void {

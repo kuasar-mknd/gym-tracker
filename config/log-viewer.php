@@ -101,13 +101,16 @@ return [
     |
     */
 
-    // La porte du panneau (qui renvoie un invité vers sa connexion), sa liste
-    // blanche d'adresses, puis la porte du paquet, viewLogViewer, définie dans
+    // La porte du panneau (qui renvoie un invité vers sa connexion), sa
+    // vérification de session (un mot de passe changé déconnecte les autres
+    // sessions, comme sur le panneau), sa liste blanche d'adresses, puis la
+    // porte du paquet, viewLogViewer, définie dans
     // AppServiceProvider::ouvrirLeLecteurDeJournaux() : les journaux ne
     // s'ouvrent qu'à qui a view-logs, d'une adresse admise, comme /backoffice.
     'middleware' => [
         'web',
         Filament\Http\Middleware\Authenticate::class,
+        Filament\Http\Middleware\AuthenticateSession::class,
         App\Http\Middleware\IpWhitelist::class,
         AuthorizeLogViewer::class,
     ],
@@ -124,6 +127,7 @@ return [
     'api_middleware' => [
         'web',
         Filament\Http\Middleware\Authenticate::class,
+        Filament\Http\Middleware\AuthenticateSession::class,
         App\Http\Middleware\IpWhitelist::class,
         AuthorizeLogViewer::class,
     ],

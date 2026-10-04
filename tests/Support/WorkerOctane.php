@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use App\Models\Admin;
 use Closure;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ final class WorkerOctane
      * Démarre le worker sous les variables d'environnement données, laisse
      * `$avantDeServir` inspecter l'application de base, puis lui fait servir les
      * requêtes, chacune pour `$administrateur` connecté sur la garde du panneau
-     * comme sa session le ferait.
+     * comme sa session le ferait (`connecterAuPanneau()`).
      *
      * Une variable posée qui n'atteint pas le worker arrête le test en le
      * disant, au lieu d'un 404 ou d'un 403 muet plus loin.
@@ -76,7 +77,7 @@ final class WorkerOctane
 
             if ($administrateur instanceof Admin) {
                 $base->make('events')->listen(RequestReceived::class, static function (RequestReceived $evenement) use ($administrateur): void {
-                    $evenement->sandbox->make('auth')->guard('admin')->setUser($administrateur);
+                    self::connecterAuPanneau($evenement->sandbox, $administrateur);
                 });
             }
 
@@ -115,6 +116,29 @@ final class WorkerOctane
             'erreurs' => $erreurs,
             'avant' => $resultatAvant,
         ];
+    }
+
+    /**
+     * Connecte l'administrateur sur la garde du panneau de la requête, comme sa
+     * session le ferait : l'utilisateur de la garde `admin`, et l'empreinte de
+     * son mot de passe que la connexion pose en session (`SessionGuard::login()`),
+     * que `AuthenticateSession` vérifie sur le panneau, Pulse et le lecteur de
+     * journaux, et qu'Horizon exige de l'administrateur.
+     *
+     * À appeler au début de la requête (`RequestReceived`), après qu'Octane a
+     * vidé la session de la précédente : `StartSession` garde ce que la session
+     * contient déjà.
+     */
+    public static function connecterAuPanneau(Application $requete, Admin $administrateur): void
+    {
+        $garde = $requete->make('auth')->guard('admin');
+
+        if (! $garde instanceof SessionGuard) {
+            throw new LogicException('La garde du panneau tient sa connexion en session.');
+        }
+
+        $garde->setUser($administrateur);
+        $garde->getSession()->put('password_hash_admin', $garde->hashPasswordForCookie($administrateur->getAuthPassword()));
     }
 
     /**
