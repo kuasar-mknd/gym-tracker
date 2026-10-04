@@ -253,6 +253,38 @@ it('dit à un compte relié à un fournisseur comment obtenir un mot de passe', 
     );
 });
 
+/**
+ * `auth.user` ne dit pas si l'adresse est vérifiée, et le formulaire le lisait
+ * là : aucun compte ne voyait l'annonce de l'avis à l'adresse actuelle, ni le
+ * bandeau qui propose de renvoyer le lien de vérification. Ce bandeau compte
+ * après un changement : tant que la nouvelle adresse n'est pas vérifiée, un
+ * changement suivant ne prévient que la dernière adresse vérifiée.
+ */
+it('dit au formulaire si l’adresse est vérifiée, et qu’elle ne l’est plus après un changement', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+    $this->actingAs($compte);
+
+    $this->get('/profile/edit')->assertInertia(
+        fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page->where('adresseVerifiee', true),
+    );
+
+    $this->from('/profile/edit')
+        ->patch('/profile', ['name' => 'Titulaire', 'email' => 'nouvelle@example.org', 'current_password' => 'password'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/profile/edit');
+
+    $this->get('/profile/edit')->assertInertia(
+        fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page
+            ->where('auth.user.email', 'nouvelle@example.org')
+            ->where('adresseVerifiee', false),
+    );
+
+    $this->actingAs(User::factory()->unverified()->create())->get('/profile/edit')->assertInertia(
+        fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page->where('adresseVerifiee', false),
+    );
+});
+
 it('ne nomme aucun fournisseur à un compte à mot de passe seul', function (): void {
     $this->actingAs(changementDAdresseLeCompte());
 

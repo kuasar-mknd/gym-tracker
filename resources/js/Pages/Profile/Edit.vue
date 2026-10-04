@@ -14,6 +14,7 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    adresseVerifiee: Boolean,
     notificationPreferences: Object,
     hasPushSubscription: Boolean,
 })
@@ -34,6 +35,7 @@ const props = defineProps({
                     :must-verify-email="mustVerifyEmail"
                     :status="status"
                     :fournisseur-de-connexion="fournisseurDeConnexion"
+                    :adresse-verifiee="adresseVerifiee"
                 />
             </GlassCard>
 

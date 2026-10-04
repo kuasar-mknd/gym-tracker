@@ -36,6 +36,10 @@ class ProfileController extends Controller
             // Le formulaire d'adresse explique à un compte relié à un
             // fournisseur comment obtenir le mot de passe qu'il exige.
             'fournisseurDeConnexion' => $this->user()->fournisseurDeConnexion(),
+            // `auth.user` ne dit pas si l'adresse est vérifiée : le formulaire
+            // en tire l'annonce de l'avis à l'adresse actuelle et le bandeau
+            // qui propose de renvoyer le lien de vérification.
+            'adresseVerifiee' => $this->user()->hasVerifiedEmail(),
             // Est-ce que NOUS détenons un abonnement, ce qui n'est pas la même
             // chose que le navigateur ayant accordé la permission. La page
             // déduisait l'un de l'autre : un abonnement que le serveur n'avait

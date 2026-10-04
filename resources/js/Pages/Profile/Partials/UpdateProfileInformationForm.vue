@@ -13,6 +13,12 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    /**
+     * L'adresse actuelle est-elle vérifiée ? Donné par la page
+     * (`ProfileController::edit`) : `auth.user` ne le partage pas. Après un
+     * changement d'adresse, la page revient avec `false`.
+     */
+    adresseVerifiee: Boolean,
 })
 
 const page = usePage()
@@ -98,7 +104,7 @@ const submit = () => {
 
                 <p class="text-text-muted text-sm" data-testid="profile-email-change-notice">
                     Ton mot de passe confirme que c’est bien toi.
-                    <template v-if="user.email_verified_at">
+                    <template v-if="props.adresseVerifiee">
                         Ton adresse actuelle sera prévenue du changement, et la nouvelle devra être vérifiée.
                     </template>
                     <template v-else>La nouvelle adresse devra être vérifiée.</template>
@@ -117,7 +123,11 @@ const submit = () => {
                 </div>
             </template>
 
-            <div v-if="mustVerifyEmail && user.email_verified_at === null" class="bg-accent-warning/20 rounded-xl p-3">
+            <div
+                v-if="mustVerifyEmail && !props.adresseVerifiee"
+                class="bg-accent-warning/20 rounded-xl p-3"
+                data-testid="profile-email-unverified"
+            >
                 <p class="text-accent-warning-deep text-sm">
                     Ton adresse email n'est pas vérifiée.
                     <Link

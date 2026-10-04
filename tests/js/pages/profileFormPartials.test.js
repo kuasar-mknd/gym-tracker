@@ -241,13 +241,18 @@ describe('UpdateProfileInformationForm', () => {
         currentPage = { props: { auth: { user } } }
     }
 
-    const verified = { name: 'Sam', email: 'sam@example.com', email_verified_at: '2026-01-01T00:00:00Z' }
-    const unverified = { name: 'Sam', email: 'sam@example.com', email_verified_at: null }
+    /**
+     * Ce que `auth.user` porte réellement (`HandleInertiaRequests::getUserData()`) :
+     * rien n'y dit si l'adresse est vérifiée. C'est la page qui le donne, par la
+     * prop `adresseVerifiee`. Un `email_verified_at` ici faisait passer des cas
+     * que la page réelle ne rendait jamais.
+     */
+    const sam = { name: 'Sam', email: 'sam@example.com' }
 
     const warning = "Ton adresse email n'est pas vérifiée."
 
     it('préremplit le formulaire avec le compte connecté', () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
 
@@ -256,7 +261,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('range le nom et l’email dans leurs champs respectifs', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
 
@@ -268,7 +273,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('enregistre par PATCH vers la route de profil', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
         await submit(wrapper)
@@ -277,12 +282,13 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('n’avertit que si la vérification est exigée ET que l’email ne l’est pas', () => {
-        signedInAs(unverified)
-        const asked = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true })
-        const notAsked = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: false })
-
-        signedInAs(verified)
-        const alreadyVerified = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true })
+        signedInAs(sam)
+        const asked = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true, adresseVerifiee: false })
+        const notAsked = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: false, adresseVerifiee: false })
+        const alreadyVerified = mountPartial(UpdateProfileInformationForm, {
+            mustVerifyEmail: true,
+            adresseVerifiee: true,
+        })
 
         // Both halves matter: on either one alone the banner shows up for people
         // who have nothing left to do, or hides from the people who do.
@@ -292,7 +298,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('renvoie l’email de vérification en POST', () => {
-        signedInAs(unverified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true })
         const resend = wrapper.find('a[href="/verification.send"]')
@@ -301,7 +307,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('ne confirme le renvoi que pour le statut que Laravel envoie', () => {
-        signedInAs(unverified)
+        signedInAs(sam)
 
         const sent = mountPartial(UpdateProfileInformationForm, {
             mustVerifyEmail: true,
@@ -317,7 +323,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('occupe le bouton tant que la requête est en vol, et le libère après', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
         const button = () => wrapper.find('[data-testid="save-profile-button"]')
@@ -340,9 +346,9 @@ describe('UpdateProfileInformationForm', () => {
         wrapper.findAll('label').some((label) => label.text().replace(/\s*\*$/, '') === labelText)
 
     it('ne demande le mot de passe actuel que lorsque l’adresse change', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
-        const wrapper = mountPartial(UpdateProfileInformationForm)
+        const wrapper = mountPartial(UpdateProfileInformationForm, { adresseVerifiee: true })
 
         expect(hasField(wrapper, currentPasswordLabel)).toBe(false)
 
@@ -366,9 +372,9 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('ne promet l’avis à l’adresse actuelle que si elle est vérifiée', async () => {
-        signedInAs(unverified)
+        signedInAs(sam)
 
-        const wrapper = mountPartial(UpdateProfileInformationForm)
+        const wrapper = mountPartial(UpdateProfileInformationForm, { adresseVerifiee: false })
 
         await typeInto(wrapper, 'Email', 'nouveau@example.com')
 
@@ -381,7 +387,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('oublie le mot de passe saisi quand l’adresse revient à celle du compte', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
 
@@ -394,7 +400,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('sur un mot de passe refusé, vide le champ et y remet le curseur', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
 
@@ -412,7 +418,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('referme le champ une fois la nouvelle adresse enregistrée', async () => {
-        currentPage = reactive({ props: { auth: { user: { ...verified } } } })
+        currentPage = reactive({ props: { auth: { user: { ...sam } } } })
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
 
@@ -422,15 +428,37 @@ describe('UpdateProfileInformationForm', () => {
 
         // Ce qu'Inertia rend après la redirection : le compte porte désormais la
         // nouvelle adresse, qui devient celle à laquelle comparer.
-        currentPage.props.auth.user = { ...verified, email: 'nouveau@example.com', email_verified_at: null }
+        currentPage.props.auth.user = { ...sam, email: 'nouveau@example.com' }
         await nextTick()
 
         expect(hasField(wrapper, currentPasswordLabel)).toBe(false)
         expect(wrapper.vm.form.current_password).toBe('')
     })
 
+    it('propose de renvoyer le lien une fois la nouvelle adresse enregistrée', async () => {
+        currentPage = reactive({ props: { auth: { user: { ...sam } } } })
+
+        const wrapper = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true, adresseVerifiee: true })
+        const unverifiedBanner = () => wrapper.find('[data-testid="profile-email-unverified"]')
+
+        expect(unverifiedBanner().exists()).toBe(false)
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+        await typeInto(wrapper, currentPasswordLabel, 'secret')
+        await submit(wrapper)
+
+        // Ce que la page reçoit après la redirection : la nouvelle adresse, qui
+        // n'est pas vérifiée. Tant qu'elle ne l'est pas, un nouveau changement
+        // ne prévient que la dernière adresse vérifiée : le renvoi doit se voir.
+        currentPage.props.auth.user = { ...sam, email: 'nouveau@example.com' }
+        await wrapper.setProps({ adresseVerifiee: false })
+
+        expect(unverifiedBanner().text()).toContain(warning)
+        expect(unverifiedBanner().find('a[href="/verification.send"]').attributes('data-method')).toBe('post')
+    })
+
     it('dit à un compte relié à un fournisseur comment obtenir un mot de passe', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const social = mountPartial(UpdateProfileInformationForm, { fournisseurDeConnexion: 'Google' })
         const passwordOnly = mountPartial(UpdateProfileInformationForm)
@@ -455,7 +483,7 @@ describe('UpdateProfileInformationForm', () => {
     })
 
     it('ne confirme l’enregistrement qu’une fois qu’il a eu lieu', async () => {
-        signedInAs(verified)
+        signedInAs(sam)
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
 
@@ -469,6 +497,24 @@ describe('UpdateProfileInformationForm', () => {
 })
 
 describe('Profile/Edit', () => {
+    it('transmet l’état de vérification de l’adresse au formulaire d’adresse', () => {
+        const mountEdit = (adresseVerifiee) =>
+            mount(ProfileEdit, {
+                props: { mustVerifyEmail: true, adresseVerifiee },
+                shallow: true,
+                global: {
+                    mocks: { route: globalThis.route },
+                    stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+                },
+            })
+        const formProp = (wrapper) => wrapper.findComponent(UpdateProfileInformationForm).props('adresseVerifiee')
+
+        // `auth.user` ne le dit pas : sans cette prop, le formulaire ne savait ni
+        // annoncer l'avis à l'adresse actuelle, ni proposer le renvoi du lien.
+        expect(formProp(mountEdit(true))).toBe(true)
+        expect(formProp(mountEdit(false))).toBe(false)
+    })
+
     it('transmet le fournisseur de connexion au formulaire d’adresse', () => {
         const wrapper = mount(ProfileEdit, {
             props: { mustVerifyEmail: true, fournisseurDeConnexion: 'GitHub' },
