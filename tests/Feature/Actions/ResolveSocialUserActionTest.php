@@ -28,6 +28,7 @@ declare(strict_types=1);
  */
 
 use App\Actions\ResolveSocialUserAction;
+use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -68,9 +69,9 @@ function compteVerifieAvecFournisseur(?string $fournisseur, ?string $identifiant
     ]);
 }
 
-function resoudre(SocialiteUser $social): User
+function resoudre(SocialiteUser $social, bool $adresseVerifiee = true): User
 {
-    return app(ResolveSocialUserAction::class)->execute('google', $social);
+    return app(ResolveSocialUserAction::class)->execute('google', $social, $adresseVerifiee);
 }
 
 beforeEach(function (): void {
@@ -213,4 +214,73 @@ it('tire le mot de passe jetable sur seize caracteres', function (): void {
      * etre fige ici.
      */
     expect($longueursDemandees)->toContain(16);
+});
+
+it('refuse un retour sans identifiant de fournisseur', function (): void {
+    /*
+     * Sans identifiant, la liaison ne pourrait rien enregistrer, et la
+     * connexion suivante ne reconnaîtrait pas le compte : elle repasserait par
+     * l'adresse.
+     */
+    $existant = compteVerifieAvecFournisseur(null, null);
+
+    expect(fn (): User => resoudre(utilisateurSocial(['id' => null])))
+        ->toThrow(SocialAuthException::class, 'Erreur lors de la connexion avec Google');
+
+    expect($existant->refresh()->provider)->toBeNull();
+});
+
+it('refuse un retour sans adresse au lieu d’échouer à l’écriture', function (): void {
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => null])))
+        ->toThrow(SocialAuthException::class, 'Google ne nous a transmis aucune adresse email.');
+
+    expect(User::query()->count())->toBe(0);
+});
+
+it('crée un compte non vérifié quand le fournisseur ne garantit pas l’adresse', function (): void {
+    /*
+     * Le seul chemin qui y mène est le contournement local du contrôle de
+     * vérification. Marqué vérifié, ce compte se serait ensuite laissé
+     * rattacher à d'autres fournisseurs sur la foi d'une adresse que personne
+     * n'a confirmée.
+     */
+    $nouveau = resoudre(utilisateurSocial(), adresseVerifiee: false)->refresh();
+
+    expect($nouveau->provider_id)->toBe('google-42');
+    expect($nouveau->hasVerifiedEmail())->toBeFalse();
+});
+
+it('départage deux comptes de la même identité par l’adresse exacte, et refuse sinon', function (): void {
+    /*
+     * L'ancienne recherche par adresse créait un second compte pour la même
+     * identité quand l'adresse changeait chez le fournisseur. Ces doublons
+     * peuvent exister : le retour va au compte de l'adresse exacte, jamais au
+     * premier venu.
+     */
+    $ancien = User::factory()->create(['email' => 'ancienne@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
+    $recent = User::factory()->create(['email' => 'jean@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
+
+    expect(resoudre(utilisateurSocial())->id)->toBe($recent->id);
+    expect(resoudre(utilisateurSocial(['email' => 'Ancienne@Example.test']))->id)->toBe($ancien->id);
+
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => 'autre@example.test'])))
+        ->toThrow(SocialAuthException::class, 'Plusieurs comptes sont associés à ce compte Google.');
+
+    expect(User::query()->count())->toBe(2);
+});
+
+it('ne prend pas pour sienne une identité qui ne diffère que par la casse', function (): void {
+    /*
+     * La colonne `provider_id` a la collation de la table : la base rend
+     * « GOOGLE-42 » pour « google-42 ». Le filtre exact est fait en PHP, et le
+     * compte, lié à une autre identité de Google, n'est pas rattaché non plus
+     * par son adresse.
+     */
+    $existant = compteVerifieAvecFournisseur('google', 'GOOGLE-42');
+
+    expect(fn (): User => resoudre(utilisateurSocial()))
+        ->toThrow(SocialAuthException::class, 'Ce compte est déjà associé à un autre compte Google.');
+
+    expect($existant->refresh()->provider_id)->toBe('GOOGLE-42');
+    expect(User::query()->count())->toBe(1);
 });
