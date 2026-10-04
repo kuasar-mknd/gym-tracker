@@ -8,9 +8,12 @@ use App\Models\Admin;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
@@ -187,20 +190,88 @@ it('efface toutes les traces polymorphes du compte, et seulement les siennes', f
         ->and(compteSupprimeSesTracesRestantes($jumeau->getMorphClass(), $identifiant))->toBe($jumeauAvant);
 })->with('chemins de suppression du compte');
 
+/**
+ * Le nombre de jetons de réinitialisation rangés sous cette adresse.
+ */
+function compteSupprimeSesJetonsDeReinitialisation(string $courriel): int
+{
+    return DB::table('password_reset_tokens')->where('email', $courriel)->count();
+}
+
+/*
+ * `password_reset_tokens` désigne le compte par son adresse de courriel, sans
+ * clé étrangère ni type : la ligne survivait au compte (#1938). Celle d'un
+ * compte voisin doit rester, son jeton est peut-être en cours d'usage.
+ */
+it('efface le jeton de réinitialisation du compte, et seulement le sien', function (Closure $supprimer): void {
+    $compte = User::factory()->create();
+    $voisin = User::factory()->create();
+
+    Password::createToken($compte);
+    Password::createToken($voisin);
+
+    expect(compteSupprimeSesJetonsDeReinitialisation($compte->email))->toBe(1);
+
+    $supprimer($compte);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(compteSupprimeSesJetonsDeReinitialisation($compte->email))->toBe(0)
+        ->and(compteSupprimeSesJetonsDeReinitialisation($voisin->email))->toBe(1);
+})->with('chemins de suppression du compte');
+
+/*
+ * La table `sessions` reste hors de l'effacement (#1938). Sa colonne `user_id`
+ * reçoit l'identifiant de la garde par défaut au moment où la session
+ * s'écrit, et le panneau fait de la garde `admin` celle de ses requêtes : la
+ * ligne d'un administrateur porte donc son identifiant d'administrateur, sans
+ * type, là où celle d'un compte porte le sien. Effacer par `user_id`
+ * déconnecterait l'administrateur qui partage l'identifiant du compte
+ * supprimé. La première assertion vérifie cette prémisse : si elle tombe, la
+ * colonne ne désigne plus que des comptes, et la question se rouvre.
+ */
+it("garde la session de l'administrateur qui porte l'identifiant du compte supprimé", function (): void {
+    config(['session.driver' => 'database']);
+
+    $administrateur = FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('User'));
+    $identifiant = $administrateur->id;
+    $compte = User::factory()->create(['id' => $identifiant]);
+    $garde = Auth::guard('admin');
+
+    if (! $garde instanceof SessionGuard) {
+        throw new LogicException('La garde du panneau tient sa connexion en session.');
+    }
+
+    // La seule session : celle que l'administrateur ouvre au panneau, comme
+    // après la page de connexion. Le compte ne s'est jamais connecté.
+    $this->withSession([
+        $garde->getName() => $administrateur->getAuthIdentifier(),
+        'password_hash_admin' => $garde->hashPasswordForCookie($administrateur->getAuthPassword()),
+    ])->get('/backoffice')->assertOk();
+
+    expect(DB::table('sessions')->where('user_id', $identifiant)->count())->toBe(1);
+
+    $compte->delete();
+
+    expect(User::query()->whereKey($identifiant)->exists())->toBeFalse()
+        ->and(DB::table('sessions')->where('user_id', $identifiant)->count())->toBe(1);
+});
+
 /*
  * La suppression du compte et l'effacement de ses traces forment une seule
  * transaction : si l'effacement échoue en route, le compte reste, et avec lui
  * tout ce qu'il désigne. Sans quoi une panne au milieu laisserait un compte
  * disparu et des lignes orphelines que plus rien ne viendrait chercher.
  *
- * La panne frappe la DERNIÈRE table de l'inventaire : les précédentes ont déjà
- * été vidées, et c'est leur retour qui prouve la transaction.
+ * La panne frappe la DERNIÈRE table de l'inventaire : les précédentes, et le
+ * jeton de réinitialisation, ont déjà été effacés, et c'est leur retour qui
+ * prouve la transaction.
  */
 it("garde le compte et toutes ses traces quand l'effacement échoue en route", function (): void {
     app(PermissionRegistrar::class)->forgetCachedPermissions();
 
     $compte = User::factory()->create();
     compteSupprimeSemerSesTraces($compte);
+    Password::createToken($compte);
 
     $avant = compteSupprimeSesTracesRestantes($compte->getMorphClass(), $compte->id);
     $derniereTable = Str::before(array_last(User::TRACES_POLYMORPHES), '.');
@@ -216,6 +287,7 @@ it("garde le compte et toutes ses traces quand l'effacement échoue en route", f
     // Le compte qui reste journalise de nouveau ses changements.
     expect(User::query()->whereKey($compte->id)->exists())->toBeTrue()
         ->and(compteSupprimeSesTracesRestantes($compte->getMorphClass(), $compte->id))->toBe($avant)
+        ->and(compteSupprimeSesJetonsDeReinitialisation($compte->email))->toBe(1)
         ->and($compte->enableLoggingModelsEvents)->toBeTrue();
 });
 
