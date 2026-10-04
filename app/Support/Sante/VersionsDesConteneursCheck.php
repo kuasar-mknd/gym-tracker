@@ -13,9 +13,12 @@ use Spatie\Health\Checks\Result;
  * annonces dans le cache (#1813) : rouge quand l'un d'eux est resté sur une
  * autre image que la dernière déployée plus de dix minutes après son
  * déploiement, orange pendant ces dix minutes ou quand l'un d'eux ne s'est
- * jamais annoncé. La dernière image déployée est celle dont la première
- * annonce est la plus récente : un conteneur en retard s'annonce peut-être
- * chaque minute, mais toujours depuis la même date.
+ * jamais annoncé. La dernière image déployée est la plus haute version
+ * publiée, puis, entre deux constructions d'une même version, celle dont la
+ * première annonce est la plus récente : un conteneur en retard s'annonce
+ * peut-être chaque minute, mais toujours depuis la même date, sauf quand le
+ * cache a évincé son annonce (#1930). Production seulement : sous Sail, app
+ * ne passe pas par Octane, et aucun conteneur n'exécute une image de la CI.
  */
 final class VersionsDesConteneursCheck extends Check
 {
@@ -42,6 +45,12 @@ final class VersionsDesConteneursCheck extends Check
 
     public function run(): Result
     {
+        if (! app()->isProduction()) {
+            return Result::make()
+                ->shortSummary('Non jugé hors production')
+                ->ok('Ce contrôle ne juge que la production : ailleurs, aucun conteneur n\'exécute une image construite par la CI, et app, servi sans Octane, ne s\'annonce pas à son démarrage.');
+        }
+
         // Lues à chaque passage : une annonce lue au démarrage du processus
         // resterait celle d'avant la mise à jour.
         $annonces = [];
@@ -95,8 +104,9 @@ final class VersionsDesConteneursCheck extends Check
     }
 
     /**
-     * L'annonce de la dernière image déployée : celle que son conteneur
-     * exécute depuis le moins longtemps.
+     * L'annonce de la dernière image déployée, datée de sa première annonce,
+     * tous conteneurs confondus : un conteneur à jour dont l'annonce revient
+     * après une éviction ne rouvre pas les dix minutes de la mise à jour.
      *
      * @param  array<string, array{version: string, revision: string, depuis: string, le: string}>  $presentes
      * @return array{version: string, revision: string, depuis: string, le: string}|null
@@ -106,12 +116,51 @@ final class VersionsDesConteneursCheck extends Check
         $reference = null;
 
         foreach ($presentes as $annonce) {
-            if ($reference === null || Carbon::parse($annonce['depuis'])->greaterThan(Carbon::parse($reference['depuis']))) {
+            if ($reference === null || $this->estPlusRecente($annonce, $reference)) {
                 $reference = $annonce;
             }
         }
 
+        if ($reference === null) {
+            return null;
+        }
+
+        foreach ($presentes as $memeImage) {
+            if ($this->identite($memeImage) === $this->identite($reference) && Carbon::parse($memeImage['depuis'])->lessThan(Carbon::parse($reference['depuis']))) {
+                $reference['depuis'] = $memeImage['depuis'];
+            }
+        }
+
         return $reference;
+    }
+
+    /**
+     * Entre deux versions publiées, la plus haute : une annonce évincée
+     * revient datée de son retour, et un conteneur resté sur une ancienne
+     * image passerait sinon pour le dernier mis à jour. Entre deux
+     * constructions de `main`, qui portent la même version, ou hors d'une
+     * version publiée, celle que son conteneur exécute depuis le moins
+     * longtemps.
+     *
+     * @param  array{version: string, revision: string, depuis: string, le: string}  $annonce
+     * @param  array{version: string, revision: string, depuis: string, le: string}  $reference
+     */
+    private function estPlusRecente(array $annonce, array $reference): bool
+    {
+        if ($annonce['version'] !== $reference['version'] && $this->estPubliee($annonce['version']) && $this->estPubliee($reference['version'])) {
+            return version_compare(ltrim($annonce['version'], 'v'), ltrim($reference['version'], 'v'), '>');
+        }
+
+        return Carbon::parse($annonce['depuis'])->greaterThan(Carbon::parse($reference['depuis']));
+    }
+
+    /**
+     * Une version publiée par un tag (`v1.5.20`), que l'on sait ordonner ;
+     * ni `main`, ni `dev`.
+     */
+    private function estPubliee(string $version): bool
+    {
+        return preg_match('/^v?\d+(\.\d+)+$/', $version) === 1;
     }
 
     /**
