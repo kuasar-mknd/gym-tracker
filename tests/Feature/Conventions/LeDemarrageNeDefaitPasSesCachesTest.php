@@ -7,7 +7,9 @@ declare(strict_types=1);
  * lancé après les caches dans l'entrypoint, il les effaçait à chaque
  * démarrage et l'application tournait sans. Ce qui ne dépend pas de
  * l'environnement se calcule dans l'image ; au démarrage ne restent que la
- * configuration, les routes, les migrations et le moniteur des tâches.
+ * configuration, les routes, les migrations, le moniteur des tâches et les
+ * verrous du planificateur (`schedule:clear-cache`, qui, malgré son nom, ne
+ * vide aucun cache de l'application, #1929).
  */
 it('ne lance au démarrage aucune commande qui efface un cache', function (): void {
     $entrypoint = (string) file_get_contents(base_path('entrypoint.sh'));

@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use Cron\CronExpression;
 use Illuminate\Console\ConfirmableTrait;
+use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Yaml\Yaml;
 
@@ -162,6 +166,143 @@ it('fait passer --force aux tâches planifiées qui demandent confirmation en pr
     // Sans elle, la garde passerait aussi le jour où plus rien ne serait reconnu.
     expect($confirmables)->toContain('activitylog:clean')
         ->and($sansForce)->toBe([], "Ces tâches s'annuleraient en production, faute de `--force` :\n- ".implode("\n- ", $sansForce));
+});
+
+/*
+ * Les tâches de sauvegarde touchent le partage des sauvegardes, qui peut
+ * cesser de répondre sans rendre d'erreur. Au premier plan, un seul accès qui
+ * attendait figeait le passage du planificateur, et les tâches suivantes de la
+ * minute avec lui (#1929). Le verrou doit tenir jusqu'au passage suivant,
+ * sinon il n'empêche rien, mais pas jusqu'à celui d'après : un verrou que rien
+ * ne rend, celui d'une tâche restée prise ou d'un processus tué avant sa fin,
+ * coûterait plus d'un passage. Celui qu'emporte un arrêt du planificateur est
+ * rendu à son démarrage (garde suivante).
+ */
+it('fait tourner les tâches de sauvegarde dans leur propre processus, sans en empiler deux', function (): void {
+    $sauvegardes = [];
+
+    foreach (app(Schedule::class)->events() as $evenement) {
+        if (preg_match("/artisan'?\\s+(backup:[\\w-]+)/", (string) $evenement->command, $nom) === 1) {
+            $sauvegardes[$nom[1]] = $evenement;
+        }
+    }
+
+    // Sans elles, la garde passerait aussi le jour où plus rien ne serait reconnu.
+    expect(array_keys($sauvegardes))->toEqualCanonicalizing(['backup:clean', 'backup:run', 'backup:monitor']);
+
+    foreach ($sauvegardes as $commande => $evenement) {
+        $cron = new CronExpression($evenement->expression);
+        $passage = $cron->getNextRunDate('2026-10-04 12:00:00');
+        $intervalle = intdiv($cron->getNextRunDate($passage)->getTimestamp() - $passage->getTimestamp(), 60);
+
+        expect($evenement->runInBackground)->toBeTrue("`{$commande}` tourne au premier plan : un partage qui ne répond plus figerait le planificateur.")
+            ->and($evenement->withoutOverlapping)->toBeTrue("`{$commande}` peut s'empiler sur un passage resté pris.")
+            ->and($evenement->expiresAt)->toBeGreaterThan($intervalle, "Le verrou de `{$commande}` ne tient pas jusqu'au passage suivant : il n'empêche rien.")
+            ->and($evenement->expiresAt)->toBeLessThan(2 * $intervalle, "Un verrou orphelin de `{$commande}` coûterait plus d'un passage.");
+    }
+});
+
+/**
+ * Lance `entrypoint.sh` avec la commande de service donnée, sous un `php`
+ * factice qui note chacun de ses appels et réussit, sauf pour la commande
+ * Artisan `$enEchec` ; rend les appels d'Artisan, dans l'ordre. Exige que le
+ * script aille jusqu'au service.
+ *
+ * @param  list<string>  $commande
+ * @return list<string>
+ */
+function planificateurAppelsArtisanAuDemarrage(array $commande, string $enEchec = 'aucune-commande-en-echec'): array
+{
+    $dossier = storage_path('framework/testing/demarrage-'.uniqid());
+    $journal = $dossier.'/appels';
+    File::ensureDirectoryExists($dossier);
+    File::put($dossier.'/php', sprintf(
+        "#!/bin/sh\nprintf '%%s\\n' \"\$*\" >> %s\ncase \"\$*\" in *%s*) exit 1 ;; esac\nexit 0\n",
+        escapeshellarg($journal),
+        $enEchec,
+    ));
+    chmod($dossier.'/php', 0755);
+
+    try {
+        $resultat = Process::env(['PATH' => $dossier.':'.getenv('PATH')])
+            ->timeout(60)
+            ->run(['bash', base_path('entrypoint.sh'), ...$commande]);
+
+        expect($resultat->successful())->toBeTrue(sprintf(
+            "entrypoint.sh s'est arrêté avant de lancer `%s` :\n%s",
+            implode(' ', $commande),
+            $resultat->errorOutput(),
+        ));
+
+        return array_values(array_filter(
+            explode("\n", File::get($journal)),
+            static fn (string $appel): bool => str_starts_with($appel, 'artisan '),
+        ));
+    } finally {
+        File::deleteDirectory($dossier);
+    }
+}
+
+/*
+ * Une tâche d'arrière-plan ne rend son verrou que par `schedule:finish`, que
+ * lance sa fin. Un planificateur arrêté en plein passage, par un redéploiement
+ * pendant la sauvegarde, l'emporte sans le rendre, et le verrou, gardé dans
+ * Redis, faisait sauter le passage du lendemain : deux nuits sans sauvegarde
+ * au lieu d'une (#1929). Le planificateur les rend à son démarrage, quand rien
+ * ne tourne encore. Les autres services n'y touchent pas : rendu par `app`
+ * pendant qu'une sauvegarde tourne, le verrou laisserait s'en empiler une
+ * seconde.
+ */
+it('rend au démarrage du planificateur, et de lui seul, les verrous que son arrêt a laissés', function (): void {
+    expect(array_slice(planificateurAppelsArtisanAuDemarrage(['php', 'artisan', 'schedule:work']), -2))
+        ->toBe(['artisan schedule:clear-cache', 'artisan schedule:work']);
+
+    foreach ([['php', 'artisan', 'horizon'], ['php', 'artisan', 'octane:frankenphp', '--port=8000']] as $service) {
+        $appels = planificateurAppelsArtisanAuDemarrage($service);
+
+        expect($appels)->toContain('artisan '.implode(' ', array_slice($service, 2)));
+        expect($appels)->not->toContain('artisan schedule:clear-cache');
+    }
+
+    $sauvegarde = collect(app(Schedule::class)->events())
+        ->first(static fn (Event $evenement): bool => str_contains((string) $evenement->command, 'backup:run'));
+    assert($sauvegarde instanceof Event);
+    $sauvegarde->mutex->create($sauvegarde);
+
+    $this->artisan('schedule:clear-cache')->assertSuccessful();
+
+    expect($sauvegarde->mutex->exists($sauvegarde))->toBeFalse('`schedule:clear-cache` ne rend pas le verrou de `backup:run`.');
+});
+
+it('lance le planificateur même si ses verrous n’ont pas pu être rendus', function (): void {
+    expect(planificateurAppelsArtisanAuDemarrage(['php', 'artisan', 'schedule:work'], enEchec: 'schedule:clear-cache'))
+        ->toContain('artisan schedule:clear-cache', 'artisan schedule:work');
+});
+
+/*
+ * Une tâche d'arrière-plan est lancée par `sh -c '( … ) &'`, qui rend aussitôt
+ * la main : le sous-shell, orphelin, revient au premier processus du
+ * conteneur. Sans init, c'est `schedule:work` (entrypoint.sh finit par
+ * `exec`), et PHP ne récolte pas les enfants qu'il n'a pas lancés : chaque
+ * sauvegarde laissait un processus zombie, trois par jour jusqu'à la
+ * recréation du conteneur (#1929).
+ */
+it('donne un init au conteneur du planificateur, qui récolte ses tâches d’arrière-plan', function (): void {
+    $planificateurs = array_filter(
+        compositionDeProduction(),
+        static fn (mixed $service): bool => is_array($service)
+            && is_string($service['command'] ?? null)
+            && str_contains($service['command'], 'schedule:work'),
+    );
+
+    expect($planificateurs)->not->toBeEmpty();
+
+    foreach ($planificateurs as $nom => $service) {
+        expect($service['init'] ?? null)->toBeTrue(sprintf(
+            'Le service `%s` lance le planificateur sans `init: true` : chaque tâche d’arrière-plan y resterait en processus zombie.',
+            $nom,
+        ));
+    }
 });
 
 it('transmet aux services ce que la sauvegarde exige', function (): void {

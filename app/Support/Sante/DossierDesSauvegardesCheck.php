@@ -40,6 +40,16 @@ final class DossierDesSauvegardesCheck extends Check
     private int $delai = self::DELAI_EN_SECONDES;
 
     /**
+     * Le dossier où la sauvegarde range ses archives : celui que « Backups »
+     * parcourt et que la page « Sauvegardes » du panneau liste. Lu à chaque
+     * appel, comme la racine du disque, qu'un test peut déplacer.
+     */
+    public static function dossierDesArchives(): string
+    {
+        return config()->string('filesystems.disks.sauvegardes.root').'/'.config()->string('backup.backup.name');
+    }
+
+    /**
      * Le dossier répond-il dans le délai, qu'il existe ou non ? Le contrôle
      * « Backups » parcourt les archives par `glob()`, sans délai : sur un
      * partage endormi, il figerait `health:check` juste après la sonde, et le

@@ -6,7 +6,12 @@ use App\Filament\Resources\TachesPlanifiees\Pages\ListTachesPlanifiees;
 use App\Filament\Resources\TachesPlanifiees\TachePlanifieeResource;
 use App\Models\Admin;
 use App\Models\TachePlanifiee;
+use Illuminate\Console\Events\ScheduledTaskFinished;
+use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
+use Illuminate\Foundation\Console\Kernel;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Livewire\Livewire;
@@ -97,4 +102,82 @@ it('purge le journal du moniteur chaque nuit, sous surveillance', function (): v
         ->all();
 
     expect($purges)->not->toBeEmpty();
+});
+
+/**
+ * La sauvegarde nocturne telle que le planning la déclare, et sa ligne au
+ * moniteur.
+ *
+ * @return array{0: Event, 1: TachePlanifiee}
+ */
+function tachesPlanifieesSauvegardeNocturne(): array
+{
+    expect(Artisan::call('schedule-monitor:sync'))->toBe(0);
+
+    $evenement = collect(app(Schedule::class)->events())
+        ->first(fn (Event $evenement): bool => str_contains((string) $evenement->command, 'backup:run'));
+    assert($evenement instanceof Event);
+
+    $tache = TachePlanifiee::findForTask($evenement);
+    assert($tache instanceof TachePlanifiee);
+
+    return [$evenement, $tache];
+}
+
+/**
+ * Ce que le processus d'arrière-plan lance quand la sauvegarde se termine :
+ * `schedule:finish`, avec l'identifiant du verrou et le code de sortie. En
+ * production, la console annonce son démarrage (`CommandStarting`), et c'est
+ * là que le moniteur s'accroche à la fin de la tâche ; la suite de tests
+ * coupe cette annonce, il faut la rebrancher.
+ */
+function tachesPlanifieesFinirEnArrierePlan(Event $evenement, int $code): void
+{
+    $noyau = app(ConsoleKernel::class);
+    assert($noyau instanceof Kernel);
+    $noyau->rerouteSymfonyCommandEvents();
+    $noyau->setArtisan(null);
+
+    expect(Artisan::call('schedule:finish', ['id' => $evenement->mutexName(), 'code' => (string) $code]))->toBe(0);
+}
+
+/*
+ * Une tâche en arrière-plan rend la main au planificateur dès son départ ; sa
+ * fin arrive plus tard, par `schedule:finish` (#1929). Le moniteur doit
+ * l'entendre : sans elle, la sauvegarde paraîtrait en retard chaque matin, ou
+ * réussie quand elle échoue, et son verrou ne serait jamais rendu.
+ */
+it('note la fin d’une sauvegarde lancée en arrière-plan, et rend son verrou', function (): void {
+    Carbon::setTestNow('2026-10-04 02:30:00');
+    [$evenement, $tache] = tachesPlanifieesSauvegardeNocturne();
+
+    expect($evenement->runInBackground)->toBeTrue()
+        ->and($evenement->mutex->create($evenement))->toBeTrue();
+
+    // Le planificateur note le départ, puis une fin aussitôt, sans code de
+    // sortie : la tâche tourne ailleurs, et le moniteur ne la compte pas.
+    event(new ScheduledTaskStarting($evenement));
+    event(new ScheduledTaskFinished($evenement, 0.1));
+
+    expect($tache->fresh()?->last_started_at?->toDateTimeString())->toBe('2026-10-04 02:30:00')
+        ->and($tache->fresh()?->last_finished_at)->toBeNull();
+
+    Carbon::setTestNow('2026-10-04 02:34:00');
+    tachesPlanifieesFinirEnArrierePlan($evenement, 0);
+
+    expect($tache->fresh()?->last_finished_at?->toDateTimeString())->toBe('2026-10-04 02:34:00')
+        ->and($tache->fresh()?->etat())->toBe(TachePlanifiee::A_L_HEURE)
+        ->and($evenement->mutex->exists($evenement))->toBeFalse();
+});
+
+it('note l’échec d’une sauvegarde lancée en arrière-plan', function (): void {
+    Carbon::setTestNow('2026-10-04 02:30:00');
+    [$evenement, $tache] = tachesPlanifieesSauvegardeNocturne();
+    event(new ScheduledTaskStarting($evenement));
+
+    Carbon::setTestNow('2026-10-04 02:31:00');
+    tachesPlanifieesFinirEnArrierePlan($evenement, 1);
+
+    expect($tache->fresh()?->last_failed_at?->toDateTimeString())->toBe('2026-10-04 02:31:00')
+        ->and($tache->fresh()?->etat())->toBe(TachePlanifiee::ECHOUEE);
 });
