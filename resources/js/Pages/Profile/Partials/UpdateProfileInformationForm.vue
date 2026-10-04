@@ -97,8 +97,11 @@ const submit = () => {
                 />
 
                 <p class="text-text-muted text-sm" data-testid="profile-email-change-notice">
-                    Ton mot de passe confirme que c’est bien toi. Ton adresse actuelle sera prévenue du changement, et
-                    la nouvelle devra être vérifiée.
+                    Ton mot de passe confirme que c’est bien toi.
+                    <template v-if="user.email_verified_at">
+                        Ton adresse actuelle sera prévenue du changement, et la nouvelle devra être vérifiée.
+                    </template>
+                    <template v-else>La nouvelle adresse devra être vérifiée.</template>
                 </p>
 
                 <div

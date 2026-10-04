@@ -221,6 +221,30 @@ it('prévient l’ancienne adresse et retire la vérification quel que soit le c
     Notification::assertSentOnDemandTimes(AdresseDuCompteChangee::class, 1);
 });
 
+/**
+ * L'inscription ne prouve pas l'adresse, et un changement remet la nouvelle en
+ * non vérifiée : un compte peut donc porter l'adresse d'un tiers, et faire des
+ * allers-retours d'adresse avec son propre mot de passe. Prévenir à chaque
+ * fois l'ancienne adresse enverrait au tiers, depuis l'expéditeur de
+ * l'application, autant d'avis de sécurité que le compte le voudrait.
+ */
+it('ne prévient pas une ancienne adresse que personne n’a vérifiée', function (): void {
+    Notification::fake();
+    $compte = User::factory()->unverified()->create(['email' => 'jamais-verifiee@example.org']);
+    $this->actingAs($compte);
+
+    foreach (range(1, 3) as $tour) {
+        $this->patch('/profile', ['name' => 'X', 'email' => "ailleurs{$tour}@example.org", 'current_password' => 'password'])
+            ->assertSessionHasNoErrors();
+        $this->patch('/profile', ['name' => 'X', 'email' => 'jamais-verifiee@example.org', 'current_password' => 'password'])
+            ->assertSessionHasNoErrors();
+    }
+
+    expect($compte->refresh()->email)->toBe('jamais-verifiee@example.org')
+        ->and($compte->email_verified_at)->toBeNull();
+    Notification::assertNothingSent();
+});
+
 it('envoie le courriel pour de bon, et seulement une fois la transaction validée', function (): void {
     $mailer = Mail::mailer();
     assert($mailer instanceof Illuminate\Mail\Mailer);

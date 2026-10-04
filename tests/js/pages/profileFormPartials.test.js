@@ -365,6 +365,21 @@ describe('UpdateProfileInformationForm', () => {
         expect(wrapper.find('input[autocomplete="current-password"]').attributes('type')).toBe('password')
     })
 
+    it('ne promet l’avis à l’adresse actuelle que si elle est vérifiée', async () => {
+        signedInAs(unverified)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+
+        // Le serveur ne prévient pas une adresse que personne n'a prouvée : le
+        // formulaire ne l'annonce pas non plus.
+        const notice = wrapper.find('[data-testid="profile-email-change-notice"]').text()
+
+        expect(notice).not.toContain('sera prévenue')
+        expect(notice).toContain('La nouvelle adresse devra être vérifiée.')
+    })
+
     it('oublie le mot de passe saisi quand l’adresse revient à celle du compte', async () => {
         signedInAs(verified)
 

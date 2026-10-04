@@ -23,7 +23,11 @@ use Illuminate\Support\Facades\Notification;
  *   une connexion sociale. Un appelant qui pose lui-même `email_verified_at`
  *   dans la même écriture est laissé maître de la valeur ;
  * - l'ancienne adresse reçoit `AdresseDuCompteChangee`, une fois la
- *   transaction validée.
+ *   transaction validée, si elle était vérifiée. L'inscription ne demande
+ *   aucune preuve de l'adresse, et chaque changement remet la nouvelle en non
+ *   vérifiée : une adresse que personne n'a prouvée peut être celle d'un
+ *   tiers, qui n'a pas à recevoir les avis d'un compte qui n'est pas le sien.
+ *   Seule une adresse vérifiée est sûrement celle du titulaire.
  *
  * Le mot de passe actuel n'est pas exigé ici : c'est l'affaire de la requête
  * du profil (`ProfileUpdateRequest`). Un administrateur du panneau change une
@@ -50,7 +54,12 @@ trait SurveilleSonAdresse
         static::updated(function (User $utilisateur): void {
             $ancienneAdresse = $utilisateur->getRawOriginal('email');
 
-            if (! $utilisateur->wasChanged('email') || ! is_string($ancienneAdresse) || $ancienneAdresse === '') {
+            if (
+                ! $utilisateur->wasChanged('email')
+                || ! is_string($ancienneAdresse)
+                || $ancienneAdresse === ''
+                || $utilisateur->getRawOriginal('email_verified_at') === null
+            ) {
                 return;
             }
 
