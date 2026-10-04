@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 126 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 2 127 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 187 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -121,7 +121,7 @@ Elles se posent dans l'environnement de la pile : les variables de la pile, ou u
 
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
-| `APP_KEY` | oui | vide : chaque page échoue (`MissingAppKeyException`) | Clé de chiffrement des cookies et des URL signées, au format `base64:…` : `echo "base64:$(openssl rand -base64 32)"` en produit une. En changer déconnecte tout le monde et invalide les liens de vérification d'adresse déjà envoyés ; `APP_PREVIOUS_KEYS`, qui permettrait une rotation sans casse, n'est pas transmise. |
+| `APP_KEY` | oui | vide : chaque page échoue (`MissingAppKeyException`) | Clé de chiffrement des cookies et des URL signées, au format `base64:…` : `echo "base64:$(openssl rand -base64 32)"` en produit une. En changer invalide les liens de vérification d'adresse déjà envoyés, et déconnecte tout le monde, `APP_PREVIOUS_KEYS` ou non : l'empreinte du mot de passe que porte chaque session, comme le cookie « se souvenir de moi », est signée par `APP_KEY` seule (#1940). `APP_PREVIOUS_KEYS`, qui garderait lisibles les cookies chiffrés et valides les liens signés, n'est pas transmise. |
 | `APP_URL` | oui | vide | Adresse publique en `https://`, celle du proxy inverse. La composition la recopie dans `ASSET_URL` : une adresse fausse fait charger CSS et JavaScript depuis une mauvaise origine, et la page s'affiche sans style ni script. Elle sert aussi aux liens produits hors d'une requête (worker, planificateur), à l'origine CORS de l'API et d'identité Web Push quand `VAPID_SUBJECT` est vide. |
 | `APP_DEBUG` | non | `false` | Pages d'erreur détaillées : code source, requêtes SQL avec leurs valeurs, en-têtes (cookies compris) et champs envoyés, mots de passe saisis compris. Jamais en production, où le contrôle du mode debug de la page « Santé » passe alors au rouge. Le `Dockerfile` pose aussi `false`. |
 
@@ -222,7 +222,7 @@ Posées par le `Dockerfile` à partir des arguments que la CI passe au build : l
 | --- | --- | --- |
 | `APP_NAME` | `GymTracker` ; `laravel` pour les préfixes | Nom de l'application et du dossier des archives que vérifie la page « Santé ». Les préfixes des clés Redis, du cache et d'Horizon et le nom du cookie de session se calculent, eux, sur `laravel` : transmettre `APP_NAME` les changerait tous — déconnexion générale, cache et métriques d'Horizon repartis de zéro. |
 | `APP_TIMEZONE` | `Europe/Paris` | Fuseau de l'application et des heures du planificateur : rappel d'entraînement à 18 h, sauvegarde à 02 h 30. |
-| `APP_PREVIOUS_KEYS` | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY` ; sans elle, une rotation déconnecte tout le monde. |
+| `APP_PREVIOUS_KEYS` | vide | Anciennes clés acceptées pendant une rotation d'`APP_KEY`, pour déchiffrer les cookies et vérifier les liens signés émis avant. Elle n'évite pas la déconnexion : une rotation ferme toutes les sessions avec ou sans elle, l'empreinte du mot de passe en session et le cookie « se souvenir de moi » n'étant signés que par `APP_KEY` (#1940). |
 | `SESSION_SECURE_COOKIE` | `true` en production | Le cookie de session n'est envoyé qu'en HTTPS : d'où le passage obligé par le proxy inverse. |
 | `SESSION_LIFETIME` | `120` | Minutes d'inactivité avant que la session expire ; « Se souvenir de moi » reconnecte ensuite sans mot de passe. |
 | `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
