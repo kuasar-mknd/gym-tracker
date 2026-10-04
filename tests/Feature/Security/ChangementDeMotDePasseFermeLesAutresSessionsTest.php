@@ -70,13 +70,22 @@ function sessionsGardeDesComptes(): SessionGuard
  */
 function sessionsAppareilConnecte(User $utilisateur, string $motDePasse = 'password'): Appareil
 {
-    $appareil = new Appareil();
+    return sessionsSeConnecterDepuis(new Appareil(), $utilisateur, $motDePasse);
+}
 
-    $appareil->envoyer('POST', '/login', [
-        'email' => $utilisateur->email,
-        'password' => $motDePasse,
-        'remember' => '1',
-    ])->assertRedirect(route('dashboard'));
+/**
+ * Le formulaire de connexion, envoyé depuis un appareil qui garde les cookies
+ * qu'il avait déjà.
+ */
+function sessionsSeConnecterDepuis(Appareil $appareil, User $utilisateur, string $motDePasse = 'password', bool $seSouvenirDeMoi = true): Appareil
+{
+    $formulaire = ['email' => $utilisateur->email, 'password' => $motDePasse];
+
+    if ($seSouvenirDeMoi) {
+        $formulaire['remember'] = '1';
+    }
+
+    $appareil->envoyer('POST', '/login', $formulaire)->assertRedirect(route('dashboard'));
 
     return $appareil;
 }
@@ -84,12 +93,14 @@ function sessionsAppareilConnecte(User $utilisateur, string $motDePasse = 'passw
 /**
  * @return TestResponse<Response>
  */
-function sessionsChangerLeMotDePasseDepuis(Appareil $appareil): TestResponse
+function sessionsChangerLeMotDePasseDepuis(Appareil $appareil, string $motDePasseActuel = 'password', ?string $nouveauMotDePasse = null): TestResponse
 {
+    $nouveauMotDePasse ??= sessionsNouveauMotDePasse();
+
     return $appareil->envoyer('PUT', '/password', [
-        'current_password' => 'password',
-        'password' => sessionsNouveauMotDePasse(),
-        'password_confirmation' => sessionsNouveauMotDePasse(),
+        'current_password' => $motDePasseActuel,
+        'password' => $nouveauMotDePasse,
+        'password_confirmation' => $nouveauMotDePasse,
     ], ['Referer' => url('/profile')])
         ->assertSessionHasNoErrors()
         ->assertRedirect('/profile');
@@ -217,6 +228,54 @@ it('garde « se souvenir de moi » sur l’appareil qui a changé le mot de pass
     sessionsOuvrirLAccueil($cetAppareil)->assertOk();
     sessionsOuvrirLAccueil($unAutre)->assertRedirect(route('login'));
 });
+
+/**
+ * Un ordinateur partagé peut garder un cookie « se souvenir de moi » que la
+ * garde refuse : elle l'ignore sans l'effacer, et une connexion sans « se
+ * souvenir de moi » le laisse en place. La personne qui s'y connecte sans
+ * cocher la case, puis y change son mot de passe, ne doit pas en repartir avec
+ * un cookie neuf et valide : la personne suivante entrerait dans son compte
+ * une fois la session expirée avec le navigateur. Le cookie périmé est effacé.
+ *
+ * Chaque cas laisse sur l'appareil un cookie de rappel périmé, puis donne le
+ * mot de passe que le compte a alors.
+ */
+it('ne coche pas « se souvenir de moi » pour qui ne l’a pas coché, sur la foi d’un cookie périmé', function (Closure $perimerLeCookie, string $motDePasse): void {
+    $utilisateur = User::factory()->create();
+    $partage = new Appareil();
+    $nomDuCookieDeRappel = sessionsGardeDesComptes()->getRecallerName();
+
+    $perimerLeCookie($partage, $utilisateur);
+
+    // Des heures plus tard : sa session a expiré, la garde refuse le cookie de rappel sans l'effacer.
+    $partage->oublierLeCookie(config()->string('session.cookie'));
+    sessionsOuvrirLAccueil($partage)->assertRedirect(route('login'));
+
+    expect($partage->cookie($nomDuCookieDeRappel))->not->toBeNull();
+
+    sessionsSeConnecterDepuis($partage, $utilisateur, $motDePasse, seSouvenirDeMoi: false);
+    sessionsChangerLeMotDePasseDepuis($partage, $motDePasse, 'Encore-un-autre-mot-de-passe-2026!');
+
+    expect($partage->cookie($nomDuCookieDeRappel))->toBeNull();
+
+    // La personne part sans se déconnecter : sa session expire avec le navigateur.
+    $partage->oublierLeCookie(config()->string('session.cookie'));
+    sessionsOuvrirLAccueil($partage)->assertRedirect(route('login'));
+})->with([
+    'le mot de passe a changé depuis un autre appareil' => [function (Appareil $partage, User $utilisateur): void {
+        sessionsSeConnecterDepuis($partage, $utilisateur);
+        sessionsChangerLeMotDePasseDepuis(sessionsAppareilConnecte($utilisateur));
+    }, sessionsNouveauMotDePasse()],
+    'le compte s’est déconnecté depuis un autre appareil' => [function (Appareil $partage, User $utilisateur): void {
+        sessionsSeConnecterDepuis($partage, $utilisateur);
+        sessionsAppareilConnecte($utilisateur)->envoyer('POST', '/logout')->assertRedirect('/');
+    }, 'password'],
+    'le cookie est celui d’un autre compte' => [function (Appareil $partage): void {
+        $unAutreCompte = User::factory()->create();
+        sessionsSeConnecterDepuis($partage, $unAutreCompte);
+        sessionsReinitialiserLeMotDePasse($unAutreCompte);
+    }, 'password'],
+]);
 
 /**
  * Le contrôleur écrit lui-même l'empreinte du nouveau mot de passe dans la
