@@ -20,9 +20,13 @@ use Illuminate\Validation\ValidationException;
  * se l'approprier. Le nom seul reste libre ; le champ `current_password` est
  * alors écarté, quoi qu'il porte.
  *
- * Les essais manqués avancent un compteur propre au compte, que seul un mot de
- * passe accepté remet à zéro : un enregistrement du seul nom n'y touche pas,
- * sans quoi il suffirait d'en glisser un entre deux essais.
+ * Les essais manqués avancent le compteur du changement de mot de passe
+ * (`UpdatePasswordRequest::throttleKey()`), que seul un mot de passe accepté
+ * remet à zéro : un enregistrement du seul nom n'y touche pas, sans quoi il
+ * suffirait d'en glisser un entre deux essais. Les deux formulaires évaluent
+ * le même mot de passe : un compteur propre à l'adresse donnerait à une
+ * session ouverte par quelqu'un d'autre cinq essais de plus chaque minute,
+ * une fois ceux du mot de passe épuisés.
  */
 class ProfileUpdateRequest extends FormRequest
 {
@@ -95,9 +99,13 @@ class ProfileUpdateRequest extends FormRequest
         });
     }
 
+    /**
+     * La clé de `UpdatePasswordRequest::throttleKey()` : les deux formulaires
+     * partagent le même budget d'essais.
+     */
     public function throttleKey(): string
     {
-        return 'update-email-'.$this->user()?->id;
+        return 'update-password-'.$this->user()?->id;
     }
 
     /**

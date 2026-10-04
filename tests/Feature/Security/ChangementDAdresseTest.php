@@ -36,6 +36,16 @@ function changementDAdresseLeCompte(): User
 }
 
 /**
+ * Un nouveau mot de passe recevable, et sa confirmation.
+ *
+ * @return array{password: string, password_confirmation: string}
+ */
+function changementDAdresseNouveauMotDePasse(): array
+{
+    return ['password' => 'Nouveau-mot-de-passe-2026!', 'password_confirmation' => 'Nouveau-mot-de-passe-2026!'];
+}
+
+/**
  * Affirme que rien n'a changé : même adresse, toujours vérifiée, et aucun
  * courriel parti.
  */
@@ -94,14 +104,14 @@ it('refuse un mauvais mot de passe, et compte l’essai', function (): void {
         ->assertSessionHasErrors(['current_password' => 'Ce mot de passe ne correspond pas à ton compte.']);
 
     changementDAdresseRienNAChange($compte, 'titulaire@example.org');
-    expect(RateLimiter::attempts('update-email-'.$compte->id))->toBe(1);
+    expect(RateLimiter::attempts('update-password-'.$compte->id))->toBe(1);
 });
 
 it('change l’adresse avec le bon mot de passe et prévient l’ancienne', function (): void {
     Notification::fake();
     $compte = changementDAdresseLeCompte();
     $this->actingAs($compte);
-    RateLimiter::hit('update-email-'.$compte->id);
+    RateLimiter::hit('update-password-'.$compte->id);
 
     $this->from('/profile/edit')
         ->patch('/profile', ['name' => 'Titulaire', 'email' => 'nouvelle@example.org', 'current_password' => 'password'])
@@ -112,7 +122,7 @@ it('change l’adresse avec le bon mot de passe et prévient l’ancienne', func
 
     expect($compte->email)->toBe('nouvelle@example.org')
         ->and($compte->email_verified_at)->toBeNull()
-        ->and(RateLimiter::attempts('update-email-'.$compte->id))->toBe(0);
+        ->and(RateLimiter::attempts('update-password-'.$compte->id))->toBe(0);
 
     Notification::assertSentOnDemand(
         AdresseDuCompteChangee::class,
@@ -135,7 +145,7 @@ it('laisse le nom changer sans mot de passe, mais pas l’adresse dans la même 
         ->assertRedirect('/profile/edit');
 
     expect($compte->refresh()->name)->toBe('Nouveau Nom')
-        ->and(RateLimiter::attempts('update-email-'.$compte->id))->toBe(0);
+        ->and(RateLimiter::attempts('update-password-'.$compte->id))->toBe(0);
 
     $this->patch('/profile', ['name' => 'Autre Nom', 'email' => 'autre@example.org'])
         ->assertSessionHasErrors('current_password');
@@ -156,7 +166,7 @@ it('tient le compteur d’essais : plein, il bloque l’adresse mais pas le nom,
 
     // Un enregistrement du seul nom glissé entre deux essais ne remet rien à zéro.
     $this->patch('/profile', ['name' => 'Titulaire', 'email' => 'titulaire@example.org'])->assertSessionHasNoErrors();
-    expect(RateLimiter::attempts('update-email-'.$compte->id))->toBe(4);
+    expect(RateLimiter::attempts('update-password-'.$compte->id))->toBe(4);
 
     $this->patch('/profile', $mauvais)->assertSessionHasErrors('current_password');
 
@@ -166,6 +176,56 @@ it('tient le compteur d’essais : plein, il bloque l’adresse mais pas le nom,
     $this->patch('/profile', ['name' => 'Encore Libre', 'email' => 'titulaire@example.org'])->assertSessionHasNoErrors();
     expect($compte->refresh()->name)->toBe('Encore Libre');
 
+    changementDAdresseRienNAChange($compte, 'titulaire@example.org');
+});
+
+/**
+ * Le changement d'adresse et le changement de mot de passe évaluent le même
+ * mot de passe. Avec deux compteurs, une session ouverte par quelqu'un d'autre
+ * qui a épuisé ses essais sur l'un en retrouvait cinq sur l'autre, chaque
+ * minute : ils partagent donc le même, dans les deux sens.
+ *
+ * Deux cas plutôt qu'un : la limite de route de `PUT /password` (six requêtes
+ * par minute, sous une clé par compte qu'elle partage avec les autres limites
+ * de route) couperait la seconde moitié d'un cas unique en 429, avant le
+ * compteur d'essais.
+ */
+it('bloque le changement d’adresse quand les essais du mot de passe sont épuisés', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+    $this->actingAs($compte);
+
+    foreach (range(1, 5) as $essai) {
+        $this->from('/profile/edit')
+            ->put('/password', ['current_password' => "devine-{$essai}", ...changementDAdresseNouveauMotDePasse()])
+            ->assertSessionHasErrors('current_password');
+    }
+
+    // Même avec le bon mot de passe, l'adresse attend que le compteur se vide.
+    $this->from('/profile/edit')
+        ->patch('/profile', ['name' => 'Titulaire', 'email' => 'autre@example.org', 'current_password' => 'password'])
+        ->assertInvalid(['current_password' => 'essayer de nouveau dans']);
+
+    changementDAdresseRienNAChange($compte, 'titulaire@example.org');
+});
+
+it('bloque le changement de mot de passe quand les essais de l’adresse sont épuisés', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+    $empreinteDuMotDePasse = $compte->password;
+    $this->actingAs($compte);
+
+    foreach (range(1, 5) as $essai) {
+        $this->from('/profile/edit')
+            ->patch('/profile', ['name' => 'Titulaire', 'email' => 'autre@example.org', 'current_password' => "devine-{$essai}"])
+            ->assertSessionHasErrors('current_password');
+    }
+
+    $this->from('/profile/edit')
+        ->put('/password', ['current_password' => 'password', ...changementDAdresseNouveauMotDePasse()])
+        ->assertInvalid(['current_password' => 'essayer de nouveau dans']);
+
+    expect($compte->refresh()->password)->toBe($empreinteDuMotDePasse);
     changementDAdresseRienNAChange($compte, 'titulaire@example.org');
 });
 
