@@ -13,9 +13,14 @@ use Symfony\Component\Process\Process;
  * pour un PHP plus récent, et refusait tout commit.
  *
  * La règle passe désormais par `scripts/formater-le-php.sh`, qui prend le
- * conteneur de Sail s'il tourne, sinon le PHP de l'hôte s'il atteint la
- * contrainte de `composer.json`, et sinon s'arrête en disant quoi faire. Le
- * script tourne ici contre un faux `docker` et un faux PHP, qui peut aussi
+ * conteneur de Sail s'il tourne pour ce dossier, sinon le PHP de l'hôte s'il
+ * atteint la contrainte de `composer.json`, et sinon s'arrête en disant quoi
+ * faire. Compose nomme le projet d'après le nom du dossier : une autre copie
+ * du dépôt qui porte le même nom lui montre son conteneur, que le script doit
+ * écarter, sans quoi Pint formaterait l'autre copie et le commit passerait
+ * sans formatage.
+ *
+ * Le script tourne ici contre un faux `docker` et un faux PHP, qui peut aussi
  * échouer : le code d'échec de Pint doit arrêter le commit, par l'une et
  * l'autre voie. Deux tests le lancent enfin avec le PHP de la suite, sur un
  * fichier illisible, qui doit refuser le commit, et sur un fichier à formater.
@@ -64,8 +69,10 @@ function crochetPhpDuProjet(): array
  * Lance le script du crochet dans un dossier de faux binaires, comme
  * lint-staged le lance : depuis la racine du dépôt, avec des chemins absolus.
  *
- * `$sailTourne` décide de ce que le faux `docker` répond à `compose ps` ; il
- * note chacun de ses appels dans `docker.log`. `$versionDuPhp` fait le faux PHP
+ * `$sailTourne` décide de ce que le faux `docker` répond à `compose ps`, et
+ * `$dossierDeSail` du dossier d'où Compose aurait lancé ce conteneur, qu'il
+ * rend à `inspect` (par défaut, la racine réelle du dépôt) ; il note chacun de
+ * ses appels dans `docker.log`. `$versionDuPhp` fait le faux PHP
  * de `PINT_PHP`, qui note dans `php.log` tout appel autre que la question de
  * sa version : c'est Pint qu'on lui aurait fait lancer. Sans version,
  * `PINT_PHP` vise un fichier absent ; avec `$phpReel`, le vrai PHP de la suite.
@@ -75,11 +82,12 @@ function crochetPhpDuProjet(): array
  * @param  list<string>  $fichiers
  * @return array{code: int|null, sortie: string, erreurs: string, docker: string, php: string}
  */
-function crochetFormater(array $fichiers, bool $sailTourne, ?string $versionDuPhp, bool $phpReel = false, int $codeDePint = 0): array
+function crochetFormater(array $fichiers, bool $sailTourne, ?string $versionDuPhp, bool $phpReel = false, int $codeDePint = 0, ?string $dossierDeSail = null): array
 {
     $dossier = storage_path('framework/testing/crochet-'.uniqid());
     File::ensureDirectoryExists($dossier);
     $conteneur = $sailTourne ? 'c0ffee' : '';
+    $dossierDeSail ??= crochetRacineReelle();
 
     try {
         File::put($dossier.'/docker', <<<BASH
@@ -87,6 +95,7 @@ function crochetFormater(array $fichiers, bool $sailTourne, ?string $versionDuPh
             printf '%s\\n' "\$*" >> '{$dossier}/docker.log'
             case "\$*" in
                 'compose ps'*) printf '%s\\n' '{$conteneur}' ;;
+                'inspect '*) printf '%s\\n' '{$dossierDeSail}' ;;
                 'compose exec'*) exit {$codeDePint} ;;
             esac
             exit 0
@@ -175,13 +184,62 @@ it('fait passer la règle PHP de lint-staged par le script, jamais par ./vendor/
 
 it('formate dans le conteneur de Sail quand il tourne, avec des chemins relatifs au dépôt', function (): void {
     $projet = crochetPhpDuProjet();
-    $resultat = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: true, versionDuPhp: "{$projet['majeur']}.{$projet['mineur']}.0");
+    // Hors du dépôt : un lien vers la racine rangé dedans y ferait une boucle.
+    $dossier = sys_get_temp_dir().'/crochet-lien-'.uniqid();
+    File::ensureDirectoryExists($dossier);
+    $lien = $dossier.'/depot';
+    symlink(crochetRacineReelle(), $lien);
 
-    expect($resultat['code'])->toBe(0, $resultat['erreurs'])
-        ->and($resultat['docker'])->toMatch('#^compose exec .*\./vendor/bin/pint app/Models/User\.php$#m')
-        ->and($resultat['docker'])->not->toContain(crochetRacineReelle())
-        // Le PHP de l'hôte suffirait ici : Sail passe quand même en premier.
-        ->and($resultat['php'])->toBe('');
+    try {
+        // Compose peut noter le chemin logique, par un lien, plutôt que le chemin réel.
+        foreach ([crochetRacineReelle(), $lien] as $dossierDeSail) {
+            $resultat = crochetFormater(
+                [crochetCheminAbsolu('app/Models/User.php')],
+                sailTourne: true,
+                versionDuPhp: "{$projet['majeur']}.{$projet['mineur']}.0",
+                dossierDeSail: $dossierDeSail,
+            );
+
+            expect($resultat['code'])->toBe(0, "Sail lancé depuis {$dossierDeSail} : ".$resultat['erreurs'])
+                ->and($resultat['docker'])->toContain('inspect --format {{ index .Config.Labels "com.docker.compose.project.working_dir" }} c0ffee')
+                ->toMatch('#^compose exec .*\./vendor/bin/pint app/Models/User\.php$#m')
+                ->and($resultat['docker'])->not->toContain(crochetRacineReelle())
+                // Le PHP de l'hôte suffirait ici : Sail passe quand même en premier.
+                ->and($resultat['php'])->toBe('', "Sail lancé depuis {$dossierDeSail} n'a pas été retenu.");
+        }
+    } finally {
+        File::deleteDirectory($dossier);
+    }
+});
+
+it('n’entre jamais dans le conteneur de Sail d’un autre dossier, même s’il porte le même nom', function (): void {
+    $projet = crochetPhpDuProjet();
+    $ancien = $projet['mineur'] > 0
+        ? sprintf('%d.%d.99', $projet['majeur'], $projet['mineur'] - 1)
+        : sprintf('%d.99.99', $projet['majeur'] - 1);
+    $dossier = storage_path('framework/testing/crochet-autre-'.uniqid());
+    $homonyme = $dossier.'/'.basename(crochetRacineReelle());
+    File::ensureDirectoryExists($homonyme);
+
+    try {
+        foreach (['une autre copie du même nom' => $homonyme, 'un dossier absent de l’hôte' => $dossier.'/absent', 'aucun dossier' => ''] as $cas => $dossierDeSail) {
+            $assezRecent = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: true, versionDuPhp: "{$projet['majeur']}.{$projet['mineur']}.0", dossierDeSail: $dossierDeSail);
+            $tropAncien = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: true, versionDuPhp: $ancien, dossierDeSail: $dossierDeSail);
+
+            // Entrer dans ce conteneur formaterait l'autre copie, et le commit passerait sans formatage.
+            expect($assezRecent['docker'])->not->toContain('compose exec', "Sail de {$cas} a été retenu.")
+                ->and($tropAncien['docker'])->not->toContain('compose exec', "Sail de {$cas} a été retenu.")
+                ->and($assezRecent['code'])->toBe(0, "{$cas} : ".$assezRecent['erreurs'])
+                ->and($assezRecent['php'])->toBe("vendor/bin/pint app/Models/User.php\n", "{$cas} : le PHP de l'hôte n'a pas pris le relais.")
+                ->and($tropAncien['code'])->toBe(1, "{$cas} : le commit n'a pas été refusé.")
+                ->and($tropAncien['php'])->toBe('')
+                ->and($tropAncien['erreurs'])->toContain('le service « laravel.test » que voit Compose tourne')
+                ->toContain($dossierDeSail === '' ? 'docker inspect ne dit pas pour quel dossier' : "pour un autre dossier (« {$dossierDeSail} »)")
+                ->toContain("est en {$ancien}");
+        }
+    } finally {
+        File::deleteDirectory($dossier);
+    }
 });
 
 it('formate avec le PHP de l’hôte dès qu’il atteint la borne basse de composer.json', function (): void {
@@ -208,7 +266,7 @@ it('s’arrête en échec en disant de lancer Sail quand le PHP de l’hôte est
     expect($resultat['code'])->toBe(1)
         ->and($resultat['php'])->toBe('')
         ->and($resultat['docker'])->not->toContain('compose exec')
-        ->and($resultat['erreurs'])->toContain('Sail ne tourne pas')
+        ->and($resultat['erreurs'])->toContain('Sail ne tourne pas pour ce dossier (service « laravel.test »)')
         ->toContain("est en {$ancien}")
         ->toContain($projet['contrainte'])
         ->toContain('./vendor/bin/sail up -d')
