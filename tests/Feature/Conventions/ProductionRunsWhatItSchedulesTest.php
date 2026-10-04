@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Cron\CronExpression;
 use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
@@ -162,6 +163,38 @@ it('fait passer --force aux tâches planifiées qui demandent confirmation en pr
     // Sans elle, la garde passerait aussi le jour où plus rien ne serait reconnu.
     expect($confirmables)->toContain('activitylog:clean')
         ->and($sansForce)->toBe([], "Ces tâches s'annuleraient en production, faute de `--force` :\n- ".implode("\n- ", $sansForce));
+});
+
+/*
+ * Les tâches de sauvegarde touchent le partage des sauvegardes, qui peut
+ * cesser de répondre sans rendre d'erreur. Au premier plan, un seul accès qui
+ * attendait figeait le passage du planificateur, et les tâches suivantes de la
+ * minute avec lui (#1929). Le verrou doit tenir jusqu'au passage suivant,
+ * sinon il n'empêche rien, mais pas jusqu'à celui d'après : un verrou laissé
+ * par un planificateur arrêté en plein passage coûterait plus d'un passage.
+ */
+it('fait tourner les tâches de sauvegarde dans leur propre processus, sans en empiler deux', function (): void {
+    $sauvegardes = [];
+
+    foreach (app(Schedule::class)->events() as $evenement) {
+        if (preg_match("/artisan'?\\s+(backup:[\\w-]+)/", (string) $evenement->command, $nom) === 1) {
+            $sauvegardes[$nom[1]] = $evenement;
+        }
+    }
+
+    // Sans elles, la garde passerait aussi le jour où plus rien ne serait reconnu.
+    expect(array_keys($sauvegardes))->toEqualCanonicalizing(['backup:clean', 'backup:run', 'backup:monitor']);
+
+    foreach ($sauvegardes as $commande => $evenement) {
+        $cron = new CronExpression($evenement->expression);
+        $passage = $cron->getNextRunDate('2026-10-04 12:00:00');
+        $intervalle = intdiv($cron->getNextRunDate($passage)->getTimestamp() - $passage->getTimestamp(), 60);
+
+        expect($evenement->runInBackground)->toBeTrue("`{$commande}` tourne au premier plan : un partage qui ne répond plus figerait le planificateur.")
+            ->and($evenement->withoutOverlapping)->toBeTrue("`{$commande}` peut s'empiler sur un passage resté pris.")
+            ->and($evenement->expiresAt)->toBeGreaterThan($intervalle, "Le verrou de `{$commande}` ne tient pas jusqu'au passage suivant : il n'empêche rien.")
+            ->and($evenement->expiresAt)->toBeLessThan(2 * $intervalle, "Un verrou orphelin de `{$commande}` coûterait plus d'un passage.");
+    }
 });
 
 it('transmet aux services ce que la sauvegarde exige', function (): void {

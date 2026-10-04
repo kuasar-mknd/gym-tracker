@@ -36,7 +36,7 @@ final class SanteServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        $archives = config()->string('filesystems.disks.sauvegardes.root').'/'.config()->string('backup.backup.name');
+        $archives = DossierDesSauvegardesCheck::dossierDesArchives();
 
         Health::checks([
             DatabaseCheck::new(),

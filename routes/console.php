@@ -41,14 +41,30 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180, '--force' => true])
     ->dailyAt('03:30');
 
-\Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])
-    ->dailyAt('02:00');
+/*
+ * Les trois tâches de sauvegarde touchent le partage des sauvegardes, qui peut
+ * cesser de répondre sans rendre d'erreur : au premier plan, un seul accès qui
+ * attendait figeait le passage du planificateur, et les tâches suivantes de la
+ * minute avec lui (#1929). Chacune tourne donc dans son propre processus ; le
+ * moniteur en reçoit la fin par `schedule:finish`, que le planificateur ajoute
+ * à la commande. Le verrou empêche d'empiler un passage sur le précédent resté
+ * pris. Il dure un jour et une heure : à vingt-quatre heures, son défaut, il
+ * expirerait à la seconde où le passage du lendemain le cherche ; au-delà de
+ * deux jours, un verrou laissé par un planificateur arrêté en plein passage
+ * coûterait plus d'une nuit de sauvegarde.
+ */
+\Illuminate\Support\Facades\Schedule::runInBackground()
+    ->withoutOverlapping(expiresAt: 25 * 60)
+    ->group(function (): void {
+        \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])
+            ->dailyAt('02:00');
 
-\Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db' => true, '--disable-notifications' => true])
-    ->dailyAt('02:30');
+        \Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db' => true, '--disable-notifications' => true])
+            ->dailyAt('02:30');
 
-\Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
-    ->dailyAt('08:00');
+        \Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
+            ->dailyAt('08:00');
+    });
 
 /*
  * La santé de l'application, lue dans le panneau (« Système › Santé »).
