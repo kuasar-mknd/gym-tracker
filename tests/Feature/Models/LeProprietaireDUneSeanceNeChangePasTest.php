@@ -10,14 +10,17 @@ use App\Models\WorkoutLine;
 /*
  * Le propriétaire d'une séance est fixé à sa création (#1933).
  *
- * `workout_lines.user_id` et `sets.user_id` le recopient, et leurs écrivains ne
- * le relisent que quand la ligne change de séance ou la série de ligne. Une
- * séance qui changeait de compte laissait donc ses lignes et ses séries à
+ * `workout_lines.user_id` et `sets.user_id` le recopient, mais aucun de leurs
+ * écrivains ne propage un changement de la séance : la ligne le recopie à
+ * chacun de ses enregistrements, la série seulement quand elle change de ligne.
+ * Une séance qui changeait de compte laissait donc ses lignes et ses séries à
  * l'ancien, et toutes les lectures filtrées par propriétaire (statistiques,
  * records, autorisations) voyaient une séance de B dont les séries étaient à A.
  *
  * Le panneau ne l'offre plus ; le modèle le refuse, pour tout chemin qui passe
- * par lui, que la clef soit affectée, forcée ou posée par la relation.
+ * par ses événements, que la clef soit affectée, forcée ou posée par la
+ * relation. `saveQuietly()`, `withoutEvents()` et le constructeur de requêtes
+ * les sautent, et lui échappent.
  */
 it('refuse de changer le propriétaire d’une séance enregistrée', function (Closure $tentative): void {
     $avant = User::factory()->create();
