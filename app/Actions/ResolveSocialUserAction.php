@@ -16,7 +16,8 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  * L'ordre compte :
  *
  *  1. l'identité du fournisseur (`provider`, `provider_id`) désigne le compte
- *     qu'elle a déjà ouvert, quelle que soit l'adresse rendue aujourd'hui ;
+ *     qu'elle a déjà ouvert, même si l'adresse rendue a changé depuis, sauf
+ *     quand cette adresse n'est que proche de celle du compte ;
  *  2. à défaut, l'adresse ne rattache un compte existant que si elle est
  *     vérifiée par le fournisseur et identique à celle du compte, à la casse
  *     ASCII près ;
@@ -83,6 +84,9 @@ final class ResolveSocialUserAction
      * refusé s'il n'y en a aucun : choisir au hasard ouvrirait peut-être le
      * compte d'un autre.
      *
+     * Un seul compte n'est pas pour autant ouvert d'office : voir
+     * `lieeSurUneAdresseSeulementProche()`.
+     *
      * @throws SocialAuthException
      */
     private function compteDeLIdentite(string $fournisseur, string $identifiant, SocialUser $utilisateurSocial): ?User
@@ -96,7 +100,18 @@ final class ResolveSocialUserAction
             ->values();
 
         if ($comptes->count() <= 1) {
-            return $comptes->first();
+            $compte = $comptes->first();
+
+            if ($compte !== null && $this->lieeSurUneAdresseSeulementProche($compte, $utilisateurSocial->getEmail())) {
+                Log::warning('Connexion sociale refusée : identité liée à un compte d’adresse seulement proche', [
+                    'fournisseur' => $fournisseur,
+                    'compte' => $compte->getKey(),
+                ]);
+
+                throw new SocialAuthException($this->refusDAdresse($fournisseur));
+            }
+
+            return $compte;
         }
 
         $adresseRendue = $this->adresseComparable($utilisateurSocial->getEmail());
@@ -114,6 +129,35 @@ final class ResolveSocialUserAction
         ]);
 
         throw new SocialAuthException('Plusieurs comptes sont associés à ce compte '.ucfirst($fournisseur).'. '.$this->suiteARefus());
+    }
+
+    /**
+     * L'identité a-t-elle été liée à ce compte sur une adresse seulement proche ?
+     *
+     * Avant la comparaison exacte, la recherche par adresse liait l'identité au
+     * compte que la collation tenait pour le même, même quand son adresse ne
+     * l'était pas. Une telle liaison se reconnaît tant que le fournisseur rend
+     * la même adresse : la base la confond avec celle du compte, mais elle n'en
+     * est ni la copie exacte ni la variante en casse ASCII. Le retour est alors
+     * refusé, comme il l'est aujourd'hui sur la recherche par adresse.
+     *
+     * Une adresse que la base ne confond pas avec celle du compte est un vrai
+     * changement d'adresse chez le fournisseur : l'identité, qui ne change pas,
+     * continue d'ouvrir son compte. La comparaison passe par un paramètre lié.
+     */
+    private function lieeSurUneAdresseSeulementProche(User $compte, ?string $adresse): bool
+    {
+        if ($adresse === null || $adresse === $compte->email) {
+            return false;
+        }
+
+        $adresseComparable = $this->adresseComparable($adresse);
+
+        if ($adresseComparable !== null && $adresseComparable === $this->adresseComparable($compte->email)) {
+            return false;
+        }
+
+        return User::query()->whereKey($compte->getKey())->where('email', $adresse)->exists();
     }
 
     /**

@@ -317,6 +317,55 @@ it('journalise le refus d’une adresse seulement proche de celle d’un compte,
     ]);
 })->with($fournisseurs);
 
+it('n’ouvre plus le compte auquel une identité a été liée sur une adresse seulement proche', function (string $fournisseur, string $adresseDuCompte, string $adresseRendue): void {
+    /*
+     * L'état qu'a pu laisser la recherche par adresse d'avant la comparaison
+     * exacte : l'identité liée au compte que la collation confondait avec
+     * l'adresse rendue. Tant que le fournisseur rend cette adresse, la
+     * liaison se reconnaît et ne vaut rien.
+     */
+    $identifiant = identiteSocialeDe($fournisseur);
+    $compte = compteSocialExistant($adresseDuCompte, $fournisseur, $identifiant);
+    $journal = Log::spy();
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe($fournisseur, $identifiant, $adresseRendue)),
+    );
+
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusDAdresseSociale($fournisseur));
+
+    assertGuest();
+    expect(User::query()->count())->toBe(1);
+    expect($compte->refresh()->provider_id)->toBe($identifiant);
+    refusSocialJournalise($journal, 'Connexion sociale refusée : identité liée à un compte d’adresse seulement proche', [
+        'fournisseur' => $fournisseur,
+        'compte' => $compte->id,
+    ]);
+})->with($fournisseurs)->with([
+    'un accent' => ['jean.dupont@example.org', 'jéan.dupont@example.org'],
+    'l’accent porté par le compte' => ['jéan.dupont@example.org', 'jean.dupont@example.org'],
+    'deux accents différents' => ['jéan.dupont@example.org', 'jèan.dupont@example.org'],
+    'la pleine chasse' => ['jean.dupont@example.org', "\u{FF4A}ean.dupont@example.org"],
+]);
+
+it('ouvre le compte de l’identité liée quand l’adresse est la même, à la casse ASCII près', function (string $fournisseur, string $adresseDuCompte, string $adresseRendue): void {
+    $identifiant = identiteSocialeDe($fournisseur);
+    $compte = compteSocialExistant($adresseDuCompte, $fournisseur, $identifiant);
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe($fournisseur, $identifiant, $adresseRendue)),
+    );
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+})->with($fournisseurs)->with([
+    'la même adresse, hors ASCII' => ['jéan.dupont@example.org', 'jéan.dupont@example.org'],
+    'une autre casse ASCII' => ['camille.martin@example.org', 'Camille.Martin@EXAMPLE.org'],
+]);
+
 it('ne rattache pas un compte qui n’a pas vérifié son adresse', function (string $fournisseur): void {
     /*
      * Quiconque peut s'inscrire par mot de passe avec l'adresse d'un autre :
@@ -379,6 +428,7 @@ it('refuse au rappel POST d’Apple une adresse seulement proche, et rattache l�
     expect($apple->requetesParties())->toHaveCount(2);
 })->with([
     'par l’adresse' => [null],
+    'par une identité liée auparavant' => ['001234.apple-de-test.0042'],
 ]);
 
 it('ne rattache pas une adresse que le fournisseur ne garantit pas, en production comme en local', function (string $fournisseur, string $refusEnLocal): void {
