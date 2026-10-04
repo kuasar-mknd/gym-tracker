@@ -50,8 +50,10 @@ Artisan::command('inspire', function (): void {
  * à la commande. Le verrou empêche d'empiler un passage sur le précédent resté
  * pris. Il dure un jour et une heure : à vingt-quatre heures, son défaut, il
  * expirerait à la seconde où le passage du lendemain le cherche ; au-delà de
- * deux jours, un verrou laissé par un planificateur arrêté en plein passage
- * coûterait plus d'une nuit de sauvegarde.
+ * deux jours, un verrou que rien ne rend coûterait plus d'une nuit de
+ * sauvegarde. Seule la fin de la tâche le rend : celui qu'emporte un
+ * planificateur arrêté en plein passage est rendu à son démarrage, par
+ * `entrypoint.sh`, sans quoi il ferait sauter la nuit suivante.
  */
 \Illuminate\Support\Facades\Schedule::runInBackground()
     ->withoutOverlapping(expiresAt: 25 * 60)
