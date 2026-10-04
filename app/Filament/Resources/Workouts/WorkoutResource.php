@@ -24,7 +24,9 @@ class WorkoutResource extends Resource
      * appartient — mais il n'a rien a faire dans le `$fillable` du modele :
      * celui-ci vaut pour TOUS les chemins d'assignation en masse, et rien ne
      * doit pouvoir changer le proprietaire d'une ligne depuis une requete
-     * utilisateur. La page l'affecte donc explicitement (#1352).
+     * utilisateur. La page de creation l'affecte donc explicitement (#1352).
+     * Celle de modification ne l'ecrit plus : le proprietaire d'une seance est
+     * fixe a sa creation (#1933), et le modele refuse qu'il change.
      *
      * @var list<string>
      */

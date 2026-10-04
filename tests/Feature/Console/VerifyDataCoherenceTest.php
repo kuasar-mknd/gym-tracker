@@ -236,6 +236,51 @@ it('signale une date de dernière séance en retard', function (): void {
 });
 
 /**
+ * Le panneau laissait donner une séance à un autre compte sans toucher à ses
+ * lignes ni à ses séries (#1933). Il ne le permet plus, mais une séance
+ * réattribuée avant reste incohérente, et les lectures par compte filtrent sur
+ * les copies. Le contrôle compte les SÉANCES, et dit combien de lignes et de
+ * séries chacune laisse à un autre compte.
+ */
+it('signale une séance réattribuée dont les lignes et les séries sont restées à l’ancien compte', function (): void {
+    [$ancien, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    $secondeLigne = WorkoutLine::factory()->create([
+        'workout_id' => $idSeance,
+        'exercise_id' => $set->workoutLine->exercise_id,
+    ]);
+    Set::factory()->create(['workout_line_id' => $secondeLigne->id, 'weight' => 50, 'reps' => 5]);
+
+    $nouveau = User::factory()->create();
+    DB::table('workouts')->where('id', $idSeance)->update(['user_id' => $nouveau->id]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('1 propriétaire recopié sur les lignes de séance')
+        ->expectsOutputToContain("séance {$idSeance} (compte {$nouveau->id}) : 2 ligne(s) dont la copie vaut {$ancien->id}")
+        ->expectsOutputToContain('1 propriétaire recopié sur les séries')
+        ->expectsOutputToContain("séance {$idSeance} (compte {$nouveau->id}) : 2 série(s) dont la copie vaut {$ancien->id}");
+});
+
+/**
+ * Une copie vide échappe à toute lecture filtrée par compte. `<>` la laisserait
+ * passer, puisque NULL n'est différent de rien.
+ */
+it('signale une copie du propriétaire restée vide', function (): void {
+    [$user, $set] = compteCoherent();
+    $idSeance = $set->workoutLine->workout_id;
+
+    DB::table('sets')->where('id', $set->id)->update(['user_id' => null]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('OK propriétaire recopié sur les lignes de séance')
+        ->expectsOutputToContain("séance {$idSeance} (compte {$user->id}) : 1 série(s) dont la copie vaut NULL")
+        ->expectsOutputToContain('1 écart(s)');
+});
+
+/**
  * Un controle qu'on ne peut pas ramener au vert finit desactive.
  *
  * La reparation n'invente rien : elle appelle le meme `recompute()` que

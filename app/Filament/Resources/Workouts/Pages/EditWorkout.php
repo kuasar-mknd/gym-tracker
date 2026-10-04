@@ -16,31 +16,28 @@ class EditWorkout extends EditRecord
     protected static string $resource = WorkoutResource::class;
 
     /**
-     * Meme raison qu'a la creation : `user_id` n'est pas dans le `$fillable`.
+     * Enregistre la séance modifiée, sans jamais toucher à son propriétaire.
      *
-     * `EditRecord` appelle `$record->update($data)`, donc l'edition empruntait
-     * exactement le meme chemin d'assignation en masse que la creation — et
-     * perdait la meme valeur en silence en production (#1352).
+     * La page écrivait `user_id` à la main (#1352) : un exploitant pouvait donc
+     * donner la séance à un autre compte, et ses lignes, ses séries, ses
+     * records et la série de jours des deux comptes restaient à l'ancien
+     * (#1933). Le champ est désormais désactivé à la modification
+     * (`WorkoutForm`) : Filament ne le déshydrate plus, il n'arrive pas dans
+     * `$data`, même quand une requête Livewire forgée en change la valeur.
+     *
+     * Le retrait ci-dessous ne le suppose pas pour autant : un champ que la
+     * page affecte à la main à la création n'a rien à faire dans une
+     * assignation en masse, où le mode strict le ferait lever hors production.
+     * La liste vient de la ressource, celle que lit la garde de convention.
      *
      * @param  array<string, mixed>  $data
      */
     #[\Override]
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        /** @var \App\Models\Workout $record */
-        /** @var int|string $identifiant */
-        $identifiant = $data['user_id'];
-
-        /*
-         * La liste vient de la ressource, elle n'est pas recopiee ici : c'est
-         * la meme que celle que le garde de convention lit pour verifier qu'un
-         * champ hors `$fillable` est bien assigne a la main. Deux copies
-         * finiraient par diverger.
-         */
         /** @var array<string, mixed> $attributs */
         $attributs = Arr::except($data, WorkoutResource::CHAMPS_ASSIGNES_EXPLICITEMENT);
 
-        $record->user_id = (int) $identifiant;
         $record->fill($attributs);
         $record->save();
 

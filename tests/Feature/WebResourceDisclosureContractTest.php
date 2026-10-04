@@ -205,16 +205,21 @@ function webHostilePayload(\Illuminate\Routing\Route $route): array
  * cite nommement n'aurait pas ete teste. Le proprietaire est donc impose quand
  * le modele en porte un.
  *
+ * Impose a la creation, et non reecrit apres : une seance refuse de changer de
+ * proprietaire une fois enregistree (#1933), et l'application ne cree rien
+ * ailleurs que chez son proprietaire.
+ *
  * @param  class-string<Model>  $model
  */
 function foreignResource(string $model, User $owner): Model
 {
-    /** @var Model $resource */
-    $resource = Factory::factoryForModel($model)->createOne();
+    $instance = new $model();
+    $attributs = ! $instance instanceof User && Schema::hasColumn($instance->getTable(), 'user_id')
+        ? ['user_id' => $owner->id]
+        : [];
 
-    if (! $resource instanceof User && Schema::hasColumn($resource->getTable(), 'user_id')) {
-        $resource->forceFill(['user_id' => $owner->id])->save();
-    }
+    /** @var Model $resource */
+    $resource = Factory::factoryForModel($model)->createOne($attributs);
 
     return $resource;
 }

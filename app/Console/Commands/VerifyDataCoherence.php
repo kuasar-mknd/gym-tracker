@@ -50,6 +50,8 @@ class VerifyDataCoherence extends Command
             'records assis sur une série éligible' => $this->recordsSurSerieInegible(...),
             'type des records' => $this->typeDesRecords(...),
             'date de dernière séance' => $this->dateDerniereSeance(...),
+            'propriétaire recopié sur les lignes de séance' => $this->proprietaireDesLignes(...),
+            'propriétaire recopié sur les séries' => $this->proprietaireDesSeries(...),
         ];
 
         if ($this->option('repair')) {
@@ -472,6 +474,89 @@ class VerifyDataCoherence extends Command
             $this->colonne($workoutLine, 'id'),
             $this->colonne($workoutLine, 'stocke'),
             $this->colonne($workoutLine, 'reel'),
+        ));
+    }
+
+    /**
+     * `workout_lines.user_id` contre le propriétaire de la séance.
+     *
+     * @return array{int, list<string>}
+     */
+    private function proprietaireDesLignes(): array
+    {
+        return $this->copiesDuProprietaire(
+            DB::table('workout_lines')->join('workouts', 'workouts.id', '=', 'workout_lines.workout_id'),
+            'workout_lines.user_id',
+            'ligne(s)',
+        );
+    }
+
+    /**
+     * `sets.user_id` contre le propriétaire de la séance, et non contre la
+     * copie de la ligne : une série recopiée d'une ligne déjà fausse doit se
+     * voir aussi.
+     *
+     * @return array{int, list<string>}
+     */
+    private function proprietaireDesSeries(): array
+    {
+        return $this->copiesDuProprietaire(
+            DB::table('sets')
+                ->join('workout_lines', 'workout_lines.id', '=', 'sets.workout_line_id')
+                ->join('workouts', 'workouts.id', '=', 'workout_lines.workout_id'),
+            'sets.user_id',
+            'série(s)',
+        );
+    }
+
+    /**
+     * Les séances dont une copie du propriétaire n'est plus le leur.
+     *
+     * Les lectures par compte (statistiques d'exercice, records, objectifs)
+     * filtrent sur la copie et non sur la séance : une ligne ou une série
+     * restée à un autre compte compte chez lui et manque chez le propriétaire.
+     * Le panneau laissait changer le propriétaire d'une séance sans rien
+     * propager ; il ne le permet plus (#1933), mais une séance réattribuée
+     * avant reste incohérente, et rien d'autre ne le voit. Une copie nulle est
+     * un écart aussi : aucune lecture filtrée ne la trouve. `orWhereNull` la
+     * compte, là où `!=` seul la laisserait passer ; le propriétaire de la
+     * séance, lui, n'est jamais nul (`workouts.user_id` est NOT NULL).
+     *
+     * Le décompte est celui des SÉANCES, unité de toute réparation ; chacune
+     * dit combien de lignes ou de séries s'écartent, et quelles copies elles
+     * portent (NULL pour une copie vide).
+     *
+     * `--repair` n'y touche pas, à dessein : recopier le propriétaire ne
+     * suffit pas, il faut refaire la série de jours et les records des deux
+     * comptes et oublier leurs caches, en transaction. C'est le rôle de
+     * l'action dédiée que décrit `.ai/rules/models.md`, à écrire si ce
+     * contrôle trouve un écart.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $copies  La table de la copie, jointe jusqu'à `workouts`.
+     * @param  'workout_lines.user_id'|'sets.user_id'  $colonne  La copie, qualifiée par sa table, et entrée telle quelle dans le SQL.
+     * @param  string  $unite  Ce que compte une séance en écart, pour la description.
+     * @return array{int, list<string>}
+     */
+    private function copiesDuProprietaire(\Illuminate\Database\Query\Builder $copies, string $colonne, string $unite): array
+    {
+        $parSeance = $copies
+            ->where(static fn (\Illuminate\Database\Query\Builder $ecart): \Illuminate\Database\Query\Builder => $ecart
+                ->whereColumn($colonne, '!=', 'workouts.user_id')
+                ->orWhereNull($colonne))
+            ->groupBy('workouts.id', 'workouts.user_id')
+            ->selectRaw(
+                "workouts.id, workouts.user_id as proprietaire, COUNT(*) as ecartees, GROUP_CONCAT(DISTINCT COALESCE(CAST({$colonne} AS CHAR), 'NULL') ORDER BY {$colonne} SEPARATOR ', ') as copies",
+            );
+
+        $requete = DB::query()->fromSub($parSeance, 'par_seance')->orderBy('id');
+
+        return $this->ecarts($requete, fn (array $seance): string => sprintf(
+            'séance %s (compte %s) : %s %s dont la copie vaut %s',
+            $this->colonne($seance, 'id'),
+            $this->colonne($seance, 'proprietaire'),
+            $this->colonne($seance, 'ecartees'),
+            $unite,
+            $this->colonne($seance, 'copies'),
         ));
     }
 
