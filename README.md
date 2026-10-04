@@ -41,7 +41,7 @@
 - **Mesures corporelles** — Suivi complet de ton évolution physique.
 
 ### 🔐 Sécurité & Outils
-- **OAuth Social** — Connexion via Google et GitHub, dès que l'identifiant et le secret du fournisseur sont posés ; Apple attend encore son câblage (#1911).
+- **OAuth Social** — Connexion via Google, GitHub et Apple, dès que l'identité OAuth du fournisseur est complète ; pour Apple, l'application signe elle-même le secret client à chaque échange, avec la clé `.p8` (#1911).
 - **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
 - **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce neuf à chaque requête, Octane compris).
 
@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 159 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 2 190 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 187 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -168,12 +168,17 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 
 #### Connexion sociale
 
-Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur ; vides, rien ne change. L'URL de rappel à déclarer chez le fournisseur est `APP_URL` suivie de `/auth/google/callback` ou `/auth/github/callback`. Un échange refusé par le fournisseur (`redirect_uri_mismatch`, `invalid_client`…) laisse une ligne « Connexion sociale refusée par le fournisseur » dans les journaux.
+Un bouton n'apparaît qu'avec l'identifiant **et** le secret de son fournisseur ; vides, rien ne change. Apple accepte, à la place du secret, le trio qui le signe. L'URL de rappel à déclarer chez le fournisseur est `APP_URL` suivie de `/auth/google/callback`, `/auth/github/callback` ou `/auth/apple/callback`. Un échange refusé par le fournisseur (`redirect_uri_mismatch`, `invalid_client`…) laisse une ligne « Connexion sociale refusée par le fournisseur » dans les journaux.
+
+Apple renvoie l'utilisateur par un POST depuis son site, sans cookie de session : son rappel est la seule route exclue de la vérification CSRF, et c'est un nonce, posé au départ dans un cookie chiffré `SameSite=None` et signé par Apple dans le jeton d'identité, qui le lie au navigateur parti. Ce cookie ne voyage qu'en HTTPS. Chez Apple (compte Apple Developer) : un Services ID avec « Sign in with Apple », le domaine d'`APP_URL` et l'URL de rappel déclarés, et une clé « Sign in with Apple » dont on télécharge le fichier `.p8`.
 
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | pour proposer Google | vides : bouton masqué | Client OAuth « Application Web » de la console Google Cloud. Transmises à `app` seul. |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | pour proposer GitHub | vides : bouton masqué | OAuth App de GitHub (Settings › Developer settings). Transmises à `app` seul. |
+| `APPLE_CLIENT_ID` | pour proposer Apple | vide : bouton masqué | Le Services ID (`org.example.gym.web`), pas l'identifiant de l'app. Transmise à `app` seul. |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | pour proposer Apple, à défaut d'`APPLE_CLIENT_SECRET` | vides : bouton masqué | L'identifiant d'équipe, celui de la clé, et le contenu du `.p8` en clair, en-têtes `BEGIN`/`END PRIVATE KEY` compris : sur une ligne, `\n` à la place des retours. L'application en signe un secret neuf, valable une heure, à chaque échange. Les trois sont nécessaires : tant qu'il en manque une, la clé est ignorée et seul `APPLE_CLIENT_SECRET` peut servir. Transmises à `app` seul. |
+| `APPLE_CLIENT_SECRET` | non | vide | Un secret déjà signé (jeton ES256), lu seulement quand le trio est incomplet : complet, il signe à sa place. Il expire au plus tard six mois après sa signature, et le bouton reste affiché après : chaque connexion échoue alors en `invalid_client`. Transmise à `app` seul. |
 
 #### Administration et supervision
 
@@ -228,8 +233,7 @@ Posées par le `Dockerfile` à partir des arguments que la CI passe au build : l
 | `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
 | `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |
 | `HORIZON_HEARTBEAT_URL`, `SCHEDULE_HEARTBEAT_URL` | vides | URL qu'un contrôle réussi d'Horizon ou du planificateur appellerait, pour qu'une surveillance externe s'alarme quand les appels cessent — y compris planificateur arrêté, ce que `HEALTH_TO_ADDRESS` ne peut pas signaler. |
-| `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | vides | Le bouton Apple reste masqué : son rappel arrive en POST et son secret doit être signé, ce que l'application ne sait pas encore faire (#1911). |
-| `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI` | `APP_URL` suivie de `/auth/google/callback` ou `/auth/github/callback` | L'URL de rappel à déclarer chez le fournisseur. |
+| `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI`, `APPLE_REDIRECT_URI` | `APP_URL` suivie de `/auth/google/callback`, `/auth/github/callback` ou `/auth/apple/callback` | L'URL de rappel à déclarer chez le fournisseur. |
 
 ### Front : variables de build
 
@@ -258,7 +262,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 | `CACHE_STORE`, `CACHE_PREFIX`, `QUEUE_CONNECTION`, `FILESYSTEM_DISK` | `database`, commentée, `database`, `local` | Cache et file en base, fichiers sur le disque local. Les tâches en file attendent `queue:listen` (lancé par `sail composer dev`) : Horizon ne sert que la connexion `redis`. |
 | `REDIS_CLIENT`, `REDIS_HOST`, `REDIS_PASSWORD`, `REDIS_PORT` | `phpredis`, `redis`, `null`, `6379` | Le Redis de Sail, dont Horizon a besoin. |
 | `MAIL_MAILER`, `MAIL_SCHEME`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Mailpit | Les courriels arrivent dans Mailpit, sur le port 8025. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`, `APPLE_REDIRECT_URI` | vides, URL de rappel dérivées d'`APP_URL` | Connexion sociale : un bouton n'apparaît qu'avec l'identifiant et le secret de son fournisseur. L'URL de rappel à déclarer chez lui est `APP_URL` suivie de `/auth/{fournisseur}/callback`. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_CLIENT_SECRET`, `APPLE_REDIRECT_URI` | vides, URL de rappel dérivées d'`APP_URL` | Connexion sociale : un bouton n'apparaît qu'avec l'identifiant et le secret de son fournisseur, ou pour Apple le trio qui signe son secret. L'URL de rappel à déclarer chez lui est `APP_URL` suivie de `/auth/{fournisseur}/callback`. Apple n'accepte qu'une URL de rappel en HTTPS, et son cookie de nonce n'en revient qu'en HTTPS. |
 | `OCTANE_SERVER` | `frankenphp` | Serveur que visent les commandes `octane:*` ; Sail, lui, sert l'application par `artisan serve`. |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | vides | Comme en production : sans clés, pas de notifications. |
 | `SERVER_TIMING_ENABLED` | `false` | `true` ajoute l'en-tête `Server-Timing` aux pages d'un compte connecté, comme en production : le temps serveur se lit dans l'onglet réseau du navigateur. |

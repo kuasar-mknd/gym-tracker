@@ -10,14 +10,15 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
+use App\Support\ConnexionSociale\FournisseurApple;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use RuntimeException;
-use SocialiteProviders\Apple\Provider as AppleProvider;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use Spatie\Backup\Events\BackupManifestWasCreated;
 
@@ -257,12 +258,26 @@ final class AppServiceProvider extends ServiceProvider
      * de la page de connexion, avec ou sans identifiants configurés. Les
      * fournisseurs communautaires s'annoncent par cet événement ; sans écouteur,
      * le paquet est inerte.
+     *
+     * Le pilote annoncé est `FournisseurApple`, celui du paquet réglé sans
+     * session et avec le nonce par cookie : le rappel d'Apple arrive en POST
+     * inter-sites, sans cookie de session (#1911).
+     *
+     * Ce cookie arrive déjà chiffré par le paquet, avec `APP_KEY` : chiffré une
+     * seconde fois par `EncryptCookies`, il pesait 827 octets, et la
+     * redirection vers Apple passait le budget d'en-têtes du proxy inverse
+     * (EnTetesDeReponseTest). Un cookie forgé ou modifié ne se déchiffre pas,
+     * et le retour est refusé. L'exclusion est posée ici, à côté du pilote
+     * qu'elle sert, et non dans bootstrap/app.php ; `except()` est statique et
+     * survit d'une requête à l'autre sous Octane.
      */
     private function registerAppleSocialiteDriver(): void
     {
         Event::listen(function (SocialiteWasCalled $event): void {
-            $event->extendSocialite('apple', AppleProvider::class);
+            $event->extendSocialite('apple', FournisseurApple::class);
         });
+
+        EncryptCookies::except(FournisseurApple::COOKIE_DU_NONCE);
     }
 
     /**

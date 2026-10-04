@@ -20,6 +20,38 @@ $urlDeRappelSociale = static function (string $fournisseur): string {
     return rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/'.$fournisseur.'/callback';
 };
 
+/*
+ * La clé privée .p8 d'Apple, en clair dans APPLE_PRIVATE_KEY (#1911). Elle
+ * signe à chaque échange un secret client neuf, valable une heure, à la place
+ * du jeton qu'il fallait signer à la main et refaire tous les six mois. Une
+ * variable tient mal sur plusieurs lignes : les « \n » écrits en toutes lettres
+ * redeviennent des retours à la ligne, sans quoi OpenSSL ne lit pas la clé.
+ * Vide ou absente, elle vaut null, comme les autres identifiants.
+ *
+ * Elle vaut null aussi tant qu'APPLE_TEAM_ID ou APPLE_KEY_ID manque. Le paquet
+ * signe dès qu'il voit une clé, sans regarder les deux autres, et ignore alors
+ * APPLE_CLIENT_SECRET : sans équipe, le retour d'Apple tombait en 500 dans la
+ * signature ; sans identifiant de clé, Apple recevait un jeton sans `kid` et
+ * refusait l'échange. Sans la clé, le paquet présente le secret posé tel quel.
+ */
+$clePriveeApple = static function (): ?string {
+    $cle = env('APPLE_PRIVATE_KEY');
+
+    if (! is_string($cle) || trim($cle) === '') {
+        return null;
+    }
+
+    foreach (['APPLE_TEAM_ID', 'APPLE_KEY_ID'] as $piece) {
+        $valeur = env($piece);
+
+        if (! is_string($valeur) || trim($valeur) === '') {
+            return null;
+        }
+    }
+
+    return str_replace('\n', "\n", trim($cle));
+};
+
 return [
 
     /*
@@ -67,9 +99,18 @@ return [
         'redirect' => $urlDeRappelSociale('google'),
     ],
 
+    /*
+     * client_id est le Services ID. Le secret se signe avec le trio team_id,
+     * key_id et private_key, que le paquet lit ici à chaque échange ;
+     * client_secret, un jeton signé à la main, ne sert que si le trio est
+     * incomplet, private_key restant alors à null (voir plus haut).
+     */
     'apple' => [
         'client_id' => env('APPLE_CLIENT_ID'),
         'client_secret' => env('APPLE_CLIENT_SECRET'),
+        'team_id' => env('APPLE_TEAM_ID'),
+        'key_id' => env('APPLE_KEY_ID'),
+        'private_key' => $clePriveeApple(),
         'redirect' => $urlDeRappelSociale('apple'),
     ],
 
