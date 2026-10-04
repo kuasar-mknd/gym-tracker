@@ -4,13 +4,28 @@ declare(strict_types=1);
 
 namespace App\Models\Traits;
 
+use Illuminate\Support\Facades\Password;
+
 /**
  * Un compte supprimé emporte ce qui le désigne sans clé étrangère (#1935).
  *
  * Les tables liées au compte par `user_id` suivent seules, par
  * `ON DELETE CASCADE`. Celles que `TRACES_POLYMORPHES` énumère le désignent
  * par une relation polymorphe, un couple `*_type` / `*_id` : la base ne sait
- * pas que la ligne parle d'un compte, et rien ne la suivait.
+ * pas que la ligne parle d'un compte, et rien ne la suivait. Le jeton de
+ * réinitialisation du mot de passe le désigne par son adresse de courriel, et
+ * restait de même (#1938).
+ *
+ * La table `sessions` n'y est pas, à dessein (#1938). Sa colonne `user_id`
+ * reçoit l'identifiant de la garde PAR DÉFAUT au moment où la session
+ * s'écrit, et le panneau fait de la garde `admin` celle de ses requêtes
+ * (`Filament\Http\Middleware\Authenticate`) : la colonne mêle comptes et
+ * administrateurs, sans type pour les distinguer, et un effacement par
+ * `user_id` déconnecterait l'administrateur qui porte le même identifiant.
+ * La production garde d'ailleurs ses sessions dans Redis, hors de la base ;
+ * ailleurs, la ligne d'un compte supprimé ne retrouve plus personne, elle
+ * redevient celle d'un invité, et le ramasse-miettes des sessions la retire
+ * après `SESSION_LIFETIME` minutes d'inactivité.
  *
  * Réservé à `User`, qui porte aussi `LogsActivity`.
  */
@@ -41,8 +56,8 @@ trait EffaceSesTracesPolymorphes
     ];
 
     /**
-     * Supprime le compte et, dans la même transaction, tout ce que
-     * `TRACES_POLYMORPHES` lui rattache.
+     * Supprime le compte et, dans la même transaction, son jeton de
+     * réinitialisation et tout ce que `TRACES_POLYMORPHES` lui rattache.
      *
      * Ici plutôt que dans un écouteur `deleting` ou `deleted`, pour deux
      * raisons. Un écouteur tourne À L'INTÉRIEUR de `delete()` et ne peut pas
@@ -72,6 +87,7 @@ trait EffaceSesTracesPolymorphes
                 $supprime = parent::delete();
 
                 if ($supprime === true) {
+                    $this->effacerSonJetonDeReinitialisation();
                     $this->effacerSesTracesPolymorphes();
                 }
 
@@ -80,6 +96,20 @@ trait EffaceSesTracesPolymorphes
         } finally {
             $this->enableLoggingModelsEvents = $journalActif;
         }
+    }
+
+    /**
+     * `password_reset_tokens` range le jeton sous l'adresse de courriel, sans
+     * clé étrangère : la ligne survivait au compte, bien après l'expiration
+     * du jeton. Le courtier efface celle de l'adresse actuelle, par la
+     * connexion par défaut, celle du compte : l'effacement entre dans la
+     * transaction. Un jeton demandé sous une ancienne adresse ne mène plus à
+     * aucun compte ; il part avec les jetons expirés, que `auth:clear-resets`
+     * purge chaque nuit (`routes/console.php`).
+     */
+    private function effacerSonJetonDeReinitialisation(): void
+    {
+        Password::deleteToken($this);
     }
 
     /**
