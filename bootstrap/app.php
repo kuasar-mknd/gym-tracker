@@ -114,8 +114,16 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         }
 
+        /*
+         * Le rappel d'Apple est un formulaire posté depuis son site (#1911) :
+         * il ne peut porter ni notre jeton ni `Sec-Fetch-Site: same-origin`,
+         * et refusé, il répondait 419. Exclu seul, chemin exact : sa
+         * protection est le nonce que `FournisseurApple` lie au navigateur
+         * par un cookie chiffré, et qu'Apple signe dans le jeton d'identité.
+         */
         $middleware->preventRequestForgery(except: [
             '_dusk/*',
+            'auth/apple/callback',
         ]);
 
         //

@@ -64,6 +64,11 @@ class HandleInertiaRequests extends Middleware
      * son terme, et proposer le bouton quand même envoie l'utilisateur sur une
      * page d'erreur au lieu de chez Apple.
      *
+     * Apple a deux façons de compléter son identité (#1911) : un secret signé
+     * à la main (`client_secret`), ou le trio qui le signe à chaque échange
+     * (`team_id`, `key_id`, `private_key`). L'un ou l'autre suffit ; un trio
+     * incomplet ne signe rien.
+     *
      * @return array<string, bool>
      */
     private function configuredSocialProviders(): array
@@ -71,9 +76,28 @@ class HandleInertiaRequests extends Middleware
         return collect(['google', 'github', 'apple'])
             ->mapWithKeys(fn (string $fournisseur): array => [
                 $fournisseur => filled(config("services.{$fournisseur}.client_id"))
-                    && filled(config("services.{$fournisseur}.client_secret")),
+                    && ($this->aUnSecretClient($fournisseur) || $this->peutSignerSonSecretClient($fournisseur)),
             ])
             ->all();
+    }
+
+    /**
+     * Le secret client posé tel quel.
+     */
+    private function aUnSecretClient(string $fournisseur): bool
+    {
+        return filled(config("services.{$fournisseur}.client_secret"));
+    }
+
+    /**
+     * Le trio qui signe le secret client à chaque échange, qu'Apple seul lit.
+     */
+    private function peutSignerSonSecretClient(string $fournisseur): bool
+    {
+        return $fournisseur === 'apple'
+            && filled(config('services.apple.team_id'))
+            && filled(config('services.apple.key_id'))
+            && filled(config('services.apple.private_key'));
     }
 
     /**

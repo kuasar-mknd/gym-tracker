@@ -65,6 +65,50 @@ it('says so on the registration page too', function (): void {
         );
 });
 
+/*
+ * Apple complète son identité autrement (#1911) : à la place d'un secret signé
+ * à la main, qui expire au bout de six mois au plus, le trio qui en signe un
+ * neuf à chaque échange. Le bouton doit apparaître avec lui seul, et rester
+ * masqué tant qu'il manque une pièce : un trio incomplet ne signe rien.
+ */
+it('propose Apple avec le trio qui signe son secret, sans secret posé', function (): void {
+    config([
+        'services.apple.client_id' => 'org.example.gym.web',
+        'services.apple.client_secret' => null,
+        'services.apple.team_id' => 'EQUIPE0001',
+        'services.apple.key_id' => 'CLEAPP0001',
+        'services.apple.private_key' => 'le contenu du .p8 de test',
+    ]);
+
+    $this->get(route('login'))
+        ->assertInertia(fn ($page) => $page->where('social_login_enabled.apple', true));
+});
+
+it('masque Apple tant que son identité est incomplète', function (array $reglages): void {
+    config([
+        'services.apple.client_id' => 'org.example.gym.web',
+        'services.apple.client_secret' => null,
+        'services.apple.team_id' => 'EQUIPE0001',
+        'services.apple.key_id' => 'CLEAPP0001',
+        'services.apple.private_key' => 'le contenu du .p8 de test',
+    ]);
+
+    foreach ($reglages as $cle => $valeur) {
+        config([(string) $cle => $valeur]);
+    }
+
+    $this->get(route('register'))
+        ->assertInertia(fn ($page) => $page->where('social_login_enabled.apple', false));
+})->with([
+    'rien de posé' => [['services.apple.client_id' => null, 'services.apple.team_id' => null, 'services.apple.key_id' => null, 'services.apple.private_key' => null]],
+    'sans Services ID' => [['services.apple.client_id' => null]],
+    'sans Services ID, secret posé' => [['services.apple.client_id' => null, 'services.apple.client_secret' => 'secret']],
+    'sans équipe' => [['services.apple.team_id' => null]],
+    'sans identifiant de clé' => [['services.apple.key_id' => null]],
+    'sans clé privée' => [['services.apple.private_key' => null]],
+    'clé privée vide, comme la transmet la composition' => [['services.apple.private_key' => '']],
+]);
+
 /**
  * Relit config/services.php avec les variables données, comme le fait
  * `config:cache` au démarrage d'un conteneur.
@@ -74,7 +118,7 @@ it('says so on the registration page too', function (): void {
  */
 function connexionSocialeConfigurationRelue(array $variables): array
 {
-    $noms = ['APP_URL', 'GOOGLE_REDIRECT_URI', 'GITHUB_REDIRECT_URI', 'APPLE_REDIRECT_URI'];
+    $noms = ['APP_URL', 'GOOGLE_REDIRECT_URI', 'GITHUB_REDIRECT_URI', 'APPLE_REDIRECT_URI', 'APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY'];
     $avant = [];
 
     foreach ($noms as $nom) {
@@ -143,4 +187,39 @@ it('envoie le fournisseur vers l\'URL de rappel de la configuration', function (
 
     expect(get(route('social.redirect', $fournisseur))->headers->get('Location'))->toBeString()
         ->toContain('redirect_uri='.rawurlencode($rappel));
-})->with(['google', 'github']);
+})->with(['google', 'github', 'apple']);
+
+/*
+ * La clé .p8 tient sur plusieurs lignes, une variable de la pile sur une
+ * seule (#1911) : écrite avec des « \n » en toutes lettres, elle doit en
+ * ressortir lisible par OpenSSL, sans quoi chaque échange échoue en
+ * `invalid_client` alors que le bouton est affiché.
+ */
+it('relit la clé privée d\'Apple écrite sur une seule ligne', function (): void {
+    $cle = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']);
+    expect($cle)->not->toBeFalse();
+    assert($cle !== false);
+    openssl_pkey_export($cle, $pem);
+    assert(is_string($pem));
+
+    $configuration = connexionSocialeConfigurationRelue([
+        'APPLE_TEAM_ID' => 'EQUIPE0001',
+        'APPLE_KEY_ID' => 'CLEAPP0001',
+        'APPLE_PRIVATE_KEY' => str_replace("\n", '\n', trim($pem)),
+    ]);
+    $relue = data_get($configuration, 'apple.private_key');
+
+    // Le paquet lit le trio sous ces noms-là, et nulle part ailleurs.
+    expect(data_get($configuration, 'apple.team_id'))->toBe('EQUIPE0001')
+        ->and(data_get($configuration, 'apple.key_id'))->toBe('CLEAPP0001')
+        ->and($relue)->toBe(trim($pem))
+        ->and(openssl_pkey_get_private(is_string($relue) ? $relue : ''))->not->toBeFalse();
+});
+
+it('garde la clé privée d\'Apple écrite sur plusieurs lignes, et tient une variable vide pour absente', function (): void {
+    $surPlusieursLignes = "première ligne de la clé\ndeuxième ligne\ntroisième ligne";
+
+    expect(data_get(connexionSocialeConfigurationRelue(['APPLE_PRIVATE_KEY' => $surPlusieursLignes]), 'apple.private_key'))->toBe($surPlusieursLignes)
+        ->and(data_get(connexionSocialeConfigurationRelue(['APPLE_PRIVATE_KEY' => '']), 'apple.private_key'))->toBeNull()
+        ->and(data_get(connexionSocialeConfigurationRelue([]), 'apple.private_key'))->toBeNull();
+});

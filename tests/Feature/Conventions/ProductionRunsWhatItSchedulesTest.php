@@ -395,7 +395,11 @@ it('nomme le fichier de journal du jour d\'après LOG_DAILY_NAME', function (): 
  */
 it('transmet les identifiants de la connexion sociale à app seul', function (): void {
     $services = compositionServicesDeLApplication();
-    $identifiants = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'];
+    $identifiants = [
+        'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET',
+        // Apple, depuis #1911 : sa clé privée surtout n'a rien à faire ailleurs.
+        'APPLE_CLIENT_ID', 'APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY', 'APPLE_CLIENT_SECRET',
+    ];
 
     foreach ($identifiants as $nom) {
         expect(data_get($services, "app.environment.{$nom}"))->toBe("\${{$nom}:-}");

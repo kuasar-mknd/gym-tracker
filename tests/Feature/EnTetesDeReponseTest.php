@@ -6,6 +6,7 @@ use App\Models\Admin;
 use App\Models\User;
 use App\Models\Workout;
 use App\Providers\TempsDuServeurServiceProvider;
+use App\Support\ConnexionSociale\FournisseurApple;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Foundation\Vite;
 use Illuminate\Routing\Route as RouteLaravel;
@@ -16,11 +17,13 @@ use Inertia\Controller as InertiaController;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\AppleSimule;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withCookie;
+use function Pest\Laravel\withUnencryptedCookie;
 
 /**
  * Les en-têtes d'une page complète tiennent dans le tampon du proxy inverse.
@@ -348,3 +351,41 @@ it('garde le panneau d’administration sous le budget, CSP comprise', function 
     'Server-Timing coupé' => [false],
     'Server-Timing allumé' => [true],
 ]);
+
+/**
+ * Le départ vers Apple et son retour (#1911) : le départ pose un troisième
+ * cookie à côté de la session et du jeton XSRF, celui du nonce, et renvoie
+ * vers une adresse d'Apple longue de ses paramètres ; le retour connecte
+ * l'utilisateur et pose les cookies d'une session neuve. Ni l'un ni l'autre
+ * ne doit approcher la limite du proxy inverse : le 502 tomberait au milieu
+ * de la connexion.
+ *
+ * Chiffré par le paquet puis par `EncryptCookies`, le cookie du nonce pesait
+ * 827 octets et le départ 3 220 : il échappe donc au second chiffrement.
+ */
+it('garde le départ vers Apple et son retour sous le budget, cookie du nonce compris', function (): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+    config(['services.apple.redirect' => enTetesHoteDeProduction().'/auth/apple/callback']);
+
+    $depart = get(enTetesHoteDeProduction().'/auth/apple/redirect');
+    $cookie = $depart->getCookie(FournisseurApple::COOKIE_DU_NONCE, decrypt: false);
+
+    expect($cookie)->not->toBeNull()
+        ->and($depart->baseResponse->headers->getCookies())->toHaveCount(3)
+        ->and(enTetesTailleDuBloc($depart))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+
+    $apple->repondraParLeJeton($apple->jetonDIdentite(AppleSimule::nonceEnvoyePar((string) $depart->headers->get('Location'))));
+    enTetesRemettreAZeroCommeOctane();
+    $apple->nouvelleRequete();
+
+    $retour = withUnencryptedCookie(FournisseurApple::COOKIE_DU_NONCE, (string) $cookie?->getValue())
+        ->post(enTetesHoteDeProduction().'/auth/apple/callback', [
+            'code' => 'code-d-autorisation-de-test',
+            'user' => '{"name":{"firstName":"Alex","lastName":"Martin"}}',
+        ]);
+
+    $retour->assertRedirect(enTetesHoteDeProduction().'/dashboard');
+
+    expect(enTetesTailleDuBloc($retour))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+});

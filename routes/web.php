@@ -128,6 +128,22 @@ Route::get('/auth/{provider}/callback', [\App\Http\Controllers\Auth\SocialAuthCo
     ->name('social.callback');
 
 /**
+ * Le rappel d'Apple, qui arrive en POST (#1911).
+ *
+ * Apple renvoie l'utilisateur par un formulaire posté depuis son propre site
+ * (`response_mode=form_post`) : sans cette route, le rappel répondait 405. Le
+ * POST n'est ouvert qu'à Apple, Google et GitHub rappellent en GET et un POST
+ * vers leur rappel reste un 405. Ce POST inter-sites ne porte ni jeton CSRF ni
+ * cookie de session : bootstrap/app.php l'exclut de PreventRequestForgery,
+ * lui seul, et c'est le nonce du cookie de `FournisseurApple`, vérifié contre
+ * le jeton d'identité signé par Apple, qui le lie au navigateur parti.
+ */
+Route::post('/auth/apple/callback', [\App\Http\Controllers\Auth\SocialAuthController::class, 'callback'])
+    ->defaults('provider', 'apple')
+    ->middleware('guest')
+    ->name('social.callback.apple');
+
+/**
  * Raccourci de connexion pour le développement mobile.
  *
  * Ouvre une session sur le compte de démonstration, comme loginAs() le fait

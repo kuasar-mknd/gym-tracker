@@ -95,11 +95,18 @@ services:
             # Connexion sociale (#1908) : un bouton n'apparaît qu'avec
             # l'identifiant ET le secret de son fournisseur ; vides, rien ne
             # change. L'URL de rappel se déduit d'APP_URL (config/services.php).
-            # Apple demande davantage et reste hors de la pile pour l'instant.
+            # Apple (#1911) : l'identifiant, puis soit le trio qui signe son
+            # secret à chaque échange (équipe, clé, clé privée .p8 en clair),
+            # soit un secret déjà signé.
             GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
             GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
             GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
             GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+            APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+            APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+            APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+            APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+            APPLE_CLIENT_SECRET: ${APPLE_CLIENT_SECRET:-}
             # Server Optimization
             OCTANE_SERVER: frankenphp
             LOG_DAILY_NAME: app
