@@ -49,6 +49,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         /*
+         * Un mot de passe changé ferme les autres sessions du compte (#1940).
+         * Le docbloc du middleware dit pourquoi la garde `web` seulement. Il
+         * est un `AuthenticatesSessions`, que l'ordre de priorité de Laravel
+         * place après `auth` et avant les deux décorateurs ci-dessous : une
+         * session refusée y est renvoyée comme une session expirée.
+         */
+        $middleware->web(append: [
+            \App\Http\Middleware\AuthentifieLaSessionDuCompte::class,
+        ]);
+
+        /*
          * Pas d'`AddLinkHeadersForPreloadedAssets` ici, et c'est voulu.
          *
          * Il recopiait dans un en-tete `Link` chaque morceau que `@vite`
