@@ -41,7 +41,7 @@
 - **Mesures corporelles** — Suivi complet de ton évolution physique.
 
 ### 🔐 Sécurité & Outils
-- **OAuth Social** — Connexion via Google, GitHub et Apple, dès que l'identité OAuth du fournisseur est complète ; Apple signe lui-même son secret client à chaque échange (#1911).
+- **OAuth Social** — Connexion via Google, GitHub et Apple, dès que l'identité OAuth du fournisseur est complète ; pour Apple, l'application signe elle-même le secret client à chaque échange, avec la clé `.p8` (#1911).
 - **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
 - **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce neuf à chaque requête, Octane compris).
 
