@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Admin;
+use Filament\Facades\Filament;
 use Illuminate\Testing\TestResponse;
 use Livewire\Mechanisms\HandleRequests\HandleRequests;
 use Spatie\Permission\Models\Role;
@@ -70,13 +71,21 @@ it('charge une carte de Pulse pour le super administrateur', function (): void {
     expect($reponse->json('components.0.effects.html'))->toBeString()->toContain('wire:name="pulse.servers"', 'wire:poll.5s');
 });
 
+/**
+ * Le rôle `invite` lui laisse le panneau (`Admin::canAccessPanel()`) : le
+ * refus vient de la porte `viewPulse`, que rejoue
+ * `Laravel\Pulse\Http\Middleware\Authorize`, et non de l'authentification du
+ * panneau.
+ */
 it('refuse de charger une carte à l’administrateur qui a perdu les outils depuis l’ouverture de la page', function (): void {
     $superAdministrateur = pulseCartesSuperAdministrateur();
     $carte = pulseCartesPremiereCarte((string) actingAs($superAdministrateur, 'admin')->get('/backoffice/pulse')->assertOk()->getContent());
 
     $superAdministrateur->removeRole('super_admin');
+    $superAdministrateur->assignRole(Role::findOrCreate('invite', 'admin'));
     $superAdministrateur->unsetRelation('roles');
 
+    expect($superAdministrateur->canAccessPanel(Filament::getPanel('admin')))->toBeTrue();
     pulseCartesCharger($carte)->assertForbidden();
 });
 
