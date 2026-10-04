@@ -36,11 +36,22 @@ final class AdresseDuCompteChangee extends Notification implements ShouldQueue
 
     /**
      * Réduit une adresse à ce qui suffit à la reconnaître : la première lettre
-     * de la partie locale et du domaine, et l'extension.
+     * de la partie locale et du domaine, et l'extension quand elle a la forme
+     * d'une extension courante.
      *
-     * Un caractère hors de [a-z0-9] est omis plutôt que recopié : l'adresse
-     * vient de la saisie, et un `*`, un `[` ou un `_` deviendrait de la mise en
-     * forme dans le courriel.
+     * L'adresse vient de la saisie de qui fait le changement, et le courriel
+     * doit alerter quelqu'un d'autre : elle n'y entre ni comme mise en forme,
+     * ni comme texte.
+     *
+     * - Un caractère hors de [a-z0-9] est omis plutôt que recopié : un `*`, un
+     *   `[` ou un `_` deviendrait de la mise en forme dans le courriel.
+     * - L'extension n'est recopiée que si elle compte de deux à six lettres
+     *   (`fr`, `org`, `com`, `uk`, `online`…), et omise sinon. La règle
+     *   `email` accepte un dernier label de soixante-trois lettres, chiffres
+     *   et tirets : recopié, il porterait dans l'avis une phrase ou un numéro
+     *   choisis par l'auteur du changement, à la place d'une extension. Six
+     *   lettres sans séparateur couvrent les messageries courantes sans laisser
+     *   la place d'une phrase.
      */
     public static function masquer(string $adresse): string
     {
@@ -56,7 +67,7 @@ final class AdresseDuCompteChangee extends Notification implements ShouldQueue
 
         return self::premiereLettre(substr($adresse, 0, $arobase)).'•••@'
             .self::premiereLettre($domaine).'•••'
-            .(preg_match('/^[a-z0-9-]{1,63}$/i', $extension) === 1 ? '.'.$extension : '');
+            .(preg_match('/^[a-z]{2,6}$/i', $extension) === 1 ? '.'.$extension : '');
     }
 
     /**

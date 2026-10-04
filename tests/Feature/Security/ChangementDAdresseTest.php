@@ -300,4 +300,34 @@ it('masque une adresse sans laisser passer de mise en forme', function (string $
     'premier caractère de mise en forme' => ['*gras*@[lien](x).org', '•••@•••.org'],
     'extension qui n’en est pas une' => ['x@[192.0.2.1]', 'x•••@•••'],
     'sans arobase' => ['pas-une-adresse', '•••'],
+    'extension d’une seule lettre' => ['x@y.z', 'x•••@y•••'],
+    'extension de sept lettres' => ['a@b.website', 'a•••@b•••'],
+    'extension qui porte une phrase' => ['x@y.migration-automatique-rien-a-faire', 'x•••@y•••'],
+    'extension qui porte une phrase sans tirets' => ['x@y.migrationautomatique', 'x•••@y•••'],
+    'extension qui porte un numéro' => ['x@y.0612345678', 'x•••@y•••'],
 ]);
+
+/**
+ * La règle `email` laisse passer un dernier label de soixante-trois lettres,
+ * chiffres et tirets. Recopié dans l'avis, il y mettrait une phrase de
+ * l'auteur du changement, dans le courriel même qui doit alerter le titulaire.
+ */
+it('n’écrit dans l’avis aucune phrase venue de la nouvelle adresse', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+
+    $this->actingAs($compte)
+        ->patch('/profile', ['name' => 'Titulaire', 'email' => 'x@y.migration-automatique-rien-a-faire', 'current_password' => 'password'])
+        ->assertSessionHasNoErrors();
+
+    Notification::assertSentOnDemand(
+        AdresseDuCompteChangee::class,
+        function (AdresseDuCompteChangee $avis, array $canaux, AnonymousNotifiable $destinataire): bool {
+            $rendu = (string) $avis->toMail($destinataire)->render();
+
+            return $destinataire->routes === ['mail' => 'titulaire@example.org']
+                && str_contains($rendu, 'remplacée par x•••@y•••.')
+                && ! str_contains($rendu, 'migration');
+        },
+    );
+});
