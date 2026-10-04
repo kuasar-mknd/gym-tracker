@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Sauvegardes;
 
+use App\Models\Admin;
+use Filament\Notifications\Notification;
+use ShuvroRoy\FilamentSpatieLaravelBackup\Enums\BackupType;
 use ShuvroRoy\FilamentSpatieLaravelBackup\Pages\Backups;
 
 /**
@@ -32,6 +35,37 @@ final class PageDesSauvegardes extends Backups
     protected function getHeaderActions(): array
     {
         return $this->dossierDesSauvegardesRepond() ? parent::getHeaderActions() : [];
+    }
+
+    /**
+     * Met une sauvegarde en file, pour qui peut en créer et si le dossier
+     * répond.
+     *
+     * Le greffon ne garde que son bouton : `create()` est une méthode Livewire
+     * publique, qu'une requête forgée appelle sans lui. Un administrateur qui ne
+     * pouvait que télécharger mettait ainsi une sauvegarde en file. Et la page
+     * qui ne propose plus d'en créer quand le dossier se tait reste ouverte
+     * ailleurs depuis qu'il répondait : la sauvegarde serait allée attendre le
+     * partage dans un travailleur de la file.
+     */
+    #[\Override]
+    public function create(string $type = BackupType::DATABASE_AND_FILES->value): void
+    {
+        $administrateur = auth('admin')->user();
+
+        abort_unless($administrateur instanceof Admin && $administrateur->can('create-backup'), 403);
+
+        if (! $this->dossierDesSauvegardesRepond()) {
+            Notification::make()
+                ->title($this->titreDuDossierQuiNeRepondPas())
+                ->body($this->explicationDuDossierQuiNeRepondPas())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        parent::create($type);
     }
 
     /**

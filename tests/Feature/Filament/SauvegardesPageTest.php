@@ -10,10 +10,13 @@ use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Process\FakeProcessResult;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process as Processus;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Livewire\Finder\Finder;
 use Livewire\Livewire;
+use ShuvroRoy\FilamentSpatieLaravelBackup\Enums\BackupType;
+use ShuvroRoy\FilamentSpatieLaravelBackup\Jobs\CreateBackupJob;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\Process\Exception\ProcessTimedOutException as DelaiDepasse;
 use Symfony\Component\Process\Process;
@@ -64,6 +67,22 @@ it('ouvre la page à qui peut télécharger une sauvegarde, sans lui proposer d�
         ->get('/backoffice/backups')
         ->assertOk()
         ->assertDontSee('Créer une sauvegarde');
+});
+
+/*
+ * Le greffon ne garde que son bouton : `create()` est une méthode Livewire
+ * publique, qu'une requête forgée appelle sans lui. Un administrateur qui ne
+ * pouvait que télécharger mettait ainsi une sauvegarde en file.
+ */
+it('refuse une sauvegarde forgée à qui ne peut pas en créer', function (): void {
+    Queue::fake();
+    $this->actingAs(FilamentAdminPanel::admin(['download-backup']), 'admin');
+
+    Livewire::test(PageDesSauvegardes::class)
+        ->call('create', BackupType::ONLY_DATABASE->value)
+        ->assertForbidden();
+
+    Queue::assertNothingPushed();
 });
 
 /**
@@ -150,6 +169,35 @@ it('dit vite que le dossier des sauvegardes ne répond pas, sans le lister ni pr
         File::deleteDirectory($racine);
         File::deleteDirectory($endormies);
     }
+});
+
+/*
+ * La page ne propose plus de sauvegarde quand le dossier se tait, mais celle
+ * ouverte avant qu'il s'endorme, ou une requête forgée, appelle encore
+ * `create()` : la sauvegarde serait allée attendre le partage dans un
+ * travailleur de la file.
+ */
+it('ne met plus de sauvegarde en file quand le dossier cesse de répondre', function (): void {
+    Queue::fake();
+    $this->actingAs(sauvegardesPageSuperAdministrateur(), 'admin');
+
+    $composant = Livewire::test(PageDesSauvegardes::class)
+        ->assertSee('Créer une sauvegarde')
+        ->call('create', BackupType::ONLY_DATABASE->value)
+        ->assertOk();
+
+    Queue::assertPushed(CreateBackupJob::class, 1);
+
+    Processus::fake(fn () => throw new ProcessTimedOutException(
+        new DelaiDepasse(new Process(['ls', '-A', 'sauvegardes']), DelaiDepasse::TYPE_GENERAL),
+        new FakeProcessResult(),
+    ));
+
+    $composant->call('create', BackupType::ONLY_DATABASE->value)
+        ->assertOk()
+        ->assertNotified('Le dossier des sauvegardes ne répond pas');
+
+    Queue::assertPushed(CreateBackupJob::class, 1);
 });
 
 /*
