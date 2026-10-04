@@ -10,6 +10,10 @@ import { Head } from '@inertiajs/vue3'
 const props = defineProps({
     mustVerifyEmail: Boolean,
     status: String,
+    fournisseurDeConnexion: {
+        type: String,
+        default: null,
+    },
     notificationPreferences: Object,
     hasPushSubscription: Boolean,
 })
@@ -26,7 +30,11 @@ const props = defineProps({
         <div class="space-y-6">
             <!-- Profile Info -->
             <GlassCard class="animate-slide-up">
-                <UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" />
+                <UpdateProfileInformationForm
+                    :must-verify-email="mustVerifyEmail"
+                    :status="status"
+                    :fournisseur-de-connexion="fournisseurDeConnexion"
+                />
             </GlassCard>
 
             <!-- Password -->

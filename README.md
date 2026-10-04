@@ -54,8 +54,8 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 190 tests, couverture ≥ **94 %** | bloquant par PR |
-| **Tests frontend** | 2 187 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
+| **Tests backend** | 2 208 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests frontend** | 2 193 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
@@ -146,10 +146,10 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
-| `MAIL_HOST`, `MAIL_PORT` | oui | vides : aucun courriel ne part | Serveur SMTP de tous les courriels : vérification d'adresse, mot de passe oublié, alertes de santé, notifications des sauvegardes manuelles. `MAIL_PORT` décide aussi du chiffrement quand `MAIL_SCHEME` est vide. |
+| `MAIL_HOST`, `MAIL_PORT` | oui | vides : aucun courriel ne part | Serveur SMTP de tous les courriels : vérification d'adresse, mot de passe oublié, avis de changement d'adresse envoyé à l'ancienne adresse, alertes de santé, notifications des sauvegardes manuelles. `MAIL_PORT` décide aussi du chiffrement quand `MAIL_SCHEME` est vide. |
 | `MAIL_USERNAME`, `MAIL_PASSWORD` | si le relais l'exige | vides : pas d'authentification | Authentification SMTP. |
 | `MAIL_SCHEME` | non | vide : déduit du port | `smtps` (TLS implicite) ou `smtp` (STARTTLS quand le serveur le propose). Vide : `smtps` sur le port 465, `smtp` ailleurs. Remplace `MAIL_ENCRYPTION`, que Laravel ne lit plus : une pile qui la pose encore n'en tire rien. |
-| `MAIL_FROM_ADDRESS` | oui | vide : l'envoi échoue | Expéditeur de tous les courriels, et destinataire des notifications de sauvegarde faute de `BACKUP_NOTIFICATION_EMAIL`. |
+| `MAIL_FROM_ADDRESS` | oui | vide : l'envoi échoue | Expéditeur de tous les courriels, et destinataire des notifications de sauvegarde faute de `BACKUP_NOTIFICATION_EMAIL`. Elle reçoit aussi les réponses : l'avis de changement d'adresse invite à y répondre qui n'est pas à l'origine du changement, et elle doit donc être lue. |
 | `MAIL_FROM_NAME` | conseillé | vide : courriels sans nom d'expéditeur | Nom de l'expéditeur. Le défaut de la configuration ne s'applique pas : la composition transmet une chaîne vide. |
 
 #### Notifications Web Push

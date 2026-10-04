@@ -3,21 +3,57 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
+import { computed, ref, watch } from 'vue'
 
-defineProps({
+const props = defineProps({
     mustVerifyEmail: Boolean,
     status: String,
+    /** Le fournisseur relié au compte (« Google »…), ou null pour un compte à mot de passe seul. */
+    fournisseurDeConnexion: {
+        type: String,
+        default: null,
+    },
 })
 
-const user = usePage().props.auth.user
+const page = usePage()
+
+/**
+ * Lu à chaque rendu plutôt qu'une fois au montage : après un changement
+ * d'adresse réussi, c'est la nouvelle adresse qui fait référence, sans quoi le
+ * champ du mot de passe resterait affiché pour une adresse déjà enregistrée.
+ */
+const user = computed(() => page.props.auth.user)
+
+const motDePasseActuel = ref(null)
 
 const form = useForm({
-    name: user.name,
-    email: user.email,
+    name: user.value.name,
+    email: user.value.email,
+    current_password: '',
+})
+
+/** Le serveur n'exige le mot de passe actuel que lorsque l'adresse change. */
+const adresseChangee = computed(() => form.email !== user.value.email)
+
+/**
+ * Le mot de passe ne sert qu'à l'adresse qu'il accompagne : il s'efface quand
+ * l'adresse revient à celle du compte, saisie à la main ou enregistrée.
+ */
+watch(adresseChangee, (changee) => {
+    if (!changee) {
+        form.current_password = ''
+    }
 })
 
 const submit = () => {
-    form.patch(route('profile.update'))
+    form.patch(route('profile.update'), {
+        onError: () => {
+            if (form.errors.current_password) {
+                form.reset('current_password')
+                motDePasseActuel.value?.focus()
+            }
+        },
+    })
 }
 </script>
 
@@ -47,6 +83,36 @@ const submit = () => {
                 autocomplete="username"
                 required
             />
+
+            <template v-if="adresseChangee">
+                <GlassInput
+                    v-model="form.current_password"
+                    ref="motDePasseActuel"
+                    dusk="profile-current-password-input"
+                    type="password"
+                    label="Mot de passe actuel"
+                    :error="form.errors.current_password"
+                    autocomplete="current-password"
+                    required
+                />
+
+                <p class="text-text-muted text-sm" data-testid="profile-email-change-notice">
+                    Ton mot de passe confirme que c’est bien toi. Ton adresse actuelle sera prévenue du changement, et
+                    la nouvelle devra être vérifiée.
+                </p>
+
+                <div
+                    v-if="props.fournisseurDeConnexion && !form.errors.current_password"
+                    class="bg-accent-info/10 rounded-xl p-3"
+                    data-testid="profile-social-password-help"
+                >
+                    <p class="text-accent-info-deep text-sm">
+                        Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de
+                        passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de
+                        connexion. Le lien part à ton adresse actuelle, {{ user.email }}.
+                    </p>
+                </div>
+            </template>
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null" class="bg-accent-warning/20 rounded-xl p-3">
                 <p class="text-accent-warning-deep text-sm">

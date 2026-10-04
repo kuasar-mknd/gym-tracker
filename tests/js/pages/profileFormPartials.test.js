@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { nextTick, reactive } from 'vue'
 
 const formPut = vi.fn()
 const formPatch = vi.fn()
@@ -23,6 +23,7 @@ vi.mock('@inertiajs/vue3', async () => {
     const { reactive } = await vi.importActual('vue')
 
     return {
+        Head: { template: '<div />' },
         Link: {
             props: { href: { type: String, default: '' }, method: { type: String, default: 'get' } },
             template: '<a :href="href" :data-method="method"><slot /></a>',
@@ -62,7 +63,8 @@ vi.mock('@inertiajs/vue3', async () => {
 
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
-import { passesSlot } from './pageStubs'
+import ProfileEdit from '@/Pages/Profile/Edit.vue'
+import { layoutStub, passesSlot } from './pageStubs'
 
 beforeAll(() => {
     globalThis.route = (name) => `/${name}`
@@ -331,6 +333,112 @@ describe('UpdateProfileInformationForm', () => {
         expect(button().attributes('aria-busy')).toBe('false')
     })
 
+    /** L'étiquette du champ qui n'apparaît que lorsque l'adresse change. */
+    const currentPasswordLabel = 'Mot de passe actuel'
+
+    const hasField = (wrapper, labelText) =>
+        wrapper.findAll('label').some((label) => label.text().replace(/\s*\*$/, '') === labelText)
+
+    it('ne demande le mot de passe actuel que lorsque l’adresse change', async () => {
+        signedInAs(verified)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+
+        expect(hasField(wrapper, currentPasswordLabel)).toBe(false)
+
+        await typeInto(wrapper, 'Nom', 'Samuel')
+
+        // Le serveur laisse passer le nom seul sans mot de passe : en demander un
+        // quand même bloquerait les comptes qui n'en ont jamais eu.
+        expect(hasField(wrapper, currentPasswordLabel)).toBe(false)
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+
+        expect(hasField(wrapper, currentPasswordLabel)).toBe(true)
+        expect(wrapper.find('[data-testid="profile-email-change-notice"]').text()).toContain(
+            'Ton adresse actuelle sera prévenue du changement',
+        )
+
+        await typeInto(wrapper, currentPasswordLabel, 'secret')
+
+        expect(wrapper.vm.form.current_password).toBe('secret')
+        expect(wrapper.find('input[autocomplete="current-password"]').attributes('type')).toBe('password')
+    })
+
+    it('oublie le mot de passe saisi quand l’adresse revient à celle du compte', async () => {
+        signedInAs(verified)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+        await typeInto(wrapper, currentPasswordLabel, 'secret')
+        await typeInto(wrapper, 'Email', 'sam@example.com')
+
+        expect(hasField(wrapper, currentPasswordLabel)).toBe(false)
+        expect(wrapper.vm.form.current_password).toBe('')
+    })
+
+    it('sur un mot de passe refusé, vide le champ et y remet le curseur', async () => {
+        signedInAs(verified)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+        await typeInto(wrapper, currentPasswordLabel, 'mauvais')
+        wrapper.vm.form.errors = { current_password: 'Ce mot de passe ne correspond pas à ton compte.' }
+
+        await submit(wrapper)
+        formPatch.mock.calls[0][1].onError()
+        await nextTick()
+
+        expect(wrapper.vm.form.current_password).toBe('')
+        expect(wrapper.vm.form.email).toBe('nouveau@example.com')
+        expect(focusedFieldLabel(wrapper)).toBe(`${currentPasswordLabel} *`)
+    })
+
+    it('referme le champ une fois la nouvelle adresse enregistrée', async () => {
+        currentPage = reactive({ props: { auth: { user: { ...verified } } } })
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+        await typeInto(wrapper, currentPasswordLabel, 'secret')
+        await submit(wrapper)
+
+        // Ce qu'Inertia rend après la redirection : le compte porte désormais la
+        // nouvelle adresse, qui devient celle à laquelle comparer.
+        currentPage.props.auth.user = { ...verified, email: 'nouveau@example.com', email_verified_at: null }
+        await nextTick()
+
+        expect(hasField(wrapper, currentPasswordLabel)).toBe(false)
+        expect(wrapper.vm.form.current_password).toBe('')
+    })
+
+    it('dit à un compte relié à un fournisseur comment obtenir un mot de passe', async () => {
+        signedInAs(verified)
+
+        const social = mountPartial(UpdateProfileInformationForm, { fournisseurDeConnexion: 'Google' })
+        const passwordOnly = mountPartial(UpdateProfileInformationForm)
+        const help = (wrapper) => wrapper.find('[data-testid="profile-social-password-help"]')
+
+        expect(help(social).exists()).toBe(false)
+
+        await typeInto(social, 'Email', 'nouveau@example.com')
+        await typeInto(passwordOnly, 'Email', 'nouveau@example.com')
+
+        expect(help(social).text()).toContain('Ton compte est relié à Google.')
+        expect(help(social).text()).toContain('« Mot de passe oublié ? »')
+        expect(help(social).text()).toContain('Le lien part à ton adresse actuelle, sam@example.com.')
+        expect(help(passwordOnly).exists()).toBe(false)
+
+        // Une fois que le serveur a répondu, son message dit la même chose sous
+        // le champ : l'encadré s'efface plutôt que de le répéter.
+        social.vm.form.errors = { current_password: 'Ton compte est relié à Google. …' }
+        await nextTick()
+
+        expect(help(social).exists()).toBe(false)
+    })
+
     it('ne confirme l’enregistrement qu’une fois qu’il a eu lieu', async () => {
         signedInAs(verified)
 
@@ -342,5 +450,23 @@ describe('UpdateProfileInformationForm', () => {
         await nextTick()
 
         expect(wrapper.text()).toContain('Enregistré ✓')
+    })
+})
+
+describe('Profile/Edit', () => {
+    it('transmet le fournisseur de connexion au formulaire d’adresse', () => {
+        const wrapper = mount(ProfileEdit, {
+            props: { mustVerifyEmail: true, fournisseurDeConnexion: 'GitHub' },
+            shallow: true,
+            global: {
+                mocks: { route: globalThis.route },
+                stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            },
+        })
+
+        // Sans lui, le formulaire ne saurait pas qu'il parle à un compte qui peut
+        // n'avoir aucun mot de passe, et le refus du serveur resterait la seule
+        // explication.
+        expect(wrapper.findComponent(UpdateProfileInformationForm).props('fournisseurDeConnexion')).toBe('GitHub')
     })
 })

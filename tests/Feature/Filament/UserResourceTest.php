@@ -7,6 +7,10 @@ use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
+use App\Notifications\AdresseDuCompteChangee;
+use Filament\Actions\Testing\TestAction;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -252,4 +256,44 @@ it('refuse la création d’un compte sans mot de passe', function (): void {
         ->assertHasFormErrors(['password' => 'required']);
 
     expect(User::query()->where('email', 'sans-mdp@example.com')->exists())->toBeFalse();
+});
+
+/**
+ * Un administrateur change l'adresse d'un compte sans le mot de passe de
+ * celui-ci : le panneau n'en a pas, et le support doit pouvoir rendre un compte
+ * dont l'adresse est perdue. Mais le titulaire en est prévenu à l'ancienne
+ * adresse, comme d'un changement fait depuis le profil, et la nouvelle repasse
+ * non vérifiée : sans quoi une adresse que personne n'a prouvée resterait
+ * marquée vérifiée, et une connexion sociale portant cette adresse se
+ * rattacherait au compte. Par la page comme par l'action de la table, qui
+ * partage le formulaire.
+ */
+it('prévient l’ancienne adresse et retire la vérification quand le panneau change l’adresse', function (): void {
+    Notification::fake();
+    $parLaPage = User::factory()->create(['email' => 'page-avant@example.org']);
+    $parLaTable = User::factory()->create(['email' => 'table-avant@example.org']);
+
+    Livewire::test(EditUser::class, ['record' => $parLaPage->getKey()])
+        ->fillForm(['email' => 'page-apres@example.org'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    Livewire::test(ListUsers::class)
+        ->callAction(TestAction::make('edit')->table($parLaTable), [
+            'email' => 'table-apres@example.org',
+        ])
+        ->assertHasNoFormErrors();
+
+    foreach (['page' => $parLaPage, 'table' => $parLaTable] as $chemin => $compte) {
+        $compte->refresh();
+
+        expect($compte->email)->toBe("{$chemin}-apres@example.org")
+            ->and($compte->email_verified_at)->toBeNull();
+
+        Notification::assertSentOnDemand(
+            AdresseDuCompteChangee::class,
+            fn (AdresseDuCompteChangee $avis, array $canaux, AnonymousNotifiable $destinataire): bool => $destinataire->routes === ['mail' => "{$chemin}-avant@example.org"]
+                && $avis->nouvelleAdresse === "{$chemin}-apres@example.org",
+        );
+    }
 });

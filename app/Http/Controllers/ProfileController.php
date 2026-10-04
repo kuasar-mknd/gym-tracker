@@ -33,6 +33,9 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => true,
             'status' => session('status'),
+            // Le formulaire d'adresse explique à un compte relié à un
+            // fournisseur comment obtenir le mot de passe qu'il exige.
+            'fournisseurDeConnexion' => $this->user()->fournisseurDeConnexion(),
             // Est-ce que NOUS détenons un abonnement, ce qui n'est pas la même
             // chose que le navigateur ayant accordé la permission. La page
             // déduisait l'un de l'autre : un abonnement que le serveur n'avait
@@ -51,20 +54,19 @@ class ProfileController extends Controller
     }
 
     /**
-     * Changer d'adresse annule la vérification : sans quoi n'importe qui
-     * pourrait se donner une adresse déjà marquée comme vérifiée.
+     * Le mot de passe actuel, exigé quand l'adresse change, est vérifié par
+     * `ProfileUpdateRequest` et n'est pas écrit. Le reste suit tout changement
+     * d'adresse, quel que soit le chemin (`SurveilleSonAdresse`) : la nouvelle
+     * adresse repasse non vérifiée, et l'ancienne en est prévenue.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $this->authorize('update', $this->user());
 
-        $this->user()->fill($request->validated());
+        /** @var array{name: string, email: string} $donneesValidees */
+        $donneesValidees = $request->safe()->only(['name', 'email']);
 
-        if ($this->user()->isDirty('email')) {
-            $this->user()->email_verified_at = null;
-        }
-
-        $this->user()->save();
+        $this->user()->update($donneesValidees);
 
         return Redirect::route('profile.edit');
     }
