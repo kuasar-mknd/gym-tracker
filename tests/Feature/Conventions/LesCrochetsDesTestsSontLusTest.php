@@ -21,6 +21,12 @@ use Symfony\Component\Finder\Finder;
  *
  * Les deux défauts ont la même forme : un réglage qui se lit comme actif et
  * que l'outil ignore. Ces gardes refusent leur retour.
+ *
+ * `prepare()` a été retirée, pas réveillée : la CI lance ChromeDriver dans
+ * une étape à part et Sail fournit Selenium, et Sail garde APP_ENV à `local`
+ * pour les parcours. La remettre sous un attribut que PHPUnit lit doublerait
+ * le pilote de la CI et poserait APP_ENV=testing dans leur processus : la
+ * dernière garde refuse ce réveil, quelle que soit sa forme.
  */
 
 /**
@@ -42,6 +48,34 @@ function crochetsDesTestsAttributsDePhpunit(): array
     }
 
     return $attributs;
+}
+
+/**
+ * Le jeton à cette position pose-t-il APP_ENV : `putenv('APP_ENV=…')`, ou
+ * une affectation à `$_ENV['APP_ENV']` ou `$_SERVER['APP_ENV']` ? Une lecture
+ * ne compte pas.
+ *
+ * @param  list<PhpToken>  $jetons  les jetons du fichier, sans espaces ni commentaires
+ */
+function crochetsDesTestsPoseAppEnv(array $jetons, int $position): bool
+{
+    $jeton = $jetons[$position];
+
+    if (! $jeton->is(T_CONSTANT_ENCAPSED_STRING)) {
+        return false;
+    }
+
+    $valeur = substr($jeton->text, 1, -1);
+
+    if (str_starts_with($valeur, 'APP_ENV=')) {
+        return true;
+    }
+
+    return $valeur === 'APP_ENV'
+        && ($jetons[$position - 1] ?? null)?->text === '['
+        && in_array(($jetons[$position - 2] ?? null)?->text, ['$_ENV', '$_SERVER'], true)
+        && ($jetons[$position + 1] ?? null)?->text === ']'
+        && ($jetons[$position + 2] ?? null)?->text === '=';
 }
 
 it('ne confie aucun crochet ni réglage de test à une étiquette de docblock, que PHPUnit ne lit plus', function (): void {
@@ -107,4 +141,31 @@ it('ne lie dans tests/Pest.php que des dossiers où vivent des tests Pest', func
     }
 
     expect($sansTestPest)->toBe([]);
+});
+
+it('ne démarre aucun pilote depuis la suite, et ne pose pas APP_ENV dans le processus des parcours', function (): void {
+    $demarrages = ['startchromedriver', 'buildchromeprocess', 'chromeprocess'];
+    $fautifs = [];
+
+    foreach (Finder::create()->files()->in(base_path('tests'))->name('*.php') as $fichier) {
+        $chemin = 'tests/'.str_replace('\\', '/', $fichier->getRelativePathname());
+        $duProcessusDesParcours = $chemin === 'tests/DuskTestCase.php' || str_starts_with($chemin, 'tests/Browser/');
+        $jetons = array_values(array_filter(
+            PhpToken::tokenize($fichier->getContents()),
+            fn (PhpToken $jeton): bool => ! $jeton->isIgnorable(),
+        ));
+
+        foreach ($jetons as $position => $jeton) {
+            if ($jeton->is([T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])
+                && in_array(strtolower(class_basename($jeton->text)), $demarrages, true)) {
+                $fautifs[] = sprintf('%s:%d : %s démarre un pilote, que la CI et Sail lancent déjà', $chemin, $jeton->line, $jeton->text);
+            }
+
+            if ($duProcessusDesParcours && crochetsDesTestsPoseAppEnv($jetons, $position)) {
+                $fautifs[] = sprintf('%s:%d : pose APP_ENV dans le processus des parcours, où Sail le garde à local', $chemin, $jeton->line);
+            }
+        }
+    }
+
+    expect($fautifs)->toBe([]);
 });
