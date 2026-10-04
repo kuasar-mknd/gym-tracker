@@ -313,8 +313,11 @@ it('prévient l’ancienne adresse et retire la vérification quand le panneau c
  * même adresse reste refusée : un compte non vérifié ne se rattache à personne
  * de nouveau. Et seule l'adresse même du compte, garantie par le fournisseur,
  * le revérifie, pas une adresse que la collation de la base tient pour la même.
+ * La casse ASCII, elle, ne distingue pas deux adresses : le panneau n'impose
+ * pas les minuscules, et un fournisseur peut rendre l'adresse avec des
+ * majuscules.
  */
-it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a changé l’adresse', function (string $fournisseur, string $identifiantEnBase, int|string $identifiantRendu, int|string $autreIdentifiant): void {
+it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a changé l’adresse', function (string $fournisseur, string $identifiantEnBase, int|string $identifiantRendu, int|string $autreIdentifiant, string $adresseDuPanneau, string $adresseRendue): void {
     Notification::fake();
     $compte = User::factory()->create([
         'email' => 'avant@example.org',
@@ -323,7 +326,7 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
     ]);
 
     Livewire::test(EditUser::class, ['record' => $compte->getKey()])
-        ->fillForm(['email' => 'apres@example.org'])
+        ->fillForm(['email' => $adresseDuPanneau])
         ->call('save')
         ->assertHasNoFormErrors();
 
@@ -353,7 +356,7 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
     };
 
     // Une autre identité qui présente l'adresse du compte : refusée.
-    $retourDe($autreIdentifiant, 'apres@example.org');
+    $retourDe($autreIdentifiant, $adresseRendue);
 
     expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($fournisseur))
         ->toThrow(SocialAuthException::class);
@@ -372,12 +375,15 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
 
     expect($compte->refresh()->email_verified_at)->toBeNull();
 
-    $retourDe($identifiantRendu, 'apres@example.org');
+    $retourDe($identifiantRendu, $adresseRendue);
 
     expect(app(HandleSocialCallbackAction::class)->execute($fournisseur)->is($compte))->toBeTrue()
         ->and($compte->refresh()->email_verified_at)->not->toBeNull()
+        ->and($compte->email)->toBe($adresseDuPanneau)
         ->and($compte->provider_id)->toBe($identifiantEnBase);
 })->with([
-    'Google' => ['google', 'g-123', 'g-123', 'g-999'],
-    'GitHub, qui rend l’identifiant en entier' => ['github', '4242', 4242, 4243],
+    'Google' => ['google', 'g-123', 'g-123', 'g-999', 'apres@example.org', 'apres@example.org'],
+    'GitHub, qui rend l’identifiant en entier' => ['github', '4242', 4242, 4243, 'apres@example.org', 'apres@example.org'],
+    'majuscules posées par le panneau' => ['github', '4242', 4242, 4243, 'Apres@example.org', 'apres@example.org'],
+    'majuscules rendues par le fournisseur' => ['google', 'g-123', 'g-123', 'g-999', 'apres@example.org', 'Apres@Example.org'],
 ]);
