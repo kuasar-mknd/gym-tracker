@@ -87,8 +87,18 @@ final class AdminPanelProvider extends PanelProvider
         return [
             FilamentShieldPlugin::make(),
             // La page relit le partage des sauvegardes à chaque sondage : une fois par
-            // minute suffit, une archive met plus longtemps à se faire.
-            FilamentSpatieLaravelBackupPlugin::make()->usingPollingInterval('60s'),
+            // minute suffit, une archive met plus longtemps à se faire. Elle ne
+            // s'ouvre qu'à qui peut faire quelque chose d'une sauvegarde : sans
+            // porte, tout administrateur du panneau voyait la liste des archives,
+            // leurs dates et leurs tailles.
+            FilamentSpatieLaravelBackupPlugin::make()
+                ->usingPollingInterval('60s')
+                ->authorize(function (): bool {
+                    /** @var \App\Models\Admin|null $user */
+                    $user = auth('admin')->user();
+
+                    return $user?->canAny(['create-backup', 'download-backup', 'delete-backup']) ?? false;
+                }),
             // Trente jours d'exceptions suffisent à comprendre une panne ; au-delà,
             // `model:prune` les efface. L'intervalle est pris au démarrage, ce qui
             // convient au planificateur, lancé à neuf.

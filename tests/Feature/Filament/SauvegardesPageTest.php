@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Admin;
 use Illuminate\Support\Facades\File;
 use Spatie\Permission\Models\Role;
+use Tests\Support\FilamentAdminPanel;
 
 beforeEach(function (): void {
     $racine = config('filesystems.disks.sauvegardes.root');
@@ -31,6 +32,25 @@ it('refuse la page à un administrateur ordinaire', function (): void {
     $this->actingAs(Admin::factory()->create(), 'admin')
         ->get('/backoffice/backups')
         ->assertForbidden();
+});
+
+/**
+ * L'administrateur ci-dessus n'entre même pas au panneau, faute de rôle : son
+ * 403 ne dit rien de la page. Celui-ci y entre, et la page s'ouvrait à lui en
+ * lecture : la liste des archives, leurs dates et leurs tailles.
+ */
+it('cache la page et son lien à un administrateur du panneau sans capacité de sauvegarde', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:Exercise']), 'admin');
+
+    $this->get('/backoffice')->assertOk()->assertDontSee('/backoffice/backups', escape: false);
+    $this->get('/backoffice/backups')->assertForbidden();
+});
+
+it('ouvre la page à qui peut télécharger une sauvegarde, sans lui proposer d’en créer', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(['download-backup']), 'admin')
+        ->get('/backoffice/backups')
+        ->assertOk()
+        ->assertDontSee('Créer une sauvegarde');
 });
 
 /**
