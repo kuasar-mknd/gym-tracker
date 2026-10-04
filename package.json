@@ -22,7 +22,7 @@
     "lint-staged": {
         "resources/**/*.{js,vue,css}": "prettier --write",
         "tests/js/**/*.js": "prettier --write",
-        "**/*.php": "./vendor/bin/pint"
+        "**/*.php": "bash scripts/formater-le-php.sh"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
