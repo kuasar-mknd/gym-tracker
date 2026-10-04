@@ -51,14 +51,32 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('auth:clear-resets')
     ->dailyAt('01:45');
 
-\Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])
-    ->dailyAt('02:00');
+/*
+ * Les trois tâches de sauvegarde touchent le partage des sauvegardes, qui peut
+ * cesser de répondre sans rendre d'erreur : au premier plan, un seul accès qui
+ * attendait figeait le passage du planificateur, et les tâches suivantes de la
+ * minute avec lui (#1929). Chacune tourne donc dans son propre processus ; le
+ * moniteur en reçoit la fin par `schedule:finish`, que le planificateur ajoute
+ * à la commande. Le verrou empêche d'empiler un passage sur le précédent resté
+ * pris. Il dure un jour et une heure : à vingt-quatre heures, son défaut, il
+ * expirerait à la seconde où le passage du lendemain le cherche ; au-delà de
+ * deux jours, un verrou que rien ne rend coûterait plus d'une nuit de
+ * sauvegarde. Seule la fin de la tâche le rend : celui qu'emporte un
+ * planificateur arrêté en plein passage est rendu à son démarrage, par
+ * `entrypoint.sh`, sans quoi il ferait sauter la nuit suivante.
+ */
+\Illuminate\Support\Facades\Schedule::runInBackground()
+    ->withoutOverlapping(expiresAt: 25 * 60)
+    ->group(function (): void {
+        \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])
+            ->dailyAt('02:00');
 
-\Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db' => true, '--disable-notifications' => true])
-    ->dailyAt('02:30');
+        \Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db' => true, '--disable-notifications' => true])
+            ->dailyAt('02:30');
 
-\Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
-    ->dailyAt('08:00');
+        \Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
+            ->dailyAt('08:00');
+    });
 
 /*
  * La santé de l'application, lue dans le panneau (« Système › Santé »).

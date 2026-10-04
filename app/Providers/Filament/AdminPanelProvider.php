@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers\Filament;
 
+use App\Filament\Sauvegardes\PageDesSauvegardes;
 use App\Http\Middleware\ConditionalCspHeaders;
 use App\Support\Csp\Nonce\SigneLesScriptsEnLigneDesPaquets;
 use BezhanSalleh\FilamentExceptions\FilamentExceptionsPlugin;
@@ -92,8 +93,11 @@ final class AdminPanelProvider extends PanelProvider
             // minute suffit, une archive met plus longtemps à se faire. Elle ne
             // s'ouvre qu'à qui peut faire quelque chose d'une sauvegarde : sans
             // porte, tout administrateur du panneau voyait la liste des archives,
-            // leurs dates et leurs tailles.
+            // leurs dates et leurs tailles. Sa page à nous sonde le dossier, dans
+            // un délai borné, avant de le lister : un partage qui ne répond plus
+            // aurait pris le travailleur d'Octane qui la sert (#1929).
             FilamentSpatieLaravelBackupPlugin::make()
+                ->usingPage(PageDesSauvegardes::class)
                 ->usingPollingInterval('60s')
                 ->authorize(function (): bool {
                     /** @var \App\Models\Admin|null $user */
