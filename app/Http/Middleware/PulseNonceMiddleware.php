@@ -8,6 +8,17 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * N'est plus branché nulle part : ne pas le rebrancher.
+ *
+ * Il signait les balises de Pulse en réécrivant toute la réponse, motif que
+ * `.ai/rules/middleware.md` interdit, et réécrivait aussi le texte `<script>`
+ * que livewire.js contient : un nonce glissé dans une chaîne cassait sa
+ * syntaxe, et la page de Pulse restait sans Livewire ni Alpine. Les balises de
+ * Pulse sont désormais signées à la compilation de ses gabarits
+ * (`SigneLesScriptsEnLigneDesPaquets`). La classe et son test attendent
+ * l'accord du propriétaire du dépôt pour être supprimés.
+ */
 class PulseNonceMiddleware
 {
     /**

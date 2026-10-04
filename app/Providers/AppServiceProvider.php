@@ -47,13 +47,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->refuserLesArchivesEnClair();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
-        // Le lecteur de journaux vit sous /backoffice mais hors du panneau : sa
-        // porte est la même, dite au paquet.
-        \Opcodes\LogViewer\Facades\LogViewer::auth(fn (\Illuminate\Http\Request $request): bool => $request->user('admin')?->can('view-logs') ?? false);
-
-        if (config('app.env') === 'testing') {
-            Gate::define('viewPulse', fn ($user = null): bool => true);
-        }
+        $this->ouvrirLeLecteurDeJournaux();
 
         // Le nonce CSP n'est plus tiré ici mais à chaque requête, par
         // NonceCspParRequete : sous Octane, boot() ne tourne qu'une fois par
@@ -285,12 +279,42 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * Le lecteur de journaux vit sous /backoffice mais hors du panneau : sa porte
+     * est `view-logs`, celle qui montre son lien dans le menu.
+     *
+     * Une porte du Gate, et non le rappel de `LogViewer::auth()` : le paquet lie
+     * son service en `scoped`, qu'Octane oublie après chaque requête. Le rappel
+     * posé au démarrage ne servait que la première requête d'un worker ; ensuite
+     * `AuthorizeLogViewer` ne trouvait ni rappel ni porte, refusait tout le monde
+     * en production (403, page et API), et laissait passer tout administrateur
+     * du panneau ailleurs. Les définitions du Gate vivent dans l'application de
+     * base, d'où chaque requête est clonée.
+     *
+     * Le paquet l'évalue par `Gate::authorize()`, donc pour l'utilisateur de la
+     * garde par défaut, que `Filament\Http\Middleware\Authenticate` vient de
+     * régler sur celle du panneau (`config/log-viewer.php`) : seul un
+     * administrateur passe, même si un compte de l'application est connecté à
+     * côté.
+     */
+    private function ouvrirLeLecteurDeJournaux(): void
+    {
+        Gate::define('viewLogViewer', fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
+            && $utilisateur->can('view-logs'));
+    }
+
+    /**
      * Les greffons demandent `create-backup`, `download-backup`, `delete-backup`
      * et `view-health` ; Shield ne les connaît pas et ne pose aucune porte pour
      * le super administrateur, si bien que personne ne voyait le bouton. Les
      * quatre capacités des exceptions suivent le même chemin : la ressource
      * s'ouvre au super administrateur sans passer par `shield:generate` en
      * production, et une permission Shield accordée à un autre rôle marche aussi.
+     *
+     * `viewPulse` aussi : Pulse pose sa propre porte, ouverte au seul
+     * environnement `local`, si bien que `/backoffice/pulse` répondait 403 en
+     * production et que son lien restait caché. La nôtre est définie après la
+     * sienne (Pulse la pose dès que le Gate est résolu, donc avant notre premier
+     * `Gate::define`) et la remplace, en local compris.
      */
     private function ouvrirLesOutilsAuSuperAdministrateur(): void
     {
@@ -312,6 +336,7 @@ final class AppServiceProvider extends ServiceProvider
             'View:TachePlanifiee',
             'view-logs',
             'view-outils',
+            'viewPulse',
         ];
 
         foreach ($capacites as $capacite) {

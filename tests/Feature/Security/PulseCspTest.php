@@ -43,8 +43,16 @@ class PulseCspTest extends TestCase
         $this->assertNotEmpty($matches[1], 'Nonce not found in CSP header');
         $nonce = $matches[1];
 
-        // Verify that unsafe-inline is removed
-        $this->assertStringNotContainsString("'unsafe-inline'", (string) $csp);
+        // Les balises <script> et <style> se signent du nonce : 'unsafe-inline'
+        // n'est admis que pour les attributs style (style-src-attr), qui ne
+        // peuvent pas porter de nonce.
+        foreach (['script-src', 'style-src'] as $directive) {
+            if (preg_match('/(?:^|;)\s*'.$directive.' ([^;]*)/', (string) $csp, $sources) !== 1) {
+                $this->fail("Directive {$directive} absente de la Content-Security-Policy.");
+            }
+
+            $this->assertStringNotContainsString("'unsafe-inline'", $sources[1]);
+        }
 
         // Verify that nonces are added to tags in the response content
         $content = (string) $response->getContent();
