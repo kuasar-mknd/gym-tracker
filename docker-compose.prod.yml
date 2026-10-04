@@ -231,9 +231,16 @@ services:
     #
     # `schedule:work` plutot qu'un cron appelant `schedule:run` : il reste dans
     # le conteneur, se redemarre avec lui, et n'ajoute pas de crontab a tenir.
+    #
+    # `init: true` : une tâche d'arrière-plan (les sauvegardes, #1929) est
+    # orpheline dès son lancement et revient au premier processus du conteneur.
+    # `schedule:work` ne récolte pas les enfants qu'il n'a pas lancés : chacune
+    # y restait en processus zombie jusqu'à la recréation du conteneur. L'init
+    # minimal du moteur de conteneurs les récolte.
     scheduler:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
         pull_policy: always
+        init: true
         volumes:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
             - journaux:/app/storage/logs

@@ -279,6 +279,32 @@ it('lance le planificateur même si ses verrous n’ont pas pu être rendus', fu
         ->toContain('artisan schedule:clear-cache', 'artisan schedule:work');
 });
 
+/*
+ * Une tâche d'arrière-plan est lancée par `sh -c '( … ) &'`, qui rend aussitôt
+ * la main : le sous-shell, orphelin, revient au premier processus du
+ * conteneur. Sans init, c'est `schedule:work` (entrypoint.sh finit par
+ * `exec`), et PHP ne récolte pas les enfants qu'il n'a pas lancés : chaque
+ * sauvegarde laissait un processus zombie, trois par jour jusqu'à la
+ * recréation du conteneur (#1929).
+ */
+it('donne un init au conteneur du planificateur, qui récolte ses tâches d’arrière-plan', function (): void {
+    $planificateurs = array_filter(
+        compositionDeProduction(),
+        static fn (mixed $service): bool => is_array($service)
+            && is_string($service['command'] ?? null)
+            && str_contains($service['command'], 'schedule:work'),
+    );
+
+    expect($planificateurs)->not->toBeEmpty();
+
+    foreach ($planificateurs as $nom => $service) {
+        expect($service['init'] ?? null)->toBeTrue(sprintf(
+            'Le service `%s` lance le planificateur sans `init: true` : chaque tâche d’arrière-plan y resterait en processus zombie.',
+            $nom,
+        ));
+    }
+});
+
 it('transmet aux services ce que la sauvegarde exige', function (): void {
     $services = compositionDeProduction();
 

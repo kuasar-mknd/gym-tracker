@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 121 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 2 126 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 187 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -95,7 +95,7 @@ La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul 
 - **Versions des conteneurs** compare l'image qu'exécutent `app`, `worker` et `scheduler`, chacun l'annonçant à son démarrage (#1813). Un conteneur garde l'image avec laquelle il a été créé : au rouge, mettre à jour la pile en retéléchargeant l'image. `docker exec <conteneur> printenv APP_VERSION APP_REVISION` donne la version d'un conteneur ; pour une image plus ancienne, l'étiquette `org.opencontainers.image.revision` de `docker inspect`.
 - **Réglages de la base** relit en production `innodb_flush_log_at_trx_commit` et `log_bin` dans MySQL, et l'état de Pulse (#1668) : rouge si une écriture repaie la synchronisation du disque, orange si Pulse enregistre ou si MySQL ne rend pas l'un des deux réglages.
 
-`docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge.
+`docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge. `scheduler` porte `init: true` : ses tâches d'arrière-plan (les sauvegardes) sont orphelines dès leur lancement, et `schedule:work`, qui ne récolte pas les enfants qu'il n'a pas lancés, les laisserait en processus zombies jusqu'à la recréation du conteneur (#1929).
 
 Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
 
