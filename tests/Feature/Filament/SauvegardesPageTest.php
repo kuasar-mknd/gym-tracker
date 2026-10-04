@@ -124,6 +124,14 @@ function sauvegardesPageSuperAdministrateur(): Admin
     return $admin;
 }
 
+/**
+ * La vue de la page copie celle du greffon, qui rend les tableaux du greffon :
+ * ceux-là listent le dossier sans délai, et leur rafraîchissement d'une minute
+ * prendrait un travailleur d'Octane à chaque fois sur un dossier qui se tait.
+ * Le test tient la page sur nos tableaux, qui sondent d'abord le dossier : une
+ * vue resynchronisée sur celle du greffon, ou la page du greffon rendue à la
+ * place de la nôtre, le fait échouer.
+ */
 it('liste les archives quand le dossier des sauvegardes répond', function (): void {
     $racine = storage_path('framework/testing/sauvegardes-'.uniqid());
     $archive = sauvegardesPageDossierAvecUneArchive($racine);
@@ -134,6 +142,8 @@ it('liste les archives quand le dossier des sauvegardes répond', function (): v
             ->assertOk()
             ->assertSee($archive)
             ->assertSee('Créer une sauvegarde')
+            ->assertSeeLivewire(ListeDesSauvegardes::class)
+            ->assertSeeLivewire(EtatDesSauvegardes::class)
             ->assertDontSee('Le dossier des sauvegardes ne répond pas');
     } finally {
         File::deleteDirectory($racine);
