@@ -225,6 +225,23 @@ it('ne prend pas pour une annonce du worker un battement traité sur place, sans
 });
 
 /*
+ * Horizon traite tous les jobs de l'application : une annonce à chacun
+ * coûterait une lecture et une écriture dans le cache par job. Seul le
+ * battement de la file, chaque minute, vaut annonce du worker.
+ */
+it('ne fait pas réannoncer le worker par un autre job que le battement de la file', function (): void {
+    versionsFileServieParUnWorker();
+    dispatch(static function (): void {
+    });
+
+    versionsLeWorkerTraiteLeJobSuivant();
+
+    // Le job a bien été traité, et sans erreur : sinon il serait resté dans la file.
+    expect(DB::connection('file_des_versions')->table('jobs')->count())->toBe(0)
+        ->and(AnnonceDeVersion::lue('worker'))->toBeNull();
+});
+
+/*
  * Octane garde ses travailleurs jusqu'à leur cinq-centième requête : app se
  * réannonce au sondage de santé de l'image, toutes les trente secondes, et
  * pas à chaque requête.
@@ -315,6 +332,25 @@ it('compare aussi la révision : deux images de main portent la même version', 
 });
 
 /*
+ * `main` n'est pas une version publiée : comparée par version_compare, elle
+ * passerait toujours sous v1.x, quelle que soit sa date. Entre une
+ * construction de `main` et une version publiée, la date de la première
+ * annonce départage.
+ */
+it('départage par la date une construction de main et une version publiée', function (): void {
+    versionsAnnonceePar('worker', 'v1.5.20', 'bbbbbbb', '2026-10-01 09:00:00');
+    versionsAnnonceePar('scheduler', 'v1.5.20', 'bbbbbbb', '2026-10-01 09:00:00');
+    versionsAnnonceePar('app', 'main', 'ccccccc', '2026-10-02 13:00:00');
+
+    Carbon::setTestNow('2026-10-02 14:00:00');
+    $resultat = versionsControleEnProduction()->run();
+
+    expect($resultat->status->value)->toBe('failed', $resultat->notificationMessage)
+        ->and($resultat->meta['en_retard'])->toBe(['worker', 'scheduler'])
+        ->and($resultat->notificationMessage)->toContain('app main (ccccccc) depuis le 02/10/2026 à 13:00');
+});
+
+/*
  * Pendant une mise à jour de la pile, les conteneurs redémarrent l'un après
  * l'autre : un écart de quelques minutes n'est pas une panne, et un rouge
  * écrirait un courriel à chaque déploiement.
@@ -399,4 +435,39 @@ it('garde au rouge un écart ancien quand l’annonce d’un conteneur à jour r
     expect($resultat->status->value)->toBe('failed', $resultat->notificationMessage)
         ->and($resultat->meta['en_retard'])->toBe(['worker'])
         ->and($resultat->notificationMessage)->toContain('app et scheduler v1.5.20 (bbbbbbb) depuis le 01/10/2026 à 09:00');
+});
+
+/*
+ * Arbitrage de #1930 : dans le cache, un retour en arrière vers une version
+ * plus ancienne ressemble à l'annonce, revenue après une éviction, d'un
+ * conteneur resté sur une ancienne image. La plus haute version publiée
+ * reste donc la dernière image tant qu'un conteneur l'exécute encore :
+ * pendant un retour en arrière de toute la pile, le contrôle passe au rouge
+ * sans attendre les dix minutes, et désigne les conteneurs déjà revenus en
+ * arrière. Il revient au vert quand le dernier a suivi.
+ */
+it('passe au rouge sans attendre dix minutes pendant un retour en arrière, tant qu’un conteneur exécute encore la plus haute version', function (): void {
+    foreach (AnnonceDeVersion::CONTENEURS as $conteneur) {
+        versionsAnnonceePar($conteneur, 'v1.5.20', 'bbbbbbb', '2026-10-01 09:00:00');
+    }
+
+    versionsAnnonceePar('app', 'v1.5.19', 'aaaaaaa', '2026-10-02 14:00:00');
+    versionsAnnonceePar('scheduler', 'v1.5.19', 'aaaaaaa', '2026-10-02 14:00:30');
+
+    Carbon::setTestNow('2026-10-02 14:01:00');
+    $pendant = versionsControleEnProduction()->run();
+
+    expect($pendant->status->value)->toBe('failed', $pendant->notificationMessage)
+        ->and($pendant->meta['en_retard'])->toBe(['app', 'scheduler'])
+        ->and($pendant->notificationMessage)
+        ->toContain('app exécute v1.5.19 (aaaaaaa) depuis le 02/10/2026 à 14:00')
+        ->toContain('worker v1.5.20 (bbbbbbb) depuis le 01/10/2026 à 09:00')
+        ->toContain('mettre à jour la pile en retéléchargeant l\'image');
+
+    versionsAnnonceePar('worker', 'v1.5.19', 'aaaaaaa', '2026-10-02 14:01:30');
+    Carbon::setTestNow('2026-10-02 14:02:00');
+    $apres = versionsControleEnProduction()->run();
+
+    expect($apres->status->value)->toBe('ok', $apres->notificationMessage)
+        ->and($apres->shortSummary)->toBe('v1.5.19 (aaaaaaa) partout');
 });

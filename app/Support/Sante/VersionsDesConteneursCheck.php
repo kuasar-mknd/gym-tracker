@@ -140,7 +140,10 @@ final class VersionsDesConteneursCheck extends Check
      * image passerait sinon pour le dernier mis à jour. Entre deux
      * constructions de `main`, qui portent la même version, ou hors d'une
      * version publiée, celle que son conteneur exécute depuis le moins
-     * longtemps.
+     * longtemps. Un retour en arrière vers une version plus ancienne
+     * ressemble, dans le cache, à cette annonce revenue : il passe au rouge
+     * sans attendre les dix minutes tant qu'un conteneur exécute encore la
+     * plus haute version, et désigne ceux qui sont déjà revenus en arrière.
      *
      * @param  array{version: string, revision: string, depuis: string, le: string}  $annonce
      * @param  array{version: string, revision: string, depuis: string, le: string}  $reference
