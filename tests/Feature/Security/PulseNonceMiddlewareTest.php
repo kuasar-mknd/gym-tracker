@@ -8,8 +8,15 @@ use Illuminate\Http\Response;
 
 /**
  * Pulse écrit `<script>` et `<style>` nus ; sans nonce, la CSP les bloque et
- * le tableau de bord est vide. Le middleware les signe avec le nonce de la
- * requête, quand il existe. Aucun test ne le nommait (audit du 2026-09-02).
+ * le tableau de bord est vide. Ce middleware les signait en réécrivant la
+ * réponse. Aucun test ne le nommait (audit du 2026-09-02).
+ *
+ * Il n'est plus branché nulle part : il réécrivait aussi le texte `<script>`
+ * que livewire.js contient, et la page de Pulse restait sans Livewire. Les
+ * balises de Pulse sont désormais signées à la compilation de ses gabarits,
+ * ce que tiennent `SigneLesScriptsEnLigneDesPaquetsTest` et
+ * `CspDesOutilsDAdministrationTest`. Ce test ne garde que la classe ; elle et
+ * lui attendent l'accord du propriétaire du dépôt pour être supprimés.
  */
 function reponseSigneeParPulse(string $html): string
 {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Admin;
 use Spatie\Permission\Models\Role;
+use Tests\Support\FilamentAdminPanel;
 
 /**
  * Le lecteur de journaux vit sous /backoffice mais hors du panneau : il
@@ -19,8 +20,13 @@ it('ouvre les journaux au super administrateur', function (): void {
         ->assertSee('Log Viewer');
 });
 
+/**
+ * Un administrateur qui entre dans le panneau, pour que le refus vienne bien de
+ * la porte du lecteur (`view-logs`) : un administrateur sans rôle ni permission
+ * serait refusé plus tôt, par `Admin::canAccessPanel()`.
+ */
 it('se refuse à un administrateur ordinaire', function (): void {
-    $this->actingAs(Admin::factory()->create(), 'admin')
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:User']), 'admin')
         ->get('/backoffice/journaux')
         ->assertForbidden();
 });

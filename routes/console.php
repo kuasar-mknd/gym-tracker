@@ -34,8 +34,11 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('04:30');
 
 // Le journal d'activité ne garde plus que l'audit des comptes (User, Admin) ;
-// sans purge, la table ne faisait que grossir (#1670).
-\Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180])
+// sans purge, la table ne faisait que grossir (#1670). `--force` : la commande
+// demande confirmation en production et, lancée par le planificateur, sans
+// personne pour répondre, s'annulait à chaque passage — la table n'a jamais
+// été purgée.
+\Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180, '--force' => true])
     ->dailyAt('03:30');
 
 \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])

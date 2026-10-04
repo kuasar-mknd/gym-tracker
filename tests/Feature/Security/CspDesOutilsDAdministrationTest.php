@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Models\Admin;
+use App\Models\ExceptionEnregistree;
+use BezhanSalleh\FilamentExceptions\Resources\ExceptionResource;
+use Illuminate\Support\Facades\Route;
 use Opcodes\LogViewer\Facades\LogViewer;
 use PHPUnit\Framework\Assert;
 use Spatie\Permission\Models\Role;
@@ -20,7 +23,8 @@ use function Pest\Laravel\get;
  * (#1920). Le lecteur de journaux, lui, recevait bien la CSP du groupe `web`,
  * mais servait un script en ligne sans nonce, que cette CSP bloquait : la page
  * restait vide (#1922). Les scripts en ligne de ces paquets sont signés à la
- * compilation de leurs gabarits (`SigneLesScriptsEnLigneDesPaquets`).
+ * compilation de leurs gabarits (`SigneLesScriptsEnLigneDesPaquets`), y compris
+ * ceux qu'un gabarit recopie depuis du PHP (filament-exceptions, Pulse).
  */
 beforeEach(function (): void {
     config([
@@ -51,7 +55,7 @@ function cspOutilsNonceDeLEnTete(Response $reponse): string
  */
 function cspOutilsNoncesDuCorps(Response $reponse): array
 {
-    preg_match_all('/\snonce="([^"]+)"/', (string) $reponse->getContent(), $trouves);
+    preg_match_all('/\snonce="([^"]+)"/', cspOutilsBalisesSansContenu($reponse), $trouves);
 
     return array_values(array_unique($trouves[1]));
 }
@@ -65,9 +69,50 @@ function cspOutilsNoncesDuCorps(Response $reponse): array
  */
 function cspOutilsScriptsEnLigneSansNonce(Response $reponse): array
 {
-    preg_match_all('/<script\b(?![^>]*\b(?:src|nonce)=)[^>]*>/i', (string) $reponse->getContent(), $trouves);
+    preg_match_all('/<script\b(?![^>]*\b(?:src|nonce)=)[^>]*>/i', cspOutilsBalisesSansContenu($reponse), $trouves);
 
     return $trouves[0];
+}
+
+/**
+ * Les balises `<style>` du corps qui ne portent pas de nonce.
+ *
+ * @return list<string>
+ */
+function cspOutilsStylesEnLigneSansNonce(Response $reponse): array
+{
+    preg_match_all('/<style\b(?![^>]*\bnonce=)[^>]*>/i', cspOutilsBalisesSansContenu($reponse), $trouves);
+
+    return $trouves[0];
+}
+
+/**
+ * Le corps, chaque script et chaque style vidé de son contenu : un script
+ * recopié dans la page (livewire.js chez Pulse) contient lui-même le texte
+ * `<script>`, que la recherche des balises prendrait pour une balise. Le
+ * contenu s'arrête au premier `</script>`, comme pour le navigateur.
+ */
+function cspOutilsBalisesSansContenu(Response $reponse): string
+{
+    return (string) preg_replace('#(<(script|style)\b[^>]*>).*?</\2>#is', '$1</$2>', (string) $reponse->getContent());
+}
+
+/**
+ * Les sources d'une directive de la Content-Security-Policy de la réponse,
+ * chaîne vide si elle est absente : `style-src` ne se confond pas avec
+ * `style-src-attr`.
+ */
+function cspOutilsDirective(Response $reponse, string $directive): string
+{
+    foreach (explode(';', (string) $reponse->headers->get('Content-Security-Policy')) as $morceau) {
+        $sources = explode(' ', trim($morceau), 2);
+
+        if (($sources[0] ?? '') === $directive) {
+            return $sources[1] ?? '';
+        }
+    }
+
+    return '';
 }
 
 /**
@@ -104,6 +149,60 @@ it('signe chaque script en ligne des pages du panneau ouvertes à un administrat
     expect(cspOutilsNoncesDuCorps($reponse))->toBe([cspOutilsNonceDeLEnTete($reponse)])
         ->and(cspOutilsScriptsEnLigneSansNonce($reponse))->toBe([]);
 })->with(['/backoffice', '/backoffice/profile']);
+
+/**
+ * Le détail d'une exception colore la pile par `window.highlight`, que
+ * filament-exceptions définit dans un `<script type="module">` en ligne. Ce
+ * script n'est pas écrit dans le gabarit mais par du PHP
+ * (`FilamentExceptions::renderJs()`), que le gabarit recopie brut : le
+ * précompilateur ne voyait que l'appel, la CSP bloquait le script, et chaque
+ * bloc de code levait « window.highlight is not a function ».
+ */
+it('signe le script de coloration du détail d’une exception', function (): void {
+    Route::get('/_csp-outils-boum', function (): never {
+        throw new RuntimeException('boum');
+    });
+    get('/_csp-outils-boum')->assertStatus(500);
+    $exception = ExceptionEnregistree::query()->sole();
+
+    $reponse = actingAs(cspOutilsSuperAdministrateur(), 'admin')
+        ->get(ExceptionResource::getUrl('view', ['record' => $exception], panel: 'admin'))
+        ->assertOk()
+        ->baseResponse;
+
+    expect((string) $reponse->getContent())->toContain('<script type="module" nonce="'.cspOutilsNonceDeLEnTete($reponse).'">')
+        ->and(cspOutilsScriptsEnLigneSansNonce($reponse))->toBe([])
+        ->and(cspOutilsNoncesDuCorps($reponse))->toBe([cspOutilsNonceDeLEnTete($reponse)]);
+});
+
+/**
+ * Pulse recopie livewire.js et pulse.js dans la page depuis son code
+ * (`Pulse::js()`), sa feuille de style aussi (`Pulse::css()`), sans nonce. Un
+ * middleware les signait en réécrivant toute la réponse : il réécrivait aussi
+ * le texte `<script>` que livewire.js contient, cassait sa syntaxe, et la page
+ * restait sans Livewire ni Alpine, ses cartes jamais chargées.
+ *
+ * Seuls les attributs `style` échappent au nonce, qu'ils ne peuvent pas
+ * porter : le menu de thème de Pulse se masque par `style="display: none;"`
+ * avant le démarrage d'Alpine.
+ */
+it('signe chaque script et chaque style de Pulse du nonce de son en-tête, sans toucher au code recopié', function (): void {
+    $reponse = actingAs(cspOutilsSuperAdministrateur(), 'admin')->get('/backoffice/pulse')->assertOk()->baseResponse;
+    $nonce = cspOutilsNonceDeLEnTete($reponse);
+
+    expect(cspOutilsScriptsEnLigneSansNonce($reponse))->toBe([])
+        ->and(cspOutilsStylesEnLigneSansNonce($reponse))->toBe([])
+        ->and(cspOutilsNoncesDuCorps($reponse))->toBe([$nonce])
+        ->and(cspOutilsDirective($reponse, 'script-src'))->toContain("'nonce-".$nonce."'")
+        ->and(cspOutilsDirective($reponse, 'script-src'))->not->toContain("'unsafe-inline'")
+        ->and(cspOutilsDirective($reponse, 'style-src'))->toContain("'nonce-".$nonce."'")
+        ->and(cspOutilsDirective($reponse, 'style-src'))->not->toContain("'unsafe-inline'")
+        ->and(cspOutilsDirective($reponse, 'style-src-attr'))->toBe("'unsafe-inline'")
+        ->and((string) $reponse->getContent())->toContain('style="display: none;"')
+        ->and((string) $reponse->getContent())
+        ->toContain('<script nonce="'.$nonce.'">'.file_get_contents(base_path('vendor/livewire/livewire/dist/livewire.js')).'</script>')
+        ->toContain('<style nonce="'.$nonce.'">'.file_get_contents(base_path('vendor/laravel/pulse/dist/pulse.css')).'</style>');
+});
 
 /**
  * Comme en production, où l'image publie les fichiers du lecteur

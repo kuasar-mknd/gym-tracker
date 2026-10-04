@@ -30,9 +30,11 @@ use ShuvroRoy\FilamentSpatieLaravelHealth\FilamentSpatieLaravelHealthPlugin;
 final class AdminPanelProvider extends PanelProvider
 {
     /**
-     * Filament et le lecteur de journaux, qui vit sous le panneau, écrivent des
-     * scripts en ligne sans nonce, que la CSP bloquerait : ils sont signés à la
-     * compilation de leurs gabarits (#1920, #1922).
+     * Filament, filament-exceptions, et le lecteur de journaux et Pulse, qui
+     * vivent sous le panneau, écrivent des scripts en ligne sans nonce, que la
+     * CSP bloquerait : ils sont signés à la compilation de leurs gabarits, y
+     * compris ceux qu'un gabarit recopie depuis du PHP (le JavaScript du détail
+     * d'une exception, celui de Pulse) (#1920, #1922).
      */
     public function boot(): void
     {

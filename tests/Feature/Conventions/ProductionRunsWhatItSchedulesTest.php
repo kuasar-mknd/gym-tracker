@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Console\ConfirmableTrait;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Yaml\Yaml;
 
 /*
@@ -120,6 +124,44 @@ it('laisse chaque tâche planifiée sous le moniteur local', function (): void {
         ."personne ne le saura, parce qu'une tache qui ne s'execute pas ne leve aucune erreur.\n- %s",
         implode("\n- ", $exemptees),
     ));
+});
+
+/*
+ * Une commande qui demande confirmation en production (`ConfirmableTrait`)
+ * s'annule quand le planificateur la lance, sans personne pour répondre :
+ * « APPLICATION IN PRODUCTION. Command cancelled. », code 1. `activitylog:clean`
+ * n'a ainsi jamais purgé le journal d'audit, et chaque passage laissait une
+ * exception. Rien ne le montrait hors production, où la commande ne demande
+ * rien.
+ */
+it('fait passer --force aux tâches planifiées qui demandent confirmation en production', function (): void {
+    $commandes = Artisan::all();
+    $confirmables = [];
+    $sansForce = [];
+
+    foreach (app(Schedule::class)->events() as $evenement) {
+        $ligne = (string) $evenement->command;
+
+        if (preg_match("/artisan'?\\s+([\\w:.-]+)/", $ligne, $nom) !== 1) {
+            continue;
+        }
+
+        $commande = $commandes[$nom[1]] ?? null;
+
+        if (! $commande instanceof Command || ! in_array(ConfirmableTrait::class, class_uses_recursive($commande), true)) {
+            continue;
+        }
+
+        $confirmables[] = $nom[1];
+
+        if (preg_match('/\\s--force\\b/', $ligne) !== 1) {
+            $sansForce[] = $ligne;
+        }
+    }
+
+    // Sans elle, la garde passerait aussi le jour où plus rien ne serait reconnu.
+    expect($confirmables)->toContain('activitylog:clean')
+        ->and($sansForce)->toBe([], "Ces tâches s'annuleraient en production, faute de `--force` :\n- ".implode("\n- ", $sansForce));
 });
 
 it('transmet aux services ce que la sauvegarde exige', function (): void {

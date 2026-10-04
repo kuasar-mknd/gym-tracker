@@ -90,6 +90,14 @@ parameters:
         - identifier: shipmonk.deadMethod
           path: app/Notifications/*
           message: '#::toWebPush\b#'
+        # signeLesBalisesDe est appelee depuis les vues compilees : le
+        # precompilateur Blade ecrit son nom dans les gabarits des paquets qui
+        # ecrivent leurs balises en PHP, aucun appel PHP n'existe donc. Le
+        # chemin est tenu de bout en bout par CspDesOutilsDAdministrationTest
+        # (detail d'une exception, Pulse).
+        - identifier: shipmonk.deadMethod
+          path: app/Support/Csp/Nonce/SigneLesScriptsEnLigneDesPaquets.php
+          message: '#::signeLesBalisesDe\b#'
         # N'etre appele que par des tests est le role d'une fabrique. L'excluder
         # les signale par construction ; les supprimer reviendrait a supprimer la
         # raison d'etre du fichier.
