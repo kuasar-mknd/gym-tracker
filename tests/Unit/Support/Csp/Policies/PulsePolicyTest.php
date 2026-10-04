@@ -17,6 +17,7 @@ describe('configure', function (): void {
             $mock->shouldReceive('add')->with(Directive::SCRIPT, Keyword::UNSAFE_EVAL)->atLeast()->once()->andReturnSelf();
             $mock->shouldReceive('addNonce')->with(Directive::SCRIPT)->atLeast()->once()->andReturnSelf();
             $mock->shouldReceive('addNonce')->with(Directive::STYLE)->atLeast()->once()->andReturnSelf();
+            $mock->shouldReceive('add')->with(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE)->atLeast()->once()->andReturnSelf();
             $mock->shouldReceive('add')->with(Directive::STYLE, 'https://fonts.bunny.net')->atLeast()->once()->andReturnSelf();
             $mock->shouldReceive('add')->with(Directive::FONT, [Keyword::SELF, 'https://fonts.bunny.net'])->atLeast()->once()->andReturnSelf();
             $mock->shouldReceive('add')->with(Directive::IMG, [Keyword::SELF, 'data:', 'https:'])->atLeast()->once()->andReturnSelf();

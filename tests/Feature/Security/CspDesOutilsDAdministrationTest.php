@@ -98,6 +98,24 @@ function cspOutilsBalisesSansContenu(Response $reponse): string
 }
 
 /**
+ * Les sources d'une directive de la Content-Security-Policy de la réponse,
+ * chaîne vide si elle est absente : `style-src` ne se confond pas avec
+ * `style-src-attr`.
+ */
+function cspOutilsDirective(Response $reponse, string $directive): string
+{
+    foreach (explode(';', (string) $reponse->headers->get('Content-Security-Policy')) as $morceau) {
+        $sources = explode(' ', trim($morceau), 2);
+
+        if (($sources[0] ?? '') === $directive) {
+            return $sources[1] ?? '';
+        }
+    }
+
+    return '';
+}
+
+/**
  * Un super administrateur du panneau, celui qui ouvre aussi les journaux.
  *
  * Relu en base, comme le panneau le relirait : la fabrique ne remplit pas
@@ -163,6 +181,10 @@ it('signe le script de coloration du détail d’une exception', function (): vo
  * middleware les signait en réécrivant toute la réponse : il réécrivait aussi
  * le texte `<script>` que livewire.js contient, cassait sa syntaxe, et la page
  * restait sans Livewire ni Alpine, ses cartes jamais chargées.
+ *
+ * Seuls les attributs `style` échappent au nonce, qu'ils ne peuvent pas
+ * porter : le menu de thème de Pulse se masque par `style="display: none;"`
+ * avant le démarrage d'Alpine.
  */
 it('signe chaque script et chaque style de Pulse du nonce de son en-tête, sans toucher au code recopié', function (): void {
     $reponse = actingAs(cspOutilsSuperAdministrateur(), 'admin')->get('/backoffice/pulse')->assertOk()->baseResponse;
@@ -171,7 +193,12 @@ it('signe chaque script et chaque style de Pulse du nonce de son en-tête, sans 
     expect(cspOutilsScriptsEnLigneSansNonce($reponse))->toBe([])
         ->and(cspOutilsStylesEnLigneSansNonce($reponse))->toBe([])
         ->and(cspOutilsNoncesDuCorps($reponse))->toBe([$nonce])
-        ->and((string) $reponse->headers->get('Content-Security-Policy'))->not->toContain("'unsafe-inline'")
+        ->and(cspOutilsDirective($reponse, 'script-src'))->toContain("'nonce-".$nonce."'")
+        ->and(cspOutilsDirective($reponse, 'script-src'))->not->toContain("'unsafe-inline'")
+        ->and(cspOutilsDirective($reponse, 'style-src'))->toContain("'nonce-".$nonce."'")
+        ->and(cspOutilsDirective($reponse, 'style-src'))->not->toContain("'unsafe-inline'")
+        ->and(cspOutilsDirective($reponse, 'style-src-attr'))->toBe("'unsafe-inline'")
+        ->and((string) $reponse->getContent())->toContain('style="display: none;"')
         ->and((string) $reponse->getContent())
         ->toContain('<script nonce="'.$nonce.'">'.file_get_contents(base_path('vendor/livewire/livewire/dist/livewire.js')).'</script>')
         ->toContain('<style nonce="'.$nonce.'">'.file_get_contents(base_path('vendor/laravel/pulse/dist/pulse.css')).'</style>');
