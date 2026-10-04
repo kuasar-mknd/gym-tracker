@@ -26,7 +26,9 @@ use Symfony\Component\Finder\Finder;
  * une étape à part et Sail fournit Selenium, et Sail garde APP_ENV à `local`
  * pour les parcours. La remettre sous un attribut que PHPUnit lit doublerait
  * le pilote de la CI et poserait APP_ENV=testing dans leur processus : la
- * dernière garde refuse ce réveil, quelle que soit sa forme.
+ * dernière garde refuse ce réveil sous les formes que liste
+ * .ai/rules/browser.md. Elle lit des jetons, pas ce que le code fera : une
+ * écriture qu'elle ne connaît pas lui échappe.
  */
 
 /**
@@ -51,23 +53,37 @@ function crochetsDesTestsAttributsDePhpunit(): array
 }
 
 /**
- * Le jeton à cette position pose-t-il APP_ENV : `putenv('APP_ENV=…')`, ou
- * une affectation à `$_ENV['APP_ENV']` ou `$_SERVER['APP_ENV']` ? Une lecture
- * ne compte pas.
+ * Le texte littéral que porte ce jeton, guillemets ôtés, ou null s'il n'est
+ * pas une chaîne. Une chaîne interpolée (`"APP_ENV={$valeur}"`) ou un heredoc
+ * se lisent morceau par morceau, chacun entre deux interpolations ; le
+ * premier morceau d'un heredoc garde son indentation.
+ */
+function crochetsDesTestsTexteLitteral(PhpToken $jeton): ?string
+{
+    if ($jeton->is(T_CONSTANT_ENCAPSED_STRING)) {
+        return substr($jeton->text, 1, -1);
+    }
+
+    return $jeton->is(T_ENCAPSED_AND_WHITESPACE) ? $jeton->text : null;
+}
+
+/**
+ * Le jeton à cette position pose-t-il APP_ENV : une chaîne qui commence par
+ * `APP_ENV=` (`putenv('APP_ENV=…')`), interpolée ou en heredoc comprise, ou
+ * une affectation, `=` ou `??=`, à `$_ENV['APP_ENV']` ou `$_SERVER['APP_ENV']` ?
+ * Une lecture ne compte pas.
  *
  * @param  list<PhpToken>  $jetons  les jetons du fichier, sans espaces ni commentaires
  */
 function crochetsDesTestsPoseAppEnv(array $jetons, int $position): bool
 {
-    $jeton = $jetons[$position];
+    $valeur = crochetsDesTestsTexteLitteral($jetons[$position]);
 
-    if (! $jeton->is(T_CONSTANT_ENCAPSED_STRING)) {
+    if ($valeur === null) {
         return false;
     }
 
-    $valeur = substr($jeton->text, 1, -1);
-
-    if (str_starts_with($valeur, 'APP_ENV=')) {
+    if (str_starts_with(ltrim($valeur), 'APP_ENV=')) {
         return true;
     }
 
@@ -75,7 +91,7 @@ function crochetsDesTestsPoseAppEnv(array $jetons, int $position): bool
         && ($jetons[$position - 1] ?? null)?->text === '['
         && in_array(($jetons[$position - 2] ?? null)?->text, ['$_ENV', '$_SERVER'], true)
         && ($jetons[$position + 1] ?? null)?->text === ']'
-        && ($jetons[$position + 2] ?? null)?->text === '=';
+        && in_array(($jetons[$position + 2] ?? null)?->text, ['=', '??='], true);
 }
 
 it('ne confie aucun crochet ni réglage de test à une étiquette de docblock, que PHPUnit ne lit plus', function (): void {
@@ -159,6 +175,10 @@ it('ne démarre aucun pilote depuis la suite, et ne pose pas APP_ENV dans le pro
             if ($jeton->is([T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED])
                 && in_array(strtolower(class_basename($jeton->text)), $demarrages, true)) {
                 $fautifs[] = sprintf('%s:%d : %s démarre un pilote, que la CI et Sail lancent déjà', $chemin, $jeton->line, $jeton->text);
+            }
+
+            if ($duProcessusDesParcours && str_contains((string) crochetsDesTestsTexteLitteral($jeton), 'chromedriver')) {
+                $fautifs[] = sprintf('%s:%d : %s nomme le binaire du pilote, que la CI et Sail lancent déjà', $chemin, $jeton->line, $jeton->text);
             }
 
             if ($duProcessusDesParcours && crochetsDesTestsPoseAppEnv($jetons, $position)) {
