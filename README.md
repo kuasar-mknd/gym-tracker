@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 102 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 2 112 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 187 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -363,6 +363,10 @@ cp .env.example .env
 | `./vendor/bin/sail bin pint` | Formate le code |
 | `./vendor/bin/sail php vendor/bin/phpstan analyse --memory-limit=2G` | Analyse statique, `level: max` |
 | `./vendor/bin/sail php vendor/bin/rector process --dry-run` | Modernisation en attente |
+
+### Crochet de commit
+
+`git commit` formate les fichiers indexés : Prettier pour le front, Pint pour le PHP. Pint lit chaque fichier avec le PHP qui le lance, et un PHP plus ancien que celui du projet échoue en erreur de syntaxe sur son code (#1928). `scripts/formater-le-php.sh` lance donc Pint dans le conteneur de Sail quand il tourne pour ce dossier, sinon avec le PHP de l'hôte s'il atteint la contrainte `php` de `composer.json`. Sans l'un ni l'autre, le commit est refusé avec la marche à suivre : lancer Sail (`./vendor/bin/sail up -d`), ou désigner un PHP assez récent par `PINT_PHP` (`PINT_PHP=/chemin/vers/php git commit`). Compose nomme le projet d'après le nom du dossier : le conteneur d'une autre copie du dépôt qui porte le même nom est écarté, puisque Pint y formaterait l'autre copie. Le service cherché est celui de `APP_SERVICE` (défaut `laravel.test`), lu dans l'environnement seulement : Sail le lit aussi dans le `.env`, le script non.
 
 ### Parcours navigateur
 
