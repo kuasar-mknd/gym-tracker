@@ -112,6 +112,33 @@ it('masque Apple tant que son identité est incomplète', function (array $regla
 ]);
 
 /*
+ * Le trio ne vaut que pour Apple : Google et GitHub ne savent pas signer de
+ * secret, et le paquet d'Apple seul le lit. Le compter pour eux rouvrirait
+ * #1908 : leur bouton s'afficherait avec le seul client id, et mènerait à une
+ * page d'erreur au lieu de chez le fournisseur.
+ */
+it('ne tient pas le trio d\'Apple pour le secret de Google ou de GitHub', function (): void {
+    config([
+        'services.apple.client_id' => 'org.example.gym.web',
+        'services.apple.client_secret' => null,
+        'services.apple.team_id' => 'EQUIPE0001',
+        'services.apple.key_id' => 'CLEAPP0001',
+        'services.apple.private_key' => 'le contenu du .p8 de test',
+        'services.google.client_id' => 'id',
+        'services.google.client_secret' => null,
+        'services.github.client_id' => 'id',
+        'services.github.client_secret' => null,
+    ]);
+
+    $this->get(route('login'))
+        ->assertInertia(fn ($page) => $page
+            ->where('social_login_enabled.apple', true)
+            ->where('social_login_enabled.google', false)
+            ->where('social_login_enabled.github', false)
+        );
+});
+
+/*
  * Sans URL de rappel, Google et Apple refusent l'échange (#1908). La pile de
  * production transmet une chaîne vide pour une variable qu'elle ne pose pas,
  * et env() rend alors cette chaîne, pas son défaut : les deux cas comptent.
