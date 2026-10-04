@@ -27,6 +27,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string|null $ancienne_adresse_verifiee Dernière adresse vérifiée quittée, tant que le compte n'est pas revérifié (`SurveilleSonAdresse`).
  * @property string|null $provider
  * @property string|null $avatar
  * @property int|null $default_rest_time
@@ -89,6 +90,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'ancienne_adresse_verifiee',
     ];
 
     /**

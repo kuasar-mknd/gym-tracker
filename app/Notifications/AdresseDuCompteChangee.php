@@ -6,17 +6,25 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Prévient l'ANCIENNE adresse d'un compte que l'adresse de connexion a changé.
+ * Prévient la dernière adresse VÉRIFIÉE d'un compte que l'adresse de connexion
+ * a changé : l'ancienne adresse, ou celle que le compte a quittée en dernier
+ * quand il n'a pas été vérifié depuis (`SurveilleSonAdresse`).
  *
  * Elle part par une route à la demande (`Notification::route('mail', …)`) : le
  * compte porte déjà la nouvelle adresse, et c'est précisément l'ancienne, celle
  * de la personne qui pourrait ne pas être à l'origine du changement, qu'il faut
  * atteindre. Elle dit vers quelle adresse, masquée, et quoi faire si ce n'était
  * pas elle : l'ancienne adresse ne peut plus demander de réinitialisation.
+ *
+ * Le masque ne garde que quelques lettres, et l'auteur du changement choisit la
+ * nouvelle adresse : il peut en prendre une dont la forme masquée est celle de
+ * l'adresse prévenue. L'avis le dit alors en toutes lettres, pour que le
+ * titulaire ne croie pas y lire sa propre adresse.
  *
  * La nouvelle adresse est saisie par qui fait le changement : elle n'entre dans
  * le courriel que réduite à des caractères qui ne disent rien au Markdown du
@@ -78,16 +86,35 @@ final class AdresseDuCompteChangee extends Notification implements ShouldQueue
         return ['mail'];
     }
 
-    public function toMail(object $_notifiable): MailMessage
+    public function toMail(object $notifiable): MailMessage
     {
         $application = config()->string('app.name');
-
-        return new MailMessage()
+        $nouvelleAdresseMasquee = self::masquer($this->nouvelleAdresse);
+        $courriel = new MailMessage()
             ->subject("L’adresse de ton compte {$application} a changé")
             ->greeting('Bonjour,')
-            ->line("L’adresse e-mail de ton compte {$application} vient d’être remplacée par ".self::masquer($this->nouvelleAdresse).'. Ce message part à l’ancienne adresse, celle-ci, qui ne reçoit plus rien du compte et ne peut plus servir à réinitialiser son mot de passe.')
+            ->line("L’adresse e-mail de ton compte {$application} vient d’être remplacée par {$nouvelleAdresseMasquee}. Ce message part à une ancienne adresse du compte, celle-ci, la dernière à avoir été vérifiée : elle ne reçoit plus rien du compte et ne peut plus servir à réinitialiser son mot de passe.");
+
+        if ($nouvelleAdresseMasquee === self::masquer(self::adresseDuDestinataire($notifiable))) {
+            $courriel->line('Une fois masquée, la nouvelle adresse ressemble à celle-ci : c’en est pourtant une autre.');
+        }
+
+        return $courriel
             ->line('Si c’est toi qui as fait ce changement, il n’y a rien à faire.')
             ->line('Si ce n’est pas toi : si tu es encore connecté sur un appareil, remets ton adresse dans ton profil puis change ton mot de passe. Sinon, réponds à ce message pour que nous te rendions l’accès à ton compte.');
+    }
+
+    /**
+     * L'adresse à laquelle part l'avis, ou une chaîne vide.
+     *
+     * L'avis part par une route à la demande ; un autre destinataire n'a pas
+     * d'adresse à comparer.
+     */
+    private static function adresseDuDestinataire(object $notifiable): string
+    {
+        $adresse = $notifiable instanceof AnonymousNotifiable ? $notifiable->routeNotificationFor('mail') : null;
+
+        return is_string($adresse) ? $adresse : '';
     }
 
     private static function premiereLettre(string $partie): string

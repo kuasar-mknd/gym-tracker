@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Address;
 use Tests\Support\Appareil;
@@ -335,6 +336,125 @@ it('ne prévient pas une ancienne adresse que personne n’a vérifiée', functi
     expect($compte->refresh()->email)->toBe('jamais-verifiee@example.org')
         ->and($compte->email_verified_at)->toBeNull();
     Notification::assertNothingSent();
+});
+
+/**
+ * Les avis partis, dans l'ordre d'envoi : le destinataire, la nouvelle adresse
+ * annoncée et le texte rendu.
+ *
+ * @return list<array{destinataire: array<mixed>, nouvelle: string, rendu: string}>
+ */
+function changementDAdresseAvisEnvoyes(): array
+{
+    $avis = [];
+
+    Notification::assertSentOnDemand(
+        AdresseDuCompteChangee::class,
+        function (AdresseDuCompteChangee $unAvis, array $_canaux, AnonymousNotifiable $destinataire) use (&$avis): bool {
+            $avis[] = [
+                'destinataire' => $destinataire->routes,
+                'nouvelle' => $unAvis->nouvelleAdresse,
+                'rendu' => (string) $unAvis->toMail($destinataire)->render(),
+            ];
+
+            return true;
+        },
+    );
+
+    return $avis;
+}
+
+/**
+ * Un changement d'adresse laisse le compte non vérifié, et seule une adresse
+ * vérifiée est prévenue. Sans mémoire de la dernière adresse vérifiée, un
+ * premier changement vers une adresse dont la forme masquée est celle du
+ * titulaire lui envoyait un seul avis, qui semblait nommer sa propre adresse ;
+ * le changement suivant, depuis cette adresse non vérifiée, ne prévenait
+ * personne, et le titulaire n'apprenait jamais où son compte était parti.
+ */
+it('prévient la dernière adresse vérifiée de chaque changement tant que le compte n’est pas revérifié', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+    $this->actingAs($compte);
+
+    $this->patch('/profile', ['name' => 'X', 'email' => 't@e.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
+    $this->patch('/profile', ['name' => 'X', 'email' => 'tiers@autre.example.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
+
+    $compte->refresh();
+
+    expect($compte->email)->toBe('tiers@autre.example.org')
+        ->and($compte->email_verified_at)->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBe('titulaire@example.org')
+        ->and($compte->toArray())->not->toHaveKey('ancienne_adresse_verifiee');
+
+    $avis = changementDAdresseAvisEnvoyes();
+
+    expect(array_column($avis, 'destinataire'))->toBe([['mail' => 'titulaire@example.org'], ['mail' => 'titulaire@example.org']])
+        ->and(array_column($avis, 'nouvelle'))->toBe(['t@e.org', 'tiers@autre.example.org']);
+
+    // Le premier avis nomme une adresse qui, masquée, se confond avec celle du
+    // titulaire : il le dit. Le second nomme l'adresse où le compte est parti.
+    expect($avis[0]['rendu'])->toContain('remplacée par t•••@e•••.org.')
+        ->and($avis[0]['rendu'])->toContain('c’en est pourtant une autre')
+        ->and($avis[1]['rendu'])->toContain('remplacée par t•••@a•••.org.')
+        ->and($avis[1]['rendu'])->not->toContain('c’en est pourtant une autre');
+});
+
+it('ne prévient pas l’adresse que le compte reprend, mais la prévient du changement suivant', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+    $this->actingAs($compte);
+
+    foreach (['ailleurs@example.org', 'titulaire@example.org', 'encore-ailleurs@example.org'] as $adresse) {
+        $this->patch('/profile', ['name' => 'X', 'email' => $adresse, 'current_password' => 'password'])->assertSessionHasNoErrors();
+    }
+
+    $avis = changementDAdresseAvisEnvoyes();
+
+    // Le retour à l'adresse du titulaire ne lui annonce pas sa propre adresse ;
+    // le compte, toujours non vérifié, la garde en mémoire pour la suite.
+    expect(array_column($avis, 'destinataire'))->toBe([['mail' => 'titulaire@example.org'], ['mail' => 'titulaire@example.org']])
+        ->and(array_column($avis, 'nouvelle'))->toBe(['ailleurs@example.org', 'encore-ailleurs@example.org']);
+});
+
+it('ne prévient pas l’adresse rendue au compte avec d’autres majuscules', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+
+    // Le panneau n'impose pas les minuscules, contrairement au profil.
+    $compte->update(['email' => 'ailleurs@example.org']);
+    $compte->update(['email' => 'Titulaire@Example.org']);
+
+    expect(array_column(changementDAdresseAvisEnvoyes(), 'nouvelle'))->toBe(['ailleurs@example.org']);
+});
+
+it('oublie l’ancienne adresse quand le compte est vérifié de nouveau', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+    $this->actingAs($compte);
+
+    $this->patch('/profile', ['name' => 'X', 'email' => 'nouvelle@example.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
+
+    expect($compte->refresh()->ancienne_adresse_verifiee)->toBe('titulaire@example.org');
+
+    $this->get(URL::temporarySignedRoute('verification.verify', now()->addHour(), [
+        'id' => $compte->id,
+        'hash' => sha1('nouvelle@example.org'),
+    ]))->assertRedirect();
+
+    $compte->refresh();
+
+    expect($compte->email_verified_at)->not->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBeNull();
+
+    // Le changement suivant prévient l'adresse vérifiée qu'il quitte, et elle seule.
+    $this->patch('/profile', ['name' => 'X', 'email' => 'encore@example.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
+
+    $avis = changementDAdresseAvisEnvoyes();
+
+    expect(array_column($avis, 'destinataire'))->toBe([['mail' => 'titulaire@example.org'], ['mail' => 'nouvelle@example.org']])
+        ->and(array_column($avis, 'nouvelle'))->toBe(['nouvelle@example.org', 'encore@example.org'])
+        ->and($compte->refresh()->ancienne_adresse_verifiee)->toBe('nouvelle@example.org');
 });
 
 it('envoie le courriel pour de bon, et seulement une fois la transaction validée', function (): void {

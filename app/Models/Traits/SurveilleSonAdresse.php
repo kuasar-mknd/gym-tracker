@@ -22,17 +22,23 @@ use Illuminate\Support\Facades\Notification;
  *   resterait marquée vérifiée, et `ResolveSocialUserAction` y rattacherait
  *   une connexion sociale. Un appelant qui pose lui-même `email_verified_at`
  *   dans la même écriture est laissé maître de la valeur ;
- * - l'ancienne adresse reçoit `AdresseDuCompteChangee`, une fois la
- *   transaction validée, si elle était vérifiée. L'inscription ne demande
- *   aucune preuve de l'adresse, et chaque changement remet la nouvelle en non
- *   vérifiée : une adresse que personne n'a prouvée peut être celle d'un
- *   tiers, qui n'a pas à recevoir les avis d'un compte qui n'est pas le sien.
- *   Seule une adresse vérifiée est sûrement celle du titulaire.
+ * - la dernière adresse vérifiée du compte reçoit `AdresseDuCompteChangee`,
+ *   une fois la transaction validée. C'est l'ancienne adresse si elle était
+ *   vérifiée. Sinon, c'est celle que le compte a retenue
+ *   (`ancienne_adresse_verifiee`) en quittant sa dernière adresse vérifiée,
+ *   jusqu'à ce qu'il soit vérifié de nouveau : un changement laisse le compte
+ *   non vérifié, et le changement suivant serait sinon passé sous silence.
+ *   Une adresse que personne n'a prouvée n'est jamais prévenue : l'inscription
+ *   ne demande aucune preuve de l'adresse, et une telle adresse peut être
+ *   celle d'un tiers, qui n'a pas à recevoir les avis d'un compte qui n'est
+ *   pas le sien. L'avis ne part pas non plus à l'adresse que le compte vient
+ *   de prendre (à la casse ASCII près), celle d'un titulaire qui remet la
+ *   sienne.
  *
  * Le mot de passe actuel n'est pas exigé ici : c'est l'affaire de la requête
  * du profil (`ProfileUpdateRequest`). Un administrateur du panneau change une
- * adresse sans le mot de passe du compte, et l'ancienne adresse en est
- * prévenue comme pour un changement fait depuis le profil.
+ * adresse sans le mot de passe du compte, et la dernière adresse vérifiée en
+ * est prévenue comme pour un changement fait depuis le profil.
  *
  * Les chemins qui sautent les événements (`saveQuietly()`, `withoutEvents()`,
  * le constructeur de requêtes) y échappent. Réservé à `User`.
@@ -49,22 +55,64 @@ trait SurveilleSonAdresse
             if ($utilisateur->isDirty('email') && ! $utilisateur->isDirty('email_verified_at')) {
                 $utilisateur->email_verified_at = null;
             }
+
+            self::retenirLaDerniereAdresseVerifiee($utilisateur);
         });
 
         static::updated(function (User $utilisateur): void {
-            $ancienneAdresse = $utilisateur->getRawOriginal('email');
+            if (! $utilisateur->wasChanged('email')) {
+                return;
+            }
+
+            $adresseAPrevenir = $utilisateur->getRawOriginal('email_verified_at') !== null
+                ? $utilisateur->getRawOriginal('email')
+                : $utilisateur->getRawOriginal('ancienne_adresse_verifiee');
 
             if (
-                ! $utilisateur->wasChanged('email')
-                || ! is_string($ancienneAdresse)
-                || $ancienneAdresse === ''
-                || $utilisateur->getRawOriginal('email_verified_at') === null
+                ! is_string($adresseAPrevenir)
+                || $adresseAPrevenir === ''
+                || strcasecmp($adresseAPrevenir, $utilisateur->email) === 0
             ) {
                 return;
             }
 
-            Notification::route('mail', $ancienneAdresse)
+            Notification::route('mail', $adresseAPrevenir)
                 ->notify(new AdresseDuCompteChangee($utilisateur->email));
         });
+    }
+
+    /**
+     * Tient `ancienne_adresse_verifiee` avant l'écriture.
+     *
+     * Un compte vérifié n'a rien à retenir : son adresse actuelle fait
+     * référence, et la mémoire se vide (`markEmailAsVerified()`, la connexion
+     * sociale qui revérifie le compte). Un compte qui quitte une adresse
+     * vérifiée retient celle-ci. Un compte non vérifié qui change encore
+     * d'adresse garde ce qu'il avait retenu.
+     *
+     * La colonne se lit par `getRawOriginal()`, jamais par l'attribut : une
+     * instance chargée sans elle lèverait `MissingAttributeException` hors
+     * production.
+     */
+    private static function retenirLaDerniereAdresseVerifiee(User $utilisateur): void
+    {
+        if ($utilisateur->email_verified_at !== null) {
+            if ($utilisateur->getRawOriginal('ancienne_adresse_verifiee') !== null) {
+                $utilisateur->ancienne_adresse_verifiee = null;
+            }
+
+            return;
+        }
+
+        $ancienneAdresse = $utilisateur->getRawOriginal('email');
+
+        if (
+            $utilisateur->isDirty('email')
+            && $utilisateur->getRawOriginal('email_verified_at') !== null
+            && is_string($ancienneAdresse)
+            && $ancienneAdresse !== ''
+        ) {
+            $utilisateur->ancienne_adresse_verifiee = $ancienneAdresse;
+        }
     }
 }

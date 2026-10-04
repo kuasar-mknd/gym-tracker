@@ -330,7 +330,8 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
         ->call('save')
         ->assertHasNoFormErrors();
 
-    expect($compte->refresh()->email_verified_at)->toBeNull();
+    expect($compte->refresh()->email_verified_at)->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBe('avant@example.org');
 
     $retourDe = static function (int|string $identifiant, string $adresse) use ($fournisseur): void {
         $utilisateurSocial = new SocialiteUser()
@@ -379,6 +380,7 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
 
     expect(app(HandleSocialCallbackAction::class)->execute($fournisseur)->is($compte))->toBeTrue()
         ->and($compte->refresh()->email_verified_at)->not->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBeNull()
         ->and($compte->email)->toBe($adresseDuPanneau)
         ->and($compte->provider_id)->toBe($identifiantEnBase);
 })->with([
