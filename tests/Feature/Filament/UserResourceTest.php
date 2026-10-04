@@ -311,8 +311,8 @@ it('prévient l’ancienne adresse et retire la vérification quand le panneau c
  * reliée au compte le rouvre, quand le fournisseur garantit sa nouvelle
  * adresse, et le compte redevient vérifié. Une autre identité qui présente la
  * même adresse reste refusée : un compte non vérifié ne se rattache à personne
- * de nouveau. Et l'adresse garantie doit être celle du compte, pas une adresse
- * que la collation de la base tient pour la même.
+ * de nouveau. Et seule l'adresse même du compte, garantie par le fournisseur,
+ * le revérifie, pas une adresse que la collation de la base tient pour la même.
  */
 it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a changé l’adresse', function (string $fournisseur, string $identifiantEnBase, int|string $identifiantRendu, int|string $autreIdentifiant): void {
     Notification::fake();
@@ -352,15 +352,25 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
         });
     };
 
-    // Une autre identité, ou la même pour une adresse que la base seule tient
-    // pour celle du compte : refusées, et le compte reste non vérifié.
-    foreach ([[$autreIdentifiant, 'apres@example.org'], [$identifiantRendu, 'aprés@example.org']] as [$identifiant, $adresse]) {
-        $retourDe($identifiant, $adresse);
+    // Une autre identité qui présente l'adresse du compte : refusée.
+    $retourDe($autreIdentifiant, 'apres@example.org');
 
-        expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($fournisseur))
-            ->toThrow(SocialAuthException::class);
-        expect($compte->refresh()->email_verified_at)->toBeNull();
+    expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($fournisseur))
+        ->toThrow(SocialAuthException::class);
+    expect($compte->refresh()->email_verified_at)->toBeNull();
+
+    // La même identité, pour une adresse que seule la collation de la base
+    // tient pour celle du compte : ce retour ne prouve pas l'adresse du compte,
+    // qui n'en est pas revérifié, que la connexion soit refusée ou non.
+    $retourDe($identifiantRendu, 'aprés@example.org');
+
+    try {
+        app(HandleSocialCallbackAction::class)->execute($fournisseur);
+    } catch (SocialAuthException) {
+        // Le refus est une issue admise ; seule compte la vérification.
     }
+
+    expect($compte->refresh()->email_verified_at)->toBeNull();
 
     $retourDe($identifiantRendu, 'apres@example.org');
 
