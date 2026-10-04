@@ -13,8 +13,9 @@ return [
     |
     | Adresses des comptes de l'application autorises a consulter Horizon hors
     | environnement local, separees par des virgules. Vide par defaut : une
-    | installation qui ne configure rien reste fermee a ces comptes. Le super
-    | administrateur du panneau entre sans y figurer, depuis une adresse de
+    | installation qui ne configure rien reste fermee a ces comptes.
+    | L'administrateur du panneau qui a view-outils (le super administrateur)
+    | entre sans y figurer, avec sa session du panneau, depuis une adresse de
     | ADMIN_ALLOWED_IPS. Voir HorizonServiceProvider::authorization().
     |
     */
