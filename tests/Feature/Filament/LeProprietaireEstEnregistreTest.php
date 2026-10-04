@@ -8,11 +8,13 @@ use App\Filament\Resources\Goals\Pages\CreateGoal;
 use App\Filament\Resources\Goals\Pages\EditGoal;
 use App\Filament\Resources\Workouts\Pages\CreateWorkout;
 use App\Filament\Resources\Workouts\Pages\EditWorkout;
+use App\Filament\Resources\Workouts\Pages\ListWorkouts;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Filament\Actions\Testing\TestAction;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -157,6 +159,40 @@ it('ne change pas le propriétaire d’une séance, même par une requête forg�
         ->set('data.user_id', $apres->getKey())
         ->set('data.name', 'Après')
         ->call('save')
+        ->assertHasNoFormErrors();
+
+    $workout->refresh();
+
+    expect($workout->name)->toBe('Après')
+        ->and($workout->user_id)->toBe($avant->getKey())
+        ->and($ligne->refresh()->user_id)->toBe($avant->getKey())
+        ->and($serie->refresh()->user_id)->toBe($avant->getKey());
+});
+
+/*
+ * Le second chemin Livewire qui ecrit une seance : l'action de modification de
+ * la table des seances. L'interface la rend en lien vers la page de
+ * modification, mais un client peut la monter et la soumettre directement, et
+ * elle enregistre par `$record->update($data)` sans passer par
+ * `EditWorkout::handleRecordUpdate()`. Elle partage le formulaire de la page :
+ * c'est la desactivation du champ dans `WorkoutForm` qui la garde, pas la page.
+ * Si cette desactivation quittait le formulaire pour la seule page, ce cas
+ * tomberait, sur l'assignation en masse refusee ou sur l'exception du modele.
+ */
+it('ne change pas le propriétaire d’une séance par l’action de modification de la table', function (): void {
+    $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Workout')), 'admin');
+
+    $avant = User::factory()->create();
+    $apres = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $avant->getKey(), 'name' => 'Avant']);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $workout->getKey()]);
+    $serie = Set::factory()->create(['workout_line_id' => $ligne->getKey()]);
+
+    Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($workout), [
+            'user_id' => $apres->getKey(),
+            'name' => 'Après',
+        ])
         ->assertHasNoFormErrors();
 
     $workout->refresh();

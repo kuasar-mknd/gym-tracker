@@ -29,6 +29,10 @@ class WorkoutForm
      * aurait réécrit la clef. Une requête Livewire forgée qui change sa valeur
      * ne va donc nulle part ; le modèle refuse de toute façon le changement
      * (`Workout::booted()`).
+     *
+     * La désactivation vit ici, et non dans `EditWorkout` : l'action de
+     * modification de la table des séances partage ce formulaire et enregistre
+     * par `$record->update($data)`, sans passer par la page.
      */
     public static function configure(Schema $schema): Schema
     {
