@@ -66,8 +66,10 @@ class HandleInertiaRequests extends Middleware
      *
      * Apple a deux façons de compléter son identité (#1911) : un secret signé
      * à la main (`client_secret`), ou le trio qui le signe à chaque échange
-     * (`team_id`, `key_id`, `private_key`). L'un ou l'autre suffit ; un trio
-     * incomplet ne signe rien.
+     * (`team_id`, `key_id`, `private_key`). L'un ou l'autre suffit. Un trio
+     * incomplet ne signe rien : config/services.php ne transmet la clé privée
+     * qu'avec les deux autres pièces, et le paquet présente alors le secret
+     * posé tel quel, s'il y en a un.
      *
      * @return array<string, bool>
      */

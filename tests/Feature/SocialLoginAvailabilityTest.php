@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Laravel\Socialite\Facades\Socialite;
+use Tests\Support\ConfigurationDesServicesRelue;
 
 use function Pest\Laravel\get;
 
@@ -69,7 +70,8 @@ it('says so on the registration page too', function (): void {
  * Apple complète son identité autrement (#1911) : à la place d'un secret signé
  * à la main, qui expire au bout de six mois au plus, le trio qui en signe un
  * neuf à chaque échange. Le bouton doit apparaître avec lui seul, et rester
- * masqué tant qu'il manque une pièce : un trio incomplet ne signe rien.
+ * masqué tant qu'il manque une pièce, faute de secret posé : un trio
+ * incomplet ne signe rien.
  */
 it('propose Apple avec le trio qui signe son secret, sans secret posé', function (): void {
     config([
@@ -109,61 +111,13 @@ it('masque Apple tant que son identité est incomplète', function (array $regla
     'clé privée vide, comme la transmet la composition' => [['services.apple.private_key' => '']],
 ]);
 
-/**
- * Relit config/services.php avec les variables données, comme le fait
- * `config:cache` au démarrage d'un conteneur.
- *
- * @param  array<array-key, mixed>  $variables
- * @return array<string, mixed>
- */
-function connexionSocialeConfigurationRelue(array $variables): array
-{
-    $noms = ['APP_URL', 'GOOGLE_REDIRECT_URI', 'GITHUB_REDIRECT_URI', 'APPLE_REDIRECT_URI', 'APPLE_TEAM_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY'];
-    $avant = [];
-
-    foreach ($noms as $nom) {
-        $avant[$nom] = [$_SERVER[$nom] ?? null, $_ENV[$nom] ?? null, getenv($nom)];
-        unset($_SERVER[$nom], $_ENV[$nom]);
-        putenv($nom);
-    }
-
-    foreach ($variables as $nom => $valeur) {
-        if (! is_string($nom) || ! is_string($valeur)) {
-            continue;
-        }
-
-        $_SERVER[$nom] = $_ENV[$nom] = $valeur;
-        putenv("{$nom}={$valeur}");
-    }
-
-    try {
-        /** @var array<string, mixed> $configuration */
-        $configuration = require config_path('services.php');
-
-        return $configuration;
-    } finally {
-        foreach ($avant as $nom => [$serveur, $environnement, $processus]) {
-            unset($_SERVER[$nom], $_ENV[$nom]);
-            putenv($processus === false ? $nom : "{$nom}={$processus}");
-
-            if ($serveur !== null) {
-                $_SERVER[$nom] = $serveur;
-            }
-
-            if ($environnement !== null) {
-                $_ENV[$nom] = $environnement;
-            }
-        }
-    }
-}
-
 /*
  * Sans URL de rappel, Google et Apple refusent l'échange (#1908). La pile de
  * production transmet une chaîne vide pour une variable qu'elle ne pose pas,
  * et env() rend alors cette chaîne, pas son défaut : les deux cas comptent.
  */
 it('déduit l\'URL de rappel d\'APP_URL quand rien ne la fixe', function (string $fournisseur, array $rappelPose): void {
-    $configuration = connexionSocialeConfigurationRelue(['APP_URL' => 'https://gym.example.org/', ...$rappelPose]);
+    $configuration = ConfigurationDesServicesRelue::avec(['APP_URL' => 'https://gym.example.org/', ...$rappelPose]);
 
     expect(data_get($configuration, "{$fournisseur}.redirect"))->toBe("https://gym.example.org/auth/{$fournisseur}/callback");
 })->with(['google', 'github', 'apple'])->with([
@@ -172,7 +126,7 @@ it('déduit l\'URL de rappel d\'APP_URL quand rien ne la fixe', function (string
 ]);
 
 it('garde l\'URL de rappel posée explicitement', function (): void {
-    $configuration = connexionSocialeConfigurationRelue([
+    $configuration = ConfigurationDesServicesRelue::avec([
         'APP_URL' => 'https://gym.example.org',
         'GOOGLE_REDIRECT_URI' => 'https://autre.example.org/rappel',
     ]);
@@ -202,7 +156,7 @@ it('relit la clé privée d\'Apple écrite sur une seule ligne', function (): vo
     openssl_pkey_export($cle, $pem);
     assert(is_string($pem));
 
-    $configuration = connexionSocialeConfigurationRelue([
+    $configuration = ConfigurationDesServicesRelue::avec([
         'APPLE_TEAM_ID' => 'EQUIPE0001',
         'APPLE_KEY_ID' => 'CLEAPP0001',
         'APPLE_PRIVATE_KEY' => str_replace("\n", '\n', trim($pem)),
@@ -218,8 +172,34 @@ it('relit la clé privée d\'Apple écrite sur une seule ligne', function (): vo
 
 it('garde la clé privée d\'Apple écrite sur plusieurs lignes, et tient une variable vide pour absente', function (): void {
     $surPlusieursLignes = "première ligne de la clé\ndeuxième ligne\ntroisième ligne";
+    $equipeEtCle = ['APPLE_TEAM_ID' => 'EQUIPE0001', 'APPLE_KEY_ID' => 'CLEAPP0001'];
 
-    expect(data_get(connexionSocialeConfigurationRelue(['APPLE_PRIVATE_KEY' => $surPlusieursLignes]), 'apple.private_key'))->toBe($surPlusieursLignes)
-        ->and(data_get(connexionSocialeConfigurationRelue(['APPLE_PRIVATE_KEY' => '']), 'apple.private_key'))->toBeNull()
-        ->and(data_get(connexionSocialeConfigurationRelue([]), 'apple.private_key'))->toBeNull();
+    expect(data_get(ConfigurationDesServicesRelue::avec([...$equipeEtCle, 'APPLE_PRIVATE_KEY' => $surPlusieursLignes]), 'apple.private_key'))->toBe($surPlusieursLignes)
+        ->and(data_get(ConfigurationDesServicesRelue::avec([...$equipeEtCle, 'APPLE_PRIVATE_KEY' => '']), 'apple.private_key'))->toBeNull()
+        ->and(data_get(ConfigurationDesServicesRelue::avec($equipeEtCle), 'apple.private_key'))->toBeNull();
 });
+
+/*
+ * Le paquet signe un secret dès qu'il voit une clé privée, sans regarder les
+ * deux autres pièces, et ignore alors le secret posé : sans équipe, l'échange
+ * tombait en 500 (TypeError dans la signature) ; sans identifiant de clé, il
+ * présentait à Apple un jeton sans `kid`, refusé en `invalid_client`. La clé
+ * ne lui parvient donc qu'avec le trio complet ; incomplet, c'est le secret
+ * posé qui part, comme le README le promet.
+ */
+it('ne transmet la clé privée d\'Apple qu\'avec l\'équipe et l\'identifiant de sa clé', function (array $variables): void {
+    $configuration = ConfigurationDesServicesRelue::avec([
+        'APPLE_TEAM_ID' => 'EQUIPE0001',
+        'APPLE_KEY_ID' => 'CLEAPP0001',
+        'APPLE_PRIVATE_KEY' => 'le contenu du .p8 de test',
+        ...$variables,
+    ]);
+
+    expect(data_get($configuration, 'apple.private_key'))->toBeNull();
+})->with([
+    'sans équipe' => [['APPLE_TEAM_ID' => null]],
+    'sans identifiant de clé' => [['APPLE_KEY_ID' => null]],
+    'équipe vide, comme la transmet la composition' => [['APPLE_TEAM_ID' => '']],
+    'identifiant de clé vide, comme le transmet la composition' => [['APPLE_KEY_ID' => '']],
+    'identifiant de clé fait d\'espaces' => [['APPLE_KEY_ID' => '   ']],
+]);

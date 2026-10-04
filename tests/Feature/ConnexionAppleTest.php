@@ -9,6 +9,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Ecdsa\Sha256 as Es256;
 use Lcobucci\JWT\Signer\Key\InMemory;
@@ -16,6 +17,7 @@ use Lcobucci\JWT\UnencryptedToken;
 use Lcobucci\JWT\Validation\Constraint\SignedWith;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\AppleSimule;
+use Tests\Support\ConfigurationDesServicesRelue;
 
 use function Pest\Laravel\assertAuthenticated;
 use function Pest\Laravel\assertDatabaseHas;
@@ -202,6 +204,42 @@ it('présente tel quel un secret client déjà signé, faute de trio', function 
 
     expect($apple->secretClientPresente($apple->requetesParties()[0]))->toBe('secret-signe-a-la-main');
 });
+
+/*
+ * L'exploitant qui passe du secret signé à la main au trio, une variable après
+ * l'autre : la clé posée avant l'équipe ou l'identifiant de clé. Le paquet
+ * signait dès qu'il voyait la clé, en ignorant le secret posé : sans équipe,
+ * le retour répondait 500 ; sans identifiant de clé, Apple recevait un jeton
+ * sans `kid` et refusait l'échange. Le bouton, lui, restait affiché.
+ */
+it('présente tel quel le secret posé tant que le trio est incomplet', function (array $variablesRetirees): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+
+    $relue = ConfigurationDesServicesRelue::avec([
+        'APPLE_CLIENT_ID' => AppleSimule::SERVICES_ID,
+        'APPLE_CLIENT_SECRET' => 'secret-signe-a-la-main',
+        'APPLE_TEAM_ID' => AppleSimule::EQUIPE,
+        'APPLE_KEY_ID' => AppleSimule::IDENTIFIANT_DE_CLE,
+        'APPLE_PRIVATE_KEY' => str_replace("\n", '\n', $apple->clePriveeDeLApplication),
+        ...$variablesRetirees,
+    ]);
+
+    foreach (['client_id', 'client_secret', 'team_id', 'key_id', 'private_key'] as $cle) {
+        config(["services.apple.{$cle}" => data_get($relue, "apple.{$cle}")]);
+    }
+
+    get(route('login'))->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->where('social_login_enabled.apple', true));
+
+    ['nonce' => $nonce, 'cookie' => $cookie] = connexionAppleDepart();
+    connexionAppleRetour($apple, $cookie, $nonce)->assertRedirect(route('dashboard'));
+
+    expect($apple->secretClientPresente($apple->requetesParties()[0]))->toBe('secret-signe-a-la-main');
+})->with([
+    'sans équipe' => [['APPLE_TEAM_ID' => null]],
+    'sans identifiant de clé' => [['APPLE_KEY_ID' => null]],
+    'équipe vide, comme la transmet la composition' => [['APPLE_TEAM_ID' => '']],
+]);
 
 it('refuse un retour sans cookie de nonce, sans même appeler Apple', function (): void {
     connexionAppleProtegerCommeEnProduction();

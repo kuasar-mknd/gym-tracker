@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 134 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 2 142 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 187 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -177,8 +177,8 @@ Apple renvoie l'utilisateur par un POST depuis son site, sans cookie de session 
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | pour proposer Google | vides : bouton masqué | Client OAuth « Application Web » de la console Google Cloud. Transmises à `app` seul. |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | pour proposer GitHub | vides : bouton masqué | OAuth App de GitHub (Settings › Developer settings). Transmises à `app` seul. |
 | `APPLE_CLIENT_ID` | pour proposer Apple | vide : bouton masqué | Le Services ID (`org.example.gym.web`), pas l'identifiant de l'app. Transmise à `app` seul. |
-| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | pour proposer Apple, à défaut d'`APPLE_CLIENT_SECRET` | vides : bouton masqué | L'identifiant d'équipe, celui de la clé, et le contenu du `.p8` en clair, en-têtes `BEGIN`/`END PRIVATE KEY` compris : sur une ligne, `\n` à la place des retours. L'application en signe un secret neuf, valable une heure, à chaque échange. Les trois sont nécessaires ; transmises à `app` seul. |
-| `APPLE_CLIENT_SECRET` | non | vide | Un secret déjà signé (jeton ES256), lu seulement sans le trio. Il expire au plus tard six mois après sa signature, et le bouton reste affiché après : chaque connexion échoue alors en `invalid_client`. Transmise à `app` seul. |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | pour proposer Apple, à défaut d'`APPLE_CLIENT_SECRET` | vides : bouton masqué | L'identifiant d'équipe, celui de la clé, et le contenu du `.p8` en clair, en-têtes `BEGIN`/`END PRIVATE KEY` compris : sur une ligne, `\n` à la place des retours. L'application en signe un secret neuf, valable une heure, à chaque échange. Les trois sont nécessaires : tant qu'il en manque une, la clé est ignorée et seul `APPLE_CLIENT_SECRET` peut servir. Transmises à `app` seul. |
+| `APPLE_CLIENT_SECRET` | non | vide | Un secret déjà signé (jeton ES256), lu seulement quand le trio est incomplet : complet, il signe à sa place. Il expire au plus tard six mois après sa signature, et le bouton reste affiché après : chaque connexion échoue alors en `invalid_client`. Transmise à `app` seul. |
 
 #### Administration et supervision
 
