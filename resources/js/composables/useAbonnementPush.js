@@ -38,10 +38,15 @@ export const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker
  *
  * Le stockage peut être bloqué (navigation privée) ou illisible : on transmet
  * alors à chaque ouverture, une écriture de trop plutôt qu'un abonnement perdu.
+ *
+ * `aRetransmettre` dit que le serveur a pu retirer l'abonnement depuis : un
+ * mot de passe changé retire tous ceux du compte (`User::booted()`). Le mémo
+ * dit encore à quel compte l'appareil a été donné, mais ne dispense plus
+ * d'écrire (`marquerLAbonnementARetransmettre`).
  */
 const CLEF_DU_MEMO = 'gym-tracker:abonnement-push-transmis'
 
-/** @returns {{utilisateur: string, endpoint: string}|null} */
+/** @returns {{utilisateur: string, endpoint: string, aRetransmettre?: boolean}|null} */
 const lireLeMemo = () => {
     try {
         const memo = JSON.parse(window.localStorage.getItem(CLEF_DU_MEMO) ?? 'null')
@@ -52,7 +57,7 @@ const lireLeMemo = () => {
     }
 }
 
-/** @param {{utilisateur: string, endpoint: string}|null} memo */
+/** @param {{utilisateur: string, endpoint: string, aRetransmettre?: boolean}|null} memo */
 const ecrireLeMemo = (memo) => {
     try {
         if (memo === null) {
@@ -133,11 +138,14 @@ const rapprocher = async (utilisateur, serveurSansAbonnement) => {
     /*
      * Quand le serveur dit n'avoir AUCUN abonnement pour ce compte, le mémo est
      * démenti (base restaurée, ligne supprimée) : seule une transmission faite
-     * pendant ce chargement-ci dispense alors d'écrire.
+     * pendant ce chargement-ci dispense alors d'écrire. Un mémo marqué « à
+     * retransmettre » ne dispense de rien : le serveur a pu retirer la ligne.
      */
-    const aJour = serveurSansAbonnement
-        ? transmisPendantLeChargement.has(`${utilisateur} ${abonnement.endpoint}`)
-        : dejaTransmis === abonnement.endpoint
+    const aJour =
+        memo?.aRetransmettre !== true &&
+        (serveurSansAbonnement
+            ? transmisPendantLeChargement.has(`${utilisateur} ${abonnement.endpoint}`)
+            : dejaTransmis === abonnement.endpoint)
 
     if (aJour) {
         return true
@@ -202,6 +210,60 @@ export const rapprocherLAbonnementPush = (utilisateurId, { serveurSansAbonnement
     rapprochementsDuChargement.set(utilisateur, suivant)
 
     return suivant
+}
+
+/**
+ * Le serveur a pu retirer l'abonnement de cet appareil : le rapprochement
+ * suivant le retransmet, s'il appartient au compte connecté.
+ *
+ * Un mot de passe changé retire tous les abonnements du compte, quel que soit
+ * le chemin du changement (`User::booted()`), et ferme ses autres sessions. Le
+ * mémo de l'appareil disait pourtant toujours « déjà transmis » : l'appareil
+ * qui se reconnectait au compte ne transmettait plus rien, et le profil
+ * montrait les cases « Envoyer aussi en Push » pour des envois qui ne lui
+ * parvenaient plus. La marque garde le compte à qui l'appareil a été donné :
+ * un appareil donné à un autre compte reste à cet autre compte.
+ *
+ * Ce que ce chargement a déjà rapproché est oublié aussi : la page de
+ * connexion et la page qui la suit se succèdent sans recharger le module.
+ */
+export const marquerLAbonnementARetransmettre = () => {
+    const memo = lireLeMemo()
+
+    if (memo !== null && memo.aRetransmettre !== true) {
+        ecrireLeMemo({ ...memo, aRetransmettre: true })
+    }
+
+    rapprochementsDuChargement.clear()
+    transmisPendantLeChargement.clear()
+}
+
+/**
+ * Rend au serveur l'abonnement de cet appareil, qui vient de changer le mot de
+ * passe depuis le profil.
+ *
+ * Le serveur a retiré tous les abonnements du compte, celui de cet appareil
+ * compris, puisqu'il ne sait pas lequel est le sien. L'appareil qui a changé
+ * le mot de passe garde sa session : il retransmet le sien. Si la
+ * transmission échoue, la marque reste, et l'ouverture suivante s'en charge.
+ *
+ * Les rapprochements en vol sont attendus d'abord : l'un d'eux, parti avant le
+ * changement, noterait sinon après la marque une transmission que le serveur
+ * vient d'effacer, et le mémo dispenserait de nouveau d'écrire.
+ *
+ * @param {number|string|null|undefined} utilisateurId
+ * @returns {Promise<boolean>} Comme `rapprocherLAbonnementPush`. Ne rejette
+ *   jamais.
+ */
+export const retransmettreLAbonnementPush = async (utilisateurId) => {
+    if (!pushPrisEnCharge()) {
+        return false
+    }
+
+    await Promise.allSettled(rapprochementsDuChargement.values())
+    marquerLAbonnementARetransmettre()
+
+    return rapprocherLAbonnementPush(utilisateurId)
 }
 
 /**

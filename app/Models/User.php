@@ -195,4 +195,56 @@ final class User extends Authenticatable implements MustVerifyEmail
     {
         return (float) $this->workouts()->sum('workout_volume');
     }
+
+    /**
+     * Un mot de passe changé détache du compte tous ses appareils abonnés aux
+     * notifications push.
+     *
+     * Depuis #1940, changer le mot de passe ferme les autres sessions du compte
+     * (`AuthentifieLaSessionDuCompte`). Leurs appareils gardaient pourtant leur
+     * abonnement, et continuaient d'afficher records, rappels et succès sur
+     * l'écran verrouillé : précisément l'appareil volé, partagé ou perdu dont
+     * la personne voulait se défaire. Le serveur ne sait pas quel abonnement
+     * appartient à quelle session, la table ne porte ni l'une ni l'autre : tous
+     * partent. La page du profil retransmet ensuite celui de l'appareil qui a
+     * changé le mot de passe, et une session fermée ne peut plus rien
+     * transmettre. Un appareil retiré qui se reconnecte au compte retransmet
+     * le sien à son tour (`useAbonnementPush`).
+     *
+     * Dans l'évènement du modèle plutôt que dans chaque contrôleur, pour la
+     * même raison que le middleware ferme les sessions : le profil, la
+     * réinitialisation par courriel, le panneau et tout chemin à venir
+     * changent le mot de passe par un enregistrement du compte, et une règle
+     * que chacun devrait rappeler finit oubliée par l'un d'eux. Seuls les
+     * chemins qui sautent les évènements y échappent (`saveQuietly()`,
+     * `withoutEvents()`, le constructeur de requêtes) ; l'application n'en
+     * écrit aucun sur le mot de passe.
+     *
+     * Le re-hachage à la connexion, quand le coût du hachage change
+     * (`hashing.rehash_on_login`), compte aussi comme un changement : il ferme
+     * déjà les autres sessions du compte, et chaque appareil retransmet son
+     * abonnement à sa connexion suivante.
+     */
+    #[\Override]
+    protected static function booted(): void
+    {
+        self::updated(static function (self $compte): void {
+            if ($compte->wasChanged('password')) {
+                $compte->detacherSesAppareilsPush();
+            }
+        });
+    }
+
+    /**
+     * Retire tous les abonnements push du compte, par sa relation, qui filtre
+     * sur le type et l'identifiant. La relation déjà chargée est oubliée : le
+     * canal WebPush lit les adresses par elle, et une notification envoyée par
+     * cette instance dans la même requête partirait sinon vers les appareils
+     * retirés.
+     */
+    private function detacherSesAppareilsPush(): void
+    {
+        $this->pushSubscriptions()->delete();
+        $this->unsetRelation('pushSubscriptions');
+    }
 }

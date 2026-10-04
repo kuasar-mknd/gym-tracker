@@ -1,6 +1,24 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
+import { onMounted } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
+import { marquerLAbonnementARetransmettre } from '@/composables/useAbonnementPush'
+
+const page = usePage()
+
+/*
+ * Une page d'invité dit que cet appareil n'a plus de session. Elle a pu être
+ * fermée par un changement de mot de passe, qui retire aussi tous les
+ * abonnements push du compte : le mémo de l'appareil ne prouve plus que le
+ * serveur tient le sien, et la connexion suivante au même compte le
+ * retransmet. La vérification de l'adresse et la confirmation du mot de passe
+ * prennent ce gabarit sous une session ouverte : rien à marquer.
+ */
+onMounted(() => {
+    if (!page.props.auth?.user) {
+        marquerLAbonnementARetransmettre()
+    }
+})
 </script>
 
 <template>

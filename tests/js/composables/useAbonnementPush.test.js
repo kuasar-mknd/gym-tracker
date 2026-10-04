@@ -14,10 +14,19 @@ vi.mock('@/Utils/http', () => ({ http: { post: (...args) => reseau.post(...args)
  */
 let useAbonnementPush
 let rapprocherLAbonnementPush
+let marquerLAbonnementARetransmettre
+let retransmettreLAbonnementPush
+let appareilDonneAUnAutreCompte
 
 const chargementSuivant = async () => {
     vi.resetModules()
-    ;({ useAbonnementPush, rapprocherLAbonnementPush } = await import('@/composables/useAbonnementPush'))
+    ;({
+        useAbonnementPush,
+        rapprocherLAbonnementPush,
+        marquerLAbonnementARetransmettre,
+        retransmettreLAbonnementPush,
+        appareilDonneAUnAutreCompte,
+    } = await import('@/composables/useAbonnementPush'))
 }
 
 const UTILISATEUR = 42
@@ -538,5 +547,147 @@ describe('le rapprochement à l’ouverture de l’application', () => {
         await rapprocherLAbonnementPush(UTILISATEUR)
 
         expect(reseau.post).not.toHaveBeenCalled()
+    })
+})
+
+/** Une promesse que le test règle quand il le décide. */
+const differee = () => {
+    let regler
+    const promesse = new Promise((resolve) => {
+        regler = resolve
+    })
+
+    return { promesse, regler }
+}
+
+describe('après un changement de mot de passe', () => {
+    /*
+     * Le serveur retire tous les abonnements du compte quand le mot de passe
+     * change (User::booted()), celui de l'appareil qui l'a changé compris : il
+     * ne sait pas lequel est le sien. Le mémo de chaque appareil disait
+     * pourtant « déjà transmis », et aucun rapprochement ne réécrivait plus.
+     */
+    it('rend au serveur l’abonnement de l’appareil qui a changé le mot de passe, puis n’écrit plus rien', async () => {
+        const gestionnaire = await dejaTransmis('https://push.example/telephone')
+
+        await expect(retransmettreLAbonnementPush(UTILISATEUR)).resolves.toBe(true)
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/telephone']])
+
+        // Le mémo est de nouveau à jour : l'ouverture suivante n'écrit rien.
+        await chargementSuivant()
+        reseau.post.mockClear()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(gestionnaire.getSubscription).toHaveBeenCalled()
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+
+    it('retransmet à l’ouverture suivante quand la retransmission a échoué', async () => {
+        await dejaTransmis('https://push.example/telephone')
+        reseau.post.mockRejectedValueOnce(new Error('réseau'))
+
+        await expect(retransmettreLAbonnementPush(UTILISATEUR)).resolves.toBe(false)
+        await chargementSuivant()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(ecritures()).toEqual([
+            ['push-subscriptions.update', 'https://push.example/telephone'],
+            ['push-subscriptions.update', 'https://push.example/telephone'],
+        ])
+    })
+
+    it('attend le rapprochement en vol, qui noterait sinon une transmission que le serveur vient d’effacer', async () => {
+        const gestionnaire = navigateur()
+        const ecritureDuChargement = differee()
+        const lectureDeLaRetransmission = differee()
+        gestionnaire.getSubscription
+            .mockResolvedValueOnce(abonnement('https://push.example/telephone'))
+            .mockReturnValueOnce(lectureDeLaRetransmission.promesse)
+        reseau.post.mockReturnValueOnce(ecritureDuChargement.promesse)
+
+        // Le layout a transmis à l'ouverture ; le mot de passe change avant
+        // que sa réponse arrive, et le serveur efface la ligne.
+        const duChargement = rapprocherLAbonnementPush(UTILISATEUR)
+        await flushPromises()
+        const retransmission = retransmettreLAbonnementPush(UTILISATEUR)
+        await flushPromises()
+        ecritureDuChargement.regler({})
+        await flushPromises()
+        lectureDeLaRetransmission.regler(abonnement('https://push.example/telephone'))
+        await duChargement
+        await retransmission
+
+        expect(ecritures()).toEqual([
+            ['push-subscriptions.update', 'https://push.example/telephone'],
+            ['push-subscriptions.update', 'https://push.example/telephone'],
+        ])
+    })
+
+    it('laisse à son compte un appareil donné à un autre, sans rien écrire', async () => {
+        await dejaTransmis('https://push.example/partage', 7)
+
+        await expect(retransmettreLAbonnementPush(UTILISATEUR)).resolves.toBe(false)
+
+        expect(reseau.post).not.toHaveBeenCalled()
+        expect(appareilDonneAUnAutreCompte(UTILISATEUR)).toBe(true)
+    })
+
+    it('ne fait rien là où le navigateur ne connaît pas le push', async () => {
+        navigateur({ existant: abonnement() })
+        delete window.Notification
+
+        await expect(retransmettreLAbonnementPush(UTILISATEUR)).resolves.toBe(false)
+
+        expect(reseau.post).not.toHaveBeenCalled()
+    })
+})
+
+describe('la connexion qui suit une session fermée', () => {
+    /*
+     * Une page d'invité marque l'abonnement : la session a pu être fermée par
+     * un changement de mot de passe fait ailleurs, qui a retiré la ligne de
+     * cet appareil. Sans la marque, l'appareil qui se reconnecte ne
+     * transmettait plus rien, et le profil montrait les cases « Envoyer aussi
+     * en Push » pour des envois qui ne lui parvenaient plus.
+     */
+    it('retransmet une fois l’abonnement que le mémo disait déjà transmis', async () => {
+        await dejaTransmis('https://push.example/tablette')
+
+        marquerLAbonnementARetransmettre()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+        await chargementSuivant()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(ecritures()).toEqual([['push-subscriptions.update', 'https://push.example/tablette']])
+    })
+
+    it('oublie ce que ce chargement avait déjà rapproché, la connexion se faisant sans recharger la page', async () => {
+        navigateur({ existant: abonnement('https://push.example/tablette') })
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        marquerLAbonnementARetransmettre()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(ecritures()).toEqual([
+            ['push-subscriptions.update', 'https://push.example/tablette'],
+            ['push-subscriptions.update', 'https://push.example/tablette'],
+        ])
+    })
+
+    it('garde l’appareil au compte à qui il a été donné', async () => {
+        await dejaTransmis('https://push.example/partage', 7)
+
+        marquerLAbonnementARetransmettre()
+        await rapprocherLAbonnementPush(UTILISATEUR)
+
+        expect(reseau.post).not.toHaveBeenCalled()
+        expect(appareilDonneAUnAutreCompte(UTILISATEUR)).toBe(true)
+    })
+
+    it('ne fait rien sans mémo', async () => {
+        marquerLAbonnementARetransmettre()
+
+        expect(window.localStorage.getItem('gym-tracker:abonnement-push-transmis')).toBeNull()
     })
 })
