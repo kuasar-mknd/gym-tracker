@@ -31,6 +31,7 @@ use App\Actions\ResolveSocialUserAction;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
@@ -216,26 +217,37 @@ it('tire le mot de passe jetable sur seize caracteres', function (): void {
     expect($longueursDemandees)->toContain(16);
 });
 
-it('refuse un retour sans identifiant de fournisseur', function (): void {
+it('refuse un retour sans identifiant de fournisseur', function (?string $identifiant): void {
     /*
      * Sans identifiant, la liaison ne pourrait rien enregistrer, et la
      * connexion suivante ne reconnaîtrait pas le compte : elle repasserait par
-     * l'adresse.
+     * l'adresse. La chaîne vide n'en est pas un non plus.
+     *
+     * Le message est comparé en entier : `toThrow(classe, message)` ne
+     * vérifie que la présence du texte.
      */
     $existant = compteVerifieAvecFournisseur(null, null);
 
-    expect(fn (): User => resoudre(utilisateurSocial(['id' => null])))
-        ->toThrow(SocialAuthException::class, 'Erreur lors de la connexion avec Google');
+    expect(fn (): User => resoudre(utilisateurSocial(['id' => $identifiant])))
+        ->toThrow(new SocialAuthException('Erreur lors de la connexion avec Google'));
 
     expect($existant->refresh()->provider)->toBeNull();
-});
+    expect($existant->provider_id)->toBeNull();
+    expect(User::query()->count())->toBe(1);
+})->with([
+    'absent' => [null],
+    'vide' => [''],
+]);
 
-it('refuse un retour sans adresse au lieu d’échouer à l’écriture', function (): void {
-    expect(fn (): User => resoudre(utilisateurSocial(['email' => null])))
-        ->toThrow(SocialAuthException::class, 'Google ne nous a transmis aucune adresse email.');
+it('refuse un retour sans adresse au lieu d’échouer à l’écriture', function (?string $adresse): void {
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => $adresse])))
+        ->toThrow(new SocialAuthException('Google ne nous a transmis aucune adresse email. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.'));
 
     expect(User::query()->count())->toBe(0);
-});
+})->with([
+    'absente' => [null],
+    'vide' => [''],
+]);
 
 it('crée un compte non vérifié quand le fournisseur ne garantit pas l’adresse', function (): void {
     /*
@@ -263,10 +275,18 @@ it('départage deux comptes de la même identité par l’adresse exacte, et ref
     expect(resoudre(utilisateurSocial())->id)->toBe($recent->id);
     expect(resoudre(utilisateurSocial(['email' => 'Ancienne@Example.test']))->id)->toBe($ancien->id);
 
+    $journal = Log::spy();
+
     expect(fn (): User => resoudre(utilisateurSocial(['email' => 'autre@example.test'])))
-        ->toThrow(SocialAuthException::class, 'Plusieurs comptes sont associés à ce compte Google.');
+        ->toThrow(new SocialAuthException('Plusieurs comptes sont associés à ce compte Google. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.'));
 
     expect(User::query()->count())->toBe(2);
+
+    // Les comptes en cause, dans l'ordre de leur création, et jamais l'adresse.
+    $journal->shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(static fn (string $message, array $contexte): bool => $message === 'Connexion sociale refusée : plusieurs comptes portent cette identité'
+            && $contexte === ['fournisseur' => 'google', 'comptes' => [$ancien->id, $recent->id]]);
 });
 
 it('ne prend pas pour sienne une identité qui ne diffère que par la casse', function (): void {
@@ -279,7 +299,7 @@ it('ne prend pas pour sienne une identité qui ne diffère que par la casse', fu
     $existant = compteVerifieAvecFournisseur('google', 'GOOGLE-42');
 
     expect(fn (): User => resoudre(utilisateurSocial()))
-        ->toThrow(SocialAuthException::class, 'Ce compte est déjà associé à un autre compte Google.');
+        ->toThrow(new SocialAuthException('Ce compte est déjà associé à un autre compte Google. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.'));
 
     expect($existant->refresh()->provider_id)->toBe('GOOGLE-42');
     expect(User::query()->count())->toBe(1);

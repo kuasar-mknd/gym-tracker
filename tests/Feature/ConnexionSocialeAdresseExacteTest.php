@@ -22,16 +22,23 @@ declare(strict_types=1);
 use App\Actions\HandleSocialCallbackAction;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
+use App\Support\ConnexionSociale\FournisseurApple;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GithubProvider;
 use Laravel\Socialite\Two\User as SocialiteUser;
+use Mockery\MockInterface;
+use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\AppleSimule;
 
 use function Pest\Laravel\assertAuthenticatedAs;
 use function Pest\Laravel\assertGuest;
 use function Pest\Laravel\get;
+use function Pest\Laravel\withUnencryptedCookie;
 
 /**
  * Un fournisseur qui rend, à chaque appel, le retour suivant de la liste.
@@ -138,6 +145,42 @@ function refusDAdresseSociale(string $fournisseur): string
     return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte. '.suiteDuRefusSocial();
 }
 
+/**
+ * Le refus a laissé une trace, une seule, avec ce message et ce contexte
+ * exactement : le fournisseur et le compte, jamais l'adresse.
+ *
+ * @param  array<string, mixed>  $contexte
+ */
+function refusSocialJournalise(MockInterface $journal, string $message, array $contexte): void
+{
+    $journal->shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(static fn (string $messageEcrit, array $contexteEcrit): bool => $messageEcrit === $message && $contexteEcrit === $contexte);
+}
+
+/**
+ * Le retour d'Apple par sa vraie route, en POST venu de son site : un départ
+ * qui pose le cookie du nonce, puis le jeton d'identité qu'Apple signerait
+ * pour ce nonce, avec cette adresse vérifiée.
+ *
+ * @return TestResponse<Response>
+ */
+function retourDAppleEnPostAvecLAdresse(AppleSimule $apple, string $adresse): TestResponse
+{
+    $depart = get(route('social.redirect', 'apple'));
+    $nonce = AppleSimule::nonceEnvoyePar((string) $depart->headers->get('Location'));
+    $cookieDuNonce = (string) $depart->getCookie(FournisseurApple::COOKIE_DU_NONCE, decrypt: false)?->getValue();
+
+    $apple->repondraParLeJeton($apple->jetonDIdentite($nonce, ['email' => $adresse, 'email_verified' => 'true']));
+    $apple->nouvelleRequete();
+
+    return withUnencryptedCookie(FournisseurApple::COOKIE_DU_NONCE, $cookieDuNonce)->post(
+        route('social.callback.apple'),
+        ['code' => 'code-d-autorisation-de-test'],
+        ['Sec-Fetch-Site' => 'cross-site', 'Origin' => 'https://appleid.apple.com'],
+    );
+}
+
 $fournisseurs = [
     'Google' => 'google',
     'GitHub' => 'github',
@@ -231,6 +274,7 @@ it('reconnaît une identité déjà liée même quand l’adresse a changé chez
 
 it('ne rattache jamais un compte déjà lié à une autre identité du même fournisseur', function (string $fournisseur): void {
     $compte = compteSocialExistant('camille.martin@example.org', $fournisseur, identiteSocialeDe($fournisseur, 'autre'));
+    $journal = Log::spy();
 
     Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
         fournisseurSocialQuiRend(retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'camille.martin@example.org')),
@@ -243,9 +287,101 @@ it('ne rattache jamais un compte déjà lié à une autre identité du même fou
     assertGuest();
     expect($compte->refresh()->provider_id)->toBe(identiteSocialeDe($fournisseur, 'autre'));
     expect(User::query()->count())->toBe(1);
+    refusSocialJournalise($journal, 'Connexion sociale refusée : compte lié à une autre identité du même fournisseur', [
+        'fournisseur' => $fournisseur,
+        'compte' => $compte->id,
+    ]);
 })->with($fournisseurs);
 
-it('ne rattache pas une adresse que le fournisseur ne garantit pas, en production comme en local', function (string $fournisseur): void {
+it('journalise le refus d’une adresse seulement proche de celle d’un compte, sans l’adresse', function (string $fournisseur): void {
+    /*
+     * L'adresse rendue est en ASCII et passe donc le premier filtre : c'est
+     * le compte trouvé par la base qui porte l'accent.
+     */
+    $compte = compteSocialExistant('jéan.dupont@example.org');
+    $journal = Log::spy();
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'jean.dupont@example.org')),
+    );
+
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusDAdresseSociale($fournisseur));
+
+    assertGuest();
+    expect($compte->refresh()->provider_id)->toBeNull();
+    refusSocialJournalise($journal, 'Connexion sociale refusée : adresse seulement proche de celle d’un compte', [
+        'fournisseur' => $fournisseur,
+        'compte' => $compte->id,
+    ]);
+})->with($fournisseurs);
+
+it('ne rattache pas un compte qui n’a pas vérifié son adresse', function (string $fournisseur): void {
+    /*
+     * Quiconque peut s'inscrire par mot de passe avec l'adresse d'un autre :
+     * rattacher ce compte au retour du vrai titulaire lui laisserait la porte
+     * du mot de passe.
+     */
+    $compte = User::factory()->unverified()->create([
+        'email' => 'camille.martin@example.org',
+        'provider' => null,
+        'provider_id' => null,
+    ]);
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'camille.martin@example.org')),
+    );
+
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', __('Your account must be verified before linking it with a social provider.'));
+
+    assertGuest();
+    expect($compte->refresh()->provider_id)->toBeNull();
+    expect(User::query()->count())->toBe(1);
+})->with($fournisseurs);
+
+it('refuse un retour GitHub dont l’adresse est vide', function (): void {
+    Socialite::shouldReceive('driver')->with('github')->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe('github', identiteSocialeDe('github'), '')),
+    );
+
+    get(route('social.callback', 'github'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', 'Votre email n\'est pas vérifié par Github');
+
+    assertGuest();
+    expect(User::query()->count())->toBe(0);
+});
+
+it('refuse au rappel POST d’Apple une adresse seulement proche, et rattache l’adresse identique', function (?string $identiteDejaLiee): void {
+    $apple = new AppleSimule();
+    $apple->configurer();
+
+    // Le `sub` que signe le jeton d'identité d'AppleSimule.
+    $identifiantApple = '001234.apple-de-test.0042';
+    $compte = compteSocialExistant('jean.dupont@example.org', $identiteDejaLiee === null ? null : 'apple', $identiteDejaLiee);
+
+    retourDAppleEnPostAvecLAdresse($apple, 'jéan.dupont@example.org')
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusDAdresseSociale('apple'));
+
+    assertGuest();
+    expect($compte->refresh()->provider_id)->toBe($identiteDejaLiee);
+    expect(User::query()->count())->toBe(1);
+
+    retourDAppleEnPostAvecLAdresse($apple, 'jean.dupont@example.org')->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+    expect($compte->refresh()->provider)->toBe('apple');
+    expect($compte->provider_id)->toBe($identifiantApple);
+    expect($apple->requetesParties())->toHaveCount(2);
+})->with([
+    'par l’adresse' => [null],
+]);
+
+it('ne rattache pas une adresse que le fournisseur ne garantit pas, en production comme en local', function (string $fournisseur, string $refusEnLocal): void {
     $compte = compteSocialExistant('camille.martin@example.org');
     $retourNonVerifie = retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'camille.martin@example.org', verifiee: false);
 
@@ -265,11 +401,15 @@ it('ne rattache pas une adresse que le fournisseur ne garantit pas, en productio
     app()->detectEnvironment(fn (): string => 'local');
 
     expect(fn () => app(HandleSocialCallbackAction::class)->execute($fournisseur))
-        ->toThrow(SocialAuthException::class);
+        ->toThrow(new SocialAuthException($refusEnLocal));
 
     expect($compte->refresh()->provider_id)->toBeNull();
     expect(User::query()->count())->toBe(1);
-})->with($fournisseurs);
+})->with([
+    'Google' => ['google', 'Votre email n\'est pas vérifié par Google'],
+    'GitHub, dont le pilote ne rend pas d’adresse non vérifiée' => ['github', 'Github ne nous a transmis aucune adresse email. '.suiteDuRefusSocial()],
+    'Apple' => ['apple', 'Votre email n\'est pas vérifié par Apple'],
+]);
 
 it('accepte l’adresse que le pilote GitHub rend, parce qu’il ne rend que la principale vérifiée', function (): void {
     /*

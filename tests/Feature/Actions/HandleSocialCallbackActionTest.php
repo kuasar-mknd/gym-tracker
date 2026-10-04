@@ -219,3 +219,28 @@ it('journalise l\'échange que le fournisseur refuse, avec sa cause', function (
     expect(fn () => app(HandleSocialCallbackAction::class)->execute('github'))
         ->toThrow(SocialAuthException::class, 'Erreur lors de la connexion avec Github');
 });
+
+/*
+ * Le message du fournisseur est borné à 500 caractères : une réponse d'erreur
+ * démesurée ne remplit pas le journal. La borne est vérifiée au caractère
+ * près, sans quoi 499 ou 501 passaient aussi.
+ */
+it('borne à 500 caractères le message journalisé du fournisseur', function (): void {
+    $providerMock = Mockery::mock(Provider::class);
+    $providerMock->shouldReceive('user')->andThrow(new RuntimeException(str_repeat('x', 600)));
+    Socialite::shouldReceive('driver')->with('google')->andReturn($providerMock);
+
+    $journal = Log::spy();
+
+    expect(fn () => app(HandleSocialCallbackAction::class)->execute('google'))
+        ->toThrow(new SocialAuthException('Erreur lors de la connexion avec Google'));
+
+    $journal->shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(static fn (string $message, array $contexte): bool => $message === 'Connexion sociale refusée par le fournisseur'
+            && $contexte === [
+                'fournisseur' => 'google',
+                'exception' => RuntimeException::class,
+                'message' => str_repeat('x', 500).'...',
+            ]);
+});
