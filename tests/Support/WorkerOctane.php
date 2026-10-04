@@ -9,6 +9,7 @@ use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
+use Illuminate\Support\Env;
 use Illuminate\Support\Facades\DB;
 use Laravel\Horizon\Horizon;
 use Laravel\Octane\ApplicationFactory;
@@ -16,6 +17,7 @@ use Laravel\Octane\CurrentApplication;
 use Laravel\Octane\Events\RequestReceived;
 use Laravel\Octane\Testing\Fakes\FakeClient;
 use Laravel\Octane\Testing\Fakes\FakeWorker;
+use LogicException;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -38,6 +40,9 @@ final class WorkerOctane
      * `$avantDeServir` inspecter l'application de base, puis lui fait servir les
      * requêtes, chacune pour `$administrateur` connecté sur la garde du panneau
      * comme sa session le ferait.
+     *
+     * Une variable posée qui n'atteint pas le worker arrête le test en le
+     * disant, au lieu d'un 404 ou d'un 403 muet plus loin.
      *
      * L'application neuve lit la base par la connexion du test, pour voir ce
      * que la transaction du test vient d'écrire. Ce que son démarrage change
@@ -64,6 +69,7 @@ final class WorkerOctane
 
         try {
             $worker->boot();
+            self::exigerLEnvironnementDuWorker($environnement);
             $base = $worker->application();
             $base->make('db')->connection()->setPdo($pdo)->setReadPdo($pdo);
             $environnementDuWorker = (string) $base->environment();
@@ -115,11 +121,20 @@ final class WorkerOctane
      * Pose des variables d'environnement comme la pile les transmettrait, et
      * rend ce qu'il y avait avant.
      *
+     * Le dépôt de variables de Laravel (`Env::getRepository()`) est statique et
+     * immuable, mais il n'épargne que les variables définies hors de lui :
+     * celles que le `.env` du test lui a fait charger, il les réécrit au
+     * chargement suivant, celui que fait le worker à son démarrage. Avec le
+     * `.env` de la CI, `ADMIN_ALLOWED_IPS=` effaçait ainsi la liste posée ici.
+     * `Env::enablePutenv()` remet le dépôt à neuf : les variables posées
+     * deviennent extérieures, et le `.env` ne les touche plus.
+     *
      * @param  array<string, string>  $variables
      * @return array<string, array{serveur: mixed, env: mixed, putenv: string|false}>
      */
     private static function poserLEnvironnement(array $variables): array
     {
+        Env::enablePutenv();
         $precedentes = [];
 
         foreach ($variables as $nom => $valeur) {
@@ -134,6 +149,30 @@ final class WorkerOctane
         }
 
         return $precedentes;
+    }
+
+    /**
+     * Exige que le worker démarré lise chaque variable posée telle qu'elle a
+     * été posée : le `.env` relu à son démarrage n'en réécrit aucune.
+     *
+     * @param  array<string, string>  $variables
+     */
+    private static function exigerLEnvironnementDuWorker(array $variables): void
+    {
+        $depot = Env::getRepository();
+
+        foreach ($variables as $nom => $valeur) {
+            $lue = $depot->get($nom);
+
+            if ($lue !== $valeur) {
+                throw new LogicException(sprintf(
+                    'La variable %s n’atteint pas le worker : il lit %s au lieu de %s.',
+                    $nom,
+                    var_export($lue, true),
+                    var_export($valeur, true),
+                ));
+            }
+        }
     }
 
     /**
