@@ -518,8 +518,9 @@ class VerifyDataCoherence extends Command
      * Le panneau laissait changer le propriétaire d'une séance sans rien
      * propager ; il ne le permet plus (#1933), mais une séance réattribuée
      * avant reste incohérente, et rien d'autre ne le voit. Une copie nulle est
-     * un écart aussi : aucune lecture filtrée ne la trouve. La comparaison
-     * `<=>` la compte, là où `<>` la laisserait passer.
+     * un écart aussi : aucune lecture filtrée ne la trouve. `orWhereNull` la
+     * compte, là où `!=` seul la laisserait passer ; le propriétaire de la
+     * séance, lui, n'est jamais nul (`workouts.user_id` est NOT NULL).
      *
      * Le décompte est celui des SÉANCES, unité de toute réparation ; chacune
      * dit combien de lignes ou de séries s'écartent, et quelles copies elles
@@ -539,7 +540,9 @@ class VerifyDataCoherence extends Command
     private function copiesDuProprietaire(\Illuminate\Database\Query\Builder $copies, string $colonne, string $unite): array
     {
         $parSeance = $copies
-            ->whereRaw("NOT ({$colonne} <=> workouts.user_id)")
+            ->where(static fn (\Illuminate\Database\Query\Builder $ecart): \Illuminate\Database\Query\Builder => $ecart
+                ->whereColumn($colonne, '!=', 'workouts.user_id')
+                ->orWhereNull($colonne))
             ->groupBy('workouts.id', 'workouts.user_id')
             ->selectRaw(
                 "workouts.id, workouts.user_id as proprietaire, COUNT(*) as ecartees, GROUP_CONCAT(DISTINCT COALESCE(CAST({$colonne} AS CHAR), 'NULL') ORDER BY {$colonne} SEPARATOR ', ') as copies",
