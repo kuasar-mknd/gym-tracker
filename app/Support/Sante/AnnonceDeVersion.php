@@ -14,6 +14,12 @@ use Illuminate\Support\Facades\Cache;
  * cache (Redis en production, jamais la base), sa version, sa révision,
  * depuis quand il exécute cette image et la date de sa dernière annonce ;
  * `VersionsDesConteneursCheck` compare.
+ *
+ * Le cache de production évince ses clés les moins servies quand il est plein
+ * (#1930) : une annonce faite une seule fois, au démarrage, pourrait
+ * disparaître. Chaque conteneur la refait donc régulièrement, et « depuis »
+ * est la première annonce que le cache a gardée : après une éviction, la date
+ * du retour de l'annonce, pas celle du démarrage du conteneur.
  */
 final class AnnonceDeVersion
 {
@@ -26,8 +32,8 @@ final class AnnonceDeVersion
 
     /**
      * Inscrit l'annonce du conteneur. Une panne du cache ne coûte que
-     * l'annonce : un écouteur qui lèverait empêcherait Octane de servir ou
-     * Horizon de travailler.
+     * l'annonce : un écouteur qui lèverait empêcherait Octane de servir,
+     * `/up` de répondre ou Horizon de travailler.
      */
     public static function annoncer(string $conteneur): void
     {

@@ -14,6 +14,7 @@ use Spatie\Health\Checks\Result;
 use Spatie\Health\Facades\Health;
 use Symfony\Component\Process\Exception\ProcessTimedOutException as DelaiDepasse;
 use Symfony\Component\Process\Process;
+use Tests\Support\PartageEndormi;
 
 /*
  * Le dossier de l'hôte monté pour les sauvegardes n'était pas inscriptible par
@@ -71,59 +72,6 @@ function sauvegardesVerificationDuDemarrage(string $dossier, array $arguments = 
     $processus->run();
 
     return $processus;
-}
-
-/**
- * Un dossier de commandes qui ne rendent jamais la main, comme `mkdir` ou
- * `ls` sur un partage réseau qui ne répond plus : placé en tête du PATH, il
- * remplace les commandes du même nom.
- *
- * @param  list<string>  $commandes
- */
-function sauvegardesCommandesEndormies(array $commandes): string
-{
-    $dossier = sauvegardesDossierJetable();
-
-    foreach ($commandes as $commande) {
-        File::put($dossier.'/'.$commande, "#!/bin/sh\nexec sleep 30\n");
-        chmod($dossier.'/'.$commande, 0755);
-    }
-
-    return $dossier;
-}
-
-/**
- * Lance le test avec le dossier donné en tête du PATH que les sous-processus
- * héritent, puis rend le PATH d'origine.
- *
- * @template T
- *
- * @param  Closure(): T  $test
- * @return T
- */
-function sauvegardesAvecEnTeteDuPath(string $dossier, Closure $test): mixed
-{
-    $origine = (string) getenv('PATH');
-    $dansEnv = array_key_exists('PATH', $_ENV);
-    $chemin = $dossier.':'.$origine;
-
-    putenv('PATH='.$chemin);
-    $_SERVER['PATH'] = $chemin;
-
-    if ($dansEnv) {
-        $_ENV['PATH'] = $chemin;
-    }
-
-    try {
-        return $test();
-    } finally {
-        putenv('PATH='.$origine);
-        $_SERVER['PATH'] = $origine;
-
-        if ($dansEnv) {
-            $_ENV['PATH'] = $origine;
-        }
-    }
 }
 
 /**
@@ -226,12 +174,12 @@ it('avertit au démarrage, avec le chemin et l’uid, quand le dossier des sauve
  */
 it('met le dossier des sauvegardes au rouge sans attendre quand le partage ne répond plus', function (): void {
     $dossier = sauvegardesDossierJetable();
-    $endormies = sauvegardesCommandesEndormies(['mkdir', 'touch', 'rm']);
+    $endormies = PartageEndormi::commandes(['mkdir', 'touch', 'rm']);
     Config::set('filesystems.disks.sauvegardes.root', $dossier);
 
     try {
         $debut = microtime(true);
-        $resultat = sauvegardesAvecEnTeteDuPath($endormies, fn (): Result => DossierDesSauvegardesCheck::new()->delai(1)->run());
+        $resultat = PartageEndormi::enTeteDuPath($endormies, fn (): Result => DossierDesSauvegardesCheck::new()->delai(1)->run());
 
         expect(microtime(true) - $debut)->toBeLessThan(10)
             ->and($resultat->status->value)->toBe('failed')
@@ -275,7 +223,7 @@ it('dit que le partage ne répond pas quand le délai de la sonde est dépassé'
  * la sonde ne serait jamais rangé ni envoyé.
  */
 it('dit si le dossier répond, présent ou non, et pas s’il ne répond plus', function (): void {
-    $endormies = sauvegardesCommandesEndormies(['ls']);
+    $endormies = PartageEndormi::commandes(['ls']);
 
     try {
         expect(DossierDesSauvegardesCheck::repond(sys_get_temp_dir(), 1))->toBeTrue()
@@ -283,7 +231,7 @@ it('dit si le dossier répond, présent ou non, et pas s’il ne répond plus', 
 
         $debut = microtime(true);
 
-        expect(sauvegardesAvecEnTeteDuPath($endormies, fn (): bool => DossierDesSauvegardesCheck::repond(sys_get_temp_dir(), 1)))->toBeFalse()
+        expect(PartageEndormi::enTeteDuPath($endormies, fn (): bool => DossierDesSauvegardesCheck::repond(sys_get_temp_dir(), 1)))->toBeFalse()
             ->and(microtime(true) - $debut)->toBeLessThan(10);
     } finally {
         File::deleteDirectory($endormies);
@@ -303,7 +251,7 @@ it('ne parcourt pas les archives d’un partage qui ne répond plus', function (
 
 it('rend la main au démarrage quand le partage des sauvegardes ne répond plus', function (): void {
     $dossier = sauvegardesDossierJetable();
-    $endormies = sauvegardesCommandesEndormies(['mkdir']);
+    $endormies = PartageEndormi::commandes(['mkdir']);
 
     try {
         $debut = microtime(true);

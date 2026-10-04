@@ -17,6 +17,7 @@ use Inertia\Controller as InertiaController;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
+use Tests\Support\Appareil;
 use Tests\Support\AppleSimule;
 
 use function Pest\Laravel\actingAs;
@@ -290,6 +291,44 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
     expect(enTetesGardeWeb()->viaRemember())->toBeTrue()
         ->and((string) $reponse->baseResponse->getContent())->toContain('modulepreload')
         ->and(enTetesTailleDuBloc($reponse))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
+});
+
+/**
+ * Changer son mot de passe rouvre la session sous le nouveau (#1940) : la
+ * réponse pose, comme la connexion, la session, le jeton XSRF et le cookie
+ * « se souvenir de moi » réémis. La session que le changement ferme ailleurs
+ * repart avec ses deux cookies et l'effacement du sien. Aucune des deux n'en
+ * porte davantage que la connexion, et toutes deux tiennent sous le budget.
+ */
+it('garde sous le budget le changement de mot de passe et la session qu’il ferme', function (): void {
+    $utilisateur = User::factory()->create();
+    $appareils = [];
+
+    foreach (['celui qui change', 'un autre'] as $nom) {
+        $appareils[$nom] = new Appareil();
+        $appareils[$nom]->envoyer('POST', enTetesHoteDeProduction().'/login', [
+            'email' => $utilisateur->email,
+            'password' => 'password',
+            'remember' => '1',
+        ])->assertRedirect(enTetesHoteDeProduction().'/dashboard');
+    }
+
+    $changement = $appareils['celui qui change']->envoyer('PUT', enTetesHoteDeProduction().'/password', [
+        'current_password' => 'password',
+        'password' => 'Un-nouveau-mot-de-passe-2026!',
+        'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
+    ], ['Referer' => enTetesHoteDeProduction().'/profile']);
+
+    $changement->assertRedirect(enTetesHoteDeProduction().'/profile');
+
+    $refus = $appareils['un autre']->envoyer('GET', enTetesHoteDeProduction().'/dashboard');
+
+    $refus->assertRedirect(enTetesHoteDeProduction().'/login');
+
+    expect($changement->baseResponse->headers->getCookies())->toHaveCount(3)
+        ->and(enTetesTailleDuBloc($changement))->toBeLessThanOrEqual(enTetesBudgetEnOctets())
+        ->and($refus->baseResponse->headers->getCookies())->toHaveCount(3)
+        ->and(enTetesTailleDuBloc($refus))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 });
 
 /**

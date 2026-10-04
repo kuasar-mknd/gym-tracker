@@ -40,5 +40,17 @@ if echo "$@" | grep -q "octane:frankenphp"; then
     php artisan schedule-monitor:sync
 fi
 
+# Les tâches de sauvegarde tournent en arrière-plan sous un verrou que seule
+# leur fin rend (#1929). Un planificateur arrêté en plein passage les emporte
+# sans le rendre, et le verrou, gardé dans Redis, ferait sauter le passage du
+# lendemain. Seul ce conteneur lance des tâches, et rien n'y tourne encore :
+# aucun verrou rendu ici n'est tenu. Malgré son nom, la commande n'efface que
+# ces verrous. Un échec avertit sans empêcher le planificateur de démarrer.
+if echo "$@" | grep -q "schedule:work"; then
+    if ! php artisan schedule:clear-cache; then
+        echo "ATTENTION : les verrous du planificateur n'ont pas pu être rendus ; une tâche de sauvegarde interrompue par l'arrêt précédent peut sauter son prochain passage (#1929)." >&2
+    fi
+fi
+
 # Execute the main command
 exec "$@"

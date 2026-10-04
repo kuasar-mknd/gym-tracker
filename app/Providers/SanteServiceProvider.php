@@ -10,7 +10,10 @@ use App\Support\Sante\ReglagesDeLaBaseCheck;
 use App\Support\Sante\TachesPlanifieesCheck;
 use App\Support\Sante\VersionsDesConteneursCheck;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Foundation\Events\DiagnosingHealth as SondageDeSante;
+use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\WorkerStarting as DemarrageDUnTravailleurDeFile;
+use Illuminate\Queue\Jobs\SyncJob;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Octane\Events\WorkerStarting as DemarrageDUnTravailleurOctane;
@@ -26,6 +29,7 @@ use Spatie\Health\Checks\Checks\RedisCheck;
 use Spatie\Health\Checks\Checks\ScheduleCheck;
 use Spatie\Health\Checks\Checks\UsedDiskSpaceCheck;
 use Spatie\Health\Facades\Health;
+use Spatie\Health\Jobs\HealthQueueJob;
 
 /**
  * Ce que la page « Santé » du panneau montre et ce que `health:check` vérifie
@@ -36,7 +40,7 @@ final class SanteServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        $archives = config()->string('filesystems.disks.sauvegardes.root').'/'.config()->string('backup.backup.name');
+        $archives = DossierDesSauvegardesCheck::dossierDesArchives();
 
         Health::checks([
             DatabaseCheck::new(),
@@ -74,15 +78,22 @@ final class SanteServiceProvider extends ServiceProvider
     }
 
     /**
-     * Chaque conteneur annonce l'image qu'il exécute quand il démarre (#1813) :
-     * app quand Octane démarre un travailleur, worker quand Horizon démarre un
-     * processus de file, scheduler à chaque tâche, donc au moins une fois par
-     * minute avec les battements. Dans le cache, jamais en base.
+     * Chaque conteneur annonce l'image qu'il exécute quand il démarre (#1813),
+     * puis régulièrement, parce que le cache de production évince les clés
+     * qu'il sert le moins (#1930) : app quand Octane démarre un travailleur
+     * et à chaque sondage de `/up`, toutes les trente secondes ; worker quand
+     * Horizon démarre un processus de file et à chaque battement de la file,
+     * chaque minute ; scheduler à chaque tâche, donc au moins une fois par
+     * minute avec les battements. Une annonce évincée revient ainsi en une
+     * minute. Jamais à chaque requête, et dans le cache, jamais en base. Le
+     * battement ne vaut annonce du worker que traité par un worker : la file
+     * `sync` l'exécuterait dans le processus qui l'envoie, le scheduler.
      */
     private function annoncerLesVersions(): void
     {
         $conteneurs = [
             DemarrageDUnTravailleurOctane::class => 'app',
+            SondageDeSante::class => 'app',
             DemarrageDUnTravailleurDeFile::class => 'worker',
             ScheduledTaskStarting::class => 'scheduler',
         ];
@@ -92,5 +103,11 @@ final class SanteServiceProvider extends ServiceProvider
                 AnnonceDeVersion::annoncer($conteneur);
             });
         }
+
+        Event::listen(JobProcessed::class, static function (JobProcessed $traite): void {
+            if (! $traite->job instanceof SyncJob && $traite->job->resolveQueuedJobClass() === HealthQueueJob::class) {
+                AnnonceDeVersion::annoncer('worker');
+            }
+        });
     }
 }
