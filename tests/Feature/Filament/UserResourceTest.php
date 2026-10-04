@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Actions\HandleSocialCallbackAction;
+use App\Exceptions\SocialAuthException;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -11,6 +13,9 @@ use App\Notifications\AdresseDuCompteChangee;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
+use Laravel\Socialite\Contracts\Provider;
+use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as SocialiteUser;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -297,3 +302,72 @@ it('prévient l’ancienne adresse et retire la vérification quand le panneau c
         );
     }
 });
+
+/**
+ * Le panneau remet la nouvelle adresse en non vérifiée, et la connexion sociale
+ * refuse un compte non vérifié : le titulaire d'un compte ouvert par Google,
+ * qui ne connaît pas le mot de passe tiré au hasard à l'ouverture, ne pouvait
+ * plus entrer après que le support lui avait rendu son adresse. L'identité déjà
+ * reliée au compte le rouvre, quand le fournisseur garantit sa nouvelle
+ * adresse, et le compte redevient vérifié. Une autre identité qui présente la
+ * même adresse reste refusée : un compte non vérifié ne se rattache à personne
+ * de nouveau. Et l'adresse garantie doit être celle du compte, pas une adresse
+ * que la collation de la base tient pour la même.
+ */
+it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a changé l’adresse', function (string $fournisseur, string $identifiantEnBase, int|string $identifiantRendu, int|string $autreIdentifiant): void {
+    Notification::fake();
+    $compte = User::factory()->create([
+        'email' => 'avant@example.org',
+        'provider' => $fournisseur,
+        'provider_id' => $identifiantEnBase,
+    ]);
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->fillForm(['email' => 'apres@example.org'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($compte->refresh()->email_verified_at)->toBeNull();
+
+    $retourDe = static function (int|string $identifiant, string $adresse) use ($fournisseur): void {
+        $utilisateurSocial = new SocialiteUser()
+            ->setRaw(['email_verified' => true])
+            ->map(['id' => $identifiant, 'email' => $adresse, 'name' => 'Titulaire', 'nickname' => null, 'avatar' => null]);
+
+        Socialite::shouldReceive('driver')->once()->with($fournisseur)->andReturn(new readonly class($utilisateurSocial) implements Provider
+        {
+            public function __construct(private SocialiteUser $utilisateurSocial)
+            {
+            }
+
+            public function redirect(): never
+            {
+                throw new LogicException('Ce test n’emprunte pas la redirection.');
+            }
+
+            public function user(): SocialiteUser
+            {
+                return $this->utilisateurSocial;
+            }
+        });
+    };
+
+    // Une autre identité, ou la même pour une adresse que la base seule tient
+    // pour celle du compte : refusées, et le compte reste non vérifié.
+    foreach ([[$autreIdentifiant, 'apres@example.org'], [$identifiantRendu, 'aprés@example.org']] as [$identifiant, $adresse]) {
+        $retourDe($identifiant, $adresse);
+
+        expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($fournisseur))
+            ->toThrow(SocialAuthException::class);
+        expect($compte->refresh()->email_verified_at)->toBeNull();
+    }
+
+    $retourDe($identifiantRendu, 'apres@example.org');
+
+    expect(app(HandleSocialCallbackAction::class)->execute($fournisseur)->is($compte))->toBeTrue()
+        ->and($compte->refresh()->email_verified_at)->not->toBeNull()
+        ->and($compte->provider_id)->toBe($identifiantEnBase);
+})->with([
+    'Google' => ['google', 'g-123', 'g-123', 'g-999'],
+    'GitHub, qui rend l’identifiant en entier' => ['github', '4242', 4242, 4243],
+]);
