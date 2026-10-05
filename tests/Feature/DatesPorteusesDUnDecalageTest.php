@@ -172,6 +172,11 @@ describe('un instant', function (): void {
             ->and(datesDecaleesJour($jeune->end_time))->toBe('2026-10-05');
     });
 
+    /*
+     * Aucun jeu ne porte le décalage de Paris ce jour-là (+02:00) : le cast en
+     * écrirait déjà la bonne heure murale sans conversion, et le jeu resterait
+     * vert si la détection de sa forme se cassait.
+     */
     it('ramène aussi un décalage numérique ou un nom de fuseau au même instant', function (string $envoye): void {
         $user = User::factory()->create();
         $workout = Workout::factory()->create(['user_id' => $user->id]);
@@ -185,7 +190,7 @@ describe('un instant', function (): void {
     })->with([
         'UTC en clair' => '2026-10-04T22:30:00+00:00',
         'à l’ouest' => '2026-10-04T18:30:00-04:00',
-        'sans deux-points' => '2026-10-05T00:30:00+0200',
+        'sans deux-points' => '2026-10-05T01:30:00+0300',
         'un nom de fuseau' => '2026-10-04 23:30:00 Europe/London',
     ]);
 });
