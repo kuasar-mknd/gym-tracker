@@ -10,3 +10,6 @@ paths:
 
 ## Le job `demarrage` lance l'image avant `merge`
 Le premier `migrate` d'une base neuve passe par le client mysql de l'image, et rien avant la production ne le voyait (#1767). `demarrage` télécharge le digest amd64 du job `build`, lance l'image sans changer sa commande ni son entrypoint contre un MySQL 8.4 et un Redis de service joints par `host.docker.internal` (`--add-host … host-gateway`), et attend `/up`. `merge` l'exige : sans réponse, ni `latest`, ni `sha`, ni tag de version. Comme `build`, il ne tourne que sur main et sur les tags, jamais sur une PR : la première exécution d'un changement s'observe après la fusion.
+
+## Le robot d'inactivité ne touche qu'aux PR
+Les issues tiennent lieu de feuille de route : `stale.yml` ne marque ni ne ferme aucune issue (`days-before-issue-stale` et `days-before-issue-close` à -1, aucun réglage commun `days-before-stale`/`days-before-close`), et le délai annoncé par le message des PR est celui de `days-before-pr-close`. `LeRobotDInactiviteEpargneLesIssuesTest` le tient (#1987).
