@@ -6,6 +6,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\DailyJournal;
 use App\Models\User;
 use App\Models\Workout;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
@@ -194,9 +195,113 @@ it('demande à la première page après la suppression du compte d’effacer l�
         ->and(historiquePageDe($premiere)['clearHistory'] ?? false)->toBeTrue();
 });
 
+/*
+ * La déconnexion et la suppression du compte ne sont pas les seules fins d'une
+ * session. Un mot de passe changé depuis un autre appareil (#1940), un compte
+ * supprimé depuis le panneau, une session expirée renvoient vers la connexion
+ * sans passer par elles : la clé restait dans l'onglet, et les pages chiffrées
+ * du compte se relisaient au bouton Retour.
+ */
+it('demande à la page qui suit la fin de la session, faite ailleurs, d’effacer l’historique', function (Closure $finirLaSession): void {
+    $compte = historiqueCompteParti();
+    $appareil = historiqueAppareilConnecte($compte);
+
+    expect(historiquePageDe($appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite()))['encryptHistory'] ?? false)->toBeTrue();
+
+    $finirLaSession($compte, $appareil);
+
+    $visite = $appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite());
+
+    $visite->assertRedirect('https://gym.example.org/login');
+
+    $premiere = historiqueSuivreJusquALaPage($appareil, $visite);
+    $suivante = $appareil->envoyer('GET', 'https://gym.example.org/login', [], historiqueEntetesDeVisite());
+
+    $premiere->assertOk();
+
+    expect(historiquePageDe($premiere)['component'])->toBe('Auth/Login')
+        ->and(historiquePageDe($premiere)['clearHistory'] ?? false)->toBeTrue()
+        ->and(historiquePageDe($suivante))->not->toHaveKey('clearHistory');
+})->with([
+    'un mot de passe changé depuis un autre appareil' => [function (User $compte): void {
+        $compte->forceFill(['password' => Hash::make('un-autre-mot-de-passe')])->save();
+    }],
+    'un compte supprimé depuis le panneau' => [function (User $compte): void {
+        $compte->delete();
+    }],
+    'une session expirée' => [function (User $compte, Appareil $appareil): void {
+        $appareil->oublierLeCookie(config()->string('session.cookie'));
+    }],
+]);
+
+/*
+ * Une session expirée ne mène pas toujours à une page qui exige un compte :
+ * l'onglet peut aller droit à une page publique, et le bouton Retour revenir
+ * de là aux pages du compte.
+ */
+it('demande à la première page d’une session expirée d’effacer l’historique, même publique', function (): void {
+    $compte = historiqueCompteParti();
+    $appareil = historiqueAppareilConnecte($compte);
+
+    $appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite())->assertOk();
+    $appareil->oublierLeCookie(config()->string('session.cookie'));
+
+    $publique = $appareil->envoyer('GET', 'https://gym.example.org/register', [], historiqueEntetesDeVisite());
+
+    $publique->assertOk();
+
+    expect(historiquePageDe($publique)['component'])->toBe('Auth/Register')
+        ->and(historiquePageDe($publique)['clearHistory'] ?? false)->toBeTrue();
+});
+
+/*
+ * Un compte qui se connecte dans un onglet ne reprend jamais la clé d'un
+ * autre : la page de connexion a pu être servie avant que la session de
+ * l'autre ne se termine, ou dans un autre onglet.
+ */
+it('demande à la première page après une connexion d’effacer l’historique, et à elle seule', function (Closure $seConnecter): void {
+    $appareil = new Appareil();
+
+    $appareil->envoyer('GET', 'https://gym.example.org/login', [], historiqueEntetesDeVisite())->assertOk();
+
+    /** @var TestResponse<Response> $connexion */
+    $connexion = $seConnecter($appareil);
+
+    $connexion->assertRedirect();
+
+    $premiere = historiqueSuivreJusquALaPage($appareil, $connexion);
+    $suivante = $appareil->envoyer('GET', 'https://gym.example.org/profile', [], historiqueEntetesDeVisite());
+
+    $premiere->assertOk();
+    $suivante->assertOk();
+
+    expect((string) $connexion->headers->get('Location'))->toEndWith('/dashboard')
+        ->and(historiquePageDe($premiere)['clearHistory'] ?? false)->toBeTrue()
+        ->and(historiquePageDe($premiere)['encryptHistory'] ?? false)->toBeTrue()
+        ->and(historiquePageDe($suivante))->not->toHaveKey('clearHistory');
+})->with([
+    'par le formulaire de connexion' => [function (Appareil $appareil): TestResponse {
+        $compte = User::factory()->create(['email' => 'compte-suivant@example.org']);
+
+        return $appareil->envoyer('POST', 'https://gym.example.org/login', [
+            'email' => $compte->email,
+            'password' => 'password',
+        ], historiqueEntetesDeVisite());
+    }],
+    'par l’inscription' => [fn (Appareil $appareil): TestResponse => $appareil->envoyer('POST', 'https://gym.example.org/register', [
+        'name' => 'Compte suivant',
+        'email' => 'compte-suivant@example.org',
+        'password' => 'un-mot-de-passe-solide-2026',
+        'password_confirmation' => 'un-mot-de-passe-solide-2026',
+    ], historiqueEntetesDeVisite())],
+]);
+
 it('ne demande pas d’effacer l’historique quand la suppression est refusée', function (): void {
     $compte = historiqueCompteParti();
     $appareil = historiqueAppareilConnecte($compte);
+
+    // La première page après la connexion jette la clé d'un éventuel compte précédent.
+    $appareil->envoyer('GET', 'https://gym.example.org/profile', [], historiqueEntetesDeVisite())->assertOk();
 
     $appareil->envoyer('DELETE', 'https://gym.example.org/profile', ['password' => 'pas-le-bon'], [
         ...historiqueEntetesDeVisite(),
