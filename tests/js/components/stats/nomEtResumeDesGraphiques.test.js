@@ -1,5 +1,6 @@
-import { describe, it, expect, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { Chart } from 'chart.js'
 import { nombre } from '@/Utils/nombre'
 
 /**
@@ -27,6 +28,7 @@ const monter = (composant, props) => {
 
 afterEach(() => {
     montes.splice(0).forEach((wrapper) => wrapper.unmount())
+    vi.restoreAllMocks()
 })
 
 /** Le nom et la description que l'arbre d'accessibilité calcule pour le canevas. */
@@ -41,10 +43,29 @@ const lectureDuCanevas = (wrapper) => {
     }
 }
 
-/** Les cartes qui ne tracent pas une prop `data`. */
-const PROPS_PROPRES = { 'ExerciseCategoryChart.vue': { exercises: [] } }
+/** Deux jours du journal, dans le désordre : la carte les remet dans l'ordre. */
+const JOURNAL = [
+    { date: '2026-10-02', mood_score: 3, energy_level: 8 },
+    { date: '2026-10-01', mood_score: 4, energy_level: 7 },
+]
+
+/**
+ * Les props propres à une carte, quand `{ data: [] }` ne suffit pas.
+ *
+ * `ExerciseCategoryChart` ne trace pas une prop `data`. `JournalChart` et
+ * `BodyPartDiffChart` montrent leur état vide, sans canevas, tant qu'ils n'ont
+ * rien à tracer : sans point, la garde ci-dessous n'aurait rien lu chez eux.
+ * Avec ces props, chacune des quarante-huit cartes rend son canevas.
+ */
+const PROPS_PROPRES = {
+    'ExerciseCategoryChart.vue': { exercises: [] },
+    'JournalChart.vue': { data: JOURNAL },
+    'BodyPartDiffChart.vue': { data: [{ part: 'Taille', diff: -1.5, unit: 'cm' }] },
+}
 
 const carte = (nom) => cartes[`/resources/js/Components/Stats/${nom}.vue`]
+
+const boutonNomme = (wrapper, nom) => wrapper.findAll('button').find((bouton) => bouton.text() === nom)
 
 describe('un graphique se lit sans le voir', () => {
     it('trouve les quarante-huit cartes de graphique', () => {
@@ -136,6 +157,38 @@ describe('un graphique se lit sans le voir', () => {
         )
     })
 
+    /**
+     * Le seul nom calculé : il suit la métrique que la personne choisit. Un nom
+     * figé, ou vide, laisserait croire au lecteur d'écran qu'il lit encore
+     * l'humeur quand la courbe montre l'énergie.
+     */
+    it('nomme le journal d’après la métrique choisie', async () => {
+        /*
+         * jsdom ne donne à Chart.js aucun contexte qu'il accepte : le graphique
+         * avorte à sa création (« Failed to create chart »). vue-chartjs le
+         * redessine pourtant quand ses séries changent, et ce dessin lèverait
+         * sur le graphique avorté. Le canevas, lui, est bien rendu.
+         */
+        vi.spyOn(Chart.prototype, 'update').mockImplementation(() => {})
+
+        const wrapper = monter(carte('JournalChart'), { data: JOURNAL })
+
+        expect(lectureDuCanevas(wrapper)).toEqual({
+            role: 'img',
+            nom: 'Humeur au fil des jours, note sur 5',
+            description: 'Humeur — 01/10 : 4 ; 02/10 : 3.',
+        })
+
+        await boutonNomme(wrapper, 'Énergie').trigger('click')
+        await flushPromises()
+
+        expect(lectureDuCanevas(wrapper)).toEqual({
+            role: 'img',
+            nom: 'Énergie au fil des jours, note sur 10',
+            description: 'Énergie — 01/10 : 7 ; 02/10 : 8.',
+        })
+    })
+
     it('dit qu’il n’y a rien à lire plutôt que de rendre une description vide', () => {
         const wrapper = monter(carte('MaxRepsChart'), { data: [] })
 
@@ -148,13 +201,10 @@ describe('un graphique se lit sans le voir', () => {
      */
     it.each(Object.keys(cartes).map((chemin) => [chemin.split('/').pop(), chemin]))(
         '%s donne un nom et une description à son canevas',
-        (_, chemin) => {
-            const wrapper = monter(cartes[chemin], PROPS_PROPRES[chemin.split('/').pop()] ?? { data: [] })
+        (fichier, chemin) => {
+            const wrapper = monter(cartes[chemin], PROPS_PROPRES[fichier] ?? { data: [] })
 
-            if (!wrapper.find('canvas').exists()) {
-                // Sans donnée, la carte montre son état vide, et aucune image.
-                return
-            }
+            expect(wrapper.find('canvas').exists(), `${fichier} ne rend aucun canevas`).toBe(true)
 
             const { role, nom, description } = lectureDuCanevas(wrapper)
 
