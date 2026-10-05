@@ -12,7 +12,7 @@ import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
  * @param {string} champ
  * @returns {string|null}
  */
-const raisonDuRefus = (erreur, champ) => {
+export const raisonDuRefus = (erreur, champ) => {
     const message = erreur?.response?.data?.errors?.[champ]?.[0]
 
     return typeof message === 'string' && message.trim() !== '' ? message.trim() : null

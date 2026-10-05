@@ -66,6 +66,52 @@ class Set extends Model
      */
     public const int DISTANCE_MAX_KM = 1_000;
 
+    /**
+     * Le plafond de chaque valeur d'une série, par nom de champ.
+     *
+     * Les pages qui préremplissent une série (la séance, le formulaire d'un
+     * modèle) le reçoivent avec leurs données, pour ne pas proposer une valeur
+     * que la requête d'une série refuserait.
+     *
+     * @return array{weight: int, reps: int, distance_km: int, duration_seconds: int}
+     */
+    public static function bornes(): array
+    {
+        return [
+            'weight' => self::POIDS_MAX_KG,
+            'reps' => self::REPETITIONS_MAX,
+            'distance_km' => self::DISTANCE_MAX_KM,
+            'duration_seconds' => self::DUREE_MAX_SECONDES,
+        ];
+    }
+
+    /**
+     * Une valeur ramenée entre zéro et le plafond de son champ ; une valeur
+     * absente le reste, une valeur dans les bornes aussi.
+     *
+     * Une série enregistrée avant ces plafonds peut les dépasser. Ce qui la
+     * recopie sans passer par la requête d'une série (la recommandation, le
+     * démarrage d'une séance ou l'enregistrement d'un modèle) la ramène ici :
+     * recopiée telle quelle, elle serait refusée à la première écriture qui la
+     * renvoie.
+     *
+     * @param  'weight'|'reps'|'distance_km'|'duration_seconds'  $champ
+     */
+    public static function ramenerALaBorne(string $champ, int|float|null $valeur): int|float|null
+    {
+        if ($valeur === null) {
+            return null;
+        }
+
+        $plafond = self::bornes()[$champ];
+
+        if ($valeur > $plafond) {
+            return $plafond;
+        }
+
+        return $valeur < 0 ? 0 : $valeur;
+    }
+
     #[\Override]
     protected $fillable = [
         'workout_line_id',

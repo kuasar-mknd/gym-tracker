@@ -81,8 +81,8 @@ final class CreateWorkoutTemplateFromWorkoutAction
             }
 
             foreach ($this->seriesReprises($ligne) as $serie) {
-                if ($this->borner($serie->reps, Set::REPETITIONS_MAX) !== $serie->reps
-                    || $this->borner($serie->weight, Set::POIDS_MAX_KG) !== $serie->weight) {
+                if (Set::ramenerALaBorne('reps', $serie->reps) !== $serie->reps
+                    || Set::ramenerALaBorne('weight', $serie->weight) !== $serie->weight) {
                     return true;
                 }
             }
@@ -133,8 +133,8 @@ final class CreateWorkoutTemplateFromWorkoutAction
             foreach ($this->seriesReprises($sourceLine) as $set) {
                 $donneesDesSeries[] = [
                     'workout_template_line_id' => $templateLine->id,
-                    'reps' => $this->borner($set->reps, Set::REPETITIONS_MAX),
-                    'weight' => $this->borner($set->weight, Set::POIDS_MAX_KG),
+                    'reps' => Set::ramenerALaBorne('reps', $set->reps),
+                    'weight' => Set::ramenerALaBorne('weight', $set->weight),
                     'is_warmup' => $set->is_warmup,
                     'order' => $set->id, // Un ordre grossier, faute de mieux pour l'instant.
                     'created_at' => $now,
@@ -184,22 +184,5 @@ final class CreateWorkoutTemplateFromWorkoutAction
     private function seriesReprises(WorkoutLine $ligne): Collection
     {
         return $ligne->sets->take(WorkoutTemplate::SERIES_MAX_PAR_EXERCICE)->values();
-    }
-
-    /**
-     * Ramène une valeur entre zéro et le plafond d'une série ; une valeur
-     * absente le reste.
-     */
-    private function borner(int|float|null $valeur, int $plafond): int|float|null
-    {
-        if ($valeur === null) {
-            return null;
-        }
-
-        if ($valeur > $plafond) {
-            return $plafond;
-        }
-
-        return $valeur < 0 ? 0 : $valeur;
     }
 }
