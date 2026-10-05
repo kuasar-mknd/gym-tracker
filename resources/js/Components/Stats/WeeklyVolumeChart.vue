@@ -57,6 +57,7 @@ const marges = { layout: { padding: { left: -10, right: -10, bottom: 0, top: 10 
 
 <template>
     <BaseChart
+        description="Volume soulevé chaque jour de la semaine en cours"
         type="line"
         :labels="labels"
         :datasets="datasets"

@@ -35,5 +35,11 @@ const infobulle = { accent: 'accent-info', callbacks: { label: volumeTooltipCall
 </script>
 
 <template>
-    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48 sm:h-64" :infobulle="infobulle" />
+    <BaseChart
+        description="Volume par séance"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48 sm:h-64"
+        :infobulle="infobulle"
+    />
 </template>

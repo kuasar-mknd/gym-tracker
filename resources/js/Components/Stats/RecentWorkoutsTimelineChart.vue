@@ -69,6 +69,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Durée des dernières séances"
         type="line"
         :labels="labels"
         :datasets="datasets"

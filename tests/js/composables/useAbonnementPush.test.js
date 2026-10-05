@@ -326,8 +326,8 @@ describe('l’état de l’abonnement au montage', () => {
         await flushPromises()
 
         // Adresse refusée, serveur en panne, réseau coupé : le serveur ne tient
-        // rien pour cet appareil. Sans bandeau, les cases « Envoyer aussi en
-        // Push » s'afficheraient pour des envois que personne ne reçoit.
+        // rien pour cet appareil. Sans bandeau, les cases d'envoi en push
+        // s'afficheraient pour des envois que personne ne reçoit.
         expect(push.pushRegistered.value).toBe(false)
     })
 
@@ -649,8 +649,8 @@ describe('la connexion qui suit une session fermée', () => {
      * Une page d'invité marque l'abonnement : la session a pu être fermée par
      * un changement de mot de passe fait ailleurs, qui a retiré la ligne de
      * cet appareil. Sans la marque, l'appareil qui se reconnecte ne
-     * transmettait plus rien, et le profil montrait les cases « Envoyer aussi
-     * en Push » pour des envois qui ne lui parvenaient plus.
+     * transmettait plus rien, et le profil montrait les cases d'envoi en push
+     * pour des envois qui ne lui parvenaient plus.
      */
     it('retransmet une fois l’abonnement que le mémo disait déjà transmis', async () => {
         await dejaTransmis('https://push.example/tablette')

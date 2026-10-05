@@ -161,10 +161,16 @@ const updatePreferences = () => {
                         description="Être notifié quand vous battez un record."
                     />
 
-                    <div v-if="pushRegistered" class="ml-2 flex items-center gap-2">
+                    <!-- La case est dans son libellé : il la nomme, et toucher le texte la
+                         coche, sur 44 px de haut plutôt que sur les 20 px de la case (#1971). -->
+                    <label
+                        v-if="pushRegistered"
+                        class="min-h-touch text-text-muted ml-2 flex items-center gap-2 text-xs"
+                        dusk="push-personal-record"
+                    >
                         <Checkbox v-model:checked="form.push_preferences.personal_record" />
-                        <label class="text-text-muted text-xs">Envoyer aussi en Push</label>
-                    </div>
+                        <span>Recevoir aussi les records en push</span>
+                    </label>
                 </div>
 
                 <!-- Training Reminder Toggle -->
@@ -175,10 +181,14 @@ const updatePreferences = () => {
                         description="Un rappel à 18 h, les jours choisis, si aucune séance n'a été faite dans la journée."
                     />
 
-                    <div v-if="pushRegistered" class="ml-2 flex items-center gap-2">
+                    <label
+                        v-if="pushRegistered"
+                        class="min-h-touch text-text-muted ml-2 flex items-center gap-2 text-xs"
+                        dusk="push-training-reminder"
+                    >
                         <Checkbox v-model:checked="form.push_preferences.training_reminder" />
-                        <label class="text-text-muted text-xs">Envoyer aussi en Push</label>
-                    </div>
+                        <span>Recevoir aussi les rappels en push</span>
+                    </label>
 
                     <Transition
                         enter-active-class="transition duration-200 ease-out"

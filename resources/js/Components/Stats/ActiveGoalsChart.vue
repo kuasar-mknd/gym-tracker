@@ -55,6 +55,7 @@ const axeX = {
 
 <template>
     <BaseChart
+        description="Progression des objectifs en cours, en pourcentage"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-full"

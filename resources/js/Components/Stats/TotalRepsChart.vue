@@ -14,7 +14,7 @@ const labels = computed(() => props.data.map((d) => d.date))
 
 const datasets = computed(() => [
     {
-        label: 'Volume (Reps)',
+        label: 'Répétitions',
         data: props.data.map((d) => d.reps),
         backgroundColor: (context) => {
             const { ctx, chartArea } = context.chart
@@ -39,5 +39,12 @@ const infobulle = {
 </script>
 
 <template>
-    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-full" :infobulle="infobulle" entiers />
+    <BaseChart
+        description="Répétitions totales par séance"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-full"
+        :infobulle="infobulle"
+        entiers
+    />
 </template>

@@ -80,6 +80,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Calories cibles et dépense énergétique quotidienne"
         type="line"
         :labels="labels"
         :datasets="datasets"

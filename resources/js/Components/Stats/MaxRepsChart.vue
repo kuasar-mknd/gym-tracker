@@ -14,7 +14,7 @@ const labels = computed(() => props.data.map((item) => item.date))
 
 const datasets = computed(() => [
     {
-        label: 'Max Reps',
+        label: 'Répétitions max',
         data: props.data.map((item) => item.reps),
         fill: true,
         tension: 0.4,
@@ -43,6 +43,7 @@ const datasets = computed(() => [
 
 <template>
     <BaseChart
+        description="Répétitions maximales par séance"
         entiers
         type="line"
         :labels="labels"

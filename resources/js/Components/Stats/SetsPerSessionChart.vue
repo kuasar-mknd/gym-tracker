@@ -14,7 +14,7 @@ const labels = computed(() => props.data.map((d) => d.date))
 
 const datasets = computed(() => [
     {
-        label: 'Séries (Sets)',
+        label: 'Séries',
         data: props.data.map((d) => d.sets),
         backgroundColor: (context) => {
             const chart = context.chart
@@ -40,5 +40,12 @@ const infobulle = {
 </script>
 
 <template>
-    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-full" :infobulle="infobulle" entiers />
+    <BaseChart
+        description="Nombre de séries par séance"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-full"
+        :infobulle="infobulle"
+        entiers
+    />
 </template>

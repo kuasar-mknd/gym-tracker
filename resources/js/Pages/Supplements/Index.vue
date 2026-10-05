@@ -214,23 +214,33 @@ const formatDate = (dateString) => {
                     <!-- Edit Mode -->
                     <div v-if="editingSupplement === supplement.id" class="space-y-4 p-4">
                         <h3 class="titre-carte">Modifier</h3>
-                        <GlassInput v-model="editForm.name" placeholder="Nom" :error="editForm.errors.name" />
-                        <GlassInput v-model="editForm.brand" placeholder="Marque" :error="editForm.errors.brand" />
+                        <!-- Les libellés du formulaire d'ajout : les champs s'ouvrent remplis,
+                             un placeholder n'y nommerait rien (#1972). -->
+                        <GlassInput v-model="editForm.name" label="Nom" :error="editForm.errors.name" />
+                        <GlassInput
+                            v-model="editForm.brand"
+                            label="Marque (Optionnel)"
+                            :error="editForm.errors.brand"
+                        />
                         <div class="grid grid-cols-2 gap-2">
                             <GlassInput
                                 v-model="editForm.servings_remaining"
                                 type="number"
-                                label="Stock"
+                                label="Doses restantes"
                                 :error="editForm.errors.servings_remaining"
                             />
                             <GlassInput
                                 v-model="editForm.low_stock_threshold"
                                 type="number"
-                                label="Seuil"
+                                label="Alerte stock bas"
                                 :error="editForm.errors.low_stock_threshold"
                             />
                         </div>
-                        <GlassInput v-model="editForm.dosage" placeholder="Dosage" :error="editForm.errors.dosage" />
+                        <GlassInput
+                            v-model="editForm.dosage"
+                            label="Dosage (Optionnel)"
+                            :error="editForm.errors.dosage"
+                        />
                         <div class="mt-2 flex gap-2">
                             <GlassButton
                                 @click="updateSupplement(supplement)"

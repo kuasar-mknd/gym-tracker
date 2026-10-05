@@ -74,7 +74,10 @@ const selectCommonPart = (part) => {
                 <h3 class="titre-carte mb-4">Nouvelle mesure</h3>
                 <form @submit.prevent="submit" class="space-y-4">
                     <div>
-                        <label class="text-text-muted mb-1 block text-sm font-medium">Partie du corps</label>
+                        <!-- Les puces remplissent le champ ; le libellé nomme le champ (#1972). -->
+                        <label for="mesure-partie-du-corps" class="text-text-muted mb-1 block text-sm font-medium"
+                            >Partie du corps</label
+                        >
                         <div class="mb-2 flex flex-wrap gap-2">
                             <GlassChip
                                 v-for="part in commonParts"
@@ -86,7 +89,13 @@ const selectCommonPart = (part) => {
                                 {{ part }}
                             </GlassChip>
                         </div>
-                        <GlassInput v-model="form.part" placeholder="Ex: Waist" :error="form.errors.part" required />
+                        <GlassInput
+                            id="mesure-partie-du-corps"
+                            v-model="form.part"
+                            placeholder="Ex: Waist"
+                            :error="form.errors.part"
+                            required
+                        />
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">

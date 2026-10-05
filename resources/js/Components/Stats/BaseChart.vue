@@ -20,11 +20,11 @@ import {
     Title,
     Tooltip,
 } from 'chart.js'
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import { jeton } from '@/Utils/couleurs'
 import { optionsDAnneau } from '@/Utils/donut'
 import { fusionner, graduations, grille, infobulle as habillageInfobulle } from './chartConfig'
-import { LANGUE } from '@/Utils/nombre'
+import { LANGUE, nombre } from '@/Utils/nombre'
 
 ChartJS.register(
     ArcElement,
@@ -44,6 +44,16 @@ ChartJS.register(
 const COMPOSANTS = { bar: 'Bar', line: 'Line', doughnut: 'Doughnut', scatter: 'Scatter' }
 
 const props = defineProps({
+    /**
+     * Ce que montre le graphique, en quelques mots : le nom que le lecteur
+     * d'écran annonce pour le canevas.
+     *
+     * Le canevas n'est qu'une image. Sans ce nom, vue-chartjs le rendait en
+     * `role="img"` sans `aria-label`, et chaque courbe était annoncée « image »,
+     * ou pas du tout (#1970). Une garde de `tests/js/conventions/chartChunks.test.js`
+     * exige qu'aucune carte ne l'oublie.
+     */
+    description: { type: String, required: true },
     type: {
         type: String,
         default: 'bar',
@@ -90,6 +100,51 @@ const chartData = computed(() => ({
             ? props.datasets.map((dataset) => ({ ...dataset, ...PARTS_D_ANNEAU }))
             : props.datasets,
 }))
+
+/**
+ * Les valeurs tracées, écrites : ce que le lecteur d'écran lit à la place des
+ * pixels, relié au canevas par `aria-describedby` (#1970).
+ *
+ * Le contenu de repli du canevas n'y suffirait pas : vue-chartjs pose
+ * `role="img"`, et les enfants d'une image sont ignorés des technologies
+ * d'assistance. Une phrase par série, nommée par son `label`, qui porte en
+ * général l'unité : « Poids (kg) — 01/10 : 80 ; 02/10 : 80,5. ». Un point sans
+ * valeur est tu, comme le tracé le saute ; un nuage de points se lit par les
+ * titres de ses axes.
+ */
+const idDuResume = useId()
+
+const etiquetteLue = (etiquette) => (Array.isArray(etiquette) ? etiquette.join(' ') : String(etiquette ?? ''))
+
+const titreDAxe = (reglage) => (estUnObjet(reglage) && reglage.title?.text) || ''
+
+const coordonneeLue = (titre, valeur) => (titre ? `${titre} : ${nombre(valeur, 2)}` : nombre(valeur, 2))
+
+const valeurLue = (valeur) =>
+    estUnObjet(valeur)
+        ? `${coordonneeLue(titreDAxe(props.axeX), valeur.x)}, ${coordonneeLue(titreDAxe(props.axeY), valeur.y)}`
+        : nombre(valeur, 2)
+
+const resume = computed(() => {
+    const phrases = props.datasets.flatMap((dataset) => {
+        const points = (dataset.data ?? []).flatMap((valeur, index) => {
+            if (valeur === null || valeur === undefined) {
+                return []
+            }
+            const etiquette = etiquetteLue(props.labels[index])
+
+            return [etiquette ? `${etiquette} : ${valeurLue(valeur)}` : valeurLue(valeur)]
+        })
+
+        if (points.length === 0) {
+            return []
+        }
+
+        return [`${dataset.label ? `${dataset.label} — ` : ''}${points.join(' ; ')}.`]
+    })
+
+    return phrases.length > 0 ? phrases.join(' ') : 'Aucune donnée.'
+})
 
 // La légende d'un anneau se dessine sous le canevas, pas dedans : dans le
 // canevas, deux lignes d'étiquettes au lieu d'une rétrécissaient l'anneau.
@@ -196,10 +251,18 @@ const style = computed(() =>
         >
             <slot v-if="vide" name="vide" />
             <template v-else>
-                <component :is="composant" :data="chartData" :options="chartOptions" :plugins="plugins" />
+                <component
+                    :is="composant"
+                    :data="chartData"
+                    :options="chartOptions"
+                    :plugins="plugins"
+                    :aria-label="description"
+                    :aria-describedby="idDuResume"
+                />
                 <slot name="surcouche" />
             </template>
         </div>
+        <p v-if="!vide" :id="idDuResume" class="sr-only">{{ resume }}</p>
         <ul v-if="legendeSousLAnneau.length" class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1">
             <li
                 v-for="entree in legendeSousLAnneau"
