@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\DailyJournal;
 use App\Models\User;
+use App\Models\Workout;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
@@ -26,7 +27,7 @@ use function Pest\Laravel\get;
  * arrière qui quitte la page courante.
  *
  * Ce que le navigateur fait de ces en-têtes est tenu par
- * tests/js/app/historiqueApresDeconnexion.test.js, avec le vrai client
+ * tests/js/utils/historiqueDuCompte.test.js, avec le vrai client
  * d'Inertia, et de bout en bout par le parcours
  * `tests/Browser/HistoriqueApresDeconnexionTest.php`.
  */
@@ -248,7 +249,7 @@ it('pose le même cache sur la séance d’un autre que sur une séance absente'
     $compte = historiqueCompteParti();
 
     $autre = User::factory()->create();
-    $seanceDAutrui = \App\Models\Workout::factory()->for($autre)->create();
+    $seanceDAutrui = Workout::factory()->for($autre)->create();
 
     actingAs($compte);
 

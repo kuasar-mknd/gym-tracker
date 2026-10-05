@@ -148,6 +148,11 @@ class ProfileController extends Controller
      * avant : il n'y a plus rien à faire tourner, le compte qui le portait
      * n'existe plus. Le témoin « se souvenir de moi » du navigateur, lui, est
      * retiré par la déconnexion.
+     *
+     * Comme à la déconnexion, la page qui suit porte `clearHistory`, posé
+     * après `invalidate()`, qui viderait sinon la consigne avec la session
+     * (#1965) : l'historique du compte supprimé ne se relit plus au bouton
+     * Retour.
      */
     public function destroy(DeleteUserRequest $request): RedirectResponse
     {
@@ -165,7 +170,6 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        // Comme à la déconnexion : l'historique du compte supprimé ne se relit plus (#1965).
         Inertia::clearHistory();
 
         return Redirect::to('/');
