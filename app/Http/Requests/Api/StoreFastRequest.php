@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreFastRequest extends FormRequest
 {
+    use RameneLesDatesAuFuseauDeLApplication;
+
     /**
      * La requête ne vérifie que la connexion ; l'autorisation vit dans le
      * contrôleur, et son refus est rendu en 404 par bootstrap/app.php.
@@ -41,5 +44,15 @@ class StoreFastRequest extends FormRequest
                 $validator->errors()->add('base', 'Un jeûne est déjà en cours.');
             }
         });
+    }
+
+    /**
+     * Un début envoyé avec un décalage est un instant, relu dans le fuseau de
+     * l'application (#1952).
+     */
+    #[\Override]
+    protected function prepareForValidation(): void
+    {
+        $this->ramenerLesInstantsAuFuseauDeLApplication(['start_time']);
     }
 }

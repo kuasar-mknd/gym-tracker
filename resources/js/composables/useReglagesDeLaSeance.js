@@ -58,9 +58,22 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
         notes: localWorkout.value.notes || '',
     })
 
+    /**
+     * Le début ne part que si l'utilisateur l'a changé.
+     *
+     * Le champ n'affiche que la minute : renvoyer une heure intacte écrivait
+     * quand même une autre valeur, tronquée de ses secondes, et faisait passer un
+     * simple renommage pour un déplacement de la séance (#1952). Une heure
+     * changée part en UTC : le navigateur n'est pas forcément dans le fuseau de
+     * l'application, et le serveur ramène l'instant au sien.
+     */
     const updateSettings = () => {
         settingsForm
-            .transform((data) => ({ ...data, started_at: formatToUTC(data.started_at) }))
+            .transform(({ started_at, ...reglages }) =>
+                started_at === formatToLocalISO(localWorkout.value.started_at)
+                    ? reglages
+                    : { ...reglages, started_at: formatToUTC(started_at) },
+            )
             .patch(route('workouts.update', { workout: localWorkout.value.id }), {
                 preserveScroll: true,
                 onSuccess: () => {

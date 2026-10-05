@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Goal;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 class GoalStoreRequest extends FormRequest
 {
+    use RameneLesDatesAuFuseauDeLApplication;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -103,5 +106,15 @@ class GoalStoreRequest extends FormRequest
         }
 
         return $goal->deadline?->format('Y-m-d') === $submitted;
+    }
+
+    /**
+     * Une échéance envoyée avec un décalage désigne le jour de Paris de cet
+     * instant, et c'est ce jour que `after:today` doit juger (#1952).
+     */
+    #[\Override]
+    protected function prepareForValidation(): void
+    {
+        $this->ramenerLesJoursAuFuseauDeLApplication(['deadline']);
     }
 }
