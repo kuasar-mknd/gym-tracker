@@ -1,7 +1,7 @@
 import '../css/app.css'
 import { jeton } from '@/Utils/couleurs'
 
-import { createInertiaApp, router } from '@inertiajs/vue3'
+import { createInertiaApp, http, router } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
@@ -13,10 +13,11 @@ import { registerSW } from 'virtual:pwa-register'
 
 /*
  * Le worker, et ce qu'une nouvelle version fait d'une page ouverte : rien sans
- * un geste, puis la navigation suivante en entier (#1967). Voir le module.
+ * un geste, puis la navigation suivante en entier, si le serveur répond
+ * (#1967). Voir le module.
  */
 if (typeof window !== 'undefined') {
-    inscrireLeWorker({ registerSW, routeur: router })
+    inscrireLeWorker({ registerSW, routeur: router, http })
 }
 
 // Expose router for testing (Dusk)

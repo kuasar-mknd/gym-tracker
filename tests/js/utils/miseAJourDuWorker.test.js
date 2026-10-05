@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { flushPromises } from '@vue/test-utils'
-import { UNE_HEURE_MS, inscrireLeWorker, nouvelleVersionPrete, rechargerMaintenant } from '@/Utils/miseAJourDuWorker'
+import {
+    MARQUE_DE_LA_VISITE_EN_ENTIER,
+    UNE_HEURE_MS,
+    VERSION_PERIMEE,
+    annoncerLaVersionPerimee,
+    inscrireLeWorker,
+    nouvelleVersionPrete,
+    rechargerMaintenant,
+} from '@/Utils/miseAJourDuWorker'
 
 /*
  * Le `registerSW` que l'application reçoit vraiment.
@@ -68,6 +76,18 @@ const routeurSimule = () => {
     return { ecouteurs, on: (type, rappel) => (ecouteurs[type] = rappel) }
 }
 
+/** Le client HTTP d'Inertia, qui retient le gestionnaire de requêtes qu'on lui confie. */
+const httpSimule = () => {
+    const gestionnaires = []
+
+    return {
+        gestionnaires,
+        onRequest: (gestionnaire) => gestionnaires.push(gestionnaire),
+        /** La requête telle que le client l'enverrait, une fois les gestionnaires passés. */
+        preparer: (requete) => gestionnaires.reduce((courante, gestionnaire) => gestionnaire(courante), requete),
+    }
+}
+
 /** Une visite telle qu'Inertia la décrit à `before`, avec ses valeurs par défaut. */
 const visite = (options = {}) => ({
     url: new URL('http://localhost/stats'),
@@ -77,27 +97,37 @@ const visite = (options = {}) => ({
     only: [],
     except: [],
     reset: [],
+    headers: {},
     prefetch: false,
     async: false,
     ...options,
+})
+
+/** La requête qu'Inertia bâtit pour une visite : ses en-têtes, puis les siens. */
+const requeteDe = (laVisite) => ({
+    method: laVisite.method,
+    url: laVisite.url.href,
+    headers: { ...laVisite.headers, 'X-Inertia': true, 'X-Inertia-Version': 'version-de-la-page' },
 })
 
 const fenetreSimulee = () => ({ location: { reload: vi.fn(), assign: vi.fn(), replace: vi.fn() } })
 
 /*
  * Le rechargement que ferait le paquet passe par la vraie `window.location`.
- * jsdom ne sait pas naviguer : elle est remplacée le temps du test.
+ * jsdom ne sait pas naviguer : elle est remplacée le temps du test, et toute
+ * navigation qu'on y lancerait se compte.
  */
 const locationOrigine = Object.getOwnPropertyDescriptor(window, 'location')
 const rechargementDuPaquet = vi.fn()
+const navigationComplete = vi.fn()
 
 const inscrire = async () => {
     const routeur = routeurSimule()
-    const fenetre = fenetreSimulee()
-    inscrireLeWorker({ registerSW: registerSWConstruit(), routeur, fenetre })
+    const http = httpSimule()
+    inscrireLeWorker({ registerSW: registerSWConstruit(), routeur, http })
     await flushPromises()
 
-    return { routeur, fenetre }
+    return { routeur, http }
 }
 
 beforeEach(() => {
@@ -105,10 +135,16 @@ beforeEach(() => {
     inscription.update.mockClear()
     inscriptionRendue = inscription
     rechargementDuPaquet.mockClear()
+    navigationComplete.mockClear()
     nouvelleVersionPrete.value = false
     Object.defineProperty(navigator, 'serviceWorker', { value: {}, configurable: true })
     Object.defineProperty(window, 'location', {
-        value: { ...window.location, reload: rechargementDuPaquet },
+        value: {
+            ...window.location,
+            reload: rechargementDuPaquet,
+            assign: navigationComplete,
+            replace: navigationComplete,
+        },
         configurable: true,
     })
 })
@@ -132,14 +168,14 @@ describe('un nouveau worker qui prend la main', () => {
         ['un déploiement trouvé par cette page', { isUpdate: true }],
         ['un déploiement trouvé par un autre onglet', { isUpdate: false, isExternal: true }],
     ])('ne recharge pas la page ouverte : %s', async (_, evenement) => {
-        const { fenetre } = await inscrire()
+        await inscrire()
 
         activer(evenement)
 
         // Le minuteur de repos, celui d'intervalles et la saisie d'une modale
         // vivent dans la page : la recharger les perdait.
         expect(rechargementDuPaquet).not.toHaveBeenCalled()
-        expect(fenetre.location.reload).not.toHaveBeenCalled()
+        expect(navigationComplete).not.toHaveBeenCalled()
         expect(nouvelleVersionPrete.value).toBe(true)
     })
 
@@ -152,32 +188,54 @@ describe('un nouveau worker qui prend la main', () => {
     })
 })
 
+/*
+ * La navigation suivante se fait en entier, mais seulement si le serveur
+ * répond : elle reste une visite d'Inertia, qui annonce une version périmée,
+ * et le serveur y répond par le 409 qui fait faire à Inertia la navigation
+ * complète. Lancée d'emblée, sans réseau, cette navigation remplaçait la
+ * séance ouverte par la page « hors ligne ». Le trajet entier, avec le vrai
+ * client d'Inertia, est tenu par miseAJourDuWorkerAvecInertia.test.js.
+ */
 describe('la navigation suivante', () => {
-    it('se fait en entier, sur la nouvelle version, à la place de la visite d’Inertia', async () => {
-        const { routeur, fenetre } = await inscrire()
+    it.each([
+        ['une visite ordinaire', {}],
+        ['une visite qui remplace l’entrée de l’historique', { replace: true }],
+    ])('reste une visite d’Inertia, qui annonce une version périmée : %s', async (_, options) => {
+        const { routeur, http } = await inscrire()
         activer({ isUpdate: true })
+        const laVisite = visite(options)
 
-        const resultat = routeur.ecouteurs.before({ detail: { visit: visite() } })
+        const resultat = routeur.ecouteurs.before({ detail: { visit: laVisite } })
+        const requete = http.preparer(requeteDe(laVisite))
 
-        expect(resultat).toBe(false)
-        expect(fenetre.location.assign).toHaveBeenCalledWith('http://localhost/stats')
+        // Rien n'annule la visite, et rien ne navigue avant la réponse.
+        expect(resultat).toBeUndefined()
+        expect(navigationComplete).not.toHaveBeenCalled()
+        expect(requete.headers['X-Inertia-Version']).toBe(VERSION_PERIMEE)
+        expect(requete.headers).not.toHaveProperty(MARQUE_DE_LA_VISITE_EN_ENTIER)
     })
 
-    it('remplace l’entrée de l’historique quand la visite le demandait', async () => {
-        const { routeur, fenetre } = await inscrire()
+    it('reste une visite d’Inertia sans réseau : la page n’est remplacée par rien', async () => {
+        const { routeur } = await inscrire()
         activer({ isUpdate: true })
+        Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
 
-        routeur.ecouteurs.before({ detail: { visit: visite({ replace: true }) } })
-
-        expect(fenetre.location.replace).toHaveBeenCalledWith('http://localhost/stats')
-        expect(fenetre.location.assign).not.toHaveBeenCalled()
+        try {
+            expect(
+                routeur.ecouteurs.before({ detail: { visit: visite({ url: new URL('http://localhost/dashboard') }) } }),
+            ).toBeUndefined()
+            expect(navigationComplete).not.toHaveBeenCalled()
+        } finally {
+            delete navigator.onLine
+        }
     })
 
-    it('reste une visite d’Inertia tant qu’aucune nouvelle version n’est prête', async () => {
-        const { routeur, fenetre } = await inscrire()
+    it('reste une visite d’Inertia à sa version tant qu’aucune nouvelle version n’est prête', async () => {
+        const { routeur, http } = await inscrire()
+        const laVisite = visite()
 
-        expect(routeur.ecouteurs.before({ detail: { visit: visite() } })).toBeUndefined()
-        expect(fenetre.location.assign).not.toHaveBeenCalled()
+        expect(routeur.ecouteurs.before({ detail: { visit: laVisite } })).toBeUndefined()
+        expect(http.preparer(requeteDe(laVisite)).headers['X-Inertia-Version']).toBe('version-de-la-page')
     })
 
     it.each([
@@ -189,12 +247,20 @@ describe('la navigation suivante', () => {
         ['un préchargement', { prefetch: true }],
         ['une interrogation en arrière-plan', { async: true }],
     ])('laisse passer %s, qui ne quitte pas la page', async (_, options) => {
-        const { routeur, fenetre } = await inscrire()
+        const { routeur, http } = await inscrire()
         activer({ isUpdate: true })
+        const laVisite = visite(options)
 
-        expect(routeur.ecouteurs.before({ detail: { visit: visite(options) } })).toBeUndefined()
-        expect(fenetre.location.assign).not.toHaveBeenCalled()
-        expect(fenetre.location.replace).not.toHaveBeenCalled()
+        expect(routeur.ecouteurs.before({ detail: { visit: laVisite } })).toBeUndefined()
+        expect(http.preparer(requeteDe(laVisite)).headers['X-Inertia-Version']).toBe('version-de-la-page')
+        expect(navigationComplete).not.toHaveBeenCalled()
+    })
+
+    it('laisse telles quelles les requêtes qui ne viennent pas d’une visite marquée', () => {
+        const requete = { method: 'get', url: '/api/v1/sets', headers: { Accept: 'application/json' } }
+
+        expect(annoncerLaVersionPerimee(requete)).toBe(requete)
+        expect(annoncerLaVersionPerimee({ method: 'get', url: '/' })).toEqual({ method: 'get', url: '/' })
     })
 })
 
