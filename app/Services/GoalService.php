@@ -138,6 +138,11 @@ final class GoalService
     /**
      * L'avancement d'un objectif de charge : le poids maximal sur l'exercice.
      *
+     * Sans record, l'objectif revient à sa valeur de départ : c'est ce que
+     * l'utilisateur déclarait soulever en le créant, et plus aucune série ne dit
+     * mieux. Garder la dernière valeur laissait atteint, pour de bon, un objectif
+     * atteint par une série ensuite supprimée (#1953).
+     *
      * @param  Goal  $goal  L'objectif à revoir.
      * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
@@ -147,12 +152,13 @@ final class GoalService
             return;
         }
 
-        if (isset($mesures['max_weights'][$goal->exercise_id])) {
-            // Pas de repli : `preCalculateMaxWeights` declare un retour `float`
-            // natif sur chaque valeur, donc `is_numeric()` y etait toujours vrai
-            // et le `0.0` inatteignable — d'ou trois mutants qu'aucun test ne
-            // pouvait tuer.
-            $goal->current_value = $mesures['max_weights'][$goal->exercise_id];
+        /*
+         * Le lot couvre l'exercice de chaque objectif de charge : un exercice
+         * qui n'y figure pas n'a pas de record, et le relire un par un
+         * referait la requête que le lot évite.
+         */
+        if (isset($mesures['max_weights'])) {
+            $goal->current_value = $mesures['max_weights'][$goal->exercise_id] ?? $goal->start_value;
 
             return;
         }
@@ -165,9 +171,7 @@ final class GoalService
             ->where('type', 'max_weight')
             ->value('value');
 
-        if ($maxWeight !== null && is_numeric($maxWeight)) {
-            $goal->current_value = (float) $maxWeight;
-        }
+        $goal->current_value = is_numeric($maxWeight) ? (float) $maxWeight : $goal->start_value;
     }
 
     /**
@@ -196,6 +200,9 @@ final class GoalService
      * L'avancement d'un objectif de volume : le meilleur volume (poids × reps)
      * atteint sur l'exercice au cours d'une seule séance.
      *
+     * Sans série validée et pesée, l'objectif revient à sa valeur de départ,
+     * comme un objectif de charge sans record (#1953).
+     *
      * @param  Goal  $goal  L'objectif à revoir.
      * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
@@ -205,10 +212,10 @@ final class GoalService
             return;
         }
 
-        if (isset($mesures['max_volumes'][$goal->exercise_id])) {
-            // Meme raison qu'au-dessus : `preCalculateMaxVolumes` garantit le
-            // float, le repli ne pouvait pas s'executer.
-            $goal->current_value = $mesures['max_volumes'][$goal->exercise_id];
+        // Même raison qu'au-dessus : le lot couvre l'exercice de chaque
+        // objectif de volume, une absence y vaut « aucun volume ».
+        if (isset($mesures['max_volumes'])) {
+            $goal->current_value = $mesures['max_volumes'][$goal->exercise_id] ?? $goal->start_value;
 
             return;
         }
@@ -226,9 +233,7 @@ final class GoalService
             ->orderByDesc('total_volume')
             ->value('total_volume');
 
-        if ($maxVolume !== null && is_numeric($maxVolume)) {
-            $goal->current_value = (float) $maxVolume;
-        }
+        $goal->current_value = is_numeric($maxVolume) ? (float) $maxVolume : $goal->start_value;
     }
 
     /**
@@ -414,8 +419,9 @@ final class GoalService
             ->whereIn('exercise_id', $idsExercices)
             ->where('type', 'max_weight')
             ->pluck('value', 'exercise_id')
-            // Un exercice sans record est ECARTE, pas ramene a zero.
-            // Voir la note de `preCalculateMaxVolumes` : c'est le meme piege.
+            // Une valeur illisible est ECARTEE, pas ramenee a zero : l'objectif
+            // retombe alors sur sa valeur de depart, comme sans record. Voir la
+            // note de `preCalculateMaxVolumes` : c'est le meme piege.
             ->filter(fn (mixed $val): bool => is_numeric($val))
             ->map(fn (mixed $val): float => (float) $val)
             ->toArray();
@@ -462,18 +468,19 @@ final class GoalService
              * `sets.weight` est nullable. Un exercice dont toutes les series sont
              * sans poids — des repetitions au poids du corps, ou un poids oublie —
              * forme bien un groupe, mais son MAX vaut NULL. Le repli a 0.0 en
-             * faisait une entree du tableau, donc un `isset()` vrai en aval, donc
-             * un `current_value` ECRASE a zero.
+             * faisait une entree du tableau, donc un `current_value` ECRASE a
+             * zero.
              *
-             * Le chemin individuel, lui, ne touchait a rien dans ce cas. Les deux
-             * repondaient donc differemment sur les memes donnees : mesure faite,
-             * `syncGoals` rendait 0 la ou `updateGoalProgress` gardait 50. Le
-             * premier tourne a chaque enregistrement de seance, via le job ; le
-             * second quand on modifie l'objectif depuis son ecran.
+             * Le chemin individuel, lui, ne lisait que des volumes pesés. Les
+             * deux repondaient donc differemment sur les memes donnees : mesure
+             * faite, `syncGoals` rendait 0 la ou `updateGoalProgress` gardait 50.
+             * Le premier tourne a chaque enregistrement ou suppression de seance
+             * ou de serie, via le job ; le second quand on modifie l'objectif
+             * depuis son ecran.
              *
-             * En ecartant l'entree, `isset()` est faux et les deux chemins se
-             * rejoignent sur le comportement du second : la valeur ne bouge pas
-             * tant qu'aucun poids n'a ete souleve.
+             * En ecartant l'entree, les deux chemins se rejoignent : sans poids
+             * souleve, l'objectif revient a sa valeur de depart (#1953).
+             * `GoalSyncPathsTest` tient cet accord.
              */
             ->filter(fn (mixed $val): bool => is_numeric($val))
             ->map(fn (mixed $val): float => (float) $val)

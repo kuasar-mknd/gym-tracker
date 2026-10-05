@@ -182,6 +182,20 @@ final class AppServiceProvider extends ServiceProvider
             $records->refreshFor($set, null, $detenus);
         });
 
+        /*
+         * Après la reconstruction des records ci-dessus, que lit l'objectif de
+         * charge : les écouteurs d'un même événement tournent dans l'ordre où
+         * ils sont posés. Sans ce recalcul, supprimer la série qui avait
+         * atteint un objectif le laissait atteint (#1953).
+         */
+        Set::deleted(function (Set $set): void {
+            $user = $set->workoutLine?->workout?->user;
+
+            if ($user instanceof User) {
+                \App\Jobs\SyncUserGoals::dispatch($user);
+            }
+        });
+
         \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {
             /**
              * Retirer un exercice emporte ses séries par un ON DELETE CASCADE,
@@ -200,6 +214,9 @@ final class AppServiceProvider extends ServiceProvider
              */
             if ($user instanceof User) {
                 app(\App\Services\PersonalRecordService::class)->recompute($user, $line->exercise_id);
+
+                // Après les records, que lit l'objectif de charge (#1953).
+                \App\Jobs\SyncUserGoals::dispatch($user);
             }
         });
     }
@@ -240,6 +257,9 @@ final class AppServiceProvider extends ServiceProvider
             }
 
             app(StreakService::class)->recalculerDepuisLesFaits($user);
+
+            // Les objectifs se recalculent dans `Workout::booted()`, après les
+            // records qu'ils lisent : cet écouteur-ci tourne avant (#1953).
         });
     }
 

@@ -25,7 +25,7 @@ use App\Services\GoalService;
  */
 
 /**
- * Un utilisateur, un exercice et un objectif de poids a 50 sur 100.
+ * Un utilisateur et un exercice de force.
  *
  * @return array{0: User, 1: Exercise}
  */
@@ -37,13 +37,18 @@ function utilisateurAvecObjectifDePoids(): array
     return [$user, $exercise];
 }
 
-function objectifDePoids(User $user, Exercise $exercise, float $courant = 50): Goal
+/**
+ * Un objectif de charge (ou de volume) parti de 20, a 50 sur 100 : trois
+ * valeurs distinctes, pour qu'un retour a zero, au depart ou a la derniere
+ * valeur se distinguent.
+ */
+function objectifDePoids(User $user, Exercise $exercise, float $courant = 50, GoalType $type = GoalType::Weight): Goal
 {
     return Goal::factory()->create([
         'user_id' => $user->id,
         'exercise_id' => $exercise->id,
-        'type' => GoalType::Weight,
-        'start_value' => 0,
+        'type' => $type,
+        'start_value' => 20,
         'target_value' => 100,
         'current_value' => $courant,
     ]);
@@ -73,22 +78,26 @@ function seanceAvecPoids(User $user, Exercise $exercise, ?float $poids, int $rep
  * `current_value` ecrase a zero — tandis que le chemin individuel ne touchait a
  * rien. Mesure avant correctif : 0 contre 50.
  *
+ * Depuis #1953, une serie sans poids ne soutient pas l'objectif : les deux
+ * chemins le ramenent a sa valeur de depart, 20, au lieu de garder 50, la
+ * derniere valeur, qu'une serie supprimee depuis pouvait avoir laissee.
+ *
  * Le cas avec poids est la pour que le test ne passe pas simplement parce que
  * les deux chemins ne feraient plus rien.
  */
-it('donne la même valeur par les deux chemins', function (?float $poids, float $attendu): void {
+it('donne la même valeur par les deux chemins', function (GoalType $type, ?float $poids, float $attendu): void {
     [$user, $exercise] = utilisateurAvecObjectifDePoids();
     seanceAvecPoids($user, $exercise, $poids);
 
     $service = app(GoalService::class);
 
-    $groupe = objectifDePoids($user, $exercise);
+    $groupe = objectifDePoids($user, $exercise, type: $type);
     $service->syncGoals($user->refresh());
     $valeurGroupe = (float) Goal::query()->findOrFail($groupe->id)->current_value;
 
     $groupe->delete();
 
-    $seul = objectifDePoids($user, $exercise);
+    $seul = objectifDePoids($user, $exercise, type: $type);
     $service->updateGoalProgress($seul);
 
     // Lu en memoire, pas en base : `updateGoalProgress()` ne persiste rien, c'est
@@ -99,8 +108,10 @@ it('donne la même valeur par les deux chemins', function (?float $poids, float 
     expect($valeurGroupe)->toBe($attendu)
         ->and($valeurSeule)->toBe($attendu);
 })->with([
-    'série sans poids : la valeur ne bouge pas' => [null, 50.0],
-    'série pesée : la valeur suit le maximum' => [80.0, 80.0],
+    'charge, série sans poids : la valeur revient au départ' => [GoalType::Weight, null, 20.0],
+    'charge, série pesée : la valeur suit le maximum' => [GoalType::Weight, 80.0, 80.0],
+    'volume, série sans poids : la valeur revient au départ' => [GoalType::Volume, null, 20.0],
+    'volume, série pesée : la valeur suit la meilleure séance' => [GoalType::Volume, 80.0, 800.0],
 ]);
 
 /**
