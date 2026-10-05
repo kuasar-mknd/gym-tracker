@@ -24,6 +24,7 @@ const datasets = computed(() => [
 
 <template>
     <BaseChart
+        description="Nombre de séances par mois"
         entiers
         :labels="labels"
         :datasets="datasets"

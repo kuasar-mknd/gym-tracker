@@ -11,7 +11,7 @@ const props = defineProps({
     },
     label: {
         type: String,
-        default: 'Measurement',
+        default: 'Mesure',
     },
     unit: {
         type: String,
@@ -65,6 +65,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        :description="`Historique des mesures : ${label}`"
         type="line"
         :labels="labels"
         :datasets="datasets"

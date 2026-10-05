@@ -24,7 +24,7 @@ const labels = computed(() =>
 
 const datasets = computed(() => [
     {
-        label: 'Valeur (kg/reps)',
+        label: 'Valeur (kg ou répétitions)',
         data: props.data.map((pr) => pr.value),
         backgroundColor: (context) => {
             const chart = context.chart
@@ -60,6 +60,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Derniers records personnels"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48"

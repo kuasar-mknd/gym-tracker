@@ -79,6 +79,7 @@ const axeY1 = { display: false, position: 'right', grid: { drawOnChartArea: fals
 
 <template>
     <BaseChart
+        description="Durée et volume des séances"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-64"

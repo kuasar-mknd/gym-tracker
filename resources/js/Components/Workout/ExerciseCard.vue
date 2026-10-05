@@ -165,9 +165,13 @@ const emit = defineEmits([
 
             <!-- Edit Mode -->
             <form v-else @submit.prevent="emit('update', exercise)" class="space-y-4">
+                <!-- Masqué comme ceux du type et de la catégorie, mais lu : le placeholder
+                     s'efface dès que le nom est là (#1972). -->
                 <GlassInput
                     v-model="editForm.name"
                     dusk="edit-exercise-name"
+                    label="Nom de l'exercice"
+                    hide-label
                     placeholder="Nom de l'exercice"
                     :error="editForm.errors.name"
                 />

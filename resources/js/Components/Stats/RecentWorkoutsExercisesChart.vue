@@ -52,6 +52,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Nombre d'exercices des dernières séances"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48"

@@ -51,6 +51,7 @@ const axeX = {
 
 <template>
     <BaseChart
+        description="Nombre de séries par charge"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-full"

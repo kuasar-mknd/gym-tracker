@@ -15,7 +15,7 @@ const labels = computed(() => props.data.map((item) => etiquetteDeDate(item.date
 
 const datasets = computed(() => [
     {
-        label: 'Habits Completed',
+        label: 'Habitudes complétées',
         data: props.data.map((item) => item.count),
         fill: true,
         tension: 0.4,
@@ -51,6 +51,7 @@ const infobulle = { accent: 'accent-state', callbacks: { label: (context) => `${
 
 <template>
     <BaseChart
+        description="Habitudes complétées par jour"
         type="line"
         :labels="labels"
         :datasets="datasets"
