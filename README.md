@@ -54,8 +54,8 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 341 tests, couverture ≥ **94 %** | bloquant par PR |
-| **Tests frontend** | 2 208 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
+| **Tests backend** | 2 348 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests frontend** | 2 209 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
