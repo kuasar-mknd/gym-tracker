@@ -170,10 +170,10 @@ describe('les dates des trois listes, sur un appareil réglé en anglais', () =>
 
 describe('the Wilks history', () => {
     /*
-     * 12:00 UTC on purpose. The row prints `toLocaleDateString()`, so the day
-     * and the format follow whatever zone and locale the run happens to have;
-     * only the year survives every offset from -12 to +14, and that is all this
-     * assertion leans on.
+     * 12:00 UTC on purpose. The row prints the day in fr-FR (`dateCourte()`),
+     * but the day itself follows whatever zone the run happens to have; only
+     * the year survives every offset from -12 to +14, and that is all this
+     * assertion leans on. The format is held under an English locale above.
      */
     const entries = [
         {

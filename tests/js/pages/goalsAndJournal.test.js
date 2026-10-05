@@ -489,7 +489,8 @@ describe('Goals/Index', () => {
         const wrapper = await mountGoals([goal({ id: 1, deadline: '2026-03-01' }), goal({ id: 2, deadline: null })])
 
         expect(cardFor(wrapper, 1).text()).toContain('Échéance :')
-        expect(cardFor(wrapper, 1).text()).toContain(new Date('2026-03-01T00:00:00').toLocaleDateString())
+        // En fr-FR quelle que soit la langue de la machine, comme le reste des dates (#1976).
+        expect(cardFor(wrapper, 1).text()).toContain('01/03/2026')
         expect(cardFor(wrapper, 2).text()).not.toContain('Échéance')
 
         wrapper.unmount()
