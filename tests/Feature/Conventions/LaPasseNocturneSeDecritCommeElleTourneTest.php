@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
 
 /*
@@ -19,10 +20,13 @@ use Symfony\Component\Yaml\Yaml;
  *
  * Chacun des quatre textes dit donc l'heure planifiée, telle que la règle le
  * `cron` de `mutation.yml`, et que GitHub la lance plusieurs heures plus tard
- * sur la pointe de `main` ; ceux qui guident un tag bloqué donnent les deux
- * façons de le débloquer : relancer la promotion après la passe du jour
- * (`gh run rerun`), ou lancer la passe sur le tag (`gh workflow run
- * mutation.yml --ref`).
+ * sur la pointe de `main` ; et chacun donne les deux façons de débloquer un
+ * tag : attendre la prochaine passe planifiée, qui le couvre si son commit est
+ * encore la pointe de `main` quand elle part, puis relancer la promotion
+ * (`gh run rerun`) ; ou, pour ne pas attendre ou si `main` a avancé, lancer la
+ * passe sur le tag (`gh workflow run mutation.yml --ref`). Aucun ne dit qu'un
+ * tag posé après le lancement du jour ne sera couvert par aucune passe
+ * planifiée : celle du lendemain le couvre tant que `main` n'a pas bougé.
  */
 
 /**
@@ -116,14 +120,20 @@ it('donne les deux façons de débloquer un tag', function (): void {
     $incomplets = [];
 
     foreach (passeNocturneTextes() as $endroit => $texte) {
-        if (str_starts_with($endroit, 'mutation.yml')) {
-            continue;
-        }
-
+        $sansAccents = mb_strtolower(Str::ascii($texte));
         $manques = array_filter([
+            'la prochaine passe planifiée, qui couvre le tag si son commit est encore la pointe de main' => ! str_contains($sansAccents, 'prochaine passe planifiee'),
             'relancer la promotion (gh run rerun)' => ! str_contains($texte, 'gh run rerun'),
             'lancer la passe sur le tag (gh workflow run mutation.yml --ref)' => ! str_contains($texte, 'gh workflow run mutation.yml --ref'),
         ]);
+        $affirmationsFausses = array_filter([
+            'la « passe du jour », quand le tag peut attendre la suivante' => str_contains($sansAccents, 'passe du jour'),
+            '« aucune passe planifiée », quand la suivante couvre un tag resté la pointe de main' => str_contains($sansAccents, 'aucune passe planifiee'),
+        ]);
+
+        if ($affirmationsFausses !== []) {
+            $incomplets[] = $endroit.' : dit à tort '.implode(', ', array_keys($affirmationsFausses));
+        }
 
         if ($manques !== []) {
             $incomplets[] = $endroit.' : manque '.implode(', ', array_keys($manques));
@@ -134,6 +144,6 @@ it('donne les deux façons de débloquer un tag', function (): void {
         'Ces textes ne donnent pas les deux façons de débloquer un tag :',
         '  '.implode("\n  ", $incomplets),
         '',
-        'Un tag posé avant le lancement de la passe du jour est couvert par elle : relancer la promotion suffit. Sinon, lancer la passe sur le tag (#1989).',
+        "Un tag dont le commit est encore la pointe de main quand la prochaine passe planifiée part est couvert par elle : l'attendre, puis relancer la promotion. Pour ne pas attendre, ou si main a avancé, lancer la passe sur le tag (#1989).",
     ]));
 });

@@ -25,7 +25,12 @@ on:
         # rien de mesurable (stale.yml, planifie a minuit, partait lui aussi
         # trois a quatre heures plus tard). Elle prend la pointe de main au
         # moment ou elle part : c'est ce moment, pas 03h17, qui dit quels tags
-        # elle couvre (README, « Mise en production »).
+        # elle couvre (README, « Mise en production »). Un tag dont le commit
+        # est encore la pointe de main quand la prochaine passe planifiee part
+        # est couvert par elle : l'attendre, puis relancer la promotion du run
+        # de CI du tag (gh run rerun <id> --failed). Pour ne pas attendre, ou
+        # si main a avance, lancer la passe sur le tag
+        # (gh workflow run mutation.yml --ref <tag>), puis relancer la promotion.
         - cron: '17 3 * * *'
     workflow_dispatch:
 

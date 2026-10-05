@@ -79,7 +79,7 @@ La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand 
 
 La release GitHub exige en plus la CI entière, `semgrep`, `secrets` et `workflows` compris.
 
-La passe nocturne est planifiée à 03h17 UTC, mais GitHub la lance plusieurs heures plus tard (entre 07h42 et 10h31 UTC du 1er septembre au 5 octobre 2026), sur la pointe de `main` au moment où elle part. Un tag posé avant ce lancement, sur un commit qui est encore la pointe de `main` quand elle part, est donc couvert par la passe du jour : l'attendre, puis relancer la promotion. Sinon, aucune passe planifiée ne le couvrira ; la lancer sur le tag lui-même :
+La passe nocturne est planifiée à 03h17 UTC, mais GitHub la lance plusieurs heures plus tard (entre 07h42 et 10h31 UTC du 1er septembre au 5 octobre 2026), sur la pointe de `main` au moment où elle part. Un tag est donc couvert par la prochaine passe planifiée si son commit est encore la pointe de `main` quand elle part : l'attendre, puis relancer la promotion. Pour ne pas attendre, ou si `main` a avancé, la lancer sur le tag lui-même :
 
 ```bash
 gh run list --workflow mutation.yml --commit <sha>   # une passe couvre-t-elle déjà ce commit ?
