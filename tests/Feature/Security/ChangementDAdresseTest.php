@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Notifications\AdresseDuCompteChangee;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\DB;
@@ -312,6 +313,57 @@ it('prévient l’ancienne adresse et retire la vérification quel que soit le c
 
     expect($verifie->refresh()->email_verified_at)->not->toBeNull();
     Notification::assertSentOnDemandTimes(AdresseDuCompteChangee::class, 1);
+});
+
+/**
+ * Une écriture qui change l'adresse et pose `email_verified_at` du même coup
+ * ne garde pas la nouvelle adresse pour vérifiée : rien ne l'a prouvée. Aucun
+ * chemin de l'application ne le fait aujourd'hui ; une exception laissée aux
+ * appelants aurait été une porte que rien ne gardait.
+ */
+it('retire la vérification même quand l’écriture qui change l’adresse la pose', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+
+    $compte->forceFill(['email' => 'pretendue@example.org', 'email_verified_at' => now()->addMinute()])->save();
+    $compte->refresh();
+
+    expect($compte->email)->toBe('pretendue@example.org')
+        ->and($compte->email_verified_at)->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBe('titulaire@example.org');
+    Notification::assertSentOnDemand(
+        AdresseDuCompteChangee::class,
+        fn (AdresseDuCompteChangee $avis, array $canaux, AnonymousNotifiable $destinataire): bool => $destinataire->routes === ['mail' => 'titulaire@example.org'],
+    );
+});
+
+/**
+ * Les écouteurs tournent à chaque enregistrement d'un compte, y compris d'une
+ * instance chargée par une sélection partielle, comme celles dont
+ * `app:verify-data-coherence --repair` recale les séries. Hors production, le
+ * mode strict refuse la lecture d'un attribut non chargé : les écouteurs ne
+ * doivent lire ainsi que ce que l'écriture pose.
+ */
+it('laisse enregistrer un compte chargé sans ses colonnes d’adresse', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompte();
+
+    expect(Model::preventsAccessingMissingAttributes())->toBeTrue();
+
+    $partiel = User::query()->select(['id', 'current_streak'])->findOrFail($compte->id);
+    $partiel->current_streak = 7;
+    $partiel->save();
+
+    $partiel = User::query()->select(['id'])->findOrFail($compte->id);
+    $partiel->markEmailAsVerified();
+
+    $compte->refresh();
+
+    expect($compte->current_streak)->toBe(7)
+        ->and($compte->email)->toBe('titulaire@example.org')
+        ->and($compte->email_verified_at)->not->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBeNull();
+    Notification::assertNothingSent();
 });
 
 /**

@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\Notification;
  * - la nouvelle adresse repasse non vérifiée (`User` implémente
  *   `MustVerifyEmail`) : sans quoi une adresse que personne n'a prouvée
  *   resterait marquée vérifiée, et `ResolveSocialUserAction` y rattacherait
- *   une connexion sociale. Un appelant qui pose lui-même `email_verified_at`
- *   dans la même écriture est laissé maître de la valeur ;
+ *   une connexion sociale. Sans exception : même une écriture qui pose
+ *   `email_verified_at` en changeant l'adresse laisse le compte non vérifié.
+ *   Une adresse se prouve après coup, par `markEmailAsVerified()`, dans une
+ *   écriture à part ;
  * - la dernière adresse vérifiée du compte reçoit `AdresseDuCompteChangee`,
  *   une fois la transaction validée. C'est l'ancienne adresse si elle était
  *   vérifiée. Sinon, c'est celle que le compte a retenue
@@ -42,6 +44,15 @@ use Illuminate\Support\Facades\Notification;
  *
  * Les chemins qui sautent les événements (`saveQuietly()`, `withoutEvents()`,
  * le constructeur de requêtes) y échappent. Réservé à `User`.
+ *
+ * Les écouteurs tournent à chaque enregistrement d'un compte, y compris d'une
+ * instance chargée par une sélection partielle (`VerifyDataCoherence` recale
+ * ainsi les séries) : ils ne lisent par l'attribut que ce que l'écriture vient
+ * de poser, et le reste par `getRawOriginal()`, qui rend null pour une colonne
+ * non chargée là où l'attribut lèverait `MissingAttributeException` hors
+ * production. Une adresse se change donc sur un compte chargé en entier : une
+ * instance sans `email_verified_at` ni `ancienne_adresse_verifiee` tiendrait
+ * le compte pour non vérifié et sans mémoire, et ne préviendrait personne.
  */
 trait SurveilleSonAdresse
 {
@@ -52,11 +63,16 @@ trait SurveilleSonAdresse
     protected static function surveillerLAdresse(): void
     {
         static::updating(function (User $utilisateur): void {
-            if ($utilisateur->isDirty('email') && ! $utilisateur->isDirty('email_verified_at')) {
+            if ($utilisateur->isDirty('email')) {
+                self::retenirLAdresseVerifieeQuittee($utilisateur);
                 $utilisateur->email_verified_at = null;
+
+                return;
             }
 
-            self::retenirLaDerniereAdresseVerifiee($utilisateur);
+            if ($utilisateur->isDirty('email_verified_at') && $utilisateur->email_verified_at !== null) {
+                $utilisateur->ancienne_adresse_verifiee = null;
+            }
         });
 
         static::updated(function (User $utilisateur): void {
@@ -82,33 +98,20 @@ trait SurveilleSonAdresse
     }
 
     /**
-     * Tient `ancienne_adresse_verifiee` avant l'écriture.
+     * Retient, avant l'écriture, l'adresse vérifiée que le compte quitte.
      *
-     * Un compte vérifié n'a rien à retenir : son adresse actuelle fait
-     * référence, et la mémoire se vide (`markEmailAsVerified()`, la connexion
-     * sociale qui revérifie le compte). Un compte qui quitte une adresse
-     * vérifiée retient celle-ci. Un compte non vérifié qui change encore
-     * d'adresse garde ce qu'il avait retenu.
-     *
-     * La colonne se lit par `getRawOriginal()`, jamais par l'attribut : une
-     * instance chargée sans elle lèverait `MissingAttributeException` hors
-     * production.
+     * Un compte qui quitte une adresse vérifiée la retient dans
+     * `ancienne_adresse_verifiee`. Un compte non vérifié qui change encore
+     * d'adresse garde ce qu'il avait retenu. La mémoire se vide quand le compte
+     * est de nouveau vérifié (`markEmailAsVerified()`, la connexion sociale qui
+     * revérifie le compte) : son adresse fait alors référence.
      */
-    private static function retenirLaDerniereAdresseVerifiee(User $utilisateur): void
+    private static function retenirLAdresseVerifieeQuittee(User $utilisateur): void
     {
-        if ($utilisateur->email_verified_at !== null) {
-            if ($utilisateur->getRawOriginal('ancienne_adresse_verifiee') !== null) {
-                $utilisateur->ancienne_adresse_verifiee = null;
-            }
-
-            return;
-        }
-
         $ancienneAdresse = $utilisateur->getRawOriginal('email');
 
         if (
-            $utilisateur->isDirty('email')
-            && $utilisateur->getRawOriginal('email_verified_at') !== null
+            $utilisateur->getRawOriginal('email_verified_at') !== null
             && is_string($ancienneAdresse)
             && $ancienneAdresse !== ''
         ) {
