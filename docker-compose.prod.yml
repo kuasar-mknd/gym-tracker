@@ -86,6 +86,11 @@ services:
             <<: *app-env
             # Security & Admin
             ADMIN_ALLOWED_IPS: ${ADMIN_ALLOWED_IPS}
+            # Pairs dont l'application croit les en-têtes X-Forwarded-* : le
+            # défaut, la boucle locale et les plages privées, est celui d'avant
+            # la variable. À régler sur l'adresse sous laquelle le proxy
+            # inverse joint app (README, « Variables d'environnement »).
+            TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
             # Le panneau Horizon et le seeder du premier administrateur ne
             # tournent que dans app. Sans ces deux lignes, les poser dans la pile
             # ne servait à rien : Horizon restait fermé à tous, et le seeder

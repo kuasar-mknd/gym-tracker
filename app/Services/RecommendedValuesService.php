@@ -205,6 +205,11 @@ final class RecommendedValuesService
      * parmi ces séries-là. Les lignes vides, ou restées au pré-remplissage,
      * sont passées.
      *
+     * Chaque valeur est ramenée sous le plafond de son champ (`Set::bornes()`) :
+     * une série enregistrée avant ces plafonds peut les dépasser, et la page
+     * envoie la recommandation telle quelle à la création de la série
+     * suivante, que la requête refuserait alors à chaque essai.
+     *
      * @param  Collection<int, WorkoutLine>  $lines  Les lignes précédentes d'un exercice, la plus récente en tête.
      * @return array{weight: float, reps: int, distance_km: float, duration_seconds: int}
      */
@@ -224,10 +229,10 @@ final class RecommendedValuesService
             [$weight, $reps, $distance, $duration] = explode('-', $mostFrequentKey);
 
             return [
-                'weight' => (float) $weight,
-                'reps' => (int) $reps,
-                'distance_km' => (float) $distance,
-                'duration_seconds' => (int) $duration,
+                'weight' => (float) Set::ramenerALaBorne('weight', (float) $weight),
+                'reps' => (int) Set::ramenerALaBorne('reps', (int) $reps),
+                'distance_km' => (float) Set::ramenerALaBorne('distance_km', (float) $distance),
+                'duration_seconds' => (int) Set::ramenerALaBorne('duration_seconds', (int) $duration),
             ];
         }
 

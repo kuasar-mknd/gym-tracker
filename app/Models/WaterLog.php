@@ -33,6 +33,12 @@ class WaterLog extends Model
     /** @use HasFactory<\Database\Factories\WaterLogFactory> */
     use HasFactory;
 
+    /**
+     * La plus grosse prise d'eau d'une entrée, en millilitres : cinq litres.
+     * Les boutons de la page en ajoutent 250 ou 500.
+     */
+    public const int QUANTITE_MAX_ML = 5_000;
+
     #[\Override]
     protected $fillable = [
         'user_id',

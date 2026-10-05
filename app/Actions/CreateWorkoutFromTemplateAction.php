@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
@@ -33,6 +34,15 @@ final class CreateWorkoutFromTemplateAction
         });
     }
 
+    /**
+     * Recopie chaque ligne du modèle et ses séries dans la séance.
+     *
+     * Les répétitions et le poids sont ramenés sous les plafonds d'une série
+     * (`Set::ramenerALaBorne()`) : un modèle enregistré avant ces plafonds
+     * peut les dépasser, et la page de séance recopie la dernière série d'un
+     * exercice dans la suivante, que la requête refuserait alors. Le poids
+     * d'un modèle se lit en chaîne (`decimal:2`) : il est converti avant.
+     */
     private function createLinesAndSets(Workout $workout, WorkoutTemplate $template): void
     {
         $allSets = [];
@@ -56,8 +66,8 @@ final class CreateWorkoutFromTemplateAction
                     // proprietaire doit etre posee ici, sans quoi ces series
                     // seraient invisibles a `GET /api/v1/sets`.
                     'user_id' => $workoutLine->user_id,
-                    'reps' => $templateSet->reps,
-                    'weight' => $templateSet->weight,
+                    'reps' => Set::ramenerALaBorne('reps', is_numeric($templateSet->reps) ? (int) $templateSet->reps : null),
+                    'weight' => Set::ramenerALaBorne('weight', is_numeric($templateSet->weight) ? (float) $templateSet->weight : null),
                     'is_warmup' => $templateSet->is_warmup,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -79,7 +89,7 @@ final class CreateWorkoutFromTemplateAction
              * premiere serie cochee, et sur les faits plutot que sur un total
              * calcule en PHP.
              */
-            \App\Models\Set::insert($allSets);
+            Set::insert($allSets);
         }
     }
 }

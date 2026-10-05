@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Models\Fast;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateFastRequest extends FormRequest
@@ -18,7 +19,8 @@ class UpdateFastRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * La durée cible est bornée comme à la création
+     * (`Fast::DUREE_CIBLE_MAX_MINUTES`).
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -27,7 +29,7 @@ class UpdateFastRequest extends FormRequest
         return [
             'start_time' => ['sometimes', 'date'],
             'end_time' => ['nullable', 'date'],
-            'target_duration_minutes' => ['sometimes', 'integer', 'min:1'],
+            'target_duration_minutes' => ['sometimes', 'integer', 'min:1', 'max:'.Fast::DUREE_CIBLE_MAX_MINUTES],
             'type' => ['sometimes', 'string', 'max:255'],
             'status' => ['sometimes', 'required', 'string', 'in:active,completed,broken'],
         ];

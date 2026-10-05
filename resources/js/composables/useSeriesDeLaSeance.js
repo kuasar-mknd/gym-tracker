@@ -30,6 +30,7 @@ import { useAjoutEtRetraitDeSerie } from '@/composables/useAjoutEtRetraitDeSerie
  *   reportSyncFailure: (message: string) => void,
  *   reportEditFailure: (message: string) => void,
  *   apresValidation: (exerciseRestTime: number|undefined) => void,
+ *   bornesDUneSerie?: Record<string, number>|null,
  * }} page
  */
 export const useSeriesDeLaSeance = ({
@@ -52,6 +53,7 @@ export const useSeriesDeLaSeance = ({
     reportSyncFailure,
     reportEditFailure,
     apresValidation,
+    bornesDUneSerie = null,
 }) => {
     const { patchSet, deleteSet } = useTransportDeSerie({ pendingIds, markUnsynced })
 
@@ -91,6 +93,7 @@ export const useSeriesDeLaSeance = ({
         markUnsynced,
         clearUnsynced,
         reportSyncFailure,
+        bornesDUneSerie,
     })
 
     return {

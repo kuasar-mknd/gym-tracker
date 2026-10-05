@@ -12,6 +12,9 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
 use App\Support\ConnexionSociale\FournisseurApple;
+use App\Support\LiensDesCourriels;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Eloquent\Model;
@@ -46,6 +49,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerAppleSocialiteDriver();
+        $this->batirLesLiensDesCourrielsSurAppUrl();
         $this->refuserLesArchivesEnClair();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
@@ -94,6 +98,18 @@ final class AppServiceProvider extends ServiceProvider
         });
 
         $this->registerWebPushFailureLog();
+    }
+
+    /**
+     * Les liens de réinitialisation et de vérification d'adresse se bâtissent
+     * sur `APP_URL`, jamais sur l'hôte de la requête qui déclenche l'envoi.
+     * `LiensDesCourriels` dit pourquoi, et comment la signature du lien de
+     * vérification reste valide.
+     */
+    private function batirLesLiensDesCourrielsSurAppUrl(): void
+    {
+        ResetPassword::createUrlUsing(LiensDesCourriels::lienDeReinitialisation(...));
+        VerifyEmail::createUrlUsing(LiensDesCourriels::lienDeVerification(...));
     }
 
     /**
