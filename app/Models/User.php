@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\DetacheSesAppareilsPush;
 use App\Models\Traits\EffaceSesTracesPolymorphes;
 use App\Models\Traits\HasFitnessData;
 use App\Models\Traits\HasToolsData;
@@ -37,6 +38,7 @@ use Spatie\Activitylog\Support\LogOptions;
  */
 final class User extends Authenticatable implements MustVerifyEmail
 {
+    use DetacheSesAppareilsPush;
     use EffaceSesTracesPolymorphes;
     use HasApiTokens;
 

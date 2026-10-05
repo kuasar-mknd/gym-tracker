@@ -98,6 +98,18 @@ parameters:
         - identifier: shipmonk.deadMethod
           path: app/Support/Csp/Nonce/SigneLesScriptsEnLigneDesPaquets.php
           message: '#::signeLesBalisesDe\b#'
+        # Eloquent appelle par son nom la methode boot<NomDuTrait>() de chaque
+        # trait d'un modele, au demarrage de la classe (Model::bootTraits()) :
+        # aucun appel PHP n'existe, et le detecteur ne connait que boot() et
+        # booted(). Le motif exige que la methode porte exactement le nom de son
+        # trait, seule forme qu'Eloquent appelle sans attribut. Un trait pose
+        # ainsi ses ecouteurs sans occuper User::booted(), qu'une seule
+        # declaration peut tenir (.ai/rules/models.md) ; le chemin de
+        # DetacheSesAppareilsPush est tenu par
+        # AbonnementsPushApresChangementDeMotDePasseTest.
+        - identifier: shipmonk.deadMethod
+          path: app/Models/Traits/*
+          message: '#\\(\w+)::boot\1\b#'
         # N'etre appele que par des tests est le role d'une fabrique. L'excluder
         # les signale par construction ; les supprimer reviendrait a supprimer la
         # raison d'etre du fichier.
