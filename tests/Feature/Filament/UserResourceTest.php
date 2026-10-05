@@ -304,6 +304,42 @@ it('prévient l’ancienne adresse et retire la vérification quand le panneau c
 });
 
 /**
+ * Une liaison prouvée ouvre le compte par l'identité seule, quelle que soit
+ * l'adresse que rend le fournisseur. Quand le panneau donne au compte une
+ * autre adresse, peut-être celle d'une autre personne, la liaison perd sa
+ * preuve et n'ouvre plus le compte que pour sa nouvelle adresse exacte. Par la
+ * page comme par l'action de la table.
+ */
+it('efface la preuve de la liaison quand le panneau change l’adresse', function (): void {
+    Notification::fake();
+    $comptes = [];
+
+    foreach (['page', 'table'] as $chemin) {
+        $comptes[$chemin] = User::factory()->create([
+            'email' => "{$chemin}-avant@example.org",
+            'provider' => 'google',
+            'provider_id' => "identite-{$chemin}",
+            'liaison_prouvee_le' => now(),
+        ]);
+    }
+
+    Livewire::test(EditUser::class, ['record' => $comptes['page']->getKey()])
+        ->fillForm(['email' => 'page-apres@example.org'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    Livewire::test(ListUsers::class)
+        ->callAction(TestAction::make('edit')->table($comptes['table']), ['email' => 'table-apres@example.org'])
+        ->assertHasNoFormErrors();
+
+    foreach ($comptes as $chemin => $compte) {
+        expect($compte->refresh()->email)->toBe("{$chemin}-apres@example.org")
+            ->and($compte->liaison_prouvee_le)->toBeNull()
+            ->and($compte->provider_id)->toBe("identite-{$chemin}");
+    }
+});
+
+/**
  * Le panneau remet la nouvelle adresse en non vérifiée, et la connexion sociale
  * refuse un compte non vérifié : le titulaire d'un compte ouvert par Google,
  * qui ne connaît pas le mot de passe tiré au hasard à l'ouverture, ne pouvait
@@ -393,7 +429,8 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
         ->and($compte->refresh()->email_verified_at)->not->toBeNull()
         ->and($compte->ancienne_adresse_verifiee)->toBeNull()
         ->and($compte->email)->toBe($adresseDuPanneau)
-        ->and($compte->provider_id)->toBe($identifiantEnBase);
+        ->and($compte->provider_id)->toBe($identifiantEnBase)
+        ->and($compte->liaison_prouvee_le)->not->toBeNull();
 })->with([
     'Google' => ['google', 'g-123', 'g-123', 'g-999', 'apres@example.org', 'apres@example.org'],
     'GitHub, qui rend l’identifiant en entier' => ['github', '4242', 4242, 4243, 'apres@example.org', 'apres@example.org'],

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 /*
  * Un retour de connexion sociale n'ouvre un compte existant que pour son
- * adresse : par l'identité qui l'a déjà ouvert quand l'adresse rendue est
- * encore celle du compte, ou par une adresse identique et garantie.
+ * adresse : par l'identité qui l'a déjà ouvert, quand l'adresse rendue est
+ * celle du compte ou quand la liaison a été prouvée sur cette adresse, ou par
+ * une adresse identique et garantie.
  *
  * La recherche par adresse passait par la base, dont la collation
  * (`utf8mb4_unicode_ci`) ignore accents et casse, replie « ß » sur « ss », le
@@ -13,9 +14,10 @@ declare(strict_types=1);
  * vérifiée chez le fournisseur par quelqu'un d'autre, ouvrait le compte. Et
  * l'identité rendue par le fournisseur n'était jamais comparée.
  *
- * L'identité seule ne suffit pas : l'adresse du compte a pu changer depuis la
- * liaison, et l'ancienne recherche a pu poser des liaisons sur des adresses
- * seulement proches. Rien en base ne les distingue d'une liaison saine.
+ * L'identité seule ne suffit que pour une liaison prouvée : l'ancienne
+ * recherche a pu poser des liaisons sur des adresses seulement proches, et
+ * l'adresse du compte a pu changer depuis la liaison, qui perd alors sa
+ * preuve.
  *
  * Chaque cas passe par la vraie route de rappel, avec le retour que rend le
  * pilote de chaque fournisseur : Google (point d'information, `email_verified`
@@ -30,6 +32,7 @@ use App\Models\User;
 use App\Support\ConnexionSociale\FournisseurApple;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -295,7 +298,8 @@ it('refuse une adresse non ASCII même quand aucun compte ne lui ressemble', fun
     expect(User::query()->count())->toBe(0);
 })->with($fournisseurs);
 
-it('rattache l’adresse identique et vérifiée, puis refuse l’identité quand l’adresse change chez le fournisseur', function (string $fournisseur): void {
+it('rattache l’adresse identique et vérifiée, puis reconnaît l’identité quand l’adresse change chez le fournisseur', function (string $fournisseur): void {
+    Carbon::setTestNow('2026-10-05 08:30:00');
     $compte = compteSocialExistant('camille.martin@example.org');
     $autreCompte = compteSocialExistant('camille@example.org');
     $identifiant = identiteSocialeDe($fournisseur);
@@ -312,24 +316,82 @@ it('rattache l’adresse identique et vérifiée, puis refuse l’identité quan
     assertAuthenticatedAs($compte);
     expect($compte->refresh()->provider)->toBe($fournisseur);
     expect($compte->provider_id)->toBe($identifiant);
+    expect($compte->liaison_prouvee_le?->toDateTimeString())->toBe('2026-10-05 08:30:00');
 
     auth()->guard('web')->logout();
 
-    // Ni le compte de l'identité, ni celui de l'adresse : ni l'un ni l'autre n'est sûr.
-    get(route('social.callback', $fournisseur))
-        ->assertRedirect(route('login'))
-        ->assertSessionHas('status', refusSocialDIdentite($fournisseur));
+    // La liaison a été prouvée sur l'adresse du compte : l'identité seule
+    // l'ouvre, et le compte de l'adresse rendue reste à son titulaire.
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
 
-    assertGuest();
+    assertAuthenticatedAs($compte);
+    expect($compte->refresh()->email)->toBe('camille.martin@example.org');
     expect($autreCompte->refresh()->provider_id)->toBeNull();
     expect(User::query()->count())->toBe(2);
 })->with($fournisseurs);
 
-it('refuse une identité déjà liée quand l’adresse a changé chez le fournisseur, sans créer de compte', function (string $fournisseur): void {
+it('reconnaît l’identité qui a créé le compte quand l’adresse change chez le fournisseur', function (string $fournisseur, string $nouvelleAdresse): void {
+    $identifiant = identiteSocialeDe($fournisseur);
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(fournisseurSocialQuiRend(
+        retourSocialDe($fournisseur, $identifiant, 'camille.martin@example.org'),
+        retourSocialDe($fournisseur, $identifiant, $nouvelleAdresse),
+    ));
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+    $compte = User::query()->sole();
+    auth()->guard('web')->logout();
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+    expect(User::query()->count())->toBe(1);
+
+    // L'adresse du compte ne suit pas celle du fournisseur, et reste vérifiée.
+    expect($compte->refresh()->email)->toBe('camille.martin@example.org');
+    expect($compte->hasVerifiedEmail())->toBeTrue();
+    expect($compte->liaison_prouvee_le)->not->toBeNull();
+})->with([
+    'Google, une autre adresse' => ['google', 'camille.durand@example.net'],
+    'GitHub, une autre adresse principale' => ['github', 'camille.durand@example.net'],
+    'Apple, une adresse relais' => ['apple', 'x7k2p9q4rs@privaterelay.appleid.com'],
+    'Google, une adresse hors ASCII' => ['google', 'camille.martin@bücher.example.org'],
+]);
+
+it('prouve une liaison sans preuve par l’adresse exacte, puis la reconnaît quand l’adresse change chez le fournisseur', function (string $fournisseur): void {
     /*
-     * La liaison peut être saine, et l'adresse avoir changé chez le
-     * fournisseur ; rien en base ne permet de le savoir. Le titulaire passe
-     * par le mot de passe du compte, comme le message le lui dit.
+     * Toutes les liaisons d'avant la preuve sont sans preuve. Elles la
+     * gagnent au premier retour de leur identité avec l'adresse exacte du
+     * compte, garantie par le fournisseur.
+     */
+    $identifiant = identiteSocialeDe($fournisseur);
+    $compte = compteSocialExistant('camille.martin@example.org', $fournisseur, $identifiant);
+
+    expect($compte->liaison_prouvee_le)->toBeNull();
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(fournisseurSocialQuiRend(
+        retourSocialDe($fournisseur, $identifiant, 'camille.martin@example.org'),
+        retourSocialDe($fournisseur, $identifiant, 'camille.durand@example.net'),
+    ));
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+    expect($compte->refresh()->liaison_prouvee_le)->not->toBeNull();
+
+    auth()->guard('web')->logout();
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+    expect(User::query()->count())->toBe(1);
+})->with($fournisseurs);
+
+it('refuse une identité liée sans preuve quand l’adresse a changé chez le fournisseur, sans créer de compte', function (string $fournisseur): void {
+    /*
+     * Une liaison d'avant la preuve peut être saine, et l'adresse avoir changé
+     * chez le fournisseur ; rien en base ne permet de le savoir. Le titulaire
+     * passe par le mot de passe du compte, comme le message le lui dit.
      */
     $identifiant = identiteSocialeDe($fournisseur);
     $compte = compteSocialExistant('ancienne@example.org', $fournisseur, $identifiant);
@@ -359,7 +421,8 @@ it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis
      * autre personne, depuis le profil. Cette personne ne peut ni s'inscrire
      * (l'adresse est prise) ni passer par un fournisseur (le compte n'est pas
      * vérifié) : elle reprend le compte par le lien de réinitialisation, puis
-     * le vérifie. L'identité qui a ouvert le compte ne doit plus l'ouvrir.
+     * le vérifie. L'identité qui a ouvert le compte ne doit plus l'ouvrir : sa
+     * liaison était prouvée, mais sur l'adresse que le compte a quittée.
      */
     Notification::fake();
     $identifiant = identiteSocialeDe($fournisseur);
@@ -369,6 +432,8 @@ it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis
 
     get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
     $compte = User::query()->sole();
+
+    expect($compte->liaison_prouvee_le)->not->toBeNull();
 
     // Un mot de passe connu, comme après « Mot de passe oublié ? » : le profil
     // l'exige pour changer d'adresse. Le changer ferme la session ouverte par
@@ -389,6 +454,7 @@ it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis
 
     expect($compte->refresh()->email)->toBe('dominique.petit@example.org');
     expect($compte->hasVerifiedEmail())->toBeFalse();
+    expect($compte->liaison_prouvee_le)->toBeNull();
     auth()->guard('web')->logout();
 
     post(route('password.store'), [

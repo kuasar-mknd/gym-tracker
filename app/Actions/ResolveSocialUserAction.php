@@ -16,21 +16,26 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  * Retrouve, rattache ou crée le compte d'un retour de connexion sociale.
  *
  * Un compte existant ne s'ouvre que pour son adresse : celle que rend le
- * fournisseur doit être la sienne, à la casse ASCII près.
+ * fournisseur doit être la sienne, à la casse ASCII près, ou l'avoir été quand
+ * l'identité a prouvé sa liaison au compte.
  *
  *  1. Un compte qui porte déjà l'identité du fournisseur (`provider`,
- *     `provider_id`) s'ouvre à cette condition, et l'identité seule ne suffit
- *     pas. L'adresse du compte a pu changer depuis la liaison, par le profil
- *     ou par le panneau, et l'ancienne recherche par adresse a pu poser une
- *     liaison sur une adresse seulement proche : le titulaire de l'identité
- *     n'est alors peut-être pas celui du compte. Rien en base ne garde
- *     l'adresse de la liaison, et rien ne distingue donc ces liaisons des
- *     autres. Une identité qui rend une autre adresse que celle de son compte
- *     est refusée, sans qu'un compte soit créé à la place. Quand elle rend
- *     l'adresse du compte et que le fournisseur la garantit, le compte
- *     redevient vérifié s'il ne l'était plus : un changement d'adresse, par
- *     le profil ou par le panneau, retire la vérification
- *     (`SurveilleSonAdresse`).
+ *     `provider_id`) s'ouvre pour son adresse exacte. Il s'ouvre aussi à
+ *     l'identité seule, quelle que soit l'adresse rendue, quand sa liaison
+ *     est prouvée (`liaison_prouvee_le`) : l'identité a créé le compte, s'y
+ *     est rattachée ou y est revenue avec l'adresse exacte du compte,
+ *     garantie par le fournisseur, et cette adresse n'a pas changé depuis
+ *     (`OublieLaPreuveDeSaLiaison`). Son titulaire détenait donc l'adresse du
+ *     compte, et seule l'adresse chez le fournisseur a changé. Une liaison
+ *     sans preuve, comme toutes celles d'avant cette colonne, a pu être posée
+ *     par l'ancienne recherche par adresse sur une adresse seulement proche,
+ *     ou survivre à un changement d'adresse du compte qui l'a fait passer à
+ *     quelqu'un d'autre : son identité n'ouvre le compte que si elle rend son
+ *     adresse exacte, et prouve alors la liaison. Sinon le retour est refusé,
+ *     sans qu'un compte soit créé à la place. Quand l'identité rend l'adresse
+ *     du compte et que le fournisseur la garantit, le compte redevient aussi
+ *     vérifié s'il ne l'était plus : un changement d'adresse, par le profil ou
+ *     par le panneau, retire la vérification (`SurveilleSonAdresse`).
  *  2. À défaut, l'adresse ne rattache un compte existant que si elle est en
  *     ASCII imprimable, vérifiée par le fournisseur, et que le compte n'est
  *     lié à aucune autre identité du même fournisseur.
@@ -109,20 +114,16 @@ final class ResolveSocialUserAction
     }
 
     /**
-     * Le compte de cette identité dont l'adresse est celle rendue, ou un refus.
+     * Le compte que cette identité ouvre, ou un refus.
      *
      * Plusieurs comptes peuvent porter la même identité, l'ancienne recherche
      * par adresse en créant un second quand l'adresse changeait chez le
-     * fournisseur : le retour va à celui dont l'adresse est celle rendue.
-     * Aucun ne l'a, le retour est refusé et journalisé, sans l'adresse.
-     *
-     * Le compte trouvé redevient vérifié quand le fournisseur garantit
-     * l'adresse : c'est la sienne, prouvée par l'identité qui l'a déjà
-     * ouvert. Sans quoi le titulaire d'un compte ouvert par un fournisseur,
-     * qui ne connaît pas le mot de passe tiré au hasard, resterait dehors
-     * après que le panneau lui a rendu son adresse. `markEmailAsVerified()`
-     * vide aussi la dernière adresse vérifiée retenue
-     * (`ancienne_adresse_verifiee`).
+     * fournisseur. Le retour va d'abord à celui dont l'adresse est celle
+     * rendue, et prouve sa liaison quand le fournisseur garantit l'adresse
+     * (`prouverLaLiaison()`). À défaut, au seul compte dont la liaison est
+     * prouvée : l'adresse a changé chez le fournisseur, pas le titulaire de
+     * l'identité. Aucun compte, ou plusieurs, le retour est refusé et
+     * journalisé, sans l'adresse.
      *
      * @param  Collection<int, User>  $comptes
      *
@@ -130,14 +131,20 @@ final class ResolveSocialUserAction
      */
     private function compteDeLIdentite(Collection $comptes, string $fournisseur, string $adresse, bool $adresseVerifiee): User
     {
-        $compte = $comptes->first(fn (User $candidat): bool => $this->memeAdresse($candidat->email, $adresse));
+        $compteDeLAdresse = $comptes->first(fn (User $candidat): bool => $this->memeAdresse($candidat->email, $adresse));
 
-        if ($compte !== null) {
-            if ($adresseVerifiee && ! $compte->hasVerifiedEmail()) {
-                $compte->markEmailAsVerified();
+        if ($compteDeLAdresse !== null) {
+            if ($adresseVerifiee) {
+                $this->prouverLaLiaison($compteDeLAdresse);
             }
 
-            return $compte;
+            return $compteDeLAdresse;
+        }
+
+        $comptesALiaisonProuvee = $comptes->filter(static fn (User $candidat): bool => $candidat->liaison_prouvee_le !== null);
+
+        if ($comptesALiaisonProuvee->count() === 1) {
+            return $comptesALiaisonProuvee->sole();
         }
 
         Log::warning('Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte', [
@@ -146,6 +153,32 @@ final class ResolveSocialUserAction
         ]);
 
         throw new SocialAuthException('Ce compte '.ucfirst($fournisseur).' est associé à un compte dont l\'adresse email n\'est pas celle que '.ucfirst($fournisseur).' nous transmet. '.$this->versLeMotDePasse('l\'adresse email de ce compte'));
+    }
+
+    /**
+     * L'identité vient de rendre l'adresse exacte de son compte, garantie par
+     * le fournisseur : sa liaison est prouvée, et l'adresse du compte aussi.
+     *
+     * Le compte redevient vérifié s'il ne l'était plus. Sans quoi le titulaire
+     * d'un compte ouvert par un fournisseur, qui ne connaît pas le mot de passe
+     * tiré au hasard, resterait dehors après que le panneau lui a rendu son
+     * adresse. `markEmailAsVerified()` vide aussi la dernière adresse vérifiée
+     * retenue (`ancienne_adresse_verifiee`).
+     *
+     * Une liaison sans preuve le devient : c'est ainsi qu'une liaison d'avant
+     * la preuve, ou une liaison dont l'adresse du compte a changé, retrouve la
+     * reconnaissance par l'identité seule. Une preuve déjà posée garde sa date,
+     * sans écriture à chaque connexion.
+     */
+    private function prouverLaLiaison(User $compte): void
+    {
+        if (! $compte->hasVerifiedEmail()) {
+            $compte->markEmailAsVerified();
+        }
+
+        if ($compte->liaison_prouvee_le === null) {
+            $compte->forceFill(['liaison_prouvee_le' => $compte->freshTimestamp()])->save();
+        }
     }
 
     /**
@@ -163,6 +196,9 @@ final class ResolveSocialUserAction
      * Un refus ne crée pas de compte à la place : l'index unique de la base, de
      * la même collation, tient les deux adresses pour une seule. Un compte lié
      * à un autre fournisseur s'ouvre sans que sa liaison soit réécrite.
+     *
+     * La liaison posée ici est prouvée : l'identité vient de rendre l'adresse
+     * exacte du compte, garantie par le fournisseur.
      *
      * @throws SocialAuthException
      */
@@ -211,6 +247,7 @@ final class ResolveSocialUserAction
             $compte->forceFill([
                 'provider' => $fournisseur,
                 'provider_id' => $identifiant,
+                'liaison_prouvee_le' => now(),
             ])->update([
                 'avatar' => $utilisateurSocial->getAvatar(),
             ]);
@@ -228,6 +265,9 @@ final class ResolveSocialUserAction
      * compte quelle que soit la casse rendue. Le profil n'exige les minuscules
      * que d'une adresse qui change (`ProfileUpdateRequest`) : le compte
      * enregistre son nom sans toucher à son adresse.
+     *
+     * Sa liaison est prouvée : l'identité a ouvert le compte sur cette adresse,
+     * et en est le titulaire tant que l'adresse du compte ne change pas.
      */
     private function creerLeCompte(
         string $fournisseur,
@@ -247,6 +287,7 @@ final class ResolveSocialUserAction
             'provider' => $fournisseur,
             'provider_id' => $identifiant,
             'email_verified_at' => $adresseVerifiee ? now() : null, // Vérifiée seulement si le fournisseur la garantit.
+            'liaison_prouvee_le' => now(),
         ])->save();
 
         return $user;
