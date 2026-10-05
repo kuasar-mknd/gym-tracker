@@ -258,6 +258,28 @@ it('garde la voie des comptes listés, hors de toute liste d’adresses', functi
 });
 
 /**
+ * L'inscription connecte le compte avant toute vérification, et un changement
+ * d'adresse dans le profil remet la vérification à nul sans fermer la
+ * session : porter une adresse listée ne prouve pas qu'on en possède la boîte.
+ * Le même compte entre une fois son adresse vérifiée.
+ */
+it('ferme Horizon et son API à un compte listé dont l’adresse n’est pas vérifiée, et les ouvre une fois vérifiée', function (): void {
+    horizonEnProductionDepuis('198.51.100.7', ['203.0.113.5']);
+    horizonSansRedis();
+    $compte = User::factory()->unverified()->create(['email' => 'ops@example.org']);
+
+    expect(Gate::forUser($compte)->allows('viewHorizon'))->toBeFalse();
+    actingAs($compte)->get('/horizon')->assertForbidden();
+    actingAs($compte)->get('/horizon/api/masters')->assertForbidden();
+
+    $compte->markEmailAsVerified();
+
+    expect(Gate::forUser($compte)->allows('viewHorizon'))->toBeTrue();
+    actingAs($compte)->get('/horizon')->assertOk();
+    actingAs($compte)->get('/horizon/api/masters')->assertOk();
+});
+
+/**
  * Quand la garde par défaut devient celle du panneau — `actingAs(..., 'admin')`
  * dans un test, ou le middleware d'authentification de Filament posé un jour
  * devant Horizon —, la porte `viewHorizon` reçoit un `Admin`. Typée `?User`,
