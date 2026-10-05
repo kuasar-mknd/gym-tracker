@@ -394,7 +394,7 @@ Puis, à chaque passe :
 
 `artisan dusk` met `.env.dusk.local` à la place du `.env` le temps de la passe, puis le remet ; il cherche `.env.dusk.` suivi de l'`APP_ENV` du `.env`, `local` sous Sail. Les parcours et le serveur de Sail, qui relit le `.env` à chaque requête, visent ainsi ensemble `gym_tracker_dusk` ; pendant la passe, `http://localhost` sert donc cette base. La CI tourne autrement : serveur et ChromeDriver sur le même exécuteur, `APP_URL=http://127.0.0.1:8000`, dans le `.env` qu'écrit le job `browser-shard`. Dans les deux cas, la suite ne démarre aucun pilote : elle se branche sur `DUSK_DRIVER_URL`, le Selenium de Sail ou le ChromeDriver que la CI lance dans une étape à part ; ailleurs, ChromeDriver est à lancer soi-même.
 
-Servis en http sur `laravel.test`, hors de la boucle locale, les parcours voient un historique en clair : `HistoriqueApresDeconnexionTest`, qui vérifie son chiffrement, s'y déclare sauté, et ne tourne qu'en CI, sur 127.0.0.1.
+Servis en http sur `laravel.test`, hors de la boucle locale, les parcours voient un historique en clair et aucun service worker : `HistoriqueApresDeconnexionTest`, qui vérifie le chiffrement de l'historique, et `OuvertureHorsLigneTest`, qui ouvre l'application réseau coupé, s'y déclarent sautés, et ne tournent qu'en CI, sur 127.0.0.1.
 
 ### Mutation testing
 
