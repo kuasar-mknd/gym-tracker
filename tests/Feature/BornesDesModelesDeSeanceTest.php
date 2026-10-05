@@ -289,11 +289,16 @@ it('coupe le nom du modèle tiré d’une séance pour qu’il tienne dans sa co
 it('nomme chaque plafond d’un modèle dans le message de son refus', function (): void {
     $compte = User::factory()->create();
     $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
-    $trop = modelesBornesCorps($exercice, [
-        ...modelesBornesSeries(1, Set::REPETITIONS_MAX + 1, Set::POIDS_MAX_KG + 1),
-        ...modelesBornesSeries(WorkoutTemplate::SERIES_MAX_PAR_EXERCICE),
-    ]);
-    $trop['exercises'] = [...$trop['exercises'], ...array_fill(0, WorkoutTemplate::EXERCICES_MAX, ['id' => $exercice->id])];
+    $trop = [
+        'name' => 'Modèle',
+        'exercises' => [
+            ['id' => $exercice->id, 'sets' => [
+                ...modelesBornesSeries(1, Set::REPETITIONS_MAX + 1, Set::POIDS_MAX_KG + 1),
+                ...modelesBornesSeries(WorkoutTemplate::SERIES_MAX_PAR_EXERCICE),
+            ]],
+            ...array_fill(0, WorkoutTemplate::EXERCICES_MAX, ['id' => $exercice->id]),
+        ],
+    ];
 
     actingAs($compte)->postJson(route('templates.store'), $trop)
         ->assertUnprocessable()
