@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Exercises;
 
 use App\Models\Exercise;
+use App\Models\Set;
 use App\Models\User;
 use App\Models\WorkoutLine;
 use App\Traits\CalculatesOneRepMax;
@@ -60,7 +61,14 @@ class FetchExerciseHistoryAction
                     'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
                 ]);
 
-                $best1rm = $sets->max('one_rep_max') ?? 0.0;
+                /*
+                 * La liste reste complete, le meilleur 1RM non : il ne lit que
+                 * les series qui peuvent etablir le record (#1956).
+                 */
+                $best1rm = $line->sets
+                    ->filter(fn (Set $set): bool => self::peutEtablirLeRecord($set))
+                    ->map(fn (Set $set): float => $this->calculate1RM((float) $set->weight, (int) $set->reps))
+                    ->max() ?? 0.0;
 
                 return [
                     'id' => $line->id,
@@ -79,5 +87,21 @@ class FetchExerciseHistoryAction
 
                 return $item;
             });
+    }
+
+    /**
+     * La serie compte dans le meilleur 1RM de la seance.
+     *
+     * Les memes conditions que le record « 1RM estime »
+     * (`PersonalRecordService`) : validee, hors echauffement, avec un poids et
+     * des repetitions. Le meilleur 1RM lisait toutes les series, et une serie
+     * prevue a 140 kg puis jamais faite le portait au-dessus du record.
+     */
+    private static function peutEtablirLeRecord(Set $set): bool
+    {
+        return $set->is_completed
+            && ! $set->is_warmup
+            && $set->weight !== null && $set->weight > 0.0
+            && $set->reps !== null && $set->reps > 0;
     }
 }
