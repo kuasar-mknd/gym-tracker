@@ -157,14 +157,30 @@ export const useLignesDeLaSeance = ({
          * et sa création se règle à null. Partie, elle se supprime par
          * l'identifiant qu'elle rend.
          */
-        const fileDeLaLigne = pendingIds.fileDe(lineId)
+        const retirerSaCreation = () => {
+            const fileDeLaLigne = pendingIds.fileDe(lineId)
 
-        if (fileDeLaLigne !== null) {
-            SyncService.retirerDeLaFile(fileDeLaLigne)
+            if (fileDeLaLigne !== null) {
+                SyncService.retirerDeLaFile(fileDeLaLigne)
+            }
         }
 
+        retirerSaCreation()
+
+        /*
+         * Retirée pendant que le premier envoi de sa création volait encore, la
+         * ligne attendait le vidage en mémoire seulement : si cet envoi finissait
+         * en file, un rechargement la laissait partir, et l'exercice retiré
+         * revenait sur le serveur. On attend donc ce premier envoi, et s'il a
+         * fini en file, elle en sort (#1962).
+         */
         pendingIds
-            .resolve(lineId)
+            .reference(lineId)
+            .then(() => {
+                retirerSaCreation()
+
+                return pendingIds.resolve(lineId)
+            })
             .then((realLineId) => {
                 if (realLineId === null) {
                     pendingIds.forget(lineId)

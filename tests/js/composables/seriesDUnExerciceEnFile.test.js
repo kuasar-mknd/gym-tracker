@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
 import { chargerSyncService, retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
-import { creerUnFauxServeur, fileDurable, monterLaSeance, routeDeTest } from './seanceHorsLigne'
+import {
+    creerUnFauxServeur,
+    fileDurable,
+    monterLaSeance,
+    rechargerQuandLeReseauRevient,
+    routeDeTest,
+    uneTentativeQuiTarde,
+} from './seanceHorsLigne'
 
 const reseau = vi.hoisted(() => ({ serveur: null }))
 
@@ -161,6 +168,29 @@ describe('les séries d’un exercice encore en file', () => {
         await page.sync.processQueue()
 
         expect(reseau.serveur.resume()).toEqual([])
+    })
+
+    it('quittent la file avec leur exercice quand il est retiré pendant sa première tentative, rechargement compris', async () => {
+        const page = await monterLaSeance(seanceVide())
+        const couper = uneTentativeQuiTarde(reseau.serveur)
+
+        // La création de l'exercice vole encore quand on lui ajoute une série, puis qu'on le retire.
+        page.addExercise(7)
+        const ligne = page.ligne()
+        page.addSet(ligne.id)
+        await flushPromises()
+
+        page.removeLine(ligne.id)
+        page.confirmerLeRetrait()
+        await couper()
+
+        expect(fileDurable()).toEqual([])
+
+        const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+        expect(reseau.serveur.lignes.size).toBe(0)
+        expect(reseau.serveur.series.size).toBe(0)
+        expect(rechargee.queue).toEqual([])
     })
 
     it('sont refusées sans partir, et annoncées, quand le serveur refuse leur exercice', async () => {
