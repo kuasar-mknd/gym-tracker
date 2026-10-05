@@ -285,8 +285,11 @@ final class GoalService
      * `(user_id, part, measured_at)`. Mesure a 20 000 lignes et 400 jours
      * d'historique : une seule lecture d'index, parcourue a l'envers, sans tri.
      *
-     * Une mensuration inconnue laisse l'objectif sans progression plutot que de
-     * planter — c'est la verite, rien ne mesure cette valeur.
+     * Sans mesure de cette partie — mensuration inconnue, jamais relevée, ou
+     * dont on a supprimé la dernière mesure —, l'objectif revient à sa valeur
+     * de départ, sans progression, plutôt que de planter ou de garder une valeur
+     * que plus rien ne soutient : supprimer la mesure qui l'avait atteint le
+     * rouvre (#1954).
      */
     private function releverLaPartieDuCorps(Goal $goal): void
     {
@@ -297,6 +300,8 @@ final class GoalService
             ->first(['value', 'unit']);
 
         if (! $mesure instanceof \App\Models\BodyPartMeasurement) {
+            $goal->current_value = $goal->start_value;
+
             return;
         }
 

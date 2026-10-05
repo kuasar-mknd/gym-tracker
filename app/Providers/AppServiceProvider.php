@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
+use App\Models\BodyPartMeasurement;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -263,10 +264,21 @@ final class AppServiceProvider extends ServiceProvider
         });
     }
 
+    /**
+     * Une pesée ou une mensuration de partie du corps relance le recalcul des
+     * objectifs qui les suivent.
+     *
+     * Les parties du corps (tour de taille, poitrine…) se lisent dans
+     * `body_part_measurements` depuis #1454 ; sans leurs écouteurs, saisir ou
+     * supprimer une mesure ne faisait bouger l'objectif qu'à la pesée ou à la
+     * série suivante (#1954).
+     */
     private function registerMeasurementEvents(): void
     {
         BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
         BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyPartMeasurement::saved(fn (BodyPartMeasurement $mesure) => \App\Jobs\SyncUserGoals::dispatch($mesure->user));
+        BodyPartMeasurement::deleted(fn (BodyPartMeasurement $mesure) => \App\Jobs\SyncUserGoals::dispatch($mesure->user));
     }
 
     /**
