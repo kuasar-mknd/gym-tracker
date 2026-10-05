@@ -23,7 +23,8 @@ use function Pest\Laravel\get;
  * revoyait le journal, les mesures et l'adresse du compte parti. Deux en-têtes
  * de page y répondent, que le client d'Inertia applique : `encryptHistory` sur
  * chaque page d'un compte, `clearHistory` sur la première page qui suit la
- * déconnexion ou la suppression du compte. Le document lui-même sort en
+ * déconnexion, la suppression du compte, toute autre fin de session et toute
+ * connexion. Le document lui-même sort en
  * `no-store`, pour que le cache HTTP ne le resserve pas à une navigation
  * arrière qui quitte la page courante.
  *

@@ -3,9 +3,11 @@
  * compte ne se montre pas (#1965).
  *
  * Le serveur pose `encryptHistory` sur chaque page d'un compte, et
- * `clearHistory` sur la première page qui suit la déconnexion : Inertia jette
- * alors la clé de l'historique, rangée dans le `sessionStorage` de l'onglet, et
- * une entrée de l'historique ne se déchiffre plus. Reste la mémoire de retour
+ * `clearHistory` sur la première page servie à un autre titulaire que la
+ * précédente : après une déconnexion, une session fermée ailleurs ou expirée,
+ * ou une connexion. Inertia jette alors la clé de l'historique, rangée dans le
+ * `sessionStorage` de l'onglet, et une entrée de l'historique ne se déchiffre
+ * plus. Reste la mémoire de retour
  * arrière (bfcache) : un document quitté par une navigation complète peut y
  * dormir tel qu'il était affiché, journal compris, et revenir au bouton Retour
  * sans rien demander à personne. Le serveur répond `no-store` pour l'en
