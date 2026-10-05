@@ -1084,3 +1084,141 @@ describe('SyncService une écriture qui attend encore', () => {
         })
     })
 })
+
+/**
+ * La série d'un exercice encore en file n'a pas d'identifiant d'exercice à
+ * donner. Elle entre en file tout de suite, derrière lui, et le nomme par son
+ * entrée : le vidage le remplace par l'identifiant réel (#1962).
+ */
+describe('SyncService une écriture qui en attend une autre', () => {
+    const ligneEnFile = {
+        method: 'post',
+        url: '/api/v1/workout-lines',
+        data: { workout_id: 5, exercise_id: 7 },
+        id: 'qL',
+        timestamp: '2026-10-05T10:00:00.000Z',
+        compte: COMPTE,
+    }
+
+    const serieDe = (reps) => ({
+        method: 'post',
+        url: '/api/v1/sets',
+        data: { workout_line_id: { enAttenteDe: 'qL' }, reps },
+    })
+
+    const horsLigne = async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([ligneEnFile]))
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        return chargé()
+    }
+
+    it('entre en file sans être tentée, derrière ce dont elle dépend, avec sa clé d’idempotence', async () => {
+        const service = await horsLigne()
+
+        const queueId = service.mettreEnFile(serieDe(8))
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))).toEqual([
+            ligneEnFile,
+            expect.objectContaining({
+                id: queueId,
+                compte: COMPTE,
+                data: { workout_line_id: { enAttenteDe: 'qL' }, reps: 8 },
+                headers: { 'Idempotency-Key': expect.any(String) },
+            }),
+        ])
+    })
+
+    it('part avec l’identifiant que son parent a produit', async () => {
+        const service = await horsLigne()
+        service.mettreEnFile(serieDe(8))
+        service.mettreEnFile(serieDe(6))
+
+        request.mockReset()
+        request.mockResolvedValueOnce({ data: { data: { id: 70 } } }).mockResolvedValue({ data: { data: {} } })
+        await service.processQueue()
+
+        expect(request.mock.calls.map(([config]) => config.data)).toEqual([
+            { workout_id: 5, exercise_id: 7 },
+            { workout_line_id: 70, reps: 8 },
+            { workout_line_id: 70, reps: 6 },
+        ])
+    })
+
+    it('écrit l’identifiant dans la file en même temps qu’il retire le parent', async () => {
+        const service = await horsLigne()
+        service.mettreEnFile(serieDe(8))
+
+        request.mockReset()
+        request.mockResolvedValueOnce({ data: { data: { id: 70 } } }).mockRejectedValue({ code: 'ERR_NETWORK' })
+        await service.processQueue()
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.data)).toEqual([
+            { workout_line_id: 70, reps: 8 },
+        ])
+    })
+
+    it('prend l’identifiant réel quand elle n’entre en file qu’après le rejeu de son parent', async () => {
+        const service = await horsLigne()
+
+        request.mockReset()
+        request.mockResolvedValueOnce({ data: { data: { id: 70 } } })
+        await service.processQueue()
+
+        request.mockRejectedValue({ code: 'ERR_NETWORK' })
+        service.mettreEnFile(serieDe(8))
+
+        expect(service.queue.map((entree) => entree.data)).toEqual([{ workout_line_id: 70, reps: 8 }])
+    })
+
+    it('n’entre pas quand son parent est sorti de la file sans rien produire', async () => {
+        const service = await horsLigne()
+        service.retirerDeLaFile('qL')
+
+        expect(service.mettreEnFile(serieDe(8))).toBeNull()
+        expect(service.queue).toEqual([])
+    })
+
+    it('est refusée sans partir, et annoncée, quand son parent est refusé', async () => {
+        const service = await horsLigne()
+        service.mettreEnFile(serieDe(8))
+        const annonce = vi.fn()
+        window.addEventListener('sync:failed', annonce)
+
+        request.mockReset()
+        request.mockRejectedValueOnce({ response: { status: 422 } })
+        await service.processQueue()
+
+        window.removeEventListener('sync:failed', annonce)
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(annonce).toHaveBeenCalledTimes(2)
+        expect(service.failedRequests().map((refus) => [refus.url, refus.status])).toEqual([
+            ['/api/v1/workout-lines', 422],
+            ['/api/v1/sets', null],
+        ])
+        expect(service.queue).toEqual([])
+    })
+
+    it('sort de la file avec son parent, et le dit', async () => {
+        const service = await horsLigne()
+        const serie = service.mettreEnFile(serieDe(8))
+        const autre = service.mettreEnFile({ method: 'patch', url: '/api/v1/sets/3', data: { reps: 4 } })
+        const annonce = vi.fn()
+        window.addEventListener('sync:retired', annonce)
+
+        expect(service.retirerDeLaFile('qL')).toBe(true)
+
+        window.removeEventListener('sync:retired', annonce)
+
+        expect(annonce.mock.calls[0][0].detail).toEqual({ queueIds: ['qL', serie] })
+        expect(service.queue.map((entree) => entree.id)).toEqual([autre])
+    })
+
+    it('ne s’attribue à personne quand personne n’est connecté', async () => {
+        const service = await freshService({ compte: null })
+
+        expect(service.mettreEnFile({ method: 'post', url: '/api/v1/sets', data: { reps: 8 } })).toBeNull()
+    })
+})

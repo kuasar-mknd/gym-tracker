@@ -142,4 +142,48 @@ describe('PendingIds.resolve', () => {
 
         expect(pending.fileDe('temp-1')).toBeNull()
     })
+
+    /**
+     * Ce qu'une charge peut nommer : l'identifiant réel, ou l'entrée de file qui
+     * le produira, selon ce qui arrive d'abord (#1962).
+     */
+    describe('reference', () => {
+        it('rend tel quel un identifiant que le serveur a émis', async () => {
+            await expect(new PendingIds().reference(12)).resolves.toBe(12)
+        })
+
+        it('rend l’entrée de file quand la création part en file avant d’aboutir', async () => {
+            const pending = new PendingIds()
+            pending.track('temp-1', new Promise(() => {}))
+
+            const reference = pending.reference('temp-1')
+            pending.noterEnFile('temp-1', 'q1')
+
+            await expect(reference).resolves.toEqual({ enAttenteDe: 'q1' })
+            await expect(pending.reference('temp-1')).resolves.toEqual({ enAttenteDe: 'q1' })
+        })
+
+        it('rend l’identifiant réel quand la création aboutit avant, et ensuite', async () => {
+            const pending = new PendingIds()
+            const creation = deferred()
+            pending.track('temp-1', creation.promise)
+
+            const reference = pending.reference('temp-1')
+            creation.resolve(31)
+
+            await expect(reference).resolves.toBe(31)
+            await expect(pending.reference('temp-1')).resolves.toBe(31)
+        })
+
+        it('rend null pour un identifiant que personne n’a créé, ou qu’on oublie', async () => {
+            const pending = new PendingIds()
+            pending.track('temp-2', new Promise(() => {}))
+
+            const reference = pending.reference('temp-2')
+            pending.forget('temp-2')
+
+            await expect(reference).resolves.toBeNull()
+            await expect(pending.reference('temp-9')).resolves.toBeNull()
+        })
+    })
 })

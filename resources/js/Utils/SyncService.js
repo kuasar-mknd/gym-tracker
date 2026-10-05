@@ -75,6 +75,25 @@ const lireLeCompteDeLaPage = () => {
 const aUnCompte = (entree) => normaliserLeCompte(entree?.compte) !== null
 
 /**
+ * La file d'une écriture dont dépend cette valeur de charge, quand c'en est une.
+ *
+ * `{ enAttenteDe: queueId }` désigne ce que produira une autre écriture encore
+ * en file : la série d'un exercice dont la création attend le réseau (#1962).
+ *
+ * @returns {string|null}
+ */
+const fileReferencee = (valeur) =>
+    valeur !== null && typeof valeur === 'object' && typeof valeur.enAttenteDe === 'string' ? valeur.enAttenteDe : null
+
+/** Les écritures dont dépend une charge, d'après ses champs de premier niveau. */
+const filesReferencees = (data) =>
+    data !== null && typeof data === 'object'
+        ? Object.values(data)
+              .map(fileReferencee)
+              .filter((id) => id !== null)
+        : []
+
+/**
  * Ce que le serveur demande d'attendre, d'après `Retry-After` : un nombre de
  * secondes ou une date HTTP. Null quand il ne dit rien d'exploitable.
  *
@@ -156,6 +175,15 @@ class SyncService {
 
         /** L'entrée que le vidage est en train d'envoyer, s'il y en a une. */
         this.enVol = null
+
+        /**
+         * Ce que chaque écriture rejouée a produit, pour la durée de la page :
+         * une écriture qui en dépend et n'est mise en file qu'après son rejeu
+         * y trouve l'identifiant réel.
+         *
+         * @type {Map<string, number|string>}
+         */
+        this.produits = new Map()
 
         window.addEventListener('online', () => this.processQueue())
 
@@ -329,6 +357,69 @@ class SyncService {
     }
 
     /**
+     * Met en file, sans la tenter, une écriture qui dépend d'une autre encore en
+     * file.
+     *
+     * La création d'une série sous un exercice lui-même ajouté hors ligne
+     * attendait en mémoire que le vidage annonce l'identifiant de l'exercice :
+     * un rechargement, ou la PWA arrêtée pendant que le téléphone dormait, la
+     * perdait, et le vidage créait un exercice vide (#1962). Elle entre
+     * désormais en file tout de suite, derrière lui, et nomme ce dont elle
+     * dépend par `{ enAttenteDe: queueId }` ; le vidage le remplace par
+     * l'identifiant réel au moment où cette écriture-là aboutit.
+     *
+     * @param {Object} config la requête, au format de `Utils/http`
+     * @returns {string|null} l'entrée créée, ou null quand rien n'entre : pas de
+     *   compte connecté, ou une écriture dont elle dépend est sortie de la file
+     *   sans rien produire (refusée, retirée).
+     */
+    mettreEnFile(config) {
+        let data = config.data
+
+        for (const [champ, valeur] of Object.entries(data ?? {})) {
+            const parent = fileReferencee(valeur)
+
+            if (parent === null) {
+                continue
+            }
+
+            if (this.produits.has(parent)) {
+                data = { ...data, [champ]: this.produits.get(parent) }
+
+                continue
+            }
+
+            if (!this.queue.some((entree) => entree.id === parent && entree.compte === this.compte)) {
+                return null
+            }
+        }
+
+        return this.addToQueue(this.stampIdempotency({ ...config, data }))
+    }
+
+    /**
+     * Retient ce qu'une écriture a produit, et le substitue dans les écritures
+     * en file qui l'attendaient. La file est réécrite juste après, d'un seul
+     * coup avec le retrait de l'écriture rejouée.
+     */
+    noterLeProduit(queueId, id) {
+        this.produits.set(queueId, id)
+
+        this.queue.forEach((entree) => {
+            if (!filesReferencees(entree.data).includes(queueId)) {
+                return
+            }
+
+            entree.data = Object.fromEntries(
+                Object.entries(entree.data).map(([champ, valeur]) => [
+                    champ,
+                    fileReferencee(valeur) === queueId ? id : valeur,
+                ]),
+            )
+        })
+    }
+
+    /**
      * Dit au service qui est connecté, et vide la file de ce compte s'il en a
      * une. Appelé à chaque navigation Inertia, déconnexion et connexion
      * comprises.
@@ -418,6 +509,18 @@ class SyncService {
             }
 
             /*
+             * Ce dont elle dépend est sorti de la file sans rien produire :
+             * refusé, ou retiré. Le serveur la refuserait faute de parent ; elle
+             * est classée refusée sans partir, et annoncée.
+             */
+            if (filesReferencees(config.data).length > 0) {
+                this.recordFailure(config, null)
+                this.retirerLEntree(config)
+
+                continue
+            }
+
+            /*
              * La requête seule, sans ce que la file note pour elle-même : son
              * identifiant, son compte, ses compteurs d'essais.
              */
@@ -431,6 +534,10 @@ class SyncService {
                 this.enVol = config.id
 
                 const response = await http(requete)
+
+                if (response?.data?.data?.id !== undefined) {
+                    this.noterLeProduit(config.id, response.data.data.id)
+                }
 
                 rejeu = {
                     queueId: config.id,
@@ -562,7 +669,8 @@ class SyncService {
      * Retire de la file une écriture qui n'a plus lieu d'être : la création
      * d'une série supprimée avant d'avoir atteint le serveur. La file la
      * rejouait au retour du réseau, et la série supprimée à l'écran réapparaissait
-     * en base (#1960).
+     * en base (#1960). Les écritures qui en dépendaient la suivent : les séries
+     * d'un exercice retiré avant d'avoir été créé (#1962).
      *
      * @param {string} queueId
      * @returns {boolean} false quand l'entrée est déjà partie ou en vol.
@@ -574,8 +682,19 @@ class SyncService {
             return false
         }
 
-        this.retirerLEntree(entree)
-        window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: [queueId] } }))
+        const retirees = new Set([queueId])
+
+        // La file est dans l'ordre : une dépendante vient toujours après ce dont elle dépend.
+        this.queue.forEach((candidate) => {
+            if (filesReferencees(candidate.data).some((parent) => retirees.has(parent))) {
+                retirees.add(candidate.id)
+            }
+        })
+
+        this.queue = this.queue.filter((candidate) => !retirees.has(candidate.id))
+        this.saveQueue()
+
+        window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: [...retirees] } }))
 
         return true
     }

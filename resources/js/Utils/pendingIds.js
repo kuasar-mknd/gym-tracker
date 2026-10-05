@@ -29,13 +29,26 @@ export class PendingIds {
         /** @type {Map<string, number|string|null>} */
         this.settled = new Map()
         /**
-         * Placeholders whose creation sits in the offline queue, by queue entry.
-         * Until the drain replays it, that entry is the only place a change to
-         * the row can go and survive a reload.
+         * Les identifiants provisoires dont la création attend dans la file hors
+         * ligne, par entrée de file. Jusqu'au vidage, cette entrée est le seul
+         * endroit où une modification de la rangée survit à un rechargement.
          *
          * @type {Map<string, string>}
          */
-        this.queued = new Map()
+        this.enFile = new Map()
+        /**
+         * Ceux qui attendent par `reference()` de savoir si une création aboutit
+         * ou part en file, selon ce qui arrive d'abord.
+         *
+         * @type {Map<string, Set<(reference: unknown) => void>>}
+         */
+        this.attentes = new Map()
+    }
+
+    /** Donne `reference` à tous ceux qui attendent cet identifiant provisoire, et les oublie. */
+    reveiller(tempId, reference) {
+        this.attentes.get(tempId)?.forEach((resoudre) => resoudre(reference))
+        this.attentes.delete(tempId)
     }
 
     /**
@@ -51,7 +64,8 @@ export class PendingIds {
             .catch(() => null)
             .then((realId) => {
                 this.settled.set(tempId, realId)
-                this.queued.delete(tempId)
+                this.enFile.delete(tempId)
+                this.reveiller(tempId, realId)
 
                 return realId
             })
@@ -87,25 +101,65 @@ export class PendingIds {
     }
 
     /**
-     * Notes that this placeholder's creation went into the offline queue, under
-     * that entry. The creation it was tracked with keeps waiting for the drain.
+     * Note que la création de cet identifiant provisoire est partie dans la
+     * file hors ligne, sous cette entrée. La création suivie par `track`
+     * continue d'attendre le vidage (#1960).
      *
      * @param {string} tempId
      * @param {string} queueId
      */
     noterEnFile(tempId, queueId) {
-        this.queued.set(tempId, queueId)
+        this.enFile.set(tempId, queueId)
+        this.reveiller(tempId, { enAttenteDe: queueId })
     }
 
     /**
-     * The queue entry still holding this placeholder's creation, or null once it
-     * has been replayed, refused or forgotten — or if it never was queued.
+     * L'entrée de file qui tient encore la création de cet identifiant, ou null
+     * une fois rejouée, refusée ou oubliée — ou si elle n'a jamais été en file.
      *
      * @param {number|string} id
      * @returns {string|null}
      */
     fileDe(id) {
-        return this.queued.get(id) ?? null
+        return this.enFile.get(id) ?? null
+    }
+
+    /**
+     * Ce qu'une charge peut nommer pour cette rangée, dès que c'est connu.
+     *
+     * L'identifiant réel une fois la création aboutie. Tant qu'elle attend dans
+     * la file hors ligne, une référence à cette entrée — `{ enAttenteDe: queueId }` —
+     * que seul `SyncService.mettreEnFile` accepte, et que le vidage remplace par
+     * l'identifiant réel au moment de l'envoi. Attendre l'identifiant lui-même
+     * gardait en mémoire, jusqu'au vidage, une série ajoutée sous un exercice en
+     * file, et un rechargement la perdait (#1962).
+     *
+     * @param {number|string} id
+     * @returns {Promise<number|string|{enAttenteDe: string}|null>}
+     */
+    async reference(id) {
+        if (!isTemporaryId(id)) {
+            return id
+        }
+
+        if (this.settled.has(id)) {
+            return this.settled.get(id)
+        }
+
+        if (this.enFile.has(id)) {
+            return { enAttenteDe: this.enFile.get(id) }
+        }
+
+        if (!this.promises.has(id)) {
+            return null
+        }
+
+        return new Promise((resoudre) => {
+            const attentes = this.attentes.get(id) ?? new Set()
+
+            attentes.add(resoudre)
+            this.attentes.set(id, attentes)
+        })
     }
 
     /** Whether this placeholder is still waiting on the server. */
@@ -116,6 +170,7 @@ export class PendingIds {
     forget(tempId) {
         this.promises.delete(tempId)
         this.settled.delete(tempId)
-        this.queued.delete(tempId)
+        this.enFile.delete(tempId)
+        this.reveiller(tempId, null)
     }
 }

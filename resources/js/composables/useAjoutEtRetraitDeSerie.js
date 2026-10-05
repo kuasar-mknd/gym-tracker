@@ -240,7 +240,7 @@ export const useAjoutEtRetraitDeSerie = ({
          * @type {Promise<{created: object|null, sent: object}|{queueId: string}|null>}
          */
         const tentative = tentativePrecedente
-            .then(() => pendingIds.resolve(lineId))
+            .then(() => pendingIds.reference(lineId))
             .then((realLineId) => {
                 if (realLineId === null) {
                     markUnsynced(tempSet.id)
@@ -270,10 +270,31 @@ export const useAjoutEtRetraitDeSerie = ({
                     ...Object.fromEntries(measured.map((field) => [field, tempSet[field]])),
                 }
 
-                return SyncService.post(route('api.v1.sets.store'), {
-                    workout_line_id: realLineId,
-                    ...sent,
-                }).then((response) => ({ created: response.data?.data ?? null, sent }))
+                const charge = { workout_line_id: realLineId, ...sent }
+
+                /*
+                 * L'exercice attend lui-même dans la file : la série s'y range
+                 * tout de suite derrière lui, sans tentative, et nomme l'exercice
+                 * par son entrée de file. Elle attendait en mémoire que le vidage
+                 * annonce l'identifiant de l'exercice, et un rechargement la
+                 * perdait ; le vidage créait ensuite un exercice vide (#1962).
+                 */
+                if (typeof realLineId === 'object') {
+                    markUnsynced(tempSet.id)
+
+                    const queueId = SyncService.mettreEnFile({
+                        method: 'post',
+                        url: route('api.v1.sets.store'),
+                        data: charge,
+                    })
+
+                    return queueId === null ? null : { queueId }
+                }
+
+                return SyncService.post(route('api.v1.sets.store'), charge).then((response) => ({
+                    created: response.data?.data ?? null,
+                    sent,
+                }))
             })
             /**
              * This is what makes the chain settle rather than reject, and it is
