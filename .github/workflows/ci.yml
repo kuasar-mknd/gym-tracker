@@ -441,7 +441,7 @@ jobs:
             # deterministe et ne depend pas de ce que le runner embarque.
             - name: Semgrep (default + php + owasp-top-ten)
               run: |
-                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.176.0 \
+                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.179.0 \
                     semgrep scan --config p/default --config p/php --config p/owasp-top-ten \
                     --severity ERROR --error .
 
@@ -593,7 +593,7 @@ jobs:
             - name: Vulnérabilités npm (OSV)
               run: |
                   set +e
-                  docker run --rm -v "$PWD":/repo:ro -w /repo ghcr.io/google/osv-scanner:v2.5.1 scan --lockfile=package-lock.json --format=json > osv.json
+                  docker run --rm -v "$PWD":/repo:ro -w /repo ghcr.io/google/osv-scanner:v2.6.0 scan --lockfile=package-lock.json --format=json > osv.json
                   code=$?
                   set -e
                   if [ "$code" != "0" ] && [ "$code" != "1" ]; then
@@ -722,7 +722,7 @@ jobs:
                     --health-timeout 5s
                     --health-retries 30
             redis:
-                image: redis:7-alpine
+                image: redis:8-alpine
                 ports:
                     - 6379:6379
         steps:
