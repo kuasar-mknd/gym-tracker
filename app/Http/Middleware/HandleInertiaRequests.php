@@ -19,8 +19,8 @@ class HandleInertiaRequests extends Middleware
      *
      * `no-store` : ni le cache HTTP ni, dans la plupart des navigateurs, la
      * mémoire de retour arrière (bfcache) ne la gardent, ou celle-ci l'évince
-     * quand les cookies changent, à la déconnexion. Plus court que le
-     * `no-cache, private` qu'elle remplace : le budget d'en-têtes de
+     * quand les cookies changent, à la déconnexion. De la même longueur que
+     * le `no-cache, private` qu'elle remplace : le budget d'en-têtes de
      * `EnTetesDeReponseTest` n'y perd rien.
      */
     public const string CACHE_D_UNE_PAGE_DE_COMPTE = 'no-store, private';
