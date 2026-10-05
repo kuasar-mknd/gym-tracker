@@ -21,7 +21,8 @@ final class GoalService
      * Recalcule l'avancement de tous les objectifs d'un utilisateur.
      *
      * Appelé par SyncUserGoals après l'enregistrement ou la suppression d'une
-     * séance, d'une ligne, d'une série ou d'une mesure.
+     * séance, d'une série ou d'une mesure, et le retrait d'un exercice d'une
+     * séance.
      *
      * @param  User  $user  L'utilisateur concerné.
      */
