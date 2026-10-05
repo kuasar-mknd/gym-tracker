@@ -7,34 +7,16 @@ import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
 import { installerLeRapporteurDErreurs } from '@/Utils/rapporteurDErreurs'
 import { installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
+import { inscrireLeWorker } from '@/Utils/miseAJourDuWorker'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
-// Register Service Worker
+/*
+ * Le worker, et ce qu'une nouvelle version fait d'une page ouverte : rien sans
+ * un geste, puis la navigation suivante en entier (#1967). Voir le module.
+ */
 if (typeof window !== 'undefined') {
-    /**
-     * registerType est 'autoUpdate', mais fournir onNeedRefresh fait basculer
-     * vite-plugin-pwa en mode prompt : il cesse d'appliquer la mise à jour et
-     * te laisse la main. Ici la main écrivait dans la console et n'appelait
-     * jamais updateSW, donc une nouvelle version restait indéfiniment en
-     * attente — visible uniquement en réinstallant l'app.
-     *
-     * updateSW(true) applique la version en attente et recharge.
-     */
-    const updateSW = registerSW({
-        immediate: true,
-        onRegisteredSW(_url, registration) {
-            // Le navigateur ne cherche un nouveau worker que sur une
-            // navigation. Une PWA installée est suspendue, pas fermée : sans
-            // ceci elle peut ne jamais regarder.
-            if (registration) {
-                setInterval(() => registration.update(), 60 * 60 * 1000)
-            }
-        },
-        onNeedRefresh() {
-            updateSW(true)
-        },
-    })
+    inscrireLeWorker({ registerSW, routeur: router })
 }
 
 // Expose router for testing (Dusk)
