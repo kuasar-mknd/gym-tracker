@@ -20,6 +20,12 @@ use Illuminate\Validation\ValidationException;
  * se l'approprier. Le nom seul reste libre ; le champ `current_password` est
  * alors écarté, quoi qu'il porte.
  *
+ * Les minuscules ne sont exigées, elles aussi, que d'une adresse qui change.
+ * GitHub rend l'adresse avec sa casse à l'inscription, et le panneau ne
+ * l'impose pas : exigées d'une adresse inchangée, elles bloqueraient le seul
+ * nom, et ramener l'adresse en minuscules, c'est la changer, donc donner le
+ * mot de passe, qu'un compte relié à un fournisseur peut n'avoir jamais choisi.
+ *
  * Les essais manqués avancent le compteur du changement de mot de passe
  * (`UpdatePasswordRequest::throttleKey()`), que seul un mot de passe accepté
  * remet à zéro : un enregistrement du seul nom n'y touche pas, sans quoi il
@@ -51,7 +57,7 @@ class ProfileUpdateRequest extends FormRequest
             'email' => [
                 'required',
                 'string',
-                'lowercase',
+                Rule::when($this->changeLAdresse(), ['lowercase']),
                 'email',
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()?->id),

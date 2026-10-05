@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\ResolveSocialUserAction;
 use App\Models\User;
 use App\Notifications\AdresseDuCompteChangee;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use Laravel\Socialite\Two\User as SocialiteUser;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Address;
 use Tests\Support\Appareil;
@@ -154,6 +156,47 @@ it('laisse le nom changer sans mot de passe, mais pas l’adresse dans la même 
 
     expect($compte->refresh()->name)->toBe('Nouveau Nom');
     changementDAdresseRienNAChange($compte, 'titulaire@example.org');
+});
+
+/**
+ * Un compte ouvert par GitHub, qui rend l'adresse principale avec sa casse.
+ * Le compte ne connaît pas son mot de passe, tiré au hasard à l'inscription.
+ */
+function changementDAdresseLeCompteGitHub(string $adresse): User
+{
+    $utilisateurGitHub = new SocialiteUser()->map([
+        'id' => 4242,
+        'nickname' => 'titulaire',
+        'name' => 'Titulaire',
+        'email' => $adresse,
+        'avatar' => null,
+    ]);
+
+    return app(ResolveSocialUserAction::class)->execute('github', $utilisateurGitHub)->refresh();
+}
+
+/**
+ * La règle des minuscules ne vise que l'adresse qui change. Une adresse
+ * enregistrée avec des majuscules, telle que GitHub la rend à l'inscription ou
+ * que le panneau la pose, bloquait sinon le seul nom : la ramener en
+ * minuscules, c'est la changer, et le mot de passe est alors exigé d'un compte
+ * qui peut n'en avoir jamais choisi.
+ */
+it('laisse changer le seul nom d’un compte dont l’adresse porte des majuscules', function (): void {
+    Notification::fake();
+    $compte = changementDAdresseLeCompteGitHub('Titulaire@Example.org');
+    $verifieeLe = $compte->email_verified_at;
+    $this->actingAs($compte);
+
+    $this->from('/profile/edit')
+        ->patch('/profile', ['name' => 'Nouveau Nom', 'email' => 'Titulaire@Example.org'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/profile/edit');
+
+    expect($compte->refresh()->name)->toBe('Nouveau Nom')
+        ->and($compte->email_verified_at)->toEqual($verifieeLe)
+        ->and(RateLimiter::attempts('update-password-'.$compte->id))->toBe(0);
+    changementDAdresseRienNAChange($compte, 'Titulaire@Example.org');
 });
 
 it('tient le compteur d’essais : plein, il bloque l’adresse mais pas le nom, et le nom seul ne le vide pas', function (): void {
