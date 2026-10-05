@@ -10,6 +10,23 @@ use App\Models\WilksScore;
 final class CreateWilksScoreAction
 {
     /**
+     * La plage de poids de corps, en kilos, sur laquelle le polynôme de Wilks
+     * est défini : les bornes des implémentations de référence.
+     *
+     * Au-delà, son dénominateur finit par changer de signe (vers 13,5 et
+     * 283 kg chez l'homme, vers 208 kg chez la femme) et le coefficient
+     * remonte avant même d'y arriver. La validation accepte de 1 à 500, en kg
+     * comme en lbs : le poids est donc ramené à la borne la plus proche, comme
+     * le fait le calcul côté client (`resources/js/Utils/formulas.js`).
+     *
+     * @var array{male: array{0: float, 1: float}, female: array{0: float, 1: float}}
+     */
+    private const array PLAGE_DU_POIDS_DE_CORPS = [
+        'male' => [40.0, 201.9],
+        'female' => [26.51, 154.53],
+    ];
+
+    /**
      * @param  array{
      *     body_weight: float,
      *     lifted_weight: float,
@@ -42,6 +59,9 @@ final class CreateWilksScoreAction
 
     private function calculateWilks(float $bw, float $lifted, string $gender): float
     {
+        [$minimum, $maximum] = self::PLAGE_DU_POIDS_DE_CORPS[$gender === 'male' ? 'male' : 'female'];
+        $bw = min(max($bw, $minimum), $maximum);
+
         if ($gender === 'male') {
             $a = -216.0475144;
             $b = 16.2606339;
