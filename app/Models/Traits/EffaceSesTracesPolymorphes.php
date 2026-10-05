@@ -7,12 +7,23 @@ namespace App\Models\Traits;
 use Illuminate\Support\Facades\Password;
 
 /**
- * Un compte supprimé emporte ce qui le désigne sans clé étrangère (#1935).
+ * Un compte supprimé emporte ses séances avant lui (#1982), et ce qui le
+ * désigne sans clé étrangère (#1935).
  *
- * Les tables liées au compte par `user_id` suivent seules, par
- * `ON DELETE CASCADE`. Celles que `TRACES_POLYMORPHES` énumère le désignent
- * par une relation polymorphe, un couple `*_type` / `*_id` : la base ne sait
- * pas que la ligne parle d'un compte, et rien ne la suivait. Le jeton de
+ * Les tables liées au compte par `user_id` suivent par `ON DELETE CASCADE`,
+ * à une exception près. La cascade vers `exercises` emporte les exercices
+ * personnels, que `workout_lines.exercise_id` protège par une clé sans
+ * `ON DELETE`, donc en RESTRICT : c'est voulu, `ExerciseController::destroy`
+ * ne retire jamais un exercice utilisé. Les séances du compte, si elles sont
+ * encore là quand vient le tour de ses exercices, font échouer toute la
+ * suppression dès que l'une d'elles utilise un exercice personnel. Elles
+ * partent donc d'abord, juste avant la ligne du compte et dans la même
+ * transaction (`performDeleteOnModel()`) ; leurs lignes et leurs séries
+ * suivent par cascade, et la clé garde son RESTRICT.
+ *
+ * Les tables que `TRACES_POLYMORPHES` énumère désignent le compte par une
+ * relation polymorphe, un couple `*_type` / `*_id` : la base ne sait pas que
+ * la ligne parle d'un compte, et rien ne la suivait. Le jeton de
  * réinitialisation du mot de passe le désigne par son adresse de courriel, et
  * restait de même (#1938).
  *
@@ -56,8 +67,8 @@ trait EffaceSesTracesPolymorphes
     ];
 
     /**
-     * Supprime le compte et, dans la même transaction, son jeton de
-     * réinitialisation et tout ce que `TRACES_POLYMORPHES` lui rattache.
+     * Supprime le compte et, dans la même transaction, ses séances, son jeton
+     * de réinitialisation et tout ce que `TRACES_POLYMORPHES` lui rattache.
      *
      * Ici plutôt que dans un écouteur `deleting` ou `deleted`, pour deux
      * raisons. Un écouteur tourne À L'INTÉRIEUR de `delete()` et ne peut pas
@@ -96,6 +107,32 @@ trait EffaceSesTracesPolymorphes
         } finally {
             $this->enableLoggingModelsEvents = $journalActif;
         }
+    }
+
+    /**
+     * Efface les séances du compte, puis la ligne du compte (#1982).
+     *
+     * `delete()` appelle cette méthode dans sa transaction, après l'évènement
+     * `deleting` : un écouteur qui refuse la suppression en rendant `false`
+     * la refuse avant que la moindre séance ne parte. Effacer les séances en
+     * tête de `delete()`, avant `parent::delete()`, les aurait perdues pour un
+     * compte qui reste.
+     *
+     * Le constructeur de requêtes plutôt que `Workout::delete()` séance par
+     * séance : les écouteurs de `Workout` referaient, à chaque séance, les
+     * records et la série de jours d'un compte qui disparaît dans la même
+     * transaction. Les lignes et les séries suivent par `ON DELETE CASCADE`,
+     * puis les exercices personnels, que plus rien n'utilise, suivent le
+     * compte.
+     */
+    #[\Override]
+    protected function performDeleteOnModel(): void
+    {
+        $this->getConnection()->table('workouts')
+            ->where('user_id', $this->getKey())
+            ->delete();
+
+        parent::performDeleteOnModel();
     }
 
     /**
