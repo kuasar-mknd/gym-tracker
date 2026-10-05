@@ -13,6 +13,23 @@ import SyncService from '@/Utils/SyncService'
  */
 export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
     /**
+     * Fond une modification dans la création d'une série encore en file.
+     *
+     * Une série créée hors ligne n'a pas d'identifiant serveur, et ne l'aura
+     * qu'au vidage. Sa saisie et sa coche rejoignent donc l'entrée qui la crée :
+     * elles partent avec elle, survivent à un rechargement, et c'est la valeur
+     * saisie, cochée, que le serveur enregistre (#1960).
+     *
+     * @returns {boolean} false quand la création n'attend plus en file : elle
+     *   vole, ou elle a déjà abouti, et la modification suit l'identifiant réel.
+     */
+    const fondreDansLaFile = (set, payload) => {
+        const fileDeLaSerie = pendingIds.fileDe(set.id)
+
+        return fileDeLaSerie !== null && SyncService.modifierEnFile(fileDeLaSerie, payload)
+    }
+
+    /**
      * The only two ways this screen may talk to the server about a set.
      *
      * Both wait out a creation still in flight, so the URL always carries an id the
@@ -21,8 +38,14 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
      * on screen, change nothing, and mark it unsynced rather than send a request
      * that can only be refused.
      */
-    const patchSet = (set, payload) =>
-        pendingIds.resolve(set.id).then((realId) => {
+    const patchSet = (set, payload) => {
+        if (fondreDansLaFile(set, payload)) {
+            markUnsynced(set.id)
+
+            return Promise.reject({ isOffline: true, message: 'Set creation queued; the change rides with it' })
+        }
+
+        return pendingIds.resolve(set.id).then((realId) => {
             if (realId === null) {
                 markUnsynced(set.id)
 
@@ -31,9 +54,21 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
 
             return SyncService.patch(route('api.v1.sets.update', { set: realId }), payload)
         })
+    }
 
-    const deleteSet = (setId) =>
-        pendingIds.resolve(setId).then((realId) => {
+    /**
+     * Une série dont la création attend encore en file n'a rien à supprimer sur
+     * le serveur : sa création sort de la file, et sa promesse se règle à null.
+     * Une création déjà partie, elle, se supprime par l'identifiant qu'elle rend.
+     */
+    const deleteSet = (setId) => {
+        const fileDeLaSerie = pendingIds.fileDe(setId)
+
+        if (fileDeLaSerie !== null) {
+            SyncService.retirerDeLaFile(fileDeLaSerie)
+        }
+
+        return pendingIds.resolve(setId).then((realId) => {
             if (realId === null) {
                 pendingIds.forget(setId)
 
@@ -42,6 +77,7 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
 
             return SyncService.delete(route('api.v1.sets.destroy', { set: realId }))
         })
+    }
 
-    return { patchSet, deleteSet }
+    return { patchSet, deleteSet, fondreDansLaFile }
 }

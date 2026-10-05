@@ -28,6 +28,14 @@ export class PendingIds {
         this.promises = new Map()
         /** @type {Map<string, number|string|null>} */
         this.settled = new Map()
+        /**
+         * Placeholders whose creation sits in the offline queue, by queue entry.
+         * Until the drain replays it, that entry is the only place a change to
+         * the row can go and survive a reload.
+         *
+         * @type {Map<string, string>}
+         */
+        this.queued = new Map()
     }
 
     /**
@@ -43,6 +51,7 @@ export class PendingIds {
             .catch(() => null)
             .then((realId) => {
                 this.settled.set(tempId, realId)
+                this.queued.delete(tempId)
 
                 return realId
             })
@@ -77,6 +86,28 @@ export class PendingIds {
         return pending ? await pending : null
     }
 
+    /**
+     * Notes that this placeholder's creation went into the offline queue, under
+     * that entry. The creation it was tracked with keeps waiting for the drain.
+     *
+     * @param {string} tempId
+     * @param {string} queueId
+     */
+    noterEnFile(tempId, queueId) {
+        this.queued.set(tempId, queueId)
+    }
+
+    /**
+     * The queue entry still holding this placeholder's creation, or null once it
+     * has been replayed, refused or forgotten — or if it never was queued.
+     *
+     * @param {number|string} id
+     * @returns {string|null}
+     */
+    fileDe(id) {
+        return this.queued.get(id) ?? null
+    }
+
     /** Whether this placeholder is still waiting on the server. */
     isPending(id) {
         return isTemporaryId(id) && this.promises.has(id) && !this.settled.has(id)
@@ -85,5 +116,6 @@ export class PendingIds {
     forget(tempId) {
         this.promises.delete(tempId)
         this.settled.delete(tempId)
+        this.queued.delete(tempId)
     }
 }

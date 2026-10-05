@@ -1,4 +1,6 @@
+import { getCurrentInstance, onUnmounted } from 'vue'
 import SyncService from '@/Utils/SyncService'
+import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 
 /**
@@ -90,6 +92,17 @@ export const useAjoutEtRetraitDeSerie = ({
      */
     const setCreateChains = new Map()
 
+    /**
+     * Les créations de séries parties dans la file hors ligne, qui attendent le
+     * vidage pour apprendre leur identifiant. L'écran qui s'en va les oublie ;
+     * les écritures, elles, restent en file et partiront sans lui.
+     */
+    const attentes = creerLesAttentesDeRejeu()
+
+    if (getCurrentInstance()) {
+        onUnmounted(() => attentes.oublierTout())
+    }
+
     const addSet = (lineId) => {
         const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
         if (!line) return
@@ -163,9 +176,70 @@ export const useAjoutEtRetraitDeSerie = ({
         }
 
         const chaineDeLigne = rowKey(line)
-        const previousCreate = setCreateChains.get(chaineDeLigne) ?? Promise.resolve()
+        const tentativePrecedente = setCreateChains.get(chaineDeLigne) ?? Promise.resolve()
 
-        const creation = previousCreate
+        /**
+         * The server owns the identity, the user owns the values.
+         *
+         * Assigning the server's copy over the row reverted whatever the user
+         * typed while the create was in flight — and typing into a set the
+         * instant you add it is the normal way to use this screen. The payload
+         * left with the old numbers, so the server's answer necessarily carries
+         * them back; taking it wholesale overwrote the new ones on screen and
+         * left the database holding values the user had already corrected.
+         *
+         * Mutating in place also keeps the row identity that v-model and the
+         * per-set debounce timers are bound to.
+         *
+         * Les valeurs, et elles seules : `is_completed` est exclue. La charge
+         * envoyee la porte, donc cocher pendant que la creation etait en vol la
+         * faisait entrer dans ce diff. Ce PATCH-ci part SANS sequenceur ni
+         * file : il courait contre la chaine de completion, qui elle est
+         * ordonnee, et rien n'arbitrait entre les deux sinon l'ordre d'arrivee
+         * au serveur. Il etait de toute facon redondant : `toggleSetCompletion`
+         * est garee sur `pendingIds.resolve(set.id)`, qui se resout sur la
+         * creation ; son ecriture ordonnee part donc a l'instant ou la creation
+         * retombe, et elle porte deja la validation.
+         *
+         * @param {object} created la série telle que le serveur l'a créée
+         * @param {object|null} sent ce que la création a réellement emporté
+         */
+        const adopter = (created, sent) => {
+            const edited = Object.fromEntries(
+                measured.filter((field) => tempSet[field] !== sent?.[field]).map((field) => [field, tempSet[field]]),
+            )
+
+            const realSetId = created.id
+
+            // It is in the database now, under either id it has worn.
+            clearUnsynced(tempSet.id, realSetId)
+
+            tempSet.id = realSetId
+            tempSet.created_at = created.created_at
+            tempSet.updated_at = created.updated_at
+            tempSet.personal_record = created.personal_record
+
+            // Typed after the payload left, so the server has never heard it.
+            if (Object.keys(edited).length > 0) {
+                SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
+                    if (!err.isOffline) markUnsynced(realSetId)
+                })
+            }
+
+            return realSetId
+        }
+
+        /**
+         * Le premier envoi : la série créée, mise en file, ou refusée.
+         *
+         * C'est sur lui, et non sur la création entière, que la série suivante
+         * s'aligne : une création mise en file n'apprend son identifiant qu'au
+         * vidage, et la suivante doit pouvoir se ranger derrière elle dans la
+         * file sans l'attendre.
+         *
+         * @type {Promise<{created: object|null, sent: object}|{queueId: string}|null>}
+         */
+        const tentative = tentativePrecedente
             .then(() => pendingIds.resolve(lineId))
             .then((realLineId) => {
                 if (realLineId === null) {
@@ -199,82 +273,19 @@ export const useAjoutEtRetraitDeSerie = ({
                 return SyncService.post(route('api.v1.sets.store'), {
                     workout_line_id: realLineId,
                     ...sent,
-                }).then((response) => {
-                    const created = response.data?.data
-
-                    if (!created) {
-                        return null
-                    }
-
-                    /**
-                     * The server owns the identity, the user owns the values.
-                     *
-                     * Assigning the server's copy over the row reverted whatever the
-                     * user typed while the create was in flight — and typing into a
-                     * set the instant you add it is the normal way to use this
-                     * screen. The payload left with the old numbers, so the server's
-                     * answer necessarily carries them back; taking it wholesale
-                     * overwrote the new ones on screen and left the database holding
-                     * values the user had already corrected.
-                     *
-                     * Mutating in place also keeps the row identity that v-model and
-                     * the per-set debounce timers are bound to.
-                     */
-                    /*
-                     * Les valeurs, et elles seules : `is_completed` est exclue.
-                     *
-                     * La charge utile envoyee la porte — a `false` — donc cocher
-                     * pendant que la creation etait en vol la faisait entrer dans
-                     * ce diff. Ce PATCH-ci part SANS sequenceur ni file : il
-                     * courait contre la chaine de completion, qui elle est
-                     * ordonnee, et rien n'arbitrait entre les deux sinon l'ordre
-                     * d'arrivee au serveur. L'ecran pouvait avoir raison pendant
-                     * que la base gardait la valeur du perdant.
-                     *
-                     * Il etait de toute facon redondant : `toggleSetCompletion` est
-                     * garee sur `pendingIds.resolve(set.id)`, qui se resout sur
-                     * cette meme promesse de creation. Son ecriture ordonnee part
-                     * donc a l'instant ou la creation retombe, et elle porte deja
-                     * la validation.
-                     */
-                    const edited = Object.fromEntries(
-                        Object.keys(sent)
-                            .filter((field) => field !== 'is_completed' && tempSet[field] !== sent[field])
-                            .map((field) => [field, tempSet[field]]),
-                    )
-
-                    const realSetId = created.id
-
-                    // It is in the database now, under either id it has worn.
-                    clearUnsynced(tempSet.id, realSetId)
-
-                    tempSet.id = realSetId
-                    tempSet.created_at = created.created_at
-                    tempSet.updated_at = created.updated_at
-                    tempSet.personal_record = created.personal_record
-
-                    // Typed after the payload left, so the server has never heard it.
-                    if (Object.keys(edited).length > 0) {
-                        SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
-                            if (!err.isOffline) markUnsynced(realSetId)
-                        })
-                    }
-
-                    return realSetId
-                })
+                }).then((response) => ({ created: response.data?.data ?? null, sent }))
             })
             /**
              * This is what makes the chain settle rather than reject, and it is
-             * load-bearing for more than this set: the next one waits on `creation`
-             * through `setCreateChains`, so a create that failed must not stop it
-             * from being sent — only from overtaking it. Returning null on every
-             * path is what keeps that promise resolvable.
+             * load-bearing for more than this set: the next one waits on this
+             * attempt through `setCreateChains`, so a create that failed must
+             * not stop it from being sent — only from overtaking it.
              */
             .catch((err) => {
                 if (err.isOffline) {
                     markUnsynced(tempSet.id)
 
-                    return null
+                    return err.queueId ? { queueId: err.queueId } : null
                 }
 
                 const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
@@ -284,7 +295,30 @@ export const useAjoutEtRetraitDeSerie = ({
                 return null
             })
 
-        setCreateChains.set(chaineDeLigne, creation)
+        /**
+         * La création entière : l'identifiant réel, ou null.
+         *
+         * Une création partie dans la file se résolvait à null pour toute la vie
+         * de la page. La rangée gardait son identifiant provisoire après le
+         * vidage : sa saisie, sa coche et sa suppression ne partaient jamais, la
+         * fusion des props l'affichait à côté de la copie du serveur, et son
+         * badge « non enregistrée » ne se levait plus (#1960). Elle attend
+         * désormais le vidage, puis prend l'identifiant que le serveur a émis et
+         * renvoie ce qui a été tapé pendant que la requête volait.
+         */
+        const creation = tentative.then((issue) => {
+            if (issue?.queueId) {
+                pendingIds.noterEnFile(tempSet.id, issue.queueId)
+
+                return attentes
+                    .attendre(issue.queueId)
+                    .then((rejeu) => (rejeu?.data?.id === undefined ? null : adopter(rejeu.data, rejeu.envoye)))
+            }
+
+            return issue?.created ? adopter(issue.created, issue.sent) : null
+        })
+
+        setCreateChains.set(chaineDeLigne, tentative)
         pendingIds.track(tempSet.id, creation)
     }
 

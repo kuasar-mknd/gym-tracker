@@ -154,6 +154,9 @@ class SyncService {
         /** La relance programmée après un échec passager, s'il y en a une. */
         this.relance = null
 
+        /** L'entrée que le vidage est en train d'envoyer, s'il y en a une. */
+        this.enVol = null
+
         window.addEventListener('online', () => this.processQueue())
 
         /**
@@ -414,26 +417,27 @@ class SyncService {
                 return
             }
 
+            /*
+             * La requête seule, sans ce que la file note pour elle-même : son
+             * identifiant, son compte, ses compteurs d'essais.
+             */
+            const requete = { method: config.method, url: config.url, data: config.data, headers: config.headers }
+
+            /** Ce que l'écriture a produit, annoncé une fois la file réécrite. */
+            let rejeu = null
+
             try {
-                // Remove internal queue ID before sending
-                const { id, timestamp, authAttempts, transientAttempts, prochainEssai, ...requete } = config
+                // Celle-ci est partie : plus rien ne se fond dans sa charge.
+                this.enVol = config.id
+
                 const response = await http(requete)
 
-                /**
-                 * Says what this write finally produced.
-                 *
-                 * A create queued offline leaves the caller holding a
-                 * placeholder id and no way to learn the real one — the row
-                 * exists on the server and the page never finds out. Anything
-                 * the user built on top of it, a set added to an exercise that
-                 * was still queued, was then stranded for good: the queue drained,
-                 * the exercise appeared, and the set was never sent by anyone.
-                 */
-                window.dispatchEvent(
-                    new CustomEvent('sync:replayed', {
-                        detail: { queueId: id, url: config.url, data: response?.data?.data ?? null },
-                    }),
-                )
+                rejeu = {
+                    queueId: config.id,
+                    url: config.url,
+                    data: response?.data?.data ?? null,
+                    envoye: requete.data,
+                }
             } catch (error) {
                 // Anything that was not a network failure used to fall off the end
                 // of this block and be lost — a 500, an expired token, a validation
@@ -498,12 +502,82 @@ class SyncService {
                 }
 
                 this.recordFailure(config, error)
+            } finally {
+                this.enVol = null
             }
 
             // Settled — sent, or filed as refused. Only now may it leave, and
             // the queue that survives a reload is written before we move on.
             this.retirerLEntree(config)
+
+            /**
+             * Says what this write finally produced, and what it carried.
+             *
+             * A create queued offline leaves the caller holding a
+             * placeholder id and no way to learn the real one — the row
+             * exists on the server and the page never finds out. Anything
+             * the user built on top of it, a set added to an exercise that
+             * was still queued, was then stranded for good: the queue drained,
+             * the exercise appeared, and the set was never sent by anyone.
+             *
+             * `envoye` est la charge partie, saisies fondues comprises : ce qui
+             * a été tapé pendant que la requête volait n'y est pas, et
+             * l'appelant le renvoie (#1960). L'annonce suit l'écriture de la
+             * file, pour que l'entrée n'y soit plus quand l'appelant la lit.
+             */
+            if (rejeu !== null) {
+                window.dispatchEvent(new CustomEvent('sync:replayed', { detail: rejeu }))
+            }
         }
+    }
+
+    /**
+     * Fond des valeurs dans la charge d'une écriture qui attend encore en file.
+     *
+     * Une série créée hors ligne n'a pas d'identifiant à donner à un PATCH : sa
+     * saisie et sa coche ne partaient jamais, et la file ne rejouait que la
+     * création, avec les valeurs recopiées de la série précédente (#1960). Elles
+     * rejoignent désormais l'entrée de sa création, qui les porte au serveur et
+     * survit à un rechargement.
+     *
+     * @param {string} queueId
+     * @param {Object} valeurs
+     * @returns {boolean} false quand l'entrée n'attend plus — partie, en vol ou
+     *   retirée — : l'appelant passe alors par l'identifiant que le serveur a émis.
+     */
+    modifierEnFile(queueId, valeurs) {
+        const entree = this.queue.find((candidate) => candidate.id === queueId && candidate.compte === this.compte)
+
+        if (entree === undefined || this.enVol === queueId) {
+            return false
+        }
+
+        entree.data = { ...entree.data, ...valeurs }
+        this.saveQueue()
+
+        return true
+    }
+
+    /**
+     * Retire de la file une écriture qui n'a plus lieu d'être : la création
+     * d'une série supprimée avant d'avoir atteint le serveur. La file la
+     * rejouait au retour du réseau, et la série supprimée à l'écran réapparaissait
+     * en base (#1960).
+     *
+     * @param {string} queueId
+     * @returns {boolean} false quand l'entrée est déjà partie ou en vol.
+     */
+    retirerDeLaFile(queueId) {
+        const entree = this.queue.find((candidate) => candidate.id === queueId && candidate.compte === this.compte)
+
+        if (entree === undefined || this.enVol === queueId) {
+            return false
+        }
+
+        this.retirerLEntree(entree)
+        window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: [queueId] } }))
+
+        return true
     }
 
     /**
@@ -550,7 +624,12 @@ class SyncService {
                 // was refused. A URL alone can only ever produce "an item of the
                 // session" — true, and of no use to someone who now has to work
                 // out which of their sets is missing.
-                detail: { url: config.url, status: error?.response?.status ?? null, data: config.data },
+                detail: {
+                    queueId: config.id,
+                    url: config.url,
+                    status: error?.response?.status ?? null,
+                    data: config.data,
+                },
             }),
         )
     }

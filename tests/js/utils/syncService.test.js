@@ -103,6 +103,7 @@ describe('SyncService.processQueue', () => {
 
         expect(listener).toHaveBeenCalledTimes(1)
         expect(listener.mock.calls[0][0].detail).toEqual({
+            queueId: 'queued-1',
             url: '/api/v1/sets/7',
             status: 422,
             data: { weight: 100 },
@@ -968,5 +969,118 @@ describe('SyncService une écriture partie juste avant une déconnexion', () => 
         await expect(ecriture).rejects.toMatchObject({ isOffline: true })
 
         expect(service.queue.map((entree) => entree.compte)).toEqual([COMPTE])
+    })
+})
+
+/**
+ * Une série créée hors ligne n'a pas d'identifiant à donner à un PATCH ni à un
+ * DELETE : sa saisie, sa coche et sa suppression passent par l'entrée de file
+ * qui la crée, tant qu'elle attend (#1960).
+ */
+describe('SyncService une écriture qui attend encore', () => {
+    const uneCreation = (id = 'q1', compte = COMPTE) => ({
+        method: 'post',
+        url: '/api/v1/sets',
+        data: { workout_line_id: 1, is_completed: false, reps: 5 },
+        id,
+        timestamp: '2026-10-05T10:00:00.000Z',
+        compte,
+    })
+
+    it('fond une saisie dans sa charge, et l’écrit', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([uneCreation()]))
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+
+        expect(service.modifierEnFile('q1', { reps: 3, is_completed: true })).toBe(true)
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))[0].data).toEqual({
+            workout_line_id: 1,
+            is_completed: true,
+            reps: 3,
+        })
+    })
+
+    it('la retire, et dit lesquelles sont retirées', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([uneCreation('q1'), uneCreation('q2')]))
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const annonce = vi.fn()
+        window.addEventListener('sync:retired', annonce)
+
+        const service = await chargé()
+        const retiree = service.retirerDeLaFile('q1')
+
+        window.removeEventListener('sync:retired', annonce)
+
+        expect(retiree).toBe(true)
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.id)).toEqual(['q2'])
+        expect(annonce.mock.calls[0][0].detail).toEqual({ queueIds: ['q1'] })
+    })
+
+    it('ne touche ni à une entrée inconnue, ni à celle d’un autre compte', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([uneCreation('q1', '2')]))
+
+        const service = await chargé()
+
+        expect(service.modifierEnFile('q1', { reps: 3 })).toBe(false)
+        expect(service.modifierEnFile('inconnue', { reps: 3 })).toBe(false)
+        expect(service.retirerDeLaFile('q1')).toBe(false)
+        expect(service.queue[0].data.reps).toBe(5)
+    })
+
+    it('ne touche pas à celle qui vole : elle est partie avec sa charge', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([uneCreation()]))
+        let repondre
+        request.mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+
+        const service = await freshService()
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(service.modifierEnFile('q1', { reps: 3 })).toBe(false)
+        expect(service.retirerDeLaFile('q1')).toBe(false)
+
+        repondre({ data: { data: { id: 100 } } })
+        await service.pending
+
+        expect(request.mock.calls[0][0].data.reps).toBe(5)
+    })
+
+    it('annonce ce qu’elle a produit et ce qu’elle a emporté, une fois la file réécrite', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([uneCreation()]))
+        request.mockResolvedValue({ data: { data: { id: 100 } } })
+        let fileAuMomentDeLAnnonce
+        const annonce = vi.fn(() => {
+            fileAuMomentDeLAnnonce = localStorage.getItem('offline_sync_queue')
+        })
+        window.addEventListener('sync:replayed', annonce)
+
+        await chargé()
+
+        window.removeEventListener('sync:replayed', annonce)
+
+        expect(annonce.mock.calls[0][0].detail).toEqual({
+            queueId: 'q1',
+            url: '/api/v1/sets',
+            data: { id: 100 },
+            envoye: { workout_line_id: 1, is_completed: false, reps: 5 },
+        })
+        expect(fileAuMomentDeLAnnonce).toBe('[]')
+    })
+
+    it('n’envoie au serveur que la requête, sans ce que la file note pour elle-même', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([{ ...uneCreation(), headers: { 'Idempotency-Key': 'k' }, authAttempts: 1 }]),
+        )
+        request.mockResolvedValue({ data: {} })
+
+        await chargé()
+
+        expect(request.mock.calls[0][0]).toEqual({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: { workout_line_id: 1, is_completed: false, reps: 5 },
+            headers: { 'Idempotency-Key': 'k' },
+        })
     })
 })

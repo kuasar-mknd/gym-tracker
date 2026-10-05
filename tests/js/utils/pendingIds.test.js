@@ -111,4 +111,35 @@ describe('PendingIds.resolve', () => {
 
         await expect(pending.resolve('temp-1')).resolves.toBeNull()
     })
+
+    /**
+     * A creation that went into the offline queue has no id yet, only the queue
+     * entry that will create it. That entry is where a change to the row goes
+     * meanwhile (#1960).
+     */
+    it('remembers which queue entry holds a queued creation, until it settles', async () => {
+        const pending = new PendingIds()
+        const creation = deferred()
+        pending.track('temp-1', creation.promise)
+
+        expect(pending.fileDe('temp-1')).toBeNull()
+
+        pending.noterEnFile('temp-1', 'q1')
+        expect(pending.fileDe('temp-1')).toBe('q1')
+        expect(pending.isPending('temp-1')).toBe(true)
+
+        creation.resolve(31)
+        await expect(pending.resolve('temp-1')).resolves.toBe(31)
+        expect(pending.fileDe('temp-1')).toBeNull()
+    })
+
+    it('forgets the queue entry with the placeholder', () => {
+        const pending = new PendingIds()
+        pending.track('temp-1', new Promise(() => {}))
+        pending.noterEnFile('temp-1', 'q1')
+
+        pending.forget('temp-1')
+
+        expect(pending.fileDe('temp-1')).toBeNull()
+    })
 })
