@@ -229,6 +229,28 @@ it('ne donne pas de meilleur 1RM à une séance sans série qui puisse établir 
 });
 
 /*
+ * Une série validée au poids du corps (0 kg) ne soulève aucune charge : le
+ * record « 1RM estimé » ne la retient pas, et ni la courbe ni l'historique
+ * n'en tirent un 1RM de zéro. Les répétitions y sont, seul le poids manque.
+ */
+it('ne donne ni point ni meilleur 1RM à une séance faite au poids du corps, comme le record', function (): void {
+    $user = User::factory()->create();
+    $ligne = ligneDePectorauxPourStats($user);
+
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 0, 'reps' => 10]);
+
+    $aUnRecord = PersonalRecord::query()
+        ->where('user_id', $user->id)
+        ->where('exercise_id', $ligne->exercise_id)
+        ->where('type', 'max_1rm')
+        ->exists();
+
+    expect($aUnRecord)->toBeFalse()
+        ->and(courbe1RMDeLaLigne($user, $ligne))->toBe([])
+        ->and(meilleurs1RMDeLHistorique($user, $ligne))->toBe([null]);
+});
+
+/*
  * La page d'exercice tire de cette liste ses graphiques de volume, de charge
  * max, de répétitions… Elle ne peut n'y compter que les séries validées que
  * si chaque série le dit ; la liste, elle, reste complète.
