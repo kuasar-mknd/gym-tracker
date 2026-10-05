@@ -60,18 +60,20 @@ it('ramène la recommandation d’une ligne ajoutée aux plafonds d’une série
 
     $ligne = actingAs($compte)
         ->postJson(route('api.v1.workout-lines.store'), ['workout_id' => $enCours->id, 'exercise_id' => $exercice->id])
-        ->assertCreated()
-        ->json('data');
+        ->assertCreated();
+
+    /** @var array{weight: int|float, reps: int, distance_km: int|float, duration_seconds: int} $recommandation */
+    $recommandation = $ligne->json('data.recommended_values');
 
     // Le JSON ne garde pas la virgule d'un flottant rond : 100000.0 revient 100000.
-    expect($ligne['recommended_values'])->toEqual(Set::bornes());
+    expect($recommandation)->toEqual(Set::bornes());
 
     actingAs($compte)
         ->postJson(route('api.v1.sets.store'), [
-            'workout_line_id' => $ligne['id'],
+            'workout_line_id' => $ligne->json('data.id'),
             'is_completed' => false,
-            'weight' => $ligne['recommended_values']['weight'],
-            'reps' => $ligne['recommended_values']['reps'],
+            'weight' => $recommandation['weight'],
+            'reps' => $recommandation['reps'],
         ])
         ->assertCreated()
         ->assertJsonPath('data.reps', Set::REPETITIONS_MAX);
