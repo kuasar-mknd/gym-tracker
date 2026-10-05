@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { jsRoot } from '../conventions/sourceFiles'
 
 const page = {
     props: {
@@ -58,6 +61,36 @@ beforeEach(() => {
     unsubscribe.mockResolvedValue(undefined)
     globalThis.Notification.requestPermission = vi.fn().mockResolvedValue('granted')
     patch.mockResolvedValue({})
+})
+
+/*
+ * La section passait du tutoiement (« Choisis comment tu souhaites… ») au
+ * vouvoiement (« Recevez des alertes… sur votre appareil », « quand vous
+ * battez un record »), quand `ConfirmDialog` fixe le tutoiement (#1980).
+ */
+describe('UpdateNotificationPreferencesForm — le ton', () => {
+    const VOUVOIEMENT = /\b(vous|votre|vos|recevez|activez|choisissez|battez|êtes|avez)\b/i
+
+    it('tutoie dans tout ce qu’elle affiche', () => {
+        const wrapper = mountForm()
+
+        expect(wrapper.text()).toContain('Reçois des alertes en temps réel sur ton appareil')
+        expect(wrapper.text()).toContain('Être prévenu quand tu bats un record.')
+        expect(wrapper.text()).not.toMatch(VOUVOIEMENT)
+
+        wrapper.unmount()
+    })
+
+    it('tutoie jusque dans les messages des branches que le navigateur de test ne rend pas', () => {
+        const source = readFileSync(
+            join(jsRoot, 'Pages/Profile/Partials/UpdateNotificationPreferencesForm.vue'),
+            'utf8',
+        )
+        const gabarit = source.slice(source.indexOf('<template>')).replace(/<!--[\s\S]*?-->/g, '')
+
+        expect(gabarit).toContain('Ton navigateur ne prend pas en charge les notifications push.')
+        expect(gabarit).not.toMatch(VOUVOIEMENT)
+    })
 })
 
 describe('UpdateNotificationPreferencesForm', () => {

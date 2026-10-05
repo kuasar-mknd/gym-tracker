@@ -107,11 +107,11 @@ describe('AchievementUnlocked::toWebPush', function (): void {
         $payload = new AchievementUnlocked($achievement)->toWebPush($user, null)->toArray();
 
         expect($payload)->toEqual([
-            'title' => 'Succès Déverrouillé ! 🏆',
+            'title' => 'Badge débloqué ! 🏆',
             'actions' => [
-                ['title' => 'Voir mes succès', 'action' => url('/achievements')],
+                ['title' => 'Voir mes badges', 'action' => url('/achievements')],
             ],
-            'body' => 'Félicitations ! Tu as déverrouillé le succès : Marathonien du Fer.',
+            'body' => 'Félicitations ! Tu as débloqué le badge : Marathonien du Fer.',
             'icon' => '/pwa-192x192.png',
             'data' => ['url' => '/achievements'],
         ]);
@@ -123,7 +123,7 @@ describe('AchievementUnlocked::toWebPush', function (): void {
 
         $body = new AchievementUnlocked($achievement)->toWebPush($user, null)->toArray()['body'];
 
-        expect($body)->toBe('Félicitations ! Tu as déverrouillé le succès : Première Séance.')
+        expect($body)->toBe('Félicitations ! Tu as débloqué le badge : Première Séance.')
             ->and($body)->not->toContain('achievement');
     });
 });

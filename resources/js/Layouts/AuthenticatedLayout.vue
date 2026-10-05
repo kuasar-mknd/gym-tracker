@@ -282,7 +282,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                                     </DropdownLink>
                                     <DropdownLink :href="route('achievements.index')">
                                         <GlassIcon name="emoji_events" size="sm" class="mr-2" />
-                                        Trophées
+                                        Badges
                                     </DropdownLink>
                                     <DropdownLink @click="seDeconnecter">
                                         <GlassIcon name="logout" size="sm" class="mr-2" />

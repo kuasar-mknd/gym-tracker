@@ -74,3 +74,23 @@ export const pourcentage = (valeur, decimales = 1) =>
 
 /** Un compte : `12`, jamais `12,0`. */
 export const entier = (valeur) => nombre(valeur, 0)
+
+/**
+ * Un compte suivi de son nom, accordé : `1 série`, `4 séries`.
+ *
+ * Plusieurs compteurs collaient un pluriel fixe à un nombre qui vaut souvent
+ * 1 (« 1 séries », « 1 exos », « 1 produits suivis ») et un autre un singulier
+ * fixe (« 4 exo ») (#1980). En français, le singulier vaut jusqu'à 2
+ * exclu : `0 série`, `1 série`, `2 séries`. L'accord se fait sur le nombre
+ * affiché, arrondi à l'unité comme par `entier()`.
+ *
+ * @param {number|string|null|undefined} valeur
+ * @param {string} singulier
+ * @param {string} pluriel
+ * @returns {string} Le compte et son nom, ou `'—'` pour ce qui n'est pas un nombre.
+ */
+export const compte = (valeur, singulier, pluriel) => {
+    const n = enNombre(valeur)
+
+    return n === null ? '—' : `${entier(n)} ${Math.abs(Math.round(n)) < 2 ? singulier : pluriel}`
+}

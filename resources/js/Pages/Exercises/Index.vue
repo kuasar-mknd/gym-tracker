@@ -22,7 +22,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import { useFiltreDansLUrl } from '@/composables/useFiltreDansLUrl'
 import { EXERCISE_CATEGORIES, EXERCISE_TYPES, CATEGORY_BORDER_COLORS, TYPE_ICONS } from '@/Utils/constants'
-import { entier } from '@/Utils/nombre'
+import { compte } from '@/Utils/nombre'
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
@@ -186,7 +186,7 @@ const typeLabel = (type) => {
                         <span class="text-gradient">Bibliothèque</span>
                     </h1>
                     <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                        {{ entier(exercises.length) }} exercices disponibles
+                        {{ compte(exercises.length, 'exercice disponible', 'exercices disponibles') }}
                     </p>
                 </div>
                 <GlassButton

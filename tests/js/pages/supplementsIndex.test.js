@@ -122,6 +122,18 @@ const buttonsLabelled = (wrapper, label) =>
     wrapper.findAllComponents({ name: 'GlassButton' }).filter((button) => button.text().includes(label))
 
 describe('reading the cupboard', () => {
+    // « 1 produits suivis » pour un seul complément (#1980).
+    it('accorde le nombre de produits suivis', async () => {
+        const un = await mountPage({ supplements: [supplement()] })
+
+        expect(un.text()).toContain('1 produit suivi')
+        expect(un.text()).not.toContain('1 produits suivis')
+
+        const deux = await mountPage({ supplements: [supplement({ id: 1 }), supplement({ id: 2 })] })
+
+        expect(deux.text()).toContain('2 produits suivis')
+    })
+
     it('names a supplement bought loose “Générique” rather than leaving a hole', async () => {
         const wrapper = await mountPage({ supplements: [supplement({ brand: null })] })
 

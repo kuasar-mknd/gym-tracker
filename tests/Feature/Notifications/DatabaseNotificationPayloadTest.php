@@ -135,8 +135,8 @@ describe('AchievementUnlocked::toArray', function (): void {
         $data = new AchievementUnlocked($achievement)->toArray($user);
 
         expect($data['type'])->toBe('achievement')
-            ->and($data['title'])->toBe('Succès Déverrouillé ! 🏆')
-            ->and($data['message'])->toBe('Félicitations ! Tu as déverrouillé le succès : Marathonien du Fer.')
+            ->and($data['title'])->toBe('Badge débloqué ! 🏆')
+            ->and($data['message'])->toBe('Félicitations ! Tu as débloqué le badge : Marathonien du Fer.')
             ->and($data['achievement_id'])->toBe($achievement->id)
             ->and($data['achieved_at']->format('Y-m-d H:i:s'))->toBe('2026-08-12 18:00:00');
 
@@ -155,8 +155,8 @@ describe('AchievementUnlocked::toArray', function (): void {
             ->sole();
 
         expect($stored->data['type'])->toBe('achievement')
-            ->and($stored->data['title'])->toBe('Succès Déverrouillé ! 🏆')
-            ->and($stored->data['message'])->toBe('Félicitations ! Tu as déverrouillé le succès : Première Séance.')
+            ->and($stored->data['title'])->toBe('Badge débloqué ! 🏆')
+            ->and($stored->data['message'])->toBe('Félicitations ! Tu as débloqué le badge : Première Séance.')
             ->and($stored->data['achievement_id'])->toBe($achievement->id);
 
         expect(Carbon::parse($stored->data['achieved_at'])->setTimezone(config('app.timezone'))->toDateTimeString())

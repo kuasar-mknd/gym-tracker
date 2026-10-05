@@ -34,7 +34,25 @@ describe('CarteDeSeance', () => {
 
         expect(wrapper.get('h4').text()).toBe('Push Day')
         expect(wrapper.text()).toContain('mer. 29 juil.')
-        expect(wrapper.text()).toContain('4 exo')
+        expect(wrapper.text()).toContain('4 exos')
+    })
+
+    /*
+     * « • 1 séries » sous un exercice, « 4 exo » sur le badge : un pluriel
+     * fixe d'un côté, un singulier fixe de l'autre (#1980).
+     */
+    it('accorde ses compteurs au singulier pour un, au pluriel au-delà', () => {
+        const seule = monter({ seance: { ...seance, workout_lines: [ligne(15, 'Dips', 1)] } }).text()
+
+        expect(seule).toContain('1 exo')
+        expect(seule).not.toContain('1 exos')
+        expect(seule).toContain('• 1 série')
+        expect(seule).not.toContain('1 séries')
+
+        const plusieurs = monter().text()
+
+        expect(plusieurs).toContain('4 exos')
+        expect(plusieurs).toContain('• 3 séries')
     })
 
     it('donne un titre à la séance qui n’en a pas, jusque dans le libellé du bouton', () => {

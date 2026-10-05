@@ -39,7 +39,7 @@ const menuGroups = [
         title: 'Ma Progression',
         items: [
             {
-                name: 'Trophées',
+                name: 'Badges',
                 icon: 'emoji_events',
                 route: 'achievements.index',
                 description: 'Voir tes exploits',
