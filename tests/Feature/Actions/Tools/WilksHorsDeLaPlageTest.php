@@ -128,9 +128,17 @@ it('recalcule les scores déjà enregistrés hors de la plage, et eux seuls', fu
     $femmeDe500Livres = WilksScore::factory()->for($user)->create([
         'body_weight' => 500, 'lifted_weight' => 1102.31, 'gender' => 'female', 'unit' => 'lbs', 'score' => -63.89,
     ]);
+    // 80 lbs valent 36,3 kg : sous la borne masculine, quand 80 tiendrait dans la plage lu en kilos.
+    $hommeDe80Livres = WilksScore::factory()->for($user)->create([
+        'body_weight' => 80, 'lifted_weight' => 400, 'gender' => 'male', 'unit' => 'lbs', 'score' => 987.65,
+    ]);
     // 90 lbs valent 40,8 kg : dans la plage masculine, la ligne ne bouge pas.
     $dansLaPlage = WilksScore::factory()->for($user)->create([
         'body_weight' => 90, 'lifted_weight' => 400, 'gender' => 'male', 'unit' => 'lbs', 'score' => 123.45,
+    ]);
+    // 300 lbs valent 136,1 kg : dans la plage féminine, quand 300 en sortirait lu en kilos.
+    $femmeDe300Livres = WilksScore::factory()->for($user)->create([
+        'body_weight' => 300, 'lifted_weight' => 600, 'gender' => 'female', 'unit' => 'lbs', 'score' => 234.56,
     ]);
 
     $migration = require database_path('migrations/2026_10_05_221523_recalculer_les_scores_de_wilks_hors_de_la_plage.php');
@@ -139,7 +147,9 @@ it('recalcule les scores déjà enregistrés hors de la plage, et eux seuls', fu
     expect($hommeDe300->refresh()->score)->toBe(scoreWilksEnregistre(201.9, 500, 'male'))->toBeGreaterThan(0.0)
         ->and($hommeDe10->refresh()->score)->toBe(scoreWilksEnregistre(40, 500, 'male'))->toBeGreaterThan(0.0)
         ->and($femmeDe500Livres->refresh()->score)->toBe(scoreWilksEnregistre(154.53, 1102.31 / 2.20462, 'female'))->toBeGreaterThan(0.0)
-        ->and($dansLaPlage->refresh()->score)->toBe(123.45);
+        ->and($hommeDe80Livres->refresh()->score)->toBe(scoreWilksEnregistre(40, 400 / 2.20462, 'male'))->toBeGreaterThan(0.0)
+        ->and($dansLaPlage->refresh()->score)->toBe(123.45)
+        ->and($femmeDe300Livres->refresh()->score)->toBe(234.56);
 
     // Rejouée, elle rend les mêmes scores.
     $migration->up();
