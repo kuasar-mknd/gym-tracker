@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
+import SyncService from '@/Utils/SyncService'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 /**
@@ -24,7 +25,12 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
     }
 
     const showFinishModal = ref(false)
+
+    /** Les écritures restées en file quand on a voulu terminer : la modale le dit. */
+    const ecrituresEnAttente = ref(0)
+
     const finishWorkout = () => {
+        ecrituresEnAttente.value = 0
         showFinishModal.value = true
     }
     const confirmFinishWorkout = async () => {
@@ -35,6 +41,23 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
          * 403, and is reverted on a page that has already navigated away.
          */
         await viderLesEcritures()
+
+        /*
+         * La file hors ligne aussi, et pour la même raison. Elle n'était ni
+         * vidée ni attendue : quand le réseau revenait sans évènement `online`,
+         * ou pendant un vidage en cours, les dernières séries partaient après la
+         * clôture et revenaient refusées (#1961). `processQueue` s'enchaîne
+         * derrière un vidage en cours. Si la file ne se vide pas — réseau
+         * absent, serveur qui redémarre, session à renouveler —, la séance
+         * reste ouverte et la modale dit combien de modifications attendent.
+         */
+        await SyncService.processQueue()
+
+        ecrituresEnAttente.value = SyncService.enAttente()
+
+        if (ecrituresEnAttente.value > 0) {
+            return
+        }
 
         router.patch(
             route('workouts.update', { workout: localWorkout.value.id }),
@@ -73,6 +96,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
         savingTemplate,
         saveAsTemplate,
         showFinishModal,
+        ecrituresEnAttente,
         finishWorkout,
         confirmFinishWorkout,
         showSettingsModal,

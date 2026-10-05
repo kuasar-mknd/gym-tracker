@@ -49,6 +49,8 @@ vi.mock('@/Utils/SyncService', () => ({
         mettreEnFile: (...args) => mettreEnFile(...args),
         modifierEnFile: (...args) => modifierEnFile(...args),
         retirerDeLaFile: (...args) => retirerDeLaFile(...args),
+        processQueue: () => Promise.resolve(),
+        enAttente: () => 0,
     },
 }))
 

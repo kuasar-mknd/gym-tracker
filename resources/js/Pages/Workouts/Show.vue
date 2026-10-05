@@ -170,6 +170,7 @@ const {
     savingTemplate,
     saveAsTemplate,
     showFinishModal,
+    ecrituresEnAttente,
     finishWorkout,
     confirmFinishWorkout,
     showSettingsModal,
@@ -362,7 +363,12 @@ onUnmounted(() => {
             @submit="updateSettings"
         />
 
-        <WorkoutFinishModal :show="showFinishModal" @close="showFinishModal = false" @confirm="confirmFinishWorkout" />
+        <WorkoutFinishModal
+            :show="showFinishModal"
+            :en-attente="ecrituresEnAttente"
+            @close="showFinishModal = false"
+            @confirm="confirmFinishWorkout"
+        />
 
         <ConfirmDialog
             :ouvert="retraitDemande"
