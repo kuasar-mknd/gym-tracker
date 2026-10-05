@@ -33,6 +33,36 @@ class Set extends Model
 
     use ResolvesOwnerAtRouteBinding;
 
+    /**
+     * Le poids le plus lourd qu'une série accepte, en kilogrammes : le plafond
+     * métier des records (#1665), sous la capacité de `sets.weight`
+     * (decimal(8,2), 999 999,99). Les séries des modèles de séance, recopiées
+     * en séries au démarrage d'une séance, ont le même.
+     */
+    public const int POIDS_MAX_KG = 100_000;
+
+    /**
+     * Le plus de répétitions qu'une série accepte : assez pour une corde à
+     * sauter comptée en répétitions, et assez peu pour que le volume de la
+     * plus lourde série permise (poids × répétitions, record `max_volume_set`)
+     * tienne dans `personal_records.value` (decimal(10,2), 99 999 999,99).
+     */
+    public const int REPETITIONS_MAX = 999;
+
+    /**
+     * La durée la plus longue d'une série, en secondes : un jour. La roue de
+     * saisie s'arrête à 23 h 59 min 59 s (`DurationWheel.vue`), sous la
+     * capacité de `sets.duration_seconds` (int).
+     */
+    public const int DUREE_MAX_SECONDES = 86_400;
+
+    /**
+     * La distance la plus longue d'une série, en kilomètres : au-delà d'une
+     * course d'un jour à vélo, sous la capacité de `sets.distance_km`
+     * (decimal(8,3), 99 999,999).
+     */
+    public const int DISTANCE_MAX_KM = 1_000;
+
     #[\Override]
     protected $fillable = [
         'workout_line_id',

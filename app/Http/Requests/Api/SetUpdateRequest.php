@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Models\Set;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SetUpdateRequest extends FormRequest
@@ -18,17 +19,20 @@ class SetUpdateRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Les valeurs d'une série sont bornées par les plafonds métier de `Set`,
+     * sous la capacité de leurs colonnes : au-delà, la base refusait
+     * l'écriture et la requête finissait en 500, que la file hors ligne prend
+     * pour une erreur passagère à réessayer, au lieu d'un refus lisible.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'weight' => 'nullable|numeric|min:0',
-            'reps' => 'nullable|integer|min:0',
-            'duration_seconds' => 'nullable|integer|min:0',
-            'distance_km' => 'nullable|numeric|min:0',
+            'weight' => 'nullable|numeric|min:0|max:'.Set::POIDS_MAX_KG,
+            'reps' => 'nullable|integer|min:0|max:'.Set::REPETITIONS_MAX,
+            'duration_seconds' => 'nullable|integer|min:0|max:'.Set::DUREE_MAX_SECONDES,
+            'distance_km' => 'nullable|numeric|min:0|max:'.Set::DISTANCE_MAX_KM,
             'is_warmup' => 'boolean',
             'is_completed' => 'boolean',
         ];
