@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
+use App\Rules\AdresseEnAsciiImprimable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -288,13 +289,13 @@ final class ResolveSocialUserAction
      * `mb_strtolower()` et le repli de casse Unicode créent eux aussi des
      * égalités (le signe kelvin y devient « k »). Et un domaine
      * internationalisé s'écrit de deux façons (Unicode ou Punycode) que rien
-     * ici ne saurait apparier. Les trois
-     * fournisseurs rendent de l'ASCII pour l'immense majorité des comptes ; les
-     * autres s'inscrivent avec leur adresse et un mot de passe.
+     * ici ne saurait apparier. Les trois fournisseurs rendent de l'ASCII pour
+     * l'immense majorité des comptes, et l'inscription comme le profil n'en
+     * admettent pas d'autre (`AdresseEnAsciiImprimable`, même motif).
      */
     private function adresseComparable(string $adresse): ?string
     {
-        if (preg_match('/\A[\x21-\x7E]+\z/', $adresse) !== 1) {
+        if (preg_match(AdresseEnAsciiImprimable::MOTIF, $adresse) !== 1) {
             return null;
         }
 
@@ -315,12 +316,16 @@ final class ResolveSocialUserAction
     }
 
     /**
-     * Le refus d'une adresse hors ASCII qu'aucun compte n'occupe : elle reste
-     * libre pour l'inscription.
+     * Le refus d'une adresse hors ASCII qu'aucun compte n'occupe.
+     *
+     * L'inscription ne l'admet pas davantage : la base la confond avec une
+     * adresse ASCII, peut-être celle d'un autre, qu'elle occuperait. Le message
+     * renvoie donc au compte que la personne aurait sous une autre adresse, ou
+     * à l'inscription avec une adresse en ASCII.
      */
     private function refusDAdresseHorsAscii(string $fournisseur): string
     {
-        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Inscrivez-vous avec cette adresse et un mot de passe.';
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une adresse en caractères ASCII, sans accent.';
     }
 
     /**

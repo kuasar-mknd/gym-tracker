@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Rules\AdresseEnAsciiImprimable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,10 +23,16 @@ class ProfileUpdateRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * Une nouvelle adresse s'écrit en ASCII imprimable, comme à l'inscription
+     * (`AdresseEnAsciiImprimable`) ; l'adresse actuelle du compte reste admise
+     * telle quelle.
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        $compte = $this->user();
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
@@ -34,6 +41,7 @@ class ProfileUpdateRequest extends FormRequest
                 'lowercase',
                 'email',
                 'max:255',
+                new AdresseEnAsciiImprimable($compte instanceof User ? $compte->email : null),
                 Rule::unique(User::class)->ignore($this->user()?->id),
             ],
         ];

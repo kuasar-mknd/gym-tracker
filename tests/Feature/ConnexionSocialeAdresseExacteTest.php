@@ -167,9 +167,13 @@ function refusSocialDAdresseProche(string $fournisseur): string
     return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la vôtre. S\'il est à vous, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
 }
 
+/**
+ * Le refus d'une adresse hors ASCII : jamais l'inscription avec cette adresse,
+ * que l'inscription refuse aussi.
+ */
 function refusSocialDAdresseHorsAscii(string $fournisseur): string
 {
-    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Inscrivez-vous avec cette adresse et un mot de passe.';
+    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une adresse en caractères ASCII, sans accent.';
 }
 
 function refusSocialDIdentite(string $fournisseur): string
@@ -733,7 +737,12 @@ it('ne propose pas l’inscription avec une adresse qu’un compte occupe déjà
     'l’adresse rendue accentuée, le compte en ASCII' => ['jean.dupont@example.org', 'jéan.dupont@example.org'],
 ]);
 
-it('propose l’inscription avec une adresse hors ASCII qu’aucun compte n’occupe, et elle aboutit', function (): void {
+/*
+ * L'inscription avec l'adresse hors ASCII était proposée, et aboutissait : le
+ * compte occupait alors, aux yeux de l'index unique, l'adresse ASCII d'un
+ * autre, dont le titulaire ne pouvait plus s'inscrire.
+ */
+it('ne propose pas l’inscription avec une adresse hors ASCII, que l’inscription refuse, mais avec une adresse ASCII', function (): void {
     Socialite::shouldReceive('driver')->with('google')->andReturn(
         fournisseurSocialQuiRend(retourSocialDe('google', identiteSocialeDe('google'), 'jéan.dupont@example.org')),
     );
@@ -744,9 +753,16 @@ it('propose l’inscription avec une adresse hors ASCII qu’aucun compte n’oc
 
     assertGuest();
 
-    inscriptionSocialeAvecLAdresse('jéan.dupont@example.org')->assertSessionHasNoErrors();
+    // Ce que le message ne propose plus, parce que l'inscription le refuse.
+    inscriptionSocialeAvecLAdresse('jéan.dupont@example.org')->assertSessionHasErrors('email');
 
-    expect(User::query()->sole()->email)->toBe('jéan.dupont@example.org');
+    assertGuest();
+    expect(User::query()->count())->toBe(0);
+
+    // Ce qu'il propose, et qui aboutit.
+    inscriptionSocialeAvecLAdresse('jean.dupont@example.net')->assertSessionHasNoErrors();
+
+    expect(User::query()->sole()->email)->toBe('jean.dupont@example.net');
 });
 
 it('renvoie au mot de passe oublié un compte lié à une autre identité, et le lien part à son adresse', function (): void {
