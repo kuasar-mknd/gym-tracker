@@ -47,11 +47,11 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
         $payload = new PersonalRecordAchieved($record)->toWebPush($record->user, null)->toArray();
 
         expect($payload)->toEqual([
-            'title' => 'Nouveau Record ! 🏆',
+            'title' => 'Nouveau record ! 🏆',
             'actions' => [
                 ['title' => 'Voir mes stats', 'action' => url('/stats')],
             ],
-            'body' => "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg.",
+            'body' => "Félicitations ! Tu as battu ton record de poids maximum sur l'exercice Développé Couché avec 102,5\u{00A0}kg.",
             'icon' => '/pwa-192x192.png',
             'data' => ['url' => '/stats'],
         ]);
@@ -64,8 +64,9 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
 
         expect($body)
             ->toContain('Soulevé de Terre')
-            ->toContain('187.25kg');
-        expect($body)->not->toContain('187.3');
+            ->toContain("187,25\u{00A0}kg");
+        expect($body)->not->toContain('187,3');
+        expect($body)->not->toContain('187.25');
         expect($body)->not->toContain('{');
     });
 
@@ -75,15 +76,15 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
         $body = new PersonalRecordAchieved($record)->toWebPush($record->user, null)->toArray()['body'];
 
         expect($body)->toBe(
-            "Félicitations ! Tu as battu ton record de {$expectedLabel} sur l'exercice Rowing Barre avec 60.00kg."
+            "Félicitations ! Tu as battu ton record de {$expectedLabel} sur l'exercice Rowing Barre avec 60\u{00A0}kg."
         );
     })->with([
-        'max weight' => [PersonalRecordType::MaxWeight, 'Poids Maximum'],
-        'estimated 1RM' => [PersonalRecordType::Max1RM, '1RM Estimé'],
-        'best set volume' => [PersonalRecordType::MaxVolumeSet, 'Volume par Série'],
-        'legacy strength falls back' => [PersonalRecordType::Strength, 'Record Personnel'],
-        'legacy 1RM falls back' => [PersonalRecordType::OneRM, 'Record Personnel'],
-        'legacy volume falls back' => [PersonalRecordType::Volume, 'Record Personnel'],
+        'max weight' => [PersonalRecordType::MaxWeight, 'poids maximum'],
+        'estimated 1RM' => [PersonalRecordType::Max1RM, '1RM estimé'],
+        'best set volume' => [PersonalRecordType::MaxVolumeSet, 'volume par série'],
+        'legacy strength falls back' => [PersonalRecordType::Strength, 'record personnel'],
+        'legacy 1RM falls back' => [PersonalRecordType::OneRM, 'record personnel'],
+        'legacy volume falls back' => [PersonalRecordType::Volume, 'record personnel'],
     ]);
 
     it('links the action to the stats page and nothing else', function (): void {
@@ -245,11 +246,11 @@ describe('end-to-end delivery through the real WebPushChannel', function (): voi
         $decoded = json_decode((string) $queued[0]['payload'], true, 512, JSON_THROW_ON_ERROR);
 
         expect($decoded)->toEqual([
-            'title' => 'Nouveau Record ! 🏆',
+            'title' => 'Nouveau record ! 🏆',
             'actions' => [
                 ['title' => 'Voir mes stats', 'action' => url('/stats')],
             ],
-            'body' => "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg.",
+            'body' => "Félicitations ! Tu as battu ton record de poids maximum sur l'exercice Développé Couché avec 102,5\u{00A0}kg.",
             'icon' => '/pwa-192x192.png',
             'data' => ['url' => '/stats'],
         ]);

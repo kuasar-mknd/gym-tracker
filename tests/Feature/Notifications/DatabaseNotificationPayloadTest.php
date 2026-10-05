@@ -41,9 +41,9 @@ describe('PersonalRecordAchieved::toArray', function (): void {
         $data = new PersonalRecordAchieved($record)->toArray($user);
 
         expect($data['type'])->toBe('personal_record')
-            ->and($data['title'])->toBe('Nouveau Record ! 🏆')
+            ->and($data['title'])->toBe('Nouveau record ! 🏆')
             ->and($data['message'])->toBe(
-                "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg."
+                "Félicitations ! Tu as battu ton record de poids maximum sur l'exercice Développé Couché avec 102,5\u{00A0}kg."
             )
             ->and($data['exercise_id'])->toBe($record->exercise_id)
             ->and($data['achieved_at'])->toBeInstanceOf(Carbon::class);
@@ -51,6 +51,26 @@ describe('PersonalRecordAchieved::toArray', function (): void {
         expect(array_keys($data))
             ->toEqualCanonicalizing(['type', 'title', 'message', 'exercise_id', 'achieved_at']);
     });
+
+    it('écrit la valeur comme le reste de l’application : virgule, milliers séparés, sans zéro inutile', function (float $valeur, string $attendu): void {
+        $user = User::factory()->create();
+        $record = PersonalRecord::factory()->create([
+            'user_id' => $user->id,
+            'exercise_id' => Exercise::factory()->create(['name' => 'Squat'])->id,
+            'type' => PersonalRecordType::MaxVolumeSet,
+            'value' => $valeur,
+        ])->refresh();
+
+        expect(new PersonalRecordAchieved($record)->toArray($user)['message'])
+            ->toBe("Félicitations ! Tu as battu ton record de volume par série sur l'exercice Squat avec {$attendu}.")
+            ->not->toContain('.50')
+            ->not->toContain('0kg');
+    })->with([
+        'une décimale' => [102.5, "102,5\u{00A0}kg"],
+        'deux décimales' => [187.25, "187,25\u{00A0}kg"],
+        'entier' => [60.0, "60\u{00A0}kg"],
+        'milliers' => [1250.5, "1\u{202F}250,5\u{00A0}kg"],
+    ]);
 
     it('reports the moment the record was set, not the moment of sending', function (): void {
         $user = User::factory()->create();
@@ -90,9 +110,9 @@ describe('PersonalRecordAchieved::toArray', function (): void {
             ->and($stored->read_at)->toBeNull()
             ->and($stored->notifiable_id)->toBe($user->id)
             ->and($stored->data['type'])->toBe('personal_record')
-            ->and($stored->data['title'])->toBe('Nouveau Record ! 🏆')
+            ->and($stored->data['title'])->toBe('Nouveau record ! 🏆')
             ->and($stored->data['message'])->toBe(
-                "Félicitations ! Tu as battu ton record de 1RM Estimé sur l'exercice Soulevé de Terre avec 187.25kg."
+                "Félicitations ! Tu as battu ton record de 1RM estimé sur l'exercice Soulevé de Terre avec 187,25\u{00A0}kg."
             )
             ->and($stored->data['exercise_id'])->toBe($record->exercise_id);
 
