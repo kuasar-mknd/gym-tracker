@@ -20,6 +20,7 @@ use Tests\Support\WorkerOctane;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
+use function Pest\Laravel\post;
 use function Pest\Laravel\withServerVariables;
 use function Pest\Laravel\withSession;
 
@@ -255,6 +256,33 @@ it('garde la voie des comptes listés, hors de toute liste d’adresses', functi
     horizonEnProductionDepuis('198.51.100.7', ['203.0.113.5']);
 
     actingAs(User::factory()->create(['email' => 'ops@example.org']))->get('/horizon')->assertOk();
+});
+
+/**
+ * La liste nomme des adresses, pas des comptes : une adresse listée qu'aucun
+ * compte n'occupe (jamais créé, supprimé, ou passé à une autre adresse)
+ * s'inscrit par mot de passe sans qu'on en détienne la boîte. Le compte
+ * n'entre qu'une fois l'adresse confirmée par le lien envoyé à celle-ci.
+ */
+it('n’ouvre Horizon à un compte listé qu’une fois son adresse confirmée', function (): void {
+    post(route('register'), [
+        'name' => 'Inconnu',
+        'email' => 'ops@example.org',
+        'password' => 'Un-mot-de-passe-solide-42!',
+        'password_confirmation' => 'Un-mot-de-passe-solide-42!',
+    ])->assertSessionHasNoErrors();
+
+    $compte = User::query()->where('email', 'ops@example.org')->sole();
+    horizonEnProductionDepuis('198.51.100.7', ['203.0.113.5']);
+
+    expect($compte->hasVerifiedEmail())->toBeFalse()
+        ->and(Gate::forUser($compte)->allows('viewHorizon'))->toBeFalse();
+    actingAs($compte)->get('/horizon')->assertForbidden();
+
+    $compte->markEmailAsVerified();
+
+    expect(Gate::forUser($compte)->allows('viewHorizon'))->toBeTrue();
+    actingAs($compte)->get('/horizon')->assertOk();
 });
 
 /**
