@@ -9,8 +9,9 @@
  * navigateur, donc l'anglais chez qui ne l'a pas changée.
  *
  * La langue est suisse : le millier s'y sépare par une apostrophe (15'750).
- * Les dates, elles, restent en `fr-FR` — l'ordre jour/mois/année de leurs
- * seize appels.
+ * Les dates, elles, restent en `fr-FR` — l'ordre jour/mois/année : c'est
+ * `LANGUE_DES_DATES` de `Utils/date.js`, et `tests/js/conventions/dates.test.js`
+ * refuse une date mise en forme sans langue.
  */
 export const LANGUE = 'fr-CH'
 

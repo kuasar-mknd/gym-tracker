@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
-import { parseCalendarDate } from '@/Utils/date'
+import { dateCourte, parseCalendarDate } from '@/Utils/date'
 import { nombre, pourcentage } from '@/Utils/nombre'
 
 const props = defineProps({
@@ -47,7 +47,7 @@ const typeLabel = computed(() => {
     }
 })
 
-const formattedDeadline = computed(() => parseCalendarDate(props.goal.deadline)?.toLocaleDateString() ?? '')
+const formattedDeadline = computed(() => dateCourte(parseCalendarDate(props.goal.deadline)))
 
 const statusColor = computed(() => {
     if (isCompleted.value) return 'text-accent-state-deep'

@@ -8,7 +8,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
-import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
+import { dateCourte, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassChip from '@/Components/UI/GlassChip.vue'
 import { nombre, variation } from '@/Utils/nombre'
 
@@ -165,7 +165,7 @@ const selectCommonPart = (part) => {
                                     <span class="text-text-muted text-sm">{{ item.unit }}</span>
                                 </div>
                                 <div class="text-text-muted mt-1 text-xs">
-                                    {{ parseCalendarDate(item.date)?.toLocaleDateString() }}
+                                    {{ dateCourte(parseCalendarDate(item.date)) }}
                                 </div>
                             </div>
                             <div

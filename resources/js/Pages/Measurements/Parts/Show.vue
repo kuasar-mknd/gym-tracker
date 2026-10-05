@@ -5,7 +5,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
-import { todayAsCalendarDate } from '@/Utils/date'
+import { dateAvecJour, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
@@ -57,13 +57,7 @@ const {
  * previous day. Pinning local midnight is the same guard Measurements/Index
  * already applies.
  */
-const formatMeasuredAt = (measuredAt) =>
-    new Date(`${measuredAt.substring(0, 10)}T00:00:00`).toLocaleDateString(undefined, {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    })
+const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measuredAt))
 </script>
 
 <template>

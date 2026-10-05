@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
 
 const formPost = vi.fn()
 const routerDelete = vi.fn()
@@ -597,6 +598,23 @@ describe('Measurements/Parts/Index cards', () => {
         // things, so the colour only claims direction, never progress.
         expect(wrapper.find('div.text-trend-up').text()).toBe('+0,75')
         expect(wrapper.find('.text-trend-down').text()).toBe('-1,5')
+    })
+
+    /*
+     * Sans langue, la date suivait celle de l'appareil : « 8/12/2026 » sur un
+     * téléphone réglé en anglais pour le 12 août (#1976).
+     */
+    it('date chaque carte en jour/mois/année sur un appareil réglé en anglais', async () => {
+        const rendre = simulerUnSystemeEnAnglais()
+
+        try {
+            const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
+
+            expect(wrapper.text()).toContain('12/08/2026')
+            expect(wrapper.text()).not.toContain('8/12/2026')
+        } finally {
+            rendre()
+        }
     })
 
     it('says nothing at all about a part that has not moved', async () => {

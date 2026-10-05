@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 import { mount, flushPromises } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
 
 /**
  * Two of the four pages here print a date, and both of them are only correct
@@ -291,6 +292,23 @@ describe('Measurements/Parts/Show — the history list', () => {
         expect(text).toMatch(/\b15\b/)
         expect(text).not.toMatch(/\b14\b/)
         expect(text).toContain('2026')
+    })
+
+    /*
+     * `toLocaleDateString(undefined, …)` suivait la langue de l'appareil :
+     * « Sun, Mar 15, 2026 » sur un téléphone réglé en anglais (#1976).
+     */
+    it('date l’historique en français sur un appareil réglé en anglais', () => {
+        const rendre = simulerUnSystemeEnAnglais()
+
+        try {
+            const { wrapper } = mountPart([{ id: 9, value: 40, unit: 'cm', measured_at: '2026-03-15', notes: null }])
+
+            expect(wrapper.text()).toContain('dim. 15 mars 2026')
+            expect(wrapper.text()).not.toContain('Sun')
+        } finally {
+            rendre()
+        }
     })
 
     it('reads only the date out of a full timestamp', () => {

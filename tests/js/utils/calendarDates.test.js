@@ -1,6 +1,14 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 
-import { demainEnJourCalendaire, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
+import {
+    dateAvecJour,
+    dateCourte,
+    demainEnJourCalendaire,
+    heureCourte,
+    parseCalendarDate,
+    todayAsCalendarDate,
+} from '@/Utils/date'
+import { simulerUnSystemeEnAnglais } from './systemeEnAnglais'
 
 /**
  * The test container runs in UTC, where both the correct and the broken form
@@ -51,6 +59,30 @@ describe('demainEnJourCalendaire', () => {
         vi.setSystemTime(new Date('2026-12-31T12:00:00Z'))
 
         expect(demainEnJourCalendaire()).toBe('2027-01-01')
+    })
+})
+
+describe('dateCourte, dateAvecJour, heureCourte', () => {
+    it('écrivent en français quelle que soit la langue de l’appareil (#1976)', () => {
+        const rendre = simulerUnSystemeEnAnglais()
+
+        try {
+            const quatreOctobre = new Date(2026, 9, 4, 14, 30)
+
+            expect(dateCourte(quatreOctobre)).toBe('04/10/2026')
+            expect(dateAvecJour(quatreOctobre)).toBe('dim. 4 oct. 2026')
+            expect(heureCourte(quatreOctobre)).toBe('14:30')
+        } finally {
+            rendre()
+        }
+    })
+
+    it('rendent une chaîne vide pour une date absente ou illisible', () => {
+        for (const formateur of [dateCourte, dateAvecJour, heureCourte]) {
+            expect(formateur(null)).toBe('')
+            expect(formateur(undefined)).toBe('')
+            expect(formateur(new Date('pas une date'))).toBe('')
+        }
     })
 })
 

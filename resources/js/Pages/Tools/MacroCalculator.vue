@@ -189,7 +189,7 @@
                                                   ? 'Maintien'
                                                   : 'Prise'
                                         }}
-                                        • {{ new Date(entry.created_at).toLocaleDateString() }}
+                                        • {{ dateCourte(new Date(entry.created_at)) }}
                                     </p>
                                 </div>
                             </div>
@@ -236,6 +236,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassTile from '@/Components/UI/GlassTile.vue'
 import { entier } from '@/Utils/nombre'
+import { dateCourte } from '@/Utils/date'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
