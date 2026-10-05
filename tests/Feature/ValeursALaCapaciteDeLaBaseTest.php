@@ -77,7 +77,7 @@ it('garde entière une description d’habitude à la limite de sa colonne', fun
 });
 
 /*
- * Chaque champ chiffré d'une série : une valeur au-delà de la capacité de sa
+ * Chaque champ numérique d'une série : une valeur au-delà de la capacité de sa
  * colonne, une juste au-delà du plafond métier, et le plafond lui-même.
  */
 dataset('valeurs capacite series', [

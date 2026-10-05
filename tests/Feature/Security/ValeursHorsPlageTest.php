@@ -21,7 +21,7 @@ use function Pest\Laravel\actingAs;
  * Un nombre hors de la plage de sa colonne passait la validation, que seul un
  * `min:` bornait : MySQL le refusait, la requête finissait en 500, et chaque
  * 500 écrivait une ligne d'exception avec le corps de la requête. Chaque
- * champ chiffré de ces requêtes porte désormais une borne haute métier, sous
+ * champ numérique de ces requêtes porte désormais une borne haute métier, sous
  * la capacité de sa colonne : hors plage, la réponse est un 422 sur le champ,
  * et aucune exception n'est enregistrée ; au plafond, l'écriture passe.
  */
@@ -80,7 +80,7 @@ function horsPlageAvec(array $corps, string $champ, mixed $valeur): array
 /*
  * Le cas, le champ (chemin pointé), une valeur hors plage et la valeur au
  * plafond. Les six routes d'origine d'abord, avec une valeur au-delà de la
- * plage d'un `int` ou d'un `decimal(8,2)` ; puis les autres champs chiffrés
+ * plage d'un `int` ou d'un `decimal(8,2)` ; puis les autres champs numériques
  * que la garde de convention a fait borner.
  */
 dataset('hors plage champs', [
