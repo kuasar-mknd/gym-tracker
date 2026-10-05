@@ -26,7 +26,11 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  *     n'est alors peut-être pas celui du compte. Rien en base ne garde
  *     l'adresse de la liaison, et rien ne distingue donc ces liaisons des
  *     autres. Une identité qui rend une autre adresse que celle de son compte
- *     est refusée, sans qu'un compte soit créé à la place.
+ *     est refusée, sans qu'un compte soit créé à la place. Quand elle rend
+ *     l'adresse du compte et que le fournisseur la garantit, le compte
+ *     redevient vérifié s'il ne l'était plus : un changement d'adresse, par
+ *     le profil ou par le panneau, retire la vérification
+ *     (`SurveilleSonAdresse`).
  *  2. À défaut, l'adresse ne rattache un compte existant que si elle est en
  *     ASCII imprimable, vérifiée par le fournisseur, et que le compte n'est
  *     lié à aucune autre identité du même fournisseur.
@@ -67,7 +71,7 @@ final class ResolveSocialUserAction
         $comptesDeLIdentite = $this->comptesDeLIdentite($fournisseur, $identifiant);
 
         if ($comptesDeLIdentite->isNotEmpty()) {
-            return $this->compteDeLIdentite($comptesDeLIdentite, $fournisseur, $adresse);
+            return $this->compteDeLIdentite($comptesDeLIdentite, $fournisseur, $adresse, $adresseVerifiee);
         }
 
         $compteDeLAdresse = User::query()->where('email', $adresse)->first();
@@ -112,15 +116,27 @@ final class ResolveSocialUserAction
      * fournisseur : le retour va à celui dont l'adresse est celle rendue.
      * Aucun ne l'a, le retour est refusé et journalisé, sans l'adresse.
      *
+     * Le compte trouvé redevient vérifié quand le fournisseur garantit
+     * l'adresse : c'est la sienne, prouvée par l'identité qui l'a déjà
+     * ouvert. Sans quoi le titulaire d'un compte ouvert par un fournisseur,
+     * qui ne connaît pas le mot de passe tiré au hasard, resterait dehors
+     * après que le panneau lui a rendu son adresse. `markEmailAsVerified()`
+     * vide aussi la dernière adresse vérifiée retenue
+     * (`ancienne_adresse_verifiee`).
+     *
      * @param  Collection<int, User>  $comptes
      *
      * @throws SocialAuthException
      */
-    private function compteDeLIdentite(Collection $comptes, string $fournisseur, string $adresse): User
+    private function compteDeLIdentite(Collection $comptes, string $fournisseur, string $adresse, bool $adresseVerifiee): User
     {
         $compte = $comptes->first(fn (User $candidat): bool => $this->memeAdresse($candidat->email, $adresse));
 
         if ($compte !== null) {
+            if ($adresseVerifiee && ! $compte->hasVerifiedEmail()) {
+                $compte->markEmailAsVerified();
+            }
+
             return $compte;
         }
 
@@ -204,14 +220,14 @@ final class ResolveSocialUserAction
     }
 
     /**
-     * Crée le compte du retour, sur son adresse en minuscules, comme l'inscription.
+     * Crée le compte du retour, sur l'adresse telle que le fournisseur la rend.
      *
      * L'adresse est ici en ASCII imprimable (`adresseComparable()` l'a admise) :
-     * `strtolower()` n'en change que la casse ASCII, que `memeAdresse()` et
-     * l'index unique ignorent déjà, et le retour suivant reconnaît le compte de
-     * même. Gardée avec la casse que le fournisseur rend, celle que son
-     * titulaire a saisie, elle bloquait le formulaire du profil, qui n'accepte
-     * qu'une adresse en minuscules, jusqu'au seul changement de nom.
+     * sa casse est la seule liberté qu'elle garde, et `memeAdresse()` comme
+     * l'index unique l'ignorent, si bien que le retour suivant reconnaît le
+     * compte quelle que soit la casse rendue. Le profil n'exige les minuscules
+     * que d'une adresse qui change (`ProfileUpdateRequest`) : le compte
+     * enregistre son nom sans toucher à son adresse.
      */
     private function creerLeCompte(
         string $fournisseur,
@@ -222,7 +238,7 @@ final class ResolveSocialUserAction
     ): User {
         $user = User::create([
             'name' => $utilisateurSocial->getName() ?? $utilisateurSocial->getNickname() ?? 'Utilisateur',
-            'email' => strtolower($adresse),
+            'email' => $adresse,
             'password' => bcrypt(Str::random(16)), // Mot de passe aléatoire : c'est le fournisseur qui authentifie.
             'avatar' => $utilisateurSocial->getAvatar(),
         ]);

@@ -370,8 +370,16 @@ it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis
     get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
     $compte = User::query()->sole();
 
-    // Un mot de passe connu : le profil peut l'exiger pour changer d'adresse.
+    // Un mot de passe connu, comme après « Mot de passe oublié ? » : le profil
+    // l'exige pour changer d'adresse. Le changer ferme la session ouverte par
+    // le fournisseur, d'où une connexion par ce mot de passe.
     $compte->forceFill(['password' => 'Mot-de-passe-du-profil-42!'])->save();
+    auth()->guard('web')->logout();
+
+    post(route('login'), ['email' => 'camille.martin@example.org', 'password' => 'Mot-de-passe-du-profil-42!'])
+        ->assertSessionHasNoErrors();
+
+    assertAuthenticatedAs($compte);
 
     patch(route('profile.update'), [
         'name' => 'Dominique Petit',
@@ -650,20 +658,23 @@ it('accepte l’adresse que le pilote GitHub rend, parce qu’il ne rend que la 
 });
 
 /*
- * Le fournisseur rend l'adresse avec la casse que son titulaire a saisie, et le
- * profil n'accepte qu'une adresse en minuscules : un compte créé sur la casse
- * rendue ne pouvait plus enregistrer son profil, pas même pour changer de nom.
+ * Le fournisseur rend l'adresse avec la casse que son titulaire a saisie. Le
+ * compte la garde : le profil n'exige les minuscules que d'une adresse qui
+ * change, et la casse ASCII ne distingue pas deux adresses au retour suivant.
  */
-it('crée le compte sur l’adresse rendue en minuscules, que le profil enregistre et que le retour suivant rouvre', function (string $fournisseur): void {
+it('crée le compte sur l’adresse rendue avec sa casse, que le profil enregistre et que le retour suivant rouvre', function (string $fournisseur): void {
     $retour = retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'Camille.Martin@Example.org');
 
-    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(fournisseurSocialQuiRend($retour, $retour));
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(fournisseurSocialQuiRend(
+        $retour,
+        retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'camille.martin@example.org'),
+    ));
 
     get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
 
     $compte = User::query()->sole();
 
-    expect($compte->email)->toBe('camille.martin@example.org');
+    expect($compte->email)->toBe('Camille.Martin@Example.org');
 
     // Le formulaire du profil renvoie l'adresse du compte, avec le nouveau nom.
     patch(route('profile.update'), ['name' => 'Camille Durand', 'email' => $compte->email])->assertSessionHasNoErrors();

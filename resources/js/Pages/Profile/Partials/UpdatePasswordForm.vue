@@ -2,9 +2,11 @@
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
-import { useForm } from '@inertiajs/vue3'
+import { retransmettreLAbonnementPush } from '@/composables/useAbonnementPush'
+import { useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
+const page = usePage()
 const passwordInput = ref(null)
 const currentPasswordInput = ref(null)
 
@@ -14,10 +16,19 @@ const form = useForm({
     password_confirmation: '',
 })
 
+/*
+ * Le serveur retire tous les abonnements push du compte quand le mot de passe
+ * change, celui de cet appareil compris : il ne sait pas lequel est le sien.
+ * Cet appareil garde sa session, et retransmet le sien ; les autres, dont la
+ * session est fermée, ne reçoivent plus rien.
+ */
 const updatePassword = () => {
     form.put(route('password.update'), {
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: () => {
+            form.reset()
+            retransmettreLAbonnementPush(page.props.auth?.user?.id)
+        },
         onError: () => {
             if (form.errors.password) {
                 form.reset('password', 'password_confirmation')

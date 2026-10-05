@@ -96,10 +96,11 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      * La liste nomme des adresses, pas des comptes : une adresse listée sans
      * compte, parce que son compte n'a jamais été créé, a été supprimé ou a
      * changé d'adresse, s'inscrit par mot de passe sans en détenir la boîte.
-     * Seul le lien de vérification, envoyé à cette adresse, prouve qu'on la
-     * détient. Un changement d'adresse depuis le profil retire cette preuve :
-     * le compte qui se donne une adresse listée reste dehors jusqu'à ce qu'il
-     * l'ait confirmée.
+     * Seul le lien de vérification, envoyé à cette adresse, ou un fournisseur
+     * de connexion qui la garantit (`ResolveSocialUserAction`) prouve qu'on la
+     * détient. Un changement d'adresse, depuis le profil comme depuis le
+     * panneau (`SurveilleSonAdresse`), retire cette preuve : le compte qui se
+     * donne une adresse listée reste dehors jusqu'à ce qu'il l'ait confirmée.
      */
     private static function adresseConfirmee(User $user): bool
     {
