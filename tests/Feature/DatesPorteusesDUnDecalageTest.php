@@ -148,7 +148,7 @@ describe('un instant', function (): void {
         expect(datesDecaleesEnUtc($jeune->start_time))->toBe('2026-10-04T22:30:00Z');
     });
 
-    it('relit le début et la fin d’un jeûne corrigés avec un décalage au même instant', function (): void {
+    it('relit le début et la fin d’un jeûne corrigés en UTC au même instant, le jour de Paris', function (): void {
         $user = User::factory()->create();
         $jeune = Fast::factory()->create([
             'user_id' => $user->id,
@@ -157,8 +157,8 @@ describe('un instant', function (): void {
 
         $this->actingAs($user)
             ->patch(route('tools.fasting.update', $jeune), [
-                'start_time' => '2026-10-04T21:45:00+00:00',
-                'end_time' => '2026-10-05T00:30:00-04:00',
+                'start_time' => '2026-10-04T22:00:00Z',
+                'end_time' => '2026-10-04T23:45:00.000Z',
                 'status' => 'completed',
             ])
             ->assertRedirect()
@@ -166,9 +166,28 @@ describe('un instant', function (): void {
 
         $jeune->refresh();
 
-        expect(datesDecaleesEnUtc($jeune->start_time))->toBe('2026-10-04T21:45:00Z')
-            ->and(datesDecaleesEnUtc($jeune->end_time))->toBe('2026-10-05T04:30:00Z');
+        expect(datesDecaleesEnUtc($jeune->start_time))->toBe('2026-10-04T22:00:00Z')
+            ->and(datesDecaleesJour($jeune->start_time))->toBe('2026-10-05')
+            ->and(datesDecaleesEnUtc($jeune->end_time))->toBe('2026-10-04T23:45:00Z')
+            ->and(datesDecaleesJour($jeune->end_time))->toBe('2026-10-05');
     });
+
+    it('ramène aussi un décalage numérique ou un nom de fuseau au même instant', function (string $envoye): void {
+        $user = User::factory()->create();
+        $workout = Workout::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($user)
+            ->patch(route('workouts.update', $workout), ['started_at' => $envoye])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect(datesDecaleesEnUtc($workout->refresh()->started_at))->toBe('2026-10-04T22:30:00Z');
+    })->with([
+        'UTC en clair' => '2026-10-04T22:30:00+00:00',
+        'à l’ouest' => '2026-10-04T18:30:00-04:00',
+        'sans deux-points' => '2026-10-05T00:30:00+0200',
+        'un nom de fuseau' => '2026-10-04 23:30:00 Europe/London',
+    ]);
 });
 
 describe('un jour', function (): void {
@@ -249,11 +268,20 @@ describe('un jour', function (): void {
     });
 });
 
-it('laisse à la règle de validation une valeur qui n’est pas une date', function (): void {
+it('laisse à la règle de validation une valeur qu’elle refuse, même suivie d’un décalage', function (string $envoye): void {
     $user = User::factory()->create();
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
+    $workout = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::parse('2026-10-05 08:00:00'),
+    ]);
 
     $this->actingAs($user)
-        ->patch(route('workouts.update', $workout), ['started_at' => 'pas une date Z'])
+        ->patch(route('workouts.update', $workout), ['started_at' => $envoye])
         ->assertSessionHasErrors('started_at');
-});
+
+    expect($workout->refresh()->started_at->format('Y-m-d H:i:s'))->toBe('2026-10-05 08:00:00');
+})->with([
+    'du texte' => 'pas une date Z',
+    'un jour qui n’existe pas' => '2026-02-30T22:30:00Z',
+    'un instant relatif' => 'now Z',
+]);

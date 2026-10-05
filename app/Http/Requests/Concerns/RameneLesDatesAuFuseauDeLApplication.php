@@ -20,10 +20,10 @@ use Illuminate\Support\Facades\Date;
  *
  * La conversion a lieu avant la validation, pour que les règles qui comparent
  * à aujourd'hui (`before_or_equal:today`, `after:today`) jugent la valeur que
- * l'application écrira. Seule une valeur qui porte un décalage ou un fuseau
- * change : une heure murale sans décalage reste une heure de l'application, et
- * une valeur illisible est laissée telle quelle à la règle `date`, qui la
- * refusera.
+ * l'application écrira. Seule une date que la règle `date` accepte, et qui
+ * porte un décalage ou un fuseau, change : une heure murale sans décalage reste
+ * une heure de l'application, et une valeur que la règle refuse lui est
+ * laissée telle quelle, pour qu'elle la refuse encore.
  *
  * `LesDatesRecuesSontRameneesAuFuseauTest` exige que chaque champ validé par
  * `date` dans une requête passe par l'une de ces deux méthodes.
@@ -61,7 +61,7 @@ trait RameneLesDatesAuFuseauDeLApplication
         foreach ($champs as $champ) {
             $valeur = $this->input($champ);
 
-            if (! is_string($valeur) || ! self::porteUnDecalage($valeur)) {
+            if (! is_string($valeur) || ! self::estUneDateAvecDecalage($valeur)) {
                 continue;
             }
 
@@ -80,12 +80,24 @@ trait RameneLesDatesAuFuseauDeLApplication
     }
 
     /**
-     * Vrai quand la valeur précise son fuseau : `Z`, un décalage (`+02:00`,
-     * `-0400`) ou un nom de fuseau. `date_parse()` est l'analyseur même de la
-     * règle `date`, qui accepte donc exactement ce qu'il reconnaît.
+     * Vrai quand la règle `date` accepte la valeur et qu'elle précise son
+     * fuseau : `Z`, un décalage (`+02:00`, `-0400`) ou un nom de fuseau.
+     *
+     * Le test reprend celui de la règle : une lecture sans erreur (ce que
+     * `strtotime()` y vérifie, et qui le fait rendre `false`), puis
+     * `checkdate()` sur ce que lit `date_parse()`. Sans lui, la conversion
+     * rendait valide ce que la règle refuse : Carbon reporte un 30 février au
+     * 2 mars, et lit `now Z` comme l'instant présent.
      */
-    private static function porteUnDecalage(string $valeur): bool
+    private static function estUneDateAvecDecalage(string $valeur): bool
     {
-        return (date_parse($valeur)['is_localtime'] ?? false) === true;
+        $analyse = date_parse($valeur);
+
+        return $analyse['error_count'] === 0
+            && is_int($analyse['year'])
+            && is_int($analyse['month'])
+            && is_int($analyse['day'])
+            && checkdate($analyse['month'], $analyse['day'], $analyse['year'])
+            && ($analyse['is_localtime'] ?? false) === true;
     }
 }
