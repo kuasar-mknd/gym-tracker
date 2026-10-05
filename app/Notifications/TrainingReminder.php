@@ -35,6 +35,9 @@ final class TrainingReminder extends Notification implements ShouldQueue
     }
 
     /**
+     * Le rappel ouvre le tableau de bord lui-même : « / » ne fait qu'y
+     * rediriger, au prix d'un aller-retour de plus (#1969).
+     *
      * @param  mixed  $_notification
      */
     public function toWebPush(User $_notifiable, $_notification): WebPushMessage
@@ -43,8 +46,8 @@ final class TrainingReminder extends Notification implements ShouldQueue
             ->title('Prêt pour ta séance ? 💪')
             ->icon('/pwa-192x192.png')
             ->body($this->message ?? '')
-            ->action('Ouvrir Gym Tracker', url('/'))
-            ->data(['url' => '/']);
+            ->action('Ouvrir Gym Tracker', route('dashboard'))
+            ->data(['url' => route('dashboard', absolute: false)]);
     }
 
     /**
