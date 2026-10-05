@@ -163,15 +163,23 @@ final class VolumeStatsService
     /**
      * Le volume du mois en cours contre celui du mois précédent.
      *
+     * Le mois précédent se compte depuis le premier du mois courant, jamais
+     * depuis aujourd'hui : Carbon déborde, et le 31 octobre moins un mois
+     * donne le 1er octobre. Chaque jour que le mois précédent n'a pas, la
+     * comparaison mettait le mois courant face à lui-même (#1955).
+     *
      * @param  User  $user  L'utilisateur concerné.
      */
     public function getMonthlyVolumeComparison(User $user): VolumeComparison
     {
+        $debutDuMois = now()->startOfMonth();
+        $debutDuMoisPrecedent = $debutDuMois->copy()->subMonth();
+
         $comparison = $this->calculateComparison(
             $user,
-            now()->startOfMonth(),
-            now()->subMonth()->startOfMonth(),
-            now()->subMonth()->endOfMonth()
+            $debutDuMois,
+            $debutDuMoisPrecedent,
+            $debutDuMoisPrecedent->copy()->endOfMonth()
         );
 
         return new VolumeComparison(
@@ -213,16 +221,23 @@ final class VolumeStatsService
     /**
      * Le volume total de chacun des derniers mois.
      *
+     * Les mois se comptent depuis le premier du mois courant : reculer depuis
+     * aujourd'hui débordait les 29, 30 et 31, et le graphique perdait un mois
+     * pour en doubler un autre (#1955). La clef porte le mois courant, pour
+     * que le premier du mois ne serve pas la fenêtre de la veille.
+     *
      * @param  User  $user  L'utilisateur concerné.
      * @param  int  $months  Le nombre de mois couverts.
      * @return array<int, MonthlyVolumePoint>
      */
     public function getMonthlyVolumeHistory(User $user, int $months = 6): array
     {
+        $debutDuMois = now()->startOfMonth();
+
         return Cache::remember(
-            ClesDeStats::seances($user, "monthly_volume_history.{$months}"),
+            ClesDeStats::seances($user, "monthly_volume_history.{$months}.{$debutDuMois->format('Y-m')}"),
             now()->addMinutes(30),
-            function () use ($user, $months): array {
+            function () use ($user, $months, $debutDuMois): array {
                 // Le regroupement et la somme se font en SQL : ramener des mois
                 // entiers de séances en PHP pour les additionner ne tiendrait pas
                 // sur un long historique. Le format de date dépend du pilote,
@@ -232,14 +247,14 @@ final class VolumeStatsService
 
                 $results = $user->workouts()
                     ->toBase()
-                    ->where('started_at', '>=', now()->subMonths($months - 1)->startOfMonth())
+                    ->where('started_at', '>=', $debutDuMois->copy()->subMonths($months - 1))
                     ->selectRaw("{$monthFormat} as month, SUM(workout_volume) as volume")
                     ->groupBy('month')
                     ->pluck('volume', 'month');
 
                 return collect(range($months - 1, 0))
-                    ->map(function (int $i) use ($results): MonthlyVolumePoint {
-                        $date = now()->subMonths($i);
+                    ->map(function (int $i) use ($results, $debutDuMois): MonthlyVolumePoint {
+                        $date = $debutDuMois->copy()->subMonths($i);
                         $monthKey = $date->format('Y-m');
                         $sum = $results->get($monthKey) ?? 0.0;
 

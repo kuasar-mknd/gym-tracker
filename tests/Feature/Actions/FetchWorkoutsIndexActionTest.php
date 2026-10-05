@@ -173,7 +173,7 @@ it('rend six mois de frequence, du plus ancien au plus recent, et zero sur un mo
     expect($frequence)->toHaveCount(6);
 
     // Le sens de lecture et le calage du mois, que rien ne verifiait. Janvier
-    // en tete tient a la fois la borne SQL (`subMonths(5)->startOfMonth()`, qui
+    // en tete tient a la fois la borne SQL (`startOfMonth()->subMonths(5)`, qui
     // decide si la seance du 20 janvier entre) et le decalage de la boucle : un
     // mois de plus, un mois de moins, ou une lecture a l'envers, et cette entree
     // ne s'appelle plus « janv. ».
