@@ -33,11 +33,36 @@ export function parseCalendarDate(value) {
  * @returns {string} Today, as YYYY-MM-DD.
  */
 export function todayAsCalendarDate() {
-    const now = new Date()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
+    return enJourCalendaire(new Date())
+}
 
-    return `${now.getFullYear()}-${month}-${day}`
+/**
+ * Demain comme jour calendaire (`AAAA-MM-JJ`), dans le fuseau du navigateur.
+ *
+ * Sert de `min` aux champs qui n'acceptent qu'une date à venir, comme
+ * l'échéance d'un objectif (`after:today` côté serveur) : sans lui, le
+ * sélecteur proposait le passé, que le serveur refusait ensuite.
+ *
+ * @returns {string} Demain, en AAAA-MM-JJ.
+ */
+export function demainEnJourCalendaire() {
+    const demain = new Date()
+    demain.setDate(demain.getDate() + 1)
+
+    return enJourCalendaire(demain)
+}
+
+/**
+ * Le jour local d'une date, en `AAAA-MM-JJ` complété de zéros.
+ *
+ * @param {Date} date
+ * @returns {string}
+ */
+function enJourCalendaire(date) {
+    const mois = String(date.getMonth() + 1).padStart(2, '0')
+    const jour = String(date.getDate()).padStart(2, '0')
+
+    return `${date.getFullYear()}-${mois}-${jour}`
 }
 
 /**

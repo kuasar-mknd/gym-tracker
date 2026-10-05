@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 
-import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
+import { demainEnJourCalendaire, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 
 /**
  * The test container runs in UTC, where both the correct and the broken form
@@ -33,6 +33,24 @@ describe('todayAsCalendarDate', () => {
         vi.setSystemTime(new Date('2026-03-05T12:00:00Z'))
 
         expect(todayAsCalendarDate()).toBe('2026-03-05')
+    })
+})
+
+describe('demainEnJourCalendaire', () => {
+    it('donne le lendemain local, y compris au passage d’un mois', () => {
+        process.env.TZ = 'Europe/Paris'
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-09-30T22:30:00Z'))
+
+        expect(demainEnJourCalendaire()).toBe('2026-10-02')
+    })
+
+    it('passe à l’année suivante le 31 décembre', () => {
+        process.env.TZ = 'Europe/Paris'
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-12-31T12:00:00Z'))
+
+        expect(demainEnJourCalendaire()).toBe('2027-01-01')
     })
 })
 
