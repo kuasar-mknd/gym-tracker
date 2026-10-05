@@ -16,10 +16,9 @@ declare(strict_types=1);
  * `TRUSTED_PROXIES` : adresses ou sous-réseaux CIDR séparés par des virgules.
  * Absente ou vide, la liste reste celle d'avant la variable — la boucle locale
  * et les trois plages privées —, pour qu'une installation qui ne la règle pas
- * garde la détection de HTTPS derrière son proxy inverse. Réglée sur la seule
- * adresse sous laquelle le proxy inverse joint l'application, elle empêche un
- * autre pair des plages privées de choisir l'adresse cliente que lisent la
- * liste `ADMIN_ALLOWED_IPS` et les limites de débit par adresse.
+ * garde la détection de HTTPS derrière son proxy inverse. En production, elle
+ * se règle sur l'adresse précise sous laquelle le proxy inverse joint
+ * l'application (README, « Variables d'environnement »).
  */
 
 $configurees = env('TRUSTED_PROXIES');

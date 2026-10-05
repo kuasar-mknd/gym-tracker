@@ -13,8 +13,8 @@ use function Pest\Laravel\withServerVariables;
  * par `TRUSTED_PROXIES` (config/trustedproxy.php). Sans réglage, la liste
  * reste exactement celle d'avant la variable : la boucle locale et les trois
  * plages privées, pour que la production garde la détection de HTTPS derrière
- * son proxy inverse. Réglée sur l'adresse du proxy inverse, elle empêche tout
- * autre pair, privé compris, de choisir l'adresse cliente que lit l'application.
+ * son proxy inverse. Réglée, elle ne fait plus croire que les pairs qu'elle
+ * nomme.
  */
 
 /**
