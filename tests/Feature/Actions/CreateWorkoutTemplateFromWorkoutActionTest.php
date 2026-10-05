@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
+use App\Models\WorkoutTemplateSet;
 use Illuminate\Support\Carbon;
 
 it('creates a template correctly from a workout', function (): void {
@@ -272,15 +273,33 @@ it('numerote chaque serie du modele par l identifiant de la serie source', funct
     expect($rangs)->toBe([$premiere->id, $seconde->id]);
 });
 
+/**
+ * Ajoute à la séance des exercices de `$seriesParExercice` séries, rangés après
+ * le premier.
+ *
+ * Cent séries ne tiennent plus dans un seul exercice de modèle
+ * (`WorkoutTemplate::SERIES_MAX_PAR_EXERCICE`) : le découpage se mesure sur
+ * plusieurs exercices.
+ *
+ * @param  list<int>  $seriesParExercice
+ */
+function exercicesDeSeanceEnMasse(Workout $workout, array $seriesParExercice): void
+{
+    foreach ($seriesParExercice as $rang => $combien) {
+        seriesEnMasse(WorkoutLine::factory()->create(['workout_id' => $workout->id, 'order' => $rang + 2]), $combien);
+    }
+}
+
 it('ecrit cent series de modele en une seule requete', function (): void {
     [$user, $workout, $line] = seanceAHorlogeArretee();
-    seriesEnMasse($line, 100);
+    seriesEnMasse($line, 50);
+    exercicesDeSeanceEnMasse($workout, [50]);
 
     $compteur = insertionsDeSeriesDeModele();
 
-    $template = app(CreateWorkoutTemplateFromWorkoutAction::class)->execute($user, $workout);
+    app(CreateWorkoutTemplateFromWorkoutAction::class)->execute($user, $workout);
 
-    expect($template->workoutTemplateLines()->firstOrFail()->workoutTemplateSets()->count())->toBe(100);
+    expect(WorkoutTemplateSet::query()->count())->toBe(100);
 
     // Une seule : cent series tiennent exactement dans un paquet. Sans le
     // decoupage, c'est une requete PAR serie ; avec une borne a 99, c'en est
@@ -290,13 +309,14 @@ it('ecrit cent series de modele en une seule requete', function (): void {
 
 it('coupe en deux requetes des la cent-et-unieme serie', function (): void {
     [$user, $workout, $line] = seanceAHorlogeArretee();
-    seriesEnMasse($line, 101);
+    seriesEnMasse($line, 50);
+    exercicesDeSeanceEnMasse($workout, [50, 1]);
 
     $compteur = insertionsDeSeriesDeModele();
 
-    $template = app(CreateWorkoutTemplateFromWorkoutAction::class)->execute($user, $workout);
+    app(CreateWorkoutTemplateFromWorkoutAction::class)->execute($user, $workout);
 
-    expect($template->workoutTemplateLines()->firstOrFail()->workoutTemplateSets()->count())->toBe(101);
+    expect(WorkoutTemplateSet::query()->count())->toBe(101);
 
     // Deux : cent puis une. Une borne a 101 les ferait tenir en une seule
     // requete — c'est le sens de cette assertion, et la raison pour laquelle

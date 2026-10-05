@@ -7,6 +7,8 @@ use App\Http\Requests\StoreWorkoutTemplateRequest;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
+use App\Models\Workout;
+use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
@@ -145,4 +147,136 @@ it('applique les mêmes bornes aux séries d’un modèle à sa création et à 
     }
 
     expect(ReglesDesRequetes::bornes($creation['exercises.*.sets']))->toBe(['min' => null, 'max' => (float) WorkoutTemplate::SERIES_MAX_PAR_EXERCICE]);
+});
+
+/**
+ * Une séance du compte, de `$exercices` exercices de `$series` séries
+ * chacun, écrites en masse comme des séries anciennes : sans passer par la
+ * validation d'une série ni par ses écouteurs.
+ *
+ * @param  array<string, mixed>  $premiereSerie  ce qui remplace les valeurs de la toute première série
+ */
+function modelesBornesSeanceDe(User $compte, Exercise $exercice, int $exercices, int $series, array $premiereSerie = []): Workout
+{
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'name' => 'Séance longue']);
+    $lignesDeSeries = [];
+
+    foreach (range(1, $exercices) as $rang) {
+        $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id, 'order' => $rang]);
+
+        foreach (range(1, $series) as $ignoree) {
+            $lignesDeSeries[] = [
+                'workout_line_id' => $ligne->id,
+                'reps' => 10,
+                'weight' => 50.0,
+                'is_warmup' => false,
+                'is_completed' => true,
+            ];
+        }
+    }
+
+    $lignesDeSeries[0] = [...$lignesDeSeries[0], ...$premiereSerie];
+
+    foreach (array_chunk($lignesDeSeries, 500) as $paquet) {
+        Set::insert($paquet);
+    }
+
+    return $seance;
+}
+
+/**
+ * Le corps qu'envoie la page de modification d'un modèle : le modèle tel
+ * qu'il est en base.
+ *
+ * @return array<string, mixed>
+ */
+function modelesBornesCorpsDuModele(WorkoutTemplate $modele): array
+{
+    $modele->load('workoutTemplateLines.workoutTemplateSets');
+
+    return [
+        'name' => $modele->name,
+        'description' => $modele->description,
+        'exercises' => $modele->workoutTemplateLines->map(fn (WorkoutTemplateLine $ligne): array => [
+            'id' => $ligne->exercise_id,
+            'sets' => $ligne->workoutTemplateSets->map(fn (WorkoutTemplateSet $serie): array => [
+                'reps' => $serie->reps,
+                'weight' => $serie->weight,
+                'is_warmup' => $serie->is_warmup,
+            ])->all(),
+        ])->all(),
+    ];
+}
+
+/*
+ * « Enregistrer comme modèle » recopie une séance, qui n'a ni le plafond
+ * d'exercices ni celui de séries d'un modèle, et dont les séries anciennes
+ * peuvent précéder les bornes d'une série. Le modèle obtenu tient dans les
+ * bornes de ses requêtes, et reste donc modifiable, jusqu'à son nom.
+ */
+it('ramène aux bornes d’un modèle la séance plus grande qu’on y enregistre, et ce modèle reste modifiable', function (): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $seance = modelesBornesSeanceDe($compte, $exercice, WorkoutTemplate::EXERCICES_MAX + 1, 2, [
+        'reps' => Set::REPETITIONS_MAX + 501,
+        'weight' => Set::POIDS_MAX_KG + 50_000,
+    ]);
+    $ligneLongue = $seance->workoutLines()->firstOrFail();
+    Set::insert(array_fill(0, WorkoutTemplate::SERIES_MAX_PAR_EXERCICE + 28, [
+        'workout_line_id' => $ligneLongue->id, 'reps' => 5, 'weight' => 20.0, 'is_warmup' => false, 'is_completed' => true,
+    ]));
+
+    actingAs($compte)->post(route('templates.save-from-workout', $seance))
+        ->assertRedirect(route('templates.index'))
+        ->assertSessionHas('success', 'Modèle enregistré, ramené à ce qu’un modèle accepte : 50 exercices et 50 séries par exercice au plus, 999 répétitions et 100 000 kg par série au plus.');
+
+    $modele = WorkoutTemplate::query()->sole();
+    $lignes = $modele->workoutTemplateLines()->withCount('workoutTemplateSets')->get();
+    $premiere = $lignes->firstOrFail();
+
+    expect($lignes)->toHaveCount(WorkoutTemplate::EXERCICES_MAX)
+        ->and($lignes->max('workout_template_sets_count'))->toBe(WorkoutTemplate::SERIES_MAX_PAR_EXERCICE)
+        ->and($premiere->workout_template_sets_count)->toBe(WorkoutTemplate::SERIES_MAX_PAR_EXERCICE)
+        ->and(WorkoutTemplateSet::query()->max('reps'))->toBe(Set::REPETITIONS_MAX)
+        ->and(WorkoutTemplateSet::query()->max('weight'))->toEqual(Set::POIDS_MAX_KG);
+
+    $corps = modelesBornesCorpsDuModele($modele);
+    $corps['name'] = 'Renommé';
+
+    actingAs($compte)->put(route('templates.update', $modele), $corps)
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('templates.index'));
+
+    expect($modele->fresh()?->name)->toBe('Renommé');
+});
+
+it('garde entière, avec le message habituel, une séance qui tient dans un modèle', function (): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $seance = modelesBornesSeanceDe($compte, $exercice, WorkoutTemplate::EXERCICES_MAX, WorkoutTemplate::SERIES_MAX_PAR_EXERCICE, [
+        'reps' => Set::REPETITIONS_MAX,
+        'weight' => Set::POIDS_MAX_KG,
+    ]);
+
+    actingAs($compte)->post(route('templates.save-from-workout', $seance))
+        ->assertRedirect(route('templates.index'))
+        ->assertSessionHas('success', 'Modèle enregistré avec succès !');
+
+    expect(WorkoutTemplateLine::query()->count())->toBe(WorkoutTemplate::EXERCICES_MAX)
+        ->and(WorkoutTemplateSet::query()->count())->toBe(WorkoutTemplate::EXERCICES_MAX * WorkoutTemplate::SERIES_MAX_PAR_EXERCICE)
+        ->and(WorkoutTemplateSet::query()->max('reps'))->toBe(Set::REPETITIONS_MAX);
+});
+
+it('coupe le nom du modèle tiré d’une séance pour qu’il tienne dans sa colonne', function (): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'name' => str_repeat('é', 255)]);
+
+    actingAs($compte)->post(route('templates.save-from-workout', $seance))
+        ->assertRedirect(route('templates.index'));
+
+    $nom = WorkoutTemplate::query()->sole()->name;
+
+    expect(mb_strlen($nom))->toBe(255)
+        ->and($nom)->toEndWith(' (Modèle)')
+        ->and($nom)->toStartWith(str_repeat('é', 246));
 });
