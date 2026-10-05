@@ -5,6 +5,7 @@ import { chargerSyncService, naviguer, poserLaPage, retirerLesEcouteursDuService
 
 const requete = vi.hoisted(() => vi.fn())
 const routeur = vi.hoisted(() => ({ post: vi.fn() }))
+const formulaire = vi.hoisted(() => ({ supprimer: vi.fn() }))
 
 vi.mock('@/Utils/http', () => ({ http: (...args) => requete(...args) }))
 vi.mock('@inertiajs/vue3', () => ({
@@ -12,6 +13,14 @@ vi.mock('@inertiajs/vue3', () => ({
     Link: { template: '<a><slot /></a>' },
     // L'écran de connexion qui suit la déconnexion : personne n'y est connecté.
     usePage: () => ({ props: { auth: { user: null } } }),
+    useForm: (champs) => ({
+        ...champs,
+        errors: {},
+        processing: false,
+        delete: (...args) => formulaire.supprimer(...args),
+        clearErrors: () => {},
+        reset: () => {},
+    }),
 }))
 // Le détachement de l'appareil et sa marque ont leurs propres tests (useAbonnementPush.test.js).
 vi.mock('@/composables/useAbonnementPush', () => ({
@@ -65,6 +74,7 @@ beforeEach(() => {
     sessionStorage.clear()
     requete.mockReset()
     routeur.post.mockReset()
+    formulaire.supprimer.mockReset()
     globalThis.route = (nom) => `/${nom}`
 })
 
@@ -174,6 +184,39 @@ describe('la file d’un compte, à la déconnexion', () => {
         await seDeconnecter()
 
         expect(routeur.post).toHaveBeenCalledTimes(2)
+    })
+})
+
+describe('la file d’un compte supprimé', () => {
+    /**
+     * Un compte supprimé ne se reconnecte jamais : ce qu'il laissait en file ne
+     * partirait jamais, et resterait sur l'appareil, alors que la suppression
+     * promet d'effacer ses données.
+     */
+    it('s’efface avec lui, une fois la suppression acceptée, et laisse aux autres comptes ce qui est à eux', async () => {
+        const entree = (id, compte) => ({ id, method: 'patch', url: `/api/v1/sets/${id}`, data: { reps: 8 }, compte })
+        const refus = (compte) => ({ method: 'post', url: '/api/v1/sets', data: { reps: 8 }, compte, status: 422 })
+        localStorage.setItem('offline_sync_queue', JSON.stringify([entree('1', '1'), entree('2', '2')]))
+        localStorage.setItem('offline_sync_failed', JSON.stringify([refus('1'), refus('2')]))
+        localStorage.setItem('draft_set_12', JSON.stringify({ reps: 8 }))
+        requete.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const sync = await chargerSyncService({ compte: 1 })
+        await sync.pending
+
+        const DeleteUserForm = (await import('@/Pages/Profile/Partials/DeleteUserForm.vue')).default
+        const formulaireDeSuppression = mount(DeleteUserForm, { shallow: true })
+        formulaireDeSuppression.vm.deleteUser()
+
+        // Rien avant la réponse : un mot de passe refusé garde tout.
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))).toHaveLength(2)
+
+        // La réponse mène à une page où plus personne n'est connecté.
+        naviguer(null)
+        formulaire.supprimer.mock.calls[0][1].onSuccess()
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((e) => e.compte)).toEqual(['2'])
+        expect(JSON.parse(localStorage.getItem('offline_sync_failed')).map((e) => e.compte)).toEqual(['2'])
+        expect(localStorage.getItem('draft_set_12')).toBeNull()
     })
 })
 

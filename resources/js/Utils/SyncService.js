@@ -442,6 +442,30 @@ class SyncService {
         }
     }
 
+    /**
+     * Oublie tout ce que la file garde pour ce compte : ses écritures en
+     * attente et ses refus.
+     *
+     * Un compte supprimé ne se reconnectera jamais. Ce qu'il laissait en file
+     * ne partirait donc jamais, et resterait sur l'appareil, lisible par qui
+     * s'en sert ensuite, alors que la suppression promet d'effacer ses
+     * données (#1964). Les écritures des autres comptes restent à eux.
+     *
+     * @param {number|string|null|undefined} id
+     */
+    oublierLeCompte(id) {
+        const compte = normaliserLeCompte(id)
+
+        if (compte === null) {
+            return
+        }
+
+        this.queue = this.queue.filter((entree) => entree.compte !== compte)
+        this.failed = this.failed.filter((entree) => entree.compte !== compte)
+        this.saveQueue()
+        this.saveFailed()
+    }
+
     /** Combien d'écritures du compte connecté attendent encore d'être envoyées. */
     enAttente() {
         return this.compte === null ? 0 : this.queue.filter((entree) => entree.compte === this.compte).length

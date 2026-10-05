@@ -6,6 +6,8 @@ import Modal from '@/Components/UI/Modal.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
+import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
+import SyncService from '@/Utils/SyncService'
 
 const confirmingUserDeletion = ref(false)
 const passwordInput = ref(null)
@@ -23,13 +25,22 @@ const confirmUserDeletion = () => {
  * ensuite, comme à toute déconnexion (#1926), mais sans prévenir le serveur :
  * la session n'existe déjà plus. Rien avant la réponse, pour qu'un mot de passe
  * refusé ne coûte pas l'abonnement d'un compte qui reste.
+ *
+ * Ce que l'appareil gardait pour ce compte s'efface aussi : ses écritures
+ * hors ligne encore en file, qui ne partiraient jamais, ses refus et les
+ * brouillons de séries (#1964). Le compte se lit avant la réponse, qui mène à
+ * une page où plus personne n'est connecté.
  */
 const deleteUser = () => {
+    const compteSupprime = SyncService.compte
+
     form.delete(route('profile.destroy'), {
         preserveScroll: true,
         onSuccess: () => {
             closeModal()
             detacherLAppareil({ prevenirLeServeur: false })
+            SyncService.oublierLeCompte(compteSupprime)
+            effacerLesBrouillons()
         },
         onError: () => passwordInput.value?.focus(),
         onFinish: () => form.reset(),
