@@ -256,6 +256,14 @@ $fournisseurs = [
 ];
 
 it('refuse une adresse seulement proche de celle d’un compte, sans créer de doublon', function (string $fournisseur, string $adresseDuCompte, string $adresseRendue): void {
+    /*
+     * Une adresse rendue hors ASCII s'arrête à la garde d'`execute()`, avant
+     * toute comparaison. Seuls les cas où le compte porte l'écart, face à une
+     * adresse rendue en ASCII, atteignent la comparaison des deux adresses,
+     * et les trois derniers y refusent un repli de casse Unicode. Le chemin
+     * de l'identité, où toute adresse rendue atteint la comparaison, a ses
+     * propres cas, plus bas.
+     */
     $compte = compteSocialExistant($adresseDuCompte);
 
     Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
@@ -275,12 +283,15 @@ it('refuse une adresse seulement proche de celle d’un compte, sans créer de d
 })->with($fournisseurs)->with([
     'un accent' => ['jean.dupont@example.org', 'jéan.dupont@example.org'],
     'une majuscule accentuée' => ['jean.dupont@example.org', 'JÉAN.DUPONT@EXAMPLE.ORG'],
-    'le signe kelvin, que mb_strtolower replie sur « k »' => ['kim@example.org', "\u{212A}im@example.org"],
+    'le signe kelvin' => ['kim@example.org', "\u{212A}im@example.org"],
     'le s long' => ['sam@example.org', "\u{17F}am@example.org"],
     '« ß » pour « ss »' => ['strasse@example.org', 'straße@example.org'],
     'un domaine internationalisé' => ['jean@bucher.example.org', 'jean@bücher.example.org'],
     'la pleine chasse' => ['jean@example.org', "\u{FF4A}ean@example.org"],
     'l’accent porté par le compte' => ['jéan@example.org', 'jean@example.org'],
+    'le signe kelvin porté par le compte, que mb_strtolower replie sur « k »' => ["\u{212A}im@example.org", 'kim@example.org'],
+    'le s long porté par le compte, que le repli de casse ramène à « s »' => ["\u{17F}am@example.org", 'sam@example.org'],
+    '« ß » porté par le compte, que le repli de casse développe en « ss »' => ['straße@example.org', 'strasse@example.org'],
 ]);
 
 it('refuse une adresse non ASCII même quand aucun compte ne lui ressemble', function (string $fournisseur): void {
@@ -527,6 +538,12 @@ it('n’ouvre pas le compte auquel une identité a été liée sur une adresse s
      * l'adresse rendue. Rien ne distingue cette liaison d'une autre : c'est
      * l'adresse du compte qui ouvre, quelle que soit celle que rend
      * l'identité, proche ou sans rapport.
+     *
+     * Ici, toute adresse rendue atteint la comparaison des deux adresses,
+     * hors ASCII comprise. Seule la casse ASCII y est ignorée : ni
+     * `mb_strtolower()`, ni le repli de casse Unicode, ni une forme normale, ni
+     * la conversion d'un domaine internationalisé en Punycode, qui replie
+     * elle-même casse et signe kelvin, n'y rapprochent deux adresses.
      */
     $identifiant = identiteSocialeDe($fournisseur);
     $compte = compteSocialExistant($adresseDuCompte, $fournisseur, $identifiant);
@@ -551,6 +568,13 @@ it('n’ouvre pas le compte auquel une identité a été liée sur une adresse s
     'un accent' => ['jean.dupont@example.org', 'jéan.dupont@example.org'],
     'l’accent porté par le compte' => ['jéan.dupont@example.org', 'jean.dupont@example.org'],
     'deux accents différents' => ['jéan.dupont@example.org', 'jèan.dupont@example.org'],
+    'une majuscule accentuée, que mb_strtolower replie sur la minuscule' => ['jéan.dupont@example.org', 'JÉAN.DUPONT@example.org'],
+    'le signe kelvin, que mb_strtolower replie sur « k »' => ['kim@example.org', "\u{212A}im@example.org"],
+    'le signe kelvin porté par le compte' => ["\u{212A}im@example.org", 'kim@example.org'],
+    'le s long, que le repli de casse ramène à « s »' => ['sam@example.org', "\u{17F}am@example.org"],
+    '« ß » pour « ss », que le repli de casse confond' => ['strasse@example.org', 'straße@example.org'],
+    'un domaine internationalisé' => ['jean@bucher.example.org', 'jean@bücher.example.org'],
+    'un domaine internationalisé, en Punycode dans le compte' => ['jean@xn--bcher-kva.example.org', 'jean@bücher.example.org'],
     'la pleine chasse' => ['jean.dupont@example.org', "\u{FF4A}ean.dupont@example.org"],
     'une espace finale' => ['jean.dupont@example.org', 'jean.dupont@example.org '],
     'une adresse sans rapport' => ['jean.dupont@example.org', 'dominique.petit@example.net'],
