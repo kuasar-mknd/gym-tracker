@@ -10,20 +10,33 @@ use Filament\Schemas\Schema;
 
 class ExerciseForm
 {
+    /**
+     * Les types d'exercice, nommés comme l'application les nomme
+     * (`resources/js/Utils/constants.js`). Le panneau les montrait en anglais
+     * (« Strength », « Timed ») (#1979).
+     *
+     * @var array<string, string>
+     */
+    public const array TYPES = [
+        'strength' => 'Force',
+        'cardio' => 'Cardio',
+        'timed' => 'Temps',
+    ];
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
-                TextInput::make('name')
+                TextInput::make('name')->label('Nom')
                     ->required(),
-                Select::make('type')
-                    ->options(['strength' => 'Strength', 'cardio' => 'Cardio', 'timed' => 'Timed'])
+                Select::make('type')->label('Type')
+                    ->options(self::TYPES)
                     ->default('strength')
                     ->required(),
-                TextInput::make('default_rest_time')
+                TextInput::make('default_rest_time')->label('Repos par défaut (s)')
                     ->numeric(),
-                TextInput::make('category'),
-                Select::make('user_id')
+                TextInput::make('category')->label('Catégorie'),
+                Select::make('user_id')->label('Compte')
                     ->relationship('user', 'name')
                     ->searchable(),
             ]);

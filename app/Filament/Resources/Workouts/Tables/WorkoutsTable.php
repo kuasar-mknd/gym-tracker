@@ -42,21 +42,21 @@ class WorkoutsTable
     private static function getColumns(): array
     {
         return [
-            TextColumn::make('user.name')
+            TextColumn::make('user.name')->label('Compte')
                 ->searchable(),
-            TextColumn::make('name')
+            TextColumn::make('name')->label('Nom')
                 ->searchable(),
-            TextColumn::make('started_at')
+            TextColumn::make('started_at')->label('Début')
                 ->dateTime()
                 ->sortable(),
-            TextColumn::make('ended_at')
+            TextColumn::make('ended_at')->label('Fin')
                 ->dateTime()
                 ->sortable(),
-            TextColumn::make('created_at')
+            TextColumn::make('created_at')->label('Créée le')
                 ->dateTime()
                 ->sortable()
                 ->toggleable(isToggledHiddenByDefault: true),
-            TextColumn::make('updated_at')
+            TextColumn::make('updated_at')->label('Modifiée le')
                 ->dateTime()
                 ->sortable()
                 ->toggleable(isToggledHiddenByDefault: true),

@@ -42,14 +42,14 @@ class AchievementsTable
     private static function getColumns(): array
     {
         return [
-            TextColumn::make('slug')->searchable(),
-            TextColumn::make('name')->searchable(),
-            TextColumn::make('icon')->searchable(),
-            TextColumn::make('type')->searchable(),
-            TextColumn::make('threshold')->numeric()->sortable(),
-            TextColumn::make('category')->searchable(),
-            TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
-            TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('slug')->label('Identifiant')->searchable(),
+            TextColumn::make('name')->label('Nom')->searchable(),
+            TextColumn::make('icon')->label('Icône')->searchable(),
+            TextColumn::make('type')->label('Type')->searchable(),
+            TextColumn::make('threshold')->label('Seuil')->numeric()->sortable(),
+            TextColumn::make('category')->label('Catégorie')->searchable(),
+            TextColumn::make('created_at')->label('Créé le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')->label('Modifié le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 }

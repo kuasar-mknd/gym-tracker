@@ -20,21 +20,21 @@ class StatsOverview extends StatsOverviewWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Total Users', User::count())
-                ->description('Total registered users')
+            Stat::make('Comptes', User::count())
+                ->description('Comptes inscrits')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->chart([7, 2, 10, 3, 15, 4, 17])
                 ->color('success'),
-            Stat::make('New Users (7d)', $this->getNewUsersCount())
-                ->description('Users joined in last 7 days')
+            Stat::make('Nouveaux comptes (7 j)', $this->getNewUsersCount())
+                ->description('Inscrits ces sept derniers jours')
                 ->descriptionIcon('heroicon-m-user-plus')
                 ->color('info'),
-            Stat::make('Workouts Today', $this->getWorkoutsTodayCount())
-                ->description('Sessions started today')
+            Stat::make('Séances du jour', $this->getWorkoutsTodayCount())
+                ->description("Séances commencées aujourd'hui")
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('warning'),
-            Stat::make('System Exercises', Exercise::whereNull('user_id')->count())
-                ->description('Global exercise library size')
+            Stat::make('Exercices communs', Exercise::whereNull('user_id')->count())
+                ->description('Taille de la bibliothèque commune')
                 ->descriptionIcon('heroicon-m-book-open')
                 ->color('primary'),
         ];

@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 class UserActivityChart extends ChartWidget
 {
     #[\Override]
-    protected ?string $heading = 'User Registrations';
+    protected ?string $heading = 'Inscriptions';
 
     protected function getType(): string
     {
@@ -36,7 +36,7 @@ class UserActivityChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'New Users',
+                    'label' => 'Nouveaux comptes',
                     'data' => $this->fillMonthlyData($usersPerMonth)['data'],
                     'backgroundColor' => Charte::jeton('accent-tertiary'),
                     'borderColor' => Charte::jeton('accent-tertiary'),
@@ -78,9 +78,12 @@ class UserActivityChart extends ChartWidget
              * fausse — Carbon 3 rend une instance ou leve, la ou Carbon 2
              * rendait false — mais `create()` reste declare nullable, donc le
              * retirer seul ne faisait que deplacer le probleme. `parse()` ne
-             * l'est pas : l'annee est arbitraire, seul le mois est lu.
+             * l'est pas : l'annee est arbitraire, seul le mois est lu. Le nom
+             * du mois est francais, comme le reste du panneau (#1979).
              */
-            $labels[] = Carbon::parse(sprintf('2000-%02d-01', $i))->format('M');
+            $mois = Carbon::parse(sprintf('2000-%02d-01', $i));
+            $mois->locale('fr');
+            $labels[] = $mois->translatedFormat('M');
         }
 
         return ['data' => $data, 'labels' => $labels];

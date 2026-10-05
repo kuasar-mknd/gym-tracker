@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Goals\Tables;
 
+use App\Enums\GoalType;
+use App\Filament\Resources\Goals\Schemas\GoalForm;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -42,18 +44,19 @@ class GoalsTable
     private static function getColumns(): array
     {
         return [
-            TextColumn::make('user.name')->searchable(),
-            TextColumn::make('title')->searchable(),
-            TextColumn::make('type')->badge(),
-            TextColumn::make('target_value')->numeric()->sortable(),
-            TextColumn::make('current_value')->numeric()->sortable(),
-            TextColumn::make('start_value')->numeric()->sortable(),
-            TextColumn::make('exercise.name')->searchable(),
-            TextColumn::make('measurement_type')->searchable(),
-            TextColumn::make('deadline')->date()->sortable(),
-            TextColumn::make('completed_at')->dateTime()->sortable(),
-            TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
-            TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('user.name')->label('Compte')->searchable(),
+            TextColumn::make('title')->label('Titre')->searchable(),
+            TextColumn::make('type')->label('Type')->badge()
+                ->formatStateUsing(fn (GoalType $state): string => GoalForm::TYPES[$state->value] ?? $state->value),
+            TextColumn::make('target_value')->label('Valeur cible')->numeric()->sortable(),
+            TextColumn::make('current_value')->label('Valeur actuelle')->numeric()->sortable(),
+            TextColumn::make('start_value')->label('Valeur de départ')->numeric()->sortable(),
+            TextColumn::make('exercise.name')->label('Exercice')->searchable(),
+            TextColumn::make('measurement_type')->label('Mensuration')->searchable(),
+            TextColumn::make('deadline')->label('Échéance')->date()->sortable(),
+            TextColumn::make('completed_at')->label('Atteint le')->dateTime()->sortable(),
+            TextColumn::make('created_at')->label('Créé le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')->label('Modifié le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 }

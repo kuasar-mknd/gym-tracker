@@ -46,8 +46,8 @@ it('compte le total des utilisateurs et ceux inscrits dans les 7 derniers jours'
 
     $values = filamentStatsOverviewValues();
 
-    expect($values['Total Users'])->toBe(8)
-        ->and($values['New Users (7d)'])->toBe(5);
+    expect($values['Comptes'])->toBe(8)
+        ->and($values['Nouveaux comptes (7 j)'])->toBe(5);
 });
 
 it('compte les séances démarrées aujourd’hui, et elles seules', function (): void {
@@ -71,7 +71,7 @@ it('compte les séances démarrées aujourd’hui, et elles seules', function ()
         'started_at' => Carbon::parse('2026-05-21 00:00:01'),
     ]);
 
-    expect(filamentStatsOverviewValues()['Workouts Today'])->toBe(3);
+    expect(filamentStatsOverviewValues()['Séances du jour'])->toBe(3);
 });
 
 it('ne compte comme exercices système que ceux sans propriétaire', function (): void {
@@ -79,18 +79,20 @@ it('ne compte comme exercices système que ceux sans propriétaire', function ()
     Exercise::factory()->count(5)->create(['user_id' => null]);
     Exercise::factory()->count(2)->create(['user_id' => $owner->getKey()]);
 
-    expect(filamentStatsOverviewValues()['System Exercises'])->toBe(5);
+    expect(filamentStatsOverviewValues()['Exercices communs'])->toBe(5);
 });
 
 it('rend les quatre tuiles de statistiques avec leurs libellés', function (): void {
     User::factory()->create();
 
     Livewire::test(StatsOverview::class)
-        ->assertSee('Total Users')
-        ->assertSee('New Users (7d)')
-        ->assertSee('Workouts Today')
-        ->assertSee('System Exercises')
-        ->assertSee('Total registered users');
+        ->assertSee('Comptes')
+        ->assertSee('Nouveaux comptes (7 j)')
+        ->assertSee('Séances du jour')
+        ->assertSee('Exercices communs')
+        ->assertSee('Comptes inscrits')
+        ->assertDontSee('Total Users')
+        ->assertDontSee('Workouts Today');
 });
 
 it('ventile les inscriptions par mois sur les douze mois de l’année en cours', function (): void {
@@ -106,8 +108,8 @@ it('ventile les inscriptions par mois sur les douze mois de l’année en cours'
     $data = (fn () => $this->getData())->call($widget);
 
     expect($data['datasets'][0]['data'])->toBe([2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 1])
-        ->and($data['datasets'][0]['label'])->toBe('New Users')
-        ->and($data['labels'])->toBe(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+        ->and($data['datasets'][0]['label'])->toBe('Nouveaux comptes')
+        ->and($data['labels'])->toBe(['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']);
 });
 
 it('renvoie douze barres à zéro quand aucun utilisateur n’est inscrit', function (): void {
