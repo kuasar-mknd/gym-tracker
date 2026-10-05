@@ -20,6 +20,21 @@ class WorkoutTemplate extends Model
     /** @use HasFactory<\Database\Factories\WorkoutTemplateFactory> */
     use HasFactory;
 
+    /**
+     * Le plus d'exercices qu'un modèle accepte.
+     */
+    public const int EXERCICES_MAX = 50;
+
+    /**
+     * Le plus de séries qu'un exercice d'un modèle accepte. Chaque série
+     * devient une ligne de `workout_template_sets`, puis une série de la
+     * séance qui démarre du modèle : cinquante couvrent les méthodes les plus
+     * longues (dix fois dix, séries dégressives) et une séance recopiée en
+     * modèle, et bornent un modèle à 2 500 séries, insérées en vingt-cinq
+     * paquets d'une transaction.
+     */
+    public const int SERIES_MAX_PAR_EXERCICE = 50;
+
     #[\Override]
     protected $fillable = [
         'name',

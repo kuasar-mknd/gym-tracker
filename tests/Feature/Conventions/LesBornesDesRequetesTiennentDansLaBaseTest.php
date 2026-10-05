@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
+use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
+use App\Http\Requests\StoreWorkoutTemplateRequest;
 use App\Models\Set;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
@@ -43,6 +45,14 @@ function bornesBaseInventaire(): array
     foreach ([SetStoreRequest::class, SetUpdateRequest::class] as $requete) {
         foreach (['weight', 'reps', 'duration_seconds', 'distance_km'] as $champ) {
             $champs[] = [$requete, $champ, 'sets.'.$champ];
+        }
+    }
+
+    // Les séries d'un modèle deviennent celles de la séance qui en démarre.
+    foreach ([StoreWorkoutTemplateRequest::class, WorkoutTemplateUpdateRequest::class] as $requete) {
+        foreach (['reps', 'weight'] as $champ) {
+            $champs[] = [$requete, 'exercises.*.sets.*.'.$champ, 'workout_template_sets.'.$champ];
+            $champs[] = [$requete, 'exercises.*.sets.*.'.$champ, 'sets.'.$champ];
         }
     }
 
