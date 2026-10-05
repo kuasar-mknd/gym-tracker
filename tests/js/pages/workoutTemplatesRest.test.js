@@ -423,6 +423,64 @@ describe.each([
             'Échauffement, série 1, Squat',
         ])
     })
+
+    /**
+     * Rien n'interdit de placer deux fois le même exercice dans un modèle : le
+     * nom seul donnait alors deux « Répétitions, série 1, Squat » (#1972).
+     */
+    it('départage par leur rang deux entrées du même exercice, et elles seules', async () => {
+        const wrapper = mountPage()
+        await seed(wrapper, [
+            { id: 2, name: 'Squat', sets: [{ reps: 5, weight: 100, is_warmup: false }] },
+            { id: 1, name: 'Développé Couché', sets: [{ reps: 10, weight: 40, is_warmup: false }] },
+            { id: 2, name: 'Squat', sets: [{ reps: 12, weight: 60, is_warmup: true }] },
+        ])
+
+        const nomsDesChamps = () =>
+            wrapper.findAll('input[type="number"]').map((champ) => champ.attributes('aria-label'))
+        // Les boutons qui désignent un exercice : ni « Supprimer la série », ni l'effacement du nom du modèle.
+        const nomsDesBoutons = () =>
+            wrapper
+                .findAll('button[aria-label]')
+                .map((bouton) => bouton.attributes('aria-label'))
+                .filter((nom) => /Squat|Développé Couché/.test(nom))
+
+        expect(nomsDesChamps()).toEqual([
+            'Répétitions, série 1, Squat (exercice 1)',
+            'Poids en kg, série 1, Squat (exercice 1)',
+            'Répétitions, série 1, Développé Couché',
+            'Poids en kg, série 1, Développé Couché',
+            'Répétitions, série 1, Squat (exercice 3)',
+            'Poids en kg, série 1, Squat (exercice 3)',
+        ])
+        expect(nomsDesBoutons()).toEqual([
+            'Monter Squat (exercice 1)',
+            'Descendre Squat (exercice 1)',
+            'Supprimer Squat (exercice 1)',
+            'Échauffement, série 1, Squat (exercice 1)',
+            'Monter Développé Couché',
+            'Descendre Développé Couché',
+            'Supprimer Développé Couché',
+            'Échauffement, série 1, Développé Couché',
+            'Monter Squat (exercice 3)',
+            'Descendre Squat (exercice 3)',
+            'Supprimer Squat (exercice 3)',
+            'Échauffement, série 1, Squat (exercice 3)',
+        ])
+
+        const noms = [...nomsDesChamps(), ...nomsDesBoutons()]
+        expect(new Set(noms).size).toBe(noms.length)
+
+        // Seul de son nom, le Squat restant redevient « Squat ».
+        await byLabel(wrapper, 'Supprimer Squat (exercice 3)')[0].trigger('click')
+
+        expect(nomsDesChamps()).toEqual([
+            'Répétitions, série 1, Squat',
+            'Poids en kg, série 1, Squat',
+            'Répétitions, série 1, Développé Couché',
+            'Poids en kg, série 1, Développé Couché',
+        ])
+    })
 })
 
 // ---------------------------------------------------------------------------
