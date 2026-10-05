@@ -55,6 +55,7 @@ const infobulle = { accent: 'accent-secondary', callbacks: { label: (context) =>
 
 <template>
     <BaseChart
+        description="Évolution de la masse grasse"
         type="line"
         :labels="labels"
         :datasets="datasets"

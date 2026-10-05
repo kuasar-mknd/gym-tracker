@@ -44,5 +44,12 @@ const infobulle = { accent: 'accent-state', callbacks: { label: (context) => `${
 </script>
 
 <template>
-    <BaseChart type="line" :labels="labels" :datasets="datasets" hauteur="h-full" :infobulle="infobulle" />
+    <BaseChart
+        description="Charge maximale par séance"
+        type="line"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-full"
+        :infobulle="infobulle"
+    />
 </template>

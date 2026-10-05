@@ -34,7 +34,7 @@ describe('MaxRepsChart series', () => {
 
         expect(series.labels).toEqual(['01/07', '08/07', '15/07'])
         expect(series.datasets[0].data).toEqual([8, 11, 10])
-        expect(series.datasets[0].label).toBe('Max Reps')
+        expect(series.datasets[0].label).toBe('Répétitions max')
     })
 
     it('holds nothing when the exercise has never been logged', () => {

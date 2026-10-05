@@ -220,8 +220,8 @@ export const rapprocherLAbonnementPush = (utilisateurId, { serveurSansAbonnement
  * le chemin du changement (`DetacheSesAppareilsPush`), et ferme ses autres
  * sessions. Le mémo de l'appareil disait pourtant toujours « déjà transmis » :
  * l'appareil qui se reconnectait au compte ne transmettait plus rien, et le
- * profil montrait les cases « Envoyer aussi en Push » pour des envois qui ne
- * lui parvenaient plus. La marque garde le compte à qui l'appareil a été
+ * profil montrait les cases d'envoi en push pour des envois qui ne lui
+ * parvenaient plus. La marque garde le compte à qui l'appareil a été
  * donné : un appareil donné à un autre compte reste à cet autre compte.
  *
  * Ce que ce chargement a déjà rapproché est oublié aussi : la page de
@@ -425,8 +425,8 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
      * L'interface a aussi tenu cet état depuis `Notification.permission`, que le
      * navigateur accorde AVANT que l'abonnement n'atteigne le serveur : quand
      * cette requête échouait, le bandeau partait pareillement et les cases
-     * « Envoyer aussi en Push » prenaient sa place, pour des envois que personne
-     * ne recevait.
+     * d'envoi en push prenaient sa place, pour des envois que personne ne
+     * recevait.
      */
     const pushRegistered = ref(dejaAbonne)
 
@@ -442,9 +442,8 @@ export const useAbonnementPush = ({ vapidPublicKey, dejaAbonne, apresAbonnement,
      * appareil détient. Quatre cas, et aucun ne laisse l'utilisateur sans
      * issue : pas d'abonnement ici, le bandeau s'affiche quoi qu'en dise le
      * serveur ; un abonnement que le serveur ignore, on le lui rend, et s'il le
-     * refuse ou ne répond pas, le bandeau revient, sinon les cases « Envoyer
-     * aussi en Push » s'afficheraient pour un appareil que le serveur ne
-     * connaît pas ; un abonnement que cet appareil a donné à un autre compte, le
+     * refuse ou ne répond pas, le bandeau revient, sinon les cases d'envoi en
+     * push s'afficheraient pour un appareil que le serveur ne connaît pas ; un abonnement que cet appareil a donné à un autre compte, le
      * bandeau s'affiche aussi, et c'est par lui seul que l'appareil change de
      * compte ; et si le worker ne répond pas, on montre le bandeau plutôt que
      * de le cacher. Un bandeau de trop se referme d'un clic, un bandeau

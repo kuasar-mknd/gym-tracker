@@ -63,6 +63,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Historique du score Wilks"
         type="line"
         :labels="labels"
         :datasets="datasets"

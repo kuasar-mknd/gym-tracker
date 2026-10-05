@@ -14,7 +14,7 @@ use Tests\TestCase;
  * reading Notification.permission — a browser fact — when the question is
  * whether *we* hold a subscription. The browser grants permission before the
  * subscription is ever sent to us, so a failed POST left the panel showing its
- * "push is on" state: the activation banner gone, the "Envoyer aussi en Push"
+ * "push is on" state: the activation banner gone, the per-notification push
  * checkboxes offered, and no path back to retry.
  *
  * This pins the prop that replaced the guess.

@@ -9,7 +9,8 @@ const BaseChart = (await import('@/Components/Stats/BaseChart.vue')).default
 const datasets = [{ label: 'Reps', data: [12, 8] }]
 const labels = ['lun.', 'mar.']
 
-const monter = (props = {}, slots = {}) => mount(BaseChart, { props: { datasets, labels, ...props }, slots })
+const monter = (props = {}, slots = {}) =>
+    mount(BaseChart, { props: { description: 'Répétitions par jour', datasets, labels, ...props }, slots })
 const trace = (wrapper, nom = 'Bar') => wrapper.findComponent({ name: nom })
 const options = (props = {}, nom = 'Bar') => trace(monter(props), nom).props('options')
 
@@ -218,5 +219,102 @@ describe('BaseChart', () => {
         expect(trace(monter({ datasets: [{ data: [1], borderWidth: 2 }] })).props('data').datasets[0].borderWidth).toBe(
             2,
         )
+    })
+})
+
+/**
+ * Le canevas n'est qu'une image : `BaseChart` lui donne un nom et relie à lui
+ * les valeurs tracées, écrites (#1970). Le vrai canevas est regardé dans
+ * `nomEtResumeDesGraphiques.test.js` ; ici, ce que le composant lui transmet.
+ */
+describe('BaseChart pour un lecteur d’écran', () => {
+    const resumeDe = (wrapper) => {
+        const id = trace(wrapper, wrapper.findComponent({ name: 'Line' }).exists() ? 'Line' : 'Bar').attributes(
+            'aria-describedby',
+        )
+
+        return wrapper.find(`[id="${id}"]`)
+    }
+
+    it('nomme le tracé par sa description et lui relie le résumé', () => {
+        const wrapper = monter()
+        const barres = trace(wrapper)
+
+        expect(barres.attributes('aria-label')).toBe('Répétitions par jour')
+        expect(resumeDe(wrapper).text()).toBe('Reps — lun. : 12 ; mar. : 8.')
+        expect(resumeDe(wrapper).classes()).toContain('sr-only')
+    })
+
+    it('écrit une phrase par série et tait les points sans valeur', () => {
+        const wrapper = monter({
+            type: 'line',
+            labels: ['01/10', '02/10', '03/10'],
+            datasets: [
+                { label: 'Série 1', data: [80, null, 82.5] },
+                { label: 'Série 2', data: [undefined, 75, 77.25] },
+                { label: 'Série 3', data: [null, null, null] },
+            ],
+        })
+
+        expect(resumeDe(wrapper).text()).toBe(
+            'Série 1 — 01/10 : 80 ; 03/10 : 82,5. Série 2 — 02/10 : 75 ; 03/10 : 77,25.',
+        )
+    })
+
+    it('lit une étiquette sur plusieurs lignes et une valeur arrivée en chaîne', () => {
+        const wrapper = monter({
+            labels: [['Développé', 'couché']],
+            datasets: [{ label: 'Charge (kg)', data: ['78.40'] }],
+        })
+
+        expect(resumeDe(wrapper).text()).toBe('Charge (kg) — Développé couché : 78,4.')
+    })
+
+    it('écrit une série sans nom ni étiquettes par ses seules valeurs', () => {
+        expect(resumeDe(monter({ labels: [], datasets: [{ data: [3, 4] }] })).text()).toBe('3 ; 4.')
+    })
+
+    it('lit un point par les titres de ses axes, ou par ses seules coordonnées', () => {
+        const titre = (text) => ({ title: { display: true, text } })
+
+        const nomme = monter({
+            type: 'scatter',
+            labels: [],
+            datasets: [{ label: 'Séries', data: [{ x: 100, y: 5 }] }],
+            axeX: titre('Poids (kg)'),
+            axeY: titre('Répétitions'),
+        })
+        const id = trace(nomme, 'Scatter').attributes('aria-describedby')
+        expect(nomme.find(`[id="${id}"]`).text()).toBe('Séries — Poids (kg) : 100, Répétitions : 5.')
+
+        const brut = monter({ type: 'scatter', labels: [], datasets: [{ data: [{ x: 100, y: 5 }] }] })
+        const idBrut = trace(brut, 'Scatter').attributes('aria-describedby')
+        expect(brut.find(`[id="${idBrut}"]`).text()).toBe('100, 5.')
+    })
+
+    it('dit qu’il n’y a rien plutôt que de relier une description vide', () => {
+        expect(resumeDe(monter({ labels: [], datasets: [{ label: 'Reps', data: [] }] })).text()).toBe('Aucune donnée.')
+    })
+
+    it('ne laisse aucun résumé quand l’état vide remplace le tracé', () => {
+        const wrapper = monter({ vide: true }, { vide: '<p>Rien à tracer</p>' })
+
+        expect(wrapper.find('.sr-only').exists()).toBe(false)
+    })
+
+    it('donne à chaque graphique d’une page son propre résumé', () => {
+        const page = mount({
+            components: { BaseChart },
+            setup: () => ({ datasets, labels }),
+            template: `<div>
+                <BaseChart description="Premier" :datasets="datasets" :labels="labels" />
+                <BaseChart description="Second" :datasets="datasets" :labels="labels" />
+            </div>`,
+        })
+        const ids = page.findAllComponents({ name: 'Bar' }).map((barres) => barres.attributes('aria-describedby'))
+
+        expect(ids).toHaveLength(2)
+        expect(ids[0]).not.toBe(ids[1])
+        ids.forEach((id) => expect(page.find(`[id="${id}"]`).text()).toBe('Reps — lun. : 12 ; mar. : 8.'))
     })
 })

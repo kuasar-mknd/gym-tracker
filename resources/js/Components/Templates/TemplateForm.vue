@@ -5,7 +5,7 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
 
 const props = defineProps({
@@ -41,6 +41,24 @@ const form = useForm({
     description: props.template?.description || '',
     exercises: initialExercises,
 })
+
+/** Combien de fois chaque exercice figure dans le modèle. */
+const occurrences = computed(() =>
+    form.exercises.reduce(
+        (compte, exercise) => compte.set(exercise.name, (compte.get(exercise.name) ?? 0) + 1),
+        new Map(),
+    ),
+)
+
+/**
+ * L'exercice tel que le nomment ses champs et ses boutons (#1972).
+ *
+ * Rien n'interdit de placer deux fois le même exercice dans un modèle. Le nom
+ * seul donnerait alors deux « Répétitions, série 1, Squat » au lecteur d'écran :
+ * le rang départage les homonymes, et eux seuls (« Squat (exercice 3) »).
+ */
+const nomDeLExercice = (exercise, exIndex) =>
+    occurrences.value.get(exercise.name) > 1 ? `${exercise.name} (exercice ${exIndex + 1})` : exercise.name
 
 const showAddExercise = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
@@ -143,21 +161,21 @@ const submit = () => {
                                     <GlassIconButton
                                         v-press
                                         icon="arrow_upward"
-                                        :label="`Monter ${exercise.name}`"
+                                        :label="`Monter ${nomDeLExercice(exercise, exIndex)}`"
                                         :disabled="exIndex === 0"
                                         @click="moveExercise(exIndex, -1)"
                                     />
                                     <GlassIconButton
                                         v-press
                                         icon="arrow_downward"
-                                        :label="`Descendre ${exercise.name}`"
+                                        :label="`Descendre ${nomDeLExercice(exercise, exIndex)}`"
                                         :disabled="exIndex === form.exercises.length - 1"
                                         @click="moveExercise(exIndex, 1)"
                                     />
                                     <GlassIconButton
                                         v-press
                                         icon="close"
-                                        :label="`Supprimer ${exercise.name}`"
+                                        :label="`Supprimer ${nomDeLExercice(exercise, exIndex)}`"
                                         ton="danger"
                                         @click="removeExercise(exIndex)"
                                     />
@@ -175,11 +193,14 @@ const submit = () => {
                                     >
                                         {{ setIndex + 1 }}
                                     </div>
+                                    <!-- Le placeholder s'efface dès que la série est remplie : le nom
+                                         reste, et dit quelle série de quel exercice (#1972). -->
                                     <input
                                         v-model="set.reps"
                                         type="number"
                                         class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-10 w-20 rounded-lg border text-center text-base"
                                         placeholder="réps"
+                                        :aria-label="`Répétitions, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                     />
                                     <input
                                         v-model="set.weight"
@@ -187,6 +208,7 @@ const submit = () => {
                                         step="0.5"
                                         class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-10 w-20 rounded-lg border text-center text-base"
                                         placeholder="kg"
+                                        :aria-label="`Poids en kg, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                     />
                                     <button
                                         v-press="{ haptic: 'selection' }"
@@ -198,10 +220,10 @@ const submit = () => {
                                                 ? 'bg-accent-primary/20 text-accent-primary-deep'
                                                 : 'text-text-muted/50 bg-surface-sunken'
                                         "
-                                        aria-label="Série d'échauffement"
+                                        :aria-label="`Échauffement, série ${setIndex + 1}, ${nomDeLExercice(exercise, exIndex)}`"
                                         :aria-pressed="set.is_warmup"
                                     >
-                                        W
+                                        É
                                     </button>
                                     <GlassIconButton
                                         v-press

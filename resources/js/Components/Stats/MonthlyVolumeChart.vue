@@ -40,6 +40,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Volume soulevé par mois"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48 sm:h-64"

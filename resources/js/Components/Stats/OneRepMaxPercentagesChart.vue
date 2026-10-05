@@ -53,5 +53,11 @@ const infobulle = {
 </script>
 
 <template>
-    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" />
+    <BaseChart
+        description="Charge pour chaque pourcentage du 1RM"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48"
+        :infobulle="infobulle"
+    />
 </template>

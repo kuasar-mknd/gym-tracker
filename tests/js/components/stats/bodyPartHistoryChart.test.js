@@ -88,7 +88,7 @@ describe('BodyPartHistoryChart', () => {
 
     it('nomme la série d’après la mesure suivie', () => {
         expect(chartOf({ data: [], label: 'Tour de bras' }).props('data').datasets[0].label).toBe('Tour de bras')
-        expect(chartOf({ data: [] }).props('data').datasets[0].label).toBe('Measurement')
+        expect(chartOf({ data: [] }).props('data').datasets[0].label).toBe('Mesure')
     })
 
     it('libelle le survol avec l’unité de la mesure', () => {
