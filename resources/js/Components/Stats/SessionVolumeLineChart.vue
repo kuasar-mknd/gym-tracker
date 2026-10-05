@@ -56,6 +56,7 @@ const marges = { layout: { padding: { left: -10, right: -10, bottom: 0, top: 10 
 
 <template>
     <BaseChart
+        description="Volume par séance"
         type="line"
         :labels="labels"
         :datasets="datasets"

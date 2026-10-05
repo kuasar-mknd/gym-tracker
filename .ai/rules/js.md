@@ -51,6 +51,11 @@ Trois règles tenues à la main, parce qu'une factorisation « sans changement d
 
 Deux pièges payés pendant la migration des 48 cartes : `BaseChart` ne pose `beginAtZero` que sur des barres, donc une courbe qui l'attendait doit le redemander par `:axe-y` ; et le composant s'importe en chemin relatif depuis le dossier des cartes, jamais par l'alias, que la garde imposant `defineAsyncComponent` refuse sur tout fichier de graphique.
 
+## Un graphique se nomme pour qui ne le voit pas
+Depuis #1970 (2026-10-05).
+
+**Un graphique** passe `description` à `BaseChart` : c'est le nom que le lecteur d'écran annonce pour le canevas, que vue-chartjs rend en `role="img"`. `BaseChart` écrit aussi les valeurs tracées dans un paragraphe `sr-only` relié au canevas par `aria-describedby`, une phrase par série nommée par son `label` : « Poids (kg) — 01/10 : 80 ; 02/10 : 80,5. ». Le nom d'une série se lit donc tel quel, en français et avec son unité entre parenthèses. Ne pas déplacer ce résumé dans le contenu de repli du canevas : les enfants d'un `role="img"` sont ignorés des technologies d'assistance, et les composants typés de vue-chartjs (`Bar`, `Line`…) ne transmettent même pas ce créneau. `tests/js/conventions/chartChunks.test.js` exige `description` de chaque appel et refuse un nom de série anglais ; `tests/js/components/stats/nomEtResumeDesGraphiques.test.js` monte chaque carte avec le vrai vue-chartjs et lit le canevas rendu.
+
 ## Il n'y aura pas de mode sombre : une seule apparence, partout
 
 Décision du propriétaire du 07/09/2026, définitive : #1806 est fermée comme non planifiée. Le mode sombre avait été retiré en #1580 parce qu'il s'écrivait paire par paire — `bg-white` et son jumeau `dark:bg-slate-800` — et que 238 utilitaires clairs sur 449 n'avaient aucun jumeau. Ce n'est plus un report en attendant mieux, c'est un choix qu'on tient.

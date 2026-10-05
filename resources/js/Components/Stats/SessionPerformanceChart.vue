@@ -85,6 +85,7 @@ const axeY1 = { position: 'right', beginAtZero: false, grid: { drawOnChartArea: 
 
 <template>
     <BaseChart
+        description="Meilleur 1RM et volume total par séance"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-full"

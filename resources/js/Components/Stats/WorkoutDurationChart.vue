@@ -45,6 +45,7 @@ const infobulle = { accent: 'accent-tertiary', callbacks: { label: (context) => 
 
 <template>
     <BaseChart
+        description="Durée des séances"
         type="line"
         :labels="labels"
         :datasets="datasets"

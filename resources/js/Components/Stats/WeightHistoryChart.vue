@@ -53,6 +53,7 @@ const infobulle = { accent: 'accent-info', callbacks: { label: (context) => `${c
 
 <template>
     <BaseChart
+        description="Évolution du poids corporel"
         type="line"
         :labels="labels"
         :datasets="datasets"
