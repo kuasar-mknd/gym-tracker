@@ -207,9 +207,15 @@ final class User extends Authenticatable implements MustVerifyEmail
      * la personne voulait se défaire. Le serveur ne sait pas quel abonnement
      * appartient à quelle session, la table ne porte ni l'une ni l'autre : tous
      * partent. La page du profil retransmet ensuite celui de l'appareil qui a
-     * changé le mot de passe, et une session fermée ne peut plus rien
-     * transmettre. Un appareil retiré qui se reconnecte au compte retransmet
-     * le sien à son tour (`useAbonnementPush`).
+     * changé le mot de passe. Un appareil retiré qui se reconnecte au compte
+     * retransmet le sien à son tour (`useAbonnementPush`).
+     *
+     * Une session fermée ne peut plus en transmettre : le middleware la refuse
+     * à l'entrée de la requête, et `PushSubscriptionController` la revérifie
+     * avant d'écrire, sous le verrou de la ligne du compte, que la mise à jour
+     * du mot de passe prend aussi. Sans cette revérification, une
+     * transmission partie avant le changement s'écrivait après ce retrait, et
+     * la session fermée gardait son abonnement.
      *
      * Dans l'évènement du modèle plutôt que dans chaque contrôleur, pour la
      * même raison que le middleware ferme les sessions : le profil, la
