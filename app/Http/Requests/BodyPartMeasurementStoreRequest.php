@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\BodyPartMeasurement;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 class BodyPartMeasurementStoreRequest extends FormRequest
@@ -23,6 +24,13 @@ class BodyPartMeasurementStoreRequest extends FormRequest
      *
      * Une partie proposée saisie sous son nom français est rangée sous sa
      * clef, avec les mesures déjà prises et les objectifs qui la suivent.
+     *
+     * Sauf quand le compte mesure déjà une partie sous ce nom exact : avant
+     * les noms français, un francophone a pu saisir « Taille » à la main, et
+     * la page de détail de cette partie renvoie ce nom. Le ramener à la clef
+     * couperait son historique en deux, la nouvelle mesure manquant à la page
+     * où on vient de l'ajouter (#1974). La comparaison suit la collation de la
+     * colonne, comme le regroupement de la page Mensurations.
      */
     #[\Override]
     protected function prepareForValidation(): void
@@ -31,9 +39,28 @@ class BodyPartMeasurementStoreRequest extends FormRequest
 
         $partie = $this->input('part');
 
-        if (is_string($partie)) {
-            $this->merge(['part' => BodyPartMeasurement::clefDePartie($partie)]);
+        if (! is_string($partie)) {
+            return;
         }
+
+        $clef = BodyPartMeasurement::clefDePartie($partie);
+
+        if ($clef === $partie || $this->leCompteMesureDejaLaPartie($partie)) {
+            return;
+        }
+
+        $this->merge(['part' => $clef]);
+    }
+
+    /**
+     * Le compte a-t-il déjà une mesure rangée sous ce nom ?
+     */
+    private function leCompteMesureDejaLaPartie(string $partie): bool
+    {
+        $utilisateur = $this->user();
+
+        return $utilisateur instanceof User
+            && $utilisateur->bodyPartMeasurements()->where('part', $partie)->exists();
     }
 
     /**

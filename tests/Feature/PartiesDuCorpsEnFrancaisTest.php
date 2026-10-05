@@ -104,6 +104,47 @@ it('range sous sa clef une partie saisie sous son nom français, et laisse une p
     'partie libre' => ['Tour de cou', 'Tour de cou'],
 ]);
 
+it('ajoute une mesure à une partie déjà saisie sous un nom français, sans couper son historique', function (string $partieSaisieAvant, string $page): void {
+    $utilisateur = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $utilisateur->id, 'part' => $partieSaisieAvant, 'value' => 90, 'unit' => 'cm', 'measured_at' => '2026-09-01']);
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'value' => 88, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(BodyPartMeasurement::query()->where('user_id', $utilisateur->id)->where('part', 'Waist')->exists())->toBeFalse();
+
+    $this->actingAs($utilisateur)
+        ->get(route('body-parts.show', ['part' => $page]))
+        ->assertInertia(fn (AssertableInertia $detail): AssertableInertia => $detail
+            ->where('label', $page)
+            ->has('history', 2)
+            ->where('history.1.value', '88.00'));
+
+    $this->actingAs($utilisateur)
+        ->get(route('body-parts.index'))
+        ->assertInertia(fn (AssertableInertia $liste): AssertableInertia => $liste
+            ->has('latestMeasurements', 1)
+            ->where('latestMeasurements.0.label', 'Taille')
+            ->where('latestMeasurements.0.current', 88)
+            ->where('latestMeasurements.0.diff', -2));
+})->with([
+    'même casse' => ['Taille', 'Taille'],
+    'autre casse' => ['taille', 'Taille'],
+]);
+
+it('range sous sa clef le nom français d’un compte qui ne l’a jamais saisi, même quand un autre compte l’a fait', function (): void {
+    $autre = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $autre->id, 'part' => 'Taille', 'measured_at' => '2026-09-01']);
+    $utilisateur = User::factory()->create();
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'value' => 88, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(BodyPartMeasurement::query()->where('user_id', $utilisateur->id)->pluck('part')->all())->toBe(['Waist']);
+});
+
 it('laisse un objectif existant suivre une mesure saisie sous le nom français, sans migration', function (): void {
     $utilisateur = User::factory()->create();
     $objectif = Goal::factory()->create([
