@@ -171,15 +171,15 @@ final class AppServiceProvider extends ServiceProvider
             app(\App\Services\PersonalRecordService::class)->retenirTypesDetenus($set);
         });
 
+        /*
+         * Sans garde sur une liste vide : `refreshFor()` regarde aussi, sous le
+         * verrou de l'exercice, les records qu'une synchronisation a ecrits
+         * pour la serie apres la lecture de `deleting` (#1984).
+         */
         Set::deleted(function (Set $set): void {
             $records = app(\App\Services\PersonalRecordService::class);
-            $detenus = $records->typesRetenus($set);
 
-            if ($detenus === []) {
-                return;
-            }
-
-            $records->refreshFor($set, null, $detenus);
+            $records->refreshFor($set, null, $records->typesRetenus($set));
         });
 
         \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {

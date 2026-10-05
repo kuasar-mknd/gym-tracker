@@ -25,6 +25,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Toute lecture-comparaison-écriture des records d'un exercice se fait sous
  * un verrou atomique du couple (compte, exercice) : voir `sousLeVerrou()`.
+ * Les lectures qui décident d'une écriture aussi : la série que l'on
+ * synchronise y est relue, et ce qu'une série corrigée ou supprimée détient
+ * s'y établit, dans la section même qui reconstruit.
  */
 final class PersonalRecordService
 {
@@ -200,86 +203,101 @@ final class PersonalRecordService
     public function recompute(User $user, int $idExercice, ?array $types = null): void
     {
         $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice, $types): void {
-            $gagnantes = $this->gagnantes($user->id, $idExercice);
-
-            /*
-             * Les doublons sont supprimes avant d'indexer.
-             *
-             * `keyBy()` ne garde que le DERNIER d'une clef repetee : sur deux
-             * records du meme type, le premier n'etait ni mis a jour ni supprime,
-             * et annoncait indefiniment une valeur que plus rien ne soutenait —
-             * y compris une serie jamais cochee. Constate en production le 31/08.
-             *
-             * `un_seul_record_par_type` pose la contrainte qui l'empeche desormais.
-             * Ce nettoyage reste parce qu'une base d'avant la contrainte doit
-             * pouvoir se reparer, et parce que `recompute()` ne doit dependre
-             * d'aucune garantie qu'il ne verifie pas lui-meme.
-             */
-            $tous = PersonalRecord::query()
-                ->where('user_id', $user->id)
-                ->where('exercise_id', $idExercice)
-                ->orderBy('id')
-                ->get();
-
-            /** @var array<string, PersonalRecord> $records */
-            $records = [];
-
-            // Les records a retirer partent en une seule instruction a la fin :
-            // chaque `delete()` separe coutait une ecriture sur le serveur.
-            /** @var list<int> $aSupprimer */
-            $aSupprimer = [];
-
-            foreach ($tous as $existant) {
-                $type = $existant->type->value;
-
-                // Trie par `id` : on garde le plus recent, comme la migration.
-                if (isset($records[$type])) {
-                    $aSupprimer[] = $records[$type]->id;
-                }
-
-                $records[$type] = $existant;
-            }
-
-            foreach (PersonalRecordType::SUIVIS as $type) {
-                if ($types !== null && ! in_array($type, $types, true)) {
-                    continue;
-                }
-
-                /** @var PersonalRecord|null $record */
-                $record = $records[$type] ?? null;
-                $meilleure = $gagnantes[$type] ?? null;
-
-                if ($meilleure === null) {
-                    // Plus une seule série ne qualifie : le record ne tient plus.
-                    if ($record !== null) {
-                        $aSupprimer[] = $record->id;
-                    }
-
-                    continue;
-                }
-
-                [$valeur, $secondaire] = $this->mesurer($type, $meilleure['poids'], $meilleure['repetitions']);
-
-                $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
-
-                /**
-                 * Aucune notification ici. C'est une correction, pas un exploit —
-                 * annoncer un record personnel à quelqu'un qui vient de rattraper
-                 * une faute de frappe serait pire que de se taire.
-                 */
-                $record->fill([
-                    'value' => $valeur,
-                    'secondary_value' => $secondaire,
-                    'workout_id' => $meilleure['seance'],
-                    'set_id' => $meilleure['id'],
-                    'achieved_at' => $meilleure['obtenu'] ?? now(),
-                ])->save();
-            }
-
-            if ($aSupprimer !== []) {
-                PersonalRecord::query()->whereKey($aSupprimer)->delete();
-            }
+            $this->reconstruire($user, $idExercice, $types);
         });
+    }
+
+    /**
+     * Le corps de `recompute()`, sans le verrou : l'appelant le tient déjà.
+     *
+     * Le verrou n'est pas réentrant. `refreshRecordsHeldBy()` et `refreshFor()`
+     * décident de ce qu'il faut reconstruire sous le verrou, puis
+     * reconstruisent dans la même section : passer par `recompute()`
+     * attendrait leur propre verrou jusqu'au délai.
+     *
+     * @param  list<string>|null  $types  Limite la reconstruction à ces records ; null les prend tous.
+     */
+    private function reconstruire(User $user, int $idExercice, ?array $types): void
+    {
+        $gagnantes = $this->gagnantes($user->id, $idExercice);
+
+        /*
+         * Les doublons sont supprimes avant d'indexer.
+         *
+         * `keyBy()` ne garde que le DERNIER d'une clef repetee : sur deux
+         * records du meme type, le premier n'etait ni mis a jour ni supprime,
+         * et annoncait indefiniment une valeur que plus rien ne soutenait —
+         * y compris une serie jamais cochee. Constate en production le 31/08.
+         *
+         * `un_seul_record_par_type` pose la contrainte qui l'empeche desormais.
+         * Ce nettoyage reste parce qu'une base d'avant la contrainte doit
+         * pouvoir se reparer, et parce que `recompute()` ne doit dependre
+         * d'aucune garantie qu'il ne verifie pas lui-meme.
+         */
+        $tous = PersonalRecord::query()
+            ->where('user_id', $user->id)
+            ->where('exercise_id', $idExercice)
+            ->orderBy('id')
+            ->get();
+
+        /** @var array<string, PersonalRecord> $records */
+        $records = [];
+
+        // Les records a retirer partent en une seule instruction a la fin :
+        // chaque `delete()` separe coutait une ecriture sur le serveur.
+        /** @var list<int> $aSupprimer */
+        $aSupprimer = [];
+
+        foreach ($tous as $existant) {
+            $type = $existant->type->value;
+
+            // Trie par `id` : on garde le plus recent, comme la migration.
+            if (isset($records[$type])) {
+                $aSupprimer[] = $records[$type]->id;
+            }
+
+            $records[$type] = $existant;
+        }
+
+        foreach (PersonalRecordType::SUIVIS as $type) {
+            if ($types !== null && ! in_array($type, $types, true)) {
+                continue;
+            }
+
+            /** @var PersonalRecord|null $record */
+            $record = $records[$type] ?? null;
+            $meilleure = $gagnantes[$type] ?? null;
+
+            if ($meilleure === null) {
+                // Plus une seule série ne qualifie : le record ne tient plus.
+                if ($record !== null) {
+                    $aSupprimer[] = $record->id;
+                }
+
+                continue;
+            }
+
+            [$valeur, $secondaire] = $this->mesurer($type, $meilleure['poids'], $meilleure['repetitions']);
+
+            $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
+
+            /**
+             * Aucune notification ici. C'est une correction, pas un exploit —
+             * annoncer un record personnel à quelqu'un qui vient de rattraper
+             * une faute de frappe serait pire que de se taire.
+             */
+            $record->fill([
+                'value' => $valeur,
+                'secondary_value' => $secondaire,
+                'workout_id' => $meilleure['seance'],
+                'set_id' => $meilleure['id'],
+                'achieved_at' => $meilleure['obtenu'] ?? now(),
+            ])->save();
+        }
+
+        if ($aSupprimer !== []) {
+            PersonalRecord::query()->whereKey($aSupprimer)->delete();
+        }
     }
 
     /**
@@ -386,6 +404,12 @@ final class PersonalRecordService
      *
      * Appelable à chaque enregistrement sans crainte : la question tient en une
      * lecture d'index, et la quasi-totalité des séries ne détiennent rien.
+     *
+     * La question se pose sous le verrou de l'exercice (#1984), dans la même
+     * section que la reconstruction. Posée avant, elle croisait la
+     * synchronisation de la série elle-même, partie sur l'ancienne valeur :
+     * « rien », parce que la synchronisation n'avait pas encore écrit, puis
+     * la synchronisation écrivait l'ancienne valeur, et le record restait.
      */
     public function refreshRecordsHeldBy(Set $set, ?User $user = null): void
     {
@@ -408,13 +432,7 @@ final class PersonalRecordService
          * morte, avec ses quatre mutants, et le `filter()` qui ecartait la chaine
          * vide n'avait rien a ecarter.
          */
-        $types = $this->typesDetenusPar($set);
-
-        if ($types === []) {
-            return;
-        }
-
-        $this->refreshFor($set, $user, $types);
+        $this->reconstruireSousLeVerrou($set, $user, fn (): array => $this->typesDetenusPar($set));
     }
 
     /** @return list<string> */
@@ -430,17 +448,58 @@ final class PersonalRecordService
     }
 
     /**
-     * Reconstruit sans condition, pour la série qui s'en va.
+     * Reconstruit, pour la série qui s'en va, les records qu'elle détenait.
      *
      * La garde ci-dessus ne sert à rien après une suppression :
      * `personal_records.set_id` est remis à null par la base à l'instant où la
      * ligne part, si bien qu'au moment où `deleted` se déclenche, plus rien
-     * n'avoue que la série détenait quoi que ce soit.
-     */
-    /**
-     * @param  list<string>|null  $types
+     * n'avoue que la série détenait quoi que ce soit. `Set::deleting` retient
+     * donc ce qu'elle détenait (`retenirTypesDetenus()`), hors du verrou.
+     *
+     * Une synchronisation de la même série peut écrire entre cette lecture et
+     * la suppression, et ses records perdent alors leur série (#1984). Sous le
+     * verrou, la reconstruction reprend aussi les records de l'exercice restés
+     * sans série : aucun ne tient, `reconstruire()` les rattache toujours à
+     * une série.
+     *
+     * @param  list<string>|null  $types  Les records retenus avant la suppression ; null les reconstruit tous.
      */
     public function refreshFor(Set $set, ?User $user = null, ?array $types = null): void
+    {
+        $this->reconstruireSousLeVerrou(
+            $set,
+            $user,
+            fn (int $idUtilisateur, int $idExercice): ?array => $types === null
+                ? null
+                : array_values(array_unique([...$types, ...$this->typesSansSerie($idUtilisateur, $idExercice)])),
+        );
+    }
+
+    /**
+     * Les types des records de l'exercice qui ne désignent aucune série.
+     *
+     * @return list<string>
+     */
+    private function typesSansSerie(int $idUtilisateur, int $idExercice): array
+    {
+        return array_values(
+            PersonalRecord::query()
+                ->where('user_id', $idUtilisateur)
+                ->where('exercise_id', $idExercice)
+                ->whereNull('set_id')
+                ->get(['type'])
+                ->map(fn (PersonalRecord $record): string => $record->type->value)
+                ->all()
+        );
+    }
+
+    /**
+     * Décide sous le verrou de l'exercice de la série quels records
+     * reconstruire, puis les reconstruit dans la même section (#1984).
+     *
+     * @param  Closure(int, int): (list<string>|null)  $aReconstruire  Reçoit le compte et l'exercice ; rend les records à reconstruire, une liste vide pour aucun, null pour tous.
+     */
+    private function reconstruireSousLeVerrou(Set $set, ?User $user, Closure $aReconstruire): void
     {
         $set->loadMissing(['workoutLine.workout.user']);
         $idExercice = $set->workoutLine?->exercise_id;
@@ -450,7 +509,17 @@ final class PersonalRecordService
             return;
         }
 
-        $this->recompute($user, (int) $idExercice, $types);
+        $idExercice = (int) $idExercice;
+
+        $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice, $aReconstruire): void {
+            $types = $aReconstruire($user->id, $idExercice);
+
+            if ($types === []) {
+                return;
+            }
+
+            $this->reconstruire($user, $idExercice, $types);
+        });
     }
 
     /**
@@ -465,6 +534,12 @@ final class PersonalRecordService
      * La lecture, la comparaison et l'écriture se font donc sous le verrou du
      * couple (compte, exercice), et la lecture juste avant de comparer.
      *
+     * La série elle-même se relit sous le verrou. Le travail de file la
+     * charge à son démarrage, et une correction faite depuis (poids, case
+     * décochée, suppression) n'y paraissait pas : la synchronisation écrivait
+     * l'ancienne valeur, que plus rien ne venait corriger. Une série qui a
+     * disparu, ou qui ne peut plus établir de record, n'écrit rien.
+     *
      * Une violation d'unicité ne devrait plus arriver : il faudrait qu'un
      * verrou ait expiré, ou qu'une écriture passe hors de ce service. Elle
      * n'est plus fatale pour autant : `recompute()` repart des séries, et la
@@ -475,7 +550,7 @@ final class PersonalRecordService
      *
      * @param  \App\Models\User  $user  L'auteur de la série.
      * @param  int  $idExercice  L'exercice concerné.
-     * @param  \App\Models\Set  $set  La série, déjà jugée recevable.
+     * @param  \App\Models\Set  $set  La série, jugée recevable telle que l'appelant l'a chargée.
      */
     private function processUpdates(User $user, int $idExercice, Set $set): void
     {
@@ -484,6 +559,12 @@ final class PersonalRecordService
 
         try {
             $etablis = $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice, $set, &$avant): array {
+                $serie = $set->fresh(['workoutLine']);
+
+                if ($serie === null || $this->shouldSkipSync($serie)) {
+                    return [];
+                }
+
                 $existingPRs = PersonalRecord::where('user_id', $user->id)
                     ->where('exercise_id', $idExercice)
                     ->get()
@@ -494,9 +575,9 @@ final class PersonalRecordService
                 }
 
                 return array_values(array_filter([
-                    $this->update($user, $idExercice, 'max_weight', (float) $set->weight, (float) $set->reps, $set, $existingPRs->get('max_weight')),
-                    $this->update($user, $idExercice, 'max_1rm', $this->calculate1RM((float) $set->weight, (int) $set->reps), (float) $set->weight, $set, $existingPRs->get('max_1rm')),
-                    $this->update($user, $idExercice, 'max_volume_set', (float) $set->weight * (int) $set->reps, null, $set, $existingPRs->get('max_volume_set')),
+                    $this->update($user, $idExercice, 'max_weight', (float) $serie->weight, (float) $serie->reps, $serie, $existingPRs->get('max_weight')),
+                    $this->update($user, $idExercice, 'max_1rm', $this->calculate1RM((float) $serie->weight, (int) $serie->reps), (float) $serie->weight, $serie, $existingPRs->get('max_1rm')),
+                    $this->update($user, $idExercice, 'max_volume_set', (float) $serie->weight * (int) $serie->reps, null, $serie, $existingPRs->get('max_volume_set')),
                 ]));
             });
         } catch (UniqueConstraintViolationException) {

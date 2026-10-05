@@ -154,6 +154,28 @@ function recordsConcurrentsAttendus(Set $gagnante): array
 }
 
 /**
+ * La série de 90 kg × 5 qui tient les records de la scène.
+ */
+function recordsConcurrentsTenante(WorkoutLine $ligne): Set
+{
+    return Set::query()->where('workout_line_id', $ligne->id)->where('weight', 90)->sole();
+}
+
+/**
+ * Ce que la série de 90 kg × 5 de la scène doit tenir : les trois records.
+ *
+ * @return array<string, array{valeur: float, serie: int|null}>
+ */
+function recordsConcurrentsAttendusDe90(Set $tenante): array
+{
+    return [
+        'max_1rm' => ['valeur' => 105.0, 'serie' => $tenante->id],
+        'max_volume_set' => ['valeur' => 450.0, 'serie' => $tenante->id],
+        'max_weight' => ['valeur' => 90.0, 'serie' => $tenante->id],
+    ];
+}
+
+/**
  * Les annonces « nouveau record » parties pour cette série, par type.
  *
  * @return array<string, int>
@@ -293,4 +315,133 @@ it('n’annonce rien pour une série que la reconstruction ne retient pas', func
     expect($plantee)->toBeTrue()
         ->and(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendus($lourde))
         ->and(recordsConcurrentsAnnonces($user, $legere))->toBe([]);
+});
+
+/*
+ * Une série corrigée pendant que sa propre synchronisation tourne. Deux
+ * lectures décidaient hors du verrou : la synchronisation comparait la série
+ * telle que la file l'avait chargée à son démarrage, et la requête qui corrige
+ * la série demandait à `refreshRecordsHeldBy()` si elle détenait un record, ce
+ * que la synchronisation n'avait peut-être pas encore écrit. Le record restait
+ * sur l'ancienne valeur de la série. La série se relit désormais sous le
+ * verrou, et la question « que détient-elle ? » s'y pose aussi.
+ */
+dataset('series corrigees', [
+    'son poids ramené à 50 kg' => ['poids'],
+    'décochée' => ['decochee'],
+]);
+
+/**
+ * Ce que la requête web change à la série : son poids, ramené à 50 kg, ou sa
+ * case, décochée.
+ *
+ * @return array<string, mixed>
+ */
+function recordsConcurrentsCorrection(string $correction): array
+{
+    return match ($correction) {
+        'poids' => ['weight' => 50],
+        'decochee' => ['is_completed' => false],
+        default => throw new InvalidArgumentException("Correction inconnue : {$correction}"),
+    };
+}
+
+it('relit sous le verrou la série qu’elle synchronise, corrigée depuis le démarrage du travail', function (string $correction): void {
+    Notification::fake();
+    [$user, $exercice, $ligne] = recordsConcurrentsScene(true);
+    $serie = recordsConcurrentsSerie($user, $ligne, 105);
+
+    // La file a restauré la série à 105 kg avant la correction (`SerializesModels`).
+    $travail = new SyncPersonalRecord(Set::query()->findOrFail($serie->id), $user);
+
+    // La requête web corrige la série, par les modèles : sa synchronisation
+    // et `refreshRecordsHeldBy()` passent, sur la valeur juste.
+    Set::query()->findOrFail($serie->id)->forceFill(recordsConcurrentsCorrection($correction))->save();
+
+    $travail->handle(app(PersonalRecordService::class));
+
+    expect(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendusDe90(recordsConcurrentsTenante($ligne)))
+        ->and(recordsConcurrentsAnnonces($user, $serie))->toBe([]);
+})->with('series corrigees');
+
+it('n’écrit rien pour une série supprimée depuis le démarrage du travail', function (): void {
+    [$user, $exercice, $ligne] = recordsConcurrentsScene(true);
+    $serie = recordsConcurrentsSerie($user, $ligne, 105);
+    $travail = new SyncPersonalRecord(Set::query()->findOrFail($serie->id), $user);
+
+    Set::query()->findOrFail($serie->id)->delete();
+
+    $travail->handle(app(PersonalRecordService::class));
+
+    expect(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendusDe90(recordsConcurrentsTenante($ligne)));
+});
+
+it('reconstruit les records d’une série corrigée pendant que sa synchronisation les écrit', function (string $correction): void {
+    [$user, $exercice, $ligne] = recordsConcurrentsScene(true);
+    $serie = recordsConcurrentsSerie($user, $ligne, 105);
+    $service = app(PersonalRecordService::class);
+    $chargee = Set::query()->findOrFail($serie->id);
+
+    $attentes = recordsConcurrentsEntrelacer(
+        fn () => new SyncPersonalRecord($chargee, $user)->handle($service),
+        function () use ($serie, $correction, $service, $user): void {
+            // Ce que fait `Set::saved` en production : la synchronisation de
+            // la série corrigée part en file après validation, et
+            // `refreshRecordsHeldBy()` s'exécute tout de suite.
+            $corrigee = Set::query()->findOrFail($serie->id);
+            $corrigee->forceFill(recordsConcurrentsCorrection($correction))->saveQuietly();
+            $service->refreshRecordsHeldBy($corrigee, $user);
+        },
+    );
+
+    // La synchronisation de la série corrigée, sortie de la file.
+    new SyncPersonalRecord(Set::query()->findOrFail($serie->id), $user)->handle($service);
+
+    expect(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendusDe90(recordsConcurrentsTenante($ligne)))
+        // `refreshRecordsHeldBy()` a trouvé le verrou pris : sa question
+        // attendait la fin de la synchronisation.
+        ->and($attentes)->toBeGreaterThan(0);
+})->with('series corrigees');
+
+/*
+ * Même croisement pour une série supprimée. `Set::deleting` retient ce que
+ * la série détient, hors du verrou ; la synchronisation écrit ses records
+ * juste après, puis la suppression les détache (`set_id` remis à null par la
+ * base). La reconstruction de `Set::deleted` reprend aussi, sous le verrou,
+ * les records de l'exercice restés sans série.
+ */
+it('reconstruit les records qu’une série reçoit pendant sa suppression', function (): void {
+    Notification::fake();
+    [$user, $exercice, $ligne] = recordsConcurrentsScene(true);
+    $serie = recordsConcurrentsSerie($user, $ligne, 105);
+    $service = app(PersonalRecordService::class);
+    $chargee = Set::query()->findOrFail($serie->id);
+    $fibre = new Fiber(fn () => new SyncPersonalRecord($chargee, $user)->handle($service));
+    $suspendue = false;
+
+    DB::listen(function (QueryExecuted $requete) use (&$suspendue, $fibre): void {
+        if (Fiber::getCurrent() === $fibre) {
+            if (! $suspendue && str_starts_with($requete->sql, 'select * from `personal_records`')) {
+                $suspendue = true;
+                Fiber::suspend();
+            }
+
+            return;
+        }
+
+        // `Set::deleting` vient de lire ce que la série détient : rien encore.
+        // La synchronisation écrit alors, avant la suppression de la ligne.
+        if ($fibre->isSuspended() && str_starts_with($requete->sql, 'select `type` from `personal_records` where `set_id`')) {
+            $fibre->resume();
+        }
+    });
+
+    $fibre->start();
+
+    expect($fibre->isSuspended())->toBeTrue('La synchronisation devait lire les records avant d’écrire.');
+
+    Set::query()->findOrFail($serie->id)->delete();
+
+    expect($fibre->isTerminated())->toBeTrue()
+        ->and(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendusDe90(recordsConcurrentsTenante($ligne)));
 });
