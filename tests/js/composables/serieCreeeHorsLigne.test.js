@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
 import { retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
-import { creerUnFauxServeur, fileDurable, monterLaSeance, routeDeTest } from './seanceHorsLigne'
+import {
+    creerUnFauxServeur,
+    fileDurable,
+    monterLaSeance,
+    rechargerQuandLeReseauRevient,
+    routeDeTest,
+    uneTentativeQuiTarde,
+} from './seanceHorsLigne'
 
 const reseau = vi.hoisted(() => ({ serveur: null }))
 
@@ -122,6 +129,77 @@ describe('une série créée hors ligne', () => {
             'patch /api/v1/sets/100 {"is_completed":true}',
         ])
         expect(serie).toMatchObject({ id: 100, weight: 82.5, is_completed: true })
+    })
+
+    /*
+     * La première tentative vole encore quand on saisit, coche ou supprime :
+     * elle n'a pas encore d'entrée où se fondre. Ce qui est fait pendant ce
+     * temps attendait le vidage en mémoire seulement, et un rechargement le
+     * perdait.
+     */
+    it('emporte dans la file ce qui a été saisi et coché pendant que sa première tentative échouait', async () => {
+        const page = await monterLaSeance(seance())
+        const couper = uneTentativeQuiTarde(reseau.serveur)
+
+        page.addSet(1)
+        await flushPromises()
+        const serie = page.ligne().sets.at(-1)
+
+        page.saisieTerminee(serie, 'reps', '3')
+        page.toggleSetCompletion(serie)
+        await couper()
+
+        expect(fileDurable().map((entree) => entree.data)).toEqual([
+            { workout_line_id: 1, is_completed: true, weight: 80, reps: 3 },
+        ])
+
+        const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+        expect(reseau.serveur.series.get(100)).toMatchObject({ reps: 3, is_completed: true })
+        expect(reseau.serveur.series.size).toBe(2)
+        expect(rechargee.queue).toEqual([])
+    })
+
+    it('garde dans la file la dernière coche, quand la première a été faite pendant sa première tentative', async () => {
+        const page = await monterLaSeance(seance())
+        const couper = uneTentativeQuiTarde(reseau.serveur)
+
+        page.addSet(1)
+        await flushPromises()
+        const serie = page.ligne().sets.at(-1)
+
+        // Cochée pendant que la tentative vole, décochée une fois la création en file.
+        page.toggleSetCompletion(serie)
+        await couper()
+        page.toggleSetCompletion(serie)
+        await flushPromises()
+
+        expect(serie.is_completed).toBe(false)
+        expect(fileDurable().map((entree) => entree.data)).toEqual([
+            { workout_line_id: 1, is_completed: false, weight: 80, reps: 5 },
+        ])
+
+        await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+        expect(reseau.serveur.series.get(100)).toMatchObject({ is_completed: false })
+    })
+
+    it('sort de la file quand on la supprime pendant que sa première tentative échouait, rechargement compris', async () => {
+        const page = await monterLaSeance(seance())
+        const couper = uneTentativeQuiTarde(reseau.serveur)
+
+        page.addSet(1)
+        await flushPromises()
+
+        page.removeSet(page.ligne().sets.at(-1).id)
+        await couper()
+
+        expect(fileDurable()).toEqual([])
+
+        const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+        expect([...reseau.serveur.series.keys()]).toEqual([3])
+        expect(rechargee.queue).toEqual([])
     })
 
     it('n’existe pas sur le serveur quand elle est supprimée avant le retour du réseau', async () => {

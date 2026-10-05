@@ -30,6 +30,24 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
     }
 
     /**
+     * Attend le premier envoi de la création de cette série : l'identifiant
+     * réel, ou l'entrée de file où elle attend désormais.
+     *
+     * Une modification ou un retrait faits pendant que ce premier envoi volait
+     * encore attendaient toute la création, donc le vidage, en mémoire seulement.
+     * Quand l'envoi finissait en file, un rechargement les perdait : la série
+     * repartait décochée, ou revenait sur le serveur alors qu'on l'avait
+     * supprimée. Après cette attente, ils rejoignent l'entrée de file comme
+     * n'importe quelle modification faite hors ligne (#1960).
+     *
+     * @param {number|string} setId
+     */
+    const premierEnvoi = (setId) => pendingIds.reference(setId)
+
+    /** Ce que rend une modification fondue dans la création encore en file. */
+    const fondue = () => Promise.reject({ isOffline: true, message: 'Set creation queued; the change rides with it' })
+
+    /**
      * The only two ways this screen may talk to the server about a set.
      *
      * Both wait out a creation still in flight, so the URL always carries an id the
@@ -42,41 +60,63 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
         if (fondreDansLaFile(set, payload)) {
             markUnsynced(set.id)
 
-            return Promise.reject({ isOffline: true, message: 'Set creation queued; the change rides with it' })
+            return fondue()
         }
 
-        return pendingIds.resolve(set.id).then((realId) => {
-            if (realId === null) {
-                markUnsynced(set.id)
+        return premierEnvoi(set.id)
+            .then(() => {
+                if (fondreDansLaFile(set, payload)) {
+                    markUnsynced(set.id)
 
-                return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
-            }
+                    return fondue()
+                }
 
-            return SyncService.patch(route('api.v1.sets.update', { set: realId }), payload)
-        })
+                return pendingIds.resolve(set.id)
+            })
+            .then((realId) => {
+                if (realId === null) {
+                    markUnsynced(set.id)
+
+                    return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
+                }
+
+                return SyncService.patch(route('api.v1.sets.update', { set: realId }), payload)
+            })
     }
 
     /**
      * Une série dont la création attend encore en file n'a rien à supprimer sur
      * le serveur : sa création sort de la file, et sa promesse se règle à null.
      * Une création déjà partie, elle, se supprime par l'identifiant qu'elle rend.
+     * Une création dont le premier envoi vole encore est attendue : si elle
+     * finit en file, elle en sort.
      */
     const deleteSet = (setId) => {
-        const fileDeLaSerie = pendingIds.fileDe(setId)
+        const retirerSaCreation = () => {
+            const fileDeLaSerie = pendingIds.fileDe(setId)
 
-        if (fileDeLaSerie !== null) {
-            SyncService.retirerDeLaFile(fileDeLaSerie)
+            if (fileDeLaSerie !== null) {
+                SyncService.retirerDeLaFile(fileDeLaSerie)
+            }
         }
 
-        return pendingIds.resolve(setId).then((realId) => {
-            if (realId === null) {
-                pendingIds.forget(setId)
+        retirerSaCreation()
 
-                return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
-            }
+        return premierEnvoi(setId)
+            .then(() => {
+                retirerSaCreation()
 
-            return SyncService.delete(route('api.v1.sets.destroy', { set: realId }))
-        })
+                return pendingIds.resolve(setId)
+            })
+            .then((realId) => {
+                if (realId === null) {
+                    pendingIds.forget(setId)
+
+                    return Promise.reject({ isOffline: true, message: 'Set not created server-side yet' })
+                }
+
+                return SyncService.delete(route('api.v1.sets.destroy', { set: realId }))
+            })
     }
 
     return { patchSet, deleteSet, fondreDansLaFile }

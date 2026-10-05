@@ -331,6 +331,17 @@ export const useAjoutEtRetraitDeSerie = ({
             if (issue?.queueId) {
                 pendingIds.noterEnFile(tempSet.id, issue.queueId)
 
+                /*
+                 * Ce qui a été saisi ou coché pendant la tentative n'avait pas
+                 * encore d'entrée où se fondre : la rangée telle qu'elle est à
+                 * l'écran la rejoint maintenant, et survit avec elle à un
+                 * rechargement.
+                 */
+                SyncService.modifierEnFile(issue.queueId, {
+                    is_completed: tempSet.is_completed,
+                    ...Object.fromEntries(measured.map((field) => [field, tempSet[field]])),
+                })
+
                 return attentes
                     .attendre(issue.queueId)
                     .then((rejeu) => (rejeu?.data?.id === undefined ? null : adopter(rejeu.data, rejeu.envoye)))

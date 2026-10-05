@@ -241,3 +241,44 @@ export const monterLaSeance = async (seance, { exercices = [{ id: 7, name: 'Squa
 
 /** Les entrées de la file telles qu'un rechargement les relirait. */
 export const fileDurable = () => JSON.parse(localStorage.getItem('offline_sync_queue') ?? '[]')
+
+/**
+ * Le réseau tarde à refuser la prochaine requête : elle reste en route, et
+ * l'écran agit pendant ce temps, jusqu'à ce qu'on coupe.
+ *
+ * @param {ReturnType<typeof creerUnFauxServeur>} serveur
+ * @returns {() => Promise<void>} coupe le réseau, et laisse la page l'apprendre
+ */
+export const uneTentativeQuiTarde = (serveur) => {
+    let couper
+    const coupure = new Promise((resolve) => (couper = resolve))
+
+    serveur.imposer.push(async () => {
+        await coupure
+
+        throw { code: 'ERR_NETWORK', request: {} }
+    })
+
+    return async () => {
+        serveur.enLigne = false
+        couper()
+        await flushPromises()
+    }
+}
+
+/**
+ * La page meurt ; un nouveau chargement relit la file durable, le réseau
+ * revient, et la file se vide.
+ *
+ * @param {{ wrapper: import('@vue/test-utils').VueWrapper }} page
+ * @param {ReturnType<typeof creerUnFauxServeur>} serveur
+ */
+export const rechargerQuandLeReseauRevient = async (page, serveur) => {
+    page.wrapper.unmount()
+    serveur.enLigne = true
+
+    const rechargee = await chargerSyncService({ compte: 1 })
+    await rechargee.pending
+
+    return rechargee
+}
