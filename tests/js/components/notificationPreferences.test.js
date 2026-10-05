@@ -395,3 +395,73 @@ describe('un abonnement que le navigateur a perdu', () => {
         }
     })
 })
+
+/**
+ * Les cases d'envoi en push avaient un texte voisin, sans lien avec elles : un
+ * lecteur d'écran annonçait deux « case à cocher » sans nom, et toucher le texte
+ * ne cochait rien — la seule cible était la case, 20 px de côté (#1971).
+ */
+describe('les cases d’envoi en push', () => {
+    const monterAvecLesCases = async () => {
+        const registration = await navigator.serviceWorker.ready
+        registration.pushManager.getSubscription.mockResolvedValueOnce({
+            endpoint: 'https://push.example/abc',
+            unsubscribe,
+        })
+
+        // Attaché au document : une case détachée change d'état sans émettre
+        // `change`, et le formulaire ne verrait rien.
+        const wrapper = mount(UpdateNotificationPreferencesForm, {
+            props: { preferences: {}, hasPushSubscription: true },
+            global: { stubs: { GlassSection: false } },
+            attachTo: document.body,
+        })
+        await flushPromises()
+
+        return wrapper
+    }
+
+    it('nomme chaque case par son libellé, différent pour les records et les rappels', async () => {
+        const wrapper = await monterAvecLesCases()
+
+        const noms = pushCheckboxes(wrapper).map((caseACocher) => {
+            const libelles = caseACocher.element.labels
+
+            expect(libelles).toHaveLength(1)
+
+            return libelles[0].textContent.trim()
+        })
+
+        expect(noms).toEqual(['Recevoir aussi les records en push', 'Recevoir aussi les rappels en push'])
+        wrapper.unmount()
+    })
+
+    it('coche la case quand on touche son libellé, sur une cible de 44 px', async () => {
+        const wrapper = await monterAvecLesCases()
+        const [records, rappels] = pushCheckboxes(wrapper)
+
+        expect(records.element.checked).toBe(false)
+        expect(records.element.labels[0].classList).toContain('min-h-touch')
+
+        await wrapper.find('[dusk="push-personal-record"] span').trigger('click')
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(records.element.checked).toBe(true)
+        expect(rappels.element.checked).toBe(false)
+        expect(patch.mock.calls.at(-1)[1].push_preferences).toEqual({
+            personal_record: true,
+            training_reminder: false,
+        })
+
+        await wrapper.find('[dusk="push-training-reminder"] span').trigger('click')
+        await wrapper.find('form').trigger('submit')
+        await flushPromises()
+
+        expect(patch.mock.calls.at(-1)[1].push_preferences).toEqual({
+            personal_record: true,
+            training_reminder: true,
+        })
+        wrapper.unmount()
+    })
+})
