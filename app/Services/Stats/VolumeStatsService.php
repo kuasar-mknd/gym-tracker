@@ -117,7 +117,13 @@ final class VolumeStatsService
     }
 
     /**
-     * Le volume des dernières séances terminées, une par point.
+     * Le volume des dernières séances terminées, une par point, de la plus
+     * ancienne à la plus récente.
+     *
+     * Les vingt DERNIÈRES, comme l'historique des durées qui lui fait face :
+     * le tri croissant suivi de la limite rendait les vingt premières du
+     * compte, et le graphique ne bougeait plus après la vingtième séance
+     * (#1957).
      *
      * @param  User  $user  L'utilisateur concerné.
      * @param  int  $limit  Le nombre de séances au plus.
@@ -138,9 +144,10 @@ final class VolumeStatsService
                 $workouts = $user->workouts()
                     ->whereNotNull('ended_at')
                     ->select(['id', 'started_at', 'name', 'workout_volume'])
-                    ->orderBy('started_at')
+                    ->latest('started_at')
                     ->limit($limit)
-                    ->get();
+                    ->get()
+                    ->reverse();
 
                 $historique = [];
                 foreach ($workouts as $row) {
