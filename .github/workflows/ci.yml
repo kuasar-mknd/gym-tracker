@@ -74,6 +74,28 @@ jobs:
             - name: Le precache reste une coquille
               run: node scripts/verifier-le-precache.mjs
 
+            # L'image construit ses actifs dans l'étape `frontend-builder` du
+            # Dockerfile, avec les seuls chemins que cette étape copie. Ces
+            # chemins, lus dans le Dockerfile, sont reconstruits ici à part :
+            # public/build et sw.js doivent être identiques, octet pour octet,
+            # à ceux que les tests et Dusk reçoivent (#1988). node_modules est
+            # copié en liens durs et non lié : un lien symbolique change les
+            # chemins écrits dans le manifeste.
+            - name: L'image construit les mêmes actifs
+              run: |
+                  set -euo pipefail
+                  contexte="$RUNNER_TEMP/contexte-de-l-image"
+                  mkdir -p "$contexte"
+                  sources=$(awk '/^FROM .* AS frontend-builder/ { dans = 1; next } /^FROM / { dans = 0 } dans && /^COPY / { for (i = 2; i < NF; i++) print $i }' Dockerfile)
+                  [ -n "$sources" ] || { echo "::error::Aucun COPY lu dans l'étape frontend-builder du Dockerfile."; exit 1; }
+                  # shellcheck disable=SC2086 # chaque source est un argument, et package*.json doit s'étendre
+                  cp -r $sources "$contexte/"
+                  cp -al node_modules "$contexte/node_modules"
+                  (cd "$contexte" && npm run build)
+                  diff -r public/build "$contexte/public/build"
+                  cmp public/sw.js "$contexte/public/sw.js"
+                  echo "Actifs identiques : $(find public/build -type f | wc -l) fichiers sous public/build, et sw.js."
+
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v7
               with:
