@@ -312,7 +312,8 @@ it('prévient l’ancienne adresse et retire la vérification quand le panneau c
  * adresse, et le compte redevient vérifié. Une autre identité qui présente la
  * même adresse reste refusée : un compte non vérifié ne se rattache à personne
  * de nouveau. Et seule l'adresse même du compte, garantie par le fournisseur,
- * le revérifie, pas une adresse que la collation de la base tient pour la même.
+ * le revérifie, pas une adresse que la collation de la base tient pour la même,
+ * ni le même identifiant rendu par un autre fournisseur.
  * La casse ASCII, elle, ne distingue pas deux adresses : le panneau n'impose
  * pas les minuscules, et un fournisseur peut rendre l'adresse avec des
  * majuscules.
@@ -333,12 +334,12 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
     expect($compte->refresh()->email_verified_at)->toBeNull()
         ->and($compte->ancienne_adresse_verifiee)->toBe('avant@example.org');
 
-    $retourDe = static function (int|string $identifiant, string $adresse) use ($fournisseur): void {
+    $retourDe = static function (int|string $identifiant, string $adresse, ?string $autreFournisseur = null) use ($fournisseur): void {
         $utilisateurSocial = new SocialiteUser()
             ->setRaw(['email_verified' => true])
             ->map(['id' => $identifiant, 'email' => $adresse, 'name' => 'Titulaire', 'nickname' => null, 'avatar' => null]);
 
-        Socialite::shouldReceive('driver')->once()->with($fournisseur)->andReturn(new readonly class($utilisateurSocial) implements Provider
+        Socialite::shouldReceive('driver')->once()->with($autreFournisseur ?? $fournisseur)->andReturn(new readonly class($utilisateurSocial) implements Provider
         {
             public function __construct(private SocialiteUser $utilisateurSocial)
             {
@@ -362,6 +363,16 @@ it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a chan
     expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($fournisseur))
         ->toThrow(SocialAuthException::class);
     expect($compte->refresh()->email_verified_at)->toBeNull();
+
+    // Le même identifiant, rendu par un autre fournisseur, avec l'adresse
+    // exacte du compte : ce n'est pas l'identité reliée, refusée aussi.
+    $autreFournisseur = $fournisseur === 'google' ? 'github' : 'google';
+    $retourDe($identifiantRendu, $adresseRendue, $autreFournisseur);
+
+    expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($autreFournisseur))
+        ->toThrow(SocialAuthException::class);
+    expect($compte->refresh()->email_verified_at)->toBeNull()
+        ->and($compte->provider)->toBe($fournisseur);
 
     // La même identité, pour une adresse que seule la collation de la base
     // tient pour celle du compte : ce retour ne prouve pas l'adresse du compte,
