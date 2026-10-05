@@ -28,6 +28,7 @@ use App\Models\Goal;
 use App\Models\Supplement;
 use App\Models\User;
 use App\Models\Workout;
+use Filament\Forms\Components\Select;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
@@ -66,18 +67,39 @@ function panneauLibellesAnglais(): array
 /**
  * Les pages de chaque ressource, avec la fabrique de leur ligne.
  *
- * @return array<string, array{0: class-string<Model>, 1: class-string, 2: class-string, 3: class-string}>
+ * @return array<string, array{0: Closure(): Model, 1: class-string, 2: class-string, 3: class-string}>
  */
 function panneauRessources(): array
 {
     return [
-        'User' => [User::class, ListUsers::class, CreateUser::class, EditUser::class],
-        'Achievement' => [Achievement::class, ListAchievements::class, CreateAchievement::class, EditAchievement::class],
-        'Exercise' => [Exercise::class, ListExercises::class, CreateExercise::class, EditExercise::class],
-        'Goal' => [Goal::class, ListGoals::class, CreateGoal::class, EditGoal::class],
-        'Supplement' => [Supplement::class, ListSupplements::class, CreateSupplement::class, EditSupplement::class],
-        'Workout' => [Workout::class, ListWorkouts::class, CreateWorkout::class, EditWorkout::class],
+        'User' => [static fn (): Model => User::factory()->create(), ListUsers::class, CreateUser::class, EditUser::class],
+        'Achievement' => [static fn (): Model => Achievement::factory()->create(), ListAchievements::class, CreateAchievement::class, EditAchievement::class],
+        'Exercise' => [static fn (): Model => Exercise::factory()->create(), ListExercises::class, CreateExercise::class, EditExercise::class],
+        'Goal' => [static fn (): Model => Goal::factory()->create(), ListGoals::class, CreateGoal::class, EditGoal::class],
+        'Supplement' => [static fn (): Model => Supplement::factory()->create(), ListSupplements::class, CreateSupplement::class, EditSupplement::class],
+        'Workout' => [static fn (): Model => Workout::factory()->create(), ListWorkouts::class, CreateWorkout::class, EditWorkout::class],
     ];
+}
+
+/**
+ * Le champ « type » du formulaire de création d'une page, avec ses options.
+ *
+ * @param  class-string  $page
+ * @return array<string, string>
+ */
+function panneauOptionsDuType(string $page): array
+{
+    /** @var \Filament\Resources\Pages\CreateRecord $creation */
+    $creation = Livewire::test($page)->instance();
+    $champ = $creation->getSchema('form')?->getFlatFields()['type'] ?? null;
+
+    expect($champ)->toBeInstanceOf(Select::class);
+
+    /** @var Select $champ */
+    /** @var array<string, string> $options */
+    $options = $champ->getOptions();
+
+    return $options;
 }
 
 /**
@@ -90,9 +112,9 @@ function panneauHtmlResserre(string $html): string
 }
 
 it('affiche en français les colonnes, les champs et les options de chaque ressource', function (string $ressource): void {
-    [$modele, $liste, $creation, $modification] = panneauRessources()[$ressource];
+    [$fabrique, $liste, $creation, $modification] = panneauRessources()[$ressource];
     $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions($ressource)), 'admin');
-    $ligne = $modele::factory()->create();
+    $ligne = $fabrique();
 
     $pages = [
         // Les colonnes masquées par défaut (créé le, modifié le) se montrent aussi.
@@ -121,16 +143,13 @@ it('nomme les types d’objectif et d’exercice en français, dans les options 
     expect(panneauHtmlResserre(Livewire::test(ListGoals::class)->html()))->toContain('Fréquence (Séances)')
         ->and(panneauHtmlResserre(Livewire::test(ListExercises::class)->html()))->toContain('>Temps<');
 
-    $champs = Livewire::test(CreateGoal::class)->instance()->form->getFlatFields();
-    expect($champs['type']->getOptions())->toBe([
+    expect(panneauOptionsDuType(CreateGoal::class))->toBe([
         'weight' => 'Force (Poids max)',
         'frequency' => 'Fréquence (Séances)',
         'volume' => 'Volume (Max par séance)',
         'measurement' => 'Mensuration',
-    ]);
-
-    $champs = Livewire::test(CreateExercise::class)->instance()->form->getFlatFields();
-    expect($champs['type']->getOptions())->toBe(['strength' => 'Force', 'cardio' => 'Cardio', 'timed' => 'Temps']);
+    ])
+        ->and(panneauOptionsDuType(CreateExercise::class))->toBe(['strength' => 'Force', 'cardio' => 'Cardio', 'timed' => 'Temps']);
 });
 
 it('appelle « Compléments » la ressource des compléments, comme l’application', function (): void {

@@ -61,10 +61,11 @@ describe('PersonalRecordAchieved::toArray', function (): void {
             'value' => $valeur,
         ])->refresh();
 
-        expect(new PersonalRecordAchieved($record)->toArray($user)['message'])
-            ->toBe("Félicitations ! Tu as battu ton record de volume par série sur l'exercice Squat avec {$attendu}.")
-            ->not->toContain('.50')
-            ->not->toContain('0kg');
+        $message = new PersonalRecordAchieved($record)->toArray($user)['message'];
+
+        expect($message)->toBe("Félicitations ! Tu as battu ton record de volume par série sur l'exercice Squat avec {$attendu}.");
+        expect($message)->not->toContain('.50');
+        expect($message)->not->toContain('0kg');
     })->with([
         'une décimale' => [102.5, "102,5\u{00A0}kg"],
         'deux décimales' => [187.25, "187,25\u{00A0}kg"],

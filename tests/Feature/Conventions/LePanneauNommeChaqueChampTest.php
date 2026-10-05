@@ -36,7 +36,7 @@ function panneauChampsSansLibelle(string $source): array
         token_get_all($source),
         static fn (array|string $jeton): bool => ! is_array($jeton) || ! in_array($jeton[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true),
     ));
-    $texte = static fn (array|string $jeton): string => is_array($jeton) ? $jeton[1] : $jeton;
+    $texte = static fn (mixed $jeton): string => is_string($jeton) ? $jeton : (is_array($jeton) && is_string($jeton[1] ?? null) ? $jeton[1] : '');
     $sansLibelle = [];
 
     foreach ($jetons as $i => $jeton) {

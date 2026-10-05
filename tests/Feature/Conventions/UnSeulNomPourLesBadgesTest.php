@@ -36,6 +36,19 @@ function unSeulNomAutresNoms(): string
 }
 
 /**
+ * Les traductions françaises de `lang/fr.json`.
+ *
+ * @return array<string, string>
+ */
+function unSeulNomTraductions(): array
+{
+    /** @var array<string, string> $traductions */
+    $traductions = json_decode((string) file_get_contents(lang_path('fr.json')), true, flags: JSON_THROW_ON_ERROR);
+
+    return $traductions;
+}
+
+/**
  * Le texte qu'affiche chaque fichier lu, avec son chemin.
  *
  * @return array<string, string>
@@ -52,8 +65,9 @@ function unSeulNomTextesAffiches(): array
         );
     }
 
+    $notifications = glob(app_path('Notifications/*.php'));
     $chemins = [
-        ...glob(app_path('Notifications/*.php')) ?: [],
+        ...(is_array($notifications) ? $notifications : []),
         ...array_map(
             static fn (SplFileInfo $fichier): string => $fichier->getPathname(),
             iterator_to_array(Finder::create()->files()->in(app_path('Filament/Resources/Achievements'))->name('*.php'), false),
@@ -72,9 +86,7 @@ function unSeulNomTextesAffiches(): array
         $textes[str_replace(base_path().'/', '', $chemin)] = $chaines;
     }
 
-    /** @var array<string, string> $traductions */
-    $traductions = json_decode((string) file_get_contents(lang_path('fr.json')), true, flags: JSON_THROW_ON_ERROR);
-    $textes['lang/fr.json'] = implode("\n", $traductions);
+    $textes['lang/fr.json'] = implode("\n", unSeulNomTraductions());
 
     return $textes;
 }
@@ -98,7 +110,7 @@ it('appelle « Badges » la page, les deux menus, la traduction et la notificati
     expect($textes['resources/js/Pages/Achievements/Index.vue'])->toContain('title="Badges"', 'page-title="Badges"', 'Badges 🏆')
         ->and($textes['resources/js/Pages/Profile/Index.vue'])->toContain("name: 'Badges'")
         ->and($textes['resources/js/Layouts/AuthenticatedLayout.vue'])->toMatch('/>\s*Badges\s*</u')
-        ->and(json_decode((string) file_get_contents(lang_path('fr.json')), true)['Achievements'])->toBe('Badges');
+        ->and(unSeulNomTraductions()['Achievements'] ?? null)->toBe('Badges');
 
     $notification = new AchievementUnlocked(Achievement::factory()->make(['name' => 'Marathonien du Fer']));
     $donnees = $notification->toArray(User::factory()->make());

@@ -116,7 +116,7 @@ it('donne un message français à chaque règle de date relative', function (): 
 
     foreach (validationFrancaiseRequetes() as $classe => $requete) {
         foreach (validationFrancaiseRegles($requete) as $clef => $regles) {
-            foreach (is_array($regles) ? $regles : explode('|', (string) $regles) as $regle) {
+            foreach (is_array($regles) ? $regles : (is_string($regles) ? explode('|', $regles) : []) as $regle) {
                 if (! is_string($regle) || preg_match('/^(after|after_or_equal|before|before_or_equal|date_equals):(today|tomorrow|yesterday|now)$/', $regle) !== 1) {
                     continue;
                 }

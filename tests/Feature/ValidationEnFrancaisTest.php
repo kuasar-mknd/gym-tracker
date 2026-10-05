@@ -33,6 +33,22 @@ function validationEnFrancaisMessage(string $champ): string
     return (string) $erreurs->first($champ);
 }
 
+/**
+ * Tous les messages rendus par la dernière requête refusée.
+ *
+ * @return list<string>
+ */
+function validationEnFrancaisTousLesMessages(): array
+{
+    /** @var \Illuminate\Support\ViewErrorBag $erreurs */
+    $erreurs = session('errors');
+
+    /** @var list<string> $messages */
+    $messages = $erreurs->all();
+
+    return $messages;
+}
+
 it('dit qu’une échéance passée doit être à venir, sans « deadline » ni « today »', function (): void {
     $this->actingAs(User::factory()->create())
         ->post(route('goals.store'), [
@@ -78,11 +94,11 @@ it('ne laisse dans aucun de ces messages ni nom de colonne ni « today »', func
     $utilisateur = User::factory()->create();
 
     $this->actingAs($utilisateur)->post(route('goals.store'), ['deadline' => '2026-10-04', 'target_value' => -1]);
-    $messages = session('errors')->all();
+    $messages = validationEnFrancaisTousLesMessages();
     $this->actingAs($utilisateur)->post(route('body-parts.store'), ['value' => 5000, 'measured_at' => '2026-10-06', 'unit' => 'kg']);
-    $messages = [...$messages, ...session('errors')->all()];
+    $messages = [...$messages, ...validationEnFrancaisTousLesMessages()];
     $this->actingAs($utilisateur)->post(route('supplements.store'), ['servings_remaining' => -1, 'low_stock_threshold' => -1]);
-    $messages = [...$messages, ...session('errors')->all()];
+    $messages = [...$messages, ...validationEnFrancaisTousLesMessages()];
 
     expect($messages)->not->toBeEmpty();
 

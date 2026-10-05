@@ -24,8 +24,8 @@ use Illuminate\Notifications\Messages\MailMessage;
 function courrielsEnFrancaisAEnvoyer(): array
 {
     return [
-        'vérification de l’adresse' => static fn (User $utilisateur): MailMessage => (new VerifyEmail())->toMail($utilisateur),
-        'réinitialisation du mot de passe' => static fn (User $utilisateur): MailMessage => (new ResetPassword('jeton-de-test'))->toMail($utilisateur),
+        'vérification de l’adresse' => static fn (User $utilisateur): MailMessage => new VerifyEmail()->toMail($utilisateur),
+        'réinitialisation du mot de passe' => static fn (User $utilisateur): MailMessage => new ResetPassword('jeton-de-test')->toMail($utilisateur),
     ];
 }
 
@@ -40,12 +40,10 @@ it('rend chaque courriel en français, pied compris', function (string $courriel
     );
 
     foreach ([$html, $texte] as $contenu) {
-        expect($contenu)
-            ->toContain('Tous droits réservés.')
-            ->toContain('Bonjour !')
-            ->toContain('Cordialement,')
-            ->not->toContain('All rights')
-            ->not->toContain('Regards')
-            ->not->toContain('Hello');
+        expect($contenu)->toContain('Tous droits réservés.', 'Bonjour !', 'Cordialement,');
+
+        foreach (['All rights', 'Regards', 'Hello'] as $anglais) {
+            expect($contenu)->not->toContain($anglais);
+        }
     }
 })->with(array_keys(courrielsEnFrancaisAEnvoyer()));
