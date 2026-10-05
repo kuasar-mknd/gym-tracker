@@ -109,3 +109,40 @@ it('enregistre un score positif pour un homme de 300 kg', function (): void {
         ->toBe(scoreWilksEnregistre(201.9, 500, 'male'))
         ->toBeGreaterThan(0.0);
 });
+
+/*
+ * Les scores enregistrés avant que le poids ne soit borné restaient négatifs
+ * ou aberrants dans l'historique et les graphiques de la page Wilks. Leurs
+ * entrées sont conservées : la migration les recalcule avec le même calcul
+ * borné, et ne touche qu'à eux.
+ */
+it('recalcule les scores déjà enregistrés hors de la plage, et eux seuls', function (): void {
+    $user = User::factory()->create();
+
+    $hommeDe300 = WilksScore::factory()->for($user)->create([
+        'body_weight' => 300, 'lifted_weight' => 500, 'gender' => 'male', 'unit' => 'kg', 'score' => -320.15,
+    ]);
+    $hommeDe10 = WilksScore::factory()->for($user)->create([
+        'body_weight' => 10, 'lifted_weight' => 500, 'gender' => 'male', 'unit' => 'kg', 'score' => -4566.34,
+    ]);
+    $femmeDe500Livres = WilksScore::factory()->for($user)->create([
+        'body_weight' => 500, 'lifted_weight' => 1102.31, 'gender' => 'female', 'unit' => 'lbs', 'score' => -63.89,
+    ]);
+    // 90 lbs valent 40,8 kg : dans la plage masculine, la ligne ne bouge pas.
+    $dansLaPlage = WilksScore::factory()->for($user)->create([
+        'body_weight' => 90, 'lifted_weight' => 400, 'gender' => 'male', 'unit' => 'lbs', 'score' => 123.45,
+    ]);
+
+    $migration = require database_path('migrations/2026_10_05_221523_recalculer_les_scores_de_wilks_hors_de_la_plage.php');
+    $migration->up();
+
+    expect($hommeDe300->refresh()->score)->toBe(scoreWilksEnregistre(201.9, 500, 'male'))->toBeGreaterThan(0.0)
+        ->and($hommeDe10->refresh()->score)->toBe(scoreWilksEnregistre(40, 500, 'male'))->toBeGreaterThan(0.0)
+        ->and($femmeDe500Livres->refresh()->score)->toBe(scoreWilksEnregistre(154.53, 1102.31 / 2.20462, 'female'))->toBeGreaterThan(0.0)
+        ->and($dansLaPlage->refresh()->score)->toBe(123.45);
+
+    // Rejouée, elle rend les mêmes scores.
+    $migration->up();
+
+    expect($hommeDe300->refresh()->score)->toBe(scoreWilksEnregistre(201.9, 500, 'male'));
+});

@@ -41,11 +41,7 @@ final class CreateWilksScoreAction
         $gender = $data['gender'];
         $unit = $data['unit'];
 
-        // Convert to KG for calculation if necessary
-        $bwKg = $unit === 'lbs' ? $bw / 2.20462 : $bw;
-        $liftedKg = $unit === 'lbs' ? $lifted / 2.20462 : $lifted;
-
-        $scoreValue = $this->calculateWilks($bwKg, $liftedKg, $gender);
+        $scoreValue = self::score($bw, $lifted, $gender, $unit);
 
         /** @var WilksScore */
         return $user->wilksScores()->create([
@@ -57,9 +53,57 @@ final class CreateWilksScoreAction
         ]);
     }
 
-    private function calculateWilks(float $bw, float $lifted, string $gender): float
+    /**
+     * Le score de Wilks d'un total, à partir des valeurs telles qu'elles sont
+     * saisies et enregistrées.
+     *
+     * Public pour la migration qui recalcule les scores enregistrés hors de la
+     * plage avant que le poids ne soit borné : les deux suivent ainsi le même
+     * calcul.
+     *
+     * @param  float  $poidsDeCorps  Le poids de corps, dans l'unité saisie.
+     * @param  float  $total  Le total soulevé, dans l'unité saisie.
+     * @param  string  $genre  `male`, ou toute autre valeur pour la formule féminine.
+     * @param  string  $unite  `kg` ou `lbs`.
+     */
+    public static function score(float $poidsDeCorps, float $total, string $genre, string $unite): float
     {
-        [$minimum, $maximum] = self::PLAGE_DU_POIDS_DE_CORPS[$gender === 'male' ? 'male' : 'female'];
+        return self::calculateWilks(self::enKilos($poidsDeCorps, $unite), self::enKilos($total, $unite), $genre);
+    }
+
+    /**
+     * Le poids de corps saisi, une fois converti en kilos, sort de la plage de
+     * la formule : le score enregistré avant que le poids ne soit borné était
+     * faux pour lui seul (#1959).
+     *
+     * @param  float  $poidsDeCorps  Le poids de corps, dans l'unité saisie.
+     * @param  string  $genre  `male`, ou toute autre valeur pour la formule féminine.
+     * @param  string  $unite  `kg` ou `lbs`.
+     */
+    public static function poidsDeCorpsHorsDeLaPlage(float $poidsDeCorps, string $genre, string $unite): bool
+    {
+        [$minimum, $maximum] = self::plage($genre);
+        $kilos = self::enKilos($poidsDeCorps, $unite);
+
+        return $kilos < $minimum || $kilos > $maximum;
+    }
+
+    private static function enKilos(float $valeur, string $unite): float
+    {
+        return $unite === 'lbs' ? $valeur / 2.20462 : $valeur;
+    }
+
+    /**
+     * @return array{0: float, 1: float}
+     */
+    private static function plage(string $genre): array
+    {
+        return self::PLAGE_DU_POIDS_DE_CORPS[$genre === 'male' ? 'male' : 'female'];
+    }
+
+    private static function calculateWilks(float $bw, float $lifted, string $gender): float
+    {
+        [$minimum, $maximum] = self::plage($gender);
         $bw = min(max($bw, $minimum), $maximum);
 
         if ($gender === 'male') {
