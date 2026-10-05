@@ -28,6 +28,14 @@ const PREMIERE_ATTENTE_MS = 5000
 /** Le plafond de cette attente, `Retry-After` compris. */
 const ATTENTE_MAX_MS = 5 * 60 * 1000
 
+/**
+ * Ce qu'une écriture directe attend, au plus, avant son unique nouvel essai sur
+ * un 429. L'écran attend sa réponse : un `Retry-After` d'une minute ne doit pas
+ * le figer une minute. Au-delà, l'échec revient à l'appelant, comme avant que
+ * l'en-tête soit lisible (#1963).
+ */
+const ATTENTE_EN_LIGNE_MAX_MS = 5000
+
 const MUTATIONS = ['post', 'patch', 'put', 'delete']
 
 /**
@@ -264,8 +272,8 @@ class SyncService {
         } catch (error) {
             // Auto-retry once on 429 Too Many Requests (rate limiting)
             if (error.response?.status === 429) {
-                const retryAfter = parseInt(error.response.headers?.['retry-after'] || '2', 10)
-                await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000))
+                const attente = Math.min(attenteDemandee(error) ?? 2000, ATTENTE_EN_LIGNE_MAX_MS)
+                await new Promise((resolve) => setTimeout(resolve, attente))
 
                 try {
                     /**

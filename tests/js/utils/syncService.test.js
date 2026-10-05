@@ -296,6 +296,10 @@ describe('SyncService idempotency', () => {
 describe('SyncService 429 retry', () => {
     const keyOf = (call) => call[0].headers?.['Idempotency-Key']
 
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
     it('retries under the same name it first used', async () => {
         vi.useFakeTimers()
         request
@@ -312,6 +316,37 @@ describe('SyncService 429 retry', () => {
         expect(keyOf(request.mock.calls[1])).toEqual(expect.any(String))
 
         vi.useRealTimers()
+    })
+
+    /**
+     * L'écran attend la réponse d'une écriture directe. L'en-tête est de nouveau
+     * lisible (#1963), et la limite de l'API demande jusqu'à une minute :
+     * l'écriture ne la fait pas attendre plus de cinq secondes. Sans en-tête,
+     * elle attend deux secondes, comme avant.
+     */
+    it('n’attend pas plus de cinq secondes avant son nouvel essai, quoi que demande Retry-After', async () => {
+        vi.useFakeTimers()
+        request
+            .mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '60' } }, request: {} })
+            .mockResolvedValueOnce({ data: {} })
+            .mockRejectedValueOnce({ response: { status: 429, headers: {} }, request: {} })
+            .mockResolvedValueOnce({ data: {} })
+
+        const service = await freshService()
+
+        const premiere = service.post('/api/v1/sets', { reps: 10 })
+        await vi.advanceTimersByTimeAsync(4999)
+        expect(request).toHaveBeenCalledTimes(1)
+        await vi.advanceTimersByTimeAsync(1)
+        expect(request).toHaveBeenCalledTimes(2)
+        await premiere
+
+        const seconde = service.post('/api/v1/sets', { reps: 8 })
+        await vi.advanceTimersByTimeAsync(1999)
+        expect(request).toHaveBeenCalledTimes(3)
+        await vi.advanceTimersByTimeAsync(1)
+        expect(request).toHaveBeenCalledTimes(4)
+        await seconde
     })
 
     it('queues the write when the retry hits the network instead of the server', async () => {
