@@ -32,6 +32,7 @@ class WorkoutTemplateController extends Controller
 
         return Inertia::render('Workouts/Templates/Create', [
             'exercises' => Exercise::enCachePourUtilisateur($idUtilisateur),
+            ...$this->bornesDuFormulaire(),
         ]);
     }
 
@@ -114,7 +115,23 @@ class WorkoutTemplateController extends Controller
         return Inertia::render('Workouts/Templates/Edit', [
             'template' => $template,
             'exercises' => Exercise::enCachePourUtilisateur($this->user()->id),
+            ...$this->bornesDuFormulaire(),
         ]);
+    }
+
+    /**
+     * Les plafonds que le formulaire d'un modèle applique avant d'envoyer : ceux
+     * d'un modèle, et ceux d'une série pour les répétitions et le poids. Ce sont
+     * ceux que ses requêtes valident (`BorneLesSeriesDuGabarit`).
+     *
+     * @return array{bornesDuModele: array{exercices: int, seriesParExercice: int}, bornesDUneSerie: array{weight: int, reps: int, distance_km: int, duration_seconds: int}}
+     */
+    private function bornesDuFormulaire(): array
+    {
+        return [
+            'bornesDuModele' => WorkoutTemplate::bornes(),
+            'bornesDUneSerie' => Set::bornes(),
+        ];
     }
 
     /**

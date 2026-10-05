@@ -12,6 +12,7 @@ use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\ReglesDesRequetes;
 
 use function Pest\Laravel\actingAs;
@@ -279,4 +280,49 @@ it('coupe le nom du modèle tiré d’une séance pour qu’il tienne dans sa co
     expect(mb_strlen($nom))->toBe(255)
         ->and($nom)->toEndWith(' (Modèle)')
         ->and($nom)->toStartWith(str_repeat('é', 246));
+});
+
+/*
+ * Le formulaire d'un modèle affiche sous l'exercice ou la série refusés le
+ * message que le serveur rend : chaque plafond s'y nomme, en français.
+ */
+it('nomme chaque plafond d’un modèle dans le message de son refus', function (): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $trop = modelesBornesCorps($exercice, [
+        ...modelesBornesSeries(1, Set::REPETITIONS_MAX + 1, Set::POIDS_MAX_KG + 1),
+        ...modelesBornesSeries(WorkoutTemplate::SERIES_MAX_PAR_EXERCICE),
+    ]);
+    $trop['exercises'] = [...$trop['exercises'], ...array_fill(0, WorkoutTemplate::EXERCICES_MAX, ['id' => $exercice->id])];
+
+    actingAs($compte)->postJson(route('templates.store'), $trop)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([
+            'exercises' => 'Un modèle compte au plus 50 exercices.',
+            'exercises.0.sets' => 'Un exercice de modèle compte au plus 50 séries.',
+            'exercises.0.sets.0.reps' => 'Une série compte au plus 999 répétitions.',
+            'exercises.0.sets.0.weight' => 'Une série porte au plus 100 000 kg.',
+        ]);
+
+    actingAs($compte)->postJson(route('templates.store'), modelesBornesCorps($exercice, modelesBornesSeries(1, -1)))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['exercises.0.sets.0.reps' => 'répétitions']);
+});
+
+it('transmet au formulaire d’un modèle les plafonds que ses requêtes valident', function (): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $modele = modelesBornesModeleDe($compte, $exercice);
+
+    foreach ([route('templates.create'), route('templates.edit', $modele)] as $adresse) {
+        actingAs($compte)->get($adresse)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->where('bornesDuModele', [
+                    'exercices' => WorkoutTemplate::EXERCICES_MAX,
+                    'seriesParExercice' => WorkoutTemplate::SERIES_MAX_PAR_EXERCICE,
+                ])
+                ->where('bornesDUneSerie', Set::bornes())
+            );
+    }
 });

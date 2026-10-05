@@ -33,4 +33,37 @@ trait BorneLesSeriesDuGabarit
             'exercises.*.sets.*.weight' => 'nullable|numeric|min:0|max:'.Set::POIDS_MAX_KG,
         ];
     }
+
+    /**
+     * Chaque plafond se nomme dans son message, en français : le formulaire
+     * d'un modèle affiche le message du serveur sous l'exercice ou la série
+     * refusés.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'exercises.max' => 'Un modèle compte au plus '.WorkoutTemplate::EXERCICES_MAX.' exercices.',
+            'exercises.*.sets.max' => 'Un exercice de modèle compte au plus '.WorkoutTemplate::SERIES_MAX_PAR_EXERCICE.' séries.',
+            'exercises.*.sets.*.reps.max' => 'Une série compte au plus '.number_format(Set::REPETITIONS_MAX, 0, ',', ' ').' répétitions.',
+            'exercises.*.sets.*.weight.max' => 'Une série porte au plus '.number_format(Set::POIDS_MAX_KG, 0, ',', ' ').' kg.',
+        ];
+    }
+
+    /**
+     * Le nom des champs tels que le formulaire les montre, pour les autres
+     * règles.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'exercises' => 'exercices',
+            'exercises.*.sets' => 'séries',
+            'exercises.*.sets.*.reps' => 'répétitions',
+            'exercises.*.sets.*.weight' => 'poids',
+        ];
+    }
 }

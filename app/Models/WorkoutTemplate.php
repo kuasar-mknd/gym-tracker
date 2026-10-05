@@ -35,6 +35,20 @@ class WorkoutTemplate extends Model
      */
     public const int SERIES_MAX_PAR_EXERCICE = 50;
 
+    /**
+     * Les plafonds d'un modèle, que son formulaire reçoit pour ne pas
+     * proposer d'ajouter un exercice ou une série que la requête refuserait.
+     *
+     * @return array{exercices: int, seriesParExercice: int}
+     */
+    public static function bornes(): array
+    {
+        return [
+            'exercices' => self::EXERCICES_MAX,
+            'seriesParExercice' => self::SERIES_MAX_PAR_EXERCICE,
+        ];
+    }
+
     #[\Override]
     protected $fillable = [
         'name',
