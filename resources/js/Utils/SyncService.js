@@ -1,5 +1,5 @@
 import { http } from '@/Utils/http'
-import { classifySyncError, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
+import { classifySyncError, estPourUnAutreCompte, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
 const FAILED_KEY = 'offline_sync_failed'
@@ -37,6 +37,13 @@ const ATTENTE_MAX_MS = 5 * 60 * 1000
 const ATTENTE_EN_LIGNE_MAX_MS = 5000
 
 const MUTATIONS = ['post', 'patch', 'put', 'delete']
+
+/**
+ * L'en-tête qui dit au serveur pour quel compte une écriture rejouée a été
+ * faite. Le serveur refuse, sans l'exécuter, celle dont le compte n'est pas
+ * celui de la session (#1964, `VerifieLeCompteDeLEcriture`).
+ */
+const ENTETE_DU_COMPTE = 'X-Compte-De-L-Ecriture'
 
 /**
  * Un stockage corrompu — une écriture coupée par une suspension iOS, un quota
@@ -196,11 +203,18 @@ class SyncService {
         window.addEventListener('online', () => this.processQueue())
 
         /**
-         * Chaque visite Inertia, le premier affichage compris, dit qui est
-         * connecté. C'est aussi une preuve que le réseau répond : la file du
-         * compte part, s'il en a une.
+         * Chaque réponse du serveur à une visite Inertia dit qui est connecté.
+         * C'est aussi une preuve que le réseau répond : la file du compte part,
+         * s'il en a une.
+         *
+         * Une réponse, pas une navigation. `inertia:navigate` est aussi émis
+         * quand le bouton Retour restaure une page depuis l'historique, avec
+         * les props qu'elle avait à son affichage : celles du compte qui s'est
+         * déconnecté depuis. Le service le croyait alors revenu, et vidait sa
+         * file sous la session du compte suivant (#1964). Le serveur refuse
+         * désormais ces écritures de toute façon ; le service ne les tente plus.
          */
-        document.addEventListener('inertia:navigate', (event) =>
+        document.addEventListener('inertia:success', (event) =>
             this.definirLeCompte(event.detail?.page?.props?.auth?.user?.id),
         )
 
@@ -554,9 +568,17 @@ class SyncService {
 
             /*
              * La requête seule, sans ce que la file note pour elle-même : son
-             * identifiant, son compte, ses compteurs d'essais.
+             * identifiant, ses compteurs d'essais. Son compte, lui, part avec
+             * elle : l'onglet qui vide la file peut croire connecté un compte
+             * dont un autre onglet a remplacé la session, et seul le serveur
+             * sait laquelle accompagne la requête (#1964).
              */
-            const requete = { method: config.method, url: config.url, data: config.data, headers: config.headers }
+            const requete = {
+                method: config.method,
+                url: config.url,
+                data: config.data,
+                headers: { ...config.headers, [ENTETE_DU_COMPTE]: config.compte },
+            }
 
             /** Ce que l'écriture a produit, annoncé une fois la file réécrite. */
             let rejeu = null
@@ -578,6 +600,15 @@ class SyncService {
                     envoye: requete.data,
                 }
             } catch (error) {
+                /*
+                 * Le serveur a refusé de l'exécuter sous la session d'un autre
+                 * compte. L'écriture reste en tête pour le sien, sans essai
+                 * consommé, et rien de ce compte ne passe devant elle.
+                 */
+                if (estPourUnAutreCompte(error)) {
+                    return
+                }
+
                 // Anything that was not a network failure used to fall off the end
                 // of this block and be lost — a 500, an expired token, a validation
                 // error — with a console.error as the only trace. These are edits

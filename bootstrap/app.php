@@ -126,6 +126,34 @@ return Application::configure(basePath: dirname(__DIR__))
         }
 
         /*
+         * Une écriture rejouée par la file hors ligne pour un autre compte que
+         * celui de la session est refusée sans être exécutée (#1964) : le
+         * docbloc du middleware dit pourquoi le client ne peut pas le garantir
+         * seul. Dans les deux groupes, parce que la file atteint les deux (les
+         * séries par l'API, les préférences par le profil).
+         *
+         * Sa place dans l'ordre de priorité compte deux fois. Après
+         * l'authentification, pour qu'une session expirée réponde encore 401 et
+         * invite à se reconnecter. Et AVANT la liaison de modèle : placé après,
+         * il aurait répondu 404 pour un identifiant inconnu et 409 pour la
+         * ligne d'un autre compte, l'oracle d'existence que #1418 et #1432 ont
+         * fermé. Le `prependToPriorityList` le met juste devant
+         * `SubstituteBindings`, donc derrière les deux décorateurs ci-dessus.
+         */
+        $middleware->web(append: [
+            \App\Http\Middleware\VerifieLeCompteDeLEcriture::class,
+        ]);
+
+        $middleware->api(append: [
+            \App\Http\Middleware\VerifieLeCompteDeLEcriture::class,
+        ]);
+
+        $middleware->prependToPriorityList(
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\VerifieLeCompteDeLEcriture::class,
+        );
+
+        /*
          * Le rappel d'Apple est un formulaire posté depuis son site (#1911) :
          * il ne peut porter ni notre jeton ni `Sec-Fetch-Site: same-origin`,
          * et refusé, il répondait 419. Exclu seul, chemin exact : sa

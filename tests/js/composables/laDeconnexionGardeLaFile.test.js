@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
-import { chargerSyncService, naviguer, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
+import {
+    chargerSyncService,
+    naviguer,
+    poserLaPage,
+    restaurerDepuisLHistorique,
+    retirerLesEcouteursDuService,
+} from '../utils/fileHorsLigne'
 
 const requete = vi.hoisted(() => vi.fn())
 const routeur = vi.hoisted(() => ({ post: vi.fn() }))
@@ -129,6 +135,56 @@ describe('la file d’un compte, à la déconnexion', () => {
 
         expect(envoyees()).toEqual(['patch /api/v1/sets/900 {"is_completed":true}'])
         expect(sync.queue.map((entree) => entree.url)).toEqual(['/profile/preferences'])
+    })
+
+    /*
+     * Le bouton Retour restaure la page de A depuis l'historique, props de A
+     * comprises, et Inertia annonce la navigation. Le service croyait A revenu
+     * et vidait sa file sous la session de B.
+     */
+    it('ne l’envoie pas quand B revient, par le bouton Retour, sur une page de A', async () => {
+        const sync = await aLaisseUneEcritureEnFile()
+        await seDeconnecter()
+
+        requete.mockReset()
+        requete.mockResolvedValue({ data: { data: {} } })
+        naviguer(null)
+        naviguer(2)
+        await sync.pending
+
+        restaurerDepuisLHistorique(null)
+        restaurerDepuisLHistorique(1)
+        await sync.pending
+
+        expect(envoyees()).toEqual([])
+        expect(sync.compte).toBe('2')
+        expect(sync.queue.map((entree) => entree.url)).toEqual(['/profile/preferences'])
+    })
+
+    /*
+     * Deux onglets, ou la PWA et le navigateur, partagent les cookies. B se
+     * connecte dans l'autre : rien ne le dit à celui-ci, resté sur une page de
+     * A, qui vide la file de A quand il revient au premier plan. Il envoie le
+     * compte de A avec l'écriture ; le serveur, qui voit la session de B, la
+     * refuse sans l'exécuter (VerifieLeCompteDeLEcriture), et elle reste à A.
+     */
+    it('envoie le compte de A depuis un onglet resté sur sa page, et garde l’écriture quand le serveur voit B', async () => {
+        const sync = await aLaisseUneEcritureEnFile()
+
+        requete.mockReset()
+        requete.mockRejectedValue({ response: { status: 409, data: { raison: 'compte-different' } } })
+
+        Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+        document.dispatchEvent(new Event('visibilitychange'))
+        await sync.pending
+
+        expect(requete).toHaveBeenCalledTimes(1)
+        expect(requete.mock.calls[0][0]).toMatchObject({
+            url: '/profile/preferences',
+            headers: { 'X-Compte-De-L-Ecriture': '1' },
+        })
+        expect(sync.queue).toEqual([expect.objectContaining({ url: '/profile/preferences', authAttempts: 1 })])
+        expect(sync.failedRequests()).toEqual([])
     })
 
     it('le dit sur l’écran qui suit, une seule fois, sans retenir la déconnexion', async () => {

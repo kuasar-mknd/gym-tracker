@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { COMPTE, chargerSyncService, naviguer, poserLaPage, retirerLesEcouteursDuService } from './fileHorsLigne'
+import {
+    COMPTE,
+    chargerSyncService,
+    naviguer,
+    poserLaPage,
+    restaurerDepuisLHistorique,
+    retirerLesEcouteursDuService,
+} from './fileHorsLigne'
 
 const request = vi.fn()
 
@@ -1102,7 +1109,7 @@ describe('SyncService une écriture qui attend encore', () => {
         expect(fileAuMomentDeLAnnonce).toBe('[]')
     })
 
-    it('n’envoie au serveur que la requête, sans ce que la file note pour elle-même', async () => {
+    it('n’envoie au serveur que la requête et le compte qui l’a faite, sans ce que la file note pour elle-même', async () => {
         localStorage.setItem(
             'offline_sync_queue',
             JSON.stringify([{ ...uneCreation(), headers: { 'Idempotency-Key': 'k' }, authAttempts: 1 }]),
@@ -1115,7 +1122,7 @@ describe('SyncService une écriture qui attend encore', () => {
             method: 'post',
             url: '/api/v1/sets',
             data: { workout_line_id: 1, is_completed: false, reps: 5 },
-            headers: { 'Idempotency-Key': 'k' },
+            headers: { 'Idempotency-Key': 'k', 'X-Compte-De-L-Ecriture': COMPTE },
         })
     })
 })
@@ -1255,5 +1262,86 @@ describe('SyncService une écriture qui en attend une autre', () => {
         const service = await freshService({ compte: null })
 
         expect(service.mettreEnFile({ method: 'post', url: '/api/v1/sets', data: { reps: 8 } })).toBeNull()
+    })
+})
+
+/**
+ * Le compte que l'onglet croit connecté vient de la dernière page qu'il a
+ * reçue. Un autre onglet, ou la PWA, qui partagent les cookies, ont pu ouvrir
+ * depuis la session d'un autre compte : seul le serveur sait laquelle
+ * accompagne la requête. Le vidage lui envoie donc le compte de chaque
+ * écriture, et il refuse sans l'exécuter celle d'un autre (#1964).
+ */
+describe('SyncService une écriture rejouée sous la session d’un autre compte', () => {
+    const refusPourUnAutreCompte = { response: { status: 409, data: { raison: 'compte-different' } } }
+
+    it('reste en tête pour son compte, sans essai consommé ni refus annoncé', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                aQueuedPatch('/profile/preferences'),
+                { ...aQueuedPatch('/api/v1/sets/2'), id: 'queued-2' },
+            ]),
+        )
+        request.mockRejectedValueOnce(refusPourUnAutreCompte)
+        const annonces = vi.fn()
+        window.addEventListener('sync:failed', annonces)
+        window.addEventListener('sync:auth-required', annonces)
+
+        const service = await chargé()
+
+        window.removeEventListener('sync:failed', annonces)
+        window.removeEventListener('sync:auth-required', annonces)
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(request.mock.calls[0][0].headers).toEqual({ 'X-Compte-De-L-Ecriture': COMPTE })
+        expect(service.queue.map((entree) => entree.id)).toEqual(['queued-1', 'queued-2'])
+        expect(service.queue[0]).not.toHaveProperty('authAttempts')
+        expect(service.queue[0]).not.toHaveProperty('transientAttempts')
+        expect(service.queue[0]).not.toHaveProperty('prochainEssai')
+        expect(service.failedRequests()).toEqual([])
+        expect(annonces).not.toHaveBeenCalled()
+
+        // Sous la session de son compte, elle part, et celle qui la suit aussi.
+        request.mockResolvedValue({ data: {} })
+        await service.processQueue()
+
+        expect(request.mock.calls.map(([config]) => config.url)).toEqual([
+            '/profile/preferences',
+            '/profile/preferences',
+            '/api/v1/sets/2',
+        ])
+        expect(service.queue).toEqual([])
+    })
+
+    it('classe refusé un autre conflit, comme avant', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
+        request.mockRejectedValueOnce({ response: { status: 409, data: { message: 'Conflit' } } })
+
+        const service = await chargé()
+
+        expect(service.queue).toEqual([])
+        expect(service.failedRequests()).toHaveLength(1)
+    })
+
+    it('ne croit pas revenu le compte d’une page que le bouton Retour restaure', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/profile/preferences')]))
+        request.mockResolvedValue({ data: {} })
+
+        // B est connecté ; la page de A revient de l'historique, sans réponse du serveur.
+        const service = await freshService({ compte: 2 })
+        await service.pending
+        restaurerDepuisLHistorique(1)
+        await service.pending
+
+        expect(service.compte).toBe('2')
+        expect(request).not.toHaveBeenCalled()
+
+        // A se reconnecte : c'est une réponse du serveur qui le dit.
+        naviguer(1)
+        await service.pending
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(service.queue).toEqual([])
     })
 })

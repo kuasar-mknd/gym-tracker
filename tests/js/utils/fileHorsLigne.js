@@ -70,10 +70,22 @@ export const chargerSyncService = async ({ compte = Number(COMPTE), page = null 
     }
 }
 
-/** Annonce une navigation Inertia, comme le routeur le fait sur `document`. */
-export const naviguer = (compte) =>
-    document.dispatchEvent(
-        new CustomEvent('inertia:navigate', {
-            detail: { page: { props: { auth: { user: compte === null ? null : { id: compte } } } } },
-        }),
-    )
+/** La page qu'Inertia annonce, avec le compte qu'elle porte. */
+const pageDuCompte = (compte) => ({ page: { props: { auth: { user: compte === null ? null : { id: compte } } } } })
+
+/**
+ * Une visite Inertia à laquelle le serveur répond, comme le routeur l'annonce
+ * sur `document` : la page qu'elle porte dit qui la session connecte.
+ */
+export const naviguer = (compte) => {
+    document.dispatchEvent(new CustomEvent('inertia:navigate', { detail: pageDuCompte(compte) }))
+    document.dispatchEvent(new CustomEvent('inertia:success', { detail: pageDuCompte(compte) }))
+}
+
+/**
+ * Le bouton Retour : Inertia restaure une page depuis l'historique, avec les
+ * props qu'elle avait à son affichage, sans rien demander au serveur. Elle
+ * annonce la navigation, pas de réponse.
+ */
+export const restaurerDepuisLHistorique = (compte) =>
+    document.dispatchEvent(new CustomEvent('inertia:navigate', { detail: pageDuCompte(compte) }))
