@@ -191,3 +191,73 @@ it('n annonce aucune version majeure qui n est pas celle des manifestes', functi
 
     expect($fausses)->toBe([]);
 });
+
+/*
+ * Axios a quitté le projet avec Inertia 3 (#1815, #1827) : les écritures de la
+ * page de séance passent par `SyncService` et `resources/js/Utils/http.js`, qui
+ * envoie `X-CSRF-TOKEN` lu dans la balise meta, et non plus `X-XSRF-TOKEN` lu
+ * dans le cookie. Les règles de `.ai/rules`, que tout agent lit avant de
+ * modifier un fichier, décrivaient encore l'ancien client : un 419 sur une
+ * route API s'y serait cherché du mauvais côté (#1993).
+ */
+it('ne nomme aucun client HTTP que package.json n installe pas', function (): void {
+    $paquetsNpm = manifesteJson('package.json');
+    $installes = [];
+
+    foreach (['dependencies', 'devDependencies'] as $section) {
+        $liste = $paquetsNpm[$section] ?? [];
+        $installes = [...$installes, ...array_keys(is_array($liste) ? $liste : [])];
+    }
+
+    $absents = array_values(array_diff(['axios'], $installes));
+    $citations = [];
+
+    foreach (documentsSurveillesPourLaDerive() as $fichier) {
+        $lignes = preg_split('/\R/', contenuDocumentaireDe($fichier));
+
+        foreach ($lignes === false ? [] : $lignes as $index => $ligne) {
+            foreach ($absents as $client) {
+                if (preg_match('/\b'.preg_quote($client, '/').'\b/i', $ligne) === 1) {
+                    $citations[] = sprintf('%s:%d → %s', str_replace(base_path().'/', '', $fichier), $index + 1, $client);
+                }
+            }
+        }
+    }
+
+    expect($citations)->toBe([]);
+});
+
+/*
+ * Le commentaire d'une étape de `ci.yml` promettait que le job échouait si la
+ * spec OpenAPI commitée différait de ce que produisaient les annotations.
+ * La spec et l5-swagger sont partis avec l'ancienne API, l'étape aussi : le
+ * commentaire décrivait une protection qui n'existait plus (#1993).
+ */
+it('ne décrit dans les workflows aucune spec d API que plus rien ne produit', function (): void {
+    $outilsDeSpec = array_filter(
+        paquetsDuLock(manifesteJson('composer.lock')),
+        static fn (array $paquet): bool => in_array($paquet['name'] ?? null, ['darkaonline/l5-swagger', 'zircote/swagger-php'], true),
+    );
+
+    if ($outilsDeSpec !== []) {
+        expect($outilsDeSpec)->not->toBeEmpty();
+
+        return;
+    }
+
+    $mentions = [];
+
+    $workflows = glob(base_path('.github/workflows/*.yml'));
+
+    foreach ($workflows === false ? [] : $workflows as $workflow) {
+        $lignes = file($workflow, FILE_IGNORE_NEW_LINES);
+
+        foreach ($lignes === false ? [] : $lignes as $index => $ligne) {
+            if (preg_match('/\b(spec|openapi|swagger)\b/i', $ligne) === 1) {
+                $mentions[] = sprintf('%s:%d', str_replace(base_path().'/', '', $workflow), $index + 1);
+            }
+        }
+    }
+
+    expect($mentions)->toBe([]);
+});
