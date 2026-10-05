@@ -71,7 +71,7 @@ Pour éviter les rapports en doublon, voici les protections actives et vérifié
 | SSRF | Endpoint des notifications push restreint à https et aux hôtes publics, résolution DNS vérifiée |
 | Analyse statique | Semgrep (`p/default`, `p/php`, `p/owasp-top-ten`), PHPStan, CodeQL |
 | Secrets | TruffleHog à chaque exécution, secret scanning et push protection GitHub |
-| Dépendances | `composer audit`, `npm audit`, Dependabot, détection des dépendances inutilisées |
+| Dépendances | `composer audit`, OSV (`osv-scanner` sur `package-lock.json`), Dependabot, détection des dépendances inutilisées |
 | Tests | 1800+ tests, dont une vingtaine de fichiers dédiés à la sécurité, avec un seuil de couverture bloquant |
 
 ## Bonnes Pratiques de Sécurité

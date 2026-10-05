@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-    - name: 💬 Discussions
-      url: https://github.com/kuasar-mknd/gym-tracker/discussions
-      about: Questions, ideas, and general discussions
+    - name: 🔒 Security vulnerability
+      url: https://github.com/kuasar-mknd/gym-tracker/security/advisories/new
+      about: Report it privately, never in a public issue (see SECURITY.md)
     - name: 📖 Documentation
       url: https://github.com/kuasar-mknd/gym-tracker#readme
       about: Check the README for installation and usage guides
