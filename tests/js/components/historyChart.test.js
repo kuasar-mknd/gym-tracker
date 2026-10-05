@@ -47,6 +47,25 @@ describe('HistoryChart series', () => {
         expect(source.map((session) => session.formatted_date)).toEqual(['31 juil.', '17 juil.', '05 juil.'])
     })
 
+    /*
+     * A session started from a template and abandoned has no best 1RM.
+     * Math.round(null) is 0: the curve dropped to the floor at every abandoned
+     * session (#1956).
+     */
+    it('skips a session with no best 1RM instead of plotting it at zero', () => {
+        const series = chartDataOf(
+            mountChart([
+                { formatted_date: '31 juil.', best_1rm: 104.6 },
+                { formatted_date: '17 juil.', best_1rm: null },
+                { formatted_date: '05 juil.', best_1rm: 100.4 },
+            ]),
+            'Line',
+        )
+
+        expect(series.datasets[0].data).toEqual([100, null, 105])
+        expect(series.datasets[0].spanGaps).toBe(true)
+    })
+
     it('plots no points at all for an exercise never performed', () => {
         const series = chartDataOf(mountChart([]), 'Line')
 
@@ -81,6 +100,15 @@ describe('HistoryChart axis', () => {
 
         expect(min).toBeCloseTo(90, 6)
         expect(max).toBeCloseTo(110, 6)
+    })
+
+    it('frames the band on the plotted points, not on a skipped session', () => {
+        // Math.min(null, 100) is 0: a skipped session would pull the band
+        // down to zero and flatten the curve.
+        const [min, max] = suggested([100, null, 105])
+
+        expect(min).toBeCloseTo(90, 6)
+        expect(max).toBeCloseTo(115.5, 6)
     })
 
     it('reads the band off the plotted values, not the raw props', () => {

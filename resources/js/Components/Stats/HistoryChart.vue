@@ -20,7 +20,11 @@ const labels = computed(() => reversedData.value.map((d) => d.formatted_date))
 const datasets = computed(() => [
     {
         label: 'Meilleur 1RM (kg)',
-        data: reversedData.value.map((d) => Math.round(d.best_1rm)),
+        // Une séance sans meilleur 1RM n'a pas de point : Math.round(null)
+        // vaudrait 0, une chute que personne n'a soulevée (#1956).
+        data: reversedData.value.map((d) =>
+            d.best_1rm === null || d.best_1rm === undefined ? null : Math.round(d.best_1rm),
+        ),
         borderColor: jeton('accent-secondary'), // hot-pink
         backgroundColor: (context) => {
             const chart = context.chart
@@ -41,6 +45,7 @@ const datasets = computed(() => [
         pointHoverRadius: 6,
         fill: true,
         tension: 0.4, // Smooth curve
+        spanGaps: true,
     },
 ])
 
@@ -50,18 +55,15 @@ const infobulle = {
     callbacks: { label: (context) => `${context.parsed.y} kg` },
 }
 
+/** Les points tracés : Math.min(null, 100) vaut 0, et ramènerait l'axe à zéro. */
+const pointsTraces = (context) => context.chart.data.datasets[0].data.filter((valeur) => valeur !== null)
+
 // Add some padding to top and bottom to make the chart look better
 const axeY = {
     display: false,
     beginAtZero: false,
-    suggestedMin: (context) => {
-        const values = context.chart.data.datasets[0].data
-        return Math.min(...values) * 0.9
-    },
-    suggestedMax: (context) => {
-        const values = context.chart.data.datasets[0].data
-        return Math.max(...values) * 1.1
-    },
+    suggestedMin: (context) => Math.min(...pointsTraces(context)) * 0.9,
+    suggestedMax: (context) => Math.max(...pointsTraces(context)) * 1.1,
 }
 </script>
 

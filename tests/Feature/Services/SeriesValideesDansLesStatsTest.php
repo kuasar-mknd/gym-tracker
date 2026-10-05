@@ -13,6 +13,7 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\Stats\ExerciseStatsService;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
 
@@ -80,13 +81,13 @@ function courbe1RMDeLaLigne(User $user, WorkoutLine $ligne): array
 /**
  * Le meilleur 1RM de chaque séance de l'historique de l'exercice.
  *
- * @return list<float>
+ * @return list<float|null>
  */
 function meilleurs1RMDeLHistorique(User $user, WorkoutLine $ligne): array
 {
     return array_values(app(FetchExerciseHistoryAction::class)
         ->execute($user, Exercise::query()->findOrFail($ligne->exercise_id))
-        ->map(fn (array $seance): float => $seance['best_1rm'])
+        ->map(fn (array $seance): ?float => $seance['best_1rm'])
         ->all());
 }
 
@@ -209,4 +210,46 @@ it('fait entrer la série dans les trois lectures dès qu’elle est cochée', f
         ->and(courbe1RMDeLaLigne($user, $ligne))->toBe([$record])
         ->and(meilleurs1RMDeLHistorique($user, $ligne))->toBe([$record])
         ->and(repartitionMusculairePourStats($user))->toBe(['Pectoraux' => 1200.0]);
+});
+
+/*
+ * Une séance lancée depuis un modèle puis abandonnée, ou faite seulement
+ * d'échauffements, n'a pas de 1RM. Un zéro y traçait une chute à 0 kg sur
+ * les courbes de la fiche, quand la courbe de progression omet la séance.
+ */
+it('ne donne pas de meilleur 1RM à une séance sans série qui puisse établir le record', function (): void {
+    $user = User::factory()->create();
+    $ligne = ligneDePectorauxPourStats($user);
+
+    Set::factory()->naPasEteFaite()->create(['workout_line_id' => $ligne->id, 'weight' => 100, 'reps' => 5]);
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 60, 'reps' => 8, 'is_warmup' => true]);
+
+    expect(courbe1RMDeLaLigne($user, $ligne))->toBe([])
+        ->and(meilleurs1RMDeLHistorique($user, $ligne))->toBe([null]);
+});
+
+/*
+ * La page d'exercice tire de cette liste ses graphiques de volume, de charge
+ * max, de répétitions… Elle ne peut n'y compter que les séries validées que
+ * si chaque série le dit ; la liste, elle, reste complète.
+ */
+it('envoie à la page d’exercice chaque série avec ses drapeaux de validation et d’échauffement', function (): void {
+    $user = User::factory()->create();
+    $ligne = ligneDePectorauxPourStats($user);
+
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 100, 'reps' => 5]);
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 40, 'reps' => 10, 'is_warmup' => true]);
+    Set::factory()->naPasEteFaite()->create(['workout_line_id' => $ligne->id, 'weight' => 140, 'reps' => 5]);
+
+    actingAs($user)
+        ->get(route('exercises.show', $ligne->exercise_id))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('Exercises/Show')
+            ->where('history.0.best_1rm', 116.67)
+            ->where('history.0.sets', [
+                ['weight' => 100, 'reps' => 5, 'one_rep_max' => 116.67, 'is_completed' => true, 'is_warmup' => false],
+                ['weight' => 40, 'reps' => 10, 'one_rep_max' => 53.33, 'is_completed' => true, 'is_warmup' => true],
+                ['weight' => 140, 'reps' => 5, 'one_rep_max' => 163.33, 'is_completed' => false, 'is_warmup' => false],
+            ]));
 });

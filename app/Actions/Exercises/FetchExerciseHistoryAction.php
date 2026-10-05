@@ -16,13 +16,25 @@ class FetchExerciseHistoryAction
     use CalculatesOneRepMax;
 
     /**
+     * L'historique d'un exercice sur un an, la seance la plus recente en tete.
+     *
+     * Chaque serie porte `is_completed` et `is_warmup` : la page d'exercice
+     * tire ses graphiques de cette liste, et ils ne comptent que les series
+     * validees, comme le volume de la seance et les records (#1956). La liste
+     * elle-meme reste complete.
+     *
+     * `best_1rm` vaut null quand aucune serie ne peut etablir le record : une
+     * seance lancee depuis un modele puis abandonnee, ou faite seulement
+     * d'echauffements, n'a pas de 1RM, et les graphiques n'y tracent pas de
+     * point plutot qu'une chute a zero.
+     *
      * @return \Illuminate\Support\Collection<int, array{
      *     id: int,
      *     workout_id: int,
      *     workout_name: string,
      *     formatted_date: string,
-     *     best_1rm: float,
-     *     sets: \Illuminate\Support\Collection<int, array<string, mixed>>
+     *     best_1rm: float|null,
+     *     sets: \Illuminate\Support\Collection<int, array{weight: float, reps: int, one_rep_max: float, is_completed: bool, is_warmup: bool}>
      * }>
      */
     public function execute(User $user, Exercise $exercise): Collection
@@ -55,20 +67,23 @@ class FetchExerciseHistoryAction
             ->map(function (WorkoutLine $line): array {
                 $workout = $line->workout;
 
-                $sets = $line->sets->map(fn ($set): array => [
+                $sets = $line->sets->map(fn (Set $set): array => [
                     'weight' => (float) $set->weight,
                     'reps' => (int) $set->reps,
                     'one_rep_max' => $this->calculate1RM((float) $set->weight, (int) $set->reps),
+                    'is_completed' => $set->is_completed,
+                    'is_warmup' => $set->is_warmup,
                 ]);
 
                 /*
                  * La liste reste complete, le meilleur 1RM non : il ne lit que
-                 * les series qui peuvent etablir le record (#1956).
+                 * les series qui peuvent etablir le record (#1956), et reste
+                 * nul quand aucune ne le peut.
                  */
                 $best1rm = $line->sets
                     ->filter(fn (Set $set): bool => self::peutEtablirLeRecord($set))
                     ->map(fn (Set $set): float => $this->calculate1RM((float) $set->weight, (int) $set->reps))
-                    ->max() ?? 0.0;
+                    ->max();
 
                 return [
                     'id' => $line->id,
