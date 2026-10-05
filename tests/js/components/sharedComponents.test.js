@@ -816,6 +816,22 @@ describe('ExerciseCard', () => {
         wrapper.unmount()
     })
 
+    /**
+     * Le nom s'ouvre rempli : son placeholder ne se voit jamais, et c'était
+     * son seul nom (#1402, #1972). Masqué comme ceux du type et de la
+     * catégorie, le libellé reste lu.
+     */
+    it('nomme le champ du nom de l’exercice en modification', () => {
+        const wrapper = mountCard({ isEditing: true })
+        const champ = wrapper.get('[dusk="edit-exercise-name"]').element
+
+        expect(champ.value).toBe('Soulevé de terre')
+        expect([...champ.labels].map((libelle) => libelle.textContent.trim())).toEqual(["Nom de l'exercice"])
+        expect(champ.labels[0].classList).toContain('sr-only')
+
+        wrapper.unmount()
+    })
+
     it('falls back to a generic icon for a type it has none for', () => {
         const wrapper = mountCard({ exercise: { ...EXERCISE, type: 'mobility' } })
 
@@ -1065,6 +1081,17 @@ describe('DeleteUserForm', () => {
         expect(wrapper.find('.modal').exists()).toBe(true)
         expect(passwordField(wrapper).exists()).toBe(true)
         expect(hoisted.formDelete).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+    })
+
+    it('nomme le champ du mot de passe, pas seulement par son placeholder', async () => {
+        const wrapper = mountForm()
+        await openConfirmation(wrapper)
+
+        const champ = passwordField(wrapper).element
+
+        expect([...champ.labels].map((libelle) => libelle.textContent.trim())).toEqual(['Mot de passe'])
 
         wrapper.unmount()
     })

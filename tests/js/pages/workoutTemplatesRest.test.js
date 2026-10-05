@@ -350,7 +350,7 @@ describe.each([
         const wrapper = mountPage()
         await seed(wrapper, twoExercises)
 
-        const toggle = byLabel(wrapper, "Série d'échauffement")[0]
+        const toggle = byLabel(wrapper, 'Échauffement, série 1, Développé Couché')[0]
         expect(toggle.attributes('aria-pressed')).toBe('false')
 
         await toggle.trigger('click')
@@ -377,6 +377,51 @@ describe.each([
         expect(interne(wrapper).form.exercises[1].sets[0].reps).toBe(12)
         expect(interne(wrapper).form.exercises[1].sets[0].weight).toBe(102.5)
         expect(interne(wrapper).form.exercises[0].sets[0].reps).toBe(10)
+    })
+
+    /**
+     * Préremplis, les champs d'une série ne montrent plus leur placeholder : un
+     * lecteur d'écran disait « réps », « kg » pour chacun, sans série ni
+     * exercice (#1972).
+     */
+    it('nomme chaque champ par sa série et son exercice, une fois rempli', async () => {
+        const wrapper = mountPage()
+        await seed(wrapper, [
+            ...twoExercises,
+            { id: 3, name: 'Tractions', sets: [{ reps: 8, weight: null, is_warmup: false }] },
+        ])
+        interne(wrapper).form.exercises[1].sets.push({ reps: 3, weight: 110, is_warmup: false })
+        await interne(wrapper).$nextTick()
+
+        const champs = wrapper.findAll('input[type="number"]')
+        const noms = champs.map((champ) => champ.attributes('aria-label'))
+
+        expect(noms).toEqual([
+            'Répétitions, série 1, Développé Couché',
+            'Poids en kg, série 1, Développé Couché',
+            'Répétitions, série 1, Squat',
+            'Poids en kg, série 1, Squat',
+            'Répétitions, série 2, Squat',
+            'Poids en kg, série 2, Squat',
+            'Répétitions, série 1, Tractions',
+            'Poids en kg, série 1, Tractions',
+        ])
+        expect(new Set(noms).size).toBe(noms.length)
+        expect(champs[2].element.value).toBe('5')
+        expect(champs[3].element.value).toBe('100')
+    })
+
+    it('écrit l’échauffement en français, et son initiale ouvre son nom', async () => {
+        const wrapper = mountPage()
+        await seed(wrapper, twoExercises)
+
+        const bascules = wrapper.findAll('button[aria-pressed]')
+
+        expect(bascules.map((bascule) => bascule.text())).toEqual(['É', 'É'])
+        expect(bascules.map((bascule) => bascule.attributes('aria-label'))).toEqual([
+            'Échauffement, série 1, Développé Couché',
+            'Échauffement, série 1, Squat',
+        ])
     })
 })
 

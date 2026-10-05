@@ -175,11 +175,14 @@ const submit = () => {
                                     >
                                         {{ setIndex + 1 }}
                                     </div>
+                                    <!-- Le placeholder s'efface dès que la série est remplie : le nom
+                                         reste, et dit quelle série de quel exercice (#1972). -->
                                     <input
                                         v-model="set.reps"
                                         type="number"
                                         class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-10 w-20 rounded-lg border text-center text-base"
                                         placeholder="réps"
+                                        :aria-label="`Répétitions, série ${setIndex + 1}, ${exercise.name}`"
                                     />
                                     <input
                                         v-model="set.weight"
@@ -187,6 +190,7 @@ const submit = () => {
                                         step="0.5"
                                         class="text-text-main placeholder:text-text-muted/40 border-border bg-surface-card/50 h-10 w-20 rounded-lg border text-center text-base"
                                         placeholder="kg"
+                                        :aria-label="`Poids en kg, série ${setIndex + 1}, ${exercise.name}`"
                                     />
                                     <button
                                         v-press="{ haptic: 'selection' }"
@@ -198,10 +202,10 @@ const submit = () => {
                                                 ? 'bg-accent-primary/20 text-accent-primary-deep'
                                                 : 'text-text-muted/50 bg-surface-sunken'
                                         "
-                                        aria-label="Série d'échauffement"
+                                        :aria-label="`Échauffement, série ${setIndex + 1}, ${exercise.name}`"
                                         :aria-pressed="set.is_warmup"
                                     >
-                                        W
+                                        É
                                     </button>
                                     <GlassIconButton
                                         v-press
