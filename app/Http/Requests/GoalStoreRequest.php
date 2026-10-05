@@ -41,7 +41,9 @@ class GoalStoreRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * La cible et le départ d'un objectif vont de zéro à `Goal::VALEUR_MAX` :
+     * aucun type d'objectif n'a l'usage d'une valeur négative, ni d'une valeur
+     * démesurée.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -50,7 +52,7 @@ class GoalStoreRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:weight,frequency,volume,measurement'],
-            'target_value' => ['required', 'numeric', 'min:0'],
+            'target_value' => ['required', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
             'exercise_id' => [
                 'required_if:type,weight,volume',
                 'nullable',
@@ -75,7 +77,7 @@ class GoalStoreRequest extends FormRequest
             'deadline' => $this->deadlineIsUnchanged()
                 ? ['nullable', 'date']
                 : ['nullable', 'date', 'after:today'],
-            'start_value' => ['nullable', 'numeric'],
+            'start_value' => ['nullable', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
         ];
     }
 

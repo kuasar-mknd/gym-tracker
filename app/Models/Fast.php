@@ -13,6 +13,12 @@ class Fast extends Model
     /** @use HasFactory<\Database\Factories\FastFactory> */
     use HasFactory;
 
+    /**
+     * La durée cible la plus longue d'un jeûne, en minutes : une semaine. Le
+     * plus long type proposé (48:0) en fait 2 880.
+     */
+    public const int DUREE_CIBLE_MAX_MINUTES = 10_080;
+
     #[\Override]
     protected $fillable = [
         'user_id',

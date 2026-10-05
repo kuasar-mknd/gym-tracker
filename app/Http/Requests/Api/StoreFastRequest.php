@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Models\Fast;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreFastRequest extends FormRequest
@@ -18,7 +19,9 @@ class StoreFastRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * La durée cible est bornée (`Fast::DUREE_CIBLE_MAX_MINUTES`), à la
+     * création comme à la modification : au-delà de la colonne (int), la
+     * requête finissait en 500.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -26,7 +29,7 @@ class StoreFastRequest extends FormRequest
     {
         return [
             'start_time' => 'required|date',
-            'target_duration_minutes' => 'required|integer|min:1',
+            'target_duration_minutes' => 'required|integer|min:1|max:'.Fast::DUREE_CIBLE_MAX_MINUTES,
             'type' => 'required|string|in:16:8,18:6,20:4,24:0,36:0,48:0,custom',
         ];
     }
