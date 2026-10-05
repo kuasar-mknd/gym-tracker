@@ -42,10 +42,13 @@ class Set extends Model
     public const int POIDS_MAX_KG = 100_000;
 
     /**
-     * Le plus de répétitions qu'une série accepte : assez pour une corde à
-     * sauter comptée en répétitions, et assez peu pour que le volume de la
-     * plus lourde série permise (poids × répétitions, record `max_volume_set`)
-     * tienne dans `personal_records.value` (decimal(10,2), 99 999 999,99).
+     * Le plus de répétitions qu'une série accepte. La borne découle du poids
+     * le plus lourd (`POIDS_MAX_KG`) : le volume de la plus lourde série
+     * permise (poids × répétitions, record `max_volume_set`) doit tenir dans
+     * `personal_records.value` (decimal(10,2), 99 999 999,99), et
+     * 100 000 kg × 999 y tient. Relever ce plafond demande d'élargir cette
+     * colonne, ou d'abaisser le poids le plus lourd. Une saisie refusée cite la
+     * borne (`NommeLesBornesDUneSerie`).
      */
     public const int REPETITIONS_MAX = 999;
 

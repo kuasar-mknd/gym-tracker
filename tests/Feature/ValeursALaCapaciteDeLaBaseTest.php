@@ -126,3 +126,32 @@ it('refuse en 422 une valeur de série hors bornes à la modification, et garde 
 
     expect(valeursCapaciteNombre($serie->fresh()?->getAttribute($champ)))->toBe((float) $aLaLimite);
 })->with('valeurs capacite series');
+
+/*
+ * La page de séance n'affiche les bornes d'une série nulle part : quand elle
+ * rétablit une valeur refusée, elle cite le message du serveur pour ce champ.
+ * Il nomme donc la borne, et le champ tel que l'utilisateur le lit.
+ */
+dataset('valeurs capacite messages', [
+    'poids' => ['weight', Set::POIDS_MAX_KG + 1, 'Une série porte au plus 100 000 kg.'],
+    'répétitions' => ['reps', Set::REPETITIONS_MAX + 1, 'Une série compte au plus 999 répétitions.'],
+    'durée' => ['duration_seconds', Set::DUREE_MAX_SECONDES + 1, 'Une série dure au plus 24 heures.'],
+    'distance' => ['distance_km', Set::DISTANCE_MAX_KM + 1, 'Une série couvre au plus 1 000 km.'],
+    'répétitions négatives' => ['reps', -1, 'La valeur de répétitions doit être au moins de 0.'],
+]);
+
+it('nomme la borne dans le message d’une valeur de série refusée, à la création comme à la modification', function (string $champ, int $horsBornes, string $message): void {
+    $compte = User::factory()->create();
+    $ligne = valeursCapaciteLigneDe($compte);
+    $serie = Set::factory()->create(['workout_line_id' => $ligne->id]);
+
+    actingAs($compte, 'sanctum')
+        ->postJson(route('api.v1.sets.store'), ['workout_line_id' => $ligne->id, $champ => $horsBornes])
+        ->assertUnprocessable()
+        ->assertJsonPath("errors.{$champ}.0", $message);
+
+    actingAs($compte, 'sanctum')
+        ->patchJson(route('api.v1.sets.update', $serie), [$champ => $horsBornes])
+        ->assertUnprocessable()
+        ->assertJsonPath("errors.{$champ}.0", $message);
+})->with('valeurs capacite messages');

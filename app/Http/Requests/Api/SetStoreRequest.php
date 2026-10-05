@@ -11,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class SetStoreRequest extends FormRequest
 {
+    use \App\Http\Requests\Concerns\NommeLesBornesDUneSerie;
+
     /**
      * La requête ne vérifie que la connexion ; l'autorisation vit dans le
      * contrôleur, et son refus est rendu en 404 par bootstrap/app.php.
