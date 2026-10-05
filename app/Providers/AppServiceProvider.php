@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
+use App\Models\BodyPartMeasurement;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -182,6 +183,20 @@ final class AppServiceProvider extends ServiceProvider
             $records->refreshFor($set, null, $records->typesRetenus($set));
         });
 
+        /*
+         * Après la reconstruction des records ci-dessus, que lit l'objectif de
+         * charge : les écouteurs d'un même événement tournent dans l'ordre où
+         * ils sont posés. Sans ce recalcul, supprimer la série qui avait
+         * atteint un objectif le laissait atteint (#1953).
+         */
+        Set::deleted(function (Set $set): void {
+            $user = $set->workoutLine?->workout?->user;
+
+            if ($user instanceof User) {
+                \App\Jobs\SyncUserGoals::dispatch($user);
+            }
+        });
+
         \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {
             /**
              * Retirer un exercice emporte ses séries par un ON DELETE CASCADE,
@@ -200,6 +215,9 @@ final class AppServiceProvider extends ServiceProvider
              */
             if ($user instanceof User) {
                 app(\App\Services\PersonalRecordService::class)->recompute($user, $line->exercise_id);
+
+                // Après les records, que lit l'objectif de charge (#1953).
+                \App\Jobs\SyncUserGoals::dispatch($user);
             }
         });
     }
@@ -240,13 +258,27 @@ final class AppServiceProvider extends ServiceProvider
             }
 
             app(StreakService::class)->recalculerDepuisLesFaits($user);
+
+            // Les objectifs se recalculent dans `Workout::booted()`, après les
+            // records qu'ils lisent : cet écouteur-ci tourne avant (#1953).
         });
     }
 
+    /**
+     * Une pesée ou une mensuration de partie du corps relance le recalcul des
+     * objectifs qui les suivent.
+     *
+     * Les parties du corps (tour de taille, poitrine…) se lisent dans
+     * `body_part_measurements` depuis #1454 ; sans leurs écouteurs, saisir ou
+     * supprimer une mesure ne faisait bouger l'objectif qu'à la pesée ou à la
+     * série suivante (#1954).
+     */
     private function registerMeasurementEvents(): void
     {
         BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
         BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyPartMeasurement::saved(fn (BodyPartMeasurement $mesure) => \App\Jobs\SyncUserGoals::dispatch($mesure->user));
+        BodyPartMeasurement::deleted(fn (BodyPartMeasurement $mesure) => \App\Jobs\SyncUserGoals::dispatch($mesure->user));
     }
 
     /**

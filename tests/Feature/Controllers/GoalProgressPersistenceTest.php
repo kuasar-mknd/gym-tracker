@@ -13,8 +13,8 @@ use App\Models\WorkoutLine;
 /*
  * La progression calculee a la creation et a la modification doit etre ECRITE.
  *
- * `updateGoalProgress()` ne persiste rien : c'est `syncGoals()` qui ecrit, par un
- * upsert groupe. Le controleur appelait donc le calcul APRES avoir enregistre,
+ * `updateGoalProgress()` ne persiste rien : c'est `syncGoals()` qui ecrit, par une
+ * mise a jour groupee. Le controleur appelait donc le calcul APRES avoir enregistre,
  * puis redirigeait — et la progression partait avec la reponse.
  *
  * Mesure avant correctif : un objectif « 100 kg » cree par quelqu'un qui souleve

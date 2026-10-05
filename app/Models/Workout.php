@@ -233,6 +233,16 @@ class Workout extends Model
             foreach ($workout->exerciseIdsToRecompute as $idExercice) {
                 $records->recompute($user, $idExercice);
             }
+
+            /*
+             * Les objectifs ensuite, et ici plutôt qu'à côté des autres
+             * déclencheurs dans `AppServiceProvider` : ses écouteurs, posés au
+             * démarrage, tournent avant ceux du modèle, et l'objectif de charge
+             * y lisait les records d'avant la reconstruction. Sans ce recalcul,
+             * supprimer la séance qui avait atteint un objectif le laissait
+             * atteint (#1953).
+             */
+            \App\Jobs\SyncUserGoals::dispatch($user);
         });
     }
 }
