@@ -15,7 +15,7 @@ import {
  * la visite échoue comme une visite d'Inertia, et la page reste. Quand le
  * serveur répond, il répond 409 à la version périmée qu'annonce la visite, et
  * c'est Inertia qui fait la navigation complète. Le serveur, lui, est tenu par
- * tests/Feature/VersionPerimeeTest.php.
+ * tests/Feature/VersionDActifsPerimeeTest.php.
  *
  * jsdom ne sait ni joindre un serveur ni naviguer : `XMLHttpRequest` et
  * `window.location` sont remplacés, et chaque navigation complète se compte.
