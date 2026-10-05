@@ -90,6 +90,25 @@ it('nomme les doses restantes et le seuil de stock bas en français', function (
         ->and(validationEnFrancaisMessage('low_stock_threshold'))->toBe('La valeur de seuil de stock bas doit être au moins de 0.');
 });
 
+it('demande en français ce qu’il manque à un objectif, sans la valeur brute de son type', function (array $objectif, string $champ, string $message): void {
+    $this->actingAs(User::factory()->create())
+        ->post(route('goals.store'), ['title' => 'Objectif', 'target_value' => 100, ...$objectif])
+        ->assertSessionHasErrors($champ);
+
+    expect(validationEnFrancaisMessage($champ))->toBe($message);
+})->with([
+    'force sans exercice' => [['type' => 'weight', 'exercise_id' => ''], 'exercise_id', "Choisis l'exercice de cet objectif."],
+    'volume sans exercice' => [['type' => 'volume'], 'exercise_id', "Choisis l'exercice de cet objectif."],
+    'mensuration sans mesure' => [['type' => 'measurement', 'measurement_type' => ''], 'measurement_type', 'Choisis la mensuration suivie.'],
+]);
+
+it('dit en français que les types d’envoi push forment une liste', function (): void {
+    $this->actingAs(User::factory()->create())
+        ->patchJson(route('profile.push-preferences.update'), ['types' => ['records' => 'personal_record']])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['types' => 'Le champ types doit être une liste.']);
+});
+
 it('ne laisse dans aucun de ces messages ni nom de colonne ni « today »', function (): void {
     $utilisateur = User::factory()->create();
 

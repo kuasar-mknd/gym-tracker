@@ -6,6 +6,11 @@ use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ConditionalRules;
+use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\ValidationRuleParser;
 use Symfony\Component\Finder\Finder;
 
 /*
@@ -21,6 +26,14 @@ use Symfony\Component\Finder\Finder;
  * `attributes()` de la requête. Elle exige aussi un message `custom` pour
  * toute règle de date relative (`after:today`…) : « postérieure au :date »
  * recopierait le mot anglais, et resterait agrammatical même traduit.
+ *
+ * Un nom français ne suffit pas quand la phrase qui l'entoure manque : la
+ * locale de repli est l'anglais, et un objectif « Force » sans exercice
+ * affichait « The exercice field is required when type is weight. » (#1975).
+ * Chaque message du validateur a donc sa version française, chaque règle
+ * employée par une requête aussi, et une règle conditionnelle (`required_if`…),
+ * qui citerait la valeur brute de l'autre champ, a sa phrase dans `custom`
+ * ou ses valeurs nommées dans `values`.
  */
 
 /**
@@ -91,6 +104,77 @@ function validationFrancaiseNomDuChamp(string $clef, FormRequest $requete): ?str
     return null;
 }
 
+/**
+ * Les règles d'un champ, nommées comme le validateur cherche leur message
+ * (`required_if`, `in`, `exists`…), avec leurs paramètres.
+ *
+ * Une règle objet qui s'écrit en texte (`Rule::in()`, `Rule::exists()`…) est
+ * lue sous cette forme, comme le fait le validateur ; une règle conditionnelle
+ * (`Rule::when()`) donne ses deux branches ; `Rule::enum()` cherche le message
+ * `enum`. Une règle maison porte son propre message : elle est laissée de côté.
+ *
+ * @return list<array{string, list<string>}>
+ */
+function validationFrancaiseReglesNommees(mixed $regles): array
+{
+    $nommees = [];
+
+    foreach (is_string($regles) ? explode('|', $regles) : (is_array($regles) ? $regles : [$regles]) as $regle) {
+        if ($regle instanceof ConditionalRules) {
+            $nommees = [
+                ...$nommees,
+                ...validationFrancaiseReglesNommees($regle->rules()),
+                ...validationFrancaiseReglesNommees($regle->defaultRules()),
+            ];
+
+            continue;
+        }
+
+        if ($regle instanceof Enum) {
+            $nommees[] = ['enum', []];
+
+            continue;
+        }
+
+        if ($regle instanceof Stringable) {
+            $regle = (string) $regle;
+        }
+
+        if (! is_string($regle) || $regle === '') {
+            continue;
+        }
+
+        /** @var array{string, list<string>} $analysee */
+        $analysee = ValidationRuleParser::parse($regle);
+        $nommees[] = [Str::snake($analysee[0]), $analysee[1]];
+    }
+
+    return $nommees;
+}
+
+/**
+ * Les clefs de message du validateur : celles du framework et celles de
+ * lang/en, sous-clefs comprises (`min.numeric`, `password.letters`).
+ *
+ * @return list<string>
+ */
+function validationFrancaiseClefsDesMessages(): array
+{
+    $clefs = [];
+
+    foreach ([base_path('vendor/laravel/framework/src/Illuminate/Translation/lang/en/validation.php'), lang_path('en/validation.php')] as $fichier) {
+        /** @var array<string, mixed> $messages */
+        $messages = require $fichier;
+
+        $clefs = [...$clefs, ...array_keys(Arr::dot(Arr::except($messages, ['attributes', 'custom', 'values'])))];
+    }
+
+    $clefs = array_values(array_unique($clefs));
+    sort($clefs);
+
+    return $clefs;
+}
+
 it('trouve des requêtes à lire', function (): void {
     expect(count(validationFrancaiseRequetes()))->toBeGreaterThan(30);
 });
@@ -133,4 +217,62 @@ it('donne un message français à chaque règle de date relative', function (): 
     }
 
     expect($sansMessage)->toBe([], 'ces règles recopieraient « today » dans le message ; donnez-leur un message « custom »');
+});
+
+it('traduit en français chaque message du validateur, sans repli sur l’anglais', function (): void {
+    $sansFrancais = array_values(array_filter(
+        validationFrancaiseClefsDesMessages(),
+        static fn (string $clef): bool => ! Lang::has("validation.{$clef}", 'fr', false),
+    ));
+
+    expect(count(validationFrancaiseClefsDesMessages()))->toBeGreaterThan(100)
+        ->and($sansFrancais)->toBe([], 'ajoutez ces messages à lang/fr/validation.php : la locale de repli les afficherait en anglais');
+});
+
+it('donne un message français à chaque règle employée par app/Http/Requests', function (): void {
+    $sansMessage = [];
+    $sansMessageDeRegle = ['bail', 'exclude', 'exclude_if', 'exclude_unless', 'exclude_with', 'exclude_without', 'nullable', 'sometimes'];
+
+    foreach (validationFrancaiseRequetes() as $classe => $requete) {
+        foreach (validationFrancaiseRegles($requete) as $clef => $regles) {
+            foreach (validationFrancaiseReglesNommees($regles) as [$nom]) {
+                if (in_array($nom, $sansMessageDeRegle, true) || isset($requete->messages()["{$clef}.{$nom}"])) {
+                    continue;
+                }
+
+                if (! Lang::has("validation.{$nom}", 'fr', false) && ! Lang::has("validation.custom.{$clef}.{$nom}", 'fr', false)) {
+                    $sansMessage[] = class_basename($classe)." : {$clef} ({$nom})";
+                }
+            }
+        }
+    }
+
+    expect($sansMessage)->toBe([], 'ces règles s’afficheraient en anglais ; ajoutez leur message à lang/fr/validation.php');
+});
+
+it('donne une phrase à chaque règle conditionnelle, ou un nom aux valeurs qu’elle cite', function (): void {
+    $sansPhrase = [];
+
+    foreach (validationFrancaiseRequetes() as $classe => $requete) {
+        foreach (validationFrancaiseRegles($requete) as $clef => $regles) {
+            foreach (validationFrancaiseReglesNommees($regles) as [$nom, $parametres]) {
+                if (preg_match('/_(if|unless)$/', $nom) !== 1 || count($parametres) < 2) {
+                    continue;
+                }
+
+                if (isset($requete->messages()["{$clef}.{$nom}"]) || Lang::has("validation.custom.{$clef}.{$nom}", 'fr', false)) {
+                    continue;
+                }
+
+                $autre = array_shift($parametres);
+                $valeursSansNom = array_filter($parametres, static fn (string $valeur): bool => ! Lang::has("validation.values.{$autre}.{$valeur}", 'fr', false));
+
+                if ($valeursSansNom !== []) {
+                    $sansPhrase[] = class_basename($classe)." : {$clef} ({$nom}:{$autre},".implode(',', $valeursSansNom).')';
+                }
+            }
+        }
+    }
+
+    expect($sansPhrase)->toBe([], 'ces règles citeraient la valeur brute de l’autre champ ; donnez-leur un message « custom »');
 });

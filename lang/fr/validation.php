@@ -11,8 +11,11 @@ return [
     'alpha' => 'Le champ :attribute doit contenir uniquement des lettres.',
     'alpha_dash' => 'Le champ :attribute doit contenir uniquement des lettres, des chiffres et des tirets.',
     'alpha_num' => 'Le champ :attribute doit contenir uniquement des chiffres et des lettres.',
+    'any_of' => 'Le champ :attribute est invalide.',
     'array' => 'Le champ :attribute doit être un tableau.',
+    'array_keys' => 'Le champ :attribute ne doit contenir que les clefs suivantes : :values.',
     'ascii' => 'Le champ :attribute ne doit contenir que des caractères alphanumériques et des symboles ASCII.',
+    'base64' => 'Le champ :attribute doit être une chaîne Base64 valide.',
     'before' => 'Le champ :attribute doit être une date antérieure au :date.',
     'before_or_equal' => 'Le champ :attribute doit être une date antérieure ou égale au :date.',
     'between' => [
@@ -41,6 +44,7 @@ return [
     'doesnt_end_with' => 'Le champ :attribute ne doit pas finir par l\'une des valeurs suivantes : :values.',
     'doesnt_start_with' => 'Le champ :attribute ne doit pas commencer par l\'une des valeurs suivantes : :values.',
     'email' => 'Le champ :attribute doit être une adresse e-mail valide.',
+    'encoding' => 'Le champ :attribute doit être encodé en :encoding.',
     'ends_with' => 'Le champ :attribute doit se terminer par une des valeurs suivantes : :values.',
     'enum' => 'Le champ :attribute sélectionné est invalide.',
     'exists' => 'Le champ :attribute sélectionné est invalide.',
@@ -63,11 +67,13 @@ return [
     'image' => 'Le champ :attribute doit être une image.',
     'in' => 'Le champ :attribute est invalide.',
     'in_array' => 'Le champ :attribute n\'existe pas dans :other.',
+    'in_array_keys' => 'Le champ :attribute doit contenir au moins l\'une des clefs suivantes : :values.',
     'integer' => 'Le champ :attribute doit être un entier.',
     'ip' => 'Le champ :attribute doit être une adresse IP valide.',
     'ipv4' => 'Le champ :attribute doit être une adresse IPv4 valide.',
     'ipv6' => 'Le champ :attribute doit être une adresse IPv6 valide.',
     'json' => 'Le champ :attribute doit être un document JSON valide.',
+    'list' => 'Le champ :attribute doit être une liste.',
     'lowercase' => 'Le champ :attribute doit être en minuscules.',
     'lt' => [
         'array' => 'Le tableau :attribute doit contenir moins de :value éléments.',
@@ -88,13 +94,24 @@ return [
         'numeric' => 'La valeur de :attribute ne peut pas être supérieure à :max.',
         'string' => 'Le texte :attribute ne peut pas contenir plus de :max caractères.',
     ],
+    'max_digits' => 'Le champ :attribute ne doit pas contenir plus de :max chiffres.',
     'mimes' => 'Le champ :attribute doit être un fichier de type : :values.',
+    'mimetypes' => 'Le champ :attribute doit être un fichier de type : :values.',
     'min' => [
         'array' => 'Le tableau :attribute doit contenir au moins :min éléments.',
         'file' => 'La taille du fichier de :attribute doit être au moins de :min kilo-octets.',
         'numeric' => 'La valeur de :attribute doit être au moins de :min.',
         'string' => 'Le texte :attribute doit contenir au moins :min caractères.',
     ],
+    'min_digits' => 'Le champ :attribute doit contenir au moins :min chiffres.',
+    'missing' => 'Le champ :attribute doit être absent.',
+    'missing_if' => 'Le champ :attribute doit être absent quand :other a la valeur :value.',
+    'missing_unless' => 'Le champ :attribute doit être absent sauf si :other a la valeur :value.',
+    'missing_with' => 'Le champ :attribute doit être absent quand :values est présent.',
+    'missing_with_all' => 'Le champ :attribute doit être absent quand :values sont présents.',
+    'multiple_of' => 'La valeur de :attribute doit être un multiple de :value.',
+    'not_in' => 'Le champ :attribute sélectionné est invalide.',
+    'not_regex' => 'Le format du champ :attribute est invalide.',
     'numeric' => 'Le champ :attribute doit être un nombre.',
     'password' => [
         'letters' => 'Le champ :attribute doit contenir au moins une lettre.',
@@ -104,9 +121,27 @@ return [
         'uncompromised' => 'La valeur du champ :attribute est apparue dans une fuite de données. Veuillez choisir une valeur différente.',
     ],
     'present' => 'Le champ :attribute doit être présent.',
+    'present_if' => 'Le champ :attribute doit être présent quand :other a la valeur :value.',
+    'present_unless' => 'Le champ :attribute doit être présent sauf si :other a la valeur :value.',
+    'present_with' => 'Le champ :attribute doit être présent quand :values est présent.',
+    'present_with_all' => 'Le champ :attribute doit être présent quand :values sont présents.',
     'prohibited' => 'Le champ :attribute est interdit.',
+    'prohibited_if' => 'Le champ :attribute est interdit quand :other a la valeur :value.',
+    'prohibited_if_accepted' => 'Le champ :attribute est interdit quand :other est accepté.',
+    'prohibited_if_declined' => 'Le champ :attribute est interdit quand :other est refusé.',
+    'prohibited_unless' => 'Le champ :attribute est interdit sauf si :other a l\'une des valeurs :values.',
+    'prohibits' => 'Le champ :attribute interdit la présence de :other.',
     'regex' => 'Le format du champ :attribute est invalide.',
     'required' => 'Le champ :attribute est obligatoire.',
+    'required_array_keys' => 'Le champ :attribute doit contenir des entrées pour : :values.',
+    'required_if' => 'Le champ :attribute est obligatoire quand :other a la valeur :value.',
+    'required_if_accepted' => 'Le champ :attribute est obligatoire quand :other est accepté.',
+    'required_if_declined' => 'Le champ :attribute est obligatoire quand :other est refusé.',
+    'required_unless' => 'Le champ :attribute est obligatoire sauf si :other a l\'une des valeurs :values.',
+    'required_with' => 'Le champ :attribute est obligatoire quand :values est présent.',
+    'required_with_all' => 'Le champ :attribute est obligatoire quand :values sont présents.',
+    'required_without' => 'Le champ :attribute est obligatoire quand :values n\'est pas présent.',
+    'required_without_all' => 'Le champ :attribute est obligatoire quand aucun de :values n\'est présent.',
     'same' => 'Les champs :attribute et :other doivent être identiques.',
     'size' => [
         'array' => 'Le tableau :attribute doit contenir :size éléments.',
@@ -117,6 +152,7 @@ return [
     'starts_with' => 'Le champ :attribute doit commencer par l\'une des valeurs suivantes : :values.',
     'string' => 'Le champ :attribute doit être une chaîne de caractères.',
     'timezone' => 'Le champ :attribute doit être un fuseau horaire valide.',
+    'ulid' => 'Le champ :attribute doit être un ULID valide.',
     'unique' => 'La valeur du champ :attribute est déjà utilisée.',
     'uploaded' => 'Le fichier du champ :attribute n\'a pu être téléversé.',
     'uppercase' => 'Le champ :attribute doit être en majuscules.',
@@ -258,14 +294,22 @@ return [
     /*
      * Une règle relative à aujourd'hui recopierait le mot anglais dans la
      * phrase (« postérieure au today »), et « postérieure au :date » resterait
-     * agrammatical même traduit : chacune a sa phrase.
+     * agrammatical même traduit : chacune a sa phrase. Une règle conditionnelle
+     * citerait la valeur brute de l'autre champ (« quand type a la valeur
+     * weight ») : celles des objectifs disent ce qu'il manque.
      */
     'custom' => [
         'deadline' => [
             'after' => 'L\'échéance doit être une date à venir.',
         ],
+        'exercise_id' => [
+            'required_if' => 'Choisis l\'exercice de cet objectif.',
+        ],
         'measured_at' => [
             'before_or_equal' => 'La date de mesure ne peut pas être dans le futur.',
+        ],
+        'measurement_type' => [
+            'required_if' => 'Choisis la mensuration suivie.',
         ],
     ],
 ];
