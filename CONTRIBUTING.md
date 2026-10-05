@@ -43,7 +43,7 @@ Les commandes de ce guide supposent cette installation faite et les conteneurs l
 
 ## 📝 Conventions de Commit
 
-Un message de commit s'écrit en français, au format `type(portée): constat`, inspiré de [Conventional Commits](https://www.conventionalcommits.org/) : le type dit la nature du changement, la portée le domaine touché, et le constat ce qui est vrai après le commit, plutôt que le geste fait. Le numéro de l'issue suit entre parenthèses. Le titre d'une issue suit le même format.
+Un message de commit s'écrit en français, au format `type(portée): constat`, inspiré de [Conventional Commits](https://www.conventionalcommits.org/) : le type dit la nature du changement, la portée le domaine touché, et le constat ce qui est vrai après le commit, plutôt que le geste fait. Le numéro de l'issue suit entre parenthèses. Le titre d'une issue suit le même format, sans numéro : les formulaires d'issue le préremplissent (`fix(): `, `feat(): `).
 
 | Type        | Description                                       |
 | ----------- | ------------------------------------------------- |
@@ -139,7 +139,7 @@ La CI rejoue exactement ces portes (`.github/workflows/ci.yml`) ; les passer en 
 - [ ] Insights aux seuils de la CI (`vendor/bin/sail bin phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90`)
 - [ ] Dépendances Composer toutes utilisées et sans avis (`vendor/bin/sail bin composer-unused`, `vendor/bin/sail composer audit`)
 - [ ] Diagnostics Doctor et Checkpoint (`vendor/bin/sail artisan doctor`, `vendor/bin/sail artisan checkpoint:scan`)
-- [ ] Tests navigateur si l'interface change (`vendor/bin/sail artisan dusk`)
+- [ ] Tests navigateur si l'interface change. La première fois, dériver `.env.dusk.local` du `.env` comme le dit la section [Parcours navigateur du README](README.md#parcours-navigateur) : sans lui, les parcours viseraient la base de développement, et leur garde refuse la passe avant toute écriture. Puis, `npm run dev` arrêté (Selenium ne joint pas le serveur de Vite, et la passe refuse de partir tant que le fichier public/hot existe) : `vendor/bin/sail npm run build`, et `vendor/bin/sail artisan dusk`
 - [ ] `actionlint` si un workflow change (`docker run --rm -v "$PWD":/repo:ro -w /repo rhysd/actionlint:1.7.12`)
 - [ ] Pas de `console.log` ou `dd()` oubliés
 - [ ] Documentation mise à jour si nécessaire

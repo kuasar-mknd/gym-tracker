@@ -22,7 +22,12 @@ use Symfony\Component\Yaml\Yaml;
  *   première commande du guide ;
  * - chaque commande Sail du guide : sa commande Artisan, son script Composer
  *   ou npm, son binaire de `vendor/bin`, le test que vise un `--filter` ;
- * - le format des exemples de commit, `type(portée): constat` ;
+ * - ce que demande une passe `artisan dusk` sur un clone neuf : le renvoi à
+ *   la section du README qui dérive `.env.dusk.local`, sans lequel la garde
+ *   des parcours refuse la passe, et `npm run build` avant, `npm run dev`
+ *   arrêté, sans quoi `public/hot` la fait refuser aussi ;
+ * - le format des exemples de commit, `type(portée): constat`, et le titre
+ *   que préremplissent les formulaires d'issue ;
  * - un formulaire de bug sans liste de versions ;
  * - des liens d'aide qui ne mènent qu'à des fonctions actives du dépôt ;
  * - les audits de dépendances que `SECURITY.md` annonce, lancés par la CI.
@@ -45,6 +50,37 @@ function guideAncreDuTitre(string $titre): string
     $texte = (string) preg_replace('/[^\p{L}\p{N}\s_-]/u', '', $texte);
 
     return str_replace(' ', '-', $texte);
+}
+
+/**
+ * La section du README que vise une ancre, jusqu'au titre suivant de même
+ * niveau ou de niveau supérieur ; vide si aucun titre ne porte cette ancre.
+ */
+function guideSectionDuReadme(string $ancre): string
+{
+    $readme = (string) file_get_contents(base_path('README.md'));
+    preg_match_all('/^(#{1,6})\s+(.+)$/m', $readme, $titres, PREG_OFFSET_CAPTURE | PREG_SET_ORDER);
+
+    foreach ($titres as $rang => $titre) {
+        if (guideAncreDuTitre($titre[2][0]) !== $ancre) {
+            continue;
+        }
+
+        $niveau = strlen($titre[1][0]);
+        $fin = strlen($readme);
+
+        foreach (array_slice($titres, $rang + 1) as $suivant) {
+            if (strlen($suivant[1][0]) <= $niveau) {
+                $fin = $suivant[0][1];
+
+                break;
+            }
+        }
+
+        return substr($readme, $titre[0][1], $fin - $titre[0][1]);
+    }
+
+    return '';
 }
 
 /**
@@ -116,6 +152,64 @@ it('ne cite que des commandes qui existent', function (): void {
     }
 
     expect($inconnues)->toBe([], "CONTRIBUTING.md cite des commandes qui n'existent pas :\n  ".implode("\n  ", $inconnues));
+});
+
+it('dit ce qu une passe navigateur demande sur un clone neuf', function (): void {
+    $guide = guideContenu();
+    $lignes = array_values(array_filter(explode("\n", $guide), static fn (string $ligne): bool => str_contains($ligne, 'artisan dusk')));
+    $incompletes = [];
+
+    foreach ($lignes as $ligne) {
+        $manques = [];
+        $sections = preg_match_all('/\]\(README\.md#([^)]+)\)/', $ligne, $liens) > 0
+            ? array_map(guideSectionDuReadme(...), $liens[1])
+            : [];
+        $deriveLaConfiguration = array_filter($sections, static fn (string $section): bool => str_contains($section, '> .env.dusk.local'));
+
+        if ($deriveLaConfiguration === [] || ! str_contains($ligne, '.env.dusk.local')) {
+            $manques[] = 'le renvoi à la section du README qui dérive .env.dusk.local : sans lui, la garde des parcours refuse la passe (base qui ne finit pas par _dusk)';
+        }
+
+        $construction = strpos($ligne, 'npm run build');
+
+        if ($construction === false || $construction > (int) strpos($ligne, 'artisan dusk')) {
+            $manques[] = 'npm run build avant artisan dusk : sans actifs construits, Selenium ne charge pas les pages';
+        }
+
+        if (str_contains($guide, 'npm run dev') && ! str_contains($ligne, 'npm run dev')) {
+            $manques[] = "l'arrêt de npm run dev, que le guide propose plus haut : public/hot fait refuser la passe";
+        }
+
+        if ($manques !== []) {
+            $incompletes[] = trim($ligne)."\n    manque : ".implode("\n    manque : ", $manques);
+        }
+    }
+
+    expect($lignes)->not->toBeEmpty('CONTRIBUTING.md ne dit plus comment lancer les parcours navigateur.')
+        ->and($incompletes)->toBe([], "CONTRIBUTING.md cite artisan dusk sans ce qu'il exige sur un clone neuf :\n  ".implode("\n  ", $incompletes));
+});
+
+it('préremplit le titre des issues au format annoncé par le guide', function (): void {
+    preg_match_all('/^\|\s*`(\p{Ll}+)`\s*\|/mu', guideContenu(), $types);
+    $formulaires = glob(base_path('.github/ISSUE_TEMPLATE/*.yml'));
+    $horsFormat = [];
+
+    foreach ($formulaires === false ? [] : $formulaires as $chemin) {
+        $formulaire = Yaml::parseFile($chemin);
+
+        if (! is_array($formulaire) || ! array_key_exists('body', $formulaire)) {
+            continue;
+        }
+
+        $titre = is_string($formulaire['title'] ?? null) ? $formulaire['title'] : '';
+
+        if (preg_match('/^(\p{Ll}+)\(/u', $titre, $type) !== 1 || ! in_array($type[1], $types[1], true)) {
+            $horsFormat[] = basename($chemin).' : '.var_export($titre, true);
+        }
+    }
+
+    expect($types[1])->not->toBeEmpty('CONTRIBUTING.md ne liste plus les types de commit.')
+        ->and($horsFormat)->toBe([], "Ces formulaires d'issue ne préremplissent pas un titre au format `type(portée): constat` du guide, avec un type de sa table :\n  ".implode("\n  ", $horsFormat));
 });
 
 it('donne des exemples de commit au format du dépôt', function (): void {
