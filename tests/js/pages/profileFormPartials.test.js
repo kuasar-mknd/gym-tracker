@@ -61,6 +61,10 @@ vi.mock('@inertiajs/vue3', async () => {
     }
 })
 
+/** La retransmission se teste dans useAbonnementPush.test.js ; ici, seulement l'appel. */
+const retransmettreLAbonnementPush = vi.hoisted(() => vi.fn())
+vi.mock('@/composables/useAbonnementPush', () => ({ retransmettreLAbonnementPush }))
+
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
 import ProfileEdit from '@/Pages/Profile/Edit.vue'
@@ -168,6 +172,27 @@ describe('UpdatePasswordForm', () => {
         await nextTick()
 
         expect(fields(wrapper)).toEqual(['', '', ''])
+    })
+
+    it('rend au serveur l’abonnement push de cet appareil une fois le mot de passe changé, et seulement alors', async () => {
+        currentPage = { props: { auth: { user: { id: 42 } } } }
+        const wrapper = filled()
+        wrapper.vm.form.errors = { current_password: 'Incorrect.' }
+
+        await submit(wrapper)
+        formPut.mock.calls[0][1].onError()
+
+        // Refusé : le serveur n'a rien retiré.
+        expect(retransmettreLAbonnementPush).not.toHaveBeenCalled()
+
+        wrapper.vm.form.errors = {}
+        await submit(wrapper)
+        formPut.mock.calls[1][1].onSuccess()
+
+        // Accepté : le serveur a retiré tous les abonnements du compte, celui
+        // de cet appareil compris, qui garde sa session et le retransmet.
+        expect(retransmettreLAbonnementPush).toHaveBeenCalledTimes(1)
+        expect(retransmettreLAbonnementPush).toHaveBeenCalledWith(42)
     })
 
     it('sur un mot de passe refusé, ne vide que le nouveau et sa confirmation', async () => {
