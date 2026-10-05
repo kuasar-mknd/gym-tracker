@@ -171,6 +171,64 @@ it('refuse la création sans nom et avec un email invalide', function (): void {
     expect(User::query()->count())->toBe($before);
 });
 
+/**
+ * La colonne `users.email` et son index unique confondent une adresse
+ * accentuée, un « ß » ou un domaine internationalisé avec l'adresse ASCII
+ * voisine : un compte créé ou modifié par le panneau sur l'une occupait
+ * l'autre, et son titulaire ne pouvait plus s'inscrire. Le panneau suit la
+ * règle de l'inscription et du profil, par la page comme par l'action de la
+ * table.
+ */
+it('refuse au panneau une nouvelle adresse hors ASCII, à la création comme à la modification', function (string $adresse): void {
+    Notification::fake();
+    $compte = User::factory()->create(['email' => 'camille@example.org']);
+
+    Livewire::test(CreateUser::class)
+        ->fillForm(['name' => 'Jean Dupont', 'email' => $adresse, 'default_rest_time' => 90, 'password' => 'Un-mot-de-passe-solide-42!'])
+        ->call('create')
+        ->assertHasFormErrors(['email']);
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->fillForm(['email' => $adresse])
+        ->call('save')
+        ->assertHasFormErrors(['email']);
+
+    Livewire::test(ListUsers::class)
+        ->callAction(TestAction::make('edit')->table($compte), ['email' => $adresse])
+        ->assertHasFormErrors(['email']);
+
+    expect(User::query()->count())->toBe(1)
+        ->and($compte->refresh()->email)->toBe('camille@example.org');
+})->with([
+    'un accent' => ['jéan.dupont@example.org'],
+    '« ß » pour « ss »' => ['straße@example.org'],
+    'un domaine internationalisé' => ['jean@bücher.example.org'],
+]);
+
+/**
+ * L'adresse actuelle d'un compte ouvert avant la règle reste admise telle
+ * quelle, et un domaine internationalisé s'écrit sous sa forme ASCII.
+ */
+it('laisse le panneau enregistrer un compte ancien sans changer son adresse, et accepte la forme ASCII d’un domaine internationalisé', function (): void {
+    Notification::fake();
+    $ancien = User::factory()->create(['name' => 'Ancien Nom', 'email' => 'jéan.dupont@example.org']);
+
+    Livewire::test(EditUser::class, ['record' => $ancien->getKey()])
+        ->fillForm(['name' => 'Jean Dupont'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($ancien->refresh()->name)->toBe('Jean Dupont')
+        ->and($ancien->email)->toBe('jéan.dupont@example.org');
+
+    Livewire::test(CreateUser::class)
+        ->fillForm(['name' => 'Jean Bücher', 'email' => 'jean@xn--bcher-kva.example.org', 'default_rest_time' => 90, 'password' => 'Un-mot-de-passe-solide-42!'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(User::query()->where('email', 'jean@xn--bcher-kva.example.org')->exists())->toBeTrue();
+});
+
 it('refuse la création sans temps de repos par défaut', function (): void {
     Livewire::test(CreateUser::class)
         ->fillForm([
