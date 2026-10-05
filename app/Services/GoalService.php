@@ -20,7 +20,8 @@ final class GoalService
     /**
      * Recalcule l'avancement de tous les objectifs d'un utilisateur.
      *
-     * Appelé après l'enregistrement d'une séance ou d'une mesure.
+     * Appelé par SyncUserGoals après l'enregistrement ou la suppression d'une
+     * séance, d'une ligne, d'une série ou d'une mesure.
      *
      * @param  User  $user  L'utilisateur concerné.
      */
@@ -52,27 +53,53 @@ final class GoalService
         }
 
         $dirtyGoals = $goals->filter->isDirty();
-        if ($dirtyGoals->isNotEmpty()) {
-            $now = now();
-            $data = $dirtyGoals->map(function ($goal) use ($now) {
-                $attrs = $goal->getAttributes();
-                $attrs['updated_at'] = $now;
 
-                return $attrs;
-            })->toArray();
-
-            /*
-             * `updated_at` n'est pas dans la liste : Eloquent l'y ajoute de
-             * lui-meme (`addUpdatedAtToUpsertColumns`) des lors que le modele
-             * porte des horodatages. L'y citer ne changeait rien — verifie en
-             * retirant la colonne et en constatant que la date monte quand meme.
-             */
-            Goal::upsert(
-                $data,
-                ['id'],
-                ['current_value', 'progress_pct', 'completed_at']
-            );
+        if ($dirtyGoals->isEmpty()) {
+            return;
         }
+
+        /*
+         * Une seule écriture pour tous les objectifs modifiés, et une écriture
+         * qui ne peut que mettre à jour : `update … set colonne = case id when
+         * … end … where id in (…)`.
+         *
+         * C'était un upsert portant toutes les colonnes de l'objectif. Sous
+         * MySQL, un objectif supprimé entre la lecture ci-dessus et cette
+         * écriture était réinséré, avec son ancien identifiant et ses anciennes
+         * valeurs (#1985). Une mise à jour ne touche qu'aux lignes qui existent
+         * encore.
+         *
+         * La requête n'assemble que des marqueurs `?` : chaque valeur passe en
+         * liaison. `updated_at` avance sur chaque objectif écrit, comme sur un
+         * enregistrement ordinaire, et le compte est rappelé dans le filtre.
+         */
+        $identifiants = [];
+        $quand = [];
+        $liaisons = ['current_value' => [], 'progress_pct' => [], 'completed_at' => []];
+
+        foreach ($dirtyGoals as $goal) {
+            $identifiants[] = $goal->id;
+            $quand[] = 'when ? then ?';
+            $attributs = $goal->getAttributes();
+
+            foreach (array_keys($liaisons) as $colonne) {
+                $liaisons[$colonne][] = $goal->id;
+                $liaisons[$colonne][] = $attributs[$colonne] ?? null;
+            }
+        }
+
+        $cas = 'case id '.implode(' ', $quand).' end';
+        $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas
+            .', updated_at = ? where user_id = ? and id in ('.implode(', ', array_fill(0, count($identifiants), '?')).')';
+
+        \Illuminate\Support\Facades\DB::update($requete, [
+            ...$liaisons['current_value'],
+            ...$liaisons['progress_pct'],
+            ...$liaisons['completed_at'],
+            now(),
+            $user->id,
+            ...$identifiants,
+        ]);
     }
 
     /**

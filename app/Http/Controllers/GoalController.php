@@ -144,7 +144,7 @@ class GoalController extends Controller
          * La progression est calculée AVANT l'enregistrement, et non après.
          *
          * `updateGoalProgress()` ne persiste rien — c'est `syncGoals()` qui
-         * écrit, par un upsert groupé. L'appel qui suivait le `save()` calculait
+         * écrit, par une mise à jour groupée. L'appel qui suivait le `save()` calculait
          * donc `current_value` et `progress_pct` pour les jeter aussitôt : un
          * objectif « développé 100 kg » créé par quelqu'un qui soulève déjà
          * 80 kg s'affichait à 0 %, jusqu'à ce qu'un enregistrement de séance

@@ -101,8 +101,8 @@ it('donne la même valeur par les deux chemins', function (GoalType $type, ?floa
     $service->updateGoalProgress($seul);
 
     // Lu en memoire, pas en base : `updateGoalProgress()` ne persiste rien, c'est
-    // son appelant qui enregistre. `syncGoals()`, lui, ecrit par un upsert
-    // groupe — d'ou la lecture asymetrique des deux cotes.
+    // son appelant qui enregistre. `syncGoals()`, lui, ecrit par une mise a
+    // jour groupee — d'ou la lecture asymetrique des deux cotes.
     $valeurSeule = (float) $seul->current_value;
 
     expect($valeurGroupe)->toBe($attendu)
@@ -115,20 +115,19 @@ it('donne la même valeur par les deux chemins', function (GoalType $type, ?floa
 ]);
 
 /**
- * L'upsert doit remonter `updated_at`, sinon la ligne ment sur sa fraîcheur.
+ * L'écriture groupée doit remonter `updated_at`, sinon la ligne ment sur sa
+ * fraîcheur.
  *
- * `syncGoals` écrit par `Goal::upsert(...)`, qui court-circuite le chemin
- * d'enregistrement ordinaire. J'ai d'abord cru que la colonne ne montait que
- * parce qu'elle figurait dans la liste des colonnes mises à jour — c'est faux :
- * Eloquent l'ajoute de lui-même via `addUpdatedAtToUpsertColumns`. Mesuré en
- * retirant la colonne de la liste, la date monte quand même, et la mention
- * explicite a donc été supprimée du service.
+ * `syncGoals` écrit tous les objectifs modifiés en une seule mise à jour, qui
+ * court-circuite le chemin d'enregistrement ordinaire : rien ne pose la date
+ * pour elle. C'était un `Goal::upsert(...)`, auquel Eloquent ajoutait la
+ * colonne de lui-même (`addUpdatedAtToUpsertColumns`) ; l'upsert pouvait
+ * réinsérer un objectif supprimé pendant le recalcul (#1985), et la mise à jour
+ * qui le remplace nomme `updated_at` elle-même.
  *
- * Ce test ne tue donc aucun mutant, et il ne prétend pas le contraire. Il
- * verrouille une propriété que rien d'autre ne vérifie : la ligne ne doit pas
- * rester figée à sa date de création pendant que sa progression change. Il
- * tomberait si quelqu'un abandonnait l'upsert pour une écriture qui oublie les
- * horodatages.
+ * Ce test verrouille une propriété que rien d'autre ne vérifie : la ligne ne
+ * doit pas rester figée à sa date de création pendant que sa progression
+ * change. Il tomberait si l'écriture oubliait les horodatages.
  */
 it('remonte la date de modification quand la progression change', function (): void {
     $this->freezeTime();
@@ -150,7 +149,7 @@ it('remonte la date de modification quand la progression change', function (): v
     $this->travel(1)->days();
 
     // L'observateur de séance déclenche la synchronisation : la progression passe
-    // de 0 à 1, l'objectif est donc sale et part dans l'upsert.
+    // de 0 à 1, l'objectif est donc sale et part dans l'écriture groupée.
     Workout::factory()->create(['user_id' => $user->id]);
 
     $apres = $goal->refresh();
