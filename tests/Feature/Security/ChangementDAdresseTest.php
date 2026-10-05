@@ -199,6 +199,32 @@ it('laisse changer le seul nom d’un compte dont l’adresse porte des majuscul
     changementDAdresseRienNAChange($compte, 'Titulaire@Example.org');
 });
 
+/**
+ * L'adresse demandée se compare telle quelle à celle du compte, comme
+ * `isDirty('email')` la comparera : la ramener en minuscules la change, et en
+ * retire la vérification. Comparée à la casse près, elle laisserait une session
+ * sans mot de passe retirer la vérification du compte, sans avis : l'adresse
+ * prise est la même que l'ancienne, à la casse près.
+ */
+it('exige le mot de passe pour un changement de la seule casse de l’adresse', function (): void {
+    Notification::fake();
+    $compte = User::factory()->create(['name' => 'Titulaire', 'email' => 'Titulaire@Example.org']);
+    $this->actingAs($compte);
+
+    $this->from('/profile/edit')
+        ->patch('/profile', ['name' => 'Titulaire', 'email' => 'titulaire@example.org'])
+        ->assertSessionHasErrors(['current_password' => 'Ton mot de passe actuel est demandé pour changer d’adresse.']);
+
+    changementDAdresseRienNAChange($compte, 'Titulaire@Example.org');
+
+    $this->from('/profile/edit')
+        ->patch('/profile', ['name' => 'Titulaire', 'email' => 'titulaire@example.org', 'current_password' => 'password'])
+        ->assertSessionHasNoErrors();
+
+    expect($compte->refresh()->email)->toBe('titulaire@example.org')
+        ->and($compte->email_verified_at)->toBeNull();
+});
+
 it('tient le compteur d’essais : plein, il bloque l’adresse mais pas le nom, et le nom seul ne le vide pas', function (): void {
     Notification::fake();
     $compte = changementDAdresseLeCompte();
