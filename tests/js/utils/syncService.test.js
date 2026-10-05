@@ -1162,7 +1162,8 @@ describe('SyncService une écriture qui en attend une autre', () => {
 
         expect(request).toHaveBeenCalledTimes(1)
         expect(JSON.parse(localStorage.getItem('offline_sync_queue'))).toEqual([
-            ligneEnFile,
+            // La ligne, elle, a été tentée au chargement : sans réponse, elle a pu aboutir.
+            { ...ligneEnFile, tentee: true },
             expect.objectContaining({
                 id: queueId,
                 compte: COMPTE,
@@ -1343,5 +1344,170 @@ describe('SyncService une écriture rejouée sous la session d’un autre compte
 
         expect(request).toHaveBeenCalledTimes(1)
         expect(service.queue).toEqual([])
+    })
+})
+
+/**
+ * Une création partie sans réponse a pu atteindre le serveur. Le vidage la
+ * rejoue avec la même clé d'idempotence, et le serveur rend ce qu'il avait
+ * créé sans le doubler. Mais retirée de l'écran pendant l'attente, elle ne
+ * pouvait plus être seulement oubliée : la ligne restait sur le serveur (#1960).
+ */
+describe('SyncService une création tentée sans réponse', () => {
+    const creation = (id, autres = {}) => ({
+        method: 'post',
+        url: '/api/v1/sets',
+        data: { workout_line_id: 1, is_completed: false, reps: 5 },
+        headers: { 'Idempotency-Key': `cle-${id}` },
+        id,
+        timestamp: '2026-10-05T10:00:00.000Z',
+        compte: COMPTE,
+        ...autres,
+    })
+
+    const annulerPar = (id) => `/api/v1/sets/${id}`
+
+    it('note qu’elle a été tentée avant de partir, pour qu’une page qui meurt pendant le vol le sache encore', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([creation('q1')]))
+        request.mockImplementation(() => new Promise(() => {}))
+
+        await freshService()
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))[0].tentee).toBe(true)
+    })
+
+    it('note aussi la création dont la tentative directe n’a pas eu de réponse, et pas une modification', async () => {
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+
+        await expect(service.post('/api/v1/sets', { reps: 5 })).rejects.toMatchObject({ isOffline: true })
+
+        // Notée dès l'échec, avant que le moindre vidage ne la reprenne.
+        expect(service.queue[0].tentee).toBe(true)
+
+        await expect(service.patch('/api/v1/sets/3', { reps: 6 })).rejects.toMatchObject({ isOffline: true })
+
+        expect(service.queue.map((entree) => [entree.method, entree.tentee ?? false])).toEqual([
+            ['post', true],
+            ['patch', false],
+        ])
+    })
+
+    it('retirée, reste en file pour annuler ce qu’elle a produit, et ses dépendantes sortent', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                creation('q1', { tentee: true }),
+                creation('q2', { data: { workout_line_id: { enAttenteDe: 'q1' }, reps: 8 } }),
+                aQueuedPatch('/api/v1/sets/3'),
+            ]),
+        )
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const retraits = vi.fn()
+        window.addEventListener('sync:retired', retraits)
+
+        const service = await chargé()
+
+        expect(service.retirerDeLaFile('q1', { annulerPar })).toBe(true)
+
+        window.removeEventListener('sync:retired', retraits)
+
+        expect(retraits.mock.calls[0][0].detail).toEqual({ queueIds: ['q1', 'q2'] })
+        expect(
+            JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => [entree.id, entree.aAnnuler]),
+        ).toEqual([
+            ['q1', '/api/v1/sets/__produit__'],
+            ['queued-1', undefined],
+        ])
+
+        // Elle ne porte plus rien, et rien ne s'appuie plus sur elle.
+        expect(service.modifierEnFile('q1', { reps: 3 })).toBe(false)
+        expect(
+            service.mettreEnFile({
+                method: 'post',
+                url: '/api/v1/sets',
+                data: { workout_line_id: { enAttenteDe: 'q1' } },
+            }),
+        ).toBeNull()
+        expect(service.retirerDeLaFile('q1', { annulerPar })).toBe(true)
+
+        // Le réseau revient : la création repart, puis ce qu'elle a produit est supprimé.
+        request.mockReset()
+        request.mockResolvedValueOnce({ data: { data: { id: 100 } } }).mockResolvedValue({ data: null })
+        const rejeux = vi.fn()
+        window.addEventListener('sync:replayed', rejeux)
+
+        await service.processQueue()
+
+        window.removeEventListener('sync:replayed', rejeux)
+
+        expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
+            'post /api/v1/sets',
+            'delete /api/v1/sets/100',
+            'patch /api/v1/sets/3',
+        ])
+        expect(request.mock.calls[1][0].headers).toEqual({ 'X-Compte-De-L-Ecriture': COMPTE })
+        expect(rejeux.mock.calls.map(([event]) => event.detail.queueId)).toEqual(['queued-1'])
+        expect(service.queue).toEqual([])
+        expect(service.failedRequests()).toEqual([])
+    })
+
+    it('garde son annulation en file quand le réseau retombe entre les deux', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([creation('q1', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' })]),
+        )
+        request
+            .mockResolvedValueOnce({ data: { data: { id: 100 } } })
+            .mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+
+        await chargé()
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))).toEqual([
+            expect.objectContaining({ method: 'delete', url: '/api/v1/sets/100', compte: COMPTE, annulation: true }),
+        ])
+    })
+
+    it('n’annonce ni le refus d’une création déjà retirée, ni le 404 de son annulation', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                creation('q1', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+                creation('q2', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+            ]),
+        )
+        request
+            .mockRejectedValueOnce({ response: { status: 422 } })
+            .mockResolvedValueOnce({ data: { data: { id: 101 } } })
+            .mockRejectedValueOnce({ response: { status: 404 } })
+        const refus = vi.fn()
+        window.addEventListener('sync:failed', refus)
+
+        const service = await chargé()
+
+        window.removeEventListener('sync:failed', refus)
+
+        expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
+            'post /api/v1/sets',
+            'post /api/v1/sets',
+            'delete /api/v1/sets/101',
+        ])
+        expect(refus).not.toHaveBeenCalled()
+        expect(service.queue).toEqual([])
+        expect(service.failedRequests()).toEqual([])
+    })
+
+    it('oublie simplement une création qui n’est jamais partie', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([{ ...aQueuedPatch(), prochainEssai: Date.now() + 60_000 }, creation('q2')]),
+        )
+
+        const service = await chargé()
+
+        expect(request).not.toHaveBeenCalled()
+        expect(service.retirerDeLaFile('q2', { annulerPar })).toBe(true)
+        expect(service.queue.map((entree) => entree.id)).toEqual(['queued-1'])
     })
 })

@@ -46,6 +46,15 @@ const MUTATIONS = ['post', 'patch', 'put', 'delete']
 const ENTETE_DU_COMPTE = 'X-Compte-De-L-Ecriture'
 
 /**
+ * Ce que l'adresse d'annulation d'une création porte à la place de
+ * l'identifiant qu'elle produira, et que le vidage remplace (#1960).
+ */
+const ID_A_VENIR = '__produit__'
+
+/** Une création, la seule écriture que rejouer peut doubler et qu'il faut savoir annuler. */
+const estUneCreation = (config) => String(config?.method ?? '').toLowerCase() === 'post'
+
+/**
  * Un stockage corrompu — une écriture coupée par une suspension iOS, un quota
  * atteint à mi-chemin — faisait lever JSON.parse au chargement du module, et
  * c'est toute la page qui ne démarrait plus. Une liste illisible vaut une
@@ -319,7 +328,12 @@ class SyncService {
         // A response means the server answered, so this is its verdict, not a
         // connectivity problem — queueing it would hide a real refusal.
         if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
-            const queueId = this.addToQueue(config, compte)
+            /*
+             * Tentée : sans réponse, rien ne dit qu'elle n'a pas atteint le
+             * serveur. Une création retirée ensuite devra être annulée là-bas,
+             * pas seulement oubliée ici (#1960).
+             */
+            const queueId = this.addToQueue(config, compte, { tentee: true })
 
             // queueId lets a caller waiting on what this create produces pick its
             // own write out of the drain later — see the `sync:replayed` event.
@@ -361,18 +375,20 @@ class SyncService {
      *
      * @param {Object} config
      * @param {string|null} compte le compte connecté quand l'écriture est partie
+     * @param {{tentee?: boolean}} notes ce que la file sait déjà de l'écriture :
+     *   `tentee` quand elle est partie une fois sans réponse.
      * @returns {string|null} the queue entry's id, so a caller that depends on
      *   what this write eventually creates can recognise it when it goes out.
      */
-    addToQueue(config, compte = this.compte) {
+    addToQueue(config, compte = this.compte, notes = {}) {
         // Only queue mutations (POST, PATCH, PUT, DELETE)
         if (!this.isMutation(config) || compte === null) {
             return null
         }
 
-        const id = Date.now() + Math.random().toString(36).substr(2, 9)
+        const id = this.nouvelIdentifiantDEntree()
 
-        this.queue.push({ ...config, id, timestamp: new Date().toISOString(), compte })
+        this.queue.push({ ...config, ...notes, id, timestamp: new Date().toISOString(), compte })
         this.saveQueue()
 
         return id
@@ -411,7 +427,12 @@ class SyncService {
                 continue
             }
 
-            if (!this.queue.some((entree) => entree.id === parent && entree.compte === this.compte)) {
+            // Retirée, ou à annuler : elle ne produira rien dont une autre puisse dépendre.
+            if (
+                !this.queue.some(
+                    (entree) => entree.id === parent && entree.compte === this.compte && entree.aAnnuler === undefined,
+                )
+            ) {
                 return null
             }
         }
@@ -580,25 +601,24 @@ class SyncService {
                 headers: { ...config.headers, [ENTETE_DU_COMPTE]: config.compte },
             }
 
-            /** Ce que l'écriture a produit, annoncé une fois la file réécrite. */
-            let rejeu = null
+            /*
+             * Notée avant le départ, et non après l'échec : une page qui meurt
+             * pendant que la requête vole ne note plus rien, et la création a
+             * pu aboutir quand même. Retirée ensuite, elle devra être annulée
+             * sur le serveur, pas seulement oubliée ici (#1960).
+             */
+            if (estUneCreation(config) && config.tentee !== true) {
+                config.tentee = true
+                this.saveQueue()
+            }
+
+            let reponse
 
             try {
                 // Celle-ci est partie : plus rien ne se fond dans sa charge.
                 this.enVol = config.id
 
-                const response = await http(requete)
-
-                if (response?.data?.data?.id !== undefined) {
-                    this.noterLeProduit(config.id, response.data.data.id)
-                }
-
-                rejeu = {
-                    queueId: config.id,
-                    url: config.url,
-                    data: response?.data?.data ?? null,
-                    envoye: requete.data,
-                }
+                reponse = await http(requete)
             } catch (error) {
                 /*
                  * Le serveur a refusé de l'exécuter sous la session d'un autre
@@ -671,13 +691,35 @@ class SyncService {
                     }
                 }
 
-                this.recordFailure(config, error)
+                if (this.refusMerite(config, error)) {
+                    this.recordFailure(config, error)
+                }
+
+                // Classée refusée : seulement maintenant elle peut sortir.
+                this.retirerLEntree(config)
+
+                continue
             } finally {
                 this.enVol = null
             }
 
-            // Settled — sent, or filed as refused. Only now may it leave, and
-            // the queue that survives a reload is written before we move on.
+            /*
+             * Une création retirée de l'écran après avoir été tentée : la
+             * rejouer rend ce qu'elle a produit, idempotence oblige, et c'est
+             * cela qu'on supprime maintenant.
+             */
+            if (config.aAnnuler !== undefined) {
+                this.remplacerParSonAnnulation(config, reponse?.data?.data?.id)
+
+                continue
+            }
+
+            if (reponse?.data?.data?.id !== undefined) {
+                this.noterLeProduit(config.id, reponse.data.data.id)
+            }
+
+            // Settled. Only now may it leave, and the queue that survives a
+            // reload is written before we move on.
             this.retirerLEntree(config)
 
             /**
@@ -692,13 +734,75 @@ class SyncService {
              *
              * `envoye` est la charge partie, saisies fondues comprises : ce qui
              * a été tapé pendant que la requête volait n'y est pas, et
-             * l'appelant le renvoie (#1960). L'annonce suit l'écriture de la
-             * file, pour que l'entrée n'y soit plus quand l'appelant la lit.
+             * l'appelant le renvoie (#1960). Le serveur, lui, a pu l'ignorer :
+             * une création qu'il avait déjà faite, dont la réponse s'était
+             * perdue, rend la ligne existante telle qu'elle est (`data`).
+             * L'annonce suit l'écriture de la file, pour que l'entrée n'y soit
+             * plus quand l'appelant la lit. L'annulation d'une création retirée
+             * n'a personne pour l'attendre : elle ne s'annonce pas.
              */
-            if (rejeu !== null) {
-                window.dispatchEvent(new CustomEvent('sync:replayed', { detail: rejeu }))
+            if (config.annulation === true) {
+                continue
             }
+
+            window.dispatchEvent(
+                new CustomEvent('sync:replayed', {
+                    detail: {
+                        queueId: config.id,
+                        url: config.url,
+                        data: reponse?.data?.data ?? null,
+                        envoye: requete.data,
+                    },
+                }),
+            )
         }
+    }
+
+    /**
+     * Si l'échec définitif d'une écriture mérite d'être annoncé.
+     *
+     * Pas celui d'une création que l'écran a déjà retirée : l'utilisateur l'a
+     * supprimée, et rien n'en reste à lui montrer. Ni le 404 de son
+     * annulation : ce qu'elle devait supprimer n'existe déjà plus.
+     */
+    refusMerite(config, error) {
+        if (config.aAnnuler !== undefined) {
+            return false
+        }
+
+        return !(config.annulation === true && error?.response?.status === 404)
+    }
+
+    /**
+     * Remplace, à sa place en tête de file, une création à annuler par la
+     * suppression de ce qu'elle a produit. Une création qui n'a rien produit
+     * sort simplement.
+     *
+     * @param {Object} config l'entrée de la création, marquée `aAnnuler`
+     * @param {number|string|undefined} produit l'identifiant que le serveur a rendu
+     */
+    remplacerParSonAnnulation(config, produit) {
+        const annulation =
+            produit === undefined
+                ? []
+                : [
+                      {
+                          method: 'delete',
+                          url: config.aAnnuler.replace(ID_A_VENIR, encodeURIComponent(String(produit))),
+                          id: this.nouvelIdentifiantDEntree(),
+                          timestamp: new Date().toISOString(),
+                          compte: config.compte,
+                          annulation: true,
+                      },
+                  ]
+
+        this.queue = this.queue.flatMap((entree) => (entree === config ? annulation : [entree]))
+        this.saveQueue()
+    }
+
+    /** Un identifiant d'entrée de file, unique sur l'appareil. */
+    nouvelIdentifiantDEntree() {
+        return Date.now() + Math.random().toString(36).substr(2, 9)
     }
 
     /**
@@ -718,7 +822,8 @@ class SyncService {
     modifierEnFile(queueId, valeurs) {
         const entree = this.queue.find((candidate) => candidate.id === queueId && candidate.compte === this.compte)
 
-        if (entree === undefined || this.enVol === queueId) {
+        // Une création à annuler ne porte plus rien : la série a quitté l'écran.
+        if (entree === undefined || this.enVol === queueId || entree.aAnnuler !== undefined) {
             return false
         }
 
@@ -735,14 +840,27 @@ class SyncService {
      * en base (#1960). Les écritures qui en dépendaient la suivent : les séries
      * d'un exercice retiré avant d'avoir été créé (#1962).
      *
+     * Une création déjà tentée a pu atteindre le serveur sans que la réponse
+     * revienne : l'oublier ici laissait la ligne là-bas. Elle reste donc en
+     * file, marquée à annuler. Le vidage la rejoue, et le serveur, qui
+     * reconnaît sa clé d'idempotence, rend ce qu'elle a produit sans le doubler
+     * ou le crée ; puis il le supprime par `annulerPar`. Pour l'écran, elle est
+     * retirée comme les autres : `sync:retired` l'annonce aussi.
+     *
      * @param {string} queueId
+     * @param {{annulerPar?: (id: string) => string}} options l'adresse qui
+     *   supprime ce que la création aura produit, d'après son identifiant
      * @returns {boolean} false quand l'entrée est déjà partie ou en vol.
      */
-    retirerDeLaFile(queueId) {
+    retirerDeLaFile(queueId, { annulerPar } = {}) {
         const entree = this.queue.find((candidate) => candidate.id === queueId && candidate.compte === this.compte)
 
         if (entree === undefined || this.enVol === queueId) {
             return false
+        }
+
+        if (entree.aAnnuler !== undefined) {
+            return true
         }
 
         const retirees = new Set([queueId])
@@ -754,7 +872,13 @@ class SyncService {
             }
         })
 
-        this.queue = this.queue.filter((candidate) => !retirees.has(candidate.id))
+        const aAnnuler = entree.tentee === true && typeof annulerPar === 'function'
+
+        if (aAnnuler) {
+            entree.aAnnuler = annulerPar(ID_A_VENIR)
+        }
+
+        this.queue = this.queue.filter((candidate) => (aAnnuler && candidate === entree) || !retirees.has(candidate.id))
         this.saveQueue()
 
         window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: [...retirees] } }))

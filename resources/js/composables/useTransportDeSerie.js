@@ -90,13 +90,20 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
      * Une création déjà partie, elle, se supprime par l'identifiant qu'elle rend.
      * Une création dont le premier envoi vole encore est attendue : si elle
      * finit en file, elle en sort.
+     *
+     * Sauf si cette création a déjà été tentée sans réponse : elle a pu créer la
+     * série sur le serveur. La file la garde alors, et supprime au vidage ce
+     * qu'elle a produit, par l'adresse donnée ici (#1960).
      */
     const deleteSet = (setId) => {
         const retirerSaCreation = () => {
             const fileDeLaSerie = pendingIds.fileDe(setId)
 
             if (fileDeLaSerie !== null) {
-                SyncService.retirerDeLaFile(fileDeLaSerie)
+                SyncService.retirerDeLaFile(fileDeLaSerie, {
+                    // L'identifiant que le serveur aura émis : le vidage le pose à la place de `realId`.
+                    annulerPar: (realId) => route('api.v1.sets.destroy', { set: realId }),
+                })
             }
         }
 

@@ -91,7 +91,11 @@ describe('le transport d’une série', () => {
 
         await expect(deleteSet('temp-6')).rejects.toMatchObject({ isOffline: true })
 
-        expect(sync.retirerDeLaFile).toHaveBeenCalledWith('q6')
+        expect(sync.retirerDeLaFile).toHaveBeenCalledWith('q6', { annulerPar: expect.any(Function) })
         expect(sync.delete).not.toHaveBeenCalled()
+
+        // Tentée sans réponse, la file la garde et supprime au vidage ce qu'elle a produit (#1960).
+        const { annulerPar } = sync.retirerDeLaFile.mock.calls[0][1]
+        expect(annulerPar(100)).toBe('/api.v1.sets.destroy/100')
     })
 })

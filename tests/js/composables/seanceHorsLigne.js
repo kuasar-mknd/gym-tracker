@@ -35,6 +35,10 @@ export const routeDeTest = (nom, parametres = {}) => {
 /**
  * Un serveur qui retient ce qu'il a créé, et un réseau qu'on coupe.
  *
+ * Idempotent comme le vrai (`CreateSetAction`, `CreateWorkoutLineAction`) :
+ * une création qui porte une clé `Idempotency-Key` déjà vue rend la ligne
+ * existante, telle qu'elle est en base, et ignore la charge.
+ *
  * @param {{ series?: Array<object> }} depart les séries que le serveur détient déjà
  */
 export const creerUnFauxServeur = ({ series = [] } = {}) => {
@@ -49,6 +53,8 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
         prochaineLigne: 70,
         /** Une réponse imposée à la prochaine requête qui atteint le serveur. */
         imposer: [],
+        /** Ce que chaque clé d'idempotence a déjà créé : `${url} ${clé}` → identifiant. */
+        creees: new Map(),
 
         repondre: async (config) => {
             if (!serveur.enLigne) {
@@ -69,12 +75,43 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
             }
 
             const serie = /^\/api\/v1\/sets\/(\d+)$/.exec(url)
+            const ligneVisee = /^\/api\/v1\/workout-lines\/(\d+)$/.exec(url)
+            const cle = config.headers?.['Idempotency-Key']
+            const dejaCreee = method === 'post' && cle ? serveur.creees.get(`${url} ${cle}`) : undefined
+
+            if (dejaCreee !== undefined) {
+                const existante = (url === '/api/v1/sets' ? serveur.series : serveur.lignes).get(dejaCreee)
+
+                if (existante) {
+                    return { data: { data: { ...existante } } }
+                }
+            }
 
             if (method === 'post' && url === '/api/v1/workout-lines') {
                 const ligne = { id: serveur.prochaineLigne++, ...data, sets: [], recommended_values: null }
                 serveur.lignes.set(ligne.id, ligne)
 
+                if (cle) {
+                    serveur.creees.set(`${url} ${cle}`, ligne.id)
+                }
+
                 return { data: { data: ligne } }
+            }
+
+            if (method === 'delete' && ligneVisee) {
+                const id = Number(ligneVisee[1])
+
+                if (!serveur.lignes.delete(id)) {
+                    throw { response: { status: 404, data: { message: 'Resource not found.' } } }
+                }
+
+                for (const [cleDeSerie, serieDeLaLigne] of serveur.series) {
+                    if (serieDeLaLigne.workout_line_id === id) {
+                        serveur.series.delete(cleDeSerie)
+                    }
+                }
+
+                return { data: null }
             }
 
             if (method === 'post' && url === '/api/v1/sets') {
@@ -90,6 +127,10 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
                     personal_record: null,
                 }
                 serveur.series.set(creee.id, creee)
+
+                if (cle) {
+                    serveur.creees.set(`${url} ${cle}`, creee.id)
+                }
 
                 return { data: { data: creee } }
             }
@@ -263,6 +304,25 @@ export const uneTentativeQuiTarde = (serveur) => {
         serveur.enLigne = false
         couper()
         await flushPromises()
+    }
+}
+
+/**
+ * La prochaine requête atteint le serveur, qui l'exécute, puis le réseau tombe
+ * avant que la réponse revienne : la page ne voit qu'une erreur réseau. C'est le
+ * cas ordinaire d'un réseau faible, et celui d'un 502 du proxy après traitement.
+ *
+ * @param {ReturnType<typeof creerUnFauxServeur>} serveur
+ */
+export const uneReponsePerdue = (serveur) => {
+    const repondre = serveur.repondre
+
+    serveur.repondre = async (config) => {
+        serveur.repondre = repondre
+        await repondre(config)
+        serveur.enLigne = false
+
+        throw { code: 'ERR_NETWORK', request: {} }
     }
 }
 

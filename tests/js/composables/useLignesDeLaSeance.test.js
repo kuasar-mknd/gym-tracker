@@ -206,9 +206,13 @@ describe('retirer un exercice', () => {
         page.confirmerLeRetrait()
         await flushPromises()
 
-        expect(sync.retirerDeLaFile).toHaveBeenCalledWith('q1')
+        expect(sync.retirerDeLaFile).toHaveBeenCalledWith('q1', { annulerPar: expect.any(Function) })
         expect(sync.delete).not.toHaveBeenCalled()
         expect(page.lignes()).toEqual([])
+
+        // Tentée sans réponse, la file la garde et supprime au vidage ce qu'elle a produit (#1960).
+        const { annulerPar } = sync.retirerDeLaFile.mock.calls[0][1]
+        expect(annulerPar(70)).toBe('/api.v1.workout-lines.destroy/70')
         expect(page.pendingIds.isPending('temp-1')).toBe(false)
     })
 

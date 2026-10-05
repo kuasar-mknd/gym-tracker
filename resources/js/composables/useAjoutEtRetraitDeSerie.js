@@ -4,6 +4,15 @@ import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 
 /**
+ * Deux valeurs d'un champ mesuré qui disent la même chose : `80`, `80.0` et
+ * `'80'` sont un même poids, et le serveur rend des nombres là où un champ de
+ * saisie peut tenir du texte.
+ */
+const memeValeur = (a, b) =>
+    a === b ||
+    (a !== null && b !== null && a !== undefined && b !== undefined && a !== '' && b !== '' && Number(a) === Number(b))
+
+/**
  * La naissance et le retrait d'une série : l'ajout optimiste avec ce que
  * l'exercice mesure, la chaîne de création qui fait attendre le second ajout
  * derrière le premier, le retrait remis en place si le serveur refuse, et ce
@@ -23,6 +32,7 @@ import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
  *   markUnsynced: (setId: unknown) => void,
  *   clearUnsynced: (setId: unknown, realId?: unknown) => void,
  *   reportSyncFailure: (message: string) => void,
+ *   reaffirmerLaValidation: (set: object, valeurDuServeur: boolean) => unknown,
  * }} page
  */
 export const useAjoutEtRetraitDeSerie = ({
@@ -39,6 +49,7 @@ export const useAjoutEtRetraitDeSerie = ({
     markUnsynced,
     clearUnsynced,
     reportSyncFailure,
+    reaffirmerLaValidation,
 }) => {
     /**
      * What each kind of exercise measures — the same split the set row renders.
@@ -201,13 +212,33 @@ export const useAjoutEtRetraitDeSerie = ({
          * creation ; son ecriture ordonnee part donc a l'instant ou la creation
          * retombe, et elle porte deja la validation.
          *
-         * @param {object} created la série telle que le serveur l'a créée
+         * Ce qui est comparé à l'écran, c'est ce que le serveur GARDE, sa
+         * réponse, et non ce qui est parti. Ils diffèrent quand le serveur
+         * avait déjà fait cette création, sa réponse perdue en route : il
+         * reconnaît la clé d'idempotence, rend la série telle qu'il l'avait
+         * enregistrée et ignore la charge rejouée. Comparée à ce qui était
+         * parti, la saisie fondue dans la file semblait arrivée, aucun PATCH
+         * ne suivait, et la base gardait les valeurs d'avant (#1960). Une coche
+         * ignorée ainsi repart, elle, dans la file des coches.
+         *
+         * @param {object} created la série telle que le serveur la garde
          * @param {object|null} sent ce que la création a réellement emporté
          */
         const adopter = (created, sent) => {
+            /** Ce que le serveur garde pour ce champ : sa réponse, ou à défaut ce qui est parti. */
+            const tenu = (field) => (Object.hasOwn(created, field) ? created[field] : sent?.[field])
+
             const edited = Object.fromEntries(
-                measured.filter((field) => tempSet[field] !== sent?.[field]).map((field) => [field, tempSet[field]]),
+                measured
+                    .filter((field) => !memeValeur(tempSet[field], tenu(field)))
+                    .map((field) => [field, tempSet[field]]),
             )
+
+            const cocheIgnoree =
+                Object.hasOwn(created, 'is_completed') &&
+                Object.hasOwn(sent ?? {}, 'is_completed') &&
+                Boolean(created.is_completed) !== Boolean(sent.is_completed) &&
+                Boolean(tempSet.is_completed) !== Boolean(created.is_completed)
 
             const realSetId = created.id
 
@@ -219,11 +250,15 @@ export const useAjoutEtRetraitDeSerie = ({
             tempSet.updated_at = created.updated_at
             tempSet.personal_record = created.personal_record
 
-            // Typed after the payload left, so the server has never heard it.
+            // Typed after the payload left, or ignored on arrival: the server has never kept it.
             if (Object.keys(edited).length > 0) {
                 SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
                     if (!err.isOffline) markUnsynced(realSetId)
                 })
+            }
+
+            if (cocheIgnoree) {
+                reaffirmerLaValidation(tempSet, Boolean(created.is_completed))
             }
 
             return realSetId

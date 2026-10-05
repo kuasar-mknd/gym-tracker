@@ -34,6 +34,7 @@ const monter = () => {
         markUnsynced: vi.fn(),
         clearUnsynced: vi.fn(),
         reportSyncFailure: vi.fn(),
+        reaffirmerLaValidation: vi.fn(),
     })
 
     return { series, ligne: () => localWorkout.value.workout_lines[0], oublierLesRafales, deleteSet }

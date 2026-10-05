@@ -184,7 +184,14 @@ describe('une série créée hors ligne', () => {
         expect(reseau.serveur.series.get(100)).toMatchObject({ is_completed: false })
     })
 
-    it('sort de la file quand on la supprime pendant que sa première tentative échouait, rechargement compris', async () => {
+    /*
+     * Une première tentative sans réponse a pu atteindre le serveur : rien ne
+     * distingue un réseau qui refuse d'emblée d'une réponse perdue en route. Sa
+     * création reste donc en file, marquée à annuler, et le vidage supprime ce
+     * qu'elle a produit (#1960). Le prix est un aller-retour de plus quand la
+     * tentative n'était jamais partie.
+     */
+    it('reste en file pour être annulée quand on la supprime pendant que sa première tentative échouait, rechargement compris', async () => {
         const page = await monterLaSeance(seance())
         const couper = uneTentativeQuiTarde(reseau.serveur)
 
@@ -194,7 +201,9 @@ describe('une série créée hors ligne', () => {
         page.removeSet(page.ligne().sets.at(-1).id)
         await couper()
 
-        expect(fileDurable()).toEqual([])
+        expect(fileDurable()).toEqual([
+            expect.objectContaining({ url: '/api/v1/sets', tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+        ])
 
         const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
 
@@ -209,12 +218,17 @@ describe('une série créée hors ligne', () => {
         page.removeSet(serie.id)
         await flushPromises()
 
-        expect(fileDurable()).toEqual([])
+        expect(fileDurable()).toEqual([expect.objectContaining({ aAnnuler: '/api/v1/sets/__produit__' })])
 
         await leReseauRevient(page)
 
-        expect(reseau.serveur.resume()).toEqual([])
+        expect(reseau.serveur.resume().map((requete) => requete.split(' {')[0])).toEqual([
+            'post /api/v1/sets',
+            'delete /api/v1/sets/100',
+        ])
+        expect([...reseau.serveur.series.keys()]).toEqual([3])
         expect(page.ligne().sets.map((s) => s.id)).toEqual([3])
+        expect(page.sync.queue).toEqual([])
     })
 
     it('est supprimée du serveur quand on la retire pendant que sa création vole', async () => {

@@ -155,13 +155,17 @@ export const useLignesDeLaSeance = ({
          * Une ligne dont la création attend encore en file sort de la file avec
          * les séries qui en dépendent : rien n'est à supprimer sur le serveur,
          * et sa création se règle à null. Partie, elle se supprime par
-         * l'identifiant qu'elle rend.
+         * l'identifiant qu'elle rend. Tentée sans réponse, elle a pu être créée
+         * là-bas : la file la garde, et la supprime au vidage (#1960).
          */
         const retirerSaCreation = () => {
             const fileDeLaLigne = pendingIds.fileDe(lineId)
 
             if (fileDeLaLigne !== null) {
-                SyncService.retirerDeLaFile(fileDeLaLigne)
+                SyncService.retirerDeLaFile(fileDeLaLigne, {
+                    // L'identifiant que le serveur aura émis : le vidage le pose à la place de `realId`.
+                    annulerPar: (realId) => route('api.v1.workout-lines.destroy', { workout_line: realId }),
+                })
             }
         }
 

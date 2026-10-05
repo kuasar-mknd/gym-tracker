@@ -154,6 +154,12 @@ describe('les séries d’un exercice encore en file', () => {
         expect(page.ligne().sets.map((serie) => serie.id)).toEqual([100, 101, 102])
     })
 
+    /*
+     * La première tentative de l'exercice est partie sans réponse : elle a pu
+     * le créer sur le serveur. Sa création reste en file, marquée à annuler,
+     * et le vidage supprime ce qu'elle a produit (#1960). Ses séries, jamais
+     * tentées, quittent la file avec lui.
+     */
     it('quittent la file avec leur exercice quand il est retiré avant le retour du réseau', async () => {
         const page = await monterLaSeance(seanceVide())
         const ligne = await unExerciceEtTroisSeriesHorsLigne(page)
@@ -162,12 +168,20 @@ describe('les séries d’un exercice encore en file', () => {
         page.confirmerLeRetrait()
         await flushPromises()
 
-        expect(fileDurable()).toEqual([])
+        expect(fileDurable()).toEqual([
+            expect.objectContaining({ url: '/api/v1/workout-lines', aAnnuler: '/api/v1/workout-lines/__produit__' }),
+        ])
 
         reseau.serveur.enLigne = true
         await page.sync.processQueue()
 
-        expect(reseau.serveur.resume()).toEqual([])
+        expect(reseau.serveur.resume().map((requete) => requete.split(' {')[0])).toEqual([
+            'post /api/v1/workout-lines',
+            'delete /api/v1/workout-lines/70',
+        ])
+        expect(reseau.serveur.lignes.size).toBe(0)
+        expect(reseau.serveur.series.size).toBe(0)
+        expect(page.sync.queue).toEqual([])
     })
 
     it('quittent la file avec leur exercice quand il est retiré pendant sa première tentative, rechargement compris', async () => {
@@ -184,7 +198,8 @@ describe('les séries d’un exercice encore en file', () => {
         page.confirmerLeRetrait()
         await couper()
 
-        expect(fileDurable()).toEqual([])
+        expect(fileDurable()).toEqual([expect.objectContaining({ url: '/api/v1/workout-lines', tentee: true })])
+        expect(fileDurable()[0].aAnnuler).toBe('/api/v1/workout-lines/__produit__')
 
         const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
 
