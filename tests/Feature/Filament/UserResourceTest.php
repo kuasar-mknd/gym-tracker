@@ -2,11 +2,20 @@
 
 declare(strict_types=1);
 
+use App\Actions\HandleSocialCallbackAction;
+use App\Exceptions\SocialAuthException;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
+use App\Notifications\AdresseDuCompteChangee;
+use Filament\Actions\Testing\TestAction;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Notification;
+use Laravel\Socialite\Contracts\Provider;
+use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as SocialiteUser;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -253,3 +262,141 @@ it('refuse la création d’un compte sans mot de passe', function (): void {
 
     expect(User::query()->where('email', 'sans-mdp@example.com')->exists())->toBeFalse();
 });
+
+/**
+ * Un administrateur change l'adresse d'un compte sans le mot de passe de
+ * celui-ci : le panneau n'en a pas, et le support doit pouvoir rendre un compte
+ * dont l'adresse est perdue. Mais le titulaire en est prévenu à l'ancienne
+ * adresse, comme d'un changement fait depuis le profil, et la nouvelle repasse
+ * non vérifiée : sans quoi une adresse que personne n'a prouvée resterait
+ * marquée vérifiée, et une connexion sociale portant cette adresse se
+ * rattacherait au compte. Par la page comme par l'action de la table, qui
+ * partage le formulaire.
+ */
+it('prévient l’ancienne adresse et retire la vérification quand le panneau change l’adresse', function (): void {
+    Notification::fake();
+    $parLaPage = User::factory()->create(['email' => 'page-avant@example.org']);
+    $parLaTable = User::factory()->create(['email' => 'table-avant@example.org']);
+
+    Livewire::test(EditUser::class, ['record' => $parLaPage->getKey()])
+        ->fillForm(['email' => 'page-apres@example.org'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    Livewire::test(ListUsers::class)
+        ->callAction(TestAction::make('edit')->table($parLaTable), [
+            'email' => 'table-apres@example.org',
+        ])
+        ->assertHasNoFormErrors();
+
+    foreach (['page' => $parLaPage, 'table' => $parLaTable] as $chemin => $compte) {
+        $compte->refresh();
+
+        expect($compte->email)->toBe("{$chemin}-apres@example.org")
+            ->and($compte->email_verified_at)->toBeNull();
+
+        Notification::assertSentOnDemand(
+            AdresseDuCompteChangee::class,
+            fn (AdresseDuCompteChangee $avis, array $canaux, AnonymousNotifiable $destinataire): bool => $destinataire->routes === ['mail' => "{$chemin}-avant@example.org"]
+                && $avis->nouvelleAdresse === "{$chemin}-apres@example.org",
+        );
+    }
+});
+
+/**
+ * Le panneau remet la nouvelle adresse en non vérifiée, et la connexion sociale
+ * refuse un compte non vérifié : le titulaire d'un compte ouvert par Google,
+ * qui ne connaît pas le mot de passe tiré au hasard à l'ouverture, ne pouvait
+ * plus entrer après que le support lui avait rendu son adresse. L'identité déjà
+ * reliée au compte le rouvre, quand le fournisseur garantit sa nouvelle
+ * adresse, et le compte redevient vérifié. Une autre identité qui présente la
+ * même adresse reste refusée : un compte non vérifié ne se rattache à personne
+ * de nouveau. Et seule l'adresse même du compte, garantie par le fournisseur,
+ * le revérifie, pas une adresse que la collation de la base tient pour la même,
+ * ni le même identifiant rendu par un autre fournisseur.
+ * La casse ASCII, elle, ne distingue pas deux adresses : le panneau n'impose
+ * pas les minuscules, et un fournisseur peut rendre l'adresse avec des
+ * majuscules.
+ */
+it('laisse l’identité déjà reliée rouvrir le compte dont le panneau a changé l’adresse', function (string $fournisseur, string $identifiantEnBase, int|string $identifiantRendu, int|string $autreIdentifiant, string $adresseDuPanneau, string $adresseRendue): void {
+    Notification::fake();
+    $compte = User::factory()->create([
+        'email' => 'avant@example.org',
+        'provider' => $fournisseur,
+        'provider_id' => $identifiantEnBase,
+    ]);
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->fillForm(['email' => $adresseDuPanneau])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($compte->refresh()->email_verified_at)->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBe('avant@example.org');
+
+    $retourDe = static function (int|string $identifiant, string $adresse, ?string $autreFournisseur = null) use ($fournisseur): void {
+        $utilisateurSocial = new SocialiteUser()
+            ->setRaw(['email_verified' => true])
+            ->map(['id' => $identifiant, 'email' => $adresse, 'name' => 'Titulaire', 'nickname' => null, 'avatar' => null]);
+
+        Socialite::shouldReceive('driver')->once()->with($autreFournisseur ?? $fournisseur)->andReturn(new readonly class($utilisateurSocial) implements Provider
+        {
+            public function __construct(private SocialiteUser $utilisateurSocial)
+            {
+            }
+
+            public function redirect(): never
+            {
+                throw new LogicException('Ce test n’emprunte pas la redirection.');
+            }
+
+            public function user(): SocialiteUser
+            {
+                return $this->utilisateurSocial;
+            }
+        });
+    };
+
+    // Une autre identité qui présente l'adresse du compte : refusée.
+    $retourDe($autreIdentifiant, $adresseRendue);
+
+    expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($fournisseur))
+        ->toThrow(SocialAuthException::class);
+    expect($compte->refresh()->email_verified_at)->toBeNull();
+
+    // Le même identifiant, rendu par un autre fournisseur, avec l'adresse
+    // exacte du compte : ce n'est pas l'identité reliée, refusée aussi.
+    $autreFournisseur = $fournisseur === 'google' ? 'github' : 'google';
+    $retourDe($identifiantRendu, $adresseRendue, $autreFournisseur);
+
+    expect(fn (): User => app(HandleSocialCallbackAction::class)->execute($autreFournisseur))
+        ->toThrow(SocialAuthException::class);
+    expect($compte->refresh()->email_verified_at)->toBeNull()
+        ->and($compte->provider)->toBe($fournisseur);
+
+    // La même identité, pour une adresse que seule la collation de la base
+    // tient pour celle du compte : ce retour ne prouve pas l'adresse du compte,
+    // qui n'en est pas revérifié, que la connexion soit refusée ou non.
+    $retourDe($identifiantRendu, 'aprés@example.org');
+
+    try {
+        app(HandleSocialCallbackAction::class)->execute($fournisseur);
+    } catch (SocialAuthException) {
+        // Le refus est une issue admise ; seule compte la vérification.
+    }
+
+    expect($compte->refresh()->email_verified_at)->toBeNull();
+
+    $retourDe($identifiantRendu, $adresseRendue);
+
+    expect(app(HandleSocialCallbackAction::class)->execute($fournisseur)->is($compte))->toBeTrue()
+        ->and($compte->refresh()->email_verified_at)->not->toBeNull()
+        ->and($compte->ancienne_adresse_verifiee)->toBeNull()
+        ->and($compte->email)->toBe($adresseDuPanneau)
+        ->and($compte->provider_id)->toBe($identifiantEnBase);
+})->with([
+    'Google' => ['google', 'g-123', 'g-123', 'g-999', 'apres@example.org', 'apres@example.org'],
+    'GitHub, qui rend l’identifiant en entier' => ['github', '4242', 4242, 4243, 'apres@example.org', 'apres@example.org'],
+    'majuscules posées par le panneau' => ['github', '4242', 4242, 4243, 'Apres@example.org', 'apres@example.org'],
+    'majuscules rendues par le fournisseur' => ['google', 'g-123', 'g-123', 'g-999', 'apres@example.org', 'Apres@Example.org'],
+]);

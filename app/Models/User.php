@@ -8,6 +8,7 @@ use App\Models\Traits\DetacheSesAppareilsPush;
 use App\Models\Traits\EffaceSesTracesPolymorphes;
 use App\Models\Traits\HasFitnessData;
 use App\Models\Traits\HasToolsData;
+use App\Models\Traits\SurveilleSonAdresse;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,6 +28,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string|null $ancienne_adresse_verifiee Dernière adresse vérifiée quittée, tant que le compte n'est pas revérifié (`SurveilleSonAdresse`).
+ * @property string|null $provider
  * @property string|null $avatar
  * @property int|null $default_rest_time
  * @property int $current_streak
@@ -50,6 +53,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     use HasToolsData;
     use LogsActivity;
     use Notifiable;
+    use SurveilleSonAdresse;
 
     /**
      * La valeur en memoire d'une instance fraiche, alignee sur celle de la base.
@@ -88,6 +92,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'ancienne_adresse_verifiee',
     ];
 
     /**
@@ -152,6 +157,32 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->where('type', $type)
             ->where('is_push_enabled', true)
             ->exists();
+    }
+
+    #[\Override]
+    protected static function booted(): void
+    {
+        self::surveillerLAdresse();
+    }
+
+    /**
+     * Le fournisseur de connexion relié au compte, nommé pour l'écran, ou null.
+     *
+     * Un compte ouvert par un fournisseur a reçu un mot de passe aléatoire que
+     * personne ne connaît (`ResolveSocialUserAction`) ; un compte à mot de
+     * passe relié ensuite à un fournisseur garde le sien. Les deux portent
+     * `provider`, et rien en base ne les distingue : le profil s'adresse donc
+     * aux deux quand il explique comment obtenir un mot de passe.
+     */
+    public function fournisseurDeConnexion(): ?string
+    {
+        return match ($this->provider) {
+            null, '' => null,
+            'github' => 'GitHub',
+            'google' => 'Google',
+            'apple' => 'Apple',
+            default => ucfirst($this->provider),
+        };
     }
 
     /**
