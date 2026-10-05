@@ -68,13 +68,16 @@ jobs:
 
                   if [ "$PROMOUVABLE" -eq 0 ]; then
                       echo ""
-                      echo "Pour debloquer, lancer la passe manquante sur le tag lui-meme :"
+                      echo "La passe nocturne est planifiee a 03h17 UTC, mais GitHub la lance plusieurs heures"
+                      echo "plus tard (entre 07h42 et 10h31 UTC du 1er septembre au 5 octobre 2026), sur la"
+                      echo "pointe de main a ce moment. Si ce commit est encore la pointe de main quand la passe"
+                      echo "du jour part, elle le couvre : l'attendre. Sinon, lancer la passe manquante sur le"
+                      echo "tag lui-meme :"
                       echo "  gh workflow run mutation.yml --ref $TAG"
                       echo "  gh workflow run ci.yml --ref $TAG"
                       echo ""
-                      echo "La passe nocturne tourne sur la pointe de main a 03h17 UTC."
-                      echo "Un tag pose apres elle n'a donc pas encore ete couvert : c'est"
-                      echo "voulu, et c'est exactement ce que cette porte sert a dire."
+                      echo "La passe verte, relancer les jobs echoues du run de CI du tag (sa promotion"
+                      echo "exige la meme passe), puis ce run :  gh run rerun $GITHUB_RUN_ID --failed"
                       exit 1
                   fi
 

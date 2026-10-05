@@ -79,13 +79,14 @@ La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand 
 
 La release GitHub exige en plus la CI entière, `semgrep`, `secrets` et `workflows` compris.
 
-La nuit tourne sur la pointe de `main` à 03h17 UTC : un tag posé après elle n'est pas encore couvert. Pour le débloquer :
+La passe nocturne est planifiée à 03h17 UTC, mais GitHub la lance plusieurs heures plus tard (entre 07h42 et 10h31 UTC du 1er septembre au 5 octobre 2026), sur la pointe de `main` au moment où elle part. Un tag posé avant ce lancement, sur un commit qui est encore la pointe de `main` quand elle part, est donc couvert par la passe du jour : l'attendre, puis relancer la promotion. Sinon, aucune passe planifiée ne le couvrira ; la lancer sur le tag lui-même :
 
 ```bash
+gh run list --workflow mutation.yml --commit <sha>   # une passe couvre-t-elle déjà ce commit ?
 gh workflow run mutation.yml --ref v1.2.3
 ```
 
-Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), puis le run de `release.yml`.
+Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), ce qui rejoue `promotion`, puis le run de `release.yml`.
 
 Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow.
 
