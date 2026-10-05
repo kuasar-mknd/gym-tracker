@@ -40,9 +40,9 @@ export const pushPrisEnCharge = () => 'Notification' in window && 'serviceWorker
  * alors à chaque ouverture, une écriture de trop plutôt qu'un abonnement perdu.
  *
  * `aRetransmettre` dit que le serveur a pu retirer l'abonnement depuis : un
- * mot de passe changé retire tous ceux du compte (`User::booted()`). Le mémo
- * dit encore à quel compte l'appareil a été donné, mais ne dispense plus
- * d'écrire (`marquerLAbonnementARetransmettre`).
+ * mot de passe changé retire tous ceux du compte (`DetacheSesAppareilsPush`,
+ * trait de `User`). Le mémo dit encore à quel compte l'appareil a été donné,
+ * mais ne dispense plus d'écrire (`marquerLAbonnementARetransmettre`).
  */
 const CLEF_DU_MEMO = 'gym-tracker:abonnement-push-transmis'
 
@@ -217,12 +217,12 @@ export const rapprocherLAbonnementPush = (utilisateurId, { serveurSansAbonnement
  * suivant le retransmet, s'il appartient au compte connecté.
  *
  * Un mot de passe changé retire tous les abonnements du compte, quel que soit
- * le chemin du changement (`User::booted()`), et ferme ses autres sessions. Le
- * mémo de l'appareil disait pourtant toujours « déjà transmis » : l'appareil
- * qui se reconnectait au compte ne transmettait plus rien, et le profil
- * montrait les cases « Envoyer aussi en Push » pour des envois qui ne lui
- * parvenaient plus. La marque garde le compte à qui l'appareil a été donné :
- * un appareil donné à un autre compte reste à cet autre compte.
+ * le chemin du changement (`DetacheSesAppareilsPush`), et ferme ses autres
+ * sessions. Le mémo de l'appareil disait pourtant toujours « déjà transmis » :
+ * l'appareil qui se reconnectait au compte ne transmettait plus rien, et le
+ * profil montrait les cases « Envoyer aussi en Push » pour des envois qui ne
+ * lui parvenaient plus. La marque garde le compte à qui l'appareil a été
+ * donné : un appareil donné à un autre compte reste à cet autre compte.
  *
  * Ce que ce chargement a déjà rapproché est oublié aussi : la page de
  * connexion et la page qui la suit se succèdent sans recharger le module.

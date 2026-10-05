@@ -20,9 +20,9 @@ class PushSubscriptionController extends Controller
      * Le middleware vérifie la session à l'entrée de la requête ; la
      * validation résout ensuite le nom d'hôte de l'adresse
      * (`PublicPushEndpoint`), ce qui peut durer. Un mot de passe changé
-     * pendant ce temps retirait les abonnements du compte (`User::booted()`)
-     * AVANT que celui-ci ne s'écrive : la session fermée gardait le sien, et
-     * l'appareil continuait de recevoir.
+     * pendant ce temps retirait les abonnements du compte
+     * (`DetacheSesAppareilsPush`) AVANT que celui-ci ne s'écrive : la session
+     * fermée gardait le sien, et l'appareil continuait de recevoir.
      *
      * Le compte est donc relu sous le verrou de sa ligne, la session
      * revérifiée contre lui, et l'abonnement écrit dans la même transaction.

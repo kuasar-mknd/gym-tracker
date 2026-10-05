@@ -563,9 +563,10 @@ const differee = () => {
 describe('après un changement de mot de passe', () => {
     /*
      * Le serveur retire tous les abonnements du compte quand le mot de passe
-     * change (User::booted()), celui de l'appareil qui l'a changé compris : il
-     * ne sait pas lequel est le sien. Le mémo de chaque appareil disait
-     * pourtant « déjà transmis », et aucun rapprochement ne réécrivait plus.
+     * change (DetacheSesAppareilsPush), celui de l'appareil qui l'a changé
+     * compris : il ne sait pas lequel est le sien. Le mémo de chaque appareil
+     * disait pourtant « déjà transmis », et aucun rapprochement ne réécrivait
+     * plus.
      */
     it('rend au serveur l’abonnement de l’appareil qui a changé le mot de passe, puis n’écrit plus rien', async () => {
         const gestionnaire = await dejaTransmis('https://push.example/telephone')
