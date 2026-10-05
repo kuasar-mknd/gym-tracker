@@ -55,15 +55,23 @@ const infobulle = {
     callbacks: { label: (context) => `${context.parsed.y} kg` },
 }
 
-/** Les points tracés : Math.min(null, 100) vaut 0, et ramènerait l'axe à zéro. */
-const pointsTraces = (context) => context.chart.data.datasets[0].data.filter((valeur) => valeur !== null)
+/**
+ * La marge autour des points tracés. Les séances sans 1RM en sont exclues :
+ * Math.min(null, 100) vaut 0, et ramènerait l'axe à zéro. Sans aucun point (un
+ * exercice au poids du corps), l'axe est laissé à Chart.js.
+ */
+const marge = (context, extremum, facteur) => {
+    const points = context.chart.data.datasets[0].data.filter((valeur) => valeur !== null)
+
+    return points.length > 0 ? extremum(...points) * facteur : undefined
+}
 
 // Add some padding to top and bottom to make the chart look better
 const axeY = {
     display: false,
     beginAtZero: false,
-    suggestedMin: (context) => Math.min(...pointsTraces(context)) * 0.9,
-    suggestedMax: (context) => Math.max(...pointsTraces(context)) * 1.1,
+    suggestedMin: (context) => marge(context, Math.min, 0.9),
+    suggestedMax: (context) => marge(context, Math.max, 1.1),
 }
 </script>
 

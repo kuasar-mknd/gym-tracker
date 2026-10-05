@@ -111,6 +111,12 @@ describe('HistoryChart axis', () => {
         expect(max).toBeCloseTo(115.5, 6)
     })
 
+    it('leaves the axis to Chart.js when no session has a 1RM at all', () => {
+        // A bodyweight exercise never sets a 1RM record: no point is plotted,
+        // and min/max of nothing would be ±Infinity.
+        expect(suggested([null, null])).toEqual([undefined, undefined])
+    })
+
     it('reads the band off the plotted values, not the raw props', () => {
         // The callbacks take the values Chart.js holds, which are the rounded
         // ones. Reading props.data here would drift from what is drawn.
