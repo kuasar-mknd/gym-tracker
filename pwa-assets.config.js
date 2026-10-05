@@ -8,8 +8,8 @@ import { readFileSync } from 'node:fs'
  * public/logo.svg ou de public/badge.svg, ou les couleurs de la charte, par
  * deux commandes lancées depuis la racine :
  *
- *     npx -y @vite-pwa/assets-generator@1.0.4
- *     npx -y @vite-pwa/assets-generator@1.0.4 public/badge.svg
+ *     npx -y @vite-pwa/assets-generator@2.0.0
+ *     npx -y @vite-pwa/assets-generator@2.0.0 public/badge.svg
  *
  * Le générateur n'est pas une dépendance du dépôt : il tire sharp, un binaire
  * natif, pour un usage d'une fois. Sa version est épinglée, et deux exécutions
