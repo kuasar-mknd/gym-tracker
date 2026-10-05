@@ -1,8 +1,27 @@
 import { router } from '@inertiajs/vue3'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
+import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
+import SyncService from '@/Utils/SyncService'
+import { noterLesEcrituresGardees } from '@/Utils/ecrituresGardees'
 
 /** La déconnexion en cours, pour qu'un double clic ne la fasse pas deux fois. */
 let deconnexionEnCours = null
+
+/**
+ * Ce que le compte qui part laisse sur l'appareil (#1964).
+ *
+ * Ses écritures encore en file restent à lui : la file ne les envoie que sous
+ * sa propre session, à sa prochaine connexion, et l'écran qui suit la
+ * déconnexion dit combien il en reste. Ses refus et ses brouillons de séries,
+ * eux, n'ont plus de lecteur et sont effacés. Rien de tout cela ne retient la
+ * déconnexion : chacune de ces écritures laisse les choses en l'état quand le
+ * stockage refuse.
+ */
+const laisserLAppareil = () => {
+    noterLesEcrituresGardees(SyncService.enAttente())
+    SyncService.clearFailedRequests()
+    effacerLesBrouillons()
+}
 
 /**
  * La seule façon de se déconnecter depuis l'application (#1926).
@@ -26,6 +45,7 @@ export const seDeconnecter = () => {
 
     deconnexionEnCours ??= detacherLAppareil()
         .then(() => {
+            laisserLAppareil()
             router.post(route('logout'), {}, { onFinish: liberer })
         })
         .catch((erreur) => {

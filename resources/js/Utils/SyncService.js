@@ -47,6 +47,34 @@ const lireLaListe = (cle) => {
 }
 
 /**
+ * L'identifiant d'un compte tel que la file le note : une chaîne, ou null quand
+ * personne n'est connecté. `42` et `'42'` désignent le même compte.
+ */
+const normaliserLeCompte = (id) => (id === undefined || id === null || id === '' ? null : String(id))
+
+/**
+ * Le compte connecté d'après la page que le serveur a rendue, lue dans le même
+ * élément qu'Inertia au démarrage. Le module se charge avant que la première
+ * navigation ne soit annoncée : sans cette lecture, le vidage du chargement ne
+ * saurait pas pour qui il travaille.
+ */
+const lireLeCompteDeLaPage = () => {
+    try {
+        const page = JSON.parse(document.querySelector('script[data-page][type="application/json"]')?.textContent ?? '')
+
+        return normaliserLeCompte(page?.props?.auth?.user?.id)
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Une entrée écrite avant que la file ne note son compte. On ne sait pas à qui
+ * elle appartient, donc pour qui l'envoyer : elle n'est jamais rejouée (#1964).
+ */
+const aUnCompte = (entree) => normaliserLeCompte(entree?.compte) !== null
+
+/**
  * Ce que le serveur demande d'attendre, d'après `Retry-After` : un nombre de
  * secondes ou une date HTTP. Null quand il ne dit rien d'exploitable.
  *
@@ -97,13 +125,45 @@ const newIdempotencyKey = () =>
 
 class SyncService {
     constructor() {
-        this.queue = lireLaListe(QUEUE_KEY)
-        this.failed = lireLaListe(FAILED_KEY)
+        /**
+         * Le compte connecté : la file appartient au compte, pas à l'appareil.
+         *
+         * Une entrée ne disait pas qui l'avait écrite, et le vidage partait
+         * sous la session connectée au moment où il avait lieu. Sur un appareil
+         * partagé, les préférences d'un compte s'appliquaient au suivant, et ses
+         * séries revenaient en 403 annoncées au mauvais compte (#1964). Chaque
+         * entrée porte désormais son compte, et seules celles du compte
+         * connecté partent.
+         */
+        this.compte = lireLeCompteDeLaPage()
+
+        const file = lireLaListe(QUEUE_KEY)
+        const refusees = lireLaListe(FAILED_KEY)
+
+        this.queue = file.filter(aUnCompte)
+        this.failed = refusees.filter(aUnCompte)
+
+        if (this.queue.length !== file.length) {
+            this.saveQueue()
+        }
+
+        if (this.failed.length !== refusees.length) {
+            this.saveFailed()
+        }
 
         /** La relance programmée après un échec passager, s'il y en a une. */
         this.relance = null
 
         window.addEventListener('online', () => this.processQueue())
+
+        /**
+         * Chaque visite Inertia, le premier affichage compris, dit qui est
+         * connecté. C'est aussi une preuve que le réseau répond : la file du
+         * compte part, s'il en a une.
+         */
+        document.addEventListener('inertia:navigate', (event) =>
+            this.definirLeCompte(event.detail?.page?.props?.auth?.user?.id),
+        )
 
         /**
          * An installed PWA is suspended and resumed, not closed. A queue built
@@ -144,6 +204,13 @@ class SyncService {
         const stamped = this.stampIdempotency(config)
 
         /*
+         * Le compte qui fait l'écriture, pris à son départ : une écriture
+         * partie juste avant une déconnexion, et tombée sur un réseau absent
+         * juste après, reste à celui qui l'a faite.
+         */
+        const compte = this.compte
+
+        /*
          * Une écriture directe ne doit pas doubler celles qui attendent : la
          * file rejouait une modification plus ancienne APRÈS celle que
          * l'utilisateur venait de faire en ligne, et l'ancienne valeur écrasait
@@ -151,11 +218,11 @@ class SyncService {
          * (toujours hors ligne, ou session à renouveler), la nouvelle écriture
          * prend sa place derrière, dans l'ordre où elle a été faite.
          */
-        if (this.isMutation(stamped) && this.queue.length > 0) {
+        if (this.isMutation(stamped) && this.enAttente() > 0) {
             await this.processQueue()
 
-            if (this.queue.length > 0) {
-                const queueId = this.addToQueue(stamped)
+            if (this.enAttente() > 0) {
+                const queueId = this.addToQueue(stamped, compte)
 
                 return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
             }
@@ -178,11 +245,11 @@ class SyncService {
                      */
                     return await http(stamped)
                 } catch (retryError) {
-                    return this.queueOrThrow(retryError, stamped)
+                    return this.queueOrThrow(retryError, stamped, compte)
                 }
             }
 
-            return this.queueOrThrow(error, stamped)
+            return this.queueOrThrow(error, stamped, compte)
         }
     }
 
@@ -195,15 +262,17 @@ class SyncService {
      * which the draft replay acts on by deleting the local draft as a duplicate
      * of a queued write that never existed.
      */
-    queueOrThrow(error, config) {
+    queueOrThrow(error, config, compte) {
         // A response means the server answered, so this is its verdict, not a
         // connectivity problem — queueing it would hide a real refusal.
         if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
-            const queueId = this.addToQueue(config)
+            const queueId = this.addToQueue(config, compte)
 
             // queueId lets a caller waiting on what this create produces pick its
             // own write out of the drain later — see the `sync:replayed` event.
-            return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
+            if (queueId !== null) {
+                return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
+            }
         }
 
         throw error
@@ -225,26 +294,66 @@ class SyncService {
         return { ...config, headers: { ...config.headers, 'Idempotency-Key': newIdempotencyKey() } }
     }
 
-    /**
-     * @returns {string|null} the queue entry's id, so a caller that depends on
-     *   what this write eventually creates can recognise it when it goes out.
-     */
     isMutation(config) {
         return MUTATIONS.includes(String(config.method ?? '').toLowerCase())
     }
 
-    addToQueue(config) {
+    /**
+     * Met une écriture en file, au nom du compte qui l'a faite.
+     *
+     * Sans compte connu, rien n'entre : une écriture que la file ne sait
+     * attribuer à personne ne pourrait jamais repartir sans risquer de partir
+     * sous un autre compte. L'appelant reçoit alors l'échec réseau tel quel, et
+     * le dit au lieu de garder la valeur comme si elle allait partir.
+     *
+     * @param {Object} config
+     * @param {string|null} compte le compte connecté quand l'écriture est partie
+     * @returns {string|null} the queue entry's id, so a caller that depends on
+     *   what this write eventually creates can recognise it when it goes out.
+     */
+    addToQueue(config, compte = this.compte) {
         // Only queue mutations (POST, PATCH, PUT, DELETE)
-        if (!this.isMutation(config)) {
+        if (!this.isMutation(config) || compte === null) {
             return null
         }
 
         const id = Date.now() + Math.random().toString(36).substr(2, 9)
 
-        this.queue.push({ ...config, id, timestamp: new Date().toISOString() })
+        this.queue.push({ ...config, id, timestamp: new Date().toISOString(), compte })
         this.saveQueue()
 
         return id
+    }
+
+    /**
+     * Dit au service qui est connecté, et vide la file de ce compte s'il en a
+     * une. Appelé à chaque navigation Inertia, déconnexion et connexion
+     * comprises.
+     *
+     * @param {number|string|null|undefined} id
+     */
+    definirLeCompte(id) {
+        this.compte = normaliserLeCompte(id)
+
+        if (this.enAttente() > 0) {
+            this.processQueue()
+        }
+    }
+
+    /** Combien d'écritures du compte connecté attendent encore d'être envoyées. */
+    enAttente() {
+        return this.compte === null ? 0 : this.queue.filter((entree) => entree.compte === this.compte).length
+    }
+
+    /** La première écriture du compte connecté encore en file, ou undefined. */
+    teteDeFile() {
+        return this.compte === null ? undefined : this.queue.find((entree) => entree.compte === this.compte)
+    }
+
+    /** Retire une entrée réglée de la file, où qu'elle soit maintenant, et l'écrit. */
+    retirerLEntree(config) {
+        this.queue = this.queue.filter((entree) => entree !== config)
+        this.saveQueue()
     }
 
     saveQueue() {
@@ -257,7 +366,7 @@ class SyncService {
              * prévenir que ce qui n'est pas encore parti ne survivra pas à un
              * rechargement.
              */
-            window.dispatchEvent(new CustomEvent('sync:storage-full', { detail: { pending: this.queue.length } }))
+            window.dispatchEvent(new CustomEvent('sync:storage-full', { detail: { pending: this.enAttente() } }))
         }
     }
 
@@ -291,9 +400,7 @@ class SyncService {
      * and overwrite it.
      */
     async drainQueue() {
-        while (this.queue.length > 0) {
-            const config = this.queue[0]
-
+        for (let config = this.teteDeFile(); config !== undefined; config = this.teteDeFile()) {
             /*
              * Une erreur passagère a fixé l'heure du prochain essai. Un autre
              * déclencheur (une écriture directe, `online`, le retour au premier
@@ -357,7 +464,7 @@ class SyncService {
                             detail: {
                                 url: config.url,
                                 status: error?.response?.status ?? null,
-                                pending: this.queue.length,
+                                pending: this.enAttente(),
                             },
                         }),
                     )
@@ -395,8 +502,7 @@ class SyncService {
 
             // Settled — sent, or filed as refused. Only now may it leave, and
             // the queue that survives a reload is written before we move on.
-            this.queue.shift()
-            this.saveQueue()
+            this.retirerLEntree(config)
         }
     }
 
@@ -436,14 +542,7 @@ class SyncService {
             this.failed = this.failed.slice(-MAX_FAILED)
         }
 
-        try {
-            localStorage.setItem(FAILED_KEY, JSON.stringify(this.failed))
-        } catch {
-            // Storage is full or unavailable. Losing the record of a refusal is
-            // bad; letting it abort the drain and strand the rest of the queue
-            // is worse.
-            this.failed = this.failed.slice(-1)
-        }
+        this.saveFailed()
 
         window.dispatchEvent(
             new CustomEvent('sync:failed', {
@@ -456,14 +555,32 @@ class SyncService {
         )
     }
 
-    /** Mutations the server refused, still on disk. */
-    failedRequests() {
-        return [...this.failed]
+    saveFailed() {
+        try {
+            if (this.failed.length === 0) {
+                localStorage.removeItem(FAILED_KEY)
+
+                return
+            }
+
+            localStorage.setItem(FAILED_KEY, JSON.stringify(this.failed))
+        } catch {
+            // Storage is full or unavailable. Losing the record of a refusal is
+            // bad; letting it abort the drain and strand the rest of the queue
+            // is worse.
+            this.failed = this.failed.slice(-1)
+        }
     }
 
+    /** Mutations the server refused, still on disk — those of the account signed in. */
+    failedRequests() {
+        return this.failed.filter((entree) => entree.compte === this.compte)
+    }
+
+    /** Oublie les refus du compte connecté ; ceux d'un autre compte l'attendent. */
     clearFailedRequests() {
-        this.failed = []
-        localStorage.removeItem(FAILED_KEY)
+        this.failed = this.failed.filter((entree) => entree.compte !== this.compte)
+        this.saveFailed()
     }
 
     /** Helper for GET requests */

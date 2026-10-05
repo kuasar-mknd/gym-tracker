@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { COMPTE, chargerSyncService, naviguer, poserLaPage, retirerLesEcouteursDuService } from './fileHorsLigne'
 
 const request = vi.fn()
 
@@ -12,11 +13,7 @@ const setOnline = (value) => {
  * The module exports a singleton built in its constructor from localStorage, so
  * each case needs a fresh import after the storage is arranged.
  */
-const freshService = async () => {
-    vi.resetModules()
-
-    return (await import('@/Utils/SyncService')).default
-}
+const freshService = (options) => chargerSyncService(options)
 
 const aQueuedPatch = (url = '/api/v1/sets/1') => ({
     method: 'patch',
@@ -24,6 +21,7 @@ const aQueuedPatch = (url = '/api/v1/sets/1') => ({
     data: { weight: 100 },
     id: 'queued-1',
     timestamp: '2026-07-29T10:00:00.000Z',
+    compte: COMPTE,
 })
 
 beforeEach(() => {
@@ -34,6 +32,8 @@ beforeEach(() => {
 
 afterEach(() => {
     localStorage.clear()
+    poserLaPage(null)
+    retirerLesEcouteursDuService()
 })
 
 describe('SyncService.processQueue', () => {
@@ -364,6 +364,7 @@ describe('SyncService drain durability', () => {
         data: { weight: 100 },
         id,
         timestamp: '2026-08-04T10:00:00.000Z',
+        compte: COMPTE,
     })
 
     const stored = () => JSON.parse(localStorage.getItem('offline_sync_queue') || '[]').map((item) => item.url)
@@ -446,6 +447,7 @@ describe('SyncService failed-request bucket', () => {
             data: { weight: i },
             id: `q${i}`,
             timestamp: '2026-08-04T10:00:00.000Z',
+            compte: COMPTE,
         }))
         localStorage.setItem('offline_sync_queue', JSON.stringify(many))
         request.mockRejectedValue({ response: { status: 422 }, request: {} })
@@ -656,6 +658,7 @@ describe('SyncService erreurs passagères', () => {
             data: { reps: n },
             id: `q${n}`,
             timestamp: '2026-10-05T10:00:00.000Z',
+            compte: COMPTE,
         }))
 
     const tentees = () => request.mock.calls.map(([config]) => config.data.reps)
@@ -797,5 +800,173 @@ describe('SyncService erreurs passagères', () => {
             transientAttempts: 1,
             prochainEssai: Date.now() + 5000,
         })
+    })
+})
+
+/**
+ * La file appartenait à l'appareil : une entrée ne disait pas qui l'avait
+ * écrite, et le vidage partait sous la session connectée à ce moment-là. Sur un
+ * appareil partagé, les préférences d'un compte s'appliquaient au suivant, et
+ * ses séries revenaient en 403 annoncées au mauvais compte (#1964).
+ */
+describe('SyncService une file par compte', () => {
+    const envoyees = () => request.mock.calls.map(([config]) => `${config.method} ${config.url}`)
+
+    it('note sur chaque écriture le compte qui l’a faite', async () => {
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+        await expect(service.patch('/profile/preferences', { preferences: {} })).rejects.toMatchObject({
+            isOffline: true,
+        })
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))[0].compte).toBe(COMPTE)
+    })
+
+    it('ne rejoue jamais l’écriture d’un compte sous la session d’un autre', async () => {
+        // A modifie ses préférences sans réseau ; au rejeu, sa session a expiré.
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+        await expect(
+            service.patch('/profile/preferences', { preferences: { personal_record: false } }),
+        ).rejects.toMatchObject({ isOffline: true })
+
+        request.mockRejectedValueOnce({ response: { status: 401 } })
+        await service.processQueue()
+        expect(service.queue[0].authAttempts).toBe(1)
+
+        // B se connecte sur le même appareil et coche une série.
+        request.mockReset()
+        request.mockResolvedValue({ data: {} })
+        naviguer(2)
+        await service.pending
+        await service.patch('/api/v1/sets/900', { is_completed: true })
+
+        // Un nouveau chargement sous B ne rejoue rien non plus.
+        const rechargee = await freshService({ compte: 2 })
+        await rechargee.pending
+
+        expect(envoyees()).toEqual(['patch /api/v1/sets/900'])
+        expect(rechargee.enAttente()).toBe(0)
+        expect(rechargee.queue).toHaveLength(1)
+
+        // A revient : son écriture part sous sa propre session.
+        naviguer(1)
+        await rechargee.pending
+
+        expect(envoyees()).toEqual(['patch /api/v1/sets/900', 'patch /profile/preferences'])
+        expect(rechargee.queue).toEqual([])
+    })
+
+    it('ne fait pas attendre l’écriture directe d’un compte derrière la file d’un autre', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([{ ...aQueuedPatch(), compte: '7' }]))
+        request.mockResolvedValue({ data: { ok: true } })
+
+        const service = await chargé()
+        const reponse = await service.patch('/api/v1/sets/5', { reps: 8 })
+
+        expect(reponse.data).toEqual({ ok: true })
+        expect(envoyees()).toEqual(['patch /api/v1/sets/5'])
+    })
+
+    it('ne rejoue pas, et efface, une écriture qui ne dit pas à qui elle appartient', async () => {
+        const { compte: _sansCompte, ...ancienne } = aQueuedPatch()
+        localStorage.setItem('offline_sync_queue', JSON.stringify([ancienne]))
+        localStorage.setItem('offline_sync_failed', JSON.stringify([{ ...ancienne, status: 422 }]))
+        request.mockResolvedValue({ data: {} })
+
+        const service = await chargé()
+
+        expect(request).not.toHaveBeenCalled()
+        expect(service.queue).toEqual([])
+        expect(localStorage.getItem('offline_sync_queue')).toBe('[]')
+        expect(localStorage.getItem('offline_sync_failed')).toBeNull()
+    })
+
+    it('ne met rien en file quand personne n’est connecté, et rend l’échec tel quel', async () => {
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await freshService({ compte: null })
+
+        await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        expect(service.queue).toEqual([])
+    })
+
+    it('ne vide rien tant que personne n’est connecté, et vide la file du compte qui se connecte', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
+        request.mockResolvedValue({ data: {} })
+
+        const service = await freshService({ compte: null })
+        await service.pending
+        expect(request).not.toHaveBeenCalled()
+
+        naviguer(1)
+        await service.pending
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(service.queue).toEqual([])
+    })
+
+    it('lit une page illisible comme une page sans compte', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
+
+        const service = await freshService({ compte: null, page: '{coupé' })
+        await service.pending
+
+        expect(service.compte).toBeNull()
+        expect(request).not.toHaveBeenCalled()
+    })
+
+    it('ne montre et n’efface que les refus du compte connecté', async () => {
+        localStorage.setItem(
+            'offline_sync_failed',
+            JSON.stringify([
+                { ...aQueuedPatch('/api/v1/sets/1'), status: 422 },
+                { ...aQueuedPatch('/api/v1/sets/2'), compte: '2', status: 422 },
+            ]),
+        )
+
+        const service = await chargé()
+
+        expect(service.failedRequests().map((refus) => refus.url)).toEqual(['/api/v1/sets/1'])
+
+        service.clearFailedRequests()
+
+        expect(service.failedRequests()).toEqual([])
+        expect(JSON.parse(localStorage.getItem('offline_sync_failed')).map((refus) => refus.url)).toEqual([
+            '/api/v1/sets/2',
+        ])
+    })
+
+    it('ne compte en attente que les écritures du compte connecté', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([aQueuedPatch('/a'), { ...aQueuedPatch('/b'), compte: '2' }, aQueuedPatch('/c')]),
+        )
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+
+        expect(service.enAttente()).toBe(2)
+
+        naviguer(null)
+
+        expect(service.enAttente()).toBe(0)
+    })
+})
+
+describe('SyncService une écriture partie juste avant une déconnexion', () => {
+    it('reste au compte qui l’a faite, même si le réseau tombe après son départ', async () => {
+        let echouer
+        request.mockImplementationOnce(() => new Promise((_, reject) => (echouer = reject)))
+
+        const service = await chargé()
+        const ecriture = service.patch('/api/v1/sets/3', { reps: 6 })
+
+        service.definirLeCompte(null)
+        echouer({ code: 'ERR_NETWORK', request: {} })
+        await expect(ecriture).rejects.toMatchObject({ isOffline: true })
+
+        expect(service.queue.map((entree) => entree.compte)).toEqual([COMPTE])
     })
 })
