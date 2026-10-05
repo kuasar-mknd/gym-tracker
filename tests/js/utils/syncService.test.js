@@ -65,7 +65,7 @@ describe('SyncService.processQueue', () => {
      * Any non-network failure fell off the end of the catch and was gone, with
      * a console.error as the only record.
      */
-    it.each([422, 403, 500])('does not lose a mutation the server refused with %i', async (status) => {
+    it.each([422, 403])('does not lose a mutation the server refused with %i', async (status) => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
         request.mockRejectedValue({ response: { status } })
 
@@ -639,5 +639,163 @@ describe('SyncService stockage', () => {
         expect(request).toHaveBeenCalledTimes(2)
         expect(service.queue).toEqual([])
         expect(listener).toHaveBeenCalled()
+    })
+})
+
+/**
+ * Un 5xx ou un 429 n'est pas un refus : le serveur redémarre, ou demande de
+ * ralentir. Le vidage classait pourtant l'écriture refusée au premier essai et
+ * passait à la suivante, si bien qu'un redémarrage pendant une mise en
+ * production faisait passer toute la file d'une séance aux refusées (#1963).
+ */
+describe('SyncService erreurs passagères', () => {
+    const troisCreations = () =>
+        [1, 2, 3].map((n) => ({
+            method: 'post',
+            url: `/api/v1/sets?n=${n}`,
+            data: { reps: n },
+            id: `q${n}`,
+            timestamp: '2026-10-05T10:00:00.000Z',
+        }))
+
+    const tentees = () => request.mock.calls.map(([config]) => config.data.reps)
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it.each([500, 502, 503, 429])('garde l’écriture en tête, et celles qui la suivent, sur un %i', async (status) => {
+        vi.useFakeTimers()
+        localStorage.setItem('offline_sync_queue', JSON.stringify(troisCreations()))
+        request
+            .mockResolvedValueOnce({ data: {} })
+            .mockRejectedValueOnce({ response: { status, headers: {} } })
+            .mockResolvedValue({ data: {} })
+
+        const service = await chargé()
+
+        expect(tentees()).toEqual([1, 2])
+        expect(service.queue.map((entree) => entree.id)).toEqual(['q2', 'q3'])
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.id)).toEqual(['q2', 'q3'])
+        expect(service.failedRequests()).toEqual([])
+    })
+
+    it('repart seule après une attente, sans attendre un autre déclencheur', async () => {
+        vi.useFakeTimers()
+        localStorage.setItem('offline_sync_queue', JSON.stringify(troisCreations()))
+        request.mockRejectedValueOnce({ response: { status: 503 } }).mockResolvedValue({ data: {} })
+
+        const service = await chargé()
+        expect(tentees()).toEqual([1])
+
+        await vi.advanceTimersByTimeAsync(4999)
+        expect(tentees()).toEqual([1])
+
+        await vi.advanceTimersByTimeAsync(1)
+        await service.pending
+
+        expect(tentees()).toEqual([1, 1, 2, 3])
+        expect(service.queue).toEqual([])
+    })
+
+    it('double l’attente à chaque échec passager', async () => {
+        vi.useFakeTimers()
+        localStorage.setItem('offline_sync_queue', JSON.stringify(troisCreations().slice(0, 1)))
+        request.mockRejectedValue({ response: { status: 502 } })
+
+        await chargé()
+        await vi.advanceTimersByTimeAsync(5000)
+        expect(request).toHaveBeenCalledTimes(2)
+
+        await vi.advanceTimersByTimeAsync(9999)
+        expect(request).toHaveBeenCalledTimes(2)
+
+        await vi.advanceTimersByTimeAsync(1)
+        expect(request).toHaveBeenCalledTimes(3)
+    })
+
+    it.each([
+        ['un nombre de secondes', '30'],
+        ['une date', () => new Date(Date.now() + 30_000).toUTCString()],
+    ])('respecte le Retry-After d’un 429 donné en %s', async (_forme, valeur) => {
+        vi.useFakeTimers()
+        localStorage.setItem('offline_sync_queue', JSON.stringify(troisCreations().slice(0, 1)))
+        request
+            .mockRejectedValueOnce({
+                response: {
+                    status: 429,
+                    headers: { 'retry-after': typeof valeur === 'function' ? valeur() : valeur },
+                },
+            })
+            .mockResolvedValue({ data: {} })
+
+        const service = await chargé()
+
+        await vi.advanceTimersByTimeAsync(29_000)
+        expect(request).toHaveBeenCalledTimes(1)
+
+        await vi.advanceTimersByTimeAsync(1000)
+        await service.pending
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(service.queue).toEqual([])
+    })
+
+    it('ne laisse pas une écriture directe devancer l’attente', async () => {
+        vi.useFakeTimers()
+        localStorage.setItem('offline_sync_queue', JSON.stringify(troisCreations().slice(0, 1)))
+        request.mockRejectedValueOnce({ response: { status: 500 } }).mockResolvedValue({ data: {} })
+
+        const service = await chargé()
+
+        await expect(service.patch('/api/v1/sets/1', { weight: 120 })).rejects.toMatchObject({ isOffline: true })
+
+        // Rien n'est reparti : ni l'écriture en tête, ni la nouvelle.
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(service.queue.map((entree) => entree.url)).toEqual(['/api/v1/sets?n=1', '/api/v1/sets/1'])
+
+        await vi.advanceTimersByTimeAsync(5000)
+        await service.pending
+
+        expect(request.mock.calls.map(([config]) => config.url)).toEqual([
+            '/api/v1/sets?n=1',
+            '/api/v1/sets?n=1',
+            '/api/v1/sets/1',
+        ])
+    })
+
+    it('classe l’écriture refusée après six échecs passagers, l’annonce, et passe à la suivante', async () => {
+        vi.useFakeTimers()
+        localStorage.setItem('offline_sync_queue', JSON.stringify(troisCreations().slice(0, 2)))
+        request.mockImplementation((config) =>
+            config.data.reps === 1 ? Promise.reject({ response: { status: 503 } }) : Promise.resolve({ data: {} }),
+        )
+        const annonce = vi.fn()
+        window.addEventListener('sync:failed', annonce)
+
+        const service = await chargé()
+        await vi.advanceTimersByTimeAsync(5000 + 10_000 + 20_000 + 40_000 + 80_000)
+        await service.pending
+
+        window.removeEventListener('sync:failed', annonce)
+
+        expect(tentees()).toEqual([1, 1, 1, 1, 1, 1, 2])
+        expect(service.failedRequests().map((entree) => entree.id)).toEqual(['q1'])
+        expect(service.failedRequests()[0].status).toBe(503)
+        expect(annonce).toHaveBeenCalledTimes(1)
+        expect(service.queue).toEqual([])
+    })
+
+    it('garde le compte des essais à travers un rechargement', async () => {
+        vi.useFakeTimers()
+        localStorage.setItem('offline_sync_queue', JSON.stringify(troisCreations().slice(0, 1)))
+        request.mockRejectedValue({ response: { status: 500 } })
+
+        await chargé()
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))[0]).toMatchObject({
+            transientAttempts: 1,
+            prochainEssai: Date.now() + 5000,
+        })
     })
 })

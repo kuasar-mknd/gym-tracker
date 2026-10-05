@@ -18,6 +18,10 @@
  *
  * 429 is deliberately transient: SyncService retries it once itself, and a rate
  * limit is by definition temporary.
+ *
+ * Dans le vidage de la file, un `transient` garde l'écriture en tête et relance
+ * plus tard, après une attente qui double, ou celle que demande `Retry-After` ;
+ * elle n'est classée refusée qu'après six échecs espacés (#1963).
  */
 export const SYNC_OFFLINE = 'offline'
 export const SYNC_AUTH = 'auth'

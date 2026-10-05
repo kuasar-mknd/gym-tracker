@@ -1,5 +1,5 @@
 import { http } from '@/Utils/http'
-import { classifySyncError, SYNC_AUTH, SYNC_OFFLINE } from '@/Utils/syncErrors'
+import { classifySyncError, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
 const FAILED_KEY = 'offline_sync_failed'
@@ -12,6 +12,21 @@ const MAX_FAILED = 50
  * d'être classée refusée plutôt que de bloquer la file pour toujours.
  */
 const MAX_AUTH_ATTEMPTS = 3
+
+/**
+ * Combien d'échecs passagers (5xx, 429) une même écriture peut rencontrer,
+ * espacés, avant d'être classée refusée (#1963). Avec les attentes ci-dessous,
+ * la sixième tentative tombe deux minutes et demie après la première : de quoi
+ * couvrir le redémarrage du serveur pendant une mise en production, sans
+ * bloquer la file pour toujours derrière une écriture qu'il refusera toujours.
+ */
+const MAX_TRANSIENT_ATTEMPTS = 6
+
+/** L'attente après le premier échec passager ; elle double à chaque échec suivant. */
+const PREMIERE_ATTENTE_MS = 5000
+
+/** Le plafond de cette attente, `Retry-After` compris. */
+const ATTENTE_MAX_MS = 5 * 60 * 1000
 
 const MUTATIONS = ['post', 'patch', 'put', 'delete']
 
@@ -32,6 +47,42 @@ const lireLaListe = (cle) => {
 }
 
 /**
+ * Ce que le serveur demande d'attendre, d'après `Retry-After` : un nombre de
+ * secondes ou une date HTTP. Null quand il ne dit rien d'exploitable.
+ *
+ * @returns {number|null} en millisecondes
+ */
+const attenteDemandee = (error) => {
+    const valeur = error?.response?.headers?.['retry-after']
+
+    if (valeur === undefined || valeur === null || String(valeur).trim() === '') {
+        return null
+    }
+
+    const secondes = Number(valeur)
+
+    if (Number.isFinite(secondes)) {
+        return Math.max(0, secondes * 1000)
+    }
+
+    const date = Date.parse(valeur)
+
+    return Number.isNaN(date) ? null : Math.max(0, date - Date.now())
+}
+
+/**
+ * L'attente avant le prochain essai d'une écriture qui vient d'échouer pour la
+ * n-ième fois sur une erreur passagère : celle que le serveur demande pour un
+ * 429, sinon une attente qui double à chaque échec.
+ */
+const attenteAvantLeProchainEssai = (error, tentatives) => {
+    const demandee = error?.response?.status === 429 ? attenteDemandee(error) : null
+    const attente = demandee ?? PREMIERE_ATTENTE_MS * 2 ** (tentatives - 1)
+
+    return Math.min(attente, ATTENTE_MAX_MS)
+}
+
+/**
  * Names one create attempt, for as long as that attempt exists.
  *
  * The dangerous failure is not the one that obviously fails. It is the request
@@ -48,6 +99,9 @@ class SyncService {
     constructor() {
         this.queue = lireLaListe(QUEUE_KEY)
         this.failed = lireLaListe(FAILED_KEY)
+
+        /** La relance programmée après un échec passager, s'il y en a une. */
+        this.relance = null
 
         window.addEventListener('online', () => this.processQueue())
 
@@ -240,9 +294,22 @@ class SyncService {
         while (this.queue.length > 0) {
             const config = this.queue[0]
 
+            /*
+             * Une erreur passagère a fixé l'heure du prochain essai. Un autre
+             * déclencheur (une écriture directe, `online`, le retour au premier
+             * plan) ne la devance pas : sans cela, une rafale de saisies
+             * épuisait les essais en quelques secondes, contre un serveur qui
+             * redémarrait.
+             */
+            if ((config.prochainEssai ?? 0) > Date.now()) {
+                this.programmerLaRelance(config.prochainEssai - Date.now())
+
+                return
+            }
+
             try {
                 // Remove internal queue ID before sending
-                const { id, timestamp, authAttempts, ...requete } = config
+                const { id, timestamp, authAttempts, transientAttempts, prochainEssai, ...requete } = config
                 const response = await http(requete)
 
                 /**
@@ -300,6 +367,29 @@ class SyncService {
                     }
                 }
 
+                if (verdict === SYNC_TRANSIENT) {
+                    /*
+                     * 5xx ou 429 : le serveur redémarre, ou demande de ralentir.
+                     * L'écriture n'est pas refusée, elle est en avance. Elle
+                     * garde sa place en tête, tout ce qui la suit attend avec
+                     * elle, et la file repart seule après une attente qui
+                     * double (ou celle que demande `Retry-After`). Elle passait
+                     * aux refusées au premier 502, et toute la file d'une
+                     * séance avec elle en un seul passage (#1963).
+                     */
+                    config.transientAttempts = (config.transientAttempts ?? 0) + 1
+
+                    if (config.transientAttempts < MAX_TRANSIENT_ATTEMPTS) {
+                        const attente = attenteAvantLeProchainEssai(error, config.transientAttempts)
+
+                        config.prochainEssai = Date.now() + attente
+                        this.saveQueue()
+                        this.programmerLaRelance(attente)
+
+                        return
+                    }
+                }
+
                 this.recordFailure(config, error)
             }
 
@@ -308,6 +398,19 @@ class SyncService {
             this.queue.shift()
             this.saveQueue()
         }
+    }
+
+    /**
+     * Relance le vidage dans `attente` millisecondes. Une seule relance à la
+     * fois : la plus récente remplace la précédente.
+     */
+    programmerLaRelance(attente) {
+        clearTimeout(this.relance)
+
+        this.relance = setTimeout(() => {
+            this.relance = null
+            this.processQueue()
+        }, attente)
     }
 
     /**
