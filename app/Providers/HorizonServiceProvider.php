@@ -20,9 +20,8 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     /**
      * Qui entre dans Horizon : l'une OU l'autre de deux voies.
      *
-     * - Un compte de l'application listé dans `HORIZON_ALLOWED_EMAILS`, dont
-     *   l'adresse est vérifiée, par la porte `viewHorizon` (#1443), sans liste
-     *   d'adresses IP.
+     * - Un compte de l'application listé dans `HORIZON_ALLOWED_EMAILS`, par la
+     *   porte `viewHorizon` (#1443), sans liste d'adresses, comme avant.
      * - L'administrateur du panneau qui voit le lien « Horizon » de son menu
      *   (capacité `view-outils`), depuis une adresse que `ADMIN_ALLOWED_IPS`
      *   admet (la règle même du panneau, par `IpWhitelist::admet()`), avec une
@@ -86,24 +85,8 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
                 explode(',', is_string($configurees) ? $configurees : ''),
             ), static fn (string $email): bool => $email !== '');
 
-            return in_array($user->email, $autorisees, true) && self::possedeSonAdresse($user);
+            return in_array($user->email, $autorisees, true);
         });
-    }
-
-    /**
-     * Le compte a prouvé qu'il reçoit le courrier de son adresse.
-     *
-     * L'adresse seule ne suffit pas : l'inscription est ouverte et connecte le
-     * compte avant toute vérification, et un changement d'adresse dans le
-     * profil remet la vérification à nul sans fermer la session. Une adresse
-     * listée que personne n'a encore prise ouvrirait donc Horizon à qui la
-     * saisit, sans posséder la boîte. Le reste de l'application renvoie ce même
-     * compte vers la vérification ; la voie de l'administrateur du panneau,
-     * elle, ne passe pas par cette porte.
-     */
-    private static function possedeSonAdresse(User $user): bool
-    {
-        return $user->hasVerifiedEmail();
     }
 
     /**
