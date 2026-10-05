@@ -46,7 +46,7 @@ const mountForm = (props = {}) =>
     })
 
 const banner = (wrapper) => wrapper.find('h4')
-// Les cases « Envoyer aussi en Push » seulement : les jours de rappel ont les leurs.
+// Les cases d'envoi en push seulement : les jours de rappel ont les leurs.
 const pushCheckboxes = (wrapper) =>
     wrapper.findAll('input[type="checkbox"]').filter((box) => box.element.closest('[dusk="reminder-days"]') === null)
 const error = (wrapper) => wrapper.find('[dusk="notification-push-error"]')
