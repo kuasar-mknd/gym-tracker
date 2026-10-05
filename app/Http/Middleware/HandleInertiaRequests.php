@@ -5,11 +5,26 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Services\NotificationService;
+use Closure;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\IpUtils;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
+    /**
+     * Ce que le navigateur peut garder d'une réponse faite à un compte connecté.
+     *
+     * `no-store` : ni le cache HTTP ni, dans la plupart des navigateurs, la
+     * mémoire de retour arrière (bfcache) ne la gardent, ou celle-ci l'évince
+     * quand les cookies changent, à la déconnexion. Plus court que le
+     * `no-cache, private` qu'elle remplace : le budget d'en-têtes de
+     * `EnTetesDeReponseTest` n'y perd rien.
+     */
+    public const string CACHE_D_UNE_PAGE_DE_COMPTE = 'no-store, private';
+
     /**
      * Le gabarit racine, chargé à la première visite.
      *
@@ -17,6 +32,66 @@ class HandleInertiaRequests extends Middleware
      */
     #[\Override]
     protected $rootView = 'app';
+
+    /**
+     * Ce que le navigateur garde des pages d'un compte, une fois parti (#1965).
+     *
+     * Inertia range les props de chaque page visitée dans l'historique du
+     * navigateur et les rend au bouton Retour sans rien demander au serveur :
+     * après une déconnexion, sur un appareil partagé, la personne suivante
+     * revoyait le journal, les mesures ou l'adresse du compte parti. Une page
+     * de compte voyage donc avec `encryptHistory` : Inertia chiffre ce qu'il
+     * range, avec une clé qu'il garde dans le `sessionStorage` de l'onglet. La
+     * déconnexion et la suppression du compte posent `clearHistory`, qui jette
+     * la clé : une entrée restée dans l'historique ne se déchiffre plus, et
+     * Inertia redemande la page au serveur, qui renvoie vers la connexion.
+     *
+     * La réponse elle-même sort en `no-store` : le document complet d'une page
+     * de compte porte aussi ses props, et le cache HTTP le resservirait tel quel
+     * à une navigation arrière qui quitte le document courant.
+     *
+     * Les deux se décident ici, à chaque requête, et jamais ailleurs :
+     * `ResponseFactory` est un singleton, une valeur posée une fois resterait
+     * pour la requête suivante du même processus, celle d'un invité comprise.
+     */
+    #[\Override]
+    public function handle(Request $request, Closure $next): Response
+    {
+        $pageDUnCompte = $request->user() !== null;
+
+        Inertia::encryptHistory($pageDUnCompte && $this->leNavigateurPeutChiffrer($request));
+
+        $reponse = parent::handle($request, $next);
+
+        if ($pageDUnCompte) {
+            $reponse->headers->set('Cache-Control', self::CACHE_D_UNE_PAGE_DE_COMPTE);
+        }
+
+        return $reponse;
+    }
+
+    /**
+     * Si le navigateur offre `crypto.subtle`, sans quoi Inertia ne chiffre rien.
+     *
+     * Il ne l'offre qu'à un contexte sûr : une page servie en HTTPS, ou depuis
+     * la boucle locale (`localhost`, `*.localhost`, 127.0.0.0/8, ::1). Ailleurs,
+     * Inertia ne sait pas créer sa clé et lève à la première page : l'écran
+     * resterait blanc. C'est le cas des parcours navigateur sous Sail, servis
+     * en http sur `laravel.test` ; la production, derrière le proxy inverse
+     * HTTPS qui transmet `X-Forwarded-Proto`, chiffre.
+     */
+    private function leNavigateurPeutChiffrer(Request $request): bool
+    {
+        if ($request->isSecure()) {
+            return true;
+        }
+
+        $hote = trim($request->getHost(), '[]');
+
+        return $hote === 'localhost'
+            || str_ends_with($hote, '.localhost')
+            || IpUtils::checkIp($hote, ['127.0.0.0/8', '::1']);
+    }
 
     /**
      * @return array<string, mixed>

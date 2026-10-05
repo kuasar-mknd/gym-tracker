@@ -101,7 +101,7 @@ Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-
 
 Les journaux des trois conteneurs de l'application vont dans `docker logs` et, un fichier par conteneur (`app`, `worker`, `scheduler`), dans le volume `journaux` que lit la page « Journaux » du panneau. Le fichier est indispensable au planificateur, qui envoie la sortie de chaque tâche dans /dev/null.
 
-L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`).
+L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`). `X-Forwarded-Proto` décide aussi du chiffrement de l'historique (#1965) : les pages d'un compte sont chiffrées dans l'historique du navigateur, et la déconnexion en jette la clé, pour que le bouton Retour ne réaffiche rien du compte parti ; le navigateur ne sait chiffrer qu'en HTTPS ou sur la boucle locale, et l'application ne le lui demande que là. Sans l'en-tête, les pages restent servies, mais l'historique en clair. Les pages d'un compte sortent en outre en `Cache-Control: no-store`.
 
 ---
 
@@ -393,6 +393,8 @@ Puis, à chaque passe :
 ```
 
 `artisan dusk` met `.env.dusk.local` à la place du `.env` le temps de la passe, puis le remet ; il cherche `.env.dusk.` suivi de l'`APP_ENV` du `.env`, `local` sous Sail. Les parcours et le serveur de Sail, qui relit le `.env` à chaque requête, visent ainsi ensemble `gym_tracker_dusk` ; pendant la passe, `http://localhost` sert donc cette base. La CI tourne autrement : serveur et ChromeDriver sur le même exécuteur, `APP_URL=http://127.0.0.1:8000`, dans le `.env` qu'écrit le job `browser-shard`. Dans les deux cas, la suite ne démarre aucun pilote : elle se branche sur `DUSK_DRIVER_URL`, le Selenium de Sail ou le ChromeDriver que la CI lance dans une étape à part ; ailleurs, ChromeDriver est à lancer soi-même.
+
+Servis en http sur `laravel.test`, hors de la boucle locale, les parcours voient un historique en clair : `HistoriqueApresDeconnexionTest`, qui vérifie son chiffrement, s'y déclare sauté, et ne tourne qu'en CI, sur 127.0.0.1.
 
 ### Mutation testing
 

@@ -6,6 +6,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
 import { installerLeRapporteurDErreurs } from '@/Utils/rapporteurDErreurs'
+import { installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -58,6 +59,9 @@ createInertiaApp({
 
         // Les erreurs du navigateur restent chez nous : voir le rapporteur.
         installerLeRapporteurDErreurs(app)
+
+        // Une page de compte rendue de mémoire après la déconnexion ne se montre pas (#1965).
+        installerLaGardeDeLHistorique({ routeur: router, pageInitiale: props.initialPage })
 
         // Register custom directives
         app.directive('press', vPress)

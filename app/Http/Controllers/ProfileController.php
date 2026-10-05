@@ -165,6 +165,9 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
+        // Comme à la déconnexion : l'historique du compte supprimé ne se relit plus (#1965).
+        Inertia::clearHistory();
+
         return Redirect::to('/');
     }
 }
