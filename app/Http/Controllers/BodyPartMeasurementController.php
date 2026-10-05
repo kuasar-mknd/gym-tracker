@@ -43,6 +43,7 @@ class BodyPartMeasurementController extends Controller
 
         return Inertia::render('Measurements/Parts/Show', [
             'part' => $part,
+            'label' => BodyPartMeasurement::libelle($part),
             'history' => $historique,
         ]);
     }

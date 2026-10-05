@@ -19,11 +19,11 @@ class FetchBodyPartMeasurementsIndexAction
     private const int PARTIES_MAX = 50;
 
     /**
-     * @return array{latestMeasurements: Collection<int, array{part: string, current: float, unit: string, date: non-falsy-string, diff: float}>, commonParts: array<int, string>}
+     * @return array{latestMeasurements: Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>, commonParts: list<array{value: string, label: string}>}
      */
     public function execute(User $user): array
     {
-        /** @var Collection<int, array{part: string, current: float, unit: string, date: non-falsy-string, diff: float}> $latestMeasurements */
+        /** @var Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}> $latestMeasurements */
         $latestMeasurements = collect();
         $curseur = '';
 
@@ -41,6 +41,7 @@ class FetchBodyPartMeasurementsIndexAction
 
             $latestMeasurements->push([
                 'part' => $derniere->part,
+                'label' => BodyPartMeasurement::libelle($derniere->part),
                 'current' => $courante,
                 'unit' => $derniere->unit,
                 'date' => Carbon::parse($derniere->measured_at)->format('Y-m-d'),
@@ -79,10 +80,15 @@ class FetchBodyPartMeasurementsIndexAction
     }
 
     /**
-     * @return array<int, string>
+     * Les parties proposées, avec le nom que la page affiche.
+     *
+     * @return list<array{value: string, label: string}>
      */
     private function getCommonParts(): array
     {
-        return \App\Models\BodyPartMeasurement::COMMON_PARTS;
+        return array_map(
+            static fn (string $partie): array => ['value' => $partie, 'label' => BodyPartMeasurement::libelle($partie)],
+            BodyPartMeasurement::COMMON_PARTS,
+        );
     }
 }

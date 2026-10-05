@@ -247,6 +247,37 @@ describe('Measurements/Parts/Show — the unit a new entry inherits', () => {
     })
 })
 
+describe('Measurements/Parts/Show — le nom de la partie', () => {
+    /*
+     * La clef reste anglaise en base et dans l'adresse ; l'écran montre le nom
+     * français que le serveur envoie (#1974).
+     */
+    it('titre la page, l’onglet et le graphique du nom français, jamais de la clef', async () => {
+        const wrapper = mount(PartShow, {
+            props: { part: 'Waist', label: 'Taille', history: structuredClone(historyFixture) },
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            },
+        })
+        await flushPromises()
+
+        expect(wrapper.find('h2').text()).toBe('Taille')
+        expect(wrapper.find('[title="Taille"]').exists()).toBe(true)
+        expect(wrapper.findComponent({ name: 'BodyPartHistoryChart' }).props('label')).toBe('Taille')
+        expect(wrapper.text()).toContain('Historique')
+        expect(wrapper.text()).not.toContain('History')
+        expect(wrapper.text()).not.toContain('Waist')
+    })
+
+    it('garde le nom saisi d’une partie libre', () => {
+        const { wrapper } = mountPart()
+
+        expect(wrapper.find('h2').text()).toBe('Biceps')
+    })
+})
+
 describe('Measurements/Parts/Show — the history list', () => {
     it('puts the most recent measurement at the top', () => {
         const { wrapper } = mountPart()

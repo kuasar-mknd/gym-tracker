@@ -15,7 +15,8 @@ const props = defineProps({
 // Filter out parts with no difference
 const differences = computed(() => props.data.filter((item) => item.diff !== 0))
 
-const labels = computed(() => differences.value.map((item) => item.part))
+// Le nom français de la partie (« Taille »), pas sa clef (`Waist`).
+const labels = computed(() => differences.value.map((item) => item.label ?? item.part))
 
 const datasets = computed(() => [
     {
@@ -51,8 +52,8 @@ const infobulle = {
         label: (context) => {
             const value = context.parsed.x
             const sign = value > 0 ? '+' : ''
-            // Find the unit for this part
-            const partData = props.data.find((d) => d.part === context.label)
+            // L'étiquette est le nom affiché (« Taille »), pas la clef (`Waist`).
+            const partData = props.data.find((d) => (d.label ?? d.part) === context.label)
             const unit = partData ? partData.unit : ''
             return `${sign}${value} ${unit}`
         },

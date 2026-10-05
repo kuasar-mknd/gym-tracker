@@ -444,41 +444,69 @@ describe('Measurements/Index deletion', () => {
     })
 })
 
-const COMMON_PARTS = ['Neck', 'Chest', 'Waist']
+/** Les parties proposées, avec le nom que la page affiche (`BodyPartMeasurement::LIBELLES`). */
+const COMMON_PARTS = [
+    { value: 'Neck', label: 'Cou' },
+    { value: 'Chest', label: 'Poitrine' },
+    { value: 'Waist', label: 'Taille' },
+]
 
 /** One row per part, the latest value and its move against the one before. */
 const PARTS = [
-    { part: 'Waist', current: 82.5, unit: 'cm', date: '2026-08-12', diff: -1.5 },
-    { part: 'Biceps L', current: 38, unit: 'cm', date: '2026-08-10', diff: 0.75 },
-    { part: 'Chest', current: 104, unit: 'cm', date: '2026-08-01', diff: 0 },
+    { part: 'Waist', label: 'Taille', current: 82.5, unit: 'cm', date: '2026-08-12', diff: -1.5 },
+    { part: 'Biceps L', label: 'Biceps gauche', current: 38, unit: 'cm', date: '2026-08-10', diff: 0.75 },
+    { part: 'Chest', label: 'Poitrine', current: 104, unit: 'cm', date: '2026-08-01', diff: 0 },
 ]
 
 /**
  * The chips are a shortcut onto a free-text field: whatever they set has to be
- * the value that is saved, or a tapped "Waist" would file itself under nothing.
+ * the value that is saved. The chip writes the French name the user reads, and
+ * the server files it under the part's key (« Taille » → `Waist`), where the
+ * earlier measurements and the goals that follow them already are.
  */
 describe('Measurements/Parts/Index part picker', () => {
     it('writes the tapped part into the field the form actually sends', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
 
         await click(wrapper, 'Ajouter')
-        await click(wrapper, 'Waist')
+        await click(wrapper, 'Taille')
 
-        expect(wrapper.vm.form.part).toBe('Waist')
+        expect(wrapper.vm.form.part).toBe('Taille')
     })
 
     it('highlights the one chip that matches the field, so the choice is visible', async () => {
         const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
 
         await click(wrapper, 'Ajouter')
-        await click(wrapper, 'Chest')
+        await click(wrapper, 'Poitrine')
 
         const highlighted = wrapper
             .findAll('button[aria-pressed]')
             .filter((chip) => chip.attributes('aria-pressed') === 'true')
 
         expect(highlighted).toHaveLength(1)
-        expect(highlighted[0].text()).toBe('Chest')
+        expect(highlighted[0].text()).toBe('Poitrine')
+    })
+
+    /*
+     * « Waist », « Thigh L » ou « Calf R » ne disent rien à un francophone, et
+     * L et R moins encore (#1974) : ni les pastilles, ni les cartes, ni le
+     * champ rempli par une pastille, ni son exemple ne montrent la clef.
+     */
+    it('ne montre aucune clef anglaise, ni dans les pastilles, ni sur les cartes, ni dans le champ', async () => {
+        const wrapper = await mountPage(BodyPartsIndex, { latestMeasurements: PARTS, commonParts: COMMON_PARTS })
+
+        await click(wrapper, 'Ajouter')
+        await click(wrapper, 'Taille')
+
+        // GlassInput est remplacé par une boîte ici : le champ affiche ce que
+        // porte `form.part`, que la pastille vient d'écrire.
+        expect(wrapper.find('[placeholder="Ex. : Taille"]').exists()).toBe(true)
+        expect(wrapper.vm.form.part).toBe('Taille')
+        expect(wrapper.findAll('h3.titre-carte').map((titre) => titre.text())).toEqual(
+            expect.arrayContaining(['Taille', 'Biceps gauche', 'Poitrine']),
+        )
+        expect(wrapper.text()).not.toMatch(/\b(Waist|Biceps L|Chest|Neck)\b/)
     })
 
     /**
@@ -510,7 +538,7 @@ describe('Measurements/Parts/Index add form', () => {
     const fillAndSubmit = async (wrapper) => {
         await click(wrapper, 'Ajouter')
         Object.assign(wrapper.vm.form, {
-            part: 'Waist',
+            part: 'Taille',
             value: '82.5',
             unit: 'in',
             measured_at: '2026-08-01',
@@ -526,7 +554,7 @@ describe('Measurements/Parts/Index add form', () => {
         await fillAndSubmit(wrapper)
 
         expect(formPost).toHaveBeenCalledWith('/body-parts.store', {
-            part: 'Waist',
+            part: 'Taille',
             value: '82.5',
             unit: 'in',
             measured_at: '2026-08-01',
@@ -543,7 +571,7 @@ describe('Measurements/Parts/Index add form', () => {
         expect(wrapper.vm.form.notes).toBe('')
         // Clearing these three would mean re-picking a part, a unit and a date
         // between every single tape measurement.
-        expect(wrapper.vm.form.part).toBe('Waist')
+        expect(wrapper.vm.form.part).toBe('Taille')
         expect(wrapper.vm.form.unit).toBe('in')
         expect(wrapper.vm.form.measured_at).toBe('2026-08-01')
     })

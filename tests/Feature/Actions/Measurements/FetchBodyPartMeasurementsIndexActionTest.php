@@ -66,7 +66,7 @@ it('fetches latest measurements correctly utilizing window functions', function 
 
     expect($result)->toHaveKey('commonParts')
         ->and($result['commonParts'])->toBeArray()->not->toBeEmpty()
-        ->and($result['commonParts'])->toContain('Chest', 'Waist', 'Hips', 'Biceps L');
+        ->and(array_column($result['commonParts'], 'value'))->toContain('Chest', 'Waist', 'Hips', 'Biceps L');
 
     expect($result)->toHaveKey('latestMeasurements')
         ->and($result['latestMeasurements'])->toHaveCount(3); // Chest, Waist, Hips
@@ -122,19 +122,19 @@ it('rend les treize parties courantes, dans leur ordre', function (): void {
      * page les propose.
      */
     expect($result['commonParts'])->toBe([
-        'Neck',
-        'Shoulders',
-        'Chest',
-        'Biceps L',
-        'Biceps R',
-        'Forearm L',
-        'Forearm R',
-        'Waist',
-        'Hips',
-        'Thigh L',
-        'Thigh R',
-        'Calf L',
-        'Calf R',
+        ['value' => 'Neck', 'label' => 'Cou'],
+        ['value' => 'Shoulders', 'label' => 'Épaules'],
+        ['value' => 'Chest', 'label' => 'Poitrine'],
+        ['value' => 'Biceps L', 'label' => 'Biceps gauche'],
+        ['value' => 'Biceps R', 'label' => 'Biceps droit'],
+        ['value' => 'Forearm L', 'label' => 'Avant-bras gauche'],
+        ['value' => 'Forearm R', 'label' => 'Avant-bras droit'],
+        ['value' => 'Waist', 'label' => 'Taille'],
+        ['value' => 'Hips', 'label' => 'Hanches'],
+        ['value' => 'Thigh L', 'label' => 'Cuisse gauche'],
+        ['value' => 'Thigh R', 'label' => 'Cuisse droite'],
+        ['value' => 'Calf L', 'label' => 'Mollet gauche'],
+        ['value' => 'Calf R', 'label' => 'Mollet droit'],
     ]);
 });
 
@@ -158,11 +158,13 @@ it('decrit chaque mesure par cinq cles, unite comprise', function (): void {
     /*
      * Aucune assertion ne portait sur `unit` : la carte pouvait perdre son
      * unite sans qu'un test bronche, et 38,5 sans unite ne veut rien dire.
-     * Comparer les cles exactes tient les cinq d'un coup.
+     * Comparer les cles exactes tient les six d'un coup, dont le nom affiche
+     * de la partie (#1974).
      */
-    expect(array_keys($mesure))->toBe(['part', 'current', 'unit', 'date', 'diff']);
+    expect(array_keys($mesure))->toBe(['part', 'label', 'current', 'unit', 'date', 'diff']);
 
     expect($mesure['part'])->toBe('Neck')
+        ->and($mesure['label'])->toBe('Cou')
         ->and($mesure['unit'])->toBe('in')
         ->and($mesure['current'])->toBe(38.5)
         ->and($mesure['date'])->toBe('2026-06-15')

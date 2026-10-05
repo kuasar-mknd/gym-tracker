@@ -88,8 +88,8 @@ it('rend la derniere mesure et l’ecart avec la precedente', function (): void 
     $resultat = $action->execute($user);
 
     expect($resultat['latestMeasurements']->all())->toBe([
-        ['part' => 'Chest', 'current' => 104.5, 'unit' => 'cm', 'date' => '2026-02-01', 'diff' => 4.5],
-        ['part' => 'Waist', 'current' => 80.0, 'unit' => 'cm', 'date' => '2026-02-01', 'diff' => 0.0],
+        ['part' => 'Chest', 'label' => 'Poitrine', 'current' => 104.5, 'unit' => 'cm', 'date' => '2026-02-01', 'diff' => 4.5],
+        ['part' => 'Waist', 'label' => 'Taille', 'current' => 80.0, 'unit' => 'cm', 'date' => '2026-02-01', 'diff' => 0.0],
     ]);
 });
 

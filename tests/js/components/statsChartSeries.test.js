@@ -79,6 +79,20 @@ describe('BodyPartDiffChart series', () => {
         expect(series.datasets[0].data).toEqual([2, -1.5])
     })
 
+    // La barre porte le nom français de la partie, pas sa clef (#1974).
+    it('nomme chaque barre du nom affiché de la partie', () => {
+        const series = seriesOf(
+            mountChart([
+                { part: 'Waist', label: 'Taille', diff: -1.5, unit: 'cm' },
+                { part: 'Calf R', label: 'Mollet droit', diff: 0.5, unit: 'cm' },
+                { part: 'Tour de cou', label: 'Tour de cou', diff: 1, unit: 'cm' },
+            ]),
+            'Bar',
+        )
+
+        expect(series.labels).toEqual(['Taille', 'Mollet droit', 'Tour de cou'])
+    })
+
     it('shows an empty state instead of an axis with no bars', () => {
         const wrapper = mountChart([{ part: 'Poids', diff: 0, unit: 'kg' }])
 

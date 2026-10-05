@@ -4,7 +4,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
-import { ref, defineAsyncComponent } from 'vue'
+import { computed, ref, defineAsyncComponent } from 'vue'
 import { dateAvecJour, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
@@ -18,9 +18,14 @@ import { nombre } from '@/Utils/nombre'
 const BodyPartHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartHistoryChart.vue'))
 
 const props = defineProps({
+    /** La clef de la partie, telle qu'elle est rangée et qu'on la renvoie. */
     part: String,
+    /** Son nom à l'écran : « Taille » pour `Waist`, le nom saisi pour une autre. */
+    label: { type: String, default: null },
     history: Array,
 })
+
+const nom = computed(() => props.label ?? props.part)
 
 const showAddForm = ref(false)
 
@@ -61,9 +66,9 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
 </script>
 
 <template>
-    <Head :title="part" />
+    <Head :title="nom" />
 
-    <AuthenticatedLayout :page-title="part">
+    <AuthenticatedLayout :page-title="nom">
         <template #header-actions>
             <Link :href="route('body-parts.index')">
                 <GlassButton size="sm" variant="secondary"> Retour </GlassButton>
@@ -72,7 +77,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">{{ part }}</h2>
+                <h2 class="titre-carte">{{ nom }}</h2>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter
@@ -83,8 +88,8 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
         <div class="space-y-6">
             <!-- Chart -->
             <GlassCard class="animate-slide-up">
-                <h3 class="text-accent-tertiary-deep sur-titre mb-4">History</h3>
-                <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="part" :unit="history[0].unit" />
+                <h3 class="text-accent-tertiary-deep sur-titre mb-4">Historique</h3>
+                <BodyPartHistoryChart v-if="history.length > 0" :data="history" :label="nom" :unit="history[0].unit" />
             </GlassCard>
 
             <!-- Formulaire d'ajout -->

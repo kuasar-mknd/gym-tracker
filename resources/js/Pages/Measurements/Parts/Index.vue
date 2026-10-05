@@ -38,8 +38,12 @@ const submit = () => {
     })
 }
 
+/**
+ * La pastille écrit le nom français dans le champ : c'est lui qu'on lit, et le
+ * serveur le range sous la clef de la partie (« Taille » → `Waist`).
+ */
 const selectCommonPart = (part) => {
-    form.part = part
+    form.part = part.label
 }
 </script>
 
@@ -81,18 +85,18 @@ const selectCommonPart = (part) => {
                         <div class="mb-2 flex flex-wrap gap-2">
                             <GlassChip
                                 v-for="part in commonParts"
-                                :key="part"
+                                :key="part.value"
                                 size="sm"
-                                :active="form.part === part"
+                                :active="form.part === part.label"
                                 @click="selectCommonPart(part)"
                             >
-                                {{ part }}
+                                {{ part.label }}
                             </GlassChip>
                         </div>
                         <GlassInput
                             id="mesure-partie-du-corps"
                             v-model="form.part"
-                            placeholder="Ex: Waist"
+                            placeholder="Ex. : Taille"
                             :error="form.errors.part"
                             required
                         />
@@ -157,7 +161,7 @@ const selectCommonPart = (part) => {
                     >
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="titre-carte">{{ item.part }}</h3>
+                                <h3 class="titre-carte">{{ item.label ?? item.part }}</h3>
                                 <div
                                     class="from-accent-tertiary to-accent-secondary mt-1 bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent"
                                 >

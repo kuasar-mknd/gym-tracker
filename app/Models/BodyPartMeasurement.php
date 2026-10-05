@@ -49,6 +49,72 @@ class BodyPartMeasurement extends BaseMeasurement
         'Calf R',
     ];
 
+    /**
+     * Le nom affiché de chaque partie proposée.
+     *
+     * La clef reste anglaise en base : les mesures déjà saisies et les
+     * objectifs qui les suivent s'y rapportent (#1657). Ce qui manquait, c'est
+     * le nom qu'on lit à l'écran, où « Waist » ou « Thigh L » ne disaient rien
+     * à un francophone (#1974). Une partie saisie librement s'affiche telle
+     * quelle.
+     *
+     * @var array<string, string>
+     */
+    public const array LIBELLES = [
+        'Neck' => 'Cou',
+        'Shoulders' => 'Épaules',
+        'Chest' => 'Poitrine',
+        'Biceps L' => 'Biceps gauche',
+        'Biceps R' => 'Biceps droit',
+        'Forearm L' => 'Avant-bras gauche',
+        'Forearm R' => 'Avant-bras droit',
+        'Waist' => 'Taille',
+        'Hips' => 'Hanches',
+        'Thigh L' => 'Cuisse gauche',
+        'Thigh R' => 'Cuisse droite',
+        'Calf L' => 'Mollet gauche',
+        'Calf R' => 'Mollet droit',
+    ];
+
+    /**
+     * Le nom à afficher pour une partie : le français d'une partie proposée,
+     * le nom saisi pour toute autre.
+     *
+     * La comparaison ignore la casse, comme la collation de la colonne, qui
+     * range « waist » avec « Waist ».
+     */
+    public static function libelle(string $partie): string
+    {
+        foreach (self::LIBELLES as $clef => $libelle) {
+            if (strcasecmp($clef, $partie) === 0) {
+                return $libelle;
+            }
+        }
+
+        return $partie;
+    }
+
+    /**
+     * La clef d'une partie proposée dont on a saisi le nom français
+     * (« Taille », « mollet gauche »), ou la saisie telle quelle.
+     *
+     * Le formulaire affiche les noms français : sans ce retour à la clef, la
+     * mesure saisie sous « Taille » serait rangée à part de celles de
+     * « Waist », et l'objectif sur le tour de taille ne la verrait jamais.
+     */
+    public static function clefDePartie(string $saisie): string
+    {
+        $cherche = mb_strtolower(trim($saisie));
+
+        foreach (self::LIBELLES as $clef => $libelle) {
+            if (mb_strtolower($libelle) === $cherche) {
+                return $clef;
+            }
+        }
+
+        return $saisie;
+    }
+
     #[\Override]
     protected $fillable = [
         'user_id',
