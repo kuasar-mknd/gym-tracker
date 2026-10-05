@@ -3,10 +3,13 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 const clientsClaim = vi.fn()
 const cleanupOutdatedCaches = vi.fn()
 const precacheAndRoute = vi.fn()
+const pageHorsLigne = { page: 'hors ligne, précachée' }
+const matchPrecache = vi.fn(async () => pageHorsLigne)
 
 vi.mock('workbox-core', () => ({ clientsClaim: (...args) => clientsClaim(...args) }))
 vi.mock('workbox-precaching', () => ({
     cleanupOutdatedCaches: (...args) => cleanupOutdatedCaches(...args),
+    matchPrecache: (...args) => matchPrecache(...args),
     precacheAndRoute: (...args) => precacheAndRoute(...args),
 }))
 
@@ -84,7 +87,8 @@ vi.spyOn(self, 'addEventListener').mockImplementation((type, handler) => {
 self.skipWaiting = skipWaiting
 self.__WB_MANIFEST = manifest
 const pushManager = { getSubscription: vi.fn(), subscribe: vi.fn() }
-self.registration = { showNotification, pushManager }
+const navigationPreload = { enable: vi.fn(async () => undefined) }
+self.registration = { showNotification, pushManager, navigationPreload }
 globalThis.clients = { openWindow, matchAll }
 
 /*
@@ -368,5 +372,63 @@ describe('abonnement remplacé ou retiré par le navigateur', () => {
         // `toEqual`, qui ne compare que des propriétés qu'elles n'ont pas.
         expect(waited).toHaveLength(1)
         expect(waited[0]).toBe(abonnementRenouvele)
+    })
+})
+
+describe('ouverture d’une page', () => {
+    /**
+     * Joue le gestionnaire `fetch` sur une requête, comme le navigateur.
+     *
+     * @param {Request} requete
+     * @param {Promise<Response|undefined>|undefined} preloadResponse
+     * @returns {{respondWith: import('vitest').Mock, reponse: () => Promise<unknown>}}
+     */
+    const demander = (requete, preloadResponse = undefined) => {
+        const respondWith = vi.fn()
+        listeners.fetch({ request: requete, preloadResponse, respondWith, waitUntil: vi.fn() })
+
+        return { respondWith, reponse: () => respondWith.mock.calls[0][0] }
+    }
+
+    /** Une navigation, telle que le worker la reçoit : `new Request` refuse le mode `navigate`. */
+    const navigation = (chemin, method = 'GET') => ({ url: `http://localhost${chemin}`, method, mode: 'navigate' })
+
+    beforeEach(() => {
+        matchPrecache.mockClear()
+    })
+
+    it.each(['/', '/dashboard', '/workouts/12'])('prend en charge la navigation vers %s', (chemin) => {
+        // Elle passait au réseau sans le worker : sans réseau, le navigateur
+        // affichait sa page d'erreur, et l'application installée ne se
+        // rouvrait pas (#1966).
+        expect(demander(navigation(chemin)).respondWith).toHaveBeenCalledTimes(1)
+    })
+
+    it('sert la page « hors ligne » du precache quand le réseau ne répond pas', async () => {
+        const { reponse } = demander(navigation('/dashboard'), Promise.reject(new TypeError('Failed to fetch')))
+
+        await expect(reponse()).resolves.toBe(pageHorsLigne)
+        expect(matchPrecache).toHaveBeenCalledWith('/build/hors-ligne.html')
+    })
+
+    it('laisse au réseau la page qu’il sert', async () => {
+        const accueil = { page: 'accueil' }
+        const { reponse } = demander(navigation('/dashboard'), Promise.resolve(accueil))
+
+        await expect(reponse()).resolves.toBe(accueil)
+        expect(matchPrecache).not.toHaveBeenCalled()
+    })
+
+    it('ne touche pas à un formulaire posté', () => {
+        expect(demander(navigation('/logout', 'POST')).respondWith).not.toHaveBeenCalled()
+    })
+
+    it('active le préchargement des navigations à l’activation', async () => {
+        const attendu = []
+        listeners.activate({ waitUntil: (promesse) => attendu.push(promesse) })
+        await Promise.all(attendu)
+
+        expect(navigationPreload.enable).toHaveBeenCalledTimes(1)
+        expect(attendu).toHaveLength(1)
     })
 })

@@ -3,6 +3,7 @@ import laravel from 'laravel-vite-plugin'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { FICHIER_DE_LA_PAGE_HORS_LIGNE, greffonDeLaPageHorsLigne } from './resources/js/sw/pageHorsLigne.js'
 
 export default defineConfig({
     plugins: [
@@ -19,6 +20,8 @@ export default defineConfig({
                 },
             },
         }),
+        // Écrite avant que le worker ne se construise, pour que le precache la prenne (#1966).
+        greffonDeLaPageHorsLigne(),
         VitePWA({
             strategies: 'injectManifest',
             srcDir: 'resources/js',
@@ -44,11 +47,18 @@ export default defineConfig({
                  * Kio du graphique et le morceau de chaque page jamais visitée
                  * (#1814). Les actifs portent leur hachage et un an de cache
                  * immuable — le navigateur les garde déjà. Restent ici la
-                 * coquille commune, les polices latines, et les deux écrans qui
-                 * servent sans réseau : l'accueil et la séance en cours. Le
-                 * reste se met en cache à la première visite, dans le worker.
+                 * coquille commune, les polices latines, les morceaux des deux
+                 * écrans qu'on ouvre le plus, l'accueil et la séance, et la
+                 * page « hors ligne ». Le reste se met en cache à la première
+                 * visite, dans le worker.
+                 *
+                 * Aucun document de l'application n'est précaché : une page
+                 * s'ouvre par le réseau, et sans lui, toute navigation reçoit
+                 * la page « hors ligne », qui ne porte rien d'un compte
+                 * (resources/js/sw/navigationsHorsLigne.js, #1966).
                  */
                 globPatterns: [
+                    FICHIER_DE_LA_PAGE_HORS_LIGNE,
                     'assets/main-*.{js,css}',
                     'assets/vue-*.js',
                     'assets/Dashboard-*.js',
