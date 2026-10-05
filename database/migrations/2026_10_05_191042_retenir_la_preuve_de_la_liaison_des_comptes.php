@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Schema;
  * Quand la liaison du compte à son fournisseur de connexion (`provider`,
  * `provider_id`) a été prouvée sur l'adresse exacte du compte.
  *
- * `ResolveSocialUserAction` la pose quand l'identité crée le compte, quand
- * elle s'y rattache par l'adresse exacte et garantie, ou quand elle revient
- * avec cette adresse. Une liaison prouvée se reconnaît ensuite à l'identité
+ * `ResolveSocialUserAction` la pose quand l'identité crée le compte, s'y
+ * rattache ou y revient avec l'adresse exacte du compte, garantie par le
+ * fournisseur. Une liaison prouvée se reconnaît ensuite à l'identité
  * seule, même si l'adresse change chez le fournisseur ; une liaison sans
  * preuve, comme toutes celles d'avant cette colonne, ne s'ouvre que pour
  * l'adresse exacte du compte. `OublieLaPreuveDeSaLiaison` l'efface quand

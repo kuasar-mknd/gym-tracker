@@ -266,9 +266,14 @@ it('crée un compte non vérifié quand le fournisseur ne garantit pas l’adres
     expect($nouveau->provider_id)->toBe('google-42');
     expect($nouveau->hasVerifiedEmail())->toBeFalse();
 
-    // L'identité a ouvert le compte : elle en est le titulaire, adresse
-    // garantie ou non.
-    expect($nouveau->liaison_prouvee_le?->toDateTimeString())->toBe('2026-06-15 12:00:00');
+    // Rien ne dit que l'identité détient l'adresse : sa liaison reste sans
+    // preuve, et n'ouvre le compte que pour cette adresse exacte.
+    expect($nouveau->liaison_prouvee_le)->toBeNull();
+
+    expect(resoudre(utilisateurSocial(), adresseVerifiee: false)->id)->toBe($nouveau->id);
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => 'nouvelle@example.test']), adresseVerifiee: false))
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+    expect(User::query()->count())->toBe(1);
 });
 
 it('départage deux comptes de la même identité par l’adresse exacte, et refuse sinon', function (): void {

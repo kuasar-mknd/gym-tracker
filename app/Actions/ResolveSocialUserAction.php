@@ -55,7 +55,7 @@ use Laravel\Socialite\Contracts\User as SocialUser;
 final class ResolveSocialUserAction
 {
     /**
-     * @param  bool  $adresseVerifiee  Le fournisseur garantit-il l'adresse rendue ? Faux, elle ne rattache aucun compte existant et le compte créé naît non vérifié.
+     * @param  bool  $adresseVerifiee  Le fournisseur garantit-il l'adresse rendue ? Faux, elle ne rattache aucun compte existant, ne prouve aucune liaison, et le compte créé naît non vérifié.
      *
      * @throws SocialAuthException quand le retour ne désigne aucun compte sans ambiguïté.
      */
@@ -266,8 +266,13 @@ final class ResolveSocialUserAction
      * que d'une adresse qui change (`ProfileUpdateRequest`) : le compte
      * enregistre son nom sans toucher à son adresse.
      *
-     * Sa liaison est prouvée : l'identité a ouvert le compte sur cette adresse,
-     * et en est le titulaire tant que l'adresse du compte ne change pas.
+     * Sa liaison est prouvée quand le fournisseur garantit l'adresse :
+     * l'identité a ouvert le compte sur une adresse qu'elle détient, et en est
+     * le titulaire tant que l'adresse du compte ne change pas. Sans garantie,
+     * ce que seul le poste de développement permet, la liaison reste sans
+     * preuve, comme le compte reste non vérifié : rien ne dit que l'identité
+     * détient l'adresse, dont le titulaire peut reprendre le compte par la
+     * réinitialisation du mot de passe.
      */
     private function creerLeCompte(
         string $fournisseur,
@@ -287,7 +292,7 @@ final class ResolveSocialUserAction
             'provider' => $fournisseur,
             'provider_id' => $identifiant,
             'email_verified_at' => $adresseVerifiee ? now() : null, // Vérifiée seulement si le fournisseur la garantit.
-            'liaison_prouvee_le' => now(),
+            'liaison_prouvee_le' => $adresseVerifiee ? now() : null,
         ])->save();
 
         return $user;
