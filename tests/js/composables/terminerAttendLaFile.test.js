@@ -154,6 +154,67 @@ describe('terminer une séance', () => {
     })
 })
 
+describe('terminer pendant un vidage qui traîne', () => {
+    /** Le réseau est revenu, mais la requête du vidage tarde : rend de quoi la libérer. */
+    const unVidageQuiTraine = async (page) => {
+        await ajouterUneSerieHorsLigne(page)
+
+        let liberer
+        reseau.serveur.enLigne = true
+        reseau.serveur.imposer.push(async (config) => {
+            await new Promise((resolve) => (liberer = resolve))
+
+            return { data: { data: { id: 100, ...config.data, created_at: 'c', updated_at: 'u' } } }
+        })
+        page.sync.processQueue()
+        await flushPromises()
+
+        return () => liberer()
+    }
+
+    it('montre l’attente et ne clôt qu’une fois, même appuyé deux fois', async () => {
+        const page = await monterLaSeance(seance())
+        const liberer = await unVidageQuiTraine(page)
+
+        page.finishWorkout()
+        const premier = page.confirmFinishWorkout()
+        await flushPromises()
+        const second = page.confirmFinishWorkout()
+        await flushPromises()
+
+        expect(page.clotureEnCours.value).toBe(true)
+        expect(inertia.patch).not.toHaveBeenCalled()
+
+        liberer()
+        await premier
+        await second
+
+        expect(inertia.patch).toHaveBeenCalledTimes(1)
+        expect(aLaCloture[0].enFile).toBe(0)
+
+        // La visite de clôture se termine : la modale pourrait resservir.
+        inertia.patch.mock.calls[0][2].onFinish()
+        expect(page.clotureEnCours.value).toBe(false)
+    })
+
+    it('rend la main au bout de l’attente maximale, et dit combien de modifications attendent', async () => {
+        const page = await monterLaSeance(seance())
+        await unVidageQuiTraine(page)
+        const { ATTENTE_MAX_DE_LA_FILE_MS } = await import('@/composables/useReglagesDeLaSeance')
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+        page.finishWorkout()
+        const cloture = page.confirmFinishWorkout()
+        await vi.advanceTimersByTimeAsync(ATTENTE_MAX_DE_LA_FILE_MS)
+        await cloture
+
+        expect(inertia.patch).not.toHaveBeenCalled()
+        expect(page.ecrituresEnAttente.value).toBe(1)
+        expect(page.clotureEnCours.value).toBe(false)
+        expect(page.showFinishModal.value).toBe(true)
+    })
+})
+
 describe('la modale de fin', () => {
     const modale = async (enAttente) => {
         const WorkoutFinishModal = (await import('@/Components/Workout/WorkoutFinishModal.vue')).default
@@ -172,5 +233,22 @@ describe('la modale de fin', () => {
             'Une modification attend encore d’être envoyée. La séance reste ouverte : réessaie quand le réseau sera revenu.',
         )
         expect((await modale(0)).find('[dusk="finish-workout-pending"]').exists()).toBe(false)
+    })
+
+    it('montre l’envoi en cours, et « Confirmer » ne se rappuie pas', async () => {
+        const WorkoutFinishModal = (await import('@/Components/Workout/WorkoutFinishModal.vue')).default
+        const enCours = mount(WorkoutFinishModal, {
+            props: { show: true, enAttente: 2, enCours: true },
+            global: { stubs: { Modal: { template: '<div><slot /></div>' } } },
+        })
+
+        expect(enCours.find('[dusk="finish-workout-sending"]').text()).toBe('Envoi des modifications en attente…')
+        expect(enCours.find('[dusk="finish-workout-pending"]').exists()).toBe(false)
+        expect(enCours.find('[dusk="confirm-finish-button"]').attributes('disabled')).toBeDefined()
+
+        await enCours.find('[dusk="confirm-finish-button"]').trigger('click')
+        expect(enCours.emitted('confirm')).toBeUndefined()
+
+        expect((await modale(0)).find('[dusk="finish-workout-sending"]').exists()).toBe(false)
     })
 })

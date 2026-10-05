@@ -171,6 +171,7 @@ const {
     saveAsTemplate,
     showFinishModal,
     ecrituresEnAttente,
+    clotureEnCours,
     finishWorkout,
     confirmFinishWorkout,
     showSettingsModal,
@@ -366,6 +367,7 @@ onUnmounted(() => {
         <WorkoutFinishModal
             :show="showFinishModal"
             :en-attente="ecrituresEnAttente"
+            :en-cours="clotureEnCours"
             @close="showFinishModal = false"
             @confirm="confirmFinishWorkout"
         />

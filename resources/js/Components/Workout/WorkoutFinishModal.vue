@@ -7,6 +7,8 @@ const props = defineProps({
     show: { type: Boolean, required: true },
     /** Les modifications restées en file à la dernière tentative : la séance ne se ferme pas sans elles (#1961). */
     enAttente: { type: Number, default: 0 },
+    /** La clôture attend que les modifications partent : « Confirmer » le montre, et n'est pas rappuyable. */
+    enCours: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['close', 'confirm'])
@@ -25,7 +27,15 @@ const avisDAttente = computed(() =>
                 Terminer la séance ?
             </h3>
             <p
-                v-if="enAttente > 0"
+                v-if="enCours"
+                role="status"
+                class="text-text-muted mb-6 text-sm font-medium"
+                dusk="finish-workout-sending"
+            >
+                Envoi des modifications en attente…
+            </p>
+            <p
+                v-else-if="enAttente > 0"
                 role="status"
                 class="bg-accent-danger/10 text-accent-danger-deep mb-6 rounded-xl p-3 text-sm font-bold"
                 dusk="finish-workout-pending"
@@ -38,6 +48,7 @@ const avisDAttente = computed(() =>
                     variant="primary"
                     id="confirm-finish-button"
                     dusk="confirm-finish-button"
+                    :loading="enCours"
                     @click="emit('confirm')"
                     class="flex-1"
                 >
