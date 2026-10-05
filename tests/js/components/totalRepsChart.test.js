@@ -24,7 +24,7 @@ describe('TotalRepsChart', () => {
     })
 
     it('nomme la série par ce qu’elle mesure', () => {
-        expect(chartDataOf(mountChart(history), 'Bar').datasets[0].label).toBe('Volume (Reps)')
+        expect(chartDataOf(mountChart(history), 'Bar').datasets[0].label).toBe('Répétitions')
     })
 
     it('compte les répétitions dans l’infobulle', () => {

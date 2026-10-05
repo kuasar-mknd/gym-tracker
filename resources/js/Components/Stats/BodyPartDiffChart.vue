@@ -64,6 +64,7 @@ const axeX = { grid: { display: true, ...grille() } }
 
 <template>
     <BaseChart
+        description="Variation récente de chaque mensuration"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-64"

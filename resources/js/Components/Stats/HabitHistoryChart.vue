@@ -39,6 +39,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Habitudes complétées par jour"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48"

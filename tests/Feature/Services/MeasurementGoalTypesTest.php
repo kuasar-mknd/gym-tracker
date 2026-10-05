@@ -18,9 +18,10 @@ use App\Services\GoalService;
  *
  *   SQLSTATE[42S22]: Column not found: 1054 Unknown column 'waist'
  *
- * Le calcul se declenche a chaque pesee enregistree (SyncUserGoals) et a
- * l'ouverture de la page des objectifs : l'objectif etait casse des sa creation,
- * et il emportait la page avec lui (#1454).
+ * Le calcul se fait a la creation et a la modification de l'objectif, puis
+ * dans SyncUserGoals, a chaque seance, serie ou mesure enregistree ou
+ * supprimee, et a chaque exercice retire d'une seance ; la page des objectifs
+ * ne fait que lire. L'objectif etait donc casse des sa creation (#1454).
  */
 
 /*

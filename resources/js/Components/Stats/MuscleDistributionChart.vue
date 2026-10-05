@@ -35,5 +35,12 @@ const datasets = computed(() => [
 </script>
 
 <template>
-    <BaseChart type="doughnut" :labels="labels" :datasets="datasets" hauteur="h-52" :infobulle="{ boxPadding: 8 }" />
+    <BaseChart
+        description="Répartition du volume par groupe musculaire"
+        type="doughnut"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-52"
+        :infobulle="{ boxPadding: 8 }"
+    />
 </template>

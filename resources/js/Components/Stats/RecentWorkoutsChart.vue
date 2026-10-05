@@ -51,5 +51,12 @@ const infobulle = {
 </script>
 
 <template>
-    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" :axe-y="false" />
+    <BaseChart
+        description="Volume des dernières séances"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48"
+        :infobulle="infobulle"
+        :axe-y="false"
+    />
 </template>

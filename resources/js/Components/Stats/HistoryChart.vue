@@ -67,6 +67,7 @@ const axeY = {
 
 <template>
     <BaseChart
+        description="Meilleur 1RM par séance"
         type="line"
         :labels="labels"
         :datasets="datasets"

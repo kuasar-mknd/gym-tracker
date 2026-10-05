@@ -63,6 +63,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Charge de chaque série, séance après séance"
         type="line"
         :labels="chartData.labels"
         :datasets="chartData.datasets"

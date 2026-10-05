@@ -56,6 +56,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Durée des jeûnes terminés"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48"

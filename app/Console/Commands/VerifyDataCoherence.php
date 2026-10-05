@@ -35,7 +35,7 @@ class VerifyDataCoherence extends Command
     #[\Override]
     protected $signature = 'app:verify-data-coherence
         {--limit=5 : Nombre d\'identifiants cités par écart}
-        {--repair : Reconstruit les records détachés depuis les séries qui restent}';
+        {--repair : Reconstruit les records détachés ou en écart depuis les séries qui restent}';
 
     #[\Override]
     protected $description = 'Compare les valeurs dérivées (volumes, records, séries, objectifs) à leur source';
@@ -48,6 +48,7 @@ class VerifyDataCoherence extends Command
             'records rattachés à une série existante' => $this->recordsOrphelins(...),
             'valeur des records' => $this->valeurDesRecords(...),
             'records assis sur une série éligible' => $this->recordsSurSerieInegible(...),
+            'records égaux à la meilleure série éligible' => $this->recordsALaMeilleureSerie(...),
             'type des records' => $this->typeDesRecords(...),
             'date de dernière séance' => $this->dateDerniereSeance(...),
             'propriétaire recopié sur les lignes de séance' => $this->proprietaireDesLignes(...),
@@ -180,11 +181,15 @@ class VerifyDataCoherence extends Command
      * que l'application execute deja quand une serie disparait (#1476). Les
      * records sont reconstruits depuis les series qui restent, ou supprimes s'il
      * n'en reste aucune.
+     *
+     * Elle reprend aussi les exercices dont un record ne vaut pas la meilleure
+     * serie eligible (#1984) : un tel record designe une serie qui existe, qui
+     * compte et qui porte son poids, et aucun des criteres ci-dessous ne le
+     * voit.
      */
     private function reconstruireLesRecords(): void
     {
         $detaches = PersonalRecord::query()
-            ->with('user')
             ->where(function (\Illuminate\Database\Eloquent\Builder $arefaire): void {
                 $arefaire->whereNull('set_id')
                     ->orWhereNotIn('set_id', DB::table('sets')->select('id'))
@@ -220,7 +225,20 @@ class VerifyDataCoherence extends Command
             })
             ->get();
 
-        if ($detaches->isEmpty()) {
+        // Un couple (utilisateur, exercice) ne se reconstruit qu'une fois :
+        // `recompute()` traite les trois types d'un coup.
+        /** @var array<string, array{0: int, 1: int}> $aRefaire */
+        $aRefaire = [];
+
+        foreach ($detaches as $record) {
+            $aRefaire["{$record->user_id}:{$record->exercise_id}"] = [$record->user_id, $record->exercise_id];
+        }
+
+        foreach ($this->recordsEnEcartDeLeurMeilleureSerie() as $ecart) {
+            $aRefaire["{$ecart['user_id']}:{$ecart['exercise_id']}"] = [$ecart['user_id'], $ecart['exercise_id']];
+        }
+
+        if ($aRefaire === []) {
             $this->line('  <fg=green>OK</> aucun record à reconstruire');
             $this->newLine();
 
@@ -228,17 +246,13 @@ class VerifyDataCoherence extends Command
         }
 
         $service = app(PersonalRecordService::class);
+        $comptes = User::query()->whereKey(array_unique(array_column($aRefaire, 0)))->get()->keyBy('id');
         $faits = [];
 
-        foreach ($detaches as $record) {
-            $user = $record->user;
-            $idExercice = $record->exercise_id;
+        foreach ($aRefaire as $cle => [$idUtilisateur, $idExercice]) {
+            $user = $comptes->get($idUtilisateur);
 
-            // Un couple (utilisateur, exercice) ne se reconstruit qu'une fois :
-            // `recompute()` traite les trois types d'un coup.
-            $cle = "{$record->user_id}:{$idExercice}";
-
-            if ($user === null || isset($faits[$cle])) {
+            if (! $user instanceof User) {
                 continue;
             }
 
@@ -392,6 +406,116 @@ class VerifyDataCoherence extends Command
             $this->colonne($workoutLine, 'value'),
             $this->colonne($workoutLine, 'user_id'),
         ));
+    }
+
+    /**
+     * Un record suivi doit valoir ce que donne la meilleure serie eligible de
+     * son exercice (#1984).
+     *
+     * Les controles voisins demandent si la serie d'un record existe, si elle
+     * compte et si elle porte son poids ; aucun ne demandait si c'etait la
+     * MEILLEURE. Deux synchronisations croisees laissaient le record sur la
+     * plus faible des deux series : designee, eligible, de meme poids, il
+     * passait tous les autres controles.
+     *
+     * La meilleure serie vient de `PersonalRecordService::recordsAttendus()`,
+     * le classement et la mesure memes que `recompute()` ecrit. Un exercice
+     * sans aucune serie eligible n'est pas juge ici : ses records s'appuient
+     * forcement sur une serie absente ou qui ne compte pas, et les controles
+     * voisins les signalent deja.
+     *
+     * @return array{int, list<string>}
+     */
+    private function recordsALaMeilleureSerie(): array
+    {
+        $ecarts = $this->recordsEnEcartDeLeurMeilleureSerie();
+        $descriptions = [];
+
+        foreach (array_slice($ecarts, 0, $this->limite()) as $ecart) {
+            $descriptions[] = sprintf(
+                "record %d (%s) de l'utilisateur %d, exercice %d : annonce %s, la meilleure série (%d) donne %s",
+                $ecart['id'],
+                $ecart['type'],
+                $ecart['user_id'],
+                $ecart['exercise_id'],
+                $ecart['stocke'],
+                $ecart['serie'],
+                $ecart['attendu'],
+            );
+        }
+
+        return [count($ecarts), $descriptions];
+    }
+
+    /**
+     * Les records suivis dont la valeur s'ecarte de la meilleure serie
+     * eligible de leur exercice, un exercice a la fois.
+     *
+     * Un centieme d'ecart est tolere : le classement de la base et la mesure
+     * de l'application arrondissent le 1RM chacun a sa facon, et un record
+     * pose par `update()` peut en differer d'autant sans etre faux.
+     *
+     * @return list<array{id: int, user_id: int, exercise_id: int, type: string, stocke: string, attendu: string, serie: int}>
+     */
+    private function recordsEnEcartDeLeurMeilleureSerie(): array
+    {
+        $service = app(PersonalRecordService::class);
+        $ecarts = [];
+        $couple = null;
+        $attendus = [];
+
+        $records = DB::table('personal_records')
+            ->whereIn('type', PersonalRecordType::SUIVIS)
+            ->select(['id', 'user_id', 'exercise_id', 'type', 'value'])
+            ->orderBy('user_id')
+            ->orderBy('exercise_id')
+            ->orderBy('id');
+
+        foreach ($records->lazy(500) as $ligne) {
+            $record = get_object_vars($ligne);
+            $type = $record['type'] ?? null;
+            $idUtilisateur = $this->entier($record['user_id'] ?? null);
+            $idExercice = $this->entier($record['exercise_id'] ?? null);
+
+            // La colonne confond 'MAX_WEIGHT' et 'max_weight' : seul un type
+            // suivi a l'octet pres se juge ici, les autres sont ceux du
+            // controle « type des records ».
+            if (! is_string($type) || ! in_array($type, PersonalRecordType::SUIVIS, true)) {
+                continue;
+            }
+
+            if ($couple !== "{$idUtilisateur}:{$idExercice}") {
+                $couple = "{$idUtilisateur}:{$idExercice}";
+                $attendus = $service->recordsAttendus($idUtilisateur, $idExercice);
+            }
+
+            $attendu = $attendus[$type] ?? null;
+            $stocke = is_numeric($record['value'] ?? null) ? (float) $record['value'] : 0.0;
+
+            if ($attendu === null || round(abs($stocke - $attendu['valeur']), 2) <= 0.01) {
+                continue;
+            }
+
+            $ecarts[] = [
+                'id' => $this->entier($record['id'] ?? null),
+                'user_id' => $idUtilisateur,
+                'exercise_id' => $idExercice,
+                'type' => $type,
+                'stocke' => $this->colonne($record, 'value'),
+                'attendu' => (string) $attendu['valeur'],
+                'serie' => $attendu['serie'],
+            ];
+        }
+
+        return $ecarts;
+    }
+
+    /**
+     * Un identifiant lu dans une ligne brute.
+     */
+    private function entier(mixed $valeur): int
+    {
+        return is_numeric($valeur) ? (int) $valeur : 0;
     }
 
     /**

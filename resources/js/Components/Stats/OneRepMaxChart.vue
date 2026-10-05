@@ -43,6 +43,7 @@ const datasets = computed(() => [
 
 <template>
     <BaseChart
+        description="Progression du 1RM estimé"
         type="line"
         :labels="labels"
         :datasets="datasets"

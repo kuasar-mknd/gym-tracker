@@ -270,6 +270,36 @@ describe('editing a supplement', () => {
         expect(editForm.low_stock_threshold).toBe(10)
     })
 
+    /**
+     * Les champs s'ouvrent remplis : Nom, Marque et Dosage n'avaient qu'un
+     * placeholder, donc rien à l'écran ni au lecteur d'écran (#1972).
+     */
+    it('nomme chaque champ de la modification comme le formulaire d’ajout', async () => {
+        const wrapper = await mountPage({
+            supplements: [supplement({ name: 'Créatine', brand: 'Bulk', dosage: '5 g' })],
+        })
+
+        await wrapper.get('[aria-label="Modifier le complément"]').trigger('click')
+
+        const carte = wrapper.findAll('h3').find((titre) => titre.text() === 'Modifier').element.parentElement
+        const champs = [...carte.querySelectorAll('input')]
+
+        expect(champs.map((champ) => [...champ.labels].map((libelle) => libelle.textContent.trim()))).toEqual([
+            ['Nom'],
+            ['Marque (Optionnel)'],
+            ['Doses restantes'],
+            ['Alerte stock bas'],
+            ['Dosage (Optionnel)'],
+        ])
+        expect(champs.map((champ) => champ.value)).toEqual([
+            'Créatine',
+            'Bulk',
+            String(supplement().servings_remaining),
+            String(supplement().low_stock_threshold),
+            '5 g',
+        ])
+    })
+
     it('reads a missing brand or dosage as an empty field, not as “null”', async () => {
         const wrapper = await mountPage({ supplements: [supplement({ brand: null, dosage: null })] })
 

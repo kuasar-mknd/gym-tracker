@@ -38,6 +38,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Doses de compléments prises par jour"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-48"

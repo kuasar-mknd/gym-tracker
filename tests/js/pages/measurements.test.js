@@ -479,6 +479,30 @@ describe('Measurements/Parts/Index part picker', () => {
         expect(highlighted).toHaveLength(1)
         expect(highlighted[0].text()).toBe('Chest')
     })
+
+    /**
+     * « Partie du corps » était un libellé sans `for`, et le champ n'avait que
+     * son placeholder : une fois une puce touchée, plus rien ne le nommait (#1972).
+     */
+    it('nomme le champ par son libellé, encore une fois rempli', async () => {
+        const wrapper = mount(BodyPartsIndex, {
+            props: structuredClone({ latestMeasurements: PARTS, commonParts: COMMON_PARTS }),
+            global: {
+                mocks: { route: globalThis.route },
+                directives: { press: {} },
+                stubs: { ...stubs, GlassInput: false },
+            },
+        })
+        await flushPromises()
+
+        await click(wrapper, 'Ajouter')
+        await click(wrapper, 'Waist')
+
+        const champ = wrapper.findAll('input').find((candidat) => candidat.element.value === 'Waist')
+
+        expect(champ, 'le champ rempli par la puce').toBeTruthy()
+        expect([...champ.element.labels].map((libelle) => libelle.textContent.trim())).toEqual(['Partie du corps'])
+    })
 })
 
 describe('Measurements/Parts/Index add form', () => {
