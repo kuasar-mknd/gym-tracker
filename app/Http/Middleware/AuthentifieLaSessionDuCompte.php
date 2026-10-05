@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\AuthenticateSession;
 
@@ -62,5 +64,50 @@ class AuthentifieLaSessionDuCompte extends AuthenticateSession
         }
 
         return parent::handle($request, $next);
+    }
+
+    /**
+     * Revérifie la session de la requête contre le compte tel que la base le
+     * donne maintenant, et la ferme comme `handle()` ferme une session
+     * périmée si elle ne tient plus : compte supprimé, ou empreinte qui ne
+     * correspond plus au mot de passe.
+     *
+     * `handle()` ne vérifie la session qu'à l'entrée de la requête. Une
+     * écriture qui ne doit pas survivre à la session, comme l'abonnement push
+     * d'un appareil (`PushSubscriptionController`), relit le compte sous le
+     * verrou de sa ligne et appelle cette méthode avant d'écrire : le mot de
+     * passe a pu changer entre-temps.
+     *
+     * Un compte sans mot de passe n'a pas d'empreinte, et `handle()` ne
+     * vérifie pas sa session : elle tient ici aussi.
+     *
+     * @throws AuthenticationException
+     */
+    public function fermerSiLaSessionNeTientPlus(Request $request, ?Authenticatable $compteEnBase): void
+    {
+        if (! $this->laSessionTientPour($request, $compteEnBase)) {
+            $this->logout($request);
+        }
+    }
+
+    /**
+     * La comparaison de `handle()`, l'empreinte de la session contre le mot
+     * de passe donné, sous ses deux formes (HMAC, ou hachage brut d'avant).
+     */
+    private function laSessionTientPour(Request $request, ?Authenticatable $compteEnBase): bool
+    {
+        if ($compteEnBase === null) {
+            return false;
+        }
+
+        $motDePasse = $compteEnBase->getAuthPassword();
+
+        if (! is_string($motDePasse) || $motDePasse === '') {
+            return true;
+        }
+
+        $empreinte = $request->session()->get('password_hash_'.self::GARDE);
+
+        return is_string($empreinte) && $this->validatePasswordHash($motDePasse, $empreinte);
     }
 }
