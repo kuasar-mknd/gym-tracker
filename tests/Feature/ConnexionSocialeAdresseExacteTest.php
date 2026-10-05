@@ -645,6 +645,36 @@ it('accepte l’adresse que le pilote GitHub rend, parce qu’il ne rend que la 
     expect($compte->hasVerifiedEmail())->toBeTrue();
 });
 
+/*
+ * Le fournisseur rend l'adresse avec la casse que son titulaire a saisie, et le
+ * profil n'accepte qu'une adresse en minuscules : un compte créé sur la casse
+ * rendue ne pouvait plus enregistrer son profil, pas même pour changer de nom.
+ */
+it('crée le compte sur l’adresse rendue en minuscules, que le profil enregistre et que le retour suivant rouvre', function (string $fournisseur): void {
+    $retour = retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'Camille.Martin@Example.org');
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(fournisseurSocialQuiRend($retour, $retour));
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    $compte = User::query()->sole();
+
+    expect($compte->email)->toBe('camille.martin@example.org');
+
+    // Le formulaire du profil renvoie l'adresse du compte, avec le nouveau nom.
+    patch(route('profile.update'), ['name' => 'Camille Durand', 'email' => $compte->email])->assertSessionHasNoErrors();
+
+    expect($compte->refresh()->name)->toBe('Camille Durand');
+    expect($compte->hasVerifiedEmail())->toBeTrue();
+
+    auth()->guard('web')->logout();
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+    expect(User::query()->count())->toBe(1);
+})->with($fournisseurs);
+
 it('cherche l’identité et l’adresse par paramètres liés, jamais dans le texte de la requête', function (): void {
     compteSocialExistant('camille.martin@example.org');
     $identifiant = identiteSocialeDe('google');

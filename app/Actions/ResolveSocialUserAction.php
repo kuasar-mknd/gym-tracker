@@ -202,6 +202,16 @@ final class ResolveSocialUserAction
         return $compte;
     }
 
+    /**
+     * Crée le compte du retour, sur son adresse en minuscules, comme l'inscription.
+     *
+     * L'adresse est ici en ASCII imprimable (`adresseComparable()` l'a admise) :
+     * `strtolower()` n'en change que la casse ASCII, que `memeAdresse()` et
+     * l'index unique ignorent déjà, et le retour suivant reconnaît le compte de
+     * même. Gardée avec la casse que le fournisseur rend, celle que son
+     * titulaire a saisie, elle bloquait le formulaire du profil, qui n'accepte
+     * qu'une adresse en minuscules, jusqu'au seul changement de nom.
+     */
     private function creerLeCompte(
         string $fournisseur,
         string $identifiant,
@@ -211,7 +221,7 @@ final class ResolveSocialUserAction
     ): User {
         $user = User::create([
             'name' => $utilisateurSocial->getName() ?? $utilisateurSocial->getNickname() ?? 'Utilisateur',
-            'email' => $adresse,
+            'email' => strtolower($adresse),
             'password' => bcrypt(Str::random(16)), // Mot de passe aléatoire : c'est le fournisseur qui authentifie.
             'avatar' => $utilisateurSocial->getAvatar(),
         ]);
@@ -270,11 +280,15 @@ final class ResolveSocialUserAction
      * unique de la base fait aussi sur l'ASCII, et le seul qu'on lui emprunte.
      *
      * Une adresse non ASCII ne rattache aucun compte plutôt que d'être
-     * normalisée. NFC ne réconcilie ni les formes pleine chasse ni le signe
-     * kelvin, que la base confond pourtant avec l'ASCII ; `mb_strtolower()` et
-     * le repli de casse Unicode créent eux-mêmes des égalités (le signe kelvin,
-     * U+212A, y devient « k ») ; et un domaine internationalisé s'écrit de deux
-     * façons (Unicode ou Punycode) que rien ici ne saurait apparier. Les trois
+     * normalisée. NFC replierait lui-même le signe kelvin (U+212A) sur « K »,
+     * sa décomposition canonique, et créerait l'égalité qu'on veut éviter ; il
+     * laisse en revanche les formes pleine chasse et le s long, que la base
+     * confond avec l'ASCII, et NFKC, qui les replie, garde « ß » quand la base
+     * le tient pour « ss » : aucune forme normale ne reproduit la collation.
+     * `mb_strtolower()` et le repli de casse Unicode créent eux aussi des
+     * égalités (le signe kelvin y devient « k »). Et un domaine
+     * internationalisé s'écrit de deux façons (Unicode ou Punycode) que rien
+     * ici ne saurait apparier. Les trois
      * fournisseurs rendent de l'ASCII pour l'immense majorité des comptes ; les
      * autres s'inscrivent avec leur adresse et un mot de passe.
      */
