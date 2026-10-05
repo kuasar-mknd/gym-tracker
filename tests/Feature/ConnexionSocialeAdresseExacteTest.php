@@ -3,14 +3,19 @@
 declare(strict_types=1);
 
 /*
- * Un retour de connexion sociale n'ouvre un compte existant que par l'identité
- * qui l'a déjà ouvert, ou par une adresse identique et garantie.
+ * Un retour de connexion sociale n'ouvre un compte existant que pour son
+ * adresse : par l'identité qui l'a déjà ouvert quand l'adresse rendue est
+ * encore celle du compte, ou par une adresse identique et garantie.
  *
  * La recherche par adresse passait par la base, dont la collation
  * (`utf8mb4_unicode_ci`) ignore accents et casse, replie « ß » sur « ss », le
  * signe kelvin sur « k » et la pleine chasse sur l'ASCII : une adresse proche,
  * vérifiée chez le fournisseur par quelqu'un d'autre, ouvrait le compte. Et
  * l'identité rendue par le fournisseur n'était jamais comparée.
+ *
+ * L'identité seule ne suffit pas : l'adresse du compte a pu changer depuis la
+ * liaison, et l'ancienne recherche a pu poser des liaisons sur des adresses
+ * seulement proches. Rien en base ne les distingue d'une liaison saine.
  *
  * Chaque cas passe par la vraie route de rappel, avec le retour que rend le
  * pilote de chaque fournisseur : Google (point d'information, `email_verified`
@@ -23,9 +28,12 @@ use App\Actions\HandleSocialCallbackAction;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use App\Support\ConnexionSociale\FournisseurApple;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
@@ -38,6 +46,8 @@ use Tests\Support\AppleSimule;
 use function Pest\Laravel\assertAuthenticatedAs;
 use function Pest\Laravel\assertGuest;
 use function Pest\Laravel\get;
+use function Pest\Laravel\patch;
+use function Pest\Laravel\post;
 use function Pest\Laravel\withUnencryptedCookie;
 
 /**
@@ -135,14 +145,50 @@ function compteSocialExistant(string $adresse, ?string $fournisseur = null, ?str
     ]);
 }
 
-function suiteDuRefusSocial(): string
+/**
+ * La suite du seul refus qui ne sait pas si un compte existe : le retour n'a
+ * pas d'adresse.
+ */
+function suiteDuRefusSocialSansCompte(): string
 {
     return 'Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.';
 }
 
-function refusDAdresseSociale(string $fournisseur): string
+/**
+ * La suite d'un refus quand un compte existe : jamais l'inscription.
+ */
+function suiteDuRefusSocialVersLeMotDePasse(string $quelleAdresse): string
 {
-    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte. '.suiteDuRefusSocial();
+    return 'Connectez-vous avec '.$quelleAdresse.' et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.';
+}
+
+function refusSocialDAdresseProche(string $fournisseur): string
+{
+    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la vôtre. S\'il est à vous, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
+}
+
+function refusSocialDAdresseHorsAscii(string $fournisseur): string
+{
+    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Inscrivez-vous avec cette adresse et un mot de passe.';
+}
+
+function refusSocialDIdentite(string $fournisseur): string
+{
+    return 'Ce compte '.ucfirst($fournisseur).' est associé à un compte dont l\'adresse email n\'est pas celle que '.ucfirst($fournisseur).' nous transmet. '.suiteDuRefusSocialVersLeMotDePasse('l\'adresse email de ce compte');
+}
+
+function refusSocialDeCompteDejaLie(string $fournisseur): string
+{
+    return 'Un compte existe déjà avec cette adresse email, associé à un autre compte '.ucfirst($fournisseur).'. '.suiteDuRefusSocialVersLeMotDePasse('cette adresse');
+}
+
+/**
+ * Le refus d'un compte non vérifié, en français : la clé de traduction était
+ * affichée telle quelle, en anglais, et sans issue.
+ */
+function refusSocialDeCompteNonVerifie(): string
+{
+    return 'Ce compte n\'a pas encore confirmé son adresse email : il ne peut pas être associé à un fournisseur de connexion. Connectez-vous avec cette adresse et votre mot de passe, puis confirmez-la. Si vous n\'avez pas de mot de passe, « Mot de passe oublié ? » vous permet d\'en choisir un.';
 }
 
 /**
@@ -181,6 +227,21 @@ function retourDAppleEnPostAvecLAdresse(AppleSimule $apple, string $adresse): Te
     );
 }
 
+/**
+ * L'inscription par mot de passe avec cette adresse, telle que la page la poste.
+ *
+ * @return TestResponse<Response>
+ */
+function inscriptionSocialeAvecLAdresse(string $adresse): TestResponse
+{
+    return post(route('register'), [
+        'name' => 'Camille Martin',
+        'email' => $adresse,
+        'password' => 'Un-mot-de-passe-solide-42!',
+        'password_confirmation' => 'Un-mot-de-passe-solide-42!',
+    ]);
+}
+
 $fournisseurs = [
     'Google' => 'google',
     'GitHub' => 'github',
@@ -196,7 +257,7 @@ it('refuse une adresse seulement proche de celle d’un compte, sans créer de d
 
     get(route('social.callback', $fournisseur))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', refusDAdresseSociale($fournisseur));
+        ->assertSessionHas('status', refusSocialDAdresseProche($fournisseur));
 
     assertGuest();
 
@@ -222,7 +283,7 @@ it('refuse une adresse non ASCII même quand aucun compte ne lui ressemble', fun
 
     get(route('social.callback', $fournisseur))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', refusDAdresseSociale($fournisseur));
+        ->assertSessionHas('status', refusSocialDAdresseHorsAscii($fournisseur));
 
     assertGuest();
 
@@ -230,7 +291,7 @@ it('refuse une adresse non ASCII même quand aucun compte ne lui ressemble', fun
     expect(User::query()->count())->toBe(0);
 })->with($fournisseurs);
 
-it('rattache l’adresse identique et vérifiée, puis reconnaît l’identité quand l’adresse change', function (string $fournisseur): void {
+it('rattache l’adresse identique et vérifiée, puis refuse l’identité quand l’adresse change chez le fournisseur', function (string $fournisseur): void {
     $compte = compteSocialExistant('camille.martin@example.org');
     $autreCompte = compteSocialExistant('camille@example.org');
     $identifiant = identiteSocialeDe($fournisseur);
@@ -250,26 +311,90 @@ it('rattache l’adresse identique et vérifiée, puis reconnaît l’identité 
 
     auth()->guard('web')->logout();
 
-    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+    // Ni le compte de l'identité, ni celui de l'adresse : ni l'un ni l'autre n'est sûr.
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDIdentite($fournisseur));
 
-    assertAuthenticatedAs($compte);
+    assertGuest();
     expect($autreCompte->refresh()->provider_id)->toBeNull();
     expect(User::query()->count())->toBe(2);
 })->with($fournisseurs);
 
-it('reconnaît une identité déjà liée même quand l’adresse a changé chez le fournisseur', function (string $fournisseur): void {
+it('refuse une identité déjà liée quand l’adresse a changé chez le fournisseur, sans créer de compte', function (string $fournisseur): void {
+    /*
+     * La liaison peut être saine, et l'adresse avoir changé chez le
+     * fournisseur ; rien en base ne permet de le savoir. Le titulaire passe
+     * par le mot de passe du compte, comme le message le lui dit.
+     */
     $identifiant = identiteSocialeDe($fournisseur);
     $compte = compteSocialExistant('ancienne@example.org', $fournisseur, $identifiant);
+    $journal = Log::spy();
 
     Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
         fournisseurSocialQuiRend(retourSocialDe($fournisseur, $identifiant, 'nouvelle@example.org')),
     );
 
-    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDIdentite($fournisseur));
 
-    assertAuthenticatedAs($compte);
+    assertGuest();
     expect(User::query()->count())->toBe(1);
     expect($compte->refresh()->email)->toBe('ancienne@example.org');
+    expect($compte->provider_id)->toBe($identifiant);
+    refusSocialJournalise($journal, 'Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte', [
+        'fournisseur' => $fournisseur,
+        'comptes' => [$compte->id],
+    ]);
+})->with($fournisseurs);
+
+it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis la liaison, réinitialisation comprise', function (string $fournisseur): void {
+    /*
+     * Le compte naît par le fournisseur, puis son adresse devient celle d'une
+     * autre personne, depuis le profil. Cette personne ne peut ni s'inscrire
+     * (l'adresse est prise) ni passer par un fournisseur (le compte n'est pas
+     * vérifié) : elle reprend le compte par le lien de réinitialisation, puis
+     * le vérifie. L'identité qui a ouvert le compte ne doit plus l'ouvrir.
+     */
+    Notification::fake();
+    $identifiant = identiteSocialeDe($fournisseur);
+    $retourDeLIdentite = retourSocialDe($fournisseur, $identifiant, 'camille.martin@example.org');
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(fournisseurSocialQuiRend($retourDeLIdentite, $retourDeLIdentite));
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+    $compte = User::query()->sole();
+
+    // Un mot de passe connu : le profil peut l'exiger pour changer d'adresse.
+    $compte->forceFill(['password' => 'Mot-de-passe-du-profil-42!'])->save();
+
+    patch(route('profile.update'), [
+        'name' => 'Dominique Petit',
+        'email' => 'dominique.petit@example.org',
+        'current_password' => 'Mot-de-passe-du-profil-42!',
+    ])->assertSessionHasNoErrors();
+
+    expect($compte->refresh()->email)->toBe('dominique.petit@example.org');
+    expect($compte->hasVerifiedEmail())->toBeFalse();
+    auth()->guard('web')->logout();
+
+    post(route('password.store'), [
+        'token' => Password::createToken($compte),
+        'email' => 'dominique.petit@example.org',
+        'password' => 'Un-mot-de-passe-solide-42!',
+        'password_confirmation' => 'Un-mot-de-passe-solide-42!',
+    ])->assertSessionHasNoErrors();
+
+    $compte->refresh()->markEmailAsVerified();
+    auth()->guard('web')->logout();
+
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDIdentite($fournisseur));
+
+    assertGuest();
+    expect(User::query()->count())->toBe(1);
 })->with($fournisseurs);
 
 it('ne rattache jamais un compte déjà lié à une autre identité du même fournisseur', function (string $fournisseur): void {
@@ -282,7 +407,7 @@ it('ne rattache jamais un compte déjà lié à une autre identité du même fou
 
     get(route('social.callback', $fournisseur))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', 'Ce compte est déjà associé à un autre compte '.ucfirst($fournisseur).'. '.suiteDuRefusSocial());
+        ->assertSessionHas('status', refusSocialDeCompteDejaLie($fournisseur));
 
     assertGuest();
     expect($compte->refresh()->provider_id)->toBe(identiteSocialeDe($fournisseur, 'autre'));
@@ -307,7 +432,7 @@ it('journalise le refus d’une adresse seulement proche de celle d’un compte,
 
     get(route('social.callback', $fournisseur))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', refusDAdresseSociale($fournisseur));
+        ->assertSessionHas('status', refusSocialDAdresseProche($fournisseur));
 
     assertGuest();
     expect($compte->refresh()->provider_id)->toBeNull();
@@ -317,12 +442,13 @@ it('journalise le refus d’une adresse seulement proche de celle d’un compte,
     ]);
 })->with($fournisseurs);
 
-it('n’ouvre plus le compte auquel une identité a été liée sur une adresse seulement proche', function (string $fournisseur, string $adresseDuCompte, string $adresseRendue): void {
+it('n’ouvre pas le compte auquel une identité a été liée sur une adresse seulement proche', function (string $fournisseur, string $adresseDuCompte, string $adresseRendue): void {
     /*
      * L'état qu'a pu laisser la recherche par adresse d'avant la comparaison
      * exacte : l'identité liée au compte que la collation confondait avec
-     * l'adresse rendue. Tant que le fournisseur rend cette adresse, la
-     * liaison se reconnaît et ne vaut rien.
+     * l'adresse rendue. Rien ne distingue cette liaison d'une autre : c'est
+     * l'adresse du compte qui ouvre, quelle que soit celle que rend
+     * l'identité, proche ou sans rapport.
      */
     $identifiant = identiteSocialeDe($fournisseur);
     $compte = compteSocialExistant($adresseDuCompte, $fournisseur, $identifiant);
@@ -334,20 +460,51 @@ it('n’ouvre plus le compte auquel une identité a été liée sur une adresse 
 
     get(route('social.callback', $fournisseur))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', refusDAdresseSociale($fournisseur));
+        ->assertSessionHas('status', refusSocialDIdentite($fournisseur));
 
     assertGuest();
     expect(User::query()->count())->toBe(1);
     expect($compte->refresh()->provider_id)->toBe($identifiant);
-    refusSocialJournalise($journal, 'Connexion sociale refusée : identité liée à un compte d’adresse seulement proche', [
+    refusSocialJournalise($journal, 'Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte', [
         'fournisseur' => $fournisseur,
-        'compte' => $compte->id,
+        'comptes' => [$compte->id],
     ]);
 })->with($fournisseurs)->with([
     'un accent' => ['jean.dupont@example.org', 'jéan.dupont@example.org'],
     'l’accent porté par le compte' => ['jéan.dupont@example.org', 'jean.dupont@example.org'],
     'deux accents différents' => ['jéan.dupont@example.org', 'jèan.dupont@example.org'],
     'la pleine chasse' => ['jean.dupont@example.org', "\u{FF4A}ean.dupont@example.org"],
+    'une espace finale' => ['jean.dupont@example.org', 'jean.dupont@example.org '],
+    'une adresse sans rapport' => ['jean.dupont@example.org', 'dominique.petit@example.net'],
+    'une adresse relais' => ['jean.dupont@example.org', 'x7k2p9q4rs@privaterelay.appleid.com'],
+]);
+
+it('n’ouvre pas le compte d’une liaison posée sur une adresse seulement proche quand l’adresse change ensuite', function (string $fournisseur, string $adresseSansRapport): void {
+    $identifiant = identiteSocialeDe($fournisseur);
+    $compte = compteSocialExistant('jean.dupont@example.org', $fournisseur, $identifiant);
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(fournisseurSocialQuiRend(
+        retourSocialDe($fournisseur, $identifiant, 'jéan.dupont@example.org'),
+        retourSocialDe($fournisseur, $identifiant, $adresseSansRapport),
+    ));
+
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDIdentite($fournisseur));
+
+    assertGuest();
+
+    get(route('social.callback', $fournisseur))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDIdentite($fournisseur));
+
+    assertGuest();
+    expect(User::query()->count())->toBe(1);
+    expect($compte->refresh()->email)->toBe('jean.dupont@example.org');
+})->with([
+    'Google, une autre adresse' => ['google', 'dominique.petit@example.net'],
+    'GitHub, une autre adresse principale' => ['github', 'dominique.petit@example.net'],
+    'Apple, une adresse relais' => ['apple', 'x7k2p9q4rs@privaterelay.appleid.com'],
 ]);
 
 it('ouvre le compte de l’identité liée quand l’adresse est la même, à la casse ASCII près', function (string $fournisseur, string $adresseDuCompte, string $adresseRendue): void {
@@ -384,7 +541,7 @@ it('ne rattache pas un compte qui n’a pas vérifié son adresse', function (st
 
     get(route('social.callback', $fournisseur))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', __('Your account must be verified before linking it with a social provider.'));
+        ->assertSessionHas('status', refusSocialDeCompteNonVerifie());
 
     assertGuest();
     expect($compte->refresh()->provider_id)->toBeNull();
@@ -404,7 +561,7 @@ it('refuse un retour GitHub dont l’adresse est vide', function (): void {
     expect(User::query()->count())->toBe(0);
 });
 
-it('refuse au rappel POST d’Apple une adresse seulement proche, et rattache l’adresse identique', function (?string $identiteDejaLiee): void {
+it('refuse au rappel POST d’Apple une adresse seulement proche, et rattache l’adresse identique', function (?string $identiteDejaLiee, string $refus): void {
     $apple = new AppleSimule();
     $apple->configurer();
 
@@ -414,7 +571,7 @@ it('refuse au rappel POST d’Apple une adresse seulement proche, et rattache l�
 
     retourDAppleEnPostAvecLAdresse($apple, 'jéan.dupont@example.org')
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', refusDAdresseSociale('apple'));
+        ->assertSessionHas('status', $refus);
 
     assertGuest();
     expect($compte->refresh()->provider_id)->toBe($identiteDejaLiee);
@@ -427,8 +584,8 @@ it('refuse au rappel POST d’Apple une adresse seulement proche, et rattache l�
     expect($compte->provider_id)->toBe($identifiantApple);
     expect($apple->requetesParties())->toHaveCount(2);
 })->with([
-    'par l’adresse' => [null],
-    'par une identité liée auparavant' => ['001234.apple-de-test.0042'],
+    'par l’adresse' => [null, refusSocialDAdresseProche('apple')],
+    'par une identité liée auparavant' => ['001234.apple-de-test.0042', refusSocialDIdentite('apple')],
 ]);
 
 it('ne rattache pas une adresse que le fournisseur ne garantit pas, en production comme en local', function (string $fournisseur, string $refusEnLocal): void {
@@ -457,7 +614,7 @@ it('ne rattache pas une adresse que le fournisseur ne garantit pas, en productio
     expect(User::query()->count())->toBe(1);
 })->with([
     'Google' => ['google', 'Votre email n\'est pas vérifié par Google'],
-    'GitHub, dont le pilote ne rend pas d’adresse non vérifiée' => ['github', 'Github ne nous a transmis aucune adresse email. '.suiteDuRefusSocial()],
+    'GitHub, dont le pilote ne rend pas d’adresse non vérifiée' => ['github', 'Github ne nous a transmis aucune adresse email. '.suiteDuRefusSocialSansCompte()],
     'Apple' => ['apple', 'Votre email n\'est pas vérifié par Apple'],
 ]);
 
@@ -517,4 +674,69 @@ it('cherche l’identité et l’adresse par paramètres liés, jamais dans le t
 
     expect($textesDesRequetes)->not->toContain('camille.martin@example.org');
     expect($textesDesRequetes)->not->toContain($identifiant);
+});
+
+/*
+ * Chaque refus propose une issue, et cette issue existe : un message qui
+ * renvoie à l'inscription quand un compte occupe l'adresse laisse le titulaire
+ * légitime sans issue, l'index unique de la même collation refusant
+ * l'inscription.
+ */
+
+it('ne propose pas l’inscription avec une adresse qu’un compte occupe déjà', function (string $adresseDuCompte, string $adresseRendue): void {
+    compteSocialExistant($adresseDuCompte);
+
+    Socialite::shouldReceive('driver')->with('google')->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe('google', identiteSocialeDe('google'), $adresseRendue)),
+    );
+
+    get(route('social.callback', 'google'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDAdresseProche('google'));
+
+    // Ce que le message ne propose pas, parce que la base le refuse.
+    inscriptionSocialeAvecLAdresse($adresseRendue)->assertSessionHasErrors('email');
+    assertGuest();
+    expect(User::query()->count())->toBe(1);
+})->with([
+    'l’adresse rendue en ASCII, le compte accentué' => ['jéan.dupont@example.org', 'jean.dupont@example.org'],
+    'l’adresse rendue accentuée, le compte en ASCII' => ['jean.dupont@example.org', 'jéan.dupont@example.org'],
+]);
+
+it('propose l’inscription avec une adresse hors ASCII qu’aucun compte n’occupe, et elle aboutit', function (): void {
+    Socialite::shouldReceive('driver')->with('google')->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe('google', identiteSocialeDe('google'), 'jéan.dupont@example.org')),
+    );
+
+    get(route('social.callback', 'google'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDAdresseHorsAscii('google'));
+
+    assertGuest();
+
+    inscriptionSocialeAvecLAdresse('jéan.dupont@example.org')->assertSessionHasNoErrors();
+
+    expect(User::query()->sole()->email)->toBe('jéan.dupont@example.org');
+});
+
+it('renvoie au mot de passe oublié un compte lié à une autre identité, et le lien part à son adresse', function (): void {
+    Notification::fake();
+    $compte = compteSocialExistant('camille.martin@example.org', 'google', identiteSocialeDe('google', 'autre'));
+
+    Socialite::shouldReceive('driver')->with('google')->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe('google', identiteSocialeDe('google'), 'camille.martin@example.org')),
+    );
+
+    get(route('social.callback', 'google'))
+        ->assertRedirect(route('login'))
+        ->assertSessionHas('status', refusSocialDeCompteDejaLie('google'));
+
+    // L'inscription, que le message ne propose plus, est refusée…
+    inscriptionSocialeAvecLAdresse('camille.martin@example.org')->assertSessionHasErrors('email');
+
+    // … et le mot de passe oublié, qu'il propose, aboutit.
+    post(route('password.email'), ['email' => 'camille.martin@example.org'])->assertSessionHasNoErrors();
+
+    Notification::assertSentTo($compte, ResetPassword::class);
+    assertGuest();
 });

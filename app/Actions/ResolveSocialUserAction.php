@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
@@ -13,23 +14,33 @@ use Laravel\Socialite\Contracts\User as SocialUser;
 /**
  * Retrouve, rattache ou crée le compte d'un retour de connexion sociale.
  *
- * L'ordre compte :
+ * Un compte existant ne s'ouvre que pour son adresse : celle que rend le
+ * fournisseur doit être la sienne, à la casse ASCII près.
  *
- *  1. l'identité du fournisseur (`provider`, `provider_id`) désigne le compte
- *     qu'elle a déjà ouvert, même si l'adresse rendue a changé depuis, sauf
- *     quand cette adresse n'est que proche de celle du compte ;
- *  2. à défaut, l'adresse ne rattache un compte existant que si elle est
- *     vérifiée par le fournisseur et identique à celle du compte, à la casse
- *     ASCII près ;
- *  3. sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
+ *  1. Un compte qui porte déjà l'identité du fournisseur (`provider`,
+ *     `provider_id`) s'ouvre à cette condition, et l'identité seule ne suffit
+ *     pas. L'adresse du compte a pu changer depuis la liaison, par le profil
+ *     ou par le panneau, et l'ancienne recherche par adresse a pu poser une
+ *     liaison sur une adresse seulement proche : le titulaire de l'identité
+ *     n'est alors peut-être pas celui du compte. Rien en base ne garde
+ *     l'adresse de la liaison, et rien ne distingue donc ces liaisons des
+ *     autres. Une identité qui rend une autre adresse que celle de son compte
+ *     est refusée, sans qu'un compte soit créé à la place.
+ *  2. À défaut, l'adresse ne rattache un compte existant que si elle est en
+ *     ASCII imprimable, vérifiée par le fournisseur, et que le compte n'est
+ *     lié à aucune autre identité du même fournisseur.
+ *  3. Sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
  *     adresse que la base tiendrait pour la même.
  *
  * Toute comparaison d'adresse et d'identifiant se fait en PHP, octet par
  * octet. La base ne sert qu'à trouver les candidats : sa collation
  * (`utf8mb4_unicode_ci`) ignore accents et casse, replie « ß » sur « ss », le
  * signe kelvin sur « k », les formes pleine chasse sur l'ASCII, et néglige les
- * espaces finales. Une adresse seulement proche de celle d'un compte n'ouvre
- * donc jamais ce compte, même vérifiée chez le fournisseur.
+ * espaces finales.
+ *
+ * Chaque refus propose une issue qui existe : quand un compte occupe
+ * l'adresse, la connexion par mot de passe, et jamais l'inscription, que
+ * l'index unique de la même collation refuserait.
  */
 final class ResolveSocialUserAction
 {
@@ -46,118 +57,78 @@ final class ResolveSocialUserAction
             throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($fournisseur));
         }
 
-        $compteDeLIdentite = $this->compteDeLIdentite($fournisseur, $identifiant, $utilisateurSocial);
-
-        if ($compteDeLIdentite !== null) {
-            return $compteDeLIdentite;
-        }
-
         $adresse = $utilisateurSocial->getEmail();
 
         if (! is_string($adresse) || $adresse === '') {
-            throw new SocialAuthException(ucfirst($fournisseur).' ne nous a transmis aucune adresse email. '.$this->suiteARefus());
+            throw new SocialAuthException(ucfirst($fournisseur).' ne nous a transmis aucune adresse email. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.');
         }
 
-        $adresseComparable = $this->adresseComparable($adresse);
+        $comptesDeLIdentite = $this->comptesDeLIdentite($fournisseur, $identifiant);
 
-        if ($adresseComparable === null) {
-            throw new SocialAuthException($this->refusDAdresse($fournisseur));
+        if ($comptesDeLIdentite->isNotEmpty()) {
+            return $this->compteDeLIdentite($comptesDeLIdentite, $fournisseur, $adresse);
         }
 
         $compteDeLAdresse = User::query()->where('email', $adresse)->first();
+
+        if ($this->adresseComparable($adresse) === null) {
+            throw new SocialAuthException($compteDeLAdresse === null
+                ? $this->refusDAdresseHorsAscii($fournisseur)
+                : $this->refusDAdresseProche($fournisseur));
+        }
 
         if ($compteDeLAdresse === null) {
             return $this->creerLeCompte($fournisseur, $identifiant, $utilisateurSocial, $adresse, $adresseVerifiee);
         }
 
-        return $this->rattacher($compteDeLAdresse, $fournisseur, $identifiant, $utilisateurSocial, $adresseComparable, $adresseVerifiee);
+        return $this->rattacher($compteDeLAdresse, $fournisseur, $identifiant, $utilisateurSocial, $adresse, $adresseVerifiee);
     }
 
     /**
-     * Le compte qu'ouvre déjà cette identité du fournisseur.
+     * Les comptes qui portent exactement cette identité du fournisseur.
      *
      * La base rend les candidats selon sa collation, qui ne distingue pas
-     * « AbC » de « abc » : le filtre exact se fait ici. Plusieurs comptes
-     * peuvent porter la même identité, l'ancienne recherche par adresse en
-     * créant un second quand l'adresse changeait chez le fournisseur. Le retour
-     * va alors à celui dont l'adresse est exactement celle rendue, et il est
-     * refusé s'il n'y en a aucun : choisir au hasard ouvrirait peut-être le
-     * compte d'un autre.
+     * « AbC » de « abc » : le filtre exact se fait ici.
      *
-     * Un seul compte n'est pas pour autant ouvert d'office : voir
-     * `lieeSurUneAdresseSeulementProche()`.
-     *
-     * @throws SocialAuthException
+     * @return Collection<int, User>
      */
-    private function compteDeLIdentite(string $fournisseur, string $identifiant, SocialUser $utilisateurSocial): ?User
+    private function comptesDeLIdentite(string $fournisseur, string $identifiant): Collection
     {
-        $comptes = User::query()
+        return User::query()
             ->where('provider', $fournisseur)
             ->where('provider_id', $identifiant)
             ->orderBy('id')
             ->get()
             ->filter(static fn (User $compte): bool => $compte->provider === $fournisseur && $compte->provider_id === $identifiant)
             ->values();
+    }
 
-        if ($comptes->count() <= 1) {
-            $compte = $comptes->first();
+    /**
+     * Le compte de cette identité dont l'adresse est celle rendue, ou un refus.
+     *
+     * Plusieurs comptes peuvent porter la même identité, l'ancienne recherche
+     * par adresse en créant un second quand l'adresse changeait chez le
+     * fournisseur : le retour va à celui dont l'adresse est celle rendue.
+     * Aucun ne l'a, le retour est refusé et journalisé, sans l'adresse.
+     *
+     * @param  Collection<int, User>  $comptes
+     *
+     * @throws SocialAuthException
+     */
+    private function compteDeLIdentite(Collection $comptes, string $fournisseur, string $adresse): User
+    {
+        $compte = $comptes->first(fn (User $candidat): bool => $this->memeAdresse($candidat->email, $adresse));
 
-            if ($compte !== null && $this->lieeSurUneAdresseSeulementProche($compte, $utilisateurSocial->getEmail())) {
-                Log::warning('Connexion sociale refusée : identité liée à un compte d’adresse seulement proche', [
-                    'fournisseur' => $fournisseur,
-                    'compte' => $compte->getKey(),
-                ]);
-
-                throw new SocialAuthException($this->refusDAdresse($fournisseur));
-            }
-
+        if ($compte !== null) {
             return $compte;
         }
 
-        $adresseRendue = $this->adresseComparable($utilisateurSocial->getEmail());
-        $compteDeLAdresseExacte = $adresseRendue === null
-            ? null
-            : $comptes->first(fn (User $compte): bool => $this->adresseComparable($compte->email) === $adresseRendue);
-
-        if ($compteDeLAdresseExacte !== null) {
-            return $compteDeLAdresseExacte;
-        }
-
-        Log::warning('Connexion sociale refusée : plusieurs comptes portent cette identité', [
+        Log::warning('Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte', [
             'fournisseur' => $fournisseur,
             'comptes' => $comptes->modelKeys(),
         ]);
 
-        throw new SocialAuthException('Plusieurs comptes sont associés à ce compte '.ucfirst($fournisseur).'. '.$this->suiteARefus());
-    }
-
-    /**
-     * L'identité a-t-elle été liée à ce compte sur une adresse seulement proche ?
-     *
-     * Avant la comparaison exacte, la recherche par adresse liait l'identité au
-     * compte que la collation tenait pour le même, même quand son adresse ne
-     * l'était pas. Une telle liaison se reconnaît tant que le fournisseur rend
-     * la même adresse : la base la confond avec celle du compte, mais elle n'en
-     * est ni la copie exacte ni la variante en casse ASCII. Le retour est alors
-     * refusé, comme il l'est aujourd'hui sur la recherche par adresse.
-     *
-     * Une adresse que la base ne confond pas avec celle du compte est un vrai
-     * changement d'adresse chez le fournisseur : l'identité, qui ne change pas,
-     * continue d'ouvrir son compte. La comparaison passe par un paramètre lié.
-     */
-    private function lieeSurUneAdresseSeulementProche(User $compte, ?string $adresse): bool
-    {
-        if ($adresse === null || $adresse === $compte->email) {
-            return false;
-        }
-
-        $adresseComparable = $this->adresseComparable($adresse);
-
-        if ($adresseComparable !== null && $adresseComparable === $this->adresseComparable($compte->email)) {
-            return false;
-        }
-
-        return User::query()->whereKey($compte->getKey())->where('email', $adresse)->exists();
+        throw new SocialAuthException('Ce compte '.ucfirst($fournisseur).' est associé à un compte dont l\'adresse email n\'est pas celle que '.ucfirst($fournisseur).' nous transmet. '.$this->versLeMotDePasse('l\'adresse email de ce compte'));
     }
 
     /**
@@ -183,16 +154,16 @@ final class ResolveSocialUserAction
         string $fournisseur,
         string $identifiant,
         SocialUser $utilisateurSocial,
-        string $adresseComparable,
+        string $adresse,
         bool $adresseVerifiee,
     ): User {
-        if ($this->adresseComparable($compte->email) !== $adresseComparable) {
+        if (! $this->memeAdresse($compte->email, $adresse)) {
             Log::warning('Connexion sociale refusée : adresse seulement proche de celle d’un compte', [
                 'fournisseur' => $fournisseur,
                 'compte' => $compte->getKey(),
             ]);
 
-            throw new SocialAuthException($this->refusDAdresse($fournisseur));
+            throw new SocialAuthException($this->refusDAdresseProche($fournisseur));
         }
 
         if (! $adresseVerifiee) {
@@ -216,7 +187,7 @@ final class ResolveSocialUserAction
                 'compte' => $compte->getKey(),
             ]);
 
-            throw new SocialAuthException('Ce compte est déjà associé à un autre compte '.ucfirst($fournisseur).'. '.$this->suiteARefus());
+            throw new SocialAuthException('Un compte existe déjà avec cette adresse email, associé à un autre compte '.ucfirst($fournisseur).'. '.$this->versLeMotDePasse('cette adresse'));
         }
 
         if (! $dejaLie) {
@@ -273,6 +244,24 @@ final class ResolveSocialUserAction
     }
 
     /**
+     * Les deux adresses sont-elles la même ?
+     *
+     * Oui si elles sont identiques octet par octet, ou si elles ont une forme
+     * comparable et que ces formes sont égales. Jamais selon la collation de
+     * la base.
+     */
+    private function memeAdresse(string $adresseDuCompte, string $adresseRendue): bool
+    {
+        if ($adresseDuCompte === $adresseRendue) {
+            return true;
+        }
+
+        $adresseComparable = $this->adresseComparable($adresseRendue);
+
+        return $adresseComparable !== null && $adresseComparable === $this->adresseComparable($adresseDuCompte);
+    }
+
+    /**
      * La forme sous laquelle deux adresses se comparent, ou null si elle n'en a pas.
      *
      * Seule une adresse en ASCII imprimable, sans espace, en a une : ses
@@ -280,31 +269,53 @@ final class ResolveSocialUserAction
      * vingt-six lettres ASCII depuis PHP 8.2. C'est le seul repli que l'index
      * unique de la base fait aussi sur l'ASCII, et le seul qu'on lui emprunte.
      *
-     * Une adresse non ASCII est refusée plutôt que normalisée. NFC ne
-     * réconcilie ni les formes pleine chasse ni le signe kelvin, que la base
-     * confond pourtant avec l'ASCII ; `mb_strtolower()` et le repli de casse
-     * Unicode créent eux-mêmes des égalités (le signe kelvin, U+212A, y
-     * devient « k ») ; et un domaine internationalisé s'écrit de deux façons
-     * (Unicode ou Punycode) que rien ici ne saurait apparier. Les trois
-     * fournisseurs rendent de l'ASCII pour l'immense majorité des comptes ;
-     * les autres s'inscrivent avec leur adresse et un mot de passe.
+     * Une adresse non ASCII ne rattache aucun compte plutôt que d'être
+     * normalisée. NFC ne réconcilie ni les formes pleine chasse ni le signe
+     * kelvin, que la base confond pourtant avec l'ASCII ; `mb_strtolower()` et
+     * le repli de casse Unicode créent eux-mêmes des égalités (le signe kelvin,
+     * U+212A, y devient « k ») ; et un domaine internationalisé s'écrit de deux
+     * façons (Unicode ou Punycode) que rien ici ne saurait apparier. Les trois
+     * fournisseurs rendent de l'ASCII pour l'immense majorité des comptes ; les
+     * autres s'inscrivent avec leur adresse et un mot de passe.
      */
-    private function adresseComparable(mixed $adresse): ?string
+    private function adresseComparable(string $adresse): ?string
     {
-        if (! is_string($adresse) || preg_match('/\A[\x21-\x7E]+\z/', $adresse) !== 1) {
+        if (preg_match('/\A[\x21-\x7E]+\z/', $adresse) !== 1) {
             return null;
         }
 
         return strtolower($adresse);
     }
 
-    private function refusDAdresse(string $fournisseur): string
+    /**
+     * Le refus d'une adresse qu'un compte occupe aux yeux de la base sans être
+     * la même.
+     *
+     * Ce compte est peut-être celui d'un autre : l'inscription avec cette
+     * adresse serait refusée, et la connexion par mot de passe ne vaut que
+     * pour le titulaire du compte.
+     */
+    private function refusDAdresseProche(string $fournisseur): string
     {
-        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte. '.$this->suiteARefus();
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la vôtre. S\'il est à vous, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
     }
 
-    private function suiteARefus(): string
+    /**
+     * Le refus d'une adresse hors ASCII qu'aucun compte n'occupe : elle reste
+     * libre pour l'inscription.
+     */
+    private function refusDAdresseHorsAscii(string $fournisseur): string
     {
-        return 'Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.';
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Inscrivez-vous avec cette adresse et un mot de passe.';
+    }
+
+    /**
+     * La suite d'un refus quand un compte existe : son mot de passe, qu'un
+     * compte ouvert par un fournisseur ne connaît pas, d'où le lien de
+     * réinitialisation, qui part à l'adresse du compte.
+     */
+    private function versLeMotDePasse(string $quelleAdresse): string
+    {
+        return 'Connectez-vous avec '.$quelleAdresse.' et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.';
     }
 }

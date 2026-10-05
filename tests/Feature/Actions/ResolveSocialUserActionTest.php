@@ -267,7 +267,7 @@ it('départage deux comptes de la même identité par l’adresse exacte, et ref
      * L'ancienne recherche par adresse créait un second compte pour la même
      * identité quand l'adresse changeait chez le fournisseur. Ces doublons
      * peuvent exister : le retour va au compte de l'adresse exacte, jamais au
-     * premier venu.
+     * premier venu, et à aucun quand ni l'un ni l'autre ne l'a.
      */
     $ancien = User::factory()->create(['email' => 'ancienne@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
     $recent = User::factory()->create(['email' => 'jean@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
@@ -278,14 +278,14 @@ it('départage deux comptes de la même identité par l’adresse exacte, et ref
     $journal = Log::spy();
 
     expect(fn (): User => resoudre(utilisateurSocial(['email' => 'autre@example.test'])))
-        ->toThrow(new SocialAuthException('Plusieurs comptes sont associés à ce compte Google. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.'));
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
 
     expect(User::query()->count())->toBe(2);
 
     // Les comptes en cause, dans l'ordre de leur création, et jamais l'adresse.
     $journal->shouldHaveReceived('warning')
         ->once()
-        ->withArgs(static fn (string $message, array $contexte): bool => $message === 'Connexion sociale refusée : plusieurs comptes portent cette identité'
+        ->withArgs(static fn (string $message, array $contexte): bool => $message === 'Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte'
             && $contexte === ['fournisseur' => 'google', 'comptes' => [$ancien->id, $recent->id]]);
 });
 
@@ -299,7 +299,7 @@ it('ne prend pas pour sienne une identité qui ne diffère que par la casse', fu
     $existant = compteVerifieAvecFournisseur('google', 'GOOGLE-42');
 
     expect(fn (): User => resoudre(utilisateurSocial()))
-        ->toThrow(new SocialAuthException('Ce compte est déjà associé à un autre compte Google. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.'));
+        ->toThrow(new SocialAuthException('Un compte existe déjà avec cette adresse email, associé à un autre compte Google. Connectez-vous avec cette adresse et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
 
     expect($existant->refresh()->provider_id)->toBe('GOOGLE-42');
     expect(User::query()->count())->toBe(1);
