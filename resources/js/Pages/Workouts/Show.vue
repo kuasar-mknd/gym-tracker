@@ -173,6 +173,7 @@ const {
     ecrituresEnAttente,
     clotureEnCours,
     finishWorkout,
+    annulerLaCloture,
     confirmFinishWorkout,
     showSettingsModal,
     settingsForm,
@@ -368,7 +369,7 @@ onUnmounted(() => {
             :show="showFinishModal"
             :en-attente="ecrituresEnAttente"
             :en-cours="clotureEnCours"
-            @close="showFinishModal = false"
+            @close="annulerLaCloture"
             @confirm="confirmFinishWorkout"
         />
 

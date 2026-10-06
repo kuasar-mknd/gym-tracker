@@ -19,6 +19,7 @@ const destroy = vi.fn()
 const mettreEnFile = vi.fn()
 const modifierEnFile = vi.fn()
 const retirerDeLaFile = vi.fn()
+const attenteDesEcritures = vi.fn()
 const routerPost = vi.fn()
 const routerPatch = vi.fn()
 const formPatch = vi.fn()
@@ -50,7 +51,9 @@ vi.mock('@/Utils/SyncService', () => ({
         modifierEnFile: (...args) => modifierEnFile(...args),
         retirerDeLaFile: (...args) => retirerDeLaFile(...args),
         processQueue: () => Promise.resolve(),
+        attendreLesEcritures: (...args) => attenteDesEcritures(...args),
         enAttente: () => 0,
+        ecrituresEnCours: () => 0,
     },
 }))
 
@@ -289,6 +292,8 @@ beforeEach(() => {
     modifierEnFile.mockReset()
     modifierEnFile.mockReturnValue(false)
     retirerDeLaFile.mockReset()
+    attenteDesEcritures.mockReset()
+    attenteDesEcritures.mockResolvedValue(undefined)
     routerPost.mockReset()
     routerPatch.mockReset()
     formPatch.mockReset()
@@ -841,6 +846,26 @@ describe('Workouts/Show — the session’s own settings', () => {
 
         await buttonLabelled(wrapper, 'Terminer').trigger('click')
         await emitOn(wrapper, FinishModalStub, 'close')
+
+        expect(wrapper.vm.showFinishModal).toBe(false)
+        expect(routerPatch).not.toHaveBeenCalled()
+    })
+
+    /*
+     * Fermer la question pendant que la clôture attendait les écritures ne
+     * faisait que cacher la modale : la clôture partait ensuite (#1961).
+     */
+    it('does not finish once the question is closed while it was still waiting for the writes', async () => {
+        let ecrituresParties
+        attenteDesEcritures.mockReturnValueOnce(new Promise((resolve) => (ecrituresParties = resolve)))
+        const wrapper = await mountPage()
+
+        await buttonLabelled(wrapper, 'Terminer').trigger('click')
+        await emitOn(wrapper, FinishModalStub, 'confirm')
+        await emitOn(wrapper, FinishModalStub, 'close')
+
+        ecrituresParties()
+        await flushPromises()
 
         expect(wrapper.vm.showFinishModal).toBe(false)
         expect(routerPatch).not.toHaveBeenCalled()

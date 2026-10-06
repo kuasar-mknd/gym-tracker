@@ -7,7 +7,10 @@ const props = defineProps({
     show: { type: Boolean, required: true },
     /** Les modifications restées en file à la dernière tentative : la séance ne se ferme pas sans elles (#1961). */
     enAttente: { type: Number, default: 0 },
-    /** La clôture attend que les modifications partent : « Confirmer » le montre, et n'est pas rappuyable. */
+    /**
+     * La clôture attend que les modifications partent : « Confirmer » le montre, et n'est pas rappuyable.
+     * « Annuler », le fond ou Échap l'abandonnent (`close`) : la séance reste ouverte.
+     */
     enCours: { type: Boolean, default: false },
 })
 

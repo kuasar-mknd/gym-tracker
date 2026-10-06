@@ -248,6 +248,16 @@ class SyncService {
          */
         this.produits = new Map()
 
+        /**
+         * Les écritures directes parties sans avoir encore de réponse. Celles
+         * que le vidage déclenche lui-même (l'adoption d'une série rejouée)
+         * partent hors de la file : « Terminer » doit les attendre aussi, ou
+         * la clôture les double et elles reviennent refusées (#1961).
+         *
+         * @type {Set<Promise>}
+         */
+        this.ecrituresDirectes = new Set()
+
         window.addEventListener('online', () => this.processQueue())
 
         /**
@@ -298,11 +308,35 @@ class SyncService {
      * user, and a true value never did prove reachability. So we always attempt
      * the request; the catch below queues it when the network genuinely refuses.
      *
+     * Une écriture est suivie jusqu'à sa réponse, dès son départ et de façon
+     * synchrone : `attendreLesEcritures` la voit, même lancée par un écouteur
+     * du vidage qu'il attend.
+     *
      * @param {Object} config La requête, au format de `Utils/http`. Une
      *   création peut y joindre `ajusterPar`, voir `notesDeCreation`.
      * @returns {Promise}
      */
-    async request(config) {
+    request(config) {
+        const ecriture = this.envoyer(config)
+
+        if (this.isMutation(config)) {
+            const oublier = () => this.ecrituresDirectes.delete(ecriture)
+
+            this.ecrituresDirectes.add(ecriture)
+            ecriture.then(oublier, oublier)
+        }
+
+        return ecriture
+    }
+
+    /**
+     * Envoie la requête, après la file s'il le faut, et la met en file si le
+     * réseau la refuse. Voir `request`.
+     *
+     * @param {Object} config
+     * @returns {Promise}
+     */
+    async envoyer(config) {
         const { ajusterPar, ...requete } = config
         const stamped = this.stampIdempotency(requete)
         const notes = this.notesDeCreation(stamped, ajusterPar)
@@ -572,6 +606,33 @@ class SyncService {
     /** Combien d'écritures du compte connecté attendent encore d'être envoyées. */
     enAttente() {
         return this.compte === null ? 0 : this.queue.filter((entree) => entree.compte === this.compte).length
+    }
+
+    /** Combien d'écritures directes attendent encore leur réponse. */
+    ecrituresEnCours() {
+        return this.ecrituresDirectes.size
+    }
+
+    /**
+     * Se règle quand tout ce que la page a écrit est parti : la file vidée
+     * (ou arrêtée faute de réseau, de session, ou devant une erreur
+     * passagère), et les écritures directes en vol revenues, y compris celles
+     * que le vidage a lui-même déclenchées. Une écriture directe qui finit en
+     * file relance le vidage. Sans délai maximum : l'appelant borne l'attente,
+     * puis lit `enAttente()` et `ecrituresEnCours()`.
+     *
+     * @returns {Promise<void>}
+     */
+    async attendreLesEcritures() {
+        for (;;) {
+            await this.processQueue()
+
+            if (this.ecrituresDirectes.size === 0) {
+                return
+            }
+
+            await Promise.allSettled([...this.ecrituresDirectes])
+        }
     }
 
     /** La première écriture du compte connecté encore en file, ou undefined. */

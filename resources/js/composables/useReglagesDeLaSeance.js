@@ -56,10 +56,35 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
      */
     const clotureEnCours = ref(false)
 
+    /**
+     * Le numéro de la dernière tentative de clôture. L'abandonner (« Annuler »,
+     * le fond ou Échap pendant l'attente) le fait avancer : la tentative qui
+     * reprend la main après ses attentes ne clôt plus. Elle closait quand
+     * même, jusqu'à huit secondes après que la personne avait renoncé, et une
+     * clôture ne se défait pas (#1961).
+     */
+    let tentative = 0
+
+    /** La clôture est partie au serveur : elle ne s'abandonne plus, sa visite la libère. */
+    let cloturePartie = false
+
     const finishWorkout = () => {
         ecrituresEnAttente.value = 0
         showFinishModal.value = true
     }
+
+    /** Ferme la question, et abandonne la clôture qui attendait encore les écritures. */
+    const annulerLaCloture = () => {
+        showFinishModal.value = false
+
+        if (cloturePartie) {
+            return
+        }
+
+        tentative += 1
+        clotureEnCours.value = false
+    }
+
     const confirmFinishWorkout = async () => {
         if (clotureEnCours.value) {
             return
@@ -67,8 +92,9 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
 
         clotureEnCours.value = true
 
-        /** Partie, la clôture se libère à la fin de sa visite, pas avant. */
-        let cloturePartie = false
+        tentative += 1
+        const cetteTentative = tentative
+        const abandonnee = () => cetteTentative !== tentative
 
         try {
             /**
@@ -79,19 +105,28 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
              */
             await viderLesEcritures()
 
+            if (abandonnee()) {
+                return
+            }
+
             /*
              * La file hors ligne aussi, et pour la même raison. Elle n'était ni
              * vidée ni attendue : quand le réseau revenait sans évènement
              * `online`, ou pendant un vidage en cours, les dernières séries
-             * partaient après la clôture et revenaient refusées (#1961).
-             * `processQueue` s'enchaîne derrière un vidage en cours. Si la file
-             * ne se vide pas — réseau absent, serveur qui redémarre, session à
-             * renouveler, ou réseau trop lent pour qu'on l'attende —, la séance
-             * reste ouverte et la modale dit combien de modifications attendent.
+             * partaient après la clôture et revenaient refusées (#1961). Les
+             * écritures que le vidage déclenche lui-même, hors de la file,
+             * sont attendues avec elle. Si tout ne part pas — réseau absent,
+             * serveur qui redémarre, session à renouveler, ou réseau trop lent
+             * pour qu'on l'attende —, la séance reste ouverte et la modale dit
+             * combien de modifications attendent.
              */
-            await attendreAuPlus(SyncService.processQueue(), ATTENTE_MAX_DE_LA_FILE_MS)
+            await attendreAuPlus(SyncService.attendreLesEcritures(), ATTENTE_MAX_DE_LA_FILE_MS)
 
-            ecrituresEnAttente.value = SyncService.enAttente()
+            if (abandonnee()) {
+                return
+            }
+
+            ecrituresEnAttente.value = SyncService.enAttente() + SyncService.ecrituresEnCours()
 
             if (ecrituresEnAttente.value > 0) {
                 return
@@ -110,12 +145,14 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
                         triggerHaptic('success')
                     },
                     onFinish: () => {
+                        cloturePartie = false
                         clotureEnCours.value = false
                     },
                 },
             )
         } finally {
-            if (!cloturePartie) {
+            // Abandonnée, elle a déjà rendu la main ; partie, sa visite la rendra.
+            if (!cloturePartie && !abandonnee()) {
                 clotureEnCours.value = false
             }
         }
@@ -147,6 +184,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
         ecrituresEnAttente,
         clotureEnCours,
         finishWorkout,
+        annulerLaCloture,
         confirmFinishWorkout,
         showSettingsModal,
         settingsForm,

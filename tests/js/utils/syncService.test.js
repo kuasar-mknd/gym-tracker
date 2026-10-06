@@ -1664,3 +1664,54 @@ describe('SyncService une création tentée sans réponse', () => {
         expect(service.queue.map((entree) => entree.id)).toEqual(['queued-1'])
     })
 })
+
+/**
+ * « Terminer » ne regardait que la file. Ce que le vidage déclenche lui-même
+ * hors de la file (l'adoption d'une série rejouée) volait encore quand la
+ * clôture partait, et pouvait revenir refusé d'une séance déjà close (#1961).
+ */
+describe('SyncService les écritures en cours', () => {
+    it('compte une écriture directe jusqu’à sa réponse, et pas une lecture', async () => {
+        const service = await chargé()
+        let repondre
+        request
+            .mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+            .mockImplementationOnce(() => new Promise(() => {}))
+
+        const ecriture = service.patch('/api/v1/sets/3', { reps: 6 })
+        service.get('/api/v1/sets')
+
+        expect(service.ecrituresEnCours()).toBe(1)
+
+        repondre({ data: {} })
+        await ecriture
+
+        expect(service.ecrituresEnCours()).toBe(0)
+    })
+
+    it('attend les écritures directes en vol, et revide la file quand l’une y finit', async () => {
+        const service = await chargé()
+        let echouer
+        request.mockImplementationOnce(() => new Promise((_resolve, reject) => (echouer = reject)))
+        const ecriture = service.patch('/api/v1/sets/3', { reps: 6 }).catch((erreur) => erreur)
+
+        let reglee = false
+        const attente = service.attendreLesEcritures().then(() => (reglee = true))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(reglee).toBe(false)
+
+        // Le réseau la refuse : elle finit en file, et le vidage relancé la renvoie.
+        request.mockResolvedValue({ data: {} })
+        echouer({ code: 'ERR_NETWORK', request: {} })
+        await attente
+
+        await expect(ecriture).resolves.toMatchObject({ isOffline: true })
+        expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
+            'patch /api/v1/sets/3',
+            'patch /api/v1/sets/3',
+        ])
+        expect(service.queue).toEqual([])
+        expect(service.ecrituresEnCours()).toBe(0)
+    })
+})

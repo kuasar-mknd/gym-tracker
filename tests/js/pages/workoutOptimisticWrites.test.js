@@ -16,7 +16,9 @@ vi.mock('@/Utils/SyncService', () => ({
         mettreEnFile: (...args) => mettreEnFile(...args),
         modifierEnFile: () => false,
         processQueue: () => Promise.resolve(),
+        attendreLesEcritures: () => Promise.resolve(),
         enAttente: () => 0,
+        ecrituresEnCours: () => 0,
     },
 }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))

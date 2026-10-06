@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import { retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
-import { creerUnFauxServeur, fileDurable, monterLaSeance, routeDeTest } from './seanceHorsLigne'
+import { creerUnFauxServeur, fileDurable, monterLaSeance, routeDeTest, uneReponsePerdue } from './seanceHorsLigne'
 
 const reseau = vi.hoisted(() => ({ serveur: null }))
 const inertia = vi.hoisted(() => ({ patch: vi.fn() }))
@@ -197,6 +197,57 @@ describe('terminer pendant un vidage qui traîne', () => {
         expect(page.clotureEnCours.value).toBe(false)
     })
 
+    /*
+     * « Annuler », le fond ou Échap pendant l'attente fermaient la modale, et
+     * la clôture partait quand même une fois l'attente finie, jusqu'à huit
+     * secondes plus tard. Une séance close ne se rouvre pas.
+     */
+    it('ne clôt pas quand on annule pendant l’attente, et une nouvelle confirmation ne clôt qu’une fois', async () => {
+        const page = await monterLaSeance(seance())
+        const liberer = await unVidageQuiTraine(page)
+
+        page.finishWorkout()
+        const abandonnee = page.confirmFinishWorkout()
+        await flushPromises()
+
+        page.annulerLaCloture()
+
+        expect(page.showFinishModal.value).toBe(false)
+        expect(page.clotureEnCours.value).toBe(false)
+
+        // On se ravise et on confirme de nouveau, pendant que le vidage traîne encore.
+        page.finishWorkout()
+        const reprise = page.confirmFinishWorkout()
+        await flushPromises()
+
+        expect(page.clotureEnCours.value).toBe(true)
+
+        liberer()
+        await abandonnee
+        await reprise
+
+        expect(inertia.patch).toHaveBeenCalledTimes(1)
+        expect(aLaCloture[0].enFile).toBe(0)
+    })
+
+    it('ne clôt jamais une tentative abandonnée, même une fois la file vidée', async () => {
+        const page = await monterLaSeance(seance())
+        const liberer = await unVidageQuiTraine(page)
+
+        page.finishWorkout()
+        const cloture = page.confirmFinishWorkout()
+        await flushPromises()
+
+        page.annulerLaCloture()
+        liberer()
+        await cloture
+        await flushPromises()
+
+        expect(inertia.patch).not.toHaveBeenCalled()
+        expect(page.sync.queue).toEqual([])
+        expect(page.clotureEnCours.value).toBe(false)
+    })
+
     it('rend la main au bout de l’attente maximale, et dit combien de modifications attendent', async () => {
         const page = await monterLaSeance(seance())
         await unVidageQuiTraine(page)
@@ -212,6 +263,98 @@ describe('terminer pendant un vidage qui traîne', () => {
         expect(page.ecrituresEnAttente.value).toBe(1)
         expect(page.clotureEnCours.value).toBe(false)
         expect(page.showFinishModal.value).toBe(true)
+    })
+})
+
+/**
+ * Le vidage déclenche lui-même des écritures : le rattrapage d'une création
+ * dont le serveur a ignoré la charge, et ce qui a été tapé pendant qu'une
+ * création rejouée volait, que l'adoption renvoie hors de la file. La clôture
+ * ne regardait que la file : elle partait pendant qu'elles volaient encore, et
+ * le serveur, qui traite les deux en parallèle, pouvait refuser la correction
+ * d'une séance déjà close.
+ */
+describe('terminer pendant que le vidage écrit encore', () => {
+    /** Retient au réseau chaque modification qui atteint le serveur : rend celles en vol et de quoi les libérer. */
+    const retenirLesModifications = () => {
+        const enVol = []
+        const liberations = []
+        const repondre = reseau.serveur.repondre
+
+        reseau.serveur.repondre = async (config) => {
+            if (config.method === 'patch') {
+                enVol.push(`${config.method} ${config.url} ${JSON.stringify(config.data)}`)
+                await new Promise((resolve) => liberations.push(resolve))
+            }
+
+            return repondre(config)
+        }
+
+        return { enVol, liberer: () => liberations.splice(0).forEach((resolve) => resolve()) }
+    }
+
+    it('attend le rattrapage d’une réponse perdue, mis en file à la place de la création', async () => {
+        const page = await monterLaSeance(seance())
+        uneReponsePerdue(reseau.serveur)
+        page.addSet(1)
+        await flushPromises()
+        page.saisieTerminee(page.ligne().sets.at(-1), 'reps', '3')
+        await flushPromises()
+
+        // Le réseau revient sans évènement ; le rattrapage traîne.
+        reseau.serveur.enLigne = true
+        const modifications = retenirLesModifications()
+
+        page.finishWorkout()
+        const cloture = page.confirmFinishWorkout()
+        await flushPromises()
+
+        expect(modifications.enVol).toEqual(['patch /api/v1/sets/100 {"reps":3}'])
+        expect(inertia.patch).not.toHaveBeenCalled()
+
+        modifications.liberer()
+        await cloture
+
+        expect(aLaCloture).toHaveLength(1)
+        expect(aLaCloture[0].recues.at(-1)).toBe('patch /api/v1/sets/100 {"reps":3}')
+        expect(reseau.serveur.series.get(100)).toMatchObject({ reps: 3 })
+    })
+
+    it('attend ce que l’adoption renvoie hors de la file : la saisie faite pendant que la création rejouée volait', async () => {
+        const page = await monterLaSeance(seance())
+        await ajouterUneSerieHorsLigne(page)
+        const serie = page.ligne().sets.at(-1)
+
+        let libererLaCreation
+        reseau.serveur.enLigne = true
+        reseau.serveur.imposer.push(async (config) => {
+            await new Promise((resolve) => (libererLaCreation = resolve))
+
+            return { data: { data: { id: 100, ...config.data, created_at: 'c', updated_at: 'u' } } }
+        })
+        page.sync.processQueue()
+        await flushPromises()
+
+        // Tapé pendant que la création vole : rien où se fondre, l'adoption le renverra.
+        page.saisieTerminee(serie, 'reps', '3')
+        const modifications = retenirLesModifications()
+
+        page.finishWorkout()
+        const cloture = page.confirmFinishWorkout()
+        await flushPromises()
+
+        libererLaCreation()
+        await flushPromises()
+
+        expect(modifications.enVol).toEqual(['patch /api/v1/sets/100 {"reps":3}'])
+        expect(page.sync.queue).toEqual([])
+        expect(inertia.patch).not.toHaveBeenCalled()
+
+        modifications.liberer()
+        await cloture
+
+        expect(aLaCloture).toHaveLength(1)
+        expect(aLaCloture[0].recues.at(-1)).toBe('patch /api/v1/sets/100 {"reps":3}')
     })
 })
 
