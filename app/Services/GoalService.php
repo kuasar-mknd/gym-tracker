@@ -20,7 +20,9 @@ final class GoalService
     /**
      * Recalcule l'avancement de tous les objectifs d'un utilisateur.
      *
-     * Appelé après l'enregistrement d'une séance ou d'une mesure.
+     * Appelé par SyncUserGoals après l'enregistrement ou la suppression d'une
+     * séance, d'une série ou d'une mesure, et le retrait d'un exercice d'une
+     * séance.
      *
      * @param  User  $user  L'utilisateur concerné.
      */
@@ -52,27 +54,53 @@ final class GoalService
         }
 
         $dirtyGoals = $goals->filter->isDirty();
-        if ($dirtyGoals->isNotEmpty()) {
-            $now = now();
-            $data = $dirtyGoals->map(function ($goal) use ($now) {
-                $attrs = $goal->getAttributes();
-                $attrs['updated_at'] = $now;
 
-                return $attrs;
-            })->toArray();
-
-            /*
-             * `updated_at` n'est pas dans la liste : Eloquent l'y ajoute de
-             * lui-meme (`addUpdatedAtToUpsertColumns`) des lors que le modele
-             * porte des horodatages. L'y citer ne changeait rien — verifie en
-             * retirant la colonne et en constatant que la date monte quand meme.
-             */
-            Goal::upsert(
-                $data,
-                ['id'],
-                ['current_value', 'progress_pct', 'completed_at']
-            );
+        if ($dirtyGoals->isEmpty()) {
+            return;
         }
+
+        /*
+         * Une seule écriture pour tous les objectifs modifiés, et une écriture
+         * qui ne peut que mettre à jour : `update … set colonne = case id when
+         * … end … where id in (…)`.
+         *
+         * C'était un upsert portant toutes les colonnes de l'objectif. Sous
+         * MySQL, un objectif supprimé entre la lecture ci-dessus et cette
+         * écriture était réinséré, avec son ancien identifiant et ses anciennes
+         * valeurs (#1985). Une mise à jour ne touche qu'aux lignes qui existent
+         * encore.
+         *
+         * La requête n'assemble que des marqueurs `?` : chaque valeur passe en
+         * liaison. `updated_at` avance sur chaque objectif écrit, comme sur un
+         * enregistrement ordinaire, et le compte est rappelé dans le filtre.
+         */
+        $identifiants = [];
+        $quand = [];
+        $liaisons = ['current_value' => [], 'progress_pct' => [], 'completed_at' => []];
+
+        foreach ($dirtyGoals as $goal) {
+            $identifiants[] = $goal->id;
+            $quand[] = 'when ? then ?';
+            $attributs = $goal->getAttributes();
+
+            foreach (array_keys($liaisons) as $colonne) {
+                $liaisons[$colonne][] = $goal->id;
+                $liaisons[$colonne][] = $attributs[$colonne] ?? null;
+            }
+        }
+
+        $cas = 'case id '.implode(' ', $quand).' end';
+        $requete = 'update goals set current_value = '.$cas.', progress_pct = '.$cas.', completed_at = '.$cas
+            .', updated_at = ? where user_id = ? and id in ('.implode(', ', array_fill(0, count($identifiants), '?')).')';
+
+        \Illuminate\Support\Facades\DB::update($requete, [
+            ...$liaisons['current_value'],
+            ...$liaisons['progress_pct'],
+            ...$liaisons['completed_at'],
+            now(),
+            $user->id,
+            ...$identifiants,
+        ]);
     }
 
     /**
@@ -138,6 +166,11 @@ final class GoalService
     /**
      * L'avancement d'un objectif de charge : le poids maximal sur l'exercice.
      *
+     * Sans record, l'objectif revient à sa valeur de départ : c'est ce que
+     * l'utilisateur déclarait soulever en le créant, et plus aucune série ne dit
+     * mieux. Garder la dernière valeur laissait atteint, pour de bon, un objectif
+     * atteint par une série ensuite supprimée (#1953).
+     *
      * @param  Goal  $goal  L'objectif à revoir.
      * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
@@ -147,12 +180,13 @@ final class GoalService
             return;
         }
 
-        if (isset($mesures['max_weights'][$goal->exercise_id])) {
-            // Pas de repli : `preCalculateMaxWeights` declare un retour `float`
-            // natif sur chaque valeur, donc `is_numeric()` y etait toujours vrai
-            // et le `0.0` inatteignable — d'ou trois mutants qu'aucun test ne
-            // pouvait tuer.
-            $goal->current_value = $mesures['max_weights'][$goal->exercise_id];
+        /*
+         * Le lot couvre l'exercice de chaque objectif de charge : un exercice
+         * qui n'y figure pas n'a pas de record, et le relire un par un
+         * referait la requête que le lot évite.
+         */
+        if (isset($mesures['max_weights'])) {
+            $goal->current_value = $mesures['max_weights'][$goal->exercise_id] ?? $goal->start_value;
 
             return;
         }
@@ -165,9 +199,7 @@ final class GoalService
             ->where('type', 'max_weight')
             ->value('value');
 
-        if ($maxWeight !== null && is_numeric($maxWeight)) {
-            $goal->current_value = (float) $maxWeight;
-        }
+        $goal->current_value = is_numeric($maxWeight) ? (float) $maxWeight : $goal->start_value;
     }
 
     /**
@@ -196,6 +228,9 @@ final class GoalService
      * L'avancement d'un objectif de volume : le meilleur volume (poids × reps)
      * atteint sur l'exercice au cours d'une seule séance.
      *
+     * Sans série validée et pesée, l'objectif revient à sa valeur de départ,
+     * comme un objectif de charge sans record (#1953).
+     *
      * @param  Goal  $goal  L'objectif à revoir.
      * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
      */
@@ -205,10 +240,10 @@ final class GoalService
             return;
         }
 
-        if (isset($mesures['max_volumes'][$goal->exercise_id])) {
-            // Meme raison qu'au-dessus : `preCalculateMaxVolumes` garantit le
-            // float, le repli ne pouvait pas s'executer.
-            $goal->current_value = $mesures['max_volumes'][$goal->exercise_id];
+        // Même raison qu'au-dessus : le lot couvre l'exercice de chaque
+        // objectif de volume, une absence y vaut « aucun volume ».
+        if (isset($mesures['max_volumes'])) {
+            $goal->current_value = $mesures['max_volumes'][$goal->exercise_id] ?? $goal->start_value;
 
             return;
         }
@@ -226,9 +261,7 @@ final class GoalService
             ->orderByDesc('total_volume')
             ->value('total_volume');
 
-        if ($maxVolume !== null && is_numeric($maxVolume)) {
-            $goal->current_value = (float) $maxVolume;
-        }
+        $goal->current_value = is_numeric($maxVolume) ? (float) $maxVolume : $goal->start_value;
     }
 
     /**
@@ -280,8 +313,11 @@ final class GoalService
      * `(user_id, part, measured_at)`. Mesure a 20 000 lignes et 400 jours
      * d'historique : une seule lecture d'index, parcourue a l'envers, sans tri.
      *
-     * Une mensuration inconnue laisse l'objectif sans progression plutot que de
-     * planter — c'est la verite, rien ne mesure cette valeur.
+     * Sans mesure de cette partie — mensuration inconnue, jamais relevée, ou
+     * dont on a supprimé la dernière mesure —, l'objectif revient à sa valeur
+     * de départ, sans progression, plutôt que de planter ou de garder une valeur
+     * que plus rien ne soutient : supprimer la mesure qui l'avait atteint le
+     * rouvre (#1954).
      */
     private function releverLaPartieDuCorps(Goal $goal): void
     {
@@ -292,6 +328,8 @@ final class GoalService
             ->first(['value', 'unit']);
 
         if (! $mesure instanceof \App\Models\BodyPartMeasurement) {
+            $goal->current_value = $goal->start_value;
+
             return;
         }
 
@@ -414,8 +452,9 @@ final class GoalService
             ->whereIn('exercise_id', $idsExercices)
             ->where('type', 'max_weight')
             ->pluck('value', 'exercise_id')
-            // Un exercice sans record est ECARTE, pas ramene a zero.
-            // Voir la note de `preCalculateMaxVolumes` : c'est le meme piege.
+            // Une valeur illisible est ECARTEE, pas ramenee a zero : l'objectif
+            // retombe alors sur sa valeur de depart, comme sans record. Voir la
+            // note de `preCalculateMaxVolumes` : c'est le meme piege.
             ->filter(fn (mixed $val): bool => is_numeric($val))
             ->map(fn (mixed $val): float => (float) $val)
             ->toArray();
@@ -462,18 +501,19 @@ final class GoalService
              * `sets.weight` est nullable. Un exercice dont toutes les series sont
              * sans poids — des repetitions au poids du corps, ou un poids oublie —
              * forme bien un groupe, mais son MAX vaut NULL. Le repli a 0.0 en
-             * faisait une entree du tableau, donc un `isset()` vrai en aval, donc
-             * un `current_value` ECRASE a zero.
+             * faisait une entree du tableau, donc un `current_value` ECRASE a
+             * zero.
              *
-             * Le chemin individuel, lui, ne touchait a rien dans ce cas. Les deux
-             * repondaient donc differemment sur les memes donnees : mesure faite,
-             * `syncGoals` rendait 0 la ou `updateGoalProgress` gardait 50. Le
-             * premier tourne a chaque enregistrement de seance, via le job ; le
-             * second quand on modifie l'objectif depuis son ecran.
+             * Le chemin individuel, lui, ne lisait que des volumes pesés. Les
+             * deux repondaient donc differemment sur les memes donnees : mesure
+             * faite, `syncGoals` rendait 0 la ou `updateGoalProgress` gardait 50.
+             * Le premier tourne a chaque enregistrement ou suppression de seance
+             * ou de serie, via le job ; le second quand on modifie l'objectif
+             * depuis son ecran.
              *
-             * En ecartant l'entree, `isset()` est faux et les deux chemins se
-             * rejoignent sur le comportement du second : la valeur ne bouge pas
-             * tant qu'aucun poids n'a ete souleve.
+             * En ecartant l'entree, les deux chemins se rejoignent : sans poids
+             * souleve, l'objectif revient a sa valeur de depart (#1953).
+             * `GoalSyncPathsTest` tient cet accord.
              */
             ->filter(fn (mixed $val): bool => is_numeric($val))
             ->map(fn (mixed $val): float => (float) $val)

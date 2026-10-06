@@ -18,14 +18,15 @@ class CalendarIndexRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * L'année affichée va de 1970, le début des horodatages de la base, à
+     * 2100 : un calendrier de séances n'a rien à montrer au-delà.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'year' => ['nullable', 'integer'],
+            'year' => ['nullable', 'integer', 'min:1970', 'max:2100'],
             'month' => ['nullable', 'integer', 'min:1', 'max:12'],
         ];
     }

@@ -25,7 +25,7 @@ use App\Services\GoalService;
  */
 
 /**
- * Un utilisateur, un exercice et un objectif de poids a 50 sur 100.
+ * Un utilisateur et un exercice de force.
  *
  * @return array{0: User, 1: Exercise}
  */
@@ -37,13 +37,18 @@ function utilisateurAvecObjectifDePoids(): array
     return [$user, $exercise];
 }
 
-function objectifDePoids(User $user, Exercise $exercise, float $courant = 50): Goal
+/**
+ * Un objectif de charge (ou de volume) parti de 20, a 50 sur 100 : trois
+ * valeurs distinctes, pour qu'un retour a zero, au depart ou a la derniere
+ * valeur se distinguent.
+ */
+function objectifDePoids(User $user, Exercise $exercise, float $courant = 50, GoalType $type = GoalType::Weight): Goal
 {
     return Goal::factory()->create([
         'user_id' => $user->id,
         'exercise_id' => $exercise->id,
-        'type' => GoalType::Weight,
-        'start_value' => 0,
+        'type' => $type,
+        'start_value' => 20,
         'target_value' => 100,
         'current_value' => $courant,
     ]);
@@ -73,51 +78,56 @@ function seanceAvecPoids(User $user, Exercise $exercise, ?float $poids, int $rep
  * `current_value` ecrase a zero — tandis que le chemin individuel ne touchait a
  * rien. Mesure avant correctif : 0 contre 50.
  *
+ * Depuis #1953, une serie sans poids ne soutient pas l'objectif : les deux
+ * chemins le ramenent a sa valeur de depart, 20, au lieu de garder 50, la
+ * derniere valeur, qu'une serie supprimee depuis pouvait avoir laissee.
+ *
  * Le cas avec poids est la pour que le test ne passe pas simplement parce que
  * les deux chemins ne feraient plus rien.
  */
-it('donne la même valeur par les deux chemins', function (?float $poids, float $attendu): void {
+it('donne la même valeur par les deux chemins', function (GoalType $type, ?float $poids, float $attendu): void {
     [$user, $exercise] = utilisateurAvecObjectifDePoids();
     seanceAvecPoids($user, $exercise, $poids);
 
     $service = app(GoalService::class);
 
-    $groupe = objectifDePoids($user, $exercise);
+    $groupe = objectifDePoids($user, $exercise, type: $type);
     $service->syncGoals($user->refresh());
     $valeurGroupe = (float) Goal::query()->findOrFail($groupe->id)->current_value;
 
     $groupe->delete();
 
-    $seul = objectifDePoids($user, $exercise);
+    $seul = objectifDePoids($user, $exercise, type: $type);
     $service->updateGoalProgress($seul);
 
     // Lu en memoire, pas en base : `updateGoalProgress()` ne persiste rien, c'est
-    // son appelant qui enregistre. `syncGoals()`, lui, ecrit par un upsert
-    // groupe — d'ou la lecture asymetrique des deux cotes.
+    // son appelant qui enregistre. `syncGoals()`, lui, ecrit par une mise a
+    // jour groupee — d'ou la lecture asymetrique des deux cotes.
     $valeurSeule = (float) $seul->current_value;
 
     expect($valeurGroupe)->toBe($attendu)
         ->and($valeurSeule)->toBe($attendu);
 })->with([
-    'série sans poids : la valeur ne bouge pas' => [null, 50.0],
-    'série pesée : la valeur suit le maximum' => [80.0, 80.0],
+    'charge, série sans poids : la valeur revient au départ' => [GoalType::Weight, null, 20.0],
+    'charge, série pesée : la valeur suit le maximum' => [GoalType::Weight, 80.0, 80.0],
+    'volume, série sans poids : la valeur revient au départ' => [GoalType::Volume, null, 20.0],
+    'volume, série pesée : la valeur suit la meilleure séance' => [GoalType::Volume, 80.0, 800.0],
 ]);
 
 /**
- * L'upsert doit remonter `updated_at`, sinon la ligne ment sur sa fraîcheur.
+ * L'écriture groupée doit remonter `updated_at`, sinon la ligne ment sur sa
+ * fraîcheur.
  *
- * `syncGoals` écrit par `Goal::upsert(...)`, qui court-circuite le chemin
- * d'enregistrement ordinaire. J'ai d'abord cru que la colonne ne montait que
- * parce qu'elle figurait dans la liste des colonnes mises à jour — c'est faux :
- * Eloquent l'ajoute de lui-même via `addUpdatedAtToUpsertColumns`. Mesuré en
- * retirant la colonne de la liste, la date monte quand même, et la mention
- * explicite a donc été supprimée du service.
+ * `syncGoals` écrit tous les objectifs modifiés en une seule mise à jour, qui
+ * court-circuite le chemin d'enregistrement ordinaire : rien ne pose la date
+ * pour elle. C'était un `Goal::upsert(...)`, auquel Eloquent ajoutait la
+ * colonne de lui-même (`addUpdatedAtToUpsertColumns`) ; l'upsert pouvait
+ * réinsérer un objectif supprimé pendant le recalcul (#1985), et la mise à jour
+ * qui le remplace nomme `updated_at` elle-même.
  *
- * Ce test ne tue donc aucun mutant, et il ne prétend pas le contraire. Il
- * verrouille une propriété que rien d'autre ne vérifie : la ligne ne doit pas
- * rester figée à sa date de création pendant que sa progression change. Il
- * tomberait si quelqu'un abandonnait l'upsert pour une écriture qui oublie les
- * horodatages.
+ * Ce test verrouille une propriété que rien d'autre ne vérifie : la ligne ne
+ * doit pas rester figée à sa date de création pendant que sa progression
+ * change. Il tomberait si l'écriture oubliait les horodatages.
  */
 it('remonte la date de modification quand la progression change', function (): void {
     $this->freezeTime();
@@ -139,7 +149,7 @@ it('remonte la date de modification quand la progression change', function (): v
     $this->travel(1)->days();
 
     // L'observateur de séance déclenche la synchronisation : la progression passe
-    // de 0 à 1, l'objectif est donc sale et part dans l'upsert.
+    // de 0 à 1, l'objectif est donc sale et part dans l'écriture groupée.
     Workout::factory()->create(['user_id' => $user->id]);
 
     $apres = $goal->refresh();

@@ -45,6 +45,12 @@ const currentMetricConfig = computed(() => {
     return metrics.find((m) => m.value === selectedMetric.value)
 })
 
+/** Le nom du graphique suit la métrique choisie : « Humeur au fil des jours, note sur 5 ». */
+const description = computed(
+    () =>
+        `${currentMetricConfig.value.label} au fil des jours, note sur ${currentMetricConfig.value.labelSuffix.slice(1)}`,
+)
+
 // Sort data by date ascending
 // Y-m-d sorts correctly as a string; there is no reason to build two
 // Date objects per comparison, let alone from a calendar day.
@@ -121,6 +127,7 @@ const axeY = computed(() => ({
 
         <!-- Chart -->
         <BaseChart
+            :description="description"
             type="line"
             :labels="labels"
             :datasets="datasets"

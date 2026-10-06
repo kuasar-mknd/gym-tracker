@@ -18,7 +18,9 @@ class HabitStoreRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * La description tient dans `habits.description`, un varchar(255) :
+     * la règle acceptait mille caractères, et la base refusait l'écriture
+     * au-delà de 255, en 500. Le champ du formulaire porte la même limite.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -26,7 +28,7 @@ class HabitStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:1000'],
+            'description' => ['nullable', 'string', 'max:255'],
             'color' => ['nullable', 'string', 'max:50'],
             'icon' => ['nullable', 'string', 'max:255'],
             'goal_times_per_week' => ['required', 'integer', 'min:1', 'max:7'],

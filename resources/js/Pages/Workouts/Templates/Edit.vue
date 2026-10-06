@@ -12,6 +12,14 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    bornesDuModele: {
+        type: Object,
+        default: null,
+    },
+    bornesDUneSerie: {
+        type: Object,
+        default: null,
+    },
 })
 </script>
 
@@ -19,6 +27,11 @@ defineProps({
     <Head title="Modifier le modèle" />
 
     <AuthenticatedLayout page-title="Modèle" show-back back-route="templates.index">
-        <TemplateForm :template="template" :exercises="exercises" />
+        <TemplateForm
+            :template="template"
+            :exercises="exercises"
+            :bornes-du-modele="bornesDuModele"
+            :bornes-d-une-serie="bornesDUneSerie"
+        />
     </AuthenticatedLayout>
 </template>

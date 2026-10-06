@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreWorkoutTemplateRequest extends FormRequest
 {
+    use \App\Http\Requests\Concerns\BorneLesSeriesDuGabarit;
     use \App\Http\Requests\Concerns\VerifieLesExercicesDuGabarit;
 
     /**
@@ -28,13 +29,10 @@ class StoreWorkoutTemplateRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'exercises' => 'nullable|array|max:50',
+            ...$this->reglesDesSeriesDuGabarit(),
             // L'existence et l'appartenance sont verifiees en une requete dans
             // `withValidator()`, pas une par element.
             'exercises.*.id' => ['required', 'integer'],
-            'exercises.*.sets' => 'nullable|array',
-            'exercises.*.sets.*.reps' => 'nullable|integer',
-            'exercises.*.sets.*.weight' => 'nullable|numeric',
             'exercises.*.sets.*.is_warmup' => 'nullable|boolean',
         ];
     }

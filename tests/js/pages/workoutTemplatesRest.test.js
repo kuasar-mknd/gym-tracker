@@ -350,7 +350,7 @@ describe.each([
         const wrapper = mountPage()
         await seed(wrapper, twoExercises)
 
-        const toggle = byLabel(wrapper, "Série d'échauffement")[0]
+        const toggle = byLabel(wrapper, 'Échauffement, série 1, Développé Couché')[0]
         expect(toggle.attributes('aria-pressed')).toBe('false')
 
         await toggle.trigger('click')
@@ -377,6 +377,109 @@ describe.each([
         expect(interne(wrapper).form.exercises[1].sets[0].reps).toBe(12)
         expect(interne(wrapper).form.exercises[1].sets[0].weight).toBe(102.5)
         expect(interne(wrapper).form.exercises[0].sets[0].reps).toBe(10)
+    })
+
+    /**
+     * Préremplis, les champs d'une série ne montrent plus leur placeholder : un
+     * lecteur d'écran disait « réps », « kg » pour chacun, sans série ni
+     * exercice (#1972).
+     */
+    it('nomme chaque champ par sa série et son exercice, une fois rempli', async () => {
+        const wrapper = mountPage()
+        await seed(wrapper, [
+            ...twoExercises,
+            { id: 3, name: 'Tractions', sets: [{ reps: 8, weight: null, is_warmup: false }] },
+        ])
+        interne(wrapper).form.exercises[1].sets.push({ reps: 3, weight: 110, is_warmup: false })
+        await interne(wrapper).$nextTick()
+
+        const champs = wrapper.findAll('input[type="number"]')
+        const noms = champs.map((champ) => champ.attributes('aria-label'))
+
+        expect(noms).toEqual([
+            'Répétitions, série 1, Développé Couché',
+            'Poids en kg, série 1, Développé Couché',
+            'Répétitions, série 1, Squat',
+            'Poids en kg, série 1, Squat',
+            'Répétitions, série 2, Squat',
+            'Poids en kg, série 2, Squat',
+            'Répétitions, série 1, Tractions',
+            'Poids en kg, série 1, Tractions',
+        ])
+        expect(new Set(noms).size).toBe(noms.length)
+        expect(champs[2].element.value).toBe('5')
+        expect(champs[3].element.value).toBe('100')
+    })
+
+    it('écrit l’échauffement en français, et son initiale ouvre son nom', async () => {
+        const wrapper = mountPage()
+        await seed(wrapper, twoExercises)
+
+        const bascules = wrapper.findAll('button[aria-pressed]')
+
+        expect(bascules.map((bascule) => bascule.text())).toEqual(['É', 'É'])
+        expect(bascules.map((bascule) => bascule.attributes('aria-label'))).toEqual([
+            'Échauffement, série 1, Développé Couché',
+            'Échauffement, série 1, Squat',
+        ])
+    })
+
+    /**
+     * Rien n'interdit de placer deux fois le même exercice dans un modèle : le
+     * nom seul donnait alors deux « Répétitions, série 1, Squat » (#1972).
+     */
+    it('départage par leur rang deux entrées du même exercice, et elles seules', async () => {
+        const wrapper = mountPage()
+        await seed(wrapper, [
+            { id: 2, name: 'Squat', sets: [{ reps: 5, weight: 100, is_warmup: false }] },
+            { id: 1, name: 'Développé Couché', sets: [{ reps: 10, weight: 40, is_warmup: false }] },
+            { id: 2, name: 'Squat', sets: [{ reps: 12, weight: 60, is_warmup: true }] },
+        ])
+
+        const nomsDesChamps = () =>
+            wrapper.findAll('input[type="number"]').map((champ) => champ.attributes('aria-label'))
+        // Les boutons qui désignent un exercice : ni « Supprimer la série », ni l'effacement du nom du modèle.
+        const nomsDesBoutons = () =>
+            wrapper
+                .findAll('button[aria-label]')
+                .map((bouton) => bouton.attributes('aria-label'))
+                .filter((nom) => /Squat|Développé Couché/.test(nom))
+
+        expect(nomsDesChamps()).toEqual([
+            'Répétitions, série 1, Squat (exercice 1)',
+            'Poids en kg, série 1, Squat (exercice 1)',
+            'Répétitions, série 1, Développé Couché',
+            'Poids en kg, série 1, Développé Couché',
+            'Répétitions, série 1, Squat (exercice 3)',
+            'Poids en kg, série 1, Squat (exercice 3)',
+        ])
+        expect(nomsDesBoutons()).toEqual([
+            'Monter Squat (exercice 1)',
+            'Descendre Squat (exercice 1)',
+            'Supprimer Squat (exercice 1)',
+            'Échauffement, série 1, Squat (exercice 1)',
+            'Monter Développé Couché',
+            'Descendre Développé Couché',
+            'Supprimer Développé Couché',
+            'Échauffement, série 1, Développé Couché',
+            'Monter Squat (exercice 3)',
+            'Descendre Squat (exercice 3)',
+            'Supprimer Squat (exercice 3)',
+            'Échauffement, série 1, Squat (exercice 3)',
+        ])
+
+        const noms = [...nomsDesChamps(), ...nomsDesBoutons()]
+        expect(new Set(noms).size).toBe(noms.length)
+
+        // Seul de son nom, le Squat restant redevient « Squat ».
+        await byLabel(wrapper, 'Supprimer Squat (exercice 3)')[0].trigger('click')
+
+        expect(nomsDesChamps()).toEqual([
+            'Répétitions, série 1, Squat',
+            'Poids en kg, série 1, Squat',
+            'Répétitions, série 1, Développé Couché',
+            'Poids en kg, série 1, Développé Couché',
+        ])
     })
 })
 

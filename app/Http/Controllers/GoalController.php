@@ -26,13 +26,14 @@ class GoalController extends Controller
      * Mesure : « SQLSTATE[42S22]: Column not found: 1054 Unknown column
      * 'waist' ».
      *
-     * Le calcul se déclenche à chaque pesée enregistrée (SyncUserGoals) et à
-     * l'ouverture de la page des objectifs, donc l'objectif était cassé dès sa
-     * création.
+     * Le calcul se fait à la création et à la modification de l'objectif, puis
+     * dans SyncUserGoals, à chaque séance, série ou mesure enregistrée ou
+     * supprimée ; l'ouverture de la page des objectifs ne fait que lire. Ces
+     * objectifs étaient donc cassés dès leur création.
      *
      * Ces trois mesures existent bien, mais dans `body_part_measurements`,
-     * indexées par nom de partie en texte libre. Les y raccorder est une
-     * fonctionnalité à part entière, pas un correctif : voir #1454.
+     * indexées par nom de partie en texte libre : `measurementTypes()` les y
+     * raccorde depuis #1454.
      *
      * Pas de `@var` ici : PHP Insights refuse toute annotation de ce genre sur
      * une constante de classe, et PHPStan lit la forme sur le littéral.
@@ -143,7 +144,7 @@ class GoalController extends Controller
          * La progression est calculée AVANT l'enregistrement, et non après.
          *
          * `updateGoalProgress()` ne persiste rien — c'est `syncGoals()` qui
-         * écrit, par un upsert groupé. L'appel qui suivait le `save()` calculait
+         * écrit, par une mise à jour groupée. L'appel qui suivait le `save()` calculait
          * donc `current_value` et `progress_pct` pour les jeter aussitôt : un
          * objectif « développé 100 kg » créé par quelqu'un qui soulève déjà
          * 80 kg s'affichait à 0 %, jusqu'à ce qu'un enregistrement de séance

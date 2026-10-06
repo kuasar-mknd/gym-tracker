@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Models\WorkoutLine;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -19,7 +20,9 @@ class WorkoutLineStoreRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Le rang d'une ligne va de zéro à `WorkoutLine::RANG_MAX` : au-delà de
+     * la colonne (int), la base refusait l'écriture et la requête finissait
+     * en 500.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -41,7 +44,7 @@ class WorkoutLineStoreRequest extends FormRequest
                     });
                 }),
             ],
-            'order' => 'nullable|integer',
+            'order' => 'nullable|integer|min:0|max:'.WorkoutLine::RANG_MAX,
             'notes' => 'nullable|string|max:1000',
         ];
     }

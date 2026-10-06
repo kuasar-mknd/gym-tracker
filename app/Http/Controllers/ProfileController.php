@@ -135,8 +135,19 @@ class ProfileController extends Controller
     }
 
     /**
-     * L'utilisateur est déconnecté avant d'être supprimé, et la session est
-     * invalidée après : le mot de passe est vérifié par `DeleteUserRequest`.
+     * Le compte est supprimé, puis l'utilisateur déconnecté et la session
+     * invalidée ; le mot de passe est vérifié par `DeleteUserRequest`.
+     *
+     * La déconnexion vient après la suppression (#1982) : une suppression qui
+     * échoue laisse l'utilisateur connecté devant une erreur, au lieu de le
+     * déconnecter avec un compte resté en base qu'il croirait effacé.
+     *
+     * `SessionGuard::logout()` fait tourner le jeton « se souvenir de moi »
+     * par un `save()` du compte, et `save()` sur un modèle supprimé l'insère
+     * de nouveau. Le jeton est donc oublié en mémoire, sans écriture, juste
+     * avant : il n'y a plus rien à faire tourner, le compte qui le portait
+     * n'existe plus. Le témoin « se souvenir de moi » du navigateur, lui, est
+     * retiré par la déconnexion.
      */
     public function destroy(DeleteUserRequest $request): RedirectResponse
     {
@@ -146,9 +157,10 @@ class ProfileController extends Controller
 
         $user = $this->user();
 
-        Auth::logout();
-
         $user->delete();
+
+        $user->setRememberToken('');
+        Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

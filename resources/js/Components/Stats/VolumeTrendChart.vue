@@ -35,6 +35,7 @@ const datasets = computed(() => [
 
 <template>
     <BaseChart
+        description="Évolution du volume"
         :labels="labels"
         :datasets="datasets"
         :hauteur="hauteur"

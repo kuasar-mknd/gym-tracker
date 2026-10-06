@@ -20,6 +20,10 @@ class ErreurNavigateurStoreRequest extends FormRequest
     }
 
     /**
+     * La ligne et la colonne sont bornées (`ErreurNavigateur::POSITION_MAX`) :
+     * au-delà de la colonne (unsigned int), la base refusait l'écriture et la
+     * requête finissait en 500.
+     *
      * @return array<string, list<\Illuminate\Validation\Rules\In|string>>
      */
     public function rules(): array
@@ -28,8 +32,8 @@ class ErreurNavigateurStoreRequest extends FormRequest
             'type' => ['required', 'string', Rule::in(ErreurNavigateur::TYPES)],
             'message' => ['required', 'string', 'max:2000'],
             'source' => ['nullable', 'string', 'max:2048'],
-            'ligne' => ['nullable', 'integer', 'min:0'],
-            'colonne' => ['nullable', 'integer', 'min:0'],
+            'ligne' => ['nullable', 'integer', 'min:0', 'max:'.ErreurNavigateur::POSITION_MAX],
+            'colonne' => ['nullable', 'integer', 'min:0', 'max:'.ErreurNavigateur::POSITION_MAX],
             'pile' => ['nullable', 'string', 'max:20000'],
             'url' => ['required', 'string', 'max:2048'],
             'agent' => ['nullable', 'string', 'max:512'],

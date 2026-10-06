@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\WarmupPreference;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateWarmupPreferenceRequest extends FormRequest
@@ -18,18 +19,20 @@ class UpdateWarmupPreferenceRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Les bornes d'une montée en charge (`WarmupPreference`) : le poids de la
+     * barre et l'arrondi tiennent dans leurs colonnes (decimal(8,2)), et les
+     * paliers, gardés en JSON, sont comptés.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'bar_weight' => ['required', 'numeric', 'min:0'],
-            'rounding_increment' => ['required', 'numeric', 'min:0'],
-            'steps' => ['required', 'array'],
+            'bar_weight' => ['required', 'numeric', 'min:0', 'max:'.WarmupPreference::POIDS_DE_BARRE_MAX_KG],
+            'rounding_increment' => ['required', 'numeric', 'min:0', 'max:'.WarmupPreference::ARRONDI_MAX_KG],
+            'steps' => ['required', 'array', 'max:'.WarmupPreference::PALIERS_MAX],
             'steps.*.percent' => ['required', 'numeric', 'min:0', 'max:100'],
-            'steps.*.reps' => ['required', 'integer', 'min:1'],
+            'steps.*.reps' => ['required', 'integer', 'min:1', 'max:'.WarmupPreference::REPETITIONS_MAX_PAR_PALIER],
             'steps.*.label' => ['nullable', 'string', 'max:50'],
         ];
     }

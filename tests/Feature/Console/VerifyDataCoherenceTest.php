@@ -469,3 +469,84 @@ it('repasse au vert après réparation', function (): void {
     // Une seconde passe, sans réparer : plus rien ne doit être signalé.
     $this->artisan('app:verify-data-coherence')->assertExitCode(0);
 });
+
+/**
+ * Un record qui désigne une série existante, éligible et de même poids, mais
+ * pas la meilleure : l'état que laissaient deux synchronisations croisées du
+ * même exercice (#1984), la plus lente écrivant 100 kg par-dessus 105.
+ *
+ * @return array{0: User, 1: Set, 2: PersonalRecord}
+ */
+function coherenceRecordResteSousLaMeilleureSerie(): array
+{
+    [$user, $legere] = compteCoherent();
+
+    $lourde = Set::factory()->create([
+        'workout_line_id' => $legere->workout_line_id,
+        'weight' => 105,
+        'reps' => 10,
+        'is_warmup' => false,
+    ]);
+
+    DB::table('personal_records')
+        ->where('user_id', $user->id)
+        ->where('type', 'max_weight')
+        ->update(['value' => 100, 'secondary_value' => 10, 'set_id' => $legere->id]);
+
+    $record = PersonalRecord::query()->where('user_id', $user->id)->where('type', 'max_weight')->firstOrFail();
+
+    return [$user, $lourde, $record];
+}
+
+/*
+ * Les trois contrôles de records demandent si la série d'un record existe, si
+ * elle compte et si elle porte son poids, jamais si c'est la meilleure : ils
+ * disaient OK sur un record resté sous la meilleure série (#1984).
+ */
+it('signale un record resté sous la meilleure série éligible, que les autres contrôles laissent passer', function (): void {
+    [$user, $lourde, $record] = coherenceRecordResteSousLaMeilleureSerie();
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('OK records rattachés à une série existante')
+        ->expectsOutputToContain('OK valeur des records')
+        ->expectsOutputToContain('OK records assis sur une série éligible')
+        ->expectsOutputToContain('1 records égaux à la meilleure série éligible')
+        ->expectsOutputToContain("record {$record->id} (max_weight) de l'utilisateur {$user->id}, exercice {$record->exercise_id} : annonce 100.00, la meilleure série ({$lourde->id}) donne 105")
+        ->expectsOutputToContain('1 écart(s)');
+});
+
+it('remonte par --repair un record resté sous la meilleure série éligible', function (): void {
+    [$user, $lourde] = coherenceRecordResteSousLaMeilleureSerie();
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain('1 exercice(s) reconstruit(s)');
+
+    $record = PersonalRecord::query()->where('user_id', $user->id)->where('type', 'max_weight')->firstOrFail();
+
+    expect((float) $record->value)->toBe(105.0)
+        ->and($record->set_id)->toBe($lourde->id);
+});
+
+/*
+ * Le contrôle de valeur ne juge que le poids maximal. Un 1RM ou un volume resté
+ * à une valeur que plus aucune série ne donne passait donc aussi : la
+ * comparaison à la meilleure série le voit, dans les deux sens.
+ */
+it('signale un record de 1RM que plus aucune série ne donne, et --repair le refait', function (): void {
+    [$user] = compteCoherent();
+
+    DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_1rm')->update(['value' => 999]);
+
+    $this->artisan('app:verify-data-coherence')
+        ->assertExitCode(1)
+        ->expectsOutputToContain('OK valeur des records')
+        ->expectsOutputToContain('1 records égaux à la meilleure série éligible');
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])->assertExitCode(0);
+
+    $valeur = DB::table('personal_records')->where('user_id', $user->id)->where('type', 'max_1rm')->value('value');
+
+    expect(is_numeric($valeur) ? (float) $valeur : null)->toBe(133.33);
+});

@@ -36,6 +36,7 @@ const axeX = { title: titre('Poids (kg)'), grid: { display: true, ...grille() } 
 
 <template>
     <BaseChart
+        description="Répétitions selon la charge, un point par série"
         type="scatter"
         :datasets="datasets"
         hauteur="h-full"

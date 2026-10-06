@@ -6,11 +6,15 @@ namespace App\Providers;
 
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
+use App\Models\BodyPartMeasurement;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
 use App\Support\ConnexionSociale\FournisseurApple;
+use App\Support\LiensDesCourriels;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Eloquent\Model;
@@ -45,6 +49,7 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerAppleSocialiteDriver();
+        $this->batirLesLiensDesCourrielsSurAppUrl();
         $this->refuserLesArchivesEnClair();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
@@ -93,6 +98,18 @@ final class AppServiceProvider extends ServiceProvider
         });
 
         $this->registerWebPushFailureLog();
+    }
+
+    /**
+     * Les liens de réinitialisation et de vérification d'adresse se bâtissent
+     * sur `APP_URL`, jamais sur l'hôte de la requête qui déclenche l'envoi.
+     * `LiensDesCourriels` dit pourquoi, et comment la signature du lien de
+     * vérification reste valide.
+     */
+    private function batirLesLiensDesCourrielsSurAppUrl(): void
+    {
+        ResetPassword::createUrlUsing(LiensDesCourriels::lienDeReinitialisation(...));
+        VerifyEmail::createUrlUsing(LiensDesCourriels::lienDeVerification(...));
     }
 
     /**
@@ -171,15 +188,29 @@ final class AppServiceProvider extends ServiceProvider
             app(\App\Services\PersonalRecordService::class)->retenirTypesDetenus($set);
         });
 
+        /*
+         * Sans garde sur une liste vide : `refreshFor()` regarde aussi, sous le
+         * verrou de l'exercice, les records qu'une synchronisation a ecrits
+         * pour la serie apres la lecture de `deleting` (#1984).
+         */
         Set::deleted(function (Set $set): void {
             $records = app(\App\Services\PersonalRecordService::class);
-            $detenus = $records->typesRetenus($set);
 
-            if ($detenus === []) {
-                return;
+            $records->refreshFor($set, null, $records->typesRetenus($set));
+        });
+
+        /*
+         * Après la reconstruction des records ci-dessus, que lit l'objectif de
+         * charge : les écouteurs d'un même événement tournent dans l'ordre où
+         * ils sont posés. Sans ce recalcul, supprimer la série qui avait
+         * atteint un objectif le laissait atteint (#1953).
+         */
+        Set::deleted(function (Set $set): void {
+            $user = $set->workoutLine?->workout?->user;
+
+            if ($user instanceof User) {
+                \App\Jobs\SyncUserGoals::dispatch($user);
             }
-
-            $records->refreshFor($set, null, $detenus);
         });
 
         \App\Models\WorkoutLine::deleted(function (\App\Models\WorkoutLine $line): void {
@@ -200,6 +231,9 @@ final class AppServiceProvider extends ServiceProvider
              */
             if ($user instanceof User) {
                 app(\App\Services\PersonalRecordService::class)->recompute($user, $line->exercise_id);
+
+                // Après les records, que lit l'objectif de charge (#1953).
+                \App\Jobs\SyncUserGoals::dispatch($user);
             }
         });
     }
@@ -240,13 +274,27 @@ final class AppServiceProvider extends ServiceProvider
             }
 
             app(StreakService::class)->recalculerDepuisLesFaits($user);
+
+            // Les objectifs se recalculent dans `Workout::booted()`, après les
+            // records qu'ils lisent : cet écouteur-ci tourne avant (#1953).
         });
     }
 
+    /**
+     * Une pesée ou une mensuration de partie du corps relance le recalcul des
+     * objectifs qui les suivent.
+     *
+     * Les parties du corps (tour de taille, poitrine…) se lisent dans
+     * `body_part_measurements` depuis #1454 ; sans leurs écouteurs, saisir ou
+     * supprimer une mesure ne faisait bouger l'objectif qu'à la pesée ou à la
+     * série suivante (#1954).
+     */
     private function registerMeasurementEvents(): void
     {
         BodyMeasurement::saved(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
         BodyMeasurement::deleted(fn (BodyMeasurement $bm) => \App\Jobs\SyncUserGoals::dispatch($bm->user));
+        BodyPartMeasurement::saved(fn (BodyPartMeasurement $mesure) => \App\Jobs\SyncUserGoals::dispatch($mesure->user));
+        BodyPartMeasurement::deleted(fn (BodyPartMeasurement $mesure) => \App\Jobs\SyncUserGoals::dispatch($mesure->user));
     }
 
     /**

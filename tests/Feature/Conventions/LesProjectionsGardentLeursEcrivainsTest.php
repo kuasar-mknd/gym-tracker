@@ -208,7 +208,7 @@ function projectionsLInventaire(): array
                     'app/Services/PersonalRecordService.php' => ['update'],
                 ],
                 'la reconstruction depuis les séries' => [
-                    'app/Services/PersonalRecordService.php' => ['recompute'],
+                    'app/Services/PersonalRecordService.php' => ['reconstruire'],
                 ],
             ],
             dette: 'Un record monte par comparaison à la valeur stockée, et se reconstruit depuis les séries quand celle '

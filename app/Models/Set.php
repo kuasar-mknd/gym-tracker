@@ -33,6 +33,85 @@ class Set extends Model
 
     use ResolvesOwnerAtRouteBinding;
 
+    /**
+     * Le poids le plus lourd qu'une série accepte, en kilogrammes : le plafond
+     * métier des records (#1665), sous la capacité de `sets.weight`
+     * (decimal(8,2), 999 999,99). Les séries des modèles de séance, recopiées
+     * en séries au démarrage d'une séance, ont le même.
+     */
+    public const int POIDS_MAX_KG = 100_000;
+
+    /**
+     * Le plus de répétitions qu'une série accepte. La borne découle du poids
+     * le plus lourd (`POIDS_MAX_KG`) : le volume de la plus lourde série
+     * permise (poids × répétitions, record `max_volume_set`) doit tenir dans
+     * `personal_records.value` (decimal(10,2), 99 999 999,99), et
+     * 100 000 kg × 999 y tient. Relever ce plafond demande d'élargir cette
+     * colonne, ou d'abaisser le poids le plus lourd. Une saisie refusée cite la
+     * borne (`NommeLesBornesDUneSerie`).
+     */
+    public const int REPETITIONS_MAX = 999;
+
+    /**
+     * La durée la plus longue d'une série, en secondes : un jour. La roue de
+     * saisie s'arrête à 23 h 59 min 59 s (`DurationWheel.vue`), sous la
+     * capacité de `sets.duration_seconds` (int).
+     */
+    public const int DUREE_MAX_SECONDES = 86_400;
+
+    /**
+     * La distance la plus longue d'une série, en kilomètres : au-delà d'une
+     * course d'un jour à vélo, sous la capacité de `sets.distance_km`
+     * (decimal(8,3), 99 999,999).
+     */
+    public const int DISTANCE_MAX_KM = 1_000;
+
+    /**
+     * Le plafond de chaque valeur d'une série, par nom de champ.
+     *
+     * Les pages qui préremplissent une série (la séance, le formulaire d'un
+     * modèle) le reçoivent avec leurs données, pour ne pas proposer une valeur
+     * que la requête d'une série refuserait.
+     *
+     * @return array{weight: int, reps: int, distance_km: int, duration_seconds: int}
+     */
+    public static function bornes(): array
+    {
+        return [
+            'weight' => self::POIDS_MAX_KG,
+            'reps' => self::REPETITIONS_MAX,
+            'distance_km' => self::DISTANCE_MAX_KM,
+            'duration_seconds' => self::DUREE_MAX_SECONDES,
+        ];
+    }
+
+    /**
+     * Une valeur ramenée entre zéro et le plafond de son champ ; une valeur
+     * absente le reste, une valeur dans les bornes aussi.
+     *
+     * Une série enregistrée avant ces plafonds peut les dépasser. Ce qui la
+     * recopie sans passer par la requête d'une série (la recommandation, le
+     * démarrage d'une séance ou l'enregistrement d'un modèle) la ramène ici :
+     * recopiée telle quelle, elle serait refusée à la première écriture qui la
+     * renvoie.
+     *
+     * @param  'weight'|'reps'|'distance_km'|'duration_seconds'  $champ
+     */
+    public static function ramenerALaBorne(string $champ, int|float|null $valeur): int|float|null
+    {
+        if ($valeur === null) {
+            return null;
+        }
+
+        $plafond = self::bornes()[$champ];
+
+        if ($valeur > $plafond) {
+            return $plafond;
+        }
+
+        return $valeur < 0 ? 0 : $valeur;
+    }
+
     #[\Override]
     protected $fillable = [
         'workout_line_id',

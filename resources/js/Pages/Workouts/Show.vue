@@ -31,6 +31,9 @@ import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
 const props = defineProps({
     workout: { type: Object, required: true },
     exercises: { type: Array, required: true },
+    // Les plafonds d'une série (`Set::bornes()`), sous lesquels une série
+    // ajoutée ramène ce qu'elle recopie.
+    bornesDUneSerie: { type: Object, default: null },
 })
 
 const page = usePage()
@@ -162,6 +165,7 @@ const {
     reportSyncFailure,
     reportEditFailure,
     apresValidation,
+    bornesDUneSerie: props.bornesDUneSerie,
 })
 
 useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })

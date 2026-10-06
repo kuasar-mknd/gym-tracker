@@ -135,4 +135,12 @@ describe('FormulaireDHabitude', () => {
         expect(form.put).not.toHaveBeenCalled()
         expect(form.post).not.toHaveBeenCalled()
     })
+
+    it('borne la description à la longueur que la base garde', () => {
+        const wrapper = monter()
+        const description = wrapper.findAll('input').find((champ) => champ.attributes('placeholder') === 'Détails...')
+
+        // habits.description est un varchar(255) : au-delà, le serveur refuse le champ.
+        expect(description.attributes('maxlength')).toBe('255')
+    })
 })
