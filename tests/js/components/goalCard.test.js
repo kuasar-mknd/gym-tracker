@@ -179,6 +179,20 @@ describe('GoalCard — figures', () => {
         expect(statTile(wrapper, 'Cible')).toBe('Cible 5 séances')
     })
 
+    it('accorde les séances d’un objectif de fréquence à chaque valeur (#1980)', () => {
+        const wrapper = mountCard({
+            type: 'frequency',
+            unit: 'séances',
+            start_value: 0,
+            current_value: 1,
+            target_value: 5,
+        })
+
+        expect(barLegend(wrapper)).toEqual(['0 séance', '5 séances'])
+        expect(statTile(wrapper, 'Actuel')).toBe('Actuel 1 séance')
+        expect(statTile(wrapper, 'Cible')).toBe('Cible 5 séances')
+    })
+
     it('renders a deadline as a calendar day, not as an instant', () => {
         // The column is cast `date:Y-m-d`; read as an instant it lands a day
         // early anywhere behind UTC.

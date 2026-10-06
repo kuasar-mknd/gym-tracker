@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Link } from '@inertiajs/vue3'
 import { dateCourte, parseCalendarDate } from '@/Utils/date'
-import { nombre, pourcentage } from '@/Utils/nombre'
+import { accord, nombre, pourcentage } from '@/Utils/nombre'
 
 const props = defineProps({
     goal: {
@@ -46,6 +46,12 @@ const typeLabel = computed(() => {
             return 'Objectif'
     }
 })
+
+/**
+ * L'unité qui suit une valeur de l'objectif. Celle d'un objectif de fréquence
+ * est un nom, qui s'accorde : « 1 séance », « 5 séances » (#1980).
+ */
+const uniteDe = (valeur) => (props.goal.type === 'frequency' ? accord(valeur, 'séance', 'séances') : props.goal.unit)
 
 const formattedDeadline = computed(() => dateCourte(parseCalendarDate(props.goal.deadline)))
 
@@ -101,8 +107,8 @@ const statusColor = computed(() => {
             <!-- Progress Bar Container -->
             <div class="space-y-1.5">
                 <div class="text-text-muted text-2xs flex justify-between font-bold tracking-widest uppercase">
-                    <span>{{ nombre(goal.start_value) }} {{ goal.unit }}</span>
-                    <span>{{ nombre(goal.target_value) }} {{ goal.unit }}</span>
+                    <span>{{ nombre(goal.start_value) }} {{ uniteDe(goal.start_value) }}</span>
+                    <span>{{ nombre(goal.target_value) }} {{ uniteDe(goal.target_value) }}</span>
                 </div>
                 <div
                     class="border-surface-card/20 bg-surface-card/10 h-2 w-full overflow-hidden rounded-full border shadow-inner backdrop-blur-md"
@@ -138,7 +144,9 @@ const statusColor = computed(() => {
                     <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Actuel</p>
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ nombre(goal.current_value) }}
-                        <span class="text-text-muted text-2xs font-bold not-italic">{{ goal.unit }}</span>
+                        <span class="text-text-muted text-2xs font-bold not-italic">{{
+                            uniteDe(goal.current_value)
+                        }}</span>
                     </p>
                 </div>
                 <div
@@ -147,7 +155,9 @@ const statusColor = computed(() => {
                     <p class="text-text-muted text-2xs font-black tracking-widest uppercase">Cible</p>
                     <p class="font-display text-text-main mt-0.5 text-lg font-black italic">
                         {{ nombre(goal.target_value) }}
-                        <span class="text-text-muted text-2xs font-bold not-italic">{{ goal.unit }}</span>
+                        <span class="text-text-muted text-2xs font-bold not-italic">{{
+                            uniteDe(goal.target_value)
+                        }}</span>
                     </p>
                 </div>
             </div>

@@ -89,8 +89,22 @@ export const entier = (valeur) => nombre(valeur, 0)
  * @param {string} pluriel
  * @returns {string} Le compte et son nom, ou `'—'` pour ce qui n'est pas un nombre.
  */
-export const compte = (valeur, singulier, pluriel) => {
+export const compte = (valeur, singulier, pluriel) =>
+    enNombre(valeur) === null ? '—' : `${entier(valeur)} ${accord(valeur, singulier, pluriel)}`
+
+/**
+ * Le seul nom, accordé au nombre qu'il suit, pour un nombre affiché à part :
+ * la carte d'un objectif écrit le chiffre en grand et son unité en petit, et
+ * un objectif de fréquence lisait « 1 séances » (#1980). Même règle que
+ * `compte()` ; le pluriel pour ce qui n'est pas un nombre (« — séances »).
+ *
+ * @param {number|string|null|undefined} valeur
+ * @param {string} singulier
+ * @param {string} pluriel
+ * @returns {string}
+ */
+export const accord = (valeur, singulier, pluriel) => {
     const n = enNombre(valeur)
 
-    return n === null ? '—' : `${entier(n)} ${Math.abs(Math.round(n)) < 2 ? singulier : pluriel}`
+    return n !== null && Math.abs(Math.round(n)) < 2 ? singulier : pluriel
 }
