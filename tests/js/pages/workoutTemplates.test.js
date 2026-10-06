@@ -267,7 +267,7 @@ describe('les bornes d’un modèle dans son formulaire', () => {
         expect(wrapper.find('[dusk="add-set-0"]').attributes('disabled')).toBeDefined()
         expect(wrapper.find('[dusk="open-add-exercise"]').attributes('disabled')).toBeDefined()
         expect(wrapper.text()).toContain('2 séries au plus par exercice.')
-        expect(wrapper.text()).toContain('1 exercices au plus par modèle.')
+        expect(wrapper.text()).toContain('1 exercice au plus par modèle.')
 
         interne(wrapper).addSet(0)
         interne(wrapper).addExercise(2)
