@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Rules\AdresseEnAsciiImprimable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules;
 
@@ -30,13 +31,18 @@ class RegisterRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * L'adresse s'écrit en minuscules et en ASCII imprimable : la base ne
+     * confond alors deux adresses que si elles sont identiques, et une
+     * inscription ne peut pas occuper l'adresse d'un autre
+     * (`AdresseEnAsciiImprimable`).
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', new AdresseEnAsciiImprimable(), 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
     }

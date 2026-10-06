@@ -172,7 +172,7 @@ function changementDAdresseLeCompteGitHub(string $adresse): User
         'avatar' => null,
     ]);
 
-    return app(ResolveSocialUserAction::class)->execute('github', $utilisateurGitHub)->refresh();
+    return app(ResolveSocialUserAction::class)->execute('github', $utilisateurGitHub, adresseVerifiee: true)->refresh();
 }
 
 /**

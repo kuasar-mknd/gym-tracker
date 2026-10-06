@@ -63,5 +63,6 @@
     "Afternoon (12h-17h)": "Après-midi (12h-17h)",
     "Evening (17h-22h)": "Soir (17h-22h)",
     "Night (22h-06h)": "Nuit (22h-06h)",
-    "Skip to content": "Aller au contenu principal"
+    "Skip to content": "Aller au contenu principal",
+    "Your account must be verified before linking it with a social provider.": "Ce compte n'a pas encore confirmé son adresse email : il ne peut pas être associé à un fournisseur de connexion. Connectez-vous avec cette adresse et votre mot de passe, puis confirmez-la. Si vous n'avez pas de mot de passe, « Mot de passe oublié ? » vous permet d'en choisir un."
 }
