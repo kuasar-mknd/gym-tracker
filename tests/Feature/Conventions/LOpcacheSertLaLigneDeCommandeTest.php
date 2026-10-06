@@ -85,6 +85,72 @@ function opcacheCliDossiersDuDepot(): array
 }
 
 /**
+ * Le chemin où un montage de la composition se pose dans le conteneur.
+ *
+ * Un `tmpfs` s'écrit `chemin[:options]` ; un volume en syntaxe courte
+ * `[source:]cible[:mode]`, en syntaxe longue un tableau qui porte `target`.
+ * Une variable de la pile (`${NOM:?message}`) peut porter elle-même des `:` :
+ * elle est remplacée avant le découpage.
+ */
+function opcacheCliCibleDuMontage(mixed $montage, bool $estUnTmpfs): ?string
+{
+    if (is_array($montage)) {
+        $cible = $montage['target'] ?? null;
+
+        return is_string($cible) ? $cible : null;
+    }
+
+    if (! is_string($montage)) {
+        return null;
+    }
+
+    $parties = explode(':', (string) preg_replace('/\$\{[^}]*\}/', 'variable', $montage));
+
+    return $estUnTmpfs || count($parties) === 1 ? $parties[0] : $parties[1];
+}
+
+/**
+ * Ce qui, dans un service de la composition, rendrait le dossier du cache
+ * fichier absent ou non inscriptible : un système de fichiers en lecture seule,
+ * ou un montage posé sur ce dossier ou sur l'un de ses parents, qui cacherait
+ * le dossier que l'image a créé pour www-data.
+ *
+ * @param  array<mixed>  $service
+ * @return list<string>
+ */
+function opcacheCliEntravesDuCache(array $service, string $cache): array
+{
+    $entraves = [];
+
+    if (in_array($service['read_only'] ?? false, [true, 'true'], true)) {
+        $entraves[] = 'read_only: true';
+    }
+
+    $montages = [
+        'tmpfs' => (array) ($service['tmpfs'] ?? []),
+        'volumes' => (array) ($service['volumes'] ?? []),
+    ];
+
+    foreach ($montages as $cle => $liste) {
+        foreach ($liste as $montage) {
+            $cible = opcacheCliCibleDuMontage($montage, $cle === 'tmpfs');
+
+            if ($cible === null) {
+                continue;
+            }
+
+            $cible = rtrim($cible, '/');
+
+            if ($cache === $cible || str_starts_with($cache, $cible.'/')) {
+                $entraves[] = "{$cle} sur {$cible}";
+            }
+        }
+    }
+
+    return $entraves;
+}
+
+/**
  * Les ini d'un dossier, dans l'ordre où PHP les lit.
  *
  * @return list<string>
@@ -264,6 +330,38 @@ it('active OPcache en ligne de commande, sans JIT, avec un cache fichier que l�
         }
     }
 });
+
+it('ne cache ni ne fige le dossier du cache fichier dans worker et scheduler', function (): void {
+    $cache = opcacheCliReglages()['opcache.file_cache'] ?? null;
+
+    expect($cache)->toBeString();
+
+    foreach (opcacheCliServices() as $service) {
+        expect(opcacheCliEntravesDuCache(opcacheCliServicesDeLaComposition()[$service], (string) $cache))->toBe([], sprintf(
+            '%s : le dossier du cache fichier (%s) y serait absent ou non inscriptible, et OPcache refuserait de démarrer : '
+            .'toute commande PHP du conteneur, sonde de santé comprise, sortirait en 254.',
+            $service,
+            $cache,
+        ));
+    }
+});
+
+it('reconnaît ce qui rendrait le dossier du cache absent ou non inscriptible', function (array $service, array $attendues): void {
+    expect(opcacheCliEntravesDuCache($service, '/tmp/opcache'))->toBe($attendues);
+})->with([
+    'les montages actuels de worker et scheduler' => [
+        ['volumes' => ['${BACKUP_HOST_PATH:?dossier des sauvegardes sur l’hôte}:/app/storage/app/sauvegardes', 'journaux:/app/storage/logs']],
+        [],
+    ],
+    'un système de fichiers en lecture seule' => [['read_only' => true], ['read_only: true']],
+    'un tmpfs sur /tmp' => [['tmpfs' => '/tmp'], ['tmpfs sur /tmp']],
+    'un tmpfs avec options parmi d’autres' => [['tmpfs' => ['/run', '/tmp:size=64m,mode=1777']], ['tmpfs sur /tmp']],
+    'un tmpfs sur le dossier lui-même' => [['tmpfs' => ['/tmp/opcache/']], ['tmpfs sur /tmp/opcache']],
+    'un dossier de l’hôte sur /tmp' => [['volumes' => ['${DOSSIER_HOTE:-./donnees}:/tmp:rw']], ['volumes sur /tmp']],
+    'un volume anonyme sur le dossier' => [['volumes' => ['/tmp/opcache']], ['volumes sur /tmp/opcache']],
+    'un volume en syntaxe longue' => [['volumes' => [['type' => 'tmpfs', 'target' => '/tmp']]], ['volumes sur /tmp']],
+    'un voisin au nom proche' => [['tmpfs' => ['/tmp/opcache-autre', '/tmp/opcache/sous-dossier']], []],
+]);
 
 it('écrit le cache fichier et relit un fichier réécrit, les ini empilés comme dans l’image', function (): void {
     $racine = sys_get_temp_dir().'/opcache-cli-'.bin2hex(random_bytes(6));
