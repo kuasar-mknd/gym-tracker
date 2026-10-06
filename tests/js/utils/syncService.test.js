@@ -1109,7 +1109,7 @@ describe('SyncService une écriture qui attend encore', () => {
         expect(fileAuMomentDeLAnnonce).toBe('[]')
     })
 
-    it('n’envoie au serveur que la requête et le compte qui l’a faite, sans ce que la file note pour elle-même', async () => {
+    it('n’envoie au serveur que la requête, son délai et le compte qui l’a faite, sans ce que la file note pour elle-même', async () => {
         localStorage.setItem(
             'offline_sync_queue',
             JSON.stringify([{ ...uneCreation(), headers: { 'Idempotency-Key': 'k' }, authAttempts: 1 }]),
@@ -1117,13 +1117,69 @@ describe('SyncService une écriture qui attend encore', () => {
         request.mockResolvedValue({ data: {} })
 
         await chargé()
+        const { DELAI_DE_REJEU_MS } = await import('@/Utils/SyncService')
 
         expect(request.mock.calls[0][0]).toEqual({
             method: 'post',
             url: '/api/v1/sets',
             data: { workout_line_id: 1, is_completed: false, reps: 5 },
             headers: { 'Idempotency-Key': 'k', 'X-Compte-De-L-Ecriture': COMPTE },
+            timeout: DELAI_DE_REJEU_MS,
         })
+    })
+})
+
+/**
+ * `fetch` n'a pas de délai maximum. Le vidage reconstruisait la requête sans
+ * celui que l'appelant avait donné à son écriture, et une requête restée sans
+ * réponse figeait la file, et derrière elle toute écriture directe, qui attend
+ * la file avant de partir (#1963).
+ */
+describe('SyncService le délai d’une écriture rejouée', () => {
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('garde celui que l’appelant avait donné à son écriture', async () => {
+        const service = await chargé()
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        await expect(
+            service.patch('/profile/push-preferences', { types: ['personal_record'] }, { timeout: 8000 }),
+        ).rejects.toMatchObject({ isOffline: true })
+
+        request.mockResolvedValue({ data: {} })
+        await service.processQueue()
+
+        expect(request.mock.calls[1][0]).toMatchObject({ url: '/profile/push-preferences', timeout: 8000 })
+    })
+
+    it('borne les autres : une requête du vidage sans réponse ne retient plus l’écriture suivante', async () => {
+        const service = await chargé()
+        const { DELAI_DE_REJEU_MS } = await import('@/Utils/SyncService')
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        await expect(service.patch('/api/v1/sets/3', { reps: 6 })).rejects.toMatchObject({ isOffline: true })
+
+        // Comme `Utils/http` : sans délai, la requête attend indéfiniment ; avec, elle échoue à son terme.
+        request.mockImplementation(
+            (config) =>
+                new Promise((_resolve, reject) => {
+                    if (config.timeout !== undefined) {
+                        setTimeout(() => reject({ code: 'ERR_NETWORK', request: {} }), config.timeout)
+                    }
+                }),
+        )
+
+        let issue = 'en attente'
+        service.patch('/api/v1/sets/3', { reps: 7 }).catch((erreur) => (issue = erreur))
+
+        await vi.advanceTimersByTimeAsync(DELAI_DE_REJEU_MS)
+
+        // La file n'a pas répondu : la nouvelle écriture se range derrière, au lieu d'attendre pour toujours.
+        expect(issue).toMatchObject({ isOffline: true })
+        expect(service.queue.map((entree) => entree.data)).toEqual([{ reps: 6 }, { reps: 7 }])
     })
 })
 

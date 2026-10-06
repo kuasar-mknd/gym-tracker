@@ -36,6 +36,15 @@ const ATTENTE_MAX_MS = 5 * 60 * 1000
  */
 const ATTENTE_EN_LIGNE_MAX_MS = 5000
 
+/**
+ * Ce qu'une requête du vidage attend sa réponse, au plus, quand l'écriture n'a
+ * pas donné son propre délai. `fetch` n'en a aucun : une seule requête restée
+ * sans réponse figeait le vidage, et avec lui toute écriture directe, qui
+ * attend la file avant de partir. Passé ce délai, l'écriture reste en tête,
+ * comme sans réseau, et repart au déclencheur suivant.
+ */
+export const DELAI_DE_REJEU_MS = 15000
+
 const MUTATIONS = ['post', 'patch', 'put', 'delete']
 
 /**
@@ -592,13 +601,15 @@ class SyncService {
              * identifiant, ses compteurs d'essais. Son compte, lui, part avec
              * elle : l'onglet qui vide la file peut croire connecté un compte
              * dont un autre onglet a remplacé la session, et seul le serveur
-             * sait laquelle accompagne la requête (#1964).
+             * sait laquelle accompagne la requête (#1964). Son délai aussi :
+             * celui que l'appelant lui avait donné, sinon `DELAI_DE_REJEU_MS`.
              */
             const requete = {
                 method: config.method,
                 url: config.url,
                 data: config.data,
                 headers: { ...config.headers, [ENTETE_DU_COMPTE]: config.compte },
+                timeout: config.timeout ?? DELAI_DE_REJEU_MS,
             }
 
             /*
