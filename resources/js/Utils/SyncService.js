@@ -627,11 +627,24 @@ class SyncService {
         for (;;) {
             await this.processQueue()
 
+            if (this.ecrituresDirectes.size > 0) {
+                await Promise.allSettled([...this.ecrituresDirectes])
+
+                continue
+            }
+
+            /*
+             * Une tâche plus tard, et non tout de suite. Une écriture que le
+             * vidage débloque sans la lancer lui-même, comme une coche faite
+             * pendant que la création de sa série volait, franchit encore
+             * quelques étapes de promesses avant de partir : on concluait que
+             * tout était parti juste avant qu'elle parte.
+             */
+            await new Promise((resolve) => setTimeout(resolve, 0))
+
             if (this.ecrituresDirectes.size === 0) {
                 return
             }
-
-            await Promise.allSettled([...this.ecrituresDirectes])
         }
     }
 

@@ -147,7 +147,9 @@ describe('terminer une séance', () => {
         reseau.serveur.imposer.push(() => Promise.reject({ response: { status: 503 } }))
 
         page.finishWorkout()
-        await page.confirmFinishWorkout()
+        const cloture = page.confirmFinishWorkout()
+        await vi.advanceTimersByTimeAsync(0)
+        await cloture
 
         expect(inertia.patch).not.toHaveBeenCalled()
         expect(page.ecrituresEnAttente.value).toBe(1)
@@ -355,6 +357,43 @@ describe('terminer pendant que le vidage écrit encore', () => {
 
         expect(aLaCloture).toHaveLength(1)
         expect(aLaCloture[0].recues.at(-1)).toBe('patch /api/v1/sets/100 {"reps":3}')
+    })
+
+    it('attend la coche faite pendant que la création rejouée volait, qui part quelques étapes après elle', async () => {
+        const page = await monterLaSeance(seance())
+        await ajouterUneSerieHorsLigne(page)
+        const serie = page.ligne().sets.at(-1)
+
+        let libererLaCreation
+        reseau.serveur.enLigne = true
+        reseau.serveur.imposer.push(async (config) => {
+            await new Promise((resolve) => (libererLaCreation = resolve))
+
+            return { data: { data: { id: 100, ...config.data, created_at: 'c', updated_at: 'u' } } }
+        })
+        page.sync.processQueue()
+        await flushPromises()
+
+        // Cochée pendant que la création vole : la coche attend son identifiant.
+        page.toggleSetCompletion(serie)
+        const modifications = retenirLesModifications()
+
+        page.finishWorkout()
+        const cloture = page.confirmFinishWorkout()
+        await flushPromises()
+
+        libererLaCreation()
+        await flushPromises()
+
+        expect(modifications.enVol).toEqual(['patch /api/v1/sets/100 {"is_completed":true}'])
+        expect(inertia.patch).not.toHaveBeenCalled()
+
+        modifications.liberer()
+        await cloture
+
+        expect(aLaCloture).toHaveLength(1)
+        expect(aLaCloture[0].recues.at(-1)).toBe('patch /api/v1/sets/100 {"is_completed":true}')
+        expect(page.ecrituresEnAttente.value).toBe(0)
     })
 })
 
