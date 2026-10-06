@@ -152,7 +152,7 @@ function projectionsLInventaire(): array
                 ],
             ],
             dette: 'Deux calculs de la même série : l’un repart des séances, l’autre ajuste la valeur stockée. '
-                .'Une séance saisie après coup ou supprimée passe déjà par le premier ; la cible n’en garde qu’un.',
+                .'Une séance saisie après coup, déplacée (#1983) ou supprimée passe déjà par le premier ; la cible n’en garde qu’un.',
         ),
         'le volume d’une séance' => projectionsDecrire(
             genre: 'colonne',

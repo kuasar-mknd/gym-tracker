@@ -762,7 +762,7 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
  * modal in the way.
  */
 describe('Workouts/Show — the session’s own settings', () => {
-    it('sends the start time back as UTC after the form held it in local time', async () => {
+    it('sends a changed start time back as UTC after the form held it in local time', async () => {
         const wrapper = await mountPage()
 
         await click(wrapper, 'workout-settings-button')
@@ -772,6 +772,7 @@ describe('Workouts/Show — the session’s own settings', () => {
         expect(wrapper.vm.settingsForm.started_at).toBe('2026-07-29T04:00')
 
         wrapper.vm.settingsForm.name = 'Séance du soir'
+        wrapper.vm.settingsForm.started_at = '2026-07-29T05:30'
         await emitOn(wrapper, SettingsModalStub, 'submit')
 
         const [url, payload, options] = formPatch.mock.calls[0]
@@ -779,7 +780,7 @@ describe('Workouts/Show — the session’s own settings', () => {
         expect(url).toBe('/workouts/1')
         expect(payload).toEqual({
             name: 'Séance du soir',
-            started_at: '2026-07-29T08:00:00.000Z',
+            started_at: '2026-07-29T09:30:00.000Z',
             notes: '',
         })
 
@@ -787,6 +788,19 @@ describe('Workouts/Show — the session’s own settings', () => {
         await wrapper.vm.$nextTick()
 
         expect(wrapper.vm.showSettingsModal).toBe(false)
+    })
+
+    // Le champ n'affiche que la minute : renvoyer une heure intacte en
+    // effaçait les secondes et passait pour un déplacement de la séance (#1952).
+    it('leaves the start time out when only the name changed', async () => {
+        const wrapper = await mountPage()
+
+        await click(wrapper, 'workout-settings-button')
+
+        wrapper.vm.settingsForm.name = 'Séance du soir'
+        await emitOn(wrapper, SettingsModalStub, 'submit')
+
+        expect(formPatch.mock.calls[0][1]).toEqual({ name: 'Séance du soir', notes: '' })
     })
 
     it('closes the settings without sending anything', async () => {

@@ -77,8 +77,32 @@ final class StreakService
      * differemment selon le pilote — `AchievementService` porte deja cette
      * double ecriture — et une seance par jour reste un volume qu'on ordonne
      * sans y penser.
+     *
+     * Une seance existante dont la date change passe aussi par ici (#1983) :
+     * le chemin incremental ajoutait le jour d'arrivee sans retirer celui de
+     * depart.
      */
     public function recalculerDepuisLesFaits(User $user): void
+    {
+        $serie = $this->serieDepuisLesFaits($user);
+
+        $user->forceFill([
+            'last_workout_at' => $serie['derniere'],
+            'current_streak' => $serie['enCours'],
+            'longest_streak' => $serie['plusLongue'],
+        ])->save();
+    }
+
+    /**
+     * La serie que donnent les seances qui existent, sans rien ecrire.
+     *
+     * `recalculerDepuisLesFaits()` l'ecrit ; le controle nocturne la compare a
+     * ce qui est stocke (#1983). Un seul calcul pour les deux : un controle qui
+     * reconstruirait a sa facon pourrait donner tort a l'ecrivain qui a raison.
+     *
+     * @return array{derniere: string|null, enCours: int, plusLongue: int}
+     */
+    public function serieDepuisLesFaits(User $user): array
     {
         /*
          * Une seule lecture, sans hydratation et sans fonction sur la colonne.
@@ -100,13 +124,7 @@ final class StreakService
         $derniere = $horodatages[0] ?? null;
 
         if ($derniere === null) {
-            $user->forceFill([
-                'last_workout_at' => null,
-                'current_streak' => 0,
-                'longest_streak' => 0,
-            ])->save();
-
-            return;
+            return ['derniere' => null, 'enCours' => 0, 'plusLongue' => 0];
         }
 
         $enCours = 1;
@@ -155,11 +173,7 @@ final class StreakService
             $veille = $jour;
         }
 
-        $user->forceFill([
-            'last_workout_at' => $derniere,
-            'current_streak' => $enCours,
-            'longest_streak' => $plusLongue,
-        ])->save();
+        return ['derniere' => $derniere, 'enCours' => $enCours, 'plusLongue' => $plusLongue];
     }
 
     public function updateStreak(User $user, ?Workout $workout = null): void

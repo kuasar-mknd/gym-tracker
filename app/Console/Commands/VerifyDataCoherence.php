@@ -35,7 +35,7 @@ class VerifyDataCoherence extends Command
     #[\Override]
     protected $signature = 'app:verify-data-coherence
         {--limit=5 : Nombre d\'identifiants cités par écart}
-        {--repair : Reconstruit les records détachés ou en écart depuis les séries qui restent}';
+        {--repair : Reconstruit les records détachés ou en écart, les volumes de séance et les séries de jours depuis leurs sources}';
 
     #[\Override]
     protected $description = 'Compare les valeurs dérivées (volumes, records, séries, objectifs) à leur source';
@@ -51,6 +51,7 @@ class VerifyDataCoherence extends Command
             'records égaux à la meilleure série éligible' => $this->recordsALaMeilleureSerie(...),
             'type des records' => $this->typeDesRecords(...),
             'date de dernière séance' => $this->dateDerniereSeance(...),
+            'série de jours' => $this->serieDeJours(...),
             'propriétaire recopié sur les lignes de séance' => $this->proprietaireDesLignes(...),
             'propriétaire recopié sur les séries' => $this->proprietaireDesSeries(...),
         ];
@@ -108,31 +109,57 @@ class VerifyDataCoherence extends Command
      * `recalculerDepuisLesFaits()` refait les trois valeurs — la date, la serie
      * en cours et la plus longue — depuis les seances qui restent. C'est deja
      * ce que la suppression d'une seance declenche.
+     *
+     * Une serie fausse sous une date juste se refait aussi : deplacer une
+     * seance vers l'avant gonflait la serie et son record sans toucher a la
+     * date (#1983), et la reparation, qui ne regardait que la date, passait
+     * a cote.
      */
     private function recalculerLesSeries(): void
     {
         $service = app(StreakService::class);
         $recales = 0;
 
-        User::query()
-            ->select(['id', 'last_workout_at', 'current_streak', 'longest_streak'])
-            ->orderBy('id')
-            ->chunkById(500, function (\Illuminate\Database\Eloquent\Collection $utilisateurs) use ($service, &$recales): void {
-                foreach ($utilisateurs as $utilisateur) {
-                    $reelle = $utilisateur->workouts()->max('started_at');
-                    $stockee = $utilisateur->last_workout_at?->toDateTimeString();
-
-                    if ($reelle === $stockee) {
-                        continue;
-                    }
-
-                    $service->recalculerDepuisLesFaits($utilisateur);
-                    $recales++;
-                }
-            });
+        $this->parcourirLesSeriesEcartees(function (User $utilisateur) use ($service, &$recales): void {
+            $service->recalculerDepuisLesFaits($utilisateur);
+            $recales++;
+        });
 
         $this->line(sprintf('  <fg=yellow>%d</> série(s) refaite(s) depuis les séances restantes', $recales));
         $this->newLine();
+    }
+
+    /**
+     * Les comptes dont la serie stockee n'est pas celle que donnent leurs
+     * seances, par lots de cinq cents, avec la serie stockee et la serie
+     * reconstruite.
+     *
+     * La reconstruction est celle de l'ecrivain, `serieDepuisLesFaits()` : une
+     * seule definition de la serie, que le controle et la reparation partagent.
+     *
+     * @param  callable(User, array{derniere: string|null, enCours: int, plusLongue: int}, array{derniere: string|null, enCours: int, plusLongue: int}): void  $pourChaqueEcart  Le compte, la serie stockee, la serie reconstruite.
+     */
+    private function parcourirLesSeriesEcartees(callable $pourChaqueEcart): void
+    {
+        $service = app(StreakService::class);
+
+        User::query()
+            ->select(['id', 'last_workout_at', 'current_streak', 'longest_streak'])
+            ->orderBy('id')
+            ->chunkById(500, function (\Illuminate\Database\Eloquent\Collection $utilisateurs) use ($service, $pourChaqueEcart): void {
+                foreach ($utilisateurs as $utilisateur) {
+                    $reconstruite = $service->serieDepuisLesFaits($utilisateur);
+                    $stockee = [
+                        'derniere' => $utilisateur->last_workout_at?->toDateTimeString(),
+                        'enCours' => $utilisateur->current_streak,
+                        'plusLongue' => $utilisateur->longest_streak,
+                    ];
+
+                    if ($stockee !== $reconstruite) {
+                        $pourChaqueEcart($utilisateur, $stockee, $reconstruite);
+                    }
+                }
+            });
     }
 
     /**
@@ -599,6 +626,49 @@ class VerifyDataCoherence extends Command
             $this->colonne($workoutLine, 'stocke'),
             $this->colonne($workoutLine, 'reel'),
         ));
+    }
+
+    /**
+     * `users.current_streak` et `users.longest_streak` contre la reconstruction
+     * depuis les seances.
+     *
+     * Le controle de la date ne suffisait pas : une seance deplacee vers
+     * l'avant gonflait la serie et son record en laissant la date juste, et la
+     * nuit annoncait « Aucun ecart » (#1983). La reconstruction se fait en PHP,
+     * compte par compte, parce que c'est celle de l'ecrivain ; une version SQL
+     * serait une seconde definition de la serie.
+     *
+     * Un compte dont seule la date s'ecarte est laisse au controle voisin, qui
+     * le compte deja : le meme ecart ne se compte pas deux fois.
+     *
+     * @return array{int, list<string>}
+     */
+    private function serieDeJours(): array
+    {
+        $nombre = 0;
+        $exemples = [];
+        $limite = $this->limite();
+
+        $this->parcourirLesSeriesEcartees(function (User $utilisateur, array $stockee, array $reconstruite) use (&$nombre, &$exemples, $limite): void {
+            if ($stockee['enCours'] === $reconstruite['enCours'] && $stockee['plusLongue'] === $reconstruite['plusLongue']) {
+                return;
+            }
+
+            $nombre++;
+
+            if (count($exemples) < $limite) {
+                $exemples[] = sprintf(
+                    'utilisateur %d : stocké %d jour(s) en cours et %d au plus long, ses séances en donnent %d et %d',
+                    $utilisateur->id,
+                    $stockee['enCours'],
+                    $stockee['plusLongue'],
+                    $reconstruite['enCours'],
+                    $reconstruite['plusLongue'],
+                );
+            }
+        });
+
+        return [$nombre, $exemples];
     }
 
     /**

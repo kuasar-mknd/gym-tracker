@@ -241,9 +241,20 @@ final class AppServiceProvider extends ServiceProvider
     private function registerWorkoutEvents(): void
     {
         Workout::saved(function (Workout $workout): void {
-            // La série ne bouge qu'à la création de la séance ou au changement
-            // de sa date : renommer une séance ne change rien au calendrier.
-            if ($workout->wasRecentlyCreated || $workout->wasChanged('started_at')) {
+            /*
+             * La série ne bouge qu'à la création de la séance ou au changement
+             * de sa date : renommer une séance ne change rien au calendrier.
+             *
+             * Une séance déplacée quitte un jour autant qu'elle en gagne un :
+             * l'avance d'un cran ajoutait le jour d'arrivée sans retirer celui
+             * de départ, et chaque déplacement vers l'avant allongeait la série
+             * et son record (#1983). Elle se reconstruit donc depuis les
+             * séances, comme après une suppression. La création seule garde
+             * l'avance d'un cran.
+             */
+            if ($workout->wasChanged('started_at')) {
+                app(StreakService::class)->recalculerDepuisLesFaits($workout->user);
+            } elseif ($workout->wasRecentlyCreated) {
                 app(StreakService::class)->updateStreak($workout->user, $workout);
             }
 

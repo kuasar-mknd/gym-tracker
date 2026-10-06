@@ -49,10 +49,25 @@ class WorkoutTemplateController extends Controller
 
     /**
      * Ouvre une séance à partir du modèle et y envoie l'utilisateur.
+     *
+     * Quand une séance est déjà ouverte, le modèle ne démarre pas : l'utilisateur
+     * est renvoyé vers elle, comme par « Démarrer », avec un message qui dit
+     * pourquoi. Sans cette garde, il se retrouvait avec deux séances ouvertes,
+     * dont le bandeau ne montrait que la plus récente, et l'autre restait « en
+     * cours » indéfiniment (#1958).
      */
     public function execute(WorkoutTemplate $template, CreateWorkoutFromTemplateAction $createWorkout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('view', $template);
+
+        $activeWorkout = app(\App\Services\ActiveWorkoutService::class)->for($this->user());
+
+        if ($activeWorkout instanceof Workout) {
+            return redirect()->route('workouts.show', $activeWorkout)->with(
+                'error',
+                "Le modèle « {$template->name} » n'a pas été démarré : une séance est déjà en cours. Terminez-la avant d'en commencer une autre.",
+            );
+        }
 
         $workout = $createWorkout->execute($this->user(), $template);
 
