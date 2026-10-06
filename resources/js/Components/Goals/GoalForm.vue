@@ -28,6 +28,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { computed, ref, watch } from 'vue'
 import { demainEnJourCalendaire } from '@/Utils/date'
+import { compte } from '@/Utils/nombre'
 
 const props = defineProps({
     form: { type: Object, required: true },
@@ -96,7 +97,8 @@ watch(
                 props.form.title = `Atteindre ${props.form.target_value || '?'} ${unit} de ${measurement.label}`
             }
         } else if (props.form.type === 'frequency') {
-            props.form.title = `Atteindre ${props.form.target_value || '?'} séances au total`
+            const seances = props.form.target_value ? compte(props.form.target_value, 'séance', 'séances') : '? séances'
+            props.form.title = `Atteindre ${seances} au total`
         }
     },
 )

@@ -626,6 +626,18 @@ describe('GoalForm', () => {
         wrapper.unmount()
     })
 
+    it('accorde le titre d’un objectif d’une seule séance (#1980)', async () => {
+        const form = goalForm({ target_value: 1 })
+        const wrapper = mountGoalForm(form, { autoTitle: true })
+
+        form.type = 'frequency'
+        await wrapper.vm.$nextTick()
+
+        expect(form.title).toBe('Atteindre 1 séance au total')
+
+        wrapper.unmount()
+    })
+
     it('leaves a question mark where the target has not been typed yet', async () => {
         // The title is written as soon as the kind of goal is chosen, which is
         // usually before the number is; `0` is a target nobody sets, so an empty

@@ -2,7 +2,7 @@
 import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
-import { poids } from '@/Utils/nombre'
+import { compte, poids } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -45,7 +45,7 @@ const infobulle = {
         label: (context) => {
             // Try to find the est reps for this data point
             const dataPoint = [...props.data].find((d) => `${d.percent}%` === context.label)
-            const repsText = dataPoint && dataPoint.reps !== '-' ? ` (${dataPoint.reps} reps)` : ''
+            const repsText = dataPoint && dataPoint.reps !== '-' ? ` (${compte(dataPoint.reps, 'rep', 'reps')})` : ''
             return `${poids(context.parsed.y)}${repsText}`
         },
     },

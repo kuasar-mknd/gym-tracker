@@ -3,6 +3,7 @@ import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
 import { etiquetteDeDate } from '@/Utils/date'
+import { compte } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -46,7 +47,7 @@ const datasets = computed(() => [
 const infobulle = {
     accent: 'accent-state',
     opaque: true,
-    callbacks: { label: (context) => `${context.parsed.y} exercices` },
+    callbacks: { label: (context) => compte(context.parsed.y, 'exercice', 'exercices') },
 }
 </script>
 
