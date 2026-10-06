@@ -31,6 +31,13 @@ class Goal extends Model
     /** @use HasFactory<\Database\Factories\GoalFactory> */
     use HasFactory;
 
+    /**
+     * La plus grande valeur de départ ou de cible d'un objectif : un million.
+     * Aucun objectif — charge, nombre de séances, volume d'une séance sur un
+     * exercice, mensuration — n'en approche.
+     */
+    public const int VALEUR_MAX = 1_000_000;
+
     #[\Override]
     protected $fillable = [
         'title',

@@ -66,9 +66,9 @@ beforeAll(() => {
 
 const passesSlot = { template: '<div><slot /></div>' }
 
-const mountPage = async (workout = emptyWorkout) => {
+const mountPage = async (workout = emptyWorkout, autresProps = {}) => {
     const wrapper = mount(WorkoutShow, {
-        props: { workout: JSON.parse(JSON.stringify(workout)), exercises: [EXERCISE] },
+        props: { workout: JSON.parse(JSON.stringify(workout)), exercises: [EXERCISE], ...autresProps },
         shallow: true,
         global: {
             directives: { press: {} },
@@ -608,6 +608,33 @@ describe('Workouts/Show — a refused create', () => {
 
         expect(wrapper.vm.unsyncedSetIds.has('42')).toBe(true)
         expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
+    })
+})
+
+/*
+ * Une série enregistrée avant les plafonds d'une série peut les dépasser. La
+ * page reçoit ces plafonds en props et y ramène la série qu'elle recopie :
+ * sinon chaque ajout était refusé, et l'exercice ne recevait plus de série.
+ */
+describe('Workouts/Show — une série recopiée au-delà des plafonds', () => {
+    it('ramène la série ajoutée sous les plafonds reçus du serveur', async () => {
+        const seance = JSON.parse(JSON.stringify(workoutWithSet))
+        seance.workout_lines[0].sets[0] = { id: 42, weight: 150000, reps: 1500, is_completed: true }
+        const wrapper = await mountPage(seance, {
+            bornesDUneSerie: { weight: 100000, reps: 999, distance_km: 1000, duration_seconds: 86400 },
+        })
+        post.mockResolvedValue({ data: { data: { id: 43, created_at: 'c', updated_at: 'u' } } })
+
+        await click(wrapper, 'add-set-0')
+        await flushPromises()
+
+        expect(post).toHaveBeenCalledWith('/api/v1/sets', {
+            workout_line_id: 10,
+            is_completed: false,
+            weight: 100000,
+            reps: 999,
+        })
+        expect(lines(wrapper)[0].sets.map((serie) => serie.id)).toEqual([42, 43])
     })
 })
 

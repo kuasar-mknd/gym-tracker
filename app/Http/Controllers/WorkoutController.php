@@ -9,6 +9,7 @@ use App\Actions\Workouts\FetchWorkoutShowAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Actions\Workouts\UpdateWorkoutAction;
 use App\Http\Requests\UpdateWorkoutRequest;
+use App\Models\Set;
 use App\Models\Workout;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,13 +38,19 @@ class WorkoutController extends Controller
     }
 
     /**
+     * La séance, et les plafonds d'une série : la page ramène dessous ce
+     * qu'elle recopie dans une série qu'elle ajoute (`Set::bornes()`).
+     *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException Si la séance n'est pas celle de l'utilisateur (403).
      */
     public function show(Workout $workout, FetchWorkoutShowAction $fetchWorkoutShow): \Inertia\Response
     {
         $this->authorize('view', $workout);
 
-        return Inertia::render('Workouts/Show', $fetchWorkoutShow->execute($this->user(), $workout));
+        return Inertia::render('Workouts/Show', [
+            ...$fetchWorkoutShow->execute($this->user(), $workout),
+            'bornesDUneSerie' => Set::bornes(),
+        ]);
     }
 
     /**

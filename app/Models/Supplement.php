@@ -15,6 +15,12 @@ class Supplement extends Model
     /** @use HasFactory<\Database\Factories\SupplementFactory> */
     use HasFactory;
 
+    /**
+     * Le plus de doses que compte un stock, et le seuil d'alerte le plus haut :
+     * dix mille, bien au-delà du plus gros pot, sous la colonne (int).
+     */
+    public const int DOSES_MAX = 10_000;
+
     #[\Override]
     protected $fillable = [
         'user_id',

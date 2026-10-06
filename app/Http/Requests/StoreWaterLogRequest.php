@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
+use App\Models\WaterLog;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreWaterLogRequest extends FormRequest
@@ -21,14 +22,15 @@ class StoreWaterLogRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Une prise d'eau est bornée (`WaterLog::QUANTITE_MAX_ML`) : au-delà de la
+     * colonne (int), la base refusait l'écriture et la requête finissait en 500.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'integer', 'min:1'],
+            'amount' => ['required', 'integer', 'min:1', 'max:'.WaterLog::QUANTITE_MAX_ML],
             'consumed_at' => ['required', 'date'],
         ];
     }

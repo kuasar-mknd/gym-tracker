@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Models\IntervalTimer;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreIntervalTimerRequest extends FormRequest
@@ -18,7 +19,8 @@ class StoreIntervalTimerRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Les bornes d'un minuteur d'intervalles (`IntervalTimer`) : au-delà, la
+     * colonne (int) refusait l'écriture et la requête finissait en 500.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -26,10 +28,10 @@ class StoreIntervalTimerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'work_seconds' => ['required', 'integer', 'min:1'],
-            'rest_seconds' => ['required', 'integer', 'min:0'],
-            'rounds' => ['required', 'integer', 'min:1'],
-            'warmup_seconds' => ['nullable', 'integer', 'min:0'],
+            'work_seconds' => ['required', 'integer', 'min:1', 'max:'.IntervalTimer::SECONDES_MAX_PAR_INTERVALLE],
+            'rest_seconds' => ['required', 'integer', 'min:0', 'max:'.IntervalTimer::SECONDES_MAX_PAR_INTERVALLE],
+            'rounds' => ['required', 'integer', 'min:1', 'max:'.IntervalTimer::TOURS_MAX],
+            'warmup_seconds' => ['nullable', 'integer', 'min:0', 'max:'.IntervalTimer::SECONDES_MAX_PAR_INTERVALLE],
         ];
     }
 }
