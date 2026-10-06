@@ -525,9 +525,9 @@ describe('Measurements/Parts/Index part picker', () => {
         await flushPromises()
 
         await click(wrapper, 'Ajouter')
-        await click(wrapper, 'Waist')
+        await click(wrapper, 'Taille')
 
-        const champ = wrapper.findAll('input').find((candidat) => candidat.element.value === 'Waist')
+        const champ = wrapper.findAll('input').find((candidat) => candidat.element.value === 'Taille')
 
         expect(champ, 'le champ rempli par la puce').toBeTruthy()
         expect([...champ.element.labels].map((libelle) => libelle.textContent.trim())).toEqual(['Partie du corps'])
