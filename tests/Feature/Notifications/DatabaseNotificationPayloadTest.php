@@ -70,7 +70,9 @@ describe('PersonalRecordAchieved::toArray', function (): void {
         'une décimale' => [102.5, "102,5\u{00A0}kg"],
         'deux décimales' => [187.25, "187,25\u{00A0}kg"],
         'entier' => [60.0, "60\u{00A0}kg"],
-        'milliers' => [1250.5, "1\u{202F}250,5\u{00A0}kg"],
+        'milliers, à l’apostrophe de nombre.js' => [1250.5, "1'250,5\u{00A0}kg"],
+        'millier rond' => [1000.0, "1'000\u{00A0}kg"],
+        'dizaines de milliers' => [12345.67, "12'345,67\u{00A0}kg"],
     ]);
 
     it('reports the moment the record was set, not the moment of sending', function (): void {

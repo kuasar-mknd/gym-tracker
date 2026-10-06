@@ -8,7 +8,6 @@ use App\Models\PersonalRecord;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Number;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
@@ -58,8 +57,8 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
      * Le message est composé ici, et le centre de notifications comme le push
      * l'affichent tel quel : la valeur suit donc le format que
      * `resources/js/Utils/nombre.js` donne aux poids dans le reste de
-     * l'application (fr-CH, au plus deux décimales, sans zéro inutile), et non
-     * le `decimal:2` de la colonne, qui écrivait « 102.50kg ».
+     * l'application (`poidsEnTexte()`), et non le `decimal:2` de la colonne,
+     * qui écrivait « 102.50kg ».
      *
      * @return array<string, \Illuminate\Support\Carbon|int|string|bool|float|array<int, mixed>|null>
      */
@@ -72,7 +71,7 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
             default => 'record personnel',
         };
 
-        $valeur = (string) Number::format((float) $this->personalRecord->value, maxPrecision: 2, locale: 'fr_CH');
+        $valeur = self::poidsEnTexte((float) $this->personalRecord->value);
 
         return [
             'type' => 'personal_record',
@@ -81,5 +80,20 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
             'exercise_id' => $this->personalRecord->exercise_id,
             'achieved_at' => $this->personalRecord->achieved_at,
         ];
+    }
+
+    /**
+     * Un poids comme `nombre(kilos, 2)` de `resources/js/Utils/nombre.js` :
+     * virgule décimale, au plus deux décimales, sans zéro inutile, et les
+     * milliers séparés par l'apostrophe de `fr-CH` (« 1'250,5 »).
+     *
+     * Le format est écrit ici plutôt que demandé à l'ICU du serveur : selon
+     * la version de ses données, `fr_CH` y sépare les milliers par une espace
+     * fine, si bien que la notification écrivait « 1 250,5 kg » quand le reste
+     * de l'application écrit « 1'250,5 kg » (#1981).
+     */
+    private static function poidsEnTexte(float $kilos): string
+    {
+        return rtrim(rtrim(number_format($kilos, 2, ',', "'"), '0'), ',');
     }
 }

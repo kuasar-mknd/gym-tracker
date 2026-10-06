@@ -57,6 +57,14 @@ describe('PersonalRecordAchieved::toWebPush', function (): void {
         ]);
     });
 
+    it('sépare les milliers du push comme le reste de l’application', function (): void {
+        $record = makePersonalRecordFixture(PersonalRecordType::MaxVolumeSet, 'Squat', 1250.5);
+
+        $body = new PersonalRecordAchieved($record)->toWebPush($record->user, null)->toArray()['body'];
+
+        expect($body)->toBe("Félicitations ! Tu as battu ton record de volume par série sur l'exercice Squat avec 1'250,5\u{00A0}kg.");
+    });
+
     it('puts the exercise name, the weight and the two decimals in the body', function (): void {
         $record = makePersonalRecordFixture(PersonalRecordType::MaxWeight, 'Soulevé de Terre', 187.25);
 
