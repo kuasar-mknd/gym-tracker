@@ -1105,6 +1105,7 @@ describe('SyncService une écriture qui attend encore', () => {
             url: '/api/v1/sets',
             data: { id: 100 },
             envoye: { workout_line_id: 1, is_completed: false, reps: 5 },
+            ajustement: null,
         })
         expect(fileAuMomentDeLAnnonce).toBe('[]')
     })
@@ -1552,6 +1553,102 @@ describe('SyncService une création tentée sans réponse', () => {
         expect(refus).not.toHaveBeenCalled()
         expect(service.queue).toEqual([])
         expect(service.failedRequests()).toEqual([])
+    })
+
+    /*
+     * Le serveur reconnaît la clé d'idempotence d'une création qu'il avait
+     * déjà faite, rend la série telle qu'il l'avait enregistrée et ignore la
+     * charge rejouée. Seule la page renvoyait ce qu'il avait ignoré : après un
+     * rechargement, la saisie et la coche fondues dans l'entrée se perdaient
+     * sans bruit (#1960).
+     */
+    it('fait suivre, à sa place, la modification de ce que le serveur a ignoré, et l’annonce', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                creation('q1', {
+                    tentee: true,
+                    ajusterPar: '/api/v1/sets/__produit__',
+                    data: { workout_line_id: 1, is_completed: true, weight: 80, reps: 3 },
+                }),
+                aQueuedPatch('/api/v1/sets/3'),
+            ]),
+        )
+        const existante = { id: 100, workout_line_id: 1, is_completed: false, weight: '80.0', reps: 5 }
+        request
+            .mockResolvedValueOnce({ data: { data: existante } })
+            .mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const rejeux = vi.fn()
+        window.addEventListener('sync:replayed', rejeux)
+
+        const service = await chargé()
+
+        window.removeEventListener('sync:replayed', rejeux)
+
+        // Écrite d'un seul coup : un rechargement maintenant la retrouve, à la place de la création.
+        const durable = JSON.parse(localStorage.getItem('offline_sync_queue'))
+        expect(durable.map(({ method, url, data, compte }) => ({ method, url, data, compte }))).toEqual([
+            { method: 'patch', url: '/api/v1/sets/100', data: { is_completed: true, reps: 3 }, compte: COMPTE },
+            { method: 'patch', url: '/api/v1/sets/3', data: { weight: 100 }, compte: COMPTE },
+        ])
+        expect(rejeux.mock.calls[0][0].detail).toEqual({
+            queueId: 'q1',
+            url: '/api/v1/sets',
+            data: { ...existante, is_completed: true, reps: 3 },
+            envoye: { workout_line_id: 1, is_completed: true, weight: 80, reps: 3 },
+            ajustement: durable[0].id,
+        })
+        expect(service.estEnFile(durable[0].id)).toBe(true)
+
+        // Le réseau revient : la modification part avant ce qui la suivait.
+        request.mockReset()
+        request.mockResolvedValue({ data: { data: {} } })
+        await service.processQueue()
+
+        expect(
+            request.mock.calls.map(([config]) => `${config.method} ${config.url} ${JSON.stringify(config.data)}`),
+        ).toEqual(['patch /api/v1/sets/100 {"is_completed":true,"reps":3}', 'patch /api/v1/sets/3 {"weight":100}'])
+        expect(service.queue).toEqual([])
+    })
+
+    it('ne fait rien suivre quand le serveur a gardé ce qui est parti, ou que la création ne dit pas comment se rattraper', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                creation('q1', { ajusterPar: '/api/v1/sets/__produit__' }),
+                creation('q2', { tentee: true }),
+            ]),
+        )
+        request
+            .mockResolvedValueOnce({ data: { data: { id: 100, workout_line_id: 1, is_completed: false, reps: '5' } } })
+            .mockResolvedValueOnce({ data: { data: { id: 101, workout_line_id: 1, is_completed: true, reps: 9 } } })
+
+        const service = await chargé()
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(service.queue).toEqual([])
+    })
+
+    it('retient l’adresse du rattrapage d’une création mise en file, sans l’envoyer au serveur', async () => {
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+        const ajusterPar = (id) => `/api/v1/sets/${id}`
+
+        await expect(
+            service.post('/api/v1/sets', { workout_line_id: 1, reps: 5 }, { ajusterPar }),
+        ).rejects.toMatchObject({ isOffline: true })
+        service.mettreEnFile({ method: 'post', url: '/api/v1/sets', data: { workout_line_id: 2 }, ajusterPar })
+        // Une modification n'a rien à rattraper.
+        await expect(service.patch('/api/v1/sets/3', { reps: 6 }, { ajusterPar })).rejects.toMatchObject({
+            isOffline: true,
+        })
+
+        expect(request.mock.calls[0][0]).not.toHaveProperty('ajusterPar')
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.ajusterPar)).toEqual([
+            '/api/v1/sets/__produit__',
+            '/api/v1/sets/__produit__',
+            undefined,
+        ])
     })
 
     it('oublie simplement une création qui n’est jamais partie', async () => {

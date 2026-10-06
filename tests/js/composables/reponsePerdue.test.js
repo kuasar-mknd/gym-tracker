@@ -100,6 +100,77 @@ describe('une création dont la réponse s’est perdue', () => {
         expect(serie).toMatchObject({ id: 100, reps: 3, is_completed: true })
         expect(page.unsyncedSetIds.value.size).toBe(0)
         expect(page.sync.queue).toEqual([])
+
+        // Le rattrapage part de la file, une fois : la page n'envoie rien en double.
+        expect(reseau.serveur.resume().slice(2)).toEqual(['patch /api/v1/sets/100 {"is_completed":true,"reps":3}'])
+    })
+
+    /*
+     * Le rattrapage vivait dans la page, qui l'envoyait en adoptant la série.
+     * Rechargée, ou arrêtée par le téléphone pendant qu'il dormait, la page
+     * n'était plus là au vidage : le serveur gardait la série recopiée et
+     * décochée, hors volume, records et objectifs.
+     */
+    it('envoie aussi ce que le serveur a ignoré quand la page a été rechargée entre-temps', async () => {
+        const page = await monterLaSeance(seance())
+        const serie = await ajouterSansReponse(page)
+
+        page.saisieTerminee(serie, 'reps', '3')
+        await page.toggleSetCompletion(serie)
+        await flushPromises()
+
+        expect(fileDurable().map((entree) => entree.data)).toEqual([
+            { workout_line_id: 1, is_completed: true, weight: 80, reps: 3 },
+        ])
+
+        const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
+
+        expect(reseau.serveur.series.get(100)).toMatchObject({ reps: 3, is_completed: true })
+        expect(rechargee.queue).toEqual([])
+    })
+
+    it('reste « non enregistrée » tant que ce rattrapage attend le réseau, puis se lève', async () => {
+        const page = await monterLaSeance(seance())
+        const serie = await ajouterSansReponse(page)
+
+        page.saisieTerminee(serie, 'reps', '3')
+        await flushPromises()
+
+        // La création repart ; le réseau retombe avant que le rattrapage parte.
+        reseau.serveur.enLigne = true
+        const repondre = reseau.serveur.repondre
+        reseau.serveur.repondre = async (config) => {
+            const reponse = await repondre(config)
+            reseau.serveur.repondre = repondre
+            reseau.serveur.enLigne = false
+
+            return reponse
+        }
+        await page.sync.processQueue()
+        await flushPromises()
+
+        expect(serie.id).toBe(100)
+        expect(fileDurable().map(({ method, url, data }) => `${method} ${url} ${JSON.stringify(data)}`)).toEqual([
+            'patch /api/v1/sets/100 {"reps":3}',
+        ])
+        expect([...page.unsyncedSetIds.value]).toEqual(['100'])
+
+        // Un rafraîchissement des props pendant ce temps ne reprend pas la copie d'avant.
+        page.rafraichir({
+            ...seance(),
+            workout_lines: [
+                {
+                    ...seance().workout_lines[0],
+                    sets: [...seance().workout_lines[0].sets, { ...reseau.serveur.series.get(100) }],
+                },
+            ],
+        })
+        expect(page.ligne().sets.at(-1)).toMatchObject({ id: 100, reps: 3 })
+
+        await leReseauRevient(page)
+
+        expect(reseau.serveur.series.get(100)).toMatchObject({ reps: 3 })
+        expect(page.unsyncedSetIds.value.size).toBe(0)
     })
 
     it('n’envoie rien de plus quand le serveur a pris ce qui est parti', async () => {

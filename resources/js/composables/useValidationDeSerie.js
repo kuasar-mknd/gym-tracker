@@ -48,49 +48,6 @@ export const useValidationDeSerie = ({
      */
     const completionsEnVol = new Set()
 
-    /**
-     * Range une écriture de validation dans la file de sa série, et la tient
-     * pour « en vol » jusqu'à sa réponse.
-     */
-    const ranger = (writeKey, send) => {
-        completionsEnVol.add(writeKey)
-
-        return completionWrites.queue(writeKey, send).finally(() => completionsEnVol.delete(writeKey))
-    }
-
-    /**
-     * Écrit la validation, et ne lit la réponse que si elle est encore la
-     * dernière sur cette série.
-     *
-     * @param {boolean} etat la coche envoyée
-     * @param {boolean} siRefusee ce que l'écran reprend si le serveur refuse
-     */
-    const ecrireLaValidation = (set, writeKey, seq, etat, siRefusee) =>
-        patchSet(set, { is_completed: etat })
-            .then((response) => {
-                // A reply that is no longer the latest word on this set is read
-                // for nothing: applying it would undo the tap that overtook it.
-                if (!isLatestWrite(writeKey, seq)) {
-                    return
-                }
-
-                // Only merge back the fields we sent + metadata to avoid overwriting
-                // concurrent optimistic updates (e.g. weight/reps changes)
-                if (response.data?.data) {
-                    set.is_completed = response.data.data.is_completed
-                    set.personal_record = response.data.data.personal_record
-                    set.updated_at = response.data.data.updated_at
-                }
-            })
-            .catch((err) => {
-                if (err.isOffline || !isLatestWrite(writeKey, seq)) {
-                    return
-                }
-
-                set.is_completed = siRefusee
-                reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
-            })
-
     const toggleSetCompletion = (set, exerciseRestTime) => {
         const newState = !set.is_completed
         const previousState = set.is_completed
@@ -160,33 +117,36 @@ export const useValidationDeSerie = ({
              */
             await flushPendingUpdates(set.id)
 
-            return ecrireLaValidation(set, writeKey, seq, newState, previousState)
+            return patchSet(set, { is_completed: newState })
+                .then((response) => {
+                    // A reply that is no longer the latest word on this set is read
+                    // for nothing: applying it would undo the tap that overtook it.
+                    if (!isLatestWrite(writeKey, seq)) {
+                        return
+                    }
+
+                    // Only merge back the fields we sent + metadata to avoid overwriting
+                    // concurrent optimistic updates (e.g. weight/reps changes)
+                    if (response.data?.data) {
+                        set.is_completed = response.data.data.is_completed
+                        set.personal_record = response.data.data.personal_record
+                        set.updated_at = response.data.data.updated_at
+                    }
+                })
+                .catch((err) => {
+                    if (err.isOffline || !isLatestWrite(writeKey, seq)) {
+                        return
+                    }
+
+                    set.is_completed = previousState
+                    reportSyncFailure('La série n’a pas pu être validée. Réessaie.')
+                })
         }
 
-        return ranger(writeKey, send)
+        completionsEnVol.add(writeKey)
+
+        return completionWrites.queue(writeKey, send).finally(() => completionsEnVol.delete(writeKey))
     }
 
-    /**
-     * Renvoie au serveur la coche que l'écran montre, rangée comme un appui
-     * dans la file des coches de cette série.
-     *
-     * Une création rejouée que le serveur avait déjà faite, sa réponse perdue en
-     * route, rend la série telle qu'il l'avait enregistrée : il reconnaît sa clé
-     * d'idempotence et ignore la charge rejouée, coche fondue comprise (#1960).
-     * La coche repart donc, dans la même file que les appuis : un appui qui suit
-     * passe derrière elle, et sa réponse n'est lue que si elle est la dernière.
-     *
-     * @param {object} set la série à l'écran, déjà sous son identifiant réel
-     * @param {boolean} valeurDuServeur ce que le serveur garde, que l'écran
-     *   reprend s'il refuse
-     */
-    const reaffirmerLaValidation = (set, valeurDuServeur) => {
-        const writeKey = `completion:${set._rowKey ?? set.id}`
-        const seq = nextWrite(writeKey)
-        const etat = set.is_completed
-
-        return ranger(writeKey, () => ecrireLaValidation(set, writeKey, seq, etat, valeurDuServeur))
-    }
-
-    return { completionsEnVol, toggleSetCompletion, reaffirmerLaValidation }
+    return { completionsEnVol, toggleSetCompletion }
 }

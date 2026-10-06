@@ -63,6 +63,36 @@ const ID_A_VENIR = '__produit__'
 /** Une création, la seule écriture que rejouer peut doubler et qu'il faut savoir annuler. */
 const estUneCreation = (config) => String(config?.method ?? '').toLowerCase() === 'post'
 
+/** Une valeur de charge qui se compare telle quelle : ni objet, ni liste. */
+const estScalaire = (valeur) => valeur === null || typeof valeur !== 'object'
+
+/**
+ * Deux valeurs d'un champ qui disent la même chose : `80`, `80.0` et `'80'`
+ * sont un même poids, et le serveur rend des nombres là où une saisie peut
+ * tenir du texte.
+ */
+const memeValeur = (a, b) =>
+    a === b ||
+    (a !== null && b !== null && a !== undefined && b !== undefined && a !== '' && b !== '' && Number(a) === Number(b))
+
+/**
+ * Ce que le serveur garde autrement qu'on le lui a envoyé : les champs de la
+ * charge qu'il rend avec une autre valeur, et la valeur envoyée.
+ *
+ * @param {Object|null|undefined} envoye la charge partie
+ * @param {Object|null|undefined} garde la ressource que le serveur rend
+ * @returns {Object}
+ */
+const ecartAvec = (envoye, garde) =>
+    garde === null || typeof garde !== 'object'
+        ? {}
+        : Object.fromEntries(
+              Object.entries(envoye ?? {}).filter(
+                  ([champ, valeur]) =>
+                      estScalaire(valeur) && Object.hasOwn(garde, champ) && !memeValeur(valeur, garde[champ]),
+              ),
+          )
+
 /**
  * Un stockage corrompu — une écriture coupée par une suspension iOS, un quota
  * atteint à mi-chemin — faisait lever JSON.parse au chargement du module, et
@@ -268,11 +298,14 @@ class SyncService {
      * user, and a true value never did prove reachability. So we always attempt
      * the request; the catch below queues it when the network genuinely refuses.
      *
-     * @param {Object} config La requête, au format de `Utils/http`
+     * @param {Object} config La requête, au format de `Utils/http`. Une
+     *   création peut y joindre `ajusterPar`, voir `notesDeCreation`.
      * @returns {Promise}
      */
     async request(config) {
-        const stamped = this.stampIdempotency(config)
+        const { ajusterPar, ...requete } = config
+        const stamped = this.stampIdempotency(requete)
+        const notes = this.notesDeCreation(stamped, ajusterPar)
 
         /*
          * Le compte qui fait l'écriture, pris à son départ : une écriture
@@ -293,7 +326,7 @@ class SyncService {
             await this.processQueue()
 
             if (this.enAttente() > 0) {
-                const queueId = this.addToQueue(stamped, compte)
+                const queueId = this.addToQueue(stamped, compte, notes)
 
                 return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
             }
@@ -316,12 +349,31 @@ class SyncService {
                      */
                     return await http(stamped)
                 } catch (retryError) {
-                    return this.queueOrThrow(retryError, stamped, compte)
+                    return this.queueOrThrow(retryError, stamped, compte, notes)
                 }
             }
 
-            return this.queueOrThrow(error, stamped, compte)
+            return this.queueOrThrow(error, stamped, compte, notes)
         }
+    }
+
+    /**
+     * Ce que la file retient d'une création pour la rattraper au vidage.
+     *
+     * Une création partie sans réponse a pu atteindre le serveur. Au rejeu, il
+     * reconnaît sa clé d'idempotence, rend ce qu'il avait enregistré et ignore
+     * la charge rejouée, saisies et coches fondues pendant l'attente comprises.
+     * `ajusterPar` donne l'adresse qui modifie ce que la création aura produit,
+     * d'après son identifiant : le vidage y renvoie ce que le serveur a ignoré
+     * (#1960). La file la garde sous forme d'adresse, `__produit__` à la place
+     * de l'identifiant, pour qu'elle survive à un rechargement.
+     *
+     * @param {Object} config la requête
+     * @param {((id: string) => string)|undefined} ajusterPar
+     * @returns {{ajusterPar?: string}}
+     */
+    notesDeCreation(config, ajusterPar) {
+        return estUneCreation(config) && typeof ajusterPar === 'function' ? { ajusterPar: ajusterPar(ID_A_VENIR) } : {}
     }
 
     /**
@@ -333,7 +385,7 @@ class SyncService {
      * which the draft replay acts on by deleting the local draft as a duplicate
      * of a queued write that never existed.
      */
-    queueOrThrow(error, config, compte) {
+    queueOrThrow(error, config, compte, notes = {}) {
         // A response means the server answered, so this is its verdict, not a
         // connectivity problem — queueing it would hide a real refusal.
         if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
@@ -342,7 +394,7 @@ class SyncService {
              * serveur. Une création retirée ensuite devra être annulée là-bas,
              * pas seulement oubliée ici (#1960).
              */
-            const queueId = this.addToQueue(config, compte, { tentee: true })
+            const queueId = this.addToQueue(config, compte, { ...notes, tentee: true })
 
             // queueId lets a caller waiting on what this create produces pick its
             // own write out of the drain later — see the `sync:replayed` event.
@@ -384,8 +436,9 @@ class SyncService {
      *
      * @param {Object} config
      * @param {string|null} compte le compte connecté quand l'écriture est partie
-     * @param {{tentee?: boolean}} notes ce que la file sait déjà de l'écriture :
-     *   `tentee` quand elle est partie une fois sans réponse.
+     * @param {{tentee?: boolean, ajusterPar?: string}} notes ce que la file sait
+     *   déjà de l'écriture : `tentee` quand elle est partie une fois sans
+     *   réponse, `ajusterPar` pour rattraper ce que le serveur en ignorera.
      * @returns {string|null} the queue entry's id, so a caller that depends on
      *   what this write eventually creates can recognise it when it goes out.
      */
@@ -415,13 +468,15 @@ class SyncService {
      * dépend par `{ enAttenteDe: queueId }` ; le vidage le remplace par
      * l'identifiant réel au moment où cette écriture-là aboutit.
      *
-     * @param {Object} config la requête, au format de `Utils/http`
+     * @param {Object} config la requête, au format de `Utils/http`, avec
+     *   `ajusterPar` pour une création (voir `notesDeCreation`)
      * @returns {string|null} l'entrée créée, ou null quand rien n'entre : pas de
      *   compte connecté, ou une écriture dont elle dépend est sortie de la file
      *   sans rien produire (refusée, retirée).
      */
     mettreEnFile(config) {
-        let data = config.data
+        const { ajusterPar, ...requete } = config
+        let data = requete.data
 
         for (const [champ, valeur] of Object.entries(data ?? {})) {
             const parent = fileReferencee(valeur)
@@ -446,7 +501,11 @@ class SyncService {
             }
         }
 
-        return this.addToQueue(this.stampIdempotency({ ...config, data }))
+        return this.addToQueue(
+            this.stampIdempotency({ ...requete, data }),
+            this.compte,
+            this.notesDeCreation(requete, ajusterPar),
+        )
     }
 
     /**
@@ -520,10 +579,58 @@ class SyncService {
         return this.compte === null ? undefined : this.queue.find((entree) => entree.compte === this.compte)
     }
 
+    /** Si cette écriture attend encore dans la file, ou y vole. */
+    estEnFile(queueId) {
+        return this.queue.some((entree) => entree.id === queueId)
+    }
+
     /** Retire une entrée réglée de la file, où qu'elle soit maintenant, et l'écrit. */
     retirerLEntree(config) {
-        this.queue = this.queue.filter((entree) => entree !== config)
+        this.remplacerLEntree(config, [])
+    }
+
+    /**
+     * Remplace une entrée réglée, à sa place, par les écritures qui doivent la
+     * suivre, et écrit la file d'un seul coup : un rechargement entre les deux
+     * ne perd ni ne double rien.
+     *
+     * @param {Object} config
+     * @param {Array<Object>} remplacantes
+     */
+    remplacerLEntree(config, remplacantes) {
+        this.queue = this.queue.flatMap((entree) => (entree === config ? remplacantes : [entree]))
         this.saveQueue()
+    }
+
+    /**
+     * La modification qui porte au serveur ce qu'il a ignoré d'une création
+     * rejouée, ou null quand il a tout gardé, ou que la création ne dit pas
+     * comment se rattraper (`ajusterPar`).
+     *
+     * @param {Object} config l'entrée de la création
+     * @param {Object|undefined} envoye la charge partie
+     * @param {Object|null|undefined} produit ce que le serveur a rendu
+     * @returns {Object|null} l'entrée de file de la modification
+     */
+    ajustementDe(config, envoye, produit) {
+        if (typeof config.ajusterPar !== 'string' || produit?.id === undefined) {
+            return null
+        }
+
+        const ecart = ecartAvec(envoye, produit)
+
+        if (Object.keys(ecart).length === 0) {
+            return null
+        }
+
+        return {
+            method: 'patch',
+            url: config.ajusterPar.replace(ID_A_VENIR, encodeURIComponent(String(produit.id))),
+            data: ecart,
+            id: this.nouvelIdentifiantDEntree(),
+            timestamp: new Date().toISOString(),
+            compte: config.compte,
+        }
     }
 
     saveQueue() {
@@ -719,19 +826,32 @@ class SyncService {
              * rejouer rend ce qu'elle a produit, idempotence oblige, et c'est
              * cela qu'on supprime maintenant.
              */
+            const produit = reponse?.data?.data
+
             if (config.aAnnuler !== undefined) {
-                this.remplacerParSonAnnulation(config, reponse?.data?.data?.id)
+                this.remplacerParSonAnnulation(config, produit?.id)
 
                 continue
             }
 
-            if (reponse?.data?.data?.id !== undefined) {
-                this.noterLeProduit(config.id, reponse.data.data.id)
+            /*
+             * Une création que le serveur avait déjà faite, sa réponse perdue
+             * en route : il rend la ligne telle qu'il l'avait enregistrée et
+             * ignore la charge rejouée, saisies et coches fondues comprises.
+             * Ce qu'il a ignoré repart, à la place de la création, par une
+             * modification de ce qu'elle a produit. C'était l'écran qui le
+             * renvoyait en adoptant la série : sans lui, après un
+             * rechargement, rien ne partait (#1960).
+             */
+            const ajustement = this.ajustementDe(config, requete.data, produit)
+
+            if (produit?.id !== undefined) {
+                this.noterLeProduit(config.id, produit.id)
             }
 
             // Settled. Only now may it leave, and the queue that survives a
-            // reload is written before we move on.
-            this.retirerLEntree(config)
+            // reload is written before we move on — with what follows it.
+            this.remplacerLEntree(config, ajustement === null ? [] : [ajustement])
 
             /**
              * Says what this write finally produced, and what it carried.
@@ -745,9 +865,9 @@ class SyncService {
              *
              * `envoye` est la charge partie, saisies fondues comprises : ce qui
              * a été tapé pendant que la requête volait n'y est pas, et
-             * l'appelant le renvoie (#1960). Le serveur, lui, a pu l'ignorer :
-             * une création qu'il avait déjà faite, dont la réponse s'était
-             * perdue, rend la ligne existante telle qu'elle est (`data`).
+             * l'appelant le renvoie (#1960). `data` est ce que le serveur
+             * gardera : sa réponse, et ce qu'il a ignoré, que la modification
+             * `ajustement` (son entrée de file) lui porte maintenant.
              * L'annonce suit l'écriture de la file, pour que l'entrée n'y soit
              * plus quand l'appelant la lit. L'annulation d'une création retirée
              * n'a personne pour l'attendre : elle ne s'annonce pas.
@@ -761,8 +881,9 @@ class SyncService {
                     detail: {
                         queueId: config.id,
                         url: config.url,
-                        data: reponse?.data?.data ?? null,
+                        data: ajustement === null ? (produit ?? null) : { ...produit, ...ajustement.data },
                         envoye: requete.data,
+                        ajustement: ajustement?.id ?? null,
                     },
                 }),
             )
@@ -807,8 +928,7 @@ class SyncService {
                       },
                   ]
 
-        this.queue = this.queue.flatMap((entree) => (entree === config ? annulation : [entree]))
-        this.saveQueue()
+        this.remplacerLEntree(config, annulation)
     }
 
     /** Un identifiant d'entrée de file, unique sur l'appareil. */

@@ -13,14 +13,17 @@ afterEach(() => {
  * le vidage l'annonce rejouée, refusée ou retirée (#1960).
  */
 describe('les attentes de rejeu', () => {
-    it('rend ce que l’écriture a produit et ce qu’elle a emporté, et ignore les autres', async () => {
+    it('rend ce que l’écriture a produit, ce qu’elle a emporté et ce qui la rattrape, et ignore les autres', async () => {
         const attentes = creerLesAttentesDeRejeu()
         const rejeu = attentes.attendre('q1')
+        const rattrapee = attentes.attendre('q3')
 
         annoncer('sync:replayed', { queueId: 'q2', data: { id: 99 } })
         annoncer('sync:replayed', { queueId: 'q1', data: { id: 100 }, envoye: { reps: 3 } })
+        annoncer('sync:replayed', { queueId: 'q3', data: { id: 101 }, envoye: { reps: 3 }, ajustement: 'q4' })
 
-        await expect(rejeu).resolves.toEqual({ data: { id: 100 }, envoye: { reps: 3 } })
+        await expect(rejeu).resolves.toEqual({ data: { id: 100 }, envoye: { reps: 3 }, ajustement: null })
+        await expect(rattrapee).resolves.toEqual({ data: { id: 101 }, envoye: { reps: 3 }, ajustement: 'q4' })
     })
 
     it('dit une écriture refusée ou retirée', async () => {
@@ -62,7 +65,7 @@ describe('les attentes de rejeu', () => {
 
         annoncer('sync:replayed', { queueId: 'q1' })
 
-        await expect(rejeu).resolves.toEqual({ data: null, envoye: null })
+        await expect(rejeu).resolves.toEqual({ data: null, envoye: null, ajustement: null })
         expect(retire).toHaveBeenCalledWith('sync:replayed', expect.any(Function))
     })
 })

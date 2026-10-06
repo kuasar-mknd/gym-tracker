@@ -32,7 +32,6 @@ const memeValeur = (a, b) =>
  *   markUnsynced: (setId: unknown) => void,
  *   clearUnsynced: (setId: unknown, realId?: unknown) => void,
  *   reportSyncFailure: (message: string) => void,
- *   reaffirmerLaValidation: (set: object, valeurDuServeur: boolean) => unknown,
  * }} page
  */
 export const useAjoutEtRetraitDeSerie = ({
@@ -49,7 +48,6 @@ export const useAjoutEtRetraitDeSerie = ({
     markUnsynced,
     clearUnsynced,
     reportSyncFailure,
-    reaffirmerLaValidation,
 }) => {
     /**
      * What each kind of exercise measures — the same split the set row renders.
@@ -212,19 +210,25 @@ export const useAjoutEtRetraitDeSerie = ({
          * creation ; son ecriture ordonnee part donc a l'instant ou la creation
          * retombe, et elle porte deja la validation.
          *
-         * Ce qui est comparé à l'écran, c'est ce que le serveur GARDE, sa
-         * réponse, et non ce qui est parti. Ils diffèrent quand le serveur
-         * avait déjà fait cette création, sa réponse perdue en route : il
-         * reconnaît la clé d'idempotence, rend la série telle qu'il l'avait
-         * enregistrée et ignore la charge rejouée. Comparée à ce qui était
-         * parti, la saisie fondue dans la file semblait arrivée, aucun PATCH
-         * ne suivait, et la base gardait les valeurs d'avant (#1960). Une coche
-         * ignorée ainsi repart, elle, dans la file des coches.
+         * Ce qui est comparé à l'écran, c'est ce que le serveur GARDERA, et
+         * non ce qui est parti. Ils diffèrent quand le serveur avait déjà fait
+         * cette création, sa réponse perdue en route : il reconnaît la clé
+         * d'idempotence, rend la série telle qu'il l'avait enregistrée et
+         * ignore la charge rejouée, saisie et coche fondues comprises. Le
+         * vidage renvoie lui-même ce qu'il a ignoré, par une modification mise
+         * en file à la place de la création (`ajusterPar`), et l'annonce dans
+         * `created` : un rechargement ne le perd plus (#1960). L'écran ne
+         * renvoie donc que ce qui a été tapé pendant que la requête volait.
+         * Tant que cette modification attend, la série reste « non
+         * enregistrée », et une fusion des props ne reprend pas la copie
+         * d'avant.
          *
-         * @param {object} created la série telle que le serveur la garde
+         * @param {object} created la série telle que le serveur la gardera
          * @param {object|null} sent ce que la création a réellement emporté
+         * @param {string|null} ajustement l'entrée de file qui lui porte ce
+         *   qu'il a ignoré, s'il y en a une
          */
-        const adopter = (created, sent) => {
+        const adopter = (created, sent, ajustement = null) => {
             /** Ce que le serveur garde pour ce champ : sa réponse, ou à défaut ce qui est parti. */
             const tenu = (field) => (Object.hasOwn(created, field) ? created[field] : sent?.[field])
 
@@ -234,35 +238,44 @@ export const useAjoutEtRetraitDeSerie = ({
                     .map((field) => [field, tempSet[field]]),
             )
 
-            const cocheIgnoree =
-                Object.hasOwn(created, 'is_completed') &&
-                Object.hasOwn(sent ?? {}, 'is_completed') &&
-                Boolean(created.is_completed) !== Boolean(sent.is_completed) &&
-                Boolean(tempSet.is_completed) !== Boolean(created.is_completed)
-
             const realSetId = created.id
 
-            // It is in the database now, under either id it has worn.
-            clearUnsynced(tempSet.id, realSetId)
+            if (ajustement === null) {
+                // It is in the database now, under either id it has worn.
+                clearUnsynced(tempSet.id, realSetId)
+            } else {
+                clearUnsynced(tempSet.id)
+
+                if (SyncService.estEnFile(ajustement)) {
+                    markUnsynced(realSetId)
+
+                    // Refusée, la modification laisse la série marquée : le rapport l'a dit.
+                    attentes.attendre(ajustement).then((issue) => {
+                        if (issue?.data !== undefined) clearUnsynced(realSetId)
+                    })
+                }
+            }
 
             tempSet.id = realSetId
             tempSet.created_at = created.created_at
             tempSet.updated_at = created.updated_at
             tempSet.personal_record = created.personal_record
 
-            // Typed after the payload left, or ignored on arrival: the server has never kept it.
+            // Typed after the payload left: the server has never seen it.
             if (Object.keys(edited).length > 0) {
                 SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
                     if (!err.isOffline) markUnsynced(realSetId)
                 })
             }
 
-            if (cocheIgnoree) {
-                reaffirmerLaValidation(tempSet, Boolean(created.is_completed))
-            }
-
             return realSetId
         }
+
+        /**
+         * L'adresse qui modifie la série que cette création aura produite : le
+         * vidage y renvoie ce que le serveur aura ignoré d'une création rejouée.
+         */
+        const ajusterPar = (realId) => route('api.v1.sets.update', { set: realId })
 
         /**
          * Le premier envoi : la série créée, mise en file, ou refusée.
@@ -321,12 +334,13 @@ export const useAjoutEtRetraitDeSerie = ({
                         method: 'post',
                         url: route('api.v1.sets.store'),
                         data: charge,
+                        ajusterPar,
                     })
 
                     return queueId === null ? null : { queueId }
                 }
 
-                return SyncService.post(route('api.v1.sets.store'), charge).then((response) => ({
+                return SyncService.post(route('api.v1.sets.store'), charge, { ajusterPar }).then((response) => ({
                     created: response.data?.data ?? null,
                     sent,
                 }))
@@ -379,7 +393,9 @@ export const useAjoutEtRetraitDeSerie = ({
 
                 return attentes
                     .attendre(issue.queueId)
-                    .then((rejeu) => (rejeu?.data?.id === undefined ? null : adopter(rejeu.data, rejeu.envoye)))
+                    .then((rejeu) =>
+                        rejeu?.data?.id === undefined ? null : adopter(rejeu.data, rejeu.envoye, rejeu.ajustement),
+                    )
             }
 
             return issue?.created ? adopter(issue.created, issue.sent) : null

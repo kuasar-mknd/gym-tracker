@@ -213,7 +213,9 @@ describe('Workouts/Show — writes made while a create is in flight', () => {
         expect(lines(wrapper)[0].id).toBe(10)
         expect(lines(wrapper)[0].sets).toHaveLength(1)
         expect(lines(wrapper)[0].sets[0].id).toBe(77)
-        expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 10 }))
+        expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 10 }), {
+            ajusterPar: expect.any(Function),
+        })
     })
 })
 
@@ -327,6 +329,7 @@ describe('Workouts/Show — a set added onto a queued exercise', () => {
             method: 'post',
             url: '/api/v1/sets',
             data: expect.objectContaining({ workout_line_id: { enAttenteDe: 'q-77' } }),
+            ajusterPar: expect.any(Function),
         })
         expect(wrapper.vm.unsyncedSetIds.size).toBe(1)
 

@@ -14,7 +14,7 @@
  * file et partira sans lui.
  *
  * @returns {{
- *   attendre: (queueId: string|undefined) => Promise<{data: object|null, envoye: object|null}|{refusee: true}|{retiree: true}|null>,
+ *   attendre: (queueId: string|undefined) => Promise<{data: object|null, envoye: object|null, ajustement: string|null}|{refusee: true}|{retiree: true}|null>,
  *   oublierTout: () => void,
  * }}
  */
@@ -38,7 +38,11 @@ export const creerLesAttentesDeRejeu = () => {
     }
 
     const surRejeu = (event) =>
-        regler(event.detail?.queueId, { data: event.detail?.data ?? null, envoye: event.detail?.envoye ?? null })
+        regler(event.detail?.queueId, {
+            data: event.detail?.data ?? null,
+            envoye: event.detail?.envoye ?? null,
+            ajustement: event.detail?.ajustement ?? null,
+        })
 
     const surRefus = (event) => regler(event.detail?.queueId, { refusee: true })
 

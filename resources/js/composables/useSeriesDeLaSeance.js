@@ -69,7 +69,7 @@ export const useSeriesDeLaSeance = ({
             reportEditFailure,
         })
 
-    const { completionsEnVol, toggleSetCompletion, reaffirmerLaValidation } = useValidationDeSerie({
+    const { completionsEnVol, toggleSetCompletion } = useValidationDeSerie({
         patchSet,
         nextWrite,
         isLatestWrite,
@@ -92,7 +92,6 @@ export const useSeriesDeLaSeance = ({
         markUnsynced,
         clearUnsynced,
         reportSyncFailure,
-        reaffirmerLaValidation,
     })
 
     return {
