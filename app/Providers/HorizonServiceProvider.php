@@ -20,8 +20,9 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
     /**
      * Qui entre dans Horizon : l'une OU l'autre de deux voies.
      *
-     * - Un compte de l'application listé dans `HORIZON_ALLOWED_EMAILS`, par la
-     *   porte `viewHorizon` (#1443), sans liste d'adresses, comme avant.
+     * - Un compte de l'application listé dans `HORIZON_ALLOWED_EMAILS`, qui a
+     *   confirmé son adresse, par la porte `viewHorizon` (#1443), sans liste
+     *   d'adresses IP.
      * - L'administrateur du panneau qui voit le lien « Horizon » de son menu
      *   (capacité `view-outils`), depuis une adresse que `ADMIN_ALLOWED_IPS`
      *   admet (la règle même du panneau, par `IpWhitelist::admet()`), avec une
@@ -85,8 +86,25 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
                 explode(',', is_string($configurees) ? $configurees : ''),
             ), static fn (string $email): bool => $email !== '');
 
-            return in_array($user->email, $autorisees, true);
+            return self::adresseConfirmee($user) && in_array($user->email, $autorisees, true);
         });
+    }
+
+    /**
+     * Le compte a-t-il confirmé détenir son adresse ?
+     *
+     * La liste nomme des adresses, pas des comptes : une adresse listée sans
+     * compte, parce que son compte n'a jamais été créé, a été supprimé ou a
+     * changé d'adresse, s'inscrit par mot de passe sans en détenir la boîte.
+     * Seul le lien de vérification, envoyé à cette adresse, ou un fournisseur
+     * de connexion qui la garantit (`ResolveSocialUserAction`) prouve qu'on la
+     * détient. Un changement d'adresse, depuis le profil comme depuis le
+     * panneau (`SurveilleSonAdresse`), retire cette preuve : le compte qui se
+     * donne une adresse listée reste dehors jusqu'à ce qu'il l'ait confirmée.
+     */
+    private static function adresseConfirmee(User $user): bool
+    {
+        return $user->hasVerifiedEmail();
     }
 
     /**

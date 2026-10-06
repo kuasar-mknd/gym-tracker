@@ -28,8 +28,10 @@ declare(strict_types=1);
  */
 
 use App\Actions\ResolveSocialUserAction;
+use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
@@ -68,9 +70,9 @@ function compteVerifieAvecFournisseur(?string $fournisseur, ?string $identifiant
     ]);
 }
 
-function resoudre(SocialiteUser $social): User
+function resoudre(SocialiteUser $social, bool $adresseVerifiee = true): User
 {
-    return app(ResolveSocialUserAction::class)->execute('google', $social);
+    return app(ResolveSocialUserAction::class)->execute('google', $social, $adresseVerifiee);
 }
 
 beforeEach(function (): void {
@@ -96,6 +98,9 @@ it('lie un compte verifie dont la colonne fournisseur est nulle', function (): v
     // L'avatar fait partie de la liaison : sans cette ligne, le compte gardait
     // la photo d'un fournisseur qu'il n'utilise plus.
     expect($existant->avatar)->toBe('https://exemple.test/avatar-google.jpg');
+
+    // Posée sur l'adresse exacte et garantie, la liaison est prouvée.
+    expect($existant->liaison_prouvee_le?->toDateTimeString())->toBe('2026-06-15 12:00:00');
 });
 
 it('lie un compte verifie dont la colonne fournisseur est la chaine vide', function (): void {
@@ -134,6 +139,7 @@ it('ne touche pas au fournisseur d un compte deja lie', function (): void {
     expect($existant->provider)->toBe('github');
     expect($existant->provider_id)->toBe('github-7');
     expect($existant->avatar)->toBe('https://exemple.test/ancien-avatar.jpg');
+    expect($existant->liaison_prouvee_le)->toBeNull();
 });
 
 it('nomme le compte cree d apres le nom rendu par le fournisseur', function (): void {
@@ -176,6 +182,7 @@ it('inscrit l avatar, le fournisseur, la verification et un mot de passe sur le 
     assertDatabaseHas('users', [
         'id' => $nouveau->id,
         'email_verified_at' => '2026-06-15 12:00:00',
+        'liaison_prouvee_le' => '2026-06-15 12:00:00',
     ]);
 
     /*
@@ -213,4 +220,158 @@ it('tire le mot de passe jetable sur seize caracteres', function (): void {
      * etre fige ici.
      */
     expect($longueursDemandees)->toContain(16);
+});
+
+it('refuse un retour sans identifiant de fournisseur', function (?string $identifiant): void {
+    /*
+     * Sans identifiant, la liaison ne pourrait rien enregistrer, et la
+     * connexion suivante ne reconnaîtrait pas le compte : elle repasserait par
+     * l'adresse. La chaîne vide n'en est pas un non plus.
+     *
+     * Le message est comparé en entier : `toThrow(classe, message)` ne
+     * vérifie que la présence du texte.
+     */
+    $existant = compteVerifieAvecFournisseur(null, null);
+
+    expect(fn (): User => resoudre(utilisateurSocial(['id' => $identifiant])))
+        ->toThrow(new SocialAuthException('Erreur lors de la connexion avec Google'));
+
+    expect($existant->refresh()->provider)->toBeNull();
+    expect($existant->provider_id)->toBeNull();
+    expect(User::query()->count())->toBe(1);
+})->with([
+    'absent' => [null],
+    'vide' => [''],
+]);
+
+it('refuse un retour sans adresse au lieu d’échouer à l’écriture', function (?string $adresse): void {
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => $adresse])))
+        ->toThrow(new SocialAuthException('Google ne nous a transmis aucune adresse email. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.'));
+
+    expect(User::query()->count())->toBe(0);
+})->with([
+    'absente' => [null],
+    'vide' => [''],
+]);
+
+it('crée un compte non vérifié quand le fournisseur ne garantit pas l’adresse', function (): void {
+    /*
+     * Le seul chemin qui y mène est le contournement local du contrôle de
+     * vérification. Marqué vérifié, ce compte se serait ensuite laissé
+     * rattacher à d'autres fournisseurs sur la foi d'une adresse que personne
+     * n'a confirmée.
+     */
+    $nouveau = resoudre(utilisateurSocial(), adresseVerifiee: false)->refresh();
+
+    expect($nouveau->provider_id)->toBe('google-42');
+    expect($nouveau->hasVerifiedEmail())->toBeFalse();
+
+    // Rien ne dit que l'identité détient l'adresse : sa liaison reste sans
+    // preuve, et n'ouvre le compte que pour cette adresse exacte.
+    expect($nouveau->liaison_prouvee_le)->toBeNull();
+
+    expect(resoudre(utilisateurSocial(), adresseVerifiee: false)->id)->toBe($nouveau->id);
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => 'nouvelle@example.test']), adresseVerifiee: false))
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+    expect(User::query()->count())->toBe(1);
+});
+
+it('départage deux comptes de la même identité par l’adresse exacte, et refuse sinon', function (): void {
+    /*
+     * L'ancienne recherche par adresse créait un second compte pour la même
+     * identité quand l'adresse changeait chez le fournisseur. Ces doublons
+     * peuvent exister : le retour va au compte de l'adresse exacte, jamais au
+     * premier venu, et à aucun quand ni l'un ni l'autre ne l'a.
+     */
+    $ancien = User::factory()->create(['email' => 'ancienne@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
+    $recent = User::factory()->create(['email' => 'jean@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
+
+    expect(resoudre(utilisateurSocial())->id)->toBe($recent->id);
+    expect(resoudre(utilisateurSocial(['email' => 'Ancienne@Example.test']))->id)->toBe($ancien->id);
+
+    $journal = Log::spy();
+
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => 'autre@example.test'])))
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+
+    expect(User::query()->count())->toBe(2);
+
+    // Les comptes en cause, dans l'ordre de leur création, et jamais l'adresse.
+    $journal->shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(static fn (string $message, array $contexte): bool => $message === 'Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte'
+            && $contexte === ['fournisseur' => 'google', 'comptes' => [$ancien->id, $recent->id]]);
+});
+
+it('ne prend pas pour sienne une identité qui ne diffère que par la casse', function (): void {
+    /*
+     * La colonne `provider_id` a la collation de la table : la base rend
+     * « GOOGLE-42 » pour « google-42 ». Le filtre exact est fait en PHP, et le
+     * compte, lié à une autre identité de Google, n'est pas rattaché non plus
+     * par son adresse.
+     */
+    $existant = compteVerifieAvecFournisseur('google', 'GOOGLE-42');
+
+    expect(fn (): User => resoudre(utilisateurSocial()))
+        ->toThrow(new SocialAuthException('Un compte existe déjà avec cette adresse email, associé à un autre compte Google. Connectez-vous avec cette adresse et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+
+    expect($existant->refresh()->provider_id)->toBe('GOOGLE-42');
+    expect(User::query()->count())->toBe(1);
+});
+
+it('ouvre le seul compte de l’identité dont la liaison est prouvée quand aucun n’a l’adresse rendue, et refuse quand ils sont plusieurs', function (): void {
+    /*
+     * Un doublon d'avant la preuve peut porter la même identité. Seule la
+     * liaison prouvée dit lequel des comptes l'identité a ouvert sur son
+     * adresse exacte : sans adresse commune, le retour lui revient, et à aucun
+     * quand deux comptes la portent.
+     */
+    $sansPreuve = User::factory()->create(['email' => 'ancienne@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
+    $prouve = User::factory()->create([
+        'email' => 'jean@example.test',
+        'provider' => 'google',
+        'provider_id' => 'google-42',
+        'liaison_prouvee_le' => Carbon::parse('2026-03-01 10:00:00'),
+    ]);
+
+    expect(resoudre(utilisateurSocial(['email' => 'nouvelle@example.test']))->id)->toBe($prouve->id);
+    expect($sansPreuve->refresh()->liaison_prouvee_le)->toBeNull();
+
+    // L'adresse exacte du compte sans preuve l'ouvre, et la prouve.
+    expect(resoudre(utilisateurSocial(['email' => 'ancienne@example.test']))->id)->toBe($sansPreuve->id);
+    expect($sansPreuve->refresh()->liaison_prouvee_le?->toDateTimeString())->toBe('2026-06-15 12:00:00');
+
+    $journal = Log::spy();
+
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => 'nouvelle@example.test'])))
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+
+    $journal->shouldHaveReceived('warning')
+        ->once()
+        ->withArgs(static fn (string $message, array $contexte): bool => $message === 'Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte'
+            && $contexte === ['fournisseur' => 'google', 'comptes' => [$sansPreuve->id, $prouve->id]]);
+});
+
+it('garde la date d’une preuve déjà posée', function (): void {
+    $compte = compteVerifieAvecFournisseur('google', 'google-42');
+    $compte->forceFill(['liaison_prouvee_le' => Carbon::parse('2026-03-01 10:00:00')])->save();
+
+    expect(resoudre(utilisateurSocial())->id)->toBe($compte->id);
+    expect($compte->refresh()->liaison_prouvee_le?->toDateTimeString())->toBe('2026-03-01 10:00:00');
+});
+
+it('ne prouve pas une liaison sur une adresse que le fournisseur ne garantit pas', function (): void {
+    /*
+     * Seul le contournement local y mène. L'identité ouvre son compte pour
+     * l'adresse exacte, mais sans garantie, ce retour ne prouve rien : la
+     * liaison n'ouvrira pas le compte pour une autre adresse.
+     */
+    $compte = User::factory()->unverified()->create(['email' => 'jean@example.test', 'provider' => 'google', 'provider_id' => 'google-42']);
+
+    expect(resoudre(utilisateurSocial(), adresseVerifiee: false)->id)->toBe($compte->id);
+    expect($compte->refresh()->liaison_prouvee_le)->toBeNull();
+    expect($compte->hasVerifiedEmail())->toBeFalse();
+
+    expect(fn (): User => resoudre(utilisateurSocial(['email' => 'nouvelle@example.test']), adresseVerifiee: false))
+        ->toThrow(SocialAuthException::class);
 });
