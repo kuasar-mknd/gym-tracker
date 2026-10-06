@@ -210,7 +210,7 @@ describe('la file d’un compte, à la déconnexion', () => {
         expect(routeur.post).toHaveBeenCalledTimes(2)
     })
 
-    it('efface les refus et les brouillons de séries que le compte laisse', async () => {
+    it('efface les refus et les brouillons de séries que le compte laisse, une fois la déconnexion acceptée', async () => {
         localStorage.setItem(
             'offline_sync_failed',
             JSON.stringify([{ method: 'post', url: '/api/v1/sets', data: { reps: 8 }, compte: '1', status: 422 }]),
@@ -222,6 +222,14 @@ describe('la file d’un compte, à la déconnexion', () => {
         await sync.pending
 
         await seDeconnecter()
+
+        // Rien avant la réponse : la déconnexion peut encore échouer.
+        expect(localStorage.getItem('draft_set_12')).not.toBeNull()
+
+        // La réponse mène à l'écran de connexion : le service n'a plus de compte quand `onSuccess` arrive.
+        naviguer(null)
+        routeur.post.mock.calls[0][2].onSuccess()
+        routeur.post.mock.calls[0][2].onFinish()
 
         expect(localStorage.getItem('offline_sync_failed')).toBeNull()
         expect(localStorage.getItem('draft_set_12')).toBeNull()
@@ -235,8 +243,42 @@ describe('la file d’un compte, à la déconnexion', () => {
         }
         vi.spyOn(Storage.prototype, 'setItem').mockImplementation(refuser)
         vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(refuser)
-        routeur.post.mock.calls[0][2].onFinish()
 
+        await seDeconnecter()
+        routeur.post.mock.calls[1][2].onSuccess()
+        routeur.post.mock.calls[1][2].onFinish()
+
+        expect(routeur.post).toHaveBeenCalledTimes(2)
+    })
+
+    /*
+     * En salle sans réseau, la déconnexion part et n'aboutit pas : la personne
+     * reste connectée. Ses refus pas encore montrés et ses brouillons, seul
+     * endroit où survit une valeur dont l'écriture a échoué, étaient effacés
+     * avant l'envoi, et l'avis noté pour l'écran de connexion ressortait sur la
+     * prochaine page d'invité.
+     */
+    it('garde tout quand la déconnexion n’aboutit pas, et retire l’avis noté pour l’écran suivant', async () => {
+        localStorage.setItem(
+            'offline_sync_failed',
+            JSON.stringify([{ method: 'post', url: '/api/v1/sets', data: { reps: 8 }, compte: '1', status: 422 }]),
+        )
+        localStorage.setItem('draft_set_12', JSON.stringify({ reps: 8 }))
+        const sync = await aLaisseUneEcritureEnFile()
+        requete.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        // Inertia finit la visite sans succès : le réseau a coupé en route.
+        routeur.post.mockImplementation((_url, _donnees, options) => options.onFinish())
+
+        await seDeconnecter()
+
+        expect(sync.compte).toBe('1')
+        expect(sync.failedRequests()).toHaveLength(1)
+        expect(localStorage.getItem('draft_set_12')).not.toBeNull()
+        expect(sync.queue.map((entree) => entree.url)).toEqual(['/profile/preferences'])
+        expect((await ecranDeConnexion()).find('[dusk="ecritures-gardees"]').exists()).toBe(false)
+
+        // Elle se relance.
         await seDeconnecter()
 
         expect(routeur.post).toHaveBeenCalledTimes(2)

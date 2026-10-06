@@ -8,18 +8,23 @@ import { noterLesEcrituresGardees } from '@/Utils/ecrituresGardees'
 let deconnexionEnCours = null
 
 /**
- * Ce que le compte qui part laisse sur l'appareil (#1964).
+ * Ce que le compte qui part laisse sur l'appareil (#1964), une fois la
+ * déconnexion acceptée.
  *
  * Ses écritures encore en file restent à lui : la file ne les envoie que sous
  * sa propre session, à sa prochaine connexion, et l'écran qui suit la
  * déconnexion dit combien il en reste. Ses refus et ses brouillons de séries,
- * eux, n'ont plus de lecteur et sont effacés. Rien de tout cela ne retient la
+ * eux, n'ont plus de lecteur et sont effacés. Pas avant la réponse : une
+ * déconnexion partie sans réseau laisse la personne connectée, et elle aurait
+ * perdu ses refus pas encore montrés et ses brouillons, seul endroit où
+ * survit une valeur dont l'écriture a échoué. Rien de tout cela ne retient la
  * déconnexion : chacune de ces écritures laisse les choses en l'état quand le
  * stockage refuse.
+ *
+ * @param {string|null} compte le compte qui s'est déconnecté, lu avant l'envoi
  */
-const laisserLAppareil = () => {
-    noterLesEcrituresGardees(SyncService.enAttente())
-    SyncService.clearFailedRequests()
+const laisserLAppareil = (compte) => {
+    SyncService.clearFailedRequests(compte)
     effacerLesBrouillons()
 }
 
@@ -45,8 +50,34 @@ export const seDeconnecter = () => {
 
     deconnexionEnCours ??= detacherLAppareil()
         .then(() => {
-            laisserLAppareil()
-            router.post(route('logout'), {}, { onFinish: liberer })
+            /*
+             * Lu avant l'envoi : la réponse mène à une page sans compte, que le
+             * service a déjà prise en compte quand `onSuccess` arrive.
+             */
+            const compte = SyncService.compte
+            let acceptee = false
+
+            // Noté avant l'envoi : l'écran d'arrivée le lit à son montage, avant `onSuccess`.
+            noterLesEcrituresGardees(SyncService.enAttente())
+
+            router.post(
+                route('logout'),
+                {},
+                {
+                    onSuccess: () => {
+                        acceptee = true
+                        laisserLAppareil(compte)
+                    },
+                    onFinish: () => {
+                        // Refusée ou coupée en route : la personne reste connectée, l'avis n'a pas lieu d'être.
+                        if (!acceptee) {
+                            noterLesEcrituresGardees(0)
+                        }
+
+                        liberer()
+                    },
+                },
+            )
         })
         .catch((erreur) => {
             liberer()

@@ -1154,9 +1154,16 @@ class SyncService {
         return this.failed.filter((entree) => entree.compte === this.compte)
     }
 
-    /** Oublie les refus du compte connecté ; ceux d'un autre compte l'attendent. */
-    clearFailedRequests() {
-        this.failed = this.failed.filter((entree) => entree.compte !== this.compte)
+    /**
+     * Oublie les refus d'un compte, le connecté par défaut ; ceux d'un autre
+     * compte l'attendent.
+     *
+     * @param {number|string|null} compte
+     */
+    clearFailedRequests(compte = this.compte) {
+        const oublie = normaliserLeCompte(compte)
+
+        this.failed = this.failed.filter((entree) => entree.compte !== oublie)
         this.saveFailed()
     }
 
