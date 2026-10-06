@@ -329,13 +329,14 @@ it('answers the same on the web for a resource owned by someone else as for one 
          * - le navigateur, qui recoit la page d'erreur ;
          * - Inertia, que #1432 cite parce que l'application n'installe aucun
          *   rendu d'erreur Inertia et que le client recoit donc du HTML brut ;
-         * - axios, qui appelle `stats.exercise` et `exercises/{id}` — des
-         *   routes web qui repondent en JSON.
+         * - `http` (resources/js/Utils/http.js), par lequel
+         *   `ExerciseProgressCard.vue` appelle `stats.exercise`, une route web
+         *   qui repond en JSON. Ses en-tetes sont ceux que ce module envoie.
          */
         $callers = [
             'navigateur' => ['Accept' => 'text/html,application/xhtml+xml'],
             'inertia' => ['Accept' => 'text/html,application/xhtml+xml', 'X-Inertia' => 'true', 'X-Inertia-Version' => '1'],
-            'axios' => ['Accept' => 'application/json, text/plain, */*', 'X-Requested-With' => 'XMLHttpRequest'],
+            'http' => ['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'],
         ];
 
         $bodies = ['sans corps' => [], 'charge invalide' => webHostilePayload($route['route'])];

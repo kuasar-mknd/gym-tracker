@@ -15,8 +15,8 @@ describe('classifySyncError', () => {
     it('treats a dropped connection as offline even without the flag', () => {
         expect(classifySyncError({ code: 'ERR_NETWORK' })).toBe(SYNC_OFFLINE)
 
-        // What axios hands back when the request went out and nothing came
-        // home: a request, no response.
+        // Une requête partie sans réponse revenue, comme `ErreurReseau`
+        // (Utils/http.js) la décrit, ici sans son `code`.
         setOnline(false)
         expect(classifySyncError({ request: {}, message: 'Network Error' })).toBe(SYNC_OFFLINE)
     })

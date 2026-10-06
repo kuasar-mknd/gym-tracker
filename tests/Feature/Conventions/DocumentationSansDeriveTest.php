@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Symfony\Component\Finder\Finder;
+
 /**
  * La documentation décrivait l'application de mars : sur 24 fichiers, 21
  * affirmations de version fausses et 13 chemins cités qui n'existaient plus
@@ -192,15 +194,14 @@ it('n annonce aucune version majeure qui n est pas celle des manifestes', functi
     expect($fausses)->toBe([]);
 });
 
-/*
- * Axios a quitté le projet avec Inertia 3 (#1815, #1827) : les écritures de la
- * page de séance passent par `SyncService` et `resources/js/Utils/http.js`, qui
- * envoie `X-CSRF-TOKEN` lu dans la balise meta, et non plus `X-XSRF-TOKEN` lu
- * dans le cookie. Les règles de `.ai/rules`, que tout agent lit avant de
- * modifier un fichier, décrivaient encore l'ancien client : un 419 sur une
- * route API s'y serait cherché du mauvais côté (#1993).
+/**
+ * Les clients HTTP que l'application a déjà employés et que `package.json`
+ * n'installe plus.
+ *
+ * @return list<string>
  */
-it('ne nomme aucun client HTTP que package.json n installe pas', function (): void {
+function clientsHttpAbsentsDuManifeste(): array
+{
     $paquetsNpm = manifesteJson('package.json');
     $installes = [];
 
@@ -209,11 +210,22 @@ it('ne nomme aucun client HTTP que package.json n installe pas', function (): vo
         $installes = [...$installes, ...array_keys(is_array($liste) ? $liste : [])];
     }
 
-    $absents = array_values(array_diff(['axios'], $installes));
+    return array_values(array_diff(['axios'], $installes));
+}
+
+/**
+ * Les lignes des fichiers donnés qui nomment un client HTTP absent du manifeste.
+ *
+ * @param  array<string, string>  $contenus  Fichier => contenu lu.
+ * @return list<string>
+ */
+function citationsDeClientsHttpAbsents(array $contenus): array
+{
+    $absents = clientsHttpAbsentsDuManifeste();
     $citations = [];
 
-    foreach (documentsSurveillesPourLaDerive() as $fichier) {
-        $lignes = preg_split('/\R/', contenuDocumentaireDe($fichier));
+    foreach ($contenus as $fichier => $contenu) {
+        $lignes = preg_split('/\R/', $contenu);
 
         foreach ($lignes === false ? [] : $lignes as $index => $ligne) {
             foreach ($absents as $client) {
@@ -224,7 +236,42 @@ it('ne nomme aucun client HTTP que package.json n installe pas', function (): vo
         }
     }
 
-    expect($citations)->toBe([]);
+    return $citations;
+}
+
+/*
+ * Axios a quitté le projet avec Inertia 3 (#1815, #1827) : les écritures de la
+ * page de séance passent par `SyncService` et `resources/js/Utils/http.js`, qui
+ * envoie `X-CSRF-TOKEN` lu dans la balise meta, et non plus `X-XSRF-TOKEN` lu
+ * dans le cookie. Les règles de `.ai/rules`, que tout agent lit avant de
+ * modifier un fichier, décrivaient encore l'ancien client : un 419 sur une
+ * route API s'y serait cherché du mauvais côté (#1993).
+ */
+it('ne nomme aucun client HTTP que package.json n installe pas', function (): void {
+    $contenus = [];
+
+    foreach (documentsSurveillesPourLaDerive() as $fichier) {
+        $contenus[$fichier] = contenuDocumentaireDe($fichier);
+    }
+
+    expect(citationsDeClientsHttpAbsents($contenus))->toBe([]);
+});
+
+/*
+ * La règle d'api.md corrigée, le client disparu restait déclaré en global à
+ * ESLint, qui acceptait donc un appel à `axios` qu'aucun script ne définit, et
+ * un commentaire de `bootstrap/app.php` le donnait pour l'appelant des routes
+ * web en JSON (#1993). Le code serveur et la configuration d'ESLint ne
+ * nomment pas davantage un client que `package.json` n'installe pas.
+ */
+it('ne déclare à ESLint ni ne décrit dans le code serveur aucun client HTTP que package.json n installe pas', function (): void {
+    $contenus = [base_path('eslint.config.js') => (string) file_get_contents(base_path('eslint.config.js'))];
+
+    foreach (Finder::create()->files()->in(array_map(base_path(...), ['app', 'bootstrap', 'config', 'routes']))->exclude('cache')->name('*.php') as $fichier) {
+        $contenus[(string) $fichier->getRealPath()] = $fichier->getContents();
+    }
+
+    expect(citationsDeClientsHttpAbsents($contenus))->toBe([]);
 });
 
 /*
