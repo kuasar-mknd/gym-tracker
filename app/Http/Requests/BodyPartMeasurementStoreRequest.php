@@ -76,5 +76,4 @@ class BodyPartMeasurementStoreRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
-
 }
