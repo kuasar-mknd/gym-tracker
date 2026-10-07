@@ -134,6 +134,19 @@ describe('reading the cupboard', () => {
         expect(deux.text()).toContain('2 produits suivis')
     })
 
+    // Le stock de la carte écrivait « 1 doses » : le nom est dans sa propre balise (#1980).
+    it('accorde les doses restantes de chaque carte', async () => {
+        const stock = (wrapper) => wrapper.get('p.text-2xl').text().replace(/\s+/g, ' ')
+
+        const une = await mountPage({ supplements: [supplement({ servings_remaining: 1 })] })
+
+        expect(stock(une)).toBe('1 dose')
+
+        const deux = await mountPage({ supplements: [supplement({ servings_remaining: 2 })] })
+
+        expect(stock(deux)).toBe('2 doses')
+    })
+
     it('names a supplement bought loose “Générique” rather than leaving a hole', async () => {
         const wrapper = await mountPage({ supplements: [supplement({ brand: null })] })
 

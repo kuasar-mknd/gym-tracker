@@ -11,7 +11,9 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * de `Utils/nombre.js`, qui accorde le nom.
  *
  * La garde cherche une interpolation, de gabarit Vue (`}}`) ou de chaîne
- * (`${…}`), suivie d'un des noms que l'application compte.
+ * (`${…}`), suivie d'un des noms que l'application compte, même quand des
+ * balises les séparent : le stock d'un complément écrivait son nombre en
+ * grand et « doses » dans un `<span>` à part, soit « 1 doses ».
  */
 const NOMS_COMPTES = [
     'séances',
@@ -27,7 +29,7 @@ const NOMS_COMPTES = [
 ]
 
 const interpolationSuivieDUnPluriel = new RegExp(
-    String.raw`(?:\}\}|\$\{[^{}\n]*(?:\{[^{}\n]*\}[^{}\n]*)*\})\s*(?:${NOMS_COMPTES.join('|')})(?!\p{L})`,
+    String.raw`(?:\}\}|\$\{[^{}\n]*(?:\{[^{}\n]*\}[^{}\n]*)*\})(?:\s*<[^<>]*>)*\s*(?:${NOMS_COMPTES.join('|')})(?!\p{L})`,
     'gu',
 )
 
@@ -52,7 +54,10 @@ it('reconnaît les formes qu’elle refuse, et laisse passer compte()', () => {
     expect(refuse('label: (context) => `${context.parsed.y} minutes`')).toBe(true)
     expect(refuse("`Atteindre ${props.form.target_value || '?'} séances au total`")).toBe(true)
     expect(refuse('{{ line.sets_count }}\n        séries')).toBe(true)
+    expect(refuse('{{ n }}\n<span class="x">doses</span>')).toBe(true)
+    expect(refuse('{{ n }}</p>\n<p class="x">séances')).toBe(true)
     expect(refuse("compte(context.parsed.y, 'séance', 'séances')")).toBe(false)
     expect(refuse("{{ compte(line.sets_count, 'série', 'séries') }}")).toBe(false)
+    expect(refuse("{{ n }}\n<span class=\"x\">{{ accord(n, 'dose', 'doses') }}</span>")).toBe(false)
     expect(refuse('`${n} séancesX`')).toBe(false)
 })
