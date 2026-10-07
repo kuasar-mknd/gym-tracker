@@ -926,6 +926,40 @@ describe('SyncService une file par compte', () => {
         expect(localStorage.getItem('offline_sync_failed')).toBeNull()
     })
 
+    /*
+     * Effacées sans un mot, alors que la version précédente les rejouait : une
+     * séance faite hors ligne, rouverte après la mise à jour, perdait ses
+     * dernières séries sans que personne le sache. Le nombre, et lui seul,
+     * attend que le premier écran authentifié le dise.
+     */
+    it('note combien d’écritures sans compte le chargement a effacées, une seule fois', async () => {
+        const { compte: _sansCompte, ...ancienne } = aQueuedPatch()
+        localStorage.setItem('offline_sync_queue', JSON.stringify([ancienne, { ...ancienne, id: 'queued-2' }]))
+        localStorage.setItem('offline_sync_failed', JSON.stringify([{ ...ancienne, status: 422 }]))
+
+        await chargé()
+
+        expect(request).not.toHaveBeenCalled()
+        expect(JSON.parse(localStorage.getItem('gym-tracker:ecritures-effacees'))).toBe(3)
+        expect(localStorage.getItem('gym-tracker:ecritures-effacees')).not.toContain('/api')
+
+        // Un second chargement n'a plus rien à effacer, ni à compter de nouveau.
+        await chargé()
+
+        const { reprendreLesEcrituresEffacees } = await import('@/Utils/ecrituresEffacees')
+        expect(reprendreLesEcrituresEffacees()).toBe(3)
+        expect(reprendreLesEcrituresEffacees()).toBe(0)
+    })
+
+    it('ne note rien quand chaque écriture dit à qui elle appartient', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
+        request.mockResolvedValue({ data: {} })
+
+        await chargé()
+
+        expect(localStorage.getItem('gym-tracker:ecritures-effacees')).toBeNull()
+    })
+
     it('ne met rien en file quand personne n’est connecté, et rend l’échec tel quel', async () => {
         request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
 

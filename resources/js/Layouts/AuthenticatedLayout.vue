@@ -14,6 +14,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
+import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 
 defineProps({
     pageTitle: {
@@ -111,6 +112,26 @@ const banniereCompacte = computed(() => !route().current('dashboard') && !route(
  * remonte à chaque page, la fonction s'en souvient.
  */
 onMounted(() => rapprocherLAbonnementPush(page.props.auth?.user?.id))
+
+/*
+ * Les écritures hors ligne que le chargement a effacées sans pouvoir les
+ * envoyer, faute de savoir à quel compte elles appartenaient (#1964) : le
+ * premier écran authentifié le dit, une fois, par le toast d'erreur. Un message
+ * déjà affiché n'est pas remplacé : l'avis attend l'écran suivant.
+ */
+onMounted(() => {
+    if (page.props.flash?.error) {
+        return
+    }
+
+    const effacees = reprendreLesEcrituresEffacees()
+
+    if (effacees > 0) {
+        const flash = page.props.flash ?? (page.props.flash = {})
+
+        flash.error = messageDesEcrituresEffacees(effacees)
+    }
+})
 
 onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>

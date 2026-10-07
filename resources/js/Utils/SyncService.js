@@ -1,4 +1,5 @@
 import { http } from '@/Utils/http'
+import { noterLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { classifySyncError, estPourUnAutreCompte, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
@@ -232,6 +233,13 @@ class SyncService {
         if (this.failed.length !== refusees.length) {
             this.saveFailed()
         }
+
+        /*
+         * Effacées sans être envoyées : l'écran le dit, une fois, et seulement
+         * combien (`Utils/ecrituresEffacees`). Elles disparaissaient sans un
+         * mot, alors que la version précédente les aurait rejouées.
+         */
+        noterLesEcrituresEffacees(file.length - this.queue.length + (refusees.length - this.failed.length))
 
         /** La relance programmée après un échec passager, s'il y en a une. */
         this.relance = null
