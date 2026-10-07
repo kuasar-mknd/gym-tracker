@@ -103,15 +103,21 @@ it('calculates volume history correctly', function (): void {
  * Terminee parce que les deux historiques filtrent sur `ended_at` : une seance
  * en cours n'y entre pas, et un jeu de donnees fait de seances ouvertes rendrait
  * des historiques vides sans que le test s'en apercoive.
+ *
+ * Sans les écouteurs d'une séance : la série de jours, les succès et les
+ * objectifs ne sont pas ce que lisent ces graphes. Avec eux, les vingt à trente
+ * séances d'un test les recalculaient chacune, trois secondes par test, payées
+ * par chaque mutant de ces trois services que la passe nocturne y faisait
+ * passer avant d'atteindre le test qui le tue.
  */
 function seancePourIndex(User $user, string $quand, string $nom = 'Seance'): Workout
 {
-    return Workout::factory()->create([
+    return Workout::withoutEvents(fn (): Workout => Workout::factory()->create([
         'user_id' => $user->id,
         'name' => $nom,
         'started_at' => Carbon::parse($quand),
         'ended_at' => Carbon::parse($quand)->addHour(),
-    ]);
+    ]));
 }
 
 it('rend les cinq graphes annonces, et la bibliotheque, sans en perdre un en route', function (): void {
