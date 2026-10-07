@@ -796,8 +796,7 @@ class SyncService {
              * est classée refusée sans partir, et annoncée.
              */
             if (filesReferencees(config.data).length > 0) {
-                this.recordFailure(config, null)
-                this.retirerLEntree(config)
+                this.sortirRefusee(config, null)
 
                 continue
             }
@@ -908,12 +907,7 @@ class SyncService {
                     }
                 }
 
-                if (this.refusMerite(config, error)) {
-                    this.recordFailure(config, error)
-                }
-
-                // Classée refusée : seulement maintenant elle peut sortir.
-                this.retirerLEntree(config)
+                this.sortirRefusee(config, error)
 
                 continue
             } finally {
@@ -988,6 +982,34 @@ class SyncService {
                     },
                 }),
             )
+        }
+    }
+
+    /**
+     * Sort de la file une écriture refusée pour de bon, dans cet ordre : le
+     * refus noté, l'entrée retirée, puis le refus annoncé.
+     *
+     * Noté avant le retrait, pour qu'elle soit toujours quelque part. Annoncé
+     * après, comme un rejeu : l'écouteur lit la file telle qu'elle est
+     * désormais. Annoncé avant, le refus de la dernière écriture trouvait la
+     * file encore occupée par elle, et rien ne suivait son retrait : la séance
+     * rechargée attendait une file vide qu'on ne lui annonçait jamais, et
+     * l'exercice créé juste avant restait absent de l'écran (#1960, #1962).
+     *
+     * @param {Object} config l'entrée refusée, en tête de file
+     * @param {Object|null} error l'erreur du serveur, ou null quand elle n'est pas partie
+     */
+    sortirRefusee(config, error) {
+        const annoncer = this.refusMerite(config, error)
+
+        if (annoncer) {
+            this.recordFailure(config, error)
+        }
+
+        this.retirerLEntree(config)
+
+        if (annoncer) {
+            this.annoncerLeRefus(config, error)
         }
     }
 
@@ -1133,7 +1155,8 @@ class SyncService {
 
     /**
      * Keeps a mutation the server refused, so it can be shown or replayed rather
-     * than vanishing. Listeners get told the moment it happens.
+     * than vanishing. `annoncerLeRefus` tells the listeners, once the entry has
+     * left the queue.
      */
     recordFailure(config, error) {
         this.failed.push({
@@ -1155,7 +1178,15 @@ class SyncService {
         }
 
         this.saveFailed()
+    }
 
+    /**
+     * Dit aux écouteurs qu'une écriture a été refusée, et laquelle.
+     *
+     * @param {Object} config l'entrée refusée
+     * @param {Object|null} error l'erreur du serveur, ou null quand elle n'est pas partie
+     */
+    annoncerLeRefus(config, error) {
         window.dispatchEvent(
             new CustomEvent('sync:failed', {
                 // The payload travels with the event so a listener can say WHAT

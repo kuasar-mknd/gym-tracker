@@ -117,6 +117,32 @@ describe('SyncService.processQueue', () => {
         })
     })
 
+    /*
+     * Annoncé avant le retrait, le refus de la dernière écriture trouvait la
+     * file encore occupée par elle, et rien ne suivait son retrait : la séance
+     * qui attendait la file vide pour se recharger n'en entendait jamais parler
+     * (#1960, #1962).
+     */
+    it('annonce le refus une fois l’écriture sortie de la file et notée parmi les refus', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/api/v1/sets/7')]))
+        request.mockRejectedValue({ response: { status: 422 } })
+
+        const vu = []
+        const listener = () =>
+            vu.push({
+                file: JSON.parse(localStorage.getItem('offline_sync_queue')).length,
+                refus: JSON.parse(localStorage.getItem('offline_sync_failed')).length,
+            })
+        window.addEventListener('sync:failed', listener)
+
+        const service = await freshService()
+        await service.processQueue()
+
+        window.removeEventListener('sync:failed', listener)
+
+        expect(vu).toEqual([{ file: 0, refus: 1 }])
+    })
+
     it('survives a reload with the refused mutations intact', async () => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch()]))
         request.mockRejectedValue({ response: { status: 422 } })
