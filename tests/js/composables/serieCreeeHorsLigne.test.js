@@ -231,6 +231,38 @@ describe('une série créée hors ligne', () => {
         expect(page.sync.queue).toEqual([])
     })
 
+    /*
+     * Rejouée pour être annulée, la création portait encore la coche fondue :
+     * le serveur recevait une série validée, et calculait ses records, ses
+     * objectifs et un éventuel « record battu », pour une série supprimée.
+     */
+    it('part décochée quand elle est rejouée pour être annulée, même cochée avant sa suppression', async () => {
+        const page = await monterLaSeance(seance())
+        const serie = await ajouterHorsLigne(page)
+
+        page.saisieTerminee(serie, 'weight', '200')
+        await page.toggleSetCompletion(serie)
+        await flushPromises()
+        page.removeSet(serie.id)
+        await flushPromises()
+
+        expect(fileDurable()).toEqual([
+            expect.objectContaining({
+                data: { workout_line_id: 1, is_completed: false, weight: 200, reps: 5 },
+                tentee: true,
+                aAnnuler: '/api/v1/sets/__produit__',
+            }),
+        ])
+
+        await leReseauRevient(page)
+
+        expect(reseau.serveur.resume()).toEqual([
+            'post /api/v1/sets {"workout_line_id":1,"is_completed":false,"weight":200,"reps":5}',
+            'delete /api/v1/sets/100',
+        ])
+        expect([...reseau.serveur.series.keys()]).toEqual([3])
+    })
+
     it('est supprimée du serveur quand on la retire pendant que sa création vole', async () => {
         const page = await monterLaSeance(seance())
         const serie = await ajouterHorsLigne(page)

@@ -94,12 +94,20 @@ export const useTransportDeSerie = ({ pendingIds, markUnsynced }) => {
      * Sauf si cette création a déjà été tentée sans réponse : elle a pu créer la
      * série sur le serveur. La file la garde alors, et supprime au vidage ce
      * qu'elle a produit, par l'adresse donnée ici (#1960).
+     *
+     * Avant d'en sortir, sa charge perd la coche qui s'y était fondue. Gardée
+     * pour être annulée, la création repartait cochée : le serveur la recevait
+     * comme une série validée, calculait ses records, avançait les objectifs et
+     * pouvait annoncer un record battu, pour une série que la personne avait
+     * supprimée. Non cochée, elle est ignorée par ces calculs jusqu'à sa
+     * suppression, qui suit au vidage.
      */
     const deleteSet = (setId) => {
         const retirerSaCreation = () => {
             const fileDeLaSerie = pendingIds.fileDe(setId)
 
             if (fileDeLaSerie !== null) {
+                SyncService.modifierEnFile(fileDeLaSerie, { is_completed: false })
                 SyncService.retirerDeLaFile(fileDeLaSerie, {
                     // L'identifiant que le serveur aura émis : le vidage le pose à la place de `realId`.
                     annulerPar: (realId) => route('api.v1.sets.destroy', { set: realId }),
