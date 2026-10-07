@@ -36,10 +36,12 @@ it('rend chaque code d’erreur en français, sans le message de l’exception',
         ->assertDontSee('4242')
         ->assertDontSee('lang="en"', false);
 
-    foreach (['Forbidden', 'Page Expired', 'Too Many Requests', 'Service Unavailable', 'Not Found', 'Server Error', 'Whoops', 'Method Not Allowed', 'Bad Gateway'] as $anglais) {
+    foreach (['Unauthorized', 'Payment Required', 'Forbidden', 'Page Expired', 'Too Many Requests', 'Service Unavailable', 'Not Found', 'Server Error', 'Whoops', 'Method Not Allowed', 'Bad Gateway'] as $anglais) {
         $reponse->assertDontSee($anglais);
     }
 })->with([
+    '401' => [401, 'Connexion requise'],
+    '402' => [402, 'Demande refusée'],
     '403' => [403, 'Accès refusé'],
     '404' => [404, 'Page introuvable'],
     '419' => [419, 'Session expirée'],
@@ -49,6 +51,25 @@ it('rend chaque code d’erreur en français, sans le message de l’exception',
     'un autre 4xx (405)' => [405, 'Demande refusée'],
     'un autre 5xx (502)' => [502, 'Service indisponible'],
 ]);
+
+/*
+ * Le framework fournit ses propres vues pour quelques codes (401, 402…), et
+ * Laravel les trouve avant le repli `errors::4xx` : chacune doit donc avoir sa
+ * page française, sans quoi le code rend la vue anglaise.
+ */
+it('donne une page française à chaque code dont le framework fournit la vue', function (): void {
+    $vues = glob(base_path('vendor/laravel/framework/src/Illuminate/Foundation/Exceptions/views/[0-9][0-9][0-9].blade.php'));
+    $vuesDuFramework = is_array($vues) ? $vues : [];
+
+    expect($vuesDuFramework)->not->toBeEmpty();
+
+    $sansPageFrancaise = array_values(array_filter(
+        array_map(static fn (string $vue): string => basename($vue, '.blade.php'), $vuesDuFramework),
+        static fn (string $code): bool => ! is_file(resource_path("views/errors/{$code}.blade.php")),
+    ));
+
+    expect($sansPageFrancaise)->toBe([]);
+});
 
 it('répond en français à la septième tentative de connexion de la minute, même en Inertia', function (): void {
     $compte = User::factory()->create();
