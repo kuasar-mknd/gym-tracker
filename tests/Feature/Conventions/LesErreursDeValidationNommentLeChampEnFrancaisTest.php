@@ -335,3 +335,89 @@ it('ne passe aucun nom de champ écrit en dur à une phrase du validateur', func
 
     expect($enDur)->toBe([], 'nommez le champ par $validator->getDisplayableAttribute() : un nom écrit en dur contourne lang/fr/validation.php');
 });
+
+/*
+ * Une règle maison écrit son propre message, que les gardes précédentes
+ * laissent de côté : celle de l'abonnement push disait « L'endpoint doit être
+ * une URL https. », et le profil affiche ce message tel quel (#1975). Un
+ * `$fail('…')` de app/ nomme donc le champ par `:attribute`, que
+ * `lang/fr/validation.php` traduit, et ne cite jamais une clef de règle dont
+ * le nom français diffère (`endpoint`, `target_value` ou `target value`).
+ * La casse compte, à la majuscule initiale près : « URL » est un mot du
+ * message, `url` une clef.
+ */
+const VALIDATION_FRANCAISE_MESSAGE_DE_REGLE_MAISON = '/\$fail\(\s*([\'"])((?:\\\\.|(?!\1)[^\\\\])*)\1/u';
+
+/**
+ * Les clefs qui sont aussi des mots français, qu'un message peut écrire sans
+ * citer le champ : « une part », « content », « les types ».
+ */
+const VALIDATION_FRANCAISE_CLEFS_QUI_SONT_DES_MOTS = ['agent', 'content', 'label', 'part', 'pile', 'types'];
+
+/**
+ * Les clefs de règle qu'un message ne doit pas citer : le dernier segment de
+ * chaque clef validée par app/Http/Requests, sous sa forme brute et avec des
+ * espaces, quand son nom français est un autre mot (`date` reste `date`).
+ *
+ * @return list<string>
+ */
+function validationFrancaiseClefsACiterParLeurNom(): array
+{
+    $formes = [];
+
+    foreach (validationFrancaiseRequetes() as $requete) {
+        foreach (array_keys(validationFrancaiseRegles($requete)) as $clef) {
+            $segments = array_values(array_filter(explode('.', (string) $clef), static fn (string $segment): bool => $segment !== '*' && ! ctype_digit($segment)));
+            $segment = end($segments);
+            $nom = validationFrancaiseNomDuChamp((string) $clef, $requete);
+
+            if ($segment === false || $nom === null || mb_strtolower($nom) === str_replace('_', ' ', $segment) || in_array($segment, VALIDATION_FRANCAISE_CLEFS_QUI_SONT_DES_MOTS, true)) {
+                continue;
+            }
+
+            $formes[] = $segment;
+            $formes[] = str_replace('_', ' ', $segment);
+        }
+    }
+
+    $formes = array_values(array_unique($formes));
+    sort($formes);
+
+    return $formes;
+}
+
+it('ne cite aucune clef de règle dans le message d’une règle maison', function (): void {
+    $formes = validationFrancaiseClefsACiterParLeurNom();
+    $citeUneClef = static fn (string $message): ?string => array_find(
+        $formes,
+        static fn (string $forme): bool => preg_match('/(?<![\p{L}:_])(?:'.preg_quote($forme, '/').'|'.preg_quote(ucfirst($forme), '/').')(?![\p{L}_])/u', $message) === 1,
+    );
+
+    expect($formes)->toContain('endpoint', 'target_value', 'target value')
+        ->and($citeUneClef('L\'endpoint doit être une URL https.'))->toBe('endpoint')
+        ->and($citeUneClef('Endpoint invalide.'))->toBe('endpoint')
+        ->and($citeUneClef('La target value est trop grande.'))->toBe('target value')
+        ->and($citeUneClef('Le champ :attribute doit être une URL https.'))->toBeNull()
+        ->and($citeUneClef('Le champ :attribute ne dépasse pas :value.'))->toBeNull();
+
+    $citations = [];
+
+    foreach (Finder::create()->files()->in(app_path())->name('*.php') as $fichier) {
+        $source = $fichier->getContents();
+
+        if (preg_match_all(VALIDATION_FRANCAISE_MESSAGE_DE_REGLE_MAISON, $source, $trouves, PREG_SET_ORDER | PREG_OFFSET_CAPTURE) === 0) {
+            continue;
+        }
+
+        foreach ($trouves as $trouve) {
+            $message = stripslashes($trouve[2][0]);
+            $clef = $citeUneClef($message);
+
+            if ($clef !== null) {
+                $citations[] = 'app/'.$fichier->getRelativePathname().':'.(substr_count(substr($source, 0, $trouve[0][1]), "\n") + 1)." cite « {$clef} »";
+            }
+        }
+    }
+
+    expect($citations)->toBe([], 'nommez le champ par :attribute : le message afficherait la clef anglaise');
+});

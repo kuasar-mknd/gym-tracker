@@ -146,6 +146,31 @@ it('nomme en français l’exercice refusé d’un modèle de séance, à la cr�
     expect($message)->not->toContain('exercise id');
 })->with(['création', 'modification']);
 
+/*
+ * La règle de l'abonnement push composait ses messages à la main avec la
+ * clef anglaise, « L'endpoint doit être une URL https. », que le profil
+ * affiche tel quel ; un hôte non résolu, le cas d'une panne DNS, touche un
+ * utilisateur légitime (#1975).
+ */
+it('nomme en français l’adresse d’un abonnement push refusée', function (string $adresse, string $message): void {
+    $reponse = $this->actingAs(User::factory()->create())
+        ->postJson(route('push-subscriptions.update'), [
+            'endpoint' => $adresse,
+            'keys' => ['auth' => 'jeton', 'p256dh' => 'clef'],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.endpoint', [$message]);
+
+    $rendu = $reponse->json('message');
+
+    expect($rendu)->toBe($message);
+    expect($rendu)->not->toContain('endpoint');
+})->with([
+    'en clair' => ['http://push.example.org/abc', "Le champ adresse de l'abonnement doit être une URL https."],
+    'hôte non résolu' => ['https://rien-du-tout.invalid/abc', "Le champ adresse de l'abonnement doit désigner un hôte joignable et public."],
+    'hôte privé' => ['https://10.0.0.5/abc', "Le champ adresse de l'abonnement doit désigner un hôte public."],
+]);
+
 it('ne laisse dans aucun de ces messages ni nom de colonne ni « today »', function (): void {
     $utilisateur = User::factory()->create();
 

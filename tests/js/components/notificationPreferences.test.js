@@ -277,7 +277,10 @@ describe('UpdateNotificationPreferencesForm — activation par étapes', () => {
 
     it('rapporte le refus du serveur avec son message', async () => {
         post.mockRejectedValue({
-            response: { status: 422, data: { message: 'L’endpoint doit désigner un hôte joignable et public.' } },
+            response: {
+                status: 422,
+                data: { message: 'Le champ adresse de l’abonnement doit désigner un hôte joignable et public.' },
+            },
         })
 
         const wrapper = mountForm()
