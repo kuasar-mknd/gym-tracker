@@ -40,6 +40,11 @@ class AuthenticatedSessionController extends Controller
 
     /**
      * Destroy an authenticated session.
+     *
+     * La première page servie ensuite porte `clearHistory` (#1965) : Inertia y
+     * jette la clé de l'historique, et les pages du compte qu'il gardait ne se
+     * déchiffrent plus au bouton Retour. Posé après `invalidate()`, qui vide la
+     * session : avant, la consigne partirait avec elle.
      */
     public function destroy(Request $request): RedirectResponse
     {
@@ -48,6 +53,8 @@ class AuthenticatedSessionController extends Controller
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();
+
+        Inertia::clearHistory();
 
         return redirect('/');
     }
