@@ -15,6 +15,15 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * Le titre de la notification, au centre de notifications comme en push.
+     *
+     * Les succès portaient trois noms selon l'écran (« Succès », « Trophées »,
+     * « Badges ») ; l'interface n'en garde qu'un, « Badges », le plus employé
+     * (#1980).
+     */
+    private const string TITRE = 'Badge débloqué ! 🏆';
+
     public function __construct(public Achievement $achievement)
     {
     }
@@ -40,11 +49,11 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
     public function toWebPush(object $_notifiable, $_notification): WebPushMessage
     {
         return new WebPushMessage()
-            ->title('Succès Déverrouillé ! 🏆')
+            ->title(self::TITRE)
             ->icon('/pwa-192x192.png')
             /** @phpstan-ignore-next-line */
             ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
-            ->action('Voir mes succès', url('/achievements'))
+            ->action('Voir mes badges', url('/achievements'))
             ->data(['url' => '/achievements']);
     }
 
@@ -55,8 +64,8 @@ final class AchievementUnlocked extends Notification implements ShouldQueue
     {
         return [
             'type' => 'achievement',
-            'title' => 'Succès Déverrouillé ! 🏆',
-            'message' => "Félicitations ! Tu as déverrouillé le succès : {$this->achievement->name}.",
+            'title' => self::TITRE,
+            'message' => "Félicitations ! Tu as débloqué le badge : {$this->achievement->name}.",
             'achievement_id' => $this->achievement->id,
             'achieved_at' => now(),
         ];

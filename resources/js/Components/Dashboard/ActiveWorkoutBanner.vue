@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { ref, onMounted, onUnmounted } from 'vue'
+import { compte } from '@/Utils/nombre'
 
 const props = defineProps({
     workout: { type: Object, required: true },
@@ -117,7 +118,7 @@ onUnmounted(() => {
                         class="text-text-on-dark-accent/80 flex items-center gap-1 text-sm font-bold"
                     >
                         <GlassIcon name="exercise" size="xs" />
-                        {{ workout.workout_lines_count }} exos
+                        {{ compte(workout.workout_lines_count, 'exo', 'exos') }}
                     </span>
                 </div>
             </div>

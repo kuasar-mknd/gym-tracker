@@ -157,12 +157,7 @@
                                 <div>
                                     <p class="text-text-main font-bold">{{ entier(log.amount) }} ml</p>
                                     <p class="text-text-muted text-xs">
-                                        {{
-                                            new Date(log.consumed_at).toLocaleTimeString([], {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                            })
-                                        }}
+                                        {{ heureCourte(new Date(log.consumed_at)) }}
                                     </p>
                                 </div>
                             </div>
@@ -210,6 +205,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
 import { entier, pourcentage } from '@/Utils/nombre'
+import { heureCourte } from '@/Utils/date'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))

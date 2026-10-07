@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vites
 import { mount, flushPromises } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
 
 /**
  * Two of the four pages here print a date, and both of them are only correct
@@ -246,6 +247,37 @@ describe('Measurements/Parts/Show — the unit a new entry inherits', () => {
     })
 })
 
+describe('Measurements/Parts/Show — le nom de la partie', () => {
+    /*
+     * La clef reste anglaise en base et dans l'adresse ; l'écran montre le nom
+     * français que le serveur envoie (#1974).
+     */
+    it('titre la page, l’onglet et le graphique du nom français, jamais de la clef', async () => {
+        const wrapper = mount(PartShow, {
+            props: { part: 'Waist', label: 'Taille', history: structuredClone(historyFixture) },
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            },
+        })
+        await flushPromises()
+
+        expect(wrapper.find('h2').text()).toBe('Taille')
+        expect(wrapper.find('[title="Taille"]').exists()).toBe(true)
+        expect(wrapper.findComponent({ name: 'BodyPartHistoryChart' }).props('label')).toBe('Taille')
+        expect(wrapper.text()).toContain('Historique')
+        expect(wrapper.text()).not.toContain('History')
+        expect(wrapper.text()).not.toContain('Waist')
+    })
+
+    it('garde le nom saisi d’une partie libre', () => {
+        const { wrapper } = mountPart()
+
+        expect(wrapper.find('h2').text()).toBe('Biceps')
+    })
+})
+
 describe('Measurements/Parts/Show — the history list', () => {
     it('puts the most recent measurement at the top', () => {
         const { wrapper } = mountPart()
@@ -291,6 +323,23 @@ describe('Measurements/Parts/Show — the history list', () => {
         expect(text).toMatch(/\b15\b/)
         expect(text).not.toMatch(/\b14\b/)
         expect(text).toContain('2026')
+    })
+
+    /*
+     * `toLocaleDateString(undefined, …)` suivait la langue de l'appareil :
+     * « Sun, Mar 15, 2026 » sur un téléphone réglé en anglais (#1976).
+     */
+    it('date l’historique en français sur un appareil réglé en anglais', () => {
+        const rendre = simulerUnSystemeEnAnglais()
+
+        try {
+            const { wrapper } = mountPart([{ id: 9, value: 40, unit: 'cm', measured_at: '2026-03-15', notes: null }])
+
+            expect(wrapper.text()).toContain('dim. 15 mars 2026')
+            expect(wrapper.text()).not.toContain('Sun')
+        } finally {
+            rendre()
+        }
     })
 
     it('reads only the date out of a full timestamp', () => {
@@ -356,6 +405,29 @@ describe('Measurements/Parts/Show — recording a measurement', () => {
         await form.trigger('submit')
 
         expect(formPost).toHaveBeenCalledWith('/routes/body-parts.store', expect.any(Object))
+    })
+
+    /*
+     * Une « Taille » saisie à la main ne doit pas être ramenée à `Waist` quand
+     * on lui ajoute une mesure depuis sa propre page : la mesure manquerait à
+     * la page où on vient de l'ajouter (#1974).
+     */
+    it('demande que la mesure rejoigne l’historique de cette page, sous ce nom', async () => {
+        const wrapper = mount(PartShow, {
+            props: { part: 'Taille', label: 'Taille (saisie libre)', history: structuredClone(historyFixture) },
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            },
+        })
+
+        const form = await openAddForm(wrapper)
+        await form.trigger('submit')
+
+        expect(wrapper.vm.form.part).toBe('Taille')
+        expect(wrapper.vm.form.keep_part_name).toBe(true)
+        expect(wrapper.find('h2').text()).toBe('Taille (saisie libre)')
     })
 
     /**

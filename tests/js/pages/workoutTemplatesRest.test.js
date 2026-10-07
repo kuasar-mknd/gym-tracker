@@ -177,7 +177,20 @@ describe('the template listing', () => {
 
         // The count is a `withCount`, so it is absent — not zero — on any
         // payload that forgot it. Printing an empty gap reads as a bug.
-        expect(wrapper.text()).toContain('• 0 séries')
+        expect(wrapper.text()).toContain('• 0 série')
+        expect(wrapper.text()).not.toContain('0 séries')
+    })
+
+    // « 1 séries » sous un exercice d'une seule série (#1980).
+    it('accorde le nombre de séries d’un exercice', () => {
+        const wrapper = mountIndex([
+            {
+                ...pushA,
+                workout_template_lines: [{ id: 11, exercise: { name: 'Dips' }, workout_template_sets_count: 1 }],
+            },
+        ])
+
+        expect(exerciseRows(wrapper)).toEqual(['Dips• 1 série'])
     })
 
     it('stays silent about extra exercises when the card already shows them all', () => {
@@ -188,9 +201,12 @@ describe('the template listing', () => {
     })
 
     it('counts the overflow from the fourth exercise on', () => {
+        // « + 1 exercices » jusqu'à #1980 : le compte s'accorde désormais.
         const wrapper = mountIndex([{ ...pushA, workout_template_lines_count: 4 }])
 
-        expect(wrapper.text()).toContain('+ 1 exercices')
+        expect(wrapper.text()).toContain('+ 1 exercice')
+        expect(wrapper.text()).not.toContain('+ 1 exercices')
+        expect(mountIndex([{ ...pushA, workout_template_lines_count: 5 }]).text()).toContain('+ 2 exercices')
     })
 
     it('launches the template that was tapped', async () => {

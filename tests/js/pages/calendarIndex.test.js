@@ -307,6 +307,15 @@ describe('the panel under the grid', () => {
         expect(links[1].text()).toContain('Traction')
     })
 
+    // « 1 exercices » sous une séance d'un seul exercice (#1980).
+    it('accorde le nombre d’exercices d’une séance', async () => {
+        const wrapper = await openTenth({ workouts: [workout({ exercises_count: 1, preview_exercises: [] })] })
+        const carte = wrapper.find('[dusk="calendar-day-details"]').find('a')
+
+        expect(carte.text()).toContain('1 exercice')
+        expect(carte.text()).not.toContain('1 exercices')
+    })
+
     it('leaves the bullet off a session with nothing to preview', async () => {
         const wrapper = await openTenth({ workouts: [workout({ preview_exercises: [] })] })
 

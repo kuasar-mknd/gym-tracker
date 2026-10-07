@@ -28,7 +28,7 @@ class ErreursNavigateurTable
                 TextColumn::make('agent')->label('Navigateur')->limit(40)->tooltip(fn (ErreurNavigateur $record): string => (string) $record->agent)->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('type')->options(array_combine(ErreurNavigateur::TYPES, ErreurNavigateur::TYPES)),
+                SelectFilter::make('type')->label('Type')->options(array_combine(ErreurNavigateur::TYPES, ErreurNavigateur::TYPES)),
             ])
             ->recordActions([
                 \Filament\Actions\DeleteAction::make(),

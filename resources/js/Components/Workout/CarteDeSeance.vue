@@ -7,6 +7,7 @@ import { Link } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import { compte } from '@/Utils/nombre'
 
 defineProps({
     seance: { type: Object, required: true },
@@ -56,7 +57,7 @@ const formatDate = (dateStr) =>
                                 {{ seance.name || 'Séance' }}
                             </h4>
                             <span class="glass-badge glass-badge-primary text-xs">
-                                {{ seance.workout_lines.length }} exo
+                                {{ compte(seance.workout_lines.length, 'exo', 'exos') }}
                             </span>
                         </div>
                         <div class="text-text-muted mt-1 text-sm">
@@ -70,7 +71,9 @@ const formatDate = (dateStr) =>
                                 class="text-text-muted border-border bg-surface-card/50 rounded-lg border px-2 py-1 text-xs"
                             >
                                 {{ line.exercise.name }}
-                                <span class="text-text-muted/50">• {{ line.sets_count }} séries</span>
+                                <span class="text-text-muted/50"
+                                    >• {{ compte(line.sets_count, 'série', 'séries') }}</span
+                                >
                             </span>
                             <span
                                 v-if="seance.workout_lines.length > 3"

@@ -43,7 +43,7 @@ class FastingController extends Controller
             'status' => 'active',
         ]);
 
-        return back()->with('success', 'Fast started successfully.');
+        return back()->with('success', 'Jeûne commencé.');
     }
 
     /**
@@ -57,7 +57,7 @@ class FastingController extends Controller
 
         $fast->update($request->validated());
 
-        return back()->with('success', 'Fast updated successfully.');
+        return back()->with('success', 'Jeûne mis à jour.');
     }
 
     /**
@@ -69,6 +69,6 @@ class FastingController extends Controller
 
         $fast->delete();
 
-        return back()->with('success', 'Fast deleted successfully.');
+        return back()->with('success', 'Jeûne supprimé.');
     }
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 import GoalCard from '@/Components/Goals/GoalCard.vue'
+import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
 
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${Object.values(params ?? {}).join('/')}`
@@ -178,6 +179,20 @@ describe('GoalCard — figures', () => {
         expect(statTile(wrapper, 'Cible')).toBe('Cible 5 séances')
     })
 
+    it('accorde les séances d’un objectif de fréquence à chaque valeur (#1980)', () => {
+        const wrapper = mountCard({
+            type: 'frequency',
+            unit: 'séances',
+            start_value: 0,
+            current_value: 1,
+            target_value: 5,
+        })
+
+        expect(barLegend(wrapper)).toEqual(['0 séance', '5 séances'])
+        expect(statTile(wrapper, 'Actuel')).toBe('Actuel 1 séance')
+        expect(statTile(wrapper, 'Cible')).toBe('Cible 5 séances')
+    })
+
     it('renders a deadline as a calendar day, not as an instant', () => {
         // The column is cast `date:Y-m-d`; read as an instant it lands a day
         // early anywhere behind UTC.
@@ -185,9 +200,27 @@ describe('GoalCard — figures', () => {
             const wrapper = mountCard({ deadline: '2026-12-25' })
 
             expect(wrapper.text()).toContain('Échéance')
-            expect(wrapper.text()).toContain(new Date('2026-12-25T00:00:00').toLocaleDateString())
-            expect(wrapper.text()).not.toContain(new Date('2026-12-24T00:00:00').toLocaleDateString())
+            expect(wrapper.text()).toContain('25/12/2026')
+            expect(wrapper.text()).not.toContain('24/12/2026')
         })
+    })
+
+    /*
+     * Sans langue, la date suivait celle de l'appareil : sur un téléphone
+     * réglé en anglais, l'échéance du 4 octobre s'écrivait « 10/4/2026 », qu'un
+     * francophone lit 10 avril (#1976).
+     */
+    it('écrit l’échéance en jour/mois/année sur un appareil réglé en anglais', () => {
+        const rendre = simulerUnSystemeEnAnglais()
+
+        try {
+            const texte = mountCard({ deadline: '2026-10-04' }).text()
+
+            expect(texte).toContain('04/10/2026')
+            expect(texte).not.toContain('10/4/2026')
+        } finally {
+            rendre()
+        }
     })
 
     it('says nothing about a deadline the goal does not have', () => {

@@ -51,6 +51,22 @@ const mountPage = (overrides = {}) =>
 
 const buttonSaying = (wrapper, text) => wrapper.findAll('button').find((button) => button.text().includes(text))
 
+// Un palier d'une seule répétition s'écrivait « 1 répétitions » (#1980).
+describe('le compte des répétitions d’un palier', () => {
+    it('s’accorde au singulier pour une, au pluriel au-delà', () => {
+        const texte = mountPage({
+            steps: [
+                { percent: 50, reps: 5, label: '' },
+                { percent: 90, reps: 1, label: '' },
+            ],
+        }).text()
+
+        expect(texte).toContain('5 répétitions')
+        expect(texte).toContain('1 répétition')
+        expect(texte).not.toContain('1 répétitions')
+    })
+})
+
 describe('editing the warm-up ladder', () => {
     it('adds a step ready to be edited rather than an empty one', async () => {
         const wrapper = mountPage()

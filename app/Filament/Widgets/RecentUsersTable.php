@@ -27,14 +27,14 @@ class RecentUsersTable extends TableWidget
                 // parcours complets de `users` — la page et son COUNT — pour un
                 // `LIKE '%…%'` qu'aucun index B-tree ne sert. Un encart de dix
                 // inscrits recents n'a pas de recherche a offrir.
-                TextColumn::make('name'),
-                TextColumn::make('email'),
+                TextColumn::make('name')->label('Nom'),
+                TextColumn::make('email')->label('Adresse e-mail'),
                 TextColumn::make('created_at')
                     ->dateTime()
-                    ->label('Registration Date'),
+                    ->label('Inscription'),
                 TextColumn::make('last_workout_at')
                     ->dateTime()
-                    ->label('Last Activity'),
+                    ->label('Dernière activité'),
             ]);
     }
 }

@@ -44,7 +44,7 @@ describe('IntervalTimerController', function (): void {
             $this->actingAs($user)
                 ->post(route('tools.interval-timer.store'), $data)
                 ->assertRedirect(route('tools.interval-timer.index'))
-                ->assertSessionHas('success', 'Timer created successfully.');
+                ->assertSessionHas('success', 'Minuteur créé.');
 
             $this->assertDatabaseHas('interval_timers', [
                 'user_id' => $user->id,
@@ -97,7 +97,7 @@ describe('IntervalTimerController', function (): void {
             $this->actingAs($user)
                 ->patch(route('tools.interval-timer.update', $timer), $data)
                 ->assertRedirect(route('tools.interval-timer.index'))
-                ->assertSessionHas('success', 'Timer updated successfully.');
+                ->assertSessionHas('success', 'Minuteur mis à jour.');
 
             $this->assertDatabaseHas('interval_timers', [
                 'id' => $timer->id,
@@ -163,7 +163,7 @@ describe('IntervalTimerController', function (): void {
             $this->actingAs($user)
                 ->delete(route('tools.interval-timer.destroy', $timer))
                 ->assertRedirect(route('tools.interval-timer.index'))
-                ->assertSessionHas('success', 'Timer deleted successfully.');
+                ->assertSessionHas('success', 'Minuteur supprimé.');
 
             $this->assertDatabaseMissing('interval_timers', [
                 'id' => $timer->id,

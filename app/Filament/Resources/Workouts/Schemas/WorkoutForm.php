@@ -38,16 +38,16 @@ class WorkoutForm
     {
         return $schema
             ->components([
-                Select::make('user_id')
+                Select::make('user_id')->label('Compte')
                     ->relationship('user', 'name')
                     ->searchable()
                     ->required()
                     ->disabledOn(Operation::Edit),
-                TextInput::make('name'),
-                DateTimePicker::make('started_at')
+                TextInput::make('name')->label('Nom'),
+                DateTimePicker::make('started_at')->label('Début')
                     ->required(),
-                DateTimePicker::make('ended_at'),
-                Textarea::make('notes')
+                DateTimePicker::make('ended_at')->label('Fin'),
+                Textarea::make('notes')->label('Notes')
                     ->columnSpanFull(),
             ]);
     }

@@ -65,27 +65,24 @@ it('fetches latest measurements correctly utilizing window functions', function 
     $result = $action->execute($user);
 
     expect($result)->toHaveKey('commonParts')
-        ->and($result['commonParts'])->toBeArray()->not->toBeEmpty()
-        ->and($result['commonParts'])->toContain('Chest', 'Waist', 'Hips', 'Biceps L');
+        ->and($result['commonParts'])->toHaveCount(13)
+        ->and(array_column($result['commonParts'], 'value'))->toContain('Chest', 'Waist', 'Hips', 'Biceps L');
 
     expect($result)->toHaveKey('latestMeasurements')
         ->and($result['latestMeasurements'])->toHaveCount(3); // Chest, Waist, Hips
 
-    $chestData = $result['latestMeasurements']->firstWhere('part', 'Chest');
-    expect($chestData)->not->toBeNull()
-        ->and($chestData['current'])->toBe(108.0)
+    $chestData = $result['latestMeasurements']->firstOrFail('part', 'Chest');
+    expect($chestData['current'])->toBe(108.0)
         ->and($chestData['diff'])->toBe(3.0) // 108 - 105
         ->and($chestData['date'])->toBe(Carbon::now()->format('Y-m-d'));
 
-    $waistData = $result['latestMeasurements']->firstWhere('part', 'Waist');
-    expect($waistData)->not->toBeNull()
-        ->and($waistData['current'])->toBe(80.0)
+    $waistData = $result['latestMeasurements']->firstOrFail('part', 'Waist');
+    expect($waistData['current'])->toBe(80.0)
         ->and($waistData['diff'])->toBe(0.0) // No previous measurement
         ->and($waistData['date'])->toBe(Carbon::now()->format('Y-m-d'));
 
-    $hipsData = $result['latestMeasurements']->firstWhere('part', 'Hips');
-    expect($hipsData)->not->toBeNull()
-        ->and($hipsData['current'])->toBe(90.0)
+    $hipsData = $result['latestMeasurements']->firstOrFail('part', 'Hips');
+    expect($hipsData['current'])->toBe(90.0)
         ->and($hipsData['diff'])->toBe(-5.0) // 90 - 95
         ->and($hipsData['date'])->toBe(Carbon::now()->format('Y-m-d'));
 });
@@ -122,19 +119,19 @@ it('rend les treize parties courantes, dans leur ordre', function (): void {
      * page les propose.
      */
     expect($result['commonParts'])->toBe([
-        'Neck',
-        'Shoulders',
-        'Chest',
-        'Biceps L',
-        'Biceps R',
-        'Forearm L',
-        'Forearm R',
-        'Waist',
-        'Hips',
-        'Thigh L',
-        'Thigh R',
-        'Calf L',
-        'Calf R',
+        ['value' => 'Neck', 'label' => 'Cou'],
+        ['value' => 'Shoulders', 'label' => 'Épaules'],
+        ['value' => 'Chest', 'label' => 'Poitrine'],
+        ['value' => 'Biceps L', 'label' => 'Biceps gauche'],
+        ['value' => 'Biceps R', 'label' => 'Biceps droit'],
+        ['value' => 'Forearm L', 'label' => 'Avant-bras gauche'],
+        ['value' => 'Forearm R', 'label' => 'Avant-bras droit'],
+        ['value' => 'Waist', 'label' => 'Taille'],
+        ['value' => 'Hips', 'label' => 'Hanches'],
+        ['value' => 'Thigh L', 'label' => 'Cuisse gauche'],
+        ['value' => 'Thigh R', 'label' => 'Cuisse droite'],
+        ['value' => 'Calf L', 'label' => 'Mollet gauche'],
+        ['value' => 'Calf R', 'label' => 'Mollet droit'],
     ]);
 });
 
@@ -152,17 +149,19 @@ it('decrit chaque mesure par cinq cles, unite comprise', function (): void {
         'measured_at' => Carbon::parse('2026-06-15'),
     ]);
 
-    /** @var array{part: string, current: float, unit: string, date: non-falsy-string, diff: float} $mesure */
+    /** @var array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float} $mesure */
     $mesure = app(FetchBodyPartMeasurementsIndexAction::class)->execute($user)['latestMeasurements']->firstOrFail();
 
     /*
      * Aucune assertion ne portait sur `unit` : la carte pouvait perdre son
      * unite sans qu'un test bronche, et 38,5 sans unite ne veut rien dire.
-     * Comparer les cles exactes tient les cinq d'un coup.
+     * Comparer les cles exactes tient les six d'un coup, dont le nom affiche
+     * de la partie (#1974).
      */
-    expect(array_keys($mesure))->toBe(['part', 'current', 'unit', 'date', 'diff']);
+    expect(array_keys($mesure))->toBe(['part', 'label', 'current', 'unit', 'date', 'diff']);
 
     expect($mesure['part'])->toBe('Neck')
+        ->and($mesure['label'])->toBe('Cou')
         ->and($mesure['unit'])->toBe('in')
         ->and($mesure['current'])->toBe(38.5)
         ->and($mesure['date'])->toBe('2026-06-15')
@@ -189,7 +188,7 @@ it('arrondit l ecart au centieme', function (): void {
         'measured_at' => Carbon::parse('2026-06-15'),
     ]);
 
-    /** @var array{part: string, current: float, unit: string, date: non-falsy-string, diff: float} $mesure */
+    /** @var array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float} $mesure */
     $mesure = app(FetchBodyPartMeasurementsIndexAction::class)->execute($user)['latestMeasurements']->firstOrFail();
 
     /*

@@ -6,6 +6,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { compte } from '@/Utils/nombre'
 import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
 
 const props = defineProps({
@@ -311,7 +312,8 @@ const submit = () => {
                                     Ajouter une série
                                 </GlassButton>
                                 <p v-if="!peutAjouterUneSerie(exercise)" class="text-text-muted text-xs">
-                                    {{ bornesDuModele.seriesParExercice }} séries au plus par exercice.
+                                    {{ compte(bornesDuModele.seriesParExercice, 'série', 'séries') }} au plus par
+                                    exercice.
                                 </p>
                             </div>
                         </GlassCard>
@@ -336,7 +338,7 @@ const submit = () => {
                         + Ajouter un exercice
                     </GlassButton>
                     <p v-if="!peutAjouterUnExercice" class="text-text-muted text-xs">
-                        {{ bornesDuModele.exercices }} exercices au plus par modèle.
+                        {{ compte(bornesDuModele.exercices, 'exercice', 'exercices') }} au plus par modèle.
                     </p>
                 </div>
             </div>
