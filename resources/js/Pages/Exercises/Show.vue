@@ -5,6 +5,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { computed, defineAsyncComponent } from 'vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { peutEtablirUnRecord, seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
 
 const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
@@ -40,11 +41,13 @@ const HistoryChart = defineAsyncComponent(() => import('@/Components/Stats/Histo
  * @property {number} history[].workout_id - ID of the workout.
  * @property {string} history[].workout_name - Name of the workout.
  * @property {string} history[].formatted_date - Formatted date string (e.g., 'Lun 12 Mai').
- * @property {number} history[].best_1rm - The best estimated 1RM for this specific session.
- * @property {Array} history[].sets - List of sets performed in this session.
+ * @property {number|null} history[].best_1rm - The best estimated 1RM for this specific session, null when no set can set the record.
+ * @property {Array} history[].sets - Every set of this session, validated or not.
  * @property {number} history[].sets[].weight - Weight lifted.
  * @property {number} history[].sets[].reps - Repetitions performed.
- * @property {number} history[].sets[].1rm - Estimated 1RM for this set.
+ * @property {number} history[].sets[].one_rep_max - Estimated 1RM for this set.
+ * @property {boolean} history[].sets[].is_completed - The set was ticked as done.
+ * @property {boolean} history[].sets[].is_warmup - The set is a warm-up.
  */
 const props = defineProps({
     exercise: Object,
@@ -52,71 +55,85 @@ const props = defineProps({
     history: Array,
 })
 
-const volumeData = computed(() => {
+/**
+ * Les séances de la plus ancienne à la plus récente, avec les séries que
+ * chaque graphique a le droit de lire.
+ *
+ * Les graphiques ne comptent que les séries validées (#1956) : le volume avec
+ * les mêmes règles que celui de la séance, échauffements validés compris ; la
+ * charge max avec celles du record. Une séance sans série qui compte n'a pas
+ * de meilleure valeur : son point vaut null, que Chart.js ne trace pas, plutôt
+ * qu'un zéro qui creuserait la courbe.
+ */
+const seances = computed(() => {
     if (!props.history || props.history.length === 0) return []
     // History is desc, so reverse for chart
     return [...props.history].reverse().map((session) => ({
         date: session.formatted_date.split('/').slice(0, 2).join('/'), // Just dd/mm
-        volume: session.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0),
+        series: seriesValidees(session.sets),
+        seriesDuRecord: session.sets.filter(peutEtablirUnRecord),
+        meilleur1rm: session.best_1rm ?? null,
     }))
 })
 
-const maxRepsData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    return [...props.history].reverse().map((session) => ({
-        date: session.formatted_date.split('/').slice(0, 2).join('/'),
-        reps: session.sets.length > 0 ? Math.max(...session.sets.map((s) => s.reps || 0)) : 0,
-    }))
-})
+const volumeData = computed(() =>
+    seances.value.map((session) => ({
+        date: session.date,
+        volume: volumeDesSeriesValidees(session.series),
+    })),
+)
 
-const totalRepsData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    return [...props.history].reverse().map((session) => ({
-        date: session.formatted_date.split('/').slice(0, 2).join('/'),
-        reps: session.sets.reduce((sum, s) => sum + (parseInt(s.reps) || 0), 0),
-    }))
-})
+const maxRepsData = computed(() =>
+    seances.value.map((session) => ({
+        date: session.date,
+        reps: session.series.length > 0 ? Math.max(...session.series.map((s) => s.reps || 0)) : null,
+    })),
+)
 
-const setsPerSessionData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    return [...props.history].reverse().map((session) => ({
-        date: session.formatted_date.split('/').slice(0, 2).join('/'),
-        sets: session.sets.length,
-    }))
-})
+const totalRepsData = computed(() =>
+    seances.value.map((session) => ({
+        date: session.date,
+        reps: session.series.reduce((sum, s) => sum + (parseInt(s.reps) || 0), 0),
+    })),
+)
 
-const maxWeightData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    return [...props.history].reverse().map((session) => ({
-        date: session.formatted_date.split('/').slice(0, 2).join('/'),
-        weight: session.sets.length > 0 ? Math.max(...session.sets.map((s) => parseFloat(s.weight) || 0)) : 0,
-    }))
-})
+const setsPerSessionData = computed(() =>
+    seances.value.map((session) => ({
+        date: session.date,
+        sets: session.series.length,
+    })),
+)
 
-const averageWeightData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    return [...props.history].reverse().map((session) => {
-        const setsWithWeight = session.sets.filter((s) => parseFloat(s.weight) > 0)
+const maxWeightData = computed(() =>
+    seances.value.map((session) => ({
+        date: session.date,
+        weight:
+            session.seriesDuRecord.length > 0
+                ? Math.max(...session.seriesDuRecord.map((s) => parseFloat(s.weight)))
+                : null,
+    })),
+)
+
+const averageWeightData = computed(() =>
+    seances.value.map((session) => {
+        const setsWithWeight = session.series.filter((s) => parseFloat(s.weight) > 0)
         const totalWeight = setsWithWeight.reduce((sum, s) => sum + parseFloat(s.weight), 0)
-        const average = setsWithWeight.length > 0 ? totalWeight / setsWithWeight.length : 0
         return {
-            date: session.formatted_date.split('/').slice(0, 2).join('/'),
-            weight: average,
+            date: session.date,
+            weight: setsWithWeight.length > 0 ? totalWeight / setsWithWeight.length : null,
         }
-    })
-})
+    }),
+)
 
-const estimated1rmData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    return [...props.history].reverse().map((session) => ({
-        date: session.formatted_date.split('/').slice(0, 2).join('/'),
-        weight: session.best_1rm || 0,
-    }))
-})
+const estimated1rmData = computed(() =>
+    seances.value.map((session) => ({
+        date: session.date,
+        weight: session.meilleur1rm,
+    })),
+)
 
 const weightDistributionData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    const allSets = props.history.flatMap((s) => s.sets)
+    const allSets = seances.value.flatMap((s) => s.series)
     if (allSets.length === 0) return []
 
     const weights = allSets.map((s) => parseFloat(s.weight))
@@ -144,9 +161,8 @@ const weightDistributionData = computed(() => {
 })
 
 const scatterData = computed(() => {
-    if (!props.history || props.history.length === 0) return []
-    const allSets = props.history.flatMap((s) => s.sets)
-    return allSets
+    return seances.value
+        .flatMap((s) => s.series)
         .filter((s) => parseFloat(s.weight) > 0 && parseInt(s.reps) > 0)
         .map((s) => ({
             x: parseFloat(s.weight),

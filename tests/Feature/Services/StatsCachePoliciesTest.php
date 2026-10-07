@@ -138,7 +138,8 @@ it('garde la vue performance du tableau de bord trente minutes', function (): vo
     Carbon::setTestNow($maintenant);
 
     app(\App\Actions\Stats\GetStatsDashboardAction::class)->performanceOverview($user, 30);
-    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'performance_overview.30');
+    // La clef porte le mois courant (#1955) : celui de l'horloge arrêtée.
+    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'performance_overview.30.2026-06');
 
     expect(Cache::has($cle))->toBeTrue('la vue n’a pas été mise en cache');
 

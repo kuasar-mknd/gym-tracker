@@ -54,18 +54,21 @@ it('fetches exercise history correctly', function (): void {
 
     expect($historique)->toHaveCount(2);
 
+    $recente = $historique->firstOrFail();
+    $ancienne = $historique->skip(1)->firstOrFail();
+
     // Assert sorting (descending by started_at)
-    expect($historique[0]['workout_id'])->toBe($workout2->id);
-    expect($historique[1]['workout_id'])->toBe($workout1->id);
+    expect($recente['workout_id'])->toBe($workout2->id);
+    expect($ancienne['workout_id'])->toBe($workout1->id);
 
     // Assert Epley 1RM calculation: 100 * (1 + 10 / 30) = 133.33
     // 105 * (1 + 5 / 30) = 122.5
     // Max is 133.33 for workout 1
     // 110 * (1 + 8 / 30) = 139.33 for workout 2
-    expect($historique[0]['best_1rm'])->toBe(139.33);
-    expect($historique[1]['best_1rm'])->toBe(133.33);
+    expect($recente['best_1rm'])->toBe(139.33);
+    expect($ancienne['best_1rm'])->toBe(133.33);
 
-    expect($historique[0]['formatted_date'])->toBe($workout2->started_at->format('d/m'));
+    expect($recente['formatted_date'])->toBe($workout2->started_at->format('d/m'));
 });
 
 it('only includes workouts for the given user', function (): void {
@@ -97,7 +100,7 @@ it('only includes workouts for the given user', function (): void {
     $historique = $action->execute($user1, $exercise);
 
     expect($historique)->toHaveCount(1)
-        ->and($historique[0]['workout_id'])->toBe($workout1->id);
+        ->and($historique->firstOrFail()['workout_id'])->toBe($workout1->id);
 });
 
 /*
@@ -110,8 +113,8 @@ it('only includes workouts for the given user', function (): void {
  *  - rendre le poids brut au lieu d'un flottant et les repetitions brutes au
  *    lieu d'un entier — invisible tant qu'aucune serie n'a de case vide ;
  *  - passer ces valeurs brutes a `calculate1RM()` ;
- *  - remplacer le zero de repli du meilleur 1RM par 1.0 ou -1.0, jamais
- *    execute tant qu'aucune ligne n'est depourvue de series.
+ *  - donner au meilleur 1RM d'une ligne sans serie une valeur de repli,
+ *    jamais executee tant qu'aucune ligne n'est depourvue de series.
  *
  * Les trois tests qui suivent ferment ces portes, en comparant a des valeurs
  * POSEES : la fabrique de `Set` tire un poids entre 0 et 200 et un nombre de
@@ -167,13 +170,16 @@ it('rend une entree et une serie avec exactement leurs cles', function (): void 
 
     // Une serie comparee d'un bloc : `toBe` sur un tableau exige les memes
     // cles, dans le meme ordre, avec les memes types. C'est ce qui tient a la
-    // fois la forme (trois cles) et les conversions (100.0 et non 100, ou la
-    // chaine que rend une colonne `decimal(8,2)`).
+    // fois la forme (cinq cles) et les conversions (100.0 et non 100, ou la
+    // chaine que rend une colonne `decimal(8,2)`). Les deux drapeaux laissent
+    // la page ne compter que les series validees (#1956).
     expect($entree['sets'])->toHaveCount(1);
     expect($entree['sets']->firstOrFail())->toBe([
         'weight' => 100.0,
         'reps' => 10,
         'one_rep_max' => 133.33,
+        'is_completed' => true,
+        'is_warmup' => false,
     ]);
 });
 
@@ -212,10 +218,12 @@ it('rend zero pour une serie inscrite sans poids ni repetitions', function (): v
         'weight' => 0.0,
         'reps' => 0,
         'one_rep_max' => 0.0,
+        'is_completed' => true,
+        'is_warmup' => false,
     ]);
 });
 
-it('rend un meilleur 1RM de zero pour une ligne sans aucune serie', function (): void {
+it('ne rend aucun meilleur 1RM pour une ligne sans aucune serie', function (): void {
     Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
 
     $user = User::factory()->create();
@@ -240,7 +248,7 @@ it('rend un meilleur 1RM de zero pour une ligne sans aucune serie', function ():
     expect($entree['id'])->toBe($line->id);
     expect($entree['sets'])->toHaveCount(0);
 
-    // Le seul test qui execute le repli `?? 0.0`. Sans lui, ce zero pouvait
-    // devenir n'importe quel nombre sans qu'aucune assertion ne bouge.
-    expect($entree['best_1rm'])->toBe(0.0)->toBeFloat();
+    // Null et non zero : un zero se tracait comme une chute a 0 kg sur les
+    // courbes de la fiche, la ou rien n'a ete mesure (#1956).
+    expect($entree['best_1rm'])->toBeNull();
 });

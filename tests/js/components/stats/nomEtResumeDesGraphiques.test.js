@@ -147,8 +147,16 @@ describe('un graphique se lit sans le voir', () => {
     it('écrit une phrase par série, chacune sous son nom', () => {
         const wrapper = monter(carte('SessionPerformanceChart'), {
             data: [
-                { formatted_date: '08/10/2026', best_1rm: 105, sets: [{ weight: 100, reps: 5 }] },
-                { formatted_date: '01/10/2026', best_1rm: 100, sets: [{ weight: 90, reps: 5 }] },
+                {
+                    formatted_date: '08/10/2026',
+                    best_1rm: 105,
+                    sets: [{ weight: 100, reps: 5, is_completed: true, is_warmup: false }],
+                },
+                {
+                    formatted_date: '01/10/2026',
+                    best_1rm: 100,
+                    sets: [{ weight: 90, reps: 5, is_completed: true, is_warmup: false }],
+                },
             ],
         })
 

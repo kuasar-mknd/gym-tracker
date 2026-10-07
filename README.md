@@ -54,8 +54,8 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 597 tests, couverture ≥ **94 %** | bloquant par PR |
-| **Tests frontend** | 2 436 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
+| **Tests backend** | 2 651 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests frontend** | 2 473 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 117 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
@@ -209,6 +209,7 @@ Apple renvoie l'utilisateur par un POST depuis son site, sans cookie de session 
 | `OCTANE_SERVER` | `frankenphp`, dans `app` seulement | Serveur que visent `octane:status` et `octane:reload` ; l'image lance `octane:frankenphp` directement. |
 | `LOG_CHANNEL`, `LOG_STACK` | `stack`, `stderr,daily` | Chaque ligne va dans `docker logs` et dans le fichier du jour du conteneur, gardé quatorze jours dans le volume `journaux` (#1907). |
 | `LOG_DAILY_NAME` | `app`, `worker` ou `scheduler`, selon le service | Nom du fichier de journal du conteneur : la page « Journaux » du panneau dit ainsi qui a écrit quoi. |
+| `PHP_INI_SCAN_DIR` | `:/app/docker/php-cli`, dans `worker` et `scheduler` seulement | Charge `docker/php-cli/zz-cli.ini` après les ini de l'image : OPcache actif en ligne de commande, sans JIT, avec un cache fichier dans /tmp/opcache que l'image crée. Chaque commande artisan, tâche planifiée et sonde de santé reprend ainsi le code déjà compilé au lieu de tout recompiler (#1968). Le `:` de tête garde le dossier par défaut de l'image (extensions, `docker/php-prod.ini`) ; posée dans `app`, elle couperait le JIT du serveur web. |
 | `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` | `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD` | Variables de l'image mysql du service `db`, lues à l'initialisation d'un volume vide. |
 
 ### Fixées par l'image
