@@ -89,8 +89,18 @@ HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
  *
  * `close()` n'émet son événement que si le dialogue était ouvert : c'est le
  * comportement du navigateur, et le composant s'en sert pour ne pas boucler.
+ *
+ * L'événement se construit avec l'`Event` de jsdom, retenu ici, et non avec
+ * celui que le global porte au moment de la fermeture. `Modal.vue` ferme son
+ * dialogue 200 ms après `show: false` ; une page testée sans être démontée
+ * laisse cette minuterie courir, et quand elle tombe après le démontage de
+ * l'environnement, le global a repris l'`Event` de Node, que le dialogue de
+ * jsdom refuse : « parameter 1 is not of type 'Event' », une erreur hors de
+ * tout test qui fait échouer la suite entière.
  */
 if (typeof HTMLDialogElement !== 'undefined') {
+    const EventDeJsdom = Event
+
     HTMLDialogElement.prototype.showModal = function showModal() {
         this.open = true
     }
@@ -101,7 +111,7 @@ if (typeof HTMLDialogElement !== 'undefined') {
         }
 
         this.open = false
-        this.dispatchEvent(new Event('close'))
+        this.dispatchEvent(new EventDeJsdom('close'))
     }
 }
 
