@@ -17,6 +17,7 @@ import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -169,6 +170,7 @@ const {
 })
 
 useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })
+useRechargementApresLeVidage()
 
 const {
     savingTemplate,

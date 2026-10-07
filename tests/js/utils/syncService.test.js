@@ -852,6 +852,47 @@ describe('SyncService erreurs passagères', () => {
  * appareil partagé, les préférences d'un compte s'appliquaient au suivant, et
  * ses séries revenaient en 403 annoncées au mauvais compte (#1964).
  */
+/*
+ * Au chargement, la page est rendue avant que la file se vide : ce que le
+ * vidage fait aboutir n'est pas dans ses props, et la séance se redemande
+ * (`useRechargementApresLeVidage`, #1960, #1962). Une réponse du serveur à une
+ * visite, elle, montre tout ce qui a abouti avant elle.
+ */
+describe('SyncService ce que les props ne montrent pas encore', () => {
+    it('compte les écritures abouties depuis la dernière visite, et repart de zéro à la suivante', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([aQueuedPatch('/a'), { ...aQueuedPatch('/b'), id: 'queued-2' }]),
+        )
+        request.mockResolvedValueOnce({ data: {} }).mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+
+        expect(service.rejeuxDepuisLaDerniereVisite).toBe(1)
+        expect(service.identifiantsEnAttente()).toEqual(['queued-2'])
+
+        naviguer(1)
+
+        expect(service.rejeuxDepuisLaDerniereVisite).toBe(0)
+    })
+
+    it('ne donne que les entrées en attente du compte connecté', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([aQueuedPatch('/a'), { ...aQueuedPatch('/b'), id: 'autre', compte: '2' }]),
+        )
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+
+        expect(service.identifiantsEnAttente()).toEqual(['queued-1'])
+
+        naviguer(null)
+
+        expect(service.identifiantsEnAttente()).toEqual([])
+    })
+})
+
 describe('SyncService une file par compte', () => {
     const envoyees = () => request.mock.calls.map(([config]) => `${config.method} ${config.url}`)
 

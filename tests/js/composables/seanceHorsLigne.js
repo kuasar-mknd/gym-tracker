@@ -166,9 +166,15 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
  * composables, la fusion des props et le service de synchronisation.
  *
  * @param {object} seance la séance telle que le serveur la rend
- * @param {{ exercices?: Array<object> }} options
+ * @param {{ exercices?: Array<object>, recharger?: (page: object) => void }} options
+ *   `recharger` tient lieu de `router.reload` : il reçoit ce que la page tient,
+ *   et lui passe la séance telle que le serveur la rend maintenant
+ *   (`page.rafraichir`), comme l'observateur des props.
  */
-export const monterLaSeance = async (seance, { exercices = [{ id: 7, name: 'Squat', type: 'strength' }] } = {}) => {
+export const monterLaSeance = async (
+    seance,
+    { exercices = [{ id: 7, name: 'Squat', type: 'strength' }], recharger = () => {} } = {},
+) => {
     const sync = await chargerSyncService({ compte: 1 })
     await sync.pending
 
@@ -179,6 +185,7 @@ export const monterLaSeance = async (seance, { exercices = [{ id: 7, name: 'Squa
     const { useSeriesDeLaSeance } = await import('@/composables/useSeriesDeLaSeance')
     const { useLignesDeLaSeance } = await import('@/composables/useLignesDeLaSeance')
     const { useReglagesDeLaSeance } = await import('@/composables/useReglagesDeLaSeance')
+    const { useRechargementApresLeVidage } = await import('@/composables/useRechargementApresLeVidage')
     const { createWriteQueue, createWriteSequencer } = await import('@/Utils/writeOrdering')
     const { fusionnerLaSeance } = await import('@/Utils/fusionDeSeance')
 
@@ -245,6 +252,8 @@ export const monterLaSeance = async (seance, { exercices = [{ id: 7, name: 'Squa
                 localWorkout,
                 viderLesEcritures: () => series.flushAllPendingUpdates(),
             })
+
+            useRechargementApresLeVidage({ recharger: () => recharger(page) })
 
             /** Ce que fait l'observateur des props de la page. */
             const rafraichir = (copieDuServeur) => {

@@ -22,6 +22,10 @@ const retirerDeLaFile = vi.fn()
 const attenteDesEcritures = vi.fn()
 const routerPost = vi.fn()
 const routerPatch = vi.fn()
+const routerReload = vi.fn()
+
+/** Ce que la file a fait aboutir depuis la dernière réponse du serveur. */
+const etatDeLaFile = vi.hoisted(() => ({ rejeux: 0 }))
 const formPatch = vi.fn()
 const fetchMock = vi.fn()
 
@@ -45,6 +49,10 @@ vi.mock('@/Utils/SyncService', () => ({
         patch: (...args) => patch(...args),
         delete: (...args) => destroy(...args),
         get: vi.fn(),
+        identifiantsEnAttente: () => [],
+        get rejeuxDepuisLaDerniereVisite() {
+            return etatDeLaFile.rejeux
+        },
         failedRequests: () => [],
         clearFailedRequests: vi.fn(),
         mettreEnFile: (...args) => mettreEnFile(...args),
@@ -81,7 +89,7 @@ vi.mock('@inertiajs/vue3', async () => {
         usePage: () => pageStub,
         router: {
             visit: vi.fn(),
-            reload: vi.fn(),
+            reload: (...args) => routerReload(...args),
             delete: vi.fn(),
             post: (...args) => routerPost(...args),
             patch: (...args) => routerPatch(...args),
@@ -296,6 +304,8 @@ beforeEach(() => {
     attenteDesEcritures.mockResolvedValue(undefined)
     routerPost.mockReset()
     routerPatch.mockReset()
+    routerReload.mockReset()
+    etatDeLaFile.rejeux = 0
     formPatch.mockReset()
     fetchMock.mockReset()
     haptics.triggerHaptic.mockReset()
@@ -985,6 +995,25 @@ describe('Workouts/Show — reconciling with what the server sends', () => {
 
         expect(lines(wrapper)).toEqual([])
         expect(wrapper.text()).toContain('Séance vide')
+    })
+
+    /*
+     * Au chargement, le serveur rend la séance avant que la file se vide : ce
+     * que le vidage a créé n'est pas dans les props (#1960, #1962).
+     */
+    it('se redemande au serveur quand la file a fait aboutir ce que ses props ne montrent pas', async () => {
+        etatDeLaFile.rejeux = 2
+
+        await mountPage()
+
+        expect(routerReload).toHaveBeenCalledTimes(1)
+        expect(routerReload).toHaveBeenCalledWith({ only: ['workout'], preserveScroll: true })
+    })
+
+    it('ne se redemande pas quand rien n’a abouti depuis ses props', async () => {
+        await mountPage()
+
+        expect(routerReload).not.toHaveBeenCalled()
     })
 
     it('survives a line that arrives with no sets array', async () => {

@@ -266,6 +266,15 @@ class SyncService {
          */
         this.ecrituresDirectes = new Set()
 
+        /**
+         * Combien d'écritures le vidage a fait aboutir depuis la dernière
+         * réponse du serveur à une visite Inertia : ce que les props de la page
+         * affichée ne montrent peut-être pas encore. Au chargement, la page est
+         * rendue AVANT que le vidage parte ; ce qu'il crée n'y figure pas
+         * (`useRechargementApresLeVidage`, #1960, #1962).
+         */
+        this.rejeuxDepuisLaDerniereVisite = 0
+
         window.addEventListener('online', () => this.processQueue())
 
         /**
@@ -280,9 +289,10 @@ class SyncService {
          * file sous la session du compte suivant (#1964). Le serveur refuse
          * désormais ces écritures de toute façon ; le service ne les tente plus.
          */
-        document.addEventListener('inertia:success', (event) =>
-            this.definirLeCompte(event.detail?.page?.props?.auth?.user?.id),
-        )
+        document.addEventListener('inertia:success', (event) => {
+            this.rejeuxDepuisLaDerniereVisite = 0
+            this.definirLeCompte(event.detail?.page?.props?.auth?.user?.id)
+        })
 
         /**
          * An installed PWA is suspended and resumed, not closed. A queue built
@@ -616,6 +626,13 @@ class SyncService {
         return this.compte === null ? 0 : this.queue.filter((entree) => entree.compte === this.compte).length
     }
 
+    /** Les entrées de file du compte connecté qui attendent encore, par leur identifiant. */
+    identifiantsEnAttente() {
+        return this.compte === null
+            ? []
+            : this.queue.filter((entree) => entree.compte === this.compte).map((entree) => entree.id)
+    }
+
     /** Combien d'écritures directes attendent encore leur réponse. */
     ecrituresEnCours() {
         return this.ecrituresDirectes.size
@@ -902,6 +919,8 @@ class SyncService {
             } finally {
                 this.enVol = null
             }
+
+            this.rejeuxDepuisLaDerniereVisite += 1
 
             /*
              * Une création retirée de l'écran après avoir été tentée : la
