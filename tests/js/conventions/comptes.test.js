@@ -6,13 +6,25 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * Un nombre suivi d'un nom au pluriel figé s'écrit « 1 séries » quand il vaut 1,
  * le cas d'une semaine à une séance ou d'une série unique (#1980). Les gabarits
  * avaient été corrigés, mais cinq infobulles de graphique gardaient
- * `${context.parsed.y} séances`. Un compte passe par `compte(n, singulier,
- * pluriel)` de `Utils/nombre.js`, qui accorde le nom.
+ * `${context.parsed.y} séances`, et celle de la durée des séances récentes
+ * lisait « 1 minutes ». Un compte passe par `compte(n, singulier, pluriel)`
+ * de `Utils/nombre.js`, qui accorde le nom.
  *
  * La garde cherche une interpolation, de gabarit Vue (`}}`) ou de chaîne
  * (`${…}`), suivie d'un des noms que l'application compte.
  */
-const NOMS_COMPTES = ['séances', 'séries', 'exercices', 'exos', 'habitudes', 'doses', 'reps', 'répétitions', 'produits']
+const NOMS_COMPTES = [
+    'séances',
+    'séries',
+    'exercices',
+    'exos',
+    'habitudes',
+    'doses',
+    'reps',
+    'répétitions',
+    'produits',
+    'minutes',
+]
 
 const interpolationSuivieDUnPluriel = new RegExp(
     String.raw`(?:\}\}|\$\{[^{}\n]*(?:\{[^{}\n]*\}[^{}\n]*)*\})\s*(?:${NOMS_COMPTES.join('|')})(?!\p{L})`,
@@ -37,6 +49,7 @@ it('reconnaît les formes qu’elle refuse, et laisse passer compte()', () => {
 
     expect(refuse('label: (context) => `${context.parsed.y} séances`')).toBe(true)
     expect(refuse('`${context.parsed.x} kg × ${context.parsed.y} reps`')).toBe(true)
+    expect(refuse('label: (context) => `${context.parsed.y} minutes`')).toBe(true)
     expect(refuse("`Atteindre ${props.form.target_value || '?'} séances au total`")).toBe(true)
     expect(refuse('{{ line.sets_count }}\n        séries')).toBe(true)
     expect(refuse("compte(context.parsed.y, 'séance', 'séances')")).toBe(false)

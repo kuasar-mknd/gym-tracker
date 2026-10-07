@@ -80,6 +80,13 @@ const cartes = [
         attendus: ['1 rep', '2 reps'],
     },
     {
+        nom: 'RecentWorkoutsTimelineChart',
+        trace: 'Line',
+        data: [{ started_at: '2026-07-05T10:00:00Z', ended_at: '2026-07-05T10:01:00Z', name: 'Jambes' }],
+        contexte: (n) => ({ parsed: { y: n } }),
+        attendus: ['1 minute', '2 minutes'],
+    },
+    {
         nom: 'WeightRepsScatterChart',
         trace: 'Scatter',
         data: [{ x: 100, y: 1 }],
