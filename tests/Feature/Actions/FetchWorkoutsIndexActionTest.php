@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
+use App\DTOs\Stats\DurationHistoryPoint;
+use App\DTOs\Stats\VolumeHistoryPoint;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -130,7 +132,7 @@ it('rend les cinq graphes annonces, et la bibliotheque, sans en perdre un en rou
     ]);
 });
 
-it('borne les deux historiques a vingt seances, la plus ancienne pour l un, la plus recente pour l autre', function (): void {
+it('borne les deux historiques aux vingt memes dernieres seances, de la plus ancienne a la plus recente', function (): void {
     Carbon::setTestNow(Carbon::parse('2026-06-25 12:00:00'));
     $user = User::factory()->create();
 
@@ -141,18 +143,43 @@ it('borne les deux historiques a vingt seances, la plus ancienne pour l un, la p
 
     $charts = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
 
-    // Les deux historiques sont bornes a 20 — mais PAS aux vingt memes seances,
-    // et c'est ce que les noms disent ici. La duree prend les vingt DERNIERES
-    // puis les remet a l'endroit (S02 -> S21) ; le volume prend les vingt
-    // PREMIERES (S01 -> S20). Sans ces deux bornes nommees, un historique de 19
-    // ou de 21 entrees passait.
+    // Les deux historiques prennent les vingt DERNIERES seances puis les
+    // remettent a l'endroit (S02 -> S21). Le volume prenait les vingt
+    // PREMIERES (S01 -> S20) et ne bougeait plus une fois la vingtieme seance
+    // passee (#1957). Sans ces deux bornes nommees, un historique de 19 ou de
+    // 21 entrees passait.
     expect($charts['duration_history'])->toHaveCount(20);
     expect($charts['duration_history'][0]->name)->toBe('S02');
     expect($charts['duration_history'][19]->name)->toBe('S21');
 
     expect($charts['volume_history'])->toHaveCount(20);
-    expect($charts['volume_history'][0]->name)->toBe('S01');
-    expect($charts['volume_history'][19]->name)->toBe('S20');
+    expect($charts['volume_history'][0]->name)->toBe('S02');
+    expect($charts['volume_history'][19]->name)->toBe('S21');
+});
+
+/**
+ * Le graphique « Volume par Séance » et son voisin « Durée » couvrent les
+ * memes seances, dans le meme ordre (#1957).
+ *
+ * Trente seances : avec dix de plus que la borne, l'ecart entre les vingt
+ * premieres et les vingt dernieres porte sur la moitie du graphique.
+ */
+it('aligne le volume par seance sur la duree, seance pour seance', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-06-30 12:00:00'));
+    $user = User::factory()->create();
+
+    for ($jour = 1; $jour <= 30; $jour++) {
+        seancePourIndex($user, sprintf('2026-06-%02d 10:00:00', $jour), sprintf('S%02d', $jour));
+    }
+
+    $charts = app(FetchWorkoutsIndexAction::class)->getDeferredData($user)['charts'];
+
+    $attendues = array_map(fn (int $jour): string => sprintf('S%02d', $jour), range(11, 30));
+
+    expect(array_map(fn (VolumeHistoryPoint $point): string => $point->name, $charts['volume_history']))
+        ->toBe($attendues)
+        ->and(array_map(fn (DurationHistoryPoint $point): string => $point->name, $charts['duration_history']))
+        ->toBe($attendues);
 });
 
 it('rend six mois de frequence, du plus ancien au plus recent, et zero sur un mois creux', function (): void {
@@ -173,7 +200,7 @@ it('rend six mois de frequence, du plus ancien au plus recent, et zero sur un mo
     expect($frequence)->toHaveCount(6);
 
     // Le sens de lecture et le calage du mois, que rien ne verifiait. Janvier
-    // en tete tient a la fois la borne SQL (`subMonths(5)->startOfMonth()`, qui
+    // en tete tient a la fois la borne SQL (`startOfMonth()->subMonths(5)`, qui
     // decide si la seance du 20 janvier entre) et le decalage de la boucle : un
     // mois de plus, un mois de moins, ou une lecture a l'envers, et cette entree
     // ne s'appelle plus « janv. ».

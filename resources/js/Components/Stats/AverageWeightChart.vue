@@ -19,6 +19,8 @@ const datasets = computed(() => [
         data: props.data.map((item) => item.weight),
         fill: true,
         tension: 0.4,
+        // Une séance sans série validée n'a pas de point (null) : la courbe passe outre.
+        spanGaps: true,
         borderColor: jeton('accent-tertiary'), // Indigo
         backgroundColor: (context) => {
             const chart = context.chart
