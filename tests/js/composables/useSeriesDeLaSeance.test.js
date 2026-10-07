@@ -225,6 +225,33 @@ describe('saisir une valeur', () => {
         )
     })
 
+    it('cite la borne que le serveur nomme pour le champ refusé', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+        sync.patch.mockRejectedValue({
+            response: {
+                status: 422,
+                data: {
+                    message: 'Une série compte au plus 999 répétitions.',
+                    errors: {
+                        weight: ['Une série porte au plus 100 000 kg.'],
+                        reps: ['Une série compte au plus 999 répétitions.'],
+                    },
+                },
+            },
+        })
+        const serie = { id: 9, weight: 50, reps: 5 }
+        const { series, rapport } = monter(ligneDe('strength', { sets: [serie] }))
+
+        series.updateSet(serie, 'reps', '1000')
+        await vi.advanceTimersByTimeAsync(1000)
+        await flushPromises()
+
+        expect(serie.reps).toBe(5)
+        expect(rapport.reportEditFailure).toHaveBeenCalledWith(
+            'Une série compte au plus 999 répétitions. La précédente est rétablie.',
+        )
+    })
+
     it('n’écrit rien pour une série provisoire ni pour une valeur qui n’en est pas une', async () => {
         vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
         const provisoire = { id: 'temp-1', weight: 0, reps: 10 }

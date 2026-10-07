@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Goal;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,6 +13,8 @@ use Illuminate\Validation\Rule;
 
 class GoalStoreRequest extends FormRequest
 {
+    use RameneLesDatesAuFuseauDeLApplication;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -41,7 +44,9 @@ class GoalStoreRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * La cible et le départ d'un objectif vont de zéro à `Goal::VALEUR_MAX` :
+     * aucun type d'objectif n'a l'usage d'une valeur négative, ni d'une valeur
+     * démesurée.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -50,7 +55,7 @@ class GoalStoreRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:weight,frequency,volume,measurement'],
-            'target_value' => ['required', 'numeric', 'min:0'],
+            'target_value' => ['required', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
             'exercise_id' => [
                 'required_if:type,weight,volume',
                 'nullable',
@@ -75,7 +80,7 @@ class GoalStoreRequest extends FormRequest
             'deadline' => $this->deadlineIsUnchanged()
                 ? ['nullable', 'date']
                 : ['nullable', 'date', 'after:today'],
-            'start_value' => ['nullable', 'numeric'],
+            'start_value' => ['nullable', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
         ];
     }
 
@@ -103,5 +108,15 @@ class GoalStoreRequest extends FormRequest
         }
 
         return $goal->deadline?->format('Y-m-d') === $submitted;
+    }
+
+    /**
+     * Une échéance envoyée avec un décalage désigne le jour de Paris de cet
+     * instant, et c'est ce jour que `after:today` doit juger (#1952).
+     */
+    #[\Override]
+    protected function prepareForValidation(): void
+    {
+        $this->ramenerLesJoursAuFuseauDeLApplication(['deadline']);
     }
 }

@@ -3,6 +3,23 @@ import { isTemporaryId } from '@/Utils/pendingIds'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 
 /**
+ * Le message que le serveur rend pour le champ refusé, s'il en rend un.
+ *
+ * La saisie n'affiche nulle part les bornes d'une série (999 répétitions,
+ * 100 000 kg…) : le refus est le seul moment où elles comptent, et le
+ * serveur, qui les tient, les nomme dans son message (`NommeLesBornesDUneSerie`).
+ *
+ * @param {unknown} erreur
+ * @param {string} champ
+ * @returns {string|null}
+ */
+export const raisonDuRefus = (erreur, champ) => {
+    const message = erreur?.response?.data?.errors?.[champ]?.[0]
+
+    return typeof message === 'string' && message.trim() !== '' ? message.trim() : null
+}
+
+/**
  * La saisie d'une valeur dans une série : la rafale de touches fondue en une
  * écriture après le debounce, son repli si le serveur refuse, le vidage de ce
  * qui attend, et l'oubli des rafales d'une série qui s'en va.
@@ -171,7 +188,7 @@ export const useSaisieDeSerie = ({
                     // haptics off. The value snapped back with no reason given.
                     reportEditFailure(
                         kind === SYNC_PERMANENT
-                            ? 'Cette valeur a été refusée. La précédente est rétablie.'
+                            ? `${raisonDuRefus(err, field) ?? 'Cette valeur a été refusée.'} La précédente est rétablie.`
                             : "Impossible d'enregistrer. La valeur précédente est rétablie.",
                     )
                 })

@@ -152,7 +152,7 @@ function projectionsLInventaire(): array
                 ],
             ],
             dette: 'Deux calculs de la même série : l’un repart des séances, l’autre ajuste la valeur stockée. '
-                .'Une séance saisie après coup ou supprimée passe déjà par le premier ; la cible n’en garde qu’un.',
+                .'Une séance saisie après coup, déplacée (#1983) ou supprimée passe déjà par le premier ; la cible n’en garde qu’un.',
         ),
         'le volume d’une séance' => projectionsDecrire(
             genre: 'colonne',
@@ -208,7 +208,7 @@ function projectionsLInventaire(): array
                     'app/Services/PersonalRecordService.php' => ['update'],
                 ],
                 'la reconstruction depuis les séries' => [
-                    'app/Services/PersonalRecordService.php' => ['recompute'],
+                    'app/Services/PersonalRecordService.php' => ['reconstruire'],
                 ],
             ],
             dette: 'Un record monte par comparaison à la valeur stockée, et se reconstruit depuis les séries quand celle '

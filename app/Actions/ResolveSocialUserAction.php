@@ -6,90 +6,397 @@ namespace App\Actions;
 
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
+use App\Rules\AdresseEnAsciiImprimable;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
 
+/**
+ * Retrouve, rattache ou crée le compte d'un retour de connexion sociale.
+ *
+ * Un compte existant ne s'ouvre que pour son adresse : celle que rend le
+ * fournisseur doit être la sienne, à la casse ASCII près, ou l'avoir été quand
+ * l'identité a prouvé sa liaison au compte.
+ *
+ *  1. Un compte qui porte déjà l'identité du fournisseur (`provider`,
+ *     `provider_id`) s'ouvre pour son adresse exacte. Il s'ouvre aussi à
+ *     l'identité seule, quelle que soit l'adresse rendue, quand sa liaison
+ *     est prouvée (`liaison_prouvee_le`) : l'identité a créé le compte, s'y
+ *     est rattachée ou y est revenue avec l'adresse exacte du compte,
+ *     garantie par le fournisseur, et cette adresse n'a pas changé depuis
+ *     (`OublieLaPreuveDeSaLiaison`). Son titulaire détenait donc l'adresse du
+ *     compte, et seule l'adresse chez le fournisseur a changé. Une liaison
+ *     sans preuve, comme toutes celles d'avant cette colonne, a pu être posée
+ *     par l'ancienne recherche par adresse sur une adresse seulement proche,
+ *     ou survivre à un changement d'adresse du compte qui l'a fait passer à
+ *     quelqu'un d'autre : son identité n'ouvre le compte que si elle rend son
+ *     adresse exacte, et prouve alors la liaison. Sinon le retour est refusé,
+ *     sans qu'un compte soit créé à la place. Quand l'identité rend l'adresse
+ *     du compte et que le fournisseur la garantit, le compte redevient aussi
+ *     vérifié s'il ne l'était plus : un changement d'adresse, par le profil ou
+ *     par le panneau, retire la vérification (`SurveilleSonAdresse`).
+ *  2. À défaut, l'adresse ne rattache un compte existant que si elle est en
+ *     ASCII imprimable, vérifiée par le fournisseur, et que le compte n'est
+ *     lié à aucune autre identité du même fournisseur.
+ *  3. Sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
+ *     adresse que la base tiendrait pour la même.
+ *
+ * Toute comparaison d'adresse et d'identifiant se fait en PHP, octet par
+ * octet. La base ne sert qu'à trouver les candidats : sa collation
+ * (`utf8mb4_unicode_ci`) ignore accents et casse, replie « ß » sur « ss », le
+ * signe kelvin sur « k », les formes pleine chasse sur l'ASCII, et néglige les
+ * espaces finales.
+ *
+ * Chaque refus propose une issue qui existe : quand un compte occupe
+ * l'adresse, la connexion par mot de passe, et jamais l'inscription, que
+ * l'index unique de la même collation refuserait.
+ */
 final class ResolveSocialUserAction
 {
-    public function execute(string $fournisseur, SocialUser $utilisateurSocial): User
+    /**
+     * @param  bool  $adresseVerifiee  Le fournisseur garantit-il l'adresse rendue ? Faux, elle ne rattache aucun compte existant, ne prouve aucune liaison, et le compte créé naît non vérifié.
+     *
+     * @throws SocialAuthException quand le retour ne désigne aucun compte sans ambiguïté.
+     */
+    public function execute(string $fournisseur, SocialUser $utilisateurSocial, bool $adresseVerifiee): User
     {
-        $existingUser = User::where('email', $utilisateurSocial->getEmail())->first();
+        $identifiant = $this->identifiantDuFournisseur($utilisateurSocial);
 
-        if ($existingUser !== null) {
-            // Sécurité : pas de rattachement tant que le compte existant n'est
-            // pas vérifié. Rattacher un compte non vérifié depuis un fournisseur
-            // social ouvre une prise de contrôle du compte.
-            if (! $existingUser->hasVerifiedEmail()) {
-                if (! $this->estLIdentiteDejaReliee($existingUser, $fournisseur, $utilisateurSocial)) {
-                    throw new SocialAuthException(__('Your account must be verified before linking it with a social provider.'));
-                }
-
-                $existingUser->markEmailAsVerified();
-            }
-
-            // Non renseigne, et non « vide ou zero » : c'est un identifiant
-            // rendu par le fournisseur, la chaine vide n'en est pas un.
-            if ($existingUser->provider_id === null || $existingUser->provider_id === '') {
-                $existingUser->forceFill([
-                    'provider' => $fournisseur,
-                    'provider_id' => $utilisateurSocial->getId(),
-                ])->update([
-                    'avatar' => $utilisateurSocial->getAvatar(),
-                ]);
-            }
-
-            return $existingUser;
+        if ($identifiant === null) {
+            throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($fournisseur));
         }
 
+        $adresse = $utilisateurSocial->getEmail();
+
+        if (! is_string($adresse) || $adresse === '') {
+            throw new SocialAuthException(ucfirst($fournisseur).' ne nous a transmis aucune adresse email. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.');
+        }
+
+        $comptesDeLIdentite = $this->comptesDeLIdentite($fournisseur, $identifiant);
+
+        if ($comptesDeLIdentite->isNotEmpty()) {
+            return $this->compteDeLIdentite($comptesDeLIdentite, $fournisseur, $adresse, $adresseVerifiee);
+        }
+
+        $compteDeLAdresse = User::query()->where('email', $adresse)->first();
+
+        if ($this->adresseComparable($adresse) === null) {
+            throw new SocialAuthException($compteDeLAdresse === null
+                ? $this->refusDAdresseHorsAscii($fournisseur)
+                : $this->refusDAdresseProche($fournisseur));
+        }
+
+        if ($compteDeLAdresse === null) {
+            return $this->creerLeCompte($fournisseur, $identifiant, $utilisateurSocial, $adresse, $adresseVerifiee);
+        }
+
+        return $this->rattacher($compteDeLAdresse, $fournisseur, $identifiant, $utilisateurSocial, $adresse, $adresseVerifiee);
+    }
+
+    /**
+     * Les comptes qui portent exactement cette identité du fournisseur.
+     *
+     * La base rend les candidats selon sa collation, qui ne distingue pas
+     * « AbC » de « abc » : le filtre exact se fait ici.
+     *
+     * @return Collection<int, User>
+     */
+    private function comptesDeLIdentite(string $fournisseur, string $identifiant): Collection
+    {
+        return User::query()
+            ->where('provider', $fournisseur)
+            ->where('provider_id', $identifiant)
+            ->orderBy('id')
+            ->get()
+            ->filter(static fn (User $compte): bool => $compte->provider === $fournisseur && $compte->provider_id === $identifiant)
+            ->values();
+    }
+
+    /**
+     * Le compte que cette identité ouvre, ou un refus.
+     *
+     * Plusieurs comptes peuvent porter la même identité, l'ancienne recherche
+     * par adresse en créant un second quand l'adresse changeait chez le
+     * fournisseur. Le retour va d'abord à celui dont l'adresse est celle
+     * rendue, et prouve sa liaison quand le fournisseur garantit l'adresse
+     * (`prouverLaLiaison()`). À défaut, au seul compte dont la liaison est
+     * prouvée : l'adresse a changé chez le fournisseur, pas le titulaire de
+     * l'identité. Aucun compte, ou plusieurs, le retour est refusé et
+     * journalisé, sans l'adresse.
+     *
+     * @param  Collection<int, User>  $comptes
+     *
+     * @throws SocialAuthException
+     */
+    private function compteDeLIdentite(Collection $comptes, string $fournisseur, string $adresse, bool $adresseVerifiee): User
+    {
+        $compteDeLAdresse = $comptes->first(fn (User $candidat): bool => $this->memeAdresse($candidat->email, $adresse));
+
+        if ($compteDeLAdresse !== null) {
+            if ($adresseVerifiee) {
+                $this->prouverLaLiaison($compteDeLAdresse);
+            }
+
+            return $compteDeLAdresse;
+        }
+
+        $comptesALiaisonProuvee = $comptes->filter(static fn (User $candidat): bool => $candidat->liaison_prouvee_le !== null);
+
+        if ($comptesALiaisonProuvee->count() === 1) {
+            return $comptesALiaisonProuvee->sole();
+        }
+
+        Log::warning('Connexion sociale refusée : l’identité rend une autre adresse que celle de son compte', [
+            'fournisseur' => $fournisseur,
+            'comptes' => $comptes->modelKeys(),
+        ]);
+
+        throw new SocialAuthException('Ce compte '.ucfirst($fournisseur).' est associé à un compte dont l\'adresse email n\'est pas celle que '.ucfirst($fournisseur).' nous transmet. '.$this->versLeMotDePasse('l\'adresse email de ce compte'));
+    }
+
+    /**
+     * L'identité vient de rendre l'adresse exacte de son compte, garantie par
+     * le fournisseur : sa liaison est prouvée, et l'adresse du compte aussi.
+     *
+     * Le compte redevient vérifié s'il ne l'était plus. Sans quoi le titulaire
+     * d'un compte ouvert par un fournisseur, qui ne connaît pas le mot de passe
+     * tiré au hasard, resterait dehors après que le panneau lui a rendu son
+     * adresse. `markEmailAsVerified()` vide aussi la dernière adresse vérifiée
+     * retenue (`ancienne_adresse_verifiee`).
+     *
+     * Une liaison sans preuve le devient : c'est ainsi qu'une liaison d'avant
+     * la preuve, ou une liaison dont l'adresse du compte a changé, retrouve la
+     * reconnaissance par l'identité seule. Une preuve déjà posée garde sa date,
+     * sans écriture à chaque connexion.
+     */
+    private function prouverLaLiaison(User $compte): void
+    {
+        if (! $compte->hasVerifiedEmail()) {
+            $compte->markEmailAsVerified();
+        }
+
+        if ($compte->liaison_prouvee_le === null) {
+            $compte->forceFill(['liaison_prouvee_le' => $compte->freshTimestamp()])->save();
+        }
+    }
+
+    /**
+     * Rattache le retour au compte qui occupe son adresse, ou le refuse.
+     *
+     * Le compte a été trouvé par la base, donc selon sa collation : il peut ne
+     * porter qu'une adresse proche. Il n'est rattaché que si :
+     *
+     *  - son adresse est exactement celle rendue, à la casse ASCII près ;
+     *  - le fournisseur garantit cette adresse ;
+     *  - le compte a lui-même vérifié son adresse (un compte non vérifié a pu
+     *    être ouvert par quelqu'un qui ne détient pas la boîte) ;
+     *  - il n'est pas déjà lié à une autre identité du même fournisseur.
+     *
+     * Un refus ne crée pas de compte à la place : l'index unique de la base, de
+     * la même collation, tient les deux adresses pour une seule. Un compte lié
+     * à un autre fournisseur s'ouvre sans que sa liaison soit réécrite.
+     *
+     * La liaison posée ici est prouvée : l'identité vient de rendre l'adresse
+     * exacte du compte, garantie par le fournisseur.
+     *
+     * @throws SocialAuthException
+     */
+    private function rattacher(
+        User $compte,
+        string $fournisseur,
+        string $identifiant,
+        SocialUser $utilisateurSocial,
+        string $adresse,
+        bool $adresseVerifiee,
+    ): User {
+        if (! $this->memeAdresse($compte->email, $adresse)) {
+            Log::warning('Connexion sociale refusée : adresse seulement proche de celle d’un compte', [
+                'fournisseur' => $fournisseur,
+                'compte' => $compte->getKey(),
+            ]);
+
+            throw new SocialAuthException($this->refusDAdresseProche($fournisseur));
+        }
+
+        if (! $adresseVerifiee) {
+            throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($fournisseur));
+        }
+
+        // Sécurité : pas de rattachement tant que le compte existant n'est
+        // pas vérifié. Rattacher un compte non vérifié depuis un fournisseur
+        // social ouvre une prise de contrôle du compte.
+        if (! $compte->hasVerifiedEmail()) {
+            throw new SocialAuthException(__('Your account must be verified before linking it with a social provider.'));
+        }
+
+        // Non renseigne, et non « vide ou zero » : c'est un identifiant
+        // rendu par le fournisseur, la chaine vide n'en est pas un.
+        $dejaLie = $compte->provider_id !== null && $compte->provider_id !== '';
+
+        if ($dejaLie && $compte->provider === $fournisseur) {
+            Log::warning('Connexion sociale refusée : compte lié à une autre identité du même fournisseur', [
+                'fournisseur' => $fournisseur,
+                'compte' => $compte->getKey(),
+            ]);
+
+            throw new SocialAuthException('Un compte existe déjà avec cette adresse email, associé à un autre compte '.ucfirst($fournisseur).'. '.$this->versLeMotDePasse('cette adresse'));
+        }
+
+        if (! $dejaLie) {
+            $compte->forceFill([
+                'provider' => $fournisseur,
+                'provider_id' => $identifiant,
+                'liaison_prouvee_le' => now(),
+            ])->update([
+                'avatar' => $utilisateurSocial->getAvatar(),
+            ]);
+        }
+
+        return $compte;
+    }
+
+    /**
+     * Crée le compte du retour, sur l'adresse telle que le fournisseur la rend.
+     *
+     * L'adresse est ici en ASCII imprimable (`adresseComparable()` l'a admise) :
+     * sa casse est la seule liberté qu'elle garde, et `memeAdresse()` comme
+     * l'index unique l'ignorent, si bien que le retour suivant reconnaît le
+     * compte quelle que soit la casse rendue. Le profil n'exige les minuscules
+     * que d'une adresse qui change (`ProfileUpdateRequest`) : le compte
+     * enregistre son nom sans toucher à son adresse.
+     *
+     * Sa liaison est prouvée quand le fournisseur garantit l'adresse :
+     * l'identité a ouvert le compte sur une adresse qu'elle détient, et en est
+     * le titulaire tant que l'adresse du compte ne change pas. Sans garantie,
+     * ce que seul le poste de développement permet, la liaison reste sans
+     * preuve, comme le compte reste non vérifié : rien ne dit que l'identité
+     * détient l'adresse, dont le titulaire peut reprendre le compte par la
+     * réinitialisation du mot de passe.
+     */
+    private function creerLeCompte(
+        string $fournisseur,
+        string $identifiant,
+        SocialUser $utilisateurSocial,
+        string $adresse,
+        bool $adresseVerifiee,
+    ): User {
         $user = User::create([
             'name' => $utilisateurSocial->getName() ?? $utilisateurSocial->getNickname() ?? 'Utilisateur',
-            'email' => $utilisateurSocial->getEmail(),
+            'email' => $adresse,
             'password' => bcrypt(Str::random(16)), // Mot de passe aléatoire : c'est le fournisseur qui authentifie.
             'avatar' => $utilisateurSocial->getAvatar(),
         ]);
 
         $user->forceFill([
             'provider' => $fournisseur,
-            'provider_id' => $utilisateurSocial->getId(),
-            'email_verified_at' => now(), // Le fournisseur a déjà vérifié l'adresse.
+            'provider_id' => $identifiant,
+            'email_verified_at' => $adresseVerifiee ? now() : null, // Vérifiée seulement si le fournisseur la garantit.
+            'liaison_prouvee_le' => $adresseVerifiee ? now() : null,
         ])->save();
 
         return $user;
     }
 
     /**
-     * Le retour vient-il de l'identité déjà reliée au compte, pour l'adresse
-     * même du compte ?
+     * L'identifiant rendu par le fournisseur, en chaîne.
      *
-     * Un compte relié à un fournisseur repasse non vérifié quand son adresse
-     * change, par le profil ou par le panneau (`SurveilleSonAdresse`). Quand
-     * c'est l'identité qu'il connaît déjà qui revient, et que le fournisseur
-     * garantit l'adresse du compte (hors environnement local,
-     * `HandleSocialCallbackAction` refuse un retour dont l'adresse n'est pas
-     * garantie), l'adresse est prouvée : le compte s'ouvre et redevient
-     * vérifié. Un compte que cette identité n'a jamais ouvert reste refusé tant
-     * qu'il n'est pas vérifié.
-     *
-     * La base a trouvé le compte selon sa collation, qui tient pour égales des
-     * adresses seulement proches : l'adresse se compare donc ici octet par
-     * octet, à la casse ASCII près, et c'est bien celle du compte que le
-     * fournisseur doit garantir. L'identifiant se compare en chaîne, GitHub le
-     * rendant en entier.
+     * Le contrat le dit `string`, mais GitHub rend un entier : c'est la
+     * colonne, une chaîne, qui fixe la forme comparée. Sans identifiant, le
+     * retour ne pourrait pas être reconnu à la connexion suivante.
      */
-    private function estLIdentiteDejaReliee(User $compte, string $fournisseur, SocialUser $utilisateurSocial): bool
+    private function identifiantDuFournisseur(SocialUser $utilisateurSocial): ?string
     {
         $identifiant = $utilisateurSocial->getId();
-        $adresse = $utilisateurSocial->getEmail();
 
         if (is_int($identifiant)) {
-            $identifiant = (string) $identifiant;
+            return (string) $identifiant;
         }
 
-        return $compte->provider === $fournisseur
-            && is_string($compte->provider_id)
-            && $compte->provider_id !== ''
-            && $identifiant === $compte->provider_id
-            && is_string($adresse)
-            && strtolower($adresse) === strtolower($compte->email);
+        return is_string($identifiant) && $identifiant !== '' ? $identifiant : null;
+    }
+
+    /**
+     * Les deux adresses sont-elles la même ?
+     *
+     * Oui si elles sont identiques octet par octet, ou si elles ont une forme
+     * comparable et que ces formes sont égales. Jamais selon la collation de
+     * la base.
+     */
+    private function memeAdresse(string $adresseDuCompte, string $adresseRendue): bool
+    {
+        if ($adresseDuCompte === $adresseRendue) {
+            return true;
+        }
+
+        $adresseComparable = $this->adresseComparable($adresseRendue);
+
+        return $adresseComparable !== null && $adresseComparable === $this->adresseComparable($adresseDuCompte);
+    }
+
+    /**
+     * La forme sous laquelle deux adresses se comparent, ou null si elle n'en a pas.
+     *
+     * Seule une adresse en ASCII imprimable, sans espace, en a une : ses
+     * lettres en minuscules, par `strtolower()`, qui ne touche que les
+     * vingt-six lettres ASCII depuis PHP 8.2. C'est le seul repli que l'index
+     * unique de la base fait aussi sur l'ASCII, et le seul qu'on lui emprunte.
+     *
+     * Une adresse non ASCII ne rattache aucun compte plutôt que d'être
+     * normalisée. NFC replierait lui-même le signe kelvin (U+212A) sur « K »,
+     * sa décomposition canonique, et créerait l'égalité qu'on veut éviter ; il
+     * laisse en revanche les formes pleine chasse et le s long, que la base
+     * confond avec l'ASCII, et NFKC, qui les replie, garde « ß » quand la base
+     * le tient pour « ss » : aucune forme normale ne reproduit la collation.
+     * `mb_strtolower()` et le repli de casse Unicode créent eux aussi des
+     * égalités (le signe kelvin y devient « k »). Et un domaine
+     * internationalisé s'écrit de deux façons (Unicode ou Punycode) que rien
+     * ici ne saurait apparier. Les trois fournisseurs rendent de l'ASCII pour
+     * l'immense majorité des comptes, et l'inscription comme le profil n'en
+     * admettent pas d'autre (`AdresseEnAsciiImprimable`, même motif).
+     */
+    private function adresseComparable(string $adresse): ?string
+    {
+        if (preg_match(AdresseEnAsciiImprimable::MOTIF, $adresse) !== 1) {
+            return null;
+        }
+
+        return strtolower($adresse);
+    }
+
+    /**
+     * Le refus d'une adresse qu'un compte occupe aux yeux de la base sans être
+     * la même.
+     *
+     * Ce compte est peut-être celui d'un autre : l'inscription avec cette
+     * adresse serait refusée, et la connexion par mot de passe ne vaut que
+     * pour le titulaire du compte.
+     */
+    private function refusDAdresseProche(string $fournisseur): string
+    {
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la vôtre. S\'il est à vous, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
+    }
+
+    /**
+     * Le refus d'une adresse hors ASCII qu'aucun compte n'occupe.
+     *
+     * L'inscription ne l'admet pas davantage : la base la confond avec une
+     * adresse ASCII, peut-être celle d'un autre, qu'elle occuperait. Le message
+     * renvoie donc au compte que la personne aurait sous une autre adresse, ou
+     * à l'inscription avec une adresse en ASCII.
+     */
+    private function refusDAdresseHorsAscii(string $fournisseur): string
+    {
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une adresse en caractères ASCII, sans accent.';
+    }
+
+    /**
+     * La suite d'un refus quand un compte existe : son mot de passe, qu'un
+     * compte ouvert par un fournisseur ne connaît pas, d'où le lien de
+     * réinitialisation, qui part à l'adresse du compte.
+     */
+    private function versLeMotDePasse(string $quelleAdresse): string
+    {
+        return 'Connectez-vous avec '.$quelleAdresse.' et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.';
     }
 }

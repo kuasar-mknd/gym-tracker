@@ -88,6 +88,8 @@ const closeModal = () => {
                         v-model="form.password"
                         ref="passwordInput"
                         type="password"
+                        label="Mot de passe"
+                        hide-label
                         placeholder="Mot de passe"
                         :error="form.errors.password"
                         @keyup.enter="deleteUser"

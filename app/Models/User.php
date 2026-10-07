@@ -8,6 +8,7 @@ use App\Models\Traits\DetacheSesAppareilsPush;
 use App\Models\Traits\EffaceSesTracesPolymorphes;
 use App\Models\Traits\HasFitnessData;
 use App\Models\Traits\HasToolsData;
+use App\Models\Traits\OublieLaPreuveDeSaLiaison;
 use App\Models\Traits\SurveilleSonAdresse;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,6 +31,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property string $email
  * @property string|null $ancienne_adresse_verifiee Dernière adresse vérifiée quittée, tant que le compte n'est pas revérifié (`SurveilleSonAdresse`).
  * @property string|null $provider
+ * @property string|null $provider_id
+ * @property \Illuminate\Support\Carbon|null $liaison_prouvee_le Quand la liaison au fournisseur a été prouvée sur l'adresse exacte du compte ; effacée quand l'adresse change (`OublieLaPreuveDeSaLiaison`).
  * @property string|null $avatar
  * @property int|null $default_rest_time
  * @property int $current_streak
@@ -53,6 +56,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     use HasToolsData;
     use LogsActivity;
     use Notifiable;
+    use OublieLaPreuveDeSaLiaison;
     use SurveilleSonAdresse;
 
     /**
@@ -211,6 +215,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'liaison_prouvee_le' => 'datetime',
             'password' => 'hashed',
             'default_rest_time' => 'integer',
             'auto_rest_timer' => 'boolean',

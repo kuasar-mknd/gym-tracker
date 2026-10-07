@@ -33,6 +33,12 @@ class WorkoutLine extends Model
 
     use ResolvesOwnerAtRouteBinding;
 
+    /**
+     * Le rang le plus grand d'une ligne dans sa séance : la page le pose au
+     * nombre de lignes déjà là, et le réordonnancement n'en accepte que cent.
+     */
+    public const int RANG_MAX = 1_000;
+
     #[\Override]
     protected $fillable = [
         'exercise_id',

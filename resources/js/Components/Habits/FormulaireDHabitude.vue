@@ -177,10 +177,12 @@ const submit = () => {
                     required
                 />
 
+                <!-- La limite de la colonne habits.description, la même que la validation. -->
                 <GlassInput
                     v-model="form.description"
                     label="Description (optionnel)"
                     placeholder="Détails..."
+                    maxlength="255"
                     :error="form.errors.description"
                 />
 

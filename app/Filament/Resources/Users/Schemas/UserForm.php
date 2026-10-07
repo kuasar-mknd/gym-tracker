@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Models\User;
+use App\Rules\AdresseEnAsciiImprimable;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -21,7 +23,20 @@ class UserForm
     {
         return [
             TextInput::make('name')->required(),
-            TextInput::make('email')->label('Email address')->email()->required(),
+            /*
+             * Une nouvelle adresse s'écrit en ASCII imprimable, comme à
+             * l'inscription et dans le profil. La colonne et son index unique
+             * confondent une adresse accentuée, un « ß » ou une lettre pleine
+             * chasse avec l'adresse ASCII voisine : un compte créé ou modifié
+             * ici sur l'une occuperait l'autre, et son titulaire ne pourrait
+             * plus s'inscrire. L'adresse actuelle du compte reste admise telle
+             * quelle, pour qu'un compte ancien s'enregistre sans en changer.
+             */
+            TextInput::make('email')
+                ->label('Email address')
+                ->email()
+                ->required()
+                ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email)),
             TextInput::make('default_rest_time')->required()->numeric()->default(90),
             /*
              * Montres, jamais ecrits.

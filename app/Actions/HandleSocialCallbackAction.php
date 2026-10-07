@@ -34,9 +34,11 @@ final class HandleSocialCallbackAction
             throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($fournisseur));
         }
 
-        if (! $this->fournisseurAConfirmeLEmail($utilisateurSocial)) {
+        $adresseVerifiee = $this->fournisseurAConfirmeLEmail($fournisseur, $utilisateurSocial);
+
+        if (! $adresseVerifiee) {
             if (app()->environment('local')) {
-                // SECURITY: Log when email verification is bypassed in local environment
+                // Sécurité : garder la trace du contournement, permis en local seulement.
                 Log::warning('Social auth email verification bypassed in local environment', [
                     'provider' => $fournisseur,
                     'email' => $utilisateurSocial->getEmail(),
@@ -46,7 +48,7 @@ final class HandleSocialCallbackAction
             }
         }
 
-        return $this->resolver->execute($fournisseur, $utilisateurSocial);
+        return $this->resolver->execute($fournisseur, $utilisateurSocial, $adresseVerifiee);
     }
 
     /**
@@ -69,18 +71,32 @@ final class HandleSocialCallbackAction
     /**
      * Le fournisseur a-t-il declare l'adresse verifiee ?
      *
-     * Tous les fournisseurs ne renseignent pas l'information, et ceux qui le
-     * font ne s'accordent pas sur le nom de la cle — d'ou les trois essais.
-     * Absente, elle vaut « non verifie » : on ne lie pas un compte sur la foi
-     * d'une adresse que personne n'a confirmee.
+     * GitHub ne le declare pas : le pilote de Socialite demande la portee
+     * `user:email` et ne rend que l'adresse principale ET verifiee du compte,
+     * ou null quand il n'y en a pas. Une adresse rendue par GitHub est donc
+     * verifiee par construction ; ses attributs bruts, ceux de `/user`, ne
+     * portent aucune cle de verification, et la recherche ci-dessous refusait
+     * tout retour de GitHub hors du poste de developpement.
+     *
+     * Google (`email_verified` de son point d'information) et Apple
+     * (`email_verified` du jeton d'identite) le declarent, mais pas sous le
+     * meme nom que d'autres fournisseurs — d'ou les trois essais. Absente, la
+     * cle vaut « non verifie » : on ne lie pas un compte sur la foi d'une
+     * adresse que personne n'a confirmee.
      *
      * `filter_var()` remplace le test de verite qui etait ici. La valeur vient
      * du fournisseur et n'est donc pas typee : `! $isVerified` etait faux pour
      * n'importe quelle chaine non vide, « false » et « no » compris. Une
      * reponse mal formee ouvrait la porte au lieu de la fermer.
      */
-    private function fournisseurAConfirmeLEmail(SocialiteUser $utilisateurSocial): bool
+    private function fournisseurAConfirmeLEmail(string $fournisseur, SocialiteUser $utilisateurSocial): bool
     {
+        if ($fournisseur === 'github') {
+            $adresse = $utilisateurSocial->getEmail();
+
+            return is_string($adresse) && $adresse !== '';
+        }
+
         $brut = $this->attributsBruts($utilisateurSocial);
 
         return filter_var(
