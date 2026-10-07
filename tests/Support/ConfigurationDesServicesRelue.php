@@ -47,13 +47,13 @@ final class ConfigurationDesServicesRelue
             putenv($nom);
         }
 
-        foreach ($variables as $nom => $valeur) {
-            if (! is_string($nom) || ! is_string($valeur)) {
+        foreach ($variables as $variable => $valeur) {
+            if (! is_string($variable) || ! is_string($valeur)) {
                 continue;
             }
 
-            $_SERVER[$nom] = $_ENV[$nom] = $valeur;
-            putenv("{$nom}={$valeur}");
+            $_SERVER[$variable] = $_ENV[$variable] = $valeur;
+            putenv("{$variable}={$valeur}");
         }
 
         try {
