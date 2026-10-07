@@ -20,7 +20,11 @@ const labels = computed(() => reversedData.value.map((d) => d.formatted_date))
 const datasets = computed(() => [
     {
         label: 'Meilleur 1RM (kg)',
-        data: reversedData.value.map((d) => Math.round(d.best_1rm)),
+        // Une séance sans meilleur 1RM n'a pas de point : Math.round(null)
+        // vaudrait 0, une chute que personne n'a soulevée (#1956).
+        data: reversedData.value.map((d) =>
+            d.best_1rm === null || d.best_1rm === undefined ? null : Math.round(d.best_1rm),
+        ),
         borderColor: jeton('accent-secondary'), // hot-pink
         backgroundColor: (context) => {
             const chart = context.chart
@@ -41,6 +45,7 @@ const datasets = computed(() => [
         pointHoverRadius: 6,
         fill: true,
         tension: 0.4, // Smooth curve
+        spanGaps: true,
     },
 ])
 
@@ -50,18 +55,23 @@ const infobulle = {
     callbacks: { label: (context) => `${context.parsed.y} kg` },
 }
 
+/**
+ * La marge autour des points tracés. Les séances sans 1RM en sont exclues :
+ * Math.min(null, 100) vaut 0, et ramènerait l'axe à zéro. Sans aucun point (un
+ * exercice au poids du corps), l'axe est laissé à Chart.js.
+ */
+const marge = (context, extremum, facteur) => {
+    const points = context.chart.data.datasets[0].data.filter((valeur) => valeur !== null)
+
+    return points.length > 0 ? extremum(...points) * facteur : undefined
+}
+
 // Add some padding to top and bottom to make the chart look better
 const axeY = {
     display: false,
     beginAtZero: false,
-    suggestedMin: (context) => {
-        const values = context.chart.data.datasets[0].data
-        return Math.min(...values) * 0.9
-    },
-    suggestedMax: (context) => {
-        const values = context.chart.data.datasets[0].data
-        return Math.max(...values) * 1.1
-    },
+    suggestedMin: (context) => marge(context, Math.min, 0.9),
+    suggestedMax: (context) => marge(context, Math.max, 1.1),
 }
 </script>
 

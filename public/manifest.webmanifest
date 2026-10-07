@@ -1,8 +1,9 @@
 {
+    "id": "/",
     "name": "Gym Tracker",
     "short_name": "GymTracker",
     "description": "Suivez vos entraînements et progressez efficacement.",
-    "start_url": "/",
+    "start_url": "/dashboard",
     "display": "standalone",
     "background_color": "#f8faff",
     "theme_color": "#f8faff",

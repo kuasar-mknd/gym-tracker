@@ -8,6 +8,7 @@ import { ZiggyVue } from 'ziggy-js'
 import { installerLeRapporteurDErreurs } from '@/Utils/rapporteurDErreurs'
 import { installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
 import { inscrireLeWorker } from '@/Utils/miseAJourDuWorker'
+import { installerLaRouteGlobale } from '@/Utils/routeGlobale'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -30,6 +31,9 @@ if (typeof window !== 'undefined') {
 // Expose router for testing (Dusk)
 window.Inertia = router
 
+// Les pages appellent route() en globale ; @routes n'écrit plus que la table.
+installerLaRouteGlobale()
+
 const appName = import.meta.env.VITE_APP_NAME || 'GymTracker'
 
 createInertiaApp({
@@ -39,11 +43,10 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             /**
-             * No config: ZiggyVue reads the global the @routes directive
-             * defines in the page. Passing the Inertia prop meant shipping the
-             * whole route table a second time — 34 KB per page, and again as
-             * JSON on every Inertia navigation — for a table identical to the
-             * one already inlined.
+             * Sans configuration : ZiggyVue lit la table globale que `@routes`
+             * écrit dans la page. La passer en prop Inertia envoyait toute la
+             * table une seconde fois — 34 Ko par page, puis de nouveau en JSON
+             * à chaque navigation Inertia — pour une table identique.
              */
             .use(ZiggyVue)
 

@@ -211,6 +211,13 @@ services:
         environment:
             <<: *app-env
             LOG_DAILY_NAME: worker
+            # OPcache en ligne de commande, sans JIT, avec un cache fichier
+            # (docker/php-cli/zz-cli.ini, #1968) : sans lui, chaque processus
+            # PHP du conteneur, sonde de santé comprise, recompilait tout le
+            # code. Le `:` de tête garde le dossier par défaut de l'image
+            # (extensions et php-prod.ini). Jamais dans app : le serveur web
+            # en hériterait et perdrait son JIT.
+            PHP_INI_SCAN_DIR: ':/app/docker/php-cli'
         deploy:
             resources:
                 limits:
@@ -261,6 +268,9 @@ services:
         environment:
             <<: *app-env
             LOG_DAILY_NAME: scheduler
+            # Comme worker : schedule:run et chacune de ses tâches démarrent un
+            # processus PHP par minute, et la sonde de santé un autre (#1968).
+            PHP_INI_SCAN_DIR: ':/app/docker/php-cli'
         deploy:
             resources:
                 limits:

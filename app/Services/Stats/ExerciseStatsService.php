@@ -41,6 +41,12 @@ final class ExerciseStatsService
      * workout_started_at)` et rien ne detourne le plan. Les categories sont
      * relues a part, par clef primaire, sur les seuls exercices rencontres.
      *
+     * Seules les series validees comptent, comme dans le volume de la seance
+     * (`Workout::recalculerLeVolume()`) : chaque serie nait decochee, et une
+     * seance lancee depuis un modele puis abandonnee gonflait la repartition
+     * de tout ce qu'elle prevoyait (#1956). Les echauffements valides restent,
+     * puisque le volume de la seance les compte aussi.
+     *
      * @return array<int, MuscleDistributionStat>
      */
     private function repartitionParCategorie(User $user, int $jours): array
@@ -50,6 +56,7 @@ final class ExerciseStatsService
             ->join('workout_lines', 'sets.workout_line_id', '=', 'workout_lines.id')
             ->where('workout_lines.user_id', $user->id)
             ->where('workout_lines.workout_started_at', '>=', now()->subDays($jours))
+            ->where('sets.is_completed', true)
             ->selectRaw('workout_lines.exercise_id, SUM(sets.weight * sets.reps) as volume')
             ->groupBy('workout_lines.exercise_id')
             ->get();
@@ -81,6 +88,22 @@ final class ExerciseStatsService
     }
 
     /**
+     * Le meilleur 1RM estime de chaque seance de la fenetre, pour la courbe de
+     * progression.
+     *
+     * Les series retenues sont celles qui peuvent etablir le record « 1RM
+     * estime » (`PersonalRecordService`) : validees, hors echauffement, avec un
+     * poids et des repetitions. Une repetition unique vaut son poids, comme
+     * dans `CalculatesOneRepMax`. La courbe comptait toutes les series, cochees
+     * ou non, et passait au-dessus du record affiche (#1956).
+     *
+     * Le calcul se fait en virgule flottante (`CAST(... AS DOUBLE)`, `30e0`),
+     * comme `CalculatesOneRepMax` en PHP, puis s'arrondit ici au centieme comme
+     * le record. En decimal, MySQL tombe juste sur une valeur a mi-chemin que
+     * le flottant de PHP place un rien en dessous : 27,75 kg x 19 valent
+     * 45,325, le record affiche 45,32 et la courbe disait 45,33. Les deux
+     * calculs suivent ainsi exactement les memes operations.
+     *
      * @return array<int, Exercise1RMProgressPoint>
      */
     public function getExercise1RMProgress(User $user, int $idExercice, int $jours = 90): array
@@ -94,7 +117,11 @@ final class ExerciseStatsService
                 ->where('workout_lines.user_id', $user->id)
                 ->where('workout_lines.exercise_id', $idExercice)
                 ->where('workout_lines.workout_started_at', '>=', now()->subDays($jours))
-                ->selectRaw('workout_lines.workout_started_at as started_at, MAX(sets.weight * (1 + sets.reps / 30.0)) as epley_1rm')
+                ->where('sets.is_completed', true)
+                ->where('sets.is_warmup', false)
+                ->where('sets.weight', '>', 0)
+                ->where('sets.reps', '>', 0)
+                ->selectRaw('workout_lines.workout_started_at as started_at, MAX(CASE WHEN sets.reps <= 1 THEN CAST(sets.weight AS DOUBLE) ELSE CAST(sets.weight AS DOUBLE) * (1 + sets.reps / 30e0) END) as epley_1rm')
                 ->groupBy('workout_lines.workout_started_at')
                 ->orderBy('workout_lines.workout_started_at')
                 ->get()
@@ -127,7 +154,7 @@ final class ExerciseStatsService
                     return new Exercise1RMProgressPoint(
                         $jour->format('d/m'),
                         $jour->format('Y-m-d'),
-                        is_numeric($set->epley_1rm) ? (float) $set->epley_1rm : 0.0,
+                        is_numeric($set->epley_1rm) ? round((float) $set->epley_1rm, 2) : 0.0,
                     );
                 })
                 ->all()
