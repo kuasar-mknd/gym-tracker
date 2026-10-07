@@ -139,16 +139,18 @@ return [
     | History
     |--------------------------------------------------------------------------
     |
-    | Enable `encrypt` to encrypt page data before it is stored in the
-    | browser's history state, preventing sensitive information from
-    | being accessible after logout. Can also be enabled per-request
-    | or via the `inertia.encrypt` middleware.
+    | Le chiffrement de l'historique se décide à chaque requête, dans
+    | `HandleInertiaRequests` : toute page d'un compte connecté le porte dès
+    | que le navigateur sait chiffrer, c'est-à-dire en HTTPS ou sur la boucle
+    | locale (#1965). Un réglage global le poserait aussi sur une origine en
+    | http, où Inertia ne trouve pas `crypto.subtle` et lève : la page
+    | resterait blanche. D'où `false` ici, et aucune variable d'environnement.
     |
     */
 
     'history' => [
 
-        'encrypt' => (bool) env('INERTIA_ENCRYPT_HISTORY', false),
+        'encrypt' => false,
 
     ],
 

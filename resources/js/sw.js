@@ -1,6 +1,12 @@
 import { clientsClaim } from 'workbox-core'
-import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from 'workbox-precaching'
 import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
+import {
+    activerLePrechargementDesNavigations,
+    estUneNavigation,
+    naviguerOuRetomber,
+    URL_DE_LA_PAGE_HORS_LIGNE,
+} from '@/sw/navigationsHorsLigne'
 import { renouvelerLAbonnement } from '@/sw/renouvellementDAbonnement'
 
 /**
@@ -29,6 +35,20 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
 /**
+ * Le navigateur lance lui-même la requête d'une navigation pendant que le
+ * worker démarre : le passage par le worker ne retarde pas l'ouverture.
+ */
+self.addEventListener('activate', (event) => {
+    event.waitUntil(activerLePrechargementDesNavigations(self.registration))
+})
+
+/**
+ * Une navigation va au réseau, et retombe sur la page « hors ligne » quand il
+ * ne répond pas (#1966) : l'application installée s'ouvre sans réseau sur une
+ * page qui le dit, et non sur l'erreur du navigateur. Aucune page de
+ * l'application n'est gardée, donc aucune ne peut être servie à un autre
+ * compte. Le détail vit dans le module.
+ *
  * Ce que l'installation n'a pas pris, la première visite le garde.
  *
  * Les morceaux de page ne sont plus préchargés : un compte qui n'ouvre jamais
@@ -38,6 +58,18 @@ precacheAndRoute(self.__WB_MANIFEST)
  * qu'un fichier de worker ne se teste pas.
  */
 self.addEventListener('fetch', (event) => {
+    if (estUneNavigation(event.request)) {
+        event.respondWith(
+            naviguerOuRetomber(
+                event,
+                () => matchPrecache(URL_DE_LA_PAGE_HORS_LIGNE),
+                (requete) => fetch(requete),
+            ),
+        )
+
+        return
+    }
+
     if (!estUnActif(event.request, self.location.origin)) {
         return
     }

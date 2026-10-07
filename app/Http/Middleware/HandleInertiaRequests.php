@@ -5,11 +5,39 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Services\NotificationService;
+use Closure;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 use Inertia\Middleware;
+use Inertia\Support\Header;
+use Symfony\Component\HttpFoundation\IpUtils;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
+    /**
+     * Ce que le navigateur peut garder d'une réponse faite à un compte connecté.
+     *
+     * `no-store` : ni le cache HTTP ni, dans la plupart des navigateurs, la
+     * mémoire de retour arrière (bfcache) ne la gardent, ou celle-ci l'évince
+     * quand les cookies changent, à la déconnexion. De la même longueur que
+     * le `no-cache, private` qu'elle remplace : le budget d'en-têtes de
+     * `EnTetesDeReponseTest` n'y perd rien.
+     */
+    public const string CACHE_D_UNE_PAGE_DE_COMPTE = 'no-store, private';
+
+    /**
+     * La clé de session qui retient à qui la session a servi sa dernière page :
+     * un compte, par son identifiant, ou un invité.
+     */
+    private const string TITULAIRE_DE_L_HISTORIQUE = 'historique.titulaire';
+
+    /**
+     * Le titulaire d'une session sans compte.
+     */
+    private const string INVITE = 'invite';
+
     /**
      * Le gabarit racine, chargé à la première visite.
      *
@@ -17,6 +45,160 @@ class HandleInertiaRequests extends Middleware
      */
     #[\Override]
     protected $rootView = 'app';
+
+    /**
+     * Ce que le navigateur garde des pages d'un compte, une fois parti (#1965).
+     *
+     * Inertia range les props de chaque page visitée dans l'historique du
+     * navigateur et les rend au bouton Retour sans rien demander au serveur :
+     * après une déconnexion, sur un appareil partagé, la personne suivante
+     * revoyait le journal, les mesures ou l'adresse du compte parti. Une page
+     * de compte voyage donc avec `encryptHistory` : Inertia chiffre ce qu'il
+     * range, avec une clé qu'il garde dans le `sessionStorage` de l'onglet.
+     * `clearHistory` jette la clé : une entrée restée dans l'historique ne se
+     * déchiffre plus, et Inertia redemande la page au serveur, qui renvoie
+     * vers la connexion. Voir `jeterLaCleQuandLeTitulaireChange()`, et, pour
+     * les autres onglets, resources/js/Utils/historiqueDuCompte.js.
+     *
+     * La réponse elle-même sort en `no-store` : le document complet d'une page
+     * de compte porte aussi ses props, et le cache HTTP le resservirait tel quel
+     * à une navigation arrière qui quitte le document courant.
+     *
+     * Le chiffrement et le cache se décident ici, à chaque requête, et jamais
+     * ailleurs : `ResponseFactory` est un singleton, une valeur posée une fois
+     * resterait pour la requête suivante du même processus, celle d'un invité
+     * comprise.
+     */
+    #[\Override]
+    public function handle(Request $request, Closure $next): Response
+    {
+        $compte = $request->user();
+        $pageDUnCompte = $compte !== null;
+
+        $this->jeterLaCleQuandLeTitulaireChange($request, $compte instanceof Authenticatable ? $compte : null);
+
+        Inertia::encryptHistory($pageDUnCompte && $this->leNavigateurPeutChiffrer($request));
+
+        $reponse = parent::handle($request, $next);
+
+        if ($pageDUnCompte) {
+            $reponse->headers->set('Cache-Control', self::CACHE_D_UNE_PAGE_DE_COMPTE);
+        }
+
+        return $reponse;
+    }
+
+    /**
+     * Pose `clearHistory` dès que la session ne sert plus le titulaire qu'elle
+     * servait : un autre compte, un invité, ou personne encore (#1965).
+     *
+     * La clé de l'historique vit dans l'onglet, la session sur le serveur : la
+     * seule chose que le serveur sache, c'est à qui il sert la page. Quand ce
+     * n'est plus le titulaire de la page précédente, la page suivante dit au
+     * client de jeter la clé. Cela couvre chaque fin de session, et pas
+     * seulement celles qui passent par un contrôleur : la déconnexion et la
+     * suppression du compte, qui la posent aussi elles-mêmes, mais encore un
+     * mot de passe changé depuis un autre appareil, qui vide la session
+     * (`AuthentifieLaSessionDuCompte`), un compte supprimé depuis le panneau,
+     * une session expirée, même suivie d'une page publique. Et chaque début :
+     * un compte qui se connecte, par n'importe quel chemin.
+     *
+     * La consigne ne vaut que pour l'onglet qui reçoit cette page : la session
+     * sert tous les onglets du navigateur, et chacun a sa clé. Les autres
+     * onglets la jettent eux-mêmes, d'après le titulaire que chaque page
+     * déclare dans `auth.user` (resources/js/Utils/historiqueDuCompte.js).
+     *
+     * Une session neuve n'a pas de titulaire : sa première page jette la clé,
+     * sans effet quand il n'y en avait pas. La consigne passe par la session,
+     * et une réponse qui ne rend pas de page la laisse à la suivante, comme le
+     * 409 d'un changement de version (`onVersionChange()`). Le même compte,
+     * lui, garde sa clé d'une page à l'autre.
+     */
+    private function jeterLaCleQuandLeTitulaireChange(Request $request, ?Authenticatable $compte): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        $titulaire = $compte === null ? self::INVITE : 'compte:'.self::identifiantDe($compte);
+        $session = $request->session();
+
+        if ($session->get(self::TITULAIRE_DE_L_HISTORIQUE) === $titulaire) {
+            return;
+        }
+
+        $session->put(self::TITULAIRE_DE_L_HISTORIQUE, $titulaire);
+
+        Inertia::clearHistory();
+    }
+
+    /**
+     * Rend la consigne `clearHistory` à la page complète qui suit un 409 de
+     * changement de version (#1965, #1967).
+     *
+     * Inertia retire la consigne de la session dès que le contrôleur construit
+     * la page, puis le middleware remplace cette page par le 409 quand la
+     * visite annonce une autre version d'actifs, ce que fait la première
+     * navigation après chaque mise à jour du worker (`perimee`). Sans ceci, la
+     * page complète qu'Inertia charge ensuite ne la portait plus, et une session
+     * terminée ailleurs laissait sa clé dans l'onglet.
+     */
+    #[\Override]
+    public function onVersionChange(Request $request, Response $response): Response
+    {
+        if ($this->laPageJetaitLaCle($response)) {
+            Inertia::clearHistory();
+        }
+
+        return parent::onVersionChange($request, $response);
+    }
+
+    /**
+     * Si la réponse remplacée est une page Inertia qui portait `clearHistory`.
+     */
+    private function laPageJetaitLaCle(Response $reponse): bool
+    {
+        if ($reponse->headers->get(Header::INERTIA) !== 'true') {
+            return false;
+        }
+
+        $page = json_decode((string) $reponse->getContent(), true);
+
+        return is_array($page) && ($page['clearHistory'] ?? false) === true;
+    }
+
+    /**
+     * L'identifiant du compte, en texte.
+     */
+    private static function identifiantDe(Authenticatable $compte): string
+    {
+        $identifiant = $compte->getAuthIdentifier();
+
+        return is_int($identifiant) || is_string($identifiant) ? (string) $identifiant : '';
+    }
+
+    /**
+     * Si le navigateur offre `crypto.subtle`, sans quoi Inertia ne chiffre rien.
+     *
+     * Il ne l'offre qu'à un contexte sûr : une page servie en HTTPS, ou depuis
+     * la boucle locale (`localhost`, `*.localhost`, 127.0.0.0/8, ::1). Ailleurs,
+     * Inertia ne sait pas créer sa clé et lève à la première page : l'écran
+     * resterait blanc. C'est le cas des parcours navigateur sous Sail, servis
+     * en http sur `laravel.test` ; la production, derrière le proxy inverse
+     * HTTPS qui transmet `X-Forwarded-Proto`, chiffre.
+     */
+    private function leNavigateurPeutChiffrer(Request $request): bool
+    {
+        if ($request->isSecure()) {
+            return true;
+        }
+
+        $hote = trim($request->getHost(), '[]');
+
+        return $hote === 'localhost'
+            || str_ends_with($hote, '.localhost')
+            || IpUtils::checkIp($hote, ['127.0.0.0/8', '::1']);
+    }
 
     /**
      * @return array<string, mixed>

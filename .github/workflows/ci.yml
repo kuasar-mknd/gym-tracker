@@ -769,6 +769,34 @@ jobs:
                   echo "::error::L'image ne répond pas sur /up avec une base vide."
                   exit 1
 
+            # worker et scheduler chargent docker/php-cli par PHP_INI_SCAN_DIR
+            # (#1968). La même valeur, dans le conteneur qui vient de démarrer,
+            # doit donner OPcache actif sans JIT et un cache fichier que
+            # www-data écrit : un dossier de cache absent ferait échouer toute
+            # commande PHP de ces deux conteneurs. Sans elle, app garde son JIT.
+            - name: OPcache de la ligne de commande dans l'image
+              run: |
+                  set -euo pipefail
+                  cli=(docker exec -e PHP_INI_SCAN_DIR=:/app/docker/php-cli app)
+                  # shellcheck disable=SC2016 # le code PHP est entre apostrophes à dessein
+                  "${cli[@]}" php -r '
+                      $actif = (opcache_get_status(false) ?: [])["opcache_enabled"] ?? false;
+                      printf("enable_cli=%s jit=%s file_cache=%s actif=%s\n", ini_get("opcache.enable_cli"), ini_get("opcache.jit"), ini_get("opcache.file_cache"), var_export($actif, true));
+                      exit(ini_get("opcache.enable_cli") === "1" && ini_get("opcache.jit") === "disable" && ini_get("opcache.file_cache") !== "" && $actif ? 0 : 1);
+                  ' || { echo "::error::OPcache n'est pas actif sans JIT en ligne de commande avec docker/php-cli."; exit 1; }
+                  "${cli[@]}" php artisan schedule:list > /dev/null
+                  ecrits=$(docker exec app sh -c 'find /tmp/opcache -type f | wc -l')
+                  echo "$ecrits fichiers dans le cache fichier d'OPcache après schedule:list."
+                  if [ "$ecrits" -eq 0 ]; then
+                      echo "::error::Le cache fichier d'OPcache est resté vide."
+                      exit 1
+                  fi
+                  jit=$(docker exec app php -r 'echo ini_get("opcache.jit");')
+                  if [ "$jit" != "tracing" ]; then
+                      echo "::error::Sans docker/php-cli, opcache.jit vaut « $jit » au lieu de « tracing »."
+                      exit 1
+                  fi
+
     promotion:
         if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest

@@ -86,6 +86,58 @@ describe('wilks', () => {
     it('returns zero rather than NaN on an empty form', () => {
         expect(wilksScore({ bodyWeight: '', lifted: '', gender: 'male' })).toBe(0)
     })
+
+    /**
+     * Le polynôme n'est défini que de 40 à 201,9 kg pour un homme et de 26,51
+     * à 154,53 kg pour une femme (#1959). Hors de cette plage, son dénominateur
+     * finissait par changer de signe et le score devenait négatif ; avant d'y
+     * arriver, le coefficient remontait au lieu de décroître.
+     */
+    describe('hors de la plage de poids de corps de la formule', () => {
+        it.each([
+            ['male', 1, 40],
+            ['male', 10, 40],
+            ['male', 13.5, 40],
+            ['male', 30, 40],
+            ['male', 250, 201.9],
+            ['male', 300, 201.9],
+            ['male', 500, 201.9],
+            ['female', 1, 26.51],
+            ['female', 20, 26.51],
+            ['female', 200, 154.53],
+            ['female', 250, 154.53],
+            ['female', 500, 154.53],
+        ])('%s de %s kg : le coefficient de la borne de %s kg', (gender, horsPlage, borne) => {
+            const aLaBorne = wilksCoefficient(borne, gender)
+
+            expect(aLaBorne).toBeGreaterThan(0)
+            expect(wilksCoefficient(horsPlage, gender)).toBe(aLaBorne)
+        })
+
+        it('borne le poids de corps une fois converti en kilos', () => {
+            // 500 lbs valent 226,8 kg : au-delà de la borne féminine, et la
+            // validation l'accepte.
+            const enLivres = wilksScore({ bodyWeight: 500, lifted: 1102.31, gender: 'female', unit: 'lbs' })
+
+            expect(enLivres).toBeGreaterThan(0)
+            expect(enLivres).toBe((1102.31 / 2.20462) * wilksCoefficient(154.53, 'female'))
+        })
+
+        it.each([
+            ['male', [150, 200, 201.9, 250, 283, 400, 500]],
+            ['female', [120, 154.53, 180, 208, 300, 500]],
+        ])('ne fait jamais remonter le coefficient %s, qui reste positif', (gender, poids) => {
+            const coefficients = poids.map((poidsDeCorps) => wilksCoefficient(poidsDeCorps, gender))
+
+            coefficients.forEach((coefficient, rang) => {
+                expect(coefficient).toBeGreaterThan(0)
+
+                if (rang > 0) {
+                    expect(coefficient).toBeLessThanOrEqual(coefficients[rang - 1])
+                }
+            })
+        })
+    })
 })
 
 describe('basalMetabolicRate — Mifflin-St Jeor', () => {

@@ -8,6 +8,7 @@ import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
+import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -143,6 +144,9 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             <code class="bg-text-main/15 rounded px-1">sail artisan migrate</code>
             avant de continuer, sinon les enregistrements échoueront sans le dire.
         </div>
+
+        <!-- Une nouvelle version propose de recharger, sans jamais le faire seule (#1967). -->
+        <BandeauDeMiseAJour />
 
         <!-- Flash Toasts -->
         <div v-for="(cfg, type) in toasts" :key="type">

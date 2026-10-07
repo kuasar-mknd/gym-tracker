@@ -2,6 +2,7 @@
 import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
+import { seriesValidees } from '@/Utils/seriesValidees'
 
 const props = defineProps({
     data: {
@@ -15,8 +16,11 @@ const chartData = computed(() => {
     const sessions = [...props.data].reverse()
     const labels = sessions.map((session) => session.formatted_date.split('/').slice(0, 2).join('/'))
 
+    // Seules les séries validées : une série jamais cochée n'a pas été soulevée (#1956).
+    const series = sessions.map((session) => seriesValidees(session.sets))
+
     // Find maximum number of sets in the history, but limit to first 3 sets to keep the chart clean
-    const maxSets = Math.min(3, Math.max(...sessions.map((s) => s.sets.length)))
+    const maxSets = Math.min(3, Math.max(...series.map((sets) => sets.length)))
 
     const datasets = []
 
@@ -30,8 +34,8 @@ const chartData = computed(() => {
     for (let i = 0; i < maxSets; i++) {
         datasets.push({
             label: `Série ${i + 1}`,
-            data: sessions.map((session) => {
-                const set = session.sets[i]
+            data: series.map((sets) => {
+                const set = sets[i]
                 return set && parseFloat(set.weight) > 0 ? parseFloat(set.weight) : null
             }),
             borderColor: setColors[i % setColors.length],

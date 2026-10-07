@@ -48,12 +48,18 @@ class GetStatsDashboardAction
      * qu'elle affiche et gardée une demi-heure sous une clef que
      * StatsCacheManager sait oublier.
      *
+     * La clef porte le mois courant, parce que la vue contient la comparaison
+     * mensuelle : le premier du mois, elle servait sinon la comparaison de la
+     * veille jusqu'à l'expiration de l'entrée (#1955).
+     *
      * @return array<string, mixed>
      */
     public function performanceOverview(User $user, int $jours = 30): array
     {
+        $mois = now()->format('Y-m');
+
         return Cache::remember(
-            ClesDeStats::seances($user, "performance_overview.{$jours}"),
+            ClesDeStats::seances($user, "performance_overview.{$jours}.{$mois}"),
             now()->addMinutes(30),
             fn (): array => [
                 'volumeTrend' => $this->volumeStats->getVolumeTrend($user, $jours),

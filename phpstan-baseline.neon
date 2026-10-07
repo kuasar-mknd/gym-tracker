@@ -403,24 +403,6 @@ parameters:
 			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
 
 		-
-			message: '#^Offset ''best_1rm'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 2
-			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
-
-		-
-			message: '#^Offset ''formatted_date'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
-
-		-
-			message: '#^Offset ''workout_id'' might not exist on array\{id\: int, workout_id\: int, workout_name\: string, formatted_date\: string, best_1rm\: float, sets\: Illuminate\\Support\\Collection\<int, array\<string, mixed\>\>\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 3
-			path: tests/Feature/Actions/Exercises/FetchExerciseHistoryActionTest.php
-
-		-
 			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1

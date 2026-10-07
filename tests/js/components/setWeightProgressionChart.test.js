@@ -15,7 +15,7 @@ const mountChart = (data) => mount(SetWeightProgressionChart, { props: { data } 
  */
 const session = (formattedDate, weights) => ({
     formatted_date: formattedDate,
-    sets: weights.map((weight) => ({ weight })),
+    sets: weights.map((weight) => ({ weight, is_completed: true, is_warmup: false })),
 })
 
 describe('SetWeightProgressionChart', () => {
@@ -90,5 +90,18 @@ describe('SetWeightProgressionChart', () => {
         expect(tooltipLabelOf(wrapper, 'Line', { dataset: { label: 'Série 2' }, parsed: { y: 75 } })).toBe(
             'Série 2: 75 kg',
         )
+    })
+
+    /*
+     * Une série jamais cochée n'a pas été soulevée : la « Série 1 » est la
+     * première série validée de la séance (#1956).
+     */
+    it('ne trace que les séries validées', () => {
+        const seance = session('12/05/2026', [140, 80, 75])
+        seance.sets[0].is_completed = false
+
+        const chart = chartDataOf(mountChart([seance]), 'Line')
+
+        expect(chart.datasets.map((dataset) => dataset.data[0])).toEqual([80, 75])
     })
 })
