@@ -29,8 +29,14 @@ const nom = computed(() => props.label ?? props.part)
 
 const showAddForm = ref(false)
 
+/**
+ * La mesure rejoint l'historique de cette page : `keep_part_name` demande au
+ * serveur de ne pas ramener à sa clef une « Taille » saisie à la main, même
+ * quand le compte mesure aussi `Waist` (#1974).
+ */
 const form = useForm({
     part: props.part,
+    keep_part_name: true,
     value: '',
     unit: props.history.length > 0 ? props.history[props.history.length - 1].unit : 'cm',
     measured_at: todayAsCalendarDate(),

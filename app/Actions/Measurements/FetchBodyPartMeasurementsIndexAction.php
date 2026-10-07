@@ -19,12 +19,16 @@ class FetchBodyPartMeasurementsIndexAction
     private const int PARTIES_MAX = 50;
 
     /**
+     * Le nom d'une carte dépend des autres parties du compte : une « Taille »
+     * saisie à la main se distingue de `Waist`, qui s'affiche aussi « Taille »
+     * (#1974). Les parties sont donc toutes relevées avant d'être nommées.
+     *
      * @return array{latestMeasurements: Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}>, commonParts: list<array{value: string, label: string}>}
      */
     public function execute(User $user): array
     {
-        /** @var Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}> $latestMeasurements */
-        $latestMeasurements = collect();
+        /** @var list<array{0: BodyPartMeasurement, 1: BodyPartMeasurement|null}> $parties */
+        $parties = [];
         $curseur = '';
 
         for ($i = 0; $i < self::PARTIES_MAX; $i++) {
@@ -36,18 +40,25 @@ class FetchBodyPartMeasurementsIndexAction
             }
 
             $curseur = $derniere->part;
-            $precedente = $lot->get(1);
+            $parties[] = [$derniere, $lot->get(1)];
+        }
+
+        $partiesDuCompte = array_map(static fn (array $partie): string => $partie[0]->part, $parties);
+
+        /** @var Collection<int, array{part: string, label: string, current: float, unit: string, date: non-falsy-string, diff: float}> $latestMeasurements */
+        $latestMeasurements = collect($parties)->map(static function (array $partie) use ($partiesDuCompte): array {
+            [$derniere, $precedente] = $partie;
             $courante = (float) $derniere->value;
 
-            $latestMeasurements->push([
+            return [
                 'part' => $derniere->part,
-                'label' => BodyPartMeasurement::libelle($derniere->part),
+                'label' => BodyPartMeasurement::libelleParmi($derniere->part, $partiesDuCompte),
                 'current' => $courante,
                 'unit' => $derniere->unit,
                 'date' => Carbon::parse($derniere->measured_at)->format('Y-m-d'),
                 'diff' => $precedente instanceof BodyPartMeasurement ? round($courante - (float) $precedente->value, 2) : 0.0,
-            ]);
-        }
+            ];
+        });
 
         return [
             'latestMeasurements' => $latestMeasurements,

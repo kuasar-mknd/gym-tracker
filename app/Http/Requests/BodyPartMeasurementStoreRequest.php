@@ -26,11 +26,15 @@ class BodyPartMeasurementStoreRequest extends FormRequest
      * clef, avec les mesures déjà prises et les objectifs qui la suivent.
      *
      * Sauf quand le compte mesure déjà une partie sous ce nom exact : avant
-     * les noms français, un francophone a pu saisir « Taille » à la main, et
-     * la page de détail de cette partie renvoie ce nom. Le ramener à la clef
-     * couperait son historique en deux, la nouvelle mesure manquant à la page
-     * où on vient de l'ajouter (#1974). La comparaison suit la collation de la
-     * colonne, comme le regroupement de la page Mensurations.
+     * les noms français, un francophone a pu saisir « Taille » à la main. Le
+     * nom saisi est gardé quand le compte n'a aucune mesure sous la clef, ou
+     * quand la mesure vient de la page de cette partie, qui le demande par
+     * `keep_part_name` : la ramener à la clef la ferait manquer à la page où
+     * on vient de l'ajouter (#1974). Quand le compte mesure les deux, la
+     * pastille va à la clef, que suivent les objectifs. La comparaison suit
+     * la collation de la colonne, comme le regroupement de la page
+     * Mensurations. `keep_part_name` n'est qu'une consigne de rangement : la
+     * validation ne le rend pas, il n'entre pas en base.
      */
     #[\Override]
     protected function prepareForValidation(): void
@@ -45,7 +49,12 @@ class BodyPartMeasurementStoreRequest extends FormRequest
 
         $clef = BodyPartMeasurement::clefDePartie($partie);
 
-        if ($clef === $partie || $this->leCompteMesureDejaLaPartie($partie)) {
+        if ($clef === $partie) {
+            return;
+        }
+
+        if ($this->leCompteMesureDejaLaPartie($partie)
+            && ($this->boolean('keep_part_name') || ! $this->leCompteMesureDejaLaPartie($clef))) {
             return;
         }
 

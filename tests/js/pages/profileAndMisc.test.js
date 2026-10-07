@@ -407,6 +407,29 @@ describe('Measurements/Parts/Show — recording a measurement', () => {
         expect(formPost).toHaveBeenCalledWith('/routes/body-parts.store', expect.any(Object))
     })
 
+    /*
+     * Une « Taille » saisie à la main ne doit pas être ramenée à `Waist` quand
+     * on lui ajoute une mesure depuis sa propre page : la mesure manquerait à
+     * la page où on vient de l'ajouter (#1974).
+     */
+    it('demande que la mesure rejoigne l’historique de cette page, sous ce nom', async () => {
+        const wrapper = mount(PartShow, {
+            props: { part: 'Taille', label: 'Taille (saisie libre)', history: structuredClone(historyFixture) },
+            global: {
+                mocks: { route },
+                directives: { press: {} },
+                stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            },
+        })
+
+        const form = await openAddForm(wrapper)
+        await form.trigger('submit')
+
+        expect(wrapper.vm.form.part).toBe('Taille')
+        expect(wrapper.vm.form.keep_part_name).toBe(true)
+        expect(wrapper.find('h2').text()).toBe('Taille (saisie libre)')
+    })
+
     /**
      * Every field on this form writes straight onto the object that is posted,
      * so a field bound to the wrong one is not a display bug: it saves a

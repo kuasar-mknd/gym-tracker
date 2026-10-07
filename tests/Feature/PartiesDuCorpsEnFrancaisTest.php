@@ -133,6 +133,115 @@ it('ajoute une mesure à une partie déjà saisie sous un nom français, sans co
     'autre casse' => ['taille', 'Taille'],
 ]);
 
+/*
+ * Le compte qui a les deux historiques : « Waist », suivi par un objectif, et
+ * « Taille », saisi à la main quand les pastilles étaient anglaises. La
+ * pastille « Taille » nourrit l'objectif ; la page de la partie saisie à la
+ * main garde ses mesures ; et les deux cartes ne s'intitulent pas pareil.
+ */
+
+/**
+ * Un compte qui mesure son tour de taille sous la clef, suivie par un
+ * objectif, et sous « Taille », saisi à la main.
+ *
+ * @return array{0: User, 1: Goal}
+ */
+function compteAuxDeuxHistoriquesDeTaille(): array
+{
+    $utilisateur = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $utilisateur->id, 'part' => 'Waist', 'value' => 90, 'unit' => 'cm', 'measured_at' => '2026-09-01']);
+    BodyPartMeasurement::factory()->create(['user_id' => $utilisateur->id, 'part' => 'Taille', 'value' => 91, 'unit' => 'cm', 'measured_at' => '2026-09-02']);
+    $objectif = Goal::factory()->create([
+        'user_id' => $utilisateur->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'Waist',
+        'start_value' => 90,
+        'current_value' => 90,
+        'target_value' => 80,
+        'completed_at' => null,
+    ]);
+
+    return [$utilisateur, $objectif];
+}
+
+/**
+ * Le nombre de mesures du compte rangées sous chaque nom, au caractère près.
+ *
+ * @return array<string, int>
+ */
+function mesuresDuCompteParPartie(User $utilisateur): array
+{
+    /** @var list<string> $parties */
+    $parties = BodyPartMeasurement::query()->where('user_id', $utilisateur->id)->pluck('part')->all();
+    $compte = array_count_values($parties);
+    ksort($compte);
+
+    return $compte;
+}
+
+it('range sous la clef la mesure de la pastille quand le compte mesure aussi la partie à la main, et son objectif avance', function (): void {
+    [$utilisateur, $objectif] = compteAuxDeuxHistoriquesDeTaille();
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'value' => 84, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(mesuresDuCompteParPartie($utilisateur))->toBe(['Taille' => 1, 'Waist' => 2])
+        ->and((float) $objectif->fresh()?->current_value)->toBe(84.0);
+});
+
+it('garde la mesure ajoutée depuis la page de la partie saisie à la main dans cet historique, même quand le compte mesure aussi la clef', function (): void {
+    [$utilisateur, $objectif] = compteAuxDeuxHistoriquesDeTaille();
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'keep_part_name' => true, 'value' => 89, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(mesuresDuCompteParPartie($utilisateur))->toBe(['Taille' => 2, 'Waist' => 1])
+        ->and((float) $objectif->fresh()?->current_value)->toBe(90.0);
+
+    $this->actingAs($utilisateur)
+        ->get(route('body-parts.show', ['part' => 'Taille']))
+        ->assertInertia(fn (AssertableInertia $detail): AssertableInertia => $detail
+            ->has('history', 2)
+            ->where('history.1.value', '89.00'));
+});
+
+it('ne garde le nom demandé tel quel que pour une partie que le compte mesure déjà sous ce nom', function (): void {
+    $utilisateur = User::factory()->create();
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'keep_part_name' => true, 'value' => 88, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(mesuresDuCompteParPartie($utilisateur))->toBe(['Waist' => 1]);
+});
+
+it('distingue, sur la carte et sur la page, la partie saisie à la main de la partie proposée du même nom', function (): void {
+    [$utilisateur] = compteAuxDeuxHistoriquesDeTaille();
+
+    $this->actingAs($utilisateur)
+        ->get(route('body-parts.index'))
+        ->assertInertia(fn (AssertableInertia $liste): AssertableInertia => $liste
+            ->has('latestMeasurements', 2)
+            ->where('latestMeasurements.0.part', 'Taille')
+            ->where('latestMeasurements.0.label', 'Taille (saisie libre)')
+            ->where('latestMeasurements.1.part', 'Waist')
+            ->where('latestMeasurements.1.label', 'Taille'));
+
+    $this->actingAs($utilisateur)
+        ->get(route('body-parts.show', ['part' => 'Taille']))
+        ->assertInertia(fn (AssertableInertia $detail): AssertableInertia => $detail
+            ->where('part', 'Taille')
+            ->where('label', 'Taille (saisie libre)'));
+
+    $this->actingAs($utilisateur)
+        ->get(route('body-parts.show', ['part' => 'Waist']))
+        ->assertInertia(fn (AssertableInertia $detail): AssertableInertia => $detail
+            ->where('part', 'Waist')
+            ->where('label', 'Taille'));
+});
+
 it('range sous sa clef le nom français d’un compte qui ne l’a jamais saisi, même quand un autre compte l’a fait', function (): void {
     $autre = User::factory()->create();
     BodyPartMeasurement::factory()->create(['user_id' => $autre->id, 'part' => 'Taille', 'measured_at' => '2026-09-01']);

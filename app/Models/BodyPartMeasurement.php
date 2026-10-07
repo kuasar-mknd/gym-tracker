@@ -95,6 +95,34 @@ class BodyPartMeasurement extends BaseMeasurement
     }
 
     /**
+     * Le nom à afficher pour une partie, parmi celles que le compte mesure.
+     *
+     * Avant les noms français, un francophone a pu saisir « Taille » à la
+     * main. S'il mesure aussi la partie proposée, `Waist` s'affiche « Taille »
+     * elle aussi : la partie saisie à la main porte alors la mention « (saisie
+     * libre) », sur sa carte comme sur sa page, pour que les deux historiques
+     * se distinguent (#1974).
+     *
+     * @param  iterable<string>  $partiesDuCompte
+     */
+    public static function libelleParmi(string $partie, iterable $partiesDuCompte): string
+    {
+        $clef = self::clefDePartie($partie);
+
+        if ($clef === $partie) {
+            return self::libelle($partie);
+        }
+
+        foreach ($partiesDuCompte as $autre) {
+            if (strcasecmp($autre, $clef) === 0) {
+                return $partie.' (saisie libre)';
+            }
+        }
+
+        return $partie;
+    }
+
+    /**
      * La clef d'une partie proposée dont on a saisi le nom français
      * (« Taille », « mollet gauche »), ou la saisie telle quelle.
      *
