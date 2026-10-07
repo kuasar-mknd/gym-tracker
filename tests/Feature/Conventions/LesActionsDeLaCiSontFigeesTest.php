@@ -129,13 +129,48 @@ function actionTruffleHogDeLaCi(): array
 }
 
 /**
+ * Vrai quand l'option de `docker run` prend sa valeur dans le mot suivant,
+ * comme docker la lit. Une option longue booléenne (`--rm`, `--publish-all`,
+ * `--oom-kill-disable`) ou qui porte sa valeur (`--name=web`) ne la prend
+ * pas, pas plus que la fin des options (`--`). Une option courte se groupe
+ * avec d'autres (`-dP`, `-ti`) : les lettres booléennes (`d`, `i`, `P`, `q`,
+ * `t`) n'attendent rien, et la première lettre qui attend une valeur la prend
+ * dans le reste du mot quand il en reste (`-p8080:80`, `-e=MODE=ci`), dans le
+ * mot suivant sinon (`-p 8080:80`, `-dp 8080:80`). Une option inconnue est
+ * tenue pour attendre sa valeur.
+ */
+function optionDeDockerRunAttendUneValeur(string $option): bool
+{
+    $longuesBooleennes = [
+        '--detach', '--disable-content-trust', '--help', '--init', '--interactive', '--no-healthcheck',
+        '--oom-kill-disable', '--privileged', '--publish-all', '--quiet', '--read-only', '--rm',
+        '--sig-proxy', '--tty', '--use-api-socket',
+    ];
+
+    if (str_starts_with($option, '--')) {
+        return $option !== '--' && ! str_contains($option, '=') && ! in_array($option, $longuesBooleennes, true);
+    }
+
+    $lettres = substr($option, 1);
+
+    foreach (str_split($lettres) as $rang => $lettre) {
+        if (! str_contains('dPqit', $lettre)) {
+            return $rang === strlen($lettres) - 1;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Les images que lance chaque `docker run` (ou sa forme longue,
  * `docker container run`) d'un script d'étape : les lignes continuées par `\`
- * sont rejointes, les options sautées, et une image passée par une variable
- * (`"$image"`) est remplacée par la valeur que le script lui donne. Une
- * variable que le script ne pose pas reste telle quelle, et n'est donc pas
- * figée. `docker compose run` lance un service de la composition, pas une
- * image : il n'est pas lu.
+ * sont rejointes, les mots découpés comme le shell les découpe, les options
+ * sautées comme docker les lit (`optionDeDockerRunAttendUneValeur`), et une
+ * image passée par une variable (`"$image"`) est remplacée par la valeur que
+ * le script lui donne. Une variable que le script ne pose pas reste telle
+ * quelle, et n'est donc pas figée. `docker compose run` lance un service de
+ * la composition, pas une image : il n'est pas lu.
  *
  * @return list<string>
  */
@@ -143,7 +178,6 @@ function imagesDesDockerRunDuScript(string $script): array
 {
     $sansCommentaires = (string) preg_replace('/^\s*#.*$/m', '', $script);
     $joint = (string) preg_replace('/\\\\\r?\n/', ' ', $sansCommentaires);
-    $sansValeur = ['--rm', '-d', '--detach', '-i', '--interactive', '-t', '--tty', '-it', '-dit', '--init', '--read-only', '--privileged', '-q', '--quiet'];
     $images = [];
 
     preg_match_all('/\bdocker\s+(?:container\s+)?run\b(.*)$/m', $joint, $commandes);
@@ -160,7 +194,7 @@ function imagesDesDockerRunDuScript(string $script): array
             }
 
             if (str_starts_with($jeton, '-')) {
-                $attendValeur = ! in_array($jeton, $sansValeur, true) && ! str_contains($jeton, '=');
+                $attendValeur = optionDeDockerRunAttendUneValeur($jeton);
 
                 continue;
             }
@@ -332,7 +366,7 @@ it('lance chaque image de docker run à une version exacte', function (): void {
         ->and($mobiles)->toBe([], "Ces images de docker run suivent l'éditeur sans diff : leur donner une version exacte (X.Y.Z) ou un digest :\n- ".implode("\n- ", $mobiles));
 });
 
-it('lit l’image de chaque docker run comme le shell', function (string $script, array $images): void {
+it('lit l’image de chaque docker run comme le shell puis docker', function (string $script, array $images): void {
     expect(imagesDesDockerRunDuScript($script))->toBe($images);
 })->with([
     'des options à valeur avant l’image' => ["docker run --rm -v \"\$PWD\":/src -w /src semgrep/semgrep:1.179.0 \\\n  semgrep scan --config p/default .", ['semgrep/semgrep:1.179.0']],
@@ -345,6 +379,25 @@ it('lit l’image de chaque docker run comme le shell', function (string $script
     'un commentaire qui cite docker run' => ["# docker run alpine:latest\necho rien", []],
     'deux commandes' => ["docker run --rm a/b:1.2.3 x\ndocker run -it c/d", ['a/b:1.2.3', 'c/d']],
     'la forme longue docker container run' => ['docker container run --rm semgrep/semgrep:latest semgrep scan', ['semgrep/semgrep:latest']],
+    'une option courte booléenne sans commande après l’image' => ['docker run -d -P nginx:latest', ['nginx:latest']],
+    'une grappe d’options booléennes' => ['docker run --rm -ti alpine:3.22.1 sh', ['alpine:3.22.1']],
+    'une grappe dont la dernière lettre attend sa valeur' => ['docker run -dP -dp 8080:80 nginx:1.27.3 nginx -g "daemon off;"', ['nginx:1.27.3']],
+    'une valeur jointe à son option courte' => ['docker run -e=MODE=ci -p8080:80 alpine:3.22.1 sh', ['alpine:3.22.1']],
+    'la fin des options' => ['docker run --rm -- alpine:3.22.1 sh', ['alpine:3.22.1']],
+]);
+
+/*
+ * Une option booléenne que la garde croyait porteuse d'une valeur avalait
+ * l'image : sans commande après elle, aucune image n'était lue, et une
+ * étiquette flottante passait.
+ */
+it('ne prend jamais l’image pour la valeur d’une option booléenne', function (string $option): void {
+    expect(imagesDesDockerRunDuScript("docker run {$option} nginx:latest"))->toBe(['nginx:latest']);
+})->with([
+    '-d', '-i', '-t', '-q', '-P', '-it', '-ti', '-td', '-dit', '-itd', '-dP',
+    '--detach', '--disable-content-trust', '--help', '--init', '--interactive', '--no-healthcheck',
+    '--oom-kill-disable', '--privileged', '--publish-all', '--quiet', '--read-only', '--rm',
+    '--sig-proxy', '--sig-proxy=false', '--tty', '--use-api-socket',
 ]);
 
 it('refuse une image de docker run qui suit l’éditeur', function (string $image): void {
