@@ -102,3 +102,46 @@ it('ne voit pas les mesures d’un autre utilisateur', function (): void {
 
     expect($action->execute($user)['latestMeasurements'])->toBeEmpty();
 });
+
+/*
+ * Cinquante parties au plus, les premières dans l'ordre de leur nom : au-delà,
+ * la page afficherait autant de cartes, et l'énumération ferait autant de
+ * lectures. La cinquante-et-unième n'a pas de carte.
+ */
+it('ne montre que les cinquante premières parties, dans l’ordre de leur nom', function (): void {
+    $user = User::factory()->create();
+    $parties = array_map(fn (int $rang): string => sprintf('Partie %02d', $rang), range(1, 51));
+
+    BodyPartMeasurement::insert(array_map(fn (string $partie): array => [
+        'user_id' => $user->id,
+        'part' => $partie,
+        'value' => 40,
+        'unit' => 'cm',
+        'measured_at' => '2026-06-01',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ], $parties));
+
+    $cartes = (new FetchBodyPartMeasurementsIndexAction())->execute($user)['latestMeasurements'];
+
+    expect($cartes->pluck('part')->all())->toBe(array_slice($parties, 0, 50));
+});
+
+/*
+ * L'énumération s'arrête à la première partie qui manque : une lecture par
+ * partie, plus celle qui constate qu'il n'y en a plus — et non cinquante
+ * lectures pour deux cartes.
+ */
+it('cesse de lire les mesures dès la dernière partie passée', function (): void {
+    $user = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Chest', 'value' => 100, 'unit' => 'cm', 'measured_at' => '2026-01-01']);
+    BodyPartMeasurement::factory()->create(['user_id' => $user->id, 'part' => 'Waist', 'value' => 80, 'unit' => 'cm', 'measured_at' => '2026-01-01']);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    (new FetchBodyPartMeasurementsIndexAction())->execute($user);
+    $lectures = array_filter(DB::getQueryLog(), fn (array $entree): bool => str_contains((string) $entree['query'], 'body_part_measurements'));
+    DB::disableQueryLog();
+
+    expect($lectures)->toHaveCount(3);
+});

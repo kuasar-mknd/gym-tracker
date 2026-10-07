@@ -251,6 +251,20 @@ it('ne donne ni point ni meilleur 1RM à une séance faite au poids du corps, co
 });
 
 /*
+ * L'autre bord : le moindre poids suffit, comme pour le record, qui ne demande
+ * qu'un poids positif. Une rééducation à 500 g a son meilleur 1RM, et c'est
+ * celui que le profil affiche.
+ */
+it('donne un meilleur 1RM à une série d’un demi-kilo, comme le record', function (): void {
+    $user = User::factory()->create();
+    $ligne = ligneDePectorauxPourStats($user);
+
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 0.5, 'reps' => 10, 'is_warmup' => false, 'is_completed' => true]);
+
+    expect(meilleurs1RMDeLHistorique($user, $ligne))->toBe([record1RMDeLaLigne($user, $ligne)]);
+});
+
+/*
  * La page d'exercice tire de cette liste ses graphiques de volume, de charge
  * max, de répétitions… Elle ne peut n'y compter que les séries validées que
  * si chaque série le dit ; la liste, elle, reste complète.

@@ -108,3 +108,24 @@ it('loads the correct line counts and eager loads up to 3 exercises', function (
     // Ensure only requested columns are loaded on exercise
     expect(array_keys($loadedExercise->getAttributes()))->toEqualCanonicalizing(['id', 'name']);
 });
+
+/*
+ * La page des modèles en montre cent, les plus récents : au-delà, chaque
+ * modèle de plus coûterait sa carte et ses trois exercices préchargés. Le
+ * cent-unième, le plus ancien, attend ; quatre-vingt-dix-neuf en cacherait un.
+ */
+it('ne rend que les cent modèles les plus récents', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
+    $user = User::factory()->create();
+
+    WorkoutTemplate::insert(array_map(fn (int $rang): array => [
+        'user_id' => $user->id,
+        'name' => 'Modèle '.$rang,
+        'created_at' => now()->subMinutes($rang),
+        'updated_at' => now()->subMinutes($rang),
+    ], range(0, 100)));
+
+    $noms = app(FetchWorkoutTemplatesAction::class)->execute($user)->pluck('name')->all();
+
+    expect($noms)->toBe(array_map(fn (int $rang): string => 'Modèle '.$rang, range(0, 99)));
+});

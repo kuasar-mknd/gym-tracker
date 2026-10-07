@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\WorkoutTemplate;
 use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
+use Illuminate\Support\Carbon;
 use PHPUnit\Framework\Assert;
 
 it('updates workout template name and description', function (): void {
@@ -162,4 +163,34 @@ it('removes all lines and sets if exercises array is empty', function (): void {
     $this->assertDatabaseMissing('workout_template_lines', [
         'id' => $line1->id,
     ]);
+});
+
+/*
+ * Les exercices d'un modèle modifié sont réécrits d'une seule requête,
+ * `insert()`, qui ne pose aucun horodatage : sans les deux qu'elle porte, ces
+ * lignes arriveraient sans date de création ni de modification, la colonne
+ * l'acceptant sans rien dire.
+ */
+it('horodate à l’instant de la modification les exercices réécrits du modèle', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+    $exercice = Exercise::factory()->create();
+
+    app(UpdateWorkoutTemplateAction::class)->execute($template, [
+        'name' => 'Modifié',
+        'exercises' => [
+            ['id' => $exercice->id, 'sets' => [['reps' => 8, 'weight' => 60, 'is_warmup' => false]]],
+            ['id' => $exercice->id],
+        ],
+    ]);
+
+    $lignes = WorkoutTemplateLine::query()->where('workout_template_id', $template->id)->get();
+
+    expect($lignes)->toHaveCount(2);
+
+    foreach ($lignes as $ligne) {
+        expect($ligne->created_at?->toDateTimeString())->toBe('2026-06-15 12:00:00')
+            ->and($ligne->updated_at?->toDateTimeString())->toBe('2026-06-15 12:00:00');
+    }
 });
