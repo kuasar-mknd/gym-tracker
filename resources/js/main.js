@@ -1,43 +1,38 @@
 import '../css/app.css'
 import { jeton } from '@/Utils/couleurs'
 
-import { createInertiaApp, router } from '@inertiajs/vue3'
+import { createInertiaApp, http, router } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, h } from 'vue'
 import { ZiggyVue } from 'ziggy-js'
 import { installerLeRapporteurDErreurs } from '@/Utils/rapporteurDErreurs'
+import { installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
+import { inscrireLeWorker } from '@/Utils/miseAJourDuWorker'
+import { installerLaRouteGlobale } from '@/Utils/routeGlobale'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
-// Register Service Worker
+/*
+ * Le worker, et ce qu'une nouvelle version fait d'une page ouverte : rien sans
+ * un geste, puis la navigation suivante en entier, si le serveur répond
+ * (#1967). Voir le module.
+ */
 if (typeof window !== 'undefined') {
-    /**
-     * registerType est 'autoUpdate', mais fournir onNeedRefresh fait basculer
-     * vite-plugin-pwa en mode prompt : il cesse d'appliquer la mise à jour et
-     * te laisse la main. Ici la main écrivait dans la console et n'appelait
-     * jamais updateSW, donc une nouvelle version restait indéfiniment en
-     * attente — visible uniquement en réinstallant l'app.
-     *
-     * updateSW(true) applique la version en attente et recharge.
+    inscrireLeWorker({ registerSW, routeur: router, http })
+
+    /*
+     * Une page de compte ne se relit plus dans l'historique d'un onglet après
+     * le départ du compte, quel que soit l'onglet où il est parti (#1965).
+     * Avant `createInertiaApp`, qui lit l'historique dès son démarrage.
      */
-    const updateSW = registerSW({
-        immediate: true,
-        onRegisteredSW(_url, registration) {
-            // Le navigateur ne cherche un nouveau worker que sur une
-            // navigation. Une PWA installée est suspendue, pas fermée : sans
-            // ceci elle peut ne jamais regarder.
-            if (registration) {
-                setInterval(() => registration.update(), 60 * 60 * 1000)
-            }
-        },
-        onNeedRefresh() {
-            updateSW(true)
-        },
-    })
+    installerLaGardeDeLHistorique({ routeur: router })
 }
 
 // Expose router for testing (Dusk)
 window.Inertia = router
+
+// Les pages appellent route() en globale ; @routes n'écrit plus que la table.
+installerLaRouteGlobale()
 
 const appName = import.meta.env.VITE_APP_NAME || 'GymTracker'
 
@@ -48,11 +43,10 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             /**
-             * No config: ZiggyVue reads the global the @routes directive
-             * defines in the page. Passing the Inertia prop meant shipping the
-             * whole route table a second time — 34 KB per page, and again as
-             * JSON on every Inertia navigation — for a table identical to the
-             * one already inlined.
+             * Sans configuration : ZiggyVue lit la table globale que `@routes`
+             * écrit dans la page. La passer en prop Inertia envoyait toute la
+             * table une seconde fois — 34 Ko par page, puis de nouveau en JSON
+             * à chaque navigation Inertia — pour une table identique.
              */
             .use(ZiggyVue)
 

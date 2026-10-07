@@ -45,11 +45,23 @@ class SyncFailureIsVisibleTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitForText('AJOUTER UN EXERCICE', 15);
 
-            // Drops the session out from under the page, so the next API call
-            // gets a genuine 401 from the real stack.
-            $browser->visit('/_dusk/logout')
-                ->back()
-                ->waitFor('#main-content', 30);
+            /*
+             * Retire la session sous la page, sans la quitter : le prochain
+             * appel à l'API reçoit un vrai 401 de la pile entière.
+             *
+             * Le parcours passait par `visit('/_dusk/logout')` puis `back()`,
+             * et comptait sur le navigateur pour rendre la séance de mémoire
+             * après la déconnexion. C'est ce que #1965 ferme : une page de
+             * compte sort en `no-store`, et revient donc du serveur, qui
+             * renvoie vers la connexion. La déconnexion part ici de la page
+             * elle-même, qui reste affichée.
+             */
+            $statut = $browser->driver->executeAsyncScript(
+                'const fini = arguments[arguments.length - 1];'
+                ."fetch('/_dusk/logout', { credentials: 'same-origin' }).then((reponse) => fini(reponse.status), () => fini(0));"
+            );
+
+            $this->assertSame(200, $statut, 'la déconnexion de Dusk n’a pas abouti');
 
             $browser->press('AJOUTER UN EXERCICE')
                 ->waitForText($exercise->name, 15)

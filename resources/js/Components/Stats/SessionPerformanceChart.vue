@@ -4,6 +4,10 @@
   It shows both the total volume (as bars) and the best 1RM (as a line) over time.
 
   @prop {Array} data - Required. An array of session objects containing 'formatted_date', 'sets', and 'best_1rm' properties.
+
+  Les deux séries ne lisent que ce qui a été fait (#1956) : le volume additionne
+  les séries validées, comme celui de la séance, et une séance sans meilleur 1RM
+  n'a pas de point sur la courbe, plutôt qu'un zéro qui la creuserait.
 -->
 <script setup>
 import { computed } from 'vue'
@@ -11,6 +15,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import BaseChart from './BaseChart.vue'
 import { volume } from '@/Utils/nombre'
 import { formatVolumeTick } from '@/Utils/volumeAxis'
+import { volumeDesSeriesValidees } from '@/Utils/seriesValidees'
 
 const props = defineProps({
     data: {
@@ -28,11 +33,12 @@ const datasets = computed(() => [
     {
         type: 'line',
         label: 'Meilleur 1RM (kg)',
-        data: seances.value.map((session) => session.best_1rm || 0),
+        data: seances.value.map((session) => session.best_1rm ?? null),
         borderColor: jeton('accent-tertiary'), // violet
         backgroundColor: jeton('accent-tertiary'),
         borderWidth: 3,
         tension: 0.4,
+        spanGaps: true,
         pointBackgroundColor: jeton('surface-card'),
         pointBorderColor: jeton('accent-tertiary'),
         pointBorderWidth: 2,
@@ -43,9 +49,7 @@ const datasets = computed(() => [
     {
         type: 'bar',
         label: 'Volume total',
-        data: seances.value.map((session) =>
-            session.sets.reduce((sum, set) => sum + (set.weight || 0) * (set.reps || 0), 0),
-        ),
+        data: seances.value.map((session) => volumeDesSeriesValidees(session.sets)),
         backgroundColor: jetonTransparent('accent-primary', 0.2), // orange with opacity
         borderColor: jeton('accent-primary'),
         borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },

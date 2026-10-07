@@ -130,7 +130,7 @@ final class FetchWorkoutsIndexAction
     protected function getDayOfWeekFrequency(User $user): Collection
     {
         return Cache::remember(
-            ClesDeStats::seances($user, 'day_of_week_frequency'),
+            ClesDeStats::seances($user, 'day_of_week_frequency.'.self::moisCourant()),
             now()->addHour(),
             fn (): Collection => $this->calculateDayOfWeekFrequency($user)
         );
@@ -143,7 +143,7 @@ final class FetchWorkoutsIndexAction
         User $user
     ): Collection {
         return Cache::remember(
-            ClesDeStats::seances($user, 'monthly_frequency'),
+            ClesDeStats::seances($user, 'monthly_frequency.'.self::moisCourant()),
             now()->addHour(),
             fn (): Collection => $this->calculateMonthlyFrequency($user)
         );
@@ -154,10 +154,25 @@ final class FetchWorkoutsIndexAction
      *
      * Six MOIS CALENDAIRES et non cent quatre-vingts jours : la carte mensuelle
      * dessine six barres, dont celle du mois en cours.
+     *
+     * Le recul part du premier du mois, jamais d'aujourd'hui : Carbon deborde,
+     * et le 31 juillet moins cinq mois donnait le « 31 fevrier », soit le
+     * 3 mars — fevrier sortait de la fenetre (#1955).
      */
     private static function debutDeLaFenetre(): \Illuminate\Support\Carbon
     {
-        return now()->subMonths(5)->startOfMonth();
+        return now()->startOfMonth()->subMonths(5);
+    }
+
+    /**
+     * Le mois courant, que portent les clefs des deux cartes de frequence.
+     *
+     * Leur fenetre suit le mois calendaire : sans lui dans la clef, le premier
+     * du mois servait encore, jusqu'a l'expiration, les six mois de la veille.
+     */
+    private static function moisCourant(): string
+    {
+        return now()->format('Y-m');
     }
 
     /**
@@ -183,8 +198,13 @@ final class FetchWorkoutsIndexAction
             ->get()
             ->keyBy('month');
 
-        return collect(range(0, 5))->map(function (int $i) use ($results): array {
-            $date = now()->subMonths(5 - $i);
+        /*
+         * Chaque barre avance d'un mois depuis le premier jour de la fenetre :
+         * reculer depuis aujourd'hui sautait et doublait des mois les 29, 30
+         * et 31 (#1955).
+         */
+        return collect(range(0, 5))->map(function (int $i) use ($results, $startDate): array {
+            $date = $startDate->copy()->addMonths($i);
             $monthKey = $date->format('Y-m');
             $data = $results->get($monthKey);
 
