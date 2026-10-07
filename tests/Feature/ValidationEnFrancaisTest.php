@@ -140,8 +140,10 @@ it('nomme en français l’exercice refusé d’un modèle de séance, à la cr�
 
     $reponse->assertSessionHasErrors('exercises.0.id');
 
-    expect(validationEnFrancaisMessage('exercises.0.id'))->toBe('Le champ exercice sélectionné est invalide.')
-        ->not->toContain('exercise');
+    $message = validationEnFrancaisMessage('exercises.0.id');
+
+    expect($message)->toBe('Le champ exercice sélectionné est invalide.');
+    expect($message)->not->toContain('exercise id');
 })->with(['création', 'modification']);
 
 it('ne laisse dans aucun de ces messages ni nom de colonne ni « today »', function (): void {
