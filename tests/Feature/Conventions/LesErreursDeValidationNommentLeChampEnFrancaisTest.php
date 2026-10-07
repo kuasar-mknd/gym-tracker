@@ -304,3 +304,34 @@ it('donne une phrase française à chaque borne décimale, que le message recopi
 
     expect($sansPhrase)->toBe([], 'ces bornes s’écriraient avec un point décimal ; donnez-leur une phrase dans messages() ou « custom »');
 });
+
+/*
+ * Un message composé à la main échappe aux règles que la garde lit : le
+ * modèle de séance vérifie ses exercices hors des règles et passait un nom
+ * anglais en dur, « Le champ exercise id sélectionné est invalide. » (#1975).
+ * Un message de app/ qui reprend une phrase du validateur nomme donc le champ
+ * par `$validator->getDisplayableAttribute()`, qui lit `attributes`, et non
+ * par un texte écrit à côté.
+ */
+const VALIDATION_FRANCAISE_ATTRIBUT_EN_DUR = '/\b(?:__|trans|trans_choice|Lang::get)\(\s*[\'"]validation\.[^\'"]+[\'"]\s*,\s*\[[^\]]*[\'"]attribute[\'"]\s*=>\s*[\'"]/u';
+
+it('ne passe aucun nom de champ écrit en dur à une phrase du validateur', function (): void {
+    expect(preg_match(VALIDATION_FRANCAISE_ATTRIBUT_EN_DUR, "__('validation.exists', ['attribute' => 'exercise id'])"))->toBe(1)
+        ->and(preg_match(VALIDATION_FRANCAISE_ATTRIBUT_EN_DUR, "__('validation.exists', ['attribute' => \$validator->getDisplayableAttribute(\$cle)])"))->toBe(0);
+
+    $enDur = [];
+
+    foreach (Finder::create()->files()->in(app_path())->name('*.php') as $fichier) {
+        $source = $fichier->getContents();
+
+        if (preg_match_all(VALIDATION_FRANCAISE_ATTRIBUT_EN_DUR, $source, $trouves, PREG_OFFSET_CAPTURE) === 0) {
+            continue;
+        }
+
+        foreach ($trouves[0] as [, $position]) {
+            $enDur[] = 'app/'.$fichier->getRelativePathname().':'.(substr_count(substr($source, 0, $position), "\n") + 1);
+        }
+    }
+
+    expect($enDur)->toBe([], 'nommez le champ par $validator->getDisplayableAttribute() : un nom écrit en dur contourne lang/fr/validation.php');
+});

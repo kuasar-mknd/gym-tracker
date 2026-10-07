@@ -16,6 +16,10 @@ use Illuminate\Validation\Validator;
  * `DatabasePresenceVerifier::getCount()` construit une requete neuve a chaque
  * appel, sans memoisation, et le chemin groupe n'est jamais emprunte quand le
  * joker eclate le tableau en attributs scalaires.
+ *
+ * Le message nomme le champ comme le validateur le ferait, par son nom de
+ * `lang/fr/validation.php` (« exercice ») : un nom ecrit ici en dur
+ * contournait la traduction et affichait « exercise id » (#1975).
  */
 trait VerifieLesExercicesDuGabarit
 {
@@ -55,9 +59,11 @@ trait VerifieLesExercicesDuGabarit
             $identifiant = is_array($exercice) ? ($exercice['id'] ?? null) : null;
 
             if (! is_numeric($identifiant) || ! in_array((int) $identifiant, $autorises, true)) {
+                $cle = "exercises.{$rang}.id";
+
                 $validator->errors()->add(
-                    "exercises.{$rang}.id",
-                    __('validation.exists', ['attribute' => 'exercise id'])
+                    $cle,
+                    __('validation.exists', ['attribute' => $validator->getDisplayableAttribute($cle)])
                 );
             }
         }

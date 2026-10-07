@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\Exercise;
 use App\Models\User;
+use App\Models\WorkoutTemplate;
 use Illuminate\Support\Carbon;
 
 /*
@@ -116,6 +118,31 @@ it('dit en français que les types d’envoi push forment une liste', function (
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['types' => 'Le champ types doit être une liste.']);
 });
+
+/*
+ * Le modèle de séance vérifie ses exercices hors des règles, en une requête,
+ * et composait son message à la main avec un nom anglais : un exercice
+ * supprimé depuis un autre onglet affichait « Le champ exercise id
+ * sélectionné est invalide. » sous l'exercice (#1975).
+ */
+it('nomme en français l’exercice refusé d’un modèle de séance, à la création comme à la modification', function (string $geste): void {
+    $utilisateur = User::factory()->create();
+    $exerciceDAutrui = Exercise::factory()->create(['user_id' => User::factory()->create()->id]);
+    $donnees = [
+        'name' => 'Modèle',
+        'exercises' => [['id' => $exerciceDAutrui->id, 'sets' => [['reps' => 10, 'weight' => 20, 'is_warmup' => false]]]],
+    ];
+
+    $requete = $this->actingAs($utilisateur);
+    $reponse = $geste === 'création'
+        ? $requete->post(route('templates.store'), $donnees)
+        : $requete->put(route('templates.update', WorkoutTemplate::factory()->create(['user_id' => $utilisateur->id])), $donnees);
+
+    $reponse->assertSessionHasErrors('exercises.0.id');
+
+    expect(validationEnFrancaisMessage('exercises.0.id'))->toBe('Le champ exercice sélectionné est invalide.')
+        ->not->toContain('exercise');
+})->with(['création', 'modification']);
 
 it('ne laisse dans aucun de ces messages ni nom de colonne ni « today »', function (): void {
     $utilisateur = User::factory()->create();
