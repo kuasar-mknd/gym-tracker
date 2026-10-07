@@ -54,6 +54,30 @@ const pushCheckboxes = (wrapper) =>
     wrapper.findAll('input[type="checkbox"]').filter((box) => box.element.closest('[dusk="reminder-days"]') === null)
 const error = (wrapper) => wrapper.find('[dusk="notification-push-error"]')
 
+/**
+ * Le texte sans ses commentaires HTML, retirés par découpage et non par un
+ * `replace` : CodeQL lit toute suppression de `<!--` par expression régulière
+ * comme une désinfection incomplète (voir conventions/etatsVides.test.js).
+ */
+const sansCommentaires = (texte) => {
+    let reste = texte
+    let resultat = ''
+
+    for (let debut = reste.indexOf('<!--'); debut !== -1; debut = reste.indexOf('<!--')) {
+        resultat += reste.slice(0, debut)
+
+        const fin = reste.indexOf('-->', debut)
+
+        if (fin === -1) {
+            return resultat
+        }
+
+        reste = reste.slice(fin + 3)
+    }
+
+    return resultat + reste
+}
+
 beforeEach(() => {
     post.mockReset()
     patch.mockReset()
@@ -86,7 +110,7 @@ describe('UpdateNotificationPreferencesForm — le ton', () => {
             join(jsRoot, 'Pages/Profile/Partials/UpdateNotificationPreferencesForm.vue'),
             'utf8',
         )
-        const gabarit = source.slice(source.indexOf('<template>')).replace(/<!--[\s\S]*?-->/g, '')
+        const gabarit = sansCommentaires(source.slice(source.indexOf('<template>')))
 
         expect(gabarit).toContain('Ton navigateur ne prend pas en charge les notifications push.')
         expect(gabarit).not.toMatch(VOUVOIEMENT)
