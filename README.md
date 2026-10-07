@@ -362,7 +362,7 @@ cp .env.example .env
 | Commande | Description |
 | --- | --- |
 | `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit, Selenium) |
-| `./vendor/bin/sail npm run dev` | Lance Vite avec Hot Reload |
+| `./vendor/bin/sail composer dev` | Lance Vite avec rechargement à chaud, la file (`queue:listen`) et les journaux (`pail`) |
 | `./vendor/bin/sail artisan test -p` | Suite backend en parallèle |
 | `./vendor/bin/sail npx vitest run` | Suite frontend |
 | `./vendor/bin/sail artisan dusk` | Parcours navigateur, sur la base `gym_tracker_dusk` : demande `.env.dusk.local`, voir ci-dessous |

@@ -22,10 +22,14 @@ use Symfony\Component\Yaml\Yaml;
  *   première commande du guide ;
  * - chaque commande Sail du guide : sa commande Artisan, son script Composer
  *   ou npm, son binaire de `vendor/bin`, le test que vise un `--filter` ;
+ * - une commande qui lance un worker, quand `.env.example` met les tâches en
+ *   file : `npm run dev` seul ne lance que Vite, et les records, les badges et
+ *   les objectifs, calculés en file, ne bougeraient plus en local ;
  * - ce que demande une passe `artisan dusk` sur un clone neuf : le renvoi à
  *   la section du README qui dérive `.env.dusk.local`, sans lequel la garde
- *   des parcours refuse la passe, et `npm run build` avant, `npm run dev`
- *   arrêté, sans quoi `public/hot` la fait refuser aussi ;
+ *   des parcours refuse la passe, et `npm run build` avant, chaque commande
+ *   du guide qui lance le serveur de Vite arrêtée, sans quoi `public/hot` la
+ *   fait refuser aussi ;
  * - le format des exemples de commit, `type(portée): constat`, et le titre
  *   que préremplissent les formulaires d'issue ;
  * - un formulaire de bug sans liste de versions ;
@@ -100,6 +104,59 @@ function guideCommandesSail(): array
     }, $appels);
 }
 
+/**
+ * Les commandes d'un script de `composer.json`, une par ligne, ses renvois
+ * à d'autres scripts (`@autre`) suivis.
+ *
+ * @param  list<string>  $dejaSuivis
+ */
+function guideScriptComposer(string $nom, array $dejaSuivis = []): string
+{
+    $composer = json_decode((string) file_get_contents(base_path('composer.json')), true, 512, JSON_THROW_ON_ERROR);
+    $scripts = is_array($composer) && is_array($composer['scripts'] ?? null) ? $composer['scripts'] : [];
+    $script = $scripts[$nom] ?? [];
+    $lignes = [];
+
+    foreach (is_array($script) ? $script : [$script] as $commande) {
+        if (! is_string($commande)) {
+            continue;
+        }
+
+        $renvoi = preg_match('/^@([\w:-]+)$/', $commande, $trouve) === 1 && ! in_array($trouve[1], ['php', 'composer', 'putenv'], true);
+
+        if ($renvoi && ! in_array($trouve[1], [...$dejaSuivis, $nom], true)) {
+            $lignes[] = guideScriptComposer($trouve[1], [...$dejaSuivis, $nom]);
+        } elseif (! $renvoi) {
+            $lignes[] = $commande;
+        }
+    }
+
+    return implode("\n", $lignes);
+}
+
+/**
+ * Les commandes Sail du guide qui lancent ce que décrit le motif, elles-mêmes
+ * ou par le script Composer qu'elles appellent, telles que le guide les écrit
+ * (`composer dev`, `npm run dev`).
+ *
+ * @return list<string>
+ */
+function guideCommandesQuiLancent(string $motif): array
+{
+    $lanceurs = [];
+
+    foreach (guideCommandesSail() as ['commande' => $commande, 'arguments' => $arguments]) {
+        $appel = trim($commande.' '.implode(' ', $arguments));
+        $lance = $commande === 'composer' ? $appel."\n".guideScriptComposer($arguments[0] ?? '') : $appel;
+
+        if (preg_match($motif, $lance) === 1) {
+            $lanceurs[] = $appel;
+        }
+    }
+
+    return array_values(array_unique($lanceurs));
+}
+
 it('renvoie à l installation du README avant toute commande', function (): void {
     $guide = guideContenu();
     $readme = (string) file_get_contents(base_path('README.md'));
@@ -157,6 +214,7 @@ it('ne cite que des commandes qui existent', function (): void {
 it('dit ce qu une passe navigateur demande sur un clone neuf', function (): void {
     $guide = guideContenu();
     $lignes = array_values(array_filter(explode("\n", $guide), static fn (string $ligne): bool => str_contains($ligne, 'artisan dusk')));
+    $lanceursDeVite = guideCommandesQuiLancent('/\bnpm run dev\b/');
     $incompletes = [];
 
     foreach ($lignes as $ligne) {
@@ -176,8 +234,10 @@ it('dit ce qu une passe navigateur demande sur un clone neuf', function (): void
             $manques[] = 'npm run build avant artisan dusk : sans actifs construits, Selenium ne charge pas les pages';
         }
 
-        if (str_contains($guide, 'npm run dev') && ! str_contains($ligne, 'npm run dev')) {
-            $manques[] = "l'arrêt de npm run dev, que le guide propose plus haut : public/hot fait refuser la passe";
+        foreach ($lanceursDeVite as $lanceur) {
+            if (! str_contains($ligne, $lanceur)) {
+                $manques[] = "l'arrêt de {$lanceur}, que le guide propose et qui lance le serveur de Vite : public/hot fait refuser la passe";
+            }
         }
 
         if ($manques !== []) {
@@ -187,6 +247,17 @@ it('dit ce qu une passe navigateur demande sur un clone neuf', function (): void
 
     expect($lignes)->not->toBeEmpty('CONTRIBUTING.md ne dit plus comment lancer les parcours navigateur.')
         ->and($incompletes)->toBe([], "CONTRIBUTING.md cite artisan dusk sans ce qu'il exige sur un clone neuf :\n  ".implode("\n  ", $incompletes));
+});
+
+it('lance le traitement de la file quand le gabarit met les tâches en file', function (): void {
+    $gabarit = (string) file_get_contents(base_path('.env.example'));
+    $connexion = preg_match('/^QUEUE_CONNECTION=(\S*)/m', $gabarit, $trouvee) === 1 ? trim($trouvee[1], '"\'') : 'sync';
+    $workers = $connexion === 'redis' ? '/\b(?:queue:(?:work|listen)|horizon)\b/' : '/\bqueue:(?:work|listen)\b/';
+
+    expect($connexion === 'sync' || guideCommandesQuiLancent($workers) !== [])->toBeTrue(
+        "Le gabarit .env.example met les tâches en file (QUEUE_CONNECTION={$connexion}), mais aucune commande Sail de CONTRIBUTING.md ne lance de worker "
+        .'(queue:listen ou queue:work, directement ou par un script Composer). Sans lui, les records, les badges et les objectifs, calculés en file, ne bougent plus.',
+    );
 });
 
 it('préremplit le titre des issues au format annoncé par le guide', function (): void {
