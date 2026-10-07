@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
+import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import { marquerLAbonnementARetransmettre } from '@/composables/useAbonnementPush'
 import { messageDesEcrituresGardees, reprendreLesEcrituresGardees } from '@/Utils/ecrituresGardees'
 
@@ -40,6 +41,8 @@ onMounted(() => {
     >
         <!-- Liquid Background -->
         <LiquidBackground variant="default" />
+
+        <BandeauDeMiseAJour />
 
         <!-- Logo -->
         <div class="animate-fade-in relative z-10 mb-8">
