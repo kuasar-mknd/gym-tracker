@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 2 777 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 2 897 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 614 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 121 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -79,13 +79,14 @@ La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand 
 
 La release GitHub exige en plus la CI entière, `semgrep`, `secrets` et `workflows` compris.
 
-La nuit tourne sur la pointe de `main` à 03h17 UTC : un tag posé après elle n'est pas encore couvert. Pour le débloquer :
+La passe nocturne est planifiée à 03h17 UTC, mais GitHub la lance plusieurs heures plus tard (entre 07h42 et 10h31 UTC du 1er septembre au 5 octobre 2026), sur la pointe de `main` au moment où elle part. Un tag est donc couvert par la prochaine passe planifiée si son commit est encore la pointe de `main` quand elle part : l'attendre, puis relancer la promotion. Pour ne pas attendre, ou si `main` a avancé, la lancer sur le tag lui-même :
 
 ```bash
+gh run list --workflow mutation.yml --commit <sha>   # une passe couvre-t-elle déjà ce commit ?
 gh workflow run mutation.yml --ref v1.2.3
 ```
 
-Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), puis le run de `release.yml`.
+Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), ce qui rejoue `promotion`, puis le run de `release.yml`.
 
 Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow.
 
@@ -362,7 +363,7 @@ cp .env.example .env
 | Commande | Description |
 | --- | --- |
 | `./vendor/bin/sail up -d` | Lance les conteneurs (App, MySQL, Redis, Mailpit, Selenium) |
-| `./vendor/bin/sail npm run dev` | Lance Vite avec Hot Reload |
+| `./vendor/bin/sail composer dev` | Lance Vite avec rechargement à chaud, la file (`queue:listen`) et les journaux (`pail`) |
 | `./vendor/bin/sail artisan test -p` | Suite backend en parallèle |
 | `./vendor/bin/sail npx vitest run` | Suite frontend |
 | `./vendor/bin/sail artisan dusk` | Parcours navigateur, sur la base `gym_tracker_dusk` : demande `.env.dusk.local`, voir ci-dessous |

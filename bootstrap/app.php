@@ -175,10 +175,11 @@ return Application::configure(basePath: dirname(__DIR__))
          *
          * `api/v1/*` answers JSON whatever the request declares, which is what
          * #1418 settled and what its contract test holds. The web router also
-         * serves JSON on a handful of routes — `stats.exercise` and
-         * `exercises/{id}`, called in axios from `ExerciseProgressCard.vue` —
-         * and there it is the Accept header that says so, exactly as it does
-         * for the genuine 404 those routes already return.
+         * serves JSON to a script — `stats.exercise`, which
+         * `ExerciseProgressCard.vue` calls through `http`
+         * (resources/js/Utils/http.js) — and there it is the Accept header
+         * that says so, exactly as it does for the genuine 404 that route
+         * already returns.
          *
          * Inertia lands on the other side: it sends `X-Inertia` but asks for
          * `text/html`, so it receives the page. That is deliberate — see the

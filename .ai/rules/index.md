@@ -11,6 +11,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | package.json, package-lock.json, composer.json, composer.lock | .ai/rules/dependencies.md |
 | app/Filament/** | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
+| app/Jobs/** | .ai/rules/jobs.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/** | .ai/rules/js.md |
 | bootstrap/app.php, app/Http/Middleware/** | .ai/rules/middleware.md |
 | app/Models/** | .ai/rules/models.md |

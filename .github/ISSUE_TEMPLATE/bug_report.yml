@@ -1,6 +1,6 @@
 name: Bug Report
 description: Create a report to help us improve
-title: '[Bug]: '
+title: 'fix(): '
 labels: ['bug']
 body:
     - type: markdown
@@ -24,16 +24,14 @@ body:
           value: 'A bug happened!'
       validations:
           required: true
-    - type: dropdown
+    - type: input
       id: version
       attributes:
-          label: Version
-          description: What version of our software are you running?
-          options:
-              - 1.0.2 (Default)
-              - 1.0.3 (Edge)
+          label: Version (tag or commit)
+          description: The release tag or the commit you are running, if you know it.
+          placeholder: ex. v1.5.x, or a commit SHA
       validations:
-          required: true
+          required: false
     - type: dropdown
       id: browsers
       attributes:

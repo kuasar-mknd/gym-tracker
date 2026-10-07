@@ -2,24 +2,17 @@
 
 Merci de contribuer à GymTracker ! 🎉 Voici comment participer.
 
-## 🚀 Quick Start
+## 🚀 Démarrer
 
-### Prérequis
-- Docker Desktop (indispensable pour l'environnement Sail)
-- PHP & Composer (uniquement pour l'installation initiale)
+L'installation est décrite une seule fois, dans la section [Installation du README](README.md#-installation-via-laravel-sail). Elle passe par un `docker run` avant tout appel à Sail : `vendor/` n'est pas versionné, donc `./vendor/bin/sail` n'existe pas sur un clone neuf, et Sail ne transmet une commande qu'à des conteneurs déjà démarrés. Elle crée aussi le compte de démonstration (`migrate --seed`).
 
-### Installation
+Les commandes de ce guide supposent cette installation faite et les conteneurs lancés (`./vendor/bin/sail up -d`). Pour développer :
+
 ```bash
-# Clone le repo
-git clone https://github.com/YOUR_USERNAME/gym-tracker.git
-cd gym-tracker
-
-# Setup initial (génère .env, installe dépendances, migre DB)
-./vendor/bin/sail composer setup
-
-# Lancer les serveurs de dev (Artisan, Vite, Workers, Pail)
 ./vendor/bin/sail composer dev
 ```
+
+Il lance ensemble Vite avec rechargement à chaud, le traitement de la file (`queue:listen`) et le flux des journaux (`pail`). Le serveur qu'il démarre aussi (`artisan serve`) n'écoute qu'à l'intérieur du conteneur : l'application reste celle que Sail sert sur `APP_PORT`. La file n'est pas facultative : le gabarit `.env.example` met les tâches en file (`QUEUE_CONNECTION=database`), et c'est en file que les records, les badges et les objectifs se mettent à jour après chaque série enregistrée. Sans elle, ils ne bougent plus.
 
 ## 📋 Workflow
 
@@ -40,11 +33,9 @@ cd gym-tracker
     ```bash
     vendor/bin/sail npm run format
     ```
-7. **Commit** avec un message clair :
+7. **Commit** en français, au format du dépôt (voir plus bas) :
     ```bash
-    git commit -m "feat: add workout templates feature"
-    # ou
-    git commit -m "fix: resolve N+1 query in dashboard"
+    git commit -m "fix(séances): le propriétaire d'une séance ne change plus après sa création (#1943)"
     ```
 8. **Push** ta branche :
     ```bash
@@ -54,26 +45,29 @@ cd gym-tracker
 
 ## 📝 Conventions de Commit
 
-Nous utilisons [Conventional Commits](https://www.conventionalcommits.org/) :
+Un message de commit s'écrit en français, au format `type(portée): constat`, inspiré de [Conventional Commits](https://www.conventionalcommits.org/) : le type dit la nature du changement, la portée le domaine touché, et le constat ce qui est vrai après le commit, plutôt que le geste fait. Le numéro de l'issue suit entre parenthèses. Le titre d'une issue suit le même format, sans numéro : les formulaires d'issue le préremplissent (`fix(): `, `feat(): `).
 
-| Type        | Description                                 |
-| ----------- | ------------------------------------------- |
-| `feat:`     | Nouvelle fonctionnalité                     |
-| `fix:`      | Correction de bug                           |
-| `docs:`     | Documentation uniquement                    |
-| `style:`    | Formatage, pas de changement de code        |
-| `refactor:` | Refactoring sans changement de comportement |
-| `test:`    | Ajout ou modification de tests              |
-| `chore:`    | Maintenance, dépendances, CI                |
+| Type        | Description                                       |
+| ----------- | ------------------------------------------------- |
+| `feat`      | Nouvelle fonctionnalité                           |
+| `fix`       | Correction de bogue                               |
+| `sécurité`  | Correction d'une faille, durcissement             |
+| `perf`      | Performance                                       |
+| `ux`        | Parcours ou affichage, sans nouvelle fonction     |
+| `docs`      | Documentation uniquement                          |
+| `refactor`  | Restructuration sans changement de comportement   |
+| `test`      | Ajout ou modification de tests                    |
+| `ci`        | Intégration continue, workflows                   |
+| `chore`     | Maintenance, dépendances, outillage               |
 
 **Exemples :**
 
 ```
-feat: add plate calculator tool
-fix: resolve login redirect loop
-docs: update installation guide
-refactor: extract AchievementService from controller
-test: add coverage for workout deletion
+fix(séances): le propriétaire d'une séance ne change plus après sa création (#1943)
+sécurité(push): se déconnecter détache l'appareil des notifications du compte (#1934)
+perf(mesure): un en-tête Server-Timing pour les pages connectées, coupé par défaut (#1931)
+ux(notifications): au retour d'une séance, l'accueil propose les notifications de records (#1936)
+docs(readme): documenter toutes les variables d'environnement et tenir le README à jour (#1906)
 ```
 
 ## 🧪 Tests
@@ -85,7 +79,7 @@ test: add coverage for workout deletion
 vendor/bin/sail artisan test
 
 # Tests spécifiques
-vendor/bin/sail artisan test --filter=WorkoutsTest
+vendor/bin/sail artisan test --filter=WorkoutsControllerTest
 
 # Avec couverture
 vendor/bin/sail artisan test --coverage
@@ -147,7 +141,7 @@ La CI rejoue exactement ces portes (`.github/workflows/ci.yml`) ; les passer en 
 - [ ] Insights aux seuils de la CI (`vendor/bin/sail bin phpinsights analyse --no-interaction --min-quality=90 --min-complexity=90 --min-architecture=90 --min-style=90`)
 - [ ] Dépendances Composer toutes utilisées et sans avis (`vendor/bin/sail bin composer-unused`, `vendor/bin/sail composer audit`)
 - [ ] Diagnostics Doctor et Checkpoint (`vendor/bin/sail artisan doctor`, `vendor/bin/sail artisan checkpoint:scan`)
-- [ ] Tests navigateur si l'interface change (`vendor/bin/sail artisan dusk`)
+- [ ] Tests navigateur si l'interface change. La première fois, dériver `.env.dusk.local` du `.env` comme le dit la section [Parcours navigateur du README](README.md#parcours-navigateur) : sans lui, les parcours viseraient la base de développement, et leur garde refuse la passe avant toute écriture. Puis, `composer dev` arrêté (Selenium ne joint pas le serveur de Vite qu'il lance, et la passe refuse de partir tant que le fichier public/hot existe) : `vendor/bin/sail npm run build`, et `vendor/bin/sail artisan dusk`
 - [ ] `actionlint` si un workflow change (`docker run --rm -v "$PWD":/repo:ro -w /repo rhysd/actionlint:1.7.12`)
 - [ ] Pas de `console.log` ou `dd()` oubliés
 - [ ] Documentation mise à jour si nécessaire
@@ -179,13 +173,14 @@ La CI rejoue exactement ces portes (`.github/workflows/ci.yml`) ; les passer en 
 
 ## 🐛 Signaler un Bug
 
-Utilise le template d'issue sur GitHub avec :
+Utilise le formulaire « Bug Report » des issues GitHub, avec :
 
-- Description du bug
+- Description du bug, comportement attendu vs actuel
 - Étapes pour reproduire
-- Comportement attendu vs actuel
-- Screenshots si applicable
-- Environnement (OS, navigateur, version PHP)
+- Version (tag ou commit) si tu la connais, et navigateur
+- Journaux ou captures si applicable
+
+Une faille de sécurité ne s'ouvre jamais en issue publique : voir [SECURITY.md](SECURITY.md).
 
 ## 💡 Proposer une Feature
 

@@ -21,9 +21,8 @@ export default [
             sourceType: 'module',
             globals: {
                 ...globals.browser,
-                // Ziggy's helper and the axios instance app.js puts on window.
+                // Le `route()` de Ziggy et sa configuration, que `@routes` déclare dans app.blade.php.
                 route: 'readonly',
-                axios: 'readonly',
                 Ziggy: 'readonly',
             },
         },

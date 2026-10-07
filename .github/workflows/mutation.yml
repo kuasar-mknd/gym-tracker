@@ -18,8 +18,19 @@ name: Mutation testing
 # a porte la couverture front de 23 % a 95 % par cliquets successifs.
 on:
     schedule:
-        # 03h17 UTC : decale de l'heure ronde, ou la file des runners planifies
-        # de GitHub est la plus chargee.
+        # Planifiee a 03h17 UTC, decalee de l'heure ronde comme GitHub le
+        # conseille. GitHub ne garantit pas l'heure d'un evenement planifie :
+        # du 1er septembre au 5 octobre 2026, la passe est partie entre 07h42
+        # et 10h31 UTC, plusieurs heures plus tard, et le decalage n'y change
+        # rien de mesurable (stale.yml, planifie a minuit, partait lui aussi
+        # trois a quatre heures plus tard). Elle prend la pointe de main au
+        # moment ou elle part : c'est ce moment, pas 03h17, qui dit quels tags
+        # elle couvre (README, « Mise en production »). Un tag dont le commit
+        # est encore la pointe de main quand la prochaine passe planifiee part
+        # est couvert par elle : l'attendre, puis relancer la promotion du run
+        # de CI du tag (gh run rerun <id> --failed). Pour ne pas attendre, ou
+        # si main a avance, lancer la passe sur le tag
+        # (gh workflow run mutation.yml --ref <tag>), puis relancer la promotion.
         - cron: '17 3 * * *'
     workflow_dispatch:
 
