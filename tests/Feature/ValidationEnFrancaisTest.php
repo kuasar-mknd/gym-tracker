@@ -73,8 +73,16 @@ it('nomme la mesure et sa date en français', function (): void {
         ])
         ->assertSessionHasErrors(['value', 'measured_at']);
 
-    expect(validationEnFrancaisMessage('value'))->toBe('La valeur de mesure ne peut pas être supérieure à 999.99.')
+    expect(validationEnFrancaisMessage('value'))->toBe('Une mesure ne dépasse pas 999,99.')
         ->and(validationEnFrancaisMessage('measured_at'))->toBe('La date de mesure ne peut pas être dans le futur.');
+});
+
+it('écrit à la française la borne décimale du poids d’un disque', function (): void {
+    $this->actingAs(User::factory()->create())
+        ->post(route('plates.store'), ['weight' => 0.05, 'quantity' => 1])
+        ->assertSessionHasErrors('weight');
+
+    expect(validationEnFrancaisMessage('weight'))->toBe('Un disque pèse au moins 0,1 kg.');
 });
 
 it('nomme les doses restantes et le seuil de stock bas en français', function (): void {

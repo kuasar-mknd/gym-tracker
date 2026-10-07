@@ -85,4 +85,19 @@ class BodyPartMeasurementStoreRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
+
+    /**
+     * La borne haute d'une mesure est décimale : le message par défaut la
+     * recopiait avec le point anglais (« 999.99 »), là où l'application écrit
+     * 999,99 (#1975).
+     *
+     * @return array<string, string>
+     */
+    #[\Override]
+    public function messages(): array
+    {
+        return [
+            'value.max' => 'Une mesure ne dépasse pas 999,99.',
+        ];
+    }
 }

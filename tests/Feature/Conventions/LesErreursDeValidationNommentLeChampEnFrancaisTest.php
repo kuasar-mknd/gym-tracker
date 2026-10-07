@@ -276,3 +276,31 @@ it('donne une phrase à chaque règle conditionnelle, ou un nom aux valeurs qu�
 
     expect($sansPhrase)->toBe([], 'ces règles citeraient la valeur brute de l’autre champ ; donnez-leur un message « custom »');
 });
+
+/*
+ * Le message d'une borne recopie son paramètre tel quel : `max:999.99` rendait
+ * « … ne peut pas être supérieure à 999.99. », avec le point anglais, là où
+ * l'application écrit 999,99 depuis #1787 (#1975). Une borne décimale a donc
+ * sa propre phrase, dans le `messages()` de la requête ou dans `custom`.
+ */
+it('donne une phrase française à chaque borne décimale, que le message recopierait avec un point', function (): void {
+    $sansPhrase = [];
+
+    foreach (validationFrancaiseRequetes() as $classe => $requete) {
+        foreach (validationFrancaiseRegles($requete) as $clef => $regles) {
+            foreach (validationFrancaiseReglesNommees($regles) as [$nom, $parametres]) {
+                $decimaux = array_filter($parametres, static fn (string $parametre): bool => preg_match('/^-?\d*\.\d+$/', $parametre) === 1);
+
+                if ($decimaux === [] || isset($requete->messages()["{$clef}.{$nom}"]) || Lang::has("validation.custom.{$clef}.{$nom}", 'fr', false)) {
+                    continue;
+                }
+
+                $sansPhrase[] = class_basename($classe)." : {$clef} ({$nom}:".implode(',', $parametres).')';
+            }
+        }
+    }
+
+    sort($sansPhrase);
+
+    expect($sansPhrase)->toBe([], 'ces bornes s’écriraient avec un point décimal ; donnez-leur une phrase dans messages() ou « custom »');
+});
