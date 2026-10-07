@@ -289,7 +289,7 @@ function appelantsEmploisDuSource(string $source): array
             $jeton->is(T_STRING) && $pile !== []
             && in_array($jetons[$i - 1]->text ?? '', ['(', ','], true)
             && ($jetons[$i + 1]->text ?? '') === ':'
-            && ! in_array($pile[array_key_last($pile)]['appel'], ['[', '{'], true)
+            && ! in_array(array_last($pile)['appel'], ['[', '{'], true)
         ) {
             $sommet = array_key_last($pile);
             $pile[$sommet] = [...$pile[$sommet], 'etiquette' => strtolower($jeton->text)];
