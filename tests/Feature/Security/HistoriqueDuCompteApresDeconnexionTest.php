@@ -22,16 +22,23 @@ use function Pest\Laravel\get;
  * Sur un appareil partagé, la personne qui le prenait après une déconnexion
  * revoyait le journal, les mesures et l'adresse du compte parti. Deux en-têtes
  * de page y répondent, que le client d'Inertia applique : `encryptHistory` sur
- * chaque page d'un compte, `clearHistory` sur la première page qui suit la
- * déconnexion, la suppression du compte, toute autre fin de session et toute
- * connexion. Le document lui-même sort en
- * `no-store`, pour que le cache HTTP ne le resserve pas à une navigation
- * arrière qui quitte la page courante.
+ * chaque page d'un compte, `clearHistory` sur la première page que la session
+ * sert après la déconnexion, la suppression du compte, toute autre fin de
+ * session et toute connexion. Le document lui-même sort en `no-store`, pour
+ * que le cache HTTP ne le resserve pas à une navigation arrière qui quitte la
+ * page courante.
+ *
+ * `clearHistory` ne part que vers l'onglet qui reçoit cette page. Les autres
+ * onglets du navigateur jettent leur clé d'après le titulaire que chaque page
+ * déclare dans `auth.user`, ce que le dernier cas de ce fichier tient côté
+ * serveur.
  *
  * Ce que le navigateur fait de ces en-têtes est tenu par
- * tests/js/utils/historiqueDuCompte.test.js, avec le vrai client
- * d'Inertia, et de bout en bout par le parcours
- * `tests/Browser/HistoriqueApresDeconnexionTest.php`.
+ * tests/js/utils/historiqueDuCompte.test.js et
+ * tests/js/utils/historiqueDuCompteParOnglet.test.js, avec le vrai client
+ * d'Inertia, et de bout en bout par les parcours
+ * `tests/Browser/HistoriqueApresDeconnexionTest.php` et
+ * `tests/Browser/HistoriqueDeDeuxOngletsTest.php`.
  */
 
 /**
@@ -367,4 +374,47 @@ it('pose le même cache sur la séance d’un autre que sur une séance absente'
 
     expect($refusee->headers->get('Cache-Control'))->toBe($absente->headers->get('Cache-Control'))
         ->and($refusee->headers->get('Cache-Control'))->toBe('no-store, private');
+});
+
+/*
+ * La session sert tous les onglets du navigateur, et `clearHistory` ne part
+ * qu'avec la première page qu'elle rend, dans l'onglet qui la demande. Les
+ * autres onglets décident eux-mêmes, d'après le titulaire que chaque page
+ * déclare (resources/js/Utils/historiqueDuCompte.js) : une page qui ne le
+ * dirait pas les laisserait garder la clé du compte parti.
+ */
+it('déclare dans chaque page le titulaire qu’un autre onglet compare au sien', function (): void {
+    $compteA = historiqueCompteParti();
+    $compteB = User::factory()->create(['email' => 'compte-suivant@example.org']);
+    $appareil = historiqueAppareilConnecte($compteA);
+
+    $ongletDeux = $appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite());
+
+    expect(historiquePageDe($ongletDeux))->toHaveKey('props.auth.user.id', $compteA->id);
+
+    // Dans le premier onglet, A se déconnecte : sa page de connexion emporte la consigne.
+    historiqueSuivreJusquALaPage($appareil, $appareil->envoyer('POST', 'https://gym.example.org/logout', [], historiqueEntetesDeVisite()));
+
+    $apresLeDepart = historiqueSuivreJusquALaPage(
+        $appareil,
+        $appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite()),
+    );
+
+    $apresLeDepart->assertOk();
+
+    expect(historiquePageDe($apresLeDepart)['component'])->toBe('Auth/Login')
+        ->and(historiquePageDe($apresLeDepart))->toHaveKey('props.auth.user', null);
+
+    // Dans le premier onglet encore, B se connecte ; le second onglet ouvre le profil.
+    $appareil->envoyer('POST', 'https://gym.example.org/login', [
+        'email' => $compteB->email,
+        'password' => 'password',
+    ], historiqueEntetesDeVisite())->assertRedirect();
+    historiqueSuivreJusquALaPage($appareil, $appareil->envoyer('GET', 'https://gym.example.org/dashboard', [], historiqueEntetesDeVisite()));
+
+    $profilDeB = $appareil->envoyer('GET', 'https://gym.example.org/profile', [], historiqueEntetesDeVisite());
+
+    $profilDeB->assertOk();
+
+    expect(historiquePageDe($profilDeB))->toHaveKey('props.auth.user.id', $compteB->id);
 });

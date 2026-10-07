@@ -56,7 +56,8 @@ class HandleInertiaRequests extends Middleware
      * range, avec une clé qu'il garde dans le `sessionStorage` de l'onglet.
      * `clearHistory` jette la clé : une entrée restée dans l'historique ne se
      * déchiffre plus, et Inertia redemande la page au serveur, qui renvoie
-     * vers la connexion. Voir `jeterLaCleQuandLeTitulaireChange()`.
+     * vers la connexion. Voir `jeterLaCleQuandLeTitulaireChange()`, et, pour
+     * les autres onglets, resources/js/Utils/historiqueDuCompte.js.
      *
      * La réponse elle-même sort en `no-store` : le document complet d'une page
      * de compte porte aussi ses props, et le cache HTTP le resservirait tel quel
@@ -99,8 +100,12 @@ class HandleInertiaRequests extends Middleware
      * mot de passe changé depuis un autre appareil, qui vide la session
      * (`AuthentifieLaSessionDuCompte`), un compte supprimé depuis le panneau,
      * une session expirée, même suivie d'une page publique. Et chaque début :
-     * un compte qui se connecte, par n'importe quel chemin, ne reprend jamais
-     * la clé de celui qui s'est servi de l'onglet avant lui.
+     * un compte qui se connecte, par n'importe quel chemin.
+     *
+     * La consigne ne vaut que pour l'onglet qui reçoit cette page : la session
+     * sert tous les onglets du navigateur, et chacun a sa clé. Les autres
+     * onglets la jettent eux-mêmes, d'après le titulaire que chaque page
+     * déclare dans `auth.user` (resources/js/Utils/historiqueDuCompte.js).
      *
      * Une session neuve n'a pas de titulaire : sa première page jette la clé,
      * sans effet quand il n'y en avait pas. La consigne passe par la session,

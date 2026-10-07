@@ -18,6 +18,13 @@ import { registerSW } from 'virtual:pwa-register'
  */
 if (typeof window !== 'undefined') {
     inscrireLeWorker({ registerSW, routeur: router, http })
+
+    /*
+     * Une page de compte ne se relit plus dans l'historique d'un onglet après
+     * le départ du compte, quel que soit l'onglet où il est parti (#1965).
+     * Avant `createInertiaApp`, qui lit l'historique dès son démarrage.
+     */
+    installerLaGardeDeLHistorique({ routeur: router })
 }
 
 // Expose router for testing (Dusk)
@@ -42,9 +49,6 @@ createInertiaApp({
 
         // Les erreurs du navigateur restent chez nous : voir le rapporteur.
         installerLeRapporteurDErreurs(app)
-
-        // Une page de compte rendue de mémoire après la déconnexion ne se montre pas (#1965).
-        installerLaGardeDeLHistorique({ routeur: router, pageInitiale: props.initialPage })
 
         // Register custom directives
         app.directive('press', vPress)
