@@ -73,7 +73,9 @@ describe('les réglages de la séance', () => {
         reglages.updateSettings()
 
         const transformer = inertia.formulaire.transform.mock.calls[0][0]
-        expect(transformer({ name: 'Dos', started_at: '2026-09-05T12:00' }).started_at).toMatch(/Z$|\+00:00$/)
+        // Un autre jour que celui de la séance : l'heure affichée dépend du fuseau
+        // de la machine, et une saisie qui lui serait égale ne serait pas envoyée.
+        expect(transformer({ name: 'Dos', started_at: '2026-09-07T12:00' }).started_at).toMatch(/Z$|\+00:00$/)
         expect(inertia.formulaire.patch).toHaveBeenCalledWith(
             '/workouts.update/5',
             expect.objectContaining({ preserveScroll: true }),
