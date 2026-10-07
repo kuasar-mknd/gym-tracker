@@ -13,7 +13,9 @@ use Illuminate\Notifications\Messages\MailMessage;
  * `lang/fr.json` ne traduisait pas : les courriels de vérification de
  * l'adresse et de réinitialisation du mot de passe étaient en français, sauf
  * leur dernière ligne (#1978). Les deux rendus, HTML et texte, sont lus ici
- * tels que le destinataire les reçoit.
+ * tels que le destinataire les reçoit. L'objet aussi : le framework a changé
+ * ses clefs (« Verify your email address », « Reset your password »), et la
+ * première ligne lue dans la boîte de réception restait anglaise.
  */
 
 /**
@@ -47,3 +49,16 @@ it('rend chaque courriel en français, pied compris', function (string $courriel
         }
     }
 })->with(array_keys(courrielsEnFrancaisAEnvoyer()));
+
+it('donne à chaque courriel un objet français', function (string $courriel, string $objet): void {
+    $message = courrielsEnFrancaisAEnvoyer()[$courriel](User::factory()->create());
+
+    expect($message->subject)->toBe($objet);
+
+    foreach (['Verify', 'Reset', 'email'] as $anglais) {
+        expect($message->subject)->not->toContain($anglais);
+    }
+})->with([
+    'vérification de l’adresse' => ['vérification de l’adresse', 'Vérifiez votre adresse e-mail'],
+    'réinitialisation du mot de passe' => ['réinitialisation du mot de passe', 'Réinitialisez votre mot de passe'],
+]);
