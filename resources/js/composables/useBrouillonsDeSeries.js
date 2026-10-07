@@ -8,8 +8,26 @@ import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErr
  */
 export const NUMERIC_SET_FIELDS = ['weight', 'reps', 'distance_km', 'duration_seconds']
 
-const draftKey = (setId) => `draft_set_${setId}`
+const PREFIXE_DES_BROUILLONS = 'draft_set_'
+const draftKey = (setId) => `${PREFIXE_DES_BROUILLONS}${setId}`
 const confirmedKey = (setId, field) => `${setId}_${field}`
+
+/**
+ * Efface tous les brouillons de séries de l'appareil.
+ *
+ * Un brouillon est rangé sous l'identifiant de la série, pas sous celui du
+ * compte : à la déconnexion, il n'a plus de lecteur légitime (#1964). Un
+ * stockage bloqué ne doit pas retenir la déconnexion qui l'appelle.
+ */
+export const effacerLesBrouillons = () => {
+    try {
+        Object.keys(localStorage)
+            .filter((cle) => cle.startsWith(PREFIXE_DES_BROUILLONS))
+            .forEach((cle) => localStorage.removeItem(cle))
+    } catch {
+        // Le stockage refuse : les brouillons restent, la déconnexion part.
+    }
+}
 
 /**
  * Ce que le serveur détient de chaque série, et ce que l'écran n'a pas encore
@@ -111,7 +129,7 @@ export const useBrouillonsDeSeries = () => {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i)
 
-            if (!key?.startsWith('draft_set_')) {
+            if (!key?.startsWith(PREFIXE_DES_BROUILLONS)) {
                 continue
             }
 
@@ -129,7 +147,7 @@ export const useBrouillonsDeSeries = () => {
                 continue
             }
 
-            const set = trouverLaSerie(key.replace('draft_set_', ''))
+            const set = trouverLaSerie(key.replace(PREFIXE_DES_BROUILLONS, ''))
 
             if (!set) {
                 continue

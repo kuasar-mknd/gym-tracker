@@ -18,6 +18,7 @@ const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { chargerSyncService, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
 /** Ziggy, including the wildcard patterns the desktop nav matches on. */
 let currentRoute = 'dashboard'
@@ -347,6 +348,86 @@ describe('AuthenticatedLayout — l’abonnement push', () => {
         mountLayout({ auth: { user: user({ id: 42 }) }, onPage: 'stats.index' })
 
         expect(rapprocherLAbonnementPush).toHaveBeenCalledWith(42)
+    })
+})
+
+/*
+ * Une écriture mise en file avant que la file ne note son compte ne part
+ * jamais, pour ne pas partir sous un autre compte : le chargement l'efface. La
+ * version précédente la rejouait, et la personne qui rouvrait l'application
+ * après la mise à jour perdait ses dernières séries sans un mot (#1964).
+ */
+describe('AuthenticatedLayout — les écritures hors ligne effacées au chargement', () => {
+    /** Une écriture telle que la version précédente la mettait en file : sans compte. */
+    const ecritureSansCompte = (id) => ({
+        method: 'patch',
+        url: `/api/v1/sets/${id}`,
+        data: { is_completed: true },
+        id: `ancienne-${id}`,
+        timestamp: '2026-10-01T10:00:00.000Z',
+    })
+
+    beforeEach(() => {
+        localStorage.clear()
+    })
+
+    afterEach(() => {
+        retirerLesEcouteursDuService()
+        poserLaPage(null)
+        localStorage.clear()
+    })
+
+    it('dit une fois combien le chargement en a effacé, sans rien de leur contenu', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([ecritureSansCompte(1), ecritureSansCompte(2)]))
+        localStorage.setItem('offline_sync_failed', JSON.stringify([{ ...ecritureSansCompte(3), status: 422 }]))
+
+        const service = await chargerSyncService({ compte: 42 })
+        await service.pending
+        const wrapper = mountLayout({ auth: { user: user({ id: 42 }) } })
+        await wrapper.vm.$nextTick()
+
+        expect(service.queue).toEqual([])
+        expect(toasts(wrapper)).toHaveLength(1)
+        expect(toasts(wrapper)[0].attributes('aria-live')).toBe('assertive')
+        expect(messageOf(toasts(wrapper)[0])).toBe(
+            "3 modifications faites hors ligne avant la mise à jour de l'application n'ont pas pu être enregistrées et ont été effacées de cet appareil. Vérifie ta dernière séance.",
+        )
+        expect(messageOf(toasts(wrapper)[0])).not.toContain('/api/v1/sets')
+
+        unmountLayout(wrapper)
+        const ecranSuivant = mountLayout({ auth: { user: user({ id: 42 }) } })
+        await ecranSuivant.vm.$nextTick()
+
+        expect(toasts(ecranSuivant)).toHaveLength(0)
+    })
+
+    it('ne dit rien quand le chargement n’a rien effacé', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([{ ...ecritureSansCompte(1), compte: '42' }]))
+
+        const service = await chargerSyncService({ compte: null })
+        await service.pending
+        const wrapper = mountLayout()
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper)).toHaveLength(0)
+    })
+
+    it('ne remplace pas un message déjà affiché : l’avis attend l’écran suivant', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([ecritureSansCompte(1)]))
+        await chargerSyncService({ compte: 42 })
+
+        const avecUneErreur = mountLayout({ flash: { error: 'Séance introuvable' } })
+        await avecUneErreur.vm.$nextTick()
+
+        expect(toasts(avecUneErreur).map(messageOf)).toEqual(['Séance introuvable'])
+
+        unmountLayout(avecUneErreur)
+        const suivant = mountLayout()
+        await suivant.vm.$nextTick()
+
+        expect(toasts(suivant).map(messageOf)).toEqual([
+            "Une modification faite hors ligne avant la mise à jour de l'application n'a pas pu être enregistrée et a été effacée de cet appareil. Vérifie ta dernière séance.",
+        ])
     })
 })
 

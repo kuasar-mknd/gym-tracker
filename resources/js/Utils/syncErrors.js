@@ -18,11 +18,27 @@
  *
  * 429 is deliberately transient: SyncService retries it once itself, and a rate
  * limit is by definition temporary.
+ *
+ * Dans le vidage de la file, un `transient` garde l'écriture en tête et relance
+ * plus tard, après une attente qui double, ou celle que demande `Retry-After` ;
+ * elle n'est classée refusée qu'après six échecs espacés (#1963).
  */
 export const SYNC_OFFLINE = 'offline'
 export const SYNC_AUTH = 'auth'
 export const SYNC_PERMANENT = 'permanent'
 export const SYNC_TRANSIENT = 'transient'
+
+/**
+ * Le serveur a refusé, sans l'exécuter, une écriture rejouée pour un autre
+ * compte que celui de la session (#1964, `VerifieLeCompteDeLEcriture`).
+ *
+ * Ce n'est ni un refus de l'écriture ni une session expirée : l'onglet croyait
+ * un compte connecté, et un autre onglet a ouvert entre-temps la session d'un
+ * autre. Le vidage garde l'écriture pour son compte, sans compter d'essai.
+ * Seul ce 409 marqué l'est : un autre conflit reste un refus.
+ */
+export const estPourUnAutreCompte = (error) =>
+    error?.response?.status === 409 && error?.response?.data?.raison === 'compte-different'
 
 export const classifySyncError = (error) => {
     if (error?.isOffline) {

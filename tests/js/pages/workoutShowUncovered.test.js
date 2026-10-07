@@ -16,8 +16,16 @@ vi.hoisted(() => {
 const post = vi.fn()
 const patch = vi.fn()
 const destroy = vi.fn()
+const mettreEnFile = vi.fn()
+const modifierEnFile = vi.fn()
+const retirerDeLaFile = vi.fn()
+const attenteDesEcritures = vi.fn()
 const routerPost = vi.fn()
 const routerPatch = vi.fn()
+const routerReload = vi.fn()
+
+/** Ce que la file a fait aboutir depuis la dernière réponse du serveur. */
+const etatDeLaFile = vi.hoisted(() => ({ rejeux: 0 }))
 const formPatch = vi.fn()
 const fetchMock = vi.fn()
 
@@ -41,8 +49,19 @@ vi.mock('@/Utils/SyncService', () => ({
         patch: (...args) => patch(...args),
         delete: (...args) => destroy(...args),
         get: vi.fn(),
+        identifiantsEnAttente: () => [],
+        get rejeuxDepuisLaDerniereVisite() {
+            return etatDeLaFile.rejeux
+        },
         failedRequests: () => [],
         clearFailedRequests: vi.fn(),
+        mettreEnFile: (...args) => mettreEnFile(...args),
+        modifierEnFile: (...args) => modifierEnFile(...args),
+        retirerDeLaFile: (...args) => retirerDeLaFile(...args),
+        processQueue: () => Promise.resolve(),
+        attendreLesEcritures: (...args) => attenteDesEcritures(...args),
+        enAttente: () => 0,
+        ecrituresEnCours: () => 0,
     },
 }))
 
@@ -70,7 +89,7 @@ vi.mock('@inertiajs/vue3', async () => {
         usePage: () => pageStub,
         router: {
             visit: vi.fn(),
-            reload: vi.fn(),
+            reload: (...args) => routerReload(...args),
             delete: vi.fn(),
             post: (...args) => routerPost(...args),
             patch: (...args) => routerPatch(...args),
@@ -276,8 +295,17 @@ beforeEach(() => {
     post.mockReset()
     patch.mockReset()
     destroy.mockReset()
+    mettreEnFile.mockReset()
+    mettreEnFile.mockReturnValue('q-serie')
+    modifierEnFile.mockReset()
+    modifierEnFile.mockReturnValue(false)
+    retirerDeLaFile.mockReset()
+    attenteDesEcritures.mockReset()
+    attenteDesEcritures.mockResolvedValue(undefined)
     routerPost.mockReset()
     routerPatch.mockReset()
+    routerReload.mockReset()
+    etatDeLaFile.rejeux = 0
     formPatch.mockReset()
     fetchMock.mockReset()
     haptics.triggerHaptic.mockReset()
@@ -847,6 +875,26 @@ describe('Workouts/Show — the session’s own settings', () => {
         expect(routerPatch).not.toHaveBeenCalled()
     })
 
+    /*
+     * Fermer la question pendant que la clôture attendait les écritures ne
+     * faisait que cacher la modale : la clôture partait ensuite (#1961).
+     */
+    it('does not finish once the question is closed while it was still waiting for the writes', async () => {
+        let ecrituresParties
+        attenteDesEcritures.mockReturnValueOnce(new Promise((resolve) => (ecrituresParties = resolve)))
+        const wrapper = await mountPage()
+
+        await buttonLabelled(wrapper, 'Terminer').trigger('click')
+        await emitOn(wrapper, FinishModalStub, 'confirm')
+        await emitOn(wrapper, FinishModalStub, 'close')
+
+        ecrituresParties()
+        await flushPromises()
+
+        expect(wrapper.vm.showFinishModal).toBe(false)
+        expect(routerPatch).not.toHaveBeenCalled()
+    })
+
     it('keeps the button busy until saving the session as a template comes back', async () => {
         const wrapper = await mountPage()
 
@@ -947,6 +995,25 @@ describe('Workouts/Show — reconciling with what the server sends', () => {
 
         expect(lines(wrapper)).toEqual([])
         expect(wrapper.text()).toContain('Séance vide')
+    })
+
+    /*
+     * Au chargement, le serveur rend la séance avant que la file se vide : ce
+     * que le vidage a créé n'est pas dans les props (#1960, #1962).
+     */
+    it('se redemande au serveur quand la file a fait aboutir ce que ses props ne montrent pas', async () => {
+        etatDeLaFile.rejeux = 2
+
+        await mountPage()
+
+        expect(routerReload).toHaveBeenCalledTimes(1)
+        expect(routerReload).toHaveBeenCalledWith({ only: ['workout'], preserveScroll: true })
+    })
+
+    it('ne se redemande pas quand rien n’a abouti depuis ses props', async () => {
+        await mountPage()
+
+        expect(routerReload).not.toHaveBeenCalled()
     })
 
     it('survives a line that arrives with no sets array', async () => {
@@ -1130,6 +1197,7 @@ describe('Workouts/Show — a create that answers with nothing', () => {
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 10, weight: 0, reps: 10 }),
+            { ajusterPar: expect.any(Function) },
         )
     })
 
@@ -1153,6 +1221,7 @@ describe('Workouts/Show — a create that answers with nothing', () => {
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 10, weight: 62.5, reps: 8 }),
+            { ajusterPar: expect.any(Function) },
         )
     })
 })
@@ -1262,6 +1331,11 @@ describe('Workouts/Show — a set on an exercise that never reached the server',
         expect(post).toHaveBeenCalledTimes(1)
     })
 
+    /**
+     * La série entre en file tout de suite, derrière son exercice qu'elle nomme
+     * par son entrée (#1962), et ne prend son identifiant qu'au rejeu de SA
+     * propre entrée : le rejeu d'une autre écriture ne la concerne pas.
+     */
     it('ignores a drain that announces some other queued request', async () => {
         post.mockImplementation((url) =>
             url.includes('workout-lines')
@@ -1276,15 +1350,24 @@ describe('Workouts/Show — a set on an exercise that never reached the server',
         await click(wrapper, `select-exercise-${STRENGTH.id}`)
         await click(wrapper, 'add-set-0')
 
+        expect(mettreEnFile).toHaveBeenCalledWith({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: expect.objectContaining({ workout_line_id: { enAttenteDe: 'q-mine' } }),
+            ajusterPar: expect.any(Function),
+        })
+
         window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: 'q-other', data: { id: 99 } } }))
         await flushPromises()
 
-        expect(post).toHaveBeenCalledTimes(1)
+        expect(lines(wrapper)[0].sets[0].id).toMatch(/^temp-/)
 
         window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: 'q-mine', data: { id: 31 } } }))
+        window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: 'q-serie', data: { id: 88 } } }))
         await flushPromises()
 
-        expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 31 }))
+        expect(lines(wrapper)[0].sets[0].id).toBe(88)
+        expect(post).toHaveBeenCalledTimes(1)
     })
 
     /**
@@ -2235,6 +2318,7 @@ describe('Workouts/Show — a set added before the exercise’s recommendation h
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 77, weight: 62.5, reps: 8 }),
+            { ajusterPar: expect.any(Function) },
         )
     })
 
@@ -2250,6 +2334,7 @@ describe('Workouts/Show — a set added before the exercise’s recommendation h
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 77, weight: 70, reps: 8 }),
+            { ajusterPar: expect.any(Function) },
         )
     })
 
