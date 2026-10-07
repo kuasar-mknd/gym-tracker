@@ -27,40 +27,53 @@ use Symfony\Component\Finder\Finder;
  *   Un `new Job` qui n'est passé à aucun de ces appels ne compte pas : rangé
  *   dans une variable, passé au constructeur d'un autre objet, construit dans
  *   une fonction anonyme ou fléchée ;
- * - chaque middleware concret de `app/Http/Middleware` est nommé
- *   (`Middleware::class`, ou son nom complet en chaîne) là où Laravel branche
- *   un middleware : `bootstrap/`, `routes/`, `config/`, un fournisseur de
- *   `app/Providers`, ou un contrôleur de `app/Http/Controllers`. Un nom qui
- *   ne sert qu'à retirer le middleware ou à le classer ne compte pas : passé à
- *   `->withoutMiddleware()`, `->withoutMiddlewareFor()`, `->remove()`,
- *   `->removeFromGroup()`, `->priority()`, `->prependToPriorityList()` ou
- *   `->appendToPriorityList()`, cherché par `->replace()` ou
- *   `->replaceInGroup()` (l'argument `search`), ou donné à `remove:` ou en clé
- *   de `replace:` dans `->web()` et `->api()`. Aucune requête ne le traverse ;
+ * - chaque middleware concret de `app/Http/Middleware` est branché par un
+ *   fichier de `bootstrap/`, `routes/`, `config/`, `app/Providers` ou
+ *   `app/Http/Controllers`, c'est-à-dire nommé (`Middleware::class`, ou son
+ *   nom complet en chaîne) là où une requête le traverse : passé directement,
+ *   tableau compris, à `->append()`, `->prepend()` ou `->use()`, à
+ *   `->replace()` comme remplaçant, ou à un appel dont le nom finit par
+ *   `middleware` (`->middleware()`, `Route::middleware()`,
+ *   `->authMiddleware()`, `->pushMiddleware()`), hors `withoutMiddleware()` et
+ *   `aliasMiddleware()` ; premier argument de `new Middleware()` ou de
+ *   l'attribut `#[Middleware]` d'un contrôleur ; rangé sous la clé
+ *   `middleware` d'un tableau (configuration d'un paquet, attributs de
+ *   `Route::group()`) ; ou écrit directement dans le corps d'une fonction dont
+ *   le nom finit par `middleware` (`HasMiddleware::middleware()` d'un
+ *   contrôleur, `getMiddleware()` que le panneau passe à `->middleware()`).
+ *   Tout autre emploi ne compte pas, parce qu'aucune requête ne le traverse :
+ *   un nom rangé dans une variable ou une constante, passé à `array_merge()`
+ *   ou à `->singleton()`, ou qui ne sert qu'à retirer le middleware ou à le
+ *   classer (`->withoutMiddleware()`, l'attribut `#[WithoutMiddleware]`,
+ *   `->withoutMiddlewareFor()`, `->remove()`, `->removeFromGroup()`,
+ *   `->priority()`, `->prependToPriorityList()`, `->appendToPriorityList()`,
+ *   l'argument `search` de `->replace()` et de `->replaceInGroup()`, `remove:`
+ *   et les clés de `replace:` dans `->web()` et `->api()`) ;
  * - un middleware nommé seulement par un alias (`->alias()`,
  *   `->aliasMiddleware()`) ou rangé seulement dans un groupe que l'application
  *   déclare (`->appendToGroup()`, `->prependToGroup()`, `->group()`,
  *   `->replaceInGroup()`, `->middlewareGroup()`, `->pushMiddlewareToGroup()`,
  *   `->prependMiddlewareToGroup()`) n'est branché que si une chaîne applique
- *   cet alias ou ce groupe, paramètres compris (`sonde:6,1`) : passée à un
- *   appel dont le nom finit par `middleware` (`->middleware()`,
- *   `Route::middleware()`, `->authMiddleware()`), hors `withoutMiddleware()`, à
- *   `new Middleware()` d'un contrôleur, rangée sous la clé `middleware` d'un
- *   tableau (configuration d'un paquet, attributs de `Route::group()`), ou
- *   rangée dans un groupe lui-même appliqué. C'est ainsi qu'un middleware meurt
- *   le plus souvent : son alias reste dans `bootstrap/app.php` quand la
- *   dernière route qui le citait disparaît. `web` et `api`, les groupes que
- *   Laravel pose sur les fichiers de routes, comptent toujours comme appliqués.
+ *   cet alias ou ce groupe, paramètres compris (`sonde:6,1`), à l'une des
+ *   places ci-dessus (hors `->append()`, `->prepend()`, `->use()` et
+ *   `->replace()`, qui ne lisent pas les alias), ou rangée dans un groupe
+ *   lui-même appliqué. C'est ainsi qu'un middleware meurt le plus souvent : son
+ *   alias reste dans `bootstrap/app.php` quand la dernière route qui le citait
+ *   disparaît. `web` et `api`, les groupes que Laravel pose sur les fichiers de
+ *   routes, comptent toujours comme appliqués.
  *
  * Elle ne voit pas un nom assemblé à l'exécution (`"App\\Jobs\\{$nom}"`), ni un
  * job rangé dans une variable avant son envoi (l'envoyer là où il est
  * construit), ni un envoi fait seulement depuis un test : un tel job n'a pas
- * d'appelant en production. Un alias ou un groupe déclaré ou appliqué
- * autrement que par une chaîne littérale (constante, variable) ne compte pas :
- * la garde échoue alors sur un middleware pourtant branché, et l'écrire en
- * littéral suffit. Une classe qui doit rester sans appelant s'inscrit dans
- * `appelantsExceptions()`, avec sa raison ; une exception qui a retrouvé un
- * appelant, ou dont la classe a disparu, fait échouer la garde.
+ * d'appelant en production. De même, un middleware, un alias ou un groupe
+ * tenus par une variable, une constante ou un appel intermédiaire
+ * (`array_merge()`), à la déclaration comme à l'emploi, ne comptent pas, ni un
+ * nom écrit dans un bloc imbriqué (`if`, `foreach`) du corps d'une fonction
+ * `…Middleware()` : la garde échoue alors sur un middleware pourtant branché,
+ * et l'écrire en littéral à l'une des places ci-dessus suffit. Une classe qui
+ * doit rester sans appelant s'inscrit dans `appelantsExceptions()`, avec sa
+ * raison ; une exception qui a retrouvé un appelant, ou dont la classe a
+ * disparu, fait échouer la garde.
  */
 
 /**
@@ -198,16 +211,26 @@ function appelantsNomResolu(PhpToken $jeton, string $espace, array $imports): st
 }
 
 /**
+ * Le dernier segment d'un nom de classe, en minuscules (`middleware` pour
+ * `Illuminate\Routing\Controllers\Middleware`).
+ */
+function appelantsDernierSegment(string $classe): string
+{
+    return strtolower(substr((string) strrchr('\\'.$classe, '\\'), 1));
+}
+
+/**
  * L'appel qu'ouvre la parenthèse en position `$i` : `dispatch` pour une
  * fonction, `bus::chain` pour une méthode statique (classe réduite à son
  * dernier segment), `->job` pour une méthode d'objet, `new middleware` pour un
- * constructeur (classe réduite de même), `autre` pour une déclaration ou une
- * structure de contrôle.
+ * constructeur et `#middleware` pour un attribut (classe réduite de même, alias
+ * d'import résolu), `autre` pour une déclaration ou une structure de contrôle.
  *
  * @param  list<PhpToken>  $jetons
  * @param  array<string, string>  $imports
+ * @param  bool  $dansUnAttribut  Vrai si la parenthèse s'ouvre directement dans `#[…]`.
  */
-function appelantsAppelOuvertEn(array $jetons, int $i, string $espace, array $imports): string
+function appelantsAppelOuvertEn(array $jetons, int $i, string $espace, array $imports, bool $dansUnAttribut): string
 {
     $nom = $jetons[$i - 1] ?? null;
     $avant = $jetons[$i - 2] ?? null;
@@ -217,6 +240,10 @@ function appelantsAppelOuvertEn(array $jetons, int $i, string $espace, array $im
     }
 
     $membre = strtolower($nom->text);
+
+    if ($dansUnAttribut) {
+        return '#'.appelantsDernierSegment(appelantsNomResolu($nom, $espace, $imports));
+    }
 
     if ($avant !== null && $avant->is([T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR])) {
         return '->'.$membre;
@@ -228,11 +255,11 @@ function appelantsAppelOuvertEn(array $jetons, int $i, string $espace, array $im
             ? appelantsNomResolu($classe, $espace, $imports)
             : '';
 
-        return strtolower(substr((string) strrchr('\\'.$resolue, '\\'), 1)).'::'.$membre;
+        return appelantsDernierSegment($resolue).'::'.$membre;
     }
 
     if ($avant !== null && $avant->is(T_NEW)) {
-        return 'new '.strtolower(substr((string) strrchr('\\'.appelantsNomResolu($nom, $espace, $imports), '\\'), 1));
+        return 'new '.appelantsDernierSegment(appelantsNomResolu($nom, $espace, $imports));
     }
 
     if ($avant !== null && $avant->is([T_FUNCTION, T_FN])) {
@@ -269,6 +296,15 @@ function appelantsCleLitteraleAvant(array $jetons, int $i): string
 }
 
 /**
+ * Vrai si cet appel n'en est pas un : un tableau ou le corps d'un `match`
+ * (`[`), un bloc (`{`) ou le corps d'une fonction nommée (`function nom`).
+ */
+function appelantsEstUnBloc(string $appel): bool
+{
+    return in_array($appel, ['[', '{'], true) || str_starts_with($appel, 'function ');
+}
+
+/**
  * Vrai si la chaîne littérale en position `$i` forme à elle seule un argument
  * de l'appel ouvert, positionnel ou nommé (`group: 'admin'`).
  *
@@ -289,8 +325,10 @@ function appelantsArgumentLitteral(array $jetons, int $i): bool
  * Les noms de classe et les chaînes qu'un source emploie dans son code, les
  * noms résolus, avec ce qui les entoure : le jeton d'avant (`new`), les deux
  * d'après (`::`, `dispatch` ou `class`), l'appel dont ils sont directement
- * l'argument (`appel`, vide hors de tout appel, `autre` quand une fonction
- * anonyme ou fléchée ou un bloc s'interpose, `new x` pour un constructeur), cet
+ * l'argument (`appel`, vide hors de tout appel, `{` dans un bloc ou le corps
+ * d'une fonction anonyme, `autre` dans une fonction fléchée, `function x`
+ * directement dans le corps de la fonction ou de la méthode nommée `x`, `new x`
+ * pour un constructeur, `#x` pour un attribut), cet
  * argument (`argument` : son nom quand il est nommé, sinon son rang compté
  * depuis 0, tableaux traversés), s'ils sont la clé d'un élément de tableau
  * (`cle`, suivis de `=>`), la clé littérale de l'élément dont ils sont la
@@ -318,7 +356,8 @@ function appelantsEmploisDuSource(string $source): array
     /**
      * Une case par parenthèse, crochet ou accolade ouverts : son numéro, l'appel
      * ouvert, `[` pour un tableau ou le corps d'un `match` (transparents), `{`
-     * pour un bloc (opaque), si une fonction fléchée a commencé à ce niveau
+     * pour un bloc et `function nom` pour le corps d'une fonction nommée
+     * (opaques), si une fonction fléchée a commencé à ce niveau
      * depuis la dernière virgule (elle court jusqu'à la virgule ou à la
      * fermeture), le rang de l'argument courant, son nom quand il est nommé
      * (`nom:`), et pour un tableau la clé littérale dont il est la valeur.
@@ -336,6 +375,23 @@ function appelantsEmploisDuSource(string $source): array
     $litteraux = [];
     $dernierAppelFerme = '';
 
+    /**
+     * Les cases ouvertes par `#[` : une parenthèse qui s'y ouvre derrière un
+     * nom pose un attribut.
+     *
+     * @var array<int, true> $attributs
+     */
+    $attributs = [];
+
+    /**
+     * La fonction nommée dont le corps est attendu, avec la hauteur de la pile à
+     * sa déclaration : la première accolade ouverte à cette hauteur ouvre son
+     * corps, un `;` à cette hauteur la dit abstraite.
+     *
+     * @var array{nom: string, hauteur: int}|null $fonction
+     */
+    $fonction = null;
+
     for ($i = 0; $i < $nombre; $i++) {
         $jeton = $jetons[$i];
 
@@ -349,13 +405,25 @@ function appelantsEmploisDuSource(string $source): array
         if ($jeton->text === '{' || $jeton->is([T_CURLY_OPEN, T_DOLLAR_OPEN_CURLY_BRACES])) {
             $profondeur++;
             $corpsDeMatch = $jeton->text === '{' && ($jetons[$i - 1]->text ?? '') === ')' && $dernierAppelFerme === 'match';
-            $pile[] = appelantsCase($cases++, $corpsDeMatch ? '[' : '{');
+            $appelDuBloc = $corpsDeMatch ? '[' : '{';
+
+            if ($jeton->text === '{' && $fonction !== null && $fonction['hauteur'] === count($pile)) {
+                $appelDuBloc = 'function '.$fonction['nom'];
+                $fonction = null;
+            }
+
+            $pile[] = appelantsCase($cases++, $appelDuBloc);
         } elseif ($jeton->text === '}') {
             $profondeur--;
             array_pop($pile);
         } elseif ($jeton->text === '(') {
-            $pile[] = appelantsCase($cases++, appelantsAppelOuvertEn($jetons, $i, $espace, $imports));
+            $dansUnAttribut = $pile !== [] && isset($attributs[array_last($pile)['id']]);
+            $pile[] = appelantsCase($cases++, appelantsAppelOuvertEn($jetons, $i, $espace, $imports, $dansUnAttribut));
         } elseif ($jeton->text === '[' || $jeton->is(T_ATTRIBUTE)) {
+            if ($jeton->is(T_ATTRIBUTE)) {
+                $attributs[$cases] = true;
+            }
+
             $pile[] = appelantsCase($cases++, '[', $jeton->text === '[' ? appelantsCleLitteraleAvant($jetons, $i) : '');
         } elseif ($jeton->text === ')' || $jeton->text === ']') {
             $dernierAppelFerme = array_pop($pile)['appel'] ?? '';
@@ -365,11 +433,17 @@ function appelantsEmploisDuSource(string $source): array
         } elseif ($jeton->text === ',' && $pile !== []) {
             $sommet = array_key_last($pile);
             $pile[$sommet] = [...$pile[$sommet], 'flechee' => false, 'rang' => $pile[$sommet]['rang'] + 1, 'etiquette' => ''];
+        } elseif ($jeton->is(T_FUNCTION)) {
+            $suivant = $jetons[$i + 1] ?? null;
+            $suivant = $suivant?->text === '&' ? ($jetons[$i + 2] ?? null) : $suivant;
+            $fonction = $suivant !== null && $suivant->is(T_STRING) ? ['nom' => strtolower($suivant->text), 'hauteur' => count($pile)] : $fonction;
+        } elseif ($jeton->text === ';' && $fonction !== null && $fonction['hauteur'] === count($pile)) {
+            $fonction = null;
         } elseif (
             $jeton->is(T_STRING) && $pile !== []
             && in_array($jetons[$i - 1]->text ?? '', ['(', ','], true)
             && ($jetons[$i + 1]->text ?? '') === ':'
-            && ! in_array(array_last($pile)['appel'], ['[', '{'], true)
+            && ! appelantsEstUnBloc(array_last($pile)['appel'])
         ) {
             $sommet = array_key_last($pile);
             $pile[$sommet] = [...$pile[$sommet], 'etiquette' => strtolower($jeton->text)];
@@ -407,7 +481,7 @@ function appelantsEmploisDuSource(string $source): array
             $nom = str_replace('\\\\', '\\', $classe[2]);
         }
 
-        if ($chaine && $pile !== [] && ! in_array(array_last($pile)['appel'], ['[', '{'], true) && appelantsArgumentLitteral($jetons, $i)) {
+        if ($chaine && $pile !== [] && ! appelantsEstUnBloc(array_last($pile)['appel']) && appelantsArgumentLitteral($jetons, $i)) {
             $sommet = array_last($pile);
             $litteraux[$sommet['id']][$sommet['etiquette'] !== '' ? $sommet['etiquette'] : $sommet['rang']] = substr($jeton->text, 1, -1);
         }
@@ -487,18 +561,40 @@ function appelantsEnvoieLeJob(array $emploi): bool
 }
 
 /**
+ * Le nom de la méthode qu'appelle cet appel (`middleware` pour `->middleware`
+ * ou `route::middleware`), ou de l'attribut qu'il pose (`#middleware`) ; vide
+ * pour une fonction, un constructeur, un bloc ou le corps d'une fonction.
+ */
+function appelantsMethodeDe(string $appel): string
+{
+    return preg_match('/(?:->|::|#)(\w+)$/', $appel, $trouvee) === 1 ? $trouvee[1] : '';
+}
+
+/**
+ * Vrai si un appel ou une fonction de ce nom branche les middlewares qu'on lui
+ * passe ou qu'elle rend : son nom finit par `middleware` (`middleware`,
+ * `authmiddleware`, `pushmiddleware`, `getmiddleware`), hors
+ * `withoutmiddleware` et `aliasmiddleware`.
+ */
+function appelantsNomBrancheDesMiddlewares(string $nom): bool
+{
+    return str_ends_with($nom, 'middleware') && ! in_array($nom, ['withoutmiddleware', 'aliasmiddleware'], true);
+}
+
+/**
  * Ce que fait d'un middleware l'appel dont cet emploi est l'argument : `aucun`
- * quand il ne sert qu'à le retirer ou à le classer parmi les autres, `direct`
- * quand il le branche, `alias` quand il lui donne un nom, `groupe` quand il le
- * range dans un groupe, avec pour ces deux derniers l'alias ou le groupe
- * (vide s'il n'est pas écrit en littéral).
+ * quand aucune requête ne le traverse (il le retire, le classe parmi les
+ * autres, ou ne fait que le nommer : variable, constante, `singleton()`…),
+ * `direct` quand il le branche, `alias` quand il lui donne un nom, `groupe`
+ * quand il le range dans un groupe, avec pour ces deux derniers l'alias ou le
+ * groupe (vide s'il n'est pas écrit en littéral).
  *
  * @param  array{nom: string, chaine: string, avant: string, apres: string, membre: string, appel: string, argument: string, cle: bool, cleDuTableau: string, litteraux: array<int|string, string>}  $emploi
  * @return array{0: 'aucun'|'direct'|'alias'|'groupe', 1: string}
  */
 function appelantsRoleDuMiddleware(array $emploi): array
 {
-    $methode = preg_match('/(?:->|::)(\w+)$/', $emploi['appel'], $trouvee) === 1 ? $trouvee[1] : '';
+    $methode = appelantsMethodeDe($emploi['appel']);
     $argument = $emploi['argument'];
     $nomLitteral = $emploi['litteraux'][0] ?? $emploi['litteraux']['group'] ?? $emploi['litteraux']['name'] ?? '';
     $declareUnGroupe = in_array($methode, ['appendtogroup', 'prependtogroup', 'middlewaregroup', 'pushmiddlewaretogroup', 'prependmiddlewaretogroup'], true)
@@ -512,26 +608,34 @@ function appelantsRoleDuMiddleware(array $emploi): array
         $methode === 'alias' => ['alias', $emploi['cleDuTableau']],
         $methode === 'aliasmiddleware' => in_array($argument, ['1', 'class'], true) ? ['alias', $nomLitteral] : ['aucun', ''],
         $declareUnGroupe => in_array($argument, ['1', 'middleware'], true) ? ['groupe', $nomLitteral] : ['aucun', ''],
-        default => ['direct', ''],
+        in_array($methode, ['append', 'prepend', 'use'], true), appelantsAppliqueUnMiddleware($emploi) => ['direct', ''],
+        default => ['aucun', ''],
     };
 }
 
 /**
- * Vrai si cette chaîne applique l'alias ou le groupe qu'elle nomme : passée à
- * un appel dont le nom finit par `middleware` (`->middleware()`,
+ * Vrai si cet emploi applique le middleware, l'alias ou le groupe qu'il nomme :
+ * passé à un appel dont le nom finit par `middleware` (`->middleware()`,
  * `Route::middleware()`, `->authMiddleware()` d'un panneau), hors
- * `withoutMiddleware()` et `aliasMiddleware()`, à `new Middleware()` d'un
- * contrôleur, ou rangée sous la clé `middleware` d'un tableau (configuration
- * d'un paquet, attributs de `Route::group()`).
+ * `withoutMiddleware()` et `aliasMiddleware()` ; premier argument de
+ * `new Middleware()` ou de l'attribut `#[Middleware]` d'un contrôleur ; rangé
+ * sous la clé `middleware` d'un tableau (configuration d'un paquet, attributs
+ * de `Route::group()`) ; ou écrit directement dans le corps d'une fonction
+ * dont le nom finit par `middleware` (`HasMiddleware::middleware()` d'un
+ * contrôleur, `getMiddleware()` qu'un fournisseur passe à `->middleware()`).
  *
  * @param  array{nom: string, chaine: string, avant: string, apres: string, membre: string, appel: string, argument: string, cle: bool, cleDuTableau: string, litteraux: array<int|string, string>}  $emploi
  */
-function appelantsChaineAppliqueUnMiddleware(array $emploi): bool
+function appelantsAppliqueUnMiddleware(array $emploi): bool
 {
-    $methode = preg_match('/(?:->|::)(\w+)$/', $emploi['appel'], $trouvee) === 1 ? $trouvee[1] : '';
+    $appel = $emploi['appel'];
 
-    return ($emploi['appel'] === 'new middleware' && in_array($emploi['argument'], ['0', 'middleware'], true))
-        || (str_ends_with($methode, 'middleware') && ! in_array($methode, ['withoutmiddleware', 'aliasmiddleware'], true))
+    if (in_array($appel, ['new middleware', '#middleware'], true)) {
+        return in_array($emploi['argument'], ['0', 'middleware'], true);
+    }
+
+    return appelantsNomBrancheDesMiddlewares(appelantsMethodeDe($appel))
+        || (str_starts_with($appel, 'function ') && appelantsNomBrancheDesMiddlewares(substr($appel, 9)))
         || $emploi['cleDuTableau'] === 'middleware';
 }
 
@@ -559,7 +663,7 @@ function appelantsAliasEtGroupesAppliques(array $emplois): array
 
         if ($role === 'groupe') {
             $membres[$groupe][] = $nom;
-        } elseif (appelantsChaineAppliqueUnMiddleware($emploi)) {
+        } elseif (appelantsAppliqueUnMiddleware($emploi)) {
             $appliques[$nom] = true;
         }
     }
@@ -579,8 +683,9 @@ function appelantsAliasEtGroupesAppliques(array $emplois): array
 
 /**
  * Les middlewares que ces emplois branchent, par nom complet en minuscules :
- * `Middleware::class`, ou son nom complet en chaîne, passé directement à un
- * appel qui le branche, ou sous un alias ou dans un groupe appliqués.
+ * `Middleware::class`, ou son nom complet en chaîne, là où une requête le
+ * traverse (`appelantsRoleDuMiddleware()`), ou sous un alias ou dans un groupe
+ * appliqués.
  *
  * @param  list<array{nom: string, chaine: string, avant: string, apres: string, membre: string, appel: string, argument: string, cle: bool, cleDuTableau: string, litteraux: array<int|string, string>}>  $emplois
  * @return array<string, true>
@@ -716,6 +821,8 @@ it('ne compte un middleware comme branché que là où une requête le traverse'
         '<?php',
         'namespace App\\Providers;',
         'use App\\Http\\Middleware\\SondeDeLaGarde;',
+        'use Illuminate\\Routing\\Attributes\\Controllers\\Middleware as MiddlewareDeControleur;',
+        'use Illuminate\\Routing\\Attributes\\Controllers\\WithoutMiddleware;',
         'use Illuminate\\Routing\\Controllers\\Middleware;',
         'use Illuminate\\Support\\Facades\\Route;',
         $code,
@@ -753,6 +860,15 @@ it('ne compte un middleware comme branché que là où une requête le traverse'
     'replaceInGroup() remplaçant dans un groupe jamais appliqué' => ["\$middleware->replaceInGroup('admin', Autre::class, SondeDeLaGarde::class);", false],
     'middlewareGroup() d un routeur, jamais appliqué' => ["\$router->middlewareGroup('admin', [SondeDeLaGarde::class]);", false],
     'pushMiddlewareToGroup() d un routeur, jamais appliqué' => ["\$router->pushMiddlewareToGroup('admin', SondeDeLaGarde::class);", false],
+    'alias() par une variable, jamais appliqué' => ["\$aliasDeLaSonde = ['sonde' => SondeDeLaGarde::class]; \$middleware->alias(\$aliasDeLaSonde);", false],
+    'alias() par une variable, même appliqué' => ["\$aliasDeLaSonde = ['sonde' => SondeDeLaGarde::class]; \$middleware->alias(\$aliasDeLaSonde); Route::middleware('sonde')->group(function () {});", false],
+    'alias() par une constante de classe, jamais appliqué' => ["final class P { private const ALIAS = ['sonde' => SondeDeLaGarde::class]; public function boot(): void { \$this->middleware->alias(self::ALIAS); } }", false],
+    'alias() par array_merge(), jamais appliqué' => ["\$middleware->alias(array_merge(\$autres, ['sonde' => SondeDeLaGarde::class]));", false],
+    'attribut WithoutMiddleware d un contrôleur' => ['#[WithoutMiddleware(SondeDeLaGarde::class)] final class C {}', false],
+    'attribut WithoutMiddleware retirant un alias' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); #[WithoutMiddleware('sonde')] final class C {}", false],
+    'attribut Middleware citant un alias hors de son premier argument' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); #[MiddlewareDeControleur('auth', only: ['sonde'])] final class C {}", false],
+    'singleton() d un fournisseur' => ['$this->app->singleton(SondeDeLaGarde::class);', false],
+    'liste rendue par une fonction qui ne branche rien' => ['function autresClasses(): array { return [Autre::class, SondeDeLaGarde::class]; }', false],
     'append()' => ['$middleware->append(SondeDeLaGarde::class);', true],
     'prepend()' => ['$middleware->prepend(SondeDeLaGarde::class);', true],
     'append() d un ternaire' => ['$middleware->append($actif ? SondeDeLaGarde::class : Autre::class);', true],
@@ -769,12 +885,18 @@ it('ne compte un middleware comme branché que là où une requête le traverse'
     'tableau de configuration' => ["return ['middleware' => ['web', SondeDeLaGarde::class]];", true],
     'tableau de configuration par le nom complet en chaîne' => ["return ['middleware' => ['App\\Http\\Middleware\\SondeDeLaGarde']];", true],
     'middleware d un contrôleur' => ["return [new Middleware(SondeDeLaGarde::class, except: ['index'])];", true],
+    'attribut Middleware d un contrôleur' => ['#[MiddlewareDeControleur(SondeDeLaGarde::class)] final class C {}', true],
+    'HasMiddleware::middleware() d un contrôleur' => ["final class C { public static function middleware(): array { return ['auth', SondeDeLaGarde::class]; } }", true],
+    'liste rendue par getMiddleware() et passée à un panneau' => ['final class P { public function panel($panel) { return $panel->middleware($this->getMiddleware()); } private function getMiddleware(): array { return [Autre::class, SondeDeLaGarde::class]; } }', true],
     'alias() appliqué par une route' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); Route::get('/sonde', fn () => 'ok')->middleware('sonde');", true],
     'alias() appliqué avec ses paramètres' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); Route::middleware(['auth', 'sonde:6,1'])->group(function () {});", true],
     'alias() appliqué dans un ternaire' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); Route::middleware(\$enProduction ? 'sonde:60,1' : 'sonde:1000,1')->group(function () {});", true],
     'alias() appliqué par la configuration' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); return ['middleware' => ['web', 'sonde']];", true],
     'alias() appliqué par les attributs de Route::group()' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); Route::group(['middleware' => 'sonde'], function () {});", true],
     'alias() appliqué par un contrôleur' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); return [new Middleware('sonde', only: ['index'])];", true],
+    'alias() appliqué par l attribut Middleware d un contrôleur' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); #[MiddlewareDeControleur('sonde')] final class C {}", true],
+    'alias() appliqué par un attribut Middleware groupé' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); final class C { #[MiddlewareDeControleur('auth'), MiddlewareDeControleur('sonde:6,1', only: ['index'])] public function index() {} }", true],
+    'alias() appliqué par HasMiddleware::middleware() d un contrôleur' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); final class C { public static function middleware(): array { return ['auth', 'sonde']; } }", true],
     'alias() appliqué par un panneau' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); \$panel->authMiddleware(['sonde']);", true],
     'alias() rangé dans web' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); \$middleware->web(append: ['sonde']);", true],
     'alias() rangé dans un groupe appliqué' => ["\$middleware->alias(['sonde' => SondeDeLaGarde::class]); \$middleware->appendToGroup('admin', 'sonde'); Route::middleware('admin')->group(function () {});", true],
@@ -801,10 +923,11 @@ it('ne garde aucun middleware que rien ne branche', function (): void {
     $orphelins = array_values(array_diff(appelantsMiddlewaresNonBranches(), array_keys(appelantsExceptions())));
 
     expect($orphelins)->toBe([], implode("\n", [
-        'Ces middlewares ne sont nommés ni dans bootstrap/, ni dans routes/, ni dans config/, ni par un fournisseur ou un contrôleur :',
+        'Ces middlewares ne sont branchés par aucun fichier de bootstrap/, routes/, config/, app/Providers ou app/Http/Controllers :',
         '  '.implode("\n  ", $orphelins),
         '',
         'Le détecteur de code mort tient leur handle() pour utilisé parce qu\'il reçoit une Request (#1991).',
+        "La garde ne lit que les branchements écrits en littéral aux places que liste l'en-tête de ce fichier : un nom, un alias ou un groupe tenus par une variable, une constante ou array_merge() ne comptent pas.",
         "Les brancher, ou les supprimer. S'ils doivent rester, les inscrire dans appelantsExceptions(), avec leur raison.",
     ]));
 });
