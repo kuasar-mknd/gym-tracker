@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -51,21 +50,10 @@ final class VerifieLeCompteDeLEcriture
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $compteDeLEcriture = $request->headers->get(self::ENTETE);
+        $compteDeLEcriture = (string) $request->headers->get(self::ENTETE);
+        $compteDeLaSession = $request->user()?->id;
 
-        if ($compteDeLEcriture === null || $compteDeLEcriture === '') {
-            return $next($request);
-        }
-
-        $utilisateur = $request->user();
-
-        if (! $utilisateur instanceof Authenticatable) {
-            return $next($request);
-        }
-
-        $identifiant = $utilisateur->getAuthIdentifier();
-
-        if ((is_int($identifiant) || is_string($identifiant)) && (string) $identifiant === $compteDeLEcriture) {
+        if ($compteDeLEcriture === '' || $compteDeLaSession === null || $compteDeLEcriture === (string) $compteDeLaSession) {
             return $next($request);
         }
 
