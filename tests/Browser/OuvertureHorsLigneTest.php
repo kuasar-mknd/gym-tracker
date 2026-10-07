@@ -71,15 +71,23 @@ class OuvertureHorsLigneTest extends DuskTestCase
                 'uploadThroughput' => -1,
             ]);
 
+            /*
+             * Les textes se lisent dans le DOM : `titre-carte` et `glass-button`
+             * les passent en majuscules, et WebDriver rend le texte transformé,
+             * contre lequel une absence se vérifierait aussi à tort.
+             */
+            $texteDe = static fn (string $selecteur): string => 'document.querySelector('.json_encode($selecteur, JSON_THROW_ON_ERROR).').textContent.trim()';
+            $absentDeLaPage = static fn (string $texte): string => '!document.body.textContent.includes('.json_encode($texte, JSON_THROW_ON_ERROR).')';
+
             try {
                 foreach (['/dashboard', '/workouts/'.$seance->id, '/'] as $chemin) {
                     $browser->visit($chemin)
                         ->waitFor('[dusk="page-hors-ligne"]', 15)
                         ->assertTitle('Hors ligne - GymTracker')
-                        ->assertSee('Pas de réseau')
-                        ->assertSee('Réessayer')
-                        ->assertDontSee($compte->name)
-                        ->assertDontSee($compte->email);
+                        ->assertScript($texteDe('[dusk="page-hors-ligne"] h1'), 'Pas de réseau')
+                        ->assertScript($texteDe('[dusk="page-hors-ligne"] a'), 'Réessayer')
+                        ->assertScript($absentDeLaPage($compte->name))
+                        ->assertScript($absentDeLaPage($compte->email));
                 }
             } finally {
                 $outils->execute('Network.emulateNetworkConditions', [
