@@ -37,7 +37,7 @@ class IntervalTimerController extends Controller
         $this->user()->intervalTimers()->create($donneesValidees);
 
         return redirect()->route('tools.interval-timer.index')
-            ->with('success', 'Timer created successfully.');
+            ->with('success', 'Minuteur créé.');
     }
 
     /**
@@ -52,7 +52,7 @@ class IntervalTimerController extends Controller
         $intervalTimer->update($donneesValidees);
 
         return redirect()->route('tools.interval-timer.index')
-            ->with('success', 'Timer updated successfully.');
+            ->with('success', 'Minuteur mis à jour.');
     }
 
     /**
@@ -65,6 +65,6 @@ class IntervalTimerController extends Controller
         $intervalTimer->delete();
 
         return redirect()->route('tools.interval-timer.index')
-            ->with('success', 'Timer deleted successfully.');
+            ->with('success', 'Minuteur supprimé.');
     }
 }

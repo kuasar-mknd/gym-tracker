@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 import BaseChart from './BaseChart.vue'
 import { etiquetteDeDate } from '@/Utils/date'
+import { compte } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -57,7 +58,7 @@ const infobulle = {
     accent: 'accent-primary',
     opaque: true,
     callbacks: {
-        label: (context) => `${context.parsed.y} minutes`,
+        label: (context) => compte(context.parsed.y, 'minute', 'minutes'),
         title: (context) => {
             // Reversed again because the chart data is reversed
             const workout = [...props.data].reverse()[context[0].dataIndex]

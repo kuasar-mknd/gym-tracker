@@ -18,13 +18,13 @@ use Filament\Tables\Table;
 class SupplementResource extends Resource
 {
     #[\Override]
-    protected static ?string $modelLabel = 'Supplément';
+    protected static ?string $modelLabel = 'Complément';
 
     #[\Override]
-    protected static ?string $pluralModelLabel = 'Suppléments';
+    protected static ?string $pluralModelLabel = 'Compléments';
 
     #[\Override]
-    protected static ?string $navigationLabel = 'Suppléments';
+    protected static ?string $navigationLabel = 'Compléments';
 
     #[\Override]
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBeaker;

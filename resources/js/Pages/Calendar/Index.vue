@@ -6,6 +6,7 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { parseCalendarDate } from '@/Utils/date'
+import { compte } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
@@ -332,7 +333,7 @@ const formatDateFull = (dateStr) => {
                                     <div>
                                         <div class="text-text-main font-bold">{{ workout.name }}</div>
                                         <div class="text-text-muted text-xs">
-                                            {{ workout.exercises_count }} exercices
+                                            {{ compte(workout.exercises_count, 'exercice', 'exercices') }}
                                             <span v-if="workout.preview_exercises.length" class="text-text-muted/60"
                                                 >• {{ workout.preview_exercises.join(', ') }}</span
                                             >

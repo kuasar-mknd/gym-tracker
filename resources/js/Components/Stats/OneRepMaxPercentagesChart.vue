@@ -2,7 +2,7 @@
 import { jeton } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
-import { poids } from '@/Utils/nombre'
+import { accord, entier, poids } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -38,6 +38,17 @@ const datasets = computed(() => [
     },
 ])
 
+/**
+ * Les répétitions estimées, que la page envoie en texte : un entier (« 20 »)
+ * ou un plancher (« 25+ »). Le nom s'accorde au nombre, et le « + » reste
+ * collé au nombre : « 1 rep », « 25+ reps » (#1980).
+ */
+const repetitions = (reps) => {
+    const [, valeur, plancher] = /^(\d+)(\+?)$/.exec(String(reps).trim()) ?? []
+
+    return valeur === undefined ? String(reps) : `${entier(valeur)}${plancher} ${accord(valeur, 'rep', 'reps')}`
+}
+
 const infobulle = {
     accent: 'accent-primary',
     opaque: true,
@@ -45,7 +56,7 @@ const infobulle = {
         label: (context) => {
             // Try to find the est reps for this data point
             const dataPoint = [...props.data].find((d) => `${d.percent}%` === context.label)
-            const repsText = dataPoint && dataPoint.reps !== '-' ? ` (${dataPoint.reps} reps)` : ''
+            const repsText = dataPoint && dataPoint.reps !== '-' ? ` (${repetitions(dataPoint.reps)})` : ''
             return `${poids(context.parsed.y)}${repsText}`
         },
     },

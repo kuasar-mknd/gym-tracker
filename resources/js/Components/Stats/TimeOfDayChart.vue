@@ -4,6 +4,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref } from 'vue'
 import { pluginCentreDAnneau } from '@/Utils/donut'
 import BaseChart from './BaseChart.vue'
+import { compte } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -52,7 +53,7 @@ const infobulle = {
             const total = context.chart._metasets[context.datasetIndex].total
             const percentage = Math.round((value / total) * 100)
 
-            return ` ${value} séances (${percentage}%)`
+            return ` ${compte(value, 'séance', 'séances')} (${percentage}%)`
         },
     },
 }

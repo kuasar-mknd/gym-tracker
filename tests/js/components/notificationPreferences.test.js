@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { jsRoot } from '../conventions/sourceFiles'
 
 const page = {
     props: {
@@ -51,6 +54,30 @@ const pushCheckboxes = (wrapper) =>
     wrapper.findAll('input[type="checkbox"]').filter((box) => box.element.closest('[dusk="reminder-days"]') === null)
 const error = (wrapper) => wrapper.find('[dusk="notification-push-error"]')
 
+/**
+ * Le texte sans ses commentaires HTML, retirés par découpage et non par un
+ * `replace` : CodeQL lit toute suppression de `<!--` par expression régulière
+ * comme une désinfection incomplète (voir conventions/etatsVides.test.js).
+ */
+const sansCommentaires = (texte) => {
+    let reste = texte
+    let resultat = ''
+
+    for (let debut = reste.indexOf('<!--'); debut !== -1; debut = reste.indexOf('<!--')) {
+        resultat += reste.slice(0, debut)
+
+        const fin = reste.indexOf('-->', debut)
+
+        if (fin === -1) {
+            return resultat
+        }
+
+        reste = reste.slice(fin + 3)
+    }
+
+    return resultat + reste
+}
+
 beforeEach(() => {
     post.mockReset()
     patch.mockReset()
@@ -58,6 +85,36 @@ beforeEach(() => {
     unsubscribe.mockResolvedValue(undefined)
     globalThis.Notification.requestPermission = vi.fn().mockResolvedValue('granted')
     patch.mockResolvedValue({})
+})
+
+/*
+ * La section passait du tutoiement (« Choisis comment tu souhaites… ») au
+ * vouvoiement (« Recevez des alertes… sur votre appareil », « quand vous
+ * battez un record »), quand `ConfirmDialog` fixe le tutoiement (#1980).
+ */
+describe('UpdateNotificationPreferencesForm — le ton', () => {
+    const VOUVOIEMENT = /\b(vous|votre|vos|recevez|activez|choisissez|battez|êtes|avez)\b/i
+
+    it('tutoie dans tout ce qu’elle affiche', () => {
+        const wrapper = mountForm()
+
+        expect(wrapper.text()).toContain('Reçois des alertes en temps réel sur ton appareil')
+        expect(wrapper.text()).toContain('Être prévenu quand tu bats un record.')
+        expect(wrapper.text()).not.toMatch(VOUVOIEMENT)
+
+        wrapper.unmount()
+    })
+
+    it('tutoie jusque dans les messages des branches que le navigateur de test ne rend pas', () => {
+        const source = readFileSync(
+            join(jsRoot, 'Pages/Profile/Partials/UpdateNotificationPreferencesForm.vue'),
+            'utf8',
+        )
+        const gabarit = sansCommentaires(source.slice(source.indexOf('<template>')))
+
+        expect(gabarit).toContain('Ton navigateur ne prend pas en charge les notifications push.')
+        expect(gabarit).not.toMatch(VOUVOIEMENT)
+    })
 })
 
 describe('UpdateNotificationPreferencesForm', () => {
@@ -244,7 +301,10 @@ describe('UpdateNotificationPreferencesForm — activation par étapes', () => {
 
     it('rapporte le refus du serveur avec son message', async () => {
         post.mockRejectedValue({
-            response: { status: 422, data: { message: 'L’endpoint doit désigner un hôte joignable et public.' } },
+            response: {
+                status: 422,
+                data: { message: 'Le champ adresse de l’abonnement doit désigner un hôte joignable et public.' },
+            },
         })
 
         const wrapper = mountForm()

@@ -41,9 +41,9 @@ describe('PersonalRecordAchieved::toArray', function (): void {
         $data = new PersonalRecordAchieved($record)->toArray($user);
 
         expect($data['type'])->toBe('personal_record')
-            ->and($data['title'])->toBe('Nouveau Record ! 🏆')
+            ->and($data['title'])->toBe('Nouveau record ! 🏆')
             ->and($data['message'])->toBe(
-                "Félicitations ! Tu as battu ton record de Poids Maximum sur l'exercice Développé Couché avec 102.50kg."
+                "Félicitations ! Tu as battu ton record de poids maximum sur l'exercice Développé Couché avec 102,5\u{00A0}kg."
             )
             ->and($data['exercise_id'])->toBe($record->exercise_id)
             ->and($data['achieved_at'])->toBeInstanceOf(Carbon::class);
@@ -51,6 +51,29 @@ describe('PersonalRecordAchieved::toArray', function (): void {
         expect(array_keys($data))
             ->toEqualCanonicalizing(['type', 'title', 'message', 'exercise_id', 'achieved_at']);
     });
+
+    it('écrit la valeur comme le reste de l’application : virgule, milliers séparés, sans zéro inutile', function (float $valeur, string $attendu): void {
+        $user = User::factory()->create();
+        $record = PersonalRecord::factory()->create([
+            'user_id' => $user->id,
+            'exercise_id' => Exercise::factory()->create(['name' => 'Squat'])->id,
+            'type' => PersonalRecordType::MaxVolumeSet,
+            'value' => $valeur,
+        ])->refresh();
+
+        $message = new PersonalRecordAchieved($record)->toArray($user)['message'];
+
+        expect($message)->toBe("Félicitations ! Tu as battu ton record de volume par série sur l'exercice Squat avec {$attendu}.");
+        expect($message)->not->toContain('.50');
+        expect($message)->not->toContain('0kg');
+    })->with([
+        'une décimale' => [102.5, "102,5\u{00A0}kg"],
+        'deux décimales' => [187.25, "187,25\u{00A0}kg"],
+        'entier' => [60.0, "60\u{00A0}kg"],
+        'milliers, à l’apostrophe de nombre.js' => [1250.5, "1'250,5\u{00A0}kg"],
+        'millier rond' => [1000.0, "1'000\u{00A0}kg"],
+        'dizaines de milliers' => [12345.67, "12'345,67\u{00A0}kg"],
+    ]);
 
     it('reports the moment the record was set, not the moment of sending', function (): void {
         $user = User::factory()->create();
@@ -90,9 +113,9 @@ describe('PersonalRecordAchieved::toArray', function (): void {
             ->and($stored->read_at)->toBeNull()
             ->and($stored->notifiable_id)->toBe($user->id)
             ->and($stored->data['type'])->toBe('personal_record')
-            ->and($stored->data['title'])->toBe('Nouveau Record ! 🏆')
+            ->and($stored->data['title'])->toBe('Nouveau record ! 🏆')
             ->and($stored->data['message'])->toBe(
-                "Félicitations ! Tu as battu ton record de 1RM Estimé sur l'exercice Soulevé de Terre avec 187.25kg."
+                "Félicitations ! Tu as battu ton record de 1RM estimé sur l'exercice Soulevé de Terre avec 187,25\u{00A0}kg."
             )
             ->and($stored->data['exercise_id'])->toBe($record->exercise_id);
 
@@ -115,8 +138,8 @@ describe('AchievementUnlocked::toArray', function (): void {
         $data = new AchievementUnlocked($achievement)->toArray($user);
 
         expect($data['type'])->toBe('achievement')
-            ->and($data['title'])->toBe('Succès Déverrouillé ! 🏆')
-            ->and($data['message'])->toBe('Félicitations ! Tu as déverrouillé le succès : Marathonien du Fer.')
+            ->and($data['title'])->toBe('Badge débloqué ! 🏆')
+            ->and($data['message'])->toBe('Félicitations ! Tu as débloqué le badge : Marathonien du Fer.')
             ->and($data['achievement_id'])->toBe($achievement->id)
             ->and($data['achieved_at']->format('Y-m-d H:i:s'))->toBe('2026-08-12 18:00:00');
 
@@ -135,8 +158,8 @@ describe('AchievementUnlocked::toArray', function (): void {
             ->sole();
 
         expect($stored->data['type'])->toBe('achievement')
-            ->and($stored->data['title'])->toBe('Succès Déverrouillé ! 🏆')
-            ->and($stored->data['message'])->toBe('Félicitations ! Tu as déverrouillé le succès : Première Séance.')
+            ->and($stored->data['title'])->toBe('Badge débloqué ! 🏆')
+            ->and($stored->data['message'])->toBe('Félicitations ! Tu as débloqué le badge : Première Séance.')
             ->and($stored->data['achievement_id'])->toBe($achievement->id);
 
         expect(Carbon::parse($stored->data['achieved_at'])->setTimezone(config('app.timezone'))->toDateTimeString())

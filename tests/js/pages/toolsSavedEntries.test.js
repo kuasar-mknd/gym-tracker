@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
 const post = vi.fn()
@@ -54,6 +54,7 @@ import WilksCalculator from '@/Pages/Tools/WilksCalculator.vue'
 import MacroCalculator from '@/Pages/Tools/MacroCalculator.vue'
 import WaterTracker from '@/Pages/Tools/WaterTracker.vue'
 import { passesSlot } from './pageStubs'
+import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
 
 /**
  * La question est posée par un dialogue de l'application, plus par `confirm()`.
@@ -116,12 +117,63 @@ const pressed = (wrapper, text) =>
  * bin icon wired to the first entry whichever row it sits on, would have
  * shipped.
  */
+/*
+ * Sans langue, ces trois listes suivaient celle de l'appareil : « 6/15/2026 »
+ * et « 11:30 AM » sur un téléphone réglé en anglais (#1976). Midi UTC garde le
+ * 15 juin dans tous les fuseaux, et l'heure de l'eau se lit à Paris.
+ */
+describe('les dates des trois listes, sur un appareil réglé en anglais', () => {
+    const fuseauDOrigine = process.env.TZ
+    let rendre
+
+    beforeEach(() => {
+        rendre = simulerUnSystemeEnAnglais()
+        process.env.TZ = 'Europe/Paris'
+    })
+
+    afterEach(() => {
+        rendre()
+        process.env.TZ = fuseauDOrigine
+    })
+
+    const entree = { id: 1, created_at: '2026-06-15T12:00:00Z' }
+
+    it('date le score de Wilks en jour/mois/année', async () => {
+        const wrapper = await mountPage(WilksCalculator, {
+            history: [{ ...entree, score: '412.678', lifted_weight: '600.0', body_weight: '90.5', unit: 'kg' }],
+        })
+
+        expect(wrapper.text()).toContain('15/06/2026')
+        expect(wrapper.text()).not.toContain('6/15/2026')
+    })
+
+    it('date le calcul de macros en jour/mois/année', async () => {
+        const wrapper = await mountPage(MacroCalculator, {
+            history: [{ ...entree, target_calories: 2100, protein: 180, carbs: 210, fat: 60, goal: 'cut' }],
+        })
+
+        expect(wrapper.text()).toContain('15/06/2026')
+        expect(wrapper.text()).not.toContain('6/15/2026')
+    })
+
+    it('donne l’heure d’un verre sur vingt-quatre heures', async () => {
+        const wrapper = await mountPage(WaterTracker, {
+            logs: [{ id: 2, amount: 250, consumed_at: '2026-06-15T09:30:00Z' }],
+            todayTotal: 250,
+            history: [],
+        })
+
+        expect(wrapper.text()).toContain('11:30')
+        expect(wrapper.text()).not.toMatch(/AM|PM/)
+    })
+})
+
 describe('the Wilks history', () => {
     /*
-     * 12:00 UTC on purpose. The row prints `toLocaleDateString()`, so the day
-     * and the format follow whatever zone and locale the run happens to have;
-     * only the year survives every offset from -12 to +14, and that is all this
-     * assertion leans on.
+     * 12:00 UTC on purpose. The row prints the day in fr-FR (`dateCourte()`),
+     * but the day itself follows whatever zone the run happens to have; only
+     * the year survives every offset from -12 to +14, and that is all this
+     * assertion leans on. The format is held under an English locale above.
      */
     const entries = [
         {

@@ -56,7 +56,9 @@
                                             <span v-if="set.label">{{ set.label }}</span>
                                             <span v-else>{{ pourcentage(set.percent, 0) }} du max</span>
                                         </p>
-                                        <p class="text-text-muted text-xs">{{ set.reps }} répétitions</p>
+                                        <p class="text-text-muted text-xs">
+                                            {{ compte(set.reps, 'répétition', 'répétitions') }}
+                                        </p>
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -187,7 +189,7 @@ import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
-import { nombre, pourcentage } from '@/Utils/nombre'
+import { compte, nombre, pourcentage } from '@/Utils/nombre'
 
 const props = defineProps({
     preference: {

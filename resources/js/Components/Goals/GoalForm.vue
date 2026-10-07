@@ -26,7 +26,9 @@
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { demainEnJourCalendaire } from '@/Utils/date'
+import { compte } from '@/Utils/nombre'
 
 const props = defineProps({
     form: { type: Object, required: true },
@@ -37,6 +39,17 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['submit', 'cancel'])
+
+/**
+ * Le serveur n'accepte qu'une échéance à venir (`after:today`), sauf celle,
+ * déjà passée, qu'un objectif modifié garde telle quelle. Le sélecteur ne
+ * propose donc pas le passé, hormis cette échéance d'origine, que le
+ * navigateur refuserait sinon d'envoyer.
+ */
+const echeanceDOrigine = props.form.deadline
+const echeanceMinimale = computed(() =>
+    props.form.deadline && props.form.deadline === echeanceDOrigine ? undefined : demainEnJourCalendaire(),
+)
 
 const goalTypeOptions = [
     { value: 'weight', label: 'Force (Poids max)' },
@@ -84,7 +97,8 @@ watch(
                 props.form.title = `Atteindre ${props.form.target_value || '?'} ${unit} de ${measurement.label}`
             }
         } else if (props.form.type === 'frequency') {
-            props.form.title = `Atteindre ${props.form.target_value || '?'} séances au total`
+            const seances = props.form.target_value ? compte(props.form.target_value, 'séance', 'séances') : '? séances'
+            props.form.title = `Atteindre ${seances} au total`
         }
     },
 )
@@ -129,6 +143,7 @@ watch(
                     v-model="form.deadline"
                     label="Échéance (Optionnel)"
                     type="date"
+                    :min="echeanceMinimale"
                     :error="form.errors.deadline"
                 />
             </div>

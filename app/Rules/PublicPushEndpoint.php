@@ -19,6 +19,10 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * privées, le lien-local — et le point d'accès de métadonnées du nuage. SSRF
  * aveugle : la réponse ne revient jamais à l'appelant, mais la requête, elle,
  * est bien partie.
+ *
+ * Ses messages nomment le champ par `:attribute`, que `lang/fr/validation.php`
+ * traduit en « adresse de l'abonnement » : le profil affiche le message tel
+ * quel, et il citait la clef anglaise (#1975).
  */
 class PublicPushEndpoint implements ValidationRule
 {
@@ -28,7 +32,7 @@ class PublicPushEndpoint implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (! is_string($value)) {
-            $fail('L\'endpoint doit être une URL.');
+            $fail('Le champ :attribute doit être une URL.');
 
             return;
         }
@@ -36,7 +40,7 @@ class PublicPushEndpoint implements ValidationRule
         $parts = parse_url($value);
 
         if ($parts === false || ($parts['scheme'] ?? null) !== 'https' || ! isset($parts['host'])) {
-            $fail('L\'endpoint doit être une URL https.');
+            $fail('Le champ :attribute doit être une URL https.');
 
             return;
         }
@@ -58,14 +62,14 @@ class PublicPushEndpoint implements ValidationRule
          * n'enregistre d'abonnement — plutot qu'un controle qui ment.
          */
         if ($adresses === []) {
-            $fail('L\'endpoint doit désigner un hôte joignable et public.');
+            $fail('Le champ :attribute doit désigner un hôte joignable et public.');
 
             return;
         }
 
         foreach ($adresses as $address) {
             if ($this->isReserved($address)) {
-                $fail('L\'endpoint doit désigner un hôte public.');
+                $fail('Le champ :attribute doit désigner un hôte public.');
 
                 return;
             }

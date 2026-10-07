@@ -49,6 +49,84 @@ class BodyPartMeasurement extends BaseMeasurement
         'Calf R',
     ];
 
+    /**
+     * Le nom affiché de chaque partie proposée.
+     *
+     * La clef reste anglaise en base : les mesures déjà saisies et les
+     * objectifs qui les suivent s'y rapportent (#1657). Ce qui manquait, c'est
+     * le nom qu'on lit à l'écran, où « Waist » ou « Thigh L » ne disaient rien
+     * à un francophone (#1974). Une partie saisie librement s'affiche telle
+     * quelle.
+     *
+     * @var array<string, string>
+     */
+    public const array LIBELLES = [
+        'Neck' => 'Cou',
+        'Shoulders' => 'Épaules',
+        'Chest' => 'Poitrine',
+        'Biceps L' => 'Biceps gauche',
+        'Biceps R' => 'Biceps droit',
+        'Forearm L' => 'Avant-bras gauche',
+        'Forearm R' => 'Avant-bras droit',
+        'Waist' => 'Taille',
+        'Hips' => 'Hanches',
+        'Thigh L' => 'Cuisse gauche',
+        'Thigh R' => 'Cuisse droite',
+        'Calf L' => 'Mollet gauche',
+        'Calf R' => 'Mollet droit',
+    ];
+
+    /**
+     * Le nom à afficher pour une partie : le français d'une partie proposée,
+     * le nom saisi pour toute autre.
+     *
+     * La comparaison ignore la casse, comme la collation de la colonne, qui
+     * range « waist » avec « Waist ».
+     */
+    public static function libelle(string $partie): string
+    {
+        return array_change_key_case(self::LIBELLES)[strtolower($partie)] ?? $partie;
+    }
+
+    /**
+     * Le nom à afficher pour une partie, parmi celles que le compte mesure.
+     *
+     * Avant les noms français, un francophone a pu saisir « Taille » à la
+     * main. S'il mesure aussi la partie proposée, `Waist` s'affiche « Taille »
+     * elle aussi : la partie saisie à la main porte alors la mention « (saisie
+     * libre) », sur sa carte comme sur sa page, pour que les deux historiques
+     * se distinguent (#1974).
+     *
+     * @param  iterable<string>  $partiesDuCompte
+     */
+    public static function libelleParmi(string $partie, iterable $partiesDuCompte): string
+    {
+        $clef = self::clefDePartie($partie);
+
+        if ($clef === $partie) {
+            return self::libelle($partie);
+        }
+
+        $laClefEstMesuree = in_array(strtolower($clef), array_map(strtolower(...), [...$partiesDuCompte]), true);
+
+        return $laClefEstMesuree ? $partie.' (saisie libre)' : $partie;
+    }
+
+    /**
+     * La clef d'une partie proposée dont on a saisi le nom français
+     * (« Taille », « mollet gauche »), ou la saisie telle quelle.
+     *
+     * Le formulaire affiche les noms français : sans ce retour à la clef, la
+     * mesure saisie sous « Taille » serait rangée à part de celles de
+     * « Waist », et l'objectif sur le tour de taille ne la verrait jamais.
+     */
+    public static function clefDePartie(string $saisie): string
+    {
+        $clefsParLibelle = array_flip(array_map(mb_strtolower(...), self::LIBELLES));
+
+        return $clefsParLibelle[mb_strtolower(trim($saisie))] ?? $saisie;
+    }
+
     #[\Override]
     protected $fillable = [
         'user_id',

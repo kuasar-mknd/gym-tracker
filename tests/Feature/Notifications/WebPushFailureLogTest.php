@@ -93,7 +93,7 @@ it('journalise un envoi refusé, avec de quoi le diagnostiquer', function (): vo
             && $contexte['statut'] === 410
             && $contexte['expire'] === true
             && $contexte['raison'] === 'Gone'
-            && $contexte['titre'] === 'Nouveau Record ! 🏆');
+            && $contexte['titre'] === 'Nouveau record ! 🏆');
 });
 
 it('ne recopie pas le point de terminaison, qui est une capacité', function (): void {

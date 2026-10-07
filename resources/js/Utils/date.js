@@ -1,4 +1,14 @@
 /**
+ * La langue des dates de l'application.
+ *
+ * Les nombres sont suisses (`Utils/nombre.js`), les dates françaises : l'ordre
+ * jour/mois/année et les noms de jours et de mois de `fr-FR`. Un appel sans
+ * langue suit celle du navigateur, et l'échéance d'un objectif au 4 octobre
+ * s'écrivait « 10/4/2026 » sur un téléphone réglé en anglais (#1976).
+ */
+export const LANGUE_DES_DATES = 'fr-FR'
+
+/**
  * Reads a calendar day (`YYYY-MM-DD`) as local midnight.
  *
  * `new Date('2026-07-31')` is specified to parse as midnight *UTC*, while
@@ -33,11 +43,36 @@ export function parseCalendarDate(value) {
  * @returns {string} Today, as YYYY-MM-DD.
  */
 export function todayAsCalendarDate() {
-    const now = new Date()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
+    return enJourCalendaire(new Date())
+}
 
-    return `${now.getFullYear()}-${month}-${day}`
+/**
+ * Demain comme jour calendaire (`AAAA-MM-JJ`), dans le fuseau du navigateur.
+ *
+ * Sert de `min` aux champs qui n'acceptent qu'une date à venir, comme
+ * l'échéance d'un objectif (`after:today` côté serveur) : sans lui, le
+ * sélecteur proposait le passé, que le serveur refusait ensuite.
+ *
+ * @returns {string} Demain, en AAAA-MM-JJ.
+ */
+export function demainEnJourCalendaire() {
+    const demain = new Date()
+    demain.setDate(demain.getDate() + 1)
+
+    return enJourCalendaire(demain)
+}
+
+/**
+ * Le jour local d'une date, en `AAAA-MM-JJ` complété de zéros.
+ *
+ * @param {Date} date
+ * @returns {string}
+ */
+function enJourCalendaire(date) {
+    const mois = String(date.getMonth() + 1).padStart(2, '0')
+    const jour = String(date.getDate()).padStart(2, '0')
+
+    return `${date.getFullYear()}-${mois}-${jour}`
 }
 
 /**
@@ -98,6 +133,44 @@ export function etiquetteDeDate(valeur) {
               : new Date(valeur)
 
     return date && !Number.isNaN(date.getTime())
-        ? date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+        ? date.toLocaleDateString(LANGUE_DES_DATES, { day: '2-digit', month: '2-digit' })
         : undefined
 }
+
+const estUneDate = (date) => date instanceof Date && !Number.isNaN(date.getTime())
+
+/**
+ * Une date courte : `04/10/2026`.
+ *
+ * Reçoit une `Date` : un jour calendaire se lit par `parseCalendarDate()`, un
+ * horodatage par `new Date()`, et c'est à l'appelant de dire lequel.
+ *
+ * @param {Date|null|undefined} date
+ * @returns {string} La date, ou une chaîne vide si elle manque ou ne se lit pas.
+ */
+export const dateCourte = (date) => (estUneDate(date) ? date.toLocaleDateString(LANGUE_DES_DATES) : '')
+
+/**
+ * Une date avec son jour de la semaine : `dim. 4 oct. 2026`.
+ *
+ * @param {Date|null|undefined} date
+ * @returns {string}
+ */
+export const dateAvecJour = (date) =>
+    estUneDate(date)
+        ? date.toLocaleDateString(LANGUE_DES_DATES, {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+          })
+        : ''
+
+/**
+ * Une heure : `14:30`, jamais `02:30 PM`.
+ *
+ * @param {Date|null|undefined} date
+ * @returns {string}
+ */
+export const heureCourte = (date) =>
+    estUneDate(date) ? date.toLocaleTimeString(LANGUE_DES_DATES, { hour: '2-digit', minute: '2-digit' }) : ''

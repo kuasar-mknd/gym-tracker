@@ -129,8 +129,7 @@ const updatePreferences = () => {
                         <div>
                             <h4 class="text-text-main text-sm font-semibold">Activer les notifications Push</h4>
                             <p class="text-text-muted text-xs">
-                                Recevez des alertes en temps réel sur votre appareil, même quand l'application est
-                                fermée.
+                                Reçois des alertes en temps réel sur ton appareil, même quand l'application est fermée.
                             </p>
                         </div>
                         <GlassButton
@@ -146,7 +145,7 @@ const updatePreferences = () => {
                 </div>
 
                 <div v-else-if="!pushSupported" class="text-text-muted/50 mb-6 text-xs italic">
-                    Les notifications push ne sont pas supportées par votre navigateur.
+                    Ton navigateur ne prend pas en charge les notifications push.
                 </div>
 
                 <div v-else-if="pushSupported && !vapidPublicKey" class="text-accent-warning-deep mb-6 text-xs italic">
@@ -158,7 +157,7 @@ const updatePreferences = () => {
                     <GlassToggle
                         v-model="form.preferences.personal_record"
                         label="Records Personnels (PR)"
-                        description="Être notifié quand vous battez un record."
+                        description="Être prévenu quand tu bats un record."
                     />
 
                     <!-- La case est dans son libellé : il la nomme, et toucher le texte la

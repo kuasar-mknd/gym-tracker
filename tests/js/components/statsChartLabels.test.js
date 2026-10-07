@@ -98,6 +98,15 @@ describe('BodyPartDiffChart tooltip', () => {
     it('prints no unit rather than "undefined" for a part it cannot find', () => {
         expect(labelFor('Inconnu', 3)).toBe('+3 ')
     })
+
+    // L'étiquette survolée est le nom affiché (« Taille »), pas la clef (#1974).
+    it('retrouve l’unité d’une partie par son nom affiché', () => {
+        const nommees = mount(BodyPartDiffChart, {
+            props: { data: [{ part: 'Waist', label: 'Taille', diff: -1.5, unit: 'in' }] },
+        })
+
+        expect(tooltipOf(nommees, 'Bar').callbacks.label({ label: 'Taille', parsed: { x: -1.5 } })).toBe('-1.5 in')
+    })
 })
 
 describe('BodyFatLineChart tooltip', () => {

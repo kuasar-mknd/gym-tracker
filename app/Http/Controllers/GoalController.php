@@ -46,10 +46,11 @@ class GoalController extends Controller
     /**
      * Les deux premières se lisent dans une COLONNE de `body_measurements` ; les
      * suivantes dans une LIGNE de `body_part_measurements`, désignée par son nom
-     * de partie. Le nom sert donc de valeur, tel qu'il est proposé à la saisie —
-     * aucun tableau de correspondance à tenir à jour, et la collation
-     * `utf8mb4_unicode_ci` de la colonne fait le rapprochement quelle que soit
-     * la casse, sans fonction qui écarterait l'index.
+     * de partie. Le nom sert donc de valeur, tel qu'il est rangé en base, et la
+     * collation `utf8mb4_unicode_ci` de la colonne fait le rapprochement quelle
+     * que soit la casse, sans fonction qui écarterait l'index. Le libellé est
+     * son nom français (`BodyPartMeasurement::libelle()`) : « Waist » ne disait
+     * rien à côté de « Poids de corps » (#1974).
      *
      * @return list<array{value: string, label: string}>
      */
@@ -58,7 +59,7 @@ class GoalController extends Controller
         return array_merge(
             self::MEASUREMENT_TYPES,
             array_map(
-                static fn (string $partie): array => ['value' => $partie, 'label' => $partie],
+                static fn (string $partie): array => ['value' => $partie, 'label' => \App\Models\BodyPartMeasurement::libelle($partie)],
                 \App\Models\BodyPartMeasurement::COMMON_PARTS
             )
         );

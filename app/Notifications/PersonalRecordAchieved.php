@@ -15,6 +15,11 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * Le titre de la notification, au centre de notifications comme en push.
+     */
+    private const string TITRE = 'Nouveau record ! 🏆';
+
     public function __construct(public PersonalRecord $personalRecord)
     {
     }
@@ -40,7 +45,7 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     public function toWebPush(object $_notifiable, $_notification): WebPushMessage
     {
         return new WebPushMessage()
-            ->title('Nouveau Record ! 🏆')
+            ->title(self::TITRE)
             ->icon('/pwa-192x192.png')
             /** @phpstan-ignore-next-line */
             ->body((string) ($this->toArray($_notifiable)['message'] ?? ''))
@@ -49,23 +54,46 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     }
 
     /**
+     * Le message est composé ici, et le centre de notifications comme le push
+     * l'affichent tel quel : la valeur suit donc le format que
+     * `resources/js/Utils/nombre.js` donne aux poids dans le reste de
+     * l'application (`poidsEnTexte()`), et non le `decimal:2` de la colonne,
+     * qui écrivait « 102.50kg ».
+     *
      * @return array<string, \Illuminate\Support\Carbon|int|string|bool|float|array<int, mixed>|null>
      */
     public function toArray(object $_notifiable): array
     {
         $typeLabel = match ($this->personalRecord->type) {
-            \App\Enums\PersonalRecordType::MaxWeight => 'Poids Maximum',
-            \App\Enums\PersonalRecordType::Max1RM => '1RM Estimé',
-            \App\Enums\PersonalRecordType::MaxVolumeSet => 'Volume par Série',
-            default => 'Record Personnel',
+            \App\Enums\PersonalRecordType::MaxWeight => 'poids maximum',
+            \App\Enums\PersonalRecordType::Max1RM => '1RM estimé',
+            \App\Enums\PersonalRecordType::MaxVolumeSet => 'volume par série',
+            default => 'record personnel',
         };
+
+        $valeur = self::poidsEnTexte((float) $this->personalRecord->value);
 
         return [
             'type' => 'personal_record',
-            'title' => 'Nouveau Record ! 🏆',
-            'message' => "Félicitations ! Tu as battu ton record de {$typeLabel} sur l'exercice {$this->personalRecord->exercise->name} avec {$this->personalRecord->value}kg.",
+            'title' => self::TITRE,
+            'message' => "Félicitations ! Tu as battu ton record de {$typeLabel} sur l'exercice {$this->personalRecord->exercise->name} avec {$valeur}\u{00A0}kg.",
             'exercise_id' => $this->personalRecord->exercise_id,
             'achieved_at' => $this->personalRecord->achieved_at,
         ];
+    }
+
+    /**
+     * Un poids comme `nombre(kilos, 2)` de `resources/js/Utils/nombre.js` :
+     * virgule décimale, au plus deux décimales, sans zéro inutile, et les
+     * milliers séparés par l'apostrophe de `fr-CH` (« 1'250,5 »).
+     *
+     * Le format est écrit ici plutôt que demandé à l'ICU du serveur : selon
+     * la version de ses données, `fr_CH` y sépare les milliers par une espace
+     * fine, si bien que la notification écrivait « 1 250,5 kg » quand le reste
+     * de l'application écrit « 1'250,5 kg » (#1981).
+     */
+    private static function poidsEnTexte(float $kilos): string
+    {
+        return rtrim(rtrim(number_format($kilos, 2, ',', "'"), '0'), ',');
     }
 }

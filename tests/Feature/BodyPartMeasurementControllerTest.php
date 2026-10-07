@@ -64,7 +64,8 @@ test('user can store a new body part measurement', function (): void {
             'measured_at' => now()->format('Y-m-d'),
             'notes' => 'Testing measurement',
         ])
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Mesure ajoutée.');
 
     assertDatabaseHas('body_part_measurements', [
         'user_id' => $user->id,
@@ -98,7 +99,8 @@ test('user can delete their own body part measurement', function (): void {
 
     actingAs($user)
         ->delete(route('body-parts.destroy', $measurement))
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Mesure supprimée.');
 
     assertDatabaseMissing('body_part_measurements', [
         'id' => $measurement->id,

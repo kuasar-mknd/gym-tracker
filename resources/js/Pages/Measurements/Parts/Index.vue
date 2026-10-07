@@ -8,7 +8,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
-import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
+import { dateCourte, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassChip from '@/Components/UI/GlassChip.vue'
 import { nombre, variation } from '@/Utils/nombre'
 
@@ -38,8 +38,12 @@ const submit = () => {
     })
 }
 
+/**
+ * La pastille écrit le nom français dans le champ : c'est lui qu'on lit, et le
+ * serveur le range sous la clef de la partie (« Taille » → `Waist`).
+ */
 const selectCommonPart = (part) => {
-    form.part = part
+    form.part = part.label
 }
 </script>
 
@@ -81,18 +85,18 @@ const selectCommonPart = (part) => {
                         <div class="mb-2 flex flex-wrap gap-2">
                             <GlassChip
                                 v-for="part in commonParts"
-                                :key="part"
+                                :key="part.value"
                                 size="sm"
-                                :active="form.part === part"
+                                :active="form.part === part.label"
                                 @click="selectCommonPart(part)"
                             >
-                                {{ part }}
+                                {{ part.label }}
                             </GlassChip>
                         </div>
                         <GlassInput
                             id="mesure-partie-du-corps"
                             v-model="form.part"
-                            placeholder="Ex: Waist"
+                            placeholder="Ex. : Taille"
                             :error="form.errors.part"
                             required
                         />
@@ -157,7 +161,7 @@ const selectCommonPart = (part) => {
                     >
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="titre-carte">{{ item.part }}</h3>
+                                <h3 class="titre-carte">{{ item.label ?? item.part }}</h3>
                                 <div
                                     class="from-accent-tertiary to-accent-secondary mt-1 bg-gradient-to-r bg-clip-text text-2xl font-bold text-transparent"
                                 >
@@ -165,7 +169,7 @@ const selectCommonPart = (part) => {
                                     <span class="text-text-muted text-sm">{{ item.unit }}</span>
                                 </div>
                                 <div class="text-text-muted mt-1 text-xs">
-                                    {{ parseCalendarDate(item.date)?.toLocaleDateString() }}
+                                    {{ dateCourte(parseCalendarDate(item.date)) }}
                                 </div>
                             </div>
                             <div
