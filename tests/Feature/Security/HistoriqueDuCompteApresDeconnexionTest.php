@@ -57,15 +57,16 @@ function historiquePageDe(TestResponse $reponse): array
 }
 
 /**
- * Les en-têtes d'une visite Inertia, à la version des actifs du serveur.
+ * Les en-têtes d'une visite Inertia, à la version des actifs du serveur ou à
+ * celle qu'annonce une page périmée (#1967).
  *
  * @return array<string, string>
  */
-function historiqueEntetesDeVisite(): array
+function historiqueEntetesDeVisite(?string $version = null): array
 {
     return [
         'X-Inertia' => 'true',
-        'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
+        'X-Inertia-Version' => $version ?? (string) app(HandleInertiaRequests::class)->version(request()),
         'X-Requested-With' => 'XMLHttpRequest',
         'Accept' => 'text/html, application/xhtml+xml',
     ];
@@ -374,6 +375,72 @@ it('pose le même cache sur la séance d’un autre que sur une séance absente'
 
     expect($refusee->headers->get('Cache-Control'))->toBe($absente->headers->get('Cache-Control'))
         ->and($refusee->headers->get('Cache-Control'))->toBe('no-store, private');
+});
+
+/*
+ * La première visite après chaque mise à jour du worker annonce une version
+ * d'actifs périmée (#1967) : le serveur répond 409, et Inertia charge la page
+ * en entier. Inertia retirait la consigne de la session en construisant la
+ * page que le 409 remplace, et la page complète ne la portait plus.
+ */
+it('rend la consigne à la page complète qu’Inertia charge après le 409 d’une version périmée', function (Closure $finirLaSession): void {
+    $compte = historiqueCompteParti();
+    $appareil = historiqueAppareilConnecte($compte);
+
+    $appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite())->assertOk();
+
+    /** @var TestResponse<Response> $reponse */
+    $reponse = $finirLaSession($compte, $appareil);
+
+    for ($etape = 0; $reponse->isRedirect() && $etape < 5; $etape++) {
+        $reponse = $appareil->envoyer('GET', (string) $reponse->headers->get('Location'), [], historiqueEntetesDeVisite('perimee'));
+    }
+
+    $reponse->assertStatus(409);
+
+    // Inertia charge l'adresse du 409 en document complet, et le navigateur suit les redirections.
+    $document = $appareil->envoyer('GET', (string) $reponse->headers->get('X-Inertia-Location'));
+
+    for ($etape = 0; $document->isRedirect() && $etape < 5; $etape++) {
+        $document = $appareil->envoyer('GET', (string) $document->headers->get('Location'));
+    }
+
+    $suivant = $appareil->envoyer('GET', 'https://gym.example.org/login');
+
+    $document->assertOk();
+
+    expect(historiquePageDe($document)['component'])->toBe('Auth/Login')
+        ->and(historiquePageDe($document)['clearHistory'] ?? false)->toBeTrue()
+        ->and(historiquePageDe($suivant))->not->toHaveKey('clearHistory');
+})->with([
+    'un mot de passe changé depuis un autre appareil' => [function (User $compte, Appareil $appareil): TestResponse {
+        $compte->forceFill(['password' => Hash::make('un-autre-mot-de-passe')])->save();
+
+        return $appareil->envoyer('GET', 'https://gym.example.org/dashboard', [], historiqueEntetesDeVisite('perimee'));
+    }],
+    'une session expirée' => [function (User $compte, Appareil $appareil): TestResponse {
+        $appareil->oublierLeCookie(config()->string('session.cookie'));
+
+        return $appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite('perimee'));
+    }],
+    'la déconnexion' => [fn (User $compte, Appareil $appareil): TestResponse => $appareil->envoyer('POST', 'https://gym.example.org/logout', [], historiqueEntetesDeVisite('perimee'))],
+]);
+
+it('n’invente pas la consigne pour le 409 d’une page qui ne la portait pas', function (): void {
+    $compte = historiqueCompteParti();
+    $appareil = historiqueAppareilConnecte($compte);
+
+    $appareil->envoyer('GET', 'https://gym.example.org/daily-journals', [], historiqueEntetesDeVisite())->assertOk();
+
+    $appareil->envoyer('GET', 'https://gym.example.org/profile', [], historiqueEntetesDeVisite('perimee'))
+        ->assertStatus(409);
+
+    $document = $appareil->envoyer('GET', 'https://gym.example.org/profile');
+
+    $document->assertOk();
+
+    expect(historiquePageDe($document))->not->toHaveKey('clearHistory')
+        ->and(historiquePageDe($document)['encryptHistory'] ?? false)->toBeTrue();
 });
 
 /*

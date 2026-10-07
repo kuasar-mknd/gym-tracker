@@ -10,6 +10,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Middleware;
+use Inertia\Support\Header;
 use Symfony\Component\HttpFoundation\IpUtils;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -109,8 +110,9 @@ class HandleInertiaRequests extends Middleware
      *
      * Une session neuve n'a pas de titulaire : sa première page jette la clé,
      * sans effet quand il n'y en avait pas. La consigne passe par la session,
-     * et une réponse qui ne rend pas de page la laisse à la suivante. Le même
-     * compte, lui, garde sa clé d'une page à l'autre.
+     * et une réponse qui ne rend pas de page la laisse à la suivante, comme le
+     * 409 d'un changement de version (`onVersionChange()`). Le même compte,
+     * lui, garde sa clé d'une page à l'autre.
      */
     private function jeterLaCleQuandLeTitulaireChange(Request $request, ?Authenticatable $compte): void
     {
@@ -128,6 +130,41 @@ class HandleInertiaRequests extends Middleware
         $session->put(self::TITULAIRE_DE_L_HISTORIQUE, $titulaire);
 
         Inertia::clearHistory();
+    }
+
+    /**
+     * Rend la consigne `clearHistory` à la page complète qui suit un 409 de
+     * changement de version (#1965, #1967).
+     *
+     * Inertia retire la consigne de la session dès que le contrôleur construit
+     * la page, puis le middleware remplace cette page par le 409 quand la
+     * visite annonce une autre version d'actifs, ce que fait la première
+     * navigation après chaque mise à jour du worker (`perimee`). Sans ceci, la
+     * page complète qu'Inertia charge ensuite ne la portait plus, et une session
+     * terminée ailleurs laissait sa clé dans l'onglet.
+     */
+    #[\Override]
+    public function onVersionChange(Request $request, Response $response): Response
+    {
+        if ($this->laPageJetaitLaCle($response)) {
+            Inertia::clearHistory();
+        }
+
+        return parent::onVersionChange($request, $response);
+    }
+
+    /**
+     * Si la réponse remplacée est une page Inertia qui portait `clearHistory`.
+     */
+    private function laPageJetaitLaCle(Response $reponse): bool
+    {
+        if ($reponse->headers->get(Header::INERTIA) !== 'true') {
+            return false;
+        }
+
+        $page = json_decode((string) $reponse->getContent(), true);
+
+        return is_array($page) && ($page['clearHistory'] ?? false) === true;
     }
 
     /**
