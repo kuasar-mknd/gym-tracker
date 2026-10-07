@@ -85,13 +85,7 @@ class BodyPartMeasurement extends BaseMeasurement
      */
     public static function libelle(string $partie): string
     {
-        foreach (self::LIBELLES as $clef => $libelle) {
-            if (strcasecmp($clef, $partie) === 0) {
-                return $libelle;
-            }
-        }
-
-        return $partie;
+        return array_change_key_case(self::LIBELLES)[strtolower($partie)] ?? $partie;
     }
 
     /**
@@ -113,13 +107,9 @@ class BodyPartMeasurement extends BaseMeasurement
             return self::libelle($partie);
         }
 
-        foreach ($partiesDuCompte as $autre) {
-            if (strcasecmp($autre, $clef) === 0) {
-                return $partie.' (saisie libre)';
-            }
-        }
+        $laClefEstMesuree = in_array(strtolower($clef), array_map(strtolower(...), [...$partiesDuCompte]), true);
 
-        return $partie;
+        return $laClefEstMesuree ? $partie.' (saisie libre)' : $partie;
     }
 
     /**
@@ -132,15 +122,9 @@ class BodyPartMeasurement extends BaseMeasurement
      */
     public static function clefDePartie(string $saisie): string
     {
-        $cherche = mb_strtolower(trim($saisie));
+        $clefsParLibelle = array_flip(array_map(mb_strtolower(...), self::LIBELLES));
 
-        foreach (self::LIBELLES as $clef => $libelle) {
-            if (mb_strtolower($libelle) === $cherche) {
-                return $clef;
-            }
-        }
-
-        return $saisie;
+        return $clefsParLibelle[mb_strtolower(trim($saisie))] ?? $saisie;
     }
 
     #[\Override]

@@ -7,7 +7,6 @@ namespace App\Http\Requests;
 use App\Enums\GoalType;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\BodyPartMeasurement;
-use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 class BodyPartMeasurementStoreRequest extends FormRequest
@@ -46,22 +45,23 @@ class BodyPartMeasurementStoreRequest extends FormRequest
 
         $partie = $this->input('part');
 
-        if (! is_string($partie)) {
-            return;
+        if (is_string($partie)) {
+            $this->merge(['part' => $this->partieARanger($partie)]);
         }
+    }
 
+    /**
+     * Le nom sous lequel ranger la mesure : la clef d'une partie proposée
+     * saisie en français, sauf quand le compte tient déjà un historique sous
+     * le nom saisi et que la page le demande ou que rien ne suit la clef.
+     */
+    private function partieARanger(string $partie): string
+    {
         $clef = BodyPartMeasurement::clefDePartie($partie);
+        $garderLeNomSaisi = $clef === $partie
+            || ($this->leCompteMesureDejaLaPartie($partie) && ($this->boolean('keep_part_name') || ! $this->leCompteSuitLaClef($clef)));
 
-        if ($clef === $partie) {
-            return;
-        }
-
-        if ($this->leCompteMesureDejaLaPartie($partie)
-            && ($this->boolean('keep_part_name') || ! $this->leCompteSuitLaClef($clef))) {
-            return;
-        }
-
-        $this->merge(['part' => $clef]);
+        return $garderLeNomSaisi ? $partie : $clef;
     }
 
     /**
@@ -69,10 +69,7 @@ class BodyPartMeasurementStoreRequest extends FormRequest
      */
     private function leCompteMesureDejaLaPartie(string $partie): bool
     {
-        $utilisateur = $this->user();
-
-        return $utilisateur instanceof User
-            && $utilisateur->bodyPartMeasurements()->where('part', $partie)->exists();
+        return $this->user('web')?->bodyPartMeasurements()->where('part', $partie)->exists() === true;
     }
 
     /**
@@ -82,17 +79,11 @@ class BodyPartMeasurementStoreRequest extends FormRequest
      */
     private function leCompteSuitLaClef(string $clef): bool
     {
-        $utilisateur = $this->user();
-
-        if (! $utilisateur instanceof User) {
-            return false;
-        }
-
         return $this->leCompteMesureDejaLaPartie($clef)
-            || $utilisateur->goals()
+            || $this->user('web')?->goals()
                 ->where('type', GoalType::Measurement)
                 ->where('measurement_type', $clef)
-                ->exists();
+                ->exists() === true;
     }
 
     /**
