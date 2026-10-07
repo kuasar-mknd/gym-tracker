@@ -20,6 +20,23 @@ use Symfony\Component\Yaml\Yaml;
  */
 
 /**
+ * Les fichiers de `.github/workflows`, en `.yml` comme en `.yaml`.
+ *
+ * @return list<string>
+ */
+function cheminsDesWorkflows(): array
+{
+    $workflows = [];
+
+    foreach (['yml', 'yaml'] as $extension) {
+        $trouves = glob(base_path(".github/workflows/*.{$extension}"));
+        $workflows = [...$workflows, ...($trouves === false ? [] : $trouves)];
+    }
+
+    return $workflows;
+}
+
+/**
  * Chaque `uses:` des workflows, tel qu'il est écrit, avec le commentaire qui le
  * suit : Symfony Yaml jette les commentaires, et c'est là que se lit la version
  * d'une action épinglée par commit.
@@ -29,14 +46,8 @@ use Symfony\Component\Yaml\Yaml;
 function actionsDesWorkflowsReferencees(): array
 {
     $references = [];
-    $workflows = [];
 
-    foreach (['yml', 'yaml'] as $extension) {
-        $trouves = glob(base_path(".github/workflows/*.{$extension}"));
-        $workflows = [...$workflows, ...($trouves === false ? [] : $trouves)];
-    }
-
-    foreach ($workflows as $chemin) {
+    foreach (cheminsDesWorkflows() as $chemin) {
         $lignes = file($chemin);
 
         foreach ($lignes === false ? [] : $lignes as $index => $ligne) {
@@ -114,6 +125,102 @@ function actionTruffleHogDeLaCi(): array
     }
 
     return ['etape' => $etape, 'reference' => $reference];
+}
+
+/**
+ * Les images que lance chaque `docker run` d'un script d'étape : les lignes
+ * continuées par `\` sont rejointes, les options de `docker run` sautées, et
+ * une image passée par une variable (`"$image"`) est remplacée par la valeur
+ * que le script lui donne. Une variable que le script ne pose pas reste telle
+ * quelle, et n'est donc pas figée.
+ *
+ * @return list<string>
+ */
+function imagesDesDockerRunDuScript(string $script): array
+{
+    $sansCommentaires = (string) preg_replace('/^\s*#.*$/m', '', $script);
+    $joint = (string) preg_replace('/\\\\\r?\n/', ' ', $sansCommentaires);
+    $sansValeur = ['--rm', '-d', '--detach', '-i', '--interactive', '-t', '--tty', '-it', '-dit', '--init', '--read-only', '--privileged', '-q', '--quiet'];
+    $images = [];
+
+    preg_match_all('/\bdocker\s+run\b(.*)$/m', $joint, $commandes);
+
+    foreach ($commandes[1] as $suite) {
+        preg_match_all('/(?:"(?:[^"\\\\]|\\\\.)*"|\'[^\']*\'|[^\s"\'])+/', $suite, $jetons);
+        $attendValeur = false;
+
+        foreach ($jetons[0] as $jeton) {
+            if ($attendValeur) {
+                $attendValeur = false;
+
+                continue;
+            }
+
+            if (str_starts_with($jeton, '-')) {
+                $attendValeur = ! in_array($jeton, $sansValeur, true) && ! str_contains($jeton, '=');
+
+                continue;
+            }
+
+            $image = trim($jeton, '"\'');
+
+            if (preg_match('/^\$\{?(\w+)\}?$/', $image, $variable) === 1
+                && preg_match_all('/(?:^|[\s;])'.$variable[1].'=("[^"]*"|\'[^\']*\'|\S+)/m', $joint, $affectations) > 0) {
+                $image = trim((string) end($affectations[1]), '"\'');
+            }
+
+            $images[] = $image;
+
+            break;
+        }
+    }
+
+    return $images;
+}
+
+/**
+ * Chaque image lancée par `docker run` dans une étape des workflows.
+ *
+ * @return list<array{ou: string, image: string}>
+ */
+function imagesLanceesParLesWorkflows(): array
+{
+    $images = [];
+
+    foreach (cheminsDesWorkflows() as $chemin) {
+        $workflow = Yaml::parseFile($chemin);
+        $jobs = is_array($workflow) && is_array($workflow['jobs'] ?? null) ? $workflow['jobs'] : [];
+
+        foreach ($jobs as $job => $definition) {
+            $etapes = is_array($definition) && is_array($definition['steps'] ?? null) ? $definition['steps'] : [];
+
+            foreach ($etapes as $rang => $etape) {
+                if (! is_array($etape) || ! is_string($etape['run'] ?? null)) {
+                    continue;
+                }
+
+                $nom = is_string($etape['name'] ?? null) ? $etape['name'] : "étape {$rang}";
+
+                foreach (imagesDesDockerRunDuScript($etape['run']) as $image) {
+                    $images[] = ['ou' => basename($chemin)." > {$job} > {$nom}", 'image' => $image];
+                }
+            }
+        }
+    }
+
+    return $images;
+}
+
+/**
+ * Vrai quand l'image porte une version exacte (`1.179.0`, `v2.6.0`) ou un
+ * digest, écrit ou calculé par le script (`@sha256:$digest`, l'image que le
+ * job `build` vient de pousser). `latest`, une image sans étiquette et une
+ * étiquette flottante (`v2`, `8.4`, `8-alpine`) suivent l'éditeur sans diff.
+ */
+function imageDockerEstFigee(string $image): bool
+{
+    return preg_match('/^[^\s@]+:v?\d+\.\d+\.\d+$/', $image) === 1
+        || preg_match('/^[^\s@]+@sha256:(?:[0-9a-f]{64}|\$\{?\w+\}?)$/', $image) === 1;
 }
 
 it('référence chaque action des workflows par une version, jamais par une branche', function (): void {
@@ -197,3 +304,58 @@ it('cite dans la règle des dépendances l’image OSV que la CI lance', functio
     expect(array_unique($dansLaCi[1]))->toHaveCount(1)
         ->and(array_unique($dansLaRegle[1]))->toBe(array_unique($dansLaCi[1]));
 });
+
+/*
+ * Les images lancées par `docker run` dans une étape (Semgrep, OSV,
+ * actionlint) ne sont lues par aucun écosystème de Dependabot : seule une
+ * version exacte écrite dans le workflow les empêche de suivre l'éditeur sans
+ * diff, comme TruffleHog avant #1990. Remplacer `semgrep/semgrep:1.179.0` par
+ * `semgrep/semgrep:latest` ne faisait rougir aucune garde.
+ */
+it('lance chaque image de docker run à une version exacte', function (): void {
+    $images = imagesLanceesParLesWorkflows();
+    $mobiles = array_map(
+        fn (array $lancee): string => "{$lancee['ou']} : {$lancee['image']}",
+        array_values(array_filter($images, fn (array $lancee): bool => ! imageDockerEstFigee($lancee['image']))),
+    );
+
+    $noms = array_map(fn (array $lancee): string => (string) preg_replace('/[:@].*$/', '', $lancee['image']), $images);
+
+    expect($noms)->toContain('semgrep/semgrep', 'rhysd/actionlint', 'ghcr.io/google/osv-scanner')
+        ->and($mobiles)->toBe([], "Ces images de docker run suivent l'éditeur sans diff : leur donner une version exacte (X.Y.Z) ou un digest :\n- ".implode("\n- ", $mobiles));
+});
+
+it('lit l’image de chaque docker run comme le shell', function (string $script, array $images): void {
+    expect(imagesDesDockerRunDuScript($script))->toBe($images);
+})->with([
+    'des options à valeur avant l’image' => ["docker run --rm -v \"\$PWD\":/src -w /src semgrep/semgrep:1.179.0 \\\n  semgrep scan --config p/default .", ['semgrep/semgrep:1.179.0']],
+    'des arguments après l’image' => ['docker run --rm -v "$PWD":/repo:ro -w /repo rhysd/actionlint:1.7.12 -color', ['rhysd/actionlint:1.7.12']],
+    'une image passée par une variable' => [
+        "image=\"\$REGISTRY/\$IMAGE_NAME@sha256:\$digest\"\ndocker run -d --name app -p 8080:80 --add-host=host.docker.internal:host-gateway \\\n  -e APP_KEY=\"base64:\$(head -c 32 /dev/urandom | base64)\" \\\n  \"\$image\"",
+        ['$REGISTRY/$IMAGE_NAME@sha256:$digest'],
+    ],
+    'une variable que le script ne pose pas' => ['docker run --rm "$IMAGE" scan', ['$IMAGE']],
+    'un commentaire qui cite docker run' => ["# docker run alpine:latest\necho rien", []],
+    'deux commandes' => ["docker run --rm a/b:1.2.3 x\ndocker run -it c/d", ['a/b:1.2.3', 'c/d']],
+]);
+
+it('refuse une image de docker run qui suit l’éditeur', function (string $image): void {
+    expect(imageDockerEstFigee($image))->toBeFalse();
+})->with([
+    'latest' => ['semgrep/semgrep:latest'],
+    'sans étiquette' => ['rhysd/actionlint'],
+    'une majeure flottante' => ['ghcr.io/google/osv-scanner:v2'],
+    'une mineure flottante' => ['mysql:8.4'],
+    'une variante flottante' => ['redis:8-alpine'],
+    'une variable non résolue' => ['$IMAGE'],
+    'un digest abrégé' => ['alpine@sha256:0123abcd'],
+]);
+
+it('accepte une image de docker run à version exacte ou à digest', function (string $image): void {
+    expect(imageDockerEstFigee($image))->toBeTrue();
+})->with([
+    'une version' => ['semgrep/semgrep:1.179.0'],
+    'une version préfixée' => ['ghcr.io/google/osv-scanner:v2.6.0'],
+    'un digest écrit' => ['alpine@sha256:'.str_repeat('0123456789abcdef', 4)],
+    'le digest que le build vient de pousser' => ['$REGISTRY/$IMAGE_NAME@sha256:$digest'],
+]);
