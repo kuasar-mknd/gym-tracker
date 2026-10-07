@@ -82,4 +82,18 @@ describe('les réglages de la séance', () => {
         inertia.formulaire.patch.mock.calls[0][1].onSuccess()
         expect(reglages.showSettingsModal.value).toBe(false)
     })
+
+    it('n’envoie pas le début quand l’heure affichée n’a pas changé, pour ne pas en perdre les secondes', () => {
+        const viderLesEcritures = vi.fn()
+        const localWorkout = ref({ id: 5, name: 'Jambes', started_at: '2026-10-05T08:30:27.000000Z', notes: null })
+        const reglages = useReglagesDeLaSeance({ localWorkout, viderLesEcritures })
+
+        reglages.updateSettings()
+
+        const transformer = inertia.formulaire.transform.mock.calls[0][0]
+        const envoye = transformer({ name: 'Dos', started_at: reglages.settingsForm.started_at, notes: '' })
+
+        expect(envoye).toEqual({ name: 'Dos', notes: '' })
+        expect(transformer({ name: 'Dos', started_at: '2026-10-05T08:31', notes: '' })).toHaveProperty('started_at')
+    })
 })

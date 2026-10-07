@@ -1,5 +1,6 @@
 import SyncService from '@/Utils/SyncService'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
+import { raisonDuRefus } from '@/composables/useSaisieDeSerie'
 
 /**
  * La naissance et le retrait d'une série : l'ajout optimiste avec ce que
@@ -21,6 +22,7 @@ import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
  *   markUnsynced: (setId: unknown) => void,
  *   clearUnsynced: (setId: unknown, realId?: unknown) => void,
  *   reportSyncFailure: (message: string) => void,
+ *   bornesDUneSerie?: Record<string, number>|null,
  * }} page
  */
 export const useAjoutEtRetraitDeSerie = ({
@@ -37,6 +39,7 @@ export const useAjoutEtRetraitDeSerie = ({
     markUnsynced,
     clearUnsynced,
     reportSyncFailure,
+    bornesDUneSerie = null,
 }) => {
     /**
      * What each kind of exercise measures — the same split the set row renders.
@@ -57,6 +60,34 @@ export const useAjoutEtRetraitDeSerie = ({
      * than an empty set that could never be filled in.
      */
     const measuredFieldsFor = (exercise) => MEASURED_FIELDS_BY_TYPE[exercise?.type] ?? MEASURED_FIELDS_BY_TYPE.strength
+
+    /**
+     * Une valeur recopiée, ramenée entre zéro et le plafond de son champ.
+     *
+     * La série ajoutée reprend la dernière de la ligne, ou la recommandation du
+     * serveur. Une série enregistrée avant les plafonds d'une série
+     * (`Set::bornes()`, reçus en props) peut les dépasser : recopiée telle
+     * quelle, la création était refusée à chaque essai, et l'exercice ne
+     * pouvait plus recevoir de série. Une valeur absente, non numérique ou
+     * déjà dans les bornes reste telle quelle ; sans plafonds reçus, rien
+     * n'est ramené.
+     *
+     * @param {string} champ
+     * @param {unknown} valeur
+     * @returns {unknown}
+     */
+    const ramenerALaBorne = (champ, valeur) => {
+        const plafond = bornesDUneSerie?.[champ]
+        const nombre = Number(valeur)
+
+        if (typeof plafond !== 'number' || valeur === null || valeur === '' || !Number.isFinite(nombre)) {
+            return valeur
+        }
+
+        if (nombre > plafond) return plafond
+
+        return nombre < 0 ? 0 : valeur
+    }
 
     /**
      * The last set-create issued for each exercise, so the next one can queue behind
@@ -117,7 +148,7 @@ export const useAjoutEtRetraitDeSerie = ({
          * The pre-fills that remain are the ones the user can see and correct.
          */
         const measured = measuredFieldsFor(line.exercise)
-        const values = Object.fromEntries(measured.map((field) => [field, prefilled[field]]))
+        const values = Object.fromEntries(measured.map((field) => [field, ramenerALaBorne(field, prefilled[field])]))
 
         /**
          * Optimistic: add set immediately with a temp id. It carried the line id
@@ -186,7 +217,7 @@ export const useAjoutEtRetraitDeSerie = ({
                 if (!lastSet && recommendation === null && line.recommended_values) {
                     for (const field of measured) {
                         if (tempSet[field] === values[field]) {
-                            tempSet[field] = line.recommended_values[field] ?? tempSet[field]
+                            tempSet[field] = ramenerALaBorne(field, line.recommended_values[field] ?? tempSet[field])
                         }
                     }
                 }
@@ -279,7 +310,18 @@ export const useAjoutEtRetraitDeSerie = ({
 
                 const setIdx = line.sets.findIndex((s) => s.id === tempSet.id)
                 if (setIdx !== -1) line.sets.splice(setIdx, 1)
-                reportSyncFailure('La série n’a pas pu être ajoutée. Réessaie.')
+
+                /*
+                 * Un refus qui nomme un champ dit pourquoi, et réessayer
+                 * renverrait la même valeur : le message du serveur remplace
+                 * alors l'invitation à réessayer.
+                 */
+                const raison = measured.map((field) => raisonDuRefus(err, field)).find((message) => message !== null)
+                reportSyncFailure(
+                    raison
+                        ? `La série n’a pas pu être ajoutée. ${raison}`
+                        : 'La série n’a pas pu être ajoutée. Réessaie.',
+                )
 
                 return null
             })

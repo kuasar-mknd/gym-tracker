@@ -122,6 +122,65 @@ describe('WorkoutTemplateController', function (): void {
 
             $this->assertDatabaseMissing('workouts', ['user_id' => $user->id]);
         });
+
+        /*
+         * « Démarrer » renvoyait déjà vers la séance ouverte ; démarrer un
+         * modèle en ouvrait une deuxième, que le bandeau cachait derrière la
+         * plus récente (#1958).
+         */
+        it('renvoie vers la séance ouverte, avec un message, sans en ouvrir une deuxième', function (): void {
+            $user = User::factory()->create();
+            $seanceOuverte = Workout::factory()->create([
+                'user_id' => $user->id,
+                'started_at' => now()->subMinutes(20),
+                'ended_at' => null,
+            ]);
+            $exercise = Exercise::factory()->create(['user_id' => $user->id]);
+            $template = WorkoutTemplate::factory()->create(['user_id' => $user->id, 'name' => 'Jambes']);
+            $template->workoutTemplateLines()->create(['exercise_id' => $exercise->id, 'order' => 0]);
+
+            $this->actingAs($user)
+                ->post(route('templates.execute', $template))
+                ->assertRedirect(route('workouts.show', $seanceOuverte))
+                ->assertSessionHas('error', fn (string $message): bool => str_contains($message, '« Jambes »')
+                    && str_contains($message, 'une séance est déjà en cours'));
+
+            expect(Workout::query()->where('user_id', $user->id)->whereNull('ended_at')->pluck('id')->all())
+                ->toBe([$seanceOuverte->id])
+                ->and($seanceOuverte->workoutLines()->count())->toBe(0);
+        });
+
+        it('affiche le message sur la séance ouverte', function (): void {
+            $user = User::factory()->create();
+            Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
+            $template = WorkoutTemplate::factory()->create(['user_id' => $user->id, 'name' => 'Dos']);
+
+            $this->actingAs($user)
+                ->followingRedirects()
+                ->post(route('templates.execute', $template))
+                ->assertOk()
+                ->assertInertia(fn (Assert $page): Assert => $page
+                    ->component('Workouts/Show')
+                    ->where('flash.error', fn (string $message): bool => str_contains($message, '« Dos »')));
+        });
+
+        it('démarre le modèle quand la dernière séance est terminée', function (): void {
+            $user = User::factory()->create();
+            Workout::factory()->create([
+                'user_id' => $user->id,
+                'started_at' => now()->subHours(3),
+                'ended_at' => now()->subHours(2),
+            ]);
+            $template = WorkoutTemplate::factory()->create(['user_id' => $user->id, 'name' => 'Pectoraux']);
+
+            $this->actingAs($user)
+                ->post(route('templates.execute', $template))
+                ->assertSessionMissing('error');
+
+            $nouvelle = Workout::query()->where('user_id', $user->id)->whereNull('ended_at')->sole();
+
+            expect($nouvelle->name)->toBe('Pectoraux');
+        });
     });
 
     describe('saveFromWorkout', function (): void {

@@ -79,7 +79,8 @@ class GoalServicePerformanceTest extends TestCase
 
         app(GoalService::class)->syncGoals($user);
 
-        $requetes = count(DB::getQueryLog());
+        $journal = DB::getQueryLog();
+        $requetes = count($journal);
 
         DB::disableQueryLog();
 
@@ -87,7 +88,7 @@ class GoalServicePerformanceTest extends TestCase
          * Vingt objectifs. Sans pre-calcul, c'est au moins une requete par
          * objectif, soit vingt, plus la lecture des objectifs et l'ecriture.
          * Avec, il en faut une poignee : les objectifs, le maximum de poids, le
-         * maximum de volume, et l'upsert.
+         * maximum de volume, et l'ecriture.
          *
          * La borne est a dix, largement au-dessus du compte reel et largement
          * en dessous du comportement degrade : elle attrape la disparition du
@@ -98,5 +99,18 @@ class GoalServicePerformanceTest extends TestCase
             $requetes,
             "syncGoals a emis {$requetes} requetes pour 20 objectifs : le pre-calcul ne joue plus son role."
         );
+
+        /*
+         * Les vingt objectifs changent, et s'ecrivent en une seule instruction :
+         * une mise a jour, qui ne peut pas recreer un objectif supprime entre
+         * la lecture et l'ecriture, comme le faisait l'upsert (#1985).
+         */
+        $ecritures = array_values(array_filter(
+            array_map(static fn (array $entree): string => (string) $entree['query'], $journal),
+            static fn (string $sql): bool => preg_match('/^\s*(insert|update|delete|replace)\b/i', $sql) === 1,
+        ));
+
+        $this->assertCount(1, $ecritures, 'syncGoals doit ecrire les vingt objectifs en une seule instruction.');
+        $this->assertStringStartsWith('update', $ecritures[0]);
     }
 }

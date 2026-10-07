@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use Illuminate\Foundation\Http\FormRequest;
 
 class BodyMeasurementStoreRequest extends FormRequest
 {
+    use RameneLesDatesAuFuseauDeLApplication;
+
     /**
      * La requête ne vérifie que la connexion ; l'autorisation vit dans le
      * contrôleur, et son refus est rendu en 404 par bootstrap/app.php.
@@ -30,5 +33,15 @@ class BodyMeasurementStoreRequest extends FormRequest
             'measured_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    /**
+     * Une date envoyée avec un décalage désigne le jour de Paris de cet instant ;
+     * telle quelle, MySQL la refusait (#1952).
+     */
+    #[\Override]
+    protected function prepareForValidation(): void
+    {
+        $this->ramenerLesJoursAuFuseauDeLApplication(['measured_at']);
     }
 }

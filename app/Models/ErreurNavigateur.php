@@ -32,6 +32,13 @@ final class ErreurNavigateur extends Model
 
     public const array TYPES = ['error', 'unhandledrejection', 'vue'];
 
+    /**
+     * La ligne ou la colonne la plus grande d'une erreur rapportée : dix
+     * millions. Un morceau compilé tient sur une ligne de quelques centaines
+     * de kilo-octets ; la colonne (unsigned int) va bien au-delà.
+     */
+    public const int POSITION_MAX = 10_000_000;
+
     #[\Override]
     protected $table = 'erreurs_navigateur';
 

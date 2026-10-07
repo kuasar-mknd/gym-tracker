@@ -65,6 +65,7 @@ const plugins = [pluginCentreDAnneau((position) => (centre.value = position))]
 
 <template>
     <BaseChart
+        description="Répartition des séances selon le moment de la journée"
         type="doughnut"
         :labels="labels"
         :datasets="datasets"

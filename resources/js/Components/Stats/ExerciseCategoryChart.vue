@@ -44,5 +44,12 @@ const infobulle = {
 </script>
 
 <template>
-    <BaseChart type="doughnut" :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" />
+    <BaseChart
+        description="Répartition des exercices par catégorie"
+        type="doughnut"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48"
+        :infobulle="infobulle"
+    />
 </template>

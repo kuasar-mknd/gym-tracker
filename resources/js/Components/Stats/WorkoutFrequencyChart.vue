@@ -42,6 +42,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Nombre de séances par jour de la semaine"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-full"

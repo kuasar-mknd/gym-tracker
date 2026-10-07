@@ -40,5 +40,11 @@ const infobulle = {
 </script>
 
 <template>
-    <BaseChart :labels="labels" :datasets="datasets" hauteur="h-48" :infobulle="infobulle" />
+    <BaseChart
+        description="Durée des séances"
+        :labels="labels"
+        :datasets="datasets"
+        hauteur="h-48"
+        :infobulle="infobulle"
+    />
 </template>

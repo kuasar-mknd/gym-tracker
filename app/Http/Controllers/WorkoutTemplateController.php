@@ -8,6 +8,7 @@ use App\Actions\CreateWorkoutFromTemplateAction;
 use App\Actions\CreateWorkoutTemplateAction;
 use App\Actions\CreateWorkoutTemplateFromWorkoutAction;
 use App\Models\Exercise;
+use App\Models\Set;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Inertia\Inertia;
@@ -31,6 +32,7 @@ class WorkoutTemplateController extends Controller
 
         return Inertia::render('Workouts/Templates/Create', [
             'exercises' => Exercise::enCachePourUtilisateur($idUtilisateur),
+            ...$this->bornesDuFormulaire(),
         ]);
     }
 
@@ -47,10 +49,25 @@ class WorkoutTemplateController extends Controller
 
     /**
      * Ouvre une séance à partir du modèle et y envoie l'utilisateur.
+     *
+     * Quand une séance est déjà ouverte, le modèle ne démarre pas : l'utilisateur
+     * est renvoyé vers elle, comme par « Démarrer », avec un message qui dit
+     * pourquoi. Sans cette garde, il se retrouvait avec deux séances ouvertes,
+     * dont le bandeau ne montrait que la plus récente, et l'autre restait « en
+     * cours » indéfiniment (#1958).
      */
     public function execute(WorkoutTemplate $template, CreateWorkoutFromTemplateAction $createWorkout): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('view', $template);
+
+        $activeWorkout = app(\App\Services\ActiveWorkoutService::class)->for($this->user());
+
+        if ($activeWorkout instanceof Workout) {
+            return redirect()->route('workouts.show', $activeWorkout)->with(
+                'error',
+                "Le modèle « {$template->name} » n'a pas été démarré : une séance est déjà en cours. Terminez-la avant d'en commencer une autre.",
+            );
+        }
 
         $workout = $createWorkout->execute($this->user(), $template);
 
@@ -59,6 +76,9 @@ class WorkoutTemplateController extends Controller
 
     /**
      * Enregistre une séance, terminée ou en cours, comme modèle réutilisable.
+     *
+     * Une séance plus grande qu'un modèle y est ramenée aux bornes d'un
+     * modèle ; le message le dit, pour que rien ne manque en silence.
      */
     public function saveFromWorkout(Workout $workout, CreateWorkoutTemplateFromWorkoutAction $createTemplate): \Illuminate\Http\RedirectResponse
     {
@@ -66,7 +86,17 @@ class WorkoutTemplateController extends Controller
 
         $createTemplate->execute($this->user(), $workout);
 
-        return redirect()->route('templates.index')->with('success', 'Modèle enregistré avec succès !');
+        $message = $createTemplate->depasseLesBornesDUnModele($workout)
+            ? sprintf(
+                'Modèle enregistré, ramené à ce qu’un modèle accepte : %d exercices et %d séries par exercice au plus, %s répétitions et %s kg par série au plus.',
+                WorkoutTemplate::EXERCICES_MAX,
+                WorkoutTemplate::SERIES_MAX_PAR_EXERCICE,
+                number_format(Set::REPETITIONS_MAX, 0, ',', ' '),
+                number_format(Set::POIDS_MAX_KG, 0, ',', ' '),
+            )
+            : 'Modèle enregistré avec succès !';
+
+        return redirect()->route('templates.index')->with('success', $message);
     }
 
     public function destroy(WorkoutTemplate $template): \Illuminate\Http\RedirectResponse
@@ -100,7 +130,23 @@ class WorkoutTemplateController extends Controller
         return Inertia::render('Workouts/Templates/Edit', [
             'template' => $template,
             'exercises' => Exercise::enCachePourUtilisateur($this->user()->id),
+            ...$this->bornesDuFormulaire(),
         ]);
+    }
+
+    /**
+     * Les plafonds que le formulaire d'un modèle applique avant d'envoyer : ceux
+     * d'un modèle, et ceux d'une série pour les répétitions et le poids. Ce sont
+     * ceux que ses requêtes valident (`BorneLesSeriesDuGabarit`).
+     *
+     * @return array{bornesDuModele: array{exercices: int, seriesParExercice: int}, bornesDUneSerie: array{weight: int, reps: int, distance_km: int, duration_seconds: int}}
+     */
+    private function bornesDuFormulaire(): array
+    {
+        return [
+            'bornesDuModele' => WorkoutTemplate::bornes(),
+            'bornesDUneSerie' => Set::bornes(),
+        ];
     }
 
     /**

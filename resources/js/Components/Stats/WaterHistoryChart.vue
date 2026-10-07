@@ -57,6 +57,7 @@ const infobulle = {
 
 <template>
     <BaseChart
+        description="Eau bue par jour"
         :labels="labels"
         :datasets="datasets"
         hauteur="h-[300px] pt-4"

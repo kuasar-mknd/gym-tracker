@@ -66,9 +66,9 @@ const mountCreate = (exercises = library) =>
         global: { mocks: { route: globalThis.route }, stubs },
     })
 
-const mountEdit = (template, exercises = library) =>
+const mountEdit = (template, exercises = library, autresProps = {}) =>
     mount(TemplateEdit, {
-        props: { template: structuredClone(template), exercises: structuredClone(exercises) },
+        props: { template: structuredClone(template), exercises: structuredClone(exercises), ...autresProps },
         global: { mocks: { route: globalThis.route }, stubs },
     })
 
@@ -214,5 +214,80 @@ describe('reordering the exercises of a template', () => {
 
         expect(monter.map((b) => b.attributes('disabled') !== undefined)).toEqual([true, false, false])
         expect(descendre.map((b) => b.attributes('disabled') !== undefined)).toEqual([false, false, true])
+    })
+})
+
+const BORNES_D_UNE_SERIE = { weight: 100000, reps: 999, distance_km: 1000, duration_seconds: 86400 }
+
+const deuxSeriesDeDeveloppe = {
+    id: 4,
+    name: 'Push A',
+    description: '',
+    workout_template_lines: [
+        {
+            exercise_id: 1,
+            exercise: { name: 'Développé Couché' },
+            workout_template_sets: [
+                { reps: 1500, weight: 40, is_warmup: false },
+                { reps: 5, weight: 100, is_warmup: false },
+            ],
+        },
+    ],
+}
+
+/*
+ * Les requêtes d'un modèle plafonnent ses exercices et ses séries, et bornent
+ * chaque valeur. Un refus portait sur une clé que le formulaire n'affichait
+ * pas (`exercises.0.sets.0.reps`) : « Enregistrer » restait sans effet visible.
+ */
+describe('les bornes d’un modèle dans son formulaire', () => {
+    it('affiche le message du serveur sous la série et l’exercice refusés, et le dit près du bouton', async () => {
+        const wrapper = mountEdit(deuxSeriesDeDeveloppe)
+
+        templateForm().errors['exercises.0.sets.0.reps'] = 'Une série compte au plus 999 répétitions.'
+        templateForm().errors['exercises.0.sets'] = 'Un exercice de modèle compte au plus 50 séries.'
+        await flushPromises()
+
+        expect(wrapper.find('[dusk="template-set-error-0-0"]').text()).toBe('Une série compte au plus 999 répétitions.')
+        expect(wrapper.find('[dusk="template-set-error-0-1"]').exists()).toBe(false)
+        expect(wrapper.find('[dusk="template-exercise-error-0"]').text()).toBe(
+            'Un exercice de modèle compte au plus 50 séries.',
+        )
+        expect(wrapper.find('[dusk="template-form-errors"]').attributes('role')).toBe('alert')
+        expect(wrapper.findAll('input[placeholder="réps"]')[0].attributes('aria-invalid')).toBe('true')
+    })
+
+    it('n’offre plus d’ajouter une série ni un exercice au-delà des plafonds reçus', async () => {
+        const wrapper = mountEdit(deuxSeriesDeDeveloppe, library, {
+            bornesDuModele: { exercices: 1, seriesParExercice: 2 },
+            bornesDUneSerie: BORNES_D_UNE_SERIE,
+        })
+        await flushPromises()
+
+        expect(wrapper.find('[dusk="add-set-0"]').attributes('disabled')).toBeDefined()
+        expect(wrapper.find('[dusk="open-add-exercise"]').attributes('disabled')).toBeDefined()
+        expect(wrapper.text()).toContain('2 séries au plus par exercice.')
+        expect(wrapper.text()).toContain('1 exercices au plus par modèle.')
+
+        interne(wrapper).addSet(0)
+        interne(wrapper).addExercise(2)
+
+        expect(templateForm().exercises).toHaveLength(1)
+        expect(templateForm().exercises[0].sets).toHaveLength(2)
+    })
+
+    it('borne les champs d’une série par les plafonds reçus', async () => {
+        const wrapper = mountEdit(deuxSeriesDeDeveloppe, library, {
+            bornesDuModele: { exercices: 50, seriesParExercice: 50 },
+            bornesDUneSerie: BORNES_D_UNE_SERIE,
+        })
+        await flushPromises()
+
+        const repetitions = wrapper.find('input[placeholder="réps"]')
+        const poids = wrapper.find('input[placeholder="kg"]')
+
+        expect([repetitions.attributes('min'), repetitions.attributes('max')]).toEqual(['0', '999'])
+        expect([poids.attributes('min'), poids.attributes('max')]).toEqual(['0', '100000'])
+        expect(wrapper.find('[dusk="add-set-0"]').attributes('disabled')).toBeUndefined()
     })
 })
