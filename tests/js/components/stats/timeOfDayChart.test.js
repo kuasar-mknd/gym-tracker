@@ -73,7 +73,7 @@ describe('TimeOfDayChart', () => {
         it('arrondit la part au point le plus proche', () => {
             // 2 séances sur 3 se lisent 67 %, pas 66 % : tronquer perd le point
             // qui manque, et les quatre créneaux n'additionnent plus 100.
-            expect(tooltip()(arc(1, 3))).toBe(' 1 séances (33%)')
+            expect(tooltip()(arc(1, 3))).toBe(' 1 séance (33%)')
             expect(tooltip()(arc(2, 3))).toBe(' 2 séances (67%)')
         })
 

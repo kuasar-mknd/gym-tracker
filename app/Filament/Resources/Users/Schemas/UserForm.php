@@ -22,7 +22,7 @@ class UserForm
     private static function getComponents(): array
     {
         return [
-            TextInput::make('name')->required(),
+            TextInput::make('name')->label('Nom')->required(),
             /*
              * Une nouvelle adresse s'écrit en ASCII imprimable, comme à
              * l'inscription et dans le profil. La colonne et son index unique
@@ -33,11 +33,11 @@ class UserForm
              * quelle, pour qu'un compte ancien s'enregistre sans en changer.
              */
             TextInput::make('email')
-                ->label('Email address')
+                ->label('Adresse e-mail')
                 ->email()
                 ->required()
                 ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email)),
-            TextInput::make('default_rest_time')->required()->numeric()->default(90),
+            TextInput::make('default_rest_time')->label('Repos par défaut (s)')->required()->numeric()->default(90),
             /*
              * Montres, jamais ecrits.
              *
@@ -58,10 +58,10 @@ class UserForm
              * social depuis le back-office, cela demande une `Action` explicite
              * avec sa propre autorisation, pas un champ de formulaire.
              */
-            DateTimePicker::make('email_verified_at')->disabled()->dehydrated(false),
-            TextInput::make('provider')->disabled()->dehydrated(false),
-            TextInput::make('provider_id')->disabled()->dehydrated(false),
-            TextInput::make('avatar'),
+            DateTimePicker::make('email_verified_at')->label('Adresse vérifiée le')->disabled()->dehydrated(false),
+            TextInput::make('provider')->label('Fournisseur de connexion')->disabled()->dehydrated(false),
+            TextInput::make('provider_id')->label('Identifiant chez le fournisseur')->disabled()->dehydrated(false),
+            TextInput::make('avatar')->label('Avatar'),
             /*
              * Le champ ne s'ecrit que lorsqu'il porte quelque chose.
              *
@@ -77,7 +77,7 @@ class UserForm
              * Invisible hors production, ou le mode strict fait lever sur les
              * autres champs du meme formulaire avant d'arriver ici (#1438).
              */
-            TextInput::make('password')
+            TextInput::make('password')->label('Mot de passe')
                 ->password()
                 ->dehydrated(fn (?string $state): bool => filled($state))
                 ->required(fn (string $operation): bool => $operation === 'create'),
@@ -92,9 +92,9 @@ class UserForm
              * (`StreakService::recalculerDepuisLesFaits`), une valeur saisie a
              * la main serait ecrasee a la premiere seance.
              */
-            TextInput::make('current_streak')->numeric()->readOnly()->dehydrated(false),
-            TextInput::make('longest_streak')->numeric()->readOnly()->dehydrated(false),
-            DateTimePicker::make('last_workout_at')->readOnly()->dehydrated(false),
+            TextInput::make('current_streak')->label('Série en cours')->numeric()->readOnly()->dehydrated(false),
+            TextInput::make('longest_streak')->label('Plus longue série')->numeric()->readOnly()->dehydrated(false),
+            DateTimePicker::make('last_workout_at')->label('Dernière séance')->readOnly()->dehydrated(false),
         ];
     }
 }

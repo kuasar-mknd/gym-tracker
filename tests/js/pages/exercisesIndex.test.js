@@ -91,6 +91,22 @@ const renderedCards = (wrapper) =>
         category: card.props('category'),
     }))
 
+// Un compte accordé : « 1 exercice disponible », pas « 1 exercices » (#1980).
+describe('Exercises/Index — le compte de la bibliothèque', () => {
+    it('s’accorde au singulier pour un exercice, au pluriel au-delà', () => {
+        const un = mountPage([PECS])
+
+        expect(un.text()).toContain('1 exercice disponible')
+        expect(un.text()).not.toContain('1 exercices')
+        un.unmount()
+
+        const deux = mountPage([PECS, BACK])
+
+        expect(deux.text()).toContain('2 exercices disponibles')
+        deux.unmount()
+    })
+})
+
 describe('Exercises/Index — filtrage et regroupement', () => {
     it('regroupe les exercices par catégorie', () => {
         const wrapper = mountPage([PECS, BACK, PECS_2])

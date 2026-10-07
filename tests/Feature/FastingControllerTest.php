@@ -42,7 +42,8 @@ describe('FastingController', function (): void {
             actingAs($user)
                 ->post(route('tools.fasting.store'), $payload)
                 ->assertRedirect()
-                ->assertSessionHasNoErrors();
+                ->assertSessionHasNoErrors()
+                ->assertSessionHas('success', 'Jeûne commencé.');
 
             $this->assertDatabaseHas('fasts', [
                 'user_id' => $user->id,
@@ -97,7 +98,8 @@ describe('FastingController', function (): void {
             actingAs($user)
                 ->patch(route('tools.fasting.update', $fast), $payload)
                 ->assertRedirect()
-                ->assertSessionHasNoErrors();
+                ->assertSessionHasNoErrors()
+                ->assertSessionHas('success', 'Jeûne mis à jour.');
 
             $this->assertDatabaseHas('fasts', [
                 'id' => $fast->id,
@@ -141,7 +143,8 @@ describe('FastingController', function (): void {
             actingAs($user)
                 ->delete(route('tools.fasting.destroy', $fast))
                 ->assertRedirect()
-                ->assertSessionHasNoErrors();
+                ->assertSessionHasNoErrors()
+                ->assertSessionHas('success', 'Jeûne supprimé.');
 
             $this->assertDatabaseMissing('fasts', ['id' => $fast->id]);
         });

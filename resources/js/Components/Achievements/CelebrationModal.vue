@@ -127,7 +127,7 @@ const close = () => {
                         </div>
 
                         <!-- Text -->
-                        <h2 class="titre-carte mb-1" id="achievement-title">Badge Débloqué !</h2>
+                        <h2 class="titre-carte mb-1" id="achievement-title">Badge débloqué !</h2>
                         <h3 class="text-accent-primary-deep titre-carte mb-3">{{ achievement.name }}</h3>
                         <p class="text-text-muted mb-6 text-sm" id="achievement-description">
                             {{

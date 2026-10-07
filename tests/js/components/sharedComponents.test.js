@@ -453,6 +453,43 @@ describe('GoalForm', () => {
         }
     })
 
+    describe('échéance', () => {
+        afterEach(() => {
+            vi.useRealTimers()
+        })
+
+        /*
+         * Le serveur refuse une échéance passée (`after:today`), et le
+         * sélecteur la proposait quand même : le message d'erreur était le seul
+         * à le dire (#1975).
+         */
+        it('ne propose que des dates à venir pour un nouvel objectif', () => {
+            vi.useFakeTimers()
+            vi.setSystemTime(new Date(2026, 9, 5, 10, 0, 0))
+            const wrapper = mountGoalForm(goalForm())
+
+            expect(fieldNamed(wrapper, 'Échéance').attributes('min')).toBe('2026-10-06')
+
+            wrapper.unmount()
+        })
+
+        it('laisse un objectif modifié garder son échéance passée, et borne toute nouvelle date', async () => {
+            vi.useFakeTimers()
+            vi.setSystemTime(new Date(2026, 9, 5, 10, 0, 0))
+            const form = goalForm({ deadline: '2026-09-01' })
+            const wrapper = mountGoalForm(form)
+
+            expect(fieldNamed(wrapper, 'Échéance').attributes('min')).toBeUndefined()
+
+            form.deadline = '2026-11-01'
+            await wrapper.vm.$nextTick()
+
+            expect(fieldNamed(wrapper, 'Échéance').attributes('min')).toBe('2026-10-06')
+
+            wrapper.unmount()
+        })
+    })
+
     it('demands a target and a title, and lets the starting value be left out', () => {
         const wrapper = mountGoalForm(goalForm())
 
@@ -585,6 +622,18 @@ describe('GoalForm', () => {
         await wrapper.vm.$nextTick()
 
         expect(form.title).toBe('Atteindre 50 séances au total')
+
+        wrapper.unmount()
+    })
+
+    it('accorde le titre d’un objectif d’une seule séance (#1980)', async () => {
+        const form = goalForm({ target_value: 1 })
+        const wrapper = mountGoalForm(form, { autoTitle: true })
+
+        form.type = 'frequency'
+        await wrapper.vm.$nextTick()
+
+        expect(form.title).toBe('Atteindre 1 séance au total')
 
         wrapper.unmount()
     })

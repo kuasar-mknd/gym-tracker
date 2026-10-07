@@ -26,4 +26,19 @@ class PlateRequest extends FormRequest
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
         ];
     }
+
+    /**
+     * La borne basse d'un disque est décimale : le message par défaut la
+     * recopiait avec le point anglais (« 0.1 »), là où l'application écrit
+     * 0,1 (#1975).
+     *
+     * @return array<string, string>
+     */
+    #[\Override]
+    public function messages(): array
+    {
+        return [
+            'weight.min' => 'Un disque pèse au moins 0,1 kg.',
+        ];
+    }
 }

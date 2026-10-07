@@ -48,13 +48,13 @@ class UsersTable
     private static function getIdentityColumns(): array
     {
         return [
-            TextColumn::make('name')->searchable(),
-            TextColumn::make('email')->label('Email address')->searchable(),
-            TextColumn::make('default_rest_time')->numeric()->sortable(),
-            TextColumn::make('email_verified_at')->dateTime()->sortable(),
-            TextColumn::make('provider')->searchable(),
-            TextColumn::make('provider_id')->searchable(),
-            TextColumn::make('avatar')->searchable(),
+            TextColumn::make('name')->label('Nom')->searchable(),
+            TextColumn::make('email')->label('Adresse e-mail')->searchable(),
+            TextColumn::make('default_rest_time')->label('Repos par défaut (s)')->numeric()->sortable(),
+            TextColumn::make('email_verified_at')->label('Adresse vérifiée le')->dateTime()->sortable(),
+            TextColumn::make('provider')->label('Fournisseur de connexion')->searchable(),
+            TextColumn::make('provider_id')->label('Identifiant chez le fournisseur')->searchable(),
+            TextColumn::make('avatar')->label('Avatar')->searchable(),
         ];
     }
 
@@ -62,11 +62,11 @@ class UsersTable
     private static function getStatsColumns(): array
     {
         return [
-            TextColumn::make('current_streak')->numeric()->sortable(),
-            TextColumn::make('longest_streak')->numeric()->sortable(),
-            TextColumn::make('last_workout_at')->dateTime()->sortable(),
-            TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
-            TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('current_streak')->label('Série en cours')->numeric()->sortable(),
+            TextColumn::make('longest_streak')->label('Plus longue série')->numeric()->sortable(),
+            TextColumn::make('last_workout_at')->label('Dernière séance')->dateTime()->sortable(),
+            TextColumn::make('created_at')->label('Créé le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')->label('Modifié le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 }

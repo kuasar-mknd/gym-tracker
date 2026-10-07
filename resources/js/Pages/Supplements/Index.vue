@@ -7,6 +7,7 @@ import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
+import { accord, compte } from '@/Utils/nombre'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -120,7 +121,7 @@ const formatDate = (dateString) => {
                 <div>
                     <h1 class="titre-page hidden sm:block">Mes <span class="text-gradient">Compléments</span></h1>
                     <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
-                        {{ supplements.length }} produits suivis
+                        {{ compte(supplements.length, 'produit suivi', 'produits suivis') }}
                     </p>
                 </div>
                 <GlassButton
@@ -300,7 +301,9 @@ const formatDate = (dateString) => {
                                         "
                                     >
                                         {{ supplement.servings_remaining }}
-                                        <span class="text-text-muted ml-0.5 text-xs font-bold">doses</span>
+                                        <span class="text-text-muted ml-0.5 text-xs font-bold">{{
+                                            accord(supplement.servings_remaining, 'dose', 'doses')
+                                        }}</span>
                                     </p>
                                 </div>
                                 <div class="text-right">

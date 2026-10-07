@@ -115,13 +115,13 @@ describe('PersonalRecordType nomme le record dans la notification', function ():
             ->toArray($user);
 
         expect($payload['message'])
-            ->toBe("Félicitations ! Tu as battu ton record de {$expectedLabel} sur l'exercice Développé couché avec 102.50kg.")
+            ->toBe("Félicitations ! Tu as battu ton record de {$expectedLabel} sur l'exercice Développé couché avec 102,5\u{00A0}kg.")
             ->and($payload['exercise_id'])->toBe($exercise->id);
     })->with([
-        'max_weight' => [PersonalRecordType::MaxWeight, 'Poids Maximum'],
-        'max_1rm' => [PersonalRecordType::Max1RM, '1RM Estimé'],
-        'max_volume_set' => [PersonalRecordType::MaxVolumeSet, 'Volume par Série'],
+        'max_weight' => [PersonalRecordType::MaxWeight, 'poids maximum'],
+        'max_1rm' => [PersonalRecordType::Max1RM, '1RM estimé'],
+        'max_volume_set' => [PersonalRecordType::MaxVolumeSet, 'volume par série'],
         // Les valeurs héritées retombent sur la branche par défaut du match.
-        'strength' => [PersonalRecordType::Strength, 'Record Personnel'],
+        'strength' => [PersonalRecordType::Strength, 'record personnel'],
     ]);
 });

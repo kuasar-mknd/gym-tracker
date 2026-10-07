@@ -171,7 +171,7 @@
                                         {{ nombre(entry.body_weight) }} {{ entry.unit }}
                                     </p>
                                     <p class="text-text-muted text-xs tracking-wider uppercase">
-                                        {{ new Date(entry.created_at).toLocaleDateString() }}
+                                        {{ dateCourte(new Date(entry.created_at)) }}
                                     </p>
                                 </div>
                             </div>
@@ -217,6 +217,7 @@ import { wilksScore as calculateWilks } from '@/Utils/formulas'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import GlassTile from '@/Components/UI/GlassTile.vue'
 import { nombre } from '@/Utils/nombre'
+import { dateCourte } from '@/Utils/date'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))

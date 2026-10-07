@@ -74,6 +74,28 @@ jobs:
             - name: Le precache reste une coquille
               run: node scripts/verifier-le-precache.mjs
 
+            # L'image construit ses actifs dans l'étape `frontend-builder` du
+            # Dockerfile, avec les seuls chemins que cette étape copie. Ces
+            # chemins, lus dans le Dockerfile, sont reconstruits ici à part :
+            # public/build et sw.js doivent être identiques, octet pour octet,
+            # à ceux que les tests et Dusk reçoivent (#1988). node_modules est
+            # copié en liens durs et non lié : un lien symbolique change les
+            # chemins écrits dans le manifeste.
+            - name: L'image construit les mêmes actifs
+              run: |
+                  set -euo pipefail
+                  contexte="$RUNNER_TEMP/contexte-de-l-image"
+                  mkdir -p "$contexte"
+                  sources=$(awk '/^FROM .* AS frontend-builder/ { dans = 1; next } /^FROM / { dans = 0 } dans && /^COPY / { for (i = 2; i < NF; i++) print $i }' Dockerfile)
+                  [ -n "$sources" ] || { echo "::error::Aucun COPY lu dans l'étape frontend-builder du Dockerfile."; exit 1; }
+                  # shellcheck disable=SC2086 # chaque source est un argument, et package*.json doit s'étendre
+                  cp -r $sources "$contexte/"
+                  cp -al node_modules "$contexte/node_modules"
+                  (cd "$contexte" && npm run build)
+                  diff -r public/build "$contexte/public/build"
+                  cmp public/sw.js "$contexte/public/sw.js"
+                  echo "Actifs identiques : $(find public/build -type f | wc -l) fichiers sous public/build, et sw.js."
+
             - name: Upload Build Artifacts
               uses: actions/upload-artifact@v7
               with:
@@ -547,13 +569,9 @@ jobs:
             - name: Composer Audit
               run: composer audit --ignore-unreachable
 
-            # Bloquant : ce gate n'est vert que parce qu'un composer-unused.php
-            # documente les deux seuls faux positifs. Il echoue aussi sur une
-            # exclusion "zombie", donc le fichier reste force de suivre composer.json.
-            # La spec commitee documentait 3 chemins sur 142 routes api/v1, figee
-            # depuis janvier. La regenerer ne suffit pas : sans ce controle elle
-            # rederive au premier endpoint ajoute. Le job echoue si le fichier
-            # commite differe de ce que les annotations produisent.
+            # Bloquant : ce gate n'est vert que parce que composer-unused.php
+            # nomme ses faux positifs. Il echoue aussi sur une exclusion
+            # "zombie", donc le fichier reste force de suivre composer.json.
             - name: Unused Composer Dependencies
               run: ./vendor/bin/composer-unused --no-progress
 
@@ -829,10 +847,17 @@ jobs:
                   if [ -z "$RUN" ]; then
                       echo "::error::Aucune passe nocturne terminee sur ce commit : l'image ne sera pas publiee sous ce tag."
                       echo ""
-                      echo "Pour debloquer :  gh workflow run mutation.yml --ref $TAG"
+                      echo "La passe est planifiee a 03h17 UTC, mais GitHub la lance plusieurs heures plus tard"
+                      echo "(entre 07h42 et 10h31 UTC du 1er septembre au 5 octobre 2026), sur la pointe de main a ce moment."
                       echo ""
-                      echo "La nuit tourne sur la pointe de main a 03h17 UTC. Un tag pose"
-                      echo "apres elle n'est pas encore couvert : c'est voulu."
+                      echo "Pour debloquer :"
+                      echo "  - si ce commit est encore la pointe de main quand la prochaine passe planifiee"
+                      echo "    part, elle le couvre : l'attendre, puis relancer ce job :  gh run rerun $GITHUB_RUN_ID --failed"
+                      echo "  - pour ne pas attendre, ou si main a avance, lancer la passe sur le tag :"
+                      echo "      gh workflow run mutation.yml --ref $TAG"
+                      echo "    puis, une fois verte :  gh run rerun $GITHUB_RUN_ID --failed"
+                      echo ""
+                      echo "Passes deja lancees sur ce commit :  gh run list --workflow mutation.yml --commit $SHA"
                       exit 1
                   fi
 
@@ -860,8 +885,9 @@ jobs:
                   if [ -n "$ECHECS" ]; then
                       echo "::error::La passe nocturne n'est pas entierement verte : $ECHECS"
                       echo ""
-                      echo "L'image ne sera pas publiee sous ce tag. Corriger, puis relancer :"
+                      echo "L'image ne sera pas publiee sous ce tag. Corriger, puis relancer la passe :"
                       echo "  gh workflow run mutation.yml --ref $TAG"
+                      echo "et, une fois verte, ce job :  gh run rerun $GITHUB_RUN_ID --failed"
                       exit 1
                   fi
 

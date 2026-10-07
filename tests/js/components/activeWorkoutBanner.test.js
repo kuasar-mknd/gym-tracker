@@ -112,6 +112,14 @@ describe('ActiveWorkoutBanner content', () => {
         expect(wrapper.text()).toContain('5 exos')
     })
 
+    // « 1 exos » était le cas de toute séance qui commence (#1980).
+    it('accorde le compte au singulier pour le premier exercice', () => {
+        const wrapper = mountBanner({ started_at: startedSecondsAgo(60), workout_lines_count: 1 })
+
+        expect(wrapper.text()).toContain('1 exo')
+        expect(wrapper.text()).not.toContain('1 exos')
+    })
+
     it('says nothing about exercises before the first one is logged', () => {
         const wrapper = mountBanner({ started_at: startedSecondsAgo(60), workout_lines_count: 0 })
 

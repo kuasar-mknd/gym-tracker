@@ -69,7 +69,7 @@ describe('HabitConsistencyChart', () => {
     it('compte les habitudes en français dans l’infobulle', () => {
         const wrapper = mountChart([{ date: '2026-07-31', count: 3 }])
 
-        expect(tooltipLabelOf(wrapper, 'Line', { parsed: { y: 3 } })).toBe('3 Complétés')
+        expect(tooltipLabelOf(wrapper, 'Line', { parsed: { y: 3 } })).toBe('3 habitudes complétées')
     })
 
     it('gradue l’axe en habitudes entières, depuis zéro', () => {

@@ -223,9 +223,10 @@ test('accepte les clés que le domaine connaît', function (): void {
 });
 
 /*
- * La page enregistre les préférences en XHR (axios). Un 302 y serait suivi en
- * gardant la méthode : PATCH /profile/edit, 405, et un message d'échec pour
- * une écriture pourtant faite (vu en production le 2026-09-04).
+ * La page enregistre les préférences en XHR (`SyncService`, par `http`). Un
+ * 302 y serait suivi en gardant la méthode : PATCH /profile/edit, 405, et un
+ * message d'échec pour une écriture pourtant faite (vu en production le
+ * 2026-09-04).
  */
 it('répond 204 à un client XHR, sans redirection à rejouer en PATCH', function (): void {
     $user = User::factory()->create();

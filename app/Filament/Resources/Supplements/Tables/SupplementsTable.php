@@ -42,14 +42,14 @@ class SupplementsTable
     private static function getColumns(): array
     {
         return [
-            TextColumn::make('user.name')->searchable(),
-            TextColumn::make('name')->searchable(),
-            TextColumn::make('brand')->searchable(),
-            TextColumn::make('dosage')->searchable(),
-            TextColumn::make('servings_remaining')->numeric()->sortable(),
-            TextColumn::make('low_stock_threshold')->numeric()->sortable(),
-            TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
-            TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('user.name')->label('Compte')->searchable(),
+            TextColumn::make('name')->label('Nom')->searchable(),
+            TextColumn::make('brand')->label('Marque')->searchable(),
+            TextColumn::make('dosage')->label('Dosage')->searchable(),
+            TextColumn::make('servings_remaining')->label('Doses restantes')->numeric()->sortable(),
+            TextColumn::make('low_stock_threshold')->label('Seuil de stock bas')->numeric()->sortable(),
+            TextColumn::make('created_at')->label('Créé le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')->label('Modifié le')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
         ];
     }
 }

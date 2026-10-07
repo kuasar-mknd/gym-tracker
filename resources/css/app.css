@@ -1,21 +1,28 @@
-@import 'tailwindcss';
+/**
+ * Tailwind ne lit que ce que l'image copie.
+ *
+ * La détection automatique de v4 scanne tout fichier que git n'ignore pas sous
+ * la racine. La CI construit depuis le dépôt entier, l'image depuis
+ * `package*.json`, `vite.config.js` et `resources/` seulement (étape
+ * `frontend-builder` du Dockerfile) : les tests, les migrations, `app/` ou
+ * `.ai/rules` faisaient émettre à la CI des classes que l'image n'émettait
+ * pas, et ce que Dusk testait n'était pas ce qui partait (#1988).
+ *
+ * `source(none)` coupe la détection ; les sources sont nommées, toutes sous
+ * `resources/`. Les gabarits de `views/vendor` sont écartés : `.gitignore` les
+ * masque dans le dépôt, pas dans le contexte de l'image, et le courriel porte
+ * sa propre feuille. `LesActifsTestesSontCeuxDeLImageTest` tient ces règles,
+ * et l'étape « L'image construit les mêmes actifs » de la CI compare les deux
+ * constructions.
+ */
+@import 'tailwindcss' source(none);
 @import './fonts.css';
 
 @plugin '@tailwindcss/forms';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-
-/**
- * La détection automatique de v4 scanne tout fichier non ignoré par git, y
- * compris la prose. Une entrée de CHANGELOG citant `glass-card` suffisait à
- * faire émettre l'utilitaire du même nom, alors qu'aucun composant ne s'en
- * sert : de la documentation qui gonfle la feuille de style. Le markdown ne
- * rend rien, il n'a donc rien à dire sur les classes à générer.
- */
-@source not '../../CHANGELOG.md';
-@source not '../../docs';
-@source not '../../*.md';
+@source '../js';
+@source '../views';
+@source not '../views/vendor';
 
 /*
  * `static` : Tailwind emet TOUTES les variables, pas seulement celles qu'une

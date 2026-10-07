@@ -5,6 +5,7 @@ import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import { compte } from '@/Utils/nombre'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
@@ -137,14 +138,14 @@ const {
                             >
                                 <span class="text-text-main font-medium">{{ line.exercise.name }}</span>
                                 <span class="text-text-muted/50"
-                                    >• {{ line.workout_template_sets_count || 0 }} séries</span
+                                    >• {{ compte(line.workout_template_sets_count || 0, 'série', 'séries') }}</span
                                 >
                             </div>
                             <div
                                 v-if="template.workout_template_lines_count > 3"
                                 class="text-text-muted/50 mt-2 ml-1 text-xs font-bold italic"
                             >
-                                + {{ template.workout_template_lines_count - 3 }} exercices
+                                + {{ compte(template.workout_template_lines_count - 3, 'exercice', 'exercices') }}
                             </div>
                         </div>
                     </div>

@@ -403,30 +403,6 @@ parameters:
 			path: tests/Feature/Actions/CreateWorkoutTemplateFromWorkoutActionTest.php
 
 		-
-			message: '#^Access to an undefined property Pest\\Mixins\\Expectation\<array\<int, string\>\>\:\:\$not\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
-
-		-
-			message: '#^Offset ''current'' might not exist on array\{part\: string, current\: float, unit\: string, date\: non\-falsy\-string, diff\: float\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 3
-			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
-
-		-
-			message: '#^Offset ''date'' might not exist on array\{part\: string, current\: float, unit\: string, date\: non\-falsy\-string, diff\: float\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 3
-			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
-
-		-
-			message: '#^Offset ''diff'' might not exist on array\{part\: string, current\: float, unit\: string, date\: non\-falsy\-string, diff\: float\}\|null\.$#'
-			identifier: offsetAccess.notFound
-			count: 3
-			path: tests/Feature/Actions/Measurements/FetchBodyPartMeasurementsIndexActionTest.php
-
-		-
 			message: '#^Call to an undefined static method Illuminate\\Support\\Facades\\Cache\:\:shouldHaveReceived\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1

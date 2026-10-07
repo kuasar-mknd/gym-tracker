@@ -29,13 +29,13 @@ const filteredAchievements = computed(() => {
 </script>
 
 <template>
-    <Head title="Succès & Badges" />
+    <Head title="Badges" />
 
-    <AuthenticatedLayout page-title="Succès & Badges">
+    <AuthenticatedLayout page-title="Badges">
         <template #header>
             <div class="flex items-end justify-between">
                 <div>
-                    <h1 class="titre-section flex items-center gap-2">Trophées 🏆</h1>
+                    <h1 class="titre-section flex items-center gap-2">Badges 🏆</h1>
                     <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
                 </div>
                 <div class="text-right">

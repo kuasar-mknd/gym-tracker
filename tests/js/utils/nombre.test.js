@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { nombre, poids, volume, variation, pourcentage, entier } from '@/Utils/nombre'
+import { nombre, poids, volume, variation, pourcentage, entier, compte, accord } from '@/Utils/nombre'
 
 describe('les nombres affichés', () => {
     /**
@@ -41,5 +41,40 @@ describe('les nombres affichés', () => {
             expect(variation(vide)).toBe('—')
             expect(nombre(vide)).toBe('—')
         }
+    })
+})
+
+describe('compte', () => {
+    // « 1 séries », « 1 exos », « 4 exo » : un nombre et un nom figé (#1980).
+    it('accorde le nom au singulier jusqu’à deux exclu', () => {
+        expect(compte(0, 'série', 'séries')).toBe('0 série')
+        expect(compte(1, 'série', 'séries')).toBe('1 série')
+        expect(compte(1.5, 'série', 'séries')).toBe('2 séries')
+        expect(compte(2, 'série', 'séries')).toBe('2 séries')
+        expect(compte('3', 'exo', 'exos')).toBe('3 exos')
+    })
+
+    it('sépare les milliers comme le reste de l’application', () => {
+        expect(compte(1250, 'exercice', 'exercices')).toBe(`${entier(1250)} exercices`)
+    })
+
+    it('rend un tiret pour ce qui n’est pas un nombre', () => {
+        expect(compte(null, 'série', 'séries')).toBe('—')
+        expect(compte(undefined, 'série', 'séries')).toBe('—')
+    })
+})
+
+describe('accord', () => {
+    // Le nom seul, pour un nombre écrit à part : « 1 séances » sur la carte
+    // d'un objectif de fréquence (#1980).
+    it('rend le nom accordé selon la même règle que compte()', () => {
+        expect(accord(0, 'séance', 'séances')).toBe('séance')
+        expect(accord('1', 'séance', 'séances')).toBe('séance')
+        expect(accord(1.5, 'séance', 'séances')).toBe('séances')
+        expect(accord(2, 'séance', 'séances')).toBe('séances')
+    })
+
+    it('garde le pluriel pour ce qui n’est pas un nombre', () => {
+        expect(accord(null, 'séance', 'séances')).toBe('séances')
     })
 })

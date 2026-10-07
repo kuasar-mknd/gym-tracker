@@ -3,6 +3,7 @@ import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { computed } from 'vue'
 import BaseChart from './BaseChart.vue'
 import { grille } from './chartConfig'
+import { compte } from '@/Utils/nombre'
 
 const props = defineProps({
     data: {
@@ -28,7 +29,7 @@ const titre = (text) => ({ display: true, text, color: jeton('text-muted'), font
 const infobulle = {
     accent: 'shadow-cast',
     opaque: true,
-    callbacks: { label: (context) => `${context.parsed.x} kg × ${context.parsed.y} reps` },
+    callbacks: { label: (context) => `${context.parsed.x} kg × ${compte(context.parsed.y, 'rep', 'reps')}` },
 }
 
 const axeX = { title: titre('Poids (kg)'), grid: { display: true, ...grille() } }
