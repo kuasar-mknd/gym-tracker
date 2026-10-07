@@ -136,11 +136,11 @@ describe('TrainingReminder::toWebPush', function (): void {
         expect($payload)->toEqual([
             'title' => 'Prêt pour ta séance ? 💪',
             'actions' => [
-                ['title' => 'Ouvrir Gym Tracker', 'action' => url('/')],
+                ['title' => 'Ouvrir Gym Tracker', 'action' => url('/dashboard')],
             ],
             'body' => "C'est le moment de s'entraîner ! 💪",
             'icon' => '/pwa-192x192.png',
-            'data' => ['url' => '/'],
+            'data' => ['url' => '/dashboard'],
         ]);
     });
 
@@ -185,8 +185,9 @@ describe('la destination du clic', function (): void {
             ->toBe(['url' => '/stats']);
         expect(new AchievementUnlocked($achievement)->toWebPush($user, null)->toArray()['data'])
             ->toBe(['url' => '/achievements']);
+        // Le tableau de bord lui-même : « / » n'y mène que par une redirection (#1969).
         expect(new TrainingReminder()->toWebPush($user, null)->toArray()['data'])
-            ->toBe(['url' => '/']);
+            ->toBe(['url' => '/dashboard']);
     });
 
     it('reste relative, pour ne pas dépendre d\'un APP_URL mal renseigné', function (): void {

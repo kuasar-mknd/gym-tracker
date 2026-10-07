@@ -1,4 +1,5 @@
 import { classifySyncError, SYNC_OFFLINE, SYNC_PERMANENT } from '@/Utils/syncErrors'
+import { isTemporaryId } from '@/Utils/pendingIds'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 
 /**
@@ -25,6 +26,7 @@ export const raisonDuRefus = (erreur, champ) => {
  *
  * @param {{
  *   patchSet: (set: object, payload: object) => Promise<unknown>,
+ *   fondreDansLaFile?: (set: object, payload: object) => boolean,
  *   nextWrite: (cle: string) => number,
  *   isLatestWrite: (cle: string, seq: number) => boolean,
  *   fieldWrites: { queue: (cle: string, envoyer: () => Promise<unknown>) => Promise<unknown> },
@@ -37,6 +39,7 @@ export const raisonDuRefus = (erreur, champ) => {
  */
 export const useSaisieDeSerie = ({
     patchSet,
+    fondreDansLaFile = () => false,
     nextWrite,
     isLatestWrite,
     fieldWrites,
@@ -98,9 +101,16 @@ export const useSaisieDeSerie = ({
             return
         }
 
-        // Skip API calls for temp sets that haven't been created on the server yet
-        if (String(set.id).startsWith('temp-')) {
+        /*
+         * Une série que le serveur n'a pas encore créée n'a pas d'adresse où
+         * écrire. Sa création vole, et le rattrapage qui suit sa réponse
+         * enverra l'écart ; ou elle attend en file, et la valeur rejoint
+         * l'entrée qui la crée (#1960).
+         */
+        if (isTemporaryId(set.id)) {
             set[field] = value
+            fondreDansLaFile(set, { [field]: value })
+
             return
         }
 

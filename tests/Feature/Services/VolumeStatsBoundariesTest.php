@@ -74,13 +74,14 @@ it('garde chaque statistique en cache la durée annoncée', function (string $me
     'tendance de volume' => ['getVolumeTrend', 'volume_trend.30', 30],
     'volume hebdomadaire' => ['getWeeklyVolumeTrend', 'weekly_volume', 10],
     'historique de volume' => ['getVolumeHistory', 'volume_history.20', 30],
-    'historique mensuel' => ['getMonthlyVolumeHistory', 'monthly_volume_history.6', 30],
+    // La clef porte le mois courant (#1955) : celui de l'horloge arrêtée.
+    'historique mensuel' => ['getMonthlyVolumeHistory', 'monthly_volume_history.6.2026-06', 30],
 ]);
 
 /**
  * La fenetre du graphique mensuel : six mois, le sixieme compris.
  *
- * `subMonths($months - 1)->startOfMonth()` decide du bord, et `range($months - 1, 0)`
+ * `$debutDuMois->copy()->subMonths($months - 1)` decide du bord, et `range($months - 1, 0)`
  * du nombre de points. Ni l'un ni l'autre n'etait contraint : cinq mutants y
  * survivaient, dont un qui changeait la soustraction en addition.
  */

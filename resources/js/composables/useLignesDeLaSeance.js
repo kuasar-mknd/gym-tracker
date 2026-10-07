@@ -1,5 +1,6 @@
 import { computed, onUnmounted } from 'vue'
 import SyncService from '@/Utils/SyncService'
+import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
 import { useConfirmation } from '@/composables/useConfirmation'
 
 /**
@@ -29,37 +30,11 @@ export const useLignesDeLaSeance = ({
     oublierLesEcrituresDeLaLigne,
     reportSyncFailure,
 }) => {
-    const replayListeners = new Set()
-
     /**
-     * Resolves to the id a queued create eventually produced, once the queue
-     * actually drains.
-     *
-     * Without this, a create that went offline resolved to "no such row", so a set
-     * added to an exercise that was still queued was refused on the spot and never
-     * revisited: the queue drained, the exercise appeared on the server, and the
-     * set belonged to nobody. It is the same shape as the placeholder-id bug one
-     * level up, and it outlived the fix for it.
+     * Les créations de lignes parties dans la file hors ligne, qui attendent le
+     * vidage pour apprendre ce qu'elles sont devenues.
      */
-    const awaitReplay = (queueId) =>
-        new Promise((resolve) => {
-            if (!queueId) {
-                resolve(null)
-
-                return
-            }
-
-            const onReplayed = (event) => {
-                if (event.detail?.queueId !== queueId) return
-
-                window.removeEventListener('sync:replayed', onReplayed)
-                replayListeners.delete(onReplayed)
-                resolve(event.detail.data?.id ?? null)
-            }
-
-            replayListeners.add(onReplayed)
-            window.addEventListener('sync:replayed', onReplayed)
-        })
+    const attentes = creerLesAttentesDeRejeu()
 
     // ⚡ Perf: addExercise via API call + optimistic UI instead of Inertia redirect
     const addExercise = (exerciseId) => {
@@ -80,48 +55,56 @@ export const useLignesDeLaSeance = ({
         localWorkout.value.workout_lines.push(tempLine)
         showAddExercise.value = false
 
+        /**
+         * La ligne que le serveur a créée prend la place de la provisoire, que la
+         * réponse vienne tout de suite ou du vidage de la file. Au vidage, la
+         * ligne gardait son identifiant provisoire : un rafraîchissement des
+         * props l'affichait à côté de la copie du serveur (#1962, comme #1960
+         * pour une série).
+         */
+        const adopterLaLigne = (created) => {
+            const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
+
+            if (!created) {
+                return null
+            }
+
+            if (idx !== -1) {
+                /**
+                 * Mutated in place, never replaced.
+                 *
+                 * Assigning a new object into the slot fixed one bug and made a
+                 * subtler one: addSet captures `line` when the user taps, and
+                 * pushes its optimistic set into THAT object's sets array. Swap
+                 * the slot for a fresh object with a fresh array and addSet is
+                 * left holding a detached copy — its own findIndex then never
+                 * finds the set again, so the row stays on a placeholder id for
+                 * as long as the page lives.
+                 *
+                 * Keeping the object and the array identity means every closure,
+                 * debounce timer and v-model binding already pointing at this
+                 * line stays pointing at the real one.
+                 */
+                const { sets: createdSets, ...lineFields } = created
+                const line = localWorkout.value.workout_lines[idx]
+
+                Object.assign(line, lineFields)
+
+                // A line the server has just created has no sets of its own, but
+                // a replayed create can return one that does.
+                for (const set of createdSets ?? []) {
+                    if (!line.sets.some((existing) => existing.id === set.id)) line.sets.push(set)
+                }
+            }
+
+            return created.id
+        }
+
         const creation = SyncService.post(route('api.v1.workout-lines.store'), {
             workout_id: localWorkout.value.id,
             exercise_id: exerciseId,
         })
-            .then((response) => {
-                const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-                const created = response.data?.data
-
-                if (!created) {
-                    return null
-                }
-
-                if (idx !== -1) {
-                    /**
-                     * Mutated in place, never replaced.
-                     *
-                     * Assigning a new object into the slot fixed one bug and made a
-                     * subtler one: addSet captures `line` when the user taps, and
-                     * pushes its optimistic set into THAT object's sets array. Swap
-                     * the slot for a fresh object with a fresh array and addSet is
-                     * left holding a detached copy — its own findIndex then never
-                     * finds the set again, so the row stays on a placeholder id for
-                     * as long as the page lives.
-                     *
-                     * Keeping the object and the array identity means every closure,
-                     * debounce timer and v-model binding already pointing at this
-                     * line stays pointing at the real one.
-                     */
-                    const { sets: createdSets, ...lineFields } = created
-                    const line = localWorkout.value.workout_lines[idx]
-
-                    Object.assign(line, lineFields)
-
-                    // A line the server has just created has no sets of its own, but
-                    // a replayed create can return one that does.
-                    for (const set of createdSets ?? []) {
-                        if (!line.sets.some((existing) => existing.id === set.id)) line.sets.push(set)
-                    }
-                }
-
-                return created.id
-            })
+            .then((response) => adopterLaLigne(response.data?.data))
             .catch((err) => {
                 if (err.isOffline) {
                     // Queued, not lost. Waiting for the drain to report the real id
@@ -129,7 +112,21 @@ export const useLignesDeLaSeance = ({
                     // at all; answering null here stranded it permanently.
                     queuedLineIds.add(tempLine.id)
 
-                    return awaitReplay(err.queueId)
+                    /*
+                     * Ses séries nomment désormais cette entrée de file, et y
+                     * entrent derrière elle sans attendre le vidage (#1962).
+                     */
+                    if (err.queueId) {
+                        pendingIds.noterEnFile(tempLine.id, err.queueId)
+                    }
+
+                    /*
+                     * Without this, a create that went offline resolved to "no
+                     * such row", so a set added to an exercise that was still
+                     * queued was refused on the spot and never revisited. Null
+                     * when the drain refuses it or the line is withdrawn first.
+                     */
+                    return attentes.attendre(err.queueId).then((rejeu) => adopterLaLigne(rejeu?.data))
                 }
 
                 const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
@@ -154,8 +151,40 @@ export const useLignesDeLaSeance = ({
         const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === lineId)
         const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
 
+        /*
+         * Une ligne dont la création attend encore en file sort de la file avec
+         * les séries qui en dépendent : rien n'est à supprimer sur le serveur,
+         * et sa création se règle à null. Partie, elle se supprime par
+         * l'identifiant qu'elle rend. Tentée sans réponse, elle a pu être créée
+         * là-bas : la file la garde, et la supprime au vidage (#1960).
+         */
+        const retirerSaCreation = () => {
+            const fileDeLaLigne = pendingIds.fileDe(lineId)
+
+            if (fileDeLaLigne !== null) {
+                SyncService.retirerDeLaFile(fileDeLaLigne, {
+                    // L'identifiant que le serveur aura émis : le vidage le pose à la place de `realId`.
+                    annulerPar: (realId) => route('api.v1.workout-lines.destroy', { workout_line: realId }),
+                })
+            }
+        }
+
+        retirerSaCreation()
+
+        /*
+         * Retirée pendant que le premier envoi de sa création volait encore, la
+         * ligne attendait le vidage en mémoire seulement : si cet envoi finissait
+         * en file, un rechargement la laissait partir, et l'exercice retiré
+         * revenait sur le serveur. On attend donc ce premier envoi, et s'il a
+         * fini en file, elle en sort (#1962).
+         */
         pendingIds
-            .resolve(lineId)
+            .reference(lineId)
+            .then(() => {
+                retirerSaCreation()
+
+                return pendingIds.resolve(lineId)
+            })
             .then((realLineId) => {
                 if (realLineId === null) {
                     pendingIds.forget(lineId)
@@ -201,8 +230,7 @@ export const useLignesDeLaSeance = ({
     onUnmounted(() => {
         // One per create still waiting on the offline queue; the page may well be
         // left before the drain ever comes.
-        replayListeners.forEach((listener) => window.removeEventListener('sync:replayed', listener))
-        replayListeners.clear()
+        attentes.oublierTout()
     })
 
     return {

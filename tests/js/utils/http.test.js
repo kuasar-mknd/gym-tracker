@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { http, ErreurHttp, ErreurReseau } from '@/Utils/http'
 
-const reponse = (corps, { status = 200, type = 'application/json' } = {}) => ({
+const reponse = (corps, { status = 200, type = 'application/json', entetes = {} } = {}) => ({
     ok: status >= 200 && status < 300,
     status,
-    headers: { get: () => type },
+    headers: new Headers({ 'content-type': type, ...entetes }),
     json: () => Promise.resolve(corps),
     text: () => Promise.resolve(String(corps)),
 })
@@ -64,6 +64,19 @@ describe('http', () => {
             response: { status: 422, data: { message: 'refusé' } },
         })
         await expect(http.post('/api/v1/sets', {})).rejects.toBeInstanceOf(ErreurHttp)
+    })
+
+    /**
+     * La file hors ligne lit `Retry-After` pour savoir quand réessayer un 429
+     * (#1963). Depuis le départ d'axios, l'erreur ne portait plus d'en-têtes :
+     * la lecture tombait toujours sur sa valeur par défaut.
+     */
+    it('garde les en-têtes de la réponse sur l’erreur', async () => {
+        globalThis.fetch.mockResolvedValue(reponse({}, { status: 429, entetes: { 'Retry-After': '30' } }))
+
+        const erreur = await http.post('/api/v1/sets', {}).catch((e) => e)
+
+        expect(erreur.response.headers['retry-after']).toBe('30')
     })
 
     it('distingue le serveur qui n’a jamais répondu', async () => {

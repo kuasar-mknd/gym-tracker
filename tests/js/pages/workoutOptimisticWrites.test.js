@@ -4,6 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 const post = vi.fn()
 const patch = vi.fn()
 const routerPatch = vi.fn()
+const mettreEnFile = vi.fn()
 
 vi.mock('@/Utils/SyncService', () => ({
     default: {
@@ -11,7 +12,15 @@ vi.mock('@/Utils/SyncService', () => ({
         patch: (...args) => patch(...args),
         delete: vi.fn(),
         get: vi.fn(),
+        identifiantsEnAttente: () => [],
+        rejeuxDepuisLaDerniereVisite: 0,
         failedRequests: () => [],
+        mettreEnFile: (...args) => mettreEnFile(...args),
+        modifierEnFile: () => false,
+        processQueue: () => Promise.resolve(),
+        attendreLesEcritures: () => Promise.resolve(),
+        enAttente: () => 0,
+        ecrituresEnCours: () => 0,
     },
 }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))
@@ -133,6 +142,7 @@ beforeEach(() => {
     post.mockReset()
     patch.mockReset()
     routerPatch.mockReset()
+    mettreEnFile.mockReset()
     patch.mockResolvedValue({ data: {} })
 })
 
@@ -207,7 +217,9 @@ describe('Workouts/Show — writes made while a create is in flight', () => {
         expect(lines(wrapper)[0].id).toBe(10)
         expect(lines(wrapper)[0].sets).toHaveLength(1)
         expect(lines(wrapper)[0].sets[0].id).toBe(77)
-        expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 10 }))
+        expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 10 }), {
+            ajusterPar: expect.any(Function),
+        })
     })
 })
 
@@ -293,14 +305,19 @@ describe('Workouts/Show — a refused edit reverts', () => {
  * to resolve to "no such row", so a set added onto it was refused on the spot
  * and never revisited. The queue drained, the exercise appeared on the server,
  * and the set belonged to nobody — gone, with the row still on screen.
+ *
+ * Le correctif suivant la faisait attendre en mémoire le rejeu de l'exercice :
+ * un rechargement la perdait (#1962). Elle entre désormais en file tout de
+ * suite, derrière l'exercice qu'elle nomme par son entrée.
  */
 describe('Workouts/Show — a set added onto a queued exercise', () => {
-    it('is sent once the queue reports what the exercise became', async () => {
+    it('is queued behind the exercise at once, and takes its id when the queue replays it', async () => {
         post.mockImplementation((url) =>
             url.includes('workout-lines')
                 ? Promise.reject({ isOffline: true, queueId: 'q-77' })
                 : Promise.resolve({ data: { data: { id: 88, weight: 0, reps: 10 } } }),
         )
+        mettreEnFile.mockReturnValue('q-78')
 
         const wrapper = await mountPage()
 
@@ -310,15 +327,26 @@ describe('Workouts/Show — a set added onto a queued exercise', () => {
         await click(wrapper, 'add-set-0')
         await flushPromises()
 
-        // Nothing has been sent for the set: the exercise does not exist yet.
+        // Nothing has been sent for the set: it waits in the queue, behind the exercise.
         expect(post).toHaveBeenCalledTimes(1)
+        expect(mettreEnFile).toHaveBeenCalledWith({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: expect.objectContaining({ workout_line_id: { enAttenteDe: 'q-77' } }),
+            ajusterPar: expect.any(Function),
+        })
         expect(wrapper.vm.unsyncedSetIds.size).toBe(1)
 
-        // The connection comes back and the queue drains the exercise.
+        // The connection comes back and the queue drains the exercise, then the set.
         window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: 'q-77', data: { id: 31 } } }))
+        window.dispatchEvent(
+            new CustomEvent('sync:replayed', {
+                detail: { queueId: 'q-78', data: { id: 88 }, envoye: { workout_line_id: 31, weight: 0, reps: 10 } },
+            }),
+        )
         await flushPromises()
 
-        expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 31 }))
+        expect(post).toHaveBeenCalledTimes(1)
         expect(lines(wrapper)[0].sets[0].id).toBe(88)
         expect(wrapper.vm.unsyncedSetIds.size).toBe(0)
     })
@@ -628,12 +656,16 @@ describe('Workouts/Show — une série recopiée au-delà des plafonds', () => {
         await click(wrapper, 'add-set-0')
         await flushPromises()
 
-        expect(post).toHaveBeenCalledWith('/api/v1/sets', {
-            workout_line_id: 10,
-            is_completed: false,
-            weight: 100000,
-            reps: 999,
-        })
+        expect(post).toHaveBeenCalledWith(
+            '/api/v1/sets',
+            {
+                workout_line_id: 10,
+                is_completed: false,
+                weight: 100000,
+                reps: 999,
+            },
+            { ajusterPar: expect.any(Function) },
+        )
         expect(lines(wrapper)[0].sets.map((serie) => serie.id)).toEqual([42, 43])
     })
 })

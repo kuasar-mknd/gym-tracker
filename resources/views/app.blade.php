@@ -30,14 +30,13 @@
          offline and sent every visitor's IP to a third party on page load. --}}
 
     {{--
-        This is the only copy of the route table.
+        La seule copie de la table des routes.
 
-        HandleInertiaRequests also shared it as an Inertia prop, so every page
-        carried the same 34 KB twice — 157.9 KB of HTML on /login against 102.9
-        without. The prop was the one to go: @routes defines the global route()
-        that page scripts call directly, and removing it throws
-        "route is not defined" the moment a page renders. The prop also travelled
-        again as JSON on every Inertia navigation, which the inline copy does not.
+        HandleInertiaRequests la partageait aussi en prop Inertia : chaque page
+        portait deux fois les mêmes 34 Ko, et la prop repartait en JSON à
+        chaque navigation Inertia. @routes n'écrit que la table (`const Ziggy`) :
+        la fonction route() que les pages appellent vient du bundle, posée en
+        globale par main.js (config/ziggy.php, #1969).
     --}}
     <!-- Scripts -->
     @routes(nonce: Vite::cspNonce())

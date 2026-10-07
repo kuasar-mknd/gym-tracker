@@ -17,12 +17,22 @@
 const jetonCsrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? null
 
 export class ErreurHttp extends Error {
-    constructor(statut, corps, url) {
+    /**
+     * @param {number} statut
+     * @param {unknown} corps
+     * @param {string} url
+     * @param {Record<string, string>} entetes les en-têtes de la réponse, noms en minuscules :
+     *   la file hors ligne lit `retry-after` pour savoir quand réessayer après un 429 (#1963).
+     */
+    constructor(statut, corps, url, entetes = {}) {
         super(`La requête ${url} a répondu ${statut}.`)
         this.name = 'ErreurHttp'
-        this.response = { status: statut, data: corps }
+        this.response = { status: statut, data: corps, headers: entetes }
     }
 }
+
+/** Les en-têtes d'une réponse en objet simple, comme axios les rendait. */
+const lireLesEntetes = (reponse) => Object.fromEntries(reponse.headers.entries())
 
 export class ErreurReseau extends Error {
     constructor(url, cause) {
@@ -95,7 +105,7 @@ export const http = async (config) => {
     const corps = await lireLeCorps(reponse)
 
     if (!reponse.ok) {
-        throw new ErreurHttp(reponse.status, corps, url)
+        throw new ErreurHttp(reponse.status, corps, url, lireLesEntetes(reponse))
     }
 
     return { data: corps, status: reponse.status }

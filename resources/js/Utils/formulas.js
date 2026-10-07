@@ -22,6 +22,16 @@ const WILKS_COEFFICIENTS = {
     female: [594.31747775582, -27.23842536447, 0.82112226871, -0.00930733913, 4.731582e-5, -9.054e-8],
 }
 
+/**
+ * La plage de poids de corps, en kilos, sur laquelle le polynôme de Wilks est
+ * défini : les bornes des implémentations de référence, les mêmes que
+ * `CreateWilksScoreAction` côté serveur (#1959).
+ */
+const PLAGE_DU_POIDS_DE_CORPS = {
+    male: [40, 201.9],
+    female: [26.51, 154.53],
+}
+
 /** Activity multipliers applied to BMR to reach TDEE. */
 export const ACTIVITY_MULTIPLIERS = {
     sedentary: 1.2,
@@ -62,20 +72,28 @@ export function oneRepMax(weight, reps) {
  * Exposed on its own because it is the part that can be checked against a
  * published Wilks table — the score is just the total times this.
  *
+ * Le poids de corps est ramené à la borne la plus proche de la plage de la
+ * formule : au-delà, le dénominateur finit par changer de signe (vers 13,5 et
+ * 283 kg chez l'homme, vers 208 kg chez la femme), et le coefficient remonte
+ * avant même d'y arriver.
+ *
  * @param {number} bodyWeightKg
  * @param {'male'|'female'} gender
  * @returns {number}
  */
 export function wilksCoefficient(bodyWeightKg, gender) {
-    const [a, b, c, d, e, f] = WILKS_COEFFICIENTS[gender === 'male' ? 'male' : 'female']
+    const genre = gender === 'male' ? 'male' : 'female'
+    const [a, b, c, d, e, f] = WILKS_COEFFICIENTS[genre]
+    const [minimum, maximum] = PLAGE_DU_POIDS_DE_CORPS[genre]
+    const poids = Math.min(Math.max(bodyWeightKg, minimum), maximum)
 
     const denominator =
         a +
-        b * bodyWeightKg +
-        c * Math.pow(bodyWeightKg, 2) +
-        d * Math.pow(bodyWeightKg, 3) +
-        e * Math.pow(bodyWeightKg, 4) +
-        f * Math.pow(bodyWeightKg, 5)
+        b * poids +
+        c * Math.pow(poids, 2) +
+        d * Math.pow(poids, 3) +
+        e * Math.pow(poids, 4) +
+        f * Math.pow(poids, 5)
 
     return 500 / denominator
 }

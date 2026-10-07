@@ -8,12 +8,14 @@ import Dropdown from '@/Components/UI/Dropdown.vue'
 import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
+import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
+import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 
 defineProps({
     pageTitle: {
@@ -112,6 +114,26 @@ const banniereCompacte = computed(() => !route().current('dashboard') && !route(
  */
 onMounted(() => rapprocherLAbonnementPush(page.props.auth?.user?.id))
 
+/*
+ * Les écritures hors ligne que le chargement a effacées sans pouvoir les
+ * envoyer, faute de savoir à quel compte elles appartenaient (#1964) : le
+ * premier écran authentifié le dit, une fois, par le toast d'erreur. Un message
+ * déjà affiché n'est pas remplacé : l'avis attend l'écran suivant.
+ */
+onMounted(() => {
+    if (page.props.flash?.error) {
+        return
+    }
+
+    const effacees = reprendreLesEcrituresEffacees()
+
+    if (effacees > 0) {
+        const flash = page.props.flash ?? (page.props.flash = {})
+
+        flash.error = messageDesEcrituresEffacees(effacees)
+    }
+})
+
 onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 </script>
 
@@ -143,6 +165,9 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
             <code class="bg-text-main/15 rounded px-1">sail artisan migrate</code>
             avant de continuer, sinon les enregistrements échoueront sans le dire.
         </div>
+
+        <!-- Une nouvelle version propose de recharger, sans jamais le faire seule (#1967). -->
+        <BandeauDeMiseAJour />
 
         <!-- Flash Toasts -->
         <div v-for="(cfg, type) in toasts" :key="type">

@@ -20,6 +20,9 @@ const seriesOf = (chart, label) => chart.props('data').datasets.find((dataset) =
 
 const session = (attributes) => ({ formatted_date: '01/07/2026', sets: [], best_1rm: 0, ...attributes })
 
+/** Une série telle que le serveur l'envoie, validée sauf mention contraire. */
+const serie = (attributes) => ({ is_completed: true, is_warmup: false, ...attributes })
+
 describe('SessionPerformanceChart', () => {
     /** The history arrives most-recent first; a progress chart must read left to right. */
     it('remet les séances dans l’ordre chronologique', () => {
@@ -57,10 +60,7 @@ describe('SessionPerformanceChart', () => {
     it('additionne le volume de chaque série de la séance', () => {
         const chart = chartOf([
             session({
-                sets: [
-                    { weight: 100, reps: 5 },
-                    { weight: 80, reps: 10 },
-                ],
+                sets: [serie({ weight: 100, reps: 5 }), serie({ weight: 80, reps: 10 })],
             }),
         ])
 
@@ -73,9 +73,9 @@ describe('SessionPerformanceChart', () => {
         const chart = chartOf([
             session({
                 sets: [
-                    { weight: null, reps: 12 },
-                    { weight: 60, reps: undefined },
-                    { weight: 60, reps: 10 },
+                    serie({ weight: null, reps: 12 }),
+                    serie({ weight: 60, reps: undefined }),
+                    serie({ weight: 60, reps: 10 }),
                 ],
             }),
         ])
@@ -83,10 +83,37 @@ describe('SessionPerformanceChart', () => {
         expect(seriesOf(chart, 'Volume total')).toEqual([600])
     })
 
-    it('trace zéro quand la séance n’a pas de 1RM estimé', () => {
-        const chart = chartOf([session({ best_1rm: null })])
+    /*
+     * Une séance lancée depuis un modèle puis abandonnée n'a pas de 1RM : un
+     * point à zéro creusait la courbe à chaque abandon. La courbe passe outre
+     * (#1956).
+     */
+    it('ne trace pas de point quand la séance n’a pas de 1RM estimé', () => {
+        const chart = chartOf([
+            session({ formatted_date: '15/07/2026', best_1rm: 105 }),
+            session({ formatted_date: '08/07/2026', best_1rm: null }),
+            session({ formatted_date: '01/07/2026', best_1rm: 100 }),
+        ])
+        const courbe = chart.props('data').datasets.find((dataset) => dataset.label === 'Meilleur 1RM (kg)')
 
-        expect(seriesOf(chart, 'Meilleur 1RM (kg)')).toEqual([0])
+        expect(courbe.data).toEqual([100, null, 105])
+        expect(courbe.spanGaps).toBe(true)
+    })
+
+    it('laisse hors du volume la série jamais cochée, comme le volume de la séance', () => {
+        const chart = chartOf([
+            session({
+                best_1rm: 116.67,
+                sets: [
+                    serie({ weight: 100, reps: 5 }),
+                    serie({ weight: 40, reps: 10, is_warmup: true }),
+                    serie({ weight: 140, reps: 5, is_completed: false }),
+                ],
+            }),
+        ])
+
+        expect(seriesOf(chart, 'Volume total')).toEqual([900])
+        expect(seriesOf(chart, 'Meilleur 1RM (kg)')).toEqual([116.67])
     })
 
     it('ne trace aucune séance sans historique', () => {
