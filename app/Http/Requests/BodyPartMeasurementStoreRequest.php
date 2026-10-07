@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\GoalType;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\BodyPartMeasurement;
 use App\Models\User;
@@ -27,14 +28,16 @@ class BodyPartMeasurementStoreRequest extends FormRequest
      *
      * Sauf quand le compte mesure déjà une partie sous ce nom exact : avant
      * les noms français, un francophone a pu saisir « Taille » à la main. Le
-     * nom saisi est gardé quand le compte n'a aucune mesure sous la clef, ou
+     * nom saisi est gardé quand le compte ne suit pas encore la clef, ou
      * quand la mesure vient de la page de cette partie, qui le demande par
      * `keep_part_name` : la ramener à la clef la ferait manquer à la page où
-     * on vient de l'ajouter (#1974). Quand le compte mesure les deux, la
-     * pastille va à la clef, que suivent les objectifs. La comparaison suit
-     * la collation de la colonne, comme le regroupement de la page
-     * Mensurations. `keep_part_name` n'est qu'une consigne de rangement : la
-     * validation ne le rend pas, il n'entre pas en base.
+     * on vient de l'ajouter (#1974). Le compte suit la clef dès qu'il a une
+     * mesure rangée sous elle ou un objectif de mensuration qui la lit : la
+     * pastille va alors à la clef, sans quoi l'objectif, qui s'affiche sous le
+     * même nom français, n'avancerait plus. La comparaison suit la collation
+     * de la colonne, comme le regroupement de la page Mensurations.
+     * `keep_part_name` n'est qu'une consigne de rangement : la validation ne
+     * le rend pas, il n'entre pas en base.
      */
     #[\Override]
     protected function prepareForValidation(): void
@@ -54,7 +57,7 @@ class BodyPartMeasurementStoreRequest extends FormRequest
         }
 
         if ($this->leCompteMesureDejaLaPartie($partie)
-            && ($this->boolean('keep_part_name') || ! $this->leCompteMesureDejaLaPartie($clef))) {
+            && ($this->boolean('keep_part_name') || ! $this->leCompteSuitLaClef($clef))) {
             return;
         }
 
@@ -70,6 +73,26 @@ class BodyPartMeasurementStoreRequest extends FormRequest
 
         return $utilisateur instanceof User
             && $utilisateur->bodyPartMeasurements()->where('part', $partie)->exists();
+    }
+
+    /**
+     * Le compte suit-il déjà la partie proposée sous sa clef, par une mesure
+     * rangée sous elle ou par un objectif de mensuration qui la lit
+     * (`GoalService::releverLaPartieDuCorps()`) ?
+     */
+    private function leCompteSuitLaClef(string $clef): bool
+    {
+        $utilisateur = $this->user();
+
+        if (! $utilisateur instanceof User) {
+            return false;
+        }
+
+        return $this->leCompteMesureDejaLaPartie($clef)
+            || $utilisateur->goals()
+                ->where('type', GoalType::Measurement)
+                ->where('measurement_type', $clef)
+                ->exists();
     }
 
     /**

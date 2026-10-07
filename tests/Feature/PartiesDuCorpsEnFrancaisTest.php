@@ -242,6 +242,80 @@ it('distingue, sur la carte et sur la page, la partie saisie à la main de la pa
             ->where('label', 'Taille'));
 });
 
+/*
+ * Le compte qui n'a encore rien rangé sous la clef, mais qu'un objectif suit :
+ * « Taille » saisi à la main, et un objectif sur `Waist`, qui s'affiche lui
+ * aussi « Taille ». La pastille « Taille » doit nourrir l'objectif ; la page
+ * de la partie saisie à la main garde ses mesures.
+ */
+
+/**
+ * Un compte qui mesure son tour de taille sous « Taille », saisi à la main,
+ * et dont un objectif suit la clef, sans aucune mesure rangée sous elle.
+ *
+ * @return array{0: User, 1: Goal}
+ */
+function compteDontLObjectifSuitLaClefSansMesure(): array
+{
+    $utilisateur = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $utilisateur->id, 'part' => 'Taille', 'value' => 91, 'unit' => 'cm', 'measured_at' => '2026-09-02']);
+    $objectif = Goal::factory()->create([
+        'user_id' => $utilisateur->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'Waist',
+        'start_value' => 90,
+        'current_value' => 90,
+        'target_value' => 80,
+        'completed_at' => null,
+    ]);
+
+    return [$utilisateur, $objectif];
+}
+
+it('range sous la clef la mesure de la pastille quand un objectif suit la clef, même sans mesure rangée sous elle', function (): void {
+    [$utilisateur, $objectif] = compteDontLObjectifSuitLaClefSansMesure();
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'value' => 84, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(mesuresDuCompteParPartie($utilisateur))->toBe(['Taille' => 1, 'Waist' => 1])
+        ->and((float) $objectif->fresh()?->current_value)->toBe(84.0);
+
+    $this->actingAs($utilisateur)
+        ->get(route('body-parts.index'))
+        ->assertInertia(fn (AssertableInertia $liste): AssertableInertia => $liste
+            ->has('latestMeasurements', 2)
+            ->where('latestMeasurements.0.part', 'Taille')
+            ->where('latestMeasurements.0.label', 'Taille (saisie libre)')
+            ->where('latestMeasurements.1.part', 'Waist')
+            ->where('latestMeasurements.1.label', 'Taille')
+            ->where('latestMeasurements.1.current', 84));
+});
+
+it('garde la mesure ajoutée depuis la page de la partie saisie à la main dans cet historique, même quand un objectif suit la clef', function (): void {
+    [$utilisateur, $objectif] = compteDontLObjectifSuitLaClefSansMesure();
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'keep_part_name' => true, 'value' => 89, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(mesuresDuCompteParPartie($utilisateur))->toBe(['Taille' => 2])
+        ->and((float) $objectif->fresh()?->current_value)->toBe(90.0);
+});
+
+it('ne suit la clef que par un objectif de mensuration du compte lui-même', function (): void {
+    $utilisateur = User::factory()->create();
+    BodyPartMeasurement::factory()->create(['user_id' => $utilisateur->id, 'part' => 'Taille', 'value' => 91, 'unit' => 'cm', 'measured_at' => '2026-09-02']);
+    Goal::factory()->create(['user_id' => User::factory()->create()->id, 'type' => GoalType::Measurement, 'measurement_type' => 'Waist', 'start_value' => 90, 'target_value' => 80]);
+
+    $this->actingAs($utilisateur)
+        ->post(route('body-parts.store'), ['part' => 'Taille', 'value' => 88, 'unit' => 'cm', 'measured_at' => '2026-10-05'])
+        ->assertSessionHasNoErrors();
+
+    expect(mesuresDuCompteParPartie($utilisateur))->toBe(['Taille' => 2]);
+});
+
 it('range sous sa clef le nom français d’un compte qui ne l’a jamais saisi, même quand un autre compte l’a fait', function (): void {
     $autre = User::factory()->create();
     BodyPartMeasurement::factory()->create(['user_id' => $autre->id, 'part' => 'Taille', 'measured_at' => '2026-09-01']);
