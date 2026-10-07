@@ -12,6 +12,8 @@ vi.mock('@/Utils/SyncService', () => ({
         post: vi.fn(),
         delete: vi.fn(),
         get: vi.fn(),
+        identifiantsEnAttente: () => [],
+        rejeuxDepuisLaDerniereVisite: 0,
         failedRequests: () => failedRequests(),
         clearFailedRequests: () => clearFailedRequests(),
     },

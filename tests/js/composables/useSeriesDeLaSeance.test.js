@@ -88,12 +88,18 @@ describe('ajouter une série', () => {
 
         await flushPromises()
 
-        expect(sync.post).toHaveBeenCalledWith('/api.v1.sets.store/', {
-            workout_line_id: 1,
-            is_completed: false,
-            distance_km: 0,
-            duration_seconds: 30,
-        })
+        expect(sync.post).toHaveBeenCalledWith(
+            '/api.v1.sets.store/',
+            {
+                workout_line_id: 1,
+                is_completed: false,
+                distance_km: 0,
+                duration_seconds: 30,
+            },
+            { ajusterPar: expect.any(Function) },
+        )
+        // L'adresse où le vidage renverra ce que le serveur ignorerait d'un rejeu (#1960).
+        expect(sync.post.mock.calls[0][2].ajusterPar('__produit__')).toBe('/api.v1.sets.update/__produit__')
         expect(serie.id).toBe(42)
         expect(rapport.clearUnsynced).toHaveBeenCalledWith('temp-1', 42)
     })
@@ -131,12 +137,16 @@ describe('ajouter une série', () => {
         await flushPromises()
 
         expect(ligne().sets[0]).toMatchObject({ id: 44, weight: 110, reps: 3 })
-        expect(sync.post).toHaveBeenCalledWith('/api.v1.sets.store/', {
-            workout_line_id: 7,
-            is_completed: false,
-            weight: 110,
-            reps: 3,
-        })
+        expect(sync.post).toHaveBeenCalledWith(
+            '/api.v1.sets.store/',
+            {
+                workout_line_id: 7,
+                is_completed: false,
+                weight: 110,
+                reps: 3,
+            },
+            { ajusterPar: expect.any(Function) },
+        )
     })
 
     it('retire la série et le dit quand le serveur refuse ; la garde quand la file l’a prise', async () => {

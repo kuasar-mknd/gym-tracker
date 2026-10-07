@@ -10,6 +10,8 @@ vi.mock('@/Utils/SyncService', () => ({
         patch: (...args) => patch(...args),
         delete: vi.fn(),
         get: vi.fn(),
+        identifiantsEnAttente: () => [],
+        rejeuxDepuisLaDerniereVisite: 0,
         failedRequests: () => [],
     },
 }))

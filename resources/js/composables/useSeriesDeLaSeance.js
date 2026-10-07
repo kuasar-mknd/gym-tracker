@@ -55,11 +55,12 @@ export const useSeriesDeLaSeance = ({
     apresValidation,
     bornesDUneSerie = null,
 }) => {
-    const { patchSet, deleteSet } = useTransportDeSerie({ pendingIds, markUnsynced })
+    const { patchSet, deleteSet, fondreDansLaFile } = useTransportDeSerie({ pendingIds, markUnsynced })
 
     const { flushAllPendingUpdates, flushPendingUpdates, updateSet, saisieEnCours, saisieTerminee, oublierLesRafales } =
         useSaisieDeSerie({
             patchSet,
+            fondreDansLaFile,
             nextWrite,
             isLatestWrite,
             fieldWrites,
