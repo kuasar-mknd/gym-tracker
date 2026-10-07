@@ -132,6 +132,7 @@ it('chiffre l’historique de chaque page d’un compte, là où le navigateur s
 })->with([
     'en HTTPS, derrière le proxy inverse' => ['https://gym.example.org'],
     'sur localhost' => ['http://localhost'],
+    'sur un sous-domaine de localhost' => ['http://gym.localhost'],
     'sur 127.0.0.1, comme les parcours de la CI' => ['http://127.0.0.1:8000'],
     'sur ::1' => ['http://[::1]:8000'],
 ]);
@@ -155,6 +156,7 @@ it('ne demande pas le chiffrement à une origine en http, où le navigateur ne s
     'le nom des parcours sous Sail' => ['http://laravel.test'],
     'une adresse du réseau local' => ['http://192.0.2.10'],
     'un nom qui finit seulement comme localhost' => ['http://pas-localhost'],
+    'un nom qui commence par localhost sans en être un sous-domaine' => ['http://localhost.example.org'],
 ]);
 
 it('laisse les pages publiques en clair et dans le cache, comme avant', function (): void {
