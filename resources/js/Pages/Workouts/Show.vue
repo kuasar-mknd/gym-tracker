@@ -17,6 +17,7 @@ import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -169,12 +170,16 @@ const {
 })
 
 useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })
+useRechargementApresLeVidage()
 
 const {
     savingTemplate,
     saveAsTemplate,
     showFinishModal,
+    ecrituresEnAttente,
+    clotureEnCours,
     finishWorkout,
+    annulerLaCloture,
     confirmFinishWorkout,
     showSettingsModal,
     settingsForm,
@@ -366,7 +371,13 @@ onUnmounted(() => {
             @submit="updateSettings"
         />
 
-        <WorkoutFinishModal :show="showFinishModal" @close="showFinishModal = false" @confirm="confirmFinishWorkout" />
+        <WorkoutFinishModal
+            :show="showFinishModal"
+            :en-attente="ecrituresEnAttente"
+            :en-cours="clotureEnCours"
+            @close="annulerLaCloture"
+            @confirm="confirmFinishWorkout"
+        />
 
         <ConfirmDialog
             :ouvert="retraitDemande"

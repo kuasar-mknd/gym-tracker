@@ -107,12 +107,16 @@ describe('l’ajout et le retrait d’une série', () => {
         series.addSet(1)
         await flushPromises()
 
-        expect(sync.post).toHaveBeenCalledWith(expect.any(String), {
-            workout_line_id: 1,
-            is_completed: false,
-            weight: 100000,
-            reps: 999,
-        })
+        expect(sync.post).toHaveBeenCalledWith(
+            expect.any(String),
+            {
+                workout_line_id: 1,
+                is_completed: false,
+                weight: 100000,
+                reps: 999,
+            },
+            { ajusterPar: expect.any(Function) },
+        )
         expect(ligne().sets.at(-1)).toMatchObject({ id: 41, weight: 100000, reps: 999 })
         expect(ligne().sets[0]).toMatchObject({ weight: 150000, reps: 1500 })
     })
@@ -125,12 +129,16 @@ describe('l’ajout et le retrait d’une série', () => {
         series.addSet(1)
         await flushPromises()
 
-        expect(sync.post).toHaveBeenCalledWith(expect.any(String), {
-            workout_line_id: 1,
-            is_completed: false,
-            weight: 62.5,
-            reps: 999,
-        })
+        expect(sync.post).toHaveBeenCalledWith(
+            expect.any(String),
+            {
+                workout_line_id: 1,
+                is_completed: false,
+                weight: 62.5,
+                reps: 999,
+            },
+            { ajusterPar: expect.any(Function) },
+        )
     })
 
     it('cite la raison d’un refus qui nomme un champ, au lieu d’inviter à réessayer', async () => {

@@ -17,8 +17,11 @@ const monter = () => {
     }
     const reportEditFailure = vi.fn()
 
+    const fondreDansLaFile = vi.fn(() => true)
+
     const saisie = useSaisieDeSerie({
         patchSet,
+        fondreDansLaFile,
         nextWrite,
         isLatestWrite,
         fieldWrites: createWriteQueue(),
@@ -26,7 +29,7 @@ const monter = () => {
         reportEditFailure,
     })
 
-    return { saisie, patchSet, brouillons, reportEditFailure }
+    return { saisie, patchSet, fondreDansLaFile, brouillons, reportEditFailure }
 }
 
 beforeEach(() => {
@@ -70,5 +73,24 @@ describe('la saisie d’une série', () => {
         vi.advanceTimersByTime(1500)
         await flushPromises()
         expect(patchSet).toHaveBeenCalledTimes(2)
+    })
+
+    /**
+     * Une série que le serveur n'a pas encore créée n'a pas d'adresse : sa
+     * saisie rejoint l'entrée de file qui la crée, sans debounce ni brouillon,
+     * puisque cette entrée survit déjà à un rechargement (#1960).
+     */
+    it('fond la saisie d’une série provisoire dans sa création en file', async () => {
+        const { saisie, patchSet, fondreDansLaFile, brouillons } = monter()
+        const provisoire = { id: 'temp-3', reps: 5 }
+
+        saisie.updateSet(provisoire, 'reps', '3')
+        vi.advanceTimersByTime(1500)
+        await flushPromises()
+
+        expect(provisoire.reps).toBe(3)
+        expect(fondreDansLaFile).toHaveBeenCalledWith(provisoire, { reps: 3 })
+        expect(patchSet).not.toHaveBeenCalled()
+        expect(brouillons.writeDraftField).not.toHaveBeenCalled()
     })
 })

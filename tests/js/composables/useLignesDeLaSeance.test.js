@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 
-const sync = vi.hoisted(() => ({ post: vi.fn(), delete: vi.fn() }))
+const sync = vi.hoisted(() => ({ post: vi.fn(), delete: vi.fn(), retirerDeLaFile: vi.fn() }))
 vi.mock('@/Utils/SyncService', () => ({ default: sync }))
 
 import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
@@ -185,5 +185,52 @@ describe('retirer un exercice', () => {
         expect(page.lignes()).toEqual([])
         expect(sync.delete).not.toHaveBeenCalled()
         expect(page.pendingIds.isPending('temp-4')).toBe(false)
+    })
+
+    /**
+     * Une ligne dont la création attend encore en file n'a rien à supprimer sur
+     * le serveur : elle sort de la file, avec les séries qui la nomment (#1962).
+     */
+    it('sort de la file une ligne qui n’y a jamais quitté son entrée, sans rien envoyer', async () => {
+        sync.post.mockRejectedValue({ isOffline: true, queueId: 'q1' })
+        sync.retirerDeLaFile.mockImplementation((queueId) => {
+            window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: [queueId] } }))
+
+            return true
+        })
+        const page = monter()
+        page.addExercise(3)
+        await flushPromises()
+
+        page.removeLine('temp-1')
+        page.confirmerLeRetrait()
+        await flushPromises()
+
+        expect(sync.retirerDeLaFile).toHaveBeenCalledWith('q1', { annulerPar: expect.any(Function) })
+        expect(sync.delete).not.toHaveBeenCalled()
+        expect(page.lignes()).toEqual([])
+
+        // Tentée sans réponse, la file la garde et supprime au vidage ce qu'elle a produit (#1960).
+        const { annulerPar } = sync.retirerDeLaFile.mock.calls[0][1]
+        expect(annulerPar(70)).toBe('/api.v1.workout-lines.destroy/70')
+        expect(page.pendingIds.isPending('temp-1')).toBe(false)
+    })
+
+    it('prend la ligne que le serveur a créée quand la file la rejoue, sans changer d’objet', async () => {
+        sync.post.mockRejectedValue({ isOffline: true, queueId: 'q1' })
+        const page = monter()
+        page.addExercise(3)
+        const ligne = page.lignes()[0]
+        await flushPromises()
+
+        window.dispatchEvent(
+            new CustomEvent('sync:replayed', {
+                detail: { queueId: 'q1', data: { id: 8, order: 0, recommended_values: { reps: 5 }, sets: [] } },
+            }),
+        )
+        await flushPromises()
+
+        expect(page.lignes()[0]).toBe(ligne)
+        expect(ligne).toMatchObject({ id: 8, _rowKey: 'row-1', recommended_values: { reps: 5 } })
     })
 })
