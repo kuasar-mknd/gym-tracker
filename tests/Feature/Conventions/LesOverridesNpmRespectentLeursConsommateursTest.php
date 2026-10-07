@@ -14,7 +14,11 @@ declare(strict_types=1);
  * Une entrée vise désormais la majeure fautive (`brace-expansion@5`,
  * `nanoid@3`), et ces gardes lisent package.json et package-lock.json comme npm
  * et Node les lisent : chaque consommateur d'un paquet visé doit charger une
- * copie qui tient dans la plage qu'il déclare.
+ * copie qui tient dans la plage qu'il déclare, ou une version plus récente de
+ * la même majeure. Cette seconde forme est celle d'un plancher relevé pour une
+ * faille chez un consommateur qui fige la version exacte : concurrently, à sa
+ * dernière version, déclare `shell-quote` « 1.9.0 », et seul un override sert
+ * la 1.12.0 corrigée.
  */
 
 /**
@@ -131,6 +135,43 @@ function comparateursNpmDuTexte(string $operateur, string $texte): array
 }
 
 /**
+ * Les ensembles de comparateurs élémentaires d'une plage npm, un par membre de
+ * `||`, plages à tiret comprises.
+ *
+ * @return list<list<array{0: string, 1: array{0: int, 1: int, 2: int, 3: list<string>}}>>
+ */
+function plageNpmEnsembles(string $plage): array
+{
+    $resultat = [];
+    $ensembles = preg_split('/\s*\|\|\s*/', trim($plage));
+
+    foreach ($ensembles === false ? [] : $ensembles as $ensemble) {
+        if (preg_match('/^(\S+)\s+-\s+(\S+)$/', $ensemble, $bornes) === 1) {
+            $haute = versionNpmDecoupee($bornes[2]);
+            $resultat[] = [
+                ...comparateursNpmDuTexte('>=', $bornes[1]),
+                ...($haute === null ? comparateursNpmDuTexte('<=', $bornes[2]) : [['<=', $haute]]),
+            ];
+
+            continue;
+        }
+
+        $comparateurs = [];
+        $jetons = preg_split('/\s+/', (string) preg_replace('/(<=|>=|<|>|=|\^|~>?)\s+/', '$1', $ensemble), -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach ($jetons === false ? [] : $jetons as $jeton) {
+            preg_match('/^(<=|>=|<|>|=|\^|~>?)?(.*)$/', $jeton, $morceaux);
+            $operateur = ($morceaux[1] ?? '') === '~>' ? '~' : $morceaux[1] ?? '';
+            $comparateurs = [...$comparateurs, ...comparateursNpmDuTexte($operateur, $morceaux[2] ?? '')];
+        }
+
+        $resultat[] = $comparateurs;
+    }
+
+    return $resultat;
+}
+
+/**
  * Vrai quand la version publiée tient dans la plage npm, selon node-semver :
  * `||`, plages à tiret, `^`, `~`, `x` et versions partielles, et une préversion
  * n'entre que dans une plage qui en nomme une du même correctif.
@@ -139,26 +180,7 @@ function plageNpmAdmet(string $version, string $plage): bool
 {
     $candidate = versionNpmDecoupee($version) ?? throw new InvalidArgumentException("version npm illisible : {$version}");
 
-    $ensembles = preg_split('/\s*\|\|\s*/', trim($plage));
-
-    foreach ($ensembles === false ? [] : $ensembles as $ensemble) {
-        if (preg_match('/^(\S+)\s+-\s+(\S+)$/', $ensemble, $bornes) === 1) {
-            $haute = versionNpmDecoupee($bornes[2]);
-            $comparateurs = [
-                ...comparateursNpmDuTexte('>=', $bornes[1]),
-                ...($haute === null ? comparateursNpmDuTexte('<=', $bornes[2]) : [['<=', $haute]]),
-            ];
-        } else {
-            $comparateurs = [];
-            $jetons = preg_split('/\s+/', (string) preg_replace('/(<=|>=|<|>|=|\^|~>?)\s+/', '$1', $ensemble), -1, PREG_SPLIT_NO_EMPTY);
-
-            foreach ($jetons === false ? [] : $jetons as $jeton) {
-                preg_match('/^(<=|>=|<|>|=|\^|~>?)?(.*)$/', $jeton, $morceaux);
-                $operateur = ($morceaux[1] ?? '') === '~>' ? '~' : $morceaux[1] ?? '';
-                $comparateurs = [...$comparateurs, ...comparateursNpmDuTexte($operateur, $morceaux[2] ?? '')];
-            }
-        }
-
+    foreach (plageNpmEnsembles($plage) as $comparateurs) {
         $admise = array_all($comparateurs, function (array $comparateur) use ($candidate): bool {
             $ecart = versionsNpmComparees($candidate, $comparateur[1]);
 
@@ -177,6 +199,87 @@ function plageNpmAdmet(string $version, string $plage): bool
         );
 
         if ($admise && $preversionAdmise) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * La majeure d'une version au sens de `^` : son premier nombre non nul, si bien
+ * que 0.2 et 0.3 sont deux majeures, comme 0.0.3 et 0.0.4.
+ *
+ * @param  array{0: int, 1: int, 2: int, 3: list<string>}  $version
+ * @return list<int>
+ */
+function versionNpmMajeure(array $version): array
+{
+    return match (true) {
+        $version[0] > 0 => [$version[0]],
+        $version[1] > 0 => [0, $version[1]],
+        default => [0, 0, $version[2]],
+    };
+}
+
+/**
+ * La plus haute version publiée qu'admet `< $borne`, PHP_INT_MAX tenant lieu
+ * d'un nombre sans limite (`< 3.0.0-0` admet jusqu'à 2.∞.∞). Null quand
+ * aucune version ne passe sous la borne.
+ *
+ * @param  array{0: int, 1: int, 2: int, 3: list<string>}  $borne
+ * @return array{0: int, 1: int, 2: int, 3: list<string>}|null
+ */
+function versionNpmSousLaBorne(array $borne): ?array
+{
+    [$majeure, $mineure, $correctif] = $borne;
+
+    return match (true) {
+        $correctif > 0 => [$majeure, $mineure, $correctif - 1, []],
+        $mineure > 0 => [$majeure, $mineure - 1, PHP_INT_MAX, []],
+        $majeure > 0 => [$majeure - 1, PHP_INT_MAX, PHP_INT_MAX, []],
+        default => null,
+    };
+}
+
+/**
+ * Vrai quand une version hors de la plage la dépasse sans quitter la majeure de
+ * sa plus haute version admise : c'est un plancher relevé pour une faille chez
+ * un consommateur qui fige sa dépendance (concurrently déclare `shell-quote`
+ * « 1.9.0 », l'override sert la 1.12.0), et ce consommateur la lit comme la
+ * sienne. Une autre majeure, une version plus ancienne que la plage, une
+ * préversion ou une plage sans plafond ne le sont pas.
+ */
+function plageNpmDepasseeDansSaMajeure(string $version, string $plage): bool
+{
+    $candidate = versionNpmDecoupee($version) ?? throw new InvalidArgumentException("version npm illisible : {$version}");
+
+    if ($candidate[3] !== [] || plageNpmAdmet($version, $plage)) {
+        return false;
+    }
+
+    foreach (plageNpmEnsembles($plage) as $comparateurs) {
+        $plafonds = array_values(array_filter(
+            $comparateurs,
+            fn (array $comparateur): bool => in_array($comparateur[0], ['<', '<=', '='], true),
+        ));
+
+        usort($plafonds, function (array $gauche, array $droite): int {
+            $ecart = versionsNpmComparees($gauche[1], $droite[1]);
+
+            return $ecart !== 0 ? $ecart : ($gauche[0] === '<' ? 0 : 1) <=> ($droite[0] === '<' ? 0 : 1);
+        });
+
+        if ($plafonds === []) {
+            continue;
+        }
+
+        [$operateur, $borne] = $plafonds[0];
+        $ecart = versionsNpmComparees($candidate, $borne);
+        $auDessus = $operateur === '<' ? $ecart >= 0 : $ecart > 0;
+        $plusHaute = $operateur === '<' ? versionNpmSousLaBorne($borne) : $borne;
+
+        if ($auDessus && $plusHaute !== null && versionNpmMajeure($plusHaute) === versionNpmMajeure($candidate)) {
             return true;
         }
     }
@@ -272,9 +375,12 @@ function overrideNpmCopieChargee(array $installes, string $chemin, string $paque
 
 /**
  * Chaque consommateur d'un paquet visé qui charge une copie hors de la plage
- * qu'il déclare, et le nombre de consommateurs vérifiés par paquet. Une
- * dépendance optionnelle ou paire absente de l'installation, et une source qui
- * n'est pas une plage (`npm:`, `file:`, `git+…`), sont laissées de côté.
+ * qu'il déclare, et le nombre de consommateurs vérifiés par paquet. Une copie
+ * plus récente que la plage, mais de la même majeure que sa plus haute version
+ * admise, passe : c'est la forme d'un plancher relevé pour une faille chez un
+ * consommateur qui fige sa dépendance. Une dépendance optionnelle ou paire
+ * absente de l'installation, et une source qui n'est pas une plage (`npm:`,
+ * `file:`, `git+…`), sont laissées de côté.
  *
  * @param  array<string, array<mixed>>  $installes  les entrées `packages` du verrou
  * @param  list<string>  $paquets
@@ -308,7 +414,7 @@ function overridesNpmEcartsDesConsommateurs(array $installes, array $paquets): a
                 $version = $installes[$copie]['version'] ?? null;
                 $verifies[$paquet] = ($verifies[$paquet] ?? 0) + 1;
 
-                if (! is_string($version) || ! plageNpmAdmet($version, $plage)) {
+                if (! is_string($version) || (! plageNpmAdmet($version, $plage) && ! plageNpmDepasseeDansSaMajeure($version, $plage))) {
                     $consommateur = $chemin === '' ? 'le projet' : $chemin;
                     $ecarts[] = "{$consommateur} charge {$paquet} ".(is_string($version) ? $version : '(sans version)')." ({$copie}) mais attend {$plage}";
                 }
@@ -338,14 +444,14 @@ function overridesNpmDuDepot(): array
     return ['overrides' => is_array($overrides) ? $overrides : [], 'installes' => $installes];
 }
 
-it('ne fait charger à aucun consommateur une copie hors de sa plage', function (): void {
+it('ne fait charger à aucun consommateur une autre majeure ni une version plus ancienne que sa plage', function (): void {
     ['overrides' => $overrides, 'installes' => $installes] = overridesNpmDuDepot();
     $paquets = overridesNpmPaquetsVises($overrides);
     $resultat = overridesNpmEcartsDesConsommateurs($installes, $paquets);
     $sansConsommateur = array_values(array_diff($paquets, array_keys($resultat['verifies'])));
 
     expect($sansConsommateur)->toBe([], 'Aucun paquet installé ne dépend plus de ces paquets visés : retirer leur override ('.implode(', ', $sansConsommateur).')')
-        ->and($resultat['ecarts'])->toBe([], "Un override impose à ces consommateurs une version hors de leur plage :\n- ".implode("\n- ", $resultat['ecarts']));
+        ->and($resultat['ecarts'])->toBe([], "Un override impose à ces consommateurs une autre majeure, ou une version plus ancienne, que leur plage :\n- ".implode("\n- ", $resultat['ecarts']));
 });
 
 it('vise une seule majeure par entrée d’overrides', function (): void {
@@ -374,6 +480,42 @@ it('aurait refusé l’override global qui cassait le minimatch de filelist', fu
     expect(overridesNpmEcartsDesConsommateurs($installes, ['brace-expansion'])['ecarts'])->toBe([])
         ->and(overridesNpmSansMajeure(['brace-expansion@5' => '^5.0.12']))->toBe([]);
 });
+
+it('admet un plancher relevé pour une faille chez un consommateur qui fige sa version', function (): void {
+    $installes = [
+        '' => ['devDependencies' => ['concurrently' => '^10.0.5']],
+        'node_modules/concurrently' => ['version' => '10.0.5', 'dependencies' => ['shell-quote' => '1.9.0']],
+        'node_modules/shell-quote' => ['version' => '1.12.0'],
+    ];
+
+    expect(overridesNpmEcartsDesConsommateurs($installes, ['shell-quote']))->toBe([
+        'verifies' => ['shell-quote' => 1],
+        'ecarts' => [],
+    ]);
+
+    $installes['node_modules/shell-quote'] = ['version' => '2.0.0'];
+
+    expect(overridesNpmEcartsDesConsommateurs($installes, ['shell-quote'])['ecarts'])
+        ->toBe(['node_modules/concurrently charge shell-quote 2.0.0 (node_modules/shell-quote) mais attend 1.9.0']);
+});
+
+it('ne laisse passer hors de la plage qu’une version plus récente de sa majeure', function (string $version, string $plage, bool $admise): void {
+    expect(plageNpmAdmet($version, $plage))->toBeFalse()
+        ->and(plageNpmDepasseeDansSaMajeure($version, $plage))->toBe($admise);
+})->with([
+    'un plancher relevé sur une version figée' => ['1.12.0', '1.9.0', true],
+    'une autre majeure que la version figée' => ['2.0.0', '1.9.0', false],
+    'au-delà d’un ~ de la même majeure' => ['1.12.0', '~1.9.0', true],
+    'au-delà d’une plage à tiret' => ['2.5.0', '1.2.3 - 2.3', true],
+    'l’écart de filelist' => ['5.0.12', '^2.0.1', false],
+    'la majeure suivante' => ['3.0.0', '^2.0.1', false],
+    'une version plus ancienne que la plage' => ['1.2.0', '^1.5.0', false],
+    'une 0.x suivante' => ['0.3.0', '^0.2.3', false],
+    'une 0.0.x suivante' => ['0.0.4', '^0.0.3', false],
+    'une préversion de la même majeure' => ['1.13.0-beta.1', '1.9.0', false],
+    'une plage sans plafond' => ['1.2.0', '>=1.5.0', false],
+    'la majeure de l’un des membres de ||' => ['4.2.0', '^2 || ~4.1.0', true],
+]);
 
 it('lit les clés d’overrides comme npm', function (array $overrides, array $paquets, int $fautives): void {
     expect(overridesNpmPaquetsVises($overrides))->toBe($paquets)
