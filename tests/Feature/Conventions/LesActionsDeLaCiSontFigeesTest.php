@@ -71,7 +71,8 @@ function actionsDesWorkflowsReferencees(): array
  * (`@4dd8…85 # v3.97.9`). Une branche (`main`, `master`, `develop`,
  * `release/v3`), un commit abrégé ou un commit sans sa version ne le sont pas.
  * Une action du dépôt (`./…`) n'a pas de référence ; une image (`docker://…`)
- * doit porter une étiquette autre que `latest`.
+ * suit la règle des images de `docker run` : une version exacte ou un digest,
+ * jamais une étiquette flottante (`3`, `3.22`, `edge`) ni un nom de branche.
  */
 function actionDeWorkflowEstFigee(string $action, ?string $commentaire): bool
 {
@@ -80,7 +81,7 @@ function actionDeWorkflowEstFigee(string $action, ?string $commentaire): bool
     }
 
     if (str_starts_with($action, 'docker://')) {
-        return preg_match('/^docker:\/\/[^:@\s]+(?::(?!latest$)[\w.-]+|@sha256:[0-9a-f]{64})$/', $action) === 1;
+        return imageDockerEstFigee(substr($action, strlen('docker://')));
     }
 
     if (preg_match('/^[\w.-]+\/[\w.\/-]+@(.+)$/', $action, $morceaux) !== 1) {
@@ -128,11 +129,13 @@ function actionTruffleHogDeLaCi(): array
 }
 
 /**
- * Les images que lance chaque `docker run` d'un script d'étape : les lignes
- * continuées par `\` sont rejointes, les options de `docker run` sautées, et
- * une image passée par une variable (`"$image"`) est remplacée par la valeur
- * que le script lui donne. Une variable que le script ne pose pas reste telle
- * quelle, et n'est donc pas figée.
+ * Les images que lance chaque `docker run` (ou sa forme longue,
+ * `docker container run`) d'un script d'étape : les lignes continuées par `\`
+ * sont rejointes, les options sautées, et une image passée par une variable
+ * (`"$image"`) est remplacée par la valeur que le script lui donne. Une
+ * variable que le script ne pose pas reste telle quelle, et n'est donc pas
+ * figée. `docker compose run` lance un service de la composition, pas une
+ * image : il n'est pas lu.
  *
  * @return list<string>
  */
@@ -143,7 +146,7 @@ function imagesDesDockerRunDuScript(string $script): array
     $sansValeur = ['--rm', '-d', '--detach', '-i', '--interactive', '-t', '--tty', '-it', '-dit', '--init', '--read-only', '--privileged', '-q', '--quiet'];
     $images = [];
 
-    preg_match_all('/\bdocker\s+run\b(.*)$/m', $joint, $commandes);
+    preg_match_all('/\bdocker\s+(?:container\s+)?run\b(.*)$/m', $joint, $commandes);
 
     foreach ($commandes[1] as $suite) {
         preg_match_all('/(?:"(?:[^"\\\\]|\\\\.)*"|\'[^\']*\'|[^\s"\'])+/', $suite, $jetons);
@@ -251,6 +254,10 @@ it('refuse une référence qui suit une branche ou ne nomme pas sa version', fun
     'une action sans référence' => ['actions/checkout', null],
     'une image latest' => ['docker://alpine:latest', null],
     'une image sans étiquette' => ['docker://alpine', null],
+    'une image à majeure flottante' => ['docker://alpine:3', null],
+    'une image à mineure flottante' => ['docker://alpine:3.22', null],
+    'une image qui suit une version de développement' => ['docker://alpine:edge', null],
+    'une image au nom de branche' => ['docker://ghcr.io/owner/img:main', null],
 ]);
 
 it('accepte une version, ou un commit complet qui nomme la sienne', function (string $action, ?string $commentaire): void {
@@ -261,7 +268,7 @@ it('accepte une version, ou un commit complet qui nomme la sienne', function (st
     'un commit et sa version' => ['trufflesecurity/trufflehog@4dd8831c5f12599465d4d45c3c447b4018a34c85', 'v3.97.9'],
     'une action d’un sous-dossier' => ['github/codeql-action/init@v4', null],
     'une action du dépôt' => ['./.github/actions/preparer', null],
-    'une image étiquetée' => ['docker://alpine:3.22', null],
+    'une image à version exacte' => ['docker://alpine:3.22.1', null],
 ]);
 
 it('lance l’image de TruffleHog à la version de son action', function (): void {
@@ -337,6 +344,7 @@ it('lit l’image de chaque docker run comme le shell', function (string $script
     'une variable que le script ne pose pas' => ['docker run --rm "$IMAGE" scan', ['$IMAGE']],
     'un commentaire qui cite docker run' => ["# docker run alpine:latest\necho rien", []],
     'deux commandes' => ["docker run --rm a/b:1.2.3 x\ndocker run -it c/d", ['a/b:1.2.3', 'c/d']],
+    'la forme longue docker container run' => ['docker container run --rm semgrep/semgrep:latest semgrep scan', ['semgrep/semgrep:latest']],
 ]);
 
 it('refuse une image de docker run qui suit l’éditeur', function (string $image): void {
