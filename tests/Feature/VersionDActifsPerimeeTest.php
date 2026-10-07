@@ -16,8 +16,15 @@ use function Pest\Laravel\withHeaders;
  * version d'actifs `perimee` (`VERSION_PERIMEE`, resources/js/Utils/miseAJourDuWorker.js) :
  * le serveur répond 409 avec l'adresse demandée, et Inertia en fait une
  * navigation complète, sur la nouvelle version. Sans réseau, aucune réponse :
- * la visite échoue et la page reste, ce que tient
- * tests/js/utils/miseAJourDuWorkerAvecInertia.test.js.
+ * la visite échoue et la page reste.
+ *
+ * Ce fichier garde le contrat sur lequel compte le client, et ne prouve pas le
+ * correctif : le 409 est celui que le middleware d'Inertia rend déjà à toute
+ * version différente, et #1967 ne change rien côté serveur. Il passe donc sans
+ * le correctif. La contre-épreuve de #1967 est portée par
+ * tests/js/utils/miseAJourDuWorkerAvecInertia.test.js, qui joue la visite
+ * avec le vrai client d'Inertia, et par tests/js/utils/miseAJourDuWorker.test.js,
+ * qui exécute le `register.js` du paquet.
  */
 
 /**
