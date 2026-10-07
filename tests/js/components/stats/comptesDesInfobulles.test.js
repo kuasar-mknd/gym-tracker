@@ -116,4 +116,29 @@ describe('les comptes des infobulles s’accordent', () => {
 
         wrapper.unmount()
     })
+
+    /*
+     * La page du calculateur envoie les répétitions en texte, dont deux
+     * planchers (« 25+ », « 30+ ») qui ne sont pas des nombres : ils se lisent
+     * tels quels, au pluriel, et non « (—) ».
+     */
+    it('OneRepMaxPercentagesChart : les répétitions telles que la page les envoie, planchers compris', () => {
+        const wrapper = mount(carte('OneRepMaxPercentagesChart'), {
+            props: {
+                data: [
+                    { percent: 100, value: 100, reps: '1' },
+                    { percent: 60, value: 60, reps: '20' },
+                    { percent: 55, value: 55, reps: '25+' },
+                    { percent: 50, value: 50, reps: '30+' },
+                ],
+            },
+        })
+
+        expect(tooltipLabelOf(wrapper, 'Bar', { label: '100%', parsed: { y: 100 } })).toBe('100 kg (1 rep)')
+        expect(tooltipLabelOf(wrapper, 'Bar', { label: '60%', parsed: { y: 60 } })).toBe('60 kg (20 reps)')
+        expect(tooltipLabelOf(wrapper, 'Bar', { label: '55%', parsed: { y: 55 } })).toBe('55 kg (25+ reps)')
+        expect(tooltipLabelOf(wrapper, 'Bar', { label: '50%', parsed: { y: 50 } })).toBe('50 kg (30+ reps)')
+
+        wrapper.unmount()
+    })
 })
