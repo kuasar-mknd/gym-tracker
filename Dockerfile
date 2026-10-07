@@ -85,7 +85,11 @@ RUN php artisan package:discover --ansi \
     && php artisan view:cache \
     && php artisan event:cache
 
-RUN chown -R www-data:www-data storage bootstrap/cache public /data /config \
+# Le cache fichier d'OPcache en ligne de commande (docker/php-cli/zz-cli.ini,
+# que worker et scheduler chargent) : OPcache n'écrit que dans un dossier qui
+# existe déjà, et refuse de démarrer sans lui (#1968).
+RUN mkdir -p /tmp/opcache \
+    && chown -R www-data:www-data storage bootstrap/cache public /data /config /tmp/opcache \
     && chmod -R 775 storage bootstrap/cache public /data /config
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
