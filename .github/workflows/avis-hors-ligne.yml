@@ -169,7 +169,17 @@ jobs:
                       >/tmp/message.txt
 
                   git commit -F /tmp/message.txt
-                  git push --force-with-lease origin "$BRANCHE"
+
+                  # Le bail porte sa valeur attendue, lue juste avant l'envoi :
+                  # l'empreinte de la branche distante, ou rien quand elle
+                  # n'existe pas encore. Sans elle, git compare a une reference
+                  # de suivi que le checkout, qui ne recupere que main, n'a
+                  # jamais creee : des que la branche existait, chaque push
+                  # etait refuse en "stale info", et plus aucune PR ne
+                  # s'ouvrait (#2026). Le push reste refuse si la branche a
+                  # bouge entre la lecture et l'envoi.
+                  attendu="$(git ls-remote origin "refs/heads/$BRANCHE" | cut -f1)"
+                  git push --force-with-lease="$BRANCHE:$attendu" origin "$BRANCHE"
 
                   # `gh pr create` echoue si une PR existe deja sur cette
                   # branche ; le push l'aura simplement mise a jour.
