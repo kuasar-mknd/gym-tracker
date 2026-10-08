@@ -67,16 +67,61 @@ jobs:
         # Un delai unique aurait ete cale sur Services et aurait laisse les
         # trois autres parts capables de tourner une heure sans que personne ne
         # s'en apercoive.
+        #
+        # App\Services COUPEE EN DEUX le 2026-10-07 (#2004).
+        #
+        # La part entiere a ete annulee a 60 minutes le 07/10 (73a16471),
+        # apres 34 minutes le 06/10 (78c7aaa1) : 956 mutants contre 952, et la
+        # part App\Actions du meme run aussi rapide par mutant que la veille
+        # (1,34 s contre 1,36). Ni le code ni les tests : le runner. Sa passe
+        # de reference a pris 126 s, contre 70 s le 06/10, et 82 s et 96 s
+        # pour les deux autres parts du meme run. Le delai que Pest accorde a
+        # chaque mutant suit cette reference (+ 20 %), et la part avec lui.
+        # Elle occupait 34 a 39 minutes sur 60 : 1,6x de marge, pour un runner
+        # 1,8x plus lent.
+        #
+        # Mesure locale sur 68a585ca, quatre processus, App\Services entiere :
+        # 967 mutants, 112 survivants, 88,42 %, 5 619 s de mutation. Le runner
+        # du 06/10 a fait la part en 2 047 s (952 mutants, 78c7aaa1) : la
+        # machine qui mesure, chargee, est 2,75x plus lente que lui, et c'est
+        # ce facteur qui ramene les mesures ci-dessous au runner.
+        #
+        #                              mutants  survivants  score   locale    runner
+        #   PersonalRecordService          191          34  82,20   47,8 min  17 min
+        #   le reste de App\Services       776          78  89,95   45,8 min  17 min
+        #
+        # PersonalRecordService fait la moitie du temps pour un cinquieme des
+        # mutants : chaque ecriture de serie le recalcule, quelque 280 tests
+        # le couvrent, et chacun de ses mutants en rejoue une bonne part
+        # (60 s en moyenne en local, 14 s pour ceux des autres services).
+        #
+        # Apres les correctifs de #2004 (le mutant sans fin de la tendance
+        # hebdomadaire retire, deux tests lents rendus rapides), chaque moitie
+        # mesuree seule sur 4e284816, la machine moins chargee (passe de
+        # reference de 140 s au lieu de 297) :
+        #
+        #                              mutants  survivants  score   mutation
+        #   PersonalRecordService          191          34  82,20   1 733 s
+        #   le reste de App\Services       769          78  89,86   1 837 s
+        #
+        # Memes mutants, memes verdicts : seuls les sept mutants de la boucle
+        # ont disparu, tous tues. Sur un runner comme ceux des 05 et 06/10,
+        # chaque moitie fait 17 a 20 minutes de mutation (la moitie des 2 047 a
+        # 2 333 s qu'y prenait la part entiere) ; sur un runner 1,8x plus lent,
+        # 31 a 36, et 34 a 39 avec la passe de reference et l'installation.
+        # D'ou 45 minutes pour chacune, comme App\Actions.
         timeout-minutes: ${{ matrix.timeout }}
         strategy:
             fail-fast: false
             matrix:
                 include:
                     # Le seuil est le score mesure moins une marge, et cette
-                    # marge n'est pas du confort : un mutant qui part en timeout
-                    # compte comme non tue, et les runners GitHub sont plus lents
-                    # que la machine qui mesure. Une porte qui bloque a tort est
-                    # une porte qu'on desactive.
+                    # marge n'est pas du confort : les runners GitHub ne sont pas
+                    # la machine qui mesure. Une porte qui bloque a tort est une
+                    # porte qu'on desactive. (Un mutant qui part en timeout
+                    # compte comme tue : 877 tues et 4 timeouts sur 932 font les
+                    # 94,53 % d'App\Actions le 06/10. Un runner lent ne baisse
+                    # donc pas le score, il allonge la part.)
                     #
                     # Elle etait de deux points, posee au juge. Trois nocturnes
                     # VERTES consecutives disent qu'elle peut etre plus serree —
@@ -127,8 +172,9 @@ jobs:
                     # 16 et 17 aout le montrent sur les trois parts a la fois. La
                     # variance qu'on redoutait en local, et qui venait de la
                     # contention entre processus, n'existe pas ici : le runner
-                    # n'a que deux processus et la duree de reference est mesuree
-                    # dans les memes conditions que les mutants.
+                    # ne lance qu'un processus par coeur (« Parallel: 4
+                    # processes » dans chaque rapport) et la duree de reference
+                    # est mesuree dans les memes conditions que les mutants.
                     #
                     # D'ou une marge d'un point au plus, et souvent moins : le
                     # seuil se pose JUSTE SOUS la derniere mesure. 80 sous 80,05,
@@ -148,9 +194,26 @@ jobs:
                     # reponse est de tuer le mutant, pas de baisser le seuil —
                     # sans quoi il reste une porte de plus qui ne garde rien.
                     # C'est la raison d'etre de #1446.
+                    #
+                    # App\Services en deux parts depuis le 07/10 (#2004) : la
+                    # mesure et le calcul du delai sont en tete du job. Les
+                    # seuils se posent juste sous la mesure, comme pour les
+                    # autres parts : 82 sous 82,20 pour PersonalRecordService,
+                    # dont les 34 survivants sont aussi ceux du rapport du 06/10
+                    # (un survivant de plus le fait passer dessous) ; 89 sous
+                    # 89,86 pour le reste, qui laisse passer six survivants de
+                    # plus.
+                    - scope: 'App\Services\PersonalRecordService'
+                      timeout: 45
+                      min: 82
+                    # Tout App\Services sauf PersonalRecordService, que la part
+                    # precedente mute : `ignore` passe a `--ignore`, et
+                    # ChaqueClasseMuteeLaNuitLEstUneFoisTest exige que chaque
+                    # classe soit mutee par une part, et une seule.
                     - scope: 'App\Services'
-                      timeout: 60
-                      min: 80
+                      ignore: 'app/Services/PersonalRecordService.php'
+                      timeout: 45
+                      min: 89
                     # 95 et non 97, contrairement aux deux autres parts qui se posent
                     # a un point sous leur mesure. La raison est le nombre
                     # d'observations, pas la prudence : Services et Policies ont
@@ -268,6 +331,9 @@ jobs:
                   DB_USERNAME: sail
                   DB_PASSWORD: password
                   TELESCOPE_ENABLED: false
+                  PART: ${{ matrix.scope }}
+                  SEUIL: ${{ matrix.min }}
+                  LAISSE: ${{ matrix.ignore }}
               # `vendor/bin/pest`, et non `php artisan test`.
               #
               # #1366 concluait « artisan test, jamais vendor/bin/pest », parce
@@ -300,9 +366,14 @@ jobs:
                   # donc toujours vert : le job ne bloque pas, mais il doit dire
                   # la verite dans l'interface.
                   set -o pipefail
-                  vendor/bin/pest --mutate --parallel --covered-only \
-                    --class='${{ matrix.scope }}' \
-                    --min=${{ matrix.min }} \
+                  options=(--class="$PART" --min="$SEUIL")
+                  # `--ignore` ne s'ajoute qu'a la part qui laisse une classe a
+                  # une autre : vide, il ignorerait tout le perimetre, et la
+                  # part ne muterait rien.
+                  if [ -n "$LAISSE" ]; then
+                      options+=(--ignore="$LAISSE")
+                  fi
+                  vendor/bin/pest --mutate --parallel --covered-only "${options[@]}" \
                     | tee mutation-report.txt
 
             - name: Upload report

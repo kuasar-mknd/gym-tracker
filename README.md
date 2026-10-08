@@ -59,7 +59,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | **Tests navigateur** | 121 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
-| **Mutation testing** | ≥ 80 % `App\Services`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
+| **Mutation testing** | ≥ 82 % `App\Services\PersonalRecordService`, 89 % le reste d'`App\Services`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
 
 S'y ajoutent plus de quarante **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur, variables d'environnement documentées.
 
@@ -424,7 +424,9 @@ L'erreur ne va que dans un sens : le parallèle **cache** des survivants, il n'e
 ./vendor/bin/sail php vendor/bin/pest --mutate --covered-only --class='App\Services\StreakService'
 ```
 
-Le nocturne n'est pas concerné : un runner GitHub à quatre cœurs ne lance que deux processus, et sa passe de référence est deux fois plus lente, ce qui élargit d'autant le délai. Mesure sur trois nuits consécutives — 1 timeout sur les 841 mutations de `App\Services`, 4 sur les 887 de `App\Actions`, 0 sur `App\Policies`.
+Le nocturne n'est pas concerné : le runner ne lance qu'un processus par cœur (« Parallel: 4 processes » dans chaque rapport), sans autre charge, et sa passe de référence se mesure dans les mêmes conditions que ses mutants. Mesure sur trois nuits consécutives — 1 timeout sur les 841 mutations de `App\Services`, 4 sur les 887 de `App\Actions`, 0 sur `App\Policies`.
+
+Sa **durée**, elle, suit le runner. Le 07/10, la passe de référence d'un runner a pris 126 s contre 70 la veille, et la part `App\Services`, qui tenait en 34 minutes, a été annulée à son délai de 60 (#2004). Elle est depuis coupée en deux parts de 45 minutes, `PersonalRecordService` et le reste, chacune mesurée : le calcul est en tête du job dans `.github/workflows/mutation.yml`.
 
 ---
 
