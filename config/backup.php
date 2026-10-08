@@ -270,7 +270,7 @@ return [
             'disks' => ['sauvegardes'],
             'health_checks' => [
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,
-                \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 2000,
+                \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5500,
             ],
         ],
     ],
@@ -324,18 +324,22 @@ return [
              * this amount of megabytes has been reached.
              * Set null for unlimited size.
              *
-             * Sous le seuil de place de `backup:monitor` (2 000 Mo, plus
-             * haut), avec 500 Mo d'écart : le nettoyage de 02:00 ramène les
-             * archives à 1 500 Mo au plus, et celles écrites avant le contrôle
+             * 5 000 Mo, comme le paquet et la configuration d'avant #2020, et
+             * pas moins : le premier nettoyage planifié applique d'un coup la
+             * règle à toutes les archives accumulées, celles lancées du
+             * panneau comprises, et une archive effacée ne revient pas. C'est
+             * le seuil de place de `backup:monitor` (plus haut) qui monte à
+             * 5 500 Mo, 500 Mo au-dessus : le nettoyage de 02:00 ramène les
+             * archives à 5 000 Mo au plus, et celles écrites avant le contrôle
              * de 08:00 (la sauvegarde de 02:30, celles lancées du panneau) ont
-             * cette marge. Au-dessus du seuil du contrôle, comme les 5 000 Mo
-             * du paquet, un jeu d'archives entre les deux seuils ferait échouer
-             * le contrôle chaque matin sans que le nettoyage y change rien, et
-             * la santé resterait au rouge (#2020). Le contrôle n'échoue donc
-             * que si le nettoyage n'a pas tourné ou si une journée a écrit
-             * plus de 500 Mo d'archives.
+             * cette marge. Avec un contrôle sous le nettoyage, comme les
+             * 2 000 Mo d'avant, un jeu d'archives entre les deux seuils ferait
+             * échouer le contrôle chaque matin sans que le nettoyage y change
+             * rien, et la santé resterait au rouge (#2020). Le contrôle
+             * n'échoue donc que si le nettoyage n'a pas tourné ou si une
+             * journée a écrit plus de 500 Mo d'archives.
              */
-            'delete_oldest_backups_when_using_more_megabytes_than' => 1500,
+            'delete_oldest_backups_when_using_more_megabytes_than' => 5000,
         ],
 
         /*

@@ -124,21 +124,24 @@ it('fait échouer le contrôle planifié des sauvegardes sans archive, sans écr
     }
 });
 
-it('ramène les archives sous le seuil du contrôle du matin, qui tient une journée de 500 Mo d’archives', function (): void {
+it('ramène les archives sous le seuil du contrôle du matin, avec de la place pour celles de la journée', function (): void {
     $dossier = sauvegardesPlanifieesDossierJetable();
     $archives = $dossier.'/'.config()->string('backup.backup.name');
     File::ensureDirectoryExists($archives);
 
     try {
-        // 2 500 Mo d'archives des six derniers jours, que la rétention par date garde toutes.
-        foreach (range(1, 25) as $rang) {
-            sauvegardesPlanifieesArchiveCreuse($archives, now()->subHours(5 * $rang));
+        // 6 000 Mo d'archives des cinq derniers jours, que la rétention par date garde toutes :
+        // plus que le seuil du contrôle, que seul le nettoyage peut donc ramener dessous.
+        foreach (range(1, 60) as $rang) {
+            sauvegardesPlanifieesArchiveCreuse($archives, now()->subHours(2 * $rang));
         }
 
         expect(sauvegardesPlanifieesLancer('backup:clean'))->toBe(0, Artisan::output());
 
-        // La sauvegarde de 02:30 et quatre lancées du panneau avant le contrôle de 08:00.
-        foreach (range(0, 4) as $rang) {
+        // La sauvegarde de 02:30 et trois lancées du panneau avant le contrôle de 08:00 : 400 Mo,
+        // dans les 500 de marge sans les remplir. Le contrôle n'échoue qu'au-delà de son seuil (`>`) :
+        // 5 500 Mo pile passeraient aussi, mais ne prouveraient que cette comparaison.
+        foreach (range(0, 3) as $rang) {
             sauvegardesPlanifieesArchiveCreuse($archives, now()->subMinutes($rang));
         }
 
