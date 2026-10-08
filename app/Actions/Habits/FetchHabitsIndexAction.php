@@ -40,7 +40,7 @@ final class FetchHabitsIndexAction
 
         return [
             'habits' => $habits,
-            'weekDates' => $this->getWeekDates(),
+            'weekDates' => $this->getWeekDates($startOfWeek, $endOfWeek),
         ];
     }
 
@@ -73,8 +73,13 @@ final class FetchHabitsIndexAction
         $consistencyData = []; // Pour la courbe.
         $historique = []; // Pour l'histogramme.
 
-        for ($i = 29; $i >= 0; $i--) {
-            $dateObj = $now->copy()->subDays($i);
+        /*
+         * Les trente jours de la période, du premier à aujourd'hui, et non un
+         * compteur : `$i++` à la place de `$i--` ne finissait jamais, et ce
+         * mutant tenait un processus de la passe nocturne jusqu'au délai que
+         * Pest accorde à chaque mutant (#2017).
+         */
+        foreach ($past30Days->daysUntil($now)->toArray() as $dateObj) {
             $dateStr = $dateObj->format('Y-m-d');
             // @phpstan-ignore-next-line
             $count = (int) ($consistencyStats[$dateStr] ?? 0);
@@ -98,21 +103,21 @@ final class FetchHabitsIndexAction
     }
 
     /**
+     * Les jours de la semaine dont les suivis sont chargés, du lundi au
+     * dimanche : la grille et le chargement anticipé lisent la même semaine.
+     * Un parcours de période et non un compteur, dont le mutant `$i--` ne
+     * finissait jamais (#2017).
+     *
      * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      */
-    private function getWeekDates(): array
+    private function getWeekDates(Carbon $debut, Carbon $fin): array
     {
-        $start = Carbon::now()->startOfWeek();
         $dates = [];
-        for ($i = 0; $i < 7; $i++) {
-            $date = $start->copy()->addDays($i);
-
+        foreach ($debut->daysUntil($fin)->toArray() as $date) {
             $dates[] = [
                 'date' => $date->format('Y-m-d'),
                 'day' => $date->format('D'),
-                // @phpstan-ignore-next-line
                 'day_name' => $date->locale('fr')->dayName,
-                // @phpstan-ignore-next-line
                 'day_short' => $date->locale('fr')->shortDayName,
                 'day_num' => $date->day,
                 'is_today' => $date->isToday(),
