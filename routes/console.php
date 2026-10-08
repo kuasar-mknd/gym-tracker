@@ -33,12 +33,22 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('app:verify-data-coherence')
     ->dailyAt('04:30');
 
-// Le journal d'activité ne garde plus que l'audit des comptes (User, Admin) ;
-// sans purge, la table ne faisait que grossir (#1670). `--force` : la commande
-// demande confirmation en production et, lancée par le planificateur, sans
-// personne pour répondre, s'annulait à chaque passage — la table n'a jamais
-// été purgée.
-\Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180, '--force' => true])
+/*
+ * Un drapeau sans valeur s'écrit en liste, jamais `'--force' => true` : le
+ * planificateur compile le tableau en ligne de commande, `true` y devient
+ * `'1'`, et la console refuse `--force='1'` avant de rien lancer (« option
+ * does not accept a value »). Passées par `Artisan::call()`, qui accepte
+ * `true`, les mêmes commandes réussissaient : cette purge et les trois
+ * sauvegardes plus bas sortaient pourtant en erreur à chaque passage (#2020).
+ * `ChaqueTachePlanifieeEstAccepteeParSaCommandeTest` lit chaque ligne compilée
+ * contre la définition de sa commande.
+ *
+ * Le journal d'activité ne garde plus que l'audit des comptes (User, Admin) ;
+ * sans purge, la table ne faisait que grossir (#1670). `--force` : la commande
+ * demande confirmation en production et, lancée par le planificateur, sans
+ * personne pour répondre, s'annulait à chaque passage.
+ */
+\Illuminate\Support\Facades\Schedule::command('activitylog:clean', ['--days' => 180, '--force'])
     ->dailyAt('03:30');
 
 /*
@@ -64,17 +74,26 @@ Artisan::command('inspire', function (): void {
  * sauvegarde. Seule la fin de la tâche le rend : celui qu'emporte un
  * planificateur arrêté en plein passage est rendu à son démarrage, par
  * `entrypoint.sh`, sans quoi il ferait sauter la nuit suivante.
+ *
+ * Aucune n'écrit de courriel : `backup:clean` et `backup:run` coupent les
+ * leurs, et `backup:monitor`, qui n'a pas d'option pour cela, n'a aucun canal
+ * pour ses deux avis dans `config/backup.php`. Son échec (archive de plus d'un
+ * jour, ou plus de 5 500 Mo d'archives) passe par le moniteur des tâches, qui
+ * met la santé au rouge et écrit à `HEALTH_TO_ADDRESS` ; « Backups », sur la
+ * page de santé, voit déjà une archive de plus de vingt-six heures. Le
+ * nettoyage de 02:00 ramène les archives à 5 000 Mo au plus, pour que ce seuil
+ * de place ne sonne pas chaque matin (`config/backup.php`).
  */
 \Illuminate\Support\Facades\Schedule::runInBackground()
     ->withoutOverlapping(expiresAt: 25 * 60)
     ->group(function (): void {
-        \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications' => true])
+        \Illuminate\Support\Facades\Schedule::command('backup:clean', ['--disable-notifications'])
             ->dailyAt('02:00');
 
-        \Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db' => true, '--disable-notifications' => true])
+        \Illuminate\Support\Facades\Schedule::command('backup:run', ['--only-db', '--disable-notifications'])
             ->dailyAt('02:30');
 
-        \Illuminate\Support\Facades\Schedule::command('backup:monitor', ['--disable-notifications' => true])
+        \Illuminate\Support\Facades\Schedule::command('backup:monitor')
             ->dailyAt('08:00');
     });
 

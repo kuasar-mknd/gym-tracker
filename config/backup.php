@@ -197,12 +197,19 @@ return [
      * the `Spatie\Backup\Notifications\Notifications` classes.
      */
     'notifications' => [
+        /*
+         * Les deux avis du contrôle des sauvegardes n'ont aucun canal. Seul
+         * `backup:monitor` les émet, et il n'a pas d'option pour les couper :
+         * planifié chaque matin, il écrirait « sauvegardes saines » tous les
+         * jours. Son échec passe par le moniteur des tâches, qui met la santé
+         * au rouge et écrit à `HEALTH_TO_ADDRESS` (#2020).
+         */
         'notifications' => [
             \Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification::class => ['mail'],
+            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification::class => [],
             \Spatie\Backup\Notifications\Notifications\CleanupHasFailedNotification::class => ['mail'],
             \Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification::class => ['mail'],
+            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification::class => [],
             \Spatie\Backup\Notifications\Notifications\CleanupWasSuccessfulNotification::class => ['mail'],
         ],
 
@@ -253,6 +260,9 @@ return [
      * Here you can specify which backups should be monitored.
      * If a backup does not meet the specified requirements the
      * UnHealthyBackupWasFound event will be fired.
+     *
+     * Le seuil de place reste au-dessus de celui du nettoyage
+     * (`cleanup.default_strategy`, plus bas) : voir là pourquoi.
      */
     'monitor_backups' => [
         [
@@ -260,7 +270,7 @@ return [
             'disks' => ['sauvegardes'],
             'health_checks' => [
                 \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays::class => 1,
-                \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 2000,
+                \Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes::class => 5500,
             ],
         ],
     ],
@@ -313,6 +323,21 @@ return [
              * After cleaning up the backups remove the oldest backup until
              * this amount of megabytes has been reached.
              * Set null for unlimited size.
+             *
+             * 5 000 Mo, comme le paquet et la configuration d'avant #2020, et
+             * pas moins : le premier nettoyage planifié applique d'un coup la
+             * règle à toutes les archives accumulées, celles lancées du
+             * panneau comprises, et une archive effacée ne revient pas. C'est
+             * le seuil de place de `backup:monitor` (plus haut) qui monte à
+             * 5 500 Mo, 500 Mo au-dessus : le nettoyage de 02:00 ramène les
+             * archives à 5 000 Mo au plus, et celles écrites avant le contrôle
+             * de 08:00 (la sauvegarde de 02:30, celles lancées du panneau) ont
+             * cette marge. Avec un contrôle sous le nettoyage, comme les
+             * 2 000 Mo d'avant, un jeu d'archives entre les deux seuils ferait
+             * échouer le contrôle chaque matin sans que le nettoyage y change
+             * rien, et la santé resterait au rouge (#2020). Le contrôle
+             * n'échoue donc que si le nettoyage n'a pas tourné ou si une
+             * journée a écrit plus de 500 Mo d'archives.
              */
             'delete_oldest_backups_when_using_more_megabytes_than' => 5000,
         ],

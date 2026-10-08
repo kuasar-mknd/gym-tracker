@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Models\TachePlanifiee;
+use App\Support\Sante\TachesPlanifieesCheck;
 use Cron\CronExpression;
 use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
@@ -277,6 +280,41 @@ it('rend au démarrage du planificateur, et de lui seul, les verrous que son arr
 it('lance le planificateur même si ses verrous n’ont pas pu être rendus', function (): void {
     expect(planificateurAppelsArtisanAuDemarrage(['php', 'artisan', 'schedule:work'], enEchec: 'schedule:clear-cache'))
         ->toContain('artisan schedule:clear-cache', 'artisan schedule:work');
+});
+
+/*
+ * Le moniteur nomme une tâche par sa ligne de commande, options comprises :
+ * corriger une ligne crée une tâche neuve, et l'ancienne garderait son échec,
+ * donc la santé au rouge, pour une tâche que plus rien ne lance (#2020). Le
+ * démarrage de `app` relit le planning sans `--keep-old`, et cette relecture
+ * efface les lignes que le planning ne porte plus. Le test rejoue l'appel
+ * même que fait `entrypoint.sh`.
+ */
+it('relit le planning au démarrage de app, et oublie l’échec d’une ligne qu’il ne lance plus', function (): void {
+    $relectures = array_values(array_filter(
+        planificateurAppelsArtisanAuDemarrage(['php', 'artisan', 'octane:frankenphp', '--port=8000']),
+        static fn (string $appel): bool => str_starts_with($appel, 'artisan schedule-monitor:'),
+    ));
+
+    expect($relectures)->toHaveCount(1);
+
+    Carbon::setTestNow('2026-10-08 09:00:00');
+    TachePlanifiee::query()->create([
+        'name' => "backup:run --only-db='1' --disable-notifications='1'",
+        'type' => 'command',
+        'cron_expression' => '30 2 * * *',
+        'grace_time_in_minutes' => 5,
+        'last_started_at' => '2026-10-08 02:30:00',
+        'last_failed_at' => '2026-10-08 02:30:01',
+    ]);
+
+    expect(TachesPlanifieesCheck::new()->run()->status->value)->toBe('failed');
+
+    expect(Artisan::call(substr($relectures[0], strlen('artisan '))))->toBe(0);
+
+    expect(TachePlanifiee::query()->where('name', 'like', 'backup:run%')->pluck('name')->all())
+        ->toBe(['backup:run --only-db --disable-notifications'])
+        ->and(TachesPlanifieesCheck::new()->run()->status->value)->toBe('ok');
 });
 
 /*
