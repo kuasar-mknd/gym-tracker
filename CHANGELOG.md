@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **La passe de mutation nocturne ne paie plus quatre mutants sans fin dans `App\Actions`** (#2017) : l'historique d'hydratation, celui des compléments, les statistiques et la grille de la semaine des habitudes comptaient leurs jours avec un compteur, et la passe, qui remplace `$i++` par `$i--` (ou l'inverse), en faisait des boucles qui ne rendaient jamais la main. Chacun de ces mutants tenait un processus jusqu'à l'épuisement de la mémoire ou au délai de Pest : 166, 175, 177 (délai dépassé) et 60 s en local, près de 580 s en tout. Ces parcours vont désormais sur les jours d'une période (`daysUntil()`), comme la tendance hebdomadaire du volume depuis #2004, et l'énumération des mensurations, dont le `break` bornait déjà le mutant, sur un `range()`. Mutation ciblée des quatre classes, avant puis après : 133 mutants puis 107, plus aucun en délai dépassé, des scores égaux ou meilleurs (habitudes 95,56 % puis 96,77 % : la fenêtre élargie d'un jour se voit désormais), 665 s de mutation puis 178 s. Les jours, leur ordre, leur format et leurs clés sont inchangés, vérifiés sur 24 090 instants de 2025 à 2027, changements d'heure compris. La règle quitte `.ai/rules/services.md` pour `.ai/rules/mutation.md`, commune aux trois espaces mutés, et `AucuneBoucleACompteurDansLeCodeMuteTest` refuse `for`, `while` et `do` dans le code que la nuit mute.
+
 ## [1.6.0] - 2026-10-08
 
 ### Ajouté
