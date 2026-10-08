@@ -20,12 +20,15 @@ declare(strict_types=1);
  * bornes d'une même fenêtre : si minuit tombe entre elles, la fenêtre s'élargit
  * d'un jour, ou d'une semaine pour la grille des habitudes. L'horloge de ces
  * tests passe minuit après la première lecture, la deuxième, la troisième ou la
- * quatrième, puisque l'endroit exact dépend de l'ordre des appels.
+ * quatrième, puisque l'endroit exact dépend de l'ordre des appels. Le total
+ * d'eau du jour, qui ne parcourt aucun jour, tirait lui aussi ses deux bornes
+ * de deux lectures : il comptait alors l'eau de la veille.
  */
 
 use App\Actions\Habits\FetchHabitsIndexAction;
 use App\Actions\Supplements\FetchSupplementsIndexAction;
 use App\Actions\Tools\FetchWaterHistoryAction;
+use App\Actions\Tools\FetchWaterTrackerAction;
 use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\Supplement;
@@ -124,4 +127,17 @@ it('rend une grille de sept jours, du lundi au dimanche, quand lundi commence pe
     $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates'];
 
     expect(array_column($semaine, 'day'))->toBe(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+})->with([1, 2, 3]);
+
+it('rend l eau d un seul jour quand minuit passe pendant le calcul', function (int $lectures): void {
+    $user = User::factory()->create();
+    WaterLog::factory()->create(['user_id' => $user->id, 'consumed_at' => Carbon::parse('2026-10-08 12:00:00'), 'amount' => 250]);
+    WaterLog::factory()->create(['user_id' => $user->id, 'consumed_at' => Carbon::parse('2026-10-09 00:00:00'), 'amount' => 500]);
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-08 23:59:59.999999', '2026-10-09 00:00:00.000001');
+
+    $suivi = app(FetchWaterTrackerAction::class)->execute($user);
+
+    // L'eau du 8 octobre ou celle du 9, selon la lecture qui fixe le jour,
+    // jamais les deux réunies.
+    expect($suivi['todayTotal'])->toBeIn([250, 500]);
 })->with([1, 2, 3]);
