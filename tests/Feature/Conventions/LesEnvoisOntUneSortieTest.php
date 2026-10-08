@@ -95,23 +95,49 @@ function envoisReseauxInternes(array $composition): array
 
 /**
  * Dit si un service peut joindre l'extérieur : relié à au moins un réseau non
- * interne, ou placé hors des réseaux de la composition par `network_mode`
- * (`host`, `bridge`…), sauf `none`. Un réseau que la composition ne déclare
- * pas compte comme une sortie : rien ne dit qu'il est interne.
+ * interne. Compose relie à `default` un service sans `networks` comme un
+ * service à la liste vide (`[]` ou `{}`). Un réseau que la composition ne
+ * déclare pas compte comme une sortie : rien ne dit qu'il est interne.
+ *
+ * `network_mode` remplace les réseaux : `none` n'a aucune sortie, `host` et
+ * `bridge` en ont une, `service:<x>` partage les réseaux du service x, dont on
+ * reprend la réponse. `container:<x>` partage ceux d'un conteneur que la
+ * composition ne décrit pas : la garde refuse de deviner, et échoue.
  *
  * @param  array<mixed>  $service
+ * @param  array<string, array<string, mixed>>  $services  tous les services, pour suivre `service:<x>`
  * @param  array<string, bool>  $internes
+ * @param  list<string>  $suivis  les services déjà suivis par `service:<x>`, contre une boucle
  */
-function envoisPeutSortir(array $service, array $internes): bool
+function envoisPeutSortir(array $service, array $services, array $internes, array $suivis = []): bool
 {
-    if (array_key_exists('network_mode', $service)) {
-        return $service['network_mode'] !== 'none';
+    $mode = $service['network_mode'] ?? null;
+
+    if (is_string($mode) && str_starts_with($mode, 'service:')) {
+        $partage = substr($mode, strlen('service:'));
+
+        if (! array_key_exists($partage, $services) || in_array($partage, $suivis, true)) {
+            throw new RuntimeException(sprintf('network_mode « %s » : service inconnu ou boucle.', $mode));
+        }
+
+        return envoisPeutSortir($services[$partage], $services, $internes, [...$suivis, $partage]);
     }
 
-    $reseaux = $service['networks'] ?? ['default'];
+    if (is_string($mode) && str_starts_with($mode, 'container:')) {
+        throw new RuntimeException(sprintf(
+            'network_mode « %s » : les réseaux d’un conteneur hors de la composition ne se lisent pas ici.',
+            $mode,
+        ));
+    }
+
+    if ($mode !== null) {
+        return $mode !== 'none';
+    }
+
+    $reseaux = $service['networks'] ?? [];
     $noms = is_array($reseaux) && ! array_is_list($reseaux) ? array_keys($reseaux) : (array) $reseaux;
 
-    return array_any($noms, static fn (mixed $nom): bool => ! is_string($nom) || ! ($internes[$nom] ?? false));
+    return array_any($noms === [] ? ['default'] : $noms, static fn (mixed $nom): bool => ! is_string($nom) || ! ($internes[$nom] ?? false));
 }
 
 /**
@@ -137,14 +163,15 @@ function envoisServicesSelonLEnvoi(): array
 
 it('donne une sortie au serveur web, à Horizon et au planificateur', function (): void {
     [$expediteurs] = envoisServicesSelonLEnvoi();
-    $internes = envoisReseauxInternes(envoisComposition());
+    $composition = envoisComposition();
+    $internes = envoisReseauxInternes($composition);
 
     // Sans eux, la garde passerait aussi le jour où plus rien ne serait reconnu.
     expect(array_keys($expediteurs))->toEqualCanonicalizing(['app', 'worker', 'scheduler']);
 
     $sansSortie = array_keys(array_filter(
         $expediteurs,
-        static fn (array $service): bool => ! envoisPeutSortir($service, $internes),
+        static fn (array $service): bool => ! envoisPeutSortir($service, $composition['services'], $internes),
     ));
 
     expect($sansSortie)->toBe([], sprintf(
@@ -156,13 +183,14 @@ it('donne une sortie au serveur web, à Horizon et au planificateur', function (
 
 it('ne donne de sortie à aucun autre service, db et redis compris', function (): void {
     [, $autres] = envoisServicesSelonLEnvoi();
-    $internes = envoisReseauxInternes(envoisComposition());
+    $composition = envoisComposition();
+    $internes = envoisReseauxInternes($composition);
 
     expect(array_keys($autres))->toContain('db', 'redis');
 
     $avecSortie = array_keys(array_filter(
         $autres,
-        static fn (array $service): bool => envoisPeutSortir($service, $internes),
+        static fn (array $service): bool => envoisPeutSortir($service, $composition['services'], $internes),
     ));
 
     expect($avecSortie)->toBe([], sprintf(
@@ -186,21 +214,63 @@ it('reconnaît les processus qui envoient', function (array $service, bool $atte
     'une autre image, sans commande' => [['image' => 'redis:8-alpine'], false],
 ]);
 
-it('reconnaît un service qui peut joindre l’extérieur', function (array $service, bool $attendu): void {
-    $internes = envoisReseauxInternes(['networks' => ['frontend' => null, 'backend' => ['internal' => true], 'sortie' => null]]);
+/**
+ * Les réseaux et les services d'une composition d'essai : backend interne,
+ * frontend et sortie non, redis sur backend seul, app sur frontend.
+ *
+ * @return array{0: array<string, array<string, mixed>>, 1: array<string, bool>}
+ */
+function envoisCompositionDEssai(): array
+{
+    return [
+        ['redis' => ['networks' => ['backend']], 'app' => ['networks' => ['frontend', 'backend']]],
+        envoisReseauxInternes(['networks' => ['frontend' => null, 'backend' => ['internal' => true], 'sortie' => null]]),
+    ];
+}
 
-    expect(envoisPeutSortir($service, $internes))->toBe($attendu);
+it('reconnaît un service qui peut joindre l’extérieur', function (array $service, bool $attendu): void {
+    [$services, $internes] = envoisCompositionDEssai();
+
+    expect(envoisPeutSortir($service, $services, $internes))->toBe($attendu);
 })->with([
     'worker avant #2019' => [['networks' => ['backend']], false],
     'worker depuis #2019' => [['networks' => ['backend', 'sortie']], true],
     'app' => [['networks' => ['frontend', 'backend']], true],
     'aucun réseau nommé, donc default' => [[], true],
+    'une liste vide ([] ou {}), donc default' => [['networks' => []], true],
     'syntaxe longue, réseau interne' => [['networks' => ['backend' => ['aliases' => ['base']]]], false],
     'syntaxe longue, avec une sortie' => [['networks' => ['backend' => null, 'frontend' => null]], true],
     'un réseau non déclaré' => [['networks' => ['inconnu']], true],
     'network_mode: host' => [['network_mode' => 'host'], true],
+    'network_mode: bridge' => [['network_mode' => 'bridge'], true],
     'network_mode: none' => [['network_mode' => 'none'], false],
+    'network_mode: service:redis, sur backend seul' => [['network_mode' => 'service:redis'], false],
+    'network_mode: service:app, qui sort' => [['network_mode' => 'service:app'], true],
 ]);
+
+it('refuse de deviner les réseaux qu’il ne peut pas lire', function (string $mode, string $message): void {
+    [$services, $internes] = envoisCompositionDEssai();
+    $services['boucle'] = ['network_mode' => 'service:boucle'];
+
+    expect(static fn (): bool => envoisPeutSortir(['network_mode' => $mode], $services, $internes))
+        ->toThrow(new RuntimeException($message));
+})->with([
+    'un conteneur hors de la composition' => ['container:abc', 'network_mode « container:abc » : les réseaux d’un conteneur hors de la composition ne se lisent pas ici.'],
+    'un service inconnu' => ['service:inconnu', 'network_mode « service:inconnu » : service inconnu ou boucle.'],
+    'une boucle' => ['service:boucle', 'network_mode « service:boucle » : service inconnu ou boucle.'],
+]);
+
+it('lit une liste vide de la composition comme default', function (): void {
+    $composition = Yaml::parse("services:\n  db:\n    networks: {}\n  redis:\n    networks: []\n");
+    assert(is_array($composition) && is_array($composition['services']));
+    [, $internes] = envoisCompositionDEssai();
+
+    /** @var array<string, array<string, mixed>> $services */
+    $services = $composition['services'];
+
+    expect(envoisPeutSortir($services['db'], $services, $internes))->toBeTrue()
+        ->and(envoisPeutSortir($services['redis'], $services, $internes))->toBeTrue();
+});
 
 it('lit l’attribut internal des réseaux déclarés, default compris', function (): void {
     expect(envoisReseauxInternes(['networks' => ['frontend' => null, 'backend' => ['internal' => true], 'default' => ['internal' => true]]]))
