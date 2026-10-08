@@ -9,14 +9,21 @@ use Illuminate\Support\Facades\File;
 /*
  * Une sauvegarde ne vaut que si l'on peut la rouvrir : l'archive doit être
  * chiffrée avec le mot de passe configuré, et le dump qu'elle contient doit
- * être complet. Le test refait tout le
- * chemin par la commande planifiée, mysqldump compris, sur le disque
- * `sauvegardes` détourné vers un dossier jetable.
+ * être complet. Le test appelle la commande comme le panneau, avec un
+ * tableau d'options, mysqldump compris, sur le disque `sauvegardes` détourné
+ * vers un dossier jetable ; la ligne que lance le planificateur passe par
+ * `SauvegardesPlanifieesTest`.
+ *
+ * Le dossier de travail du paquet y passe aussi : `backup:run` vide le sien
+ * en commençant et l'efface en finissant, et celui de la configuration est le
+ * même pour tous les processus d'une suite parallèle, où
+ * `SauvegardesPlanifieesTest` effaçait le dump de celui-ci (et réciproquement).
  */
 it('produit une archive chiffrée dont le dump est complet et relisible', function (): void {
     $dossier = storage_path('framework/testing/sauvegardes-'.uniqid());
     File::ensureDirectoryExists($dossier);
     Config::set('filesystems.disks.sauvegardes.root', $dossier);
+    Config::set('backup.backup.temporary_directory', $dossier.'/.temp');
     Config::set('backup.backup.password', 'mot-de-passe-de-test');
     Config::set('backup.notifications.notifications', []);
     // Le paquet fige sa configuration dans un singleton au démarrage : on la refait lire.
@@ -61,6 +68,7 @@ it('refuse d’écrire une archive sans mot de passe, d’où que vienne la dema
     $dossier = storage_path('framework/testing/sauvegardes-'.uniqid());
     File::ensureDirectoryExists($dossier);
     Config::set('filesystems.disks.sauvegardes.root', $dossier);
+    Config::set('backup.backup.temporary_directory', $dossier.'/.temp');
     Config::set('backup.backup.password');
     Config::set('backup.notifications.notifications', []);
     // Le paquet fige sa configuration dans un singleton au démarrage : on la refait lire.
