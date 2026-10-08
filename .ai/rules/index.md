@@ -15,6 +15,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | resources/js/**, resources/js/**/*.vue, resources/css/** | .ai/rules/js.md |
 | bootstrap/app.php, app/Http/Middleware/** | .ai/rules/middleware.md |
 | app/Models/** | .ai/rules/models.md |
+| app/Actions/**, app/Services/**, app/Policies/** | .ai/rules/mutation.md |
 | app/Providers/**, routes/console.php | .ai/rules/providers.md |
 | README.md, .env.example, docker-compose.prod.yml, compose.yaml, Dockerfile, entrypoint.sh, docker/**, config/** | .ai/rules/readme.md |
 | app/Http/Requests/** | .ai/rules/requests.md |

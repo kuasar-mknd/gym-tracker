@@ -30,10 +30,17 @@ class FetchWaterHistoryAction
             static fn (WaterLog $log): string => $log->consumed_at->format('Y-m-d')
         );
 
+        /*
+         * Les sept jours à rebours depuis maintenant, du plus ancien à
+         * aujourd'hui, sur un `range()` et non un compteur : `$i++` à la place
+         * de `$i--` ne finissait jamais, et ce mutant tenait un processus de la
+         * passe nocturne jusqu'au délai que Pest accorde à chaque mutant. Pas
+         * une période partie de minuit non plus : là où minuit manque le jour
+         * du passage à l'heure d'été, elle perdait aujourd'hui (#2017).
+         */
         $historique = [];
-        for ($i = 6; $i >= 0; $i--) {
-            // `copy()` plutôt qu'une nouvelle instance de Carbon à chaque tour.
-            $date = $now->copy()->subDays($i);
+        foreach (range(6, 0) as $joursEcoules) {
+            $date = $now->copy()->subDays($joursEcoules);
             $dateString = $date->format('Y-m-d');
 
             /** @var float|int $dayTotal */

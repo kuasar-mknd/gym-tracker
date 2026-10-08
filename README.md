@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 3 058 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 3 085 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 615 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 121 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -234,7 +234,7 @@ Posées par le `Dockerfile` à partir des arguments que la CI passe au build : l
 | `SESSION_SECURE_COOKIE` | `true` en production | Le cookie de session n'est envoyé qu'en HTTPS : d'où le passage obligé par le proxy inverse. |
 | `SESSION_LIFETIME` | `120` | Minutes d'inactivité avant que la session expire ; « Se souvenir de moi » reconnecte ensuite sans mot de passe. |
 | `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
-| `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde : réussite ou échec d'une archive lancée du panneau ou par `backup:run`, ou d'un nettoyage lancé par `backup:clean`. Les tâches planifiées n'y écrivent jamais : `backup:clean` et `backup:run` coupent leurs avis (`--disable-notifications`), et `backup:monitor`, le contrôle de 08 h, qui n'a pas d'option pour cela, n'a aucun canal pour les siens dans `config/backup.php` (#2020). L'échec de l'une d'elles se lit dans « Tâches planifiées » et met la santé au rouge, qui écrit à `HEALTH_TO_ADDRESS`. |
+| `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |
 | `HORIZON_HEARTBEAT_URL`, `SCHEDULE_HEARTBEAT_URL` | vides | URL qu'un contrôle réussi d'Horizon ou du planificateur appellerait, pour qu'une surveillance externe s'alarme quand les appels cessent — y compris planificateur arrêté, ce que `HEALTH_TO_ADDRESS` ne peut pas signaler. |
 | `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI`, `APPLE_REDIRECT_URI` | `APP_URL` suivie de `/auth/google/callback`, `/auth/github/callback` ou `/auth/apple/callback` | L'URL de rappel à déclarer chez le fournisseur. |
 
