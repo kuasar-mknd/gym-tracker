@@ -33,6 +33,7 @@ use App\Models\SupplementLog;
 use App\Models\User;
 use App\Models\WaterLog;
 use Illuminate\Support\Carbon;
+use Tests\Support\HorlogeQuiPasseMinuit;
 
 afterEach(function (): void {
     date_default_timezone_set(config()->string('app.timezone'));
@@ -48,23 +49,6 @@ function santiagoLeLendemainDuMinuitManquant(): void
 {
     date_default_timezone_set('America/Santiago');
     Carbon::setTestNow(Carbon::parse('2026-09-07 00:30:00'));
-}
-
-/**
- * Une horloge qui rend `$avant` à ses `$lectures` premières lectures, puis
- * `$apres` : minuit passe au milieu du calcul.
- */
-function horlogeQuiPasseMinuitApres(int $lectures, string $avant, string $apres): void
-{
-    $instantAvant = Carbon::parse($avant);
-    $instantApres = Carbon::parse($apres);
-    $lues = 0;
-
-    Carbon::setTestNow(static function () use (&$lues, $lectures, $instantAvant, $instantApres): Carbon {
-        $lues++;
-
-        return ($lues <= $lectures ? $instantAvant : $instantApres)->copy();
-    });
 }
 
 /**
@@ -121,7 +105,7 @@ it('rend trente jours de statistiques d habitudes, aujourd hui compris, là où 
 
 it('rend trente jours de compléments d affilée quand minuit passe pendant le calcul', function (int $lectures): void {
     $user = User::factory()->create();
-    horlogeQuiPasseMinuitApres($lectures, '2026-10-08 23:59:59.999999', '2026-10-09 00:00:00.000001');
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-08 23:59:59.999999', '2026-10-09 00:00:00.000001');
 
     $historique = app(FetchSupplementsIndexAction::class)->execute($user)['usageHistory'];
 
@@ -135,7 +119,7 @@ it('rend trente jours de compléments d affilée quand minuit passe pendant le c
 
 it('rend une grille de sept jours, du lundi au dimanche, quand lundi commence pendant le calcul', function (int $lectures): void {
     $user = User::factory()->create();
-    horlogeQuiPasseMinuitApres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
 
     $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates'];
 
