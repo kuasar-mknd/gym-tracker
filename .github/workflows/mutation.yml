@@ -71,45 +71,64 @@ jobs:
         # App\Services COUPEE EN DEUX le 2026-10-07 (#2004).
         #
         # La part entiere a ete annulee a 60 minutes le 07/10 (73a16471),
-        # apres 34 minutes le 06/10 (78c7aaa1) : 956 mutants contre 952, et la
-        # part App\Actions du meme run aussi rapide par mutant que la veille
-        # (1,34 s contre 1,36). Ni le code ni les tests : le runner. Sa passe
-        # de reference a pris 126 s, contre 70 s le 06/10, et 82 s et 96 s
-        # pour les deux autres parts du meme run. Le delai que Pest accorde a
-        # chaque mutant suit cette reference (+ 20 %), et la part avec lui.
-        # Elle occupait 34 a 39 minutes sur 60 : 1,6x de marge, pour un runner
-        # 1,8x plus lent.
+        # apres 34 minutes le 06/10 (78c7aaa1). Pas le code : 956 mutants
+        # contre 952, un seul en timeout chaque nuit, et la part App\Actions
+        # du meme run aussi rapide par mutant que la veille (1,34 s contre
+        # 1,36). Le runner : il executait chaque test plus lentement, et
+        # chaque mutant, qui rejoue les tests couvrant sa ligne, l'a paye. Sa
+        # passe de reference en temoigne : 126 s, contre 96 et 82 s pour les
+        # deux autres parts du meme run, sur la meme suite. Par mutant, la
+        # part est passee de 2,15 s (2 047 s pour 952 mutants) a 3,84 s
+        # (3 430 s pour les 894 traites avant l'annulation), soit 1,78x ; la
+        # suite avait grandi entre-temps (2 394 tests de reference le 06/10,
+        # 2 592 le 07/10, + 8 %), et le runner seul etait environ 1,65x plus
+        # lent. Le delai que Pest accorde a chaque mutant (la reference
+        # + 20 %, MutationTest::calculateTimeout) n'est qu'un plafond : il ne
+        # coute que pour un mutant qui ne finit pas, un par nuit, et n'explique
+        # que quelques pour cent de l'ecart. La part occupait 34 a 39 minutes
+        # sur 60 : 1,6x de marge, pour 1,78x de plus par mutant.
         #
-        # Mesure locale sur 68a585ca, quatre processus, App\Services entiere :
-        # 967 mutants, 112 survivants, 88,42 %, 5 619 s de mutation. Le runner
-        # du 06/10 a fait la part en 2 047 s (952 mutants, 78c7aaa1) : la
-        # machine qui mesure, chargee, est 2,75x plus lente que lui, et c'est
-        # ce facteur qui ramene les mesures ci-dessous au runner.
+        # Mesure locale sur 68a585ca, quatre processus, App\Services entiere,
+        # charge moyenne 8 (de 4,6 a 13,6, la mesure elle-meme comprise) :
+        # 967 mutants, 112 survivants, 88,42 %, 5 619 s de mutation, apres une
+        # passe de reference de 2 777 tests en 297 s. Le runner du 06/10 a
+        # fait la part en 2 047 s (952 mutants, 78c7aaa1, reference de
+        # 2 394 tests) : 2,75x, un rapport qui mele la machine chargee et
+        # 16 % de tests en plus, et qui ramene les estimations ci-dessous au
+        # runner. Les deux moities n'ont pas ete mesurees seules sur 68a585ca :
+        # la colonne « locale » repartit les 5 619 s au prorata du temps
+        # cumule de leurs mutants (--profile : 11 464 s et 10 989 s).
         #
         #                              mutants  survivants  score   locale    runner
+        #                                                           (prorata) (/ 2,75)
         #   PersonalRecordService          191          34  82,20   47,8 min  17 min
         #   le reste de App\Services       776          78  89,95   45,8 min  17 min
         #
         # PersonalRecordService fait la moitie du temps pour un cinquieme des
         # mutants : chaque ecriture de serie le recalcule, quelque 280 tests
         # le couvrent, et chacun de ses mutants en rejoue une bonne part
-        # (60 s en moyenne en local, 14 s pour ceux des autres services).
+        # (60 s en moyenne en local a charge 8, 14 s pour ceux des autres
+        # services).
         #
         # Apres les correctifs de #2004 (le mutant sans fin de la tendance
         # hebdomadaire retire, deux tests lents rendus rapides), chaque moitie
         # mesuree seule sur c21ade7f et ces correctifs, la machine moins
-        # chargee (passe de reference de 140 s au lieu de 297) :
+        # chargee (charge moyenne 5,5, la mesure elle-meme comprise ; passe de
+        # reference de 2 912 tests en 140 s au lieu de 297) :
         #
         #                              mutants  survivants  score   mutation
         #   PersonalRecordService          191          34  82,20   1 733 s
         #   le reste de App\Services       769          78  89,86   1 837 s
         #
-        # Memes mutants, memes verdicts : seuls les sept mutants de la boucle
-        # ont disparu, tous tues. Sur un runner comme ceux des 05 et 06/10,
+        # Memes mutants, memes verdicts, a la boucle pres : ses huit mutants du
+        # compteur ont disparu (tous tues), et le parcours des jours qui la
+        # remplace en apporte un, ForeachEmptyIterable, tue lui aussi
+        # (776 - 8 + 1 = 769). Sur un runner comme ceux des 05 et 06/10,
         # chaque moitie fait 17 a 20 minutes de mutation (la moitie des 2 047 a
-        # 2 333 s qu'y prenait la part entiere) ; sur un runner 1,8x plus lent,
-        # 31 a 36, et 34 a 39 avec la passe de reference et l'installation.
-        # D'ou 45 minutes pour chacune, comme App\Actions.
+        # 2 333 s qu'y prenait la part entiere) ; sur un runner qui met 1,8x
+        # plus de temps par mutant, comme le 07/10, 31 a 36, et 34 a 39 avec
+        # la passe de reference et l'installation. D'ou 45 minutes pour
+        # chacune, comme App\Actions.
         timeout-minutes: ${{ matrix.timeout }}
         strategy:
             fail-fast: false

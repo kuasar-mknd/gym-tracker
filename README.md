@@ -426,7 +426,7 @@ L'erreur ne va que dans un sens : le parallèle **cache** des survivants, il n'e
 
 Le nocturne n'est pas concerné : le runner ne lance qu'un processus par cœur (« Parallel: 4 processes » dans chaque rapport), sans autre charge, et sa passe de référence se mesure dans les mêmes conditions que ses mutants. Mesure sur trois nuits consécutives — 1 timeout sur les 841 mutations de `App\Services`, 4 sur les 887 de `App\Actions`, 0 sur `App\Policies`.
 
-Sa **durée**, elle, suit le runner. Le 07/10, la passe de référence d'un runner a pris 126 s contre 70 la veille, et la part `App\Services`, qui tenait en 34 minutes, a été annulée à son délai de 60 (#2004). Elle est depuis coupée en deux parts de 45 minutes, `PersonalRecordService` et le reste, chacune mesurée : le calcul est en tête du job dans `.github/workflows/mutation.yml`.
+Sa **durée**, elle, suit le runner : un runner lent exécute chaque test plus lentement, et chaque mutant, qui rejoue les tests couvrant sa ligne, le paie. Le 07/10, la passe de référence de la part `App\Services` a pris 126 s, contre 96 et 82 pour les deux autres parts du même run, et la part, qui tenait en 34 minutes la veille, a été annulée à son délai de 60 (#2004). Elle est depuis coupée en deux parts de 45 minutes, `PersonalRecordService` et le reste, chacune mesurée : le calcul est en tête du job dans `.github/workflows/mutation.yml`.
 
 ---
 

@@ -193,8 +193,9 @@ it('rebâtit le record quand la série qui le détenait est corrigée', function
  * Écrites d'une seule requête, sans les écouteurs d'une série : le test qui
  * s'en sert mesure ce que lit `recompute()`, qu'il appelle lui-même. Créées
  * une à une, ses 63 séries relançaient chacune les records, les objectifs et
- * le volume — six secondes, que la passe de mutation nocturne payait pour
- * chaque mutant de `PersonalRecordService` qui arrivait jusqu'à lui.
+ * le volume : le test durait dix-neuf fois plus (3,0 s contre 0,16, machine à
+ * charge 0,5), ce que la passe de mutation nocturne payait pour chaque mutant
+ * de `PersonalRecordService` qui arrivait jusqu'à lui.
  */
 function seriesPour(User $user, Exercise $exercise, int $combien): void
 {

@@ -106,9 +106,10 @@ it('calculates volume history correctly', function (): void {
  *
  * Sans les écouteurs d'une séance : la série de jours, les succès et les
  * objectifs ne sont pas ce que lisent ces graphes. Avec eux, les vingt à trente
- * séances d'un test les recalculaient chacune, trois secondes par test, payées
- * par chaque mutant de ces trois services que la passe nocturne y faisait
- * passer avant d'atteindre le test qui le tue.
+ * séances d'un test les recalculaient chacune, et le test durait trois à
+ * quatre fois plus (0,45 à 0,63 s contre 0,12 à 0,24, machine à charge 0,5),
+ * payé par chaque mutant de ces trois services que la passe nocturne y
+ * faisait passer avant d'atteindre le test qui le tue.
  */
 function seancePourIndex(User $user, string $quand, string $nom = 'Seance'): Workout
 {
