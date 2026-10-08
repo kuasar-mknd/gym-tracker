@@ -229,7 +229,8 @@ services:
             start_period: 30s
             retries: 3
         # backend pour db et redis, sortie pour le relais SMTP et les services
-        # push : Horizon envoie d'ici les notifications en file (#2019).
+        # push : Horizon envoie d'ici les notifications en file et les avis des
+        # sauvegardes lancées du panneau, qui tournent dans un job (#2019).
         networks:
             - backend
             - sortie
@@ -284,8 +285,8 @@ services:
             timeout: 15s
             retries: 3
             start_period: 60s
-        # Comme worker : les alertes de santé et les avis des sauvegardes
-        # planifiées partent d'ici, sans passer par la file (#2019).
+        # Comme worker : les alertes de santé partent d'ici, sans passer par la
+        # file (#2019). Les sauvegardes planifiées, elles, n'envoient rien.
         networks:
             - backend
             - sortie
@@ -299,16 +300,18 @@ networks:
     # Le réseau de app, par lequel passe ce qui arrive sur son port publié.
     frontend:
     # Interne, donc sans aucune route vers l'extérieur : db et redis ne
-    # joignent rien hors de la pile, et rien hors de la pile ne les joint.
+    # joignent rien hors de la pile. Cela ne les cache pas : faute de port
+    # publié, seuls les conteneurs de backend les joignent, et l'hôte aussi,
+    # par leur adresse sur ce réseau.
     backend:
         internal: true
     # La sortie de worker et scheduler. Ils n'étaient que sur backend (#2019) :
     # les notifications en file, que Horizon envoie depuis worker (push des
     # records, des succès et du rappel d'entraînement, avis de changement
-    # d'adresse, tout courriel mis en file), et les alertes de santé et les
-    # avis des sauvegardes, que scheduler envoie lui-même, ne joignaient ni le
-    # relais SMTP ni les services push ; seul ce qu'une requête web envoyait
-    # partait, depuis app. Un réseau à eux plutôt que frontend : ils n'ont
+    # d'adresse, avis des sauvegardes lancées du panneau, tout courriel mis en
+    # file), et les alertes de santé, que scheduler envoie lui-même, ne
+    # joignaient ni le relais SMTP ni les services push ; seul ce qu'une
+    # requête web envoyait partait, depuis app. Un réseau à eux plutôt que frontend : ils n'ont
     # rien à recevoir, et ce qui se brancherait sur frontend pour joindre app
     # les joindrait aussi. db et redis n'y sont pas.
     # LesEnvoisOntUneSortieTest tient cette répartition.

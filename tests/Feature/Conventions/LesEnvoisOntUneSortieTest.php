@@ -9,10 +9,10 @@ use Symfony\Component\Yaml\Yaml;
  * `docker-compose.prod.yml`, worker et scheduler n'étaient reliés qu'à
  * backend, interne (#2019) : les notifications en file, que Horizon envoie
  * depuis worker (push des records, des succès et du rappel d'entraînement,
- * avis de changement d'adresse, tout courriel mis en file), et les alertes de
- * santé et les avis des sauvegardes, que scheduler envoie lui-même, ne
- * joignaient ni le relais SMTP ni les services push. Seul app, relié aussi à
- * frontend, pouvait envoyer.
+ * avis de changement d'adresse, avis des sauvegardes lancées du panneau, tout
+ * courriel mis en file), et les alertes de santé, que scheduler envoie
+ * lui-même, ne joignaient ni le relais SMTP ni les services push. Seul app,
+ * relié aussi à frontend, pouvait envoyer.
  *
  * Rien d'autre ne pouvait le voir : la suite remplace les envois par des
  * faux, et un envoi qui ne part pas ne laisse, au mieux, qu'un job en échec
