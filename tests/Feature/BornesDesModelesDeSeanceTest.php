@@ -309,17 +309,19 @@ it('juge les bornes d’une séance relue sans ses exercices ni ses séries', fu
 });
 
 /*
- * Une séance peut n'avoir pas de nom (la colonne l'accepte). Son modèle ne
- * prend alors que le suffixe, sans nom inventé à sa place.
+ * Une séance peut n'avoir pas de nom (la colonne l'accepte). L'application la
+ * nomme alors « Séance » partout où elle l'affiche (statistiques, liste et page
+ * des séances), et son modèle reprend ce nom : sans lui, il s'appelait
+ * « (Modèle) », une espace en tête.
  */
-it('ne nomme que par son suffixe le modèle d’une séance sans nom', function (): void {
+it('nomme « Séance (Modèle) » le modèle d’une séance sans nom', function (): void {
     $compte = User::factory()->create();
     $seance = Workout::factory()->create(['user_id' => $compte->id, 'name' => null]);
 
     actingAs($compte)->post(route('templates.save-from-workout', $seance))
         ->assertRedirect(route('templates.index'));
 
-    expect(WorkoutTemplate::query()->sole()->name)->toBe(' (Modèle)');
+    expect(WorkoutTemplate::query()->sole()->name)->toBe('Séance (Modèle)');
 });
 
 it('coupe le nom du modèle tiré d’une séance pour qu’il tienne dans sa colonne', function (): void {
