@@ -116,7 +116,7 @@ Elles se posent dans l'environnement de la pile : les variables de la pile, ou u
 
 - **Seules celles que `docker-compose.prod.yml` transmet atteignent les conteneurs.** Une variable lue par `config/` mais absente de ce fichier garde son défaut, quoi qu'on pose dans la pile (voir « Lues par l'application, non transmises »).
 - **Une variable oubliée arrive vide, pas absente.** Compose avertit et la remplace par une chaîne vide ; Laravel retient cette chaîne vide, pas le défaut de sa configuration. La colonne « Défaut » dit ce que reçoit le conteneur quand la variable manque. Seules `BACKUP_ARCHIVE_PASSWORD` et `BACKUP_HOST_PATH` empêchent la pile de démarrer ; les autres obligatoires la laissent démarrer, puis un service tombe.
-- **La configuration est figée au démarrage du conteneur** : `entrypoint.sh` lance `php artisan config:cache`. Une variable changée n'agit qu'une fois les conteneurs recréés (`docker compose up -d`, ou la mise à jour de la pile) ; un redémarrage garde l'ancien environnement, et `docker exec -e` ne change pas la configuration.
+- **La configuration est figée au démarrage du conteneur** : `entrypoint.sh` lance `php artisan config:cache`. Une variable changée n'agit qu'une fois les conteneurs recréés (`docker compose -f docker-compose.prod.yml up -d`, ou la mise à jour de la pile) ; un redémarrage garde l'ancien environnement, et `docker exec -e` ne change pas la configuration.
 
 #### Application
 
