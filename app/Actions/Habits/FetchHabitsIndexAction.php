@@ -21,7 +21,7 @@ final class FetchHabitsIndexAction
     public function getImmediateData(User $user): array
     {
         $startOfWeek = Carbon::now()->startOfWeek();
-        $endOfWeek = Carbon::now()->endOfWeek();
+        $endOfWeek = $startOfWeek->copy()->endOfWeek();
 
         $habits = $user->habits()
             ->where('archived', false)
@@ -40,7 +40,7 @@ final class FetchHabitsIndexAction
 
         return [
             'habits' => $habits,
-            'weekDates' => $this->getWeekDates(),
+            'weekDates' => $this->getWeekDates($startOfWeek, $endOfWeek),
         ];
     }
 
@@ -73,8 +73,16 @@ final class FetchHabitsIndexAction
         $consistencyData = []; // Pour la courbe.
         $historique = []; // Pour l'histogramme.
 
-        for ($i = 29; $i >= 0; $i--) {
-            $dateObj = $now->copy()->subDays($i);
+        /*
+         * Les trente jours à rebours depuis maintenant, du plus ancien à
+         * aujourd'hui, sur un `range()` et non un compteur : `$i++` à la place
+         * de `$i--` ne finissait jamais, et ce mutant tenait un processus de la
+         * passe nocturne jusqu'au délai que Pest accorde à chaque mutant. Pas
+         * une période partie de minuit non plus : là où minuit manque le jour
+         * du passage à l'heure d'été, elle perdait aujourd'hui (#2017).
+         */
+        foreach (range(29, 0) as $joursEcoules) {
+            $dateObj = $now->copy()->subDays($joursEcoules);
             $dateStr = $dateObj->format('Y-m-d');
             // @phpstan-ignore-next-line
             $count = (int) ($consistencyStats[$dateStr] ?? 0);
@@ -98,21 +106,24 @@ final class FetchHabitsIndexAction
     }
 
     /**
+     * Les jours de la semaine dont les suivis sont chargés, du lundi au
+     * dimanche : la grille et le chargement anticipé lisent la même semaine,
+     * dont la fin se déduit du début plutôt que d'une seconde lecture de
+     * l'horloge, qui ouvrait une grille de quatorze jours quand lundi
+     * commençait entre les deux. Un parcours de période et non un compteur,
+     * dont le mutant `$i--` ne finissait jamais ; borné à la fin du dimanche,
+     * il garde ses sept jours même là où minuit manque (#2017).
+     *
      * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      */
-    private function getWeekDates(): array
+    private function getWeekDates(Carbon $debut, Carbon $fin): array
     {
-        $start = Carbon::now()->startOfWeek();
         $dates = [];
-        for ($i = 0; $i < 7; $i++) {
-            $date = $start->copy()->addDays($i);
-
+        foreach ($debut->daysUntil($fin)->toArray() as $date) {
             $dates[] = [
                 'date' => $date->format('Y-m-d'),
                 'day' => $date->format('D'),
-                // @phpstan-ignore-next-line
                 'day_name' => $date->locale('fr')->dayName,
-                // @phpstan-ignore-next-line
                 'day_short' => $date->locale('fr')->shortDayName,
                 'day_num' => $date->day,
                 'is_today' => $date->isToday(),

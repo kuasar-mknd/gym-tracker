@@ -77,6 +77,10 @@ final class VolumeStatsService
      * Les sept jours sortent toujours, y compris ceux sans séance : la courbe
      * doit montrer les creux, pas les sauter.
      *
+     * Le dimanche se déduit du lundi, d'une seule lecture de l'horloge : une
+     * seconde lecture rendait quatorze jours quand lundi commençait entre les
+     * deux, et le cache les gardait dix minutes (#2017).
+     *
      * @param  User  $user  L'utilisateur concerné.
      * @return array<int, WeeklyVolumeTrendPoint>
      */
@@ -87,7 +91,7 @@ final class VolumeStatsService
             now()->addMinutes(10),
             function () use ($user): array {
                 $startOfWeek = now()->startOfWeek();
-                $endOfWeek = now()->endOfWeek();
+                $endOfWeek = $startOfWeek->copy()->endOfWeek();
 
                 // `toBase()` : la somme sort déjà agrégée, aucun modèle à
                 // hydrater derrière.
@@ -206,20 +210,27 @@ final class VolumeStatsService
     /**
      * Le volume de la semaine en cours contre celui de la semaine précédente.
      *
+     * Les deux semaines et la clef se tirent d'une seule lecture de l'horloge,
+     * comme le mois dans `getMonthlyVolumeComparison` : avec une lecture par
+     * borne, quand lundi commençait entre elles, la semaine qui s'achevait se
+     * comparait à elle-même, ou à elle-même et à la précédente réunies (#2017).
+     *
      * @param  User  $user  L'utilisateur concerné.
      */
     public function getWeeklyVolumeComparison(User $user): VolumeComparison
     {
-        $weekKey = now()->startOfWeek()->format('Y-W');
+        $debutDeSemaine = now()->startOfWeek();
+        $semainePrecedente = $debutDeSemaine->copy()->subWeek()->startOfWeek();
+        $weekKey = $debutDeSemaine->format('Y-W');
 
         $comparison = Cache::remember(
             ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}"),
             now()->addMinutes(10),
             fn (): array => $this->calculateComparison(
                 $user,
-                now()->startOfWeek(),
-                now()->subWeek()->startOfWeek(),
-                now()->subWeek()->endOfWeek()
+                $debutDeSemaine,
+                $semainePrecedente,
+                $semainePrecedente->copy()->endOfWeek()
             )
         );
 
