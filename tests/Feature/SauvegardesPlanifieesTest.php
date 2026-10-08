@@ -43,12 +43,18 @@ function sauvegardesPlanifieesLigneDe(string $commande): string
 /**
  * Détourne le disque `sauvegardes` vers un dossier jetable, dont il rend le
  * chemin, et retient les avis au lieu de les envoyer.
+ *
+ * Le dossier de travail du paquet y passe aussi : `backup:run` vide le sien
+ * en commençant et l'efface en finissant, et celui de la configuration est le
+ * même pour tous les processus d'une suite parallèle, où
+ * `SauvegardeRestaurableTest` lui effaçait son dump (et réciproquement).
  */
 function sauvegardesPlanifieesDossierJetable(): string
 {
     $dossier = storage_path('framework/testing/sauvegardes-planifiees-'.uniqid());
     File::ensureDirectoryExists($dossier);
     Config::set('filesystems.disks.sauvegardes.root', $dossier);
+    Config::set('backup.backup.temporary_directory', $dossier.'/.temp');
     Config::set('backup.backup.password', 'mot-de-passe-de-test');
     // Le paquet fige sa configuration dans un singleton au démarrage : on la refait lire.
     app()->forgetInstance(\Spatie\Backup\Config\Config::class);
