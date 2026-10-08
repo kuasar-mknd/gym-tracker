@@ -9,9 +9,10 @@ use Illuminate\Support\Facades\File;
 /*
  * Une sauvegarde ne vaut que si l'on peut la rouvrir : l'archive doit être
  * chiffrée avec le mot de passe configuré, et le dump qu'elle contient doit
- * être complet. Le test refait tout le
- * chemin par la commande planifiée, mysqldump compris, sur le disque
- * `sauvegardes` détourné vers un dossier jetable.
+ * être complet. Le test appelle la commande comme le panneau, avec un
+ * tableau d'options, mysqldump compris, sur le disque `sauvegardes` détourné
+ * vers un dossier jetable ; la ligne que lance le planificateur passe par
+ * `SauvegardesPlanifieesTest`.
  *
  * Le dossier de travail du paquet y passe aussi : `backup:run` vide le sien
  * en commençant et l'efface en finissant, et celui de la configuration est le
