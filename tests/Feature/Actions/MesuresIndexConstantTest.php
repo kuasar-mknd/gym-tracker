@@ -122,7 +122,7 @@ it('ne montre que les cinquante premières parties, dans l’ordre de leur nom',
         'updated_at' => now(),
     ], $parties));
 
-    $cartes = (new FetchBodyPartMeasurementsIndexAction())->execute($user)['latestMeasurements'];
+    $cartes = new FetchBodyPartMeasurementsIndexAction()->execute($user)['latestMeasurements'];
 
     expect($cartes->pluck('part')->all())->toBe(array_slice($parties, 0, 50));
 });
@@ -139,7 +139,7 @@ it('cesse de lire les mesures dès la dernière partie passée', function (): vo
 
     DB::flushQueryLog();
     DB::enableQueryLog();
-    (new FetchBodyPartMeasurementsIndexAction())->execute($user);
+    new FetchBodyPartMeasurementsIndexAction()->execute($user);
     $lectures = array_filter(DB::getQueryLog(), fn (array $entree): bool => str_contains((string) $entree['query'], 'body_part_measurements'));
     DB::disableQueryLog();
 
