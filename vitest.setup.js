@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
+import { defineComponent, h } from 'vue'
 
 /*
  * La charte, chargée pour de vrai.
@@ -181,3 +182,34 @@ config.global.directives = { ...config.global.directives, press: {} }
  * les assertions de structure.
  */
 config.global.components = { ...config.global.components, Head: { render: () => null } }
+
+/*
+ * Un composant chargé par `defineAsyncComponent` et remplacé par un stub, par
+ * `stubs: { X: true }` ou par `shallow: true`, n'est plus chargé du tout.
+ *
+ * Test Utils appelait son chargeur pour enregistrer le stub sous le composant
+ * résolu, sans attendre ce chargement. Au dernier test d'un fichier, l'import
+ * partait donc encore quand le fichier se terminait : les mocks du fichier
+ * étaient déjà levés, c'est le VRAI composant qui se chargeait, Chart.js
+ * compris, et si l'environnement était démonté entre-temps, Vitest rendait
+ * « EnvironmentTeardownError: Cannot load … after the environment was torn
+ * down ». Tous les tests passaient, et la commande sortait en erreur (#2023).
+ *
+ * Le stub rendu ici est celui de Test Utils, moins le chargement : même nom,
+ * même balise `x-stub`, aucune prop (le composant asynchrone n'en déclare
+ * pas). `findComponent` le retrouve par son nom ou par le composant
+ * asynchrone, que Test Utils enregistre lui-même ; plus par le composant
+ * résolu, puisqu'il n'est jamais résolu.
+ */
+const enTirets = (nom) => nom.replace(/\B([A-Z])/g, '-$1').toLowerCase()
+
+config.plugins.createStubs = ({ name, component }) => {
+    if (!component?.__asyncLoader) {
+        return undefined
+    }
+
+    const nomDuStub = name || 'anonymous-stub'
+    const balise = name ? `${enTirets(name)}-stub` : nomDuStub
+
+    return defineComponent({ name: nomDuStub, setup: () => () => h(balise) })
+}
