@@ -10,13 +10,13 @@ use Symfony\Component\Yaml\Yaml;
  * délai que Pest accorde à chaque mutant (la passe de référence + 20 %), ou
  * jusqu'à épuiser la mémoire. Aucun test ne peut le tuer vite, puisque la
  * boucle ne rend jamais la main. La tendance hebdomadaire du volume en a coûté
- * 336 s en local (#2004) ; trois boucles d'App\Actions, 155 à 172 s chacune, et
- * environ 500 s par nuit à la part qui les mute (#2017).
+ * 336 s en local (#2004) ; quatre parcours de jours d'App\Actions, de 60 à
+ * 177 s chacun en local, près de 580 s cumulées (#2017).
  *
  * Cette garde refuse donc `for`, `while` et `do` dans les espaces de noms que
  * la nuit mute, lus dans .github/workflows/mutation.yml : on y parcourt ce qui
- * est borné par nature, les jours d'une période (`daysUntil()`), une
- * collection, un `range()`. La règle est dans .ai/rules/mutation.md.
+ * est borné par nature, un `range()`, une collection, les jours d'une période
+ * (`daysUntil()`). La règle est dans .ai/rules/mutation.md.
  */
 
 /**

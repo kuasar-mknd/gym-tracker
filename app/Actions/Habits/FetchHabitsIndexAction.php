@@ -21,7 +21,7 @@ final class FetchHabitsIndexAction
     public function getImmediateData(User $user): array
     {
         $startOfWeek = Carbon::now()->startOfWeek();
-        $endOfWeek = Carbon::now()->endOfWeek();
+        $endOfWeek = $startOfWeek->copy()->endOfWeek();
 
         $habits = $user->habits()
             ->where('archived', false)
@@ -74,12 +74,15 @@ final class FetchHabitsIndexAction
         $historique = []; // Pour l'histogramme.
 
         /*
-         * Les trente jours de la période, du premier à aujourd'hui, et non un
-         * compteur : `$i++` à la place de `$i--` ne finissait jamais, et ce
-         * mutant tenait un processus de la passe nocturne jusqu'au délai que
-         * Pest accorde à chaque mutant (#2017).
+         * Les trente jours à rebours depuis maintenant, du plus ancien à
+         * aujourd'hui, sur un `range()` et non un compteur : `$i++` à la place
+         * de `$i--` ne finissait jamais, et ce mutant tenait un processus de la
+         * passe nocturne jusqu'au délai que Pest accorde à chaque mutant. Pas
+         * une période partie de minuit non plus : là où minuit manque le jour
+         * du passage à l'heure d'été, elle perdait aujourd'hui (#2017).
          */
-        foreach ($past30Days->daysUntil($now)->toArray() as $dateObj) {
+        foreach (range(29, 0) as $joursEcoules) {
+            $dateObj = $now->copy()->subDays($joursEcoules);
             $dateStr = $dateObj->format('Y-m-d');
             // @phpstan-ignore-next-line
             $count = (int) ($consistencyStats[$dateStr] ?? 0);
@@ -104,9 +107,12 @@ final class FetchHabitsIndexAction
 
     /**
      * Les jours de la semaine dont les suivis sont chargés, du lundi au
-     * dimanche : la grille et le chargement anticipé lisent la même semaine.
-     * Un parcours de période et non un compteur, dont le mutant `$i--` ne
-     * finissait jamais (#2017).
+     * dimanche : la grille et le chargement anticipé lisent la même semaine,
+     * dont la fin se déduit du début plutôt que d'une seconde lecture de
+     * l'horloge, qui ouvrait une grille de quatorze jours quand lundi
+     * commençait entre les deux. Un parcours de période et non un compteur,
+     * dont le mutant `$i--` ne finissait jamais ; borné à la fin du dimanche,
+     * il garde ses sept jours même là où minuit manque (#2017).
      *
      * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      */
