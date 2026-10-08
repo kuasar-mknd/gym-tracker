@@ -7,7 +7,8 @@ import { defineAsyncComponent, h, nextTick } from 'vue'
  *
  * Test Utils appelait le chargeur d'un composant `defineAsyncComponent`
  * remplacé par `true` ou par `shallow: true`, sans attendre ce chargement. Au
- * dernier test d'un fichier, l'import partait après la levée des mocks : le
+ * dernier test d'un fichier, cet import n'avait pas abouti quand le fichier se
+ * terminait ; résolu hors de tout test, il ne passait plus par le mock : le
  * vrai graphique se chargeait, et si l'environnement était démonté entre-temps,
  * Vitest sortait en erreur, tous les tests au vert. `vitest.setup.js` rend
  * désormais ces stubs sans appeler le chargeur.
