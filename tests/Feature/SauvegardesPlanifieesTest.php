@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Backup\Notifications\EventHandler;
+use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes;
 
 /*
  * Les sauvegardes planifiées telles que le planificateur les lance : la ligne
@@ -130,10 +131,16 @@ it('ramène les archives sous le seuil du contrôle du matin, avec de la place p
     File::ensureDirectoryExists($archives);
 
     try {
-        // 6 000 Mo d'archives des cinq derniers jours, que la rétention par date garde toutes :
-        // plus que le seuil du contrôle, que seul le nettoyage peut donc ramener dessous.
-        foreach (range(1, 60) as $rang) {
-            sauvegardesPlanifieesArchiveCreuse($archives, now()->subHours(2 * $rang));
+        // 500 Mo de plus que le seuil du contrôle, lu dans la configuration pour que le test suive
+        // ce seuil s'il bouge, en archives des derniers jours que la rétention par date garde
+        // toutes : seul le nettoyage peut les ramener dessous.
+        $seuilDuControle = config('backup.monitor_backups.0.health_checks.'.MaximumStorageInMegabytes::class);
+        assert(is_int($seuilDuControle));
+        $archivesPosees = intdiv($seuilDuControle, 100) + 5;
+        expect($archivesPosees * 100)->toBeGreaterThan($seuilDuControle);
+
+        foreach (range(1, $archivesPosees) as $rang) {
+            sauvegardesPlanifieesArchiveCreuse($archives, now()->subMinutes(20 * $rang));
         }
 
         expect(sauvegardesPlanifieesLancer('backup:clean'))->toBe(0, Artisan::output());
