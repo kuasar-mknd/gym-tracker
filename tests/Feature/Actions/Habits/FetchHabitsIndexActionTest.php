@@ -34,7 +34,9 @@ use App\Actions\Habits\FetchHabitsIndexAction;
 use App\Models\Habit;
 use App\Models\HabitLog;
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Mercredi 17 juin 2026 a midi.
@@ -155,6 +157,31 @@ it('nomme exactement les cles de chacune des trente entrees', function (): void 
 
     expect(array_map(array_keys(...), $stats['history']))
         ->toBe(array_fill(0, 30, ['date', 'full_date', 'count']));
+});
+
+/*
+ * Les trente jours affichés se comptent à rebours depuis maintenant (#2017) :
+ * la borne de la requête ne décide plus d'aucun jour rendu. Reculée d'un jour
+ * (`subDays(30)`), elle chargerait le trente et unième pour l'ignorer aussitôt,
+ * et aucune assertion sur les statistiques ne le verrait. Elle se lit donc là
+ * où elle agit : dans ce que la base doit lire, que l'index `(user_id, date)`
+ * borne aux trente jours demandés.
+ */
+it('ne demande a la base que les trente jours affiches', function (): void {
+    $user = scenePourHabitudes();
+
+    $bornes = [];
+    DB::listen(function (QueryExecuted $requete) use (&$bornes): void {
+        if (str_contains($requete->sql, 'habit_logs')) {
+            $bornes[] = $requete->bindings;
+        }
+    });
+
+    app(FetchHabitsIndexAction::class)->getStatsData($user);
+
+    // Le 19 mai, premier des trente jours rendus : pas le 18, qu'aucun
+    // graphique n'affiche.
+    expect($bornes)->toBe([[$user->id, '2026-05-19']]);
 });
 
 it('ne charge que les suivis de la semaine affichee', function (): void {

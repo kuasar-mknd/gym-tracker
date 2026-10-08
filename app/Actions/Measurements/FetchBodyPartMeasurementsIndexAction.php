@@ -27,11 +27,17 @@ class FetchBodyPartMeasurementsIndexAction
      */
     public function execute(User $user): array
     {
-        /** @var list<array{0: BodyPartMeasurement, 1: BodyPartMeasurement|null}> $parties */
+        /** @var array<int, array{0: BodyPartMeasurement, 1: BodyPartMeasurement|null}> $parties */
         $parties = [];
         $curseur = '';
 
-        for ($i = 0; $i < self::PARTIES_MAX; $i++) {
+        /*
+         * Chaque partie à son rang, jusqu'à la première qui manque. Un
+         * `range()` et non un compteur : le `break` bornait déjà le mutant
+         * `$i--`, mais le code que la passe nocturne mute ne garde aucune
+         * boucle à compteur (#2017).
+         */
+        foreach (range(0, self::PARTIES_MAX - 1) as $rang) {
             $lot = $this->partieSuivante($user->id, $curseur);
             $derniere = $lot->first();
 
@@ -40,7 +46,7 @@ class FetchBodyPartMeasurementsIndexAction
             }
 
             $curseur = $derniere->part;
-            $parties[] = [$derniere, $lot->get(1)];
+            $parties[$rang] = [$derniere, $lot->get(1)];
         }
 
         $partiesDuCompte = array_map(static fn (array $partie): string => $partie[0]->part, $parties);

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\DTOs\Stats\MonthlyVolumePoint;
+use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
@@ -11,6 +12,7 @@ use App\Models\WorkoutLine;
 use App\Services\Stats\VolumeStatsService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Tests\Support\HorlogeQuiPasseMinuit;
 
 /*
  * Les bornes de VolumeStatsService, ou 39 mutants survivaient.
@@ -73,6 +75,8 @@ it('garde chaque statistique en cache la durée annoncée', function (string $me
 })->with([
     'tendance de volume' => ['getVolumeTrend', 'volume_trend.30', 30],
     'volume hebdomadaire' => ['getWeeklyVolumeTrend', 'weekly_volume', 10],
+    // La clef porte la semaine courante : la 25e de 2026, celle du 15 juin.
+    'comparaison hebdomadaire' => ['getWeeklyVolumeComparison', 'weekly_volume_comparison.2026-25', 10],
     'historique de volume' => ['getVolumeHistory', 'volume_history.20', 30],
     // La clef porte le mois courant (#1955) : celui de l'horloge arrêtée.
     'historique mensuel' => ['getMonthlyVolumeHistory', 'monthly_volume_history.6.2026-06', 30],
@@ -128,3 +132,45 @@ it('donne zéro à un mois sans séance', function (): void {
 
     Carbon::setTestNow();
 });
+
+/**
+ * La semaine de la tendance se tire d'une seule lecture de l'horloge.
+ *
+ * Son dimanche venait d'une seconde lecture : quand lundi commençait entre les
+ * deux, la tendance comptait quatorze jours, du lundi d'avant au dimanche
+ * d'après, et le cache les gardait dix minutes. L'horloge passe minuit après
+ * chacune des lectures, puisque l'endroit exact dépend de l'ordre des appels,
+ * cache compris (#2017).
+ */
+it('rend les sept jours d une seule semaine quand lundi commence pendant le calcul', function (int $lectures): void {
+    $user = User::factory()->create();
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+
+    $tendance = app(VolumeStatsService::class)->getWeeklyVolumeTrend($user);
+
+    expect(array_map(static fn (WeeklyVolumeTrendPoint $point): string => $point->date, $tendance))->toBeIn([
+        ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'],
+        ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'],
+    ]);
+})->with([1, 2, 3, 4]);
+
+/**
+ * La comparaison de la semaine se tire, elle aussi, d'une seule lecture.
+ *
+ * La semaine courante, le début de la précédente et sa fin venaient de trois
+ * lectures : quand lundi commençait entre elles, la semaine qui s'achevait se
+ * comparait à elle-même (0 %), ou à elle-même et à celle d'avant réunies
+ * (#2017).
+ */
+it('compare la semaine à la précédente quand lundi commence pendant le calcul', function (int $lectures): void {
+    $user = User::factory()->create();
+    seanceDeVolume($user, Carbon::parse('2026-09-30 10:00:00'), 100, 10);   // 1000, semaine du 28 septembre
+    seanceDeVolume($user, Carbon::parse('2026-10-07 10:00:00'), 50, 10);    // 500, semaine du 5 octobre
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+
+    $comparaison = app(VolumeStatsService::class)->getWeeklyVolumeComparison($user->refresh());
+
+    // La semaine du 5 contre celle du 28, ou celle du 12, encore vide, contre
+    // celle du 5.
+    expect([$comparaison->current_volume, $comparaison->previous_volume])->toBeIn([[500.0, 1000.0], [0.0, 500.0]]);
+})->with([1, 2, 3, 4, 5]);

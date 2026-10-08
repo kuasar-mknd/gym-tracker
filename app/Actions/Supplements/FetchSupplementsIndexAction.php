@@ -78,14 +78,23 @@ final class FetchSupplementsIndexAction
      * Un jour sans prise vaut zéro plutôt que d'être absent : le graphique
      * attend une série continue.
      *
+     * Les jours à rebours depuis un seul instant, sur un `range()` et non un
+     * compteur : `$i++` à la place de `$i--` ne finissait jamais, et ce mutant
+     * tenait un processus de la passe nocturne jusqu'au délai que Pest accorde
+     * à chaque mutant. Pas une période partie de minuit non plus : là où minuit
+     * manque le jour du passage à l'heure d'été, elle perdait aujourd'hui, et
+     * deux lectures de l'horloge l'allongeaient d'un jour quand minuit passait
+     * entre elles (#2017).
+     *
      * @param  Collection<string, float>  $usageHistoryRaw
      * @return array<int, array{date: string, count: float}>
      */
     private function fillUsageHistory(Collection $usageHistoryRaw, int $jours): array
     {
+        $maintenant = now();
         $historique = [];
-        for ($i = $jours - 1; $i >= 0; $i--) {
-            $carbonDate = now()->subDays($i);
+        foreach (range($jours - 1, 0) as $joursEcoules) {
+            $carbonDate = $maintenant->copy()->subDays($joursEcoules);
             $dateKey = $carbonDate->format('Y-m-d');
             $dateString = $carbonDate->format('d/m');
 
