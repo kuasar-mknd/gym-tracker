@@ -11,6 +11,7 @@ use App\Models\WorkoutLine;
 use App\Services\PersonalRecordService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /** @return array{0: User, 1: Exercise, 2: WorkoutLine} */
 function scenePourDoublons(): array
@@ -22,6 +23,38 @@ function scenePourDoublons(): array
 
     return [$user, $exercice, $workoutLine];
 }
+
+/*
+ * Deux tests de ce fichier passent par un ordre DDL : retirer la contrainte
+ * pour fabriquer un doublon, et la migration qui la repose. Un ordre DDL
+ * valide la transaction de `RefreshDatabase`, qui le voit à la fin du test et
+ * remigre alors toute la base avant le suivant : `migrate:fresh`, plus de
+ * vingt fois la durée d'un test de ce fichier (3,6 s contre 0,11 à 0,19,
+ * machine à charge 0,3), payé en plus par chaque mutant de la passe nocturne
+ * qui dépasse « supprime le doublon » (#2004). Ce qu'elle referait se fait
+ * ici en quelques dizaines de millisecondes : les lignes que le test a
+ * validées effacées (une base migrée n'en a que dans `migrations`), la
+ * contrainte reposée par sa migration, et une transaction rouverte, que
+ * `RefreshDatabase` annule comme la sienne.
+ */
+afterEach(function (): void {
+    if (DB::getPdo()->inTransaction()) {
+        return;
+    }
+
+    Schema::withoutForeignKeyConstraints(function (): void {
+        foreach (Schema::getTableListing(DB::connection()->getDatabaseName(), false) as $table) {
+            if ($table !== 'migrations') {
+                DB::table($table)->delete();
+            }
+        }
+    });
+
+    $migration = require database_path('migrations/2026_08_31_130425_un_seul_record_par_type.php');
+    $migration->up();
+
+    DB::getPdo()->beginTransaction();
+});
 
 /**
  * Deux records du meme type sur le meme exercice : `keyBy()` n'en gardait que
