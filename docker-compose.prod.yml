@@ -286,7 +286,7 @@ services:
             retries: 3
             start_period: 60s
         # Comme worker : les alertes de santé partent d'ici, sans passer par la
-        # file (#2019). Les sauvegardes planifiées, elles, n'envoient rien.
+        # file (#2019).
         networks:
             - backend
             - sortie
