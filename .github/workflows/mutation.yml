@@ -97,8 +97,8 @@ jobs:
         #
         # Apres les correctifs de #2004 (le mutant sans fin de la tendance
         # hebdomadaire retire, deux tests lents rendus rapides), chaque moitie
-        # mesuree seule sur 4e284816, la machine moins chargee (passe de
-        # reference de 140 s au lieu de 297) :
+        # mesuree seule sur c21ade7f et ces correctifs, la machine moins
+        # chargee (passe de reference de 140 s au lieu de 297) :
         #
         #                              mutants  survivants  score   mutation
         #   PersonalRecordService          191          34  82,20   1 733 s
