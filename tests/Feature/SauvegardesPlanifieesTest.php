@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonInterface;
 use Illuminate\Console\Application;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
@@ -77,6 +78,19 @@ function sauvegardesPlanifieesLancer(string $commande): int
     return Artisan::call(sauvegardesPlanifieesLigneDe($commande));
 }
 
+/**
+ * Pose dans le dossier des archives une archive de 100 Mo datée par son nom,
+ * comme le paquet nomme les siennes. Le fichier est creux : il ne prend
+ * presque rien sur le disque, et le paquet ne lit que sa taille.
+ */
+function sauvegardesPlanifieesArchiveCreuse(string $archives, CarbonInterface $date): void
+{
+    $fichier = fopen($archives.'/'.$date->format('Y-m-d-H-i-s').'.zip', 'w');
+    assert($fichier !== false);
+    ftruncate($fichier, 100 * 1024 * 1024);
+    fclose($fichier);
+}
+
 it('fait tourner la nuit des sauvegardes par les lignes du planning, sans écrire à personne', function (): void {
     $dossier = sauvegardesPlanifieesDossierJetable();
 
@@ -103,6 +117,32 @@ it('fait échouer le contrôle planifié des sauvegardes sans archive, sans écr
         expect(sauvegardesPlanifieesLancer('backup:monitor'))->toBe(1)
             ->and(Artisan::output())->toContain('considered unhealthy');
 
+        Notification::assertNothingSent();
+    } finally {
+        File::deleteDirectory($dossier);
+        EventHandler::enable();
+    }
+});
+
+it('ramène les archives sous le seuil du contrôle du matin, qui tient une journée de 500 Mo d’archives', function (): void {
+    $dossier = sauvegardesPlanifieesDossierJetable();
+    $archives = $dossier.'/'.config()->string('backup.backup.name');
+    File::ensureDirectoryExists($archives);
+
+    try {
+        // 2 500 Mo d'archives des six derniers jours, que la rétention par date garde toutes.
+        foreach (range(1, 25) as $rang) {
+            sauvegardesPlanifieesArchiveCreuse($archives, now()->subHours(5 * $rang));
+        }
+
+        expect(sauvegardesPlanifieesLancer('backup:clean'))->toBe(0, Artisan::output());
+
+        // La sauvegarde de 02:30 et quatre lancées du panneau avant le contrôle de 08:00.
+        foreach (range(0, 4) as $rang) {
+            sauvegardesPlanifieesArchiveCreuse($archives, now()->subMinutes($rang));
+        }
+
+        expect(sauvegardesPlanifieesLancer('backup:monitor'))->toBe(0, Artisan::output());
         Notification::assertNothingSent();
     } finally {
         File::deleteDirectory($dossier);

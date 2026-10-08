@@ -80,7 +80,9 @@ Artisan::command('inspire', function (): void {
  * pour ses deux avis dans `config/backup.php`. Son échec (archive de plus d'un
  * jour, ou plus de 2 000 Mo d'archives) passe par le moniteur des tâches, qui
  * met la santé au rouge et écrit à `HEALTH_TO_ADDRESS` ; « Backups », sur la
- * page de santé, voit déjà une archive de plus de vingt-six heures.
+ * page de santé, voit déjà une archive de plus de vingt-six heures. Le
+ * nettoyage de 02:00 tient les archives sous 1 500 Mo, pour que ce seuil de
+ * place ne sonne pas chaque matin (`config/backup.php`).
  */
 \Illuminate\Support\Facades\Schedule::runInBackground()
     ->withoutOverlapping(expiresAt: 25 * 60)

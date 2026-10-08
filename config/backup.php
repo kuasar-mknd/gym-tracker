@@ -260,6 +260,9 @@ return [
      * Here you can specify which backups should be monitored.
      * If a backup does not meet the specified requirements the
      * UnHealthyBackupWasFound event will be fired.
+     *
+     * Le seuil de place reste au-dessus de celui du nettoyage
+     * (`cleanup.default_strategy`, plus bas) : voir là pourquoi.
      */
     'monitor_backups' => [
         [
@@ -320,8 +323,19 @@ return [
              * After cleaning up the backups remove the oldest backup until
              * this amount of megabytes has been reached.
              * Set null for unlimited size.
+             *
+             * Sous le seuil de place de `backup:monitor` (2 000 Mo, plus
+             * haut), avec 500 Mo d'écart : le nettoyage de 02:00 ramène les
+             * archives à 1 500 Mo au plus, et celles écrites avant le contrôle
+             * de 08:00 (la sauvegarde de 02:30, celles lancées du panneau) ont
+             * cette marge. Au-dessus du seuil du contrôle, comme les 5 000 Mo
+             * du paquet, un jeu d'archives entre les deux seuils ferait échouer
+             * le contrôle chaque matin sans que le nettoyage y change rien, et
+             * la santé resterait au rouge (#2020). Le contrôle n'échoue donc
+             * que si le nettoyage n'a pas tourné ou si une journée a écrit
+             * plus de 500 Mo d'archives.
              */
-            'delete_oldest_backups_when_using_more_megabytes_than' => 5000,
+            'delete_oldest_backups_when_using_more_megabytes_than' => 1500,
         ],
 
         /*
