@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\CreateWorkoutTemplateFromWorkoutAction;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Requests\StoreWorkoutTemplateRequest;
 use App\Models\Exercise;
@@ -266,6 +267,61 @@ it('garde entière, avec le message habituel, une séance qui tient dans un mod�
     expect(WorkoutTemplateLine::query()->count())->toBe(WorkoutTemplate::EXERCICES_MAX)
         ->and(WorkoutTemplateSet::query()->count())->toBe(WorkoutTemplate::EXERCICES_MAX * WorkoutTemplate::SERIES_MAX_PAR_EXERCICE)
         ->and(WorkoutTemplateSet::query()->max('reps'))->toBe(Set::REPETITIONS_MAX);
+});
+
+/*
+ * Chaque borne, dépassée seule, suffit à faire annoncer un modèle ramené. Le
+ * test qui précède les dépasse toutes à la fois : un message qui ne dirait la
+ * coupe que si plusieurs bornes débordent, ou qui ne regarderait que la
+ * première, y passait aussi, et laissait croire complet un modèle privé d'un
+ * exercice, de séries, ou de la valeur exacte d'une série.
+ */
+it('annonce un modèle ramené dès qu’une seule borne d’un modèle déborde', function (int $exercices, int $series, int $repetitions, float $poids): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $seance = modelesBornesSeanceDe($compte, $exercice, $exercices, $series, ['reps' => $repetitions, 'weight' => $poids]);
+
+    actingAs($compte)->post(route('templates.save-from-workout', $seance))
+        ->assertRedirect(route('templates.index'))
+        ->assertSessionHas('success', 'Modèle enregistré, ramené à ce qu’un modèle accepte : 50 exercices et 50 séries par exercice au plus, 999 répétitions et 100 000 kg par série au plus.');
+})->with([
+    'un exercice de trop' => [WorkoutTemplate::EXERCICES_MAX + 1, 1, 10, 50.0],
+    'une série de trop sur un exercice' => [1, WorkoutTemplate::SERIES_MAX_PAR_EXERCICE + 1, 10, 50.0],
+    'des répétitions au-delà du plafond' => [1, 1, Set::REPETITIONS_MAX + 1, 50.0],
+    'un poids au-delà du plafond' => [1, 1, 10, Set::POIDS_MAX_KG + 1.0],
+]);
+
+/*
+ * Le contrôle est public : la page l'appelle après la copie, qui a chargé la
+ * séance, mais il ne doit rien à cet ordre. Sur une séance relue, il charge
+ * lui-même les séries qu'il compte, sans les relire une à une — ce que le mode
+ * strict d'Eloquent refuse hors production.
+ */
+it('juge les bornes d’une séance relue sans ses exercices ni ses séries', function (): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $longue = modelesBornesSeanceDe($compte, $exercice, 2, WorkoutTemplate::SERIES_MAX_PAR_EXERCICE + 1);
+    $courte = modelesBornesSeanceDe($compte, $exercice, 2, 1);
+    $copie = app(CreateWorkoutTemplateFromWorkoutAction::class);
+
+    expect($copie->depasseLesBornesDUnModele(Workout::query()->findOrFail($longue->id)))->toBeTrue()
+        ->and($copie->depasseLesBornesDUnModele(Workout::query()->findOrFail($courte->id)))->toBeFalse();
+});
+
+/*
+ * Une séance peut n'avoir pas de nom (la colonne l'accepte). L'application la
+ * nomme alors « Séance » partout où elle l'affiche (statistiques, liste et page
+ * des séances), et son modèle reprend ce nom : sans lui, il s'appelait
+ * « (Modèle) », une espace en tête.
+ */
+it('nomme « Séance (Modèle) » le modèle d’une séance sans nom', function (): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'name' => null]);
+
+    actingAs($compte)->post(route('templates.save-from-workout', $seance))
+        ->assertRedirect(route('templates.index'));
+
+    expect(WorkoutTemplate::query()->sole()->name)->toBe('Séance (Modèle)');
 });
 
 it('coupe le nom du modèle tiré d’une séance pour qu’il tienne dans sa colonne', function (): void {

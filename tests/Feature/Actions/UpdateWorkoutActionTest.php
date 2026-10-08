@@ -144,3 +144,26 @@ it('vide les historiques en plus des agregats quand elle vide tout', function ()
     expect(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'volume_history.30')))->toBeFalse();
     expect(Cache::has(\App\Services\Stats\ClesDeStats::seances($user, 'duration_history.20')))->toBeFalse();
 });
+
+/*
+ * Les notes d'une séance n'entrent dans aucune statistique : les modifier ne
+ * fait rien recalculer. Seuls la date, la fin et le nom invalident le cache,
+ * et une note retouchée en fin de séance n'a pas à coûter le recalcul de
+ * toutes les statistiques de séance à la lecture suivante.
+ */
+it('garde les statistiques en cache quand seules les notes changent', function (): void {
+    $user = User::factory()->create();
+    $workout = Workout::factory()->create([
+        'user_id' => $user->id,
+        'started_at' => now(),
+        'name' => 'Jambes',
+        'notes' => 'Avant',
+    ]);
+    Cache::put(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30'), ['some_data'], 600);
+
+    app(UpdateWorkoutAction::class)->execute($workout, ['notes' => 'Genou sensible', 'name' => 'Jambes']);
+
+    // La clef se relit après coup : invalider, c'est changer la version qu'elle porte.
+    expect($workout->refresh()->notes)->toBe('Genou sensible')
+        ->and(Cache::get(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30')))->toBe(['some_data']);
+});

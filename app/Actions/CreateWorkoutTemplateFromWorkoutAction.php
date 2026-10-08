@@ -155,13 +155,15 @@ final class CreateWorkoutTemplateFromWorkoutAction
     /**
      * Le nom de la séance suivi du suffixe, coupé pour tenir dans la colonne :
      * une séance accepte un nom de 255 caractères, et le suffixe le
-     * dépasserait.
+     * dépasserait. Une séance sans nom prête au modèle celui que l'application
+     * lui donne partout ailleurs, « Séance » (statistiques, liste et page des
+     * séances).
      */
     private function nomDuModele(Workout $workout): string
     {
         $place = self::LONGUEUR_MAX_DU_NOM - mb_strlen(self::SUFFIXE_DU_NOM);
 
-        return mb_substr($workout->name ?? '', 0, $place).self::SUFFIXE_DU_NOM;
+        return mb_substr($workout->name ?? __('Workout'), 0, $place).self::SUFFIXE_DU_NOM;
     }
 
     /**

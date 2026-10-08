@@ -178,3 +178,31 @@ it('horodate chaque serie recopiee, a la creation et a la modification', functio
         expect($serie->updated_at->toDateTimeString())->toBe('2026-06-15 12:00:00');
     }
 });
+
+/*
+ * `Set::insert()` ne pose aucun rang : sans le sien, chaque série recopiée
+ * naîtrait à l'ordre 0, et la page de séance, qui trie par rang puis par
+ * identifiant, ne tiendrait plus l'ordre du modèle que par hasard — ni après
+ * le premier réordonnancement, qui part de ces rangs.
+ */
+it('donne à chaque série recopiée le rang qu’elle a dans son exercice de modèle', function (): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+    $ligne = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id, 'order' => 0]);
+
+    // Le rang du modèle posé, et dans l'ordre de création : la fabrique en tire
+    // un au hasard, et la relation, qui ne trie pas, suit alors l'index.
+    foreach ([12, 10, 8] as $rang => $repetitions) {
+        WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $ligne->id, 'reps' => $repetitions, 'order' => $rang]);
+    }
+
+    $workout = app(CreateWorkoutFromTemplateAction::class)->execute($user, $template);
+
+    $series = \App\Models\Set::query()
+        ->whereIn('workout_line_id', $workout->workoutLines()->pluck('id'))
+        ->orderBy('id')
+        ->get();
+
+    expect($series->pluck('order')->all())->toBe([0, 1, 2])
+        ->and($series->pluck('reps')->all())->toBe([12, 10, 8]);
+});

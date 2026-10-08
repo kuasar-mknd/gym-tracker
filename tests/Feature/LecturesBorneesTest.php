@@ -52,6 +52,24 @@ it('garde une seance datee de la veille de la borne', function (): void {
     expect(app(FetchExerciseHistoryAction::class)->execute($user, $exercice))->toHaveCount(1);
 });
 
+/*
+ * La borne, à la seconde : la séance d'il y a un an jour pour jour entre, celle
+ * d'une seconde plus tôt non. Le test qui précède ne la tenait pas : la date
+ * de la séance et celle de la borne s'écrivent à la seconde, tombent presque
+ * toujours dans la même, et une fenêtre de 364 jours gardait aussi sa séance.
+ */
+it('garde la séance d’il y a un an jour pour jour, et pas celle d’une seconde plus tôt', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-06-15 12:00:00'));
+    $user = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
+
+    $anniversaire = ligneDatee($user, $exercice, Carbon::parse('2025-06-15 12:00:00'));
+    ligneDatee($user, $exercice, Carbon::parse('2025-06-15 11:59:59'));
+
+    expect(app(FetchExerciseHistoryAction::class)->execute($user, $exercice)->pluck('id')->all())
+        ->toBe([$anniversaire->id]);
+});
+
 /**
  * La garde du second jeune vit dans `StoreFastRequest::withValidator()`.
  *

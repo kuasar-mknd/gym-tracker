@@ -99,9 +99,15 @@ final class VolumeStatsService
                     ->get()
                     ->keyBy('date');
 
+                /*
+                 * Les jours de la semaine, du lundi au dimanche, et non un
+                 * compteur : `$i--` a la place de `$i++` ne finissait jamais,
+                 * et ce mutant tenait un processus de la passe nocturne
+                 * jusqu'au delai que Pest accorde a chaque mutant, ou jusqu'a
+                 * epuiser la memoire (#2004).
+                 */
                 $trend = [];
-                for ($i = 0; $i < 7; $i++) {
-                    $dateObj = $startOfWeek->copy()->addDays($i);
+                foreach ($startOfWeek->daysUntil($endOfWeek)->toArray() as $dateObj) {
                     $date = $dateObj->format('Y-m-d');
                     $workoutData = $workouts->get($date);
                     $trend[] = new WeeklyVolumeTrendPoint(

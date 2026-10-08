@@ -187,19 +187,32 @@ it('rebâtit le record quand la série qui le détenait est corrigée', function
     expect((float) recordDeType($user, 'max_weight')?->value)->toBe(100.0);
 });
 
+/**
+ * `$combien` séries validées de cinq répétitions, de 51 kg à 50 + `$combien` kg.
+ *
+ * Écrites d'une seule requête, sans les écouteurs d'une série : le test qui
+ * s'en sert mesure ce que lit `recompute()`, qu'il appelle lui-même. Créées
+ * une à une, ses 63 séries relançaient chacune les records, les objectifs et
+ * le volume : le test durait dix-neuf fois plus (3,0 s contre 0,16, machine à
+ * charge 0,5), ce que la passe de mutation nocturne payait pour chaque mutant
+ * de `PersonalRecordService` qui arrivait jusqu'à lui.
+ */
 function seriesPour(User $user, Exercise $exercise, int $combien): void
 {
     $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
 
-    for ($i = 1; $i <= $combien; $i++) {
-        Set::factory()->create([
-            'workout_line_id' => $line->id,
-            'weight' => 50 + $i,
-            'reps' => 5,
-            'is_warmup' => false,
-        ]);
-    }
+    Set::insert(array_map(fn (int $rang): array => [
+        'workout_line_id' => $line->id,
+        'user_id' => $user->id,
+        'order' => $rang,
+        'weight' => 50 + $rang,
+        'reps' => 5,
+        'is_warmup' => false,
+        'is_completed' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ], range(1, $combien)));
 }
 
 /** @return list<string> */
