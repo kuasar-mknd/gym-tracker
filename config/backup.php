@@ -197,12 +197,19 @@ return [
      * the `Spatie\Backup\Notifications\Notifications` classes.
      */
     'notifications' => [
+        /*
+         * Les deux avis du contrôle des sauvegardes n'ont aucun canal. Seul
+         * `backup:monitor` les émet, et il n'a pas d'option pour les couper :
+         * planifié chaque matin, il écrirait « sauvegardes saines » tous les
+         * jours. Son échec passe par le moniteur des tâches, qui met la santé
+         * au rouge et écrit à `HEALTH_TO_ADDRESS` (#2020).
+         */
         'notifications' => [
             \Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification::class => ['mail'],
+            \Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification::class => [],
             \Spatie\Backup\Notifications\Notifications\CleanupHasFailedNotification::class => ['mail'],
             \Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification::class => ['mail'],
-            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification::class => ['mail'],
+            \Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification::class => [],
             \Spatie\Backup\Notifications\Notifications\CleanupWasSuccessfulNotification::class => ['mail'],
         ],
 

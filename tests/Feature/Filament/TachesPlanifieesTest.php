@@ -25,7 +25,7 @@ use Tests\Support\FilamentAdminPanel;
 it('relit le planning : les tâches quotidiennes, pas les battements de santé', function (): void {
     expect(Artisan::call('schedule-monitor:sync'))->toBe(0);
 
-    // Le nom porte les options de la commande (`backup:run --only-db='1' …`).
+    // Le nom porte les options de la commande (`backup:run --only-db --disable-notifications`).
     $commandes = TachePlanifiee::query()->get()->map(fn (TachePlanifiee $tache): string => explode(' ', $tache->name)[0])->all();
 
     expect($commandes)->toContain('app:remind-training', 'app:verify-data-coherence', 'backup:run', 'backup:clean')

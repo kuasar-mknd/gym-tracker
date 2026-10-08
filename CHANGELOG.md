@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **La sauvegarde nocturne de la base tourne enfin** (#2020) : le planificateur compile les options d'une tâche en ligne de commande, et `'--only-db' => true` y devenait `--only-db='1'`, que la console refuse avant de rien lancer (« option does not accept a value »). `backup:clean`, `backup:run` et la purge du journal d'activité (#1670) sortaient ainsi en erreur à chaque passage, et `backup:monitor` recevait une option qu'il n'a pas : aucune sauvegarde planifiée n'a écrit d'archive, seules celles lancées du panneau, qui passent leurs options autrement. Les drapeaux s'écrivent désormais en liste. `backup:monitor` tourne sans option, et ses deux avis n'ont plus de canal dans `config/backup.php`, sans quoi il écrirait chaque matin que les sauvegardes sont saines : son échec met « Tâches planifiées » et la santé au rouge, comme celui des autres tâches. Au déploiement, `app` relit le planning et remplace dans « Tâches planifiées » les anciennes lignes en échec par les nouvelles. La première purge du journal d'activité, à 03:30, efface d'un coup ce qu'il garde au-delà de 180 jours. `ChaqueTachePlanifieeEstAccepteeParSaCommandeTest` lit chaque ligne du planning contre la définition de sa commande, et `SauvegardesPlanifieesTest` lance les lignes des sauvegardes elles-mêmes. Après le déploiement, vérifier dès le lendemain matin la date de la dernière archive (page « Sauvegardes » du panneau) ; d'ici là, en lancer une du panneau
+
 ## [1.6.0] - 2026-10-08
 
 ### Ajouté
