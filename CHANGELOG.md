@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **worker et scheduler peuvent enfin envoyer : notifications push, courriels en file et alertes de santé partent** (#2019) : dans `docker-compose.prod.yml`, ces deux conteneurs n'étaient reliés qu'à `backend`, réseau interne sans aucune sortie. Les notifications que Horizon traite dans worker (push des records, des succès et du rappel d'entraînement, avis de changement d'adresse, tout courriel mis en file) et les alertes de `HEALTH_TO_ADDRESS` et avis des sauvegardes que scheduler envoie lui-même ne joignaient ni le relais SMTP ni les services push ; seuls partaient les courriels envoyés par une requête web, depuis app. Ils sont désormais aussi sur `sortie`, un réseau non interne à eux, sans rien à recevoir ; db et redis restent sur `backend` seul. `LesEnvoisOntUneSortieTest` refuse un service qui lance le serveur web, Horizon ou le planificateur sans réseau non interne, et tout autre service, db et redis compris, relié à un réseau qui sort. **À reporter dans la pile** : ajouter le réseau `sortie` et y relier worker et scheduler, puis recréer les deux conteneurs (`docker compose up -d` ou la mise à jour de la pile).
+
 ## [1.6.0] - 2026-10-08
 
 ### Ajouté
