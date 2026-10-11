@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Le courriel d'alerte de santé et la page « Santé » nomment chaque contrôle en français** (#ISSUE) : sans libellé, laravel-health découpe le nom du contrôle, si bien que le courriel citait « Taches Planifiees », sans accents, et que la page montrait « Database », « Used Disk Space », « Backups » ou « Optimized App ». Les quinze contrôles portent désormais un libellé français : « Connexion à la base », « Réglages de la base », « Connexion à Redis », « Cache de l'application », « File d'attente », « Planificateur », « Tâches planifiées », « Travailleurs Horizon », « Versions des conteneurs », « Espace disque utilisé », « Dossier des sauvegardes », « Archives des sauvegardes » (l'ancien « Backups »), « Mode debug », « Environnement » et « Application optimisée ». Leur nom ne change pas. `SanteTest` refuse un contrôle qui garderait le libellé tiré de son nom, rend le courriel et la page, et vérifie que le README nomme chaque contrôle comme eux.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé

@@ -6,11 +6,14 @@ use App\Models\Admin;
 use App\Models\TachePlanifiee;
 use App\Support\Sante\TachesPlanifieesCheck;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Mail\Markdown;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use ShuvroRoy\FilamentSpatieLaravelHealth\Pages\HealthCheckResults;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
+use Spatie\Health\Checks\Result;
 use Spatie\Health\Facades\Health;
 use Spatie\Health\Notifications\CheckFailedNotification;
 use Spatie\Health\Notifications\Notifiable;
@@ -62,6 +65,83 @@ it('regarde la base et ses réglages, le cache, la file, le planificateur, Horiz
         'Environment',
         'OptimizedApp',
     ]);
+});
+
+/**
+ * Sans libellé, laravel-health découpe le nom du contrôle : la page et le
+ * courriel d'alerte disaient « Taches Planifiees », « Used Disk Space » ou
+ * « Backups » (#ISSUE). Le libellé se pose par `->label()` dans le provider
+ * ou par `$label` dans la classe ; le nom, lui, ne change pas.
+ */
+it('donne à chaque contrôle un libellé français, jamais celui que le paquet tirerait de son nom', function (): void {
+    $controles = Health::registeredChecks();
+
+    foreach ($controles as $controle) {
+        $sansLibelle = clone $controle;
+        new ReflectionProperty(Check::class, 'label')->setValue($sansLibelle, null);
+        $tireDeLaClasse = (string) Str::of(class_basename($controle))->beforeLast('Check')->snake()->replace('_', ' ')->title();
+
+        expect($controle->getLabel())->not->toBeIn(
+            [$sansLibelle->getLabel(), $tireDeLaClasse],
+            $controle->getName().' garde le libellé tiré de son nom',
+        );
+    }
+
+    expect($controles->map(fn (Check $controle): string => $controle->getLabel())->all())->toBe([
+        'Connexion à la base',
+        'Réglages de la base',
+        'Connexion à Redis',
+        "Cache de l'application",
+        "File d'attente",
+        'Planificateur',
+        'Tâches planifiées',
+        'Travailleurs Horizon',
+        'Versions des conteneurs',
+        'Espace disque utilisé',
+        'Dossier des sauvegardes',
+        'Archives des sauvegardes',
+        'Mode debug',
+        'Environnement',
+        'Application optimisée',
+    ]);
+});
+
+/**
+ * Le README nomme les contrôles comme la page et le courriel : un libellé
+ * changé dans le provider se change aussi là-bas.
+ */
+it('nomme dans le README chaque contrôle par son libellé', function (): void {
+    $readme = (string) file_get_contents(base_path('README.md'));
+
+    foreach (Health::registeredChecks() as $controle) {
+        expect($readme)->toContain('« '.$controle->getLabel().' »');
+    }
+});
+
+/**
+ * Le courriel d'alerte cite chaque contrôle au rouge par son libellé. Les
+ * deux rendus, HTML et texte, sont lus tels que le destinataire les reçoit.
+ */
+it('cite chaque contrôle par son libellé français dans le courriel d’alerte', function (): void {
+    $controles = Health::registeredChecks();
+    $courriel = new CheckFailedNotification(
+        $controles->map(fn (Check $controle): Result => Result::make()->check($controle)->failed('Au rouge.'))->all(),
+    )->toMail();
+
+    $html = html_entity_decode((string) $courriel->render(), ENT_QUOTES | ENT_HTML5);
+    $texte = html_entity_decode(
+        (string) app(Markdown::class)->renderText((string) $courriel->markdown, $courriel->data()),
+        ENT_QUOTES | ENT_HTML5,
+    );
+
+    foreach ([$html, $texte] as $contenu) {
+        expect($contenu)->toContain('Tâches planifiées');
+        expect($contenu)->not->toContain('Taches Planifiees');
+
+        foreach ($controles as $controle) {
+            expect($contenu)->toContain($controle->getLabel().': Au rouge.');
+        }
+    }
 });
 
 it('trouve la base en bonne santé', function (): void {
@@ -163,4 +243,47 @@ it('n’écrit un courriel que si une adresse est posée, et seulement pour un r
 
     $this->artisan('health:check')->assertSuccessful();
     Notification::assertSentTo(app(Notifiable::class), CheckFailedNotification::class);
+});
+
+/**
+ * Le chemin que le propriétaire a suivi : `health:check` voit une tâche
+ * échouée, écrit le courriel et range le résultat que la page « Santé » lit.
+ * Les deux disaient « Taches Planifiees » (#ISSUE).
+ */
+it('écrit « Tâches planifiées » dans le courriel envoyé et sur la page', function (): void {
+    Notification::fake();
+    Config::set('health.notifications.enabled', true);
+    Config::set('health.notifications.mail.to', 'sam@exemple.test');
+    Health::clearChecks();
+    Health::checks([TachesPlanifieesCheck::new()]);
+
+    TachePlanifiee::query()->create([
+        'name' => 'app:remind-training',
+        'type' => 'command',
+        'cron_expression' => '0 18 * * *',
+        'grace_time_in_minutes' => 5,
+        'last_started_at' => '2026-09-05 18:00:00',
+        'last_failed_at' => '2026-09-05 18:00:02',
+    ]);
+
+    $this->artisan('health:check')->assertSuccessful();
+
+    Notification::assertSentTo(
+        app(Notifiable::class),
+        CheckFailedNotification::class,
+        function (CheckFailedNotification $avis): bool {
+            $rendu = html_entity_decode((string) $avis->toMail()->render(), ENT_QUOTES | ENT_HTML5);
+
+            return str_contains($rendu, 'Tâches planifiées: Échouée : app:remind-training');
+        },
+    );
+
+    $superAdmin = Admin::factory()->create();
+    $superAdmin->assignRole(Role::findOrCreate('super_admin', 'admin'));
+
+    $this->actingAs($superAdmin, 'admin')
+        ->get(HealthCheckResults::getUrl(panel: 'admin'))
+        ->assertOk()
+        ->assertSee('Tâches planifiées')
+        ->assertDontSee('Taches Planifiees');
 });

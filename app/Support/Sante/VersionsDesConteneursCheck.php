@@ -32,7 +32,8 @@ final class VersionsDesConteneursCheck extends Check
     private const string QUOI_FAIRE = "Un conteneur garde l'image avec laquelle il a été créé : mettre à jour la pile en retéléchargeant l'image, puis vérifier que les trois conteneurs ont été recréés.";
 
     /**
-     * Le libellé de la page « Santé », qui découperait sinon le nom de classe.
+     * Le libellé de la page « Santé » et du courriel d'alerte, qui
+     * découperaient sinon le nom de classe.
      */
     #[\Override]
     protected ?string $label = 'Versions des conteneurs';
