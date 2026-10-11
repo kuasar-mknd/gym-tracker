@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'app/Providers/**, routes/console.php'
+  - 'app/Providers/**, routes/console.php, config/backup.php'
 ---
 
 # Providers
@@ -28,3 +28,6 @@ Le cache de production évince les clés qu'il sert le moins quand il est plein 
 
 ## Un écouteur de modèle posé ici tourne avant ceux du modèle
 `AppServiceProvider::boot()` pose ses écouteurs (`Set::deleted(...)`, `Workout::deleted(...)`) au démarrage de l'application ; ceux de `booted()` ne se posent qu'à la première instanciation du modèle. Pour un même événement, ceux du fournisseur passent donc d'abord, puis ceux du modèle, chacun dans l'ordre où il a été posé. Le recalcul des objectifs à la suppression d'une séance, posé ici, lisait ainsi les records d'avant leur reconstruction, que fait `Workout::booted()` : il a été déplacé dans ce même écouteur, après elle (#1953). Un écouteur qui lit ce qu'un autre reconstruit se pose après lui, dans le même fichier, ou dans le même écouteur ; avec la file synchrone des tests, un test de route le vérifie.
+
+## Une archive ne vit pas plus de sept mois : la page de profil le promet
+Réglé le 2026-10-11 (#1938), décision du propriétaire. Une archive garde une copie des comptes supprimés depuis qu'elle a été écrite : la rétention par date de `config/backup.php` s'arrête donc à la période mensuelle (`keep_yearly_backups_for_years` à 0, le reste inchangé), soit sept jours de tout, une par jour sur seize jours, une par semaine sur huit semaines et une par mois sur quatre mois : 79 jours et quatre mois, sept mois au plus. Le paquet accepte 0 : la période annuelle est vide, et la stratégie efface tout ce qui précède la fin de la période mensuelle, sauf la plus récente archive, qu'elle ne touche jamais. La page de profil annonce « sept mois au plus » ; `SauvegardesPlanifieesTest` lance le nettoyage par sa ligne du planning sur trois ans d'archives nocturnes, exige que la plus vieille restante ait entre six et sept mois, et lit la promesse du profil. Allonger la rétention, c'est changer cette promesse dans la même PR.

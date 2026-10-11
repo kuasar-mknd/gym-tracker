@@ -1110,13 +1110,16 @@ describe('DeleteUserForm', () => {
      * La suppression efface le compte et tout ce qui le désigne en base
      * (#1935), mais les sauvegardes quotidiennes de la base en gardent une
      * copie jusqu'à leur expiration. « Définitivement effacées » promettait
-     * plus que ce que l'application tient.
+     * plus que ce que l'application tient. Et la durée se dit : sans archive
+     * annuelle, aucune ne passe sept mois (#1938), ce que
+     * `SauvegardesPlanifieesTest` vérifie sur la configuration.
      */
     it('ne promet pas un effacement que les sauvegardes démentent', () => {
         const wrapper = mountForm()
         const promesse = wrapper.get('[data-testid="delete-account-promise"]').text()
 
         expect(promesse).toContain('sauvegardes')
+        expect(promesse).toContain('sept mois au plus')
         expect(promesse).not.toContain('définitivement')
 
         wrapper.unmount()
