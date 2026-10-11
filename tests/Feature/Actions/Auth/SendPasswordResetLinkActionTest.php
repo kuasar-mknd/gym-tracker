@@ -7,56 +7,53 @@ declare(strict_types=1);
  * sans qu'aucun ne regarde ce qu'elle decide : ses quatre mutants survivaient
  * tous les quatre.
  *
- * Concretement, chacune de ces reecritures passait la suite au vert :
+ * Elle ne decide plus rien (#1951) : elle met en file l'envoi du lien, sans
+ * chercher le compte, pour que ni la reponse ni le temps de la requete ne
+ * disent si l'adresse en a un. Une adresse inconnue levait une erreur de
+ * validation nommant le champ ; elle ne leve plus rien, et rien ne part.
  *
- *  - inverser le test de statut, c'est-a-dire rendre le statut quand l'envoi a
- *    ECHOUE et lever une erreur de validation quand il a REUSSI. Une adresse
- *    inconnue aurait alors affiche « lien envoye » a la page, et une adresse
- *    valide un message d'erreur ;
- *  - vider le message porte par l'erreur, laissant le formulaire signaler un
- *    champ fautif sans dire pourquoi ;
- *  - vider la cle `email` de l'erreur, la detachant du champ : le formulaire
- *    n'aurait plus rien a colorer ni a annoncer.
- *
- * Les deux tests ci-dessous couvrent les deux sorties de la ligne 25 — sans le
- * cas qui reussit, inverser la comparaison resterait invisible.
+ * Les tests ci-dessous tiennent ce qu'elle met en file — sans l'envoi, ou avec
+ * une autre adresse ou une autre langue, le lien ne partirait pas, ou partirait
+ * ailleurs, ou dans une autre langue que celle de la page —, puis ce que le job
+ * en fait.
  */
 
 use App\Actions\Auth\SendPasswordResetLinkAction;
+use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Queue;
 
-it('rend le statut d envoi quand le lien part', function (): void {
+it('met en file l envoi du lien, avec l adresse et la langue de la demande', function (): void {
+    Queue::fake();
+    app()->setLocale('en');
+
+    app(SendPasswordResetLinkAction::class)->execute('lien@example.test');
+
+    Queue::assertPushedTimes(EnvoyerLeLienDeReinitialisation::class, 1);
+    Queue::assertPushed(
+        EnvoyerLeLienDeReinitialisation::class,
+        static fn (EnvoyerLeLienDeReinitialisation $job): bool => $job->adresse === 'lien@example.test' && $job->langue === 'en',
+    );
+});
+
+it('envoie le lien au compte de l adresse, une fois le job traite', function (): void {
     Notification::fake();
 
     $user = User::factory()->create(['email' => 'lien@example.test']);
 
-    $statut = app(SendPasswordResetLinkAction::class)->execute(['email' => $user->email]);
+    app(SendPasswordResetLinkAction::class)->execute($user->email);
 
-    // Le statut lui-meme, et non « quelque chose de non vide » : le controleur
-    // le passe a `__()` pour composer le message de la page.
-    expect($statut)->toBe(Password::RESET_LINK_SENT);
+    Notification::assertSentToTimes($user, ResetPassword::class, 1);
 });
 
-it('leve une erreur de validation nommant le champ email quand l envoi echoue', function (): void {
+it('ne leve plus d erreur de validation pour une adresse inconnue, et n envoie rien', function (): void {
     Notification::fake();
 
-    // Aucun utilisateur ne porte cette adresse : le courtier rend
-    // `passwords.user`, pas `passwords.sent`.
-    try {
-        app(SendPasswordResetLinkAction::class)->execute(['email' => 'inconnue@example.test']);
-
-        $this->fail('Une adresse inconnue devrait lever une ValidationException.');
-    } catch (ValidationException $validationException) {
-        // La forme exacte de l'erreur : la cle `email` — que le formulaire lit
-        // pour designer le champ — et le message traduit qu'elle porte. Un
-        // tableau vide, cote cle comme cote message, laisserait la page muette.
-        expect($validationException->errors())->toBe([
-            'email' => ['Nous ne trouvons aucun utilisateur avec cette adresse email.'],
-        ]);
-    }
+    // Aucun utilisateur ne porte cette adresse : le courtier rend `passwords.user`
+    // dans le job, et ce statut ne sort pas du job.
+    app(SendPasswordResetLinkAction::class)->execute('inconnue@example.test');
 
     Notification::assertNothingSent();
 });
