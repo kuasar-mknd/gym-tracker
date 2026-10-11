@@ -9,9 +9,10 @@ declare(strict_types=1);
  * Deux lectures pour une même décision se contredisent quand minuit passe
  * entre elles : la séance ouverte à minuit portait le nom du lendemain et la
  * date de la veille, les cartes voisines de la page des séances comptaient
- * deux fenêtres différentes, le calendrier ouvert le soir du 31 décembre
- * montrait janvier de l'année qui s'achève, et la carte hebdomadaire du
- * tableau de bord posait le total d'une semaine sur la courbe d'une autre.
+ * deux fenêtres différentes, la page Statistiques rangeait sous un mois la
+ * comparaison du suivant, le calendrier ouvert le soir du 31 décembre montrait
+ * janvier de l'année qui s'achève, et la carte hebdomadaire du tableau de bord
+ * posait le total d'une semaine sur la courbe d'une autre.
  * Après #2017, qui avait réglé les deux bornes d'une même fenêtre, ces tests
  * font passer minuit, ou la fin du mois et de l'année, entre deux lectures,
  * par l'horloge de `tests/Support/HorlogeQuiPasseMinuit.php`.
@@ -19,6 +20,7 @@ declare(strict_types=1);
 
 use App\Actions\Calendar\FetchCalendarEventsAction;
 use App\Actions\Dashboard\FetchDashboardDataAction;
+use App\Actions\Stats\GetStatsDashboardAction;
 use App\Actions\Workouts\CreateWorkoutAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\DTOs\Stats\MonthlyVolumePoint;
@@ -87,6 +89,41 @@ it('montre les mêmes six mois sur les cartes de la page des séances quand le m
         ->and(Cache::has(ClesDeStats::seances($user, 'day_of_week_frequency.'.$moisDeLaFenetre)))
         ->toBeTrue();
 })->with(range(1, 10));
+
+/**
+ * La vue « performance » de la page Statistiques range la comparaison
+ * mensuelle sous le mois qu'elle compare quand le mois change pendant le
+ * calcul.
+ *
+ * Le mois de la clef venait d'une lecture de l'horloge, la fenêtre de la
+ * comparaison d'une autre, faite par le service bien après : quand le
+ * 1er octobre commençait entre les deux, l'entrée rangée sous septembre
+ * gardait la comparaison d'octobre, rien contre le total de septembre, et la
+ * servait pendant une demi-heure à une requête encore en septembre.
+ * L'horloge passe minuit après chacune des douze lectures, cache compris, qui
+ * précédaient celle de la comparaison.
+ */
+it('range la comparaison mensuelle de la page Statistiques sous le mois qu elle compare quand le mois change pendant le calcul', function (int $lectures): void {
+    $user = User::factory()->create();
+    Workout::withoutEvents(function () use ($user): void {
+        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-08-14 10:00:00'), 'workout_volume' => 500]);
+        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-09-15 10:00:00'), 'workout_volume' => 1000]);
+    });
+    $statistiques = app(GetStatsDashboardAction::class);
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-09-30 23:59:59.999999', '2026-10-01 00:00:00.000001');
+
+    $comparaison = $statistiques->performanceOverview($user, 30)['monthlyComparison'];
+
+    // Septembre contre août, 1 000 contre 500, ou octobre, vide, contre
+    // septembre : l'entrée porte le mois de la comparaison qu'elle garde.
+    $moisDeLaComparaison = $comparaison->current_volume === 1000.0 ? '2026-09' : '2026-10';
+    expect([$comparaison->current_volume, $comparaison->previous_volume, $comparaison->percentage])->toBeIn([
+        [1000.0, 500.0, 100.0],
+        [0.0, 1000.0, -100.0],
+    ])
+        ->and(Cache::has(ClesDeStats::seances($user, 'performance_overview.30.'.$moisDeLaComparaison)))
+        ->toBeTrue();
+})->with(range(1, 12));
 
 /**
  * Le calendrier ouvert sans mois demandé montre le mois courant de l'année

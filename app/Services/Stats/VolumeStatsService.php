@@ -194,11 +194,16 @@ final class VolumeStatsService
      * donne le 1er octobre. Chaque jour que le mois précédent n'a pas, la
      * comparaison mettait le mois courant face à lui-même (#1955).
      *
+     * L'instant se reçoit de la vue qui range la comparaison sous son mois :
+     * relu ici, il pouvait tomber dans le mois suivant (#2033).
+     *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      */
-    public function getMonthlyVolumeComparison(User $user): VolumeComparison
+    public function getMonthlyVolumeComparison(User $user, ?Carbon $maintenant = null): VolumeComparison
     {
-        $debutDuMois = now()->startOfMonth();
+        $maintenant ??= now();
+        $debutDuMois = $maintenant->copy()->startOfMonth();
         $debutDuMoisPrecedent = $debutDuMois->copy()->subMonth();
 
         $comparison = $this->calculateComparison(
