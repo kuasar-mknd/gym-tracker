@@ -2,6 +2,7 @@ import { computed, defineComponent, h, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 
 import { chargerSyncService } from '../utils/fileHorsLigne'
+import { suivreLesPagesMontees } from '../pages/pagesMontees'
 
 /**
  * Une séance montée comme `Pages/Workouts/Show.vue` la monte — les mêmes
@@ -12,8 +13,24 @@ import { chargerSyncService } from '../utils/fileHorsLigne'
  *
  * Le fichier de test déclare lui-même ses `vi.mock` (ils ne valent que là) :
  * `@/Utils/http` vers `serveur.repondre`, `@inertiajs/vue3`,
- * `@/composables/useHaptics` et `@formkit/drag-and-drop/vue`.
+ * `@/composables/useHaptics` et `@formkit/drag-and-drop/vue`. Il ouvre son
+ * `afterEach` par `await seances.demonterToutes()`.
  */
+
+/**
+ * Les séances que `monterLaSeance` a montées dans le fichier de test qui
+ * l'importe : chaque fichier de test charge ce module à part, donc tient sa
+ * propre liste.
+ *
+ * Une séance laissée montée garde ses écouteurs de `window` (`sync:replayed`,
+ * `sync:failed`, `sync:retired`, que posent le rapport de synchronisation et
+ * le rechargement après le vidage) : ils répondaient au vidage des tests
+ * suivants, jusqu'à dix séances d'un même fichier à la fois, et un `recharger`
+ * espionné aurait compté leurs appels avec ceux de la séance du test (#2003).
+ * `tests/js/conventions/pagesDemontees.test.js` exige l'appel en tête de
+ * l'`afterEach` de tout fichier qui monte une séance.
+ */
+export const seances = suivreLesPagesMontees()
 
 /** Les adresses de Ziggy dont la séance se sert. */
 export const routeDeTest = (nom, parametres = {}) => {
@@ -284,6 +301,7 @@ export const monterLaSeance = async (
     })
 
     const wrapper = mount(Seance)
+    seances.retenir(wrapper)
     await flushPromises()
 
     return { wrapper, sync, ...page }
