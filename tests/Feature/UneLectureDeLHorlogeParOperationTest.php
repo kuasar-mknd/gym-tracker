@@ -24,6 +24,7 @@ use App\Actions\Stats\GetStatsDashboardAction;
 use App\Actions\Workouts\CreateWorkoutAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\DTOs\Stats\MonthlyVolumePoint;
+use App\DTOs\Stats\VolumeComparison;
 use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
 use App\Models\Workout;
@@ -113,6 +114,7 @@ it('range la comparaison mensuelle de la page Statistiques sous le mois qu elle 
     HorlogeQuiPasseMinuit::apres($lectures, '2026-09-30 23:59:59.999999', '2026-10-01 00:00:00.000001');
 
     $comparaison = $statistiques->performanceOverview($user, 30)['monthlyComparison'];
+    assert($comparaison instanceof VolumeComparison);
 
     // Septembre contre août, 1 000 contre 500, ou octobre, vide, contre
     // septembre : l'entrée porte le mois de la comparaison qu'elle garde.
