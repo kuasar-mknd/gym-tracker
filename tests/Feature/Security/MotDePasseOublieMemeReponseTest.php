@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Auth\SendPasswordResetLinkAction;
+use App\Http\Controllers\Auth\NewPasswordController;
 use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -43,7 +44,9 @@ use function Pest\Laravel\post;
  * La page suivante disait la même chose autrement : un jeton quelconque essayé
  * sur une adresse sans compte recevait « Nous ne trouvons aucun utilisateur
  * avec cette adresse email. », et sur un compte « Ce jeton … n'est pas
- * valide. ». Les deux reçoivent désormais le second.
+ * valide. ». Les deux reçoivent désormais le second. Le refus durait aussi plus
+ * longtemps pour un compte qui venait de demander un lien : tout refus dure
+ * désormais `NewPasswordController::DUREE_D_UN_REFUS_MICROSECONDES`.
  */
 
 /**
@@ -359,4 +362,82 @@ it('refuse à l’identique, à la réinitialisation, une adresse sans compte et
         ->and($sansCompte['session']['errors'] ?? null)->toBe(['default' => ['email' => ['Ce jeton de réinitialisation du mot de passe n\'est pas valide.']]])
         ->and($jetonFaux)->toBe($sansCompte)
         ->and(Hash::check('password', (string) $compte->fresh()?->getAuthPassword()))->toBeTrue();
+});
+
+/**
+ * Un essai de réinitialisation avec le jeton quelconque, et sa durée en
+ * microsecondes.
+ *
+ * @return array{0: float, 1: TestResponse<Response>}
+ */
+function motDePasseOublieChronometrerLeRefus(): array
+{
+    $debut = microtime(true);
+    $reponse = motDePasseOublieReinitialiser();
+
+    return [(microtime(true) - $debut) * 1_000_000, $reponse];
+}
+
+/**
+ * Le coût bcrypt que `.env.example` donne à la production, et que phpunit.xml
+ * baisse à 4.
+ */
+function motDePasseOublieCoutDeProduction(): int
+{
+    expect(preg_match('/^BCRYPT_ROUNDS=(\d+)$/m', File::get(base_path('.env.example')), $cout))->toBe(1);
+
+    return (int) $cout[1];
+}
+
+/*
+ * Le courtier ne vérifie l'empreinte du jeton essayé (bcrypt) que pour un
+ * compte qui a une demande récente, et au coût de production cette
+ * vérification dépasse sa propre Timebox : le refus durait alors plus
+ * longtemps que pour une adresse sans compte. Ici, la demande récente est celle
+ * que « Mot de passe oublié » vient de faire pour le compte.
+ */
+it('refuse dans le même temps, à la réinitialisation, une adresse sans compte et le jeton faux d’un compte qui vient de demander un lien', function (): void {
+    $plancher = NewPasswordController::DUREE_D_UN_REFUS_MICROSECONDES;
+
+    [$dureeSansCompte, $sansCompte] = motDePasseOublieChronometrerLeRefus();
+    $sansCompte->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
+
+    $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
+    // Le jeton s'enregistre au coût de production, que sa vérification paiera.
+    config(['hashing.bcrypt.rounds' => motDePasseOublieCoutDeProduction()]);
+    Hash::forgetDrivers();
+    Password::createToken($compte);
+
+    [$dureeCompte, $jetonFaux] = motDePasseOublieChronometrerLeRefus();
+    $jetonFaux->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
+
+    // Le travail du refus le plus long, hors du plancher : la Timebox du courtier, puis la vérification de l'empreinte.
+    $debut = microtime(true);
+    expect(Password::reset([
+        'token' => 'un-jeton-quelconque',
+        'email' => motDePasseOublieAdresse(),
+        'password' => 'Un-nouveau-mot-de-passe-2026!',
+        'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
+    ], static function (): void {
+    }))->toBe(Password::INVALID_TOKEN);
+    $travail = (microtime(true) - $debut) * 1_000_000;
+
+    expect($travail)->toBeLessThan($plancher)
+        ->and($dureeSansCompte)->toBeGreaterThanOrEqual($plancher)
+        ->and($dureeCompte)->toBeGreaterThanOrEqual($plancher);
+});
+
+it('répond à une réinitialisation réussie sans attendre le plancher des refus', function (): void {
+    $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
+    $jeton = Password::createToken($compte);
+
+    $debut = microtime(true);
+    post(route('password.store'), [
+        'token' => $jeton,
+        'email' => motDePasseOublieAdresse(),
+        'password' => 'Un-nouveau-mot-de-passe-2026!',
+        'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
+    ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+
+    expect((microtime(true) - $debut) * 1_000_000)->toBeLessThan(NewPasswordController::DUREE_D_UN_REFUS_MICROSECONDES);
 });
