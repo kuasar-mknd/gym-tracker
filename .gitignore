@@ -45,8 +45,13 @@ frankenphp
 # swallowed it silently — `git add -A` committed the fonts beside it and said
 # nothing — so the build failed only on CI, where the file did not exist.
 !/resources/fonts/material-symbols.txt
-/lang/vendor
-/resources/views/vendor
+# Ce que vendor:publish dépose reste hors dépôt, sauf ce qu'on y surcharge
+# exprès : les textes du courriel d'alerte de santé, en français (#2034).
+# Un dossier ignoré ne se rouvre pas : on ignore son contenu, puis on rouvre.
+/lang/vendor/*
+!/lang/vendor/health/
+/resources/views/vendor/*
+!/resources/views/vendor/health/
 /storage/app/GymTracker
 /public/css/filament-spatie-backup
 /public/css/filament-spatie-health
