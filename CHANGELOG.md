@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **« refuses to move a set past either end » ne tombe plus au hasard** (#2003) : les tests de `Workouts/Show` ne démontaient jamais leurs pages. Une valeur tapée part une seconde plus tard, et deux tests de `workoutShowUncovered.test.js` finissaient avant : leur PATCH tombait dans le test qui tournait alors, sur le même mock, et celui qui n'attend aucun appel échouait selon la vitesse de la machine (reproduit tel quel sur une suite complète, et 4 passages sur 30 du fichier en ordre aléatoire faisaient échouer « cancels a debounced edit… » de la même façon) ; `workoutSetEntry.test.js` en laissait deux autres partir. Les quatre fichiers qui montent la page la démontent à la fin de chaque test et attendent ce qu'elle envoie en partant (`tests/js/pages/pagesMontees.js`), ce que `pagesDemontees.test.js` exige. Dans la même suite en ordre aléatoire, 8 passages sur 10 échouaient sur les bips d'`intervalTimerPresetForm.test.js` : le test d'une panne de son supprimait la méthode `createOscillator` du faux contexte audio ; il passe désormais par un espion restauré après chaque test. 30 passages du fichier en ordre aléatoire, graines des échecs comprises, et la suite des pages en ordre aléatoire passent.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
