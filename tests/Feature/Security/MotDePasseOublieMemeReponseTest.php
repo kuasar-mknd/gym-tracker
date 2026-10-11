@@ -308,7 +308,45 @@ it('garde le limiteur de débit de la route, le même pour toute adresse', funct
     Queue::assertPushedTimes(EnvoyerLeLienDeReinitialisation::class, 6);
 });
 
-it('ne laisse demander un lien au courtier que par le job', function (): void {
+/**
+ * Ce code demande-t-il ou envoie-t-il un lien de réinitialisation : appel au
+ * courtier, création d'un jeton (par le courtier ou son dépôt), avis
+ * `ResetPassword` construit à la main, ou page « Mot de passe oublié » du
+ * panneau ? La garde lit le texte : une écriture qu'elle ne connaît pas lui
+ * échappe, et ne vaut pas permission.
+ */
+function motDePasseOublieEnvoieUnLien(string $code): bool
+{
+    return preg_match(
+        '/->sendResetLink\(|::sendResetLink\(|sendPasswordResetNotification\(|->passwordReset\('
+        .'|Password::(?:createToken|getRepository)\(|broker\([^;]*?\)->(?:createToken|getRepository)\('
+        .'|\bnew\s+[\w\\\\]*ResetPassword\b|ResetPassword::class|\bextends\s+[\w\\\\]*ResetPassword\b/',
+        $code,
+    ) === 1;
+}
+
+it('reconnaît chaque façon connue de demander ou d’envoyer un lien', function (string $code, bool $envoie): void {
+    expect(motDePasseOublieEnvoieUnLien($code))->toBe($envoie);
+})->with([
+    'le courtier par la façade' => ['Password::sendResetLink([\'email\' => $adresse]);', true],
+    'un courtier nommé' => ['Password::broker(\'users\')->sendResetLink($donnees);', true],
+    'l’avis du compte' => ['$user->sendPasswordResetNotification($jeton);', true],
+    'la page du panneau' => ['->passwordReset()', true],
+    'un jeton par la façade' => ['$user->notify(new ResetPassword(Password::createToken($user)));', true],
+    'un jeton par un courtier' => ['$jeton = app(\'auth.password\')->broker(config(\'auth.defaults.passwords\'))->createToken($user);', true],
+    'un jeton par le dépôt' => ['Password::getRepository()->create($user);', true],
+    'l’avis nommé en entier' => ['$user->notify(new \\Illuminate\\Auth\\Notifications\\ResetPassword($jeton));', true],
+    'l’avis par sa classe' => ['Notification::send($user, app(ResetPassword::class, [\'token\' => $jeton]));', true],
+    'un avis dérivé' => ['final class Lien extends ResetPassword {}', true],
+    'un avis maison' => ['$user->notify(new LienDeReinitialisationResetPassword($jeton));', true],
+    'le jeton d’API de Sanctum' => ['$user->createToken(\'api\')->plainTextToken;', false],
+    'le lien des courriels' => ['ResetPassword::createUrlUsing(LiensDesCourriels::lienDeReinitialisation(...));', false],
+    'les migrations jouées' => ['$migrator->getRepository()->getRan();', false],
+    'l’import de l’avis' => ['use Illuminate\\Auth\\Notifications\\ResetPassword;', false],
+    'un contrôleur au nom voisin' => ['Route::post(\'x\', [ResetPasswordController::class, \'store\']);', false],
+]);
+
+it('ne laisse demander ou envoyer un lien que par le job', function (): void {
     $appels = [];
 
     foreach (['app', 'routes', 'bootstrap'] as $dossier) {
@@ -317,7 +355,7 @@ it('ne laisse demander un lien au courtier que par le job', function (): void {
                 continue;
             }
 
-            if (preg_match('/->sendResetLink\(|::sendResetLink\(|sendPasswordResetNotification\(|->passwordReset\(/', $fichier->getContents()) === 1) {
+            if (motDePasseOublieEnvoieUnLien($fichier->getContents())) {
                 $appels[] = Str::after($fichier->getPathname(), base_path().'/');
             }
         }
