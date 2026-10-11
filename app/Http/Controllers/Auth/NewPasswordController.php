@@ -29,7 +29,9 @@ class NewPasswordController extends Controller
     }
 
     /**
-     * Handle an incoming new password request.
+     * Tout refus parle du jeton, même quand l'adresse n'a pas de compte : le
+     * courtier rend alors `passwords.user`, dont le message dirait que
+     * l'adresse est inconnue à quiconque essaie un jeton quelconque (#1951).
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -42,7 +44,7 @@ class NewPasswordController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'email' => [trans($status)],
+            'email' => [trans(Password::INVALID_TOKEN)],
         ]);
     }
 

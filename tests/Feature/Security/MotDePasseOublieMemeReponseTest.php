@@ -39,6 +39,11 @@ use function Pest\Laravel\post;
  * envoyait le courriel. La requête ne fait plus que mettre
  * `EnvoyerLeLienDeReinitialisation` en file : sa réponse, ses requêtes SQL et
  * donc son temps sont les mêmes pour toute adresse bien formée.
+ *
+ * La page suivante disait la même chose autrement : un jeton quelconque essayé
+ * sur une adresse sans compte recevait « Nous ne trouvons aucun utilisateur
+ * avec cette adresse email. », et sur un compte « Ce jeton … n'est pas
+ * valide. ». Les deux reçoivent désormais le second.
  */
 
 /**
@@ -316,4 +321,42 @@ it('ne laisse demander un lien au courtier que par le job', function (): void {
     }
 
     expect($appels)->toBe(['app/Jobs/EnvoyerLeLienDeReinitialisation.php']);
+});
+
+/**
+ * La page qu'ouvre un lien de réinitialisation, avec un jeton quelconque.
+ */
+function motDePasseOubliePageDuLien(): string
+{
+    return route('password.reset', ['token' => 'un-jeton-quelconque', 'email' => motDePasseOublieAdresse()]);
+}
+
+/**
+ * Un essai de réinitialisation avec ce jeton quelconque, depuis sa page.
+ *
+ * @return TestResponse<Response>
+ */
+function motDePasseOublieReinitialiser(): TestResponse
+{
+    return motDePasseOublieEnvoyer(motDePasseOubliePageDuLien(), 'password.store', [
+        'token' => 'un-jeton-quelconque',
+        'email' => motDePasseOublieAdresse(),
+        'password' => 'Un-nouveau-mot-de-passe-2026!',
+        'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
+    ]);
+}
+
+it('refuse à l’identique, à la réinitialisation, une adresse sans compte et le jeton faux d’un compte', function (): void {
+    $this->freezeSecond();
+
+    $sansCompte = motDePasseOublieCeQueLeClientLit(motDePasseOublieReinitialiser(), motDePasseOubliePageDuLien());
+
+    $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
+    Password::createToken($compte);
+    $jetonFaux = motDePasseOublieCeQueLeClientLit(motDePasseOublieReinitialiser(), motDePasseOubliePageDuLien());
+
+    expect($sansCompte['statut'])->toBe(302)
+        ->and($sansCompte['session']['errors'] ?? null)->toBe(['default' => ['email' => ['Ce jeton de réinitialisation du mot de passe n\'est pas valide.']]])
+        ->and($jetonFaux)->toBe($sansCompte)
+        ->and(Hash::check('password', (string) $compte->fresh()?->getAuthPassword()))->toBeTrue();
 });
