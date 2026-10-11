@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Un parcours Dusk bloqué tombe sur sa propre erreur, et ne tient plus son éclat sept minutes** (#2029) : le 08/10, sur main, le premier parcours de l'éclat 2 a tenu 407 s sans qu'aucune requête n'atteigne l'application, puis l'éclat a rapporté « Timed out receiving message from renderer: 10.000 ». Ce message était celui de la capture d'écran que Dusk prend après un échec : le navigateur ne rendait plus rien, la capture a levé à son tour, et son exception a remplacé celle du parcours, dont la cause reste inconnue faute de journal du pilote. `tests/DuskTestCase.php` borne désormais le chargement d'une page à 60 s (300 s auparavant), le script à 30 s et la réponse à chaque ordre envoyé au pilote à 90 s (180 s auparavant) : une page qui ne vient pas tombe sur la ligne de sa visite, avec le message du pilote. Une capture, une source ou, après un échec, une console impossibles à relever se signalent sur la sortie d'erreur sans prendre la place de l'échec du parcours. Le ChromeDriver de la CI écrit son journal, joint aux journaux d'un éclat tombé, et « Dump Logs on Failure » en affiche les derniers ordres : la prochaine fois, il dira quel ordre attendait. `UnParcoursBloqueTombeViteTest` tient les trois points.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
