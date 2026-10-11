@@ -60,6 +60,12 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // Le message d'une erreur SQL garde la requête avec ses `?` au
+            // lieu d'y recopier les valeurs envoyées : ce message part dans
+            // les journaux, la table des exceptions et `failed_jobs` (#2032).
+            // Le texte du serveur, lui, reste tel quel : celui d'une clé en
+            // double ou d'une valeur mal typée cite encore la valeur refusée.
+            'mask_bindings_in_exception_messages' => true,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 1008 => env('MYSQL_ATTR_SSL_CA'), // Pdo\Mysql::ATTR_SSL_CA / PDO::MYSQL_ATTR_SSL_CA
                 1013 => filter_var(env('DB_SSL_VERIFY', true), FILTER_VALIDATE_BOOLEAN), // Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT / PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
@@ -92,6 +98,8 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // Comme pour mysql, ci-dessus (#2032).
+            'mask_bindings_in_exception_messages' => true,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 1008 => env('MYSQL_ATTR_SSL_CA'), // Pdo\Mysql::ATTR_SSL_CA / PDO::MYSQL_ATTR_SSL_CA
                 1013 => env('DB_SSL_VERIFY', true), // Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT / PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT

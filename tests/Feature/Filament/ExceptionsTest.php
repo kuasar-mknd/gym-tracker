@@ -81,10 +81,10 @@ function exceptionsTailleDeLaLigne(): int
 }
 
 /*
- * Le paquet garde le corps entier de la requête, et le message d'une erreur
- * SQL recopie les valeurs envoyées, comme la pile (arguments compris) et le
- * texte Markdown : une requête de plusieurs mégaoctets qui finissait en
- * erreur écrivait une ligne aussi grosse qu'elle.
+ * Le paquet garde le corps entier de la requête, le message d'une exception
+ * peut recopier une valeur reçue, comme le texte Markdown, et hors de l'image
+ * la pile garde les arguments de chaque appel : une requête de plusieurs
+ * mégaoctets qui finissait en erreur écrivait une ligne aussi grosse qu'elle.
  */
 it('borne la ligne d’une exception, quel que soit le corps de la requête', function (): void {
     Route::post('/_boum', function (Request $requete): never {
