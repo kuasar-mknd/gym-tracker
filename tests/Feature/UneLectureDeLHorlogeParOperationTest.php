@@ -9,17 +9,20 @@ declare(strict_types=1);
  * Deux lectures pour une même décision se contredisent quand minuit passe
  * entre elles : la séance ouverte à minuit portait le nom du lendemain et la
  * date de la veille, les cartes voisines de la page des séances comptaient
- * deux fenêtres différentes, et le calendrier ouvert le soir du 31 décembre
- * montrait janvier de l'année qui s'achève. Après #2017, qui avait réglé les
- * deux bornes d'une même fenêtre, ces tests font passer minuit, ou la fin du
- * mois et de l'année, entre deux lectures, par l'horloge de
- * `tests/Support/HorlogeQuiPasseMinuit.php`.
+ * deux fenêtres différentes, le calendrier ouvert le soir du 31 décembre
+ * montrait janvier de l'année qui s'achève, et la carte hebdomadaire du
+ * tableau de bord posait le total d'une semaine sur la courbe d'une autre.
+ * Après #2017, qui avait réglé les deux bornes d'une même fenêtre, ces tests
+ * font passer minuit, ou la fin du mois et de l'année, entre deux lectures,
+ * par l'horloge de `tests/Support/HorlogeQuiPasseMinuit.php`.
  */
 
 use App\Actions\Calendar\FetchCalendarEventsAction;
+use App\Actions\Dashboard\FetchDashboardDataAction;
 use App\Actions\Workouts\CreateWorkoutAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\DTOs\Stats\MonthlyVolumePoint;
+use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\Stats\ClesDeStats;
@@ -105,4 +108,101 @@ it('ouvre le calendrier sur un mois de la bonne année quand l année change pen
 
     $reponse->assertOk();
     expect([$reponse->inertiaProps('year'), $reponse->inertiaProps('month')])->toBeIn([[2026, 12], [2027, 1]]);
+});
+
+/**
+ * Deux semaines de séances pour la carte hebdomadaire du tableau de bord.
+ *
+ * 1 000 la semaine du 28 septembre, 500 celle du 5 octobre, rien encore celle
+ * du 12 : la semaine du 5 se lit « 500, -50 % », celle du 12 « 0, -100 % ».
+ * Le volume est posé, les écouteurs sont coupés.
+ */
+function carteHebdomadaireSurDeuxSemaines(User $user): void
+{
+    Workout::withoutEvents(function () use ($user): void {
+        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-09-30 10:00:00'), 'workout_volume' => 1000]);
+        Workout::factory()->create(['user_id' => $user->id, 'started_at' => Carbon::parse('2026-10-07 10:00:00'), 'workout_volume' => 500]);
+    });
+}
+
+/**
+ * La carte hebdomadaire du tableau de bord montre une seule semaine quand
+ * lundi commence pendant le calcul.
+ *
+ * Le total de la semaine et sa comparaison venaient d'une lecture de
+ * l'horloge, la courbe des sept jours d'une autre : quand lundi commençait
+ * entre les deux, la carte annonçait les 500 de la semaine qui s'achevait
+ * au-dessus de la courbe, vide, de celle qui commençait. La clef de la courbe
+ * ne disait pas non plus sa semaine. L'horloge passe minuit après chacune des
+ * cinq lectures, cache compris, qui précédaient celle de la courbe.
+ */
+it('montre une seule semaine sur la carte hebdomadaire du tableau de bord quand lundi commence pendant le calcul', function (int $lectures): void {
+    $user = User::factory()->create();
+    carteHebdomadaireSurDeuxSemaines($user);
+    $tableauDeBord = app(FetchDashboardDataAction::class);
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+
+    $carte = $tableauDeBord->getWeeklyVolumeData($user);
+
+    $courbe = $carte['trend'];
+    $semaine = Carbon::parse($courbe[0]->date)->format('Y-W');
+
+    // La semaine du 5 octobre, 500 contre 1 000, ou celle du 12, vide, contre
+    // 500 : le total est la somme de la courbe.
+    expect([$courbe[0]->date, $carte['stats']['current_week_volume'], $carte['stats']['percentage']])->toBeIn([
+        ['2026-10-05', 500.0, -50.0],
+        ['2026-10-12', 0.0, -100.0],
+    ])
+        ->and(array_sum(array_map(static fn (WeeklyVolumeTrendPoint $point): float => $point->volume, $courbe)))
+        ->toBe($carte['stats']['current_week_volume'])
+        ->and(Cache::has(ClesDeStats::seances($user, 'weekly_volume.'.$semaine)))
+        ->toBeTrue()
+        ->and(Cache::has(ClesDeStats::seances($user, 'weekly_volume_comparison.'.$semaine)))
+        ->toBeTrue();
+})->with(range(1, 5));
+
+/**
+ * Les analyses du tableau de bord se rangent sous la semaine de la carte
+ * qu'elles gardent.
+ *
+ * Leur clef ne portait pas la semaine, et la carte hebdomadaire qu'elles
+ * réunissent lisait l'horloge pour son compte. L'horloge passe minuit après
+ * chacune des six lectures qui précédaient celle de la courbe.
+ */
+it('range les analyses du tableau de bord sous la semaine de leur carte quand lundi commence pendant le calcul', function (int $lectures): void {
+    $user = User::factory()->create();
+    carteHebdomadaireSurDeuxSemaines($user);
+    $tableauDeBord = app(FetchDashboardDataAction::class);
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+
+    $carte = $tableauDeBord->getAnalyticalStats($user)['weeklyVolume'];
+
+    $semaine = Carbon::parse($carte['trend'][0]->date)->format('Y-W');
+    expect([$carte['trend'][0]->date, $carte['stats']['current_week_volume']])->toBeIn([['2026-10-05', 500.0], ['2026-10-12', 0.0]])
+        ->and(Cache::has(ClesDeStats::seances($user, 'dashboard_analytical.'.$semaine)))
+        ->toBeTrue();
+})->with(range(1, 6));
+
+/**
+ * Le lundi ne sert pas la carte hebdomadaire mise en cache le dimanche soir.
+ *
+ * Ni les analyses réunies du tableau de bord ni la courbe des sept jours ne
+ * portaient la semaine dans leur clef : le tableau de bord ouvert le dimanche
+ * à 23:55, puis à 00:02, montrait encore la semaine qui venait de s'achever
+ * comme la semaine en cours, jusqu'à l'expiration de l'entrée, dix minutes.
+ * Elles la portent désormais, comme la comparaison, et comme le volume mensuel
+ * porte son mois (#1955).
+ */
+it('ne sert pas le lundi la carte hebdomadaire mise en cache le dimanche soir', function (): void {
+    $user = User::factory()->create();
+    carteHebdomadaireSurDeuxSemaines($user);
+    $tableauDeBord = app(FetchDashboardDataAction::class);
+    Carbon::setTestNow(Carbon::parse('2026-10-11 23:55:00'));
+    $tableauDeBord->getAnalyticalStats($user);
+    Carbon::setTestNow(Carbon::parse('2026-10-12 00:02:00'));
+
+    $carte = $tableauDeBord->getAnalyticalStats($user)['weeklyVolume'];
+
+    expect($carte['trend'][0]->date)->toBe('2026-10-12')
+        ->and($carte['stats'])->toBe(['current_week_volume' => 0.0, 'percentage' => -100.0]);
 });

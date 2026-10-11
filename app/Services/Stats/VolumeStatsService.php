@@ -81,16 +81,25 @@ final class VolumeStatsService
      * seconde lecture rendait quatorze jours quand lundi commençait entre les
      * deux, et le cache les gardait dix minutes (#2017).
      *
+     * La clef porte la semaine, comme celle de la comparaison : sans elle, le
+     * lundi juste après minuit servait encore la semaine de la veille, jusqu'à
+     * l'expiration. L'instant se reçoit de la carte qui montre aussi la
+     * comparaison : relu ici, il pouvait tomber dans la semaine suivante, et la
+     * courbe d'une semaine passait sous le total d'une autre (#2033).
+     *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      * @return array<int, WeeklyVolumeTrendPoint>
      */
-    public function getWeeklyVolumeTrend(User $user): array
+    public function getWeeklyVolumeTrend(User $user, ?Carbon $maintenant = null): array
     {
+        $maintenant ??= now();
+        $startOfWeek = $maintenant->copy()->startOfWeek();
+
         return Cache::remember(
-            ClesDeStats::seances($user, 'weekly_volume'),
-            now()->addMinutes(10),
-            function () use ($user): array {
-                $startOfWeek = now()->startOfWeek();
+            ClesDeStats::seances($user, "weekly_volume.{$startOfWeek->format('Y-W')}"),
+            $maintenant->copy()->addMinutes(10),
+            function () use ($user, $startOfWeek): array {
                 $endOfWeek = $startOfWeek->copy()->endOfWeek();
 
                 // `toBase()` : la somme sort déjà agrégée, aucun modèle à
@@ -214,18 +223,22 @@ final class VolumeStatsService
      * comme le mois dans `getMonthlyVolumeComparison` : avec une lecture par
      * borne, quand lundi commençait entre elles, la semaine qui s'achevait se
      * comparait à elle-même, ou à elle-même et à la précédente réunies (#2017).
+     * Cette lecture se reçoit de la carte qui montre aussi la courbe de la
+     * semaine, pour que les deux disent la même (#2033).
      *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      */
-    public function getWeeklyVolumeComparison(User $user): VolumeComparison
+    public function getWeeklyVolumeComparison(User $user, ?Carbon $maintenant = null): VolumeComparison
     {
-        $debutDeSemaine = now()->startOfWeek();
+        $maintenant ??= now();
+        $debutDeSemaine = $maintenant->copy()->startOfWeek();
         $semainePrecedente = $debutDeSemaine->copy()->subWeek()->startOfWeek();
         $weekKey = $debutDeSemaine->format('Y-W');
 
         $comparison = Cache::remember(
             ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}"),
-            now()->addMinutes(10),
+            $maintenant->copy()->addMinutes(10),
             fn (): array => $this->calculateComparison(
                 $user,
                 $debutDeSemaine,
