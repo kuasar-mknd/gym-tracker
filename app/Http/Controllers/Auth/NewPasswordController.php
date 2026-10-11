@@ -22,11 +22,12 @@ class NewPasswordController extends Controller
      * La durée de tout refus, en microsecondes (#1951).
      *
      * Elle doit dépasser le travail du refus le plus long : le courtier ne
-     * vérifie l'empreinte du jeton (bcrypt, au coût de `BCRYPT_ROUNDS`) que pour
-     * un compte qui a une demande récente, et cette vérification seule prend
-     * déjà plus que la Timebox du courtier (`auth.timebox_duration`, 200 ms).
-     * Environ 0,25 s au coût 12 de la production, le double à chaque unité de
-     * plus : passer `BCRYPT_ROUNDS` au-delà de 13 demande de relever ce plancher.
+     * vérifie l'empreinte du jeton (bcrypt, au coût de `BCRYPT_ROUNDS`) que
+     * pour un compte qui a une demande récente, et cette vérification prend
+     * à elle seule plus que la Timebox du courtier (200 ms,
+     * `auth.timebox_duration`). Environ 0,25 s au coût 12 de la production,
+     * le double à chaque unité de plus : passer `BCRYPT_ROUNDS` au-delà de 13
+     * demande de relever ce plancher.
      */
     public const int DUREE_D_UN_REFUS_MICROSECONDES = 1_000_000;
 
@@ -53,7 +54,10 @@ class NewPasswordController extends Controller
     public function store(NewPasswordRequest $request): RedirectResponse
     {
         $status = new Timebox()->call(
-            fn (Timebox $minuteur): string => $this->resetPassword($request->validated(), $minuteur),
+            fn (Timebox $delai): string => $this->resetPassword(
+                $request->validated(),
+                $delai,
+            ),
             self::DUREE_D_UN_REFUS_MICROSECONDES,
         );
 
@@ -72,12 +76,12 @@ class NewPasswordController extends Controller
      *
      * @param  array<string, mixed>  $credentials
      */
-    private function resetPassword(array $credentials, Timebox $minuteur): string
+    private function resetPassword(array $credentials, Timebox $delai): string
     {
         /** @phpstan-ignore-next-line */
         return Password::reset(
             $credentials,
-            function (\App\Models\User $user) use ($credentials, $minuteur): void {
+            function (\App\Models\User $user) use ($credentials, $delai): void {
                 /** @var string $password */
                 $password = $credentials['password'];
 
@@ -88,7 +92,7 @@ class NewPasswordController extends Controller
 
                 event(new PasswordReset($user));
 
-                $minuteur->returnEarly();
+                $delai->returnEarly();
             }
         );
     }
