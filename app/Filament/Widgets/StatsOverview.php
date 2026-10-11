@@ -50,7 +50,7 @@ class StatsOverview extends StatsOverviewWidget
      *
      * Les deux bornes du jour se tirent d'une seule lecture de l'horloge : avec
      * une lecture chacune, quand minuit passait entre elles, le jour couvrait
-     * aussi la veille (#ISSUE).
+     * aussi la veille (#2033).
      */
     private function getWorkoutsTodayCount(): int
     {

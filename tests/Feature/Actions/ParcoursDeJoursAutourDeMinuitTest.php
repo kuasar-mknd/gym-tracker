@@ -135,7 +135,7 @@ it('rend une grille de sept jours, du lundi au dimanche, quand lundi commence pe
  * commençait après la lecture de la semaine, la grille de la semaine qui
  * s'achevait ne mettait plus aucun jour en avant. L'horloge passe minuit après
  * chacune des huit lectures, celle de la semaine puis celles des sept jours
- * (#ISSUE).
+ * (#2033).
  */
 it('met en avant un seul jour de la grille, aujourd hui, quand lundi commence pendant le calcul', function (int $lectures): void {
     $user = User::factory()->create();

@@ -118,7 +118,7 @@ final class FetchHabitsIndexAction
      * Le jour mis en avant se tire du même instant que la semaine : chaque jour
      * relisait l'horloge (`isToday()`), et quand lundi commençait après la
      * lecture de la semaine, la grille qui s'achevait n'en mettait plus aucun
-     * en avant (#ISSUE).
+     * en avant (#2033).
      *
      * @param  Carbon  $maintenant  L'instant dont vient la semaine.
      * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>

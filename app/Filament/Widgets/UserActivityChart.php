@@ -52,7 +52,7 @@ class UserActivityChart extends ChartWidget
      * Les deux bornes de l'année se tirent d'une seule lecture de l'horloge :
      * avec une lecture chacune, quand l'année changeait entre elles, la
      * fenêtre couvrait deux ans, et janvier comptait ensemble les inscrits des
-     * deux (#ISSUE).
+     * deux (#2033).
      *
      * @return array<int, int>
      */

@@ -78,7 +78,7 @@ it('compte les séances démarrées aujourd’hui, et elles seules', function ()
 /*
  * Le jour compté se tire d'une seule lecture de l'horloge : son début et sa fin
  * venaient de deux, et quand minuit passait entre elles, « Séances du jour »
- * comptait la veille avec le jour qui commençait (#ISSUE).
+ * comptait la veille avec le jour qui commençait (#2033).
  */
 it('compte les séances d’un seul jour quand minuit passe pendant le calcul', function (): void {
     $user = User::factory()->create();
@@ -140,7 +140,7 @@ it('ventile les inscriptions par mois sur les douze mois de l’année en cours'
  * L'année des barres se tire d'une seule lecture de l'horloge : son début et sa
  * fin venaient de deux, et quand l'année changeait entre elles, le graphique
  * couvrait deux ans et rangeait les inscrits de janvier prochain avec ceux de
- * l'année qui s'achevait (#ISSUE).
+ * l'année qui s'achevait (#2033).
  */
 it('ventile les inscriptions d’une seule année quand l’année change pendant le calcul', function (): void {
     User::factory()->create(['created_at' => Carbon::parse('2026-03-05 09:00:00')]);

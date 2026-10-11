@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /*
  * Une opération lit l'horloge une fois, et passe cet instant à tout ce qu'elle
- * en tire (#ISSUE).
+ * en tire (#2033).
  *
  * Deux lectures pour une même décision se contredisent quand minuit passe
  * entre elles : la séance ouverte à minuit portait le nom du lendemain et la

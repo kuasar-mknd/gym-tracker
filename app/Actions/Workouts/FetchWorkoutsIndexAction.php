@@ -53,7 +53,7 @@ final class FetchWorkoutsIndexAction
      * lisait l'horloge, et la clef de chaque fréquence d'une autre lecture que
      * sa fenêtre. Quand le mois changeait entre deux lectures, deux cartes
      * voisines comptaient deux fenêtres différentes, ou l'entrée rangée sous
-     * le mois qui s'achevait gardait la fenêtre du mois suivant (#ISSUE).
+     * le mois qui s'achevait gardait la fenêtre du mois suivant (#2033).
      *
      * @return array{
      *     charts: array{
@@ -185,7 +185,7 @@ final class FetchWorkoutsIndexAction
      * Leur fenetre suit le mois calendaire : sans lui dans la clef, le premier
      * du mois servait encore, jusqu'a l'expiration, les six mois de la veille.
      * Il vient du même instant que la fenêtre, pour que la clef dise le mois
-     * de la fenêtre qu'elle garde (#ISSUE).
+     * de la fenêtre qu'elle garde (#2033).
      *
      * @param  Carbon  $maintenant  L'instant de l'opération.
      */
@@ -253,7 +253,7 @@ final class FetchWorkoutsIndexAction
          * Les deux la tirent desormais de `debutDeLaFenetre()`, et du même
          * instant, pour qu'elles ne puissent plus diverger, et les deux
          * sous-titres l'annoncent. Chacune lisait l'horloge : quand le mois
-         * changeait entre les deux lectures, elles divergeaient encore (#ISSUE).
+         * changeait entre les deux lectures, elles divergeaient encore (#2033).
          */
         $results = Workout::query()
             ->toBase()

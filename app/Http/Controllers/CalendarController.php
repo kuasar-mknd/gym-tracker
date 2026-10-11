@@ -16,7 +16,7 @@ class CalendarController extends Controller
      * L'année et le mois par défaut se tirent d'une seule lecture de l'horloge :
      * avec une lecture chacun, le calendrier ouvert le soir du 31 décembre, quand
      * l'année changeait entre les deux, s'ouvrait sur janvier de l'année qui
-     * s'achevait (#ISSUE).
+     * s'achevait (#2033).
      */
     public function index(CalendarIndexRequest $request, FetchCalendarEventsAction $fetchCalendarEvents): \Inertia\Response
     {

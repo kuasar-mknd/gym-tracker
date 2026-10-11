@@ -252,7 +252,7 @@ final class VolumeStatsService
      *
      * L'instant se reçoit de l'opération qui affiche d'autres cartes à côté :
      * relu ici, il pouvait tomber dans le mois suivant, et la page des séances
-     * montrait alors deux fenêtres côte à côte (#ISSUE).
+     * montrait alors deux fenêtres côte à côte (#2033).
      *
      * @param  User  $user  L'utilisateur concerné.
      * @param  int  $months  Le nombre de mois couverts.
