@@ -54,7 +54,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 3 115 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 3 126 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 619 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 121 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -101,6 +101,8 @@ La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul 
 Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
 
 Les journaux des trois conteneurs de l'application vont dans `docker logs` et, un fichier par conteneur (`app`, `worker`, `scheduler`), dans le volume `journaux` que lit la page « Journaux » du panneau. Le fichier est indispensable au planificateur, qui envoie la sortie de chaque tâche dans /dev/null.
+
+**Ce qui reste d'un compte supprimé.** La suppression efface, dans une seule transaction, le compte, ses données, ce qui le désigne sans clé étrangère (notifications, abonnements push, jetons, rôles, audit, jeton de réinitialisation du mot de passe) et les erreurs que son navigateur a rapportées (#1935, #1938). Restent, chacun pour une durée bornée : les exceptions enregistrées, qu'aucune colonne ne rattache à un compte, trente jours ; quand c'est un administrateur qui supprime, l'entrée d'audit qui le dit, sans sujet ni rien du compte, 180 jours ; les journaux de l'application, quatorze jours dans le volume `journaux` ; et les archives de la base, sept mois au plus : toutes celles des sept derniers jours, puis une par jour sur seize jours, une par semaine sur huit semaines et une par mois sur quatre mois, sans archive annuelle.
 
 L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`). `X-Forwarded-Proto` décide aussi du chiffrement de l'historique (#1965) : les pages d'un compte sont chiffrées dans l'historique du navigateur, et la déconnexion en jette la clé, pour que le bouton Retour ne réaffiche rien du compte parti ; le navigateur ne sait chiffrer qu'en HTTPS ou sur la boucle locale, et l'application ne le lui demande que là. Sans l'en-tête, les pages restent servies, mais l'historique en clair. Les pages d'un compte sortent en outre en `Cache-Control: no-store`.
 

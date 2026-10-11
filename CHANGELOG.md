@@ -7,6 +7,18 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Ajouté
+- **Le journal d'audit dit quand un administrateur supprime un compte, sans rien dire du compte** (#1938) : l'entrée d'activité du compte part avec lui, et plus rien ne gardait trace de l'action. Une suppression depuis le panneau, page du compte ou suppression groupée, écrit désormais une entrée « Compte supprimé par un administrateur » : l'administrateur en est la cause, elle n'a pas de sujet, et ni le nom, ni l'adresse, ni l'identifiant du compte n'y figurent. Elle suit la purge de l'audit à 180 jours. Le journal d'audit du panneau affiche « aucun » pour une entrée sans sujet. Un compte qui se supprime lui-même depuis son profil n'écrit rien.
+
+### Modifié
+- **Les archives de la base ne vivent plus que sept mois au plus** (#1938) : une archive garde une copie des comptes supprimés depuis, et la rétention gardait en plus une archive par an pendant deux ans. Elle s'arrête désormais avec la période mensuelle : toutes les archives des sept derniers jours, puis une par jour sur seize jours, une par semaine sur huit semaines et une par mois sur quatre mois. La page de profil l'annonce à qui supprime son compte. Le premier nettoyage après le déploiement, à 02:00, efface les archives annuelles et toute archive de plus de six mois et demi environ : celles qu'on veut garder se copient avant, hors du dossier `GymTracker` des archives, ou se téléchargent depuis la page « Sauvegardes ».
+
+### Sécurité
+- **Les erreurs du navigateur d'un compte supprimé partent avec lui** (#1938) : elles gardaient le message, l'URL et la pile jusqu'à la purge à trente jours, sans le compte mais avec ce qu'il avait saisi. Les exceptions enregistrées ne désignent aucun compte et restent purgées à trente jours.
+
+### Retiré
+- **`PulseNonceMiddleware`, que plus rien ne branchait** (#1938) : les scripts de Pulse sont signés à la compilation de ses gabarits, et ce middleware, qui réécrivait la réponse, n'était plus branché nulle part. La classe et son test sont supprimés, avec l'accord du propriétaire du dépôt.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
