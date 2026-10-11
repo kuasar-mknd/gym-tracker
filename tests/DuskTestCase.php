@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Closure;
 use Facebook\WebDriver\Chrome\ChromeOptions;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
@@ -14,9 +15,46 @@ use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
 use RuntimeException;
 use Tests\Support\GardeDesParcours;
+use Throwable;
 
 abstract class DuskTestCase extends BaseTestCase
 {
+    /**
+     * Le temps qu'une page a pour se charger, en secondes.
+     *
+     * Sans réglage, le pilote attend une navigation trois cents secondes, et
+     * php-webdriver abandonne sa requête au bout de cent quatre-vingts : le
+     * 08/10/2026, le premier parcours de l'éclat 2 a tenu près de sept minutes
+     * sans qu'aucune requête n'atteigne l'application, pour finir sur une
+     * erreur qui ne disait pas ce qui attendait (#2029). Sur les dix éclats
+     * tombés de septembre et d'octobre dont le journal du serveur est gardé,
+     * la première requête est arrivée deux à vingt-quatre secondes après le
+     * départ de Dusk, base remise à neuf et navigateur démarré compris :
+     * soixante laissent sa marge à un exécuteur lent, et font tomber une page
+     * qui ne vient pas sur la ligne de sa visite, avec le message du pilote
+     * (« Timed out receiving message from renderer »).
+     */
+    public const int SECONDES_POUR_CHARGER_UNE_PAGE = 60;
+
+    /**
+     * Le temps qu'un script exécuté dans la page a pour rendre sa valeur.
+     *
+     * La valeur par défaut du pilote, écrite ici pour que les bornes se lisent
+     * au même endroit, et que celle des ordres reste au-dessus.
+     */
+    public const int SECONDES_POUR_UN_SCRIPT = 30;
+
+    /**
+     * Le temps qu'un ordre envoyé au pilote a pour recevoir sa réponse.
+     *
+     * php-webdriver en accorde cent quatre-vingts. Plus long que la page et
+     * que le script, que le pilote borne lui-même : son message, qui nomme ce
+     * qui a manqué, arrive le premier, et celui-ci ne parle que pour un ordre
+     * dont le pilote ne rend jamais la réponse, comme un script ou la lecture
+     * de la console dans un rendu figé.
+     */
+    public const int SECONDES_POUR_UN_ORDRE = 90;
+
     protected function setUp(): void
     {
         static::assertViteIsNotInDevMode();
@@ -385,10 +423,83 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
-     * Create the RemoteWebDriver instance.
+     * Mène un parcours, et rapporte son échec à lui, pas celui des relevés
+     * qui le suivent.
+     *
+     * Le `browse()` de Dusk relève la capture d'écran et la source d'un
+     * parcours tombé, puis la console dans son `finally`, avant de relancer
+     * l'exception du parcours ; un relevé qui échoue à son tour lève la sienne,
+     * qui part à la place. Le 08/10/2026, un navigateur qui ne rendait plus
+     * rien a refusé sa capture en dix secondes : l'éclat a rapporté « Timed out
+     * receiving message from renderer: 10.000 » sur l'appel de `browse()`, et
+     * la cause du parcours est partie avec elle (#2029). Le même déroulé, à
+     * ceci près qu'après un échec, un relevé impossible se signale à côté de
+     * l'échec, qui reste celui que la suite rapporte. Sur un parcours réussi,
+     * une console illisible échoue comme avant.
      */
     #[\Override]
-    protected function driver(): RemoteWebDriver
+    public function browse(Closure $callback): void
+    {
+        $browsers = $this->createBrowsersFor($callback);
+
+        try {
+            $callback(...$browsers->all());
+        } catch (Throwable $echecDuParcours) {
+            $this->releverSansMasquerLEchec('capture d’écran', function () use ($browsers): void {
+                $this->captureFailuresFor($browsers);
+            });
+            $this->releverSansMasquerLEchec('source de la page', function () use ($browsers): void {
+                $this->storeSourceLogsFor($browsers);
+            });
+            $this->releverSansMasquerLEchec('console du navigateur', function () use ($browsers): void {
+                $this->storeConsoleLogsFor($browsers);
+            });
+
+            static::$browsers = $this->closeAllButPrimary($browsers);
+
+            throw $echecDuParcours;
+        }
+
+        try {
+            $this->storeConsoleLogsFor($browsers);
+        } finally {
+            static::$browsers = $this->closeAllButPrimary($browsers);
+        }
+    }
+
+    /**
+     * Fait un relevé d'échec ; s'il échoue, le signale sans rien lever.
+     *
+     * @param  Closure(): void  $releve
+     */
+    private function releverSansMasquerLEchec(string $quoi, Closure $releve): void
+    {
+        try {
+            $releve();
+        } catch (Throwable $impossible) {
+            $this->signalerUnReleveImpossible(sprintf(
+                "%s : %s impossible (%s : %s). L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n",
+                $this->getCallerName(),
+                $quoi,
+                $impossible::class,
+                trim($impossible->getMessage()),
+            ));
+        }
+    }
+
+    /**
+     * Écrit le signalement sur la sortie d'erreur, que le journal du job garde
+     * à côté de l'échec.
+     */
+    protected function signalerUnReleveImpossible(string $signalement): void
+    {
+        fwrite(STDERR, $signalement);
+    }
+
+    /**
+     * Les capacités demandées au navigateur, bornes d'attente comprises.
+     */
+    protected function capacitesDuNavigateur(): DesiredCapabilities
     {
         $options = new ChromeOptions()->addArguments(collect([
             '--window-size=393,852',
@@ -409,14 +520,29 @@ abstract class DuskTestCase extends BaseTestCase
             '--window-size=393,852',
         ]))->all());
 
+        return DesiredCapabilities::chrome()
+            ->setCapability('goog:loggingPrefs', ['browser' => 'ALL'])
+            ->setCapability('timeouts', [
+                'pageLoad' => static::SECONDES_POUR_CHARGER_UNE_PAGE * 1000,
+                'script' => static::SECONDES_POUR_UN_SCRIPT * 1000,
+            ])
+            ->setCapability(ChromeOptions::CAPABILITY, $options);
+    }
+
+    /**
+     * Create the RemoteWebDriver instance.
+     *
+     * Chaque attente du pilote est bornée : la page, le script, et la réponse
+     * à chaque ordre. Un parcours bloqué tombe ainsi sur la ligne qui
+     * attendait, au lieu de tenir l'éclat jusqu'aux délais par défaut.
+     */
+    #[\Override]
+    protected function driver(): RemoteWebDriver
+    {
         return RemoteWebDriver::create(
             $this->urlDuPilote(),
-            DesiredCapabilities::chrome()
-                ->setCapability('goog:loggingPrefs', ['browser' => 'ALL'])
-                ->setCapability(
-                    ChromeOptions::CAPABILITY,
-                    $options
-                )
+            $this->capacitesDuNavigateur(),
+            request_timeout_in_ms: static::SECONDES_POUR_UN_ORDRE * 1000,
         );
     }
 }

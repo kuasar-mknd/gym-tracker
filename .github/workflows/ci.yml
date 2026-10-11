@@ -320,8 +320,11 @@ jobs:
                   done
                   exit 1
 
+            # Le journal du pilote horodate chaque ordre et sa réponse. Il a
+            # manqué pour dire où le premier parcours de l'éclat 2 s'était figé
+            # le 08/10 (#2029) : il part avec les journaux d'un éclat tombé.
             - name: Start Chrome Driver
-              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &
+              run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 --log-path=storage/logs/chromedriver.log --readable-timestamp &
 
             - name: Run Dusk Tests
               run: |
@@ -385,6 +388,14 @@ jobs:
                   tail -n 100 storage/logs/laravel.log || echo "No laravel log found"
                   echo "--- Serve Log ---"
                   cat storage/logs/serve.log || echo "No serve log found"
+                  # Un ordre peut porter un script entier : chaque ligne est
+                  # coupée à 300 caractères, le fichier complet part en artefact.
+                  echo "--- Derniers ordres du pilote ---"
+                  if [ -f storage/logs/chromedriver.log ]; then
+                      grep -E '\] (COMMAND|RESPONSE) |\[SEVERE\]' storage/logs/chromedriver.log | cut -c1-300 | tail -n 60
+                  else
+                      echo "Aucun journal du pilote"
+                  fi
 
             - name: Upload Test Screenshots
               if: failure()
@@ -398,7 +409,9 @@ jobs:
               uses: actions/upload-artifact@v7
               with:
                   name: dusk-console-${{ matrix.shard }}
-                  path: tests/Browser/console
+                  path: |
+                      tests/Browser/console
+                      storage/logs/chromedriver.log
 
     browser-tests:
         runs-on: ubuntu-latest
