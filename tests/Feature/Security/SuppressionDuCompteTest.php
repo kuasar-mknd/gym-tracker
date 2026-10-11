@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Filament\Resources\ActivityLogs\Pages\ListActivityLogs;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Models\ActivityLog;
 use App\Models\Admin;
+use App\Models\ErreurNavigateur;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
@@ -19,6 +22,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
@@ -479,4 +483,218 @@ it("n'écrit rien dans le journal d'activité en supprimant le compte", function
     $compte->delete();
 
     expect($ecritures)->toBe(0);
+});
+
+/*
+ * Quand un administrateur supprime un compte depuis le panneau, une entrée
+ * d'audit le dit (#1938) : l'entrée « deleted » du compte, effacée avec lui,
+ * ne laissait aucune trace de l'action. Elle ne dit que cela : l'administrateur
+ * en est la cause, elle n'a pas de sujet, et rien du compte n'y figure.
+ *
+ * Le compte porte ici le MÊME identifiant que l'administrateur qui le
+ * supprime : l'effacement de `activity_log.causer`, s'il filtrait sur le seul
+ * identifiant, emporterait l'entrée qu'il vient d'écrire.
+ */
+dataset('suppressions du compte par un administrateur', [
+    "la page d'édition" => [function (User $compte): void {
+        Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+            ->callAction(DeleteAction::class);
+    }],
+    'la suppression groupée' => [function (User $compte): void {
+        Livewire::test(ListUsers::class)
+            ->selectTableRecords([$compte->getKey()])
+            ->callAction(TestAction::make('delete')->table()->bulk());
+    }],
+]);
+
+/**
+ * Un administrateur qui peut supprimer des comptes et lire le journal
+ * d'audit, connecté au panneau : un seul `actingAs` par cas.
+ */
+function compteSupprimeLAdministrateurConnecte(): Admin
+{
+    $administrateur = FilamentAdminPanel::admin([
+        ...FilamentAdminPanel::crudPermissions('User'),
+        'ViewAny:ActivityLog',
+    ]);
+
+    test()->actingAs($administrateur, 'admin');
+
+    return $administrateur;
+}
+
+/**
+ * L'identifiant de la dernière entrée d'audit, zéro quand il n'y en a pas.
+ */
+function compteSupprimeLaDerniereEntreeDAudit(): int
+{
+    $derniere = ActivityLog::query()->max('id');
+
+    return is_numeric($derniere) ? (int) $derniere : 0;
+}
+
+/**
+ * Les entrées d'audit écrites après celle-ci.
+ *
+ * @return \Illuminate\Database\Eloquent\Collection<int, ActivityLog>
+ */
+function compteSupprimeLesEntreesDAuditApres(int $derniere): \Illuminate\Database\Eloquent\Collection
+{
+    return ActivityLog::query()->where('id', '>', $derniere)->orderBy('id')->get();
+}
+
+it("laisse une entrée d'audit anonyme, que l'effacement du compte épargne, quand un administrateur le supprime", function (Closure $supprimer): void {
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $compte = User::factory()->create([
+        'id' => $administrateur->id,
+        'name' => 'Nom Temoin Anonyme',
+        'email' => 'temoin-anonyme@example.org',
+    ]);
+    compteSupprimeSemerSesTraces($compte);
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    $supprimer($compte);
+
+    $entrees = compteSupprimeLesEntreesDAuditApres($derniere);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(compteSupprimeSesTracesRestantes($compte->getMorphClass(), $compte->id))->each->toBe(0)
+        ->and($entrees)->toHaveCount(1);
+
+    $entree = $entrees->sole();
+    $ligne = (string) json_encode(DB::table('activity_log')->find($entree->id), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    expect($entree->description)->toBe(User::SUPPRESSION_PAR_UN_ADMINISTRATEUR)
+        ->and($entree->event)->toBe('deleted')
+        ->and($entree->causer_type)->toBe($administrateur->getMorphClass())
+        ->and($entree->causer_id)->toBe($administrateur->id)
+        ->and($entree->subject_type)->toBeNull()
+        ->and($entree->subject_id)->toBeNull()
+        ->and($entree->properties?->all())->toBe([])
+        ->and($entree->attribute_changes?->all())->toBe([])
+        ->and($ligne)->not->toContain('Nom Temoin Anonyme')
+        ->and($ligne)->not->toContain('temoin-anonyme@example.org');
+})->with('suppressions du compte par un administrateur');
+
+it('écrit une entrée anonyme par compte supprimé en suppression groupée', function (): void {
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $comptes = User::factory()->count(2)->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    Livewire::test(ListUsers::class)
+        ->selectTableRecords($comptes->modelKeys())
+        ->callAction(TestAction::make('delete')->table()->bulk());
+
+    $entrees = compteSupprimeLesEntreesDAuditApres($derniere);
+
+    expect(User::query()->whereKey($comptes->modelKeys())->exists())->toBeFalse()
+        ->and($entrees)->toHaveCount(2)
+        ->and($entrees->pluck('description')->unique()->all())->toBe([User::SUPPRESSION_PAR_UN_ADMINISTRATEUR])
+        ->and($entrees->pluck('causer_id')->unique()->all())->toBe([$administrateur->id])
+        ->and($entrees->whereNotNull('subject_type'))->toBeEmpty();
+});
+
+/*
+ * Le journal d'audit du panneau affichait « # » dans la colonne du sujet
+ * d'une entrée qui n'en a pas.
+ */
+it("affiche l'entrée anonyme dans le journal d'audit du panneau", function (): void {
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $compte = User::factory()->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->callAction(DeleteAction::class);
+
+    $entree = compteSupprimeLesEntreesDAuditApres($derniere)->sole();
+
+    Livewire::test(ListActivityLogs::class)
+        ->assertCanSeeTableRecords([$entree])
+        ->assertTableColumnStateSet('description', User::SUPPRESSION_PAR_UN_ADMINISTRATEUR, $entree)
+        ->assertTableColumnStateSet('subject', 'aucun', $entree)
+        ->assertTableColumnStateSet('causer', 'Admin #'.$administrateur->id, $entree);
+});
+
+/*
+ * Le compte qui se supprime lui-même depuis son profil n'a pas
+ * d'administrateur pour acteur : rien ne s'écrit, comme hors de toute
+ * requête (`User::destroy()`, une commande).
+ */
+it("n'écrit aucune entrée d'audit quand le compte se supprime lui-même", function (): void {
+    $compte = User::factory()->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    $this->actingAs($compte)
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertRedirect('/');
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(compteSupprimeLesEntreesDAuditApres($derniere))->toBeEmpty();
+});
+
+/**
+ * Une erreur rapportée par le navigateur de ce compte.
+ */
+function compteSupprimeSemerUneErreurDuNavigateur(User $compte): void
+{
+    ErreurNavigateur::query()->create([
+        'user_id' => $compte->id,
+        'type' => 'error',
+        'message' => 'témoin du compte '.$compte->id,
+        'url' => '/workouts/'.$compte->id,
+        'empreinte' => ErreurNavigateur::empreinteDe('error', 'témoin', null, null),
+    ]);
+}
+
+/*
+ * Les erreurs du navigateur portent le message et l'URL de la page, qui
+ * peuvent recopier ce que le compte a saisi. Leur clé vidait `user_id` à la
+ * suppression du compte (`ON DELETE SET NULL`) : la ligne restait jusqu'à la
+ * purge à trente jours. Elle part désormais avec le compte (#1938).
+ */
+it('efface les erreurs du navigateur du compte, et seulement les siennes', function (Closure $supprimer): void {
+    $compte = User::factory()->create();
+    $voisin = User::factory()->create();
+
+    compteSupprimeSemerUneErreurDuNavigateur($compte);
+    compteSupprimeSemerUneErreurDuNavigateur($voisin);
+
+    $supprimer($compte);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(ErreurNavigateur::query()->count())->toBe(1)
+        ->and(ErreurNavigateur::query()->where('user_id', $voisin->id)->count())->toBe(1);
+})->with('chemins de suppression du compte');
+
+/*
+ * Toute ligne qui désigne un compte par une clé étrangère part avec lui :
+ * `SET NULL` garderait la ligne, sans nom, mais avec ce qu'elle dit du compte.
+ * Une table qui doit survivre au compte le justifie ici.
+ */
+it('efface en cascade toute ligne qui désigne le compte par une clé étrangère', function (): void {
+    $regles = DB::table('information_schema.REFERENTIAL_CONSTRAINTS')
+        ->where('CONSTRAINT_SCHEMA', DB::connection()->getDatabaseName())
+        ->where('REFERENCED_TABLE_NAME', 'users')
+        ->pluck('DELETE_RULE', 'TABLE_NAME')
+        ->all();
+
+    expect($regles)->toHaveKey('erreurs_navigateur')
+        ->and(array_filter($regles, static fn (mixed $regle): bool => $regle !== 'CASCADE'))->toBe([]);
+});
+
+/*
+ * Les exceptions enregistrées ne partent pas avec le compte, mais à trente
+ * jours (#1938) : aucune colonne ne le désigne. L'adresse IP, le chemin, les
+ * en-têtes et le corps de la requête en gardent la trace, aucun de façon
+ * sûre, et les rapprocher d'un compte serait deviner. Cette prémisse tombe le
+ * jour où la table reçoit un lien vers le compte : la question se rouvre.
+ */
+it('ne rattache les exceptions enregistrées à aucun compte : elles attendent leur purge', function (): void {
+    $colonnes = Schema::getColumnListing('filament_exceptions_table');
+    $cles = Schema::getForeignKeys('filament_exceptions_table');
+
+    expect($colonnes)->not->toContain('user_id')
+        ->and($cles)->toBe([]);
 });

@@ -21,6 +21,12 @@ use BezhanSalleh\FilamentExceptions\Models\Exception;
  * clé `…` qui compte ce qui manque. Une liste (pile, requêtes SQL) garde ses
  * premiers éléments sans marque, parce que le panneau lit chacun comme un
  * tableau : le haut de la pile, là où l'exception est levée, reste.
+ *
+ * Aucune colonne ne désigne le compte de la requête : seuls l'adresse IP, le
+ * chemin, les en-têtes (cookies écartés) et le corps en gardent la trace, et
+ * aucun ne le désigne de façon sûre. Une exception ne part donc pas avec le
+ * compte, mais à trente jours, par la purge que le paquet planifie
+ * (`modelPruneInterval()` du panneau, #1938).
  */
 final class ExceptionEnregistree extends Exception
 {
