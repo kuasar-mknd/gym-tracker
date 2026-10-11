@@ -70,7 +70,7 @@ it('regarde la base et ses réglages, le cache, la file, le planificateur, Horiz
 /**
  * Sans libellé, laravel-health découpe le nom du contrôle : la page et le
  * courriel d'alerte disaient « Taches Planifiees », « Used Disk Space » ou
- * « Backups » (#ISSUE). Le libellé se pose par `->label()` dans le provider
+ * « Backups » (#2034). Le libellé se pose par `->label()` dans le provider
  * ou par `$label` dans la classe ; le nom, lui, ne change pas.
  */
 it('donne à chaque contrôle un libellé français, jamais celui que le paquet tirerait de son nom', function (): void {
@@ -248,7 +248,7 @@ it('n’écrit un courriel que si une adresse est posée, et seulement pour un r
 /**
  * Le chemin que le propriétaire a suivi : `health:check` voit une tâche
  * échouée, écrit le courriel et range le résultat que la page « Santé » lit.
- * Les deux disaient « Taches Planifiees » (#ISSUE).
+ * Les deux disaient « Taches Planifiees » (#2034).
  */
 it('écrit « Tâches planifiées » dans le courriel envoyé et sur la page', function (): void {
     Notification::fake();
