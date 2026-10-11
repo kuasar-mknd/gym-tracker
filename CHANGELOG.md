@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Une opération lit l'horloge une fois : minuit qui passe pendant un calcul ne fait plus dire deux choses à la même page** (#ISSUE) : la séance ouverte à minuit tirait son début et son nom de deux lectures de l'horloge, et pouvait commencer le 30 septembre sous le nom « 01/10/2026 ». Sur la page des séances, la fréquence mensuelle, sa voisine par jour de la semaine et le volume mensuel lisaient chacun l'heure, et la clef de chaque fréquence ne venait pas de la même lecture que sa fenêtre : quand le mois changeait entre deux lectures, deux cartes voisines comptaient l'une d'avril à septembre, l'autre de mai à octobre, ou l'entrée rangée sous septembre gardait la fenêtre d'octobre. Le calendrier ouvert le 31 décembre au soir s'ouvrait sur janvier de l'année qui s'achevait, la grille des habitudes ne mettait plus aucun jour en avant quand lundi commençait pendant le calcul, et les tuiles « Séances du jour » et « Inscriptions » du panneau comptaient deux jours ou deux ans. Chaque opération lit désormais l'horloge une fois et passe l'instant à ses calculs (`VolumeStatsService::getMonthlyVolumeHistory()` le reçoit) ; `UneLectureDeLHorlogeParOperationTest`, `ParcoursDeJoursAutourDeMinuitTest` et `DashboardWidgetsTest` font passer minuit, la fin du mois ou celle de l'année après chacune des lectures, et leurs 21 nouveaux cas échouent tous sur l'ancien code. La règle est dans `.ai/rules/horloge.md`, avec les secondes lectures laissées en place parce qu'elles ne décident de rien de visible (durée d'une entrée de cache, horodatages).
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
