@@ -28,6 +28,7 @@ import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import { suivreLesPagesMontees } from './pagesMontees'
 
 const STRENGTH = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
 const CARDIO = { id: 6, name: 'Course', type: 'cardio', category: 'Cardio', default_rest_time: 60 }
@@ -69,6 +70,13 @@ beforeAll(() => {
 
 const passesSlot = { template: '<div><slot /></div>' }
 
+/**
+ * Chaque page montée ici est démontée à la fin de son test : laissée montée,
+ * elle envoyait une valeur tapée une seconde plus tard, dans le test qui
+ * tournait alors, sur le même `patch` (#2003).
+ */
+const pages = suivreLesPagesMontees()
+
 const mountPage = async (workout) => {
     const wrapper = mount(WorkoutShow, {
         props: { workout: JSON.parse(JSON.stringify(workout)), exercises: [STRENGTH, CARDIO] },
@@ -88,6 +96,7 @@ const mountPage = async (workout) => {
             },
         },
     })
+    pages.retenir(wrapper)
 
     await flushPromises()
 
@@ -134,7 +143,10 @@ beforeEach(() => {
     patch.mockResolvedValue({ data: {} })
 })
 
-afterEach(() => localStorage.clear())
+afterEach(async () => {
+    await pages.demonterToutes()
+    localStorage.clear()
+})
 
 /**
  * The duration used to be read out of an `<input type="time">`, which reports an
