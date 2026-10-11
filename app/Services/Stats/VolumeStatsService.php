@@ -250,17 +250,23 @@ final class VolumeStatsService
      * pour en doubler un autre (#1955). La clef porte le mois courant, pour
      * que le premier du mois ne serve pas la fenêtre de la veille.
      *
+     * L'instant se reçoit de l'opération qui affiche d'autres cartes à côté :
+     * relu ici, il pouvait tomber dans le mois suivant, et la page des séances
+     * montrait alors deux fenêtres côte à côte (#ISSUE).
+     *
      * @param  User  $user  L'utilisateur concerné.
      * @param  int  $months  Le nombre de mois couverts.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      * @return array<int, MonthlyVolumePoint>
      */
-    public function getMonthlyVolumeHistory(User $user, int $months = 6): array
+    public function getMonthlyVolumeHistory(User $user, int $months = 6, ?Carbon $maintenant = null): array
     {
-        $debutDuMois = now()->startOfMonth();
+        $maintenant ??= now();
+        $debutDuMois = $maintenant->copy()->startOfMonth();
 
         return Cache::remember(
             ClesDeStats::seances($user, "monthly_volume_history.{$months}.{$debutDuMois->format('Y-m')}"),
-            now()->addMinutes(30),
+            $maintenant->copy()->addMinutes(30),
             function () use ($user, $months, $debutDuMois): array {
                 // Le regroupement et la somme se font en SQL : ramener des mois
                 // entiers de séances en PHP pour les additionner ne tiendrait pas
