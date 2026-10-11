@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Sécurité
+- **La demande de réinitialisation du mot de passe répond de la même façon quelle que soit l'adresse** (#1951) : le lien part désormais en file, hors de la requête, et la page de réinitialisation refuse tout lien invalide par le même message.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
