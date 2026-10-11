@@ -422,7 +422,9 @@ function motDePasseOublieChronometrerLeRefus(): array
  */
 function motDePasseOublieCoutDeProduction(): int
 {
-    expect(preg_match('/^BCRYPT_ROUNDS=(\d+)$/m', File::get(base_path('.env.example')), $cout))->toBe(1);
+    if (preg_match('/^BCRYPT_ROUNDS=(\d+)$/m', File::get(base_path('.env.example')), $cout) !== 1) {
+        throw new RuntimeException('.env.example ne donne plus BCRYPT_ROUNDS.');
+    }
 
     return (int) $cout[1];
 }
