@@ -199,10 +199,12 @@ trait EffaceSesTracesPolymorphes
      * n'écrivent rien. Ici plutôt que dans les actions du panneau, pour que
      * tout chemin d'administration, présent ou futur, l'écrive.
      *
-     * L'effacement de `activity_log.causer` ne l'atteint pas : il filtre sur
-     * le type du compte, et la cause de cette entrée est un administrateur.
-     * Elle s'écrit dans la transaction de `delete()`, après lui : une
-     * suppression annulée ne laisse pas d'entrée. `activitylog:clean` la
+     * L'effacement des traces de ce compte passe avant elle. Celui d'un
+     * compte supprimé plus tard, qui porterait l'identifiant de
+     * l'administrateur, ne l'atteint pas : il filtre sur le type du compte,
+     * et la cause de cette entrée est un administrateur. Elle s'écrit dans la
+     * transaction de `delete()`, après la suppression : une suppression
+     * annulée ne laisse pas d'entrée. `activitylog:clean` la
      * purge à 180 jours, comme le reste de l'audit.
      */
     private function tracerLaSuppressionParUnAdministrateur(): void

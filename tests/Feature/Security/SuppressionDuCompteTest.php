@@ -490,10 +490,6 @@ it("n'écrit rien dans le journal d'activité en supprimant le compte", function
  * d'audit le dit (#1938) : l'entrée « deleted » du compte, effacée avec lui,
  * ne laissait aucune trace de l'action. Elle ne dit que cela : l'administrateur
  * en est la cause, elle n'a pas de sujet, et rien du compte n'y figure.
- *
- * Le compte porte ici le MÊME identifiant que l'administrateur qui le
- * supprime : l'effacement de `activity_log.causer`, s'il filtrait sur le seul
- * identifiant, emporterait l'entrée qu'il vient d'écrire.
  */
 dataset('suppressions du compte par un administrateur', [
     "la page d'édition" => [function (User $compte): void {
@@ -543,12 +539,11 @@ function compteSupprimeLesEntreesDAuditApres(int $derniere): \Illuminate\Databas
     return ActivityLog::query()->where('id', '>', $derniere)->orderBy('id')->get();
 }
 
-it("laisse une entrée d'audit anonyme, que l'effacement du compte épargne, quand un administrateur le supprime", function (Closure $supprimer): void {
+it("laisse une entrée d'audit anonyme quand un administrateur le supprime", function (Closure $supprimer): void {
     app(PermissionRegistrar::class)->forgetCachedPermissions();
 
     $administrateur = compteSupprimeLAdministrateurConnecte();
     $compte = User::factory()->create([
-        'id' => $administrateur->id,
         'name' => 'Nom Temoin Anonyme',
         'email' => 'temoin-anonyme@example.org',
     ]);
@@ -577,6 +572,35 @@ it("laisse une entrée d'audit anonyme, que l'effacement du compte épargne, qua
         ->and($ligne)->not->toContain('Nom Temoin Anonyme')
         ->and($ligne)->not->toContain('temoin-anonyme@example.org');
 })->with('suppressions du compte par un administrateur');
+
+/*
+ * L'entrée anonyme s'écrit APRÈS l'effacement des traces du compte qu'elle
+ * concerne : cet effacement-là ne peut pas l'atteindre. Le risque est celui
+ * d'un compte supprimé plus tard qui porte l'identifiant de l'administrateur
+ * (`users` et `admins` ont chacune leur séquence) : l'effacement de
+ * `activity_log.causer`, s'il filtrait sur le seul identifiant, emporterait
+ * alors l'entrée, et avec elle toute trace de la suppression.
+ */
+it("garde l'entrée anonyme quand part ensuite un compte qui porte l'identifiant de l'administrateur", function (): void {
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $compte = User::factory()->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->callAction(DeleteAction::class);
+
+    $entree = compteSupprimeLesEntreesDAuditApres($derniere)->sole();
+    $homonyme = User::factory()->create(['id' => $administrateur->id]);
+
+    $this->actingAs($homonyme)
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/');
+
+    expect(User::query()->whereKey($homonyme->id)->exists())->toBeFalse()
+        ->and($entree->causer_id)->toBe($homonyme->id)
+        ->and(compteSupprimeLesEntreesDAuditApres($derniere)->modelKeys())->toBe([$entree->id]);
+});
 
 it('écrit une entrée anonyme par compte supprimé en suppression groupée', function (): void {
     $administrateur = compteSupprimeLAdministrateurConnecte();
