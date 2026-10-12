@@ -168,6 +168,7 @@ return [
         App\Enums\ExerciseCategory::class,
         App\Enums\GoalType::class,
         App\Enums\PersonalRecordType::class,
+        App\Enums\PorteeDeDiagnostic::class,
 
         // What Eloquent results are actually built out of.
         Illuminate\Database\Eloquent\Collection::class,
