@@ -83,10 +83,18 @@ function erreursSqlInsererUneSeance(array $colonnes): bool
 
 /**
  * Insère deux comptes à la même adresse : le second est refusé.
+ *
+ * Le premier prend l'adresse en capitales. La collation de la colonne la
+ * tient pour la même, et le serveur cite la valeur refusée, en minuscules :
+ * le canari n'est ainsi que dans la requête refusée. Avec `APP_DEBUG` (la CI
+ * part de `.env.example`), Laravel garde les requêtes réussies, valeurs
+ * comprises, et le paquet des exceptions les enregistre (`query`,
+ * `markdown`) : un canari écrit par une requête réussie s'y trouverait, quoi
+ * que fasse le masque.
  */
 function erreursSqlInsererDeuxComptesA(string $adresse): bool
 {
-    DB::table('users')->insert(['name' => 'Premier', 'email' => $adresse]);
+    DB::table('users')->insert(['name' => 'Premier', 'email' => mb_strtoupper($adresse)]);
 
     return DB::table('users')->insert(['name' => 'Doublon', 'email' => $adresse]);
 }
