@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use App\Models\ExceptionEnregistree;
 use App\Models\User;
+use App\Support\BaseDeDonnees\ConnexionMariaDb;
+use App\Support\BaseDeDonnees\ConnexionMySql;
 use BezhanSalleh\FilamentExceptions\Resources\ExceptionResource;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
@@ -20,11 +23,14 @@ use function Pest\Laravel\actingAs;
  * Le message d'une erreur SQL recopiait les valeurs de la requête, et ce
  * message part dans les journaux, dans la table des exceptions du panneau et
  * dans `failed_jobs` (#2032). `mask_bindings_in_exception_messages` le fait
- * finir sur la requête avec ses `?`.
+ * finir sur la requête avec ses `?`. Le texte du serveur, qui le précède,
+ * cite lui aussi la valeur d'une clé en double, d'un entier ou d'une date mal
+ * formés : les connexions `ConnexionMySql` et `ConnexionMariaDb` la
+ * remplacent par `'?'` (`TexteDuServeurSansValeurs`).
  *
- * Chaque insertion ci-dessous viole une contrainte dont le serveur ne cite pas
- * la valeur : l'option ne touche pas au texte du serveur, et celui d'une clé
- * en double ou d'une valeur mal typée cite la valeur refusée.
+ * Chaque refus ci-dessous passe par une vraie insertion : deux dont le
+ * serveur ne cite pas la valeur, quatre où il la cite, dont une valeur qui
+ * porte des apostrophes et imite la fin du texte du serveur.
  *
  * La pile est réglée comme dans l'image, d'après `docker/php-prod.ini` : sans
  * `zend.exception_ignore_args`, ses arguments recopieraient la valeur que
@@ -41,20 +47,66 @@ function erreursSqlCanari(): string
 }
 
 /**
- * Insère une séance que la base refuse, avec le canari parmi les valeurs.
+ * Fait refuser une insertion par la base, avec le canari parmi les valeurs.
  *
  * `cle-etrangere` : la séance d'un compte qui n'existe pas. `trop-longue` : un
- * nom plus long que sa colonne, pour un compte qui existe.
+ * nom plus long que sa colonne. `entier-mal-forme` : le canari pour
+ * identifiant du compte. `date-mal-formee` : le canari pour date de début.
+ * `cle-en-double` : un compte dont l'adresse est déjà prise.
+ * `cle-en-double-rusee` : la même, avec une adresse qui porte des apostrophes
+ * et la fin du texte du serveur, pour qu'un masque qui couperait aux
+ * apostrophes laisse sortir le canari.
  */
 function erreursSqlInserer(string $refus, string $canari): void
 {
-    $seance = match ($refus) {
-        'cle-etrangere' => ['user_id' => 0, 'name' => 'Séance orpheline', 'notes' => $canari],
-        'trop-longue' => ['user_id' => User::factory()->create()->id, 'name' => $canari.str_repeat('x', 300), 'notes' => null],
+    match ($refus) {
+        'cle-etrangere' => erreursSqlInsererUneSeance(['user_id' => 0, 'notes' => $canari]),
+        'trop-longue' => erreursSqlInsererUneSeance(['user_id' => User::factory()->create()->id, 'name' => $canari.str_repeat('x', 300)]),
+        'entier-mal-forme' => erreursSqlInsererUneSeance(['user_id' => $canari]),
+        'date-mal-formee' => erreursSqlInsererUneSeance(['user_id' => User::factory()->create()->id, 'started_at' => $canari]),
+        'cle-en-double' => erreursSqlInsererDeuxComptesA("{$canari}@example.org"),
+        'cle-en-double-rusee' => erreursSqlInsererDeuxComptesA("o'{$canari}' for key '{$canari}@example.org"),
         default => throw new InvalidArgumentException("Refus inconnu : {$refus}."),
     };
+}
 
-    DB::table('workouts')->insert([...$seance, 'started_at' => '2026-10-11 08:00:00']);
+/**
+ * Insère une séance, les colonnes données par-dessus celles d'une séance
+ * ordinaire.
+ *
+ * @param  array<string, mixed>  $colonnes
+ */
+function erreursSqlInsererUneSeance(array $colonnes): bool
+{
+    return DB::table('workouts')->insert([...['name' => 'Séance', 'notes' => null, 'started_at' => '2026-10-11 08:00:00'], ...$colonnes]);
+}
+
+/**
+ * Insère deux comptes à la même adresse : le second est refusé.
+ */
+function erreursSqlInsererDeuxComptesA(string $adresse): bool
+{
+    DB::table('users')->insert(['name' => 'Premier', 'email' => $adresse]);
+
+    return DB::table('users')->insert(['name' => 'Doublon', 'email' => $adresse]);
+}
+
+/**
+ * Chaque refus, le texte du serveur qu'en garde le message et la classe de
+ * l'exception.
+ *
+ * @return array<string, array{string, string, class-string<QueryException>}>
+ */
+function erreursSqlRefus(): array
+{
+    return [
+        'une clé étrangère sans ligne' => ['cle-etrangere', 'a foreign key constraint fails', QueryException::class],
+        'une valeur plus longue que sa colonne' => ['trop-longue', "Data too long for column 'name' at row 1", QueryException::class],
+        'un entier mal formé' => ['entier-mal-forme', "1366 Incorrect integer value: '?' for column 'user_id' at row 1", QueryException::class],
+        'une date mal formée' => ['date-mal-formee', "1292 Incorrect datetime value: '?' for column 'started_at' at row 1", QueryException::class],
+        'une clé en double' => ['cle-en-double', "1062 Duplicate entry '?' for key 'users.users_email_unique'", UniqueConstraintViolationException::class],
+        'une clé en double dont la valeur imite le serveur' => ['cle-en-double-rusee', "1062 Duplicate entry '?' for key 'users.users_email_unique'", UniqueConstraintViolationException::class],
+    ];
 }
 
 /**
@@ -119,16 +171,20 @@ function erreursSqlTracesQuiRecopientLeCanari(array $traces): array
 }
 
 /**
- * Un job qui échoue sur la même insertion. Il ne porte aucune propriété : sa
- * charge utile, gardée dans `failed_jobs`, ne contient donc pas le canari.
+ * Un job qui échoue sur la même insertion. Il ne porte que le nom du refus :
+ * sa charge utile, gardée dans `failed_jobs`, ne contient donc pas le canari.
  */
-final class ErreursSqlJobQuiInsereUneSeanceOrpheline implements ShouldQueue
+final class ErreursSqlJobQuiInsereUneLigneRefusee implements ShouldQueue
 {
     use Queueable;
 
+    public function __construct(public string $refus)
+    {
+    }
+
     public function handle(): void
     {
-        erreursSqlInserer('cle-etrangere', erreursSqlCanari());
+        erreursSqlInserer($this->refus, erreursSqlCanari());
     }
 }
 
@@ -150,37 +206,63 @@ it('masque les valeurs des requêtes dans les messages d’erreur des connexions
         ->and(config('database.connections.mariadb.mask_bindings_in_exception_messages'))->toBeTrue();
 });
 
-it('ne recopie pas les valeurs d’une insertion refusée dans le message de son exception', function (string $refus, string $texteDuServeur): void {
+it('ouvre les connexions mysql et mariadb par les classes qui masquent le texte du serveur', function (): void {
+    try {
+        expect(DB::connection('mysql'))->toBeInstanceOf(ConnexionMySql::class)
+            ->and(DB::connection('mariadb'))->toBeInstanceOf(ConnexionMariaDb::class);
+    } finally {
+        DB::purge('mariadb');
+    }
+});
+
+it('ne recopie pas les valeurs d’une insertion refusée dans le message de son exception', function (string $refus, string $texteDuServeur, string $classe): void {
     $exception = erreursSqlExceptionDe($refus);
     $valeurs = array_map(static fn (mixed $valeur): string => is_scalar($valeur) ? (string) $valeur : '', $exception->getBindings());
 
-    expect($exception->getMessage())
+    expect($exception::class)->toBe($classe)
+        ->and($exception->getMessage())
         ->not->toContain(erreursSqlCanari())
         ->toStartWith('SQLSTATE[')
         ->toContain($texteDuServeur)
-        ->toMatch('/, SQL: insert into `workouts` \([^)]+\) values \(\?(, \?)+\)\)$/')
+        ->toMatch('/, SQL: insert into `(workouts|users)` \([^)]+\) values \(\?(, \?)+\)\)$/')
+        ->and((string) $exception)->not->toContain(erreursSqlCanari())
         // Le code qui rattrape l'exception lit toujours les valeurs : seul le
         // message les tait.
         ->and(implode("\n", $valeurs))->toContain(erreursSqlCanari());
-})->with([
-    'une clé étrangère sans ligne' => ['cle-etrangere', 'a foreign key constraint fails'],
-    'une valeur plus longue que sa colonne' => ['trop-longue', "Data too long for column 'name'"],
-]);
+})->with(erreursSqlRefus(...));
+
+/*
+ * Laravel relit le texte du serveur pour reconnaître une clé en double et en
+ * tirer l'index : `CreateSetAction` et `PersonalRecordService` rattrapent
+ * `UniqueConstraintViolationException`.
+ */
+it('garde ce que Laravel lit dans l’erreur d’une clé en double', function (): void {
+    $exception = erreursSqlExceptionDe('cle-en-double-rusee');
+    $erreurDePdo = $exception->getPrevious();
+
+    expect($exception)->toBeInstanceOf(UniqueConstraintViolationException::class)
+        ->and($exception instanceof UniqueConstraintViolationException ? $exception->index : null)->toBe('users_email_unique')
+        ->and($exception->getCode())->toBe('23000')
+        ->and($exception->errorInfo)->toBe(['23000', 1062, "Duplicate entry '?' for key 'users.users_email_unique'"])
+        ->and($erreurDePdo)->toBeInstanceOf(PDOException::class)
+        ->and($erreurDePdo?->getMessage())->toBe("SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '?' for key 'users.users_email_unique'")
+        ->and($erreurDePdo?->getPrevious())->toBeNull();
+});
 
 /*
  * La page de l'exception dans le panneau en montre le message et la pile, que
  * le panneau affiche sans arguments quand l'exception n'en a pas gardé.
  */
-it('ne laisse la valeur ni dans la table des exceptions, ni dans sa page du panneau, ni dans le journal quand une requête échoue sur l’insertion', function (): void {
+it('ne laisse la valeur ni dans la table des exceptions, ni dans sa page du panneau, ni dans le journal quand une requête échoue sur l’insertion', function (string $refus, string $texteDuServeur, string $classe): void {
     $journal = erreursSqlJournalDansUnFichier();
 
-    Route::post('/_seance-orpheline', static function (): never {
-        erreursSqlInserer('cle-etrangere', erreursSqlCanari());
+    Route::post('/_insertion-refusee', static function () use ($refus): never {
+        erreursSqlInserer($refus, erreursSqlCanari());
 
         throw new RuntimeException("L'insertion n'a pas été refusée.");
     });
 
-    $this->post('/_seance-orpheline')->assertStatus(500);
+    $this->post('/_insertion-refusee')->assertStatus(500);
 
     $ecrit = erreursSqlLireEtEffacer($journal);
     $exception = ExceptionEnregistree::query()->sole();
@@ -190,32 +272,32 @@ it('ne laisse la valeur ni dans la table des exceptions, ni dans sa page du pann
         ->baseResponse
         ->getContent();
 
-    expect($exception->type)->toBe(QueryException::class)
-        ->and($page)->toContain('a foreign key constraint fails')
-        ->and($ecrit)->toContain('a foreign key constraint fails')
-        ->and(erreursSqlTracesQuiRecopientLeCanari([
-            'la table des exceptions' => erreursSqlLignesDe('filament_exceptions_table'),
-            'la page de l’exception dans le panneau' => $page,
-            'le journal' => $ecrit,
-        ]))->toBe([]);
-});
+    expect(erreursSqlTracesQuiRecopientLeCanari([
+        'la table des exceptions' => erreursSqlLignesDe('filament_exceptions_table'),
+        'la page de l’exception dans le panneau' => $page,
+        'le journal' => $ecrit,
+    ]))->toBe([])
+        ->and($exception->type)->toBe($classe)
+        ->and(html_entity_decode($page, ENT_QUOTES | ENT_HTML5))->toContain($texteDuServeur)
+        ->and($ecrit)->toContain($texteDuServeur);
+})->with(erreursSqlRefus(...));
 
-it('ne laisse la valeur ni dans failed_jobs, ni dans la table des exceptions, ni dans le journal quand un job échoue sur l’insertion', function (): void {
+it('ne laisse la valeur ni dans failed_jobs, ni dans la table des exceptions, ni dans le journal quand un job échoue sur l’insertion', function (string $refus, string $texteDuServeur, string $classe): void {
     $journal = erreursSqlJournalDansUnFichier();
 
-    dispatch(new ErreursSqlJobQuiInsereUneSeanceOrpheline())->onConnection('database');
+    dispatch(new ErreursSqlJobQuiInsereUneLigneRefusee($refus))->onConnection('database');
 
     Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--tries' => 1, '--sleep' => 0]);
 
     $ecrit = erreursSqlLireEtEffacer($journal);
 
-    expect(DB::table('failed_jobs')->count())->toBe(1)
-        ->and(DB::table('failed_jobs')->value('exception'))->toBeString()->toContain('a foreign key constraint fails')
-        ->and(DB::table('filament_exceptions_table')->where('type', QueryException::class)->count())->toBe(1)
-        ->and($ecrit)->toContain('a foreign key constraint fails')
-        ->and(erreursSqlTracesQuiRecopientLeCanari([
-            'failed_jobs' => erreursSqlLignesDe('failed_jobs'),
-            'la table des exceptions' => erreursSqlLignesDe('filament_exceptions_table'),
-            'le journal' => $ecrit,
-        ]))->toBe([]);
-});
+    expect(erreursSqlTracesQuiRecopientLeCanari([
+        'failed_jobs' => erreursSqlLignesDe('failed_jobs'),
+        'la table des exceptions' => erreursSqlLignesDe('filament_exceptions_table'),
+        'le journal' => $ecrit,
+    ]))->toBe([])
+        ->and(DB::table('failed_jobs')->count())->toBe(1)
+        ->and(DB::table('failed_jobs')->value('exception'))->toBeString()->toContain($texteDuServeur)
+        ->and(DB::table('filament_exceptions_table')->where('type', $classe)->count())->toBe(1)
+        ->and($ecrit)->toContain($texteDuServeur);
+})->with(erreursSqlRefus(...));
