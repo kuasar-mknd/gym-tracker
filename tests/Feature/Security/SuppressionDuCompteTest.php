@@ -16,6 +16,8 @@ use App\Models\WorkoutLine;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Auth\SessionGuard;
+use Illuminate\Console\Scheduling\Event;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\QueryException;
@@ -721,4 +723,47 @@ it('ne rattache les exceptions enregistrées à aucun compte : elles attendent l
 
     expect($colonnes)->not->toContain('user_id')
         ->and($cles)->toBe([]);
+});
+
+/*
+ * Avant #1670 (2026-09-03), le journal d'activité suivait aussi les données
+ * métier : une entrée sur une séance du compte recopiait ses champs et son
+ * `user_id`. Celles dont la cause est un administrateur ou personne ne
+ * désignent le compte ni comme cause, ni comme sujet : elles survivent à sa
+ * suppression, jusqu'à la purge de l'audit à 180 jours, donc jusqu'au
+ * 2027-03-02 au plus tard (#1938). La page de profil annonce cette durée :
+ * elle se raccourcit le jour où ces entrées partent avec le compte, ou que la
+ * purge les prend plus tôt.
+ */
+it("laisse les entrées d'audit d'avant #1670 sur les données du compte à la purge à 180 jours, que la page de profil annonce", function (): void {
+    $compte = User::factory()->create();
+    $seance = Workout::withoutEvents(static fn (): Workout => Workout::factory()->create(['user_id' => $compte->id]));
+
+    foreach ([Admin::factory()->create(), null] as $cause) {
+        DB::table('activity_log')->insert([
+            'log_name' => 'default',
+            'description' => 'updated',
+            'event' => 'updated',
+            'subject_type' => $seance->getMorphClass(),
+            'subject_id' => $seance->id,
+            'causer_type' => $cause?->getMorphClass(),
+            'causer_id' => $cause?->id,
+            'attribute_changes' => json_encode(['attributes' => ['user_id' => $compte->id, 'notes' => 'note témoin']]),
+            'created_at' => '2026-09-02 12:00:00',
+            'updated_at' => '2026-09-02 12:00:00',
+        ]);
+    }
+
+    $compte->delete();
+
+    $purges = array_values(array_filter(
+        app(Schedule::class)->events(),
+        static fn (Event $evenement): bool => str_contains((string) $evenement->command, 'activitylog:clean'),
+    ));
+    $promesse = preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue')));
+
+    expect(DB::table('activity_log')->where('subject_type', $seance->getMorphClass())->where('subject_id', $seance->id)->count())->toBe(2)
+        ->and($purges)->toHaveCount(1)
+        ->and((string) $purges[0]->command)->toContain('--days=180')
+        ->and($promesse)->toContain("180 jours dans l'historique d'audit");
 });

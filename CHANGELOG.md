@@ -15,6 +15,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ### Sécurité
 - **Les erreurs du navigateur d'un compte supprimé partent avec lui** (#1938) : elles gardaient le message, l'URL et la pile jusqu'à la purge à trente jours, sans le compte mais avec ce qu'il avait saisi. Les exceptions enregistrées ne désignent aucun compte et restent purgées à trente jours.
+- **Les tâches en échec ne restent plus en base que trente jours** (#1938) : leur charge porte le destinataire d'une notification, adresse de courriel comprise, et rien ne purgeait la table. Une tâche planifiée la purge désormais chaque nuit ; Horizon ne garde les siennes que sept jours. La page de profil ne dit plus que seules les sauvegardes gardent une copie : elle donne la durée de chacune, trente jours dans les journaux et les rapports d'erreurs, 180 jours dans l'historique d'audit, sept mois au plus dans les sauvegardes.
 
 ### Retiré
 - **`PulseNonceMiddleware`, que plus rien ne branchait** (#1938) : les scripts de Pulse sont signés à la compilation de ses gabarits, et ce middleware, qui réécrivait la réponse, n'était plus branché nulle part. La classe et son test sont supprimés, avec l'accord du propriétaire du dépôt.

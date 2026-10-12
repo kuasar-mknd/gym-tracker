@@ -1113,14 +1113,23 @@ describe('DeleteUserForm', () => {
      * plus que ce que l'application tient. Et la durée se dit : sans archive
      * annuelle, aucune ne passe sept mois (#1938), ce que
      * `SauvegardesPlanifieesTest` vérifie sur la configuration.
+     *
+     * Les sauvegardes ne sont pas seules à garder une copie (#1938) : les
+     * journaux, les exceptions et les tâches en échec la gardent trente jours
+     * (`TachesEnEchecTest`), les entrées d'audit d'avant #1670 sur les données
+     * du compte 180 jours (`SuppressionDuCompteTest`). « Seules les
+     * sauvegardes » promettait plus que cela.
      */
-    it('ne promet pas un effacement que les sauvegardes démentent', () => {
+    it('ne promet pas un effacement que les sauvegardes et les journaux démentent', () => {
         const wrapper = mountForm()
         const promesse = wrapper.get('[data-testid="delete-account-promise"]').text()
 
         expect(promesse).toContain('sauvegardes')
         expect(promesse).toContain('sept mois au plus')
+        expect(promesse).toContain('trente jours dans les journaux')
+        expect(promesse).toContain("180 jours dans l'historique d'audit")
         expect(promesse).not.toContain('définitivement')
+        expect(promesse).not.toMatch(/seules?\b/i)
 
         wrapper.unmount()
     })

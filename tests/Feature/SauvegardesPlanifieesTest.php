@@ -228,7 +228,7 @@ it('ne garde aucune archive de plus de sept mois, et une par mois jusqu’à six
         expect($plusVieille)->toBeInstanceOf(Carbon::class)
             ->and($plusVieille?->greaterThan(now()->subMonths(7)))->toBeTrue('Une archive de plus de sept mois est restée : '.$plusVieille?->toDateTimeString())
             ->and($plusVieille?->lessThan(now()->subMonths(6)))->toBeTrue('La plus vieille archive a moins de six mois : '.$plusVieille?->toDateTimeString())
-            ->and(file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue')))->toContain('sept mois au plus');
+            ->and(preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue'))))->toContain('sept mois au plus dans les sauvegardes');
     } finally {
         Carbon::setTestNow();
         File::deleteDirectory($dossier);
