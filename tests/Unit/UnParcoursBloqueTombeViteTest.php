@@ -16,6 +16,7 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\Dusk\Browser;
+use Laravel\Dusk\Concerns\ProvidesBrowser;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 use Tests\DuskTestCase;
@@ -707,6 +708,38 @@ it('abandonne en secondes un ordre que le pilote ne rend jamais, et borne la pag
         ->toBeGreaterThan(DuskTestCase::SECONDES_POUR_CHARGER_UNE_PAGE)
         ->toBeGreaterThan(DuskTestCase::SECONDES_POUR_UN_SCRIPT)
         ->toBeLessThan(180);
+});
+
+/*
+ * `DuskTestCase::browse()` reprend celui de Dusk, `newBrowser()` le remplace,
+ * et l'écart d'un navigateur muet compte sur `createBrowsersFor()`, qui ne
+ * démarre un navigateur que si la classe n'en garde aucun. Une montée de
+ * laravel/dusk ne touche que composer.json et composer.lock : sans ce test,
+ * une version qui changerait l'un d'eux serait masquée en silence.
+ */
+it('fait relire les surcharges de DuskTestCase quand Dusk change le code qu’elles reprennent', function (): void {
+    $empreintes = [];
+
+    foreach (['browse', 'createBrowsersFor', 'newBrowser'] as $methode) {
+        $reflexion = new ReflectionMethod(ProvidesBrowser::class, $methode);
+        $fichier = $reflexion->getFileName();
+        $source = $fichier === false ? false : file($fichier);
+        $premiereLigne = $reflexion->getStartLine();
+        $derniereLigne = $reflexion->getEndLine();
+
+        if ($source === false || $premiereLigne === false || $derniereLigne === false) {
+            throw new RuntimeException("source de ProvidesBrowser::{$methode}() introuvable");
+        }
+
+        $lignes = array_slice($source, $premiereLigne - 1, $derniereLigne - $premiereLigne + 1);
+        $empreintes[$methode] = hash('sha256', implode('', $lignes));
+    }
+
+    expect($empreintes)->toBe([
+        'browse' => 'b50efa7fcc652f8e7ba6bb8a755fd510f421587762c476c4726039d6a8099eec',
+        'createBrowsersFor' => 'dc2bd781ff5457ee7dc67b4c9e2ec9fe8f6ecdcbf92ab920f286a597007b8cbd',
+        'newBrowser' => '5d292d734cd4e6a4e66baf69c97d67c0a3074ec06435fb0e15966eb71dd7e7cc',
+    ], 'Dusk a changé le code que reprennent browse(), newBrowser() et l’écart d’un navigateur muet de tests/DuskTestCase.php : relire ces surcharges contre la nouvelle version (.ai/rules/browser.md, #2029), puis reporter ici les nouvelles empreintes.');
 });
 
 /*

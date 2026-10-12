@@ -457,6 +457,9 @@ abstract class DuskTestCase extends BaseTestCase
      *
      * Un navigateur dont le pilote ne répond plus n'est ni relevé ni rendu à
      * la classe (`rendreOuEcarterLesNavigateurs()`).
+     *
+     * Une copie du `browse()` de Dusk : `UnParcoursBloqueTombeViteTest` en
+     * garde l'empreinte, et une montée de Dusk qui le change la fait relire.
      */
     #[\Override]
     public function browse(Closure $callback): void
