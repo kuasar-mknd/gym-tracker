@@ -1,0 +1,210 @@
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { createApp, h } from 'vue'
+
+/*
+ * La célébration d'un badge, avec le vrai client d'Inertia (#2052).
+ *
+ * Un compte qui débloque plusieurs badges d'un coup les voit l'un après
+ * l'autre : le serveur ne partage que le plus récent des non lus
+ * (`latest_achievement`). Fermer la modale marque ce badge lu, le serveur
+ * répond par la page avec le badge suivant, et la modale le montre.
+ *
+ * C'est l'ordre des évènements d'Inertia qui faisait tomber la modale : la page
+ * est posée, Vue rejoue ce qui la regarde, PUIS le `onSuccess` de la visite est
+ * appelé. Le badge suivant était donc déjà affiché quand le rappel de la
+ * lecture effaçait « le badge affiché », devenu le suivant : la modale restait
+ * ouverte sur un badge nul, et son rendu levait « Cannot read properties of
+ * null (reading 'icon') », vu dans un vrai Chromium. Un composant monté avec un
+ * faux `router` ne rejoue pas cet ordre : d'où le vrai client ici. Le dernier
+ * badge fermé, la page n'en porte plus aucun : ce cas-là ne cassait pas, il
+ * clôt chaque parcours.
+ *
+ * jsdom ne joint pas de serveur : `XMLHttpRequest` est remplacé par un faux
+ * serveur qui tient les badges non lus du compte et calcule la page à
+ * l'arrivée de chaque requête, comme le vrai. La lecture y répond directement
+ * par la page, comme le navigateur la rend après la redirection de `back()`.
+ */
+
+/** Les badges que le compte n'a pas lus, du plus récent au plus ancien. */
+let nonLus = []
+/** Les requêtes reçues par le faux serveur. */
+const requetes = []
+/** Les erreurs que Vue a relevées, celles du rendu comprises. */
+const erreurs = []
+
+/** Un badge tel que le partage `HandleInertiaRequests`, avec ce qu'`AchievementUnlocked` range en base. */
+const unBadge = (id, nom) => ({
+    id,
+    data: {
+        type: 'achievement',
+        title: 'Badge débloqué ! 🏆',
+        message: `Félicitations ! Tu as débloqué le badge : ${nom}.`,
+        achievement_id: 7,
+        achieved_at: '2026-10-12T08:00:00.000000Z',
+    },
+    created_at: '2026-10-12T08:00:00.000000Z',
+})
+
+/** La page du tableau de bord, telle que le serveur la rend à cet instant. */
+const tableauDeBord = () => ({
+    component: 'Dashboard',
+    url: '/dashboard',
+    version: 'v1',
+    props: {
+        errors: {},
+        is_testing: false,
+        auth: { user: { id: 1, latest_achievement: nonLus[0] ?? null } },
+    },
+})
+
+class RequeteSimulee {
+    upload = {}
+    status = 0
+    responseText = ''
+
+    open(methode, url) {
+        this.methode = methode
+        this.url = url
+    }
+
+    setRequestHeader() {}
+
+    getAllResponseHeaders() {
+        return 'x-inertia: true\r\ncontent-type: application/json'
+    }
+
+    abort() {
+        this.onabort?.()
+    }
+
+    send() {
+        const chemin = new URL(this.url, window.location.href).pathname
+        requetes.push(`${this.methode} ${chemin}`)
+
+        const lecture = chemin.match(/^\/notifications\/([^/]+)\/read$/)
+
+        if (lecture) {
+            nonLus = nonLus.filter((badge) => badge.id !== lecture[1])
+        }
+
+        const corps = JSON.stringify(tableauDeBord())
+
+        queueMicrotask(() => {
+            this.status = 200
+            this.responseText = corps
+            this.onload?.()
+        })
+    }
+}
+
+let routeur
+
+beforeAll(async () => {
+    vi.stubGlobal('XMLHttpRequest', RequeteSimulee)
+    vi.stubGlobal('route', (nom, parametres) => {
+        expect(nom).toBe('notifications.mark-as-read')
+
+        return `/notifications/${parametres.id}/read`
+    })
+    // jsdom ne fait pas défiler la page, et le dit à chaque visite.
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    document.body.replaceChildren(Object.assign(document.createElement('div'), { id: 'app' }))
+    window.history.replaceState(null, '', '/dashboard')
+
+    nonLus = [unBadge('guerrier', 'Guerrier de la Semaine'), unBadge('novice', 'Novice du Volume')]
+
+    const inertia = await import('@inertiajs/vue3')
+    const { default: CelebrationModal } = await import('@/Components/Achievements/CelebrationModal.vue')
+    routeur = inertia.router
+
+    // Le tableau de bord rend le layout, qui rend la modale : ici, la modale seule.
+    const TableauDeBord = { render: () => h('main', [h(CelebrationModal)]) }
+
+    await inertia.createInertiaApp({
+        page: tableauDeBord(),
+        resolve: () => TableauDeBord,
+        setup: ({ el, App, props, plugin }) => {
+            const application = createApp({ render: () => h(App, props) })
+
+            application.config.errorHandler = (erreur) => erreurs.push(erreur)
+
+            return application.use(plugin).directive('press', {}).mount(el)
+        },
+    })
+})
+
+beforeEach(() => {
+    requetes.length = 0
+    erreurs.length = 0
+})
+
+afterAll(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+})
+
+const dialogue = () => document.querySelector('dialog')
+const texteDuBadge = () => document.getElementById('achievement-description')?.textContent.trim() ?? null
+
+/** Attend la fin de la visite que `geste` déclenche, puis le rendu de ce qu'elle a changé. */
+const jusquALaFinDeLaVisite = async (geste) => {
+    let finie = false
+    const arreter = routeur.on('finish', () => (finie = true))
+
+    geste()
+
+    await vi.waitUntil(() => finie)
+    arreter()
+    // Le rappel `onSuccess` passe après la page : ce qu'il change se rend au tour suivant.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+}
+
+const fermerParLeBouton = () =>
+    jusquALaFinDeLaVisite(() => document.querySelector('[dusk="celebration-dismiss"]').click())
+
+/** Échap ferme un `<dialog>` de lui-même : le composant ne l'apprend que par l'évènement `close`. */
+const fermerParEchap = () => jusquALaFinDeLaVisite(() => dialogue().close())
+
+describe('la célébration de plusieurs badges', () => {
+    it('les montre l’un après l’autre, puis se ferme quand le serveur n’en rend plus, sans erreur', async () => {
+        expect(dialogue().open).toBe(true)
+        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Guerrier de la Semaine.')
+
+        await fermerParLeBouton()
+
+        expect(requetes).toEqual(['POST /notifications/guerrier/read'])
+        expect(erreurs).toEqual([])
+        expect(dialogue().open).toBe(true)
+        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Novice du Volume.')
+
+        await fermerParLeBouton()
+
+        expect(requetes).toEqual(['POST /notifications/guerrier/read', 'POST /notifications/novice/read'])
+        expect(erreurs).toEqual([])
+        expect(dialogue().open).toBe(false)
+        expect(texteDuBadge()).toBeNull()
+    })
+
+    it('fermée par Échap, passe au badge suivant sans erreur, et lit chaque badge une seule fois', async () => {
+        nonLus = [unBadge('premiere', 'Première Séance'), unBadge('volume', 'Novice du Volume')]
+        await jusquALaFinDeLaVisite(() => routeur.reload())
+        requetes.length = 0
+
+        expect(dialogue().open).toBe(true)
+        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Première Séance.')
+
+        await fermerParEchap()
+
+        expect(requetes).toEqual(['POST /notifications/premiere/read'])
+        expect(erreurs).toEqual([])
+        expect(dialogue().open).toBe(true)
+        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Novice du Volume.')
+
+        await fermerParEchap()
+
+        expect(requetes).toEqual(['POST /notifications/premiere/read', 'POST /notifications/volume/read'])
+        expect(erreurs).toEqual([])
+        expect(dialogue().open).toBe(false)
+    })
+})
