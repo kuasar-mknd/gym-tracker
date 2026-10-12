@@ -35,7 +35,7 @@ export const pageHorsLigne = ({ feuilles }) => `<!DOCTYPE html>
 ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille)}">`).join('\n')}
 </head>
 <body class="bg-surface-page text-text-main font-sans antialiased">
-    <main id="main-content" class="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-12">
+    <main id="main-content" class="px-sure-6 py-sure-12 flex min-h-dvh flex-col items-center justify-center gap-8">
         <p class="text-gradient font-display text-4xl font-black tracking-tight uppercase italic">GymTracker</p>
         <section class="glass-panel-light w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
             <h1 class="titre-carte text-2xl">Pas de réseau</h1>
