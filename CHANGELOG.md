@@ -8,7 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Sécurité
-- **Les traces ne recopient plus les valeurs reçues** (#2032) : les messages d'erreur SQL ne recopient plus les valeurs de la requête (`mask_bindings_in_exception_messages` sur les connexions mysql et mariadb), et en production les piles d'exception ne gardent plus les arguments des appels (`zend.exception_ignore_args` dans `docker/php-prod.ini` et `docker/php-cli/zz-cli.ini`). Cela vaut pour les journaux, la table des exceptions du panneau et `failed_jobs`. Le texte du serveur de base, lui, reste entier : une clé en double y cite encore la valeur refusée. `LesErreursSqlNeRecopientPasLesValeursTest` et `LesPilesNeGardentPasLeursArgumentsTest` le vérifient
+- **Les traces ne recopient plus les valeurs reçues** (#2032) : les messages d'erreur SQL ne recopient plus les valeurs de la requête, ni dans la requête citée (`mask_bindings_in_exception_messages` sur les connexions mysql et mariadb), ni dans le texte du serveur de base, où la valeur d'une clé en double ou d'une valeur mal typée devient `'?'` ; en production, les piles d'exception ne gardent plus les arguments des appels (`zend.exception_ignore_args` dans `docker/php-prod.ini` et `docker/php-cli/zz-cli.ini`). Cela vaut pour les journaux, la table des exceptions du panneau et `failed_jobs`. `LesErreursSqlNeRecopientPasLesValeursTest`, `TexteDuServeurSansValeursTest` et `LesPilesNeGardentPasLeursArgumentsTest` le vérifient
 
 ## [1.6.1] - 2026-10-08
 
