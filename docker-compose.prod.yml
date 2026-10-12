@@ -67,6 +67,21 @@ x-app-env: &app-env
     # administrateur seulement. Coupé par défaut ; `true` le temps d'une mesure.
     SERVER_TIMING_ENABLED: ${SERVER_TIMING_ENABLED:-false}
 
+# La copie des journaux que lit `docker logs`, pour app, worker et scheduler.
+# Chaque ligne écrite sur stderr y va, avec l'identifiant du compte connecté
+# dans chaque exception, et aucune rotation ne la bornait : elle grandissait
+# toute la vie du conteneur, traces des comptes supprimés comprises (#1938).
+# Rotation par taille : trois fichiers de 10 Mo, environ 30 Mo au plus par
+# conteneur, les plus anciennes lignes partant à mesure que d'autres
+# s'écrivent ; la borne est une taille, pas une durée. Posé ici, le réglage
+# prend le pas sur le pilote de journaux réglé pour tout le démon.
+# LesJournauxDesConteneursSontBornesTest le tient.
+x-app-logging: &app-logging
+    driver: json-file
+    options:
+        max-size: '10m'
+        max-file: '3'
+
 services:
     app:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
@@ -80,6 +95,7 @@ services:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
             - journaux:/app/storage/logs
         restart: always
+        logging: *app-logging
         ports:
             - 8888:80
         environment:
@@ -204,6 +220,7 @@ services:
         image: ghcr.io/kuasar-mknd/gym-tracker:v1
         pull_policy: always
         restart: always
+        logging: *app-logging
         command: php artisan horizon
         volumes:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
@@ -268,6 +285,7 @@ services:
             - ${BACKUP_HOST_PATH:?dossier des sauvegardes sur l'hôte}:/app/storage/app/sauvegardes
             - journaux:/app/storage/logs
         restart: always
+        logging: *app-logging
         command: php artisan schedule:work
         environment:
             <<: *app-env

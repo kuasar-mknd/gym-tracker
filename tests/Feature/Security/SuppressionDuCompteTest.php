@@ -806,14 +806,16 @@ it("laisse les entrées d'audit d'avant #1670 sur les données du compte à la p
 
 /*
  * La pile écrit chaque ligne de journal sur stderr (`LOG_STACK`), donc dans
- * `docker logs`, et aucun service n'y pose de rotation (`logging`) : cette
- * copie vit autant que le conteneur. Le gestionnaire d'exceptions y ajoute
- * l'identifiant du compte connecté, et le message d'une erreur SQL ce qu'il a
- * saisi. La page de profil ne promet donc aucune durée aux journaux du
- * serveur (#1938) ; elle pourra en promettre une le jour où la composition
- * bornera cette copie.
+ * `docker logs`. Le gestionnaire d'exceptions y ajoute l'identifiant du compte
+ * connecté, et le message d'une erreur SQL ce qu'il a saisi. Aucun service n'y
+ * posait de rotation, et cette copie vivait autant que le conteneur ; app,
+ * worker et scheduler la bornent désormais par la taille (`logging`, pilote
+ * `json-file`, `max-size` et `max-file`, #1938). Une rotation par taille ne
+ * donne aucune durée : la page de profil dit seulement que de nouvelles
+ * lignes remplacent ces traces, sans leur promettre un nombre de jours.
+ * `LesJournauxDesConteneursSontBornesTest` tient les valeurs du réglage.
  */
-it('ne promet aucune durée aux journaux du serveur, que docker logs garde sans borne', function (): void {
+it('dit des journaux du serveur ce que tient leur rotation par taille, sans leur promettre de durée', function (): void {
     $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
     assert(is_array($composition) && is_array($composition['services'] ?? null));
     $promesse = preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue')));
@@ -824,10 +826,12 @@ it('ne promet aucune durée aux journaux du serveur, que docker logs garde sans 
 
         $pile = $service['environment']['LOG_STACK'] ?? null;
 
-        expect($service)->not->toHaveKey('logging')
-            ->and(is_string($pile) ? $pile : '')->toContain('stderr');
+        expect(is_string($pile) ? $pile : '')->toContain('stderr')
+            ->and(data_get($service, 'logging.driver'))->toBe('json-file', "`{$nom}` ne pose pas la rotation de docker logs.")
+            ->and(data_get($service, 'logging.options'))->toBeArray()->toHaveKeys(['max-size', 'max-file']);
     }
 
-    expect($promesse)->toContain('Les journaux du serveur peuvent aussi en garder des traces, sans durée fixe')
-        ->and($promesse)->not->toContain('trente jours dans les journaux');
+    expect($promesse)->toContain('Les journaux du serveur peuvent aussi en garder des traces, le temps que de nouvelles lignes les remplacent')
+        ->and($promesse)->not->toContain('sans durée fixe')
+        ->and($promesse)->not->toMatch('/\d+ jours dans les journaux|trente jours dans les journaux/');
 });
