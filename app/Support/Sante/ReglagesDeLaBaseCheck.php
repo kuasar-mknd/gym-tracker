@@ -19,7 +19,8 @@ use Spatie\Health\Checks\Result;
 final class ReglagesDeLaBaseCheck extends Check
 {
     /**
-     * Le libellé de la page « Santé », qui découperait sinon le nom de classe.
+     * Le libellé de la page « Santé » et du courriel d'alerte, qui
+     * découperaient sinon le nom de classe, sans ses accents.
      */
     #[\Override]
     protected ?string $label = 'Réglages de la base';
