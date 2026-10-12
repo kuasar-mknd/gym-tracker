@@ -3,16 +3,21 @@
 declare(strict_types=1);
 
 use App\Jobs\SyncUserGoals;
+use App\Services\Diagnostic\ExpurgeLeTexte;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\EtatDeHorizon;
 use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\ProjectionDesFiles;
 use App\Services\Diagnostic\TexteNonFiable;
+use App\Services\Diagnostic\ValeurLue;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
+use Tests\Support\JobDuDiagnosticQuiEchoue;
 
 /*
  * Les files et les jobs échoués vus par le diagnostic (#2032) : l'état
@@ -23,6 +28,9 @@ use Laravel\Horizon\Contracts\WorkloadRepository;
 
 /**
  * Un échec de job, aux colonnes données par-dessus des valeurs ordinaires.
+ * Son exception est écrite comme PHP l'écrit quand elle en enveloppe une
+ * autre : l'exception précédente d'abord, puis « Next » et celle que le job
+ * a levée.
  *
  * @param  array<string, mixed>  $colonnes
  */
@@ -35,7 +43,11 @@ function filesDiagnosticEchec(array $colonnes = []): string
         'connection' => 'database',
         'queue' => 'default',
         'payload' => json_encode(['displayName' => SyncUserGoals::class, 'data' => ['command' => 'charge-utile-canari']]),
-        'exception' => 'Illuminate\\Database\\QueryException: SQLSTATE[23000]: boum (Connection: mysql, SQL: insert into `users` values (charge-utile-canari)) in '.base_path('vendor/laravel/framework/src/Illuminate/Database/Connection.php').":838\n"
+        'exception' => 'PDOException: SQLSTATE[23000]: boum in '.base_path('vendor/laravel/framework/src/Illuminate/Database/Connection.php').":589\n"
+            ."Stack trace:\n"
+            .'#0 '.base_path('vendor/laravel/framework/src/Illuminate/Database/Connection.php')."(589): PDOStatement->execute()\n"
+            ."#1 {main}\n\n"
+            .'Next Illuminate\\Database\\QueryException: SQLSTATE[23000]: boum (Connection: mysql, SQL: insert into `users` values (charge-utile-canari)) in '.base_path('vendor/laravel/framework/src/Illuminate/Database/Connection.php').":838\n"
             ."Stack trace:\n"
             .'#0 '.base_path('vendor/laravel/framework/src/Illuminate/Database/Connection.php')."(794): Illuminate\\Database\\Connection->runQueryCallback('insert into `us...', Array, Object(Closure))\n"
             .'#1 '.base_path('app/Jobs/SyncUserGoals.php')."(40): Illuminate\\Database\\Connection->insert('argument-canari')\n"
@@ -120,6 +132,32 @@ it('rend le détail d’un échec, la pile sans arguments, et le message sous Te
                 ProjectionDesFiles::BUDGET_DU_MESSAGE,
             ),
         ]);
+});
+
+/*
+ * Un vrai échec, par `queue:work` : l'écriture refusée lève une
+ * `PDOException`, que Laravel enveloppe. `failed_jobs` écrit d'abord la
+ * précédente, puis « Next » et celle que le job a levée ; le diagnostic
+ * range l'échec sous celle-ci, comme la table des exceptions.
+ */
+it('range un vrai échec sous l’exception que le job a levée, pas sous celle qu’elle enveloppe', function (): void {
+    dispatch(new JobDuDiagnosticQuiEchoue('Premier compte', 'Second compte'))->onConnection('database');
+    Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--tries' => 1, '--sleep' => 0]);
+
+    $brut = ValeurLue::texte(DB::table('failed_jobs')->value('exception'));
+    $liste = new ProjectionDesFiles()->liste(filesDiagnosticFenetre());
+    $detail = new ProjectionDesFiles()->detail(ValeurLue::texte(DB::table('failed_jobs')->value('uuid')), filesDiagnosticFenetre(), true);
+    $message = data_get($detail, 'non_fiable.message');
+
+    expect($brut)->toStartWith('PDOException: SQLSTATE[23000]: ')
+        ->and($brut)->toContain("\n\nNext ".UniqueConstraintViolationException::class.': SQLSTATE[23000]: ')
+        ->and(array_map(static fn (array $echec): array => [$echec['job'], $echec['exception'], $echec['nombre']], $liste['echecs']))
+        ->toBe([[JobDuDiagnosticQuiEchoue::class, UniqueConstraintViolationException::class, 1]])
+        ->and($detail['exception'] ?? null)->toBe(UniqueConstraintViolationException::class)
+        ->and(data_get($detail, 'pile.0.appel'))->toBe('Illuminate\Database\Connection->runQueryCallback')
+        ->and($message)->toBeInstanceOf(TexteNonFiable::class)
+        ->and(new ExpurgeLeTexte()($message instanceof TexteNonFiable ? $message->brut : '')->texte)
+        ->toBe("SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '?' for key 'users.users_email_unique' (insert `users`)");
 });
 
 it('ne rend pas le détail d’un échec de plus de trente jours, ni d’un échec inconnu', function (): void {

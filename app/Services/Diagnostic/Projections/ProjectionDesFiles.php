@@ -17,12 +17,14 @@ use stdClass;
  * Les files et les jobs échoués, vus par le diagnostic (#2032).
  *
  * La liste rend l'état d'Horizon et les échecs des trente derniers jours,
- * groupés par classe de job et classe d'exception. Le détail d'un échec rend
- * sa classe, sa file, sa date, la classe de son exception et sa pile, sans
- * arguments ; avec `TexteBrut`, le message de l'exception. Jamais la charge
- * utile : la commande sérialisée, et les adresses d'une notification, n'en
- * sortent pas. La base n'en extrait que le nom affiché du job, et de
- * l'exception que ses premiers octets.
+ * groupés par classe de job et classe de l'exception levée. Le détail d'un
+ * échec rend sa classe, sa file, sa date, la classe de l'exception levée et
+ * sa pile, sans arguments ; avec `TexteBrut`, son message. L'exception levée
+ * est celle du job, pas celle qu'elle enveloppe (`ExceptionDUnJobEchoue`).
+ * Jamais la charge utile : la commande sérialisée, et les adresses d'une
+ * notification, n'en sortent pas. La base n'en extrait que le nom affiché du
+ * job, et de l'exception que les premiers octets de sa tête et de son
+ * dernier bloc.
  */
 final class ProjectionDesFiles
 {
@@ -40,10 +42,10 @@ final class ProjectionDesFiles
         $lignes = $this->lignes($fenetre);
         $groupes = new RegroupeLesOccurrences()(
             LecturesBornees::bornees($lignes),
-            static fn (stdClass $ligne): string => (string) json_encode([$ligne->job, ExceptionDUnJobEchoue::classe($ligne->debut_de_l_exception)]),
+            static fn (stdClass $ligne): string => (string) json_encode([$ligne->job, self::classeLevee($ligne)]),
             static fn (stdClass $ligne): array => [
                 'job' => Vocabulaire::forme(Vocabulaire::CLASSE, $ligne->job),
-                'exception' => ExceptionDUnJobEchoue::classe($ligne->debut_de_l_exception),
+                'exception' => self::classeLevee($ligne),
                 'dernier_uuid' => Vocabulaire::forme(Vocabulaire::UUID, $ligne->uuid),
             ],
         );
@@ -63,24 +65,16 @@ final class ProjectionDesFiles
      */
     public function detail(string $uuid, FenetreDeDiagnostic $fenetre, bool $texteBrut): ?array
     {
-        $ligne = $this->echecs($fenetre)
-            ->select(['uuid', 'queue', 'failed_at'])
-            ->selectRaw(self::NOM_DU_JOB)
-            ->selectRaw('substring(exception, 1, '.ExceptionDUnJobEchoue::OCTETS_LUS.') as exception')
+        $ligne = ExceptionDUnJobEchoue::lire(
+            $this->echecs($fenetre)->select(['uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
+            ExceptionDUnJobEchoue::OCTETS_LUS,
+        )
             ->where('uuid', $uuid)
             ->first();
 
         return match ($ligne) {
             null => null,
-            default => [
-                'uuid' => Vocabulaire::forme(Vocabulaire::UUID, $ligne->uuid),
-                'job' => Vocabulaire::forme(Vocabulaire::CLASSE, $ligne->job),
-                'file' => Vocabulaire::forme(Vocabulaire::IDENTIFIANT, $ligne->queue),
-                'echoue_le' => ValeurLue::instant($ligne->failed_at),
-                'exception' => ExceptionDUnJobEchoue::classe($ligne->exception),
-                'pile' => PileSansArguments::duTexte(ValeurLue::texte($ligne->exception), self::CADRES_AU_PLUS),
-                ...$this->texte($ligne, $texteBrut),
-            ],
+            default => $this->echec($ligne, ExceptionDUnJobEchoue::levee($ligne->tete_de_l_exception, $ligne->fin_de_l_exception), $texteBrut),
         };
     }
 
@@ -93,13 +87,22 @@ final class ProjectionDesFiles
      */
     private function lignes(FenetreDeDiagnostic $fenetre): Collection
     {
-        return $this->echecs($fenetre)
-            ->select(['id', 'uuid', 'queue', 'failed_at as created_at'])
-            ->selectRaw(self::NOM_DU_JOB)
-            ->selectRaw('substring(exception, 1, 512) as debut_de_l_exception')
+        return ExceptionDUnJobEchoue::lire(
+            $this->echecs($fenetre)->select(['id', 'uuid', 'queue', 'failed_at as created_at'])->selectRaw(self::NOM_DU_JOB),
+            ExceptionDUnJobEchoue::OCTETS_DE_LA_LISTE,
+        )
             ->orderByDesc('id')
             ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
             ->get();
+    }
+
+    /**
+     * La classe de l'exception que le job a levée, lue des premiers octets
+     * de sa tête et de son dernier bloc.
+     */
+    private static function classeLevee(stdClass $ligne): ?string
+    {
+        return ExceptionDUnJobEchoue::classe(ExceptionDUnJobEchoue::levee($ligne->tete_de_l_exception, $ligne->fin_de_l_exception));
     }
 
     /**
@@ -117,13 +120,23 @@ final class ProjectionDesFiles
     }
 
     /**
+     * Le détail d'un échec, dont l'exception levée est donnée en texte.
+     *
      * @return array<string, mixed>
      */
-    private function texte(stdClass $ligne, bool $texteBrut): array
+    private function echec(stdClass $ligne, string $exception, bool $texteBrut): array
     {
-        return match ($texteBrut) {
-            true => ['non_fiable' => ['message' => new TexteNonFiable(ExceptionDUnJobEchoue::message($ligne->exception), self::BUDGET_DU_MESSAGE)]],
-            false => [],
-        };
+        return [
+            'uuid' => Vocabulaire::forme(Vocabulaire::UUID, $ligne->uuid),
+            'job' => Vocabulaire::forme(Vocabulaire::CLASSE, $ligne->job),
+            'file' => Vocabulaire::forme(Vocabulaire::IDENTIFIANT, $ligne->queue),
+            'echoue_le' => ValeurLue::instant($ligne->failed_at),
+            'exception' => ExceptionDUnJobEchoue::classe($exception),
+            'pile' => PileSansArguments::duTexte($exception, self::CADRES_AU_PLUS),
+            ...match ($texteBrut) {
+                true => ['non_fiable' => ['message' => new TexteNonFiable(ExceptionDUnJobEchoue::message($exception), self::BUDGET_DU_MESSAGE)]],
+                false => [],
+            },
+        ];
     }
 }

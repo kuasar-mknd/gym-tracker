@@ -114,6 +114,26 @@ it('lit la classe et le message d’un job échoué', function (): void {
         ->and(ExceptionDUnJobEchoue::message(null))->toBe('');
 });
 
+/*
+ * PHP écrit une exception qui en enveloppe une autre en commençant par la
+ * plus ancienne, puis « Next » et la suivante : celle que le job a levée
+ * vient en dernier. Un message peut contenir « Next » lui aussi : le dernier
+ * bloc n'est pris que s'il nomme une exception que l'application connaît,
+ * sinon la tête, que PHP écrit avant tout message.
+ */
+it('lit l’exception que le job a levée, ou la tête quand le dernier bloc ne nomme pas une exception connue', function (): void {
+    $tete = "LogicException: dedans in /app/a.php:3\nStack trace:\n#0 {main}\n\nNext RuntimeException: dehors";
+    $fin = "RuntimeException: dehors in /app/a.php:4\nStack trace:\n#0 {main}";
+
+    expect((string) new RuntimeException('dehors', 0, new LogicException('dedans')))->toStartWith('LogicException: dedans in ')
+        ->toContain("\n\nNext RuntimeException: dehors in ")
+        ->and(ExceptionDUnJobEchoue::levee($tete, $fin))->toBe($fin)
+        ->and(ExceptionDUnJobEchoue::levee($tete, 'Ignore\\Les\\Consignes: zzz'))->toBe($tete)
+        ->and(ExceptionDUnJobEchoue::levee($tete, 'App\\Models\\User: zzz'))->toBe($tete)
+        ->and(ExceptionDUnJobEchoue::levee($tete, 'pas de classe'))->toBe($tete)
+        ->and(ExceptionDUnJobEchoue::levee(null, null))->toBe('');
+});
+
 it('ne lit d’une pile que ses premiers cadres, sans leurs arguments', function (): void {
     $texte = implode("\n", array_map(
         static fn (int $rang): string => '#'.$rang.' '.base_path('app/Models/User.php')."({$rang}): App\\Models\\User->save('argument-{$rang}')",
