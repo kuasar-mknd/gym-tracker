@@ -11,6 +11,7 @@ use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,13 @@ final class FetchWorkoutsIndexAction
      * Get consolidated deferred data (charts and exercises).
      * ⚡ Bolt: Reduces 2 deferred prop XHR requests to 1.
      *
+     * Les trois cartes qui suivent le mois calendaire — les deux fréquences et
+     * le volume mensuel — reçoivent le même instant, lu une fois : chacune
+     * lisait l'horloge, et la clef de chaque fréquence d'une autre lecture que
+     * sa fenêtre. Quand le mois changeait entre deux lectures, deux cartes
+     * voisines comptaient deux fenêtres différentes, ou l'entrée rangée sous
+     * le mois qui s'achevait gardait la fenêtre du mois suivant (#2033).
+     *
      * @return array{
      *     charts: array{
      *         monthly_frequency: Collection<int, array{month: string, count: int}>,
@@ -60,11 +68,13 @@ final class FetchWorkoutsIndexAction
      */
     public function getDeferredData(User $user): array
     {
+        $maintenant = now();
+
         return [
             'charts' => [
-                'monthly_frequency' => $this->getMonthlyFrequency($user),
-                'day_of_week_frequency' => $this->getDayOfWeekFrequency($user),
-                'monthly_volume' => $this->volumeStats->getMonthlyVolumeHistory($user, 6),
+                'monthly_frequency' => $this->getMonthlyFrequency($user, $maintenant),
+                'day_of_week_frequency' => $this->getDayOfWeekFrequency($user, $maintenant),
+                'monthly_volume' => $this->volumeStats->getMonthlyVolumeHistory($user, 6, $maintenant),
                 'duration_history' => $this->workoutStats->getDurationHistory($user, 20),
                 'volume_history' => $this->volumeStats->getVolumeHistory($user, 20),
             ],
@@ -125,27 +135,30 @@ final class FetchWorkoutsIndexAction
     }
 
     /**
+     * @param  Carbon  $maintenant  L'instant de l'opération, dont viennent la clef et la fenêtre.
      * @return Collection<int, array{day: string, count: int}>
      */
-    protected function getDayOfWeekFrequency(User $user): Collection
+    protected function getDayOfWeekFrequency(User $user, Carbon $maintenant): Collection
     {
         return Cache::remember(
-            ClesDeStats::seances($user, 'day_of_week_frequency.'.self::moisCourant()),
-            now()->addHour(),
-            fn (): Collection => $this->calculateDayOfWeekFrequency($user)
+            ClesDeStats::seances($user, 'day_of_week_frequency.'.self::moisCourant($maintenant)),
+            $maintenant->copy()->addHour(),
+            fn (): Collection => $this->calculateDayOfWeekFrequency($user, self::debutDeLaFenetre($maintenant))
         );
     }
 
     /**
+     * @param  Carbon  $maintenant  L'instant de l'opération, dont viennent la clef et la fenêtre.
      * @return Collection<int, array{month: string, count: int}>
      */
     protected function getMonthlyFrequency(
-        User $user
+        User $user,
+        Carbon $maintenant
     ): Collection {
         return Cache::remember(
-            ClesDeStats::seances($user, 'monthly_frequency.'.self::moisCourant()),
-            now()->addHour(),
-            fn (): Collection => $this->calculateMonthlyFrequency($user)
+            ClesDeStats::seances($user, 'monthly_frequency.'.self::moisCourant($maintenant)),
+            $maintenant->copy()->addHour(),
+            fn (): Collection => $this->calculateMonthlyFrequency($user, self::debutDeLaFenetre($maintenant))
         );
     }
 
@@ -158,10 +171,12 @@ final class FetchWorkoutsIndexAction
      * Le recul part du premier du mois, jamais d'aujourd'hui : Carbon deborde,
      * et le 31 juillet moins cinq mois donnait le « 31 fevrier », soit le
      * 3 mars — fevrier sortait de la fenetre (#1955).
+     *
+     * @param  Carbon  $maintenant  L'instant de l'opération, que la fenêtre ne modifie pas.
      */
-    private static function debutDeLaFenetre(): \Illuminate\Support\Carbon
+    private static function debutDeLaFenetre(Carbon $maintenant): Carbon
     {
-        return now()->startOfMonth()->subMonths(5);
+        return $maintenant->copy()->startOfMonth()->subMonths(5);
     }
 
     /**
@@ -169,23 +184,27 @@ final class FetchWorkoutsIndexAction
      *
      * Leur fenetre suit le mois calendaire : sans lui dans la clef, le premier
      * du mois servait encore, jusqu'a l'expiration, les six mois de la veille.
+     * Il vient du même instant que la fenêtre, pour que la clef dise le mois
+     * de la fenêtre qu'elle garde (#2033).
+     *
+     * @param  Carbon  $maintenant  L'instant de l'opération.
      */
-    private static function moisCourant(): string
+    private static function moisCourant(Carbon $maintenant): string
     {
-        return now()->format('Y-m');
+        return $maintenant->format('Y-m');
     }
 
     /**
+     * @param  Carbon  $startDate  Le premier jour de la fenêtre.
      * @return Collection<
      *     int,
      *     array{month: string, count: int}
      * >
      */
     private function calculateMonthlyFrequency(
-        User $user
+        User $user,
+        Carbon $startDate
     ): Collection {
-        $startDate = self::debutDeLaFenetre();
-
         // ⚡ Bolt Optimization: Group and count directly in SQL to reduce memory usage and CPU cycles in PHP.
         // Also uses toBase() to avoid Eloquent model hydration.
         $results = Workout::query()
@@ -216,9 +235,10 @@ final class FetchWorkoutsIndexAction
     }
 
     /**
+     * @param  Carbon  $debut  Le premier jour de la fenêtre, celui de la fréquence mensuelle.
      * @return Collection<int, array{day: string, count: int}>
      */
-    private function calculateDayOfWeekFrequency(User $user): Collection
+    private function calculateDayOfWeekFrequency(User $user, Carbon $debut): Collection
     {
         /*
          * La MEME fenetre que la frequence mensuelle, sa voisine immediate.
@@ -230,13 +250,15 @@ final class FetchWorkoutsIndexAction
          * 1 249 a 600 — la derniere page du produit dont le cout suivait
          * l'anciennete du compte.
          *
-         * Les deux la tirent desormais de `debutDeLaFenetre()`, pour qu'elles ne
-         * puissent plus diverger, et les deux sous-titres l'annoncent.
+         * Les deux la tirent desormais de `debutDeLaFenetre()`, et du même
+         * instant, pour qu'elles ne puissent plus diverger, et les deux
+         * sous-titres l'annoncent. Chacune lisait l'horloge : quand le mois
+         * changeait entre les deux lectures, elles divergeaient encore (#2033).
          */
         $results = Workout::query()
             ->toBase()
             ->where('user_id', $user->id)
-            ->where('started_at', '>=', self::debutDeLaFenetre())
+            ->where('started_at', '>=', $debut)
             ->selectRaw('DAYOFWEEK(started_at) as day_of_week, COUNT(*) as count')
             ->groupBy('day_of_week')
             ->get()

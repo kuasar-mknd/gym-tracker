@@ -74,8 +74,9 @@ it('garde chaque statistique en cache la durée annoncée', function (string $me
     Carbon::setTestNow();
 })->with([
     'tendance de volume' => ['getVolumeTrend', 'volume_trend.30', 30],
-    'volume hebdomadaire' => ['getWeeklyVolumeTrend', 'weekly_volume', 10],
-    // La clef porte la semaine courante : la 25e de 2026, celle du 15 juin.
+    // Les clefs hebdomadaires portent la semaine courante : la 25e de 2026,
+    // celle du 15 juin (#2033 pour la courbe).
+    'volume hebdomadaire' => ['getWeeklyVolumeTrend', 'weekly_volume.2026-25', 10],
     'comparaison hebdomadaire' => ['getWeeklyVolumeComparison', 'weekly_volume_comparison.2026-25', 10],
     'historique de volume' => ['getVolumeHistory', 'volume_history.20', 30],
     // La clef porte le mois courant (#1955) : celui de l'horloge arrêtée.

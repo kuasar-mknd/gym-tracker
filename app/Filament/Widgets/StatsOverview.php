@@ -45,8 +45,17 @@ class StatsOverview extends StatsOverviewWidget
         return User::where('created_at', '>=', Carbon::now()->subDays(7))->count();
     }
 
+    /**
+     * Les séances commencées aujourd'hui.
+     *
+     * Les deux bornes du jour se tirent d'une seule lecture de l'horloge : avec
+     * une lecture chacune, quand minuit passait entre elles, le jour couvrait
+     * aussi la veille (#2033).
+     */
     private function getWorkoutsTodayCount(): int
     {
-        return Workout::whereBetween('started_at', [Carbon::today()->startOfDay(), Carbon::today()->endOfDay()])->count();
+        $debutDuJour = Carbon::today();
+
+        return Workout::whereBetween('started_at', [$debutDuJour, $debutDuJour->copy()->endOfDay()])->count();
     }
 }
