@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Auth;
 
-use App\Actions\CreateUserAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Jobs\TraiterUneInscription;
+use App\Support\DureeDesReponsesDAuthentification;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,28 +24,28 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Handle an incoming registration request.
+     * Répond la même chose, dans le même temps, à toute inscription bien
+     * formée, que l'adresse ait déjà un compte ou non : la page de connexion,
+     * avec un message écrit pour les deux cas, et personne de connecté.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * La requête ne cherche pas le compte. Elle hache le mot de passe, ce que
+     * les deux cas paient, et met `TraiterUneInscription` en file, dans le
+     * plancher commun des réponses d'authentification
+     * (`DureeDesReponsesDAuthentification`). Le job crée le compte en attente
+     * et lui envoie le lien qui l'ouvre, ou prévient le titulaire de l'adresse
+     * prise. Le compte ne se connecte qu'une fois son adresse prouvée.
      */
-    public function store(RegisterRequest $request, CreateUserAction $createUser): RedirectResponse
+    public function store(RegisterRequest $request): RedirectResponse
     {
-        /*
-         * Le tableau est construit champ par champ plutot que passe tel quel.
-         *
-         * `CreateUserAction::execute()` attend un `array<string, string>`, et
-         * `validated()` rend un `array<string, mixed>`. Elargir la signature de
-         * l'action pour que les deux s'accordent la ferait taire sans rien
-         * garantir ; la remplir explicitement lui donne bien trois chaines.
-         */
-        $user = $createUser->execute([
-            'name' => $request->string('name')->toString(),
-            'email' => $request->string('email')->toString(),
-            'password' => $request->string('password')->toString(),
-        ]);
+        $adresse = $request->string('email')->toString();
+        $nom = $request->string('name')->toString();
+        $motDePasse = $request->string('password')->toString();
+        $langue = app()->getLocale();
 
-        Auth::login($user);
+        DureeDesReponsesDAuthentification::appeler(static function () use ($adresse, $nom, $motDePasse, $langue): void {
+            TraiterUneInscription::dispatch($adresse, $nom, Hash::make($motDePasse), $langue);
+        });
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect()->route('login')->with('status', __('auth.inscription_recue'));
     }
 }

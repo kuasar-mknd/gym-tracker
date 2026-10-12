@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\NewPasswordRequest;
 use App\Support\DureeDesReponsesDAuthentification;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -61,7 +62,10 @@ class NewPasswordController extends Controller
 
     /**
      * Le courtier n'appelle la fonction qu'une fois le jeton vérifié : c'est
-     * elle qui libère la réponse du plancher des refus.
+     * elle qui libère la réponse du plancher des refus. Le jeton est arrivé à
+     * l'adresse du compte : un compte en attente de cette preuve s'ouvre
+     * (`AttendLaPreuveDeSonAdresse`), et le titulaire d'une adresse qu'un
+     * autre a inscrite reprend ainsi le compte.
      *
      * @param  array<string, mixed>  $credentials
      */
@@ -78,6 +82,12 @@ class NewPasswordController extends Controller
                     'password' => $password,
                     'remember_token' => Str::random(60),
                 ])->save();
+
+                // Le lien reçu prouve l'adresse : un compte en attente s'ouvre,
+                // sans être connecté (la page mène à la connexion).
+                if ($user->estEnAttente() && $user->markEmailAsVerified()) {
+                    event(new Verified($user));
+                }
 
                 event(new PasswordReset($user));
 

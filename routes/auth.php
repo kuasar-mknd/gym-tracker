@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\OuvrirLeCompteController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
@@ -19,6 +20,12 @@ Route::middleware('guest')->group(function (): void {
 
     Route::post('register', [RegisteredUserController::class, 'store'])
         ->middleware('throttle:6,1');
+
+    // Le lien qui ouvre un compte créé par l'inscription : il marque la
+    // session et mène à la connexion, sans lire la base.
+    Route::get('inscription/ouvrir/{id}/{hash}', OuvrirLeCompteController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('inscription.ouvrir');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

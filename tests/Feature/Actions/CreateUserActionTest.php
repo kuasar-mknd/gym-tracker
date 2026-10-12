@@ -58,3 +58,34 @@ it('annonce l inscription', function (): void {
         fn (Registered $event): bool => $event->user->getAuthIdentifier() === $user->id,
     );
 });
+
+it('cree le compte en attente de la preuve de son adresse', function (): void {
+    $this->freezeSecond();
+
+    $user = app(CreateUserAction::class)->execute([
+        'name' => 'Ada Lovelace',
+        'email' => 'ada@example.test',
+        'password' => 'un-mot-de-passe-pose',
+    ]);
+
+    /*
+     * L'inscription ne prouve pas l'adresse : le compte ne se connecte qu'une
+     * fois le lien envoye a son adresse suivi (`AttendLaPreuveDeSonAdresse`).
+     */
+    expect($user->estEnAttente())->toBeTrue()
+        ->and($user->refresh()->en_attente_depuis?->equalTo(now()))->toBeTrue()
+        ->and($user->hasVerifiedEmail())->toBeFalse();
+});
+
+it('garde telle quelle l empreinte que l inscription a calculee', function (): void {
+    $empreinte = Hash::make('un-mot-de-passe-pose');
+
+    $user = app(CreateUserAction::class)->execute([
+        'name' => 'Ada Lovelace',
+        'email' => 'ada@example.test',
+        'password' => $empreinte,
+    ]);
+
+    expect($user->refresh()->getAuthPassword())->toBe($empreinte)
+        ->and(Hash::check('un-mot-de-passe-pose', $user->getAuthPassword()))->toBeTrue();
+});
