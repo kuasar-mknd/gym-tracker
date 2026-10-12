@@ -24,23 +24,34 @@ return new class() extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasColumn('users', 'en_attente_depuis')) {
+        if (! Schema::hasColumn('users', 'en_attente_depuis')) {
+            Schema::table('users', function (Blueprint $table): void {
+                $table->timestamp('en_attente_depuis')->nullable()->after('email_verified_at');
+            });
+        }
+
+        if (Schema::hasIndex('users', ['en_attente_depuis'])) {
             return;
         }
 
         Schema::table('users', function (Blueprint $table): void {
-            $table->timestamp('en_attente_depuis')->nullable()->after('email_verified_at')->index();
+            $table->index('en_attente_depuis');
         });
     }
 
     public function down(): void
     {
+        if (Schema::hasIndex('users', ['en_attente_depuis'])) {
+            Schema::table('users', function (Blueprint $table): void {
+                $table->dropIndex(['en_attente_depuis']);
+            });
+        }
+
         if (! Schema::hasColumn('users', 'en_attente_depuis')) {
             return;
         }
 
         Schema::table('users', function (Blueprint $table): void {
-            $table->dropIndex(['en_attente_depuis']);
             $table->dropColumn('en_attente_depuis');
         });
     }
