@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Admin;
 use App\Models\ExceptionEnregistree;
+use App\Models\User;
 use BezhanSalleh\FilamentExceptions\Resources\ExceptionResource;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Http\Request;
@@ -28,7 +29,65 @@ it('garde une exception rapportée, avec son type, son message et sa requête', 
     expect($exception->type)->toBe(RuntimeException::class)
         ->and($exception->message)->toBe('boum')
         ->and($exception->method)->toBe('POST')
-        ->and($exception->path)->toBe('_boum');
+        ->and($exception->path)->toBe('_boum')
+        ->and($exception->user_id)->toBeNull();
+});
+
+/*
+ * Une exception levée par une requête d'un compte connecté le désigne, et
+ * recopie souvent ce qu'il a saisi : l'en-tête des écritures rejouées, le
+ * modèle lié par la route, le message d'une erreur SQL. `user_id` la rattache
+ * au compte, pour qu'elle parte avec lui (#1938).
+ */
+it('rattache au compte l’exception levée par une de ses requêtes', function (): void {
+    $compte = User::factory()->create();
+
+    Route::middleware(['web', 'auth'])->post('/_boum', function (): never {
+        throw new RuntimeException('boum');
+    });
+
+    $this->actingAs($compte)->post('/_boum')->assertStatus(500);
+
+    expect(ExceptionEnregistree::query()->sole()->user_id)->toBe($compte->id);
+});
+
+/*
+ * Sous le panneau, la garde par défaut est `admin`, et un administrateur
+ * porte souvent l'identifiant d'un compte (chaque table a sa séquence) : son
+ * exception ne doit pas devenir celle de ce compte, ni partir avec lui.
+ */
+it('ne rattache à aucun compte l’exception levée sous la garde du panneau', function (): void {
+    $administrateur = Admin::factory()->create();
+    User::factory()->create(['id' => $administrateur->id]);
+
+    Route::middleware('web')->post('/_boum', function (): never {
+        throw new RuntimeException('boum');
+    });
+
+    $this->actingAs($administrateur, 'admin')->post('/_boum')->assertStatus(500);
+
+    expect(ExceptionEnregistree::query()->sole()->user_id)->toBeNull();
+});
+
+/*
+ * Une exception levée après la suppression du compte de la requête ne peut
+ * plus lui être rattachée : la clé refuserait la ligne, et le paquet perdrait
+ * l'exception sans rien dire. Elle est gardée sans lien, et part à trente
+ * jours.
+ */
+it('garde sans lien l’exception levée après la suppression du compte de la requête', function (): void {
+    $compte = User::factory()->create();
+
+    Route::middleware(['web', 'auth'])->post('/_boum', function (Request $requete): never {
+        $requete->user()?->delete();
+
+        throw new RuntimeException('boum');
+    });
+
+    $this->actingAs($compte)->post('/_boum')->assertStatus(500);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(ExceptionEnregistree::query()->sole()->user_id)->toBeNull();
 });
 
 it('masque les champs sensibles et ne garde aucun cookie', function (): void {

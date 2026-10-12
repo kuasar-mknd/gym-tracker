@@ -62,6 +62,20 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('01:45');
 
 /*
+ * Une tâche en file qui échoue est recopiée dans `failed_jobs`, charge
+ * comprise : la notification et son destinataire, sérialisés, donc des
+ * adresses de courriel en clair. Rien ne purgeait la table, et rien ne la
+ * relie au compte autrement que par cette charge : elle gardait ces lignes
+ * sans limite, compte supprimé ou non (#1938). Elle les garde désormais
+ * trente jours, comme les exceptions enregistrées ; Horizon, de son côté, ne
+ * garde les siennes que sept jours (`config/horizon.php`). La commande ne
+ * demande aucune confirmation en production. 01:30 : avant la sauvegarde de
+ * 02:30, et hors de l'heure que les changements d'heure sautent ou répètent.
+ */
+\Illuminate\Support\Facades\Schedule::command('queue:prune-failed', ['--hours' => 30 * 24])
+    ->dailyAt('01:30');
+
+/*
  * Les trois tâches de sauvegarde touchent le partage des sauvegardes, qui peut
  * cesser de répondre sans rendre d'erreur : au premier plan, un seul accès qui
  * attendait figeait le passage du planificateur, et les tâches suivantes de la

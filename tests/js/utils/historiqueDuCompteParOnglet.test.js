@@ -261,3 +261,36 @@ describe('un onglet resté sur une page du compte parti, sans rien visiter', () 
         expect(vus.filter((texte) => texte?.includes('de A'))).toEqual([])
     })
 })
+
+/**
+ * Les huit premiers octets de l'entrée chiffrée de `chemin`, une fois écrite dans l'historique.
+ *
+ * @param {string} chemin
+ * @returns {Promise<number[]>}
+ */
+const debutDeLEntree = async (chemin) => {
+    await vi.waitUntil(() => window.location.pathname === chemin && window.history.state?.page instanceof ArrayBuffer)
+
+    return Array.from(new Uint8Array(window.history.state.page, 0, 8))
+}
+
+/*
+ * Deux pages du même compte commencent par les mêmes octets, ceux du début de
+ * leur JSON. Chiffrées sous la même clé avec un vecteur d'initialisation propre
+ * à chacune, leurs entrées ne commencent pas pareil ; Inertia, jusqu'à la
+ * 3.9.0, gardait un seul vecteur pour tout l'onglet (@inertiajs/vue3 3.9.1).
+ */
+describe('deux pages chiffrées sous la même clé', () => {
+    it('ne donnent pas deux entrées qui commencent par les mêmes octets', async () => {
+        await visiter('/stats', page(2, '/stats', 'Statistiques de B'))
+        const cle = window.sessionStorage.getItem(CLEF_DE_L_HISTORIQUE)
+        const premiere = await debutDeLEntree('/stats')
+
+        await visiter('/measurements', page(2, '/measurements', 'Mesures de B'))
+        const seconde = await debutDeLEntree('/measurements')
+
+        expect(cle).not.toBeNull()
+        expect(window.sessionStorage.getItem(CLEF_DE_L_HISTORIQUE)).toBe(cle)
+        expect(seconde).not.toEqual(premiere)
+    })
+})

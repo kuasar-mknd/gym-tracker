@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Filament\Resources\ActivityLogs\Pages\ListActivityLogs;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Models\ActivityLog;
 use App\Models\Admin;
+use App\Models\ErreurNavigateur;
+use App\Models\ExceptionEnregistree;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
@@ -13,17 +17,23 @@ use App\Models\WorkoutLine;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Auth\SessionGuard;
+use Illuminate\Console\Scheduling\Event;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Symfony\Component\Yaml\Yaml;
 use Tests\Support\FilamentAdminPanel;
 
 /*
@@ -479,4 +489,429 @@ it("n'écrit rien dans le journal d'activité en supprimant le compte", function
     $compte->delete();
 
     expect($ecritures)->toBe(0);
+});
+
+/*
+ * Quand un administrateur supprime un compte depuis le panneau, une entrée
+ * d'audit le dit (#1938) : l'entrée « deleted » du compte, effacée avec lui,
+ * ne laissait aucune trace de l'action. Elle ne dit que cela : l'administrateur
+ * en est la cause, elle n'a pas de sujet, et rien du compte n'y figure.
+ */
+dataset('suppressions du compte par un administrateur', [
+    "la page d'édition" => [function (User $compte): void {
+        Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+            ->callAction(DeleteAction::class);
+    }],
+    'la suppression groupée' => [function (User $compte): void {
+        Livewire::test(ListUsers::class)
+            ->selectTableRecords([$compte->getKey()])
+            ->callAction(TestAction::make('delete')->table()->bulk());
+    }],
+]);
+
+/**
+ * Un administrateur qui peut supprimer des comptes et lire le journal
+ * d'audit, connecté au panneau : un seul `actingAs` par cas.
+ */
+function compteSupprimeLAdministrateurConnecte(): Admin
+{
+    $administrateur = FilamentAdminPanel::admin([
+        ...FilamentAdminPanel::crudPermissions('User'),
+        'ViewAny:ActivityLog',
+    ]);
+
+    test()->actingAs($administrateur, 'admin');
+
+    return $administrateur;
+}
+
+/**
+ * L'identifiant de la dernière entrée d'audit, zéro quand il n'y en a pas.
+ */
+function compteSupprimeLaDerniereEntreeDAudit(): int
+{
+    $derniere = ActivityLog::query()->max('id');
+
+    return is_numeric($derniere) ? (int) $derniere : 0;
+}
+
+/**
+ * Les entrées d'audit écrites après celle-ci.
+ *
+ * @return \Illuminate\Database\Eloquent\Collection<int, ActivityLog>
+ */
+function compteSupprimeLesEntreesDAuditApres(int $derniere): \Illuminate\Database\Eloquent\Collection
+{
+    return ActivityLog::query()->where('id', '>', $derniere)->orderBy('id')->get();
+}
+
+it("laisse une entrée d'audit anonyme quand un administrateur le supprime", function (Closure $supprimer): void {
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $compte = User::factory()->create([
+        'name' => 'Nom Temoin Anonyme',
+        'email' => 'temoin-anonyme@example.org',
+    ]);
+    compteSupprimeSemerSesTraces($compte);
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    $supprimer($compte);
+
+    $entrees = compteSupprimeLesEntreesDAuditApres($derniere);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(compteSupprimeSesTracesRestantes($compte->getMorphClass(), $compte->id))->each->toBe(0)
+        ->and($entrees)->toHaveCount(1);
+
+    $entree = $entrees->sole();
+    $ligne = (string) json_encode(DB::table('activity_log')->find($entree->id), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    expect($entree->description)->toBe(User::SUPPRESSION_PAR_UN_ADMINISTRATEUR)
+        ->and($entree->event)->toBe('deleted')
+        ->and($entree->causer_type)->toBe($administrateur->getMorphClass())
+        ->and($entree->causer_id)->toBe($administrateur->id)
+        ->and($entree->subject_type)->toBeNull()
+        ->and($entree->subject_id)->toBeNull()
+        ->and($entree->properties?->all())->toBe([])
+        ->and($entree->attribute_changes?->all())->toBe([])
+        ->and($ligne)->not->toContain('Nom Temoin Anonyme')
+        ->and($ligne)->not->toContain('temoin-anonyme@example.org');
+})->with('suppressions du compte par un administrateur');
+
+/*
+ * L'entrée anonyme s'écrit APRÈS l'effacement des traces du compte qu'elle
+ * concerne : cet effacement-là ne peut pas l'atteindre. Le risque est celui
+ * d'un compte supprimé plus tard qui porte l'identifiant de l'administrateur
+ * (`users` et `admins` ont chacune leur séquence) : l'effacement de
+ * `activity_log.causer`, s'il filtrait sur le seul identifiant, emporterait
+ * alors l'entrée, et avec elle toute trace de la suppression.
+ */
+it("garde l'entrée anonyme quand part ensuite un compte qui porte l'identifiant de l'administrateur", function (): void {
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $compte = User::factory()->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->callAction(DeleteAction::class);
+
+    $entree = compteSupprimeLesEntreesDAuditApres($derniere)->sole();
+    $homonyme = User::factory()->create(['id' => $administrateur->id]);
+
+    $this->actingAs($homonyme)
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/');
+
+    expect(User::query()->whereKey($homonyme->id)->exists())->toBeFalse()
+        ->and($entree->causer_id)->toBe($homonyme->id)
+        ->and(compteSupprimeLesEntreesDAuditApres($derniere)->modelKeys())->toBe([$entree->id]);
+});
+
+it('écrit une entrée anonyme par compte supprimé en suppression groupée', function (): void {
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $comptes = User::factory()->count(2)->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    Livewire::test(ListUsers::class)
+        ->selectTableRecords($comptes->modelKeys())
+        ->callAction(TestAction::make('delete')->table()->bulk());
+
+    $entrees = compteSupprimeLesEntreesDAuditApres($derniere);
+
+    expect(User::query()->whereKey($comptes->modelKeys())->exists())->toBeFalse()
+        ->and($entrees)->toHaveCount(2)
+        ->and($entrees->pluck('description')->unique()->all())->toBe([User::SUPPRESSION_PAR_UN_ADMINISTRATEUR])
+        ->and($entrees->pluck('causer_id')->unique()->all())->toBe([$administrateur->id])
+        ->and($entrees->whereNotNull('subject_type'))->toBeEmpty();
+});
+
+/*
+ * Le journal d'audit du panneau affichait « # » dans la colonne du sujet
+ * d'une entrée qui n'en a pas.
+ */
+it("affiche l'entrée anonyme dans le journal d'audit du panneau", function (): void {
+    $administrateur = compteSupprimeLAdministrateurConnecte();
+    $compte = User::factory()->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    Livewire::test(EditUser::class, ['record' => $compte->getKey()])
+        ->callAction(DeleteAction::class);
+
+    $entree = compteSupprimeLesEntreesDAuditApres($derniere)->sole();
+
+    Livewire::test(ListActivityLogs::class)
+        ->assertCanSeeTableRecords([$entree])
+        ->assertTableColumnStateSet('description', User::SUPPRESSION_PAR_UN_ADMINISTRATEUR, $entree)
+        ->assertTableColumnStateSet('subject', 'aucun', $entree)
+        ->assertTableColumnStateSet('causer', 'Admin #'.$administrateur->id, $entree);
+});
+
+/*
+ * Le compte qui se supprime lui-même depuis son profil n'a pas
+ * d'administrateur pour acteur : rien ne s'écrit, comme hors de toute
+ * requête (`User::destroy()`, une commande).
+ */
+it("n'écrit aucune entrée d'audit quand le compte se supprime lui-même", function (): void {
+    $compte = User::factory()->create();
+    $derniere = compteSupprimeLaDerniereEntreeDAudit();
+
+    $this->actingAs($compte)
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertRedirect('/');
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(compteSupprimeLesEntreesDAuditApres($derniere))->toBeEmpty();
+});
+
+/**
+ * Une erreur rapportée par le navigateur de ce compte.
+ */
+function compteSupprimeSemerUneErreurDuNavigateur(User $compte): void
+{
+    ErreurNavigateur::query()->create([
+        'user_id' => $compte->id,
+        'type' => 'error',
+        'message' => 'témoin du compte '.$compte->id,
+        'url' => '/workouts/'.$compte->id,
+        'empreinte' => ErreurNavigateur::empreinteDe('error', 'témoin', null, null),
+    ]);
+}
+
+/*
+ * Les erreurs du navigateur portent le message et l'URL de la page, qui
+ * peuvent recopier ce que le compte a saisi. Leur clé vidait `user_id` à la
+ * suppression du compte (`ON DELETE SET NULL`) : la ligne restait jusqu'à la
+ * purge à trente jours. Elle part désormais avec le compte (#1938).
+ */
+it('efface les erreurs du navigateur du compte, et seulement les siennes', function (Closure $supprimer): void {
+    $compte = User::factory()->create();
+    $voisin = User::factory()->create();
+
+    compteSupprimeSemerUneErreurDuNavigateur($compte);
+    compteSupprimeSemerUneErreurDuNavigateur($voisin);
+
+    $supprimer($compte);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(ErreurNavigateur::query()->count())->toBe(1)
+        ->and(ErreurNavigateur::query()->where('user_id', $voisin->id)->count())->toBe(1);
+})->with('chemins de suppression du compte');
+
+/*
+ * Toute ligne qui désigne un compte par une clé étrangère part avec lui :
+ * `SET NULL` garderait la ligne, sans nom, mais avec ce qu'elle dit du compte.
+ * Une table qui doit survivre au compte le justifie ici. Les règles se lisent
+ * par contrainte, et non par table : une table qui porterait deux clés vers
+ * `users` ne garderait sinon que la règle de l'une.
+ */
+it('efface en cascade toute ligne qui désigne le compte par une clé étrangère', function (): void {
+    $regles = DB::table('information_schema.REFERENTIAL_CONSTRAINTS')
+        ->where('CONSTRAINT_SCHEMA', DB::connection()->getDatabaseName())
+        ->where('REFERENCED_TABLE_NAME', 'users')
+        ->pluck('DELETE_RULE', 'CONSTRAINT_NAME')
+        ->all();
+
+    expect($regles)->toHaveKey('erreurs_navigateur_user_id_foreign')
+        ->and($regles)->toHaveKey('filament_exceptions_table_user_id_foreign')
+        ->and(array_filter($regles, static fn (mixed $regle): bool => $regle !== 'CASCADE'))->toBe([]);
+});
+
+/**
+ * Une exception levée par une requête de ce compte, comme le serveur la garde.
+ */
+function compteSupprimeLeverUneException(User $compte): void
+{
+    test()->actingAs($compte)->post('/_boum-du-compte')->assertServerError();
+}
+
+/*
+ * Une exception levée par une requête du compte porte son identifiant, et
+ * souvent ce qu'il a saisi (en-têtes, modèle lié par la route, message) : elle
+ * part avec lui (#1938). Celle qu'aucun compte connecté n'a levée n'a pas de
+ * lien : elle reste, jusqu'à la purge à trente jours.
+ */
+it('efface les exceptions levées par le compte, et seulement les siennes', function (Closure $supprimer): void {
+    ExceptionEnregistree::query()->create([
+        'type' => RuntimeException::class,
+        'message' => 'sans compte',
+        'file' => __FILE__,
+        'line' => 1,
+        'trace' => [],
+        'method' => 'GET',
+        'path' => '/',
+    ]);
+
+    Route::middleware(['web', 'auth'])->post('/_boum-du-compte', function (): never {
+        throw new RuntimeException('exception du compte');
+    });
+
+    $compte = User::factory()->create();
+    $voisin = User::factory()->create();
+
+    compteSupprimeLeverUneException($compte);
+    compteSupprimeLeverUneException($voisin);
+
+    expect(ExceptionEnregistree::query()->where('user_id', $compte->id)->count())->toBe(1);
+
+    $supprimer($compte);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(ExceptionEnregistree::query()->where('user_id', $compte->id)->count())->toBe(0)
+        ->and(ExceptionEnregistree::query()->where('user_id', $voisin->id)->count())->toBe(1)
+        ->and(ExceptionEnregistree::query()->whereNull('user_id')->count())->toBe(1);
+})->with('chemins de suppression du compte');
+
+/*
+ * Avant #1670 (2026-09-03), le journal d'activité suivait aussi les données
+ * métier : une entrée sur une séance du compte recopiait ses champs et son
+ * `user_id`. Celles dont la cause est un administrateur ou personne ne
+ * désignent le compte ni comme cause, ni comme sujet : elles survivent à sa
+ * suppression, jusqu'à la purge de l'audit à 180 jours, donc jusqu'au début
+ * de mars 2027 pour les dernières, selon la date à laquelle #1670 a été
+ * déployé (#1938). La page de profil annonce cette durée :
+ * elle se raccourcit le jour où ces entrées partent avec le compte, ou que la
+ * purge les prend plus tôt.
+ */
+it("laisse les entrées d'audit d'avant #1670 sur les données du compte à la purge à 180 jours, que la page de profil annonce", function (): void {
+    $compte = User::factory()->create();
+    $seance = Workout::withoutEvents(static fn (): Workout => Workout::factory()->create(['user_id' => $compte->id]));
+
+    foreach ([Admin::factory()->create(), null] as $cause) {
+        DB::table('activity_log')->insert([
+            'log_name' => 'default',
+            'description' => 'updated',
+            'event' => 'updated',
+            'subject_type' => $seance->getMorphClass(),
+            'subject_id' => $seance->id,
+            'causer_type' => $cause?->getMorphClass(),
+            'causer_id' => $cause?->id,
+            'attribute_changes' => json_encode(['attributes' => ['user_id' => $compte->id, 'notes' => 'note témoin']]),
+            'created_at' => '2026-09-02 12:00:00',
+            'updated_at' => '2026-09-02 12:00:00',
+        ]);
+    }
+
+    $compte->delete();
+
+    $purges = array_values(array_filter(
+        app(Schedule::class)->events(),
+        static fn (Event $evenement): bool => str_contains((string) $evenement->command, 'activitylog:clean'),
+    ));
+    $promesse = preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue')));
+
+    expect(DB::table('activity_log')->where('subject_type', $seance->getMorphClass())->where('subject_id', $seance->id)->count())->toBe(2)
+        ->and($purges)->toHaveCount(1)
+        ->and((string) $purges[0]->command)->toContain('--days=180')
+        ->and($promesse)->toContain("180 jours dans l'historique d'audit");
+});
+
+/*
+ * La pile écrit chaque ligne de journal sur stderr (`LOG_STACK`), donc dans
+ * `docker logs`. Le gestionnaire d'exceptions y ajoute l'identifiant du compte
+ * connecté, et le message d'une erreur SQL ce qu'il a saisi. Aucun service n'y
+ * posait de rotation, et cette copie vivait autant que le conteneur ; app,
+ * worker et scheduler la bornent désormais par la taille (`logging`, pilote
+ * `json-file`, `max-size` et `max-file`, #1938). Une rotation par taille ne
+ * donne aucune durée : la page de profil dit seulement que de nouvelles
+ * lignes remplacent ces traces, sans leur promettre un nombre de jours.
+ * `LesJournauxDesConteneursSontBornesTest` tient les valeurs du réglage.
+ */
+it('dit des journaux du serveur ce que tient leur rotation par taille, sans leur promettre de durée', function (): void {
+    $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
+    assert(is_array($composition) && is_array($composition['services'] ?? null));
+    $promesse = preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue')));
+
+    foreach (['app', 'worker', 'scheduler'] as $nom) {
+        $service = $composition['services'][$nom] ?? null;
+        assert(is_array($service) && is_array($service['environment'] ?? null));
+
+        $pile = $service['environment']['LOG_STACK'] ?? null;
+
+        expect(is_string($pile) ? $pile : '')->toContain('stderr')
+            ->and(data_get($service, 'logging.driver'))->toBe('json-file', "`{$nom}` ne pose pas la rotation de docker logs.")
+            ->and(data_get($service, 'logging.options'))->toBeArray()->toHaveKeys(['max-size', 'max-file']);
+    }
+
+    expect($promesse)->toContain('Les journaux du serveur peuvent aussi en garder des traces, le temps que de nouvelles lignes les remplacent')
+        ->and($promesse)->not->toContain('sans durée fixe')
+        ->and($promesse)->not->toMatch('/\d+ jours dans les journaux|trente jours dans les journaux/');
+});
+
+/**
+ * Le nom du fichier du jour du conteneur `app`, tant de jours avant ce jour.
+ */
+function compteSupprimeLeFichierDuJour(DateTimeImmutable $aujourdhui, int $jours): string
+{
+    return 'app-'.$aujourdhui->modify("-{$jours} days")->format('Y-m-d').'.log';
+}
+
+/**
+ * Les fichiers du jour qui restent dans un dossier de journaux, une fois
+ * semés ceux de jours passés et écrite une ligne aujourd'hui, par le canal
+ * `daily` tel que la configuration le construit (le dossier et le niveau
+ * mis à part). Monolog date ses fichiers à l'horloge du système, pas à
+ * celle de Carbon : les jours passés se comptent depuis cette horloge.
+ *
+ * @param  list<int>  $joursPasses
+ * @return list<string>
+ */
+function compteSupprimeLesFichiersDuJourRestants(string $dossier, DateTimeImmutable $aujourdhui, array $joursPasses): array
+{
+    foreach ($joursPasses as $jours) {
+        file_put_contents($dossier.'/'.compteSupprimeLeFichierDuJour($aujourdhui, $jours), "trace\n");
+    }
+
+    $canal = config('logging.channels.daily');
+    assert(is_array($canal));
+
+    Log::build([...$canal, 'path' => $dossier.'/app.log', 'level' => 'debug'])->info('nouvelle ligne');
+
+    $fichiers = glob($dossier.'/app-*.log');
+    assert(is_array($fichiers));
+
+    $restants = array_map(basename(...), $fichiers);
+    sort($restants);
+
+    return $restants;
+}
+
+/*
+ * La pile écrit aussi chaque ligne dans le fichier du jour du conteneur, sur
+ * le volume `journaux` (`LOG_STACK: stderr,daily`). Le canal `daily` y garde
+ * les quatorze fichiers les plus récents de chaque conteneur, pas quatorze
+ * jours de calendrier : Monolog n'efface le plus ancien qu'en ouvrant le
+ * fichier d'un nouveau jour, et seulement s'il y en a plus de quatorze. Un
+ * conteneur qui écrit peu (`LOG_LEVEL: info`) garde ainsi un fichier de
+ * soixante jours, et ses traces d'un compte supprimé, tant que quatorze jours
+ * plus récents n'ont pas été écrits. Le README disait ce fichier gardé
+ * quatorze jours (#1938) : il dit désormais les quatorze derniers jours où le
+ * conteneur a écrit, et la page de profil, qui ne promet aucune durée aux
+ * journaux du serveur, reste vraie.
+ */
+it('garde dans le volume `journaux` les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de calendrier, comme le dit le README', function (): void {
+    $dossier = sys_get_temp_dir().'/journaux-du-jour-'.bin2hex(random_bytes(6));
+    $aujourdhui = new DateTimeImmutable();
+    $readme = (string) preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('README.md')));
+
+    try {
+        File::ensureDirectoryExists($dossier.'/peu');
+        File::ensureDirectoryExists($dossier.'/chaque-jour');
+
+        $peu = compteSupprimeLesFichiersDuJourRestants($dossier.'/peu', $aujourdhui, [60, 40, 20]);
+        $chaqueJour = compteSupprimeLesFichiersDuJourRestants($dossier.'/chaque-jour', $aujourdhui, [60, ...range(1, 13)]);
+
+        expect(config('logging.channels.daily.days'))->toEqual(14)
+            ->and($peu)->toHaveCount(4)
+            ->and($peu)->toContain(...array_map(static fn (int $jours): string => compteSupprimeLeFichierDuJour($aujourdhui, $jours), [60, 40, 20]))
+            ->and($chaqueJour)->toHaveCount(14)
+            ->and($chaqueJour)->not->toContain(compteSupprimeLeFichierDuJour($aujourdhui, 60))
+            ->and($chaqueJour)->toContain(compteSupprimeLeFichierDuJour($aujourdhui, 13))
+            ->and(str_contains($readme, 'les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de calendrier'))
+            ->toBeTrue('Le README doit dire ce que garde le volume `journaux` : les quatorze derniers jours où le conteneur a écrit.')
+            ->and(preg_match_all('/gardé quatorze jours|quatorze jours dans le volume/', $readme))
+            ->toBe(0, 'Le README promet quatorze jours au volume `journaux`, que le canal `daily` ne borne pas par la durée.');
+    } finally {
+        File::deleteDirectory($dossier);
+    }
 });
