@@ -11,8 +11,9 @@ declare(strict_types=1);
  * date de la veille, les cartes voisines de la page des séances comptaient
  * deux fenêtres différentes, la page Statistiques rangeait sous un mois la
  * comparaison du suivant, le calendrier ouvert le soir du 31 décembre montrait
- * janvier de l'année qui s'achève, et la carte hebdomadaire du tableau de bord
- * posait le total d'une semaine sur la courbe d'une autre.
+ * janvier de l'année qui s'achève, la carte hebdomadaire du tableau de bord
+ * posait le total d'une semaine sur la courbe d'une autre, et la page
+ * Hydratation montrait au compteur un autre jour que sur son graphique.
  * Après #2017, qui avait réglé les deux bornes d'une même fenêtre, ces tests
  * font passer minuit, ou la fin du mois et de l'année, entre deux lectures,
  * par l'horloge de `tests/Support/HorlogeQuiPasseMinuit.php`.
@@ -21,12 +22,14 @@ declare(strict_types=1);
 use App\Actions\Calendar\FetchCalendarEventsAction;
 use App\Actions\Dashboard\FetchDashboardDataAction;
 use App\Actions\Stats\GetStatsDashboardAction;
+use App\Actions\Tools\FetchWaterTrackerAction;
 use App\Actions\Workouts\CreateWorkoutAction;
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\DTOs\Stats\MonthlyVolumePoint;
 use App\DTOs\Stats\VolumeComparison;
 use App\DTOs\Stats\WeeklyVolumeTrendPoint;
 use App\Models\User;
+use App\Models\WaterLog;
 use App\Models\Workout;
 use App\Services\Stats\ClesDeStats;
 use Illuminate\Support\Carbon;
@@ -147,6 +150,45 @@ it('ouvre le calendrier sur un mois de la bonne année quand l année change pen
 
     $reponse->assertOk();
     expect([$reponse->inertiaProps('year'), $reponse->inertiaProps('month')])->toBeIn([[2026, 12], [2027, 1]]);
+});
+
+/**
+ * La page Hydratation montre le même jour au compteur et sur la dernière barre
+ * de son graphique quand minuit passe pendant la requête.
+ *
+ * Le compteur du jour et le graphique des sept derniers jours lisaient chacun
+ * l'horloge : quand minuit passait entre les deux, le compteur montrait les
+ * 2 000 ml et les prises du 11 octobre au-dessus d'un graphique dont la barre
+ * du jour, le 12, restait vide, et dont la veille portait ces 2 000 ml.
+ * L'horloge passe minuit dès que le contrôleur a reçu ses actions, juste
+ * avant sa première lecture.
+ */
+it('montre le même jour au compteur et au graphique de la page Hydratation quand minuit passe pendant la requête', function (): void {
+    $user = User::factory()->create();
+    WaterLog::factory()->create(['user_id' => $user->id, 'consumed_at' => Carbon::parse('2026-10-11 12:00:00'), 'amount' => 2000]);
+    Carbon::setTestNow(Carbon::parse('2026-10-11 23:59:59'));
+    $this->app->resolving(FetchWaterTrackerAction::class, static function (): void {
+        HorlogeQuiPasseMinuit::apres(1, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+    });
+
+    $reponse = $this->actingAs($user)->get(route('tools.water.index'));
+
+    $reponse->assertOk();
+    $historique = $reponse->inertiaProps('history');
+    assert(is_array($historique));
+    $barreDuJour = end($historique);
+    assert(is_array($barreDuJour));
+    $prisesDuJour = $reponse->inertiaProps('logs');
+    assert(is_array($prisesDuJour));
+    $totalDuJour = $reponse->inertiaProps('todayTotal');
+    assert(is_numeric($totalDuJour) && is_numeric($barreDuJour['total']));
+
+    // Le 11 octobre et ses 2 000 ml, ou le 12, vide, au compteur comme sur la
+    // barre du jour.
+    expect([(float) $totalDuJour, count($prisesDuJour), $barreDuJour['date'], (float) $barreDuJour['total']])->toBeIn([
+        [2000.0, 1, '2026-10-11', 2000.0],
+        [0.0, 0, '2026-10-12', 0.0],
+    ]);
 });
 
 /**
