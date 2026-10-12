@@ -70,7 +70,7 @@
     "Your account must be verified before linking it with a social provider.": "Ce compte n'a pas encore confirmé son adresse email : il ne peut pas être associé à un fournisseur de connexion. Connectez-vous avec cette adresse et votre mot de passe, puis confirmez-la. Si vous n'avez pas de mot de passe, « Mot de passe oublié ? » vous permet d'en choisir un.",
     "Redis returned a falsy response when try to connection to it.": "Redis a rendu une réponse vide à la connexion.",
     "Could not set or retrieve an application cache value.": "Impossible d'écrire ou de relire une valeur dans le cache de l'application.",
-    "Queue jobs running failed. Check meta for more information.": "Les tâches de la file ne tournent pas, le détail est dans les métadonnées du résultat.",
+    "Queue jobs running failed. Check meta for more information.": "Le battement de la file n'a pas été traité à temps.",
     "The schedule did not run yet.": "Le planificateur n'a pas encore tourné.",
     "Horizon does not seem to be installed correctly.": "Horizon ne semble pas installé correctement.",
     "Horizon is not running.": "Horizon ne tourne pas.",

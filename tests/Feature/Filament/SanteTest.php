@@ -239,7 +239,9 @@ it('écrit en français l’objet, le titre et l’introduction du courriel d’
  * se traduit par sa clé dans `lang/fr.json`, dans le courriel comme sur la
  * page, qui range le message traduit. La liste est lue dans la source des
  * contrôles enregistrés : un message ajouté ou reformulé par une mise à jour
- * du paquet la change, et ce test le dit.
+ * du paquet la change, et ce test le dit. Une traduction se suffit : elle ne
+ * renvoie pas aux métadonnées du résultat, comme le fait l'anglais de la file,
+ * puisque ni le courriel ni la page ne les montrent.
  */
 it('traduit chaque message fixe des contrôles du paquet', function (): void {
     $messages = santeMessagesFixesDuPaquet();
@@ -265,7 +267,13 @@ it('traduit chaque message fixe des contrôles du paquet', function (): void {
     ]);
 
     foreach ($messages as $message) {
-        expect(Result::make()->failed($message)->getNotificationMessage())->not->toBe($message, "« {$message} » n'a pas de traduction dans lang/fr.json");
+        $traduction = Result::make()->failed($message)->getNotificationMessage();
+
+        expect($traduction)->not->toBe($message, "« {$message} » n'a pas de traduction dans lang/fr.json");
+
+        foreach (['métadonnées', 'meta'] as $renvoi) {
+            expect(Str::lower($traduction))->not->toContain($renvoi);
+        }
     }
 });
 
