@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use PHPUnit\Framework\ExpectationFailedException;
 use Symfony\Component\Yaml\Yaml;
 
 /*
@@ -35,15 +36,18 @@ function journauxBornesReglageAttendu(): array
 }
 
 /**
- * Les services de `docker-compose.prod.yml` qui font tourner l'image de
- * l'application, ancres résolues.
+ * Les services d'une composition qui font tourner l'image de l'application,
+ * ancres résolues. app, worker et scheduler doivent en être : sans eux, la
+ * garde passerait aussi le jour où plus rien ne serait reconnu. Un nouveau
+ * service de l'image en est aussi, sans qu'il faille l'ajouter ici : la garde
+ * exige de lui le même réglage.
  *
+ * @param  array<mixed>  $composition
  * @return array<string, array<string, mixed>>
  */
-function journauxBornesServicesDeLApplication(): array
+function journauxBornesServicesDeLApplication(array $composition): array
 {
-    $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
-    $services = is_array($composition) ? ($composition['services'] ?? null) : null;
+    $services = $composition['services'] ?? null;
 
     expect($services)->toBeArray();
     assert(is_array($services));
@@ -55,11 +59,30 @@ function journauxBornesServicesDeLApplication(): array
             && str_starts_with($service['image'], 'ghcr.io/kuasar-mknd/gym-tracker'),
     );
 
-    // Sans eux, la garde passerait aussi le jour où plus rien ne serait reconnu.
-    expect(array_keys($services))->toEqualCanonicalizing(['app', 'worker', 'scheduler']);
+    expect(array_keys($services))->toContain('app', 'worker', 'scheduler');
 
     /** @var array<string, array<string, mixed>> $services */
     return $services;
+}
+
+/**
+ * Les écarts de chaque service de l'image d'une composition, précédés de son
+ * nom. Une liste vide : tous portent la rotation par taille décidée.
+ *
+ * @param  array<mixed>  $composition
+ * @return list<string>
+ */
+function journauxBornesFautes(array $composition): array
+{
+    $fautes = [];
+
+    foreach (journauxBornesServicesDeLApplication($composition) as $nom => $service) {
+        foreach (journauxBornesEcarts($service) as $ecart) {
+            $fautes[] = "{$nom} : {$ecart}";
+        }
+    }
+
+    return $fautes;
 }
 
 /**
@@ -95,13 +118,10 @@ function journauxBornesEcarts(array $service): array
 }
 
 it('borne par la taille les journaux de app, worker et scheduler', function (): void {
-    $fautes = [];
+    $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
+    assert(is_array($composition));
 
-    foreach (journauxBornesServicesDeLApplication() as $nom => $service) {
-        foreach (journauxBornesEcarts($service) as $ecart) {
-            $fautes[] = "{$nom} : {$ecart}";
-        }
-    }
+    $fautes = journauxBornesFautes($composition);
 
     expect($fautes)->toBe([], sprintf(
         'La copie des journaux que garde docker logs doit tourner par taille, json-file, max-size 10m et max-file 3 '
@@ -161,4 +181,48 @@ it('lit le réglage partagé par une ancre comme celui de chaque service', funct
     $service = data_get($composition, 'services.app');
 
     expect(journauxBornesEcarts($service))->toBe([]);
+});
+
+it('exige le réglage d’un nouveau service de l’image sans qu’il faille l’ajouter à la garde', function (): void {
+    $composition = Yaml::parse(<<<'YAML'
+        x-app-logging: &app-logging
+            driver: json-file
+            options:
+                max-size: '10m'
+                max-file: '3'
+        services:
+            app:
+                image: ghcr.io/kuasar-mknd/gym-tracker:v1
+                logging: *app-logging
+            worker:
+                image: ghcr.io/kuasar-mknd/gym-tracker:v1
+                logging: *app-logging
+            scheduler:
+                image: ghcr.io/kuasar-mknd/gym-tracker:v1
+                logging: *app-logging
+            migrations:
+                image: ghcr.io/kuasar-mknd/gym-tracker:v1
+                logging: *app-logging
+            oubli:
+                image: ghcr.io/kuasar-mknd/gym-tracker:v1
+            db:
+                image: mysql:8.4
+        YAML);
+    assert(is_array($composition));
+
+    expect(array_keys(journauxBornesServicesDeLApplication($composition)))->toBe(['app', 'worker', 'scheduler', 'migrations', 'oubli'])
+        ->and(journauxBornesFautes($composition))->toBe([
+            'oubli : aucun réglage `logging` : la copie de docker logs suit le réglage du démon, sans rotation par défaut',
+        ]);
+});
+
+it('ne passe pas à vide quand app, worker ou scheduler ne fait plus tourner l’image', function (): void {
+    $composition = ['services' => [
+        'app' => ['image' => 'ghcr.io/kuasar-mknd/gym-tracker:v1'],
+        'worker' => ['image' => 'ghcr.io/kuasar-mknd/gym-tracker:v1'],
+        'scheduler' => ['image' => 'example.org/autre-image:v1'],
+    ]];
+
+    expect(static fn (): array => journauxBornesServicesDeLApplication($composition))
+        ->toThrow(ExpectationFailedException::class);
 });
