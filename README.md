@@ -44,6 +44,7 @@
 - **OAuth Social** — Connexion via Google, GitHub et Apple, dès que l'identité OAuth du fournisseur est complète ; pour Apple, l'application signe elle-même le secret client à chaque échange, avec la clé `.p8` (#1911).
 - **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
 - **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce neuf à chaque requête, Octane compris).
+- **Compte ouvert par le lien** — L'inscription et le changement d'adresse répondent de la même façon, dans le même temps, qu'une adresse ait déjà un compte ou non. Un compte ne s'ouvre, et une nouvelle adresse ne remplace l'ancienne, qu'une fois suivi le lien envoyé à cette adresse ; après l'inscription, on suit le lien puis on se connecte sur le même appareil. Le titulaire d'une adresse déjà prise en est prévenu par courriel. Un compte jamais ouvert s'efface au bout de sept jours ; les comptes créés avant ce changement, ou depuis le panneau, ne sont pas concernés.
 
 ---
 
@@ -54,8 +55,8 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 3 304 tests, couverture ≥ **94 %** | bloquant par PR |
-| **Tests frontend** | 2 624 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
+| **Tests backend** | 3 385 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests frontend** | 2 627 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 121 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
@@ -148,7 +149,7 @@ Le service `db` reçoit `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` et `DB_ROOT_
 
 | Variable | Obligatoire en production | Défaut | Rôle |
 | --- | --- | --- | --- |
-| `MAIL_HOST`, `MAIL_PORT` | oui | vides : aucun courriel ne part | Serveur SMTP de tous les courriels : vérification d'adresse, mot de passe oublié, avis de changement d'adresse envoyé à la dernière adresse vérifiée du compte, alertes de santé, notifications des sauvegardes manuelles. Le lien de mot de passe oublié part de `worker` (Horizon), comme tout courriel en file (#1951). `MAIL_PORT` décide aussi du chiffrement quand `MAIL_SCHEME` est vide. |
+| `MAIL_HOST`, `MAIL_PORT` | oui | vides : aucun courriel ne part | Serveur SMTP de tous les courriels : vérification d'adresse, lien qui ouvre un compte après l'inscription, lien qui confirme une nouvelle adresse, avis au titulaire d'une adresse qu'une inscription ou un autre compte a voulu prendre, mot de passe oublié, avis de changement d'adresse envoyé à la dernière adresse vérifiée du compte, alertes de santé, notifications des sauvegardes manuelles. L'inscription et le changement d'adresse, comme le lien de mot de passe oublié (#1951), sont traités par `worker` (Horizon), d'où partent leurs courriels : Horizon arrêté, aucun compte ne se crée et aucun lien ne part, alors que la page a répondu. `MAIL_PORT` décide aussi du chiffrement quand `MAIL_SCHEME` est vide. |
 | `MAIL_USERNAME`, `MAIL_PASSWORD` | si le relais l'exige | vides : pas d'authentification | Authentification SMTP. |
 | `MAIL_SCHEME` | non | vide : déduit du port | `smtps` (TLS implicite) ou `smtp` (STARTTLS quand le serveur le propose). Vide : `smtps` sur le port 465, `smtp` ailleurs. Remplace `MAIL_ENCRYPTION`, que Laravel ne lit plus : une pile qui la pose encore n'en tire rien. |
 | `MAIL_FROM_ADDRESS` | oui | vide : l'envoi échoue | Expéditeur de tous les courriels, et destinataire des notifications de sauvegarde faute de `BACKUP_NOTIFICATION_EMAIL`. Elle reçoit aussi les réponses : l'avis de changement d'adresse invite à y répondre qui n'est pas à l'origine du changement, et elle doit donc être lue. |
@@ -235,6 +236,7 @@ Posées par le `Dockerfile` à partir des arguments que la CI passe au build : l
 | `SESSION_LIFETIME` | `120` | Minutes d'inactivité avant que la session expire ; « Se souvenir de moi » reconnecte ensuite sans mot de passe. |
 | `BACKUP_PATH` | `/app/storage/app/sauvegardes` | Racine du disque des archives, exactement la cible du montage de `BACKUP_HOST_PATH`. À ne pas transmettre : une autre valeur écrirait les archives dans le conteneur, hors du partage. |
 | `BACKUP_NOTIFICATION_EMAIL` | `MAIL_FROM_ADDRESS` | Destinataire des notifications de sauvegarde. Les sauvegardes planifiées les coupent (`--disable-notifications`) : seules celles lancées à la main, du panneau ou par `backup:run`, écrivent. |
+| `AUTH_TIMEBOX_DURATION` | `1000000` (une seconde, en microsecondes) | Durée minimale des réponses d'authentification (inscription, connexion, mot de passe oublié, réinitialisation, demande de changement d'adresse, connexion du panneau), pour qu'elles ne durent pas plus longtemps quand l'adresse a un compte. Elle doit dépasser un hachage bcrypt au coût de `BCRYPT_ROUNDS` (environ 0,25 s à 12, le double à chaque unité) : relever les deux ensemble au-delà de 13. Une valeur vide ou non numérique donne le défaut ; phpunit.xml la met à 0, et les tests de durée reposent la seconde. |
 | `HORIZON_HEARTBEAT_URL`, `SCHEDULE_HEARTBEAT_URL` | vides | URL qu'un contrôle réussi d'Horizon ou du planificateur appellerait, pour qu'une surveillance externe s'alarme quand les appels cessent — y compris planificateur arrêté, ce que `HEALTH_TO_ADDRESS` ne peut pas signaler. |
 | `GOOGLE_REDIRECT_URI`, `GITHUB_REDIRECT_URI`, `APPLE_REDIRECT_URI` | `APP_URL` suivie de `/auth/google/callback`, `/auth/github/callback` ou `/auth/apple/callback` | L'URL de rappel à déclarer chez le fournisseur. |
 
@@ -259,6 +261,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 | `APP_MAINTENANCE_DRIVER`, `APP_MAINTENANCE_STORE` | `file`, commentée | Où se mémorise le mode maintenance. |
 | `PHP_CLI_SERVER_WORKERS` | commentée | Processus de `artisan serve`, que Sail lance pour servir l'application. |
 | `BCRYPT_ROUNDS` | `12` | Coût du hachage des mots de passe ; phpunit.xml le baisse à 4. |
+| `AUTH_TIMEBOX_DURATION` | commentée | Durée minimale des réponses d'authentification, une seconde par défaut ; phpunit.xml la met à 0. Voir « Lues par l'application, non transmises en production ». |
 | `LOG_CHANNEL`, `LOG_STACK`, `LOG_LEVEL`, `LOG_DEPRECATIONS_CHANNEL` | `stack`, `single`, `debug`, `null` | Journaux dans storage/logs/laravel.log, dépréciations ignorées. Avec `LOG_STACK=daily`, `LOG_DAILY_NAME` (défaut `laravel`) nomme le fichier du jour. |
 | `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | `mysql`, `mysql`, `3306`, `gym_tracker`, `sail`, `password` | Le MySQL de Sail, qui crée la base et l'utilisateur au premier démarrage du volume. Les tests gardent l'hôte mais visent la base `gym_tracker_testing`, les parcours navigateur la base `gym_tracker_dusk` par `.env.dusk.local` ; le premier démarrage du volume crée les deux. |
 | `SESSION_DRIVER`, `SESSION_LIFETIME`, `SESSION_ENCRYPT`, `SESSION_PATH`, `SESSION_DOMAIN` | `database`, `120`, `false`, `/`, `null` | Sessions en base. |
