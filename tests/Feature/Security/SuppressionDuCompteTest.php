@@ -24,6 +24,8 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -834,4 +836,79 @@ it('dit des journaux du serveur ce que tient leur rotation par taille, sans leur
     expect($promesse)->toContain('Les journaux du serveur peuvent aussi en garder des traces, le temps que de nouvelles lignes les remplacent')
         ->and($promesse)->not->toContain('sans durée fixe')
         ->and($promesse)->not->toMatch('/\d+ jours dans les journaux|trente jours dans les journaux/');
+});
+
+/**
+ * Le nom du fichier du jour du conteneur `app`, tant de jours avant ce jour.
+ */
+function compteSupprimeLeFichierDuJour(DateTimeImmutable $aujourdhui, int $jours): string
+{
+    return 'app-'.$aujourdhui->modify("-{$jours} days")->format('Y-m-d').'.log';
+}
+
+/**
+ * Les fichiers du jour qui restent dans un dossier de journaux, une fois
+ * semés ceux de jours passés et écrite une ligne aujourd'hui, par le canal
+ * `daily` tel que la configuration le construit (le dossier et le niveau
+ * mis à part). Monolog date ses fichiers à l'horloge du système, pas à
+ * celle de Carbon : les jours passés se comptent depuis cette horloge.
+ *
+ * @param  list<int>  $joursPasses
+ * @return list<string>
+ */
+function compteSupprimeLesFichiersDuJourRestants(string $dossier, DateTimeImmutable $aujourdhui, array $joursPasses): array
+{
+    foreach ($joursPasses as $jours) {
+        file_put_contents($dossier.'/'.compteSupprimeLeFichierDuJour($aujourdhui, $jours), "trace\n");
+    }
+
+    $canal = config('logging.channels.daily');
+    assert(is_array($canal));
+
+    Log::build([...$canal, 'path' => $dossier.'/app.log', 'level' => 'debug'])->info('nouvelle ligne');
+
+    $restants = array_map(basename(...), File::glob($dossier.'/app-*.log'));
+    sort($restants);
+
+    return $restants;
+}
+
+/*
+ * La pile écrit aussi chaque ligne dans le fichier du jour du conteneur, sur
+ * le volume `journaux` (`LOG_STACK: stderr,daily`). Le canal `daily` y garde
+ * les quatorze fichiers les plus récents de chaque conteneur, pas quatorze
+ * jours de calendrier : Monolog n'efface le plus ancien qu'en ouvrant le
+ * fichier d'un nouveau jour, et seulement s'il y en a plus de quatorze. Un
+ * conteneur qui écrit peu (`LOG_LEVEL: info`) garde ainsi un fichier de
+ * soixante jours, et ses traces d'un compte supprimé, tant que quatorze jours
+ * plus récents n'ont pas été écrits. Le README disait ce fichier gardé
+ * quatorze jours (#1938) : il dit désormais les quatorze derniers jours où le
+ * conteneur a écrit, et la page de profil, qui ne promet aucune durée aux
+ * journaux du serveur, reste vraie.
+ */
+it('garde dans le volume `journaux` les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de calendrier, comme le dit le README', function (): void {
+    $dossier = sys_get_temp_dir().'/journaux-du-jour-'.bin2hex(random_bytes(6));
+    $aujourdhui = new DateTimeImmutable();
+    $readme = preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('README.md')));
+
+    try {
+        File::ensureDirectoryExists($dossier.'/peu');
+        File::ensureDirectoryExists($dossier.'/chaque-jour');
+
+        $peu = compteSupprimeLesFichiersDuJourRestants($dossier.'/peu', $aujourdhui, [60, 40, 20]);
+        $chaqueJour = compteSupprimeLesFichiersDuJourRestants($dossier.'/chaque-jour', $aujourdhui, [60, ...range(1, 13)]);
+
+        expect(config('logging.channels.daily.days'))->toEqual(14)
+            ->and($peu)->toHaveCount(4)
+            ->and($peu)->toContain(...array_map(static fn (int $jours): string => compteSupprimeLeFichierDuJour($aujourdhui, $jours), [60, 40, 20]))
+            ->and($chaqueJour)->toHaveCount(14)
+            ->and($chaqueJour)->not->toContain(compteSupprimeLeFichierDuJour($aujourdhui, 60))
+            ->and($chaqueJour)->toContain(compteSupprimeLeFichierDuJour($aujourdhui, 13))
+            ->and(str_contains($readme, 'les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de calendrier'))
+            ->toBeTrue('Le README doit dire ce que garde le volume `journaux` : les quatorze derniers jours où le conteneur a écrit.')
+            ->and(preg_match_all('/gardé quatorze jours|quatorze jours dans le volume/', $readme))
+            ->toBe(0, 'Le README promet quatorze jours au volume `journaux`, que le canal `daily` ne borne pas par la durée.');
+    } finally {
+        File::deleteDirectory($dossier);
+    }
 });
