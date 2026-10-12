@@ -46,15 +46,26 @@ class UserActivityChart extends ChartWidget
         ];
     }
 
-    /** @return array<int, int> */
+    /**
+     * Les inscriptions de l'année en cours, par mois.
+     *
+     * Les deux bornes de l'année se tirent d'une seule lecture de l'horloge :
+     * avec une lecture chacune, quand l'année changeait entre elles, la
+     * fenêtre couvrait deux ans, et janvier comptait ensemble les inscrits des
+     * deux (#2033).
+     *
+     * @return array<int, int>
+     */
     private function getUsersPerMonth(): array
     {
+        $debutDeLAnnee = Carbon::now()->startOfYear();
+
         /** @phpstan-ignore-next-line */
         return User::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
             // Un intervalle sur la colonne nue : `whereYear()` lui appliquait une
             // fonction et rendait tout index inutilisable.
-            ->where('created_at', '>=', Carbon::now()->startOfYear())
-            ->where('created_at', '<', Carbon::now()->addYear()->startOfYear())
+            ->where('created_at', '>=', $debutDeLAnnee)
+            ->where('created_at', '<', $debutDeLAnnee->copy()->addYear())
             ->groupBy('month')
             ->orderBy('month')
             ->pluck('count', 'month')

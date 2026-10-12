@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use Closure;
 use Facebook\WebDriver\Chrome\ChromeOptions;
+use Facebook\WebDriver\Exception\Internal\UnexpectedResponseException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverKeys;
@@ -14,9 +16,63 @@ use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
 use RuntimeException;
 use Tests\Support\GardeDesParcours;
+use Tests\Support\NavigateurDesParcours;
+use Tests\Support\PiloteDesParcours;
+use Throwable;
 
 abstract class DuskTestCase extends BaseTestCase
 {
+    /**
+     * Le temps qu'une page a pour se charger, en secondes.
+     *
+     * Sans réglage, le pilote attend une navigation trois cents secondes, et
+     * php-webdriver abandonne sa requête au bout de cent quatre-vingts : le
+     * 08/10/2026, le premier parcours de l'éclat 2 a tenu près de sept minutes
+     * sans qu'aucune requête n'atteigne l'application, pour finir sur une
+     * erreur qui ne disait pas ce qui attendait (#2029). Sur les dix éclats
+     * tombés de septembre et d'octobre dont le journal du serveur est gardé,
+     * la première requête est arrivée deux à vingt-quatre secondes après le
+     * départ de Dusk, base remise à neuf et navigateur démarré compris :
+     * soixante laissent sa marge à un exécuteur lent, et font tomber une page
+     * qui ne vient pas sur la ligne de sa visite, avec le message du pilote
+     * (« Timed out receiving message from renderer »).
+     */
+    public const int SECONDES_POUR_CHARGER_UNE_PAGE = 60;
+
+    /**
+     * Le temps qu'un script exécuté dans la page a pour rendre sa valeur.
+     *
+     * La valeur par défaut du pilote, écrite ici pour que les bornes se lisent
+     * au même endroit, et que celle des ordres reste au-dessus.
+     */
+    public const int SECONDES_POUR_UN_SCRIPT = 30;
+
+    /**
+     * Le temps qu'un ordre envoyé au pilote a pour recevoir sa réponse.
+     *
+     * php-webdriver en accorde cent quatre-vingts. Plus long que la page et
+     * que le script, que le pilote borne lui-même : son message, qui nomme ce
+     * qui a manqué, arrive le premier, et celui-ci ne parle que pour un ordre
+     * dont le pilote ne rend jamais la réponse, comme un script, une recherche
+     * d'élément ou la lecture de la console dans un rendu figé. Cet ordre lève
+     * une `WebDriverCurlException`, et `PiloteDesParcours` le retient même
+     * quand Dusk l'avale : le parcours tombe sur lui, ou sur l'échec que Dusk
+     * en a tiré, en quatre-vingt-dix secondes, et rien ne lui est plus envoyé
+     * que la fermeture.
+     */
+    public const int SECONDES_POUR_UN_ORDRE = 90;
+
+    /**
+     * Le temps qu'a un navigateur écarté pour confirmer sa fermeture.
+     *
+     * Le pilote traite les ordres d'une session l'un après l'autre : derrière
+     * un ordre resté sans réponse, la fermeture attendrait son tour en vain,
+     * SECONDES_POUR_UN_ORDRE durant. Elle reste envoyée, pour que le pilote
+     * ferme le navigateur s'il reprend, mais sa réponse n'est attendue que
+     * quelques secondes.
+     */
+    public const int SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET = 5;
+
     protected function setUp(): void
     {
         static::assertViteIsNotInDevMode();
@@ -385,10 +441,201 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
-     * Create the RemoteWebDriver instance.
+     * Mène un parcours, et rapporte son échec à lui, pas celui des relevés
+     * qui le suivent.
+     *
+     * Le `browse()` de Dusk relève la capture d'écran et la source d'un
+     * parcours tombé, puis la console dans son `finally`, avant de relancer
+     * l'exception du parcours ; un relevé qui échoue à son tour lève la sienne,
+     * qui part à la place. Le 08/10/2026, un navigateur qui ne rendait plus
+     * rien a refusé sa capture en dix secondes : l'éclat a rapporté « Timed out
+     * receiving message from renderer: 10.000 » sur l'appel de `browse()`, et
+     * la cause du parcours est partie avec elle (#2029). Le même déroulé, à
+     * ceci près qu'après un échec, un relevé impossible se signale à côté de
+     * l'échec, qui reste celui que la suite rapporte. Sur un parcours réussi,
+     * une console illisible échoue comme avant.
+     *
+     * Un navigateur dont le pilote ne répond plus n'est ni relevé ni rendu à
+     * la classe (`rendreOuEcarterLesNavigateurs()`).
+     *
+     * Une copie du `browse()` de Dusk : `UnParcoursBloqueTombeViteTest` en
+     * garde l'empreinte, et une montée de Dusk qui le change la fait relire.
      */
     #[\Override]
-    protected function driver(): RemoteWebDriver
+    public function browse(Closure $callback): void
+    {
+        $browsers = $this->createBrowsersFor($callback);
+
+        try {
+            $callback(...$browsers->all());
+        } catch (Throwable $echecDuParcours) {
+            $this->releverApresUnEchec($browsers);
+            $this->rendreOuEcarterLesNavigateurs($browsers);
+
+            throw $echecDuParcours;
+        }
+
+        try {
+            $this->storeConsoleLogsFor($browsers);
+        } finally {
+            $this->rendreOuEcarterLesNavigateurs($browsers);
+        }
+    }
+
+    /**
+     * Le navigateur des parcours, dont les attentes tombent sur un ordre
+     * resté sans réponse plutôt que sur leur délai.
+     *
+     * @param  RemoteWebDriver  $driver
+     */
+    #[\Override]
+    protected function newBrowser($driver): NavigateurDesParcours
+    {
+        return new NavigateurDesParcours($driver);
+    }
+
+    /**
+     * Relève la capture d'écran, la source et la console d'un parcours tombé,
+     * tant que le pilote répond.
+     *
+     * Derrière un ordre resté sans réponse, chaque relevé attendrait
+     * SECONDES_POUR_UN_ORDRE en vain, que l'ordre soit celui du parcours, que
+     * Dusk l'ait avalé ou que ce soit celui d'un relevé précédent : aucun
+     * n'est tenté.
+     *
+     * @param  Collection<array-key, mixed>  $browsers
+     */
+    private function releverApresUnEchec(Collection $browsers): void
+    {
+        $releves = [
+            'capture d’écran' => function () use ($browsers): void {
+                $this->captureFailuresFor($browsers);
+            },
+            'source de la page' => function () use ($browsers): void {
+                $this->storeSourceLogsFor($browsers);
+            },
+            'console du navigateur' => function () use ($browsers): void {
+                $this->storeConsoleLogsFor($browsers);
+            },
+        ];
+
+        foreach ($releves as $quoi => $releve) {
+            if ($this->ordresSansReponse($browsers) !== []) {
+                return;
+            }
+
+            $this->tenterSansMasquerLEchec($quoi, $releve);
+        }
+    }
+
+    /**
+     * Les ordres restés sans réponse des pilotes de ces navigateurs.
+     *
+     * @param  Collection<array-key, mixed>  $browsers
+     * @return list<UnexpectedResponseException>
+     */
+    private function ordresSansReponse(Collection $browsers): array
+    {
+        $ordres = [];
+
+        foreach ($browsers as $navigateur) {
+            $ordre = $navigateur instanceof Browser && $navigateur->driver instanceof PiloteDesParcours
+                ? $navigateur->driver->ordreSansReponse()
+                : null;
+
+            if ($ordre !== null) {
+                $ordres[] = $ordre;
+            }
+        }
+
+        return $ordres;
+    }
+
+    /**
+     * Rend les navigateurs à la classe pour son parcours suivant, ou les écarte
+     * si leur pilote ne répond plus.
+     *
+     * Le `createBrowsersFor()` de Dusk ne démarre un navigateur que si la
+     * classe n'en garde aucun : rendu à la classe, un navigateur muet fait
+     * tomber chacun des parcours suivants, puis attendre sa fermeture en fin
+     * de classe. Écarté, il reçoit sa fermeture, bornée par
+     * SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET, et le parcours suivant en
+     * démarre un neuf (#2029). Le signalement nomme l'ordre resté sans
+     * réponse, que Dusk a pu avaler. Mesuré avec un vrai navigateur au rendu
+     * figé, SECONDES_POUR_UN_ORDRE ramené à dix secondes : le parcours figé
+     * prend son ordre sans réponse et cinq secondes de fermeture, le suivant
+     * passe en moins d'une seconde.
+     *
+     * @param  Collection<array-key, mixed>  $browsers
+     */
+    private function rendreOuEcarterLesNavigateurs(Collection $browsers): void
+    {
+        $ordresSansReponse = $this->ordresSansReponse($browsers);
+
+        if ($ordresSansReponse === []) {
+            static::$browsers = $this->closeAllButPrimary($browsers);
+
+            return;
+        }
+
+        static::$browsers = new Collection();
+
+        $this->signaler(sprintf(
+            "%s : le pilote ne répond plus (%s) ; il ne reçoit plus que la fermeture de ses navigateurs, écartés, et le parcours suivant en démarre un neuf (#2029).\n",
+            $this->getCallerName(),
+            implode(' ; ', array_map(
+                static fn (UnexpectedResponseException $ordre): string => trim($ordre->getMessage()),
+                $ordresSansReponse,
+            )),
+        ));
+
+        $millisecondesPourFermer = static::SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET * 1000;
+
+        foreach ($browsers as $navigateur) {
+            if (! $navigateur instanceof Browser) {
+                continue;
+            }
+
+            $this->tenterSansMasquerLEchec('fermeture du navigateur écarté', static function () use ($navigateur, $millisecondesPourFermer): void {
+                $navigateur->driver->getCommandExecutor()->setRequestTimeout($millisecondesPourFermer);
+                $navigateur->quit();
+            });
+        }
+    }
+
+    /**
+     * Tente un relevé ou une fermeture ; s'il échoue, le signale sans lever.
+     *
+     * @param  Closure(): void  $ordre
+     */
+    private function tenterSansMasquerLEchec(string $quoi, Closure $ordre): void
+    {
+        try {
+            $ordre();
+        } catch (Throwable $impossible) {
+            $this->signaler(sprintf(
+                "%s : %s impossible (%s : %s). L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n",
+                $this->getCallerName(),
+                $quoi,
+                $impossible::class,
+                trim($impossible->getMessage()),
+            ));
+        }
+    }
+
+    /**
+     * Écrit un signalement sur la sortie d'erreur, que le journal du job garde
+     * à côté de l'échec.
+     */
+    protected function signaler(string $signalement): void
+    {
+        fwrite(STDERR, $signalement);
+    }
+
+    /**
+     * Les capacités demandées au navigateur, bornes d'attente comprises.
+     */
+    protected function capacitesDuNavigateur(): DesiredCapabilities
     {
         $options = new ChromeOptions()->addArguments(collect([
             '--window-size=393,852',
@@ -409,14 +656,30 @@ abstract class DuskTestCase extends BaseTestCase
             '--window-size=393,852',
         ]))->all());
 
-        return RemoteWebDriver::create(
+        return DesiredCapabilities::chrome()
+            ->setCapability('goog:loggingPrefs', ['browser' => 'ALL'])
+            ->setCapability('timeouts', [
+                'pageLoad' => static::SECONDES_POUR_CHARGER_UNE_PAGE * 1000,
+                'script' => static::SECONDES_POUR_UN_SCRIPT * 1000,
+            ])
+            ->setCapability(ChromeOptions::CAPABILITY, $options);
+    }
+
+    /**
+     * Create the RemoteWebDriver instance.
+     *
+     * Chaque attente du pilote est bornée : la page, le script, et la réponse
+     * à chaque ordre. Un parcours bloqué tombe ainsi sur la ligne qui
+     * attendait, au lieu de tenir l'éclat jusqu'aux délais par défaut.
+     * `PiloteDesParcours` retient l'ordre resté sans réponse.
+     */
+    #[\Override]
+    protected function driver(): RemoteWebDriver
+    {
+        return PiloteDesParcours::create(
             $this->urlDuPilote(),
-            DesiredCapabilities::chrome()
-                ->setCapability('goog:loggingPrefs', ['browser' => 'ALL'])
-                ->setCapability(
-                    ChromeOptions::CAPABILITY,
-                    $options
-                )
+            $this->capacitesDuNavigateur(),
+            request_timeout_in_ms: static::SECONDES_POUR_UN_ORDRE * 1000,
         );
     }
 }

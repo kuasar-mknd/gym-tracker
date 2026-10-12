@@ -4,30 +4,21 @@ declare(strict_types=1);
 
 namespace App\Actions\Auth;
 
-use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
+use App\Jobs\EnvoyerLeLienDeReinitialisation;
 
 class SendPasswordResetLinkAction
 {
     /**
-     * Send a password reset link to the given email address.
+     * Met en file l'envoi du lien de réinitialisation, sans chercher le compte
+     * (#1951).
      *
-     * @param  array<string, mixed>  $data
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Ni la réponse, ni une erreur, ni le temps de la requête ne doivent dire si
+     * l'adresse a un compte, ou si sa dernière demande est trop récente : le
+     * courtier ne tourne donc pas ici, mais dans `EnvoyerLeLienDeReinitialisation`,
+     * hors de la requête.
      */
-    public function execute(array $data): string
+    public function execute(string $adresse): void
     {
-        $status = Password::sendResetLink(
-            $data
-        );
-
-        if ($status === Password::RESET_LINK_SENT) {
-            return $status;
-        }
-
-        throw ValidationException::withMessages([
-            'email' => [trans($status)],
-        ]);
+        EnvoyerLeLienDeReinitialisation::dispatch($adresse, app()->getLocale());
     }
 }

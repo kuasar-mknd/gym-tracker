@@ -62,6 +62,20 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('01:45');
 
 /*
+ * Une tâche en file qui échoue est recopiée dans `failed_jobs`, charge
+ * comprise : la notification et son destinataire, sérialisés, donc des
+ * adresses de courriel en clair. Rien ne purgeait la table, et rien ne la
+ * relie au compte autrement que par cette charge : elle gardait ces lignes
+ * sans limite, compte supprimé ou non (#1938). Elle les garde désormais
+ * trente jours, comme les exceptions enregistrées ; Horizon, de son côté, ne
+ * garde les siennes que sept jours (`config/horizon.php`). La commande ne
+ * demande aucune confirmation en production. 01:30 : avant la sauvegarde de
+ * 02:30, et hors de l'heure que les changements d'heure sautent ou répètent.
+ */
+\Illuminate\Support\Facades\Schedule::command('queue:prune-failed', ['--hours' => 30 * 24])
+    ->dailyAt('01:30');
+
+/*
  * Les trois tâches de sauvegarde touchent le partage des sauvegardes, qui peut
  * cesser de répondre sans rendre d'erreur : au premier plan, un seul accès qui
  * attendait figeait le passage du planificateur, et les tâches suivantes de la
@@ -79,10 +93,11 @@ Artisan::command('inspire', function (): void {
  * leurs, et `backup:monitor`, qui n'a pas d'option pour cela, n'a aucun canal
  * pour ses deux avis dans `config/backup.php`. Son échec (archive de plus d'un
  * jour, ou plus de 5 500 Mo d'archives) passe par le moniteur des tâches, qui
- * met la santé au rouge et écrit à `HEALTH_TO_ADDRESS` ; « Backups », sur la
- * page de santé, voit déjà une archive de plus de vingt-six heures. Le
- * nettoyage de 02:00 ramène les archives à 5 000 Mo au plus, pour que ce seuil
- * de place ne sonne pas chaque matin (`config/backup.php`).
+ * met la santé au rouge et écrit à `HEALTH_TO_ADDRESS` ; « Archives des
+ * sauvegardes », sur la page de santé, voit déjà une archive de plus de
+ * vingt-six heures. Le nettoyage de 02:00 ramène les archives à 5 000 Mo au
+ * plus, pour que ce seuil de place ne sonne pas chaque matin
+ * (`config/backup.php`).
  */
 \Illuminate\Support\Facades\Schedule::runInBackground()
     ->withoutOverlapping(expiresAt: 25 * 60)

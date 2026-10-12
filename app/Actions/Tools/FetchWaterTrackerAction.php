@@ -15,12 +15,15 @@ class FetchWaterTrackerAction
      * Les deux bornes du jour se tirent d'une seule lecture de l'horloge : avec
      * une lecture par borne, quand minuit passait entre elles, le jour couvrait
      * aussi la veille, et le total du jour comptait l'eau de la veille (#2017).
+     * La page Hydratation passe le même instant au graphique de la semaine
+     * (#2033).
      *
+     * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge.
      * @return array{logs: \Illuminate\Database\Eloquent\Collection<int, \App\Models\WaterLog>, todayTotal: float|int}
      */
-    public function execute(User $user): array
+    public function execute(User $user, ?Carbon $maintenant = null): array
     {
-        $debutDuJour = Carbon::today();
+        $debutDuJour = ($maintenant ?? Carbon::now())->copy()->startOfDay();
 
         $todayLogs = $user->waterLogs()
             // Un intervalle plutot que `whereDate()`, qui rendait inutilisable

@@ -133,6 +133,7 @@ import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
+import { suivreLesPagesMontees } from './pagesMontees'
 
 /** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
 const modale = (wrapper) => wrapper.findComponent(AjoutDExerciceModal).vm
@@ -218,6 +219,13 @@ const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
 const RestTimerStub = { name: 'RestTimerStub', props: ['duration', 'autoRestTimer'], template: '<div />' }
 
+/**
+ * Chaque page montée ici est démontée à la fin de son test. Une valeur tapée
+ * part une seconde plus tard : laissée montée, la page l'envoyait dans le test
+ * qui tournait alors, sur le même `patch` (#2003).
+ */
+const pages = suivreLesPagesMontees()
+
 const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDIO, TIMED]) => {
     const wrapper = mount(WorkoutShow, {
         props: { workout: JSON.parse(JSON.stringify(workout)), exercises },
@@ -243,6 +251,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
             },
         },
     })
+    pages.retenir(wrapper)
 
     await flushPromises()
 
@@ -316,7 +325,8 @@ beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock)
 })
 
-afterEach(() => {
+afterEach(async () => {
+    await pages.demonterToutes()
     localStorage.clear()
     vi.unstubAllGlobals()
     vi.useRealTimers()

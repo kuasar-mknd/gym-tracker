@@ -20,7 +20,8 @@ final class FetchHabitsIndexAction
      */
     public function getImmediateData(User $user): array
     {
-        $startOfWeek = Carbon::now()->startOfWeek();
+        $maintenant = Carbon::now();
+        $startOfWeek = $maintenant->copy()->startOfWeek();
         $endOfWeek = $startOfWeek->copy()->endOfWeek();
 
         $habits = $user->habits()
@@ -40,7 +41,7 @@ final class FetchHabitsIndexAction
 
         return [
             'habits' => $habits,
-            'weekDates' => $this->getWeekDates($startOfWeek, $endOfWeek),
+            'weekDates' => $this->getWeekDates($startOfWeek, $endOfWeek, $maintenant),
         ];
     }
 
@@ -114,9 +115,15 @@ final class FetchHabitsIndexAction
      * dont le mutant `$i--` ne finissait jamais ; borné à la fin du dimanche,
      * il garde ses sept jours même là où minuit manque (#2017).
      *
+     * Le jour mis en avant se tire du même instant que la semaine : chaque jour
+     * relisait l'horloge (`isToday()`), et quand lundi commençait après la
+     * lecture de la semaine, la grille qui s'achevait n'en mettait plus aucun
+     * en avant (#2033).
+     *
+     * @param  Carbon  $maintenant  L'instant dont vient la semaine.
      * @return array<int, array{date: string, day: string, day_name: string, day_short: string, day_num: int, is_today: bool}>
      */
-    private function getWeekDates(Carbon $debut, Carbon $fin): array
+    private function getWeekDates(Carbon $debut, Carbon $fin, Carbon $maintenant): array
     {
         $dates = [];
         foreach ($debut->daysUntil($fin)->toArray() as $date) {
@@ -126,7 +133,7 @@ final class FetchHabitsIndexAction
                 'day_name' => $date->locale('fr')->dayName,
                 'day_short' => $date->locale('fr')->shortDayName,
                 'day_num' => $date->day,
-                'is_today' => $date->isToday(),
+                'is_today' => $date->isSameDay($maintenant),
             ];
         }
 

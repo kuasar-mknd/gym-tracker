@@ -129,6 +129,29 @@ it('rend une grille de sept jours, du lundi au dimanche, quand lundi commence pe
     expect(array_column($semaine, 'day'))->toBe(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 })->with([1, 2, 3]);
 
+/*
+ * Le jour mis en avant dans la grille se tire de la même lecture que la
+ * semaine. Chaque jour relisait l'horloge (`isToday()`) : quand lundi
+ * commençait après la lecture de la semaine, la grille de la semaine qui
+ * s'achevait ne mettait plus aucun jour en avant. L'horloge passe minuit après
+ * chacune des sept premières lectures, celle de la semaine puis celles des six
+ * premiers jours ; après la huitième, celle du dimanche, il ne reste rien à
+ * contredire (#2033).
+ */
+it('met en avant un seul jour de la grille, aujourd hui, quand lundi commence pendant le calcul', function (int $lectures): void {
+    $user = User::factory()->create();
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-10-11 23:59:59.999999', '2026-10-12 00:00:00.000001');
+
+    $semaine = app(FetchHabitsIndexAction::class)->getImmediateData($user)['weekDates'];
+
+    // Le dimanche de la semaine qui s'achève, ou le lundi de celle qui
+    // commence, chacun dans sa grille.
+    expect([array_column($semaine, 'date'), array_column(array_filter($semaine, static fn (array $jour): bool => $jour['is_today']), 'date')])->toBeIn([
+        [['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'], ['2026-10-11']],
+        [['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'], ['2026-10-12']],
+    ]);
+})->with(range(1, 7));
+
 it('rend l eau d un seul jour quand minuit passe pendant le calcul', function (int $lectures): void {
     $user = User::factory()->create();
     WaterLog::factory()->create(['user_id' => $user->id, 'consumed_at' => Carbon::parse('2026-10-08 12:00:00'), 'amount' => 250]);

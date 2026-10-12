@@ -15,6 +15,13 @@ use Spatie\Health\Checks\Result;
  */
 final class TachesPlanifieesCheck extends Check
 {
+    /**
+     * Le libellé de la page « Santé » et du courriel d'alerte, qui
+     * découperaient sinon le nom de classe, sans ses accents.
+     */
+    #[\Override]
+    protected ?string $label = 'Tâches planifiées';
+
     #[\Override]
     public function getName(): string
     {
