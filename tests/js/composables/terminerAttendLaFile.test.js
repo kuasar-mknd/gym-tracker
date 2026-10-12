@@ -2,7 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import { retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
-import { creerUnFauxServeur, fileDurable, monterLaSeance, routeDeTest, uneReponsePerdue } from './seanceHorsLigne'
+import {
+    creerUnFauxServeur,
+    fileDurable,
+    monterLaSeance,
+    routeDeTest,
+    seances,
+    uneReponsePerdue,
+} from './seanceHorsLigne'
 
 const reseau = vi.hoisted(() => ({ serveur: null }))
 const inertia = vi.hoisted(() => ({ patch: vi.fn() }))
@@ -53,7 +60,8 @@ beforeEach(() => {
     )
 })
 
-afterEach(() => {
+afterEach(async () => {
+    await seances.demonterToutes()
     vi.useRealTimers()
     retirerLesEcouteursDuService()
     poserLaPage(null)

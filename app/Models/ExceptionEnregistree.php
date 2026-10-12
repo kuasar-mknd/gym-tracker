@@ -11,9 +11,10 @@ use BezhanSalleh\FilamentExceptions\Models\Exception;
  * de secret : les cookies ne sont pas gardés, et les champs et en-têtes
  * sensibles sont masqués avant l'écriture.
  *
- * Et à taille bornée : le paquet garde le corps entier de la requête, et le
- * message d'une erreur SQL recopie les valeurs envoyées, comme la pile et le
- * texte Markdown. Une requête de plusieurs mégaoctets qui finit en erreur
+ * Et à taille bornée : le paquet garde le corps entier de la requête, le
+ * message d'une exception peut recopier une valeur reçue, que le texte
+ * Markdown répète, et hors de l'image la pile garde les arguments de chaque
+ * appel (#2032). Une requête de plusieurs mégaoctets qui finit en erreur
  * écrivait une ligne aussi grosse qu'elle. Chaque colonne est désormais
  * coupée à un budget (`OCTETS_MAX_PAR_COLONNE`), de sorte qu'une ligne ne
  * dépasse jamais 128 Kio, quel que soit le corps reçu (`ExceptionsTest`). Ce qui

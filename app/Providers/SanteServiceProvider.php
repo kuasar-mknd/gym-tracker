@@ -35,6 +35,10 @@ use Spatie\Health\Jobs\HealthQueueJob;
  * Ce que la page « Santé » du panneau montre et ce que `health:check` vérifie
  * toutes les cinq minutes en production : le pendant, à l'exécution, de ce
  * que Doctor regarde dans la CI.
+ *
+ * Chaque contrôle porte un libellé français, que la page et le courriel
+ * d'alerte affichent : sans lui, le paquet découpe le nom du contrôle
+ * (« Used Disk Space », « Taches Planifiees »). Le nom ne change pas.
  */
 final class SanteServiceProvider extends ServiceProvider
 {
@@ -43,17 +47,17 @@ final class SanteServiceProvider extends ServiceProvider
         $archives = DossierDesSauvegardesCheck::dossierDesArchives();
 
         Health::checks([
-            DatabaseCheck::new(),
+            DatabaseCheck::new()->label('Connexion à la base'),
             ReglagesDeLaBaseCheck::new(),
-            RedisCheck::new(),
-            CacheCheck::new(),
+            RedisCheck::new()->label('Connexion à Redis'),
+            CacheCheck::new()->label("Cache de l'application"),
             // Le battement passe par la file « default », celle qu'Horizon sert.
-            QueueCheck::new()->onQueue('default')->failWhenHealthJobTakesLongerThanMinutes(5),
-            ScheduleCheck::new()->heartbeatMaxAgeInMinutes(2),
+            QueueCheck::new()->label("File d'attente")->onQueue('default')->failWhenHealthJobTakesLongerThanMinutes(5),
+            ScheduleCheck::new()->label('Planificateur')->heartbeatMaxAgeInMinutes(2),
             TachesPlanifieesCheck::new(),
-            HorizonCheck::new(),
+            HorizonCheck::new()->label('Travailleurs Horizon'),
             VersionsDesConteneursCheck::new(),
-            UsedDiskSpaceCheck::new()->warnWhenUsedSpaceIsAbovePercentage(70)->failWhenUsedSpaceIsAbovePercentage(90),
+            UsedDiskSpaceCheck::new()->label('Espace disque utilisé')->warnWhenUsedSpaceIsAbovePercentage(70)->failWhenUsedSpaceIsAbovePercentage(90),
             // Le délai du script de démarrage : au-delà, le partage est tenu pour endormi.
             DossierDesSauvegardesCheck::new()->delai(DossierDesSauvegardesCheck::DELAI_EN_SECONDES),
             // La sauvegarde nocturne tombe à 02 h 30 : vingt-six heures laissent une
@@ -65,13 +69,14 @@ final class SanteServiceProvider extends ServiceProvider
             // il figerait tout le passage, et le rouge de « Dossier des
             // sauvegardes » avec lui. Il ne tourne que si le dossier répond.
             BackupsCheck::new()
+                ->label('Archives des sauvegardes')
                 ->locatedAt($archives.'/*.zip')
                 ->numberOfBackups(min: 1)
                 ->youngestBackShouldHaveBeenMadeBefore(now()->subHours(26))
                 ->if(static fn (): bool => DossierDesSauvegardesCheck::repond($archives)),
-            DebugModeCheck::new(),
-            EnvironmentCheck::new(),
-            OptimizedAppCheck::new(),
+            DebugModeCheck::new()->label('Mode debug'),
+            EnvironmentCheck::new()->label('Environnement'),
+            OptimizedAppCheck::new()->label('Application optimisée'),
         ]);
 
         $this->annoncerLesVersions();

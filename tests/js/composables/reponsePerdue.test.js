@@ -8,6 +8,7 @@ import {
     monterLaSeance,
     rechargerQuandLeReseauRevient,
     routeDeTest,
+    seances,
     uneReponsePerdue,
 } from './seanceHorsLigne'
 
@@ -73,7 +74,8 @@ beforeEach(() => {
     globalThis.route = routeDeTest
 })
 
-afterEach(() => {
+afterEach(async () => {
+    await seances.demonterToutes()
     retirerLesEcouteursDuService()
     poserLaPage(null)
 })

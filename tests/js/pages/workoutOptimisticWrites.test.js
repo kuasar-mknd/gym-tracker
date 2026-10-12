@@ -42,6 +42,7 @@ import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import { suivreLesPagesMontees } from './pagesMontees'
 
 const EXERCISE = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
 
@@ -75,6 +76,14 @@ beforeAll(() => {
 
 const passesSlot = { template: '<div><slot /></div>' }
 
+/**
+ * Chaque page montée ici est démontée à la fin de son test : laissée montée,
+ * elle enverrait une valeur tapée une seconde plus tard, dans le test qui
+ * tournerait alors, sur le même `patch`, et ses écouteurs de `window`
+ * répondraient encore aux évènements des tests suivants (#2003).
+ */
+const pages = suivreLesPagesMontees()
+
 const mountPage = async (workout = emptyWorkout, autresProps = {}) => {
     const wrapper = mount(WorkoutShow, {
         props: { workout: JSON.parse(JSON.stringify(workout)), exercises: [EXERCISE], ...autresProps },
@@ -94,6 +103,7 @@ const mountPage = async (workout = emptyWorkout, autresProps = {}) => {
             },
         },
     })
+    pages.retenir(wrapper)
 
     await flushPromises()
 
@@ -146,7 +156,10 @@ beforeEach(() => {
     patch.mockResolvedValue({ data: {} })
 })
 
-afterEach(() => localStorage.clear())
+afterEach(async () => {
+    await pages.demonterToutes()
+    localStorage.clear()
+})
 
 /**
  * Adding an exercise and typing into it immediately is the normal way to use

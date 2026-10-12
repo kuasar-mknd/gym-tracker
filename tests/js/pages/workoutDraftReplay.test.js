@@ -30,6 +30,7 @@ vi.mock('@inertiajs/vue3', () => ({
 import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import { suivreLesPagesMontees } from './pagesMontees'
 
 const DRAFT_KEY = 'draft_set_42'
 
@@ -60,6 +61,14 @@ beforeAll(() => {
  */
 const passesSlot = { template: '<div><slot /></div>' }
 
+/**
+ * Chaque page montée ici est démontée à la fin de son test : laissée montée,
+ * elle enverrait une valeur tapée une seconde plus tard, dans le test qui
+ * tournerait alors, sur le même `patch`, et ses écouteurs de `window`
+ * répondraient encore aux évènements des tests suivants (#2003).
+ */
+const pages = suivreLesPagesMontees()
+
 const mountPage = async () => {
     const wrapper = mount(WorkoutShow, {
         props: { workout: JSON.parse(JSON.stringify(workout)), exercises: [] },
@@ -75,6 +84,7 @@ const mountPage = async () => {
             },
         },
     })
+    pages.retenir(wrapper)
 
     await flushPromises()
 
@@ -92,7 +102,10 @@ beforeEach(() => {
     failedRequests.mockReturnValue([])
 })
 
-afterEach(() => localStorage.clear())
+afterEach(async () => {
+    await pages.demonterToutes()
+    localStorage.clear()
+})
 
 /**
  * Edits made offline are written to localStorage and replayed on the next mount.
