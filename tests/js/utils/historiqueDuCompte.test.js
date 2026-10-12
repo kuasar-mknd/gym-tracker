@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { createApp, h } from 'vue'
 import {
     CLEF_DE_L_HISTORIQUE,
@@ -378,9 +378,36 @@ describe('des stockages que le navigateur refuse', () => {
  * Avec le vrai client d'Inertia : la garde lit la clé là où Inertia la range,
  * et c'est bien `clearHistory` qui la fait disparaître. Si Inertia changeait
  * l'une ou l'autre, ce cas tomberait au lieu de laisser la garde aveugle.
+ *
+ * Le routeur d'Inertia est unique par module, et les écouteurs qu'il pose sur
+ * la fenêtre ne se retirent pas : l'application se monte donc une fois pour ces
+ * cas. Chacun repart pourtant de son propre état (#2044) : un stockage vide, la
+ * page du compte rangée de nouveau, chiffrée sous une clé à elle, et aucun
+ * écouteur laissé sur le routeur par le cas d'avant. Sans quoi le cas qui jette
+ * la clé, passé le premier en ordre aléatoire, privait l'autre de la sienne.
  */
 describe('avec le vrai client d’Inertia', () => {
     let routeur
+
+    /** Ce que le serveur a servi au fil des visites : une page du compte, à chiffrer dans l'historique. */
+    const pageDuCompte = (visite) => ({
+        component: 'Journal/Index',
+        url: '/daily-journals',
+        version: 'v1',
+        props: { errors: {}, auth: { user: { id: 1 } }, note: 'Note privée du compte parti', visite },
+        encryptHistory: true,
+    })
+
+    let visites = 0
+
+    /** Les écouteurs qu'un cas pose sur le vrai routeur, retirés après lui. */
+    const retraits = []
+
+    /** Le vrai routeur, tel que la garde s'en sert : ce qu'elle y écoute part avec le cas. */
+    const routeurDuCas = () => ({
+        on: (evenement, rappel) => retraits.push(routeur.on(evenement, rappel)),
+        clearHistory: () => routeur.clearHistory(),
+    })
 
     beforeAll(async () => {
         window.sessionStorage.clear()
@@ -399,13 +426,7 @@ describe('avec le vrai client d’Inertia', () => {
         }
 
         await inertia.createInertiaApp({
-            page: {
-                component: 'Journal/Index',
-                url: '/daily-journals',
-                version: 'v1',
-                props: { errors: {}, auth: { user: { id: 1 } }, note: 'Note privée du compte parti' },
-                encryptHistory: true,
-            },
+            page: pageDuCompte(visites),
             resolve: () => Journal,
             setup: ({ el, App, props, plugin }) =>
                 createApp({ render: () => h(App, props) })
@@ -416,14 +437,32 @@ describe('avec le vrai client d’Inertia', () => {
         await vi.waitUntil(() => estChiffree(window.history.state?.page))
     })
 
+    beforeEach(async () => {
+        window.sessionStorage.clear()
+        window.localStorage.clear()
+
+        // Une page que le client ne tient pas déjà, sans quoi il ne la range pas :
+        // il la chiffre, sous une clé qu'il crée.
+        visites += 1
+        let rangee = false
+        routeur.replace({ ...pageDuCompte(visites), onFinish: () => (rangee = true) })
+
+        await vi.waitUntil(() => rangee)
+    })
+
+    afterEach(() => {
+        retraits.splice(0).forEach((retirer) => retirer())
+    })
+
     it('chiffre la page dans l’historique, avec une clé à l’endroit que lit la garde', () => {
+        expect(estChiffree(window.history.state?.page)).toBe(true)
         expect(JSON.stringify(window.history.state)).not.toContain('Note privée')
         expect(window.sessionStorage.getItem(CLEF_DE_L_HISTORIQUE)).not.toBeNull()
     })
 
     it('masque la page après `clearHistory`, et seulement après', async () => {
         const fenetre = fenetreDeTest()
-        installerLaGardeDeLHistorique({ routeur, pageInitiale: { encryptHistory: true }, fenetre })
+        installerLaGardeDeLHistorique({ routeur: routeurDuCas(), pageInitiale: { encryptHistory: true }, fenetre })
 
         // Encore connecté : la page revient telle quelle.
         await vi.waitUntil(() => estChiffree(window.history.state?.page))
