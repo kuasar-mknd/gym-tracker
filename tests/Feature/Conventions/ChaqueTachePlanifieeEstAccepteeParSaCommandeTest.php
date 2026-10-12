@@ -87,6 +87,7 @@ it('fait accepter chaque ligne du planning par la commande qu’elle lance', fun
 
     expect($refusees)->toBe([], "La console refuserait ces tâches planifiées avant de les lancer, chaque fois :\n- ".implode("\n- ", $refusees));
 
-    // Sans elles, la garde passerait aussi le jour où plus rien ne serait reconnu.
-    expect($acceptees)->toContain('backup:clean', 'backup:run', 'backup:monitor', 'activitylog:clean', 'model:prune');
+    // Sans elles, la garde passerait aussi le jour où plus rien ne serait reconnu. Les purges
+    // des jetons de réinitialisation et des tâches en échec (#1938) sont les dernières venues.
+    expect($acceptees)->toContain('backup:clean', 'backup:run', 'backup:monitor', 'activitylog:clean', 'model:prune', 'auth:clear-resets', 'queue:prune-failed');
 });

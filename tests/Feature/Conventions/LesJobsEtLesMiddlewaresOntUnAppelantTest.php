@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Http\Middleware\PulseNonceMiddleware;
 use Symfony\Component\Finder\Finder;
 
 /*
@@ -79,14 +78,15 @@ use Symfony\Component\Finder\Finder;
 /**
  * Les classes qui restent sans appelant, chacune avec sa raison.
  *
+ * Vide depuis que `PulseNonceMiddleware`, débranché quand le précompilateur
+ * s'est mis à signer les scripts de Pulse, a été supprimé avec l'accord du
+ * propriétaire du dépôt (#1938).
+ *
  * @return array<string, string>
  */
 function appelantsExceptions(): array
 {
-    return [
-        PulseNonceMiddleware::class => 'Débranché depuis que le précompilateur signe les scripts de Pulse à la compilation de ses gabarits. '
-            ."Sa suppression, et celle de son test, attendent l'accord du propriétaire du dépôt (#1991).",
-    ];
+    return [];
 }
 
 /**

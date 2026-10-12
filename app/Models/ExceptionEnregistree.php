@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use BezhanSalleh\FilamentExceptions\Models\Exception;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Une exception gardée en base pour le panneau, sans ce qu'une requête porte
@@ -22,6 +23,19 @@ use BezhanSalleh\FilamentExceptions\Models\Exception;
  * clé `…` qui compte ce qui manque. Une liste (pile, requêtes SQL) garde ses
  * premiers éléments sans marque, parce que le panneau lit chacun comme un
  * tableau : le haut de la pile, là où l'exception est levée, reste.
+ *
+ * Une exception levée par une requête d'un compte connecté le désigne, et
+ * souvent recopie ce qu'il a saisi : l'en-tête `X-Compte-De-L-Ecriture` des
+ * écritures rejouées porte son identifiant, les paramètres de route le modèle
+ * lié (son `user_id` et ses champs), le message d'une erreur SQL les valeurs
+ * envoyées. `user_id` la rattache donc au compte de la requête
+ * (`compteDeLaRequete()`), et la clé l'efface avec lui (#1938). Les autres,
+ * levées avant l'authentification, sous le panneau, en file ou en console,
+ * n'ont pas de lien et peuvent porter les mêmes traces : elles partent à
+ * trente jours, par la purge que le paquet planifie (`modelPruneInterval()`
+ * du panneau), comme les lignes écrites avant la colonne.
+ *
+ * @property int|null $user_id
  */
 final class ExceptionEnregistree extends Exception
 {
@@ -84,6 +98,10 @@ final class ExceptionEnregistree extends Exception
 
     protected static function booted(): void
     {
+        self::creating(function (self $exception): void {
+            $exception->user_id ??= self::compteDeLaRequete();
+        });
+
         self::saving(function (self $exception): void {
             $exception->cookies = null;
 
@@ -124,6 +142,28 @@ final class ExceptionEnregistree extends Exception
                 }
             }
         });
+    }
+
+    /**
+     * L'identifiant du compte que la requête a déjà authentifié, sur la garde
+     * `web`, celle des comptes : les pages et, par Sanctum, l'API.
+     *
+     * Jamais la garde par défaut (`Auth::id()`) : le panneau en fait la garde
+     * `admin`, et un administrateur porte souvent l'identifiant d'un compte,
+     * qui hériterait de ses exceptions et les emporterait. `hasUser()` et non
+     * `user()` : `user()` lirait la session ou le cookie « se souvenir de
+     * moi », connecterait un compte au milieu du rapport d'une exception, et
+     * rattacherait au compte d'une session voisine une exception qu'aucune de
+     * ses requêtes n'a levée. Un compte que la requête vient de supprimer
+     * (`exists` faux) n'en reçoit pas : la clé refuserait la ligne, et le
+     * paquet perdrait l'exception sans rien dire.
+     */
+    private static function compteDeLaRequete(): ?int
+    {
+        $garde = Auth::guard('web');
+        $compte = $garde->hasUser() ? $garde->user() : null;
+
+        return $compte instanceof User && $compte->exists ? $compte->id : null;
     }
 
     /**
