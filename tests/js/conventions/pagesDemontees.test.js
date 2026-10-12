@@ -26,6 +26,28 @@ const AIDES_DE_MONTAGE = [{ module: 'seanceHorsLigne', montage: 'monterLaSeance'
 
 const racineDesTests = resolve(__dirname, '..')
 
+/** Un texte à chercher tel quel dans une expression régulière. */
+const litteral = (texte) => texte.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Le fichier importe le chemin que décrit `motif`, en tête (`from '…'`) comme à
+ * la demande (`await import('…')`) : `fastingIndex.test.js` charge sa page de
+ * cette seconde façon. Un `vi.mock` du même chemin ne compte pas, il ne monte
+ * rien.
+ */
+const importe = (source, motif) => new RegExp(`(?:from\\s+|import\\(\\s*)(['"])${motif}\\1`).test(source)
+
+/** Le fichier importe la page. */
+const importeLaPage = (source, page) => importe(source, litteral(page))
+
+/**
+ * Le fichier importe l'aide, depuis n'importe quel dossier, avec ou sans
+ * l'extension `.js` (ainsi s'importe `chartRecorder.js`), et appelle son
+ * montage.
+ */
+const monteParLAide = (source, { module, montage }) =>
+    importe(source, `[^'"]*/${litteral(module)}(?:\\.js)?`) && source.includes(`${montage}(`)
+
 const fichiersDeTest = (dossier) =>
     readdirSync(dossier).flatMap((entree) => {
         const chemin = join(dossier, entree)
@@ -42,7 +64,7 @@ it('démonte à la fin de chaque test les pages qui écrivent encore après lui'
 
     for (const chemin of fichiersDeTest(racineDesTests)) {
         const source = readFileSync(chemin, 'utf8')
-        const pages = PAGES_A_DEMONTER.filter((page) => source.includes(`from '${page}'`))
+        const pages = PAGES_A_DEMONTER.filter((page) => importeLaPage(source, page))
 
         if (pages.length === 0) {
             continue
@@ -61,10 +83,6 @@ it('démonte à la fin de chaque test les pages qui écrivent encore après lui'
         'suivreLesPagesMontees (tests/js/pages/pagesMontees.js) : retenir chaque page montée, et ouvrir l’afterEach par `await pages.demonterToutes()`',
     ).toEqual([])
 })
-
-/** Le fichier importe l'aide et appelle son montage. */
-const monteParLAide = (source, { module, montage }) =>
-    new RegExp(`from '[^']*/${module}'`).test(source) && source.includes(`${montage}(`)
 
 it('démonte à la fin de chaque test les pages que monte une aide', () => {
     const fautifs = []
@@ -94,7 +112,7 @@ it('trouve au moins un fichier qui monte chacune de ces pages', () => {
 
     for (const page of PAGES_A_DEMONTER) {
         expect(
-            sources.some((source) => source.includes(`from '${page}'`)),
+            sources.some((source) => importeLaPage(source, page)),
             `${page} : aucun test ne la monte, la garde ne vérifie plus rien`,
         ).toBe(true)
     }
@@ -105,4 +123,30 @@ it('trouve au moins un fichier qui monte chacune de ces pages', () => {
             `${aide.montage} : aucun test ne s’en sert, la garde ne vérifie plus rien`,
         ).toBe(true)
     }
+})
+
+it('reconnaît la page et l’aide quelle que soit la forme de leur import', () => {
+    const [page] = PAGES_A_DEMONTER
+    const [aide] = AIDES_DE_MONTAGE
+    const appel = `\nawait ${aide.montage}({})`
+
+    expect(importeLaPage(`import WorkoutShow from '${page}'`, page), 'import en tête').toBe(true)
+    expect(importeLaPage(`const WorkoutShow = (await import('${page}')).default`, page), 'import à la demande').toBe(
+        true,
+    )
+    expect(importeLaPage(`vi.mock('${page}', () => ({}))`, page), 'un mock ne monte rien').toBe(false)
+
+    expect(monteParLAide(`import { ${aide.montage} } from './${aide.module}'${appel}`, aide), 'sans extension').toBe(
+        true,
+    )
+    expect(monteParLAide(`import { ${aide.montage} } from './${aide.module}.js'${appel}`, aide), 'avec extension').toBe(
+        true,
+    )
+    expect(
+        monteParLAide(`const { ${aide.montage} } = await import('../composables/${aide.module}.js')${appel}`, aide),
+        'import à la demande, depuis un autre dossier',
+    ).toBe(true)
+    expect(monteParLAide(`import { ${aide.montage} } from './${aide.module}'`, aide), 'importée sans montage').toBe(
+        false,
+    )
 })
