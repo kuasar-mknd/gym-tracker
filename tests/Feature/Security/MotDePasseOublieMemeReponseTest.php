@@ -309,11 +309,13 @@ it('garde le limiteur de débit de la route, le même pour toute adresse', funct
 });
 
 /**
- * Ce code demande-t-il ou envoie-t-il un lien de réinitialisation : appel au
- * courtier, création d'un jeton (par le courtier ou son dépôt), avis
- * `ResetPassword` construit à la main, ou page « Mot de passe oublié » du
- * panneau ? La garde lit le texte : une écriture qu'elle ne connaît pas lui
- * échappe, et ne vaut pas permission.
+ * Ce code demande-t-il ou envoie-t-il un lien de réinitialisation : demande
+ * de lien (`sendResetLink`), création d'un jeton par la façade, par un
+ * courtier nommé ou par le dépôt de la façade, avis `ResetPassword` construit
+ * à la main, ou page « Mot de passe oublié » du panneau ? Un courtier pris
+ * autrement (conteneur, injection) est l'affaire de
+ * `motDePasseOublieAtteintLeCourtier()`. La garde lit le texte : une écriture
+ * qu'elle ne connaît pas lui échappe, et ne vaut pas permission.
  */
 function motDePasseOublieEnvoieUnLien(string $code): bool
 {
@@ -346,22 +348,137 @@ it('reconnaît chaque façon connue de demander ou d’envoyer un lien', functio
     'un contrôleur au nom voisin' => ['Route::post(\'x\', [ResetPasswordController::class, \'store\']);', false],
 ]);
 
-it('ne laisse demander ou envoyer un lien que par le job', function (): void {
-    $appels = [];
+/**
+ * Le code PHP de app, bootstrap et routes, par chemin depuis la racine du
+ * dépôt. bootstrap/cache, que le framework écrit, n'en est pas : il nomme les
+ * clefs du conteneur que chaque fournisseur déclare.
+ *
+ * @return array<string, string>
+ */
+function motDePasseOublieCodeDeLApplication(): array
+{
+    $codes = [];
 
-    foreach (['app', 'routes', 'bootstrap'] as $dossier) {
+    foreach (['app', 'bootstrap', 'routes'] as $dossier) {
         foreach (File::allFiles(base_path($dossier)) as $fichier) {
-            if ($fichier->getExtension() !== 'php') {
+            $chemin = Str::after($fichier->getPathname(), base_path().'/');
+
+            if ($fichier->getExtension() !== 'php' || str_starts_with($chemin, 'bootstrap/cache/')) {
                 continue;
             }
 
-            if (motDePasseOublieEnvoieUnLien($fichier->getContents())) {
-                $appels[] = Str::after($fichier->getPathname(), base_path().'/');
-            }
+            $codes[$chemin] = $fichier->getContents();
         }
     }
 
+    ksort($codes);
+
+    return $codes;
+}
+
+it('ne laisse demander ou envoyer un lien que par le job', function (): void {
+    $appels = array_keys(array_filter(motDePasseOublieCodeDeLApplication(), motDePasseOublieEnvoieUnLien(...)));
+
     expect($appels)->toBe(['app/Jobs/EnvoyerLeLienDeReinitialisation.php']);
+});
+
+/**
+ * Ce code atteint-il le courtier des mots de passe ou ses jetons ? Par la
+ * façade (importée, même en groupe ou sous un autre nom, nommée en entier,
+ * ou par l'alias global `\Password`), par un appel propre au courtier sur un
+ * `Password::` dont l'import manque (routes), par une clef du conteneur
+ * (`auth.password`, `auth.password.broker`), par le contrat ou la classe du
+ * courtier, de sa fabrique ou de son dépôt, ou par la table des jetons. La
+ * règle de validation `Password` et la clef de traduction homonyme
+ * (`__('auth.password')`) n'en sont pas. La garde lit le texte : une écriture
+ * qu'elle ne connaît pas lui échappe, et ne vaut pas permission.
+ */
+function motDePasseOublieAtteintLeCourtier(string $code): bool
+{
+    return preg_match(
+        '/Facades\\\\(?:\{[^}]*\b)?Password\b|(?<![\w\\\\])\\\\Password::|\buse\s+\\\\?Password\b'
+        .'|\bPassword::(?:sendResetLink|createToken|deleteToken|tokenExists|reset|getUser|getRepository|broker)\('
+        .'|(?<!__\(|trans\()[\'"]auth\.password(?:\.broker)?[\'"]'
+        .'|\bPasswordBroker(?:Factory|Manager)?\b'
+        .'|\b(?:TokenRepositoryInterface|DatabaseTokenRepository|CacheTokenRepository)\b'
+        .'|[\'"]password_reset_tokens[\'"]/',
+        $code,
+    ) === 1;
+}
+
+/**
+ * Les méthodes du courtier ou de son dépôt que ce code appelle, quel que soit
+ * l'objet qui les reçoit, triées et sans doublon.
+ *
+ * @return list<string>
+ */
+function motDePasseOublieUsagesDuCourtier(string $code): array
+{
+    preg_match_all(
+        '/(?:::|->)(sendResetLink|createToken|deleteToken|deleteExpired|tokenExists|recentlyCreatedToken|reset|getUser|getRepository|broker)\(/',
+        $code,
+        $appels,
+    );
+
+    $usages = array_values(array_unique($appels[1]));
+    sort($usages);
+
+    return $usages;
+}
+
+it('reconnaît chaque façon connue d’atteindre le courtier', function (string $code, bool $atteint): void {
+    expect(motDePasseOublieAtteintLeCourtier($code))->toBe($atteint);
+})->with([
+    'la façade importée' => ['use Illuminate\\Support\\Facades\\Password;', true],
+    'la façade sous un autre nom' => ['use Illuminate\\Support\\Facades\\Password as Courtier;', true],
+    'la façade dans un import groupé' => ['use Illuminate\\Support\\Facades\\{Hash, Password};', true],
+    'la façade nommée en entier' => ['\\Illuminate\\Support\\Facades\\Password::createToken($user);', true],
+    'l’alias global' => ['\\Password::sendResetLink($donnees);', true],
+    'l’alias global importé' => ['use Password;', true],
+    'la façade sans import, dans un fichier de routes' => ['return Password::reset($donnees, static function (): void {});', true],
+    'le courtier du conteneur' => ['return app(\'auth.password.broker\')->createToken($user);', true],
+    'la fabrique du conteneur' => ['$this->app[\'auth.password\']->broker()->reset($donnees, $rappel);', true],
+    'le contrat du courtier' => ['app(PasswordBroker::class)->createToken($user);', true],
+    'la fabrique injectée' => ['public function __construct(private PasswordBrokerFactory $courtiers) {}', true],
+    'le dépôt des jetons' => ['app(TokenRepositoryInterface::class)->create($user);', true],
+    'la table des jetons' => ['DB::table(\'password_reset_tokens\')->insert($ligne);', true],
+    'la règle de validation' => ['use Illuminate\\Validation\\Rules\\Password;', false],
+    'ses règles par défaut' => ['Password::defaults(static fn (): Password => Password::min(8)->mixedCase());', false],
+    'la règle nommée en entier' => ['\\Illuminate\\Validation\\Rules\\Password::min(8);', false],
+    'la traduction homonyme' => ['throw ValidationException::withMessages([\'password\' => __(\'auth.password\')]);', false],
+    'la confirmation du mot de passe' => ['$request->session()->put(\'auth.password_confirmed_at\', time());', false],
+]);
+
+it('lit les méthodes du courtier qu’un code appelle, quel que soit leur receveur', function (string $code, array $usages): void {
+    expect(motDePasseOublieUsagesDuCourtier($code))->toBe($usages);
+})->with([
+    'par la façade' => ['Password::sendResetLink([\'email\' => $adresse]);', ['sendResetLink']],
+    'par un courtier injecté' => ['return $this->courtier->createToken($user);', ['createToken']],
+    'par un courtier nommé' => ['Password::broker(\'users\')->reset($donnees, $rappel); Password::reset($autres, $rappel);', ['broker', 'reset']],
+    'aucune' => ['$this->form->fill(); $jeton?->delete();', []],
+]);
+
+/*
+ * Trois fichiers seulement atteignent le courtier, chacun pour un seul usage :
+ * le job envoie le lien, `NewPasswordController` réinitialise sous le plancher
+ * des refus et ne rend jamais `passwords.user`, et l'effacement d'un compte
+ * retire son jeton. Une autre entrée qui réinitialiserait (API, panneau)
+ * rendrait `passwords.user` pour une adresse sans compte, et sans le
+ * plancher : elle passe par `NewPasswordController::store()`, ou par une
+ * classe extraite de lui qui garde ce plancher et ce message, et qui prend sa
+ * place ici.
+ */
+it('ne laisse atteindre le courtier qu’à trois fichiers, chacun pour son seul usage', function (): void {
+    $usages = array_map(
+        motDePasseOublieUsagesDuCourtier(...),
+        array_filter(motDePasseOublieCodeDeLApplication(), motDePasseOublieAtteintLeCourtier(...)),
+    );
+
+    expect($usages)->toBe([
+        'app/Http/Controllers/Auth/NewPasswordController.php' => ['reset'],
+        'app/Jobs/EnvoyerLeLienDeReinitialisation.php' => ['sendResetLink'],
+        'app/Models/Traits/EffaceSesTracesPolymorphes.php' => ['deleteToken'],
+    ]);
 });
 
 /**
