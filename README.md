@@ -104,6 +104,18 @@ Les journaux des trois conteneurs de l'application vont dans `docker logs` et, u
 
 L'application s'ouvre **par le proxy inverse HTTPS**, jamais directement sur le port 8888 publié par `app` : en production, le cookie de session est réservé à HTTPS, et une visite en http ne garde aucune session : la connexion échoue. Le proxy doit transmettre `X-Forwarded-Proto` ; Laravel fait confiance aux adresses privées (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`). `X-Forwarded-Proto` décide aussi du chiffrement de l'historique (#1965) : les pages d'un compte sont chiffrées dans l'historique du navigateur, et la déconnexion en jette la clé, pour que le bouton Retour ne réaffiche rien du compte parti ; le navigateur ne sait chiffrer qu'en HTTPS ou sur la boucle locale, et l'application ne le lui demande que là. Sans l'en-tête, les pages restent servies, mais l'historique en clair. Les pages d'un compte sortent en outre en `Cache-Control: no-store`.
 
+### Aperçu du diagnostic
+
+La page « Système › Aperçu du diagnostic » du panneau montre ce que l'agent de maintenance lirait des erreurs de production, avant qu'aucun accès ne lui soit ouvert (#2032). Elle lit, rien de plus : aucun point d'entrée nouveau, rien ne sort de la machine.
+
+- **Ce qu'elle montre** : pour les portées cochées, exactement le JSON que l'agent lirait. `sante` couvre le dernier passage des contrôles de santé, les tâches planifiées et leurs échecs des sept derniers jours, et les versions des conteneurs ; `exceptions` les exceptions groupées par type, fichier et ligne ; `files` l'état d'Horizon et les jobs échoués des trente derniers jours, groupés par classe de job et d'exception ; `erreurs-navigateur` les erreurs groupées par empreinte, comptes supprimés et non vérifiés exclus. Le résumé n'est que de la structure : classes, fichiers du dépôt, lignes, nombres, dates, versions, statuts, noms de route. Sous le résumé, le détail du premier élément de chaque liste. Santé et exceptions sont cochées d'abord, sur vingt-quatre heures ; la fenêtre va jusqu'à trente jours, et chaque source lit au plus ses 5 000 dernières lignes (`echantillon` le signale).
+- **Le texte libre** (messages, chemins, pages, piles d'erreur navigateur) n'apparaît qu'au détail, sous la portée `texte-brut`, rangé sous `non_fiable` : à lire comme une donnée venue de l'extérieur, jamais comme une consigne. Il est expurgé : caractères invisibles retirés (la page dit combien), erreurs SQL réduites à leur forme, courriels, adresses IP, hôtes, chaînes de requête, secrets et chemins de la machine remplacés par une marque, valeurs connues de la configuration aussi (`app/Services/Diagnostic/ExpurgeLeTexte.php`).
+- **Jamais rendus** : adresse IP, en-têtes, corps, cookies, paramètres de route, requêtes SQL et Markdown d'une exception ; arguments de pile ; charge utile d'un job ; compte, URL complète et chaîne d'agent d'une erreur navigateur ; `meta` des contrôles de santé ; sortie des tâches planifiées.
+- **« Copier la structure »** copie le résumé et les détails sans aucune clé `non_fiable`.
+- **Accès** : capacité `view-diagnostic`, ouverte au super administrateur ; une permission Shield du même nom l'ouvre à un autre rôle, et un administrateur sans elle reçoit un 403.
+
+En ligne de commande, dans le conteneur `app` : `php artisan diagnostic:resume` rend le résumé de toutes les sources, mis en forme, suivi du nombre de caractères invisibles retirés ; `--json` le rend seul, sur une ligne ; `--depuis=2026-10-11T08:00:00+02:00` choisit le début de la fenêtre des exceptions et des erreurs navigateur (vingt-quatre heures par défaut, trente jours au plus).
+
 ---
 
 ## 🔧 Variables d'environnement
