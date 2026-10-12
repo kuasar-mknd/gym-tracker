@@ -74,7 +74,7 @@ final class TexteDuServeurSansValeurs
             self::DECOUPE,
             static fn (array $morceaux): string => $morceaux['entete']
                 .$morceaux['tete']
-                .preg_replace(self::CITATION, "'?'", $morceaux['milieu'])
+                .preg_replace(self::CITATION, "'?'", (string) $morceaux['milieu'])
                 .$morceaux['queue'],
             $texte,
             1,
