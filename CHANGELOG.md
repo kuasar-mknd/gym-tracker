@@ -8,7 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Sécurité
-- **La demande de réinitialisation du mot de passe répond de la même façon quelle que soit l'adresse** (#1951) : le lien part désormais en file, hors de la requête, et la page de réinitialisation refuse tout lien invalide par le même message, après le même délai.
+- **La demande de réinitialisation du mot de passe répond de la même façon quelle que soit l'adresse** (#1951) : le lien part désormais en file, hors de la requête, et la page de réinitialisation refuse tout lien invalide par le même message, après le même délai. Le courriel part donc de worker, par Horizon, et non plus de app : il suppose la sortie de worker posée en 1.6.1 (#2019). Horizon arrêté, il attend sa reprise ; un envoi qui échoue n'est pas retenté et reste parmi les jobs échoués, alors que la page a déjà annoncé le lien.
 
 ## [1.6.1] - 2026-10-08
 
