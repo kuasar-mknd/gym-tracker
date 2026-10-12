@@ -867,7 +867,10 @@ function compteSupprimeLesFichiersDuJourRestants(string $dossier, DateTimeImmuta
 
     Log::build([...$canal, 'path' => $dossier.'/app.log', 'level' => 'debug'])->info('nouvelle ligne');
 
-    $restants = array_map(basename(...), File::glob($dossier.'/app-*.log'));
+    $fichiers = glob($dossier.'/app-*.log');
+    assert(is_array($fichiers));
+
+    $restants = array_map(basename(...), $fichiers);
     sort($restants);
 
     return $restants;
@@ -889,7 +892,7 @@ function compteSupprimeLesFichiersDuJourRestants(string $dossier, DateTimeImmuta
 it('garde dans le volume `journaux` les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de calendrier, comme le dit le README', function (): void {
     $dossier = sys_get_temp_dir().'/journaux-du-jour-'.bin2hex(random_bytes(6));
     $aujourdhui = new DateTimeImmutable();
-    $readme = preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('README.md')));
+    $readme = (string) preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('README.md')));
 
     try {
         File::ensureDirectoryExists($dossier.'/peu');
