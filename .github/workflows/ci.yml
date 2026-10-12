@@ -388,10 +388,23 @@ jobs:
                   tail -n 100 storage/logs/laravel.log || echo "No laravel log found"
                   echo "--- Serve Log ---"
                   cat storage/logs/serve.log || echo "No serve log found"
-                  # Un ordre peut porter un script entier : chaque ligne est
-                  # coupée à 300 caractères, le fichier complet part en artefact.
-                  echo "--- Derniers ordres du pilote ---"
+                  # Le journal couvre tout l'éclat, et le parcours figé peut en
+                  # être le premier (#2029) : l'ordre resté sans réponse et les
+                  # erreurs du pilote se cherchent sur tout le fichier, avant
+                  # ses dernières lignes. Le pilote traite les ordres d'une
+                  # session l'un après l'autre : le dernier ordre d'une session
+                  # sans réponse est celui qui attendait. « no such element »
+                  # est la réponse ordinaire aux attentes de Dusk. Un ordre peut
+                  # porter un script entier : chaque ligne est coupée à 300
+                  # caractères, le fichier complet part en artefact.
                   if [ -f storage/logs/chromedriver.log ]; then
+                      echo "--- Ordres du pilote restés sans réponse ---"
+                      awk '/\] COMMAND / { s = $0; sub(/\] COMMAND .*/, "", s); sub(/.*\[/, "", s); attente[s] = $0; next }
+                           /\] RESPONSE / { s = $0; sub(/\] RESPONSE .*/, "", s); sub(/.*\[/, "", s); delete attente[s] }
+                           END { for (s in attente) print attente[s] }' storage/logs/chromedriver.log | cut -c1-300
+                      echo "--- Erreurs du pilote ---"
+                      grep -E 'RESPONSE [A-Za-z]+ ERROR|\[SEVERE\]' storage/logs/chromedriver.log | grep -vE 'ERROR no such element|CreatePlatformSocket' | cut -c1-300 | tail -n 60
+                      echo "--- Derniers ordres du pilote ---"
                       grep -E '\] (COMMAND|RESPONSE) |\[SEVERE\]' storage/logs/chromedriver.log | cut -c1-300 | tail -n 60
                   else
                       echo "Aucun journal du pilote"
