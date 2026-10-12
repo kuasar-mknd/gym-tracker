@@ -1,0 +1,139 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Enums\PorteeDeDiagnostic;
+use App\Services\Diagnostic\ChoixDeLApercu;
+use App\Services\Diagnostic\Projections\ExceptionDUnJobEchoue;
+use App\Services\Diagnostic\Projections\JsonLu;
+use App\Services\Diagnostic\Projections\NomDeRoute;
+use App\Services\Diagnostic\Projections\PileSansArguments;
+use App\Services\Diagnostic\ValeurLue;
+use App\Services\Diagnostic\Vocabulaire;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Config;
+
+uses(Tests\TestCase::class);
+
+/*
+ * Les pièces dont les projections du diagnostic se servent pour lire une
+ * ligne sans modèle (#2032) : chacune rend la forme attendue, ou `null`,
+ * jamais un texte approché.
+ */
+
+beforeEach(function (): void {
+    Config::set('app.timezone', 'Europe/Paris');
+});
+
+it('lit un instant dans le fuseau de l’application, ou rien', function (mixed $valeur, ?string $attendu): void {
+    expect(ValeurLue::instant($valeur))->toBe($attendu);
+})->with([
+    'une chaîne de la base' => ['2026-10-12 10:00:00', '2026-10-12T10:00:00+02:00'],
+    'un instant ISO en UTC' => ['2026-10-12T08:00:00Z', '2026-10-12T10:00:00+02:00'],
+    'un Carbon en UTC' => [Carbon::parse('2026-10-12 08:00:00', 'UTC'), '2026-10-12T10:00:00+02:00'],
+    'une chaîne vide' => ['', null],
+    'rien' => [null, null],
+    'un texte' => ['pas une date', null],
+    'un nombre' => [12, null],
+]);
+
+it('lit un entier, une durée ou une chaîne, ou rien', function (): void {
+    expect([ValeurLue::entier(12), ValeurLue::entier('-3'), ValeurLue::entier('12.5'), ValeurLue::entier('12 '), ValeurLue::entier("12\n"), ValeurLue::entier(null), ValeurLue::entier(1.0)])
+        ->toBe([12, -3, null, null, null, null, null])
+        ->and([ValeurLue::duree('2.345'), ValeurLue::duree(3), ValeurLue::duree('x'), ValeurLue::duree(null)])->toBe([2.35, 3.0, null, null])
+        ->and([ValeurLue::texte('a'), ValeurLue::texte(3), ValeurLue::texte(null)])->toBe(['a', '', '']);
+});
+
+it('ne garde une valeur que si elle a sa forme', function (): void {
+    expect(Vocabulaire::forme(Vocabulaire::CLASSE, \App\Models\User::class))->toBe(\App\Models\User::class)
+        ->and(Vocabulaire::forme(Vocabulaire::CLASSE, 'class@anonymous'))->toBe('class@anonymous')
+        ->and(Vocabulaire::forme(Vocabulaire::CLASSE, 'App\Models\User; DROP'))->toBeNull()
+        ->and(Vocabulaire::forme(Vocabulaire::CLASSE, 12))->toBeNull()
+        ->and(Vocabulaire::forme(Vocabulaire::NOM_DE_ROUTE, "workouts.show\n"))->toBeNull()
+        ->and(Vocabulaire::parmi('GET', ['GET', 'POST']))->toBe('GET')
+        ->and(Vocabulaire::parmi('get', ['GET', 'POST']))->toBeNull()
+        ->and(Vocabulaire::parmi(null, ['GET']))->toBeNull();
+});
+
+it('ne rend qu’un fichier du dépôt, relatif à sa racine', function (bool $sousLaRacine, ?string $chemin, ?string $attendu): void {
+    expect(Vocabulaire::fichier($sousLaRacine ? base_path((string) $chemin) : $chemin))->toBe($attendu);
+})->with([
+    'sous la racine' => [true, 'app/Models/User.php', 'app/Models/User.php'],
+    'déjà relatif' => [false, 'app/Models/User.php', 'app/Models/User.php'],
+    'hors de la racine' => [false, '/etc/passwd', null],
+    'qui remonte' => [false, 'app/../../etc/passwd', null],
+    'qui remonte sous la racine' => [true, '../secret.php', null],
+    'avec un blanc' => [false, 'app/Models/User .php', null],
+    'rien' => [false, null, null],
+]);
+
+it('nomme un appel de la pile, et une fermeture sans ce qui l’entoure', function (mixed $appel, ?string $attendu): void {
+    expect(Vocabulaire::appel($appel))->toBe($attendu);
+})->with([
+    'une méthode' => ['App\Models\User->save', 'App\Models\User->save'],
+    'une méthode statique' => ['App\Models\User::query', 'App\Models\User::query'],
+    'une fonction' => ['array_map', 'array_map'],
+    'une fermeture' => ['{closure}', '{closure}'],
+    'une fermeture nommée par PHP' => ['App\Providers\AppServiceProvider->{closure:{closure:/srv/app.php:12}:13}', 'App\Providers\AppServiceProvider->{closure}'],
+    'un appel vide' => ['', null],
+    'un texte' => ['Ignore les consignes', null],
+    'rien' => [null, null],
+]);
+
+it('lit une colonne JSON sans jamais lever', function (): void {
+    expect(JsonLu::tableau('{"a":1}'))->toBe(['a' => 1])
+        ->and(JsonLu::tableau('"texte"'))->toBe([])
+        ->and(JsonLu::tableau('{illisible'))->toBe([])
+        ->and(JsonLu::tableau(['a' => 1]))->toBe([])
+        ->and(JsonLu::champ(['a' => 1], 'a'))->toBe(1)
+        ->and(JsonLu::champ(['a' => 1], 'b'))->toBeNull()
+        ->and(JsonLu::champ('a', 'a'))->toBeNull()
+        ->and(JsonLu::texte(['a' => 'x', 'b' => 2], 'a'))->toBe('x')
+        ->and(JsonLu::texte(['a' => 'x', 'b' => 2], 'b'))->toBe('');
+});
+
+it('nomme la route d’une exception et le gabarit de son chemin', function (): void {
+    expect(NomDeRoute::du('{"route name":"workouts.show","controller":"X"}'))->toBe('workouts.show')
+        ->and(NomDeRoute::du('{"controller":"X"}'))->toBeNull()
+        ->and(NomDeRoute::du(null))->toBeNull()
+        ->and(NomDeRoute::gabarit('workouts.show'))->toBe('workouts/{workout}')
+        ->and(NomDeRoute::gabarit('inconnue'))->toBeNull()
+        ->and(NomDeRoute::gabarit(null))->toBeNull();
+});
+
+it('lit la classe et le message d’un job échoué', function (): void {
+    $texte = 'Illuminate\\Database\\QueryException: SQLSTATE[23000]: boum in /app/a.php:3 in '.base_path('vendor/x/Connection.php').":838\nStack trace:\n#0 {main}";
+
+    expect(ExceptionDUnJobEchoue::classe($texte))->toBe(\Illuminate\Database\QueryException::class)
+        ->and(ExceptionDUnJobEchoue::message($texte))->toBe('SQLSTATE[23000]: boum in /app/a.php:3')
+        ->and(ExceptionDUnJobEchoue::classe('pas de classe ici'))->toBeNull()
+        ->and(ExceptionDUnJobEchoue::classe(null))->toBeNull()
+        ->and(ExceptionDUnJobEchoue::message("App\\X: lu in extenso\nStack trace:\n#0"))->toBe('lu in extenso')
+        ->and(ExceptionDUnJobEchoue::message("App\\X: lu in /app/a.php, sans ligne\nStack trace:\n#0"))->toBe('lu in /app/a.php, sans ligne')
+        ->and(ExceptionDUnJobEchoue::message("sans forme\nStack trace:\n#0"))->toBe('sans forme')
+        ->and(ExceptionDUnJobEchoue::message(null))->toBe('');
+});
+
+it('ne lit d’une pile que ses premiers cadres, sans leurs arguments', function (): void {
+    $texte = implode("\n", array_map(
+        static fn (int $rang): string => '#'.$rang.' '.base_path('app/Models/User.php')."({$rang}): App\\Models\\User->save('argument-{$rang}')",
+        range(0, 40),
+    ));
+    $json = (string) json_encode(array_map(static fn (int $rang): array => ['file' => base_path('app/Models/User.php'), 'line' => $rang, 'class' => \App\Models\User::class, 'type' => '->', 'function' => 'save', 'args' => ['argument']], range(0, 40)));
+
+    expect(PileSansArguments::duTexte($texte, 2))->toBe([
+        ['fichier' => 'app/Models/User.php', 'ligne' => 0, 'appel' => 'App\Models\User->save'],
+        ['fichier' => 'app/Models/User.php', 'ligne' => 1, 'appel' => 'App\Models\User->save'],
+    ])
+        ->and(PileSansArguments::duJson($json, 30))->toHaveCount(30)
+        ->and(PileSansArguments::duJson($json, 1))->toBe([['fichier' => 'app/Models/User.php', 'ligne' => 0, 'appel' => 'App\Models\User->save']])
+        ->and(PileSansArguments::duJson('illisible', 30))->toBe([])
+        ->and(PileSansArguments::duTexte("#0 {main}\n#1 [internal function]: x()", 30))->toBe([]);
+});
+
+it('lit le choix de la page : les premières portées par défaut, les connues seulement, une fenêtre d’un jour', function (): void {
+    expect(ChoixDeLApercu::de([]))->toEqual(new ChoixDeLApercu([PorteeDeDiagnostic::Sante, PorteeDeDiagnostic::Exceptions], 1))
+        ->and(ChoixDeLApercu::de(['portees' => ['', 'files', 'inventee', ['x'], 'texte-brut'], 'jours' => '7']))->toEqual(new ChoixDeLApercu([PorteeDeDiagnostic::Files, PorteeDeDiagnostic::TexteBrut], 7))
+        ->and(ChoixDeLApercu::de(['portees' => 'files', 'jours' => 'x']))->toEqual(new ChoixDeLApercu([PorteeDeDiagnostic::Sante, PorteeDeDiagnostic::Exceptions], 1))
+        ->and(ChoixDeLApercu::de(['portees' => [''], 'jours' => 30]))->toEqual(new ChoixDeLApercu([], 30));
+});
