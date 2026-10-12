@@ -67,7 +67,7 @@ function tachesEnEchecRestantes(): array
     $restantes = [];
 
     foreach (DB::table('failed_jobs')->orderBy('failed_at')->pluck('payload') as $charge) {
-        $decodee = json_decode((string) $charge, true);
+        $decodee = is_string($charge) ? json_decode($charge, true) : null;
         $restantes[] = is_array($decodee) && is_string($decodee['displayName'] ?? null) ? $decodee['displayName'] : '';
     }
 

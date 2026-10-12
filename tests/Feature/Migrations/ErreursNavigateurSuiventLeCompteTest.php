@@ -35,6 +35,28 @@ function erreursNavigateurMigration(): Migration
 }
 
 /**
+ * Joue `up()` de la migration, comme `migrate`.
+ */
+function erreursNavigateurMonter(): void
+{
+    $migration = erreursNavigateurMigration();
+    assert(method_exists($migration, 'up'));
+
+    $migration->up();
+}
+
+/**
+ * Joue `down()` de la migration, comme `migrate:rollback`.
+ */
+function erreursNavigateurDescendre(): void
+{
+    $migration = erreursNavigateurMigration();
+    assert(method_exists($migration, 'down'));
+
+    $migration->down();
+}
+
+/**
  * La règle de suppression de la clé de `user_id`, nulle quand la clé manque.
  */
 function erreursNavigateurRegleDeLaCle(): ?string
@@ -79,14 +101,14 @@ afterEach(function (): void {
         }
     });
 
-    erreursNavigateurMigration()->up();
+    erreursNavigateurMonter();
 
     DB::getPdo()->beginTransaction();
 });
 
 it('ne touche à rien quand la clé a déjà sa règle', function (): void {
     expect(erreursNavigateurRegleDeLaCle())->toBe('cascade')
-        ->and(erreursNavigateurOrdresDe(static fn () => erreursNavigateurMigration()->up()))->toBe([])
+        ->and(erreursNavigateurOrdresDe(erreursNavigateurMonter(...)))->toBe([])
         ->and(erreursNavigateurRegleDeLaCle())->toBe('cascade');
 });
 
@@ -96,24 +118,24 @@ it('reprend un passage interrompu entre le retrait de la clé et sa pose', funct
     expect(erreursNavigateurRegleDeLaCle())->toBeNull()
         ->and(Schema::hasIndex('erreurs_navigateur', ['user_id']))->toBeTrue();
 
-    erreursNavigateurMigration()->up();
+    erreursNavigateurMonter();
 
     expect(erreursNavigateurRegleDeLaCle())->toBe('cascade')
         ->and(Schema::hasIndex('erreurs_navigateur', ['user_id']))->toBeTrue();
 });
 
 it('se défait et se rejoue, deux fois de suite, en gardant l’index de user_id', function (): void {
-    erreursNavigateurMigration()->down();
+    erreursNavigateurDescendre();
 
     expect(erreursNavigateurRegleDeLaCle())->toBe('set null')
         ->and(Schema::hasIndex('erreurs_navigateur', ['user_id']))->toBeTrue()
-        ->and(erreursNavigateurOrdresDe(static fn () => erreursNavigateurMigration()->down()))->toBe([])
+        ->and(erreursNavigateurOrdresDe(erreursNavigateurDescendre(...)))->toBe([])
         ->and(erreursNavigateurRegleDeLaCle())->toBe('set null');
 
-    erreursNavigateurMigration()->up();
+    erreursNavigateurMonter();
 
     expect(erreursNavigateurRegleDeLaCle())->toBe('cascade')
         ->and(Schema::hasIndex('erreurs_navigateur', ['user_id']))->toBeTrue()
-        ->and(erreursNavigateurOrdresDe(static fn () => erreursNavigateurMigration()->up()))->toBe([])
+        ->and(erreursNavigateurOrdresDe(erreursNavigateurMonter(...)))->toBe([])
         ->and(erreursNavigateurRegleDeLaCle())->toBe('cascade');
 });
