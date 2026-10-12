@@ -67,7 +67,7 @@ final class ProjectionDesFiles
     {
         $ligne = ExceptionDUnJobEchoue::lire(
             $this->echecs($fenetre)->select(['uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
-            ExceptionDUnJobEchoue::OCTETS_LUS,
+            ExceptionDUnJobEchoue::OCTETS_PAR_MORCEAU,
         )
             ->where('uuid', $uuid)
             ->first();

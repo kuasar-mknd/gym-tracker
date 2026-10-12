@@ -6,6 +6,7 @@ use App\Jobs\SyncUserGoals;
 use App\Services\Diagnostic\ExpurgeLeTexte;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\EtatDeHorizon;
+use App\Services\Diagnostic\Projections\ExceptionDUnJobEchoue;
 use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\ProjectionDesFiles;
 use App\Services\Diagnostic\TexteNonFiable;
@@ -158,6 +159,28 @@ it('range un vrai échec sous l’exception que le job a levée, pas sous celle 
         ->and($message)->toBeInstanceOf(TexteNonFiable::class)
         ->and(new ExpurgeLeTexte()($message instanceof TexteNonFiable ? $message->brut : '')->texte)
         ->toBe("SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '?' for key 'users.users_email_unique' (insert `users`)");
+});
+
+/*
+ * La base extrait le dernier bloc de toute la colonne, pas d'un début coupé
+ * : une exception enveloppée dont la pile dépasse ce que le détail lit ne
+ * cache pas celle que le job a levée.
+ */
+it('lit l’exception levée même quand celle qu’elle enveloppe dépasse ce que le détail lit', function (): void {
+    $cadres = implode("\n", array_map(static fn (int $rang): string => '#'.$rang.' '.base_path('vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php')."({$rang}): Illuminate\\Pipeline\\Pipeline->then()", range(0, 400)));
+    $exception = "PDOException: dedans in /a.php:1\nStack trace:\n".$cadres."\n#401 {main}\n\n"
+        .'Next RuntimeException: dehors in '.base_path('app/Jobs/SyncUserGoals.php').":40\nStack trace:\n"
+        .'#0 '.base_path('app/Jobs/SyncUserGoals.php')."(40): App\\Jobs\\SyncUserGoals->handle()\n#1 {main}";
+    $uuid = filesDiagnosticEchec(['exception' => $exception]);
+
+    $liste = new ProjectionDesFiles()->liste(filesDiagnosticFenetre());
+    $detail = new ProjectionDesFiles()->detail($uuid, filesDiagnosticFenetre(), true);
+
+    expect(strlen($exception))->toBeGreaterThan(ExceptionDUnJobEchoue::OCTETS_LUS)
+        ->and(data_get($liste, 'echecs.0.exception'))->toBe(RuntimeException::class)
+        ->and(data_get($detail, 'exception'))->toBe(RuntimeException::class)
+        ->and(data_get($detail, 'pile'))->toBe([['fichier' => 'app/Jobs/SyncUserGoals.php', 'ligne' => 40, 'appel' => 'App\Jobs\SyncUserGoals->handle']])
+        ->and(data_get($detail, 'non_fiable.message'))->toEqual(new TexteNonFiable('dehors', ProjectionDesFiles::BUDGET_DU_MESSAGE));
 });
 
 it('ne rend pas le détail d’un échec de plus de trente jours, ni d’un échec inconnu', function (): void {

@@ -18,7 +18,8 @@ use Throwable;
  * ancienne, puis `\n\nNext ` et la suivante : celle que le job a levée vient
  * en dernier, et c'est elle que le diagnostic lit, comme la table des
  * exceptions garde la classe levée. La base extrait ce dernier bloc et la
- * tête du texte, chacun coupé (`lire()`). Un message peut contenir
+ * tête du texte, chacun coupé (`lire()`) : le détail en lit 16 Kio en tout,
+ * dont l'expurgation ne garde que les 8 premiers de chacun. Un message peut contenir
  * `\n\nNext ` lui aussi : le dernier bloc n'est pris que s'il nomme une
  * exception que l'application connaît, sinon la tête, que PHP écrit avant
  * tout message et qu'aucun ne peut contrefaire (`levee()`).
@@ -31,8 +32,11 @@ use Throwable;
  */
 final class ExceptionDUnJobEchoue
 {
-    /** Ce que le détail lit de chaque morceau, en octets. */
+    /** Ce que le détail lit de la colonne en tout, en octets. */
     public const int OCTETS_LUS = 16_384;
+
+    /** Ce que le détail lit de chaque morceau : la moitié, la tête et le dernier bloc. */
+    public const int OCTETS_PAR_MORCEAU = self::OCTETS_LUS / 2;
 
     /** Ce que la liste lit de chaque morceau : assez pour la classe. */
     public const int OCTETS_DE_LA_LISTE = 512;
