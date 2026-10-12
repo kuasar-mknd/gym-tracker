@@ -28,9 +28,11 @@ use function Pest\Laravel\actingAs;
  * formés : les connexions `ConnexionMySql` et `ConnexionMariaDb` la
  * remplacent par `'?'` (`TexteDuServeurSansValeurs`).
  *
- * Chaque refus ci-dessous passe par une vraie insertion : deux dont le
- * serveur ne cite pas la valeur, quatre où il la cite, dont une valeur qui
- * porte des apostrophes et imite la fin du texte du serveur.
+ * Chaque refus ci-dessous passe par une vraie écriture : deux dont le serveur
+ * ne cite pas la valeur, cinq où il la cite. Deux de ces valeurs portent des
+ * apostrophes et imitent la fin d'un texte du serveur : celle d'une clé en
+ * double, que le serveur cite avant le nom de l'index, et celle d'une
+ * comparaison, qu'il cite en dernier.
  *
  * La pile est réglée comme dans l'image, d'après `docker/php-prod.ini` : sans
  * `zend.exception_ignore_args`, ses arguments recopieraient la valeur que
@@ -47,7 +49,7 @@ function erreursSqlCanari(): string
 }
 
 /**
- * Fait refuser une insertion par la base, avec le canari parmi les valeurs.
+ * Fait refuser une écriture par la base, avec le canari parmi les valeurs.
  *
  * `cle-etrangere` : la séance d'un compte qui n'existe pas. `trop-longue` : un
  * nom plus long que sa colonne. `entier-mal-forme` : le canari pour
@@ -55,9 +57,12 @@ function erreursSqlCanari(): string
  * `cle-en-double` : un compte dont l'adresse est déjà prise.
  * `cle-en-double-rusee` : la même, avec une adresse qui porte des apostrophes
  * et la fin du texte du serveur, pour qu'un masque qui couperait aux
- * apostrophes laisse sortir le canari.
+ * apostrophes laisse sortir le canari. `comparaison-rusee` : un compte
+ * modifié d'après un identifiant qui n'est pas un entier et finit comme la
+ * queue d'une clé en double, pour qu'un masque qui garderait cette queue
+ * hors de sa forme laisse sortir le canari.
  */
-function erreursSqlInserer(string $refus, string $canari): void
+function erreursSqlEcrire(string $refus, string $canari): void
 {
     match ($refus) {
         'cle-etrangere' => erreursSqlInsererUneSeance(['user_id' => 0, 'notes' => $canari]),
@@ -66,6 +71,7 @@ function erreursSqlInserer(string $refus, string $canari): void
         'date-mal-formee' => erreursSqlInsererUneSeance(['user_id' => User::factory()->create()->id, 'started_at' => $canari]),
         'cle-en-double' => erreursSqlInsererDeuxComptesA("{$canari}@example.org"),
         'cle-en-double-rusee' => erreursSqlInsererDeuxComptesA("o'{$canari}' for key '{$canari}@example.org"),
+        'comparaison-rusee' => erreursSqlRenommerLeCompte("abc' for key '{$canari}"),
         default => throw new InvalidArgumentException("Refus inconnu : {$refus}."),
     };
 }
@@ -100,6 +106,19 @@ function erreursSqlInsererDeuxComptesA(string $adresse): bool
 }
 
 /**
+ * Renomme le compte dont l'identifiant vaut celui donné. Le serveur refuse de
+ * convertir en entier un identifiant qui n'en est pas un, et cite la valeur à
+ * la fin de son texte (1292). Un compte existe : sans ligne à comparer, le
+ * serveur ne refuserait rien.
+ */
+function erreursSqlRenommerLeCompte(string $identifiant): int
+{
+    User::factory()->create();
+
+    return DB::table('users')->where('id', $identifiant)->update(['name' => 'Renommé']);
+}
+
+/**
  * Chaque refus, le texte du serveur qu'en garde le message et la classe de
  * l'exception.
  *
@@ -114,21 +133,22 @@ function erreursSqlRefus(): array
         'une date mal formée' => ['date-mal-formee', "1292 Incorrect datetime value: '?' for column 'started_at' at row 1", QueryException::class],
         'une clé en double' => ['cle-en-double', "1062 Duplicate entry '?' for key 'users.users_email_unique'", UniqueConstraintViolationException::class],
         'une clé en double dont la valeur imite le serveur' => ['cle-en-double-rusee', "1062 Duplicate entry '?' for key 'users.users_email_unique'", UniqueConstraintViolationException::class],
+        'une comparaison dont la valeur imite une clé en double' => ['comparaison-rusee', "1292 Truncated incorrect INTEGER value: '?' (Connection: mysql", QueryException::class],
     ];
 }
 
 /**
- * L'exception que lève l'insertion refusée.
+ * L'exception que lève l'écriture refusée.
  */
 function erreursSqlExceptionDe(string $refus): QueryException
 {
     try {
-        erreursSqlInserer($refus, erreursSqlCanari());
+        erreursSqlEcrire($refus, erreursSqlCanari());
     } catch (QueryException $exception) {
         return $exception;
     }
 
-    throw new RuntimeException("L'insertion « {$refus} » n'a pas été refusée.");
+    throw new RuntimeException("L'écriture « {$refus} » n'a pas été refusée.");
 }
 
 /**
@@ -179,10 +199,10 @@ function erreursSqlTracesQuiRecopientLeCanari(array $traces): array
 }
 
 /**
- * Un job qui échoue sur la même insertion. Il ne porte que le nom du refus :
+ * Un job qui échoue sur la même écriture. Il ne porte que le nom du refus :
  * sa charge utile, gardée dans `failed_jobs`, ne contient donc pas le canari.
  */
-final class ErreursSqlJobQuiInsereUneLigneRefusee implements ShouldQueue
+final class ErreursSqlJobQuiEcritUneLigneRefusee implements ShouldQueue
 {
     use Queueable;
 
@@ -192,7 +212,7 @@ final class ErreursSqlJobQuiInsereUneLigneRefusee implements ShouldQueue
 
     public function handle(): void
     {
-        erreursSqlInserer($this->refus, erreursSqlCanari());
+        erreursSqlEcrire($this->refus, erreursSqlCanari());
     }
 }
 
@@ -223,7 +243,7 @@ it('ouvre les connexions mysql et mariadb par les classes qui masquent le texte 
     }
 });
 
-it('ne recopie pas les valeurs d’une insertion refusée dans le message de son exception', function (string $refus, string $texteDuServeur, string $classe): void {
+it('ne recopie pas les valeurs d’une écriture refusée dans le message de son exception', function (string $refus, string $texteDuServeur, string $classe): void {
     $exception = erreursSqlExceptionDe($refus);
     $valeurs = array_map(static fn (mixed $valeur): string => is_scalar($valeur) ? (string) $valeur : '', $exception->getBindings());
 
@@ -232,7 +252,7 @@ it('ne recopie pas les valeurs d’une insertion refusée dans le message de son
         ->not->toContain(erreursSqlCanari())
         ->toStartWith('SQLSTATE[')
         ->toContain($texteDuServeur)
-        ->toMatch('/, SQL: insert into `(workouts|users)` \([^)]+\) values \(\?(, \?)+\)\)$/')
+        ->toMatch('/, SQL: (insert into `(workouts|users)` \([^)]+\) values \(\?(, \?)+\)|update `users` set `name` = \? where `id` = \?)\)$/')
         ->and((string) $exception)->not->toContain(erreursSqlCanari())
         // Le code qui rattrape l'exception lit toujours les valeurs : seul le
         // message les tait.
@@ -261,16 +281,16 @@ it('garde ce que Laravel lit dans l’erreur d’une clé en double', function (
  * La page de l'exception dans le panneau en montre le message et la pile, que
  * le panneau affiche sans arguments quand l'exception n'en a pas gardé.
  */
-it('ne laisse la valeur ni dans la table des exceptions, ni dans sa page du panneau, ni dans le journal quand une requête échoue sur l’insertion', function (string $refus, string $texteDuServeur, string $classe): void {
+it('ne laisse la valeur ni dans la table des exceptions, ni dans sa page du panneau, ni dans le journal quand une requête échoue sur l’écriture', function (string $refus, string $texteDuServeur, string $classe): void {
     $journal = erreursSqlJournalDansUnFichier();
 
-    Route::post('/_insertion-refusee', static function () use ($refus): never {
-        erreursSqlInserer($refus, erreursSqlCanari());
+    Route::post('/_ecriture-refusee', static function () use ($refus): never {
+        erreursSqlEcrire($refus, erreursSqlCanari());
 
-        throw new RuntimeException("L'insertion n'a pas été refusée.");
+        throw new RuntimeException("L'écriture n'a pas été refusée.");
     });
 
-    $this->post('/_insertion-refusee')->assertStatus(500);
+    $this->post('/_ecriture-refusee')->assertStatus(500);
 
     $ecrit = erreursSqlLireEtEffacer($journal);
     $exception = ExceptionEnregistree::query()->sole();
@@ -290,10 +310,10 @@ it('ne laisse la valeur ni dans la table des exceptions, ni dans sa page du pann
         ->and($ecrit)->toContain($texteDuServeur);
 })->with(erreursSqlRefus(...));
 
-it('ne laisse la valeur ni dans failed_jobs, ni dans la table des exceptions, ni dans le journal quand un job échoue sur l’insertion', function (string $refus, string $texteDuServeur, string $classe): void {
+it('ne laisse la valeur ni dans failed_jobs, ni dans la table des exceptions, ni dans le journal quand un job échoue sur l’écriture', function (string $refus, string $texteDuServeur, string $classe): void {
     $journal = erreursSqlJournalDansUnFichier();
 
-    dispatch(new ErreursSqlJobQuiInsereUneLigneRefusee($refus))->onConnection('database');
+    dispatch(new ErreursSqlJobQuiEcritUneLigneRefusee($refus))->onConnection('database');
 
     Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--tries' => 1, '--sleep' => 0]);
 

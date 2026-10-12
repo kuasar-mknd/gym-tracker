@@ -20,25 +20,39 @@ use ReflectionProperty;
  * des exceptions et `failed_jobs`.
  *
  * Ce que le texte cite entre apostrophes devient `'?'`, sauf un nom du schéma
- * à une place que le serveur réserve aux noms : en tête (« Column 'x' cannot
- * be null », « Unknown column 'x' ») ou en queue (« for key 'x' », « for
- * column 'x' at row 1 », « in 'field list' »). Une valeur peut contenir des
- * apostrophes, et même imiter une queue : le masque couvre tout ce qui sépare
- * la première apostrophe hors de ces places de la dernière, si bien
- * qu'aucune partie d'une valeur ne reste. L'en-tête de PDO (état SQL, sa
+ * à la place que lui réserve une forme connue du serveur : en tête (« Column
+ * 'x' cannot be null ») ou en queue (« Duplicate entry '…' for key 'x' »,
+ * « Incorrect … value: '…' for column 'x' at row 1 », « Unknown column 'x' in
+ * 'field list' »). Une queue n'est gardée qu'au bout de la forme qui la
+ * porte : le serveur écrit certaines valeurs en dernier (« Truncated
+ * incorrect INTEGER value: '…' »), et une telle valeur peut finir comme une
+ * queue. Entre le début et la queue, le masque couvre tout ce qui sépare la
+ * première apostrophe de la dernière : une valeur qui contient des
+ * apostrophes, ou qui imite une queue, ne laisse rien passer. Une forme
+ * inconnue perd tout ce qu'elle cite. L'en-tête de PDO (état SQL, sa
  * description, code du serveur) ne change pas : Laravel y reconnaît une clé
  * en double et une connexion perdue.
  */
 final class TexteDuServeurSansValeurs
 {
     /**
-     * Le texte en quatre morceaux : l'en-tête de PDO, un nom en tête, le
-     * milieu, un nom en queue. Seul le milieu est masqué.
+     * Le texte en quatre morceaux : l'en-tête de PDO, le début de la forme
+     * (un nom compris), le milieu, la queue (un nom). Seul le milieu est
+     * masqué. Une ligne par forme connue, la dernière pour toutes les autres.
+     *
+     * Chaque queue va avec le début de sa forme : « for key 'x' » ne finit
+     * qu'une clé en double, « for column 'x' at row N » qu'une valeur mal
+     * formée, trop longue, coupée ou hors bornes. Ailleurs, la même fin
+     * peut venir d'une valeur, et reste dans le milieu.
      */
-    private const string DECOUPE = '/^(?<entete>SQLSTATE\\[[0-9A-Z]{5}\\](?:: [^:\\n]*: \\d+ | \\[\\d+\\] ))?'
-        ."(?<tete>(?:Column|Field|Table|Unknown column|Unknown table|Check constraint) '[^']*')?"
-        .'(?<milieu>.*?)'
-        ."(?<queue> (?:for (?:key|column) '[^']*'(?: at row \\d+)?|in '(?:field list|where clause|order clause|group statement|having clause|on clause)')\\.?)?$/sD";
+    private const string DECOUPE = '/^(?<entete>SQLSTATE\\[[0-9A-Z]{5}\\](?:: [^:\\n]*: \\d+ | \\[\\d+\\] ))?(?|'
+        ."(?<tete>Duplicate entry)(?<milieu>.*)(?<queue> for key '[^']*')"
+        ."|(?<tete>Incorrect [^:'\\n]* value:|Data too long|Data truncated|Out of range value)(?<milieu>.*)(?<queue> for column '[^']*' at row \\d+)"
+        ."|(?<tete>Invalid JSON text:)(?<milieu>.*)(?<queue> for column '[^']*'\\.)"
+        ."|(?<tete>Unknown column '[^']*')(?<milieu>)(?<queue> in '(?:field list|where clause|order clause|group statement|having clause|on clause)')"
+        ."|(?<tete>(?:Column|Field|Table|Unknown column|Unknown table|Check constraint) '[^']*')(?<milieu>.*)(?<queue>)"
+        .'|(?<tete>)(?<milieu>.*)(?<queue>)'
+        .')$/sD';
 
     /**
      * Ce que le milieu cite, de sa première apostrophe à sa dernière.

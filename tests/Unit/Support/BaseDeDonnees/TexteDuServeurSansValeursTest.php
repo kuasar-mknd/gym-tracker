@@ -15,6 +15,10 @@ use Illuminate\Database\LostConnectionDetector;
  * Les textes ont la forme exacte de ceux du serveur MySQL 8.4 de la CI, ou de
  * MariaDB quand elle diffère (une colonne entre accents graves). Un message
  * d'une forme que le masque ne connaît pas perd tout ce qu'il cite.
+ *
+ * Le serveur écrit certaines valeurs en dernier, puis l'apostrophe qui les
+ * ferme : une valeur qui finit par « ' for key 'x » donne un texte qui finit
+ * comme une clé en double. La queue n'est gardée qu'au bout de sa forme.
  */
 
 it('remplace par ? la valeur que cite le serveur', function (string $texte, string $attendu): void {
@@ -64,6 +68,30 @@ it('remplace par ? la valeur que cite le serveur', function (string $texte, stri
         "Invalid utf8mb4 character string: '8080'",
         "Invalid utf8mb4 character string: '?'",
     ],
+    'une comparaison dont la valeur imite la queue d’une clé en double' => [
+        "Truncated incorrect INTEGER value: 'abc' for key 'canari-2032'",
+        "Truncated incorrect INTEGER value: '?'",
+    ],
+    'une comparaison dont la valeur imite une queue de colonne' => [
+        "Truncated incorrect DOUBLE value: 'abc' for column 'canari-2032'",
+        "Truncated incorrect DOUBLE value: '?'",
+    ],
+    'une comparaison dont la valeur imite la queue d’une colonne inconnue' => [
+        "Truncated incorrect DOUBLE value: 'abc' in 'field list'",
+        "Truncated incorrect DOUBLE value: '?'",
+    ],
+    'une date hors colonne dont la valeur imite une queue' => [
+        "Incorrect DATETIME value: 'x' for column 'canari-2032'",
+        "Incorrect DATETIME value: '?'",
+    ],
+    'un fragment de caractère invalide dont la valeur imite une queue' => [
+        "Invalid utf8mb4 character string: 'x' for key 'canari-2032'",
+        "Invalid utf8mb4 character string: '?'",
+    ],
+    'une entrée en double d’une liste dont la valeur imite une queue' => [
+        "Duplicate entry 'x' for key 'canari-2032'.",
+        "Duplicate entry '?'.",
+    ],
     'une erreur de syntaxe' => [
         "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'ada@example.org' at line 1",
         "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '?' at line 1",
@@ -75,6 +103,10 @@ it('remplace par ? la valeur que cite le serveur', function (string $texte, stri
     'le message de PDO d’un entier mal formé' => [
         "SQLSTATE[HY000]: General error: 1366 Incorrect integer value: 'abc-2032' for column 'user_id' at row 1",
         "SQLSTATE[HY000]: General error: 1366 Incorrect integer value: '?' for column 'user_id' at row 1",
+    ],
+    'le message de PDO d’une comparaison refusée dont la valeur imite une queue' => [
+        "SQLSTATE[22007]: Invalid datetime format: 1292 Truncated incorrect INTEGER value: 'abc' for key 'canari-2032'",
+        "SQLSTATE[22007]: Invalid datetime format: 1292 Truncated incorrect INTEGER value: '?'",
     ],
     'le message de PDO d’une connexion refusée' => [
         "SQLSTATE[HY000] [1045] Access denied for user 'sail'@'192.0.2.10' (using password: YES)",
@@ -94,6 +126,7 @@ it('garde tel quel un texte qui ne cite que des noms du schéma', function (stri
     'une colonne inconnue' => ["Unknown column 'nope' in 'field list'"],
     'une table inconnue' => ["Table 'gym.nope' doesn't exist"],
     'une contrainte de vérification' => ["Check constraint 'workouts_chk_1' is violated."],
+    'une clé en double sans sa valeur' => ["Duplicate entry for key 'users.users_email_unique'"],
     'une valeur trop longue' => ["Data too long for column 'name' at row 1"],
     'une valeur hors bornes' => ["Out of range value for column 'reps' at row 2"],
     'une valeur coupée' => ["Data truncated for column 'type' at row 1"],
