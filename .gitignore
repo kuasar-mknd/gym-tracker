@@ -45,8 +45,21 @@ frankenphp
 # swallowed it silently — `git add -A` committed the fonts beside it and said
 # nothing — so the build failed only on CI, where the file did not exist.
 !/resources/fonts/material-symbols.txt
-/lang/vendor
-/resources/views/vendor
+# Ce que vendor:publish dépose reste hors dépôt. Les vues surchargées de mail,
+# notifications et pulse y sont pourtant suivies, ajoutées de force ; le
+# courriel d'alerte de santé en français (#2034) est rouvert ici, et seulement
+# ses deux dossiers : les autres langues et les autres vues de laravel-health,
+# si on les publie, restent ignorées, et `git add -A` ne les emporte pas. Un
+# dossier ignoré ne se rouvre pas : on ignore son contenu, on rouvre le
+# sous-dossier voulu, et ainsi de suite.
+/lang/vendor/*
+!/lang/vendor/health/
+/lang/vendor/health/*
+!/lang/vendor/health/fr/
+/resources/views/vendor/*
+!/resources/views/vendor/health/
+/resources/views/vendor/health/*
+!/resources/views/vendor/health/mail/
 /storage/app/GymTracker
 /public/css/filament-spatie-backup
 /public/css/filament-spatie-health
