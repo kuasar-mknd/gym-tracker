@@ -26,15 +26,18 @@ final readonly class PrevenirLeTitulaireDeLAdresse
      */
     public const int SECONDES_ENTRE_DEUX_AVIS = 3600;
 
-    public function execute(User $titulaire, MotifDeLaTentative $motif): void
+    /**
+     * Rend vrai quand l'avis part, faux quand la borne le retient.
+     */
+    public function execute(User $titulaire, MotifDeLaTentative $motif): bool
     {
-        RateLimiter::attempt(
+        return RateLimiter::attempt(
             'avis-sur-l-adresse:'.$titulaire->id,
             1,
             static function () use ($titulaire, $motif): void {
                 $titulaire->notify(new TentativeSurTonAdresse($motif));
             },
             self::SECONDES_ENTRE_DEUX_AVIS,
-        );
+        ) !== false;
     }
 }

@@ -212,6 +212,41 @@ it('n’envoie pas plus d’un lien par quart d’heure à la même adresse', fu
     Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 2);
 });
 
+it('ne fait partir que trois courriels par heure depuis un même compte, avis et liens confondus, sans que la réponse change', function (): void {
+    Notification::fake();
+    $compte = changementMemeReponseLeCompte();
+    $premier = User::factory()->create(['email' => 'prise1@example.org']);
+    $second = User::factory()->create(['email' => 'prise2@example.org']);
+    $troisieme = User::factory()->create(['email' => 'prise3@example.org']);
+
+    $demander = static function (string $adresse) use ($compte): void {
+        actingAs($compte)
+            ->patch(route('profile.update'), ['name' => 'Titulaire', 'email' => $adresse, 'current_password' => 'password'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', 'lien-de-changement-d-adresse-envoye');
+    };
+
+    $demander('prise1@example.org');
+    $demander('prise2@example.org');
+
+    foreach (range(1, 10) as $numero) {
+        $demander("destinataire{$numero}@example.org");
+    }
+
+    $demander('prise3@example.org');
+
+    Notification::assertSentToTimes($premier, TentativeSurTonAdresse::class, 1);
+    Notification::assertSentToTimes($second, TentativeSurTonAdresse::class, 1);
+    Notification::assertNotSentTo($troisieme, TentativeSurTonAdresse::class);
+    Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 1);
+    expect(TraiterUnChangementDAdresse::COURRIELS_PAR_HEURE_ET_PAR_COMPTE)->toBe(3);
+
+    $this->travel(3601)->seconds();
+    $demander('destinataire11@example.org');
+
+    Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 2);
+});
+
 it('refuse un lien d’un autre compte, altéré, ou périmé par un changement d’adresse', function (): void {
     Notification::fake();
     $compte = changementMemeReponseLeCompte();
