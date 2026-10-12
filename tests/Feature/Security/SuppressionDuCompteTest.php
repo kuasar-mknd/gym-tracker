@@ -730,8 +730,9 @@ it('ne rattache les exceptions enregistrées à aucun compte : elles attendent l
  * métier : une entrée sur une séance du compte recopiait ses champs et son
  * `user_id`. Celles dont la cause est un administrateur ou personne ne
  * désignent le compte ni comme cause, ni comme sujet : elles survivent à sa
- * suppression, jusqu'à la purge de l'audit à 180 jours, donc jusqu'au
- * 2027-03-02 au plus tard (#1938). La page de profil annonce cette durée :
+ * suppression, jusqu'à la purge de l'audit à 180 jours, donc jusqu'au début
+ * de mars 2027 pour les dernières, selon la date à laquelle #1670 a été
+ * déployé (#1938). La page de profil annonce cette durée :
  * elle se raccourcit le jour où ces entrées partent avec le compte, ou que la
  * purge les prend plus tôt.
  */
