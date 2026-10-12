@@ -6,6 +6,7 @@ namespace Tests;
 
 use Closure;
 use Facebook\WebDriver\Chrome\ChromeOptions;
+use Facebook\WebDriver\Exception\Internal\WebDriverCurlException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverKeys;
@@ -54,6 +55,17 @@ abstract class DuskTestCase extends BaseTestCase
      * de la console dans un rendu figé.
      */
     public const int SECONDES_POUR_UN_ORDRE = 90;
+
+    /**
+     * Le temps qu'a un navigateur écarté pour confirmer sa fermeture.
+     *
+     * Le pilote traite les ordres d'une session l'un après l'autre : derrière
+     * un ordre resté sans réponse, la fermeture attendrait son tour en vain,
+     * SECONDES_POUR_UN_ORDRE durant. Elle reste envoyée, pour que le pilote
+     * ferme le navigateur s'il reprend, mais sa réponse n'est attendue que
+     * quelques secondes.
+     */
+    public const int SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET = 5;
 
     protected function setUp(): void
     {
@@ -436,6 +448,9 @@ abstract class DuskTestCase extends BaseTestCase
      * ceci près qu'après un échec, un relevé impossible se signale à côté de
      * l'échec, qui reste celui que la suite rapporte. Sur un parcours réussi,
      * une console illisible échoue comme avant.
+     *
+     * Un navigateur dont le pilote ne répond plus n'est pas rendu à la classe
+     * (`rendreOuEcarterLesNavigateurs()`).
      */
     #[\Override]
     public function browse(Closure $callback): void
@@ -445,53 +460,135 @@ abstract class DuskTestCase extends BaseTestCase
         try {
             $callback(...$browsers->all());
         } catch (Throwable $echecDuParcours) {
-            $this->releverSansMasquerLEchec('capture d’écran', function () use ($browsers): void {
-                $this->captureFailuresFor($browsers);
-            });
-            $this->releverSansMasquerLEchec('source de la page', function () use ($browsers): void {
-                $this->storeSourceLogsFor($browsers);
-            });
-            $this->releverSansMasquerLEchec('console du navigateur', function () use ($browsers): void {
-                $this->storeConsoleLogsFor($browsers);
-            });
-
-            static::$browsers = $this->closeAllButPrimary($browsers);
+            $this->rendreOuEcarterLesNavigateurs($browsers, $this->releverApresUnEchec($browsers, $echecDuParcours));
 
             throw $echecDuParcours;
         }
 
         try {
             $this->storeConsoleLogsFor($browsers);
-        } finally {
+        } catch (Throwable $consoleIllisible) {
+            $this->rendreOuEcarterLesNavigateurs($browsers, $consoleIllisible instanceof WebDriverCurlException);
+
+            throw $consoleIllisible;
+        }
+
+        $this->rendreOuEcarterLesNavigateurs($browsers, false);
+    }
+
+    /**
+     * Relève la capture d'écran, la source et la console d'un parcours tombé,
+     * et dit si le pilote ne répond plus.
+     *
+     * Un ordre resté sans réponse dans sa borne lève une
+     * `WebDriverCurlException`, que ce soit dans le parcours ou dans un relevé :
+     * chaque relevé suivant attendrait SECONDES_POUR_UN_ORDRE en vain, et n'est
+     * pas tenté.
+     *
+     * @param  Collection<array-key, mixed>  $browsers
+     */
+    private function releverApresUnEchec(Collection $browsers, Throwable $echecDuParcours): bool
+    {
+        $piloteMuet = $echecDuParcours instanceof WebDriverCurlException;
+        $releves = [
+            'capture d’écran' => function () use ($browsers): void {
+                $this->captureFailuresFor($browsers);
+            },
+            'source de la page' => function () use ($browsers): void {
+                $this->storeSourceLogsFor($browsers);
+            },
+            'console du navigateur' => function () use ($browsers): void {
+                $this->storeConsoleLogsFor($browsers);
+            },
+        ];
+
+        foreach ($releves as $quoi => $releve) {
+            if ($piloteMuet) {
+                break;
+            }
+
+            $piloteMuet = $this->tenterSansMasquerLEchec($quoi, $releve) instanceof WebDriverCurlException;
+        }
+
+        return $piloteMuet;
+    }
+
+    /**
+     * Rend les navigateurs à la classe pour son parcours suivant, ou les écarte
+     * si leur pilote ne répond plus.
+     *
+     * Le `createBrowsersFor()` de Dusk ne démarre un navigateur que si la
+     * classe n'en garde aucun : rendu à la classe, un navigateur muet fait
+     * tomber chacun des parcours suivants sur un ordre sans réponse, puis
+     * attendre sa fermeture en fin de classe. Écarté, il reçoit sa fermeture,
+     * bornée par SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET, et le parcours
+     * suivant en démarre un neuf (#2029). Mesuré avec un vrai navigateur au
+     * rendu figé, SECONDES_POUR_UN_ORDRE ramené à dix secondes : rendu à la
+     * classe, chaque parcours suivant tombait en trente secondes (sa visite,
+     * sa capture, sa console) ; écarté, le parcours figé paie sa capture et
+     * cinq secondes de fermeture, et le suivant passe en moins d'une seconde.
+     *
+     * @param  Collection<array-key, mixed>  $browsers
+     */
+    private function rendreOuEcarterLesNavigateurs(Collection $browsers, bool $piloteMuet): void
+    {
+        if (! $piloteMuet) {
             static::$browsers = $this->closeAllButPrimary($browsers);
+
+            return;
+        }
+
+        static::$browsers = new Collection();
+
+        $this->signaler(sprintf(
+            "%s : le pilote ne répond plus ; il ne reçoit plus que la fermeture de ses navigateurs, écartés, et le parcours suivant en démarre un neuf (#2029).\n",
+            $this->getCallerName(),
+        ));
+
+        $millisecondesPourFermer = static::SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET * 1000;
+
+        foreach ($browsers as $navigateur) {
+            if (! $navigateur instanceof Browser) {
+                continue;
+            }
+
+            $this->tenterSansMasquerLEchec('fermeture du navigateur écarté', static function () use ($navigateur, $millisecondesPourFermer): void {
+                $navigateur->driver->getCommandExecutor()->setRequestTimeout($millisecondesPourFermer);
+                $navigateur->quit();
+            });
         }
     }
 
     /**
-     * Fait un relevé d'échec ; s'il échoue, le signale sans rien lever.
+     * Tente un relevé ou une fermeture ; s'il échoue, le signale et rend son
+     * exception sans la lever.
      *
-     * @param  Closure(): void  $releve
+     * @param  Closure(): void  $ordre
      */
-    private function releverSansMasquerLEchec(string $quoi, Closure $releve): void
+    private function tenterSansMasquerLEchec(string $quoi, Closure $ordre): ?Throwable
     {
         try {
-            $releve();
+            $ordre();
         } catch (Throwable $impossible) {
-            $this->signalerUnReleveImpossible(sprintf(
+            $this->signaler(sprintf(
                 "%s : %s impossible (%s : %s). L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n",
                 $this->getCallerName(),
                 $quoi,
                 $impossible::class,
                 trim($impossible->getMessage()),
             ));
+
+            return $impossible;
         }
+
+        return null;
     }
 
     /**
-     * Écrit le signalement sur la sortie d'erreur, que le journal du job garde
+     * Écrit un signalement sur la sortie d'erreur, que le journal du job garde
      * à côté de l'échec.
      */
-    protected function signalerUnReleveImpossible(string $signalement): void
+    protected function signaler(string $signalement): void
     {
         fwrite(STDERR, $signalement);
     }

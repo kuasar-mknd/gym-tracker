@@ -5,11 +5,15 @@ declare(strict_types=1);
 use Facebook\WebDriver\Exception\Internal\UnexpectedResponseException;
 use Facebook\WebDriver\Exception\TimeoutException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
+use Facebook\WebDriver\Remote\DriverCommand;
 use Facebook\WebDriver\Remote\HttpCommandExecutor;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverOptions;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Laravel\Dusk\Browser;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 use Tests\DuskTestCase;
 
@@ -62,6 +66,76 @@ function unParcoursBloquePiloteFige(): RemoteWebDriver
             throw new TimeoutException('timeout: la console ne répond plus');
         }
     };
+}
+
+/**
+ * Un pilote qui ne rend plus de réponse : chaque ordre part vers une adresse
+ * qui accepte la connexion sans jamais répondre, ou que plus rien n'écoute, et
+ * lève une `WebDriverCurlException`, comme un ordre resté sans réponse dans
+ * SECONDES_POUR_UN_ORDRE (ici deux dixièmes de seconde). Chaque ordre reçu
+ * s'inscrit au carnet, avec le temps qu'il a pris.
+ *
+ * @param  ArrayObject<int, array{string, float}>  $carnet
+ */
+function unParcoursBloquePiloteSansReponse(string $adresse, ArrayObject $carnet): RemoteWebDriver
+{
+    return new class($adresse, $carnet) extends RemoteWebDriver
+    {
+        /**
+         * @param  ArrayObject<int, array{string, float}>  $carnet
+         */
+        public function __construct(string $adresse, private readonly ArrayObject $carnet)
+        {
+            $executeur = new HttpCommandExecutor($adresse);
+            $executeur->setRequestTimeout(200);
+
+            parent::__construct($executeur, 'pilote-sans-reponse', DesiredCapabilities::chrome(), true);
+        }
+
+        /**
+         * @param  string  $command_name
+         * @param  array<mixed>  $params
+         */
+        #[\Override]
+        public function execute($command_name, $params = []): mixed
+        {
+            $debut = microtime(true);
+
+            try {
+                return parent::execute($command_name, $params);
+            } finally {
+                $this->carnet[] = [$command_name, microtime(true) - $debut];
+            }
+        }
+    };
+}
+
+/**
+ * Les ordres inscrits au carnet d'un pilote, dans l'ordre.
+ *
+ * @param  ArrayObject<int, array{string, float}>  $carnet
+ * @return list<string>
+ */
+function unParcoursBloqueOrdresRecus(ArrayObject $carnet): array
+{
+    return array_values(array_map(static fn (array $ordre): string => $ordre[0], $carnet->getArrayCopy()));
+}
+
+/**
+ * Le temps qu'a pris la fermeture inscrite au carnet d'un pilote, ou null s'il
+ * n'en a reçu aucune.
+ *
+ * @param  ArrayObject<int, array{string, float}>  $carnet
+ */
+function unParcoursBloqueDureeDeLaFermeture(ArrayObject $carnet): ?float
+{
+    foreach ($carnet as [$ordre, $duree]) {
+        if ($ordre === DriverCommand::QUIT) {
+            return $duree;
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -118,7 +192,15 @@ it('rapporte l’échec du parcours, et non celui de la capture qui le suit', fu
             self::$browsers = new Collection([$navigateur]);
         }
 
-        public function rendreLesNavigateurs(): void
+        /**
+         * @return Collection<array-key, mixed>
+         */
+        public function navigateursGardes(): Collection
+        {
+            return new Collection(self::$browsers);
+        }
+
+        public function oublierLesNavigateurs(): void
         {
             self::$browsers = new Collection();
         }
@@ -130,7 +212,7 @@ it('rapporte l’échec du parcours, et non celui de la capture qui le suit', fu
         }
 
         #[\Override]
-        protected function signalerUnReleveImpossible(string $signalement): void
+        protected function signaler(string $signalement): void
         {
             $this->signalements[] = $signalement;
         }
@@ -158,16 +240,185 @@ it('rapporte l’échec du parcours, et non celui de la capture qui le suit', fu
             ->toBe("parcoursFictif : console du navigateur impossible (Facebook\WebDriver\Exception\TimeoutException : timeout: la console ne répond plus). L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n");
 
         /*
+         * Ce pilote a répondu, par des erreurs : son navigateur reste à la
+         * classe, comme Dusk le fait.
+         */
+        expect($parcours->navigateursGardes()->all())->toBe([$navigateur]);
+
+        /*
          * Hors d'un échec, la console garde sa parole : un parcours réussi dont
          * le navigateur ne la rend pas tombe, comme avant.
          */
         expect(fn () => $parcours->browse(function (Browser $navigateur): void {
         }))->toThrow(new TimeoutException('timeout: la console ne répond plus'));
 
-        expect($parcours->signalements)->toHaveCount(3);
+        expect($parcours->signalements)->toHaveCount(3)
+            ->and($parcours->navigateursGardes()->all())->toBe([$navigateur]);
     } finally {
-        $parcours->rendreLesNavigateurs();
+        $parcours->oublierLesNavigateurs();
         Browser::$storeScreenshotsAt = $dossierDesCaptures;
+    }
+});
+
+/*
+ * Dusk ne démarre un navigateur que si la classe n'en garde aucun. Rendu à la
+ * classe, le navigateur d'un pilote muet faisait tomber chacun des parcours
+ * suivants sur un ordre sans réponse, après SECONDES_POUR_UN_ORDRE, puis
+ * attendre autant sa capture et sa console : mesuré avec un vrai navigateur
+ * figé, 30 s par parcours pour une borne de 10 s. Avec la borne de 90 s, les
+ * huit parcours de WorkoutSetEntryRegressionTest auraient dépassé les vingt
+ * minutes de l'éclat.
+ */
+it('écarte le navigateur d’un pilote qui ne répond plus, et le parcours suivant en démarre un neuf', function (): void {
+    $ecoute = stream_socket_server('tcp://127.0.0.1:0', $codeDErreur, $erreur);
+    $fermee = stream_socket_server('tcp://127.0.0.1:0', $codeDErreur, $erreur);
+
+    if ($ecoute === false || $fermee === false) {
+        throw new RuntimeException("faux pilote impossible : {$erreur}");
+    }
+
+    $adresseMuette = 'http://'.stream_socket_get_name($ecoute, false);
+    $adresseMorte = 'http://'.stream_socket_get_name($fermee, false);
+    fclose($fermee);
+
+    $parcours = new class('parcoursFictif') extends DuskTestCase
+    {
+        public const int SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET = 1;
+
+        /**
+         * @var list<string>
+         */
+        public array $signalements = [];
+
+        public int $navigateursDemarres = 0;
+
+        public function parcoursFictif(): void
+        {
+        }
+
+        public function confierLeNavigateur(Browser $navigateur): void
+        {
+            self::$browsers = new Collection([$navigateur]);
+            $this->signalements = [];
+        }
+
+        /**
+         * @return Collection<array-key, mixed>
+         */
+        public function navigateursGardes(): Collection
+        {
+            return new Collection(self::$browsers);
+        }
+
+        /**
+         * @return Collection<array-key, mixed>
+         */
+        public function navigateursDuParcoursSuivant(): Collection
+        {
+            return $this->createBrowsersFor(function (Browser $navigateur): void {
+            });
+        }
+
+        public function oublierLesNavigateurs(): void
+        {
+            self::$browsers = new Collection();
+        }
+
+        #[\Override]
+        protected function driver(): RemoteWebDriver
+        {
+            $this->navigateursDemarres++;
+
+            return unParcoursBloquePiloteFige();
+        }
+
+        #[\Override]
+        protected function getCallerName(): string
+        {
+            return 'parcoursFictif';
+        }
+
+        #[\Override]
+        protected function signaler(string $signalement): void
+        {
+            $this->signalements[] = $signalement;
+        }
+    };
+
+    $ecart = "parcoursFictif : le pilote ne répond plus ; il ne reçoit plus que la fermeture de ses navigateurs, écartés, et le parcours suivant en démarre un neuf (#2029).\n";
+    $dossierDesCaptures = Browser::$storeScreenshotsAt;
+    Browser::$storeScreenshotsAt = sys_get_temp_dir();
+
+    try {
+        /*
+         * La capture ne vient pas : ni la source ni la console ne sont
+         * demandées, et la fermeture n'attend que sa propre borne, une seconde
+         * ici, et non celle des autres ordres.
+         */
+        /** @var ArrayObject<int, array{string, float}> $carnetMuet */
+        $carnetMuet = new ArrayObject();
+        $navigateurMuet = new Browser(unParcoursBloquePiloteSansReponse($adresseMuette, $carnetMuet));
+        $navigateurMuet->disableFitOnFailure();
+        $navigateurMuet->madeSourceAssertion = true;
+        $parcours->confierLeNavigateur($navigateurMuet);
+
+        expect(fn () => $parcours->browse(function (Browser $navigateur): void {
+            throw new RuntimeException('le parcours est tombé');
+        }))->toThrow(new RuntimeException('le parcours est tombé'));
+
+        expect(unParcoursBloqueOrdresRecus($carnetMuet))->toBe([DriverCommand::SCREENSHOT, DriverCommand::QUIT])
+            ->and(unParcoursBloqueDureeDeLaFermeture($carnetMuet))->toBeGreaterThanOrEqual(0.9)->toBeLessThan(5.0)
+            ->and($parcours->navigateursGardes()->all())->toBe([])
+            ->and($parcours->signalements)->toHaveCount(3)
+            ->and($parcours->signalements[0])
+            ->toStartWith('parcoursFictif : capture d’écran impossible (Facebook\WebDriver\Exception\Internal\WebDriverCurlException : Curl error thrown for http GET to /session/pilote-sans-reponse/screenshot')
+            ->and($parcours->signalements[1])->toBe($ecart)
+            ->and($parcours->signalements[2])
+            ->toStartWith('parcoursFictif : fermeture du navigateur écarté impossible (Facebook\WebDriver\Exception\Internal\WebDriverCurlException : Curl error thrown for http DELETE to /session/pilote-sans-reponse');
+
+        $suivants = $parcours->navigateursDuParcoursSuivant();
+
+        expect($parcours->navigateursDemarres)->toBe(1)
+            ->and($suivants)->toHaveCount(1)
+            ->and($suivants->first())->toBeInstanceOf(Browser::class)
+            ->and($suivants->first())->not->toBe($navigateurMuet);
+
+        /*
+         * Le parcours tombe lui-même sur un ordre sans réponse, ici parce que
+         * plus rien n'écoute : aucun relevé n'est tenté.
+         */
+        /** @var ArrayObject<int, array{string, float}> $carnetMort */
+        $carnetMort = new ArrayObject();
+        $parcours->confierLeNavigateur(new Browser(unParcoursBloquePiloteSansReponse($adresseMorte, $carnetMort)));
+
+        expect(fn () => $parcours->browse(function (Browser $navigateur): void {
+            $navigateur->driver->getTitle();
+        }))->toThrow(UnexpectedResponseException::class, 'Curl error thrown for http GET to /session/pilote-sans-reponse/title');
+
+        expect(unParcoursBloqueOrdresRecus($carnetMort))->toBe([DriverCommand::GET_TITLE, DriverCommand::QUIT])
+            ->and($parcours->navigateursGardes()->all())->toBe([])
+            ->and($parcours->signalements)->toHaveCount(2)
+            ->and($parcours->signalements[0])->toBe($ecart);
+
+        /*
+         * Un parcours réussi dont la console ne vient pas échoue comme avant,
+         * et son navigateur est écarté de même.
+         */
+        /** @var ArrayObject<int, array{string, float}> $carnetMortEnFin */
+        $carnetMortEnFin = new ArrayObject();
+        $parcours->confierLeNavigateur(new Browser(unParcoursBloquePiloteSansReponse($adresseMorte, $carnetMortEnFin)));
+
+        expect(fn () => $parcours->browse(function (Browser $navigateur): void {
+        }))->toThrow(UnexpectedResponseException::class, 'Curl error thrown for http POST to /session/pilote-sans-reponse/log');
+
+        expect(unParcoursBloqueOrdresRecus($carnetMortEnFin))->toBe([DriverCommand::GET_LOG, DriverCommand::QUIT])
+            ->and($parcours->navigateursGardes()->all())->toBe([])
+            ->and($parcours->signalements)->toHaveCount(2)
+            ->and($parcours->signalements[0])->toBe($ecart);
+    } finally {
+        $parcours->oublierLesNavigateurs();
+        Browser::$storeScreenshotsAt = $dossierDesCaptures;
+        fclose($ecoute);
     }
 });
 
@@ -208,7 +459,7 @@ it('abandonne en secondes un ordre que le pilote ne rend jamais, et borne la pag
         expect(fn (): RemoteWebDriver => $parcours->demarrerLeNavigateur())
             ->toThrow(UnexpectedResponseException::class, 'Operation timed out after');
 
-        expect(microtime(true) - $debut)->toBeLessThan(10.0);
+        expect(microtime(true) - $debut)->toBeGreaterThanOrEqual(0.9)->toBeLessThan(10.0);
 
         $requete = unParcoursBloqueRequeteRecue($ecoute);
         $demande = json_decode(explode("\r\n\r\n", $requete, 2)[1] ?? '', true, 512, JSON_THROW_ON_ERROR);
@@ -260,4 +511,64 @@ it('garde le journal du pilote avec ceux d’un éclat tombé', function (): voi
         ->and(preg_split('/\R/', trim(is_string($envoi) ? $envoi : '')))
         ->toContain('storage/logs/chromedriver.log')
         ->toContain('tests/Browser/console');
+});
+
+/*
+ * Le parcours figé du 08/10 était le premier de son éclat, et trente-cinq
+ * autres l'ont suivi : les dernières lignes du journal du pilote ne parlaient
+ * plus de lui. Le vidage d'un éclat tombé cherche donc sur tout le journal
+ * l'ordre resté sans réponse et les erreurs du pilote.
+ */
+it('nomme, au vidage d’un éclat tombé, l’ordre resté sans réponse et les erreurs du pilote, loin de la fin du journal', function (): void {
+    $ci = Yaml::parseFile(dirname(__DIR__, 2).'/.github/workflows/ci.yml');
+    $vidage = null;
+
+    foreach ((array) data_get($ci, 'jobs.browser-shard.steps', []) as $etape) {
+        if (data_get($etape, 'name') === 'Dump Logs on Failure') {
+            $vidage = data_get($etape, 'run');
+        }
+    }
+
+    expect($vidage)->toBeString();
+
+    $session = static fn (string $lettre): string => str_repeat($lettre, 32);
+    $ligne = static fn (string $heure, string $texte): string => "[10-08-2026 {$heure}][INFO]: {$texte}";
+    $journal = [
+        $ligne('20:00:30.100000', "[{$session('a')}] COMMAND InitSession {"),
+        $ligne('20:00:30.300000', "[{$session('a')}] RESPONSE InitSession {"),
+        $ligne('20:00:30.400000', "[{$session('a')}] COMMAND Navigate {"),
+        '[10-08-2026 20:01:30.400000][SEVERE]: Timed out receiving message from renderer: 60.000',
+        $ligne('20:01:30.410000', "[{$session('a')}] RESPONSE Navigate ERROR timeout: Timed out receiving message from renderer: -0.003"),
+        $ligne('20:01:30.500000', "[{$session('a')}] COMMAND Screenshot {"),
+        $ligne('20:03:00.000000', "[{$session('b')}] COMMAND InitSession {"),
+        '[10-08-2026 20:03:00.100000][SEVERE]: CreatePlatformSocket() failed: Address family not supported by protocol (97)',
+        $ligne('20:03:00.200000', "[{$session('b')}] RESPONSE InitSession {"),
+    ];
+
+    for ($parcoursSuivant = 0; $parcoursSuivant < 200; $parcoursSuivant++) {
+        $journal[] = $ligne('20:04:00.000000', "[{$session('b')}] COMMAND FindElement {");
+        $journal[] = $ligne('20:04:00.100000', "[{$session('b')}] RESPONSE FindElement ERROR no such element: Unable to locate element");
+        $journal[] = $ligne('20:04:00.200000', "[{$session('b')}] COMMAND GetTitle {");
+        $journal[] = $ligne('20:04:00.300000', "[{$session('b')}] RESPONSE GetTitle \"GymTracker\"");
+    }
+
+    $dossier = sys_get_temp_dir().'/vidage-du-pilote-'.bin2hex(random_bytes(6));
+    mkdir($dossier.'/storage/logs', 0777, true);
+    file_put_contents($dossier.'/storage/logs/chromedriver.log', implode("\n", $journal)."\n");
+
+    try {
+        $processus = new Process(['bash', '-e', '-c', is_string($vidage) ? $vidage : ''], $dossier);
+        $processus->mustRun();
+        $sortie = $processus->getOutput();
+    } finally {
+        new Filesystem()->deleteDirectory($dossier);
+    }
+
+    expect(trim(Str::betweenFirst($sortie, "--- Ordres du pilote restés sans réponse ---\n", '---')))
+        ->toBe($ligne('20:01:30.500000', "[{$session('a')}] COMMAND Screenshot {"))
+        ->and(trim(Str::betweenFirst($sortie, "--- Erreurs du pilote ---\n", '---')))
+        ->toBe(implode("\n", [
+            '[10-08-2026 20:01:30.400000][SEVERE]: Timed out receiving message from renderer: 60.000',
+            $ligne('20:01:30.410000', "[{$session('a')}] RESPONSE Navigate ERROR timeout: Timed out receiving message from renderer: -0.003"),
+        ]));
 });
