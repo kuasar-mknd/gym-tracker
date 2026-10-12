@@ -24,14 +24,14 @@ class PasswordResetLinkController extends Controller
     }
 
     /**
-     * Handle an incoming password reset link request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Répond la même chose à toute adresse bien formée, qu'elle ait un compte
+     * ou non, et que sa dernière demande soit récente ou non (#1951) : seule
+     * une adresse mal formée reçoit une erreur, celle de sa forme.
      */
     public function store(PasswordResetLinkRequest $request, SendPasswordResetLinkAction $sendPasswordResetLinkAction): RedirectResponse
     {
-        $status = $sendPasswordResetLinkAction->execute($request->validated());
+        $sendPasswordResetLinkAction->execute($request->string('email')->toString());
 
-        return back()->with('status', __($status));
+        return back()->with('status', __('passwords.sent'));
     }
 }

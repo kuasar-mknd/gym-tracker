@@ -179,7 +179,9 @@ it('assemble les statistiques analytiques sous leurs deux cles', function (): vo
 
 it('garde les statistiques analytiques dix minutes, ni neuf ni onze', function (): void {
     $user = scenePourTableauDeBord();
-    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'dashboard_analytical');
+    // La clef porte la semaine de la carte qu'elle garde (#2033) : la 25e de
+    // 2026, celle du jeudi 18 juin.
+    $cle = \App\Services\Stats\ClesDeStats::seances($user, 'dashboard_analytical.2026-25');
 
     app(FetchDashboardDataAction::class)->getAnalyticalStats($user);
 
