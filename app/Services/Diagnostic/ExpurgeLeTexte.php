@@ -32,9 +32,10 @@ use App\Services\Diagnostic\Expurgation\TexteIllisible;
  *    (`RameneLesChemins`) ;
  * 9. le tout coupé au budget du champ.
  *
- * Chaque motif a des répétitions bornées, et chaque appel est vérifié : une
- * expression qui échoue fait de tout le champ `[illisible]`, jamais le texte
- * d'origine. L'expurgation est faite au mieux ; la première barrière reste de
+ * Chaque motif a des répétitions bornées, sauf celui du texte du serveur de
+ * base, repris de la source (`TexteDuServeurSansValeurs`) et borné par la
+ * coupe de l'entrée ; chaque appel est vérifié : une expression qui échoue
+ * fait de tout le champ `[illisible]`, jamais le texte d'origine. L'expurgation est faite au mieux ; la première barrière reste de
  * ne pas rendre le texte, qui ne sort qu'au détail, sous `non_fiable`.
  */
 final class ExpurgeLeTexte
