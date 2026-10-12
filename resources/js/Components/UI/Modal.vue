@@ -181,8 +181,6 @@ const isBottomSheet = computed(() => props.position === 'bottom')
 const containerClass = computed(() =>
     isBottomSheet.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
 )
-
-const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
 </script>
 
 <template>
@@ -233,16 +231,19 @@ const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
 
                       La hauteur permise est la zone sûre moins les marges de la
                       fenêtre (`hauteur-sure-12` sous le `py-sure-6` du dessus),
-                      et non plus 85vh, qui ignorait les barres (#2043). La
-                      fenêtre est une colonne flexible : un contenu qui doit
-                      remplir cette hauteur, comme la liste de « Ajouter un
-                      exercice », s'y étire et défile en lui-même au lieu de
-                      laisser un vide sous la fenêtre.
+                      et non plus 85vh, qui ignorait les barres (#2043). Pas de
+                      marge verticale ici : le `py-sure-6` fait déjà l'écart du
+                      bas, et un `mb-6` de plus faisait déborder la zone de
+                      défilement de 24 px, si bien que toute la fenêtre glissait
+                      contre la barre d'état. La fenêtre est une colonne flexible : un
+                      contenu qui doit remplir cette hauteur, comme la liste de
+                      « Ajouter un exercice », s'y étire et défile en lui-même
+                      au lieu de laisser un vide sous la fenêtre.
                     -->
                     <div
                         v-show="show"
                         class="glass-modal text-text-main border-surface-card/20 bg-surface-card/80 hauteur-sure-12 flex transform flex-col overflow-y-auto rounded-3xl border shadow-2xl backdrop-blur-xl transition sm:mx-auto sm:w-full"
-                        :class="[maxWidthClass, panelSpacingClass]"
+                        :class="maxWidthClass"
                     >
                         <slot v-if="showSlot" />
                     </div>

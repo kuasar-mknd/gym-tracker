@@ -1488,6 +1488,21 @@
     max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - var(--spacing) * --value(integer));
 }
 
+/*
+ * Ce qui colle sous l'en-tête de l'application : le titre d'un mois du journal,
+ * la ligne des jours des habitudes. L'en-tête mobile mesure 77 px sous la barre
+ * d'état (16 + 44 + 16, et 1 de bordure), la barre de bureau 65 (64 + 1).
+ * Collé plus haut, l'élément mordait sur l'en-tête ; plus bas, il laissait voir
+ * entre les deux le contenu qui défile (#2043).
+ */
+@utility top-sous-entete {
+    top: calc(var(--spacing) * 19 + 1px + var(--safe-area-top));
+
+    @variant sm {
+        top: calc(var(--spacing) * 16 + 1px + var(--safe-area-top));
+    }
+}
+
 @utility hide-scrollbar {
     /* Hide scrollbar */
     -ms-overflow-style: none;

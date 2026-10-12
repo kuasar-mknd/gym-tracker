@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Browser;
 
+use App\Models\DailyJournal;
 use App\Models\Exercise;
+use App\Models\Habit;
 use App\Models\User;
 use App\Models\Workout;
+use Carbon\CarbonImmutable;
 use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
 use Facebook\WebDriver\Exception\WebDriverException;
 use Illuminate\Database\Eloquent\Factories\Sequence;
@@ -124,6 +127,31 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $this->assertTrue($defilement['listeDefile'], 'La liste défile en elle-même.');
             $this->assertFalse($defilement['fenetreDefile'], 'Le titre et la recherche restent en place : seule la liste défile.');
 
+            /*
+             * La fenêtre ne glisse pas non plus dans son cadre. Une marge sous
+             * le panneau, en plus de celle du cadre, faisait déborder celui-ci
+             * de 24 px : au bout de la liste, toute la fenêtre remontait contre
+             * la barre d'état.
+             */
+            /** @var array{cadreDeborde: bool, panneauHautApresDefilement: float} $cadreDeLaFenetre */
+            $cadreDeLaFenetre = $browser->script(<<<'JS'
+                const cadre = document.querySelector('dialog[open] [scroll-region]');
+                const debordement = cadre.scrollHeight > cadre.clientHeight;
+                cadre.scrollTop = cadre.scrollHeight;
+                return {
+                    cadreDeborde: debordement,
+                    panneauHautApresDefilement: document.querySelector('dialog[open] .glass-modal').getBoundingClientRect().top,
+                };
+                JS)[0];
+
+            $this->assertFalse($cadreDeLaFenetre['cadreDeborde'], 'Le cadre de la fenêtre ne déborde pas de l’écran.');
+            $this->assertEqualsWithDelta(
+                $fenetre['panneauHaut'],
+                $cadreDeLaFenetre['panneauHautApresDefilement'],
+                0.5,
+                'La fenêtre reste où elle est quand on fait défiler son cadre.'
+            );
+
             /** @var array{titreHaut: float, navigationBas: float} $cadre */
             $cadre = $browser->script(<<<'JS'
                 return {
@@ -174,7 +202,109 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $this->assertGreaterThanOrEqual($marges['gauche'], $cadre['logoGauche'], 'Le logo de l’en-tête s’écarte de l’encoche.');
             $this->assertGreaterThanOrEqual($marges['gauche'], $cadre['contenuGauche'], 'Le contenu de la page s’écarte de l’encoche.');
             $this->assertLessThanOrEqual($fenetre['largeur'] - $marges['droite'], $cadre['contenuDroite'], 'Le contenu de la page s’écarte du bord droit.');
+
+            /*
+             * Le formulaire de création dépasse la hauteur permise en paysage. Il
+             * ne se plie pas comme la liste : la fenêtre défile, et son bouton
+             * garde au bas la marge de la fenêtre. Plié, il débordait dans cette
+             * marge et l'arrondi du panneau rognait le bouton.
+             */
+            $browser->type('#search-workout-exercise', 'Exercice absent de la bibliothèque')
+                ->waitFor('@quick-create-exercise', 15)
+                ->script('document.querySelector(\'[dusk="quick-create-exercise"]\').click();');
+
+            $browser->waitFor('@new-exercise-name', 15)->waitForStableLayout();
+
+            /** @var array{fenetreDefile: bool, margeSousLeBouton: float} $creation */
+            $creation = $browser->script(<<<'JS'
+                const panneau = document.querySelector('dialog[open] .glass-modal');
+                panneau.scrollTop = panneau.scrollHeight;
+                return {
+                    fenetreDefile: panneau.scrollHeight > panneau.clientHeight,
+                    margeSousLeBouton: panneau.getBoundingClientRect().bottom
+                        - panneau.querySelector('button[type="submit"]').getBoundingClientRect().bottom,
+                };
+                JS)[0];
+
+            $this->assertTrue($creation['fenetreDefile'], 'En paysage, le formulaire de création fait défiler la fenêtre.');
+            $this->assertGreaterThanOrEqual(
+                24.0,
+                $creation['margeSousLeBouton'],
+                sprintf('Le bouton « Créer » garde la marge du bas de la fenêtre (%.0f px).', $creation['margeSousLeBouton'])
+            );
         });
+    }
+
+    public function test_ce_qui_colle_sous_l_en_tete_s_y_pose_sans_jour_ni_chevauchement(): void
+    {
+        $compte = User::factory()->create(['email_verified_at' => now()]);
+
+        DailyJournal::factory()
+            ->count(12)
+            ->for($compte)
+            ->state(new Sequence(static fn (Sequence $rang): array => ['date' => CarbonImmutable::parse('2026-03-01')->addDays($rang->index)->toDateString()]))
+            ->create();
+        Habit::factory()->count(12)->for($compte)->create();
+
+        $this->browse(function (Browser $browser) use ($compte): void {
+            $browser->loginAs($compte)->resizeToIphone15();
+
+            $this->simulerLesMarges($browser, ['top' => 47, 'bottom' => 34, 'left' => 0, 'right' => 0]);
+            $this->verifierCeQuiColleSousLEnTete($browser, 'en portrait');
+
+            /*
+             * En paysage, la largeur dépasse `sm` : c'est la barre de bureau qui
+             * sert d'en-tête, plus basse que l'en-tête mobile.
+             */
+            $browser->resize(844, 390);
+
+            $this->simulerLesMarges($browser, ['top' => 0, 'bottom' => 21, 'left' => 47, 'right' => 47]);
+            $this->verifierCeQuiColleSousLEnTete($browser, 'en paysage');
+        });
+    }
+
+    /**
+     * Le titre d'un mois du journal et la ligne des jours des habitudes, une
+     * fois collés, commencent au bas de l'en-tête : ni le contenu qui défile
+     * ne se voit entre les deux, ni l'élément ne mord sur l'en-tête.
+     */
+    private function verifierCeQuiColleSousLEnTete(Browser $browser, string $orientation): void
+    {
+        foreach (['/daily-journals' => '@titre-du-mois', '/habits' => '@jours-des-habitudes'] as $chemin => $collant) {
+            $browser->visit($chemin)
+                ->waitFor('#main-content', 30)
+                ->disableAnimations()
+                ->waitFor($collant, 15)
+                ->waitForStableLayout();
+
+            /** @var array{colle: bool, hautDuCollant: float, basDeLEntete: float} $mesure */
+            $mesure = $browser->script(sprintf(<<<'JS'
+                const collant = document.querySelector('[dusk="%s"]');
+                window.scrollTo({ top: collant.getBoundingClientRect().top + window.scrollY + 120, behavior: 'instant' });
+                const entete = [...document.querySelectorAll('header.z-collant, nav.z-nav')]
+                    .find((element) => getComputedStyle(element).display !== 'none');
+                const haut = collant.getBoundingClientRect().top;
+                return {
+                    colle: Math.abs(haut - parseFloat(getComputedStyle(collant).top)) < 0.5,
+                    hautDuCollant: haut,
+                    basDeLEntete: entete.getBoundingClientRect().bottom,
+                };
+                JS, substr($collant, 1)))[0];
+
+            $this->assertTrue($mesure['colle'], sprintf('%s %s : l’élément est collé une fois la page défilée.', $chemin, $orientation));
+            $this->assertEqualsWithDelta(
+                $mesure['basDeLEntete'],
+                $mesure['hautDuCollant'],
+                0.5,
+                sprintf(
+                    '%s %s : collé à %.0f px pour un en-tête qui finit à %.0f px.',
+                    $chemin,
+                    $orientation,
+                    $mesure['hautDuCollant'],
+                    $mesure['basDeLEntete']
+                )
+            );
+        }
     }
 
     /**

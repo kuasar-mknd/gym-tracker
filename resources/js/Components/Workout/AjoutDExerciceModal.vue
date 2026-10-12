@@ -113,9 +113,11 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
         <!--
             Une colonne qui se plie à la hauteur de la fenêtre : la liste prend ce
             que laissent le titre et la recherche, et défile en elle-même. Bornée
-            à 60vh, elle laissait un grand vide sous la fenêtre (#2043).
+            à 60vh, elle laissait un grand vide sous la fenêtre (#2043). Le
+            formulaire de création, lui, ne se plie pas : la fenêtre défile, et
+            son bouton garde la marge du bas au lieu d'être rogné par l'arrondi.
         -->
-        <div class="flex min-h-0 flex-col p-6">
+        <div class="flex flex-col p-6" :class="{ 'min-h-0': !showCreateForm }">
             <h2 id="add-exercise-title" class="titre-section mb-6">Ajouter un exercice</h2>
             <div v-if="!showCreateForm" class="flex min-h-0 flex-col">
                 <div class="pb-4">
