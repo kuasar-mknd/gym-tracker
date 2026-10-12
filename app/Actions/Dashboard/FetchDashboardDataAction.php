@@ -9,6 +9,7 @@ use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
+use Illuminate\Support\Carbon;
 
 /**
  * Ce que le tableau de bord affiche.
@@ -58,18 +59,28 @@ final class FetchDashboardDataAction
     }
 
     /**
+     * La carte hebdomadaire : le total de la semaine, sa comparaison à la
+     * précédente et la courbe de ses sept jours.
+     *
+     * Les trois se tirent d'une seule lecture de l'horloge : le total et la
+     * courbe lisaient chacun l'heure, et quand lundi commençait entre les
+     * deux, la carte annonçait le total de la semaine qui s'achevait au-dessus
+     * de la courbe, vide, de celle qui commençait (#2033).
+     *
+     * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge.
      * @return array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>}
      */
-    public function getWeeklyVolumeData(User $user): array
+    public function getWeeklyVolumeData(User $user, ?Carbon $maintenant = null): array
     {
-        $stats = $this->volumeStats->getWeeklyVolumeComparison($user);
+        $maintenant ??= now();
+        $stats = $this->volumeStats->getWeeklyVolumeComparison($user, $maintenant);
 
         return [
             'stats' => [
                 'current_week_volume' => $stats->current_volume,
                 'percentage' => $stats->percentage,
             ],
-            'trend' => $this->volumeStats->getWeeklyVolumeTrend($user),
+            'trend' => $this->volumeStats->getWeeklyVolumeTrend($user, $maintenant),
         ];
     }
 
@@ -79,6 +90,12 @@ final class FetchDashboardDataAction
      * Séparées, elles faisaient deux requêtes XHR et occupaient deux clefs de
      * cache ; ensemble, une seule.
      *
+     * La clef porte la semaine de la carte hebdomadaire qu'elle garde, tirée du
+     * même instant que la carte : sans elle, le lundi juste après minuit
+     * servait encore, jusqu'à l'expiration, la semaine de la veille comme la
+     * semaine en cours (#2033), comme le premier du mois servait la fenêtre de
+     * la veille avant que le mois n'entre dans les clefs mensuelles (#1955).
+     *
      * @return array{
      *     weeklyVolume: array{stats: array{current_week_volume: float, percentage: float|null}, trend: array<int, \App\DTOs\Stats\WeeklyVolumeTrendPoint>},
      *     workoutDistributions: array{duration: array<int, \App\DTOs\Stats\DistributionStat>, time_of_day: array<int, \App\DTOs\Stats\DistributionStat>}
@@ -86,11 +103,13 @@ final class FetchDashboardDataAction
      */
     public function getAnalyticalStats(User $user): array
     {
+        $maintenant = now();
+
         return \Illuminate\Support\Facades\Cache::remember(
-            ClesDeStats::seances($user, 'dashboard_analytical'),
-            now()->addMinutes(10),
+            ClesDeStats::seances($user, 'dashboard_analytical.'.$maintenant->copy()->startOfWeek()->format('Y-W')),
+            $maintenant->copy()->addMinutes(10),
             fn (): array => [
-                'weeklyVolume' => $this->getWeeklyVolumeData($user),
+                'weeklyVolume' => $this->getWeeklyVolumeData($user, $maintenant),
                 'workoutDistributions' => $this->repartitionsDesSeances($user),
             ]
         );

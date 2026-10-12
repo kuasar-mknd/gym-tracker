@@ -13,6 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Une erreur survenue dans le navigateur d'un utilisateur, rapportée par la
  * page elle-même : ce que Sentry recevait, gardé ici.
  *
+ * Elle part à trente jours (`prunable()`), ou avec le compte qui l'a
+ * rapportée : la clé de `user_id` est en cascade (#1938), parce que le
+ * message et l'URL peuvent porter ce que le compte a saisi.
+ *
  * @property int $id
  * @property int|null $user_id
  * @property string $type

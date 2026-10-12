@@ -59,8 +59,10 @@ const closeModal = () => {
         <header>
             <h2 class="titre-carte">Supprimer le compte</h2>
             <p class="text-text-muted mt-1 text-sm" data-testid="delete-account-promise">
-                Une fois ton compte supprimé, toutes tes données sont effacées de l'application. Seules les sauvegardes
-                de la base en gardent une copie, le temps qu'elles expirent.
+                Une fois ton compte supprimé, tes données sont effacées de l'application. Des copies en restent un temps
+                limité : trente jours dans les rapports d'erreurs, 180 jours dans l'historique d'audit et sept mois au
+                plus dans les sauvegardes de la base. Les journaux du serveur peuvent aussi en garder des traces, le
+                temps que de nouvelles lignes les remplacent.
             </p>
         </header>
 

@@ -91,10 +91,12 @@ it('ne laisse pas une seconde session du compte s’approprier l’adresse, ni l
 
     changementDAdresseRienNAChange($compte, 'titulaire@example.org');
 
-    new Appareil()->envoyer('POST', '/forgot-password', ['email' => 'autre@example.org'])->assertSessionHasErrors('email');
+    // La page répond pareil aux deux adresses (#1951) : seul l'avis dit laquelle a un compte.
+    new Appareil()->envoyer('POST', '/forgot-password', ['email' => 'autre@example.org'])->assertSessionHasNoErrors();
     new Appareil()->envoyer('POST', '/forgot-password', ['email' => 'titulaire@example.org'])->assertSessionHasNoErrors();
 
-    Notification::assertSentTo($compte, ResetPassword::class);
+    Notification::assertSentToTimes($compte, ResetPassword::class, 1);
+    Notification::assertSentTimes(ResetPassword::class, 1);
     $titulaire->envoyer('GET', '/profile/edit')->assertOk();
 });
 

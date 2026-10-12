@@ -6,6 +6,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Console\Application;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\File;
@@ -155,6 +156,81 @@ it('ramène les archives sous le seuil du contrôle du matin, avec de la place p
         expect(sauvegardesPlanifieesLancer('backup:monitor'))->toBe(0, Artisan::output());
         Notification::assertNothingSent();
     } finally {
+        File::deleteDirectory($dossier);
+        EventHandler::enable();
+    }
+});
+
+/**
+ * Pose dans le dossier des archives une archive de quelques octets, datée par
+ * son nom : la stratégie ne lit que la date, et la place prise reste loin du
+ * plafond du nettoyage.
+ */
+function sauvegardesPlanifieesPetiteArchive(string $archives, CarbonInterface $date): void
+{
+    file_put_contents($archives.'/'.$date->format('Y-m-d-H-i-s').'.zip', 'archive');
+}
+
+/**
+ * Les dates des archives restées dans le dossier, de la plus vieille à la
+ * plus récente.
+ *
+ * @return list<Carbon>
+ */
+function sauvegardesPlanifieesDatesRestantes(string $archives): array
+{
+    $dates = [];
+    $chemins = glob($archives.'/*.zip');
+
+    foreach ($chemins === false ? [] : $chemins as $chemin) {
+        $date = Carbon::createFromFormat('Y-m-d-H-i-s', basename($chemin, '.zip'));
+        assert($date instanceof Carbon);
+        $dates[] = $date;
+    }
+
+    usort($dates, static fn (Carbon $une, Carbon $autre): int => $une <=> $autre);
+
+    return $dates;
+}
+
+/*
+ * Une archive garde une copie des comptes supprimés depuis qu'elle a été
+ * écrite : la rétention est d'environ six mois (#1938), et la page de profil
+ * promet « sept mois au plus ». Sans archive annuelle
+ * (`keep_yearly_backups_for_years` à 0), la stratégie efface tout ce qui
+ * dépasse sa période mensuelle : toutes les archives des sept derniers jours,
+ * puis une par jour sur seize jours, une par semaine sur huit semaines et une
+ * par mois sur quatre mois, soit 79 jours et quatre mois, 203 jours au plus.
+ * Avec les deux ans d'archives annuelles d'avant, la plus vieille avait deux
+ * ans et demi.
+ *
+ * Le nettoyage tourne par sa ligne du planning, à son heure, sur trois ans
+ * d'archives nocturnes.
+ */
+it('ne garde aucune archive de plus de sept mois, et une par mois jusqu’à six mois', function (): void {
+    $dossier = sauvegardesPlanifieesDossierJetable();
+    $archives = $dossier.'/'.config()->string('backup.backup.name');
+    File::ensureDirectoryExists($archives);
+
+    // Le nettoyage de 02:00, après trois ans de sauvegardes de 02:30.
+    Carbon::setTestNow(Carbon::parse('2026-10-12 02:00:00'));
+
+    try {
+        foreach (range(1, 3 * 365) as $jours) {
+            sauvegardesPlanifieesPetiteArchive($archives, now()->subDays($jours)->setTime(2, 30));
+        }
+
+        expect(sauvegardesPlanifieesLancer('backup:clean'))->toBe(0, Artisan::output());
+
+        $restantes = sauvegardesPlanifieesDatesRestantes($archives);
+        $plusVieille = $restantes[0] ?? null;
+
+        expect($plusVieille)->toBeInstanceOf(Carbon::class)
+            ->and($plusVieille?->greaterThan(now()->subMonths(7)))->toBeTrue('Une archive de plus de sept mois est restée : '.$plusVieille?->toDateTimeString())
+            ->and($plusVieille?->lessThan(now()->subMonths(6)))->toBeTrue('La plus vieille archive a moins de six mois : '.$plusVieille?->toDateTimeString())
+            ->and(preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue'))))->toContain('sept mois au plus dans les sauvegardes');
+    } finally {
+        Carbon::setTestNow();
         File::deleteDirectory($dossier);
         EventHandler::enable();
     }

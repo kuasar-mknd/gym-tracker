@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models\Traits;
 
+use App\Models\Admin;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Password;
 
 /**
@@ -38,10 +40,25 @@ use Illuminate\Support\Facades\Password;
  * redevient celle d'un invité, et le ramasse-miettes des sessions la retire
  * après `SESSION_LIFETIME` minutes d'inactivité.
  *
+ * Les erreurs du navigateur (`erreurs_navigateur`) et les exceptions levées
+ * par une requête du compte (`filament_exceptions_table`) ont une clé
+ * étrangère et suivent par la cascade, comme le reste (#1938). Une exception
+ * levée sans compte connecté n'a pas de lien, même quand elle recopie son
+ * identifiant ou ses saisies : elle part avec la purge à trente jours.
+ *
+ * Quand c'est un administrateur qui supprime, une entrée d'audit anonyme le
+ * dit, sans rien du compte (#1938).
+ *
  * Réservé à `User`, qui porte aussi `LogsActivity`.
  */
 trait EffaceSesTracesPolymorphes
 {
+    /**
+     * La description de l'entrée d'audit qu'écrit la suppression d'un compte
+     * par un administrateur.
+     */
+    public const string SUPPRESSION_PAR_UN_ADMINISTRATEUR = 'Compte supprimé par un administrateur';
+
     /**
      * Une table, et le nom de sa relation polymorphe : `notifiable` pour le
      * couple `notifiable_type` / `notifiable_id`.
@@ -85,7 +102,8 @@ trait EffaceSesTracesPolymorphes
      * Le journal d'activité est coupé pour cette instance le temps de la
      * suppression : l'entrée « deleted » recopierait nom et courriel dans
      * `activity_log` au moment où on l'efface, et, si le tampon du journal
-     * était activé, elle n'y serait écrite qu'APRÈS l'effacement.
+     * était activé, elle n'y serait écrite qu'APRÈS l'effacement. Seule
+     * l'entrée anonyme de `tracerLaSuppressionParUnAdministrateur()` s'écrit.
      */
     #[\Override]
     public function delete(): ?bool
@@ -100,6 +118,7 @@ trait EffaceSesTracesPolymorphes
                 if ($supprime === true) {
                     $this->effacerSonJetonDeReinitialisation();
                     $this->effacerSesTracesPolymorphes();
+                    $this->tracerLaSuppressionParUnAdministrateur();
                 }
 
                 return $supprime;
@@ -165,5 +184,41 @@ trait EffaceSesTracesPolymorphes
                 ->where($relation.'_id', $this->getKey())
                 ->delete();
         }
+    }
+
+    /**
+     * Quand un administrateur supprime le compte, une entrée d'audit le dit,
+     * et ne dit que cela (#1938) : l'administrateur en est la cause, elle n'a
+     * pas de sujet, et ni le nom, ni le courriel, ni l'identifiant du compte
+     * n'y figurent. L'entrée « deleted » du compte, effacée avec lui, ne
+     * laissait sinon aucune trace de l'action.
+     *
+     * L'acteur est l'utilisateur de la garde par défaut, celle dont le
+     * journal tire aussi ses causes : le panneau en fait la garde `admin` sur
+     * chacune de ses requêtes, page, action unitaire ou groupée. Le profil,
+     * une commande ou une file n'ont pas d'administrateur pour acteur, et
+     * n'écrivent rien. Ici plutôt que dans les actions du panneau, pour que
+     * tout chemin d'administration, présent ou futur, l'écrive.
+     *
+     * L'effacement des traces de ce compte passe avant elle. Celui d'un
+     * compte supprimé plus tard, qui porterait l'identifiant de
+     * l'administrateur, ne l'atteint pas : il filtre sur le type du compte,
+     * et la cause de cette entrée est un administrateur. Elle s'écrit dans la
+     * transaction de `delete()`, après la suppression : une suppression
+     * annulée ne laisse pas d'entrée. `activitylog:clean` la
+     * purge à 180 jours, comme le reste de l'audit.
+     */
+    private function tracerLaSuppressionParUnAdministrateur(): void
+    {
+        $acteur = Auth::user();
+
+        if (! $acteur instanceof Admin) {
+            return;
+        }
+
+        activity()
+            ->causedBy($acteur)
+            ->event('deleted')
+            ->log(self::SUPPRESSION_PAR_UN_ADMINISTRATEUR);
     }
 }

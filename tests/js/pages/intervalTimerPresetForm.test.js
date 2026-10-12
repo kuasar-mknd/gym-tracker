@@ -94,7 +94,15 @@ beforeEach(() => {
     window.AudioContext = FakeAudioContext
 })
 
+/**
+ * `vi.restoreAllMocks` rend aux prototypes ce qu'un test y a remplacé par
+ * `vi.spyOn`. Le test qui fait échouer le son écrasait puis supprimait
+ * `createOscillator` de `FakeAudioContext` : la méthode d'origine disparaissait
+ * avec, et en ordre aléatoire les tests des bips qui passaient après lui
+ * n'entendaient plus rien (#2003).
+ */
 afterEach(() => {
+    vi.restoreAllMocks()
     vi.useRealTimers()
     delete window.AudioContext
     delete window.webkitAudioContext
@@ -440,9 +448,9 @@ describe('the beeps', () => {
 
     it('swallows an audio failure rather than stopping the session', async () => {
         const error = vi.spyOn(console, 'error').mockImplementation(() => {})
-        FakeAudioContext.prototype.createOscillator = () => {
+        vi.spyOn(FakeAudioContext.prototype, 'createOscillator').mockImplementation(() => {
             throw new Error('no output device')
-        }
+        })
 
         const wrapper = await runPreset({ warmup_seconds: 0, work_seconds: 4, rest_seconds: 4, rounds: 1 })
 
@@ -451,9 +459,6 @@ describe('the beeps', () => {
 
         expect(wrapper.text()).toContain('TERMINÉ')
         expect(error).toHaveBeenCalled()
-
-        error.mockRestore()
-        delete FakeAudioContext.prototype.createOscillator
     })
 
     it('gives the audio context back when the page is left', async () => {

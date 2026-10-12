@@ -316,8 +316,17 @@ return [
             /*
              * After the "keep_monthly_backups_for_months" period is over, the most recent backup
              * of that year will be kept. Older backups within the same year will be removed.
+             *
+             * Zéro : aucune archive annuelle (#1938). Une archive garde une
+             * copie des comptes supprimés depuis, et la rétention s'arrête
+             * donc avec la période mensuelle : 7 jours, puis 16, puis
+             * 8 semaines, puis 4 mois, soit 79 jours et 4 mois, sept mois au
+             * plus, ce que la page de profil annonce. La stratégie efface
+             * toute archive plus vieille que la fin de cette période ; seule
+             * la plus récente échappe toujours au nettoyage.
+             * `SauvegardesPlanifieesTest` l'applique à trois ans d'archives.
              */
-            'keep_yearly_backups_for_years' => 2,
+            'keep_yearly_backups_for_years' => 0,
 
             /*
              * After cleaning up the backups remove the oldest backup until

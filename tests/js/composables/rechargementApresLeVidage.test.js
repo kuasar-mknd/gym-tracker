@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
 import { retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
-import { creerUnFauxServeur, monterLaSeance, routeDeTest } from './seanceHorsLigne'
+import { creerUnFauxServeur, monterLaSeance, routeDeTest, seances } from './seanceHorsLigne'
 
 const reseau = vi.hoisted(() => ({ serveur: null }))
 
@@ -33,31 +33,12 @@ const seanceDuServeur = () => ({
     })),
 })
 
-/**
- * Les pages encore montées. Démontées après chaque test : leurs écouteurs
- * entendraient sinon le vidage du suivant, et l'échec d'un test ferait tomber
- * ceux qui le suivent.
- */
-const montees = new Set()
-
-const monter = async (seance, options) => {
-    const page = await monterLaSeance(seance, options)
-    montees.add(page.wrapper)
-
-    return page
-}
-
-const demonter = (page) => {
-    montees.delete(page.wrapper)
-    page.wrapper.unmount()
-}
-
 /** `router.reload` : la page reçoit la séance que le serveur rend à cet instant. */
 const recharger = vi.fn((page) => page.rafraichir(seanceDuServeur()))
 
 /** Sans réseau : l'exercice 7, une série corrigée à 60 kg, puis la page meurt. */
 const unExerciceHorsLigneAvantUnRechargement = async () => {
-    const page = await monter(seanceVide())
+    const page = await monterLaSeance(seanceVide())
     reseau.serveur.enLigne = false
 
     page.addExercise(7)
@@ -66,7 +47,7 @@ const unExerciceHorsLigneAvantUnRechargement = async () => {
     page.saisieTerminee(page.ligne().sets[0], 'weight', '60')
     await flushPromises()
 
-    demonter(page)
+    page.wrapper.unmount()
 }
 
 /** Le refus d'une écriture, tel que le serveur le rend : la série hors des bornes, par exemple. */
@@ -88,9 +69,8 @@ beforeEach(() => {
     recharger.mockClear()
 })
 
-afterEach(() => {
-    montees.forEach((wrapper) => wrapper.unmount())
-    montees.clear()
+afterEach(async () => {
+    await seances.demonterToutes()
     retirerLesEcouteursDuService()
     poserLaPage(null)
 })
@@ -101,7 +81,7 @@ describe('la séance rechargée pendant que la file attend', () => {
 
         // Le réseau est revenu : le vidage du chargement part avant le montage.
         reseau.serveur.enLigne = true
-        const page = await monter(seanceVide(), { recharger })
+        const page = await monterLaSeance(seanceVide(), { recharger })
 
         expect(recharger).toHaveBeenCalledTimes(1)
         expect(ecran(page)).toEqual([{ ligne: 70, series: [100] }])
@@ -112,7 +92,7 @@ describe('la séance rechargée pendant que la file attend', () => {
         await unExerciceHorsLigneAvantUnRechargement()
 
         // Toujours sans réseau au montage : la file attend, rien n'a changé.
-        const page = await monter(seanceVide(), { recharger })
+        const page = await monterLaSeance(seanceVide(), { recharger })
         expect(recharger).not.toHaveBeenCalled()
 
         // Le réseau ne revient que le temps de créer l'exercice.
@@ -145,7 +125,7 @@ describe('la séance rechargée pendant que la file attend', () => {
      */
     it('se recharge aussi quand la dernière écriture d’avant le montage est refusée', async () => {
         await unExerciceHorsLigneAvantUnRechargement()
-        const page = await monter(seanceVide(), { recharger })
+        const page = await monterLaSeance(seanceVide(), { recharger })
 
         // L'exercice passe, sa série est refusée.
         reseau.serveur.enLigne = true
@@ -167,16 +147,16 @@ describe('la séance rechargée pendant que la file attend', () => {
             { id: 7, name: 'Squat', type: 'strength' },
             { id: 8, name: 'Développé couché', type: 'strength' },
         ]
-        const avant = await monter(seanceVide(), { exercices })
+        const avant = await monterLaSeance(seanceVide(), { exercices })
         reseau.serveur.enLigne = false
 
         avant.addExercise(7)
         avant.addExercise(8)
         avant.addSet(avant.ligne(1).id)
         await flushPromises()
-        demonter(avant)
+        avant.wrapper.unmount()
 
-        const page = await monter(seanceVide(), { exercices, recharger })
+        const page = await monterLaSeance(seanceVide(), { exercices, recharger })
 
         // Le premier exercice passe, le second est refusé : sa série ne part pas.
         reseau.serveur.enLigne = true
@@ -199,7 +179,7 @@ describe('la séance rechargée pendant que la file attend', () => {
      * valeur : la recharger reprendrait au serveur une valeur en pleine saisie.
      */
     it('ne se recharge pas pour les écritures que la page a faites elle-même', async () => {
-        const page = await monter(seanceVide(), { recharger })
+        const page = await monterLaSeance(seanceVide(), { recharger })
         reseau.serveur.enLigne = false
 
         page.addExercise(7)
