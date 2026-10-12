@@ -1115,10 +1115,12 @@ describe('DeleteUserForm', () => {
      * `SauvegardesPlanifieesTest` vérifie sur la configuration.
      *
      * Les sauvegardes ne sont pas seules à garder une copie (#1938) : les
-     * journaux, les exceptions et les tâches en échec la gardent trente jours
+     * exceptions et les tâches en échec la gardent trente jours
      * (`TachesEnEchecTest`), les entrées d'audit d'avant #1670 sur les données
      * du compte 180 jours (`SuppressionDuCompteTest`). « Seules les
-     * sauvegardes » promettait plus que cela.
+     * sauvegardes » promettait plus que cela. Et la copie des journaux que
+     * garde `docker logs` n'a ni rotation ni durée : la page ne leur en promet
+     * aucune.
      */
     it('ne promet pas un effacement que les sauvegardes et les journaux démentent', () => {
         const wrapper = mountForm()
@@ -1126,8 +1128,10 @@ describe('DeleteUserForm', () => {
 
         expect(promesse).toContain('sauvegardes')
         expect(promesse).toContain('sept mois au plus')
-        expect(promesse).toContain('trente jours dans les journaux')
+        expect(promesse).toContain("trente jours dans les rapports d'erreurs")
         expect(promesse).toContain("180 jours dans l'historique d'audit")
+        expect(promesse).toContain('Les journaux du serveur peuvent aussi en garder des traces, sans durée fixe')
+        expect(promesse).not.toContain('trente jours dans les journaux')
         expect(promesse).not.toContain('définitivement')
         expect(promesse).not.toMatch(/seules?\b/i)
 

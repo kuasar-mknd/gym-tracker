@@ -31,6 +31,7 @@ use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Symfony\Component\Yaml\Yaml;
 use Tests\Support\FilamentAdminPanel;
 
 /*
@@ -803,3 +804,30 @@ it("laisse les entrées d'audit d'avant #1670 sur les données du compte à la p
         ->and($promesse)->toContain("180 jours dans l'historique d'audit");
 });
 
+/*
+ * La pile écrit chaque ligne de journal sur stderr (`LOG_STACK`), donc dans
+ * `docker logs`, et aucun service n'y pose de rotation (`logging`) : cette
+ * copie vit autant que le conteneur. Le gestionnaire d'exceptions y ajoute
+ * l'identifiant du compte connecté, et le message d'une erreur SQL ce qu'il a
+ * saisi. La page de profil ne promet donc aucune durée aux journaux du
+ * serveur (#1938) ; elle pourra en promettre une le jour où la composition
+ * bornera cette copie.
+ */
+it('ne promet aucune durée aux journaux du serveur, que docker logs garde sans borne', function (): void {
+    $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
+    assert(is_array($composition) && is_array($composition['services'] ?? null));
+    $promesse = preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue')));
+
+    foreach (['app', 'worker', 'scheduler'] as $nom) {
+        $service = $composition['services'][$nom] ?? null;
+        assert(is_array($service) && is_array($service['environment'] ?? null));
+
+        $pile = $service['environment']['LOG_STACK'] ?? null;
+
+        expect($service)->not->toHaveKey('logging')
+            ->and(is_string($pile) ? $pile : '')->toContain('stderr');
+    }
+
+    expect($promesse)->toContain('Les journaux du serveur peuvent aussi en garder des traces, sans durée fixe')
+        ->and($promesse)->not->toContain('trente jours dans les journaux');
+});

@@ -107,5 +107,5 @@ it('garde une tâche en échec trente jours, pas davantage, comme le promet la p
 
     expect($codeDeSortie)->toBe(0, Artisan::output())
         ->and(tachesEnEchecRestantes())->toBe(['vingt-neuf-jours', 'la-veille'])
-        ->and(preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue'))))->toContain('trente jours dans les journaux');
+        ->and(preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue'))))->toContain("trente jours dans les rapports d'erreurs");
 });
