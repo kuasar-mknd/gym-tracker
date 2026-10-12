@@ -9,17 +9,22 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Mail\Markdown;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use ShuvroRoy\FilamentSpatieLaravelHealth\Pages\HealthCheckResults;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
 use Spatie\Health\Checks\Result;
 use Spatie\Health\Facades\Health;
+use Spatie\Health\HealthServiceProvider;
 use Spatie\Health\Notifications\CheckFailedNotification;
 use Spatie\Health\Notifications\Notifiable;
 use Spatie\Permission\Models\Role;
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\Finder\SplFileInfo;
 
 /**
  * Le courriel tel que le destinataire le lit : le texte visible du rendu HTML
@@ -357,6 +362,82 @@ it('ne s’écarte de la vue du courriel du paquet que par son titre et ses deux
 
     expect($ramenee)->not->toBe($publiee)
         ->and($ramenee)->toBe(file_get_contents(base_path('vendor/spatie/laravel-health/resources/views/mail/checkFailedNotification.blade.php')));
+});
+
+/**
+ * Laravel fusionne la surcharge avec la traduction du paquet clé par clé :
+ * une clé qui recopie celle du paquet, ou qu'aucun courriel envoyé ne lit
+ * (message Slack, page de résultats du paquet, qu'aucune route ne sert), ne
+ * changerait rien qu'on puisse voir. La surcharge ne garde donc que les
+ * textes du courriel, chacun autrement que le paquet.
+ */
+it('ne surcharge du paquet que les textes du courriel envoyé, chacun autrement que lui', function (): void {
+    Config::set('app.name', 'GymTracker');
+
+    $surcharge = require lang_path('vendor/health/fr/notifications.php');
+    $duPaquet = require base_path('vendor/spatie/laravel-health/resources/lang/fr/notifications.php');
+    $courriel = new CheckFailedNotification([
+        Result::make()->check(TachesPlanifieesCheck::new())->failed('Échouée : app:remind-training'),
+    ])->toMail();
+    $lu = $courriel->subject."\n".santeRendusDuCourriel($courriel)['texte'];
+
+    expect($surcharge)->toBeArray()->not->toBeEmpty();
+
+    foreach ((array) $surcharge as $cle => $valeur) {
+        expect($valeur)->toBeString()->not->toBe(data_get($duPaquet, (string) $cle), "« {$cle} » recopie la traduction du paquet")
+            ->and($lu)->toContain(str_replace(':application_name', 'GymTracker', is_string($valeur) ? $valeur : ''));
+    }
+});
+
+/**
+ * `.gitignore` ne rouvre, de tout ce que laravel-health publie sous
+ * lang/vendor et resources/views/vendor, que les deux fichiers que
+ * l'application surcharge : les autres langues et les autres vues restent
+ * ignorées, et `git add -A` ne les emporte pas après un vendor:publish ; les
+ * dossiers publiés d'un autre paquet aussi. Le dépôt est rejoué dans un
+ * dossier temporaire et lu comme Git le lirait, par Finder, sans git.
+ */
+it('ne rouvre dans .gitignore, de ce que publie laravel-health, que ses deux surcharges', function (): void {
+    $publies = ['lang/vendor/filament/fr/actions.php', 'resources/views/vendor/pulse/autre.blade.php'];
+
+    foreach (ServiceProvider::pathsToPublish(HealthServiceProvider::class) as $source => $destination) {
+        $relatif = Str::after($destination, base_path().'/');
+
+        if (! is_dir($source) || ! Str::startsWith($relatif, ['lang/vendor/', 'resources/views/vendor/'])) {
+            continue;
+        }
+
+        foreach (File::allFiles($source) as $fichier) {
+            $publies[] = $relatif.'/'.$fichier->getRelativePathname();
+        }
+    }
+
+    $racine = sys_get_temp_dir().'/sante-gitignore-'.Str::random(16);
+
+    try {
+        File::ensureDirectoryExists($racine.'/.git');
+        File::copy(base_path('.gitignore'), $racine.'/.gitignore');
+
+        foreach ($publies as $chemin) {
+            File::ensureDirectoryExists(dirname($racine.'/'.$chemin));
+            File::put($racine.'/'.$chemin, '');
+        }
+
+        $nonIgnores = array_map(
+            static fn (SplFileInfo $fichier): string => $fichier->getRelativePathname(),
+            iterator_to_array(Finder::create()->files()->in($racine)->ignoreVCSIgnored(true), false),
+        );
+    } finally {
+        File::deleteDirectory($racine);
+    }
+
+    sort($nonIgnores);
+
+    expect($publies)->toContain('lang/vendor/health/en/notifications.php', 'resources/views/vendor/health/list.blade.php')
+        ->and($nonIgnores)->toBe([
+            'lang/vendor/health/fr/notifications.php',
+            'resources/views/vendor/health/mail/checkFailedNotification.blade.php',
+        ]);
 });
 
 it('trouve la base en bonne santé', function (): void {
