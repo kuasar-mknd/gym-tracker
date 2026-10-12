@@ -250,7 +250,7 @@ it('laisse le compte tel quel quand l’adresse est devenue celle d’un autre a
     Notification::fake();
     $compte = changementMemeReponseLeCompte();
     $lien = LiensDesCourriels::lienDeConfirmationDAdresse($compte, 'disputee@example.org');
-    User::factory()->enAttente()->create(['email' => 'disputee@example.org']);
+    User::factory()->create(['email' => 'disputee@example.org']);
 
     actingAs($compte)->get($lien)
         ->assertRedirect(route('profile.edit'))
@@ -260,6 +260,61 @@ it('laisse le compte tel quel quand l’adresse est devenue celle d’un autre a
     expect($compte->email)->toBe('titulaire@example.org')
         ->and($compte->hasVerifiedEmail())->toBeTrue();
     Notification::assertSentOnDemandTimes(AdresseDuCompteChangee::class, 0);
+});
+
+/*
+ * Un tiers a inscrit l'adresse du membre, sans pouvoir ouvrir le compte. Le
+ * membre, qui détient la boîte, doit pouvoir la prendre quand même.
+ */
+it('envoie le lien quand seule une inscription jamais ouverte tient l’adresse, et l’efface quand le lien est suivi', function (): void {
+    Notification::fake();
+    $compte = changementMemeReponseLeCompte();
+    $inscription = User::factory()->enAttente()->create(['name' => 'Nom-Choisi-Par-L-Intrus', 'email' => 'boite-du-membre@example.org']);
+
+    changementMemeReponseDemander($compte, 'boite-du-membre@example.org')->assertSessionHasNoErrors();
+
+    Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 1);
+    Notification::assertNotSentTo($inscription, TentativeSurTonAdresse::class);
+    expect($compte->refresh()->email)->toBe('titulaire@example.org');
+
+    actingAs($compte)->get(LienDeChangementDAdresseRecu::pour('boite-du-membre@example.org'))
+        ->assertRedirect(route('profile.edit'))
+        ->assertSessionHas('status', 'adresse-confirmee');
+
+    $compte->refresh();
+    expect($compte->email)->toBe('boite-du-membre@example.org')
+        ->and($compte->hasVerifiedEmail())->toBeTrue()
+        ->and(User::query()->whereKey($inscription->id)->exists())->toBeFalse()
+        ->and(User::query()->count())->toBe(1);
+    Notification::assertSentOnDemand(
+        AdresseDuCompteChangee::class,
+        static fn (AdresseDuCompteChangee $_avis, array $_canaux, AnonymousNotifiable $destinataire): bool => $destinataire->routes === ['mail' => 'titulaire@example.org'],
+    );
+});
+
+it('prévient, sans lien, le titulaire d’une inscription jamais ouverte sur une adresse qui n’est pas exactement celle demandée', function (): void {
+    Notification::fake();
+    $compte = changementMemeReponseLeCompte();
+    $inscription = User::factory()->enAttente()->create(['email' => 'Boite-Du-Membre@example.org']);
+
+    changementMemeReponseDemander($compte, 'boite-du-membre@example.org')->assertSessionHasNoErrors();
+
+    Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 0);
+    Notification::assertSentToTimes($inscription, TentativeSurTonAdresse::class, 1);
+});
+
+it('n’efface pas au lien suivi un compte ouvert entre-temps sur l’adresse', function (): void {
+    Notification::fake();
+    $compte = changementMemeReponseLeCompte();
+    $inscription = User::factory()->enAttente()->create(['email' => 'disputee@example.org']);
+    $lien = LiensDesCourriels::lienDeConfirmationDAdresse($compte, 'disputee@example.org');
+    $inscription->markEmailAsVerified();
+
+    actingAs($compte)->get($lien)->assertSessionHas('status', 'adresse-deja-prise');
+
+    expect($compte->refresh()->email)->toBe('titulaire@example.org')
+        ->and($inscription->refresh()->email)->toBe('disputee@example.org')
+        ->and($inscription->estEnAttente())->toBeFalse();
 });
 
 it('répond « confirmée » au même lien suivi deux fois, sans rien réécrire', function (): void {

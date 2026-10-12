@@ -27,7 +27,11 @@ use Illuminate\Support\Traits\Localizable;
  * (`PrevenirLeTitulaireDeLAdresse`). Sinon, le lien qui la confirme part à
  * la nouvelle adresse (`LienDeChangementDAdresse`), au plus un par quart
  * d'heure et par adresse : l'adresse du compte ne change qu'une fois ce lien
- * suivi (`ConfirmerLAdresseController`).
+ * suivi (`ConfirmerLAdresseController`). Un compte que l'inscription a ouvert
+ * sur exactement cette adresse, jamais ouvert depuis, ne compte pas : rien ne
+ * prouve que son inscrit détienne la boîte, n'importe qui tape l'adresse d'un
+ * autre. Le lien part donc aussi, et le suivre efface ce compte : le
+ * titulaire de la boîte ne perd pas son adresse au profit d'un tiers.
  *
  * Comme `EnvoyerLeLienDeReinitialisation` : chiffré dans la file (l'adresse
  * est une saisie, peut-être celle d'un tiers), mis en file après la
@@ -62,7 +66,7 @@ final class TraiterUnChangementDAdresse implements ShouldBeEncrypted, ShouldQueu
                 ->whereKeyNot($compte->getKey())
                 ->first();
 
-            if ($titulaire !== null) {
+            if ($titulaire !== null && ! $this->nEstQuUneInscriptionJamaisOuverte($titulaire)) {
                 $prevenirLeTitulaire->execute($titulaire, MotifDeLaTentative::ChangementDAdresse);
 
                 return;
@@ -70,6 +74,16 @@ final class TraiterUnChangementDAdresse implements ShouldBeEncrypted, ShouldQueu
 
             $this->envoyerLeLien($compte);
         });
+    }
+
+    /**
+     * Ce compte n'occupe-t-il l'adresse que par une inscription jamais
+     * ouverte, sur cette adresse octet pour octet ? La collation, elle, ne
+     * décide pas d'une identité (`.ai/rules/actions.md`).
+     */
+    private function nEstQuUneInscriptionJamaisOuverte(User $titulaire): bool
+    {
+        return $titulaire->estEnAttente() && $titulaire->email === $this->adresse;
     }
 
     private function envoyerLeLien(User $compte): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
@@ -22,8 +23,11 @@ use Illuminate\Support\Facades\Redirect;
  * lien émis avant un autre changement ne vaut plus. Le changement passe par
  * l'enregistrement du compte, donc par `SurveilleSonAdresse` (avis à la
  * dernière adresse vérifiée) et `OublieLaPreuveDeSaLiaison`, puis l'adresse,
- * que le lien vient de prouver, est vérifiée dans une écriture à part. Une
- * adresse prise entre-temps par un autre compte (l'index unique refuse)
+ * que le lien vient de prouver, est vérifiée dans une écriture à part. Un
+ * compte que l'inscription a ouvert sur cette adresse, jamais ouvert depuis,
+ * s'efface d'abord, dans la même transaction, par `delete()` (ses traces avec
+ * lui) : le lien suivi prouve la boîte, que son inscrit n'a jamais prouvée.
+ * Une adresse prise entre-temps par un autre compte (l'index unique refuse)
  * laisse le compte tel qu'il était : seul le titulaire de la boîte, qui a reçu
  * le lien, l'apprend.
  */
@@ -49,6 +53,8 @@ final class ConfirmerLAdresseController extends Controller
 
         try {
             DB::transaction(static function () use ($compte, $adresse): void {
+                self::effacerLInscriptionJamaisOuverte($compte, $adresse);
+
                 $compte->update(['email' => $adresse]);
 
                 // La mise à jour vient de retirer la vérification : celle-ci écrit toujours.
@@ -60,5 +66,24 @@ final class ConfirmerLAdresseController extends Controller
         }
 
         return Redirect::route('profile.edit')->with('status', 'adresse-confirmee');
+    }
+
+    /**
+     * Efface le compte que l'inscription a ouvert sur exactement cette
+     * adresse et que rien n'a ouvert depuis : la base le trouve selon la
+     * collation de l'index, l'égalité se décide octet par octet
+     * (`.ai/rules/actions.md`). Un compte ouvert, lui, reste, et l'index
+     * unique refuse alors le changement.
+     */
+    private static function effacerLInscriptionJamaisOuverte(User $compte, string $adresse): void
+    {
+        User::query()
+            ->where('email', $adresse)
+            ->whereKeyNot($compte->getKey())
+            ->whereNotNull('en_attente_depuis')
+            ->whereNull('email_verified_at')
+            ->get()
+            ->filter(static fn (User $inscription): bool => $inscription->email === $adresse)
+            ->each(static fn (User $inscription): ?bool => $inscription->delete());
     }
 }
