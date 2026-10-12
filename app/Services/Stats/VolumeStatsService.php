@@ -81,16 +81,25 @@ final class VolumeStatsService
      * seconde lecture rendait quatorze jours quand lundi commençait entre les
      * deux, et le cache les gardait dix minutes (#2017).
      *
+     * La clef porte la semaine, comme celle de la comparaison : sans elle, le
+     * lundi juste après minuit servait encore la semaine de la veille, jusqu'à
+     * l'expiration. L'instant se reçoit de la carte qui montre aussi la
+     * comparaison : relu ici, il pouvait tomber dans la semaine suivante, et la
+     * courbe d'une semaine passait sous le total d'une autre (#2033).
+     *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      * @return array<int, WeeklyVolumeTrendPoint>
      */
-    public function getWeeklyVolumeTrend(User $user): array
+    public function getWeeklyVolumeTrend(User $user, ?Carbon $maintenant = null): array
     {
+        $maintenant ??= now();
+        $startOfWeek = $maintenant->copy()->startOfWeek();
+
         return Cache::remember(
-            ClesDeStats::seances($user, 'weekly_volume'),
-            now()->addMinutes(10),
-            function () use ($user): array {
-                $startOfWeek = now()->startOfWeek();
+            ClesDeStats::seances($user, "weekly_volume.{$startOfWeek->format('Y-W')}"),
+            $maintenant->copy()->addMinutes(10),
+            function () use ($user, $startOfWeek): array {
                 $endOfWeek = $startOfWeek->copy()->endOfWeek();
 
                 // `toBase()` : la somme sort déjà agrégée, aucun modèle à
@@ -185,11 +194,16 @@ final class VolumeStatsService
      * donne le 1er octobre. Chaque jour que le mois précédent n'a pas, la
      * comparaison mettait le mois courant face à lui-même (#1955).
      *
+     * L'instant se reçoit de la vue qui range la comparaison sous son mois :
+     * relu ici, il pouvait tomber dans le mois suivant (#2033).
+     *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      */
-    public function getMonthlyVolumeComparison(User $user): VolumeComparison
+    public function getMonthlyVolumeComparison(User $user, ?Carbon $maintenant = null): VolumeComparison
     {
-        $debutDuMois = now()->startOfMonth();
+        $maintenant ??= now();
+        $debutDuMois = $maintenant->copy()->startOfMonth();
         $debutDuMoisPrecedent = $debutDuMois->copy()->subMonth();
 
         $comparison = $this->calculateComparison(
@@ -214,18 +228,22 @@ final class VolumeStatsService
      * comme le mois dans `getMonthlyVolumeComparison` : avec une lecture par
      * borne, quand lundi commençait entre elles, la semaine qui s'achevait se
      * comparait à elle-même, ou à elle-même et à la précédente réunies (#2017).
+     * Cette lecture se reçoit de la carte qui montre aussi la courbe de la
+     * semaine, pour que les deux disent la même (#2033).
      *
      * @param  User  $user  L'utilisateur concerné.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      */
-    public function getWeeklyVolumeComparison(User $user): VolumeComparison
+    public function getWeeklyVolumeComparison(User $user, ?Carbon $maintenant = null): VolumeComparison
     {
-        $debutDeSemaine = now()->startOfWeek();
+        $maintenant ??= now();
+        $debutDeSemaine = $maintenant->copy()->startOfWeek();
         $semainePrecedente = $debutDeSemaine->copy()->subWeek()->startOfWeek();
         $weekKey = $debutDeSemaine->format('Y-W');
 
         $comparison = Cache::remember(
             ClesDeStats::seances($user, "weekly_volume_comparison.{$weekKey}"),
-            now()->addMinutes(10),
+            $maintenant->copy()->addMinutes(10),
             fn (): array => $this->calculateComparison(
                 $user,
                 $debutDeSemaine,
@@ -250,17 +268,23 @@ final class VolumeStatsService
      * pour en doubler un autre (#1955). La clef porte le mois courant, pour
      * que le premier du mois ne serve pas la fenêtre de la veille.
      *
+     * L'instant se reçoit de l'opération qui affiche d'autres cartes à côté :
+     * relu ici, il pouvait tomber dans le mois suivant, et la page des séances
+     * montrait alors deux fenêtres côte à côte (#2033).
+     *
      * @param  User  $user  L'utilisateur concerné.
      * @param  int  $months  Le nombre de mois couverts.
+     * @param  Carbon|null  $maintenant  L'instant de l'opération, que le calcul ne modifie pas ; à défaut, l'horloge.
      * @return array<int, MonthlyVolumePoint>
      */
-    public function getMonthlyVolumeHistory(User $user, int $months = 6): array
+    public function getMonthlyVolumeHistory(User $user, int $months = 6, ?Carbon $maintenant = null): array
     {
-        $debutDuMois = now()->startOfMonth();
+        $maintenant ??= now();
+        $debutDuMois = $maintenant->copy()->startOfMonth();
 
         return Cache::remember(
             ClesDeStats::seances($user, "monthly_volume_history.{$months}.{$debutDuMois->format('Y-m')}"),
-            now()->addMinutes(30),
+            $maintenant->copy()->addMinutes(30),
             function () use ($user, $months, $debutDuMois): array {
                 // Le regroupement et la somme se font en SQL : ramener des mois
                 // entiers de séances en PHP pour les additionner ne tiendrait pas

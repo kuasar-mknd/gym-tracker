@@ -50,21 +50,25 @@ class GetStatsDashboardAction
      *
      * La clef porte le mois courant, parce que la vue contient la comparaison
      * mensuelle : le premier du mois, elle servait sinon la comparaison de la
-     * veille jusqu'à l'expiration de l'entrée (#1955).
+     * veille jusqu'à l'expiration de l'entrée (#1955). Ce mois et la fenêtre
+     * de la comparaison viennent de la même lecture de l'horloge : relue par
+     * le service, la comparaison pouvait tomber dans le mois suivant, et
+     * l'entrée rangée sous septembre gardait celle d'octobre (#2033).
      *
      * @return array<string, mixed>
      */
     public function performanceOverview(User $user, int $jours = 30): array
     {
-        $mois = now()->format('Y-m');
+        $maintenant = now();
+        $mois = $maintenant->format('Y-m');
 
         return Cache::remember(
             ClesDeStats::seances($user, "performance_overview.{$jours}.{$mois}"),
-            now()->addMinutes(30),
+            $maintenant->copy()->addMinutes(30),
             fn (): array => [
                 'volumeTrend' => $this->volumeStats->getVolumeTrend($user, $jours),
                 'muscleDistribution' => $this->exerciseStats->getMuscleDistribution($user, $jours),
-                'monthlyComparison' => $this->volumeStats->getMonthlyVolumeComparison($user),
+                'monthlyComparison' => $this->volumeStats->getMonthlyVolumeComparison($user, $maintenant),
                 'durationHistory' => $this->workoutStats->getDurationHistory($user, 30),
             ]
         );
