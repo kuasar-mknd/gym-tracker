@@ -381,10 +381,11 @@ it('ne surcharge du paquet que les textes du courriel envoyé, chacun autrement 
     ])->toMail();
     $lu = $courriel->subject."\n".santeRendusDuCourriel($courriel)['texte'];
 
-    expect($surcharge)->toBeArray()->not->toBeEmpty();
+    expect($surcharge)->not->toBeEmpty()->toBeArray();
 
     foreach ((array) $surcharge as $cle => $valeur) {
-        expect($valeur)->toBeString()->not->toBe(data_get($duPaquet, (string) $cle), "« {$cle} » recopie la traduction du paquet")
+        expect($valeur)->not->toBe(data_get($duPaquet, (string) $cle), "« {$cle} » recopie la traduction du paquet")
+            ->toBeString()
             ->and($lu)->toContain(str_replace(':application_name', 'GymTracker', is_string($valeur) ? $valeur : ''));
     }
 });
@@ -401,9 +402,13 @@ it('ne rouvre dans .gitignore, de ce que publie laravel-health, que ses deux sur
     $publies = ['lang/vendor/filament/fr/actions.php', 'resources/views/vendor/pulse/autre.blade.php'];
 
     foreach (ServiceProvider::pathsToPublish(HealthServiceProvider::class) as $source => $destination) {
+        if (! is_string($source) || ! is_string($destination) || ! is_dir($source)) {
+            continue;
+        }
+
         $relatif = Str::after($destination, base_path().'/');
 
-        if (! is_dir($source) || ! Str::startsWith($relatif, ['lang/vendor/', 'resources/views/vendor/'])) {
+        if (! Str::startsWith($relatif, ['lang/vendor/', 'resources/views/vendor/'])) {
             continue;
         }
 
