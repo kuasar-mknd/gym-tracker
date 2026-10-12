@@ -17,8 +17,10 @@ use Illuminate\Support\Facades\Schema;
  *
  * Retirer la clé puis la reposer : deux appels séparés, chacun précédé de sa
  * question, pour qu'une reprise après un échec en cours de route retombe sur
- * ses pieds (`MigrationsRejouablesTest`). L'index de la colonne reste en
- * place entre les deux, et la clé reposée le reprend.
+ * ses pieds. L'index de la colonne reste en place entre les deux, et la clé
+ * reposée le reprend. `ErreursNavigateurSuiventLeCompteTest` joue la
+ * migration sur MySQL dans chacun de ces états : déjà passée, interrompue
+ * entre les deux appels, défaite puis rejouée.
  */
 return new class() extends Migration
 {
