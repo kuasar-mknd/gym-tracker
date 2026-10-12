@@ -7,15 +7,14 @@ use App\Models\User;
 use App\Support\BaseDeDonnees\ConnexionMariaDb;
 use App\Support\BaseDeDonnees\ConnexionMySql;
 use BezhanSalleh\FilamentExceptions\Resources\ExceptionResource;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\JobQuiEcritUneLigneRefusee;
 
 use function Pest\Laravel\actingAs;
 
@@ -198,24 +197,6 @@ function erreursSqlTracesQuiRecopientLeCanari(array $traces): array
     return array_keys(array_filter($traces, static fn (string $texte): bool => str_contains($texte, erreursSqlCanari())));
 }
 
-/**
- * Un job qui échoue sur la même écriture. Il ne porte que le nom du refus :
- * sa charge utile, gardée dans `failed_jobs`, ne contient donc pas le canari.
- */
-final class ErreursSqlJobQuiEcritUneLigneRefusee implements ShouldQueue
-{
-    use Queueable;
-
-    public function __construct(public string $refus)
-    {
-    }
-
-    public function handle(): void
-    {
-        erreursSqlEcrire($this->refus, erreursSqlCanari());
-    }
-}
-
 beforeEach(function (): void {
     $production = parse_ini_file(base_path('docker/php-prod.ini'));
     $ignorerLesArguments = is_array($production) ? ($production['zend.exception_ignore_args'] ?? null) : null;
@@ -313,7 +294,7 @@ it('ne laisse la valeur ni dans la table des exceptions, ni dans sa page du pann
 it('ne laisse la valeur ni dans failed_jobs, ni dans la table des exceptions, ni dans le journal quand un job échoue sur l’écriture', function (string $refus, string $texteDuServeur, string $classe): void {
     $journal = erreursSqlJournalDansUnFichier();
 
-    dispatch(new ErreursSqlJobQuiEcritUneLigneRefusee($refus))->onConnection('database');
+    dispatch(new JobQuiEcritUneLigneRefusee($refus))->onConnection('database');
 
     Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--tries' => 1, '--sleep' => 0]);
 
