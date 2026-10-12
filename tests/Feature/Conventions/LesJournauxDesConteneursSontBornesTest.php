@@ -27,7 +27,7 @@ use Symfony\Component\Yaml\Yaml;
  * Le réglage `logging` exigé de chaque conteneur de l'application, clé par
  * clé (en notation pointée).
  *
- * @return array{driver: string, options.max-size: string, options.max-file: string}
+ * @return array{driver: string, 'options.max-size': string, 'options.max-file': string}
  */
 function journauxBornesReglageAttendu(): array
 {
