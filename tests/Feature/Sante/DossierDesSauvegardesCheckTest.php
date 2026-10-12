@@ -21,9 +21,9 @@ use Tests\Support\PartageEndormi;
  * le conteneur (#1812) :
  * la sauvegarde manuelle a échoué sur « Unable to create a directory », la
  * nocturne au même endroit, et la page « Santé » ne le disait qu'à travers
- * « Backups », vingt-six heures plus tard et sans dire pourquoi. Le contrôle
- * et la vérification du démarrage écrivent vraiment, parce que
- * `is_writable()` répond côté client sur un partage réseau.
+ * « Archives des sauvegardes », vingt-six heures plus tard et sans dire
+ * pourquoi. Le contrôle et la vérification du démarrage écrivent vraiment,
+ * parce que `is_writable()` répond côté client sur un partage réseau.
  */
 
 /**
@@ -75,7 +75,7 @@ function sauvegardesVerificationDuDemarrage(string $dossier, array $arguments = 
 }
 
 /**
- * Le contrôle « Backups » tel que le provider l'enregistre.
+ * Le contrôle « Archives des sauvegardes » tel que le provider l'enregistre.
  */
 function sauvegardesControleDesArchives(): Check
 {
@@ -218,9 +218,9 @@ it('dit que le partage ne répond pas quand le délai de la sonde est dépassé'
 });
 
 /*
- * « Backups » parcourt le dossier par `glob()`, sans délai : sur un partage
- * endormi, il figerait `health:check` juste après la sonde, et le rouge de
- * la sonde ne serait jamais rangé ni envoyé.
+ * « Archives des sauvegardes » parcourt le dossier par `glob()`, sans délai :
+ * sur un partage endormi, il figerait `health:check` juste après la sonde, et
+ * le rouge de la sonde ne serait jamais rangé ni envoyé.
  */
 it('dit si le dossier répond, présent ou non, et pas s’il ne répond plus', function (): void {
     $endormies = PartageEndormi::commandes(['ls']);

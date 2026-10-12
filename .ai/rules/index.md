@@ -11,12 +11,13 @@ Before planning or editing, find the row whose globs match the file's path and r
 | package.json, package-lock.json, composer.json, composer.lock | .ai/rules/dependencies.md |
 | app/Filament/** | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
+| app/** | .ai/rules/horloge.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/** | .ai/rules/js.md |
 | bootstrap/app.php, app/Http/Middleware/** | .ai/rules/middleware.md |
 | app/Models/** | .ai/rules/models.md |
 | app/Actions/**, app/Services/**, app/Policies/** | .ai/rules/mutation.md |
-| app/Providers/**, routes/console.php | .ai/rules/providers.md |
+| app/Providers/**, routes/console.php, lang/vendor/health/**, resources/views/vendor/health/** | .ai/rules/providers.md |
 | README.md, .env.example, docker-compose.prod.yml, compose.yaml, Dockerfile, entrypoint.sh, docker/**, config/** | .ai/rules/readme.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
 | routes/web.php | .ai/rules/routes.md |

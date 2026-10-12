@@ -14,10 +14,10 @@ use Spatie\Health\Checks\Result;
  * Le dossier des sauvegardes doit être inscriptible par l'utilisateur du
  * conteneur (#1812). En production, c'est un dossier de l'hôte que le dépôt ne tient
  * pas : quand il ne l'était pas, toute sauvegarde échouait, et la page ne le
- * disait qu'à travers « Backups », vingt-six heures plus tard et sans dire
- * pourquoi. Le contrôle écrit puis efface vraiment une sonde à la racine du
- * disque, parce que `is_writable()` répond côté client sur un partage réseau :
- * une écriture toutes les cinq minutes.
+ * disait qu'à travers « Archives des sauvegardes », vingt-six heures plus
+ * tard et sans dire pourquoi. Le contrôle écrit puis efface vraiment une
+ * sonde à la racine du disque, parce que `is_writable()` répond côté client
+ * sur un partage réseau : une écriture toutes les cinq minutes.
  *
  * Chaque accès passe par un sous-processus borné : un partage réseau qui ne
  * répond plus ne rend pas d'erreur, il fait attendre sans fin, et une
@@ -32,7 +32,8 @@ final class DossierDesSauvegardesCheck extends Check
     public const int DELAI_EN_SECONDES = 10;
 
     /**
-     * Le libellé de la page « Santé », qui découperait sinon le nom de classe.
+     * Le libellé de la page « Santé » et du courriel d'alerte, qui
+     * découperaient sinon le nom de classe.
      */
     #[\Override]
     protected ?string $label = 'Dossier des sauvegardes';
@@ -40,9 +41,10 @@ final class DossierDesSauvegardesCheck extends Check
     private int $delai = self::DELAI_EN_SECONDES;
 
     /**
-     * Le dossier où la sauvegarde range ses archives : celui que « Backups »
-     * parcourt et que la page « Sauvegardes » du panneau liste. Lu à chaque
-     * appel, comme la racine du disque, qu'un test peut déplacer.
+     * Le dossier où la sauvegarde range ses archives : celui que le contrôle
+     * « Archives des sauvegardes » parcourt et que la page « Sauvegardes » du
+     * panneau liste. Lu à chaque appel, comme la racine du disque, qu'un test
+     * peut déplacer.
      */
     public static function dossierDesArchives(): string
     {
@@ -51,14 +53,14 @@ final class DossierDesSauvegardesCheck extends Check
 
     /**
      * Le dossier répond-il dans le délai, qu'il existe ou non ? Le contrôle
-     * « Backups » parcourt les archives par `glob()`, sans délai : sur un
-     * partage endormi, il figerait `health:check` juste après la sonde, et le
-     * rouge de celle-ci ne serait ni rangé ni envoyé.
+     * « Archives des sauvegardes » parcourt les archives par `glob()`, sans
+     * délai : sur un partage endormi, il figerait `health:check` juste après
+     * la sonde, et le rouge de celle-ci ne serait ni rangé ni envoyé.
      */
     public static function repond(string $dossier, int $delai = self::DELAI_EN_SECONDES): bool
     {
         try {
-            // Un dossier absent répond aussi : « Backups » dira qu'il n'y a pas d'archive.
+            // Un dossier absent répond aussi : « Archives des sauvegardes » dira qu'il n'en a aucune.
             Process::timeout($delai)->run(['ls', '-A', $dossier]);
         } catch (ProcessTimedOutException) {
             return false;
