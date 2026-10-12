@@ -326,6 +326,76 @@ jobs:
             - name: Start Chrome Driver
               run: ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 --log-path=storage/logs/chromedriver.log --readable-timestamp &
 
+            # Chaque éclat payait le premier démarrage de Chrome dans son premier
+            # parcours : neuf à douze secondes de plus que le même parcours ensuite
+            # sur un éclat vert, et le 12/10, 48 s de démarrage puis un rendu muet
+            # trois minutes, que le parcours a payés de son échec (#2046, après
+            # #2029).
+            # La chauffe ouvre une session par le pilote comme le fera ce premier
+            # parcours : le Chrome que le pilote trouve, les options sans tête de
+            # DuskTestCase, une page http sur 127.0.0.1 dont le texte se rend (le
+            # statut du pilote : l'application n'est pas encore servie), puis une
+            # capture. Elle ferme la session et écrit ses durées. Sans réponse en
+            # SECONDES_DE_CHAUFFE, ou en erreur, elle le signale sans faire tomber
+            # l'éclat : le premier parcours fera son propre diagnostic, dans les
+            # bornes de DuskTestCase.
+            - name: Chauffer Chrome
+              continue-on-error: true
+              timeout-minutes: 10
+              env:
+                  PILOTE: http://127.0.0.1:9515
+                  SECONDES_DE_CHAUFFE: 480
+              run: |
+                  debut=$(date +%s%3N)
+                  precedent=$debut
+                  session=""
+                  releve=""
+                  ecoule() { echo $(( $(date +%s%3N) - debut )); }
+                  en_secondes() { printf '%d,%d s' $(( $1 / 1000 )) $(( $1 % 1000 / 100 )); }
+                  reste() { r=$(( SECONDES_DE_CHAUFFE - $(ecoule) / 1000 )); if [ "$r" -gt 0 ]; then echo "$r"; else echo 1; fi; }
+                  noter() {
+                      maintenant=$(date +%s%3N)
+                      releve="${releve:+$releve, }$1 en $(en_secondes $(( maintenant - precedent )))"
+                      precedent=$maintenant
+                  }
+                  # Derrière un ordre resté sans réponse, la fermeture attend son
+                  # tour : cinq secondes ici, le pilote l'exécute quand il le peut.
+                  fermer() {
+                      if [ -n "$session" ]; then
+                          curl -sf -o /dev/null --max-time 5 -X DELETE "$PILOTE/session/$session" && noter "session fermée"
+                          session=""
+                      fi
+                  }
+                  echouer() {
+                      fermer
+                      echo "::warning title=Chauffe de Chrome::$1 après $(en_secondes "$(ecoule)")${releve:+ ($releve)}. Le premier parcours fera son propre diagnostic (#2046)."
+                      exit 1
+                  }
+
+                  until curl -sf -o /dev/null --max-time 2 "$PILOTE/status"; do
+                      [ "$(ecoule)" -lt $(( SECONDES_DE_CHAUFFE * 1000 )) ] || echouer "le pilote ne répond pas"
+                      sleep 1
+                  done
+                  noter "pilote prêt"
+
+                  capacites='{"capabilities": {"alwaysMatch": {"browserName": "chrome", "goog:chromeOptions": {"args": [
+                      "--disable-gpu", "--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
+                      "--ignore-certificate-errors", "--window-size=393,852"
+                  ]}}}}'
+                  reponse=$(curl -sf --max-time "$(reste)" -H 'Content-Type: application/json' -d "$capacites" "$PILOTE/session") || echouer "la session ne s'est pas ouverte"
+                  session=$(printf '%s' "$reponse" | sed -n 's/.*"sessionId" *: *"\([^"]*\)".*/\1/p')
+                  [ -n "$session" ] || echouer "le pilote n'a pas rendu de session"
+                  noter "session ouverte"
+
+                  curl -sf -o /dev/null --max-time "$(reste)" -H 'Content-Type: application/json' -d "{\"url\": \"$PILOTE/status\"}" "$PILOTE/session/$session/url" || echouer "la page ne s'est pas rendue"
+                  noter "page rendue"
+
+                  curl -sf -o /dev/null --max-time "$(reste)" "$PILOTE/session/$session/screenshot" || echouer "la capture n'est pas venue"
+                  noter "capture"
+
+                  fermer
+                  echo "Chrome chaud en $(en_secondes "$(ecoule)") : $releve."
+
             - name: Run Dusk Tests
               run: |
                   # Create fresh .env
