@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /*
@@ -14,6 +15,12 @@ use Illuminate\Support\Facades\Schema;
  * restaient en base jusqu'à la purge à trente jours, et l'URL peut porter des
  * identifiants. Elle efface désormais la ligne (`ON DELETE CASCADE`), comme
  * toutes les autres clés vers `users`.
+ *
+ * Les erreurs déjà orphelines (`user_id` nul) partent aussi : ce n'est pas
+ * une devinette. Depuis leur introduction (#1766), la route n'accepte que des
+ * comptes connectés et le contrôleur pose toujours `user_id` ; la colonne
+ * n'est nullable que pour l'ancien `SET NULL`. Une ligne sans compte est donc
+ * celle d'un compte supprimé. `down()` ne les rend pas.
  *
  * Retirer la clé puis la reposer : deux appels séparés, chacun précédé de sa
  * question, pour qu'une reprise après un échec en cours de route retombe sur
@@ -29,6 +36,8 @@ return new class() extends Migration
     public function up(): void
     {
         $this->reposerLaCle('cascade');
+
+        DB::table('erreurs_navigateur')->whereNull('user_id')->delete();
     }
 
     public function down(): void

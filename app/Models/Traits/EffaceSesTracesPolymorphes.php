@@ -40,10 +40,11 @@ use Illuminate\Support\Facades\Password;
  * redevient celle d'un invité, et le ramasse-miettes des sessions la retire
  * après `SESSION_LIFETIME` minutes d'inactivité.
  *
- * Les erreurs du navigateur (`erreurs_navigateur`) ont une clé étrangère et
- * suivent par la cascade, comme le reste. Les exceptions enregistrées
- * (`filament_exceptions_table`) ne portent aucun lien vers le compte : elles
- * partent avec la purge à trente jours (#1938).
+ * Les erreurs du navigateur (`erreurs_navigateur`) et les exceptions levées
+ * par une requête du compte (`filament_exceptions_table`) ont une clé
+ * étrangère et suivent par la cascade, comme le reste (#1938). Une exception
+ * levée sans compte connecté n'a pas de lien, même quand elle recopie son
+ * identifiant ou ses saisies : elle part avec la purge à trente jours.
  *
  * Quand c'est un administrateur qui supprime, une entrée d'audit anonyme le
  * dit, sans rien du compte (#1938).

@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\ErreurNavigateur;
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -138,4 +140,33 @@ it('se défait et se rejoue, deux fois de suite, en gardant l’index de user_id
         ->and(Schema::hasIndex('erreurs_navigateur', ['user_id']))->toBeTrue()
         ->and(erreursNavigateurOrdresDe(erreursNavigateurMonter(...)))->toBe([])
         ->and(erreursNavigateurRegleDeLaCle())->toBe('cascade');
+});
+
+/**
+ * Une erreur du navigateur rapportée par ce compte, ou sans compte.
+ */
+function erreursNavigateurRapporter(?User $compte, string $message): void
+{
+    ErreurNavigateur::query()->create([
+        'user_id' => $compte?->id,
+        'type' => 'error',
+        'message' => $message,
+        'url' => '/workouts',
+        'empreinte' => ErreurNavigateur::empreinteDe('error', $message, null, null),
+    ]);
+}
+
+/*
+ * La route n'a jamais accepté que des comptes connectés (#1766), et le
+ * contrôleur pose toujours `user_id` : une erreur sans compte vient du
+ * `ON DELETE SET NULL` d'un compte supprimé. Elle part au passage de la
+ * migration, et celle d'un compte présent reste.
+ */
+it('efface au passage les erreurs déjà orphelines d’un compte supprimé', function (): void {
+    erreursNavigateurRapporter(User::factory()->create(), 'erreur d’un compte présent');
+    erreursNavigateurRapporter(null, 'erreur d’un compte supprimé');
+
+    erreursNavigateurMonter();
+
+    expect(ErreurNavigateur::query()->pluck('message')->all())->toBe(['erreur d’un compte présent']);
 });

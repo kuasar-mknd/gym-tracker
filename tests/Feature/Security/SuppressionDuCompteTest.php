@@ -8,6 +8,7 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\ActivityLog;
 use App\Models\Admin;
 use App\Models\ErreurNavigateur;
+use App\Models\ExceptionEnregistree;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
@@ -24,7 +25,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
@@ -697,33 +698,66 @@ it('efface les erreurs du navigateur du compte, et seulement les siennes', funct
 /*
  * Toute ligne qui désigne un compte par une clé étrangère part avec lui :
  * `SET NULL` garderait la ligne, sans nom, mais avec ce qu'elle dit du compte.
- * Une table qui doit survivre au compte le justifie ici.
+ * Une table qui doit survivre au compte le justifie ici. Les règles se lisent
+ * par contrainte, et non par table : une table qui porterait deux clés vers
+ * `users` ne garderait sinon que la règle de l'une.
  */
 it('efface en cascade toute ligne qui désigne le compte par une clé étrangère', function (): void {
     $regles = DB::table('information_schema.REFERENTIAL_CONSTRAINTS')
         ->where('CONSTRAINT_SCHEMA', DB::connection()->getDatabaseName())
         ->where('REFERENCED_TABLE_NAME', 'users')
-        ->pluck('DELETE_RULE', 'TABLE_NAME')
+        ->pluck('DELETE_RULE', 'CONSTRAINT_NAME')
         ->all();
 
-    expect($regles)->toHaveKey('erreurs_navigateur')
+    expect($regles)->toHaveKey('erreurs_navigateur_user_id_foreign')
+        ->and($regles)->toHaveKey('filament_exceptions_table_user_id_foreign')
         ->and(array_filter($regles, static fn (mixed $regle): bool => $regle !== 'CASCADE'))->toBe([]);
 });
 
-/*
- * Les exceptions enregistrées ne partent pas avec le compte, mais à trente
- * jours (#1938) : aucune colonne ne le désigne. L'adresse IP, le chemin, les
- * en-têtes et le corps de la requête en gardent la trace, aucun de façon
- * sûre, et les rapprocher d'un compte serait deviner. Cette prémisse tombe le
- * jour où la table reçoit un lien vers le compte : la question se rouvre.
+/**
+ * Une exception levée par une requête de ce compte, comme le serveur la garde.
  */
-it('ne rattache les exceptions enregistrées à aucun compte : elles attendent leur purge', function (): void {
-    $colonnes = Schema::getColumnListing('filament_exceptions_table');
-    $cles = Schema::getForeignKeys('filament_exceptions_table');
+function compteSupprimeLeverUneException(User $compte): void
+{
+    test()->actingAs($compte)->post('/_boum-du-compte')->assertServerError();
+}
 
-    expect($colonnes)->not->toContain('user_id')
-        ->and($cles)->toBe([]);
-});
+/*
+ * Une exception levée par une requête du compte porte son identifiant, et
+ * souvent ce qu'il a saisi (en-têtes, modèle lié par la route, message) : elle
+ * part avec lui (#1938). Celle qu'aucun compte connecté n'a levée n'a pas de
+ * lien : elle reste, jusqu'à la purge à trente jours.
+ */
+it('efface les exceptions levées par le compte, et seulement les siennes', function (Closure $supprimer): void {
+    ExceptionEnregistree::query()->create([
+        'type' => RuntimeException::class,
+        'message' => 'sans compte',
+        'file' => __FILE__,
+        'line' => 1,
+        'trace' => [],
+        'method' => 'GET',
+        'path' => '/',
+    ]);
+
+    Route::middleware(['web', 'auth'])->post('/_boum-du-compte', function (): never {
+        throw new RuntimeException('exception du compte');
+    });
+
+    $compte = User::factory()->create();
+    $voisin = User::factory()->create();
+
+    compteSupprimeLeverUneException($compte);
+    compteSupprimeLeverUneException($voisin);
+
+    expect(ExceptionEnregistree::query()->where('user_id', $compte->id)->count())->toBe(1);
+
+    $supprimer($compte);
+
+    expect(User::query()->whereKey($compte->id)->exists())->toBeFalse()
+        ->and(ExceptionEnregistree::query()->where('user_id', $compte->id)->count())->toBe(0)
+        ->and(ExceptionEnregistree::query()->where('user_id', $voisin->id)->count())->toBe(1)
+        ->and(ExceptionEnregistree::query()->whereNull('user_id')->count())->toBe(1);
+})->with('chemins de suppression du compte');
 
 /*
  * Avant #1670 (2026-09-03), le journal d'activité suivait aussi les données
@@ -768,3 +802,4 @@ it("laisse les entrées d'audit d'avant #1670 sur les données du compte à la p
         ->and((string) $purges[0]->command)->toContain('--days=180')
         ->and($promesse)->toContain("180 jours dans l'historique d'audit");
 });
+
