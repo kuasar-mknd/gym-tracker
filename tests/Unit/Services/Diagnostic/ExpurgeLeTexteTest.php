@@ -124,9 +124,25 @@ it('ne garde un nom qu’à la place que lui réserve sa forme', function (strin
         "SQLSTATE[42000]: Syntax error: 1064 near 'abc' and 'secret de Jean",
         "SQLSTATE[42000]: Syntax error: 1064 near '?'",
     ],
-    'une valeur à apostrophe dans une forme qui ne finit pas par une apostrophe' => [
+    'une citation coupée dont la valeur porte une apostrophe' => [
+        "SQLSTATE[42000]: Syntax error: 1064 near 'secret d'Artagnan",
+        "SQLSTATE[42000]: Syntax error: 1064 near '?'",
+    ],
+    'une clé en double coupée dans sa valeur' => [
+        "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'secret d'Arta",
+        "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '?'",
+    ],
+    'une clé en double coupée dans le nom de sa clé' => [
+        "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'secret d'Artagnan' for key 'users.users_em",
+        "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '?' for key 'users.users_em",
+    ],
+    'une valeur à apostrophe dans une forme qui finit par sa queue' => [
         "SQLSTATE[HY000]: General error: 1366 Incorrect integer value: 'O'Brien' for column 'user_id' at row 1",
-        "SQLSTATE[HY000]: General error: 1366 Incorrect integer value: '?'",
+        "SQLSTATE[HY000]: General error: 1366 Incorrect integer value: '?' for column 'user_id' at row 1",
+    ],
+    'un texte complet sans citation' => [
+        'SQLSTATE[HY000]: General error: 2006 MySQL server has gone away',
+        'SQLSTATE[HY000]: General error: 2006 MySQL server has gone away',
     ],
     'une connexion refusée' => [
         'SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, Host: 192.0.2.10, Port: 3306, Database: gym, SQL: select * from `sessions` where `id` = abc)',
@@ -168,6 +184,43 @@ it('marque les courriels, les adresses IP, les hôtes, les chaînes de requête 
     );
 });
 
+/*
+ * Une adresse se reconnaît à ses quatre nombres, pas à ce qui l'entoure :
+ * un point qui finit la phrase, un deux-points, des points de suspension, le
+ * préfixe d'une adresse IPv4 écrite en IPv6. Seul un nombre collé à elle,
+ * ou un cinquième nombre pointé, en fait autre chose.
+ */
+it('marque une adresse IP quel que soit son voisin', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'en fin de phrase' => ['Trop de requêtes depuis 203.0.113.7.', 'Trop de requêtes depuis [adresse IP].'],
+    'après un deux-points' => ['client ip:203.0.113.7 refusé', 'client ip:[adresse IP] refusé'],
+    'après des points de suspension' => ['vu...203.0.113.7 hier', 'vu...[adresse IP] hier'],
+    'une plage' => ['plage 203.0.113.7-203.0.113.9 bloquée', 'plage [adresse IP]-[adresse IP] bloquée'],
+    'une adresse IPv4 écrite en IPv6' => ['client ::ffff:203.0.113.7 refusé', 'client [adresse IP] refusé'],
+    'une adresse IPv6 en fin de phrase' => ['Trop de requêtes depuis 2001:db8::7.', 'Trop de requêtes depuis [adresse IP].'],
+    'cinq nombres pointés' => ['version 1.2.3.4.5 et 1203.0.113.7', 'version 1.2.3.4.5 et 1203.0.113.7'],
+]);
+
+/*
+ * Un hôte se reconnaît à son dernier label quand il n'en a que deux (une
+ * extension connue, un code de pays), sauf après `//`, `@` ou « host » ; à
+ * partir de trois labels, tout dernier label alphabétique. Un nom de route
+ * à deux labels, un index et un fichier restent.
+ */
+it('marque un hôte dont l’extension n’est pas dans la liste', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'trois labels' => ['smtp.salle-canari.systems refusé', '[hôte] refusé'],
+    'deux labels dans une URL' => ['page https://salle-canari.shop/seances', 'page https://[hôte]/seances'],
+    'deux labels après « host »' => ['Connection could not be established with host salle-canari.email :stream', 'Connection could not be established with host [hôte] :stream'],
+    'un nom internationalisé' => ['smtp.salle-réservée.systems refusé', '[hôte] refusé'],
+    'une route, un index, un fichier' => [
+        'route workouts.show, index users.users_email_unique, fichier jquery.min.js',
+        'route workouts.show, index users.users_email_unique, fichier jquery.min.js',
+    ],
+]);
+
 it('laisse une heure, une version, un appel et un fichier', function (): void {
     $message = 'À 12:30:45, version 1.6.1, App\\Http\\Controllers\\WorkoutsController::show dans app.js et Connection.php, values (?, ?), #0 {main}';
 
@@ -188,6 +241,37 @@ it('remplace par [secret] les jetons, les JWT et les longues suites', function (
         .'migration 2026_09_06_115255_create_filament_exceptions_table',
     );
 });
+
+/*
+ * Le jeton d'un lien de réinitialisation ou de vérification est dans le
+ * chemin de la page : la table des exceptions garde le chemin brut, et une
+ * erreur navigateur la page. Une suite hexadécimale est un secret, qu'une
+ * barre oblique, un signe égal, un tiret ou un souligné la précède ; une
+ * lettre ou un chiffre collés en font un mot.
+ */
+it('remplace par [secret] une longue suite hexadécimale quel que soit son voisin', function (string $message, string $attendu): void {
+    expect(expurgeLeTexte($message)->texte)->toBe($attendu);
+})->with([
+    'le chemin d’un lien de réinitialisation' => [
+        'reset-password/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+        'reset-password/[secret]',
+    ],
+    'la page d’un lien de réinitialisation' => [
+        'https://gym.example.org/reset-password/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+        'https://[hôte]/reset-password/[secret]',
+    ],
+    'la page d’un lien de vérification' => [
+        'https://gym.example.org/verify-email/12/2fd4e1c67a2d28fced849ee1bb76e7391b93eb12',
+        'https://[hôte]/verify-email/12/[secret]',
+    ],
+    'après un signe égal' => ['Clé refusée : api_key=c0ffee5ca1ab1e0ddba11deadbeefcafe0123456', 'Clé refusée : api_key=[secret]'],
+    'après un tiret ou un souligné' => [
+        'jeton-c0ffee5ca1ab1e0ddba11deadbeefcafe0123456 et sk_c0ffee5ca1ab1e0ddba11deadbeefcafe0123456',
+        'jeton-[secret] et sk_[secret]',
+    ],
+    'au milieu d’un secret en base64' => ['clé Zm9vYmFy+c0ffee5ca1ab1e0ddba11deadbeefcafe0123456+YmF6 refusée', 'clé [secret] refusée'],
+    'collée à un mot' => ['cle cachec0ffee5ca1ab1e0ddba11deadbeefcafe0123456', 'cle cachec0ffee5ca1ab1e0ddba11deadbeefcafe0123456'],
+]);
 
 it('ramène un chemin du dépôt à sa racine et marque les autres chemins absolus', function (): void {
     $message = 'Dans '.base_path('app/Models/User.php').':12, lu /etc/ssl/private/cle.pem et (/var/lib/donnees/a.db)';
@@ -240,5 +324,10 @@ it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $ad
     'de l’hexadécimal mêlé' => [str_repeat('a1', 4_096)],
     'des groupes IPv6' => [str_repeat('a:a:', 2_048)],
     'des labels d’hôte' => [str_repeat('ab.', 2_731)],
+    'des labels accentués' => [str_repeat('éb.', 2_731)],
+    'des « host » enchaînés' => [str_repeat('host a.', 1_171)],
+    'des adresses IPv4 enchaînées' => [str_repeat('1.2.3.4.', 1_024)],
+    'des adresses IPv4 écrites en IPv6' => [str_repeat('::ffff:1.2.3.', 631)],
+    'de l’hexadécimal entre des tirets' => [str_repeat('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0-', 200)],
     'des courriels enchaînés' => [str_repeat('a.b@c.', 1_366)],
 ]);

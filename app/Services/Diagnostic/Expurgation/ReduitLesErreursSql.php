@@ -17,9 +17,11 @@ use App\Support\BaseDeDonnees\TexteDuServeurSansValeurs;
  * (`TexteDuServeurSansValeurs`) : l'en-tête de PDO et les noms d'index ou de
  * colonne restent, les valeurs citées deviennent `'?'`. La sortie ne compte
  * pas sur la source pour l'avoir fait : une ligne écrite avant ce masque, ou
- * par une connexion qui ne le porte pas, le garde. En plus de la source, une
- * citation que rien ne ferme (un texte coupé avant sa fin) est fermée avant
- * le masque, qui la couvre alors jusqu'au bout.
+ * par une connexion qui ne le porte pas, le garde. En plus de la source, un
+ * texte qui ne finit ni par une apostrophe ni par une queue connue a pu être
+ * coupé dans une citation : elle est fermée avant le masque, qui la couvre
+ * alors jusqu'au bout, et l'apostrophe ajoutée est retirée si aucune
+ * citation ne l'a prise.
  */
 final class ReduitLesErreursSql
 {
@@ -28,6 +30,15 @@ final class ReduitLesErreursSql
     private const string CONNEXION = '(Connection:';
 
     private const string APOSTROPHE = "'";
+
+    private const string CITATION_MASQUEE = "'?'";
+
+    /**
+     * Les queues du texte du serveur qui ne finissent pas par une
+     * apostrophe : une valeur mal formée, trop longue ou coupée, un JSON
+     * invalide.
+     */
+    private const string QUEUE_SANS_APOSTROPHE = "/ for column '[^']{0,255}'(?: at row \\d{1,20}|\\.)$/D";
 
     private const string REQUETE = '/SQL: (?<verbe>[a-z]{1,16})\b[^`]{0,4096}?`(?<table>[\w$]{1,64})`/i';
 
@@ -65,24 +76,27 @@ final class ReduitLesErreursSql
      */
     private function sansValeurs(string $message): string
     {
-        $masque = TexteDuServeurSansValeurs::de($this->citationFermee($message));
+        $fini = $this->finitCommeLeServeur($message);
+        $masque = TexteDuServeurSansValeurs::de($fini ? $message : $message.self::APOSTROPHE);
         Motifs::verifierLeDernierAppel();
 
-        return $masque;
+        return match ($fini || str_ends_with($masque, self::CITATION_MASQUEE)) {
+            true => $masque,
+            false => substr($masque, 0, -1),
+        };
     }
 
     /**
-     * Le message, et l'apostrophe qui ferme sa dernière citation quand un
-     * texte coupé l'a laissée ouverte : un nombre impair d'apostrophes, sans
-     * apostrophe à la fin. Le serveur ferme toujours la sienne ; sans cela, ce
-     * qui suit la dernière apostrophe, la fin d'une valeur, resterait.
+     * Vrai si le texte finit comme le serveur finit une citation : par une
+     * apostrophe, ou par une queue connue qui n'en porte pas. Sinon, un texte
+     * coupé a pu laisser une citation ouverte, quel que soit le nombre de ses
+     * apostrophes : une valeur peut en contenir (« 'secret d'Artagnan »), et
+     * ce qui suit la dernière, la fin de la valeur, resterait. Le serveur
+     * ferme toujours la sienne.
      */
-    private function citationFermee(string $message): string
+    private function finitCommeLeServeur(string $message): bool
     {
-        return match (substr_count($message, self::APOSTROPHE) % 2 === 1 && ! str_ends_with($message, self::APOSTROPHE)) {
-            true => $message.self::APOSTROPHE,
-            false => $message,
-        };
+        return str_ends_with($message, self::APOSTROPHE) || Motifs::trouver(self::QUEUE_SANS_APOSTROPHE, $message) !== null;
     }
 
     /**
