@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Quatre fichiers de la suite frontend ne dépendent plus de l'ordre de leurs tests** (#2044) : en ordre aléatoire (`--sequence.shuffle`, Node 24), `historiqueDuCompte.test.js`, `historiqueDuCompteParOnglet.test.js`, `miseAJourDuWorkerAvecInertia.test.js` et `intervalTimerPresetForm.test.js` échouaient selon la graine, parce qu'un cas lisait l'état laissé par un autre : la clé d'historique jetée par `clearHistory`, la page ou l'historique de l'application Inertia montée pour le fichier, ou le faux oscillateur qu'un test effaçait de sa classe au lieu de le rétablir. Chaque cas prépare désormais son état et nettoie le sien : il bâtit son historique par ses propres visites ou remet la page avant lui, face à un faux serveur vidé, retire les écouteurs qu'il pose sur le routeur, et remplace une méthode par un espion rétabli après lui. Aucune assertion n'est affaiblie, ni ordre imposé ni nouvelle tentative : chaque fichier passe sur 31 graines, dont celles de l'issue, et la suite complète sur cinq. La leçon est dans `.ai/rules/tests-js.md`.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
