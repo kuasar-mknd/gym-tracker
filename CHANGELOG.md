@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Les fenêtres ne s'ouvrent plus sous la barre d'état de l'iPhone** (#2043) : dans l'application installée, la page s'étend sous la barre d'état et l'indicateur d'accueil, et la fenêtre « Ajouter un exercice » se posait à 24 px du haut de l'écran : son titre passait sous l'heure et la batterie, et sa liste, bornée à 60 % de l'écran, laissait un grand vide sous la fenêtre. Toute fenêtre s'écarte désormais des barres et se borne à la zone sûre ; une longue liste la remplit jusqu'en bas et défile en elle-même, sous un titre et une recherche qui restent en place. Les notifications, le bandeau de mise à jour, le minuteur de repos, l'indicateur de rafraîchissement, les en-têtes collants, la carte de succès et la page « hors ligne » s'en écartent aussi, et, en paysage, l'en-tête et le contenu s'écartent de l'encoche. Une seule famille d'utilitaires (`pt-sure-*`, `top-sure-*`, `hauteur-sure-*`…) ajoute ces marges, qui valent 0 sur un écran sans encoche : la page y est la même qu'avant, à deux différences près, voulues : une fenêtre à longue liste descend jusqu'au bas de l'écran au lieu de s'arrêter à 85 %, et le titre d'un mois du journal, qui collait derrière l'en-tête, colle désormais sous lui. `zonesSures.test.js` refuse un élément fixe ou collant, une fenêtre ou une hauteur en `vh` qui ignoreraient les barres, et `LesFenetresRestentDansLaZoneSureTest` mesure la fenêtre dans Chrome, marges d'un iPhone simulées, en portrait et en paysage.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
