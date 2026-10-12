@@ -6,7 +6,7 @@ namespace Tests;
 
 use Closure;
 use Facebook\WebDriver\Chrome\ChromeOptions;
-use Facebook\WebDriver\Exception\Internal\WebDriverCurlException;
+use Facebook\WebDriver\Exception\Internal\UnexpectedResponseException;
 use Facebook\WebDriver\Remote\DesiredCapabilities;
 use Facebook\WebDriver\Remote\RemoteWebDriver;
 use Facebook\WebDriver\WebDriverKeys;
@@ -16,6 +16,8 @@ use Laravel\Dusk\Browser;
 use Laravel\Dusk\TestCase as BaseTestCase;
 use RuntimeException;
 use Tests\Support\GardeDesParcours;
+use Tests\Support\NavigateurDesParcours;
+use Tests\Support\PiloteDesParcours;
 use Throwable;
 
 abstract class DuskTestCase extends BaseTestCase
@@ -51,8 +53,12 @@ abstract class DuskTestCase extends BaseTestCase
      * php-webdriver en accorde cent quatre-vingts. Plus long que la page et
      * que le script, que le pilote borne lui-même : son message, qui nomme ce
      * qui a manqué, arrive le premier, et celui-ci ne parle que pour un ordre
-     * dont le pilote ne rend jamais la réponse, comme un script ou la lecture
-     * de la console dans un rendu figé.
+     * dont le pilote ne rend jamais la réponse, comme un script, une recherche
+     * d'élément ou la lecture de la console dans un rendu figé. Cet ordre lève
+     * une `WebDriverCurlException`, et `PiloteDesParcours` le retient même
+     * quand Dusk l'avale : le parcours tombe sur lui, ou sur l'échec que Dusk
+     * en a tiré, en quatre-vingt-dix secondes, et rien ne lui est plus envoyé
+     * que la fermeture.
      */
     public const int SECONDES_POUR_UN_ORDRE = 90;
 
@@ -449,8 +455,8 @@ abstract class DuskTestCase extends BaseTestCase
      * l'échec, qui reste celui que la suite rapporte. Sur un parcours réussi,
      * une console illisible échoue comme avant.
      *
-     * Un navigateur dont le pilote ne répond plus n'est pas rendu à la classe
-     * (`rendreOuEcarterLesNavigateurs()`).
+     * Un navigateur dont le pilote ne répond plus n'est ni relevé ni rendu à
+     * la classe (`rendreOuEcarterLesNavigateurs()`).
      */
     #[\Override]
     public function browse(Closure $callback): void
@@ -460,36 +466,44 @@ abstract class DuskTestCase extends BaseTestCase
         try {
             $callback(...$browsers->all());
         } catch (Throwable $echecDuParcours) {
-            $this->rendreOuEcarterLesNavigateurs($browsers, $this->releverApresUnEchec($browsers, $echecDuParcours));
+            $this->releverApresUnEchec($browsers);
+            $this->rendreOuEcarterLesNavigateurs($browsers);
 
             throw $echecDuParcours;
         }
 
         try {
             $this->storeConsoleLogsFor($browsers);
-        } catch (Throwable $consoleIllisible) {
-            $this->rendreOuEcarterLesNavigateurs($browsers, $consoleIllisible instanceof WebDriverCurlException);
-
-            throw $consoleIllisible;
+        } finally {
+            $this->rendreOuEcarterLesNavigateurs($browsers);
         }
+    }
 
-        $this->rendreOuEcarterLesNavigateurs($browsers, false);
+    /**
+     * Le navigateur des parcours, dont les attentes tombent sur un ordre
+     * resté sans réponse plutôt que sur leur délai.
+     *
+     * @param  RemoteWebDriver  $driver
+     */
+    #[\Override]
+    protected function newBrowser($driver): NavigateurDesParcours
+    {
+        return new NavigateurDesParcours($driver);
     }
 
     /**
      * Relève la capture d'écran, la source et la console d'un parcours tombé,
-     * et dit si le pilote ne répond plus.
+     * tant que le pilote répond.
      *
-     * Un ordre resté sans réponse dans sa borne lève une
-     * `WebDriverCurlException`, que ce soit dans le parcours ou dans un relevé :
-     * chaque relevé suivant attendrait SECONDES_POUR_UN_ORDRE en vain, et n'est
-     * pas tenté.
+     * Derrière un ordre resté sans réponse, chaque relevé attendrait
+     * SECONDES_POUR_UN_ORDRE en vain, que l'ordre soit celui du parcours, que
+     * Dusk l'ait avalé ou que ce soit celui d'un relevé précédent : aucun
+     * n'est tenté.
      *
      * @param  Collection<array-key, mixed>  $browsers
      */
-    private function releverApresUnEchec(Collection $browsers, Throwable $echecDuParcours): bool
+    private function releverApresUnEchec(Collection $browsers): void
     {
-        $piloteMuet = $echecDuParcours instanceof WebDriverCurlException;
         $releves = [
             'capture d’écran' => function () use ($browsers): void {
                 $this->captureFailuresFor($browsers);
@@ -503,14 +517,35 @@ abstract class DuskTestCase extends BaseTestCase
         ];
 
         foreach ($releves as $quoi => $releve) {
-            if ($piloteMuet) {
-                break;
+            if ($this->ordresSansReponse($browsers) !== []) {
+                return;
             }
 
-            $piloteMuet = $this->tenterSansMasquerLEchec($quoi, $releve) instanceof WebDriverCurlException;
+            $this->tenterSansMasquerLEchec($quoi, $releve);
+        }
+    }
+
+    /**
+     * Les ordres restés sans réponse des pilotes de ces navigateurs.
+     *
+     * @param  Collection<array-key, mixed>  $browsers
+     * @return list<UnexpectedResponseException>
+     */
+    private function ordresSansReponse(Collection $browsers): array
+    {
+        $ordres = [];
+
+        foreach ($browsers as $navigateur) {
+            $ordre = $navigateur instanceof Browser && $navigateur->driver instanceof PiloteDesParcours
+                ? $navigateur->driver->ordreSansReponse()
+                : null;
+
+            if ($ordre !== null) {
+                $ordres[] = $ordre;
+            }
         }
 
-        return $piloteMuet;
+        return $ordres;
     }
 
     /**
@@ -519,20 +554,22 @@ abstract class DuskTestCase extends BaseTestCase
      *
      * Le `createBrowsersFor()` de Dusk ne démarre un navigateur que si la
      * classe n'en garde aucun : rendu à la classe, un navigateur muet fait
-     * tomber chacun des parcours suivants sur un ordre sans réponse, puis
-     * attendre sa fermeture en fin de classe. Écarté, il reçoit sa fermeture,
-     * bornée par SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET, et le parcours
-     * suivant en démarre un neuf (#2029). Mesuré avec un vrai navigateur au
-     * rendu figé, SECONDES_POUR_UN_ORDRE ramené à dix secondes : rendu à la
-     * classe, chaque parcours suivant tombait en trente secondes (sa visite,
-     * sa capture, sa console) ; écarté, le parcours figé paie sa capture et
-     * cinq secondes de fermeture, et le suivant passe en moins d'une seconde.
+     * tomber chacun des parcours suivants, puis attendre sa fermeture en fin
+     * de classe. Écarté, il reçoit sa fermeture, bornée par
+     * SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET, et le parcours suivant en
+     * démarre un neuf (#2029). Le signalement nomme l'ordre resté sans
+     * réponse, que Dusk a pu avaler. Mesuré avec un vrai navigateur au rendu
+     * figé, SECONDES_POUR_UN_ORDRE ramené à dix secondes : le parcours figé
+     * prend son ordre sans réponse et cinq secondes de fermeture, le suivant
+     * passe en moins d'une seconde.
      *
      * @param  Collection<array-key, mixed>  $browsers
      */
-    private function rendreOuEcarterLesNavigateurs(Collection $browsers, bool $piloteMuet): void
+    private function rendreOuEcarterLesNavigateurs(Collection $browsers): void
     {
-        if (! $piloteMuet) {
+        $ordresSansReponse = $this->ordresSansReponse($browsers);
+
+        if ($ordresSansReponse === []) {
             static::$browsers = $this->closeAllButPrimary($browsers);
 
             return;
@@ -541,8 +578,12 @@ abstract class DuskTestCase extends BaseTestCase
         static::$browsers = new Collection();
 
         $this->signaler(sprintf(
-            "%s : le pilote ne répond plus ; il ne reçoit plus que la fermeture de ses navigateurs, écartés, et le parcours suivant en démarre un neuf (#2029).\n",
+            "%s : le pilote ne répond plus (%s) ; il ne reçoit plus que la fermeture de ses navigateurs, écartés, et le parcours suivant en démarre un neuf (#2029).\n",
             $this->getCallerName(),
+            implode(' ; ', array_map(
+                static fn (UnexpectedResponseException $ordre): string => trim($ordre->getMessage()),
+                $ordresSansReponse,
+            )),
         ));
 
         $millisecondesPourFermer = static::SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET * 1000;
@@ -560,12 +601,11 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
-     * Tente un relevé ou une fermeture ; s'il échoue, le signale et rend son
-     * exception sans la lever.
+     * Tente un relevé ou une fermeture ; s'il échoue, le signale sans lever.
      *
      * @param  Closure(): void  $ordre
      */
-    private function tenterSansMasquerLEchec(string $quoi, Closure $ordre): ?Throwable
+    private function tenterSansMasquerLEchec(string $quoi, Closure $ordre): void
     {
         try {
             $ordre();
@@ -577,11 +617,7 @@ abstract class DuskTestCase extends BaseTestCase
                 $impossible::class,
                 trim($impossible->getMessage()),
             ));
-
-            return $impossible;
         }
-
-        return null;
     }
 
     /**
@@ -632,11 +668,12 @@ abstract class DuskTestCase extends BaseTestCase
      * Chaque attente du pilote est bornée : la page, le script, et la réponse
      * à chaque ordre. Un parcours bloqué tombe ainsi sur la ligne qui
      * attendait, au lieu de tenir l'éclat jusqu'aux délais par défaut.
+     * `PiloteDesParcours` retient l'ordre resté sans réponse.
      */
     #[\Override]
     protected function driver(): RemoteWebDriver
     {
-        return RemoteWebDriver::create(
+        return PiloteDesParcours::create(
             $this->urlDuPilote(),
             $this->capacitesDuNavigateur(),
             request_timeout_in_ms: static::SECONDES_POUR_UN_ORDRE * 1000,
