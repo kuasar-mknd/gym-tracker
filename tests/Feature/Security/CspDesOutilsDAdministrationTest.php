@@ -148,7 +148,7 @@ it('signe chaque script en ligne des pages du panneau ouvertes à un administrat
 
     expect(cspOutilsNoncesDuCorps($reponse))->toBe([cspOutilsNonceDeLEnTete($reponse)])
         ->and(cspOutilsScriptsEnLigneSansNonce($reponse))->toBe([]);
-})->with(['/backoffice', '/backoffice/profile']);
+})->with(['/backoffice', '/backoffice/profile', '/backoffice/apercu-du-diagnostic']);
 
 /**
  * Le détail d'une exception colore la pile par `window.highlight`, que
