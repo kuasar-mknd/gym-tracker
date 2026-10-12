@@ -29,6 +29,7 @@ declare(strict_types=1);
 use App\Actions\HandleSocialCallbackAction;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
+use App\Notifications\TentativeSurTonAdresse;
 use App\Support\ConnexionSociale\FournisseurApple;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Events\QueryExecuted;
@@ -45,6 +46,7 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 use Mockery\MockInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\AppleSimule;
+use Tests\Support\LienDeChangementDAdresseRecu;
 
 use function Pest\Laravel\assertAuthenticatedAs;
 use function Pest\Laravel\assertGuest;
@@ -429,11 +431,11 @@ it('refuse une identité liée sans preuve quand l’adresse a changé chez le f
 it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis la liaison, réinitialisation comprise', function (string $fournisseur): void {
     /*
      * Le compte naît par le fournisseur, puis son adresse devient celle d'une
-     * autre personne, depuis le profil. Cette personne ne peut ni s'inscrire
-     * (l'adresse est prise) ni passer par un fournisseur (le compte n'est pas
-     * vérifié) : elle reprend le compte par le lien de réinitialisation, puis
-     * le vérifie. L'identité qui a ouvert le compte ne doit plus l'ouvrir : sa
-     * liaison était prouvée, mais sur l'adresse que le compte a quittée.
+     * autre personne, depuis le profil : le lien envoyé à cette adresse est
+     * suivi depuis la session du compte. Cette personne reprend le compte par
+     * le lien de réinitialisation. L'identité qui a ouvert le compte ne doit
+     * plus l'ouvrir : sa liaison était prouvée, mais sur l'adresse que le
+     * compte a quittée.
      */
     Notification::fake();
     $identifiant = identiteSocialeDe($fournisseur);
@@ -462,9 +464,11 @@ it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis
         'email' => 'dominique.petit@example.org',
         'current_password' => 'Mot-de-passe-du-profil-42!',
     ])->assertSessionHasNoErrors();
+    get(LienDeChangementDAdresseRecu::pour('dominique.petit@example.org'))->assertRedirect(route('profile.edit'));
 
+    // Le lien prouve la nouvelle adresse, pas la liaison faite sur l'ancienne.
     expect($compte->refresh()->email)->toBe('dominique.petit@example.org');
-    expect($compte->hasVerifiedEmail())->toBeFalse();
+    expect($compte->hasVerifiedEmail())->toBeTrue();
     expect($compte->liaison_prouvee_le)->toBeNull();
     auth()->guard('web')->logout();
 
@@ -818,8 +822,9 @@ it('cherche l’identité et l’adresse par paramètres liés, jamais dans le t
  * l'inscription.
  */
 
-it('ne propose pas l’inscription avec une adresse qu’un compte occupe déjà', function (string $adresseDuCompte, string $adresseRendue): void {
-    compteSocialExistant($adresseDuCompte);
+it('ne propose pas l’inscription avec une adresse qu’un compte occupe déjà', function (string $adresseDuCompte, string $adresseRendue, bool $inscriptionRecevable): void {
+    Notification::fake();
+    $compte = compteSocialExistant($adresseDuCompte);
 
     Socialite::shouldReceive('driver')->with('google')->andReturn(
         fournisseurSocialQuiRend(retourSocialDe('google', identiteSocialeDe('google'), $adresseRendue)),
@@ -829,13 +834,24 @@ it('ne propose pas l’inscription avec une adresse qu’un compte occupe déjà
         ->assertRedirect(route('login'))
         ->assertSessionHas('status', refusSocialDAdresseProche('google'));
 
-    // Ce que le message ne propose pas, parce que la base le refuse.
-    inscriptionSocialeAvecLAdresse($adresseRendue)->assertSessionHasErrors('email');
+    // Ce que le message ne propose pas, parce que la base n'en ferait pas un
+    // compte : l'adresse accentuée est refusée, et l'adresse ASCII, qui répond
+    // comme une adresse libre, ne fait que prévenir le titulaire du compte.
+    $inscription = inscriptionSocialeAvecLAdresse($adresseRendue);
+
+    if ($inscriptionRecevable) {
+        $inscription->assertSessionHasNoErrors()->assertRedirect(route('login'));
+        Notification::assertSentTo($compte, TentativeSurTonAdresse::class);
+    } else {
+        $inscription->assertSessionHasErrors('email');
+        Notification::assertNotSentTo($compte, TentativeSurTonAdresse::class);
+    }
+
     assertGuest();
     expect(User::query()->count())->toBe(1);
 })->with([
-    'l’adresse rendue en ASCII, le compte accentué' => ['jéan.dupont@example.org', 'jean.dupont@example.org'],
-    'l’adresse rendue accentuée, le compte en ASCII' => ['jean.dupont@example.org', 'jéan.dupont@example.org'],
+    'l’adresse rendue en ASCII, le compte accentué' => ['jéan.dupont@example.org', 'jean.dupont@example.org', true],
+    'l’adresse rendue accentuée, le compte en ASCII' => ['jean.dupont@example.org', 'jéan.dupont@example.org', false],
 ]);
 
 /*
@@ -878,8 +894,11 @@ it('renvoie au mot de passe oublié un compte lié à une autre identité, et le
         ->assertRedirect(route('login'))
         ->assertSessionHas('status', refusSocialDeCompteDejaLie('google'));
 
-    // L'inscription, que le message ne propose plus, est refusée…
-    inscriptionSocialeAvecLAdresse('camille.martin@example.org')->assertSessionHasErrors('email');
+    // L'inscription, que le message ne propose plus, répond comme pour une
+    // adresse libre, ne crée rien et prévient le titulaire…
+    inscriptionSocialeAvecLAdresse('camille.martin@example.org')->assertSessionHasNoErrors()->assertRedirect(route('login'));
+    expect(User::query()->count())->toBe(1);
+    Notification::assertSentTo($compte, TentativeSurTonAdresse::class);
 
     // … et le mot de passe oublié, qu'il propose, aboutit.
     post(route('password.email'), ['email' => 'camille.martin@example.org'])->assertSessionHasNoErrors();

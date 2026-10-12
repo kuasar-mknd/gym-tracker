@@ -1,0 +1,242 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Models\Admin;
+use App\Models\User;
+use App\Support\DureeDesReponsesDAuthentification;
+use Filament\Auth\Pages\Login as ConnexionDuPanneau;
+use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Timebox;
+use Livewire\Livewire;
+use Tests\Support\DureeSimulee;
+use Tests\Support\TimeboxEspionnee;
+
+/*
+ * Une réponse d'authentification dure le même temps, que l'adresse ait un
+ * compte ou non.
+ *
+ * Mesuré sur main, au coût bcrypt de production : une connexion ratée durait
+ * 207 ms pour une adresse inconnue et 280 à 300 ms pour une adresse connue
+ * (la vérification du mot de passe dépassait la Timebox de 200 ms de la
+ * garde), une inscription 6 ms pour une adresse prise et 300 ms pour une
+ * adresse libre, et la connexion du panneau 250 ms contre 350 ms pour un
+ * administrateur. Toutes passent désormais par le plancher commun
+ * (`DureeDesReponsesDAuthentification`, `auth.timebox_duration`), une seconde
+ * par défaut, au-dessus de bcrypt. Le sommeil est simulé (`DureeSimulee`) :
+ * la durée vue du client est le temps passé plus le sommeil demandé.
+ */
+
+/**
+ * Le coût bcrypt que `.env.example` donne à la production, et que phpunit.xml
+ * baisse à 4.
+ */
+function dureeAuthentificationCoutDeProduction(): int
+{
+    if (preg_match('/^BCRYPT_ROUNDS=(\d+)$/m', File::get(base_path('.env.example')), $cout) !== 1) {
+        throw new RuntimeException('.env.example ne donne plus BCRYPT_ROUNDS.');
+    }
+
+    return (int) $cout[1];
+}
+
+/**
+ * Le plancher que donnerait `config/auth.php` avec cette valeur
+ * d'`AUTH_TIMEBOX_DURATION` (null : absente).
+ */
+function dureeAuthentificationPlancherAvec(?string $valeur): mixed
+{
+    $avant = [$_SERVER['AUTH_TIMEBOX_DURATION'] ?? null, $_ENV['AUTH_TIMEBOX_DURATION'] ?? null, getenv('AUTH_TIMEBOX_DURATION')];
+
+    try {
+        unset($_SERVER['AUTH_TIMEBOX_DURATION'], $_ENV['AUTH_TIMEBOX_DURATION']);
+        putenv('AUTH_TIMEBOX_DURATION');
+
+        if ($valeur !== null) {
+            $_SERVER['AUTH_TIMEBOX_DURATION'] = $_ENV['AUTH_TIMEBOX_DURATION'] = $valeur;
+            putenv('AUTH_TIMEBOX_DURATION='.$valeur);
+        }
+
+        /** @var array<string, mixed> $configuration */
+        $configuration = require config_path('auth.php');
+
+        return $configuration['timebox_duration'] ?? null;
+    } finally {
+        unset($_SERVER['AUTH_TIMEBOX_DURATION'], $_ENV['AUTH_TIMEBOX_DURATION']);
+        putenv('AUTH_TIMEBOX_DURATION');
+
+        if ($avant[0] !== null) {
+            $_SERVER['AUTH_TIMEBOX_DURATION'] = $avant[0];
+        }
+
+        if ($avant[1] !== null) {
+            $_ENV['AUTH_TIMEBOX_DURATION'] = $avant[1];
+        }
+
+        if (is_string($avant[2])) {
+            putenv('AUTH_TIMEBOX_DURATION='.$avant[2]);
+        }
+    }
+}
+
+it('prend une seconde par défaut, et la valeur numérique d’AUTH_TIMEBOX_DURATION', function (): void {
+    expect(DureeDesReponsesDAuthentification::PLANCHER_PAR_DEFAUT_MICROSECONDES)->toBe(1_000_000)
+        ->and(dureeAuthentificationPlancherAvec(null))->toBe(1_000_000)
+        ->and(dureeAuthentificationPlancherAvec(''))->toBe(1_000_000)
+        ->and(dureeAuthentificationPlancherAvec('une seconde'))->toBe(1_000_000)
+        ->and(dureeAuthentificationPlancherAvec('2000000'))->toBe(2_000_000)
+        ->and(dureeAuthentificationPlancherAvec('0'))->toBe(0);
+
+    // phpunit.xml le met à 0, et la garde comme le courtier le lisent.
+    expect(DureeDesReponsesDAuthentification::microsecondes())->toBe(0);
+    config(['auth.timebox_duration' => 1_234_567]);
+    expect(DureeDesReponsesDAuthentification::microsecondes())->toBe(1_234_567);
+});
+
+it('dépasse un hachage et une vérification bcrypt au coût de production', function (): void {
+    config(['hashing.bcrypt.rounds' => dureeAuthentificationCoutDeProduction()]);
+    Hash::forgetDrivers();
+
+    $pire = 0.0;
+    $empreinte = '';
+
+    foreach (range(1, 3) as $_tour) {
+        $debut = hrtime(true);
+        $empreinte = Hash::make('Un-mot-de-passe-solide-42!');
+        Hash::check('pas-le-bon', $empreinte);
+        $pire = max($pire, (hrtime(true) - $debut) / 1_000 / 2);
+    }
+
+    expect(password_get_info($empreinte)['options']['cost'] ?? null)->toBe(dureeAuthentificationCoutDeProduction())
+        ->and($pire)->toBeLessThan(DureeDesReponsesDAuthentification::PLANCHER_PAR_DEFAUT_MICROSECONDES);
+});
+
+/**
+ * Chaque réponse d'authentification qui ne doit rien dire d'une adresse :
+ * une fonction qui prépare le cas puis rend la requête à mesurer.
+ *
+ * @return array<string, array{0: Closure(): (Closure(): mixed)}>
+ */
+function dureeAuthentificationCas(): array
+{
+    $inscription = static fn (string $adresse): Closure => static fn (): mixed => test()->post(route('register'), [
+        'name' => 'Camille',
+        'email' => $adresse,
+        'password' => 'Un-mot-de-passe-solide-42!',
+        'password_confirmation' => 'Un-mot-de-passe-solide-42!',
+    ])->assertRedirect(route('login'));
+    $connexion = static fn (string $adresse, string $motDePasse): Closure => static fn (): mixed => test()->post(route('login'), [
+        'email' => $adresse,
+        'password' => $motDePasse,
+    ])->assertSessionHasErrors('email');
+    $oubli = static fn (string $adresse): Closure => static fn (): mixed => test()->post(route('password.email'), ['email' => $adresse])
+        ->assertSessionHasNoErrors();
+    $profil = static fn (User $compte, string $adresse): Closure => static fn (): mixed => test()->actingAs($compte)->patch(route('profile.update'), [
+        'name' => 'Camille',
+        'email' => $adresse,
+        'current_password' => 'password',
+    ])->assertSessionHasNoErrors();
+    $panneau = static fn (string $adresse): Closure => static function () use ($adresse): mixed {
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        return Livewire::test(ConnexionDuPanneau::class)
+            ->fillForm(['email' => $adresse, 'password' => 'pas-le-bon-mot-de-passe'])
+            ->call('authenticate')
+            ->assertHasFormErrors(['email']);
+    };
+
+    return [
+        'inscription, adresse libre' => [static fn (): Closure => $inscription('libre@example.org')],
+        'inscription, adresse prise' => [static function () use ($inscription): Closure {
+            User::factory()->create(['email' => 'prise@example.org']);
+
+            return $inscription('prise@example.org');
+        }],
+        'connexion, adresse inconnue' => [static fn (): Closure => $connexion('personne@example.org', 'password')],
+        'connexion, mauvais mot de passe' => [static function () use ($connexion): Closure {
+            User::factory()->create(['email' => 'prise@example.org']);
+
+            return $connexion('prise@example.org', 'pas-le-bon');
+        }],
+        'connexion, compte en attente sans son lien' => [static function () use ($connexion): Closure {
+            User::factory()->enAttente()->create(['email' => 'en-attente@example.org']);
+
+            return $connexion('en-attente@example.org', 'password');
+        }],
+        'mot de passe oublié, adresse inconnue' => [static fn (): Closure => $oubli('personne@example.org')],
+        'mot de passe oublié, adresse connue' => [static function () use ($oubli): Closure {
+            User::factory()->create(['email' => 'prise@example.org']);
+
+            return $oubli('prise@example.org');
+        }],
+        'réinitialisation, jeton faux d’un compte' => [static function (): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+            Password::createToken($compte);
+
+            return static fn (): mixed => test()->post(route('password.store'), [
+                'token' => 'un-jeton-quelconque',
+                'email' => 'prise@example.org',
+                'password' => 'Un-nouveau-mot-de-passe-2026!',
+                'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
+            ])->assertSessionHasErrors('email');
+        }],
+        'profil, nouvelle adresse libre' => [static fn (): Closure => $profil(User::factory()->create(), 'libre@example.org')],
+        'profil, nouvelle adresse prise' => [static function () use ($profil): Closure {
+            User::factory()->create(['email' => 'prise@example.org']);
+
+            return $profil(User::factory()->create(), 'prise@example.org');
+        }],
+        'panneau, adresse inconnue' => [static fn (): Closure => $panneau('personne@example.org')],
+        'panneau, administrateur' => [static function () use ($panneau): Closure {
+            Admin::factory()->create(['email' => 'admin@example.org']);
+
+            return $panneau('admin@example.org');
+        }],
+    ];
+}
+
+it('dure au moins le plancher commun, sommeil compris', function (Closure $preparer): void {
+    Notification::fake();
+    $duree = DureeSimulee::demarrer();
+    /** @var Closure(): mixed $requete */
+    $requete = $preparer();
+    Cache::flush();
+
+    $mesure = $duree->mesurer($requete);
+
+    expect($mesure['total'])->toBeGreaterThanOrEqual($duree->plancher)
+        ->and($mesure['dormi'])->toBeGreaterThan(0.0)
+        ->and($mesure['reel'])->toBeLessThan($duree->plancher);
+})->with(dureeAuthentificationCas());
+
+it('passe par une Timebox réglée sur le plancher commun', function (Closure $preparer): void {
+    Notification::fake();
+    $duree = DureeSimulee::demarrer(2_345_678);
+    $durees = new ArrayObject();
+    app()->bind(Timebox::class, static fn (): Timebox => new TimeboxEspionnee($durees));
+    /** @var Closure(): mixed $requete */
+    $requete = $preparer();
+    Cache::flush();
+
+    $duree->mesurer($requete);
+
+    expect($durees->getArrayCopy())->not->toBeEmpty()
+        ->and(array_unique($durees->getArrayCopy()))->toBe([2_345_678]);
+})->with(dureeAuthentificationCas());
+
+it('rend la main sans attendre à une connexion réussie', function (): void {
+    $duree = DureeSimulee::demarrer();
+    User::factory()->create(['email' => 'membre@example.org']);
+
+    $mesure = $duree->mesurer(static fn (): mixed => test()->post(route('login'), [
+        'email' => 'membre@example.org',
+        'password' => 'password',
+    ])->assertRedirect(route('dashboard')));
+
+    expect($mesure['dormi'])->toBe(0.0);
+});
