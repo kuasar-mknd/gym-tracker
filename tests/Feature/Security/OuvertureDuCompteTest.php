@@ -35,8 +35,10 @@ use function Pest\Laravel\postJson;
  * son adresse le lien qui l'ouvre. Le lien marque la session du navigateur
  * qui le suit, puis mène à la connexion : c'est la connexion, avec le bon mot
  * de passe et cette marque, qui ouvre le compte. Sans la marque, le bon mot de
- * passe ne connecte pas et dit de suivre le lien ; un mauvais mot de passe
- * répond comme une adresse inconnue. La réinitialisation du mot de passe et la
+ * passe ne connecte pas et renvoie le lien, avec le refus de tout autre
+ * essai, comme un mauvais mot de passe ou une adresse inconnue : un refus à
+ * part dirait à qui vient de s'inscrire avec ce mot de passe que l'adresse
+ * était libre. La réinitialisation du mot de passe et la
  * connexion par un fournisseur qui garantit l'adresse prouvent l'adresse
  * aussi : elles ouvrent le compte, et le rendent au titulaire de l'adresse
  * quand l'inscrit était un autre. Les comptes d'avant la colonne, vérifiés ou
@@ -129,41 +131,41 @@ it('ouvre le compte quand le lien a été suivi, puis le bon mot de passe donné
     Event::assertDispatched(Verified::class, fn (Verified $evenement): bool => $evenement->user instanceof User && $evenement->user->is($compte));
 });
 
-it('ne connecte pas un compte en attente sans le lien, le dit, et renvoie le lien une fois par quart d’heure', function (): void {
+it('ne connecte pas un compte en attente sans le lien, refuse comme pour tout autre essai, et renvoie le lien une fois par quart d’heure', function (): void {
     Notification::fake();
     $compte = ouvertureCompteEnAttente();
 
     ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())
         ->assertRedirect(route('login'))
-        ->assertSessionHasErrors(['email' => __('auth.compte_en_attente')]);
+        ->assertSessionHasErrors(['email' => __('auth.failed')]);
 
     assertGuest();
     Notification::assertSentToTimes($compte, LienDOuvertureDuCompte::class, 1);
 
     $this->travel(ConnecterLeCompte::SECONDES_ENTRE_DEUX_LIENS - 1)->seconds();
-    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.compte_en_attente')]);
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
 
     Notification::assertSentToTimes($compte, LienDOuvertureDuCompte::class, 1);
 
     $this->travel(2)->seconds();
-    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.compte_en_attente')]);
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
 
     Notification::assertSentToTimes($compte, LienDOuvertureDuCompte::class, 2);
     expect($compte->refresh()->estEnAttente())->toBeTrue();
 });
 
-it('répond à un mauvais mot de passe sur un compte en attente comme à une adresse inconnue', function (): void {
+it('répond au bon comme au mauvais mot de passe d’un compte en attente sans le lien, comme à une adresse inconnue', function (): void {
     Notification::fake();
     $this->freezeSecond();
-    ouvertureCompteEnAttente();
+    $compte = ouvertureCompteEnAttente();
     User::factory()->create(['email' => 'ouvert@example.org']);
 
     // L'adresse tapée revient dans le champ (`_old_input`) : seule différence attendue.
-    $lire = static function (string $adresse): array {
+    $lire = static function (string $adresse, string $motDePasse = 'pas-le-bon-mot-de-passe'): array {
         test()->flushSession();
         Cache::flush();
 
-        $lu = CeQueLeClientLit::de(ouvertureSeConnecter($adresse, 'pas-le-bon-mot-de-passe'), route('login'));
+        $lu = CeQueLeClientLit::de(ouvertureSeConnecter($adresse, $motDePasse), route('login'));
 
         expect($lu['session']['_old_input'] ?? null)->toBe(['email' => $adresse]);
         $lu['session']['_old_input'] = ['email' => 'l’adresse tapée'];
@@ -177,6 +179,10 @@ it('répond à un mauvais mot de passe sur un compte en attente comme à une adr
         ->and($lire('inscrit@example.org'))->toBe($inconnue)
         ->and($lire('ouvert@example.org'))->toBe($inconnue);
     Notification::assertNothingSent();
+
+    expect($lire('inscrit@example.org', ouvertureMotDePasse()))->toBe($inconnue);
+    Notification::assertSentToTimes($compte, LienDOuvertureDuCompte::class, 1);
+    Notification::assertSentTimes(LienDOuvertureDuCompte::class, 1);
     assertGuest();
 });
 
@@ -191,7 +197,7 @@ it('refuse un lien d’ouverture expiré ou altéré', function (): void {
     $this->travel(LiensDesCourriels::minutesDeValiditeDUnLien() + 1)->minutes();
     get($lien)->assertForbidden();
 
-    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.compte_en_attente')]);
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
     assertGuest();
 });
 
@@ -201,16 +207,16 @@ it('n’ouvre pas un compte par le lien d’un autre, ni par une marque échue o
     $autre = ouvertureCompteEnAttente('autre@example.org');
 
     get(LiensDesCourriels::lienDOuvertureDuCompte($autre))->assertRedirect(route('login'));
-    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.compte_en_attente')]);
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
 
     // Une marque posée pour le bon compte, mais sur une autre adresse.
     session([ConnecterLeCompte::MARQUE_DU_LIEN_SUIVI => ['compte' => $compte->id, 'empreinte' => sha1('autre@example.org'), 'expire' => now()->addHour()->getTimestamp()]]);
-    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.compte_en_attente')]);
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
 
     // Le bon lien, puis une connexion après l'échéance de la marque.
     get(LiensDesCourriels::lienDOuvertureDuCompte($compte))->assertRedirect(route('login'));
     $this->travel(LiensDesCourriels::minutesDeValiditeDUnLien() + 1)->minutes();
-    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.compte_en_attente')]);
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
 
     assertGuest();
     expect($compte->refresh()->estEnAttente())->toBeTrue()

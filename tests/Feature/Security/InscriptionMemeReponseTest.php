@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\LienDOuvertureDuCompte;
 use App\Notifications\TentativeSurTonAdresse;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -94,6 +95,57 @@ it('répond à l’identique pour une adresse libre, prise, prise par un compte 
         ->and(inscriptionCeQueLeClientLit('prise@example.org'))->toBe($libre)
         ->and(inscriptionCeQueLeClientLit('en-attente@example.org'))->toBe($libre)
         ->and(inscriptionCeQueLeClientLit('ancien@example.org'))->toBe($libre);
+});
+
+/**
+ * Ce que lit le client de la connexion qui suit son inscription, avec le mot
+ * de passe qu'il vient d'y choisir, une fois le job passé. L'adresse tapée
+ * revient dans le champ (`_old_input`) : elle se remplace par un repère.
+ *
+ * @return array{statut: int, entetes: array<mixed>, cookies: list<array<string, mixed>>, corps: string|false, session: array<mixed>, page: string}
+ */
+function inscriptionPuisConnexion(string $adresse): array
+{
+    inscriptionEnvoyer($adresse)->assertRedirect(route('login'));
+
+    test()->flushSession();
+    Cache::flush();
+    Auth::forgetGuards();
+
+    $lu = CeQueLeClientLit::de(
+        test()->from(route('login'))->post(route('login'), ['email' => $adresse, 'password' => 'Un-mot-de-passe-solide-42!']),
+        route('login'),
+    );
+    assertGuest();
+
+    expect($lu['session']['_old_input'] ?? null)->toBe(['email' => $adresse]);
+    $lu['session']['_old_input'] = ['email' => 'l’adresse tapée'];
+
+    return $lu;
+}
+
+/*
+ * Inscrite libre, l'adresse a désormais un compte en attente dont le client
+ * connaît le mot de passe ; prise, elle a le compte d'un autre, que ce mot de
+ * passe n'ouvre pas. La connexion qui suit ne doit pas les distinguer.
+ */
+it('ne le dit pas non plus à la connexion qui suit, avec le mot de passe choisi à l’inscription', function (): void {
+    Notification::fake();
+    $this->freezeSecond();
+
+    User::factory()->create(['email' => 'prise@example.org']);
+    User::factory()->enAttente()->create(['email' => 'en-attente@example.org']);
+    User::factory()->unverified()->create(['email' => 'ancien@example.org']);
+
+    $libre = inscriptionPuisConnexion('libre@example.org');
+
+    expect(User::query()->where('email', 'libre@example.org')->sole()->estEnAttente())->toBeTrue()
+        ->and($libre['statut'])->toBe(302)
+        ->and($libre['entetes']['Location'] ?? null)->toBe([route('login')])
+        ->and($libre['session']['errors'] ?? null)->toBe(['default' => ['email' => [__('auth.failed')]]])
+        ->and(inscriptionPuisConnexion('prise@example.org'))->toBe($libre)
+        ->and(inscriptionPuisConnexion('en-attente@example.org'))->toBe($libre)
+        ->and(inscriptionPuisConnexion('ancien@example.org'))->toBe($libre);
 });
 
 it('met l’inscription en file sans lire les comptes, avec l’empreinte du mot de passe et non le mot de passe', function (): void {

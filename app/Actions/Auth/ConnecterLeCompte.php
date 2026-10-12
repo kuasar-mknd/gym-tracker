@@ -26,14 +26,17 @@ use Illuminate\Support\Facades\RateLimiter;
  * autre a inscrite n'ouvre donc rien à ce dernier, comme la vérification de
  * Laravel, qui se fait depuis une session.
  *
- * Sans la marque, le bon mot de passe ne connecte pas : la réponse le dit
- * (`auth.compte_en_attente`), et un nouveau lien part, au plus un par quart
- * d'heure et par compte. Il faut connaître le mot de passe pour lire cette
- * réponse. Un mauvais mot de passe sur un compte en attente répond, lui,
- * comme une adresse inconnue (`auth.failed`), dans le même temps : la garde
- * vérifie l'empreinte dans sa Timebox, puis `AuthenticatedSessionController`
- * pose le plancher commun. Un compte qui n'est pas en attente, dont les
- * comptes d'avant la colonne, vérifiés ou non, se connecte comme avant.
+ * Sans la marque, le bon mot de passe ne connecte pas, et un nouveau lien
+ * part, au plus un par quart d'heure et par compte. Le refus est celui de
+ * tout autre (`auth.failed`, écrit pour les deux cas) : n'importe qui
+ * s'inscrit avec une adresse et le mot de passe de son choix, puis se
+ * connecte avec lui ; un refus propre au compte en attente lui dirait que
+ * l'adresse était libre, puisqu'une adresse prise refuse ce mot de passe.
+ * Adresse inconnue, mauvais mot de passe et bon mot de passe sans la marque
+ * répondent donc de même, dans le même temps : la garde vérifie l'empreinte
+ * dans sa Timebox, puis `AuthenticatedSessionController` pose le plancher
+ * commun. Un compte qui n'est pas en attente, dont les comptes d'avant la
+ * colonne, vérifiés ou non, se connecte comme avant.
  */
 final readonly class ConnecterLeCompte
 {
@@ -48,11 +51,11 @@ final readonly class ConnecterLeCompte
     public const int SECONDES_ENTRE_DEUX_LIENS = 900;
 
     /**
-     * Rend null quand le compte est connecté, et sinon le message du refus.
+     * Le compte est-il connecté ? Un refus, quel qu'il soit, rend faux.
      *
      * @param  array<string, string>  $identifiants
      */
-    public function execute(array $identifiants, bool $seSouvenir, Session $session): ?string
+    public function execute(array $identifiants, bool $seSouvenir, Session $session): bool
     {
         $compteRetenu = null;
 
@@ -80,24 +83,28 @@ final readonly class ConnecterLeCompte
             $seSouvenir,
         );
 
-        if ($connecte) {
-            return null;
+        if ($compteRetenu instanceof User) {
+            $this->renvoyerLeLien($compteRetenu);
         }
 
-        if (! $compteRetenu instanceof User) {
-            return trans('auth.failed');
-        }
+        return $connecte;
+    }
 
+    /**
+     * Renvoie le lien d'ouverture au compte en attente dont on vient de donner
+     * le bon mot de passe, au plus un par quart d'heure : rien n'en paraît
+     * dans la réponse.
+     */
+    private function renvoyerLeLien(User $compte): void
+    {
         RateLimiter::attempt(
-            'lien-d-ouverture:'.$compteRetenu->id,
+            'lien-d-ouverture:'.$compte->id,
             1,
-            static function () use ($compteRetenu): void {
-                $compteRetenu->sendEmailVerificationNotification();
+            static function () use ($compte): void {
+                $compte->sendEmailVerificationNotification();
             },
             self::SECONDES_ENTRE_DEUX_LIENS,
         );
-
-        return trans('auth.compte_en_attente');
     }
 
     /**

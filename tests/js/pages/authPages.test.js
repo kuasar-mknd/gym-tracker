@@ -207,20 +207,6 @@ describe('Login', () => {
         expect(mountPage(Login).text()).not.toContain('Lien envoyé.')
     })
 
-    it('montre sous l’email le refus d’un compte qui attend encore son lien', async () => {
-        const attente =
-            'Ton compte n’est pas encore ouvert : suis le lien envoyé à ton adresse, puis connecte-toi sur cet appareil.'
-        const wrapper = mountPage(Login)
-
-        wrapper.vm.form.errors = { email: attente }
-        await nextTick()
-
-        const email = wrapper.find('input[type="email"]')
-
-        expect(email.attributes('aria-invalid')).toBe('true')
-        expect(wrapper.text()).toContain(attente)
-    })
-
     it('n’offre aucun fournisseur tant que le serveur ne l’a pas dit', () => {
         // Fail closed, not open. This used to default each provider to enabled,
         // and since the flag was never shared at all the default won every time

@@ -31,8 +31,9 @@ class LoginRequest extends FormRequest
 
     /**
      * Connecte le compte par `ConnecterLeCompte`, qui retient un compte en
-     * attente dont le lien d'ouverture n'a pas été suivi. Tout refus compte un
-     * essai sous la clef de l'adresse et de l'adresse IP.
+     * attente dont le lien d'ouverture n'a pas été suivi. Tout refus a le même
+     * message, `auth.failed`, et compte un essai sous la clef de l'adresse et
+     * de l'adresse IP.
      *
      * @throws \Illuminate\Validation\ValidationException
      */
@@ -43,13 +44,11 @@ class LoginRequest extends FormRequest
         /** @var array<string, string> $identifiants */
         $identifiants = $this->only('email', 'password');
 
-        $refus = app(ConnecterLeCompte::class)->execute($identifiants, $this->boolean('remember'), $this->session());
-
-        if ($refus !== null) {
+        if (! app(ConnecterLeCompte::class)->execute($identifiants, $this->boolean('remember'), $this->session())) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => $refus,
+                'email' => trans('auth.failed'),
             ]);
         }
 
