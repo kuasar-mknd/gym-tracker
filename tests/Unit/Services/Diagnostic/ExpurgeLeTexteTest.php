@@ -120,6 +120,14 @@ it('ne garde un nom qu’à la place que lui réserve sa forme', function (strin
         "SQLSTATE[42000]: Syntax error: 1064 near 'secret de Jean",
         "SQLSTATE[42000]: Syntax error: 1064 near '?'",
     ],
+    'une citation coupée après une autre' => [
+        "SQLSTATE[42000]: Syntax error: 1064 near 'abc' and 'secret de Jean",
+        "SQLSTATE[42000]: Syntax error: 1064 near '?'",
+    ],
+    'une valeur à apostrophe dans une forme qui ne finit pas par une apostrophe' => [
+        "SQLSTATE[HY000]: General error: 1366 Incorrect integer value: 'O'Brien' for column 'user_id' at row 1",
+        "SQLSTATE[HY000]: General error: 1366 Incorrect integer value: '?'",
+    ],
     'une connexion refusée' => [
         'SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, Host: 192.0.2.10, Port: 3306, Database: gym, SQL: select * from `sessions` where `id` = abc)',
         'SQLSTATE[HY000] [2002] Connection refused (select `sessions`)',

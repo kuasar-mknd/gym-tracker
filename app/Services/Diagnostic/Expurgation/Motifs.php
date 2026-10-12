@@ -56,6 +56,14 @@ final class Motifs
         return $occurrences;
     }
 
+    /**
+     * Lève si la dernière expression appelée, ailleurs qu'ici, a échoué.
+     */
+    public static function verifierLeDernierAppel(): void
+    {
+        self::verifier('');
+    }
+
     private static function verifier(?string $resultat): string
     {
         if ($resultat === null || preg_last_error() !== PREG_NO_ERROR) {
