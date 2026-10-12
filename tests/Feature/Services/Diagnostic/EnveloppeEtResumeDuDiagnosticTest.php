@@ -184,9 +184,12 @@ it('détaille la première tâche quand aucune n’a échoué, et rien quand il 
  * La forme des requêtes, pas leur nombre de lignes : une lecture sans borne
  * ne se verrait pas dans le résumé, qui compte au plus 5 000 lignes
  * (`LecturesBornees::bilan()`), mais lirait toute la table
- * (`.ai/rules/services.md`).
+ * (`.ai/rules/services.md`). Une colonne de texte libre (message, page,
+ * pile, chemin, trace) n'est lue entière que d'une ligne : 5 000 piles
+ * d'erreur navigateur, lues pour n'en montrer qu'une, dépassaient la mémoire
+ * d'une requête.
  */
-it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans limite', function (): void {
+it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans limite, ni texte lu de plus d’une ligne', function (): void {
     $compte = User::factory()->create();
     ExceptionEnregistree::query()->create(['type' => RuntimeException::class, 'code' => '0', 'message' => 'boum', 'file' => 'f', 'line' => 1, 'trace' => [], 'method' => 'GET', 'path' => '/']);
     DB::table('failed_jobs')->insert(['uuid' => (string) Str::uuid(), 'connection' => 'database', 'queue' => 'default', 'payload' => '{}', 'exception' => 'RuntimeException: boum', 'failed_at' => now()]);
@@ -202,9 +205,12 @@ it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans 
     DB::disableQueryLog();
 
     $sansBorne = array_filter($lectures, static fn (string $requete): bool => preg_match('/ limit \d+$|`id` in \(\?(?:, \?){0,49}\)$/', $requete) !== 1);
+    $texteEntier = array_values(array_filter($lectures, static fn (string $requete): bool => preg_match('/`(?:message|url|pile|path|trace)`/', $requete) === 1));
 
-    expect($lectures)->toHaveCount(11)
+    expect($lectures)->toHaveCount(12)
         ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, '*')))->toBe([])
         ->and($sansBorne)->toBe([])
-        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'limit '.(LecturesBornees::LIGNES_AU_PLUS + 1))))->toHaveCount(3);
+        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'limit '.(LecturesBornees::LIGNES_AU_PLUS + 1))))->toHaveCount(3)
+        ->and($texteEntier)->toHaveCount(2)
+        ->and(array_filter($texteEntier, static fn (string $requete): bool => ! str_ends_with($requete, ' limit 1')))->toBe([]);
 });

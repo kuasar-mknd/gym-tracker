@@ -24,8 +24,10 @@ use stdClass;
  * pousse pas son erreur devant celle de plusieurs. Les erreurs d'un compte
  * supprimé ou non vérifié ne sont pas lues. Le détail d'un groupe ajoute,
  * avec `TexteBrut`, le message, la page sans sa chaîne de requête et les
- * premières lignes de la pile de sa dernière occurrence, sous `non_fiable`.
- * Jamais le compte, l'URL complète ni la chaîne d'agent.
+ * premières lignes de la pile de sa dernière occurrence, sous `non_fiable`,
+ * lus de cette seule ligne : le groupe en compte jusqu'à 5 000, et leurs
+ * piles ne tiendraient pas dans la mémoire d'une requête. Jamais le compte,
+ * l'URL complète ni la chaîne d'agent.
  */
 final class ProjectionDesErreursNavigateur
 {
@@ -63,14 +65,13 @@ final class ProjectionDesErreursNavigateur
     {
         $lignes = $this->erreurs($fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS))
             ->select(self::COLONNES)
-            ->when($texteBrut, static fn (Builder $requete): Builder => $requete->addSelect(['e.message', 'e.url', 'e.pile']))
             ->where('e.empreinte', Vocabulaire::forme(Vocabulaire::EMPREINTE, $empreinte))
             ->limit(LecturesBornees::LIGNES_AU_PLUS)
             ->get();
 
         return match ($lignes->isEmpty()) {
             true => null,
-            false => [...$this->regrouper($lignes)->firstOrFail(), ...$this->texte($lignes->firstOrFail(), $texteBrut)],
+            false => [...$this->regrouper($lignes)->firstOrFail(), ...$this->texte($lignes->firstOrFail()->id, $texteBrut)],
         };
     }
 
@@ -111,19 +112,32 @@ final class ProjectionDesErreursNavigateur
     }
 
     /**
+     * Sous `TexteBrut`, le texte de la dernière occurrence, lu de sa seule
+     * ligne.
+     *
      * @return array<string, mixed>
      */
-    private function texte(stdClass $derniere, bool $texteBrut): array
+    private function texte(mixed $identifiant, bool $texteBrut): array
     {
         return match ($texteBrut) {
-            true => [
-                'non_fiable' => [
-                    'message' => new TexteNonFiable(ValeurLue::texte($derniere->message), self::BUDGET_DU_MESSAGE),
-                    'page' => new TexteNonFiable((string) preg_replace('/[?#].*$/s', '', ValeurLue::texte($derniere->url)), self::BUDGET_DE_LA_PAGE),
-                    'pile' => new TexteNonFiable(implode("\n", array_slice(explode("\n", ValeurLue::texte($derniere->pile)), 0, self::LIGNES_DE_PILE)), self::BUDGET_DE_LA_PILE),
-                ],
-            ],
+            true => ['non_fiable' => $this->texteDe(ErreurNavigateur::query()->toBase()->select(['message', 'url', 'pile'])->where('id', $identifiant)->first())],
             false => [],
         };
+    }
+
+    /**
+     * Le message, la page sans sa chaîne de requête et les premières lignes
+     * de la pile d'une occurrence ; rien d'une occurrence effacée entre deux
+     * lectures.
+     *
+     * @return array<string, TexteNonFiable>
+     */
+    private function texteDe(?stdClass $occurrence): array
+    {
+        return [
+            'message' => new TexteNonFiable(ValeurLue::texte($occurrence?->message), self::BUDGET_DU_MESSAGE),
+            'page' => new TexteNonFiable((string) preg_replace('/[?#].*$/s', '', ValeurLue::texte($occurrence?->url)), self::BUDGET_DE_LA_PAGE),
+            'pile' => new TexteNonFiable(implode("\n", array_slice(explode("\n", ValeurLue::texte($occurrence?->pile)), 0, self::LIGNES_DE_PILE)), self::BUDGET_DE_LA_PILE),
+        ];
     }
 }
