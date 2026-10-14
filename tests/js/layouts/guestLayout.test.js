@@ -46,4 +46,16 @@ describe('GuestLayout', () => {
 
         expect(marquerLAbonnementARetransmettre).toHaveBeenCalledTimes(1)
     })
+
+    /**
+     * Le logo de l'application, empilé sur son nom au-dessus de la carte. Le
+     * lien vers l'accueil se lit « GymTracker » : le dessin est muet.
+     */
+    it('montre le logo et le nom de l’application, en lien vers l’accueil', () => {
+        const accueil = monter({ user: null }).get('a[href="/"]')
+
+        expect(accueil.find('[data-testid="logo-de-l-application"]').exists()).toBe(true)
+        expect(accueil.get('[data-testid="logo-de-l-application"]').classes()).toContain('size-20')
+        expect(accueil.text()).toBe('GymTracker')
+    })
 })

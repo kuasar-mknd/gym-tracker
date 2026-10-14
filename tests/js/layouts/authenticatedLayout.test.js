@@ -151,6 +151,22 @@ describe('la largeur du contenu', () => {
     })
 })
 
+describe('la marque de la barre de navigation', () => {
+    /**
+     * Le logo, tracé dans la page, puis le nom : le lien vers l'accueil se lit
+     * « GymTracker », et l'en-tête reste entier hors ligne.
+     */
+    it('montre le logo et le nom de l’application, en lien vers l’accueil', () => {
+        const accueil = mountLayout()
+            .findAll('a[href="/resolved/dashboard"]')
+            .find((lien) => lien.find('[data-testid="logo-de-l-application"]').exists())
+
+        expect(accueil).toBeDefined()
+        expect(accueil.get('[data-testid="logo-de-l-application"]').classes()).toContain('size-10')
+        expect(accueil.text()).toBe('GymTracker')
+    })
+})
+
 describe('AuthenticatedLayout — flash messages', () => {
     it('says nothing when the server flashed nothing', () => {
         expect(toasts(mountLayout())).toHaveLength(0)
