@@ -34,9 +34,16 @@ class AuthenticatedSessionController extends Controller
      * vérification du mot de passe d'une adresse connue (bcrypt) dépassait la
      * Timebox de la garde, et un refus durait plus longtemps qu'une adresse
      * inconnue. Seule une connexion réussie rend la main plus tôt.
+     *
+     * Le refus du limiteur de la connexion répond avant le plancher : il ne
+     * dépend que des essais ratés sous cette adresse depuis cette adresse IP,
+     * jamais de l'existence du compte, et chaque réponse retenue occupe un
+     * processus de l'application le temps du plancher.
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        $request->ensureIsNotRateLimited();
+
         DureeDesReponsesDAuthentification::appeler(static function (Timebox $delai) use ($request): void {
             $request->authenticate();
 

@@ -14,10 +14,14 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
 use Livewire\Livewire;
 use Tests\Support\DureeSimulee;
 use Tests\Support\TimeboxEspionnee;
+
+use function Pest\Laravel\assertGuest;
 
 /*
  * Une réponse d'authentification dure le même temps, que l'adresse ait un
@@ -267,3 +271,29 @@ it('rend la main sans attendre à une connexion réussie', function (): void {
 
     expect($mesure['dormi'])->toBe(0.0);
 });
+
+/*
+ * Le limiteur de la connexion compte les essais ratés sous une adresse depuis
+ * une adresse IP, que l'adresse ait un compte ou non : son refus ne dit rien
+ * du compte, et le faire dormir occuperait un processus pour rien.
+ */
+it('répond sans attendre au refus du limiteur de la connexion, compte ou non', function (string $adresse): void {
+    $this->freezeSecond();
+    $duree = DureeSimulee::demarrer();
+    User::factory()->create(['email' => 'membre@example.org']);
+    $cle = Str::transliterate($adresse.'|127.0.0.1');
+
+    foreach (range(1, 5) as $_essai) {
+        RateLimiter::hit($cle);
+    }
+
+    $secondes = RateLimiter::availableIn($cle);
+
+    $mesure = $duree->mesurer(static fn (): mixed => test()->post(route('login'), [
+        'email' => $adresse,
+        'password' => 'password',
+    ])->assertSessionHasErrors(['email' => __('auth.throttle', ['seconds' => $secondes, 'minutes' => ceil($secondes / 60)])]));
+
+    expect($mesure['dormi'])->toBe(0.0);
+    assertGuest();
+})->with(['membre@example.org', 'personne@example.org']);
