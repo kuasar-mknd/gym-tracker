@@ -223,6 +223,26 @@ it('n’ouvre pas un compte par le lien d’un autre, ni par une marque échue o
         ->and($autre->refresh()->estEnAttente())->toBeTrue();
 });
 
+/*
+ * La marque vaut jusqu'à sa dernière seconde comprise, comme le lien signé
+ * qui la pose.
+ */
+it('ouvre encore le compte à la dernière seconde de la marque du lien', function (): void {
+    Notification::fake();
+    $this->freezeSecond();
+    $compte = ouvertureCompteEnAttente();
+
+    get(LiensDesCourriels::lienDOuvertureDuCompte($compte))->assertRedirect(route('login'));
+    $this->travel(LiensDesCourriels::minutesDeValiditeDUnLien())->minutes();
+
+    ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+    expect($compte->refresh()->estEnAttente())->toBeFalse();
+});
+
 it('ouvre le compte en attente par une réinitialisation du mot de passe, sans le connecter', function (): void {
     Notification::fake();
     Event::fake([Verified::class]);
@@ -275,6 +295,7 @@ it('garde en attente un compte dont une même écriture change l’adresse et po
 
 it('rend au titulaire revenu par un fournisseur le compte en attente ouvert sur son adresse', function (): void {
     Notification::fake();
+    Event::fake([Verified::class]);
     $compte = ouvertureCompteEnAttente('camille.martin@example.org');
     $compte->forceFill(['name' => 'Nom-Choisi-Par-L-Intrus'])->save();
     $jeton = (string) $compte->getRememberToken();
@@ -298,12 +319,27 @@ it('rend au titulaire revenu par un fournisseur le compte en attente ouvert sur 
         ->and($compte->provider_id)->toBe('109876543210987654321')
         ->and($compte->liaison_prouvee_le)->not->toBeNull()
         ->and($compte->getRememberToken())->not->toBe($jeton)
+        ->and(strlen((string) $compte->getRememberToken()))->toBe(60)
+        ->and($compte->avatar)->toBe('https://example.org/avatar.jpg')
         ->and(Hash::check(ouvertureMotDePasse(), $compte->getAuthPassword()))->toBeFalse()
         ->and(User::query()->count())->toBe(1);
+    Event::assertDispatchedTimes(Verified::class, 1);
+    Event::assertDispatched(Verified::class, fn (Verified $evenement): bool => $evenement->user instanceof User && $evenement->user->is($compte));
 
     // Le mot de passe choisi par l'inscrit ne vaut plus rien.
     ouvertureSeConnecter('camille.martin@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
     assertGuest();
+});
+
+it('donne au compte repris le pseudonyme du fournisseur quand celui-ci ne rend pas de nom', function (): void {
+    Notification::fake();
+    $compte = ouvertureCompteEnAttente('camille.martin@example.org');
+    $retour = new SocialiteUser()->map(['id' => '42', 'nickname' => 'camille', 'name' => null, 'email' => 'camille.martin@example.org', 'avatar' => null]);
+
+    app(ResolveSocialUserAction::class)->execute('github', $retour, adresseVerifiee: true);
+
+    expect($compte->refresh()->name)->toBe('camille')
+        ->and($compte->estEnAttente())->toBeFalse();
 });
 
 it('ne rend pas le compte en attente à un fournisseur qui ne garantit pas l’adresse', function (): void {
