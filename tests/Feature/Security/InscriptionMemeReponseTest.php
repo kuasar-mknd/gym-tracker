@@ -112,10 +112,10 @@ function inscriptionPuisConnexion(string $adresse): array
     Cache::flush();
     Auth::forgetGuards();
 
-    $lu = CeQueLeClientLit::de(
-        test()->from(route('login'))->post(route('login'), ['email' => $adresse, 'password' => 'Un-mot-de-passe-solide-42!']),
-        route('login'),
-    );
+    /** @var TestResponse<Response> $reponse */
+    $reponse = test()->from(route('login'))->post(route('login'), ['email' => $adresse, 'password' => 'Un-mot-de-passe-solide-42!']);
+
+    $lu = CeQueLeClientLit::de($reponse, route('login'));
     assertGuest();
 
     expect($lu['session']['_old_input'] ?? null)->toBe(['email' => $adresse]);
