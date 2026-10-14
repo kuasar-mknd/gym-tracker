@@ -6,6 +6,7 @@ use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\Admin;
 use App\Models\User;
 use App\Support\DureeDesReponsesDAuthentification;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -20,8 +21,10 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\DureeSimulee;
+use Tests\Support\FilamentAdminPanel;
 use Tests\Support\TimeboxEspionnee;
 
 use function Pest\Laravel\assertGuest;
@@ -323,6 +326,47 @@ it('rend la main sans attendre à une connexion réussie', function (): void {
 
     expect($mesure['dormi'])->toBe(0.0);
 });
+
+/*
+ * Le panneau déclare la double authentification (`AppAuthentication`) :
+ * Filament fait alors durer sa Timebox à chaque étape d'une connexion,
+ * réussie ou non, pour ne pas dire quel compte l'a activée. Réglée sur le
+ * plancher commun, une connexion réussie au panneau l'attend donc à chaque
+ * étape : mot de passe, puis code s'il y en a un.
+ */
+it('fait attendre le plancher à chaque étape d’une connexion réussie au panneau', function (bool $doubleAuthentification): void {
+    $duree = DureeSimulee::demarrer();
+    $admin = FilamentAdminPanel::admin(['ViewAny:User']);
+    $application = AppAuthentication::make();
+
+    if ($doubleAuthentification) {
+        $application->saveSecret($admin, $application->generateSecret());
+    }
+
+    $motDePasse = $duree->mesurer(static fn (): Testable => Livewire::test(ConnexionDuPanneau::class)
+        ->fillForm(['email' => $admin->email, 'password' => 'password'])
+        ->call('authenticate')
+        ->assertHasNoFormErrors());
+    $etapes = [$motDePasse];
+
+    if ($doubleAuthentification) {
+        expect(auth('admin')->check())->toBeFalse();
+
+        $code = $application->getCurrentCode($admin);
+        $etapes[] = $duree->mesurer(static function () use ($motDePasse, $code): void {
+            $motDePasse['reponse']->set('data.multiFactor.app.code', $code)->call('authenticate');
+        });
+        $motDePasse['reponse']->assertHasNoErrors();
+    }
+
+    expect(auth('admin')->id())->toBe($admin->id);
+
+    foreach ($etapes as $etape) {
+        expect($etape['dormi'])->toBeGreaterThan(0.0)
+            ->and($etape['total'])->toBeGreaterThanOrEqual($duree->plancher)
+            ->and($etape['total'])->toBeLessThanOrEqual($duree->plancher + $etape['reel'] + 1_000);
+    }
+})->with(['sans double authentification' => false, 'avec double authentification' => true]);
 
 /*
  * Le bon mot de passe d'un compte en attente, sans le lien suivi, fait
