@@ -13,12 +13,13 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Le lien qui fait de la nouvelle adresse demandée depuis le profil celle du
- * compte, envoyé à cette nouvelle adresse (`TraiterUnChangementDAdresse`).
+ * compte, envoyé à cette nouvelle adresse (`DonnerSuiteAUnChangementDAdresse`,
+ * depuis `TraiterUnChangementDAdresse`).
  *
  * L'adresse du compte ne change qu'une fois ce lien suivi, depuis une session
  * du compte (`ConfirmerLAdresseController`) : la réponse du profil, et la page
  * qui la suit, sont ainsi les mêmes que l'adresse demandée soit libre ou déjà
- * celle d'un autre compte. Le lien, signé, est bâti sur `APP_URL` par le job
+ * celle d'un autre compte. Le lien, signé, est bâti sur `APP_URL` dans la file
  * (`LiensDesCourriels::lienDeConfirmationDAdresse()`) ; il nomme la nouvelle
  * adresse, d'où une file chiffrée. L'avis part une fois la transaction
  * validée, et ne recopie ni le nom du compte ni son adresse actuelle.

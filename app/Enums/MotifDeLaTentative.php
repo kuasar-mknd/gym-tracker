@@ -13,6 +13,6 @@ enum MotifDeLaTentative: string
     /** Une inscription avec cette adresse (`TraiterUneInscription`). */
     case Inscription = 'inscription';
 
-    /** Un autre compte a demandé à prendre cette adresse (`TraiterUnChangementDAdresse`). */
+    /** Un autre compte a demandé à prendre cette adresse (`DonnerSuiteAUnChangementDAdresse`). */
     case ChangementDAdresse = 'changement-d-adresse';
 }

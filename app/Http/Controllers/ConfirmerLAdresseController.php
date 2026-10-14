@@ -84,6 +84,8 @@ final class ConfirmerLAdresseController extends Controller
             ->whereNull('email_verified_at')
             ->get()
             ->filter(static fn (User $inscription): bool => $inscription->email === $adresse)
-            ->each(static fn (User $inscription): ?bool => $inscription->delete());
+            ->each(static function (User $inscription): void {
+                $inscription->delete();
+            });
     }
 }

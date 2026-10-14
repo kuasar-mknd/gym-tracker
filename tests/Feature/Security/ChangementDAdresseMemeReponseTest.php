@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Auth\DonnerSuiteAUnChangementDAdresse;
 use App\Jobs\TraiterUnChangementDAdresse;
 use App\Models\User;
 use App\Notifications\AdresseDuCompteChangee;
@@ -205,8 +206,9 @@ it('n’envoie pas plus d’un lien par quart d’heure à la même adresse', fu
     }
 
     Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 1);
+    expect(DonnerSuiteAUnChangementDAdresse::SECONDES_ENTRE_DEUX_LIENS)->toBe(900);
 
-    $this->travel(TraiterUnChangementDAdresse::SECONDES_ENTRE_DEUX_LIENS + 1)->seconds();
+    $this->travel(DonnerSuiteAUnChangementDAdresse::SECONDES_ENTRE_DEUX_LIENS + 1)->seconds();
     actingAs($compte)->patch(route('profile.update'), ['name' => 'Titulaire', 'email' => 'libre@example.org', 'current_password' => 'password']);
 
     Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 2);
