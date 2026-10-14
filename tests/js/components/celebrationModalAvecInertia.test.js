@@ -20,9 +20,11 @@ import { createApp, h } from 'vue'
  * clôt chaque parcours.
  *
  * jsdom ne joint pas de serveur : `XMLHttpRequest` est remplacé par un faux
- * serveur qui tient les badges non lus du compte et calcule la page à
- * l'arrivée de chaque requête, comme le vrai. La lecture y répond directement
- * par la page, comme le navigateur la rend après la redirection de `back()`.
+ * serveur qui tient les badges non lus du compte et calcule la page quand il
+ * traite chaque requête, comme le vrai. La lecture y répond directement par la
+ * page, comme le navigateur la rend après la redirection de `back()`. Un test
+ * peut retenir les requêtes, pour choisir l'ordre dans lequel le serveur les
+ * traite puis celui dans lequel leurs réponses arrivent.
  */
 
 /** Les badges que le compte n'a pas lus, du plus récent au plus ancien. */
@@ -31,6 +33,10 @@ let nonLus = []
 const requetes = []
 /** Les erreurs que Vue a relevées, celles du rendu comprises. */
 const erreurs = []
+/** Vrai, le faux serveur garde chaque requête sans la traiter, jusqu'à ce que le test le fasse. */
+let retenir = false
+/** Les requêtes retenues, chacune avec son traitement par le serveur et la livraison de sa réponse. */
+const retenues = []
 
 /** Un badge tel que le partage `HandleInertiaRequests` : ce qu'`AchievementUnlocked` range en base, et le badge lui-même. */
 const unBadge = (id, nom) => ({
@@ -84,19 +90,33 @@ class RequeteSimulee {
         const chemin = new URL(this.url, window.location.href).pathname
         requetes.push(`${this.methode} ${chemin}`)
 
-        const lecture = chemin.match(/^\/notifications\/([^/]+)\/read$/)
+        let corps = null
 
-        if (lecture) {
-            nonLus = nonLus.filter((badge) => badge.id !== lecture[1])
+        /** Le serveur traite la requête : la lecture marque son badge lu, puis la page se calcule. */
+        const traiter = () => {
+            const lecture = chemin.match(/^\/notifications\/([^/]+)\/read$/)
+
+            if (lecture) {
+                nonLus = nonLus.filter((badge) => badge.id !== lecture[1])
+            }
+
+            corps = JSON.stringify(tableauDeBord())
         }
 
-        const corps = JSON.stringify(tableauDeBord())
-
-        queueMicrotask(() => {
+        const livrer = () => {
             this.status = 200
             this.responseText = corps
             this.onload?.()
-        })
+        }
+
+        if (retenir) {
+            retenues.push({ methode: this.methode, traiter, livrer })
+
+            return
+        }
+
+        traiter()
+        queueMicrotask(livrer)
     }
 }
 
@@ -149,6 +169,7 @@ afterAll(() => {
 
 const dialogue = () => document.querySelector('dialog')
 const nomDuBadge = () => document.getElementById('achievement-name')?.textContent.trim() ?? null
+const boutonDeFermeture = () => document.querySelector('[dusk="celebration-dismiss"]')
 
 /** Attend la fin de la visite que `geste` déclenche, puis le rendu de ce qu'elle a changé. */
 const jusquALaFinDeLaVisite = async (geste) => {
@@ -163,11 +184,17 @@ const jusquALaFinDeLaVisite = async (geste) => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
-const fermerParLeBouton = () =>
-    jusquALaFinDeLaVisite(() => document.querySelector('[dusk="celebration-dismiss"]').click())
+const fermerParLeBouton = () => jusquALaFinDeLaVisite(() => boutonDeFermeture().click())
 
 /** Échap ferme un `<dialog>` de lui-même : le composant ne l'apprend que par l'évènement `close`. */
 const fermerParEchap = () => jusquALaFinDeLaVisite(() => dialogue().close())
+
+/** Montre au compte les badges donnés, du plus récent au plus ancien, par un rechargement de la page. */
+const debloquer = async (...badges) => {
+    nonLus = badges
+    await jusquALaFinDeLaVisite(() => routeur.reload())
+    requetes.length = 0
+}
 
 describe('la célébration de plusieurs badges', () => {
     it('les montre l’un après l’autre, puis se ferme quand le serveur n’en rend plus, sans erreur', async () => {
@@ -190,9 +217,7 @@ describe('la célébration de plusieurs badges', () => {
     })
 
     it('fermée par Échap, passe au badge suivant sans erreur, et lit chaque badge une seule fois', async () => {
-        nonLus = [unBadge('premiere', 'Première Séance'), unBadge('volume', 'Novice du Volume')]
-        await jusquALaFinDeLaVisite(() => routeur.reload())
-        requetes.length = 0
+        await debloquer(unBadge('premiere', 'Première Séance'), unBadge('volume', 'Novice du Volume'))
 
         expect(dialogue().open).toBe(true)
         expect(nomDuBadge()).toBe('Première Séance')
@@ -209,5 +234,42 @@ describe('la célébration de plusieurs badges', () => {
         expect(requetes).toEqual(['POST /notifications/premiere/read', 'POST /notifications/volume/read'])
         expect(erreurs).toEqual([])
         expect(dialogue().open).toBe(false)
+    })
+
+    /**
+     * Un rechargement parti pendant la lecture (tirer pour actualiser) peut
+     * être traité par le serveur avant elle, et répondre après elle : sa page
+     * porte encore le badge que la personne vient de fermer. L'ancienne modale
+     * avait oublié ce badge dans le rappel de la lecture, et le rouvrait.
+     */
+    it('ne rouvre pas un badge fermé que rapporte un rechargement traité avant la lecture', async () => {
+        await debloquer(unBadge('record', 'Premier Record'))
+
+        expect(dialogue().open).toBe(true)
+        expect(nomDuBadge()).toBe('Premier Record')
+
+        retenir = true
+        boutonDeFermeture().click()
+        routeur.reload()
+        await vi.waitUntil(() => retenues.length === 2)
+        retenir = false
+
+        const [lecture, rechargement] = ['POST', 'GET'].map((methode) =>
+            retenues.find((requete) => requete.methode === methode),
+        )
+        retenues.length = 0
+
+        rechargement.traiter()
+        lecture.traiter()
+        await jusquALaFinDeLaVisite(lecture.livrer)
+
+        expect(dialogue().open).toBe(false)
+
+        await jusquALaFinDeLaVisite(rechargement.livrer)
+
+        expect(requetes).toEqual(['POST /notifications/record/read', 'GET /dashboard'])
+        expect(erreurs).toEqual([])
+        expect(dialogue().open).toBe(false)
+        expect(nomDuBadge()).toBeNull()
     })
 })
