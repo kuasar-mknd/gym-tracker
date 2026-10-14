@@ -26,7 +26,7 @@ describe('la page « hors ligne »', () => {
      * Le logo de l'application sur sa tuile, tracé dans la page comme dans les
      * pages invitées : sans réseau, une image de public/ ne se chargerait pas.
      */
-    it('montre le logo de l’application au-dessus de son nom, sans le charger', () => {
+    it('montre le logo de l’application seul, nom lu mais caché, sans le charger', () => {
         const logo = page.querySelector('main > div > svg')
 
         expect(logo).not.toBeNull()
@@ -37,6 +37,7 @@ describe('la page « hors ligne »', () => {
         expect(logo.querySelectorAll('g.fill-logo-lettre path')).toHaveLength(TRACES_DE_LA_LETTRE.length)
         expect(logo.querySelectorAll('g.fill-logo-barres path')).toHaveLength(TRACES_DES_BARRES.length)
         expect(logo.nextElementSibling.textContent).toBe('GymTracker')
+        expect(logo.nextElementSibling.classList).toContain('sr-only')
     })
 
     it('ne porte rien d’un compte : ni données de page, ni jeton, ni identité', () => {

@@ -19,7 +19,7 @@ import { DISPOSITIONS_DE_LA_MARQUE, TUILE_DU_LOGO, logoEnSvg } from '../Utils/de
 /** Le nom du fichier dans public/build, d'où le precache le prend. */
 export const FICHIER_DE_LA_PAGE_HORS_LIGNE = URL_DE_LA_PAGE_HORS_LIGNE.replace(/^\/build\//, '')
 
-/** La marque des pages invitées : le logo sur sa tuile, empilé sur le nom. */
+/** La marque des pages invitées : le logo seul sur sa tuile, le nom lu mais caché. */
 const MARQUE = DISPOSITIONS_DE_LA_MARQUE.page
 
 const echapper = (texte) => texte.replace(/[&<>"']/g, (caractere) => `&#${caractere.charCodeAt(0)};`)

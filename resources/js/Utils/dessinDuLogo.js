@@ -28,8 +28,12 @@ export const TRACES_DES_BARRES = [
 
 /**
  * Les deux dispositions de la marque, le logo et le nom : en ligne dans la
- * barre de navigation, empilée au-dessus de la carte d'une page invitée et de
- * la page « hors ligne ».
+ * barre de navigation, et le logo seul au-dessus de la carte d'une page
+ * invitée et de la page « hors ligne ».
+ *
+ * Au-dessus d'une page, le nom ne se montre pas, à la demande du propriétaire
+ * (2026-10-14) : le logo suffit, et le nom reste lu, il nomme le lien vers
+ * l'accueil et la page « hors ligne ».
  *
  * Dans la barre, le nom ne se montre qu'à partir de `xl` (1 280 px), et reste
  * lu en deçà : il nomme toujours le lien vers l'accueil. La barre de bureau,
@@ -47,7 +51,7 @@ export const DISPOSITIONS_DE_LA_MARQUE = {
         nom: 'sr-only text-2xl xl:not-sr-only',
         sens: 'flex-row gap-3',
     },
-    page: { logo: 'size-20 rounded-lg p-2 shadow-lg', nom: 'text-4xl', sens: 'flex-col gap-3' },
+    page: { logo: 'size-20 rounded-lg p-2 shadow-lg', nom: 'sr-only', sens: 'flex-col gap-3' },
 }
 
 /**
