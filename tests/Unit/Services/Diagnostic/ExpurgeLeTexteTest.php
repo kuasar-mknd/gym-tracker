@@ -205,8 +205,9 @@ it('marque une adresse IP quel que soit son voisin', function (string $message, 
 /*
  * Un hôte se reconnaît à son dernier label quand il n'en a que deux (une
  * extension connue, un code de pays), sauf après `//`, `@` ou « host » ; à
- * partir de trois labels, tout dernier label alphabétique. Un nom de route
- * à deux labels, un index et un fichier restent.
+ * partir de trois labels, tout dernier label alphabétique, même quand un
+ * label du milieu est une extension connue ou un code de pays. Un nom de
+ * route à deux labels, un index et un fichier restent.
  */
 it('marque un hôte dont l’extension n’est pas dans la liste', function (string $message, string $attendu): void {
     expect(expurgeLeTexte($message)->texte)->toBe($attendu);
@@ -215,6 +216,11 @@ it('marque un hôte dont l’extension n’est pas dans la liste', function (str
     'deux labels dans une URL' => ['page https://salle-canari.shop/seances', 'page https://[hôte]/seances'],
     'deux labels après « host »' => ['Connection could not be established with host salle-canari.email :stream', 'Connection could not be established with host [hôte] :stream'],
     'un nom internationalisé' => ['smtp.salle-réservée.systems refusé', '[hôte] refusé'],
+    'un label du milieu qui est une extension connue, et un port' => ['connexion refusée par relais.us.salle-canari.systems:587', 'connexion refusée par [hôte]'],
+    'un label du milieu de deux lettres' => ['hôte smtp.de.salle-canari.email injoignable', 'hôte [hôte] injoignable'],
+    'un label du milieu dans une URL' => ['page https://api.io.salle-canari.systems/v1', 'page https://[hôte]/v1'],
+    'un label du milieu nommé example' => ['connexion à smtp.example.systems', 'connexion à [hôte]'],
+    'en fin de phrase' => ['Envoi refusé par smtp.example.org.', 'Envoi refusé par [hôte].'],
     'une route, un index, un fichier' => [
         'route workouts.show, index users.users_email_unique, fichier jquery.min.js',
         'route workouts.show, index users.users_email_unique, fichier jquery.min.js',

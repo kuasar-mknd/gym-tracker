@@ -22,7 +22,10 @@ namespace App\Services\Diagnostic\Expurgation;
  * de trois labels, tout dernier label de deux à vingt-quatre lettres suffit,
  * pour les extensions que la liste ne nomme pas (`smtp.salle.systems`) : un
  * nom de route ou une clé à trois labels (`admin.users.index`) est marqué
- * avec eux, ce qui ne fait rien perdre que la structure ne dise déjà. Une
+ * avec eux, ce qui ne fait rien perdre que la structure ne dise déjà. Un
+ * hôte ne finit jamais devant un point suivi d'un label : un label du milieu
+ * qui est une extension connue ou un code de pays (`relais.us.salle.systems`)
+ * ne coupe pas l'hôte, que le motif des trois labels prend en entier. Une
  * extension de fichier n'est jamais un dernier label (`app.js`,
  * `jquery.min.js` et `Connection.php` restent), et un label peut porter des
  * lettres accentuées.
@@ -40,7 +43,7 @@ final class MasqueLesCoordonnees
 
     private const string LABEL = '[\p{L}\p{N}](?:[\p{L}\p{N}-]{0,61}[\p{L}\p{N}])?';
 
-    private const string FIN_DE_L_HOTE = '(?![\w-])(?::\d{1,5}(?!\d))?';
+    private const string FIN_DE_L_HOTE = '(?![\w-]|\.[\p{L}\p{N}])(?::\d{1,5}(?!\d))?';
 
     private const string ADRESSE_IPV4 = '(?:\d{1,3}\.){3}\d{1,3}';
 
