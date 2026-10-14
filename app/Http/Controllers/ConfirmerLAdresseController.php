@@ -23,9 +23,10 @@ use Illuminate\Support\Facades\Redirect;
  * d'autrui), la nouvelle adresse, chiffrée (`LiensDesCourriels`), et
  * l'empreinte de l'adresse actuelle : un lien émis avant un autre changement
  * ne vaut plus. Une adresse qui ne se déchiffre pas refuse le lien comme une
- * signature fausse (`LiensDesCourriels::adresseDuLienDeConfirmation()`). Le changement passe par
- * l'enregistrement du compte, donc par `SurveilleSonAdresse` (avis à la
- * dernière adresse vérifiée) et `OublieLaPreuveDeSaLiaison`, puis l'adresse,
+ * signature fausse (`LiensDesCourriels::adresseDuLienDeConfirmation()`). Le
+ * changement passe par l'enregistrement du compte, donc par
+ * `SurveilleSonAdresse` (avis à la dernière adresse vérifiée) et
+ * `OublieLaPreuveDeSaLiaison`, puis l'adresse,
  * que le lien vient de prouver, est vérifiée dans une écriture à part. Un
  * compte que l'inscription a ouvert sur cette adresse, jamais ouvert depuis,
  * s'efface d'abord, dans la même transaction, par `delete()` (ses traces avec
