@@ -252,6 +252,27 @@ it('ouvre le compte en attente par une réinitialisation du mot de passe, sans l
     assertAuthenticatedAs($compte);
 });
 
+/*
+ * Une écriture qui change l'adresse ne prouve pas la nouvelle, même quand
+ * elle pose la vérification (`SurveilleSonAdresse` la remet à null) : sans
+ * quoi le compte, ni en attente ni vérifié, se connecterait comme un compte
+ * d'avant la colonne.
+ */
+it('garde en attente un compte dont une même écriture change l’adresse et pose la vérification', function (): void {
+    Notification::fake();
+    $compte = ouvertureCompteEnAttente();
+
+    $compte->forceFill(['email' => 'autre@example.org', 'email_verified_at' => now()])->save();
+
+    $compte->refresh();
+    expect($compte->email)->toBe('autre@example.org')
+        ->and($compte->estEnAttente())->toBeTrue()
+        ->and($compte->hasVerifiedEmail())->toBeFalse();
+
+    ouvertureSeConnecter('autre@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
+    assertGuest();
+});
+
 it('rend au titulaire revenu par un fournisseur le compte en attente ouvert sur son adresse', function (): void {
     Notification::fake();
     $compte = ouvertureCompteEnAttente('camille.martin@example.org');
