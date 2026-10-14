@@ -6,7 +6,9 @@ vi.mock('@inertiajs/vue3', () => ({
     router: { patch: inertia.patch },
 }))
 
-import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { REPOS_AUTOMATIQUE_SANS_RESEAU, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
+import { noterQueLeServeurRepond, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 beforeEach(() => {
     vi.clearAllMocks()
@@ -39,9 +41,28 @@ describe('le minuteur de repos', () => {
         expect(inertia.patch).toHaveBeenCalledWith(
             '/profile.rest-timer.update',
             { auto_rest_timer: false },
-            { preserveScroll: true, preserveState: true },
+            expect.objectContaining({ preserveScroll: true, preserveState: true }),
         )
         expect(minuteur.showTimer.value).toBe(false)
+    })
+
+    /*
+     * Sans réseau, l'interrupteur ne changeait qu'à l'écran : la séance
+     * suivante repartait sur l'ancien réglage, sans que rien ne l'ait dit (#2048).
+     */
+    it('revient en arrière et le dit quand le réglage part sans réseau', () => {
+        noterQueLeServeurRepond()
+        const minuteur = useMinuteurDeRepos()
+
+        minuteur.setAutoRestTimer(false)
+        const { rendu, annonces } = annoncesPendant(() =>
+            inertia.patch.mock.calls[0][2].onNetworkError({ code: 'ERR_NETWORK' }),
+        )
+
+        expect(rendu).toBe(false)
+        expect(minuteur.autoRestTimer.value).toBe(true)
+        expect(annonces).toEqual([REPOS_AUTOMATIQUE_SANS_RESEAU])
+        expect(useEtatDuReseau().joignable.value).toBe(false)
     })
 
     it('lit le réglage du profil au départ', () => {

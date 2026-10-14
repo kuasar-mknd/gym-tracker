@@ -42,6 +42,7 @@ import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 
 const EXERCISE = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
@@ -98,6 +99,7 @@ const mountPage = async (workout = emptyWorkout, autresProps = {}) => {
                 AjoutDExerciceModal,
                 RangeeDeSerie,
                 CarteDExercice,
+                ActionsDeLaSeance,
                 GlassInput: passesSlot,
                 GlassSelect: passesSlot,
             },

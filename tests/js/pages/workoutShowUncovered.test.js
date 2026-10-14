@@ -132,6 +132,7 @@ import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 
@@ -248,6 +249,7 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
                 WorkoutSettingsModal: SettingsModalStub,
                 WorkoutFinishModal: FinishModalStub,
                 RestTimer: RestTimerStub,
+                ActionsDeLaSeance,
             },
         },
     })
@@ -867,11 +869,12 @@ describe('Workouts/Show — the session’s own settings', () => {
         expect(url).toBe('/workouts/1')
         expect(payload).toEqual({ is_finished: true })
 
-        options.onStart()
-        await wrapper.vm.$nextTick()
-        expect(wrapper.vm.showFinishModal).toBe(false)
+        // La question reste ouverte pendant la visite (#2048) : sans réseau, elle le dirait.
+        expect(wrapper.vm.showFinishModal).toBe(true)
 
         options.onSuccess()
+        await wrapper.vm.$nextTick()
+        expect(wrapper.vm.showFinishModal).toBe(false)
         expect(haptics.triggerHaptic).toHaveBeenCalledWith('success')
     })
 
