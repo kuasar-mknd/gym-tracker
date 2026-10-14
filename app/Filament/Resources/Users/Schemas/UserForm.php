@@ -59,6 +59,18 @@ class UserForm
              * avec sa propre autorisation, pas un champ de formulaire.
              */
             DateTimePicker::make('email_verified_at')->label('Adresse vérifiée le')->disabled()->dehydrated(false),
+            /*
+             * Un compte ouvert par l'inscription attend que son titulaire suive
+             * le lien envoyé à son adresse (`AttendLaPreuveDeSonAdresse`). La
+             * fiche le dit, sans rien écrire : seule la preuve de l'adresse
+             * efface l'attente.
+             */
+            DateTimePicker::make('en_attente_depuis')
+                ->label('En attente du lien depuis')
+                ->helperText(sprintf("Le compte ne s'ouvre qu'une fois suivi le lien envoyé à son adresse ; jamais ouvert, il est effacé au bout de %d jours.", User::JOURS_AVANT_LA_PURGE))
+                ->visible(fn (?User $record): bool => $record?->estEnAttente() ?? false)
+                ->disabled()
+                ->dehydrated(false),
             TextInput::make('provider')->label('Fournisseur de connexion')->disabled()->dehydrated(false),
             TextInput::make('provider_id')->label('Identifiant chez le fournisseur')->disabled()->dehydrated(false),
             TextInput::make('avatar')->label('Avatar'),
