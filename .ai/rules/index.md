@@ -25,5 +25,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Services/Stats/** | .ai/rules/stats.md |
 | tests/js/** | .ai/rules/tests-js.md |
 | tests/** | .ai/rules/tests.md |
-| resources/js/Utils/SyncService.js, resources/js/Utils/syncErrors.js | .ai/rules/utils.md |
+| resources/js/Utils/SyncService.js, resources/js/Utils/syncErrors.js, resources/js/Utils/seanceEtFile.js, resources/js/composables/useSeanceEtSaFile.js | .ai/rules/utils.md |
 | .github/workflows/** | .ai/rules/workflows.md |
