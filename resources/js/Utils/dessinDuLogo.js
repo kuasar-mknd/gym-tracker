@@ -30,9 +30,21 @@ export const TRACES_DES_BARRES = [
  * Les deux dispositions de la marque, le logo et le nom : en ligne dans la
  * barre de navigation, empilée au-dessus de la carte d'une page invitée et de
  * la page « hors ligne ».
+ *
+ * Dans la barre, le nom ne se montre qu'à partir de `xl` (1 280 px), et reste
+ * lu en deçà : il nomme toujours le lien vers l'accueil. La barre de bureau,
+ * ouverte dès `sm`, n'a pas la place du logo et du nom à la fois. Avec les
+ * deux, elle débordait jusqu'à 1 103 px de large, et le menu du compte sortait
+ * de l'écran, chevron compris ; l'ancien en-tête, le nom seul, débordait déjà
+ * jusqu'à 1 051 px. Le logo seul tient dès 900 px (mesures dans Chromium, avec
+ * un compte « Test User »).
  */
 export const DISPOSITIONS_DE_LA_MARQUE = {
-    barre: { logo: 'size-10 rounded p-1 shadow-sm', nom: 'text-2xl', sens: 'flex-row gap-3' },
+    barre: {
+        logo: 'size-10 rounded p-1 shadow-sm',
+        nom: 'sr-only text-2xl xl:not-sr-only',
+        sens: 'flex-row gap-3',
+    },
     page: { logo: 'size-20 rounded-lg p-2 shadow-lg', nom: 'text-4xl', sens: 'flex-col gap-3' },
 }
 

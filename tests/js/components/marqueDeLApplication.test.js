@@ -61,6 +61,25 @@ describe('MarqueDeLApplication', () => {
     it('se met dans la barre de navigation par défaut', () => {
         expect(monter().get('svg').classes()).toContain('size-10')
     })
+
+    /**
+     * La barre de bureau, ouverte dès `sm`, n'a pas la place du logo et du nom
+     * à la fois : avec les deux, elle débordait jusqu'à 1 103 px de large et
+     * coupait le menu du compte. Le nom ne s'y montre qu'à partir de `xl`, et
+     * reste lu en deçà : le lien vers l'accueil se nomme toujours. Au-dessus
+     * d'une page, la place ne manque pas, et le nom se montre toujours.
+     */
+    it('ne montre le nom dans la barre qu’à partir de xl, et le laisse lire en deçà', () => {
+        const barre = monter({ disposition: 'barre' })
+        const nomDeLaBarre = barre.get('svg + span')
+        const nomDeLaPage = monter({ disposition: 'page' }).get('svg + span')
+
+        expect(nomDeLaBarre.classes()).toEqual(expect.arrayContaining(['sr-only', 'xl:not-sr-only']))
+        expect(nomDeLaBarre.attributes('aria-hidden')).toBeUndefined()
+        expect(barre.text()).toBe('GymTracker')
+        expect(nomDeLaPage.classes()).not.toContain('sr-only')
+        expect(nomDeLaPage.text()).toBe('GymTracker')
+    })
 })
 
 describe('logoEnSvg', () => {

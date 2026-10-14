@@ -16,6 +16,8 @@ import {
  * de l'icône de l'application, qui lui garde ses contrastes sur un fond teinté.
  * Il est décoratif : le nom écrit à côté nomme le lien qui entoure la marque,
  * et un nom posé aussi sur le dessin ferait annoncer « GymTracker GymTracker ».
+ * Dans la barre, ce nom n'est visible qu'à partir de `xl`, faute de place, et
+ * reste lu en deçà (`DISPOSITIONS_DE_LA_MARQUE`).
  */
 defineProps({
     disposition: {

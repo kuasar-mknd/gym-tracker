@@ -165,6 +165,21 @@ describe('la marque de la barre de navigation', () => {
         expect(accueil.get('[data-testid="logo-de-l-application"]').classes()).toContain('size-10')
         expect(accueil.text()).toBe('GymTracker')
     })
+
+    /**
+     * Logo et nom ensemble faisaient déborder la barre de bureau jusqu'à
+     * 1 103 px de large, menu du compte coupé : le nom n'y apparaît qu'à
+     * partir de `xl`, et nomme le lien à toute largeur.
+     */
+    it('garde le nom pour les lecteurs d’écran, et ne le montre qu’à partir de xl', () => {
+        const accueil = mountLayout()
+            .findAll('a[href="/resolved/dashboard"]')
+            .find((lien) => lien.find('[data-testid="logo-de-l-application"]').exists())
+        const nom = accueil.get('[data-testid="logo-de-l-application"] + span')
+
+        expect(nom.classes()).toEqual(expect.arrayContaining(['sr-only', 'xl:not-sr-only']))
+        expect(nom.text()).toBe('GymTracker')
+    })
 })
 
 describe('AuthenticatedLayout — flash messages', () => {
