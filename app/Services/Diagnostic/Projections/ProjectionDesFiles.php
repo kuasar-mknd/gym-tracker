@@ -23,8 +23,8 @@ use stdClass;
  * est celle du job, pas celle qu'elle enveloppe (`ExceptionDUnJobEchoue`).
  * Jamais la charge utile : la commande sérialisée, et les adresses d'une
  * notification, n'en sortent pas. La base n'en extrait que le nom affiché du
- * job, et de l'exception que les premiers octets de sa tête et de son
- * dernier bloc.
+ * job, et de l'exception que les premiers octets de sa tête, de son dernier
+ * bloc et, au détail, de la pile qui suit son message.
  */
 final class ProjectionDesFiles
 {
@@ -65,10 +65,10 @@ final class ProjectionDesFiles
      */
     public function detail(string $uuid, FenetreDeDiagnostic $fenetre, bool $texteBrut): ?array
     {
-        $ligne = ExceptionDUnJobEchoue::lire(
+        $ligne = ExceptionDUnJobEchoue::avecLaPile(ExceptionDUnJobEchoue::lire(
             $this->echecs($fenetre)->select(['uuid', 'queue', 'failed_at'])->selectRaw(self::NOM_DU_JOB),
             ExceptionDUnJobEchoue::OCTETS_PAR_MORCEAU,
-        )
+        ))
             ->where('uuid', $uuid)
             ->first();
 
@@ -120,7 +120,8 @@ final class ProjectionDesFiles
     }
 
     /**
-     * Le détail d'un échec, dont l'exception levée est donnée en texte.
+     * Le détail d'un échec, dont l'exception levée est donnée en texte ; sa
+     * pile est celle que la base a lue après le message.
      *
      * @return array<string, mixed>
      */
@@ -132,7 +133,7 @@ final class ProjectionDesFiles
             'file' => Vocabulaire::forme(Vocabulaire::IDENTIFIANT, $ligne->queue),
             'echoue_le' => ValeurLue::instant($ligne->failed_at),
             'exception' => ExceptionDUnJobEchoue::classe($exception),
-            'pile' => PileSansArguments::duTexte($exception, self::CADRES_AU_PLUS),
+            'pile' => PileSansArguments::duTexte(ExceptionDUnJobEchoue::texte($ligne->pile_de_l_exception), self::CADRES_AU_PLUS),
             ...match ($texteBrut) {
                 true => ['non_fiable' => ['message' => new TexteNonFiable(ExceptionDUnJobEchoue::message($exception), self::BUDGET_DU_MESSAGE)]],
                 false => [],

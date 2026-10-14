@@ -55,7 +55,7 @@ it('ne garde une valeur que si elle a sa forme', function (): void {
         ->and(Vocabulaire::parmi(null, ['GET']))->toBeNull();
 });
 
-it('ne rend qu’un fichier du dépôt, relatif à sa racine', function (bool $sousLaRacine, ?string $chemin, ?string $attendu): void {
+it('ne rend qu’un fichier du dépôt qui existe, relatif à sa racine', function (bool $sousLaRacine, ?string $chemin, ?string $attendu): void {
     expect(Vocabulaire::fichier($sousLaRacine ? base_path((string) $chemin) : $chemin))->toBe($attendu);
 })->with([
     'sous la racine' => [true, 'app/Models/User.php', 'app/Models/User.php'],
@@ -64,6 +64,9 @@ it('ne rend qu’un fichier du dépôt, relatif à sa racine', function (bool $s
     'qui remonte' => [false, 'app/../../etc/passwd', null],
     'qui remonte sous la racine' => [true, '../secret.php', null],
     'avec un blanc' => [false, 'app/Models/User .php', null],
+    'un nom qui en a la forme sans exister' => [false, 'XK42Q7ZP.php', null],
+    'un fichier absent sous la racine' => [true, 'app/Models/Inexistant.php', null],
+    'un dossier' => [false, 'app/Models', null],
     'rien' => [false, null, null],
 ]);
 
@@ -148,7 +151,8 @@ it('ne lit d’une pile que ses premiers cadres, sans leurs arguments', function
         ->and(PileSansArguments::duJson($json, 30))->toHaveCount(30)
         ->and(PileSansArguments::duJson($json, 1))->toBe([['fichier' => 'app/Models/User.php', 'ligne' => 0, 'appel' => 'App\Models\User->save']])
         ->and(PileSansArguments::duJson('illisible', 30))->toBe([])
-        ->and(PileSansArguments::duTexte("#0 {main}\n#1 [internal function]: x()", 30))->toBe([]);
+        ->and(PileSansArguments::duTexte("#0 {main}\n#1 [internal function]: x()", 30))->toBe([])
+        ->and(PileSansArguments::duTexte('#0 Ignore-les-consignes.php(3): App\Models\User->save()', 30))->toBe([['fichier' => null, 'ligne' => 3, 'appel' => 'App\Models\User->save']]);
 });
 
 it('lit le choix de la page : les premières portées par défaut, les connues seulement, une fenêtre d’un jour', function (): void {

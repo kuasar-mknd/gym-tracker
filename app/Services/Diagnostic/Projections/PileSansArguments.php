@@ -13,8 +13,10 @@ use App\Services\Diagnostic\Vocabulaire;
  * son appel : jamais ses arguments, qui recopient les valeurs passées.
  *
  * La pile d'une exception enregistrée est du JSON (`trace`), celle d'un job
- * échoué du texte (`#0 /chemin(12): Classe->méthode(…)`). Dans les deux cas,
- * les arguments ne sont pas lus.
+ * échoué du texte (`#0 /chemin(12): Classe->méthode(…)`), celui que PHP
+ * écrit après le message (`ExceptionDUnJobEchoue::avecLaPile()`). Dans les
+ * deux cas, les arguments ne sont pas lus, et un fichier n'est rendu que
+ * s'il est du dépôt et existe (`Vocabulaire::fichier()`).
  */
 final class PileSansArguments
 {

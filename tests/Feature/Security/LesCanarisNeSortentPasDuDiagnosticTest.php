@@ -20,6 +20,7 @@ use Spatie\Health\ResultStores\ResultStore;
 use Spatie\Permission\Models\Role;
 use Tests\Support\BoutonCopierLaStructure;
 use Tests\Support\CanarisDuDiagnostic;
+use Tests\Support\JobDuDiagnosticAuMessageQuiImiteUnePile;
 use Tests\Support\JobDuDiagnosticQuiEchoue;
 
 use function Pest\Laravel\actingAs;
@@ -179,4 +180,31 @@ it('ne laisse aucun canari dans la page servie au navigateur', function (): void
         ->assertOk();
 
     expect(CanarisDuDiagnostic::trouvesDans((string) $reponse->getContent()))->toBe([]);
+});
+
+/*
+ * Le message d'une exception peut recopier un texte venu d'ailleurs, sauts
+ * de ligne compris : celui-ci imite une exception enveloppante et des
+ * cadres de pile qui portent le code canari. Le job échoue par
+ * `queue:work`, après les autres : son échec est le premier de la liste, et
+ * la page en montre le détail.
+ */
+it('ne laisse aucun canari dans la pile d’un job dont le message imite une pile', function (): void {
+    dispatch(new JobDuDiagnosticAuMessageQuiImiteUnePile())->onConnection('database');
+    Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--tries' => 1, '--sleep' => 0]);
+    Artisan::call('diagnostic:resume', ['--json' => true]);
+    $commande = Artisan::output();
+
+    $page = (string) actingAs(canarisSuperAdministrateur(), 'admin')
+        ->get(ApercuDuDiagnostic::getUrl(['portees' => [PorteeDeDiagnostic::Files->value, PorteeDeDiagnostic::TexteBrut->value]], panel: 'admin'))
+        ->assertOk()
+        ->getContent();
+    $structure = BoutonCopierLaStructure::structureCopiee($page);
+
+    expect(DB::table('failed_jobs')->latest('id')->value('exception'))->toContain(JobDuDiagnosticAuMessageQuiImiteUnePile::message())
+        ->and(data_get($structure, 'resume.donnees.files.echecs.0.job'))->toBe(JobDuDiagnosticAuMessageQuiImiteUnePile::class)
+        ->and(CanarisDuDiagnostic::trouvesDans($commande))->toBe([])
+        ->and(CanarisDuDiagnostic::trouvesDans($page))->toBe([])
+        ->and(CanarisDuDiagnostic::trouvesDans((string) json_encode($structure, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))->toBe([])
+        ->and(data_get($structure, 'details.donnees.echec_de_job.pile.0.fichier'))->toStartWith('vendor/laravel/framework/');
 });

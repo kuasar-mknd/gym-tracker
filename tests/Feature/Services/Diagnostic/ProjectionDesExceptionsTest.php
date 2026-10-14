@@ -144,7 +144,7 @@ it('rend le détail sans arguments de pile, et sans texte hors de TexteBrut', fu
         'path' => 'seances/1?jeton=abc',
         'route_context' => ['route name' => 'workouts.update'],
         'trace' => [
-            ['file' => base_path('app/Http/Controllers/WorkoutsController.php'), 'line' => 40, 'class' => 'App\Http\Controllers\WorkoutsController', 'type' => '->', 'function' => 'update', 'args' => ['secret-de-pile']],
+            ['file' => base_path('app/Http/Controllers/WorkoutController.php'), 'line' => 40, 'class' => 'App\Http\Controllers\WorkoutController', 'type' => '->', 'function' => 'update', 'args' => ['secret-de-pile']],
             ['file' => '/usr/lib/php/x.php', 'line' => 2, 'function' => '{closure:{closure:/srv/x.php:1}:2}'],
             ['function' => 'array_map'],
         ],
@@ -163,7 +163,7 @@ it('rend le détail sans arguments de pile, et sans texte hors de TexteBrut', fu
         'gabarit' => 'workouts/{workout}',
         'le' => '2026-10-12T10:00:00+02:00',
         'pile' => [
-            ['fichier' => 'app/Http/Controllers/WorkoutsController.php', 'ligne' => 40, 'appel' => 'App\Http\Controllers\WorkoutsController->update'],
+            ['fichier' => 'app/Http/Controllers/WorkoutController.php', 'ligne' => 40, 'appel' => 'App\Http\Controllers\WorkoutController->update'],
             ['fichier' => null, 'ligne' => 2, 'appel' => '{closure}'],
             ['fichier' => null, 'ligne' => null, 'appel' => 'array_map'],
         ],

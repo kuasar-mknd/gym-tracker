@@ -14,8 +14,8 @@ namespace App\Services\Diagnostic;
  * d'une liste. Une valeur qui n'a pas sa forme devient `null`, jamais un
  * texte approché : un nom de job écrit par un tiers, un fichier hors du
  * dépôt, une méthode HTTP inventée ne passent pas. Une forme ne ferme pas à
- * elle seule le vocabulaire d'un nom que le client écrit : le fichier d'une
- * erreur navigateur doit en plus exister dans le build en place.
+ * elle seule le vocabulaire d'un nom qu'un tiers peut écrire : un fichier
+ * doit en plus exister, dans le dépôt ou dans le build en place.
  */
 final class Vocabulaire
 {
@@ -70,16 +70,21 @@ final class Vocabulaire
     }
 
     /**
-     * Un fichier du dépôt, relatif à sa racine. Un chemin hors de
-     * l'application n'est pas un fichier du dépôt : `null`.
+     * Un fichier du dépôt qui existe, relatif à sa racine. Un chemin hors de
+     * l'application, ou un nom qui n'a que la forme d'un fichier, n'est pas
+     * un fichier du dépôt : `null`. Le disque est relu à chaque appel.
      */
     public static function fichier(mixed $chemin): ?string
     {
         $racine = base_path().'/';
-
-        return match (is_string($chemin) && str_starts_with($chemin, $racine)) {
+        $relatif = match (is_string($chemin) && str_starts_with($chemin, $racine)) {
             true => self::forme(self::FICHIER, substr($chemin, strlen($racine))),
             false => self::forme(self::FICHIER, $chemin),
+        };
+
+        return match ($relatif !== null && is_file($racine.$relatif)) {
+            true => $relatif,
+            false => null,
         };
     }
 

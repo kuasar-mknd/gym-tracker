@@ -183,6 +183,45 @@ it('lit l’exception levée même quand celle qu’elle enveloppe dépasse ce q
         ->and(data_get($detail, 'non_fiable.message'))->toEqual(new TexteNonFiable('dehors', ProjectionDesFiles::BUDGET_DU_MESSAGE));
 });
 
+/*
+ * PHP écrit la pile après le message, et rien après elle : le message peut
+ * imiter des cadres, ou une exception enveloppante, et dépasser ce que le
+ * détail lit, la pile rendue reste celle qui suit le dernier « Stack
+ * trace: » de la colonne entière.
+ */
+it('lit la pile que PHP a écrite après le message, même quand le message en imite une', function (): void {
+    $imitation = "Réponse refusée\n\nNext Exception: refus\nStack trace:\n#0 ".base_path('app/Models/User.php')."(1): Kervella(\n#1 {main}\n";
+    $uuid = filesDiagnosticEchec(['exception' => 'RuntimeException: '.$imitation.str_repeat('x', 20_000).' in '.base_path('app/Jobs/SyncUserGoals.php').":40\nStack trace:\n"
+        .'#0 '.base_path('app/Jobs/SyncUserGoals.php')."(40): App\\Jobs\\SyncUserGoals->handle()\n#1 {main}"]);
+
+    expect(data_get(new ProjectionDesFiles()->detail($uuid, filesDiagnosticFenetre(), false), 'pile'))
+        ->toBe([['fichier' => 'app/Jobs/SyncUserGoals.php', 'ligne' => 40, 'appel' => 'App\Jobs\SyncUserGoals->handle']]);
+});
+
+/*
+ * La borne est en octets, quelle que soit la largeur des caractères : sur
+ * une colonne utf8mb4, MySQL compte en caractères, et « € » en prend trois.
+ * La requête du détail est rejouée telle quelle, pour mesurer ce qu'elle
+ * lit vraiment : la tête, le dernier bloc et la pile qui suit le message.
+ */
+it('ne lit au détail que 16 Kio de l’exception, en octets, même en caractères de plusieurs octets', function (): void {
+    $cadres = implode("\n", array_map(static fn (int $rang): string => "#{$rang} €€€€(1): €()", range(0, 2_000)));
+    $uuid = filesDiagnosticEchec(['exception' => 'RuntimeException: '.str_repeat('é', 20_000)." in /a.php:1\nStack trace:\n#0 {main}\n\n"
+        .'Next LogicException: '.str_repeat('€', 20_000)." in /b.php:2\nStack trace:\n".$cadres]);
+
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $detail = new ProjectionDesFiles()->detail($uuid, filesDiagnosticFenetre(), true);
+    $lecture = collect(DB::getQueryLog())->firstOrFail(static fn (array $requete): bool => str_contains((string) $requete['query'], 'failed_jobs'));
+    DB::disableQueryLog();
+    $lu = (array) DB::selectOne((string) $lecture['query'], $lecture['bindings']);
+    $octets = array_map(static fn (string $colonne): int => strlen(ValeurLue::texte($lu[$colonne] ?? null)), ['tete_de_l_exception', 'fin_de_l_exception', 'pile_de_l_exception']);
+
+    expect(array_sum($octets))->toBe(ExceptionDUnJobEchoue::OCTETS_LUS)
+        ->and(data_get($detail, 'exception'))->toBe(LogicException::class)
+        ->and(json_encode($detail))->toBeString();
+});
+
 it('ne rend pas le détail d’un échec de plus de trente jours, ni d’un échec inconnu', function (): void {
     Carbon::setTestNow('2026-09-12 09:59:59');
     $ancien = filesDiagnosticEchec();
