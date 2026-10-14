@@ -300,15 +300,26 @@ it('rend [illisible] quand une expression échoue, jamais le texte d’origine',
     expect($expurge)->toEqual(new TexteExpurge(ExpurgeLeTexte::ILLISIBLE, 0));
 });
 
+/*
+ * La meilleure de cinq mesures : une expression qui revient en arrière sans
+ * fin dépasse la borne à chaque passage, une machine chargée (la suite
+ * parallèle de la CI, un autre processus) n'en retarde que certains. Vu le
+ * 2026-10-14 : 53, 55 et 91 ms pour un traitement d'une milliseconde, sous
+ * une charge de 28 sur quatre cœurs.
+ */
 it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $adverse): void {
     expect(strlen($adverse))->toBeGreaterThanOrEqual(ExpurgeLeTexte::OCTETS_LUS);
 
-    $debut = hrtime(true);
-    $expurge = expurgeLeTexte($adverse);
-    $millisecondes = (hrtime(true) - $debut) / 1_000_000;
+    $mesures = array_map(static function () use ($adverse): array {
+        $debut = hrtime(true);
+        $expurge = expurgeLeTexte($adverse);
 
-    expect($millisecondes)->toBeLessThan(50.0)
-        ->and($expurge->texte)->not->toBe(ExpurgeLeTexte::ILLISIBLE);
+        return ['millisecondes' => (hrtime(true) - $debut) / 1_000_000, 'texte' => $expurge->texte];
+    }, range(1, 5));
+
+    expect(min(array_column($mesures, 'millisecondes')))->toBeLessThan(50.0)
+        ->and(array_unique(array_column($mesures, 'texte')))->toHaveCount(1)
+        ->and($mesures[0]['texte'])->not->toBe(ExpurgeLeTexte::ILLISIBLE);
 })->with([
     'des lettres' => [str_repeat('a', 8_192)],
     'des arobases' => [str_repeat('a@', 4_096)],
