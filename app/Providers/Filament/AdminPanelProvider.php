@@ -18,12 +18,14 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use ShuvroRoy\FilamentSpatieLaravelHealth\FilamentSpatieLaravelHealthPlugin;
@@ -70,6 +72,12 @@ final class AdminPanelProvider extends PanelProvider
             ->login()
             ->profile()
             ->brandName('GymTracker')
+            /*
+             * Le logo de l'application et son nom, comme dans son en-tête :
+             * sans `brandLogo`, le panneau n'écrivait que le nom.
+             */
+            ->brandLogo(fn (): Htmlable => new HtmlString(view('filament.marque')->render()))
+            ->brandLogoHeight('2rem')
             ->favicon(asset('favicon.ico'))
             ->authGuard('admin')
             ->colors($this->getPanelColors())
