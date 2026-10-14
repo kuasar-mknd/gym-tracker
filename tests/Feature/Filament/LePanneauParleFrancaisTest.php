@@ -164,7 +164,9 @@ it('affiche en français l’encart des derniers inscrits', function (): void {
 
     $html = panneauHtmlResserre(Livewire::test(RecentUsersTable::class)->html());
 
-    expect($html)->toContain('Inscription', 'Dernière activité', 'Adresse e-mail');
+    // Sans titre posé, Filament tirait celui de l'encart du nom de sa classe.
+    expect($html)->toContain('Derniers inscrits', 'Inscription', 'Dernière activité', 'Adresse e-mail')
+        ->and($html)->not->toContain('Recent Users Table');
 
     foreach (panneauLibellesAnglais() as $libelle) {
         expect($html)->not->toContain($libelle);

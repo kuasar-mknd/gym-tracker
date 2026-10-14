@@ -47,7 +47,9 @@ class UserActivityChart extends ChartWidget
     }
 
     /**
-     * Les inscriptions de l'année en cours, par mois.
+     * Les inscriptions de l'année en cours, par mois : les comptes ouverts,
+     * rangés au mois de leur inscription. Un compte encore en attente du lien
+     * n'y entre qu'une fois ouvert (`User::ouverts()`).
      *
      * Les deux bornes de l'année se tirent d'une seule lecture de l'horloge :
      * avec une lecture chacune, quand l'année changeait entre elles, la
@@ -61,7 +63,8 @@ class UserActivityChart extends ChartWidget
         $debutDeLAnnee = Carbon::now()->startOfYear();
 
         /** @phpstan-ignore-next-line */
-        return User::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
+        return User::ouverts()
+            ->selectRaw('COUNT(*) as count, MONTH(created_at) as month')
             // Un intervalle sur la colonne nue : `whereYear()` lui appliquait une
             // fonction et rendait tout index inutilisable.
             ->where('created_at', '>=', $debutDeLAnnee)

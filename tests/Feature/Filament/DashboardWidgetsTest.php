@@ -51,6 +51,32 @@ it('compte le total des utilisateurs et ceux inscrits dans les 7 derniers jours'
         ->and($values['Nouveaux comptes (7 j)'])->toBe(5);
 });
 
+/*
+ * Un compte ouvert par l'inscription attend que son titulaire suive le lien
+ * envoyé à son adresse, et s'efface s'il ne le fait jamais : ce n'est pas
+ * encore un compte. « Comptes » et « Nouveaux comptes (7 j) » ne comptent que
+ * les comptes ouverts, dont ceux qu'un lien suivi a ouverts et ceux qui n'ont
+ * jamais attendu, vérifiés ou non ; « Comptes » dit à part combien attendent.
+ */
+it('ne compte pas les comptes en attente du lien dans les tuiles, et dit combien attendent', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-05-20 12:00:00'));
+    $hier = Carbon::parse('2026-05-19 09:00:00');
+
+    User::factory()->count(2)->create(['created_at' => $hier]);
+    User::factory()->unverified()->create(['created_at' => Carbon::parse('2026-05-01 09:00:00')]);
+    User::factory()->enAttente()->count(3)->create(['created_at' => $hier, 'en_attente_depuis' => $hier]);
+    User::factory()->enAttente()->create(['created_at' => $hier, 'en_attente_depuis' => $hier])->markEmailAsVerified();
+
+    $values = filamentStatsOverviewValues();
+
+    expect($values['Comptes'])->toBe(4)
+        ->and($values['Nouveaux comptes (7 j)'])->toBe(3);
+
+    Livewire::test(StatsOverview::class)
+        ->assertSee('Comptes ouverts, et 3 en attente du lien')
+        ->assertSee('Ouverts, inscrits ces sept derniers jours');
+});
+
 it('compte les séances démarrées aujourd’hui, et elles seules', function (): void {
     Carbon::setTestNow(Carbon::parse('2026-05-20 12:00:00'));
 
@@ -114,7 +140,8 @@ it('rend les quatre tuiles de statistiques avec leurs libellés', function (): v
         ->assertSee('Nouveaux comptes (7 j)')
         ->assertSee('Séances du jour')
         ->assertSee('Exercices communs')
-        ->assertSee('Comptes inscrits')
+        ->assertSee('Comptes ouverts, et 0 en attente du lien')
+        ->assertDontSee('Comptes inscrits')
         ->assertDontSee('Total Users')
         ->assertDontSee('Workouts Today');
 });
@@ -134,6 +161,25 @@ it('ventile les inscriptions par mois sur les douze mois de l’année en cours'
     expect($data['datasets'][0]['data'])->toBe([2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 1])
         ->and($data['datasets'][0]['label'])->toBe('Nouveaux comptes')
         ->and($data['labels'])->toBe(['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']);
+});
+
+/*
+ * Le graphique « Inscriptions » ne range que les comptes ouverts, au mois de
+ * leur inscription : un compte en attente du lien n'y entre qu'une fois
+ * ouvert, et compte alors au mois où il s'est inscrit.
+ */
+it('ne range dans les inscriptions que les comptes ouverts', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-05-20 12:00:00'));
+    $finAvril = Carbon::parse('2026-04-30 23:00:00');
+    $mai = Carbon::parse('2026-05-18 09:00:00');
+
+    User::factory()->count(2)->create(['created_at' => Carbon::parse('2026-03-05 09:00:00')]);
+    User::factory()->enAttente()->count(4)->create(['created_at' => $mai, 'en_attente_depuis' => $mai]);
+    User::factory()->enAttente()->create(['created_at' => $finAvril, 'en_attente_depuis' => $finAvril])->markEmailAsVerified();
+
+    $donnees = new ReflectionMethod(UserActivityChart::class, 'getData')->invoke(new UserActivityChart());
+
+    expect(data_get($donnees, 'datasets.0.data'))->toBe([0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
 });
 
 /*
@@ -191,4 +237,20 @@ it('affiche le nom, l’email et la dernière activité de chaque inscrit récen
         ->assertTableColumnStateSet('email', 'recente@example.com', $user)
         ->assertTableColumnStateSet('last_workout_at', Carbon::parse('2026-05-18 20:00:00'), $user)
         ->assertSee('recente@example.com');
+});
+
+/*
+ * L'encart des derniers inscrits ne montre que des comptes ouverts : un compte
+ * en attente du lien, même plus récent, ne s'y glisse pas (la liste des
+ * utilisateurs le montre, avec son badge).
+ */
+it('n’affiche dans les derniers inscrits que les comptes ouverts', function (): void {
+    $ouvert = User::factory()->create(['created_at' => Carbon::now()->subDays(2)]);
+    $jamaisVerifie = User::factory()->unverified()->create(['created_at' => Carbon::now()->subDays(3)]);
+    $enAttente = User::factory()->enAttente()->create();
+
+    Livewire::test(RecentUsersTable::class)
+        ->assertCanSeeTableRecords([$ouvert, $jamaisVerifie], inOrder: true)
+        ->assertCanNotSeeTableRecords([$enAttente])
+        ->assertDontSee($enAttente->email);
 });
