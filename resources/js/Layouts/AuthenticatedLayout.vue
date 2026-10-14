@@ -1,5 +1,5 @@
 <script setup>
-import { watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
@@ -9,6 +9,7 @@ import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
+import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -16,6 +17,7 @@ import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
+import { EVENEMENT_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
 
 defineProps({
     pageTitle: {
@@ -65,6 +67,35 @@ const toasts = {
     error: { icon: 'error', color: 'red', delay: 8000, id: null },
 }
 
+/**
+ * Le bouton que porte le toast d'erreur, avec le message auquel il appartient :
+ * « Annuler » sous « Le réseau ne répond pas » (#2048). Un autre message le
+ * fait disparaître, puisqu'il ne lui appartient pas.
+ */
+const actionDuToast = ref(null)
+
+const actionDeLErreur = computed(() =>
+    actionDuToast.value !== null && actionDuToast.value.message === page.props.flash?.error
+        ? actionDuToast.value
+        : null,
+)
+
+/**
+ * Pose l'échéance du toast `key`. Un toast qui porte une action n'en a pas :
+ * il reste jusqu'à ce que sa visite finisse, ou qu'on le ferme.
+ *
+ * @param {'success'|'error'} key
+ */
+const armerLeToast = (key) => {
+    clearTimeout(toasts[key].id)
+
+    if (key === 'error' && actionDeLErreur.value !== null) {
+        return
+    }
+
+    toasts[key].id = setTimeout(() => page.props.flash && (page.props.flash[key] = null), toasts[key].delay)
+}
+
 /*
  * Chaque toast garde l'échéance posée à son apparition.
  *
@@ -93,12 +124,52 @@ watch(
                 return
             }
 
-            clearTimeout(toasts[key].id)
-            toasts[key].id = setTimeout(() => page.props.flash && (page.props.flash[key] = null), toasts[key].delay)
+            armerLeToast(key)
         })
     },
     { immediate: true },
 )
+
+/**
+ * Ce que le filet des visites hors ligne annonce (`Utils/visitesHorsLigne.js`),
+ * par le toast d'erreur : une page indisponible sans réseau, une écriture sans
+ * confirmation, un réseau qui ne répond pas. Le même message annoncé deux fois
+ * de suite repart pour sa durée entière : sinon le second appui sur un lien
+ * mort ne dirait rien.
+ */
+const surSansReseau = ({ detail }) => {
+    const flash = page.props.flash ?? (page.props.flash = {})
+
+    if (detail.message === null) {
+        if (flash.error === detail.retire) {
+            flash.error = null
+        }
+
+        return
+    }
+
+    actionDuToast.value =
+        detail.annuler === null ? null : { message: detail.message, libelle: 'Annuler', faire: detail.annuler }
+
+    if (flash.error === detail.message) {
+        armerLeToast('error')
+
+        return
+    }
+
+    flash.error = detail.message
+}
+
+const faireLActionDuToast = () => {
+    const action = actionDeLErreur.value
+
+    page.props.flash.error = null
+    actionDuToast.value = null
+    action?.faire()
+}
+
+onMounted(() => window.addEventListener(EVENEMENT_SANS_RESEAU, surSansReseau))
+onUnmounted(() => window.removeEventListener(EVENEMENT_SANS_RESEAU, surSansReseau))
 
 const activeWorkout = computed(() => page.props.auth?.user?.active_workout)
 const isWorkoutShow = computed(() => route().current('workouts.show'))
@@ -204,6 +275,15 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                         <p class="text-text-main flex-1 text-sm font-bold">
                             {{ $page.props.flash[type] }}
                         </p>
+                        <GlassButton
+                            v-if="type === 'error' && actionDeLErreur"
+                            variant="secondary"
+                            size="sm"
+                            dusk="action-du-toast"
+                            @click="faireLActionDuToast"
+                        >
+                            {{ actionDeLErreur.libelle }}
+                        </GlassButton>
                         <GlassIconButton
                             v-press
                             icon="close"
