@@ -41,7 +41,8 @@ it('lit un entier, une durée ou une chaîne, ou rien', function (): void {
     expect([ValeurLue::entier(12), ValeurLue::entier('-3'), ValeurLue::entier('12.5'), ValeurLue::entier('12 '), ValeurLue::entier("12\n"), ValeurLue::entier(null), ValeurLue::entier(1.0)])
         ->toBe([12, -3, null, null, null, null, null])
         ->and([ValeurLue::duree('2.345'), ValeurLue::duree(3), ValeurLue::duree('x'), ValeurLue::duree(null)])->toBe([2.35, 3.0, null, null])
-        ->and([ValeurLue::texte('a'), ValeurLue::texte(3), ValeurLue::texte(null)])->toBe(['a', '', '']);
+        ->and([ValeurLue::texte('a'), ValeurLue::texte(3), ValeurLue::texte(null)])->toBe(['a', '', ''])
+        ->and([ValeurLue::morceau("é€\xE2\x82"), ValeurLue::morceau('a'), ValeurLue::morceau(null)])->toBe(['é€?', 'a', '']);
 });
 
 it('ne garde une valeur que si elle a sa forme', function (): void {

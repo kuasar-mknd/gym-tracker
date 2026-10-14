@@ -133,7 +133,7 @@ final class ProjectionDesFiles
             'file' => Vocabulaire::forme(Vocabulaire::IDENTIFIANT, $ligne->queue),
             'echoue_le' => ValeurLue::instant($ligne->failed_at),
             'exception' => ExceptionDUnJobEchoue::classe($exception),
-            'pile' => PileSansArguments::duTexte(ExceptionDUnJobEchoue::texte($ligne->pile_de_l_exception), self::CADRES_AU_PLUS),
+            'pile' => PileSansArguments::duTexte(ValeurLue::morceau($ligne->pile_de_l_exception), self::CADRES_AU_PLUS),
             ...match ($texteBrut) {
                 true => ['non_fiable' => ['message' => new TexteNonFiable(ExceptionDUnJobEchoue::message($exception), self::BUDGET_DU_MESSAGE)]],
                 false => [],

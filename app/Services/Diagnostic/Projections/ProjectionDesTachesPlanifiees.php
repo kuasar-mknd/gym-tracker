@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Diagnostic\Projections;
 
 use App\Models\TachePlanifiee;
+use App\Services\Diagnostic\ExpurgeLeTexte;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\TexteNonFiable;
 use App\Services\Diagnostic\ValeurLue;
@@ -18,8 +19,9 @@ use stdClass;
  * état, dates, marge, le nombre des échecs des sept derniers jours et les
  * derniers d'entre eux (date, durée, code de sortie) : cinq par tâche au
  * résumé, cinquante au détail d'une tâche, qui ajoute sous `TexteBrut` le
- * message de chacun, sous `non_fiable`. Jamais la sortie d'une commande, que
- * le moniteur garde aussi : elle n'est pas lue.
+ * message de chacun, sous `non_fiable`, lu de ces seules lignes et coupé à
+ * ce que l'expurgation en garde. Jamais la sortie d'une commande, que le
+ * moniteur garde aussi : elle n'est pas lue.
  *
  * Comme les autres listes, le résumé lit au plus 50 tâches et 5 000 échecs,
  * un de plus pour savoir s'il a débordé, et le dit (`tronque`,
@@ -141,7 +143,8 @@ final class ProjectionDesTachesPlanifiees
     }
 
     /**
-     * Le message de chacun des échecs donnés, par identifiant.
+     * Le message de chacun des échecs donnés, par identifiant : les 8 Kio
+     * que l'expurgation en garderait, coupés en base en octets.
      *
      * @param  array<array-key, mixed>  $identifiants
      * @return array<array-key, mixed>
@@ -150,7 +153,7 @@ final class ProjectionDesTachesPlanifiees
     {
         return MonitoredScheduledTaskLogItem::query()->toBase()
             ->select('id')
-            ->selectRaw("json_unquote(json_extract(meta, '$.failure_message')) as message")
+            ->selectRaw("substring(cast(json_unquote(json_extract(meta, '$.failure_message')) as binary), 1, ?) as message", [ExpurgeLeTexte::OCTETS_LUS])
             ->whereIn('id', $identifiants)
             ->pluck('message', 'id')
             ->all();
@@ -171,7 +174,7 @@ final class ProjectionDesTachesPlanifiees
             'code_de_sortie' => ValeurLue::entier($ligne->code_de_sortie),
             ...match ($messages) {
                 null => [],
-                default => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::texte($messages[ValeurLue::entier($ligne->id) ?? 0] ?? null), self::BUDGET_DU_MESSAGE)]],
+                default => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::morceau($messages[ValeurLue::entier($ligne->id) ?? 0] ?? null), self::BUDGET_DU_MESSAGE)]],
             },
         ];
     }

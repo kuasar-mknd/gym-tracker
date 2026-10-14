@@ -22,8 +22,8 @@ use stdClass;
  * (seulement s'il est du build en place), ligne, colonne. Les groupes qui
  * touchent le plus de comptes passent devant, puis les plus nombreux, puis
  * les plus récents : un compte seul ne pousse pas son erreur devant celle
- * de plusieurs. Les erreurs d'un compte
- * supprimé ou non vérifié ne sont pas lues. Le détail d'un groupe ajoute,
+ * de plusieurs. Les erreurs d'un compte supprimé ou non vérifié ne sont
+ * pas lues. Le détail d'un groupe ajoute,
  * avec `TexteBrut`, le message, la page sans sa chaîne de requête et les
  * premières lignes de la pile de sa dernière occurrence, sous `non_fiable`,
  * lus de cette seule ligne : le groupe en compte jusqu'à 5 000, et leurs

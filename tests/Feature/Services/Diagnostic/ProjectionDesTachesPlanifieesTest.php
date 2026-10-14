@@ -188,7 +188,7 @@ it('compte les échecs au résumé sans tous les lister, lit au plus 5 000 ligne
 
     expect([$liste['lignes_lues'], $liste['echantillon'], $liste['tronque'], count($liste['taches'])])->toBe([LecturesBornees::LIGNES_AU_PLUS, true, true, LecturesBornees::GROUPES_AU_PLUS])
         ->and($liste['taches'][0]['echecs_sur_7_jours'])->toBe(LecturesBornees::LIGNES_AU_PLUS)
-        ->and(array_column($liste['taches'][0]['derniers_echecs'], 'le'))->toBe([
+        ->and(data_get($liste, 'taches.0.derniers_echecs.*.le'))->toBe([
             '2026-10-12T09:59:00+02:00', '2026-10-12T09:58:00+02:00', '2026-10-12T09:57:00+02:00', '2026-10-12T09:56:00+02:00', '2026-10-12T09:55:00+02:00',
         ])
         ->and([$resume->enveloppe['echantillon'], $resume->enveloppe['tronque']])->toBe([true, true])
@@ -201,4 +201,19 @@ it('compte les échecs au résumé sans tous les lister, lit au plus 5 000 ligne
             'code_de_sortie' => 1,
             'non_fiable' => ['message' => new TexteNonFiable('refus n° 50', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE)],
         ]);
+});
+
+/*
+ * Le message d'un échec est du texte libre : le détail en lit cinquante, et
+ * de chacun les 8 Kio que l'expurgation garderait, coupés en octets et non
+ * en caractères ; un caractère tranché est remplacé.
+ */
+it('ne lit du message d’un échec que les 8 Kio que l’expurgation garde, coupés en octets', function (): void {
+    $tache = tachesDiagnosticTache('backup:run', ['last_failed_at' => '2026-10-12 02:30:04'], [
+        ['le' => '2026-10-12 02:30:04', 'meta' => ['failure_message' => str_repeat('€', 5_000), 'runtime' => 4, 'exit_code' => 1]],
+    ]);
+
+    $message = data_get(new ProjectionDesTachesPlanifiees()->detail($tache->id, tachesDiagnosticFenetre(), true), 'derniers_echecs.0.non_fiable.message');
+
+    expect($message)->toEqual(new TexteNonFiable(str_repeat('€', 2_730).'?', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE));
 });

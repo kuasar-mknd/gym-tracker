@@ -67,4 +67,13 @@ final class ValeurLue
     {
         return is_string($valeur) ? $valeur : '';
     }
+
+    /**
+     * Un morceau de texte que la base a coupé en octets : une chaîne, dont
+     * un caractère que la coupe a tranché est remplacé.
+     */
+    public static function morceau(mixed $valeur): string
+    {
+        return mb_scrub(self::texte($valeur), 'UTF-8');
+    }
 }

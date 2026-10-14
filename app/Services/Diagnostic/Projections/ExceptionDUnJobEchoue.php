@@ -32,7 +32,7 @@ use Throwable;
  * Chaque morceau est coupé en base, en octets et non en caractères (`é`
  * en prend deux, `€` trois) : le détail lit 16 Kio de la colonne en tout,
  * un quart pour la tête, un quart pour le dernier bloc, la moitié pour la
- * pile. Un caractère coupé en deux est réparé (`texte()`).
+ * pile. Un caractère coupé en deux est réparé (`ValeurLue::morceau()`).
  *
  * La classe vient du début du bloc, le message de ce qui la suit jusqu'à la
  * pile, sans le dernier ` in /chemin:ligne` (l'endroit où l'exception est
@@ -104,18 +104,9 @@ final class ExceptionDUnJobEchoue
         $classe = self::classe($fin);
 
         return match ($classe !== null && is_a($classe, Throwable::class, true)) {
-            true => self::texte($fin),
-            false => self::texte($tete),
+            true => ValeurLue::morceau($fin),
+            false => ValeurLue::morceau($tete),
         };
-    }
-
-    /**
-     * Un morceau lu en base : du texte, dont un caractère que la coupe a
-     * tranché est remplacé.
-     */
-    public static function texte(mixed $morceau): string
-    {
-        return mb_scrub(ValeurLue::texte($morceau), 'UTF-8');
     }
 
     public static function classe(mixed $texte): ?string
