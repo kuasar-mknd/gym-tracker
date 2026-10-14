@@ -617,4 +617,24 @@ it('dessine le badge des notifications en blanc sur transparent', function (): v
         ->and($pixels[0][3])->toBe("\x00", 'Le coin du badge doit être transparent.')
         ->and(count($visibles))->toBeGreaterThan(0)->toBeLessThan(count($pixels) / 2)
         ->and(array_values($teintes))->toBe(["\xFF\xFF\xFF"]);
+
+    /*
+     * La taille, le coin, la surface et la teinte ne disent pas ce que le
+     * badge dessine : l'ancien, un cercle et une croix blancs, les tenait
+     * aussi. Trois points du dessin le disent, en proportion du côté : le flanc
+     * gauche du G et la plus haute barre sont pleins, le jour entre le G et
+     * son bras est vide. Chacun est au cœur d'une zone de sept pixels de côté.
+     * Un pixel s'y lit en hexadécimal, rouge, vert, bleu puis alpha.
+     */
+    $point = static fn (int $x, int $y): string => bin2hex($pixels[intdiv($entete['hauteur'] * $y, 100) * $entete['largeur'] + intdiv($entete['largeur'] * $x, 100)]);
+
+    expect([
+        'flanc du G' => $point(17, 52),
+        'plus haute barre' => $point(81, 62),
+        'alpha du jour entre le G et son bras' => substr($point(32, 52), 6),
+    ])->toBe([
+        'flanc du G' => 'ffffffff',
+        'plus haute barre' => 'ffffffff',
+        'alpha du jour entre le G et son bras' => '00',
+    ], 'public/badge-96x96.png ne montre pas le dessin de public/badge.svg : à régénérer, voir pwa-assets.config.js.');
 });
