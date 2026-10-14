@@ -53,7 +53,7 @@ const mountModal = async (props = { is_testing: false, auth: { user: { latest_ac
         attachTo: document.body,
     })
 
-    // The dialog opens from a watcher on `show`, which onMounted sets.
+    // Le montage ouvre le dialogue sur le badge que la page porte déjà.
     await nextTick()
 
     return wrapper
