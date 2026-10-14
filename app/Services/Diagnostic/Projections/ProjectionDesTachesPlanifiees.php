@@ -57,7 +57,7 @@ final class ProjectionDesTachesPlanifiees
 
         return [
             'taches' => $montrees
-                ->map(fn (TachePlanifiee $tache): array => $this->tache($tache, $fenetre, $parTache->get($tache->getKey(), new Collection()), self::ECHECS_DU_RESUME, false))
+                ->map(fn (TachePlanifiee $tache): array => $this->tache($tache, $fenetre, $parTache->get(ValeurLue::entier($tache->getKey()) ?? 0, new Collection()), self::ECHECS_DU_RESUME, false))
                 ->values()
                 ->all(),
             ...LecturesBornees::bilan($echecs, $taches),
@@ -128,7 +128,7 @@ final class ProjectionDesTachesPlanifiees
      * ces seules lignes.
      *
      * @param  Collection<int, stdClass>  $echecs
-     * @return list<array<string, mixed>>
+     * @return array<int, array<string, mixed>>
      */
     private function derniers(Collection $echecs, bool $texteBrut): array
     {
@@ -143,7 +143,7 @@ final class ProjectionDesTachesPlanifiees
     /**
      * Le message de chacun des échecs donnés, par identifiant.
      *
-     * @param  array<int, mixed>  $identifiants
+     * @param  array<array-key, mixed>  $identifiants
      * @return array<array-key, mixed>
      */
     private function messages(array $identifiants): array
@@ -171,7 +171,7 @@ final class ProjectionDesTachesPlanifiees
             'code_de_sortie' => ValeurLue::entier($ligne->code_de_sortie),
             ...match ($messages) {
                 null => [],
-                default => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::texte($messages[$ligne->id] ?? null), self::BUDGET_DU_MESSAGE)]],
+                default => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::texte($messages[ValeurLue::entier($ligne->id) ?? 0] ?? null), self::BUDGET_DU_MESSAGE)]],
             },
         ];
     }
