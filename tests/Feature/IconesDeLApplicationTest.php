@@ -248,6 +248,33 @@ function iconePngAlphasDistincts(string $pixels): array
 }
 
 /**
+ * Le plus petit rectangle qui contient les pixels retenus, en pixels.
+ *
+ * @param  Closure(string): bool  $retenu  reçoit un pixel, quatre octets RVBA
+ * @return array{largeur: int, hauteur: int}
+ */
+function iconePngBoite(string $pixels, int $largeurDeLImage, Closure $retenu): array
+{
+    $gauche = $haut = PHP_INT_MAX;
+    $droite = $bas = -1;
+
+    foreach (str_split($pixels, 4) as $rang => $pixel) {
+        if ($retenu($pixel)) {
+            $x = $rang % $largeurDeLImage;
+            $y = intdiv($rang, $largeurDeLImage);
+            $gauche = min($gauche, $x);
+            $droite = max($droite, $x);
+            $haut = min($haut, $y);
+            $bas = max($bas, $y);
+        }
+    }
+
+    expect($droite)->toBeGreaterThanOrEqual(0, 'Aucun pixel de l’image n’est retenu.');
+
+    return ['largeur' => $droite - $gauche + 1, 'hauteur' => $bas - $haut + 1];
+}
+
+/**
  * Le manifeste de l'application, décodé.
  *
  * @return array<string, mixed>
@@ -497,21 +524,50 @@ it('tire les icônes opaques de la tuile du logo, sans marge', function (): void
 
     expect($adresses)->toHaveCount(2);
 
+    /*
+     * Le générateur réduit par défaut la source à 70 % de ces deux icônes, sur
+     * un fond blanc. Les coins ne la trahissent pas : la tuile est blanche, elle
+     * aussi. La taille du dessin la trahit. Sans marge, la tuile remplit
+     * l'image, et le dessin y couvre la même part du côté que de sa tuile sur
+     * la grande icône « any » du manifeste, où la tuile se détache par sa
+     * transparence, quelle que soit la marge qui l'entoure.
+     */
+    $tuile = substr((string) hex2bin(ltrim(Charte::jeton('logo-fond'), '#')), 0, 3);
+    $estDuDessin = static fn (string $pixel): bool => $pixel[3] === "\xFF" && substr($pixel, 0, 3) !== $tuile;
+    $ordinaires = array_column(array_filter(iconesDuManifeste(), static fn (array $icone): bool => ($icone['purpose'] ?? 'any') === 'any' && ($icone['sizes'] ?? '') === '512x512'), 'src');
+
+    expect($ordinaires)->toHaveCount(1, 'Le manifeste doit déclarer une icône « any » de 512 px.');
+
+    $reference = (string) file_get_contents(iconeFichierServi($ordinaires[0]));
+    $pixelsDeReference = iconePngPixels($reference, $ordinaires[0]);
+    $largeurDeReference = iconePngEnTete($reference, $ordinaires[0])['largeur'];
+    $tuileDeReference = iconePngBoite($pixelsDeReference, $largeurDeReference, static fn (string $pixel): bool => $pixel[3] !== "\x00");
+    $dessinDeReference = iconePngBoite($pixelsDeReference, $largeurDeReference, $estDuDessin);
+    $partDeLaTuile = [
+        'largeur' => round($dessinDeReference['largeur'] / $tuileDeReference['largeur'], 3),
+        'hauteur' => round($dessinDeReference['hauteur'] / $tuileDeReference['hauteur'], 3),
+    ];
+
     foreach ($adresses as $adresse) {
         $png = (string) file_get_contents(iconeFichierServi($adresse));
         $pixels = iconePngPixels($png, $adresse);
         $entete = iconePngEnTete($png, $adresse);
         $coins = [0, $entete['largeur'] - 1, ($entete['hauteur'] - 1) * $entete['largeur'], $entete['largeur'] * $entete['hauteur'] - 1];
+        $dessin = iconePngBoite($pixels, $entete['largeur'], $estDuDessin);
 
         /*
-         * Quatre coins à la tuile de la charte : ni la marge blanche que le
-         * générateur pose par défaut, ni la transparence des coins arrondis de
-         * la tuile. Une couleur retouchée dans la charte et dans icone.svg sans
-         * relancer la recette se voit aussi ici.
+         * Quatre coins à la tuile de la charte : ni la transparence des coins
+         * arrondis de la tuile, ni une autre couleur de fond. Une couleur
+         * retouchée dans la charte et dans icone.svg sans relancer la recette
+         * se voit aussi ici.
          */
         expect(array_map(static fn (int $rang): string => iconePngCouleurDuPixel($pixels, $rang), $coins))
             ->toBe(array_fill(0, 4, Charte::jeton('logo-fond')), "{$adresse} : à régénérer, voir pwa-assets.config.js.")
-            ->and(iconePngAlphasDistincts($pixels))->toBe(["\xFF"], "{$adresse} porte des pixels transparents.");
+            ->and(iconePngAlphasDistincts($pixels))->toBe(["\xFF"], "{$adresse} porte des pixels transparents.")
+            ->and([
+                'largeur' => round($dessin['largeur'] / $entete['largeur'], 3),
+                'hauteur' => round($dessin['hauteur'] / $entete['hauteur'], 3),
+            ])->toEqualWithDelta($partDeLaTuile, 0.02, "{$adresse} : le dessin n'y couvre pas la part du côté qu'il couvre de sa tuile sur {$ordinaires[0]}. Une marge entoure la tuile : à régénérer, voir pwa-assets.config.js.");
     }
 });
 

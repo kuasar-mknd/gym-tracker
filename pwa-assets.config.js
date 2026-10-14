@@ -23,8 +23,8 @@ import { readFileSync } from 'node:fs'
  *
  * tests/Feature/IconesDeLApplicationTest.php vérifie le résultat : même dessin
  * dans ses quatre copies, tailles, opacité de l'icône iOS, couleur de sa tuile,
- * dessin dans la zone sûre de l'icône masquable, les trois couleurs du logo sur
- * chaque PNG, badge blanc sur transparent.
+ * icônes opaques sans marge, dessin dans la zone sûre de l'icône masquable, les
+ * trois couleurs du logo sur chaque PNG, badge blanc sur transparent.
  */
 
 /**
