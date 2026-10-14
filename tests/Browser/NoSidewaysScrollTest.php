@@ -180,12 +180,14 @@ class NoSidewaysScrollTest extends DuskTestCase
     /**
      * Les largeurs de bureau où la barre de navigation doit tenir.
      *
-     * Elle s'ouvre dès `sm` (640 px). Logo et nom ensemble la faisaient
-     * déborder jusqu'à 1 103 px de large avec un compte « Test User », et
-     * plus loin avec un nom long : le menu du compte sortait de l'écran,
-     * chevron compris. 1 080 px est la largeur d'un écran 1080p tourné en
-     * portrait, entre `lg` et `xl`, où la barre ne montre que le logo ;
-     * 1 280 px, la première largeur où elle montre aussi le nom.
+     * Elle s'ouvre dès `sm` (640 px). Logo et nom ensemble lui demandaient
+     * 1 103 px de large avec un compte « Test User », 1 151 avec le nom long
+     * de userWithContent(), plus les 15 px de l'ascenseur que Chrome montre
+     * ici : en deçà, le menu du compte sortait de l'écran, chevron compris.
+     * Le logo seul en demande 947 avec ce nom. 1 080 px est la largeur d'un
+     * écran 1080p tourné en portrait, entre `lg` et `xl`, où la barre ne
+     * montre que le logo ; 1 280 px, la première largeur où elle montre aussi
+     * le nom.
      *
      * @return array<string, array{int}>
      */

@@ -167,8 +167,8 @@ describe('la marque de la barre de navigation', () => {
     })
 
     /**
-     * Logo et nom ensemble faisaient déborder la barre de bureau jusqu'à
-     * 1 103 px de large, menu du compte coupé : le nom n'y apparaît qu'à
+     * Logo et nom ensemble demandaient 1 103 px de large à la barre de
+     * bureau, menu du compte coupé en deçà : le nom n'y apparaît qu'à
      * partir de `xl`, et nomme le lien à toute largeur.
      */
     it('garde le nom pour les lecteurs d’écran, et ne le montre qu’à partir de xl', () => {
