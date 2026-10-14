@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
 use Livewire\Livewire;
@@ -206,7 +207,7 @@ function dureeAuthentificationCas(): array
     ];
 }
 
-it('dure au moins le plancher commun, sommeil compris', function (Closure $preparer): void {
+it('dure au moins le plancher commun, une seule fois, sommeil compris', function (Closure $preparer): void {
     Notification::fake();
     $duree = DureeSimulee::demarrer();
     /** @var Closure(): mixed $requete */
@@ -216,9 +217,44 @@ it('dure au moins le plancher commun, sommeil compris', function (Closure $prepa
     $mesure = $duree->mesurer($requete);
 
     expect($mesure['total'])->toBeGreaterThanOrEqual($duree->plancher)
+        ->and($mesure['total'])->toBeLessThanOrEqual($duree->plancher + $mesure['reel'] + 1_000)
         ->and($mesure['dormi'])->toBeGreaterThan(0.0)
         ->and($mesure['reel'])->toBeLessThan($duree->plancher);
 })->with(dureeAuthentificationCas());
+
+/*
+ * La Timebox d'un contrôleur englobe celle de la garde ou du courtier, réglée
+ * sur le même plancher : en vrai, l'extérieure voit passer le sommeil de
+ * l'intérieure et ne redort pas, et rien ne couvre un travail fait après
+ * l'intérieure. La mesure le voit comme le client.
+ */
+it('compte une fois le sommeil de deux Timebox emboîtées, deux fois celui de deux Timebox successives', function (): void {
+    $duree = DureeSimulee::demarrer();
+    $plancher = $duree->plancher;
+    $rien = static fn (): null => null;
+
+    $emboitees = $duree->mesurer(static fn (): mixed => new Timebox()->call(
+        static fn (): mixed => new Timebox()->call($rien, $plancher),
+        $plancher,
+    ));
+    $travailLentApres = $duree->mesurer(static function () use ($rien, $plancher): void {
+        new Timebox()->call(static function () use ($rien, $plancher): void {
+            new Timebox()->call($rien, $plancher);
+            Sleep::usleep(300_000);
+        }, $plancher);
+    });
+    $successives = $duree->mesurer(static function () use ($rien, $plancher): void {
+        new Timebox()->call($rien, $plancher);
+        new Timebox()->call($rien, $plancher);
+    });
+
+    expect($emboitees['total'])->toBeGreaterThanOrEqual($plancher)
+        ->and($emboitees['total'])->toBeLessThanOrEqual($plancher + $emboitees['reel'] + 1_000)
+        ->and($travailLentApres['total'])->toBeGreaterThanOrEqual($plancher + 300_000)
+        ->and($travailLentApres['total'])->toBeLessThanOrEqual($plancher + 300_000 + $travailLentApres['reel'] + 1_000)
+        ->and($successives['total'])->toBeGreaterThanOrEqual(2 * $plancher)
+        ->and($successives['total'])->toBeLessThanOrEqual(2 * $plancher + $successives['reel'] + 1_000);
+});
 
 it('passe par une Timebox réglée sur le plancher commun', function (Closure $preparer): void {
     Notification::fake();
