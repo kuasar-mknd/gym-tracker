@@ -70,4 +70,16 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    /**
+     * Un compte ouvert par l'inscription, qui attend la preuve de son adresse
+     * (`AttendLaPreuveDeSonAdresse`) : il ne se connecte pas encore.
+     */
+    public function enAttente(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'email_verified_at' => null,
+            'en_attente_depuis' => now(),
+        ]);
+    }
 }

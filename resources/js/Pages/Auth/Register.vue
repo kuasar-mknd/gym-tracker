@@ -28,6 +28,9 @@ const submit = () => {
         <div class="mb-6 text-center">
             <h2 class="titre-section">Bienvenue ! 💪</h2>
             <p class="text-text-muted mt-2">Crée ton compte pour commencer</p>
+            <p class="text-text-muted mt-2 text-sm" data-testid="register-link-notice">
+                Un lien partira à ton adresse : ton compte s’ouvre une fois ce lien suivi.
+            </p>
         </div>
 
         <form @submit.prevent="submit" class="space-y-5">
