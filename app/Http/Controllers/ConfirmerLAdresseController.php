@@ -6,9 +6,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 
@@ -19,8 +21,10 @@ use Illuminate\Support\Facades\Redirect;
  *
  * La route est signée et réservée aux sessions ouvertes ; le lien nomme le
  * compte, qui doit être celui de la session (sinon 404, comme toute ressource
- * d'autrui), la nouvelle adresse, et l'empreinte de l'adresse actuelle : un
- * lien émis avant un autre changement ne vaut plus. Le changement passe par
+ * d'autrui), la nouvelle adresse, chiffrée (`LiensDesCourriels`), et
+ * l'empreinte de l'adresse actuelle : un lien émis avant un autre changement
+ * ne vaut plus. Une adresse qui ne se déchiffre pas refuse le lien comme une
+ * signature fausse (403). Le changement passe par
  * l'enregistrement du compte, donc par `SurveilleSonAdresse` (avis à la
  * dernière adresse vérifiée) et `OublieLaPreuveDeSaLiaison`, puis l'adresse,
  * que le lien vient de prouver, est vérifiée dans une écriture à part. Un
@@ -41,7 +45,7 @@ final class ConfirmerLAdresseController extends Controller
             abort(404);
         }
 
-        $adresse = $request->string('adresse')->toString();
+        $adresse = self::adresseDuLien($request);
 
         if ($compte->email === $adresse) {
             return Redirect::route('profile.edit')->with('status', 'adresse-confirmee');
@@ -66,6 +70,18 @@ final class ConfirmerLAdresseController extends Controller
         }
 
         return Redirect::route('profile.edit')->with('status', 'adresse-confirmee');
+    }
+
+    /**
+     * La nouvelle adresse que le lien porte chiffrée.
+     */
+    private static function adresseDuLien(Request $request): string
+    {
+        try {
+            return Crypt::decryptString($request->string('adresse')->toString());
+        } catch (DecryptException) {
+            abort(403);
+        }
     }
 
     /**

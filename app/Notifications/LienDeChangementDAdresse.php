@@ -20,9 +20,10 @@ use Illuminate\Notifications\Notification;
  * du compte (`ConfirmerLAdresseController`) : la réponse du profil, et la page
  * qui la suit, sont ainsi les mêmes que l'adresse demandée soit libre ou déjà
  * celle d'un autre compte. Le lien, signé, est bâti sur `APP_URL` dans la file
- * (`LiensDesCourriels::lienDeConfirmationDAdresse()`) ; il nomme la nouvelle
- * adresse, d'où une file chiffrée. L'avis part une fois la transaction
- * validée, et ne recopie ni le nom du compte ni son adresse actuelle.
+ * (`LiensDesCourriels::lienDeConfirmationDAdresse()`) ; il ne porte la
+ * nouvelle adresse que chiffrée, mais l'avis part vers elle, d'où une file
+ * chiffrée. L'avis part une fois la transaction validée, et ne recopie ni le
+ * nom du compte ni son adresse actuelle.
  */
 final class LienDeChangementDAdresse extends Notification implements ShouldBeEncrypted, ShouldQueue
 {

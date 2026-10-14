@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use LogicException;
 
 /**
@@ -95,6 +96,12 @@ final class LiensDesCourriels
      * depuis le profil (`LienDeChangementDAdresse`). Il nomme le compte, la
      * nouvelle adresse et l'empreinte de l'adresse actuelle : un lien émis
      * avant un autre changement ne vaut plus.
+     *
+     * La nouvelle adresse n'y paraît que chiffrée (`Crypt::encryptString()`),
+     * sous la signature : un lien suivi en GET finit dans les journaux
+     * d'accès, l'historique du navigateur, l'adresse que la connexion garde
+     * pour après (`url.intended`) et, si la requête échoue, la trace de
+     * l'exception. `ConfirmerLAdresseController` la déchiffre.
      */
     public static function lienDeConfirmationDAdresse(User $compte, string $nouvelleAdresse): string
     {
@@ -103,7 +110,7 @@ final class LiensDesCourriels
             Carbon::now()->addMinutes(self::minutesDeValiditeDUnLien()),
             [
                 'compte' => $compte->getKey(),
-                'adresse' => $nouvelleAdresse,
+                'adresse' => Crypt::encryptString($nouvelleAdresse),
                 'actuelle' => sha1($compte->email),
             ],
         );

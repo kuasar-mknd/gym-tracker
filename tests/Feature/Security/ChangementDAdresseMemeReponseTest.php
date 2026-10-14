@@ -12,11 +12,14 @@ use App\Support\LiensDesCourriels;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\CeQueLeClientLit;
@@ -249,6 +252,24 @@ it('ne fait partir que trois courriels par heure depuis un même compte, avis et
     Notification::assertSentOnDemandTimes(LienDeChangementDAdresse::class, 2);
 });
 
+/**
+ * Le lien de confirmation, où la valeur du paramètre `adresse` est remplacée.
+ */
+function changementMemeReponseAutreAdresseDansLeLien(string $lien, string $adresse): string
+{
+    return (string) preg_replace('/([?&]adresse=)[^&]+/', '${1}'.rawurlencode($adresse), $lien, 1);
+}
+
+/**
+ * La valeur, décodée, d'un paramètre de la chaîne de requête du lien.
+ */
+function changementMemeReponseParametreDuLien(string $lien, string $nom): mixed
+{
+    parse_str((string) parse_url($lien, PHP_URL_QUERY), $parametres);
+
+    return $parametres[$nom] ?? null;
+}
+
 it('refuse un lien d’un autre compte, altéré, ou périmé par un changement d’adresse', function (): void {
     Notification::fake();
     $compte = changementMemeReponseLeCompte();
@@ -257,7 +278,7 @@ it('refuse un lien d’un autre compte, altéré, ou périmé par un changement 
     $lien = LiensDesCourriels::lienDeConfirmationDAdresse($compte, 'libre@example.org');
 
     actingAs($compte)->get($lienDeLAutre)->assertNotFound();
-    actingAs($compte)->get(str_replace('libre%40', 'pirate%40', $lien))->assertForbidden();
+    actingAs($compte)->get(changementMemeReponseAutreAdresseDansLeLien($lien, Crypt::encryptString('pirate@example.org')))->assertForbidden();
     expect($autre->refresh()->email)->toBe('autre@example.org');
 
     // Un autre lien a changé l'adresse entre-temps : le premier ne vaut plus.
@@ -273,6 +294,51 @@ it('refuse un lien d’un autre compte, altéré, ou périmé par un changement 
     $this->travel(LiensDesCourriels::minutesDeValiditeDUnLien() + 1)->minutes();
     actingAs($compte)->get($tardif)->assertForbidden();
     expect($compte->refresh()->email)->toBe('entre-temps@example.org');
+});
+
+/*
+ * Un lien suivi en GET finit dans les journaux d'accès, l'historique du
+ * navigateur, l'adresse que la connexion garde pour après et, si la requête
+ * échoue, la trace de l'exception : la nouvelle adresse n'y paraît que
+ * chiffrée, sous la signature.
+ */
+it('ne met la nouvelle adresse dans le lien que chiffrée, jusque dans la session de l’invité qui le suit', function (): void {
+    Notification::fake();
+    $compte = changementMemeReponseLeCompte();
+
+    changementMemeReponseDemander($compte, 'nouvelle.adresse@example.org')->assertSessionHasNoErrors();
+    $lien = LienDeChangementDAdresseRecu::pour('nouvelle.adresse@example.org');
+    $chiffree = changementMemeReponseParametreDuLien($lien, 'adresse');
+
+    expect($lien)->not->toContain('nouvelle')
+        ->and(rawurldecode($lien))->not->toContain('nouvelle')
+        ->and($chiffree)->toBeString();
+    assert(is_string($chiffree));
+    expect(Crypt::decryptString($chiffree))->toBe('nouvelle.adresse@example.org');
+
+    Auth::logout();
+    test()->flushSession();
+    get($lien)->assertRedirect(route('login'));
+
+    expect(json_encode(session()->all(), JSON_THROW_ON_ERROR))->not->toContain('nouvelle');
+
+    test()->post(route('login'), ['email' => 'titulaire@example.org', 'password' => 'password'])->assertRedirect($lien);
+    get($lien)->assertSessionHas('status', 'adresse-confirmee');
+
+    expect($compte->refresh()->email)->toBe('nouvelle.adresse@example.org');
+});
+
+it('refuse un lien signé dont l’adresse ne se déchiffre pas', function (): void {
+    $compte = changementMemeReponseLeCompte();
+    $lien = URL::temporarySignedRoute('adresse.confirmer', now()->addHour(), [
+        'compte' => $compte->id,
+        'adresse' => 'libre@example.org',
+        'actuelle' => sha1($compte->email),
+    ]);
+
+    actingAs($compte)->get($lien)->assertForbidden();
+
+    expect($compte->refresh()->email)->toBe('titulaire@example.org');
 });
 
 it('envoie un invité qui suit le lien vers la connexion', function (): void {
