@@ -109,12 +109,16 @@ it('lit vingt-quatre heures sans saisie, ramène un instant au fuseau et le born
     'trente jours pile' => ['2026-09-12T10:00:00+02:00', '2026-09-12T10:00:00+02:00'],
     'au-delà de trente jours' => ['2026-01-01', '2026-09-12T10:00:00+02:00'],
     'dans le futur' => ['2027-01-01T00:00:00Z', '2026-10-12T10:00:00+02:00'],
+    'un 29 février bissextile' => ['2024-02-29', '2026-09-12T10:00:00+02:00'],
 ]);
 
 it('refuse ce qui n’est pas un instant ISO 8601, ou une date qui n’existe pas', function (string $saisie): void {
     expect(static fn (): FenetreDeDiagnostic => FenetreDeDiagnostic::depuis($saisie, now()))
         ->toThrow(new InvalidArgumentException(FenetreDeDiagnostic::INSTANT_ATTENDU));
-})->with(['hier', 'yesterday', '12/10/2026', '2026-10-11T08:00:00+02:00 ; DROP', "2026-10-11\n", '2026-13-45', '2026-10-11T25:61']);
+})->with([
+    'hier', 'yesterday', '12/10/2026', '2026-10-11T08:00:00+02:00 ; DROP', "2026-10-11\n", '2026-13-45', '2026-10-11T25:61',
+    '2026-09-31', '2026-02-29', '2026-00-10', '2026-10-00', '2026-10-11T24:00', '2026-10-11T23:59:60',
+]);
 
 it('lit les derniers jours, de un à trente', function (int $jours, string $depuis): void {
     expect(FenetreDeDiagnostic::jours($jours, now())->depuis->toIso8601String())->toBe($depuis);

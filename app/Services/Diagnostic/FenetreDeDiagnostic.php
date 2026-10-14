@@ -24,8 +24,8 @@ final readonly class FenetreDeDiagnostic
 
     public const string INSTANT_ATTENDU = '« depuis » attend un instant ISO 8601, par exemple 2026-10-11T08:00:00+02:00.';
 
-    /** Un instant ISO 8601 : une date, une heure facultative, un décalage facultatif. */
-    private const string INSTANT_ISO_8601 = '/^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?(?:Z|[+-]\d{2}:?\d{2})?$/D';
+    /** Un instant ISO 8601 : une date, une heure facultative de 00:00 à 23:59:59, un décalage facultatif. */
+    private const string INSTANT_ISO_8601 = '/^(?<annee>\d{4})-(?<mois>\d{2})-(?<jour>\d{2})(?:[T ](?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d{1,6})?)?)?(?:Z|[+-]\d{2}:?\d{2})?$/D';
 
     public function __construct(
         public CarbonImmutable $depuis,
@@ -61,17 +61,30 @@ final readonly class FenetreDeDiagnostic
     }
 
     /**
-     * L'instant saisi, s'il a la forme ISO 8601 et désigne une date qui
-     * existe (pas un treizième mois).
+     * L'instant saisi, s'il a la forme ISO 8601 et désigne un instant qui
+     * existe.
      */
     private static function instantSaisi(string $saisie): CarbonImmutable
     {
-        $instant = match (preg_match(self::INSTANT_ISO_8601, $saisie)) {
-            1 => rescue(static fn (): CarbonImmutable => CarbonImmutable::parse($saisie), null, report: false),
-            default => null,
+        $instant = match (self::existe($saisie)) {
+            true => rescue(static fn (): CarbonImmutable => CarbonImmutable::parse($saisie), null, report: false),
+            false => null,
         };
 
         return $instant ?? throw new InvalidArgumentException(self::INSTANT_ATTENDU);
+    }
+
+    /**
+     * La saisie a-t-elle la forme ISO 8601, chaque champ dans ses bornes ?
+     * Carbon reporte ce qui déborde au lieu de le refuser : un 31 septembre
+     * devient le 1er octobre, un 29 février d'une année commune le 1er mars,
+     * une heure 24 le lendemain. La date est donc vérifiée avant lui
+     * (`checkdate()`), l'heure par la forme.
+     */
+    private static function existe(string $saisie): bool
+    {
+        return preg_match(self::INSTANT_ISO_8601, $saisie, $champs) === 1
+            && checkdate((int) $champs['mois'], (int) $champs['jour'], (int) $champs['annee']);
     }
 
     private static function dansLeFuseau(CarbonInterface $instant): CarbonImmutable
