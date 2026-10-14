@@ -23,7 +23,13 @@ const page = usePage()
  */
 const badgesFermes = reactive(new Set())
 
-/** Le badge à célébrer : le plus récent des non lus, s'il n'a pas déjà été fermé ici. */
+/**
+ * Le badge à célébrer : le plus récent des non lus, s'il n'a pas déjà été fermé ici.
+ *
+ * Son icône, son nom et sa description viennent du badge lui-même, que le
+ * serveur joint à la notification ; un badge supprimé depuis n'a que le message
+ * de la notification, qui le nomme.
+ */
 const badge = computed(() => {
     if (page.props.is_testing) {
         return null
@@ -92,7 +98,7 @@ const fermer = () => {
             ref="dialog"
             class="m-0 h-full max-h-full w-full max-w-full bg-transparent p-0 backdrop:bg-transparent"
             aria-labelledby="achievement-title"
-            aria-describedby="achievement-description"
+            aria-describedby="achievement-name achievement-description"
             @close="fermer"
         >
             <div v-if="badge" class="z-modale fixed inset-0 flex items-center justify-center px-4">
@@ -122,18 +128,17 @@ const fermer = () => {
                             <div
                                 class="animate-wobble border-border bg-surface-sunken flex h-24 w-24 items-center justify-center rounded-3xl border text-6xl shadow-lg backdrop-blur-md"
                             >
-                                {{ badge.data.icon }}
+                                {{ badge.icon || '🏆' }}
                             </div>
                         </div>
 
                         <!-- Text -->
                         <h2 class="titre-carte mb-1" id="achievement-title">Badge débloqué !</h2>
-                        <h3 class="text-accent-primary-deep titre-carte mb-3">{{ badge.data.name }}</h3>
+                        <h3 v-if="badge.name" class="text-accent-primary-deep titre-carte mb-3" id="achievement-name">
+                            {{ badge.name }}
+                        </h3>
                         <p class="text-text-muted mb-6 text-sm" id="achievement-description">
-                            {{
-                                badge.data.message?.replace('Nouveau badge débloqué : ' + badge.data.name + ' !', '') ||
-                                'Félicitations pour cet exploit !'
-                            }}
+                            {{ badge.description || badge.data.message || 'Félicitations pour cet exploit !' }}
                         </p>
 
                         <!-- Action -->

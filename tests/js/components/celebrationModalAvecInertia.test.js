@@ -32,9 +32,12 @@ const requetes = []
 /** Les erreurs que Vue a relevées, celles du rendu comprises. */
 const erreurs = []
 
-/** Un badge tel que le partage `HandleInertiaRequests`, avec ce qu'`AchievementUnlocked` range en base. */
+/** Un badge tel que le partage `HandleInertiaRequests` : ce qu'`AchievementUnlocked` range en base, et le badge lui-même. */
 const unBadge = (id, nom) => ({
     id,
+    name: nom,
+    icon: '🏅',
+    description: `Ce qui a valu « ${nom} ».`,
     data: {
         type: 'achievement',
         title: 'Badge débloqué ! 🏆',
@@ -145,7 +148,7 @@ afterAll(() => {
 })
 
 const dialogue = () => document.querySelector('dialog')
-const texteDuBadge = () => document.getElementById('achievement-description')?.textContent.trim() ?? null
+const nomDuBadge = () => document.getElementById('achievement-name')?.textContent.trim() ?? null
 
 /** Attend la fin de la visite que `geste` déclenche, puis le rendu de ce qu'elle a changé. */
 const jusquALaFinDeLaVisite = async (geste) => {
@@ -169,21 +172,21 @@ const fermerParEchap = () => jusquALaFinDeLaVisite(() => dialogue().close())
 describe('la célébration de plusieurs badges', () => {
     it('les montre l’un après l’autre, puis se ferme quand le serveur n’en rend plus, sans erreur', async () => {
         expect(dialogue().open).toBe(true)
-        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Guerrier de la Semaine.')
+        expect(nomDuBadge()).toBe('Guerrier de la Semaine')
 
         await fermerParLeBouton()
 
         expect(requetes).toEqual(['POST /notifications/guerrier/read'])
         expect(erreurs).toEqual([])
         expect(dialogue().open).toBe(true)
-        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Novice du Volume.')
+        expect(nomDuBadge()).toBe('Novice du Volume')
 
         await fermerParLeBouton()
 
         expect(requetes).toEqual(['POST /notifications/guerrier/read', 'POST /notifications/novice/read'])
         expect(erreurs).toEqual([])
         expect(dialogue().open).toBe(false)
-        expect(texteDuBadge()).toBeNull()
+        expect(nomDuBadge()).toBeNull()
     })
 
     it('fermée par Échap, passe au badge suivant sans erreur, et lit chaque badge une seule fois', async () => {
@@ -192,14 +195,14 @@ describe('la célébration de plusieurs badges', () => {
         requetes.length = 0
 
         expect(dialogue().open).toBe(true)
-        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Première Séance.')
+        expect(nomDuBadge()).toBe('Première Séance')
 
         await fermerParEchap()
 
         expect(requetes).toEqual(['POST /notifications/premiere/read'])
         expect(erreurs).toEqual([])
         expect(dialogue().open).toBe(true)
-        expect(texteDuBadge()).toBe('Félicitations ! Tu as débloqué le badge : Novice du Volume.')
+        expect(nomDuBadge()).toBe('Novice du Volume')
 
         await fermerParEchap()
 
