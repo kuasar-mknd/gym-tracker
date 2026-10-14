@@ -14,11 +14,26 @@ describe('la page « hors ligne »', () => {
         expect(page.querySelector('h1').textContent).toBe('Pas de réseau')
     })
 
-    it('prend la feuille de style de l’application, et rien d’autre de l’extérieur', () => {
+    it('prend la feuille de style de l’application et le logo, et rien d’autre', () => {
         expect([...page.querySelectorAll('link[rel="stylesheet"]')].map((lien) => lien.getAttribute('href'))).toEqual([
             '/build/assets/main-abc123.css',
         ])
-        expect(page.querySelectorAll('script[src], img, iframe')).toHaveLength(0)
+        // Le logo est au precache, comme la feuille (#2048) : ServiceWorkerAssetsTest le vérifie.
+        expect([...page.querySelectorAll('img')].map((image) => image.getAttribute('src'))).toEqual(['/logo.svg'])
+        expect(page.querySelectorAll('script[src], iframe')).toHaveLength(0)
+    })
+
+    /*
+     * Un démarrage à froid sans réseau ouvre cette page : le logo et l'icône
+     * `cloud_off` s'y affichent, tous deux pris au precache (#2048).
+     */
+    it('montre le logo, décoratif à côté du nom, et l’icône cloud_off, muette pour un lecteur d’écran', () => {
+        const logo = page.querySelector('img')
+        const icone = page.querySelector('.material-symbols-outlined')
+
+        expect(logo.getAttribute('alt')).toBe('')
+        expect(icone.textContent).toBe('cloud_off')
+        expect(icone.getAttribute('aria-hidden')).toBe('true')
     })
 
     it('ne porte rien d’un compte : ni données de page, ni jeton, ni identité', () => {

@@ -35,6 +35,9 @@ RUN npm ci
 
 COPY vite.config.js ./
 COPY resources/ ./resources/
+# Les icônes de public/ entrent au precache avec l'empreinte de leur contenu :
+# sans elles, le worker de l'image différerait de celui de la CI.
+COPY public/*.ico public/*.png public/*.svg ./public/
 RUN npm run build
 
 # 3. Builder stage for Composer dependencies

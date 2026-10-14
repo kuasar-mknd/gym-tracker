@@ -9,9 +9,11 @@ import { URL_DE_LA_PAGE_HORS_LIGNE } from './navigationsHorsLigne.js'
  * que le precache garde aussi, et donc la charte : ses couleurs viennent des
  * utilitaires de `app.css`, jamais d'une valeur écrite ici.
  *
- * Rien à charger d'autre que cette feuille et ses polices : « Réessayer »
- * redemande la page qui n'a pas pu s'ouvrir, et le retour du réseau le fait
- * tout seul.
+ * Rien à charger d'autre que cette feuille, ses polices et le logo, tous
+ * précachés : « Réessayer » redemande la page qui n'a pas pu s'ouvrir, et le
+ * retour du réseau le fait tout seul. Le logo de public/ et l'icône
+ * `cloud_off`, de la police Material Symbols, sont au precache depuis #2048 :
+ * un démarrage à froid sans réseau les affiche.
  */
 
 /** Le nom du fichier dans public/build, d'où le precache le prend. */
@@ -36,8 +38,12 @@ ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille
 </head>
 <body class="bg-surface-page text-text-main font-sans antialiased">
     <main id="main-content" class="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-12">
-        <p class="text-gradient font-display text-4xl font-black tracking-tight uppercase italic">GymTracker</p>
+        <div class="flex flex-col items-center gap-3">
+            <img src="/logo.svg" alt="" width="64" height="64" class="size-16 rounded-2xl" dusk="logo-hors-ligne">
+            <p class="text-gradient font-display text-4xl font-black tracking-tight uppercase italic">GymTracker</p>
+        </div>
         <section class="glass-panel-light w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
+            <span class="material-symbols-outlined text-text-muted text-5xl" aria-hidden="true" dusk="icone-hors-ligne">cloud_off</span>
             <h1 class="titre-carte text-2xl">Pas de réseau</h1>
             <p class="text-text-muted text-base font-medium">
                 Cette page n'a pas pu s'ouvrir : l'appareil n'est pas connecté.

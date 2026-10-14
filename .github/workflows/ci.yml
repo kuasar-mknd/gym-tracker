@@ -88,8 +88,9 @@ jobs:
                   mkdir -p "$contexte"
                   sources=$(awk '/^FROM .* AS frontend-builder/ { dans = 1; next } /^FROM / { dans = 0 } dans && /^COPY / { for (i = 2; i < NF; i++) print $i }' Dockerfile)
                   [ -n "$sources" ] || { echo "::error::Aucun COPY lu dans l'étape frontend-builder du Dockerfile."; exit 1; }
-                  # shellcheck disable=SC2086 # chaque source est un argument, et package*.json doit s'étendre
-                  cp -r $sources "$contexte/"
+                  # --parents : public/logo.svg arrive dans public/ du contexte, comme le COPY de l'image le range.
+                  # shellcheck disable=SC2086 # chaque source est un argument, et package*.json comme public/*.png doivent s'étendre
+                  cp -r --parents $sources "$contexte/"
                   cp -al node_modules "$contexte/node_modules"
                   (cd "$contexte" && npm run build)
                   diff -r public/build "$contexte/public/build"

@@ -7,9 +7,10 @@ import { readFileSync, statSync } from 'node:fs'
  * graphique et le morceau de chaque page jamais visitée (#1814). La coquille
  * — l'entrée, la CSS, Vue, les polices latines, l'accueil et la séance — en
  * pèse 572. Un glob élargi par mégarde referait grossir l'installation sans
- * que rien ne le dise.
+ * que rien ne le dise. Depuis #2048, la police des icônes et les neuf icônes
+ * de public/ y entrent aussi : 22 entrées, 620 Kio.
  */
-const MAX_ENTREES = 20
+const MAX_ENTREES = 25
 const MAX_KIO = 700
 
 const worker = readFileSync('public/sw.js', 'utf8')

@@ -4,6 +4,7 @@ import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
 import {
     activerLePrechargementDesNavigations,
     estUneNavigation,
+    garderLePrechargement,
     naviguerOuRetomber,
     URL_DE_LA_PAGE_HORS_LIGNE,
 } from '@/sw/navigationsHorsLigne'
@@ -59,6 +60,7 @@ self.addEventListener('activate', (event) => {
  */
 self.addEventListener('fetch', (event) => {
     if (estUneNavigation(event.request)) {
+        garderLePrechargement(event)
         event.respondWith(
             naviguerOuRetomber(
                 event,

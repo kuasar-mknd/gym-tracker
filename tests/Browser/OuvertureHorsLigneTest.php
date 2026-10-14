@@ -105,4 +105,93 @@ class OuvertureHorsLigneTest extends DuskTestCase
                 ->assertMissing('[dusk="page-hors-ligne"]');
         });
     }
+
+    /**
+     * Un démarrage à froid sans réseau montre le logo et l'icône `cloud_off`
+     * de la page « hors ligne » (#2048).
+     *
+     * Ni l'un ni l'autre n'étaient au precache : `/logo.svg` vit à la racine de
+     * public/, que ses globs ne lisent pas, et la police Material Symbols
+     * n'entrait au cache qu'à sa première utilisation. Le parcours n'en laisse
+     * que le precache de l'installation : le cache des actifs mis de côté à la
+     * demande est vidé, comme le cache HTTP du navigateur. Couper le réseau par
+     * les outils de Chrome ne coupe que la page, pas le worker : le logo et la
+     * police sont donc aussi retirés du serveur pendant la coupure, pour qu'il
+     * ne puisse rien servir que le precache n'a pas.
+     */
+    public function test_un_demarrage_a_froid_sans_reseau_montre_le_logo_et_l_icone_du_precache(): void
+    {
+        $compte = User::factory()->create([
+            'email' => 'demarrage-a-froid-'.Str::lower(Str::random(10)).'@example.org',
+            'email_verified_at' => now(),
+        ]);
+
+        $this->browse(function (Browser $browser) use ($compte): void {
+            $browser->loginAs($compte)
+                ->visit('/dashboard')
+                ->waitFor('#main-content', 30);
+
+            if ($browser->script("return window.isSecureContext === true && 'serviceWorker' in navigator;")[0] !== true) {
+                $this->markTestSkipped('Origine en http hors boucle locale : aucun service worker n’y est inscrit.');
+            }
+
+            $browser->waitUntil(
+                "navigator.serviceWorker.controller !== null && navigator.serviceWorker.controller.state === 'activated'",
+                30,
+                'le service worker n’a jamais pris la page en charge',
+            );
+
+            // Ce que les pages vues en ligne ont mis au cache à la demande ne compte pas.
+            $browser->script("window.cacheALaDemandeVide = false; caches.delete('actifs-a-la-demande').then(() => { window.cacheALaDemandeVide = true; });");
+            $browser->waitUntil('window.cacheALaDemandeVide === true', 15, 'le cache des actifs à la demande ne s’est pas vidé');
+
+            $outils = new ChromeDevToolsDriver($browser->driver);
+            $outils->execute('Network.enable');
+            $outils->execute('Network.clearBrowserCache');
+            $outils->execute('Network.emulateNetworkConditions', [
+                'offline' => true,
+                'latency' => 0,
+                'downloadThroughput' => -1,
+                'uploadThroughput' => -1,
+            ]);
+
+            $retires = [];
+
+            try {
+                foreach ([public_path('logo.svg'), ...(array) glob(public_path('build/assets/material-symbols-outlined-*.woff2'))] as $fichier) {
+                    $fichier = (string) $fichier;
+                    rename($fichier, $fichier.'.retire');
+                    $retires[] = $fichier;
+                }
+
+                $this->assertCount(2, $retires, 'le logo et la police des icônes doivent exister dans la construction');
+
+                $browser->visit('/dashboard')
+                    ->waitFor('[dusk="page-hors-ligne"]', 15)
+                    ->waitUntil(
+                        "(() => { const logo = document.querySelector('[dusk=\"logo-hors-ligne\"]'); return logo !== null && logo.complete && logo.naturalWidth > 0; })()",
+                        15,
+                        'le logo ne s’affiche pas sans réseau',
+                    )
+                    ->waitUntil(
+                        "[...document.fonts].some((police) => police.family.includes('Material Symbols') && police.status === 'loaded')",
+                        15,
+                        'la police des icônes ne se charge pas sans réseau',
+                    )
+                    // Dessinée par sa police, l'icône tient dans son carré ; sans elle, on lirait le mot « cloud_off ».
+                    ->assertScript("(() => { const icone = document.querySelector('[dusk=\"icone-hors-ligne\"]'); return icone.textContent === 'cloud_off' && icone.getBoundingClientRect().width < parseFloat(getComputedStyle(icone).fontSize) * 1.5; })()");
+            } finally {
+                foreach ($retires as $fichier) {
+                    rename($fichier.'.retire', $fichier);
+                }
+
+                $outils->execute('Network.emulateNetworkConditions', [
+                    'offline' => false,
+                    'latency' => 0,
+                    'downloadThroughput' => -1,
+                    'uploadThroughput' => -1,
+                ]);
+            }
+        });
+    }
 }
