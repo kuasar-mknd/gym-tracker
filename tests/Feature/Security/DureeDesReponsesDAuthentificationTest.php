@@ -9,7 +9,9 @@ use App\Support\DureeDesReponsesDAuthentification;
 use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -306,6 +308,34 @@ it('rend la main sans attendre à une connexion réussie', function (): void {
     ])->assertRedirect(route('dashboard')));
 
     expect($mesure['dormi'])->toBe(0.0);
+});
+
+/*
+ * Le bon mot de passe d'un compte en attente, sans le lien suivi, fait
+ * repartir le lien : un travail que les autres refus ne font pas. Il se fait
+ * dans la Timebox de la garde, qui tient le refus ; après elle, rien ne le
+ * couvrirait, celle du contrôleur s'étant écoulée avec elle.
+ */
+it('renvoie le lien d’un compte en attente dans le plancher : un envoi lent ne rallonge pas le refus', function (): void {
+    $duree = DureeSimulee::demarrer();
+    User::factory()->enAttente()->create(['email' => 'en-attente@example.org']);
+    $envois = 0;
+    Event::listen(NotificationSending::class, static function () use (&$envois): void {
+        $envois++;
+        Sleep::usleep(300_000);
+    });
+    $connexion = static fn (string $adresse): Closure => static fn (): mixed => test()->post(route('login'), [
+        'email' => $adresse,
+        'password' => 'password',
+    ])->assertSessionHasErrors(['email' => __('auth.failed')]);
+
+    $inconnue = $duree->mesurer($connexion('personne@example.org'));
+    $enAttente = $duree->mesurer($connexion('en-attente@example.org'));
+
+    expect($envois)->toBe(1)
+        ->and($enAttente['total'])->toBeGreaterThanOrEqual($duree->plancher)
+        ->and(abs($enAttente['total'] - $inconnue['total']))->toBeLessThan(100_000);
+    assertGuest();
 });
 
 /*

@@ -32,8 +32,14 @@ class AuthenticatedSessionController extends Controller
      * Connecte le compte, ou refuse, en au moins le plancher commun des réponses
      * d'authentification (`DureeDesReponsesDAuthentification`) : la
      * vérification du mot de passe d'une adresse connue (bcrypt) dépassait la
-     * Timebox de la garde, et un refus durait plus longtemps qu'une adresse
-     * inconnue. Seule une connexion réussie rend la main plus tôt.
+     * Timebox de 200 ms de la garde, et un refus durait plus longtemps qu'une
+     * adresse inconnue. Seule une connexion réussie rend la main plus tôt.
+     *
+     * La garde a sa propre Timebox, réglée sur la même valeur, à l'intérieur
+     * de celle-ci : c'est elle qui tient chaque refus, et la plus extérieure
+     * ne rallonge rien de ce qui la suit, son plancher s'étant écoulé avec le
+     * sien. Tout ce qui dépend du compte se fait donc dans la garde
+     * (`ConnecterLeCompte`), jamais après elle.
      *
      * Le refus du limiteur de la connexion répond avant le plancher : il ne
      * dépend que des essais ratés sous cette adresse depuis cette adresse IP,

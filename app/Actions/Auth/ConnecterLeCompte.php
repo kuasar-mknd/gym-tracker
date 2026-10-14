@@ -33,10 +33,14 @@ use Illuminate\Support\Facades\RateLimiter;
  * connecte avec lui ; un refus propre au compte en attente lui dirait que
  * l'adresse était libre, puisqu'une adresse prise refuse ce mot de passe.
  * Adresse inconnue, mauvais mot de passe et bon mot de passe sans la marque
- * répondent donc de même, dans le même temps : la garde vérifie l'empreinte
- * dans sa Timebox, puis `AuthenticatedSessionController` pose le plancher
- * commun. Un compte qui n'est pas en attente, dont les comptes d'avant la
- * colonne, vérifiés ou non, se connecte comme avant.
+ * répondent donc de même, dans le même temps : la garde vérifie l'empreinte,
+ * puis appelle la fonction qui décide, dans sa Timebox, réglée sur le
+ * plancher commun (`auth.timebox_duration`), et le lien repart dans cette
+ * fonction, avant le refus. Rien ne couvrirait un travail fait après la
+ * garde : la Timebox d'`AuthenticatedSessionController`, de même durée, a
+ * démarré avant celle de la garde et s'est écoulée avec elle. Un compte qui
+ * n'est pas en attente, dont les comptes d'avant la colonne, vérifiés ou
+ * non, se connecte comme avant.
  */
 final readonly class ConnecterLeCompte
 {
@@ -57,17 +61,15 @@ final readonly class ConnecterLeCompte
      */
     public function execute(array $identifiants, bool $seSouvenir, Session $session): bool
     {
-        $compteRetenu = null;
-
-        $connecte = Auth::attemptWhen(
+        return Auth::attemptWhen(
             $identifiants,
-            function (Authenticatable $compte) use ($session, &$compteRetenu): bool {
+            function (Authenticatable $compte) use ($session): bool {
                 if (! $compte instanceof User || ! $compte->estEnAttente()) {
                     return true;
                 }
 
                 if (! $this->lienSuiviPour($compte, $session)) {
-                    $compteRetenu = $compte;
+                    $this->renvoyerLeLien($compte);
 
                     return false;
                 }
@@ -82,18 +84,13 @@ final readonly class ConnecterLeCompte
             },
             $seSouvenir,
         );
-
-        if ($compteRetenu instanceof User) {
-            $this->renvoyerLeLien($compteRetenu);
-        }
-
-        return $connecte;
     }
 
     /**
      * Renvoie le lien d'ouverture au compte en attente dont on vient de donner
      * le bon mot de passe, au plus un par quart d'heure : rien n'en paraît
-     * dans la réponse.
+     * dans la réponse, ni dans sa durée, puisqu'il part dans la Timebox de la
+     * garde.
      */
     private function renvoyerLeLien(User $compte): void
     {
