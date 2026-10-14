@@ -131,4 +131,39 @@ describe('les brouillons d’un montage précédent', () => {
         ])
         expect(enFile).toMatchObject({ id: 100, weight: 82.5, reps: 7 })
     })
+
+    /*
+     * La page est morte entre la frappe et l'envoi : la saisie n'a laissé qu'un
+     * brouillon, rangé sous l'identifiant que la série porte d'un montage à
+     * l'autre tant que sa création attend, `temp-q<queueId>`. Il revient sur
+     * cette série, et sur elle seule, et rejoint son entrée de file.
+     */
+    it('rejouent sur la série en file le brouillon rangé sous son entrée, dans cette même entrée', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([creationEnFile]))
+        localStorage.setItem('draft_set_temp-qq1', JSON.stringify({ reps: 9 }))
+        reseau.serveur.enLigne = false
+
+        const { wrapper, sync } = await monterLaPage()
+        const [, enFile] = wrapper.vm.localWorkout.workout_lines[0].sets
+
+        expect(enFile).toMatchObject({ id: 'temp-qq1', weight: 82.5, reps: 9, is_completed: true })
+        expect(wrapper.find('[dusk="set-unsynced-0-1"]').exists()).toBe(true)
+        expect(fileDurable()).toEqual([
+            expect.objectContaining({
+                id: 'q1',
+                data: { workout_line_id: 10, is_completed: true, weight: 82.5, reps: 9 },
+            }),
+        ])
+        expect(Object.keys(localStorage).filter((cle) => cle.startsWith('draft_set_'))).toEqual([])
+
+        reseau.serveur.enLigne = true
+        await sync.processQueue()
+        await flushPromises()
+
+        expect(reseau.serveur.resume()).toEqual([
+            'post /api/v1/sets {"workout_line_id":10,"is_completed":true,"weight":82.5,"reps":9}',
+        ])
+        expect(enFile).toMatchObject({ id: 100, weight: 82.5, reps: 9 })
+        expect(wrapper.find('[dusk="set-unsynced-0-1"]').exists()).toBe(false)
+    })
 })
