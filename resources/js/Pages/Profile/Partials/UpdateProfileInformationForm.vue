@@ -51,8 +51,28 @@ watch(adresseChangee, (changee) => {
     }
 })
 
+/**
+ * Ce que dit la page après un enregistrement ou un lien suivi. Une nouvelle
+ * adresse ne remplace l'actuelle qu'une fois le lien qui lui est envoyé suivi :
+ * la réponse est la même, que l'adresse demandée soit libre ou déjà celle d'un
+ * autre compte, dont le titulaire est alors prévenu.
+ */
+const messagesDAdresse = {
+    'lien-de-changement-d-adresse-envoye':
+        'Un courriel part vers la nouvelle adresse. Ton adresse ne changera qu’une fois le lien qu’il contient suivi, depuis un appareil où tu es connecté.',
+    'adresse-confirmee': 'Ta nouvelle adresse est enregistrée et vérifiée.',
+    'lien-de-changement-d-adresse-perime':
+        'Ce lien ne vaut plus : l’adresse du compte a changé depuis. Refais la demande si besoin.',
+    'adresse-deja-prise': 'Cette adresse est devenue celle d’un autre compte entre-temps : la tienne n’a pas changé.',
+}
+
+const messageDAdresse = computed(() => messagesDAdresse[props.status] ?? null)
+
 const submit = () => {
     form.patch(route('profile.update'), {
+        // L'adresse du compte n'a pas changé : le champ y revient, et le mot de
+        // passe, qui ne servait qu'à elle, s'efface.
+        onSuccess: () => form.reset('email', 'current_password'),
         onError: () => {
             if (form.errors.current_password) {
                 form.reset('current_password')
@@ -103,11 +123,11 @@ const submit = () => {
                 />
 
                 <p class="text-text-muted text-sm" data-testid="profile-email-change-notice">
-                    Ton mot de passe confirme que c’est bien toi.
-                    <template v-if="props.adresseVerifiee">
-                        Ton adresse actuelle sera prévenue du changement, et la nouvelle devra être vérifiée.
-                    </template>
-                    <template v-else>La nouvelle adresse devra être vérifiée.</template>
+                    Ton mot de passe confirme que c’est bien toi. Un lien partira à la nouvelle adresse : elle ne
+                    remplacera l’actuelle qu’une fois ce lien suivi.
+                    <template v-if="props.adresseVerifiee"
+                        >Ton adresse actuelle sera alors prévenue du changement.</template
+                    >
                 </p>
 
                 <div
@@ -144,6 +164,15 @@ const submit = () => {
                     Un nouveau lien a été envoyé.
                 </p>
             </div>
+
+            <p
+                v-if="messageDAdresse"
+                class="text-accent-state-deep text-sm"
+                role="status"
+                data-testid="profile-email-status"
+            >
+                {{ messageDAdresse }}
+            </p>
 
             <div class="flex items-center gap-4">
                 <GlassButton

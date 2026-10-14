@@ -9,6 +9,7 @@ use App\Notifications\AdresseDuCompteChangee;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\LienDeChangementDAdresseRecu;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -76,11 +77,18 @@ class ProfileTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect('/profile/edit');
 
+        // Le nom s'enregistre aussitôt ; l'adresse attend le lien envoyé à la nouvelle.
         $user->refresh();
 
         $this->assertSame('Test User', $user->name);
+        $this->assertSame($ancienneAdresse, $user->email);
+
+        $this->get(LienDeChangementDAdresseRecu::pour('test@example.com'))->assertRedirect('/profile/edit');
+
+        $user->refresh();
+
         $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->assertNotNull($user->email_verified_at);
         Notification::assertSentOnDemand(
             AdresseDuCompteChangee::class,
             fn (AdresseDuCompteChangee $avis, array $canaux, AnonymousNotifiable $destinataire): bool => $destinataire->routes === ['mail' => $ancienneAdresse],

@@ -21,6 +21,13 @@ use Tests\TestCase;
 |
 */
 
+/*
+| L'heure que lit la Timebox de Laravel compte le sommeil simulé d'une mesure
+| de durée (`Tests\Support\DureeSimulee`). PHP retient la fonction `microtime`
+| trouvée au premier appel d'une Timebox : la déclarer avant tout test.
+*/
+require_once __DIR__.'/Support/horloge-des-timebox.php';
+
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');

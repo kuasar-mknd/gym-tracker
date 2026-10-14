@@ -137,6 +137,15 @@ Artisan::command('inspire', function (): void {
 \Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\ErreurNavigateur::class]])
     ->dailyAt('03:45');
 
+/*
+ * Un compte ouvert par l'inscription dont l'adresse n'a jamais été prouvée
+ * s'efface au bout de `User::JOURS_AVANT_LA_PURGE` jours : l'adresse d'un
+ * autre, tapée à l'inscription, ne reste pas occupée. Un à un, par `delete()`,
+ * qui efface aussi les traces du compte (`EffaceSesTracesPolymorphes`).
+ */
+\Illuminate\Support\Facades\Schedule::command('model:prune', ['--model' => [\App\Models\User::class]])
+    ->dailyAt('03:50');
+
 \Illuminate\Support\Facades\Schedule::command(\Spatie\Health\Commands\DispatchQueueCheckJobsCommand::class)
     ->everyMinute()
     ->doNotMonitor();

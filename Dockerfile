@@ -110,4 +110,4 @@ ENV APP_REVISION=${APP_REVISION}
 USER www-data
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=2", "--caddyfile=/app/docker/octane/Caddyfile"]
+CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=4", "--caddyfile=/app/docker/octane/Caddyfile"]
