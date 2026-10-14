@@ -1,6 +1,7 @@
 import { computed, onUnmounted } from 'vue'
 import SyncService from '@/Utils/SyncService'
 import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
+import { entreeDeLaRangee } from '@/Utils/seanceEtFile'
 import { useConfirmation } from '@/composables/useConfirmation'
 
 /**
@@ -36,6 +37,103 @@ export const useLignesDeLaSeance = ({
      */
     const attentes = creerLesAttentesDeRejeu()
 
+    /**
+     * La ligne que le serveur a créée prend la place de la provisoire, que la
+     * réponse vienne tout de suite ou du vidage de la file. Au vidage, la
+     * ligne gardait son identifiant provisoire : un rafraîchissement des
+     * props l'affichait à côté de la copie du serveur (#1962, comme #1960
+     * pour une série).
+     *
+     * @param {string} idProvisoire l'identifiant que la ligne porte à l'écran
+     * @param {object|null|undefined} created la ligne telle que le serveur l'a créée
+     * @returns {number|string|null} l'identifiant réel, ou null sans ligne créée
+     */
+    const adopterLaLigne = (idProvisoire, created) => {
+        const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === idProvisoire)
+
+        if (!created) {
+            return null
+        }
+
+        if (idx !== -1) {
+            /**
+             * Mutated in place, never replaced.
+             *
+             * Assigning a new object into the slot fixed one bug and made a
+             * subtler one: addSet captures `line` when the user taps, and
+             * pushes its optimistic set into THAT object's sets array. Swap
+             * the slot for a fresh object with a fresh array and addSet is
+             * left holding a detached copy — its own findIndex then never
+             * finds the set again, so the row stays on a placeholder id for
+             * as long as the page lives.
+             *
+             * Keeping the object and the array identity means every closure,
+             * debounce timer and v-model binding already pointing at this
+             * line stays pointing at the real one.
+             */
+            const { sets: createdSets, ...lineFields } = created
+            const line = localWorkout.value.workout_lines[idx]
+
+            Object.assign(line, lineFields)
+
+            // A line the server has just created has no sets of its own, but
+            // a replayed create can return one that does.
+            for (const set of createdSets ?? []) {
+                if (!line.sets.some((existing) => existing.id === set.id)) line.sets.push(set)
+            }
+        }
+
+        return created.id
+    }
+
+    /**
+     * Une ligne dont la création attend dans la file hors ligne : celle qu'on
+     * vient d'y mettre, ou celle que la file tenait déjà à l'ouverture de la
+     * page (`useSeanceEtSaFile`, #2048). Elle attend le vidage pour apprendre
+     * ce qu'elle est devenue.
+     *
+     * @param {object} ligne la rangée provisoire à l'écran
+     * @param {string|undefined} queueId l'entrée de file qui la crée
+     * @returns {Promise<number|string|null>} l'identifiant réel, ou null
+     */
+    const suivreUneLigneEnFile = (ligne, queueId) => {
+        // Queued, not lost. Waiting for the drain to report the real id
+        // is what lets a set added onto this exercise reach the server
+        // at all; answering null here stranded it permanently.
+        queuedLineIds.add(ligne.id)
+
+        /*
+         * Ses séries nomment désormais cette entrée de file, et y
+         * entrent derrière elle sans attendre le vidage (#1962).
+         */
+        if (queueId) {
+            pendingIds.noterEnFile(ligne.id, queueId)
+        }
+
+        /*
+         * Without this, a create that went offline resolved to "no
+         * such row", so a set added to an exercise that was still
+         * queued was refused on the spot and never revisited. Null
+         * when the drain refuses it or the line is withdrawn first.
+         */
+        return attentes.attendre(queueId).then((rejeu) => adopterLaLigne(ligne.id, rejeu?.data))
+    }
+
+    /*
+     * Les lignes que la file tenait déjà quand la page s'est ouverte, posées
+     * par-dessus la séance du serveur, se suivent comme celle qu'on vient d'y
+     * mettre : sans cela, ses séries ne sauraient pas derrière quelle entrée se
+     * ranger, son retrait ne sortirait pas sa création de la file, et elle
+     * garderait son identifiant provisoire après le vidage (#2048).
+     */
+    for (const ligne of Array.isArray(localWorkout.value.workout_lines) ? localWorkout.value.workout_lines : []) {
+        const queueId = entreeDeLaRangee(ligne.id)
+
+        if (queueId !== null) {
+            pendingIds.track(ligne.id, suivreUneLigneEnFile(ligne, queueId))
+        }
+    }
+
     // ⚡ Perf: addExercise via API call + optimistic UI instead of Inertia redirect
     const addExercise = (exerciseId) => {
         const exercise = localExercises.value.find((e) => e.id === exerciseId)
@@ -55,78 +153,14 @@ export const useLignesDeLaSeance = ({
         localWorkout.value.workout_lines.push(tempLine)
         showAddExercise.value = false
 
-        /**
-         * La ligne que le serveur a créée prend la place de la provisoire, que la
-         * réponse vienne tout de suite ou du vidage de la file. Au vidage, la
-         * ligne gardait son identifiant provisoire : un rafraîchissement des
-         * props l'affichait à côté de la copie du serveur (#1962, comme #1960
-         * pour une série).
-         */
-        const adopterLaLigne = (created) => {
-            const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-
-            if (!created) {
-                return null
-            }
-
-            if (idx !== -1) {
-                /**
-                 * Mutated in place, never replaced.
-                 *
-                 * Assigning a new object into the slot fixed one bug and made a
-                 * subtler one: addSet captures `line` when the user taps, and
-                 * pushes its optimistic set into THAT object's sets array. Swap
-                 * the slot for a fresh object with a fresh array and addSet is
-                 * left holding a detached copy — its own findIndex then never
-                 * finds the set again, so the row stays on a placeholder id for
-                 * as long as the page lives.
-                 *
-                 * Keeping the object and the array identity means every closure,
-                 * debounce timer and v-model binding already pointing at this
-                 * line stays pointing at the real one.
-                 */
-                const { sets: createdSets, ...lineFields } = created
-                const line = localWorkout.value.workout_lines[idx]
-
-                Object.assign(line, lineFields)
-
-                // A line the server has just created has no sets of its own, but
-                // a replayed create can return one that does.
-                for (const set of createdSets ?? []) {
-                    if (!line.sets.some((existing) => existing.id === set.id)) line.sets.push(set)
-                }
-            }
-
-            return created.id
-        }
-
         const creation = SyncService.post(route('api.v1.workout-lines.store'), {
             workout_id: localWorkout.value.id,
             exercise_id: exerciseId,
         })
-            .then((response) => adopterLaLigne(response.data?.data))
+            .then((response) => adopterLaLigne(tempLine.id, response.data?.data))
             .catch((err) => {
                 if (err.isOffline) {
-                    // Queued, not lost. Waiting for the drain to report the real id
-                    // is what lets a set added onto this exercise reach the server
-                    // at all; answering null here stranded it permanently.
-                    queuedLineIds.add(tempLine.id)
-
-                    /*
-                     * Ses séries nomment désormais cette entrée de file, et y
-                     * entrent derrière elle sans attendre le vidage (#1962).
-                     */
-                    if (err.queueId) {
-                        pendingIds.noterEnFile(tempLine.id, err.queueId)
-                    }
-
-                    /*
-                     * Without this, a create that went offline resolved to "no
-                     * such row", so a set added to an exercise that was still
-                     * queued was refused on the spot and never revisited. Null
-                     * when the drain refuses it or the line is withdrawn first.
-                     */
-                    return attentes.attendre(err.queueId).then((rejeu) => adopterLaLigne(rejeu?.data))
+                    return suivreUneLigneEnFile(tempLine, err.queueId)
                 }
 
                 const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)

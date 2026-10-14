@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { useBrouillonsDeSeries, NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
+import {
+    effacerLesBrouillonsOrphelins,
+    useBrouillonsDeSeries,
+    NUMERIC_SET_FIELDS,
+} from '@/composables/useBrouillonsDeSeries'
 
 beforeEach(() => {
     localStorage.clear()
@@ -39,6 +43,48 @@ describe('les brouillons d’une série', () => {
 
         writeDraftField(9, 'weight', 60)
         expect(readDraft(9)).toEqual({ weight: 60 })
+    })
+})
+
+/*
+ * Un identifiant provisoire ne vaut que pour le montage qui l'a donné : le
+ * `temp-3` d'hier est une autre série aujourd'hui (#2048).
+ */
+describe('les brouillons orphelins', () => {
+    it('efface ceux d’un identifiant provisoire qu’aucune écriture en file ne tient plus', () => {
+        localStorage.setItem('draft_set_temp-3', JSON.stringify({ weight: 999 }))
+        localStorage.setItem('draft_set_temp-qpartie', JSON.stringify({ reps: 1 }))
+        localStorage.setItem('draft_set_temp-qattend', JSON.stringify({ reps: 6 }))
+        localStorage.setItem('draft_set_42', JSON.stringify({ weight: 80 }))
+        localStorage.setItem('offline_sync_queue', '[]')
+
+        effacerLesBrouillonsOrphelins(['temp-qattend'])
+
+        expect(Object.keys(localStorage).sort()).toEqual([
+            'draft_set_42',
+            'draft_set_temp-qattend',
+            'offline_sync_queue',
+        ])
+    })
+
+    it('laisse la séance s’ouvrir quand le stockage refuse', () => {
+        const lecture = vi.spyOn(Object, 'keys').mockImplementation(() => {
+            throw new Error('SecurityError')
+        })
+        let erreur = null
+        let lectures
+
+        try {
+            effacerLesBrouillonsOrphelins([])
+        } catch (levee) {
+            erreur = levee
+        } finally {
+            lectures = lecture.mock.calls.length
+            lecture.mockRestore()
+        }
+
+        expect(lectures).toBeGreaterThan(0)
+        expect(erreur).toBeNull()
     })
 })
 

@@ -917,6 +917,45 @@ describe('SyncService ce que les props ne montrent pas encore', () => {
 
         expect(service.identifiantsEnAttente()).toEqual([])
     })
+
+    /*
+     * La page de séance superpose ces entrées à la séance du serveur (#2048) :
+     * elle lit la file telle qu'un rechargement la relirait, sans pouvoir la
+     * changer par mégarde.
+     */
+    it('rend les entrées du compte connecté, dans l’ordre, en copie que la page ne peut pas écrire', async () => {
+        const creation = {
+            ...aQueuedPatch('/api/v1/sets'),
+            method: 'post',
+            id: 'queued-2',
+            data: { workout_line_id: { enAttenteDe: 'queued-1' }, is_completed: true, weight: 82.5, reps: 7 },
+        }
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([aQueuedPatch(), { ...aQueuedPatch('/b'), id: 'autre', compte: '2' }, creation]),
+        )
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+        const avant = localStorage.getItem('offline_sync_queue')
+        const entrees = service.entreesDuCompte()
+
+        expect(entrees.map((entree) => entree.id)).toEqual(['queued-1', 'queued-2'])
+        expect(entrees[1]).toMatchObject({ method: 'post', compte: COMPTE, data: creation.data })
+
+        entrees[1].data.workout_line_id.enAttenteDe = 'changee'
+        entrees[0].data.weight = 1
+        entrees.pop()
+
+        expect(service.queue.find((entree) => entree.id === 'queued-2').data).toEqual(creation.data)
+        expect(service.queue.find((entree) => entree.id === 'queued-1').data).toEqual({ weight: 100 })
+        expect(service.entreesDuCompte()).toHaveLength(2)
+        expect(localStorage.getItem('offline_sync_queue')).toBe(avant)
+
+        naviguer(null)
+
+        expect(service.entreesDuCompte()).toEqual([])
+    })
 })
 
 describe('SyncService une file par compte', () => {

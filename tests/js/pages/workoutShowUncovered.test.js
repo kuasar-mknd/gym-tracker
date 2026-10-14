@@ -50,6 +50,7 @@ vi.mock('@/Utils/SyncService', () => ({
         delete: (...args) => destroy(...args),
         get: vi.fn(),
         identifiantsEnAttente: () => [],
+        entreesDuCompte: () => [],
         get rejeuxDepuisLaDerniereVisite() {
             return etatDeLaFile.rejeux
         },

@@ -18,6 +18,7 @@ import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
+import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -39,11 +40,8 @@ const props = defineProps({
 
 const page = usePage()
 
-// ⚡ Perf: Use a mutable reactive ref instead of computed to support optimistic UI updates
-const localWorkout = ref(JSON.parse(JSON.stringify(props.workout)))
-if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workout_lines)) {
-    localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
-}
+// La copie locale, modifiable pour l'affichage optimiste : la séance du serveur, et par-dessus la file hors ligne.
+const localWorkout = useSeanceEtSaFile({ seance: props.workout, exercices: props.exercises })
 
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(

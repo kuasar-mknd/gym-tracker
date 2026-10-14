@@ -30,6 +30,40 @@ export const effacerLesBrouillons = () => {
 }
 
 /**
+ * Efface les brouillons rangés sous un identifiant provisoire qu'aucune
+ * écriture en file ne tient plus.
+ *
+ * Un identifiant provisoire ne vaut que pour le montage qui l'a donné : le
+ * compteur de `useIdentiteDesRangees` repart de zéro à chaque montage, et le
+ * `temp-3` d'hier désigne une autre série aujourd'hui. Laissé en place, le
+ * brouillon d'une série rangé sous ce nom serait appliqué par
+ * `rejouerLesBrouillons` à la série qui le porte maintenant, puis envoyé avec
+ * elle (#2048). Seuls restent ceux des rangées que la file crée encore
+ * (`temp-q<queueId>`, `Utils/seanceEtFile`), qui gardent ce nom d'un montage à
+ * l'autre ; ceux d'une série enregistrée, sous son identifiant réel, ne sont
+ * pas touchés. Un stockage bloqué ne doit pas retenir l'ouverture de la séance.
+ *
+ * @param {Iterable<string>} gardes les identifiants provisoires des rangées que
+ *   la file crée encore
+ */
+export const effacerLesBrouillonsOrphelins = (gardes) => {
+    const encoreEnFile = new Set(gardes)
+
+    try {
+        Object.keys(localStorage)
+            .filter((cle) => cle.startsWith(PREFIXE_DES_BROUILLONS))
+            .filter((cle) => {
+                const setId = cle.slice(PREFIXE_DES_BROUILLONS.length)
+
+                return isTemporaryId(setId) && !encoreEnFile.has(setId)
+            })
+            .forEach((cle) => localStorage.removeItem(cle))
+    } catch {
+        // Le stockage refuse : les brouillons restent, la séance s'ouvre.
+    }
+}
+
+/**
  * Ce que le serveur détient de chaque série, et ce que l'écran n'a pas encore
  * réussi à lui faire accepter.
  *

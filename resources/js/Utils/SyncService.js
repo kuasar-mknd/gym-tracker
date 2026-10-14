@@ -633,6 +633,25 @@ class SyncService {
             : this.queue.filter((entree) => entree.compte === this.compte).map((entree) => entree.id)
     }
 
+    /**
+     * Les écritures du compte connecté qui attendent encore, dans l'ordre de la
+     * file, celle qui vole comprise : une copie profonde, en lecture seule.
+     *
+     * La page de séance les superpose à la séance du serveur à son montage
+     * (`Utils/seanceEtFile`) : ce qui attendait en file n'apparaissait qu'après
+     * le vidage, et une série ajoutée sans réseau disparaissait de l'écran au
+     * rechargement ou au bouton Retour (#2048). La copie ne laisse personne
+     * modifier la file sans passer par `modifierEnFile` ou `retirerDeLaFile`,
+     * qui écrivent le stockage durable.
+     *
+     * @returns {Array<Object>}
+     */
+    entreesDuCompte() {
+        return this.compte === null
+            ? []
+            : JSON.parse(JSON.stringify(this.queue.filter((entree) => entree.compte === this.compte)))
+    }
+
     /** Combien d'écritures directes attendent encore leur réponse. */
     ecrituresEnCours() {
         return this.ecrituresDirectes.size
