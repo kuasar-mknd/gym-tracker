@@ -370,9 +370,16 @@ jobs:
                   }
                   # Derrière un ordre resté sans réponse, la fermeture attend son
                   # tour : cinq secondes ici, le pilote l'exécute quand il le peut.
+                  # Le relevé dit ce qu'elle a donné (28 : curl à bout de temps).
                   fermer() {
                       if [ -n "$session" ]; then
-                          curl -sf -o /dev/null --max-time 5 -X DELETE "$PILOTE/session/$session" && noter "session fermée"
+                          code=0
+                          curl -sf -o /dev/null --max-time 5 -X DELETE "$PILOTE/session/$session" || code=$?
+                          case $code in
+                              0) noter "session fermée" ;;
+                              28) noter "fermeture sans réponse" ;;
+                              *) noter "fermeture refusée" ;;
+                          esac
                           session=""
                       fi
                   }

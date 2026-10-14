@@ -97,6 +97,40 @@ function chromeChaudRangDeLaChauffe(array $etapes, string $ou): int
 }
 
 /**
+ * Le port sur lequel une étape démarre ChromeDriver, ou null quand elle ne le
+ * démarre pas. Le script se lit comme le shell le lit : commentaires ôtés,
+ * lignes continuées par `\` jointes. Une commande `chromedriver…` (un chemin
+ * ou un nom) démarre le pilote ; une mention de son journal
+ * (`chromedriver.log`) ou `artisan dusk:chrome-driver`, qui l'installe, non.
+ * Sans `--port`, ChromeDriver écoute sur 9515. Un `--port` sans `=`
+ * (`--port 9515`) l'arrête (« Invalid port. Exiting... »), et un port qui ne
+ * se lit pas (une variable) ne se compare à rien : le port rendu est alors 0,
+ * qu'aucun pilote des parcours ne vise.
+ *
+ * @param  array<mixed>  $etape
+ */
+function chromeChaudPortDuPiloteDemarre(array $etape): ?int
+{
+    $script = $etape['run'] ?? null;
+
+    if (! is_string($script)) {
+        return null;
+    }
+
+    $script = (string) preg_replace(['/(?<=^|\s)#.*$/m', '/\\\\\r?\n/'], ['', ' '], $script);
+
+    if (preg_match('~(?<![\w./=-])(?:[\w.-]*/)*chromedriver(?:-[\w-]+)?(?![\w./-])([^;&|\n]*)~', $script, $commande) !== 1) {
+        return null;
+    }
+
+    if (preg_match('/(?<!\S)--port(?:=(\S*))?(?!\S)/', $commande[1], $option) !== 1) {
+        return 9515;
+    }
+
+    return ctype_digit($option[1] ?? '') ? (int) $option[1] : 0;
+}
+
+/**
  * Les capacités que les parcours demandent au pilote, avec ou sans tête.
  */
 function chromeChaudCapacitesDesParcours(bool $sansTete): DesiredCapabilities
@@ -155,6 +189,117 @@ function chromeChaudBorneDUnePageDesParcours(): int
 }
 
 /**
+ * Ce qui ne va pas dans la chauffe d'un job qui lance les parcours, une phrase
+ * par défaut, rien quand elle est en ordre. Le démarrage du pilote doit être
+ * reconnu : un démarrage écrit autrement ne laisse pas passer une chauffe
+ * placée avant lui, qui attendrait sa borne entière un pilote pas encore
+ * lancé.
+ *
+ * @param  list<array<mixed>>  $etapes
+ * @return list<string>
+ */
+function chromeChaudDefautsDuJob(string $ou, array $etapes): array
+{
+    $rangDeLaChauffe = chromeChaudRangDe($etapes, static fn (array $etape): bool => ($etape['name'] ?? null) === 'Chauffer Chrome');
+
+    if ($rangDeLaChauffe === null) {
+        return ["{$ou} lance les parcours sans étape « Chauffer Chrome » : son premier parcours paierait le premier démarrage de Chrome (#2046)."];
+    }
+
+    $chauffe = $etapes[$rangDeLaChauffe];
+    $rangDesParcours = (int) chromeChaudRangDe($etapes, chromeChaudLanceLesParcours(...));
+    $script = $etapes[$rangDesParcours]['run'] ?? '';
+    $pilote = data_get($etapes[$rangDesParcours], 'env.DUSK_DRIVER_URL') ?? (is_string($script) && preg_match('/^\s*DUSK_DRIVER_URL=(\S+)/m', $script, $trouve) === 1 ? $trouve[1] : null);
+    $rangDuPilote = chromeChaudRangDe($etapes, static fn (array $etape): bool => chromeChaudPortDuPiloteDemarre($etape) !== null);
+    $portDuPilote = $rangDuPilote === null ? null : chromeChaudPortDuPiloteDemarre($etapes[$rangDuPilote]);
+    $secondes = data_get($chauffe, 'env.SECONDES_DE_CHAUFFE');
+    $essais = data_get($chauffe, 'env.ESSAIS_PAR_ORDRE');
+    $minutes = data_get($chauffe, 'timeout-minutes');
+    $secondesParPage = intdiv(chromeChaudBorneDUnePageDesParcours(), 1000);
+
+    $defauts = [
+        'la chauffe vient après les parcours' => $rangDeLaChauffe > $rangDesParcours,
+        'la chauffe ne doit dépendre d\'aucune condition (`if:`), chaque éclat la paie' => array_key_exists('if', $chauffe),
+        'une chauffe qui échoue ne doit pas faire tomber le job (`continue-on-error: true`), le premier parcours fera son propre diagnostic' => data_get($chauffe, 'continue-on-error') !== true,
+        'la chauffe doit passer par le pilote des parcours (PILOTE égal à DUSK_DRIVER_URL)' => ! is_string($pilote) || data_get($chauffe, 'env.PILOTE') !== $pilote,
+        'SECONDES_DE_CHAUFFE doit être un nombre entier de secondes, positif' => ! is_int($secondes) || $secondes < 1,
+        'ESSAIS_PAR_ORDRE doit être un nombre entier d\'essais, deux au moins' => ! is_int($essais) || $essais < 2,
+        'ESSAIS_PAR_ORDRE essais d\'une page des parcours doivent couvrir SECONDES_DE_CHAUFFE : le pilote coupe un lancement de Chrome et une page à soixante secondes' => is_int($secondes) && is_int($essais) && $essais * $secondesParPage < $secondes,
+        'la borne de l\'étape (`timeout-minutes`) doit laisser la chauffe finir sur la sienne, fermer sa session et écrire ses durées' => ! is_int($minutes) || ! is_int($secondes) || $minutes * 60 <= $secondes + 30,
+        'aucune étape ne démarre ChromeDriver (une commande `chromedriver…` dans un `run:`) : la chauffe attendrait jusqu\'à sa borne un pilote que rien ne lance' => $rangDuPilote === null,
+        'le démarrage du pilote ne doit dépendre d\'aucune condition (`if:`) : sauté, il laisserait la chauffe l\'attendre jusqu\'à sa borne' => $rangDuPilote !== null && array_key_exists('if', $etapes[$rangDuPilote]),
+        'la chauffe part avant le démarrage du pilote, qu\'elle attendrait jusqu\'à sa borne' => $rangDuPilote !== null && $rangDuPilote > $rangDeLaChauffe,
+        'la chauffe et les parcours doivent viser le port du pilote que le job démarre' => $portDuPilote !== null && is_string($pilote) && $portDuPilote !== (parse_url($pilote, PHP_URL_PORT) ?? 80),
+    ];
+
+    return array_map(static fn (string $defaut): string => "{$ou} : {$defaut}", array_keys(array_filter($defauts)));
+}
+
+/**
+ * Le rang de l'étape nommée d'un job. Une étape qui manque arrête la variante
+ * en cours : elle ne doit pas passer pour une variante sans rien changer.
+ *
+ * @param  list<array<mixed>>  $etapes
+ */
+function chromeChaudRangDeLEtape(array $etapes, string $nom): int
+{
+    return chromeChaudRangDe($etapes, static fn (array $etape): bool => ($etape['name'] ?? null) === $nom)
+        ?? throw new RuntimeException("étape « {$nom} » introuvable");
+}
+
+/**
+ * Les étapes d'un job changées selon `$variante` : `demarrage` réécrit le
+ * script du démarrage du pilote (false retire l'étape), `demarrageSi` lui pose
+ * une condition, `chauffe` remplace des clés de la chauffe, `chauffeAvant` la
+ * déplace juste avant l'étape nommée, `port` porte le pilote des parcours et
+ * celui de la chauffe sur un autre port.
+ *
+ * @param  list<array<mixed>>  $etapes
+ * @param  array<mixed>  $variante
+ * @return list<array<mixed>>
+ */
+function chromeChaudVarianteDuJob(array $etapes, array $variante): array
+{
+    $rangDeLaChauffe = chromeChaudRangDeLEtape($etapes, 'Chauffer Chrome');
+    $chauffe = $variante['chauffe'] ?? [];
+    $etapes[$rangDeLaChauffe] = array_replace_recursive($etapes[$rangDeLaChauffe], is_array($chauffe) ? $chauffe : []);
+    $port = $variante['port'] ?? null;
+
+    if (is_int($port)) {
+        $rangDesParcours = chromeChaudRangDeLEtape($etapes, 'Run Dusk Tests');
+        $script = $etapes[$rangDesParcours]['run'] ?? null;
+        $autre = is_string($script) ? str_replace('DUSK_DRIVER_URL=http://127.0.0.1:9515', "DUSK_DRIVER_URL=http://127.0.0.1:{$port}", $script) : $script;
+        $etapes[$rangDesParcours]['run'] = $autre !== $script ? $autre : throw new RuntimeException('DUSK_DRIVER_URL introuvable');
+        $etapes[$rangDeLaChauffe] = array_replace_recursive($etapes[$rangDeLaChauffe], ['env' => ['PILOTE' => "http://127.0.0.1:{$port}"]]);
+    }
+
+    $demarrage = $variante['demarrage'] ?? null;
+
+    if (is_string($demarrage)) {
+        $etapes[chromeChaudRangDeLEtape($etapes, 'Start Chrome Driver')]['run'] = $demarrage;
+    }
+
+    if ($demarrage === false) {
+        array_splice($etapes, chromeChaudRangDeLEtape($etapes, 'Start Chrome Driver'), 1);
+    }
+
+    $condition = $variante['demarrageSi'] ?? null;
+
+    if (is_string($condition)) {
+        $etapes[chromeChaudRangDeLEtape($etapes, 'Start Chrome Driver')]['if'] = $condition;
+    }
+
+    $chauffeAvant = $variante['chauffeAvant'] ?? null;
+
+    if (is_string($chauffeAvant)) {
+        $chauffeDeplacee = array_splice($etapes, chromeChaudRangDeLEtape($etapes, 'Chauffer Chrome'), 1);
+        array_splice($etapes, chromeChaudRangDeLEtape($etapes, $chauffeAvant), 0, $chauffeDeplacee);
+    }
+
+    return array_values($etapes);
+}
+
+/**
  * Lit l'ordre qu'un client envoie au faux pilote.
  *
  * @param  resource  $connexion
@@ -201,9 +346,11 @@ function chromeChaudOrdreRecu($connexion): array
  * Rejoue l'étape de chauffe comme GitHub la lance (`bash -e`), contre un faux
  * pilote qui répond à chaque ordre le statut et le corps que `$repondre` rend
  * (avec le rang de l'ordre parmi ceux de même méthode et de même chemin), ou
- * jamais quand il rend null. Sans faux pilote, la chauffe vise le port 1, où
- * rien n'écoute. Les chaînes de `$variables` prennent le pas sur
- * l'environnement de l'étape.
+ * jamais quand il rend null. Comme ChromeDriver, il traite les ordres d'une
+ * session l'un après l'autre : derrière un ordre resté sans réponse, ceux de
+ * la même session attendent aussi, fermeture comprise. Sans faux pilote, la
+ * chauffe vise le port 1, où rien n'écoute. Les chaînes de `$variables`
+ * prennent le pas sur l'environnement de l'étape.
  *
  * @param  array<mixed>  $etape
  * @param  (Closure(string, string, int): ?array{0: int, 1: string})|null  $repondre
@@ -250,6 +397,7 @@ function chromeChaudRejouerLaChauffe(array $etape, int $secondes, ?Closure $repo
     $ordres = [];
     $recus = [];
     $muettes = [];
+    $sessionsEnAttente = [];
     $debut = microtime(true);
 
     try {
@@ -280,12 +428,24 @@ function chromeChaudRejouerLaChauffe(array $etape, int $secondes, ?Closure $repo
 
             $ordre = chromeChaudOrdreRecu($connexion);
             $ordres[] = $ordre;
+            $session = preg_match('#^/session/([^/]+)#', $ordre['chemin'], $trouve) === 1 ? $trouve[1] : '';
+
+            if (isset($sessionsEnAttente[$session])) {
+                $muettes[] = $connexion;
+
+                continue;
+            }
+
             $cle = "{$ordre['methode']} {$ordre['chemin']}";
             $recus[$cle] = ($recus[$cle] ?? 0) + 1;
             $reponse = $repondre($ordre['methode'], $ordre['chemin'], $recus[$cle]);
 
             if ($reponse === null) {
                 $muettes[] = $connexion;
+
+                if ($session !== '') {
+                    $sessionsEnAttente[$session] = true;
+                }
 
                 continue;
             }
@@ -321,7 +481,8 @@ function chromeChaudSessionDuFauxPilote(): string
 /**
  * Le faux pilote : il répond à chaque ordre comme ChromeDriver, sauf à ceux
  * dont la méthode et le chemin (`{id}` pour la session) sont dans `$pannes`.
- * Il laisse un ordre « muet » sans réponse, et refuse un ordre « refusé » par
+ * Il laisse un ordre « muet » sans réponse (et, derrière lui, les ordres
+ * suivants de la même session), et refuse un ordre « refusé » par
  * l'erreur que ChromeDriver rend quand il coupe un lancement de Chrome
  * (l'ouverture d'une session) ou une page (tout autre ordre), à chaque fois
  * ou la première seulement (« refusé une fois »).
@@ -396,48 +557,49 @@ function chromeChaudLigneAttendue(string $modele): string
 
 it('chauffe Chrome par le pilote des parcours avant chaque lancement des parcours, sans faire tomber le job', function (): void {
     $jobs = chromeChaudJobsDesParcours();
-    $secondesParPage = intdiv(chromeChaudBorneDUnePageDesParcours(), 1000);
 
     // Le job browser-shard lance les parcours : une garde qui ne lirait rien passerait sans rien prouver.
     expect(array_column($jobs, 'ou'))->toContain('ci.yml > browser-shard');
 
     foreach ($jobs as ['ou' => $ou, 'etapes' => $etapes]) {
-        $rangDeLaChauffe = chromeChaudRangDeLaChauffe($etapes, $ou);
-        $chauffe = $etapes[$rangDeLaChauffe];
-        $rangDesParcours = (int) chromeChaudRangDe($etapes, chromeChaudLanceLesParcours(...));
-        $rangDuPilote = chromeChaudRangDe($etapes, static fn (array $etape): bool => is_string($etape['run'] ?? null) && preg_match('/chromedriver\S*\s[^\n]*--port=\d+/', $etape['run']) === 1);
-        $parcours = $etapes[$rangDesParcours];
-        $script = is_string($parcours['run'] ?? null) ? $parcours['run'] : '';
-        $pilote = data_get($parcours, 'env.DUSK_DRIVER_URL') ?? (preg_match('/^\s*DUSK_DRIVER_URL=(\S+)/m', $script, $trouve) === 1 ? $trouve[1] : null);
-        $secondes = data_get($chauffe, 'env.SECONDES_DE_CHAUFFE');
-        $essais = data_get($chauffe, 'env.ESSAIS_PAR_ORDRE');
-        $minutes = data_get($chauffe, 'timeout-minutes');
-
-        expect($rangDeLaChauffe)->toBeLessThan($rangDesParcours, "{$ou} : la chauffe vient après les parcours")
-            // Une condition (`if:`) la sauterait sur certains éclats, ou sur tous.
-            ->and(array_key_exists('if', $chauffe))->toBeFalse("{$ou} : la chauffe ne doit dépendre d'aucune condition, chaque éclat la paie")
-            ->and(data_get($chauffe, 'continue-on-error'))->toBeTrue("{$ou} : une chauffe qui échoue ne doit pas faire tomber le job, le premier parcours fera son propre diagnostic")
-            ->and(data_get($chauffe, 'env.PILOTE'))->toBe($pilote, "{$ou} : la chauffe doit passer par le pilote des parcours (DUSK_DRIVER_URL)")
-            ->and($secondes)->toBeInt()->toBeGreaterThan(0)
-            ->and($essais)->toBeInt()->toBeGreaterThan(1)
-            ->and($minutes)->toBeInt();
-
-        assert(is_int($secondes) && is_int($essais) && is_int($minutes) && is_string($pilote));
-
-        // Le pilote coupe chaque lancement de Chrome et chaque page à soixante secondes : sans assez d'essais, la borne ne serait jamais atteinte.
-        expect($essais * $secondesParPage)->toBeGreaterThanOrEqual($secondes, "{$ou} : ESSAIS_PAR_ORDRE essais d'une page des parcours doivent couvrir SECONDES_DE_CHAUFFE")
-            // Sa propre borne, plus la fermeture (cinq secondes) et une seconde par ordre, tient sous celle de GitHub.
-            ->and($minutes * 60)->toBeGreaterThan($secondes + 30, "{$ou} : la borne de l'étape doit laisser la chauffe finir sur la sienne et écrire ses durées");
-
-        if ($rangDuPilote !== null) {
-            $demarrage = $etapes[$rangDuPilote]['run'] ?? '';
-
-            expect($rangDuPilote)->toBeLessThan($rangDeLaChauffe, "{$ou} : la chauffe part avant le démarrage du pilote")
-                ->and(is_string($demarrage) && str_contains($demarrage, '--port='.parse_url($pilote, PHP_URL_PORT)))
-                ->toBeTrue("{$ou} : la chauffe et les parcours doivent viser le pilote que le job démarre");
-        }
+        expect(chromeChaudDefautsDuJob($ou, $etapes))->toBe([]);
     }
 });
+
+it('reconnaît le démarrage du pilote sous toutes ses formes, et refuse une chauffe mal placée ou mal réglée', function (array $variante, ?string $defaut): void {
+    $jobs = array_values(array_filter(chromeChaudJobsDesParcours(), static fn (array $job): bool => $job['ou'] === 'ci.yml > browser-shard'));
+
+    expect($jobs)->toHaveCount(1);
+
+    $defauts = chromeChaudDefautsDuJob($jobs[0]['ou'], chromeChaudVarianteDuJob($jobs[0]['etapes'], $variante));
+
+    if ($defaut === null) {
+        expect($defauts)->toBe([]);
+
+        return;
+    }
+
+    expect($defauts)->toHaveCount(1)
+        ->and($defauts[0] ?? '')->toContain($defaut);
+})->with([
+    'le démarrage sur deux lignes' => [['demarrage' => "./vendor/laravel/dusk/bin/chromedriver-linux \\\n    --port=9515 --log-path=storage/logs/chromedriver.log --readable-timestamp &\n"], null],
+    'le démarrage sans --port=, sur le port par défaut' => [['demarrage' => "./vendor/laravel/dusk/bin/chromedriver-linux --log-path=storage/logs/chromedriver.log --readable-timestamp &\n"], null],
+    'la chauffe avant un démarrage sur deux lignes' => [['demarrage' => "./vendor/laravel/dusk/bin/chromedriver-linux \\\n    --port=9515 --log-path=storage/logs/chromedriver.log --readable-timestamp &\n", 'chauffeAvant' => 'Start Chrome Driver'], 'la chauffe part avant le démarrage du pilote'],
+    'la chauffe avant un démarrage sans --port=' => [['demarrage' => "chromedriver --log-path=storage/logs/chromedriver.log &\n", 'chauffeAvant' => 'Start Chrome Driver'], 'la chauffe part avant le démarrage du pilote'],
+    'un démarrage sur deux lignes vers un autre port' => [['demarrage' => "./vendor/laravel/dusk/bin/chromedriver-linux \\\n    --port=9516 --log-path=storage/logs/chromedriver.log &\n"], 'doivent viser le port du pilote que le job démarre'],
+    'un démarrage sans --port= quand les parcours visent un autre port' => [['demarrage' => "chromedriver --log-path=storage/logs/chromedriver.log &\n", 'port' => 9516], 'doivent viser le port du pilote que le job démarre'],
+    'un --port sans valeur, qui arrête ChromeDriver' => [['demarrage' => "chromedriver --port 9515 &\n"], 'doivent viser le port du pilote que le job démarre'],
+    'un port écrit par une variable, qui ne se compare à rien' => [['demarrage' => "chromedriver --port=\"\$PORT_DU_PILOTE\" &\n"], 'doivent viser le port du pilote que le job démarre'],
+    'un démarrage en commentaire seulement' => [['demarrage' => "# ./vendor/laravel/dusk/bin/chromedriver-linux --port=9515 &\ntail storage/logs/chromedriver.log\n"], 'aucune étape ne démarre ChromeDriver'],
+    'aucune étape de démarrage' => [['demarrage' => false], 'aucune étape ne démarre ChromeDriver'],
+    'un démarrage sous condition' => [['demarrageSi' => 'matrix.shard == 1'], 'le démarrage du pilote ne doit dépendre d\'aucune condition'],
+    'la chauffe après les parcours' => [['chauffeAvant' => 'Dump Logs on Failure'], 'la chauffe vient après les parcours'],
+    'la chauffe sur un seul éclat' => [['chauffe' => ['if' => 'matrix.shard == 1']], 'aucune condition'],
+    'la chauffe qui fait tomber le job' => [['chauffe' => ['continue-on-error' => false]], 'ne doit pas faire tomber le job'],
+    'la chauffe sur un autre pilote que les parcours' => [['chauffe' => ['env' => ['PILOTE' => 'http://127.0.0.1:4444']]], 'doit passer par le pilote des parcours'],
+    'deux essais pour huit minutes' => [['chauffe' => ['env' => ['ESSAIS_PAR_ORDRE' => 2]]], 'doivent couvrir SECONDES_DE_CHAUFFE'],
+    'une borne d\'étape sous celle de la chauffe' => [['chauffe' => ['timeout-minutes' => 8]], 'doit laisser la chauffe finir sur la sienne'],
+]);
 
 it('ouvre une session avec les options sans tête et la borne d\'une page des parcours, rend une page http, en prend la capture, la ferme et écrit ses durées', function (): void {
     $optionsSansTete = chromeChaudOptionsSansTeteDesParcours();
@@ -514,17 +676,31 @@ it('rejoue un ordre que le pilote refuse ou laisse sans réponse, rend la main s
         '::warning title=Chauffe de Chrome::la page ne s\'est pas rendue après X s (pilote prêt en X s, session ouverte en X s, attente vaine en X s et N essais, session fermée en X s). Le premier parcours fera son propre diagnostic (#2046).',
         1.9, 7.0,
     ],
+    // La fermeture attend derrière la page restée sans réponse, et renonce au bout de ses cinq secondes.
     'la page muette' => [
         ['POST /session/{id}/url' => 'muet'], 1, [], 1,
         ['GET /status', 'POST /session', 'POST /session/{id}/url', 'DELETE /session/{id}'],
-        '::warning title=Chauffe de Chrome::la page ne s\'est pas rendue après X s (pilote prêt en X s, session ouverte en X s, attente vaine en X s, session fermée en X s). Le premier parcours fera son propre diagnostic (#2046).',
-        0.9, 6.0,
+        '::warning title=Chauffe de Chrome::la page ne s\'est pas rendue après X s (pilote prêt en X s, session ouverte en X s, attente vaine en X s, fermeture sans réponse en X s). Le premier parcours fera son propre diagnostic (#2046).',
+        5.9, 10.0,
     ],
     'la capture muette' => [
         ['GET /session/{id}/screenshot' => 'muet'], 1, [], 1,
         ['GET /status', 'POST /session', 'POST /session/{id}/url', 'GET /session/{id}/screenshot', 'DELETE /session/{id}'],
-        '::warning title=Chauffe de Chrome::la capture n\'est pas venue après X s (pilote prêt en X s, session ouverte en X s, page rendue en X s, attente vaine en X s, session fermée en X s). Le premier parcours fera son propre diagnostic (#2046).',
-        0.9, 6.0,
+        '::warning title=Chauffe de Chrome::la capture n\'est pas venue après X s (pilote prêt en X s, session ouverte en X s, page rendue en X s, attente vaine en X s, fermeture sans réponse en X s). Le premier parcours fera son propre diagnostic (#2046).',
+        5.9, 10.0,
+    ],
+    'la fermeture refusée' => [
+        ['DELETE /session/{id}' => 'refusé'], 20, [], 0,
+        ['GET /status', 'POST /session', 'POST /session/{id}/url', 'GET /session/{id}/screenshot', 'DELETE /session/{id}'],
+        'Chrome chaud en X s : pilote prêt en X s, session ouverte en X s, page rendue en X s, capture en X s, fermeture refusée en X s.',
+        0.0, 6.0,
+    ],
+    // Chaque attente du statut renonce au bout de deux secondes.
+    'le pilote muet' => [
+        ['GET /status' => 'muet'], 1, [], 1,
+        ['GET /status'],
+        '::warning title=Chauffe de Chrome::le pilote ne répond pas après X s (attente vaine en X s). Le premier parcours fera son propre diagnostic (#2046).',
+        1.9, 6.0,
     ],
     'le pilote absent' => [
         null, 1, [], 1,
