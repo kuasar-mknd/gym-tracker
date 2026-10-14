@@ -11,7 +11,6 @@ use App\Http\Requests\DeleteUserRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Http\Requests\UpdateNotificationPreferencesRequest;
 use App\Jobs\TraiterUnChangementDAdresse;
-use App\Support\DureeDesReponsesDAuthentification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -66,35 +65,30 @@ class ProfileController extends Controller
      * Une nouvelle adresse ne remplace pas l'actuelle tout de suite : la
      * réponse, et la page qui la suit, diraient sinon si elle était libre ou
      * déjà celle d'un autre compte. Le nom s'enregistre, et
-     * `TraiterUnChangementDAdresse` part en file, dans le plancher commun des
-     * réponses d'authentification (`DureeDesReponsesDAuthentification`) : il
-     * envoie à la nouvelle adresse le lien qui la confirme
+     * `TraiterUnChangementDAdresse` part en file : c'est lui qui cherche
+     * l'adresse, puis envoie à la nouvelle adresse le lien qui la confirme
      * (`ConfirmerLAdresseController`), ou prévient son titulaire. La réponse est
-     * la même dans les deux cas. Le lien suivi, le reste suit tout changement
-     * d'adresse, quel que soit le chemin (`SurveilleSonAdresse`) : la dernière
-     * adresse vérifiée en est prévenue.
+     * la même dans les deux cas, et sa durée aussi, puisque la requête ne lit
+     * pas l'adresse demandée : elle ne passe donc pas par le plancher commun
+     * des réponses d'authentification (`DureeDesReponsesDAuthentification`),
+     * qui n'y protégerait rien et retiendrait un processus une seconde par
+     * demande, sous un limiteur qui compte par compte et non par adresse IP.
+     * Le lien suivi, le reste suit tout changement d'adresse, quel que soit le
+     * chemin (`SurveilleSonAdresse`) : la dernière adresse vérifiée en est
+     * prévenue.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $this->authorize('update', $this->user());
 
         $compte = $this->user();
-        $nom = $request->string('name')->toString();
+        $compte->update(['name' => $request->string('name')->toString()]);
 
         if (! $request->changeLAdresse()) {
-            $compte->update(['name' => $nom]);
-
             return Redirect::route('profile.edit');
         }
 
-        $adresse = $request->string('email')->toString();
-        $langue = app()->getLocale();
-
-        DureeDesReponsesDAuthentification::appeler(static function () use ($compte, $nom, $adresse, $langue): void {
-            $compte->update(['name' => $nom]);
-
-            TraiterUnChangementDAdresse::dispatch($compte->id, $adresse, $langue);
-        });
+        TraiterUnChangementDAdresse::dispatch($compte->id, $request->string('email')->toString(), app()->getLocale());
 
         return Redirect::route('profile.edit')->with('status', 'lien-de-changement-d-adresse-envoye');
     }

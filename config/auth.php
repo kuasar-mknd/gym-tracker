@@ -131,10 +131,10 @@ return [
     |
     | En microsecondes. La garde de session, le courtier des mots de passe, la
     | connexion du panneau et `DureeDesReponsesDAuthentification` (inscription,
-    | connexion, mot de passe oublié, réinitialisation, changement d'adresse)
-    | la lisent tous : une réponse ne dure pas plus longtemps pour une adresse
-    | qui a un compte. Elle doit dépasser le coût de `BCRYPT_ROUNDS`. Une
-    | variable vide ou non numérique donne le défaut ; phpunit.xml la met à 0.
+    | connexion, mot de passe oublié, réinitialisation) la lisent tous : une
+    | réponse ne dure pas plus longtemps pour une adresse qui a un compte. Elle
+    | doit dépasser le coût de `BCRYPT_ROUNDS`. Une variable vide ou non
+    | numérique donne le défaut ; phpunit.xml la met à 0.
     |
     */
 

@@ -13,10 +13,12 @@ use Illuminate\Support\Timebox;
  * aussi sûrement qu'un message : la connexion d'une adresse connue vérifiait
  * le mot de passe (bcrypt) au-delà de la Timebox de la garde, et l'inscription
  * d'une adresse libre hachait le mot de passe là où celle d'une adresse prise
- * répondait aussitôt. L'inscription, la connexion, « Mot de passe oublié », la
- * réinitialisation et la demande de changement d'adresse du profil passent
- * donc par `appeler()`, et la garde de session, le courtier des mots de passe
- * et la connexion du panneau lisent la même valeur (`auth.timebox_duration`).
+ * répondait aussitôt. L'inscription, la connexion, « Mot de passe oublié » et
+ * la réinitialisation passent donc par `appeler()`, et la garde de session,
+ * le courtier des mots de passe et la connexion du panneau lisent la même
+ * valeur (`auth.timebox_duration`). La demande de changement d'adresse du
+ * profil n'y passe pas : elle ne lit pas l'adresse demandée, qu'un job
+ * cherche hors de la requête.
  * Une réussite qui connecte peut rendre la main plus tôt (`returnEarly()`) :
  * seul le titulaire la voit.
  *

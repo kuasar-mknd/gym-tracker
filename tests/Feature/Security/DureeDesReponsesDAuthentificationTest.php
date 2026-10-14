@@ -145,11 +145,6 @@ function dureeAuthentificationCas(): array
     ])->assertSessionHasErrors('email');
     $oubli = static fn (string $adresse): Closure => static fn (): mixed => test()->post(route('password.email'), ['email' => $adresse])
         ->assertSessionHasNoErrors();
-    $profil = static fn (User $compte, string $adresse): Closure => static fn (): mixed => test()->actingAs($compte)->patch(route('profile.update'), [
-        'name' => 'Camille',
-        'email' => $adresse,
-        'current_password' => 'password',
-    ])->assertSessionHasNoErrors();
     $panneau = static fn (string $adresse): Closure => static function () use ($adresse): mixed {
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
@@ -193,12 +188,6 @@ function dureeAuthentificationCas(): array
                 'password' => 'Un-nouveau-mot-de-passe-2026!',
                 'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
             ])->assertSessionHasErrors('email');
-        }],
-        'profil, nouvelle adresse libre' => [static fn (): Closure => $profil(User::factory()->create(), 'libre@example.org')],
-        'profil, nouvelle adresse prise' => [static function () use ($profil): Closure {
-            User::factory()->create(['email' => 'prise@example.org']);
-
-            return $profil(User::factory()->create(), 'prise@example.org');
         }],
         'panneau, adresse inconnue' => [static fn (): Closure => $panneau('personne@example.org')],
         'panneau, administrateur' => [static function () use ($panneau): Closure {
@@ -272,6 +261,31 @@ it('passe par une Timebox réglée sur le plancher commun', function (Closure $p
     expect($durees->getArrayCopy())->not->toBeEmpty()
         ->and(array_unique($durees->getArrayCopy()))->toBe([2_345_678]);
 })->with(dureeAuthentificationCas());
+
+/*
+ * La demande de changement d'adresse ne lit pas l'adresse demandée : elle
+ * enregistre le nom et met `TraiterUnChangementDAdresse` en file, qui la
+ * cherche. Rien n'y dure plus longtemps pour une adresse prise, et le
+ * plancher retiendrait un processus une seconde par demande, sous un limiteur
+ * qui compte par compte et non par adresse IP.
+ */
+it('répond sans plancher à une demande de changement d’adresse, libre ou prise', function (string $adresse): void {
+    Notification::fake();
+    $duree = DureeSimulee::demarrer();
+    $durees = new ArrayObject();
+    app()->bind(Timebox::class, static fn (): Timebox => new TimeboxEspionnee($durees));
+    User::factory()->create(['email' => 'prise@example.org']);
+    $compte = User::factory()->create();
+
+    $mesure = $duree->mesurer(static fn (): mixed => test()->actingAs($compte)->patch(route('profile.update'), [
+        'name' => 'Camille',
+        'email' => $adresse,
+        'current_password' => 'password',
+    ])->assertSessionHasNoErrors()->assertSessionHas('status', 'lien-de-changement-d-adresse-envoye'));
+
+    expect($mesure['dormi'])->toBe(0.0)
+        ->and($durees->getArrayCopy())->toBe([]);
+})->with(['libre@example.org', 'prise@example.org']);
 
 /*
  * Le travailleur de la file n'a pas de client qui mesure sa durée : le
