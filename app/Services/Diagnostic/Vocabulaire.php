@@ -13,7 +13,9 @@ namespace App\Services\Diagnostic;
  * être : un nom de classe, un fichier du dépôt, un nom de route, une valeur
  * d'une liste. Une valeur qui n'a pas sa forme devient `null`, jamais un
  * texte approché : un nom de job écrit par un tiers, un fichier hors du
- * dépôt, une méthode HTTP inventée ne passent pas.
+ * dépôt, une méthode HTTP inventée ne passent pas. Une forme ne ferme pas à
+ * elle seule le vocabulaire d'un nom que le client écrit : le fichier d'une
+ * erreur navigateur doit en plus exister dans le build en place.
  */
 final class Vocabulaire
 {
@@ -78,6 +80,24 @@ final class Vocabulaire
         return match (is_string($chemin) && str_starts_with($chemin, $racine)) {
             true => self::forme(self::FICHIER, substr($chemin, strlen($racine))),
             false => self::forme(self::FICHIER, $chemin),
+        };
+    }
+
+    /**
+     * Le fichier JavaScript du build en place que désigne la source d'une
+     * erreur navigateur, URL ou chemin, sans hôte ni chaîne de requête. La
+     * source est écrite par le client : un nom qui a seulement la forme d'un
+     * fichier du build porterait le texte de son choix. Seul un fichier que
+     * le build a écrit, et qui est encore sous `public/build/assets`, est
+     * rendu ; tout autre devient `null`. Le disque est relu à chaque appel.
+     */
+    public static function fichierDuBuild(mixed $source): ?string
+    {
+        $chemin = self::forme(self::FICHIER_DU_BUILD, ltrim((string) parse_url(is_string($source) ? $source : '', PHP_URL_PATH), '/'));
+
+        return match ($chemin !== null && is_file(public_path($chemin))) {
+            true => $chemin,
+            false => null,
         };
     }
 

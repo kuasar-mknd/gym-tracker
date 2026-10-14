@@ -18,10 +18,11 @@ use stdClass;
  * Les erreurs navigateur, vues par le diagnostic (#2032).
  *
  * La liste les groupe par empreinte : type, nombre, comptes touchés (un
- * nombre), familles de navigateurs (une liste fermée), fichier du build,
- * ligne, colonne. Les groupes qui touchent le plus de comptes passent
- * devant, puis les plus nombreux, puis les plus récents : un compte seul ne
- * pousse pas son erreur devant celle de plusieurs. Les erreurs d'un compte
+ * nombre), familles de navigateurs (une liste fermée), fichier du build
+ * (seulement s'il est du build en place), ligne, colonne. Les groupes qui
+ * touchent le plus de comptes passent devant, puis les plus nombreux, puis
+ * les plus récents : un compte seul ne pousse pas son erreur devant celle
+ * de plusieurs. Les erreurs d'un compte
  * supprimé ou non vérifié ne sont pas lues. Le détail d'un groupe ajoute,
  * avec `TexteBrut`, le message, la page sans sa chaîne de requête et les
  * premières lignes de la pile de sa dernière occurrence, sous `non_fiable`,
@@ -103,7 +104,7 @@ final class ProjectionDesErreursNavigateur
                 'type' => Vocabulaire::parmi($derniere->type, ErreurNavigateur::TYPES),
                 'comptes_touches' => $toutes->pluck('user_id')->unique()->count(),
                 'navigateurs' => $toutes->map(static fn (stdClass $ligne): string => FamilleDeNavigateur::de($ligne->agent))->unique()->sort()->values()->all(),
-                'fichier' => Vocabulaire::forme(Vocabulaire::FICHIER_DU_BUILD, ltrim((string) parse_url(ValeurLue::texte($derniere->source), PHP_URL_PATH), '/')),
+                'fichier' => Vocabulaire::fichierDuBuild($derniere->source),
                 'ligne' => ValeurLue::entier($derniere->ligne),
                 'colonne' => ValeurLue::entier($derniere->colonne),
             ],

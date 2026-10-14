@@ -19,6 +19,7 @@ use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\WorkloadRepository;
 use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResult;
 use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResults;
+use Tests\Support\BuildDuDiagnostic;
 
 /*
  * Hors de `non_fiable`, chaque valeur de chaque réponse du diagnostic est un
@@ -26,11 +27,13 @@ use Spatie\Health\ResultStores\StoredCheckResults\StoredCheckResults;
  *
  * Le test sème dans chaque colonne que lisent les projections un texte
  * hostile (des blancs, un saut de ligne, un chemin hors du dépôt, une
- * consigne), à côté de valeurs ordinaires, puis parcourt chaque clé du
- * résumé, toutes portées accordées, et de chaque détail, sous `TexteBrut`.
- * Chaque clé doit être connue de la liste ci-dessous, qui ne dépend pas du
- * code qu'elle vérifie, et sa valeur avoir la forme de sa clé. Une clé
- * nouvelle fait échouer le test tant qu'elle n'y entre pas avec sa forme.
+ * consigne, un nom de fichier qui en a la forme sans exister), à côté de
+ * valeurs ordinaires, puis parcourt chaque clé du résumé, toutes portées
+ * accordées, et de chaque détail, sous `TexteBrut`. Chaque clé doit être
+ * connue de la liste ci-dessous, qui ne dépend pas du code qu'elle vérifie,
+ * et sa valeur avoir la forme de sa clé ; un fichier doit en plus exister,
+ * dans le dépôt ou dans le build en place. Une clé nouvelle fait échouer le
+ * test tant qu'elle n'y entre pas avec sa forme.
  */
 
 /** Un texte qu'aucune forme fermée n'admet. */
@@ -64,7 +67,7 @@ function vocabulaireFermeFormes(): array
         'version' => '/^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$/', 'revision' => '/^[A-Za-z0-9][A-Za-z0-9.+_-]{0,63}$/',
         'environnement' => '/^[A-Za-z0-9_.:-]{1,64}$/', 'nom' => '/^[A-Za-z0-9_.:-]{1,64}$/', 'file' => '/^[A-Za-z0-9_.:-]{1,64}$/',
         'conteneur' => '/^(app|worker|scheduler)$/',
-        'fichier' => '/^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_.\/-]*$/',
+        'fichier' => 'fichier',
         'appel' => '/^(?:[A-Za-z_][A-Za-z0-9_\\\\]*(?:@anonymous)?(?:->|::))?(?:[A-Za-z_][A-Za-z0-9_]*|\{closure\})$/',
         'route' => '/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/',
         'gabarit' => '/^[A-Za-z0-9_{}\/.?-]*$/',
@@ -133,6 +136,7 @@ function vocabulaireFermeParcourir(array $valeurs, string $chemin, string $paren
             $forme === 'int' => is_int($valeur),
             $forme === 'float' => is_float($valeur) || is_int($valeur),
             $forme === 'bool' => is_bool($valeur),
+            $forme === 'fichier' => vocabulaireFermeFichierExistant($valeur),
             $forme === 'null' => false,
             default => is_string($valeur) && preg_match($forme, $valeur) === 1,
         };
@@ -143,6 +147,17 @@ function vocabulaireFermeParcourir(array $valeurs, string $chemin, string $paren
     }
 
     return $constats;
+}
+
+/**
+ * Un fichier du dépôt ou du build en place, nommé par son chemin relatif :
+ * un nom qui en a seulement la forme peut porter le texte de son choix.
+ */
+function vocabulaireFermeFichierExistant(mixed $valeur): bool
+{
+    return is_string($valeur)
+        && preg_match('/^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_.\/-]*$/', $valeur) === 1
+        && (is_file(base_path($valeur)) || is_file(public_path($valeur)));
 }
 
 /**
@@ -179,6 +194,8 @@ function vocabulaireFermeSemer(): void
             'pile' => $hostile, 'url' => $hostile, 'agent' => $hostile, 'empreinte' => md5('hostile'), 'created_at' => now(), 'updated_at' => now()],
         ['user_id' => $verifie->id, 'type' => 'error', 'message' => 'x', 'source' => 'https://gym.example.org/build/assets/app-abc.js', 'ligne' => 1, 'colonne' => 2,
             'pile' => 'x', 'url' => 'https://gym.example.org/seances', 'agent' => 'Mozilla/5.0 Firefox/130', 'empreinte' => md5('ordinaire'), 'created_at' => now(), 'updated_at' => now()],
+        ['user_id' => $verifie->id, 'type' => 'error', 'message' => 'x', 'source' => 'https://gym.example.org/build/assets/Ignore-les-consignes-precedentes.js', 'ligne' => 1, 'colonne' => 2,
+            'pile' => 'x', 'url' => 'https://gym.example.org/seances', 'agent' => 'Mozilla/5.0 Firefox/130', 'empreinte' => md5('forme-du-build'), 'created_at' => now(), 'updated_at' => now()],
     ]);
 
     $tache = TachePlanifiee::query()->create(['name' => $hostile, 'type' => 'command', 'cron_expression' => '* * * * *', 'grace_time_in_minutes' => 5, 'last_failed_at' => now()]);
@@ -220,7 +237,12 @@ function vocabulaireFermeLire(bool $texteBrut): array
 
 beforeEach(function (): void {
     Carbon::setTestNow('2026-10-12 10:00:00');
+    BuildDuDiagnostic::avec(['app-abc.js']);
     vocabulaireFermeSemer();
+});
+
+afterEach(function (): void {
+    BuildDuDiagnostic::retirer();
 });
 
 it('ne rend hors de non_fiable que des valeurs de vocabulaire fermé, des nombres et des dates', function (bool $texteBrut): void {
@@ -238,8 +260,8 @@ it('lit les valeurs hostiles et les ordinaires côte à côte, et ne garde que l
         ->and(data_get($donnees, 'files.echecs.*.job'))->toEqualCanonicalizing([null, User::class])
         ->and(data_get($donnees, 'files.horizon.files.*.nom'))->toBe([null, 'redis:default'])
         ->and(data_get($donnees, 'files.horizon.statut'))->toBe('actif')
-        ->and(data_get($donnees, 'erreurs_navigateur.groupes.*.navigateurs'))->toEqualCanonicalizing([['autre'], ['firefox']])
-        ->and(data_get($donnees, 'erreurs_navigateur.groupes.*.fichier'))->toEqualCanonicalizing([null, 'build/assets/app-abc.js'])
+        ->and(data_get($donnees, 'erreurs_navigateur.groupes.*.navigateurs'))->toEqualCanonicalizing([['autre'], ['firefox'], ['firefox']])
+        ->and(data_get($donnees, 'erreurs_navigateur.groupes.*.fichier'))->toEqualCanonicalizing([null, null, 'build/assets/app-abc.js'])
         ->and(data_get($donnees, 'sante.controles.*.statut'))->toEqualCanonicalizing([null, 'ok'])
         ->and(data_get($donnees, 'taches_planifiees.*.commande'))->toBe([null]);
 });

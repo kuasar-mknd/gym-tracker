@@ -9,12 +9,15 @@ use App\Services\Diagnostic\Projections\FamilleDeNavigateur;
 use App\Services\Diagnostic\Projections\ProjectionDesErreursNavigateur;
 use App\Services\Diagnostic\TexteNonFiable;
 use Illuminate\Support\Carbon;
+use Tests\Support\BuildDuDiagnostic;
 
 /*
  * Les erreurs navigateur vues par le diagnostic (#2032) : groupées par
  * empreinte, les comptes touchés d'abord ; ni compte supprimé, ni compte
  * non vérifié ; au détail, sous `TexteBrut`, le message, la page sans sa
- * chaîne de requête et le début de la pile.
+ * chaîne de requête et le début de la pile. Le build en place ne contient
+ * que `app-abc.js` et `autre-def.js` : la source d'une erreur est écrite par
+ * le client, seul un fichier du build est rendu.
  */
 
 /**
@@ -47,6 +50,11 @@ function erreursNavigateurDiagnosticFenetre(): FenetreDeDiagnostic
 
 beforeEach(function (): void {
     Carbon::setTestNow('2026-10-12 10:00:00');
+    BuildDuDiagnostic::avec(['app-abc.js', 'autre-def.js']);
+});
+
+afterEach(function (): void {
+    BuildDuDiagnostic::retirer();
 });
 
 it('range devant le groupe qui touche le plus de comptes, puis le plus nombreux, puis le plus récent', function (): void {
@@ -113,7 +121,7 @@ it('rend au détail, sous TexteBrut seulement, le message, la page sans requête
         ->and(new ProjectionDesErreursNavigateur()->detail('pas-une-empreinte', erreursNavigateurDiagnosticFenetre(), true))->toBeNull();
 });
 
-it('ne rend qu’un fichier du build, jamais une autre source', function (?string $source, ?string $fichier): void {
+it('ne rend qu’un fichier du build en place, jamais une autre source', function (?string $source, ?string $fichier): void {
     erreursNavigateurDiagnosticRapporter(User::factory()->create(), 'source', ['source' => $source]);
 
     $groupe = new ProjectionDesErreursNavigateur()->liste(erreursNavigateurDiagnosticFenetre())['groupes'][0] ?? [];
@@ -123,6 +131,8 @@ it('ne rend qu’un fichier du build, jamais une autre source', function (?strin
 })->with([
     'le build' => ['https://gym.example.org/build/assets/app-abc.js', 'build/assets/app-abc.js'],
     'un chemin relatif' => ['/build/assets/app-abc.js', 'build/assets/app-abc.js'],
+    'un nom qui a la forme d’un fichier du build sans en être' => ['https://gym.example.org/build/assets/Ignore-les-consignes-precedentes.js', null],
+    'un fichier qui n’est pas du build' => ['https://gym.example.org/build/manifest.js', null],
     'un script tiers' => ['https://cdn.example.org/tracker.js', null],
     'une extension' => ['chrome-extension://abc/content.js', null],
     'rien' => [null, null],

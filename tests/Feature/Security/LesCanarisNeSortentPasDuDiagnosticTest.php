@@ -32,10 +32,11 @@ use function Pest\Laravel\actingAs;
  * Les canaris sont semés par les vrais chemins : une requête dont
  * l'écriture est refusée (la table des exceptions), un job qui échoue
  * (`failed_jobs`, par `queue:work`), deux tâches planifiées en échec (le
- * moniteur, par `schedule:run`), une erreur navigateur (par sa route), et
- * le passage des contrôles de santé que le magasin garde. Le test tient
- * avec ou sans le masquage des valeurs SQL à la source : la sortie ne compte
- * pas dessus.
+ * moniteur, par `schedule:run`), deux erreurs navigateur (par leur route),
+ * dont l'une porte les canaris dans le chemin de sa source, avec la forme
+ * d'un fichier du build sans en être un, et le passage des contrôles de
+ * santé que le magasin garde. Le test tient avec ou sans le masquage des
+ * valeurs SQL à la source : la sortie ne compte pas dessus.
  */
 
 /**
@@ -92,6 +93,22 @@ function canarisSemerParLesVraisChemins(): void
     actingAs(User::factory()->create())
         ->postJson(route('erreurs-navigateur.store'), [
             'type' => 'error',
+            'message' => 'lecture impossible',
+            'source' => 'https://gym.example.org/build/assets/'.implode('-', [
+                CanarisDuDiagnostic::CODE,
+                CanarisDuDiagnostic::ADRESSE_IP,
+                CanarisDuDiagnostic::HOTE_DU_COURRIER,
+                CanarisDuDiagnostic::SECRET,
+            ]).'.js',
+            'ligne' => 5,
+            'colonne' => 6,
+            'url' => 'https://gym.example.org/seances',
+        ])
+        ->assertNoContent();
+
+    actingAs(User::factory()->create())
+        ->postJson(route('erreurs-navigateur.store'), [
+            'type' => 'error',
             'message' => CanarisDuDiagnostic::messageReconnaissable(),
             'source' => 'https://gym.example.org/build/assets/app-abc.js?v='.CanarisDuDiagnostic::CODE,
             'ligne' => 3,
@@ -126,7 +143,7 @@ it('sème chaque canari là où le diagnostic lit', function (): void {
     expect(ExceptionEnregistree::query()->count())->toBeGreaterThanOrEqual(2)
         ->and(DB::table('failed_jobs')->count())->toBe(1)
         ->and(TachePlanifiee::query()->whereNotNull('last_failed_at')->count())->toBe(2)
-        ->and(ErreurNavigateur::query()->count())->toBe(1)
+        ->and(ErreurNavigateur::query()->count())->toBe(2)
         ->and(CanarisDuDiagnostic::trouvesDans(implode("\n", $sources)))->toEqualCanonicalizing([
             ...array_keys(CanarisDuDiagnostic::reconnaissables()),
             ...array_keys(CanarisDuDiagnostic::sansForme()),
