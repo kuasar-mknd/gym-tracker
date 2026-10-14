@@ -2,18 +2,22 @@
 
 declare(strict_types=1);
 
+use App\Enums\PorteeDeDiagnostic;
 use App\Models\TachePlanifiee;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
+use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\ProjectionDesTachesPlanifiees;
+use App\Services\Diagnostic\ResumeDuDiagnostic;
 use App\Services\Diagnostic\TexteNonFiable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /*
  * Les tâches planifiées vues par le diagnostic (#2032) : commande, cron,
- * état jugé à l'instant de la lecture, dates, marge, et les échecs des sept
- * derniers jours, sans la sortie de la commande ; au détail, sous
- * `TexteBrut`, le message de chaque échec.
+ * état jugé à l'instant de la lecture, dates, marge, le nombre des échecs
+ * des sept derniers jours et les derniers d'entre eux, sans la sortie de la
+ * commande ; au détail, plus d'échecs et, sous `TexteBrut`, le message de
+ * chacun.
  */
 
 /**
@@ -79,31 +83,38 @@ it('rend chaque tâche, son état à l’instant de la lecture et ses échecs de
     $liste = new ProjectionDesTachesPlanifiees()->liste(tachesDiagnosticFenetre());
 
     expect($liste)->toBe([
-        [
-            'id' => $enRetard->id,
-            'commande' => 'app:remind-training',
-            'cron' => '0 18 * * *',
-            'etat' => 'en_retard',
-            'dernier_depart_le' => null,
-            'derniere_fin_le' => '2026-10-10T18:00:03+02:00',
-            'dernier_echec_le' => null,
-            'marge_en_minutes' => 5,
-            'echecs_sur_7_jours' => [],
-        ],
-        [
-            'id' => $echouee->id,
-            'commande' => 'backup:run --only-db',
-            'cron' => '30 2 * * *',
-            'etat' => 'echouee',
-            'dernier_depart_le' => '2026-10-12T02:30:00+02:00',
-            'derniere_fin_le' => null,
-            'dernier_echec_le' => '2026-10-12T02:30:04+02:00',
-            'marge_en_minutes' => 10,
-            'echecs_sur_7_jours' => [
-                ['le' => '2026-10-12T02:30:04+02:00', 'duree_en_secondes' => null, 'code_de_sortie' => null],
-                ['le' => '2026-10-05T10:00:00+02:00', 'duree_en_secondes' => 2.35, 'code_de_sortie' => 2],
+        'taches' => [
+            [
+                'id' => $enRetard->id,
+                'commande' => 'app:remind-training',
+                'cron' => '0 18 * * *',
+                'etat' => 'en_retard',
+                'dernier_depart_le' => null,
+                'derniere_fin_le' => '2026-10-10T18:00:03+02:00',
+                'dernier_echec_le' => null,
+                'marge_en_minutes' => 5,
+                'echecs_sur_7_jours' => 0,
+                'derniers_echecs' => [],
+            ],
+            [
+                'id' => $echouee->id,
+                'commande' => 'backup:run --only-db',
+                'cron' => '30 2 * * *',
+                'etat' => 'echouee',
+                'dernier_depart_le' => '2026-10-12T02:30:00+02:00',
+                'derniere_fin_le' => null,
+                'dernier_echec_le' => '2026-10-12T02:30:04+02:00',
+                'marge_en_minutes' => 10,
+                'echecs_sur_7_jours' => 2,
+                'derniers_echecs' => [
+                    ['le' => '2026-10-12T02:30:04+02:00', 'duree_en_secondes' => null, 'code_de_sortie' => null],
+                    ['le' => '2026-10-05T10:00:00+02:00', 'duree_en_secondes' => 2.35, 'code_de_sortie' => 2],
+                ],
             ],
         ],
+        'lignes_lues' => 2,
+        'echantillon' => false,
+        'tronque' => false,
     ])->and(json_encode($liste))->not->toContain('canari');
 });
 
@@ -128,11 +139,12 @@ it('ajoute au détail, sous TexteBrut seulement, le message de chaque échec', f
     $sans = new ProjectionDesTachesPlanifiees()->detail($tache->id, tachesDiagnosticFenetre(), false);
     $avec = new ProjectionDesTachesPlanifiees()->detail($tache->id, tachesDiagnosticFenetre(), true);
 
-    expect($sans['echecs_sur_7_jours'] ?? null)->toBe([
+    expect($sans['derniers_echecs'] ?? null)->toBe([
         ['le' => '2026-10-12T02:30:04+02:00', 'duree_en_secondes' => 4.0, 'code_de_sortie' => 1],
         ['le' => '2026-10-11T02:30:04+02:00', 'duree_en_secondes' => 3.0, 'code_de_sortie' => 1],
     ])
-        ->and($avec['echecs_sur_7_jours'] ?? null)->toEqual([
+        ->and([$sans['echecs_sur_7_jours'] ?? null, $avec['echecs_sur_7_jours'] ?? null])->toBe([2, 2])
+        ->and($avec['derniers_echecs'] ?? null)->toEqual([
             ['le' => '2026-10-12T02:30:04+02:00', 'duree_en_secondes' => 4.0, 'code_de_sortie' => 1, 'non_fiable' => ['message' => new TexteNonFiable('disque plein', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE)]],
             ['le' => '2026-10-11T02:30:04+02:00', 'duree_en_secondes' => 3.0, 'code_de_sortie' => 1, 'non_fiable' => ['message' => new TexteNonFiable('', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE)]],
         ])
@@ -144,6 +156,49 @@ it('rend une commande ou un cron hors forme comme une valeur nulle', function ()
 
     expect(array_map(
         static fn (array $tache): array => [$tache['commande'], $tache['cron']],
-        new ProjectionDesTachesPlanifiees()->liste(tachesDiagnosticFenetre()),
+        new ProjectionDesTachesPlanifiees()->liste(tachesDiagnosticFenetre())['taches'],
     ))->toBe([[null, '* * * * *']]);
+});
+
+/*
+ * Une tâche de chaque minute qui échoue une semaine durant laisse plus de
+ * 10 000 lignes au moniteur : le résumé n'en lit que 5 000, les compte, n'en
+ * montre que les cinq dernières et le dit ; le détail en montre cinquante.
+ * Le résumé reste sous les 256 Kio de toute réponse.
+ */
+it('compte les échecs au résumé sans tous les lister, lit au plus 5 000 lignes et 50 tâches, et le dit', function (): void {
+    $minute = tachesDiagnosticTache('app:chaque-minute', ['cron_expression' => '* * * * *', 'last_failed_at' => '2026-10-12 09:59:00']);
+    $lignes = array_map(static fn (int $rang): array => [
+        'monitored_scheduled_task_id' => $minute->id,
+        'type' => 'failed',
+        'meta' => json_encode(['runtime' => 0.5, 'exit_code' => 1, 'failure_message' => 'refus n° '.$rang]),
+        'created_at' => now()->subMinutes($rang),
+        'updated_at' => now()->subMinutes($rang),
+    ], range(LecturesBornees::LIGNES_AU_PLUS + 1, 1));
+
+    foreach (array_chunk($lignes, 1_000) as $paquet) {
+        DB::table('monitored_scheduled_task_log_items')->insert($paquet);
+    }
+
+    array_map(static fn (int $rang): TachePlanifiee => tachesDiagnosticTache(sprintf('app:tache-%02d', $rang)), range(1, LecturesBornees::GROUPES_AU_PLUS));
+
+    $liste = new ProjectionDesTachesPlanifiees()->liste(tachesDiagnosticFenetre());
+    $resume = new ResumeDuDiagnostic()([PorteeDeDiagnostic::Sante], tachesDiagnosticFenetre());
+    $detail = new ProjectionDesTachesPlanifiees()->detail($minute->id, tachesDiagnosticFenetre(), true);
+
+    expect([$liste['lignes_lues'], $liste['echantillon'], $liste['tronque'], count($liste['taches'])])->toBe([LecturesBornees::LIGNES_AU_PLUS, true, true, LecturesBornees::GROUPES_AU_PLUS])
+        ->and($liste['taches'][0]['echecs_sur_7_jours'])->toBe(LecturesBornees::LIGNES_AU_PLUS)
+        ->and(array_column($liste['taches'][0]['derniers_echecs'], 'le'))->toBe([
+            '2026-10-12T09:59:00+02:00', '2026-10-12T09:58:00+02:00', '2026-10-12T09:57:00+02:00', '2026-10-12T09:56:00+02:00', '2026-10-12T09:55:00+02:00',
+        ])
+        ->and([$resume->enveloppe['echantillon'], $resume->enveloppe['tronque']])->toBe([true, true])
+        ->and(strlen($resume->json()))->toBeLessThan(256 * 1_024)
+        ->and($detail['echecs_sur_7_jours'] ?? null)->toBe(LecturesBornees::LIGNES_AU_PLUS)
+        ->and($detail['derniers_echecs'] ?? [])->toHaveCount(LecturesBornees::GROUPES_AU_PLUS)
+        ->and(data_get($detail, 'derniers_echecs.49'))->toEqual([
+            'le' => '2026-10-12T09:10:00+02:00',
+            'duree_en_secondes' => 0.5,
+            'code_de_sortie' => 1,
+            'non_fiable' => ['message' => new TexteNonFiable('refus n° 50', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE)],
+        ]);
 });

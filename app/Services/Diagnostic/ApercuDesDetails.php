@@ -70,7 +70,7 @@ final class ApercuDesDetails
      */
     private function premiereTacheEchouee(array $resume): int
     {
-        $taches = collect((array) data_get($resume, 'taches_planifiees', []));
+        $taches = collect((array) data_get($resume, 'taches_planifiees.taches', []));
         $tache = $taches->first(static fn (mixed $une): bool => data_get($une, 'etat') === 'echouee') ?? $taches->first();
 
         return ValeurLue::entier(data_get($tache, 'id')) ?? 0;

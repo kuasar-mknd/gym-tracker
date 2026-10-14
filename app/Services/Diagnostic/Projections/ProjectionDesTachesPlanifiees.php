@@ -15,19 +15,26 @@ use stdClass;
 
 /**
  * Les tâches planifiées, vues par le diagnostic (#2032) : commande, cron,
- * état, dates, marge, et les échecs des sept derniers jours (date, durée,
- * code de sortie). Au détail d'une tâche, avec `TexteBrut`, le message de
- * chaque échec, sous `non_fiable`. Jamais la sortie d'une commande, que le
- * moniteur garde aussi : elle n'est pas lue.
+ * état, dates, marge, le nombre des échecs des sept derniers jours et les
+ * derniers d'entre eux (date, durée, code de sortie) : cinq par tâche au
+ * résumé, cinquante au détail d'une tâche, qui ajoute sous `TexteBrut` le
+ * message de chacun, sous `non_fiable`. Jamais la sortie d'une commande, que
+ * le moniteur garde aussi : elle n'est pas lue.
  *
- * L'état de chaque tâche est jugé à l'instant de la lecture, le même pour
- * toutes.
+ * Comme les autres listes, le résumé lit au plus 50 tâches et 5 000 échecs,
+ * un de plus pour savoir s'il a débordé, et le dit (`tronque`,
+ * `echantillon`) : une tâche de chaque minute qui échoue une semaine durant
+ * en laisse plus de 10 000. L'état de chaque tâche est jugé à l'instant de
+ * la lecture, le même pour toutes.
  */
 final class ProjectionDesTachesPlanifiees
 {
     public const int JOURS_D_ECHECS = 7;
 
     public const int BUDGET_DU_MESSAGE = 512;
+
+    /** Les derniers échecs que le résumé montre de chaque tâche. */
+    public const int ECHECS_DU_RESUME = 5;
 
     /** @var array<string, string> */
     public const array ETATS = [
@@ -39,17 +46,22 @@ final class ProjectionDesTachesPlanifiees
     private const array COLONNES = ['id', 'name', 'cron_expression', 'timezone', 'grace_time_in_minutes', 'last_started_at', 'last_finished_at', 'last_failed_at', 'created_at'];
 
     /**
-     * @return array<int, array<string, mixed>>
+     * @return array{taches: array<int, array<string, mixed>>, lignes_lues: int, echantillon: bool, tronque: bool}
      */
     public function liste(FenetreDeDiagnostic $fenetre): array
     {
-        $taches = TachePlanifiee::query()->select(self::COLONNES)->orderBy('name')->limit(LecturesBornees::GROUPES_AU_PLUS)->get();
-        $echecs = $this->echecs($fenetre, $taches->modelKeys(), false);
+        $taches = TachePlanifiee::query()->select(self::COLONNES)->orderBy('name')->limit(LecturesBornees::GROUPES_AU_PLUS + 1)->get();
+        $montrees = $taches->take(LecturesBornees::GROUPES_AU_PLUS);
+        $echecs = $this->echecs($fenetre, $montrees->modelKeys());
+        $parTache = LecturesBornees::bornees($echecs)->groupBy('monitored_scheduled_task_id');
 
-        return $taches
-            ->map(fn (TachePlanifiee $tache): array => $this->tache($tache, $fenetre, $echecs[ValeurLue::entier($tache->getKey()) ?? 0] ?? []))
-            ->values()
-            ->all();
+        return [
+            'taches' => $montrees
+                ->map(fn (TachePlanifiee $tache): array => $this->tache($tache, $fenetre, $parTache->get($tache->getKey(), new Collection()), self::ECHECS_DU_RESUME, false))
+                ->values()
+                ->all(),
+            ...LecturesBornees::bilan($echecs, $taches),
+        ];
     }
 
     /**
@@ -63,15 +75,17 @@ final class ProjectionDesTachesPlanifiees
 
         return match ($tache) {
             null => null,
-            default => $this->tache($tache, $fenetre, $this->echecs($fenetre, [$identifiant], $texteBrut)[$identifiant] ?? []),
+            default => $this->tache($tache, $fenetre, LecturesBornees::bornees($this->echecs($fenetre, [$identifiant])), LecturesBornees::GROUPES_AU_PLUS, $texteBrut),
         };
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $echecs
+     * Une tâche, le nombre de ses échecs lus et les `$montres` derniers.
+     *
+     * @param  Collection<int, stdClass>  $echecs  du plus récent au plus ancien
      * @return array<string, mixed>
      */
-    private function tache(TachePlanifiee $tache, FenetreDeDiagnostic $fenetre, array $echecs): array
+    private function tache(TachePlanifiee $tache, FenetreDeDiagnostic $fenetre, Collection $echecs, int $montres, bool $texteBrut): array
     {
         return [
             'id' => ValeurLue::entier($tache->getKey()),
@@ -82,51 +96,82 @@ final class ProjectionDesTachesPlanifiees
             'derniere_fin_le' => ValeurLue::instant($tache->last_finished_at),
             'dernier_echec_le' => ValeurLue::instant($tache->last_failed_at),
             'marge_en_minutes' => ValeurLue::entier($tache->grace_time_in_minutes),
-            'echecs_sur_7_jours' => $echecs,
+            'echecs_sur_7_jours' => $echecs->count(),
+            'derniers_echecs' => $this->derniers($echecs->take($montres), $texteBrut),
         ];
     }
 
     /**
-     * Les échecs des sept derniers jours des tâches données, rangés par
-     * tâche, du plus récent au plus ancien. La base n'extrait du journal que
-     * la durée, le code de sortie et, sous `TexteBrut`, le message.
+     * Les échecs des sept derniers jours des tâches données, du plus récent
+     * au plus ancien, un de plus que la borne pour savoir si elle a débordé.
+     * La base n'extrait du journal que la durée et le code de sortie.
      *
      * @param  array<int, int|string>  $taches
-     * @return array<array-key, array<int, array<string, mixed>>>
+     * @return Collection<int, stdClass>
      */
-    private function echecs(FenetreDeDiagnostic $fenetre, array $taches, bool $texteBrut): array
+    private function echecs(FenetreDeDiagnostic $fenetre, array $taches): Collection
     {
         return MonitoredScheduledTaskLogItem::query()->toBase()
             ->select(['id', 'monitored_scheduled_task_id', 'created_at'])
             ->selectRaw("json_unquote(json_extract(meta, '$.runtime')) as duree")
             ->selectRaw("json_unquote(json_extract(meta, '$.exit_code')) as code_de_sortie")
-            ->when($texteBrut, static fn ($requete) => $requete->selectRaw("json_unquote(json_extract(meta, '$.failure_message')) as message"))
             ->whereIn('monitored_scheduled_task_id', $taches)
             ->where('type', MonitoredScheduledTaskLogItem::TYPE_FAILED)
             ->where('created_at', '>=', $fenetre->jusqua->subDays(self::JOURS_D_ECHECS))
             ->orderByDesc('id')
-            ->limit(LecturesBornees::LIGNES_AU_PLUS)
-            ->get()
-            ->groupBy('monitored_scheduled_task_id')
-            ->map(static fn (Collection $lignes): array => $lignes->map(static fn (stdClass $ligne): array => self::echec($ligne, $texteBrut))->values()->all())
+            ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
+            ->get();
+    }
+
+    /**
+     * Les échecs montrés et, sous `TexteBrut`, le message de chacun, lu de
+     * ces seules lignes.
+     *
+     * @param  Collection<int, stdClass>  $echecs
+     * @return list<array<string, mixed>>
+     */
+    private function derniers(Collection $echecs, bool $texteBrut): array
+    {
+        $messages = match ($texteBrut && $echecs->isNotEmpty()) {
+            true => $this->messages($echecs->pluck('id')->all()),
+            false => null,
+        };
+
+        return $echecs->map(static fn (stdClass $ligne): array => self::echec($ligne, $messages))->values()->all();
+    }
+
+    /**
+     * Le message de chacun des échecs donnés, par identifiant.
+     *
+     * @param  array<int, mixed>  $identifiants
+     * @return array<array-key, mixed>
+     */
+    private function messages(array $identifiants): array
+    {
+        return MonitoredScheduledTaskLogItem::query()->toBase()
+            ->select('id')
+            ->selectRaw("json_unquote(json_extract(meta, '$.failure_message')) as message")
+            ->whereIn('id', $identifiants)
+            ->pluck('message', 'id')
             ->all();
     }
 
     /**
-     * Un échec : sa date, sa durée, son code de sortie et, sous `TexteBrut`,
-     * son message.
+     * Un échec : sa date, sa durée, son code de sortie et, quand les
+     * messages sont lus, son message.
      *
+     * @param  array<array-key, mixed>|null  $messages
      * @return array<string, mixed>
      */
-    private static function echec(stdClass $ligne, bool $texteBrut): array
+    private static function echec(stdClass $ligne, ?array $messages): array
     {
         return [
             'le' => ValeurLue::instant($ligne->created_at),
             'duree_en_secondes' => ValeurLue::duree($ligne->duree),
             'code_de_sortie' => ValeurLue::entier($ligne->code_de_sortie),
-            ...match ($texteBrut) {
-                true => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::texte($ligne->message), self::BUDGET_DU_MESSAGE)]],
-                false => [],
+            ...match ($messages) {
+                null => [],
+                default => ['non_fiable' => ['message' => new TexteNonFiable(ValeurLue::texte($messages[$ligne->id] ?? null), self::BUDGET_DU_MESSAGE)]],
             },
         ];
     }

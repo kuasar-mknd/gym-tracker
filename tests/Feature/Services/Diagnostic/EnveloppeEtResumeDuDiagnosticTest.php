@@ -194,7 +194,8 @@ it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans 
     ExceptionEnregistree::query()->create(['type' => RuntimeException::class, 'code' => '0', 'message' => 'boum', 'file' => 'f', 'line' => 1, 'trace' => [], 'method' => 'GET', 'path' => '/']);
     DB::table('failed_jobs')->insert(['uuid' => (string) Str::uuid(), 'connection' => 'database', 'queue' => 'default', 'payload' => '{}', 'exception' => 'RuntimeException: boum', 'failed_at' => now()]);
     ErreurNavigateur::query()->create(['user_id' => $compte->id, 'type' => 'error', 'message' => 'm', 'url' => '/', 'empreinte' => md5('e')]);
-    TachePlanifiee::query()->create(['name' => 'b:echouee', 'type' => 'command', 'cron_expression' => '0 18 * * *', 'grace_time_in_minutes' => 5, 'last_failed_at' => now()]);
+    $tache = TachePlanifiee::query()->create(['name' => 'b:echouee', 'type' => 'command', 'cron_expression' => '0 18 * * *', 'grace_time_in_minutes' => 5, 'last_failed_at' => now()]);
+    DB::table('monitored_scheduled_task_log_items')->insert(['monitored_scheduled_task_id' => $tache->id, 'type' => 'failed', 'meta' => json_encode(['failure_message' => 'boum']), 'created_at' => now(), 'updated_at' => now()]);
     $fenetre = FenetreDeDiagnostic::jours(30, now());
 
     DB::flushQueryLog();
@@ -207,10 +208,10 @@ it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans 
     $sansBorne = array_filter($lectures, static fn (string $requete): bool => preg_match('/ limit \d+$|`id` in \(\?(?:, \?){0,49}\)$/', $requete) !== 1);
     $texteEntier = array_values(array_filter($lectures, static fn (string $requete): bool => preg_match('/`(?:message|url|pile|path|trace)`/', $requete) === 1));
 
-    expect($lectures)->toHaveCount(12)
+    expect($lectures)->toHaveCount(13)
         ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, '*')))->toBe([])
         ->and($sansBorne)->toBe([])
-        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'limit '.(LecturesBornees::LIGNES_AU_PLUS + 1))))->toHaveCount(3)
+        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'limit '.(LecturesBornees::LIGNES_AU_PLUS + 1))))->toHaveCount(5)
         ->and($texteEntier)->toHaveCount(2)
         ->and(array_filter($texteEntier, static fn (string $requete): bool => ! str_ends_with($requete, ' limit 1')))->toBe([]);
 });
