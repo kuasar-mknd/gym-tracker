@@ -20,6 +20,12 @@ use Illuminate\Support\Timebox;
  * Une réussite qui connecte peut rendre la main plus tôt (`returnEarly()`) :
  * seul le titulaire la voit.
  *
+ * Le plancher ne sert que là où un client mesure la durée : dans une requête.
+ * Le courtier lit la même valeur, et sa Timebox ne rend jamais la main tôt
+ * autour de `sendResetLink()` : le job de « mot de passe oublié »
+ * (`EnvoyerLeLienDeReinitialisation`) prend donc un courtier créé sans
+ * plancher, pour ne pas endormir un processus de la file à chaque lien.
+ *
  * Le plancher doit dépasser le travail le plus long qu'il couvre, une
  * vérification ou un hachage bcrypt au coût de `BCRYPT_ROUNDS` : mesurés
  * environ 0,25 s au coût 12 de la production, 0,5 s à 13, 1 s à 14 (le double

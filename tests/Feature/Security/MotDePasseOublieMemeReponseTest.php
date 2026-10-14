@@ -413,8 +413,9 @@ it('lit les méthodes du courtier qu’un code appelle, quel que soit leur recev
 
 /*
  * Trois fichiers seulement atteignent le courtier, chacun pour un seul usage :
- * le job envoie le lien, `NewPasswordController` réinitialise sous le plancher
- * des refus et ne rend jamais `passwords.user`, et l'effacement d'un compte
+ * le job envoie le lien, par un courtier neuf qu'il crée sans plancher
+ * (`broker()`), `NewPasswordController` réinitialise sous le plancher des
+ * refus et ne rend jamais `passwords.user`, et l'effacement d'un compte
  * retire son jeton. Une autre entrée qui réinitialiserait (API, panneau)
  * rendrait `passwords.user` pour une adresse sans compte, et sans le
  * plancher : elle passe par `NewPasswordController::store()`, ou par une
@@ -429,7 +430,7 @@ it('ne laisse atteindre le courtier qu’à trois fichiers, chacun pour son seul
 
     expect($usages)->toBe([
         'app/Http/Controllers/Auth/NewPasswordController.php' => ['reset'],
-        'app/Jobs/EnvoyerLeLienDeReinitialisation.php' => ['sendResetLink'],
+        'app/Jobs/EnvoyerLeLienDeReinitialisation.php' => ['broker', 'sendResetLink'],
         'app/Models/Traits/EffaceSesTracesPolymorphes.php' => ['deleteToken'],
     ]);
 });

@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\Admin;
 use App\Models\User;
 use App\Support\DureeDesReponsesDAuthentification;
 use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
@@ -228,6 +230,31 @@ it('passe par une Timebox réglée sur le plancher commun', function (Closure $p
     expect($durees->getArrayCopy())->not->toBeEmpty()
         ->and(array_unique($durees->getArrayCopy()))->toBe([2_345_678]);
 })->with(dureeAuthentificationCas());
+
+/*
+ * Le travailleur de la file n'a pas de client qui mesure sa durée : le
+ * plancher n'y protège rien, et l'endormir une seconde par demande de lien
+ * occuperait Horizon pour rien.
+ */
+it('n’endort pas le travailleur qui envoie le lien de réinitialisation', function (string $adresse): void {
+    Notification::fake();
+    $duree = DureeSimulee::demarrer();
+    $compte = User::factory()->create(['email' => 'connue@example.org']);
+
+    $mesure = $duree->mesurer(static function () use ($adresse): void {
+        new EnvoyerLeLienDeReinitialisation($adresse, 'fr')->handle();
+    });
+
+    expect($mesure['dormi'])->toBe(0.0)
+        ->and(config('auth.timebox_duration'))->toBe($duree->plancher)
+        ->and(DureeDesReponsesDAuthentification::microsecondes())->toBe($duree->plancher);
+
+    if ($adresse === 'connue@example.org') {
+        Notification::assertSentTo($compte, ResetPassword::class);
+    } else {
+        Notification::assertNothingSent();
+    }
+})->with(['connue@example.org', 'inconnue@example.org']);
 
 it('rend la main sans attendre à une connexion réussie', function (): void {
     $duree = DureeSimulee::demarrer();
