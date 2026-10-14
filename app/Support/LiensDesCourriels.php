@@ -7,8 +7,10 @@ namespace App\Support;
 use App\Models\User;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
@@ -101,7 +103,8 @@ final class LiensDesCourriels
      * sous la signature : un lien suivi en GET finit dans les journaux
      * d'accès, l'historique du navigateur, l'adresse que la connexion garde
      * pour après (`url.intended`) et, si la requête échoue, la trace de
-     * l'exception. `ConfirmerLAdresseController` la déchiffre.
+     * l'exception. `ConfirmerLAdresseController` la lit par
+     * `adresseDuLienDeConfirmation()`.
      */
     public static function lienDeConfirmationDAdresse(User $compte, string $nouvelleAdresse): string
     {
@@ -114,6 +117,22 @@ final class LiensDesCourriels
                 'actuelle' => sha1($compte->email),
             ],
         );
+    }
+
+    /**
+     * La nouvelle adresse que porte, chiffrée, le lien de confirmation suivi
+     * (`lienDeConfirmationDAdresse()`). Une valeur qui ne se déchiffre pas
+     * refuse le lien comme une signature fausse (403).
+     *
+     * @throws InvalidSignatureException
+     */
+    public static function adresseDuLienDeConfirmation(Request $requete): string
+    {
+        try {
+            return Crypt::decryptString($requete->string('adresse')->toString());
+        } catch (DecryptException) {
+            throw new InvalidSignatureException();
+        }
     }
 
     /**
