@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\NewPasswordRequest;
+use App\Models\User;
 use App\Support\DureeDesReponsesDAuthentification;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
@@ -64,8 +65,9 @@ class NewPasswordController extends Controller
      * Le courtier n'appelle la fonction qu'une fois le jeton vérifié : c'est
      * elle qui libère la réponse du plancher des refus. Le jeton est arrivé à
      * l'adresse du compte : un compte en attente de cette preuve s'ouvre
-     * (`AttendLaPreuveDeSonAdresse`), et le titulaire d'une adresse qu'un
-     * autre a inscrite reprend ainsi le compte.
+     * (`reprendreLeCompteEnAttente()`), sans être connecté (la page mène à la
+     * connexion), et le titulaire d'une adresse qu'un autre a inscrite
+     * reprend ainsi le compte.
      *
      * @param  array<string, mixed>  $credentials
      */
@@ -74,7 +76,7 @@ class NewPasswordController extends Controller
         /** @phpstan-ignore-next-line */
         return Password::reset(
             $credentials,
-            function (\App\Models\User $user) use ($credentials, $delai): void {
+            function (User $user) use ($credentials, $delai): void {
                 /** @var string $password */
                 $password = $credentials['password'];
 
@@ -83,10 +85,8 @@ class NewPasswordController extends Controller
                     'remember_token' => Str::random(60),
                 ])->save();
 
-                // Le lien reçu prouve l'adresse : un compte en attente s'ouvre,
-                // sans être connecté (la page mène à la connexion).
-                if ($user->estEnAttente() && $user->markEmailAsVerified()) {
-                    event(new Verified($user));
+                if ($user->estEnAttente()) {
+                    self::reprendreLeCompteEnAttente($user);
                 }
 
                 event(new PasswordReset($user));
@@ -94,5 +94,23 @@ class NewPasswordController extends Controller
                 $delai->returnEarly();
             }
         );
+    }
+
+    /**
+     * Ouvre le compte en attente que la réinitialisation vient de prouver
+     * (`AttendLaPreuveDeSonAdresse`), dans une seule écriture. Son nom, saisi
+     * à l'inscription, a pu l'être par un autre que le titulaire de la boîte :
+     * n'importe qui tape l'adresse d'un autre. Il cède la partie locale de
+     * l'adresse, que le lien reçu vient de prouver, comme
+     * `ReprendreUnCompteEnAttente` lui préfère le nom du fournisseur.
+     */
+    private static function reprendreLeCompteEnAttente(User $user): void
+    {
+        $user->forceFill([
+            'name' => Str::before($user->email, '@'),
+            'email_verified_at' => $user->freshTimestamp(),
+        ])->save();
+
+        event(new Verified($user));
     }
 }

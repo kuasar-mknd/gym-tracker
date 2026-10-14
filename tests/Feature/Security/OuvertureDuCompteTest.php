@@ -227,18 +227,25 @@ it('ouvre le compte en attente par une réinitialisation du mot de passe, sans l
     Notification::fake();
     Event::fake([Verified::class]);
     $compte = ouvertureCompteEnAttente();
+    $compte->forceFill(['name' => 'Nom-Choisi-Par-L-Intrus'])->save();
+    $ouvert = User::factory()->create(['name' => 'Camille Martin', 'email' => 'ouvert@example.org']);
 
-    post(route('password.store'), [
-        'token' => Password::createToken($compte),
-        'email' => 'inscrit@example.org',
-        'password' => 'Le-mot-de-passe-du-titulaire-42!',
-        'password_confirmation' => 'Le-mot-de-passe-du-titulaire-42!',
-    ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+    foreach ([$compte, $ouvert] as $titulaire) {
+        post(route('password.store'), [
+            'token' => Password::createToken($titulaire),
+            'email' => $titulaire->email,
+            'password' => 'Le-mot-de-passe-du-titulaire-42!',
+            'password_confirmation' => 'Le-mot-de-passe-du-titulaire-42!',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+    }
 
     assertGuest();
     expect($compte->refresh()->estEnAttente())->toBeFalse()
-        ->and($compte->hasVerifiedEmail())->toBeTrue();
-    Event::assertDispatched(Verified::class);
+        ->and($compte->hasVerifiedEmail())->toBeTrue()
+        ->and($compte->name)->toBe('inscrit')
+        ->and($ouvert->refresh()->name)->toBe('Camille Martin');
+    Event::assertDispatchedTimes(Verified::class, 1);
+    Event::assertDispatched(Verified::class, fn (Verified $evenement): bool => $evenement->user instanceof User && $evenement->user->is($compte));
 
     ouvertureSeConnecter('inscrit@example.org', ouvertureMotDePasse())->assertSessionHasErrors(['email' => __('auth.failed')]);
     ouvertureSeConnecter('inscrit@example.org', 'Le-mot-de-passe-du-titulaire-42!')->assertRedirect(route('dashboard'));
