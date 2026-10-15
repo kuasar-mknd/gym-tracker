@@ -185,9 +185,9 @@ class NoSidewaysScrollTest extends DuskTestCase
      * de userWithContent(), plus les 15 px de l'ascenseur que Chrome montre
      * ici : en deçà, le menu du compte sortait de l'écran, chevron compris.
      * Le logo seul en demande 947 avec ce nom. 1 080 px est la largeur d'un
-     * écran 1080p tourné en portrait, entre `lg` et `xl`, où la barre ne
-     * montre que le logo ; 1 280 px, la première largeur où elle montre aussi
-     * le nom.
+     * écran 1080p tourné en portrait, entre `lg` et `xl` ; 1 280 px, la
+     * largeur où elle montrait aussi le nom, avant que le logo ne s'y montre
+     * seul à toute largeur.
      *
      * @return array<string, array{int}>
      */
@@ -195,7 +195,7 @@ class NoSidewaysScrollTest extends DuskTestCase
     {
         return [
             'logo seul, 1080p en portrait' => [1080],
-            'logo et nom, à partir de xl' => [1280],
+            'à partir de xl' => [1280],
         ];
     }
 
