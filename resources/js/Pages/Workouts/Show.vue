@@ -40,18 +40,9 @@ const props = defineProps({
 
 const page = usePage()
 
-const {
-    releverLesValeursDuServeur,
-    rememberConfirmed,
-    lastConfirmed,
-    writeDraftField,
-    clearDraftField,
-    oublierLaSerie,
-    rejouerLesBrouillons,
-    noterUneEcritureNonConfirmee,
-    oublierLEcritureNonConfirmee,
-    valeursDeRepli,
-} = useBrouillonsDeSeries()
+// Ce que le serveur détient de chaque série, les brouillons, et les écritures qu'il n'a pas encore confirmées.
+const brouillons = useBrouillonsDeSeries()
+const { releverLesValeursDuServeur, rejouerLesBrouillons, valeursDeRepli } = brouillons
 
 // La copie locale, modifiable pour l'affichage optimiste : la séance du serveur ou de l'historique, la file par-dessus.
 const { localWorkout, seanceDeDepart } = useSeanceEtSaFile({
@@ -162,19 +153,13 @@ const {
     nextWrite,
     isLatestWrite,
     fieldWrites,
-    lastConfirmed,
-    rememberConfirmed,
-    writeDraftField,
-    clearDraftField,
-    oublierLaSerie,
+    ...brouillons,
     markUnsynced,
     clearUnsynced,
     reportSyncFailure,
     reportEditFailure,
     apresValidation,
     bornesDUneSerie: props.bornesDUneSerie,
-    noterUneEcritureNonConfirmee,
-    oublierLEcritureNonConfirmee,
 })
 
 useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })
