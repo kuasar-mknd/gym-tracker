@@ -60,10 +60,13 @@ class NewPasswordRequest extends FormRequest
      * la clef `email` où il la cherche, et le nouveau mot de passe ; null quand
      * le lien ne porte pas d'adresse qui se déchiffre.
      *
-     * L'adresse en clair n'est fusionnée dans aucune requête : dans celle de
-     * l'application (`request()`), elle partirait avec ses données dans la
-     * saisie que la session garde après un refus et dans le corps
-     * qu'enregistre une exception.
+     * L'adresse en clair n'est fusionnée dans aucune requête, ni dans celle de
+     * l'application (`request()`), ni dans celle-ci : la page envoie du JSON,
+     * et `Request::createFrom()` donne à cette requête le même corps JSON que
+     * celle de l'application, si bien qu'une valeur fusionnée ici s'y lit
+     * aussi. Elle partirait alors dans la saisie que la session garde après
+     * un refus et dans le corps qu'enregistre une exception. Seul un corps
+     * encodé comme un formulaire HTML est copié d'une requête à l'autre.
      *
      * @return array{token: string, email: string, password: string, password_confirmation: string}|null
      */
