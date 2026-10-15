@@ -251,10 +251,39 @@ const FICHIERS_A_DIALOGUE = [
 
 const relatif = (chemin) => chemin.replace(jsRoot, 'resources/js')
 
+/**
+ * Un texte sans ses commentaires HTML.
+ *
+ * Ils se retirent par découpage et non par un `replace` global, comme dans
+ * etatsVides.test.js : CodeQL lit toute suppression de `<!--` par expression
+ * régulière comme une désinfection incomplète. Un commentaire jamais refermé
+ * emporte la fin du texte, comme dans le navigateur.
+ *
+ * @param {string} texte
+ * @returns {string}
+ */
+const sansCommentairesHtml = (texte) => {
+    let reste = texte
+    let garde = ''
+
+    for (let debut = reste.indexOf('<!--'); debut !== -1; debut = reste.indexOf('<!--')) {
+        garde += reste.slice(0, debut)
+
+        const fin = reste.indexOf('-->', debut + 4)
+
+        if (fin === -1) {
+            return garde
+        }
+
+        reste = reste.slice(fin + 3)
+    }
+
+    return garde + reste
+}
+
 /** Une source sans ses commentaires : un commentaire qui cite `fixed` ne place rien. */
 const sansCommentaires = (source) =>
-    source
-        .replace(/<!--[\s\S]*?-->/g, '')
+    sansCommentairesHtml(source)
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/(^|[^:])\/\/.*$/gm, '$1')
 
@@ -263,7 +292,7 @@ const gabarit = (source) => {
     const debut = source.indexOf('<template>')
     const fin = source.lastIndexOf('</template>')
 
-    return debut === -1 ? '' : source.slice(debut, fin).replace(/<!--[\s\S]*?-->/g, '')
+    return debut === -1 ? '' : sansCommentairesHtml(source.slice(debut, fin))
 }
 
 /**
@@ -377,9 +406,47 @@ const chainesDuScript = (script) =>
         (trouve) => trouve[1] ?? trouve[2] ?? trouve[3],
     )
 
-/** Le script d'un composant, ou tout le module. */
-const scriptDe = (source, vue) =>
-    vue ? [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((bloc) => bloc[1]).join('\n') : source
+/**
+ * Le script d'un composant, ou tout le module.
+ *
+ * Les blocs `<script>` se découpent par `indexOf`, et non par une expression
+ * régulière : CodeQL lit toute expression qui reconnaît `<script>` comme un
+ * filtre de balises HTML, et refuse celle qui ne reconnaît pas `<SCRIPT>`. Un
+ * composant Vue n'écrit que `<script>` et `<script setup>`, en minuscules.
+ *
+ * @param {string} source
+ * @param {boolean} vue
+ * @returns {string}
+ */
+const scriptDe = (source, vue) => {
+    if (!vue) {
+        return source
+    }
+
+    const blocs = []
+    let debut = source.indexOf('<script')
+
+    while (debut !== -1) {
+        const suivant = source.charAt(debut + '<script'.length)
+        const corps = source.indexOf('>', debut) + 1
+        const fin = corps === 0 ? -1 : source.indexOf('</script>', corps)
+
+        if (fin === -1) {
+            break
+        }
+
+        if (/\w/.test(suivant)) {
+            debut = source.indexOf('<script', debut + 1)
+
+            continue
+        }
+
+        blocs.push(source.slice(corps, fin))
+        debut = source.indexOf('<script', fin + '</script>'.length)
+    }
+
+    return blocs.join('\n')
+}
 
 /**
  * Les listes de classes écrites dans une source : une par élément du gabarit,
