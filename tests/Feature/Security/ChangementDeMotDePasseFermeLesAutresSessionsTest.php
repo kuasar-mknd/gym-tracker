@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Testing\TestResponse;
 use Laravel\Horizon\Contracts\MasterSupervisorRepository;
 use Laravel\Horizon\Contracts\SupervisorRepository;
@@ -24,6 +23,7 @@ use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\FormulaireDeReinitialisation;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\withoutMiddleware;
@@ -114,12 +114,8 @@ function sessionsChangerLeMotDePasseDepuis(Appareil $appareil, string $motDePass
  */
 function sessionsReinitialiserLeMotDePasse(User $utilisateur): void
 {
-    new Appareil()->envoyer('POST', '/reset-password', [
-        'token' => Password::createToken($utilisateur),
-        'email' => $utilisateur->email,
-        'password' => sessionsNouveauMotDePasse(),
-        'password_confirmation' => sessionsNouveauMotDePasse(),
-    ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+    new Appareil()->envoyer('POST', '/reset-password', FormulaireDeReinitialisation::pour($utilisateur, sessionsNouveauMotDePasse()))
+        ->assertSessionHasNoErrors()->assertRedirect(route('login'));
 }
 
 /**

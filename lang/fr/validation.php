@@ -197,6 +197,7 @@ return [
          * un nom pour chaque clef des règles de app/Http/Requests.
          */
         'activity_level' => 'niveau d\'activité',
+        'adresse' => 'adresse du lien',
         'agent' => 'navigateur',
         'amount' => 'quantité',
         'archived' => 'archivage',

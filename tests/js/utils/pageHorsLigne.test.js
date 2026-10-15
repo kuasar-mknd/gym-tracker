@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { FICHIER_DE_LA_PAGE_HORS_LIGNE, greffonDeLaPageHorsLigne, pageHorsLigne } from '@/sw/pageHorsLigne'
+import { CADRE_DU_LOGO, TRACES_DE_LA_LETTRE, TRACES_DES_BARRES } from '@/Utils/dessinDuLogo'
 
 /** La page lue comme un document, pour la questionner par sélecteurs. */
 const document_ = (html) => new DOMParser().parseFromString(html, 'text/html')
@@ -19,6 +20,35 @@ describe('la page « hors ligne »', () => {
             '/build/assets/main-abc123.css',
         ])
         expect(page.querySelectorAll('script[src], img, iframe')).toHaveLength(0)
+    })
+
+    /*
+     * Un démarrage à froid sans réseau ouvre cette page : l'icône `cloud_off`
+     * s'y affiche, la police Material Symbols étant au precache (#2048).
+     */
+    it('montre l’icône cloud_off, muette pour un lecteur d’écran', () => {
+        const icone = page.querySelector('.material-symbols-outlined')
+
+        expect(icone.textContent).toBe('cloud_off')
+        expect(icone.getAttribute('aria-hidden')).toBe('true')
+    })
+
+    /**
+     * Le logo de l'application sur sa tuile, tracé dans la page comme dans les
+     * pages invitées : il s'affiche sans aucune requête.
+     */
+    it('montre le logo de l’application seul, nom lu mais caché, sans le charger', () => {
+        const logo = page.querySelector('main > div > svg')
+
+        expect(logo).not.toBeNull()
+        expect(logo.getAttribute('viewBox')).toBe(CADRE_DU_LOGO)
+        expect(logo.getAttribute('aria-hidden')).toBe('true')
+        expect(logo.classList).toContain('bg-logo-fond')
+        expect(logo.classList).toContain('size-20')
+        expect(logo.querySelectorAll('g.fill-logo-lettre path')).toHaveLength(TRACES_DE_LA_LETTRE.length)
+        expect(logo.querySelectorAll('g.fill-logo-barres path')).toHaveLength(TRACES_DES_BARRES.length)
+        expect(logo.nextElementSibling.textContent).toBe('GymTracker')
+        expect(logo.nextElementSibling.classList).toContain('sr-only')
     })
 
     it('ne porte rien d’un compte : ni données de page, ni jeton, ni identité', () => {

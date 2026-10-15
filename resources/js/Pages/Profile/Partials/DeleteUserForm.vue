@@ -8,9 +8,18 @@ import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import SyncService from '@/Utils/SyncService'
+import { SUPPRESSION_DU_COMPTE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const confirmingUserDeletion = ref(false)
 const passwordInput = ref(null)
+
+/**
+ * La suppression est partie et sa réponse n'est pas revenue (#2048). La
+ * fenêtre de confirmation le dit elle-même : le toast du layout resterait sous
+ * elle, la fenêtre ouverte par `showModal()` passant au-dessus de toute la page.
+ * Jamais « le compte n'est pas supprimé » : la requête a pu arriver.
+ */
+const suppressionSansReseau = ref(false)
 
 const form = useForm({
     password: '',
@@ -33,6 +42,7 @@ const confirmUserDeletion = () => {
  */
 const deleteUser = () => {
     const compteSupprime = SyncService.compte
+    suppressionSansReseau.value = false
 
     form.delete(route('profile.destroy'), {
         preserveScroll: true,
@@ -43,12 +53,16 @@ const deleteUser = () => {
             effacerLesBrouillons()
         },
         onError: () => passwordInput.value?.focus(),
+        onNetworkError: direSansReseau(null, () => {
+            suppressionSansReseau.value = true
+        }),
         onFinish: () => form.reset(),
     })
 }
 
 const closeModal = () => {
     confirmingUserDeletion.value = false
+    suppressionSansReseau.value = false
     form.clearErrors()
     form.reset()
 }
@@ -83,6 +97,15 @@ const closeModal = () => {
 
                 <p class="text-text-muted mt-2 text-sm">
                     Cette action est irréversible. Entre ton mot de passe pour confirmer.
+                </p>
+
+                <p
+                    v-if="suppressionSansReseau"
+                    role="status"
+                    class="bg-accent-danger/10 text-accent-danger-deep mt-4 rounded-xl p-3 text-sm font-bold"
+                    data-testid="delete-account-offline"
+                >
+                    {{ SUPPRESSION_DU_COMPTE_NON_CONFIRMEE }} Réessaie quand le réseau sera revenu.
                 </p>
 
                 <div class="mt-4">

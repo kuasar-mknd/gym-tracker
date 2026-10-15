@@ -3,6 +3,7 @@ import {
     URL_DE_LA_PAGE_HORS_LIGNE,
     activerLePrechargementDesNavigations,
     estUneNavigation,
+    garderLePrechargement,
     naviguerOuRetomber,
 } from '@/sw/navigationsHorsLigne'
 
@@ -125,4 +126,28 @@ describe('activerLePrechargementDesNavigations', () => {
 
 it('sert la page que la construction écrit dans public/build', () => {
     expect(URL_DE_LA_PAGE_HORS_LIGNE).toBe('/build/hors-ligne.html')
+})
+
+/*
+ * Sans réseau, la réponse préchargée est rejetée : tenue par `waitUntil`
+ * jusqu'à son règlement, et son rejet rattrapé (#2048).
+ */
+describe('garderLePrechargement', () => {
+    it('tient le worker jusqu’au règlement de la réponse préchargée, et rattrape son rejet', async () => {
+        const tenues = []
+        const rejet = Promise.reject(new TypeError('Failed to fetch'))
+
+        garderLePrechargement({ preloadResponse: rejet, waitUntil: (promesse) => tenues.push(promesse) })
+
+        expect(tenues).toHaveLength(1)
+        await expect(tenues[0]).resolves.toBeUndefined()
+    })
+
+    it('ne tient rien quand le navigateur ne précharge pas', () => {
+        const waitUntil = vi.fn()
+
+        garderLePrechargement({ waitUntil })
+
+        expect(waitUntil).not.toHaveBeenCalled()
+    })
 })

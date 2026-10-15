@@ -14,7 +14,8 @@ const reponse = (data) => ({ data: { data } })
 const ligneDe = (type = 'strength', extra = {}) => ({
     id: 1,
     _rowKey: 'row-1',
-    exercise: { type },
+    exercise_id: 7,
+    exercise: { id: 7, type },
     sets: [],
     recommended_values: null,
     ...extra,
@@ -96,7 +97,7 @@ describe('ajouter une série', () => {
                 distance_km: 0,
                 duration_seconds: 30,
             },
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 5, exercise_id: 7 } },
         )
         // L'adresse où le vidage renverra ce que le serveur ignorerait d'un rejeu (#1960).
         expect(sync.post.mock.calls[0][2].ajusterPar('__produit__')).toBe('/api.v1.sets.update/__produit__')
@@ -145,7 +146,7 @@ describe('ajouter une série', () => {
                 weight: 110,
                 reps: 3,
             },
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 5, exercise_id: 7 } },
         )
     })
 

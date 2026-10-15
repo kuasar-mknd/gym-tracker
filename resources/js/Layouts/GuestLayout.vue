@@ -3,6 +3,8 @@ import { onMounted, ref } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
+import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
+import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
 import { marquerLAbonnementARetransmettre } from '@/composables/useAbonnementPush'
 import { messageDesEcrituresGardees, reprendreLesEcrituresGardees } from '@/Utils/ecrituresGardees'
 
@@ -44,12 +46,13 @@ onMounted(() => {
 
         <BandeauDeMiseAJour />
 
+        <!-- Sans réseau, une page d'invité le dit aussi (#2048). -->
+        <ToastsDuLayout />
+
         <!-- Logo -->
         <div class="animate-fade-in relative z-10 mb-8">
-            <Link href="/">
-                <span class="text-gradient font-display text-4xl font-black tracking-tight uppercase italic">
-                    GymTracker
-                </span>
+            <Link href="/" class="flex">
+                <MarqueDeLApplication disposition="page" />
             </Link>
         </div>
 

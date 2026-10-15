@@ -13,6 +13,7 @@ vi.mock('@/Utils/SyncService', () => ({
         delete: vi.fn(),
         get: vi.fn(),
         identifiantsEnAttente: () => [],
+        entreesDuCompte: () => [],
         rejeuxDepuisLaDerniereVisite: 0,
         failedRequests: () => [],
         mettreEnFile: (...args) => mettreEnFile(...args),
@@ -42,6 +43,7 @@ import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 
 const EXERCISE = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
@@ -98,6 +100,7 @@ const mountPage = async (workout = emptyWorkout, autresProps = {}) => {
                 AjoutDExerciceModal,
                 RangeeDeSerie,
                 CarteDExercice,
+                ActionsDeLaSeance,
                 GlassInput: passesSlot,
                 GlassSelect: passesSlot,
             },
@@ -232,6 +235,7 @@ describe('Workouts/Show — writes made while a create is in flight', () => {
         expect(lines(wrapper)[0].sets[0].id).toBe(77)
         expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 10 }), {
             ajusterPar: expect.any(Function),
+            contexte: { workout_id: 1, exercise_id: 5 },
         })
     })
 })
@@ -347,6 +351,7 @@ describe('Workouts/Show — a set added onto a queued exercise', () => {
             url: '/api/v1/sets',
             data: expect.objectContaining({ workout_line_id: { enAttenteDe: 'q-77' } }),
             ajusterPar: expect.any(Function),
+            contexte: { workout_id: 1, exercise_id: 5 },
         })
         expect(wrapper.vm.unsyncedSetIds.size).toBe(1)
 
@@ -677,7 +682,7 @@ describe('Workouts/Show — une série recopiée au-delà des plafonds', () => {
                 weight: 100000,
                 reps: 999,
             },
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 1, exercise_id: 5 } },
         )
         expect(lines(wrapper)[0].sets.map((serie) => serie.id)).toEqual([42, 43])
     })

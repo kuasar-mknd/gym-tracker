@@ -7,6 +7,7 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Inertia\Testing\AssertableInertia as Assert;
 
 /**
  * A create the server accepted and wrote, whose response never reached the
@@ -140,5 +141,39 @@ describe('idempotent creates', function (): void {
         );
 
         expect($response->json('data'))->not->toHaveKey('idempotency_key');
+    });
+
+    /**
+     * La page de séance reconnaît à cette clé une création arrivée au serveur
+     * dont la réponse s'est perdue, et qui attend encore dans sa file (#2048) :
+     * sans elle, la série rechargée se montrait deux fois, la sienne et celle
+     * de la file, et retirer l'une supprimait l'autre au vidage. La page ne
+     * montre que la séance du compte : la clé n'y sort pas de chez lui.
+     */
+    it('rend à la page de séance la clé de chaque ligne et de chaque série créées', function (): void {
+        $compte = User::factory()->create();
+        $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
+        $exercice = Exercise::factory()->create();
+
+        $this->actingAs($compte)->postJson(
+            route('api.v1.workout-lines.store'),
+            ['workout_id' => $seance->id, 'exercise_id' => $exercice->id],
+            ['Idempotency-Key' => 'tentative-de-la-ligne'],
+        )->assertSuccessful();
+        $ligne = WorkoutLine::query()->where('workout_id', $seance->id)->sole();
+
+        $this->actingAs($compte)->postJson(
+            route('api.v1.sets.store'),
+            ['workout_line_id' => $ligne->id, 'weight' => 82.5, 'reps' => 7],
+            ['Idempotency-Key' => 'tentative-de-la-serie'],
+        )->assertSuccessful();
+
+        $this->actingAs($compte)
+            ->get(route('workouts.show', $seance))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page): Assert => $page
+                ->component('Workouts/Show')
+                ->where('workout.workout_lines.0.idempotency_key', 'tentative-de-la-ligne')
+                ->where('workout.workout_lines.0.sets.0.idempotency_key', 'tentative-de-la-serie'));
     });
 });

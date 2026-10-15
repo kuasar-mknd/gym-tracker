@@ -74,7 +74,6 @@ it('n ecrit jamais deux fois la meme couleur dans la charte', function (): void 
      * dispense se demande donc explicitement, en nommant la paire ici.
      */
     $coincidences_assumees = [
-        ['--color-accent-primary', '--color-category-chest'],
         ['--color-accent-secondary', '--color-category-shoulders'],
         ['--color-accent-tertiary', '--color-category-back'],
         ['--color-accent-info', '--color-category-arms'],
@@ -88,8 +87,16 @@ it('n ecrit jamais deux fois la meme couleur dans la charte', function (): void 
          * roles : le jour ou les cartes prendront un blanc casse, le texte sur
          * l'orange devra rester franc.
          */
-        ['--color-surface-card', '--color-text-on-dark-accent'],
-        ['--color-text-main', '--color-text-on-accent'],
+        ['--color-surface-card', '--color-text-on-dark-accent', '--color-logo-fond'],
+        ['--color-text-main', '--color-text-on-accent', '--color-logo-lettre'],
+
+        /*
+         * Le logo a été dessiné dans l'encre, l'orange et le blanc de la
+         * charte. Ses jetons sont à lui : un logo installé sur un écran
+         * d'accueil ne suit pas une retouche de l'interface, il se redessine
+         * et ses icônes se régénèrent (pwa-assets.config.js).
+         */
+        ['--color-accent-primary', '--color-category-chest', '--color-logo-barres'],
     ];
 
     $fautives = [];

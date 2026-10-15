@@ -61,6 +61,8 @@ import GoalForm from '@/Components/Goals/GoalForm.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
+import { ECRITURE_NON_CONFIRMEE, SUPPRESSION_DU_COMPTE_NON_CONFIRMEE } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
 
 beforeAll(() => {
     globalThis.route = (name, params) => ['', name, ...Object.values(params ?? {})].join('/')
@@ -1257,6 +1259,72 @@ describe('DeleteUserForm', () => {
         hoisted.formDelete.mock.calls[0][1].onFinish()
 
         expect(hoisted.detacherLAppareil).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+    })
+
+    /*
+     * Sans réponse du serveur, la fenêtre de confirmation le dit elle-même
+     * (#2048) : un toast du layout resterait sous la fenêtre, que `showModal()`
+     * place au-dessus de toute la page. Et jamais « le compte n'est pas
+     * supprimé », ni « l'enregistrement n'est pas confirmé » : la suppression
+     * n'enregistre rien, et elle a pu arriver.
+     */
+    it('dit dans la fenêtre que la suppression n’est pas confirmée quand le serveur ne répond pas', async () => {
+        hoisted.detacherLAppareil.mockClear()
+        const wrapper = mountForm()
+        await openConfirmation(wrapper)
+        await wrapper.get('[data-testid="confirm-delete-button"]').trigger('click')
+
+        const options = hoisted.formDelete.mock.calls[0][1]
+        const { rendu, annonces } = annoncesPendant(() => options.onNetworkError({ code: 'ERR_NETWORK' }))
+        options.onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([])
+        expect(wrapper.find('.modal').exists()).toBe(true)
+        expect(wrapper.get('[data-testid="delete-account-offline"]').text()).toContain(
+            SUPPRESSION_DU_COMPTE_NON_CONFIRMEE,
+        )
+        expect(wrapper.text()).not.toContain(ECRITURE_NON_CONFIRMEE)
+        expect(hoisted.detacherLAppareil).not.toHaveBeenCalled()
+
+        wrapper.unmount()
+    })
+
+    it('retire l’avis sans réseau à la tentative suivante et à la fermeture', async () => {
+        const wrapper = mountForm()
+        await openConfirmation(wrapper)
+        const avis = () => wrapper.find('[data-testid="delete-account-offline"]')
+
+        await wrapper.get('[data-testid="confirm-delete-button"]').trigger('click')
+        hoisted.formDelete.mock.calls[0][1].onNetworkError({ code: 'ERR_NETWORK' })
+        await wrapper.vm.$nextTick()
+        expect(avis().exists()).toBe(true)
+
+        await wrapper.get('[data-testid="confirm-delete-button"]').trigger('click')
+        expect(avis().exists()).toBe(false)
+
+        hoisted.formDelete.mock.calls[1][1].onNetworkError({ code: 'ERR_NETWORK' })
+        await wrapper.vm.$nextTick()
+        await wrapper.get('[data-testid="cancel-delete-button"]').trigger('click')
+        await openConfirmation(wrapper)
+        expect(avis().exists()).toBe(false)
+
+        wrapper.unmount()
+    })
+
+    it('laisse au rapporteur une erreur qui ne vient pas du réseau', async () => {
+        const wrapper = mountForm()
+        await openConfirmation(wrapper)
+        await wrapper.get('[data-testid="confirm-delete-button"]').trigger('click')
+
+        const { rendu } = annoncesPendant(() => hoisted.formDelete.mock.calls[0][1].onNetworkError(new TypeError('x')))
+        await wrapper.vm.$nextTick()
+
+        expect(rendu).toBeUndefined()
+        expect(wrapper.find('[data-testid="delete-account-offline"]').exists()).toBe(false)
 
         wrapper.unmount()
     })
