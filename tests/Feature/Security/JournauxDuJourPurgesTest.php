@@ -122,11 +122,11 @@ afterEach(function (): void {
 });
 
 /*
- * Un fichier n'a pas de date de fin : une ligne écrite au premier instant d'un
- * jour part avec lui, à la purge qui suit son quatorzième anniversaire. Dans
- * la première heure du jour, la purge ne laisse pas une ligne passer quatorze
- * jours et une heure, et reste loin de l'heure que les changements d'heure
- * sautent ou répètent.
+ * Une ligne part avec le fichier de son jour, à la purge du quatorzième jour
+ * qui suit : écrite au premier instant de ce jour, elle a alors quatorze jours
+ * et l'heure de la purge. Dans la première heure du jour, la purge ne laisse
+ * pas une ligne passer quatorze jours et une heure, et reste loin de l'heure
+ * que les changements d'heure sautent ou répètent.
  */
 it('purge chaque nuit, dans la première heure du jour, sous le moniteur des tâches', function (): void {
     $tache = journauxDuJourLaPurge();
@@ -161,11 +161,11 @@ it('garde quatorze jours de calendrier pour chaque conteneur, et rien d’autre 
 
     // Ce que le canal `daily` n'écrit pas : le fichier du canal `single`, ceux
     // du pilote de navigateur et du serveur des parcours, une page gardée par
-    // un parcours, une archive, une date impossible, une autre extension, un
-    // nom sans extension.
+    // un parcours, une archive, une date impossible, une date que le nom ne
+    // sépare pas par un tiret, une autre extension, un nom sans extension.
     $autres = [
         '.gitignore', 'laravel.log', 'chromedriver.log', 'serve.log', 'dusk_html_dump.html',
-        'app-2026-08-16.log.gz', 'app-2026-02-30.log', 'notes-2026-08-16.txt', 'app-2026-08-16',
+        'app-2026-08-16.log.gz', 'app-2026-02-30.log', 'notes_2026-08-16.log', 'notes-2026-08-16.txt', 'app-2026-08-16',
     ];
 
     try {
