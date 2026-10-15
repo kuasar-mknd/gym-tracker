@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * Les canaris du diagnostic (#2032) : des valeurs qu'aucune sortie du
  * diagnostic ne doit laisser passer, semées par les vrais chemins de
- * l'application (une écriture refusée, un job qui échoue, une tâche
- * planifiée en échec, une erreur navigateur).
+ * l'application (une écriture refusée, un job qui échoue, une requête mal
+ * formée dans une tâche planifiée, une erreur navigateur).
  *
  * Les uns ont une forme que l'expurgation reconnaît (un courriel, une
  * adresse IP, un secret, un hôte de courrier) : on peut les écrire dans un
@@ -86,6 +86,20 @@ final class CanarisDuDiagnostic
     {
         DB::table('users')->insert(['name' => $premier, 'email' => self::adresseEnDouble()]);
         DB::table('users')->insert(['name' => $second, 'email' => self::adresseEnDouble()]);
+    }
+
+    /**
+     * Une requête écrite à la main, valeurs comprises, que le serveur refuse
+     * dès son premier mot. Son texte cite la requête à partir de l'erreur
+     * (« near '…' »), et le moniteur des tâches planifiées coupe le message à
+     * 255 caractères : au milieu de l'adresse, dont la citation reste
+     * ouverte. Les valeurs sont dans le texte de la requête, pas dans ses
+     * liaisons : seul le masque du texte du serveur, quand la connexion le
+     * porte, les tait.
+     */
+    public static function ecrireUneRequeteMalFormee(): void
+    {
+        DB::update(sprintf("updat users set name = '%s', email = '%s'", self::NOM_PROPRE, self::adresseEnDouble()));
     }
 
     /**

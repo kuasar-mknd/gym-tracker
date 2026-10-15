@@ -9,6 +9,14 @@ use App\Models\ErreurNavigateur;
 use App\Models\ExceptionEnregistree;
 use App\Models\TachePlanifiee;
 use App\Models\User;
+use App\Services\Diagnostic\EnveloppeDeDiagnostic;
+use App\Services\Diagnostic\FenetreDeDiagnostic;
+use App\Services\Diagnostic\Projections\ProjectionDesErreursNavigateur;
+use App\Services\Diagnostic\Projections\ProjectionDesExceptions;
+use App\Services\Diagnostic\Projections\ProjectionDesFiles;
+use App\Services\Diagnostic\Projections\ProjectionDesTachesPlanifiees;
+use App\Services\Diagnostic\ResumeDuDiagnostic;
+use App\Services\Diagnostic\ValeurLue;
 use App\Support\Sante\TachesPlanifieesCheck;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Facades\Artisan;
@@ -38,6 +46,12 @@ use function Pest\Laravel\actingAs;
  * d'un fichier du build sans en être un, et le passage des contrôles de
  * santé que le magasin garde. Le test tient avec ou sans le masquage des
  * valeurs SQL à la source : la sortie ne compte pas dessus.
+ *
+ * Chaque texte semé passe par une sortie vérifiée. La page montre le détail
+ * de la première tâche échouée par ordre de nom : celle de la requête mal
+ * formée (`diagnostic-canari-base`), dont le moniteur coupe le message au
+ * milieu d'une citation du serveur. Le détail de chaque élément du résumé,
+ * que l'agent lira par son identifiant, est vérifié à part.
  */
 
 /**
@@ -49,6 +63,16 @@ function canarisSuperAdministrateur(): Admin
     $administrateur->assignRole(Role::findOrCreate('super_admin', 'admin'));
 
     return $administrateur->fresh() ?? $administrateur;
+}
+
+/**
+ * Le message de la tâche à la requête mal formée, tel que le détail le rend :
+ * la citation que le moniteur a coupée est fermée, puis masquée.
+ */
+function canarisMessageDeLaRequeteMalFormee(): string
+{
+    return 'SQLSTATE[42000]: Syntax error or access violation: 1064 You have an error in your SQL syntax; '
+        ."check the manual that corresponds to your MySQL server version for the right syntax to use near '?'";
 }
 
 /**
@@ -82,8 +106,8 @@ function canarisSemerParLesVraisChemins(): void
 
     $planning = new Schedule(config()->string('app.timezone'));
     $planning->call(static function (): void {
-        CanarisDuDiagnostic::ecrireUnCompteEnDouble();
-    })->everyMinute()->monitorName('diagnostic-canari-sql');
+        CanarisDuDiagnostic::ecrireUneRequeteMalFormee();
+    })->everyMinute()->monitorName('diagnostic-canari-base');
     $planning->call(static function (): never {
         throw new RuntimeException(CanarisDuDiagnostic::messageReconnaissable());
     })->everyMinute()->monitorName('diagnostic-canari-courrier');
@@ -169,7 +193,9 @@ it('ne laisse aucun canari dans la page, toutes portées cochées, ni dans ce qu
     $structure = BoutonCopierLaStructure::structureCopiee($page);
 
     expect(html_entity_decode($page, ENT_QUOTES | ENT_HTML5))->toContain('Envoi refusé par [hôte du courrier] ([adresse IP]) pour [courriel], clé [secret]')
+        ->toContain(canarisMessageDeLaRequeteMalFormee())
         ->and($page)->toContain('Duplicate entry')
+        ->and(data_get($structure, 'details.donnees.tache_planifiee.commande'))->toBe('diagnostic-canari-base')
         ->and(CanarisDuDiagnostic::trouvesDans($page))->toBe([])
         ->and(CanarisDuDiagnostic::trouvesDans((string) json_encode($structure, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))->toBe([]);
 });
@@ -181,6 +207,57 @@ it('ne laisse aucun canari dans la page servie au navigateur', function (): void
 
     expect(CanarisDuDiagnostic::trouvesDans((string) $reponse->getContent()))->toBe([]);
 });
+
+/*
+ * La page ne montre que le détail du premier élément de chaque liste ;
+ * l'agent lira celui de chacun par son identifiant. Le détail de chaque
+ * tâche, groupe d'exceptions, échec de job et groupe d'erreurs navigateur du
+ * résumé est donc lu ici, sous `TexteBrut`, et rendu par l'enveloppe.
+ */
+it('ne laisse aucun canari dans le détail d’aucun élément du résumé', function (): void {
+    $maintenant = now();
+    $fenetre = FenetreDeDiagnostic::jours(30, $maintenant);
+    $resume = new ResumeDuDiagnostic()(PorteeDeDiagnostic::cases(), $fenetre)->enveloppe['donnees'];
+    $details = [
+        ...array_map(
+            static fn (mixed $tache): ?array => new ProjectionDesTachesPlanifiees()->detail(ValeurLue::entier(data_get($tache, 'id')) ?? 0, $fenetre, true),
+            (array) data_get($resume, 'taches_planifiees.taches'),
+        ),
+        ...array_map(
+            static fn (mixed $groupe): ?array => new ProjectionDesExceptions()->detail(ValeurLue::entier(data_get($groupe, 'dernier_id')) ?? 0, $fenetre, true),
+            (array) data_get($resume, 'exceptions.groupes'),
+        ),
+        ...array_map(
+            static fn (mixed $echec): ?array => new ProjectionDesFiles()->detail(ValeurLue::texte(data_get($echec, 'dernier_uuid')), $fenetre, true),
+            (array) data_get($resume, 'files.echecs'),
+        ),
+        ...array_map(
+            static fn (mixed $groupe): ?array => new ProjectionDesErreursNavigateur()->detail(ValeurLue::texte(data_get($groupe, 'empreinte')), $fenetre, true),
+            (array) data_get($resume, 'erreurs_navigateur.groupes'),
+        ),
+    ];
+
+    expect($details)->toHaveCount(8)->not->toContain(null)
+        ->and(CanarisDuDiagnostic::trouvesDans(new EnveloppeDeDiagnostic()(['details' => $details], $maintenant)->json()))->toBe([]);
+});
+
+/*
+ * Le message de chaque tâche est comparé en entier : celui de la requête
+ * mal formée, que le moniteur coupe au milieu d'une citation du serveur, et
+ * celui de l'envoi refusé.
+ */
+it('ne laisse aucun canari dans le détail de chaque tâche planifiée en échec', function (string $tache, string $message): void {
+    $maintenant = now();
+    $identifiant = ValeurLue::entier(TachePlanifiee::query()->where('name', $tache)->value('id')) ?? 0;
+    $detail = new ProjectionDesTachesPlanifiees()->detail($identifiant, FenetreDeDiagnostic::jours(30, $maintenant), true);
+    $enveloppe = new EnveloppeDeDiagnostic()(['tache_planifiee' => $detail], $maintenant);
+
+    expect(data_get($enveloppe->enveloppe, 'donnees.tache_planifiee.derniers_echecs.0.non_fiable.message'))->toBe($message)
+        ->and(CanarisDuDiagnostic::trouvesDans($enveloppe->json()))->toBe([]);
+})->with([
+    'la requête mal formée' => ['diagnostic-canari-base', canarisMessageDeLaRequeteMalFormee()],
+    'l’envoi refusé' => ['diagnostic-canari-courrier', 'Envoi refusé par [hôte du courrier] ([adresse IP]) pour [courriel], clé [secret]'],
+]);
 
 /*
  * Le message d'une exception peut recopier un texte venu d'ailleurs, sauts
