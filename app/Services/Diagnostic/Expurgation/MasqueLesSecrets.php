@@ -14,12 +14,13 @@ namespace App\Services\Diagnostic\Expurgation;
  * d'un nom de migration ; avec `/`, seulement quand elles portent un `+` ou
  * finissent par `=`, pour qu'un chemin (`app/Http/Controllers/Api/V1/…`) ne
  * soit pas pris pour un secret. Puis les suites hexadécimales de 32
- * caractères ou plus (empreintes, clés, jetons), quel que soit leur voisin
- * hors d'une lettre ou d'un chiffre : le jeton d'un lien de réinitialisation
- * suit une barre oblique dans le chemin, une clé suit un `=`. Elles passent
- * après le base64, qui couvre ainsi en entier un secret où une telle suite
- * figure. Chaque motif ne s'essaie qu'au début d'un mot : une longue suite
- * n'est parcourue qu'une fois.
+ * caractères ou plus (empreintes, clés, jetons), avec ou sans le préfixe
+ * `0x`, quel que soit leur voisin hors d'une lettre ou d'un chiffre : le
+ * jeton d'un lien de réinitialisation suit une barre oblique dans le
+ * chemin, une clé suit un `=`. Elles passent après le base64, qui couvre
+ * ainsi en entier un secret où une telle suite figure. Chaque motif ne
+ * s'essaie qu'au début d'un mot : une longue suite n'est parcourue qu'une
+ * fois.
  */
 final class MasqueLesSecrets
 {
@@ -34,7 +35,7 @@ final class MasqueLesSecrets
         '/(?<![\w-])eyJ[\w-]{2,4096}\.[\w-]{2,4096}\.[\w-]{0,4096}/' => '[secret]',
         '/(?<![\w+\/=-])(?=[\w+-]{0,4096}[a-z])(?=[\w+-]{0,4096}[A-Z])(?=[\w+-]{0,4096}\d)[\w+-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
         '/(?<![\w+\/=-])(?=[\w+\/-]{0,4096}(?:\+|=))[\w+\/-]{40,4096}={0,2}(?![\w+\/=-])/' => '[secret]',
-        '/(?<![0-9A-Za-z])[0-9a-f]{32,4096}(?![0-9A-Za-z])/i' => '[secret]',
+        '/(?<![0-9A-Za-z])(?:0x)?[0-9a-f]{32,4096}(?![0-9A-Za-z])/i' => '[secret]',
     ];
 
     public function __invoke(string $texte): string

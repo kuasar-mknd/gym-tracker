@@ -276,7 +276,10 @@ it('remplace par [secret] une longue suite hexadécimale quel que soit son voisi
         'jeton-[secret] et sk_[secret]',
     ],
     'au milieu d’un secret en base64' => ['clé Zm9vYmFy+c0ffee5ca1ab1e0ddba11deadbeefcafe0123456+YmF6 refusée', 'clé [secret] refusée'],
+    'avec le préfixe 0x' => ['clé 0xc0ffee5ca1ab1e0ddba11deadbeefcafe0123456 refusée', 'clé [secret] refusée'],
+    'avec le préfixe 0X, en capitales' => ['clé=0XC0FFEE5CA1AB1E0DDBA11DEADBEEFCAFE0123456.', 'clé=[secret].'],
     'collée à un mot' => ['cle cachec0ffee5ca1ab1e0ddba11deadbeefcafe0123456', 'cle cachec0ffee5ca1ab1e0ddba11deadbeefcafe0123456'],
+    'un préfixe 0x collé à un mot' => ['cle cache0xc0ffee5ca1ab1e0ddba11deadbeefcafe0123456', 'cle cache0xc0ffee5ca1ab1e0ddba11deadbeefcafe0123456'],
 ]);
 
 it('ramène un chemin du dépôt à sa racine et marque les autres chemins absolus', function (): void {
@@ -339,6 +342,7 @@ it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $ad
     'des étiquettes' => [str_repeat("\u{E0041}", 2_048)],
     'des séquences ANSI ouvertes' => [str_repeat("\e]", 4_096)],
     'de l’hexadécimal mêlé' => [str_repeat('a1', 4_096)],
+    'des préfixes 0x' => [str_repeat('0x', 4_096)],
     'des groupes IPv6' => [str_repeat('a:a:', 2_048)],
     'des labels d’hôte' => [str_repeat('ab.', 2_731)],
     'des labels accentués' => [str_repeat('éb.', 2_731)],
