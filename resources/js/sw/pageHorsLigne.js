@@ -1,4 +1,5 @@
 import { URL_DE_LA_PAGE_HORS_LIGNE } from './navigationsHorsLigne.js'
+import { DISPOSITIONS_DE_LA_MARQUE, TUILE_DU_LOGO, logoEnSvg } from '../Utils/dessinDuLogo.js'
 
 /**
  * La page « hors ligne », écrite à la construction (#1966).
@@ -9,13 +10,17 @@ import { URL_DE_LA_PAGE_HORS_LIGNE } from './navigationsHorsLigne.js'
  * que le precache garde aussi, et donc la charte : ses couleurs viennent des
  * utilitaires de `app.css`, jamais d'une valeur écrite ici.
  *
- * Rien à charger d'autre que cette feuille et ses polices : « Réessayer »
- * redemande la page qui n'a pas pu s'ouvrir, et le retour du réseau le fait
+ * Rien à charger d'autre que cette feuille et ses polices : le logo est tracé
+ * dans la page, comme dans l'en-tête de l'application, et « Réessayer »
+ * redemande la page qui n'a pas pu s'ouvrir, ce que le retour du réseau fait
  * tout seul.
  */
 
 /** Le nom du fichier dans public/build, d'où le precache le prend. */
 export const FICHIER_DE_LA_PAGE_HORS_LIGNE = URL_DE_LA_PAGE_HORS_LIGNE.replace(/^\/build\//, '')
+
+/** La marque des pages invitées : le logo seul sur sa tuile, le nom lu mais caché. */
+const MARQUE = DISPOSITIONS_DE_LA_MARQUE.page
 
 const echapper = (texte) => texte.replace(/[&<>"']/g, (caractere) => `&#${caractere.charCodeAt(0)};`)
 
@@ -36,7 +41,10 @@ ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille
 </head>
 <body class="bg-surface-page text-text-main font-sans antialiased">
     <main id="main-content" class="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-12">
-        <p class="text-gradient font-display text-4xl font-black tracking-tight uppercase italic">GymTracker</p>
+        <div class="flex items-center ${MARQUE.sens}">
+            ${logoEnSvg(`${TUILE_DU_LOGO} ${MARQUE.logo}`)}
+            <p class="text-gradient font-display ${MARQUE.nom} font-black tracking-tight uppercase italic">GymTracker</p>
+        </div>
         <section class="glass-panel-light w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
             <h1 class="titre-carte text-2xl">Pas de réseau</h1>
             <p class="text-text-muted text-base font-medium">

@@ -24,9 +24,57 @@ use Tests\DuskTestCase;
  * is where the defect can actually appear unnoticed — nobody was measuring.
  *
  * 375px is the iPhone SE and the narrowest device this app targets.
+ *
+ * Le bureau a son propre piège : la barre de navigation s'ouvre dès 640 px et
+ * tient tout juste dans sa largeur. Elle se mesure donc aussi, sur l'accueil,
+ * aux largeurs de `largeursDeLaBarreDeBureau()`.
  */
 class NoSidewaysScrollTest extends DuskTestCase
 {
+    /**
+     * html and body both carry overflow-x: hidden, so the page can never
+     * report a sideways scroll — it clips instead, and the content that
+     * overflows is simply cut off. Measuring scrollWidth as it stands
+     * therefore always passes. The clipping is lifted for the duration of the
+     * measurement, which asks the question that matters: would this page
+     * overflow if it were not being hidden?
+     *
+     * The blurred background blobs are 600px squares placed off-canvas on
+     * purpose and rely on that clip. They carry no content and cannot be
+     * reached, so they are not what this is looking for.
+     *
+     * A row of chips inside a horizontal scroller is meant to extend past the
+     * viewport — that is the control, not a defect. Only content with no way
+     * to be scrolled to counts.
+     */
+    private const string MESURE_DU_DEBORDEMENT = 'const style = document.createElement("style");'
+        .'style.textContent = "html,body{overflow-x:visible !important}";'
+        .'document.head.appendChild(style);'
+        .'const d = document.documentElement;'
+        .'const decorative = el => {'
+        .'  const c = (el.className || "").toString();'
+        .'  if (/liquid-bg|blur-\[/.test(c)) return true;'
+        .'  const s = getComputedStyle(el);'
+        .'  return s.pointerEvents === "none" && s.position === "absolute";'
+        .'};'
+        .'const inScroller = el => {'
+        .'  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {'
+        .'    const o = getComputedStyle(p).overflowX;'
+        .'    if (o === "auto" || o === "scroll") return true;'
+        .'  }'
+        .'  return false;'
+        .'};'
+        .'let widest = "", worst = d.clientWidth;'
+        .'document.querySelectorAll("body *").forEach(el => {'
+        .'  if (decorative(el) || inScroller(el)) return;'
+        .'  const r = el.getBoundingClientRect();'
+        .'  if (r.width > 0 && r.right > worst) { worst = r.right;'
+        .'    widest = el.tagName.toLowerCase() + "." + (el.className || "").toString().slice(0, 90); }'
+        .'});'
+        .'const result = {scroll: Math.round(worst), client: d.clientWidth, widest};'
+        .'style.remove();'
+        .'return result;';
+
     /**
      * @return array<string, array{string}>
      */
@@ -119,54 +167,7 @@ class NoSidewaysScrollTest extends DuskTestCase
                 ->waitFor('#main-content', 30)
                 ->waitForStableLayout();
 
-            // html and body both carry overflow-x: hidden, so the page can never
-            // report a sideways scroll — it clips instead, and the content that
-            // overflows is simply cut off. Measuring scrollWidth as it stands
-            // therefore always passes. The clipping is lifted for the duration
-            // of the measurement, which asks the question that matters: would
-            // this page overflow if it were not being hidden?
-            /** @var array{0: array{scroll: int, client: int, widest: string}} $measurement */
-            $measurement = $browser->script(
-                'const style = document.createElement("style");'
-                .'style.textContent = "html,body{overflow-x:visible !important}";'
-                .'document.head.appendChild(style);'
-                .'const d = document.documentElement;'
-                // The blurred background blobs are 600px squares placed off-canvas
-                // on purpose and rely on that clip. They carry no content and
-                // cannot be reached, so they are not what this is looking for.
-                .'const decorative = el => {'
-                .'  const c = (el.className || "").toString();'
-                .'  if (/liquid-bg|blur-\[/.test(c)) return true;'
-                .'  const s = getComputedStyle(el);'
-                .'  return s.pointerEvents === "none" && s.position === "absolute";'
-                .'};'
-                // A row of chips inside a horizontal scroller is meant to extend
-                // past the viewport — that is the control, not a defect. Only
-                // content with no way to be scrolled to counts.
-                .'const inScroller = el => {'
-                .'  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {'
-                .'    const o = getComputedStyle(p).overflowX;'
-                .'    if (o === "auto" || o === "scroll") return true;'
-                .'  }'
-                .'  return false;'
-                .'};'
-                .'let widest = "", worst = d.clientWidth;'
-                .'document.querySelectorAll("body *").forEach(el => {'
-                .'  if (decorative(el) || inScroller(el)) return;'
-                .'  const r = el.getBoundingClientRect();'
-                .'  if (r.width > 0 && r.right > worst) { worst = r.right;'
-                .'    widest = el.tagName.toLowerCase() + "." + (el.className || "").toString().slice(0, 90); }'
-                .'});'
-                .'const result = {scroll: Math.round(worst), client: d.clientWidth, widest};'
-                .'style.remove();'
-                .'return result;'
-            );
-
-            [$scroll, $client, $widest] = [
-                $measurement[0]['scroll'],
-                $measurement[0]['client'],
-                $measurement[0]['widest'],
-            ];
+            ['scroll' => $scroll, 'client' => $client, 'widest' => $widest] = $this->debordementDeLaPage($browser);
 
             $this->assertLessThanOrEqual(
                 $client,
@@ -174,5 +175,62 @@ class NoSidewaysScrollTest extends DuskTestCase
                 "La page {$routeName} déborde de ".($scroll - $client)."px. Élément le plus à droite : {$widest}"
             );
         });
+    }
+
+    /**
+     * Les largeurs de bureau où la barre de navigation doit tenir.
+     *
+     * Elle s'ouvre dès `sm` (640 px). Logo et nom ensemble lui demandaient
+     * 1 103 px de large avec un compte « Test User », 1 151 avec le nom long
+     * de userWithContent(), plus les 15 px de l'ascenseur que Chrome montre
+     * ici : en deçà, le menu du compte sortait de l'écran, chevron compris.
+     * Le logo seul en demande 947 avec ce nom. 1 080 px est la largeur d'un
+     * écran 1080p tourné en portrait, entre `lg` et `xl`, où la barre ne
+     * montre que le logo ; 1 280 px, la première largeur où elle montre aussi
+     * le nom.
+     *
+     * @return array<string, array{int}>
+     */
+    public static function largeursDeLaBarreDeBureau(): array
+    {
+        return [
+            'logo seul, 1080p en portrait' => [1080],
+            'logo et nom, à partir de xl' => [1280],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('largeursDeLaBarreDeBureau')]
+    public function test_la_barre_de_bureau_tient_dans_la_largeur_de_l_ecran(int $largeur): void
+    {
+        $this->browse(function (Browser $browser) use ($largeur): void {
+            $browser->loginAs($this->userWithContent())
+                ->resize($largeur, 900)
+                ->visit(route('dashboard'))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitForStableLayout();
+
+            ['scroll' => $scroll, 'client' => $client, 'widest' => $widest] = $this->debordementDeLaPage($browser);
+
+            $this->assertLessThanOrEqual(
+                $client,
+                $scroll,
+                "À {$largeur}px, l'accueil déborde de ".($scroll - $client)."px. Élément le plus à droite : {$widest}"
+            );
+        });
+    }
+
+    /**
+     * Le bord droit le plus lointain de la page, sa largeur visible et
+     * l'élément qui porte ce bord.
+     *
+     * @return array{scroll: int, client: int, widest: string}
+     */
+    private function debordementDeLaPage(Browser $browser): array
+    {
+        /** @var array{0: array{scroll: int, client: int, widest: string}} $measurement */
+        $measurement = $browser->script(self::MESURE_DU_DEBORDEMENT);
+
+        return $measurement[0];
     }
 }
