@@ -8,7 +8,7 @@ use Symfony\Component\Finder\Finder;
  * Un compte ouvert par l'inscription attend la preuve de son adresse, et
  * s'efface s'il ne la reçoit jamais. Les tuiles, le graphique des inscriptions
  * et l'encart des derniers inscrits du tableau de bord le comptaient pourtant
- * comme un compte (#PR).
+ * comme un compte (#2059).
  *
  * La garde lit chaque widget du panneau (app/Filament/Widgets) : toute requête
  * qui part de `User` y dit quels comptes elle lit, par `ouverts()` ou
