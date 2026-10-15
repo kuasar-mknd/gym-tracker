@@ -917,6 +917,45 @@ describe('SyncService ce que les props ne montrent pas encore', () => {
 
         expect(service.identifiantsEnAttente()).toEqual([])
     })
+
+    /*
+     * La page de séance superpose ces entrées à la séance du serveur (#2048) :
+     * elle lit la file telle qu'un rechargement la relirait, sans pouvoir la
+     * changer par mégarde.
+     */
+    it('rend les entrées du compte connecté, dans l’ordre, en copie que la page ne peut pas écrire', async () => {
+        const creation = {
+            ...aQueuedPatch('/api/v1/sets'),
+            method: 'post',
+            id: 'queued-2',
+            data: { workout_line_id: { enAttenteDe: 'queued-1' }, is_completed: true, weight: 82.5, reps: 7 },
+        }
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([aQueuedPatch(), { ...aQueuedPatch('/b'), id: 'autre', compte: '2' }, creation]),
+        )
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+        const avant = localStorage.getItem('offline_sync_queue')
+        const entrees = service.entreesDuCompte()
+
+        expect(entrees.map((entree) => entree.id)).toEqual(['queued-1', 'queued-2'])
+        expect(entrees[1]).toMatchObject({ method: 'post', compte: COMPTE, data: creation.data })
+
+        entrees[1].data.workout_line_id.enAttenteDe = 'changee'
+        entrees[0].data.weight = 1
+        entrees.pop()
+
+        expect(service.queue.find((entree) => entree.id === 'queued-2').data).toEqual(creation.data)
+        expect(service.queue.find((entree) => entree.id === 'queued-1').data).toEqual({ weight: 100 })
+        expect(service.entreesDuCompte()).toHaveLength(2)
+        expect(localStorage.getItem('offline_sync_queue')).toBe(avant)
+
+        naviguer(null)
+
+        expect(service.entreesDuCompte()).toEqual([])
+    })
 })
 
 describe('SyncService une file par compte', () => {
@@ -1750,6 +1789,54 @@ describe('SyncService une création tentée sans réponse', () => {
             '/api/v1/sets/__produit__',
             undefined,
         ])
+    })
+
+    /*
+     * La page de séance note sur la création d'une série la séance et
+     * l'exercice de sa ligne : une page qui ne connaît pas la ligne la
+     * reconstruit avec, au lieu d'écarter la série en file (#2048). Ce n'est
+     * pas une donnée de la série : le serveur ne la reçoit jamais.
+     */
+    it('garde sur l’entrée le contexte d’une création, la page le relit, et il ne part jamais au serveur', async () => {
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+        const contexte = { workout_id: 5, exercise_id: 8 }
+
+        await expect(
+            service.post('/api/v1/sets', { workout_line_id: 70, reps: 5 }, { contexte }),
+        ).rejects.toMatchObject({ isOffline: true })
+        service.mettreEnFile({ method: 'post', url: '/api/v1/sets', data: { workout_line_id: 71 }, contexte })
+        // Une modification n'a rien à montrer de plus que sa charge.
+        await expect(service.patch('/api/v1/sets/3', { reps: 6 }, { contexte })).rejects.toMatchObject({
+            isOffline: true,
+        })
+        contexte.exercise_id = 9
+
+        // La tentative directe, partie avant la file : sans contexte non plus.
+        expect(request.mock.calls[0][0]).not.toHaveProperty('contexte')
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.contexte)).toEqual([
+            { workout_id: 5, exercise_id: 8 },
+            { workout_id: 5, exercise_id: 8 },
+            undefined,
+        ])
+        expect(service.entreesDuCompte().map((entree) => entree.contexte)).toEqual([
+            { workout_id: 5, exercise_id: 8 },
+            { workout_id: 5, exercise_id: 8 },
+            undefined,
+        ])
+
+        request.mockReset()
+        request.mockResolvedValueOnce({ data: { data: { id: 100, workout_line_id: 70, reps: 5 } } })
+        request.mockResolvedValueOnce({ data: { data: { id: 101, workout_line_id: 71 } } })
+        request.mockResolvedValueOnce({ data: { data: { id: 3, reps: 6 } } })
+        await service.processQueue()
+
+        expect(request).toHaveBeenCalledTimes(3)
+        request.mock.calls.forEach(([config]) => {
+            expect(config).not.toHaveProperty('contexte')
+            expect(config.data).not.toHaveProperty('contexte')
+        })
+        expect(service.queue).toEqual([])
     })
 
     it('oublie simplement une création qui n’est jamais partie', async () => {

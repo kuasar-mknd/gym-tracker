@@ -3,6 +3,7 @@ import { router, useForm } from '@inertiajs/vue3'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import SyncService from '@/Utils/SyncService'
 import { triggerHaptic } from '@/composables/useHaptics'
+import { direSansReseau } from '@/Utils/visitesHorsLigne'
 
 /**
  * Ce que « Terminer » attend la file hors ligne, au plus. Un vidage n'a pas de
@@ -68,8 +69,17 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
     /** La clôture est partie au serveur : elle ne s'abandonne plus, sa visite la libère. */
     let cloturePartie = false
 
+    /**
+     * La dernière clôture n'a reçu aucune réponse : la séance reste ouverte à
+     * l'écran, et la modale dit que sa fin n'est pas confirmée (#2048). Elle se
+     * fermait dès le départ de la visite, et sans réseau, la personne restait
+     * sur sa séance ouverte, sans un mot.
+     */
+    const clotureSansReseau = ref(false)
+
     const finishWorkout = () => {
         ecrituresEnAttente.value = 0
+        clotureSansReseau.value = false
         showFinishModal.value = true
     }
 
@@ -91,6 +101,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
         }
 
         clotureEnCours.value = true
+        clotureSansReseau.value = false
 
         tentative += 1
         const cetteTentative = tentative
@@ -134,19 +145,31 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
 
             cloturePartie = true
 
+            /*
+             * La modale reste ouverte pendant la visite, « Confirmer » occupé.
+             * Acceptée, elle se ferme ; refusée, elle se ferme aussi, et le
+             * message du serveur prend le relais. Sans réponse, elle reste, et
+             * dit que la fin n'est pas confirmée : la requête a pu arriver, et
+             * seule sa réponse se perdre.
+             */
             router.patch(
                 route('workouts.update', { workout: localWorkout.value.id }),
                 { is_finished: true },
                 {
-                    onStart: () => {
-                        showFinishModal.value = false
-                    },
                     onSuccess: () => {
+                        showFinishModal.value = false
                         triggerHaptic('success')
                     },
+                    onNetworkError: direSansReseau(null, () => {
+                        clotureSansReseau.value = true
+                    }),
                     onFinish: () => {
                         cloturePartie = false
                         clotureEnCours.value = false
+
+                        if (!clotureSansReseau.value) {
+                            showFinishModal.value = false
+                        }
                     },
                 },
             )
@@ -196,6 +219,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
         showFinishModal,
         ecrituresEnAttente,
         clotureEnCours,
+        clotureSansReseau,
         finishWorkout,
         annulerLaCloture,
         confirmFinishWorkout,

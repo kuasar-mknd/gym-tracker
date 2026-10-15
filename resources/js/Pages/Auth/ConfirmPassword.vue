@@ -4,6 +4,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
+import { VERIFICATION_DU_MOT_DE_PASSE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const form = useForm({
     password: '',
@@ -11,6 +12,7 @@ const form = useForm({
 
 const submit = () => {
     form.post(route('password.confirm'), {
+        onNetworkError: direSansReseau(VERIFICATION_DU_MOT_DE_PASSE_NON_CONFIRMEE),
         onFinish: () => form.reset(),
     })
 }

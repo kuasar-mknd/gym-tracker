@@ -1,5 +1,13 @@
 import { ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import { direSansReseau } from '@/Utils/visitesHorsLigne'
+
+/**
+ * Ce que dit un réglage du repos automatique resté sans réponse (#2048). Pas
+ * « rien n'a changé » : la requête a pu arriver, et seule sa réponse se perdre.
+ */
+export const REPOS_AUTOMATIQUE_SANS_RESEAU =
+    "Pas de réponse du serveur : le changement du repos automatique n'est pas confirmé."
 
 /** Le minuteur de repos de la seance : son etat, son reglage, et ce qui le lance. */
 export const useMinuteurDeRepos = () => {
@@ -35,13 +43,25 @@ export const useMinuteurDeRepos = () => {
         demarrerLeRepos(exerciseRestTime)
     }
 
+    /**
+     * Sans réseau, l'interrupteur revient où il était, et un message le dit
+     * (#2048) : il ne changeait qu'à l'écran, et la séance suivante repartait
+     * sur l'ancien réglage sans que rien ne l'ait dit.
+     */
     const setAutoRestTimer = (valeur) => {
+        const precedent = autoRestTimer.value
         autoRestTimer.value = valeur
 
         router.patch(
             route('profile.rest-timer.update'),
             { auto_rest_timer: valeur },
-            { preserveScroll: true, preserveState: true },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onNetworkError: direSansReseau(REPOS_AUTOMATIQUE_SANS_RESEAU, () => {
+                    autoRestTimer.value = precedent
+                }),
+            },
         )
     }
 

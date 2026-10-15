@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Actions\Auth\ReprendreUnCompteEnAttente;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
@@ -52,8 +53,12 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  * l'adresse, la connexion par mot de passe, et jamais l'inscription, que
  * l'index unique de la même collation refuserait.
  */
-final class ResolveSocialUserAction
+final readonly class ResolveSocialUserAction
 {
+    public function __construct(private ReprendreUnCompteEnAttente $reprendreUnCompteEnAttente)
+    {
+    }
+
     /**
      * @param  bool  $adresseVerifiee  Le fournisseur garantit-il l'adresse rendue ? Faux, elle ne rattache aucun compte existant, ne prouve aucune liaison, et le compte créé naît non vérifié.
      *
@@ -190,7 +195,9 @@ final class ResolveSocialUserAction
      *  - son adresse est exactement celle rendue, à la casse ASCII près ;
      *  - le fournisseur garantit cette adresse ;
      *  - le compte a lui-même vérifié son adresse (un compte non vérifié a pu
-     *    être ouvert par quelqu'un qui ne détient pas la boîte) ;
+     *    être ouvert par quelqu'un qui ne détient pas la boîte) ; un compte
+     *    en attente du lien d'ouverture, lui, est repris par le titulaire
+     *    (`ReprendreUnCompteEnAttente`) ;
      *  - il n'est pas déjà lié à une autre identité du même fournisseur.
      *
      * Un refus ne crée pas de compte à la place : l'index unique de la base, de
@@ -221,6 +228,13 @@ final class ResolveSocialUserAction
 
         if (! $adresseVerifiee) {
             throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($fournisseur));
+        }
+
+        // Un compte que l'inscription a ouvert sur cette adresse, jamais
+        // ouvert depuis, passe au titulaire que le fournisseur garantit : son
+        // inscrit peut être un autre, dont le mot de passe ne vaut plus rien.
+        if ($compte->estEnAttente()) {
+            return $this->reprendreUnCompteEnAttente->execute($compte, $fournisseur, $identifiant, $utilisateurSocial);
         }
 
         // Sécurité : pas de rattachement tant que le compte existant n'est

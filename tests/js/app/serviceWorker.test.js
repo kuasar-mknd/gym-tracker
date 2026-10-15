@@ -381,13 +381,14 @@ describe('ouverture d’une page', () => {
      *
      * @param {Request} requete
      * @param {Promise<Response|undefined>|undefined} preloadResponse
-     * @returns {{respondWith: import('vitest').Mock, reponse: () => Promise<unknown>}}
+     * @returns {{respondWith: import('vitest').Mock, waitUntil: import('vitest').Mock, reponse: () => Promise<unknown>}}
      */
     const demander = (requete, preloadResponse = undefined) => {
         const respondWith = vi.fn()
-        listeners.fetch({ request: requete, preloadResponse, respondWith, waitUntil: vi.fn() })
+        const waitUntil = vi.fn()
+        listeners.fetch({ request: requete, preloadResponse, respondWith, waitUntil })
 
-        return { respondWith, reponse: () => respondWith.mock.calls[0][0] }
+        return { respondWith, waitUntil, reponse: () => respondWith.mock.calls[0][0] }
     }
 
     /** Une navigation, telle que le worker la reçoit : `new Request` refuse le mode `navigate`. */
@@ -417,6 +418,26 @@ describe('ouverture d’une page', () => {
 
         await expect(reponse()).resolves.toBe(accueil)
         expect(matchPrecache).not.toHaveBeenCalled()
+    })
+
+    /*
+     * Le navigateur n'attend la réponse préchargée que tant que le worker
+     * vit : remise à `waitUntil`, elle va jusqu'à son règlement, et son échec,
+     * rattrapé, ne compte pas comme un rejet du gestionnaire (#2048).
+     */
+    it('tient la réponse préchargée jusqu’à son règlement, échec rattrapé', async () => {
+        const { waitUntil, reponse } = demander(
+            navigation('/dashboard'),
+            Promise.reject(new TypeError('Failed to fetch')),
+        )
+
+        expect(waitUntil).toHaveBeenCalledTimes(1)
+        await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined()
+        await expect(reponse()).resolves.toBe(pageHorsLigne)
+    })
+
+    it('ne remet rien à waitUntil quand le navigateur n’a rien préchargé', () => {
+        expect(demander(navigation('/dashboard')).waitUntil).not.toHaveBeenCalled()
     })
 
     it('ne touche pas à un formulaire posté', () => {

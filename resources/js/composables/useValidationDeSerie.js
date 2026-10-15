@@ -12,6 +12,8 @@ import { createWriteQueue } from '@/Utils/writeOrdering'
  *   flushPendingUpdates: (setId: unknown) => Promise<unknown>,
  *   reportSyncFailure: (message: string) => void,
  *   apresValidation: (exerciseRestTime: number|undefined) => void,
+ *   noterUneEcritureNonConfirmee?: (cle: string, serie: object, champ: string, valeurDeRepli: unknown) => void,
+ *   oublierLEcritureNonConfirmee?: (cle: string) => void,
  * }} page
  */
 export const useValidationDeSerie = ({
@@ -21,6 +23,8 @@ export const useValidationDeSerie = ({
     flushPendingUpdates,
     reportSyncFailure,
     apresValidation,
+    noterUneEcritureNonConfirmee = () => {},
+    oublierLEcritureNonConfirmee = () => {},
 }) => {
     /**
      * The same, for completion. Kept apart from `fieldWrites` on purpose:
@@ -99,6 +103,19 @@ export const useValidationDeSerie = ({
             apresValidation(exerciseRestTime)
         }
 
+        /*
+         * La coche d'avant, tant que le serveur n'a pas répondu au dernier
+         * appui : l'entrée d'historique la garde à la place de celle de
+         * l'écran, comme une valeur saisie (#2048).
+         */
+        noterUneEcritureNonConfirmee(writeKey, set, 'is_completed', previousState)
+
+        const oublierSiDernier = () => {
+            if (isLatestWrite(writeKey, seq)) {
+                oublierLEcritureNonConfirmee(writeKey)
+            }
+        }
+
         const send = async () => {
             /**
              * Awaited, not merely started.
@@ -119,6 +136,8 @@ export const useValidationDeSerie = ({
 
             return patchSet(set, { is_completed: newState })
                 .then((response) => {
+                    oublierSiDernier()
+
                     // A reply that is no longer the latest word on this set is read
                     // for nothing: applying it would undo the tap that overtook it.
                     if (!isLatestWrite(writeKey, seq)) {
@@ -134,6 +153,9 @@ export const useValidationDeSerie = ({
                     }
                 })
                 .catch((err) => {
+                    // Refusée, elle est rétablie ci-dessous ; en file, la file la garde.
+                    oublierSiDernier()
+
                     if (err.isOffline || !isLatestWrite(writeKey, seq)) {
                         return
                     }

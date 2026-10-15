@@ -57,11 +57,52 @@ describe('les réglages de la séance', () => {
             inertia.patch.mock.invocationCallOrder[0],
         )
 
+        // La question reste ouverte pendant la visite, « Confirmer » occupé (#2048).
+        expect(reglages.showFinishModal.value).toBe(true)
+        expect(reglages.clotureEnCours.value).toBe(true)
+
         const options = inertia.patch.mock.calls[0][2]
-        options.onStart()
         options.onSuccess()
+        options.onFinish()
         expect(reglages.showFinishModal.value).toBe(false)
+        expect(reglages.clotureEnCours.value).toBe(false)
         expect(haptics.triggerHaptic).toHaveBeenCalledWith('success')
+    })
+
+    /*
+     * La question se fermait dès le départ de la visite : sans réseau, la
+     * séance restait ouverte, sans un mot (#2048).
+     */
+    it('garde la question ouverte et le dit quand la clôture part sans réseau, puis réessaie', async () => {
+        const reglages = monter()
+        reglages.finishWorkout()
+        await reglages.confirmFinishWorkout()
+
+        const options = inertia.patch.mock.calls[0][2]
+        expect(options.onNetworkError({ code: 'ERR_NETWORK' })).toBe(false)
+        options.onFinish()
+
+        expect(reglages.showFinishModal.value).toBe(true)
+        expect(reglages.clotureSansReseau.value).toBe(true)
+        expect(reglages.clotureEnCours.value).toBe(false)
+        expect(haptics.triggerHaptic).not.toHaveBeenCalledWith('success')
+
+        // « Confirmer » de nouveau : le message s'efface pendant la nouvelle tentative.
+        await reglages.confirmFinishWorkout()
+
+        expect(inertia.patch).toHaveBeenCalledTimes(2)
+        expect(reglages.clotureSansReseau.value).toBe(false)
+    })
+
+    it('ferme la question quand le serveur refuse la clôture : son message prend le relais', async () => {
+        const reglages = monter()
+        reglages.finishWorkout()
+        await reglages.confirmFinishWorkout()
+
+        inertia.patch.mock.calls[0][2].onFinish()
+
+        expect(reglages.showFinishModal.value).toBe(false)
+        expect(reglages.clotureSansReseau.value).toBe(false)
     })
 
     it('envoie les réglages avec le début en UTC, et referme la modale quand le serveur accepte', () => {

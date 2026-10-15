@@ -124,4 +124,22 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Durée minimale des réponses d'authentification
+    |--------------------------------------------------------------------------
+    |
+    | En microsecondes. La garde de session, le courtier des mots de passe, la
+    | connexion du panneau et `DureeDesReponsesDAuthentification` (inscription,
+    | connexion, mot de passe oublié, réinitialisation) la lisent tous : une
+    | réponse ne dure pas plus longtemps pour une adresse qui a un compte. Elle
+    | doit dépasser le coût de `BCRYPT_ROUNDS`. Une variable vide ou non
+    | numérique donne le défaut ; phpunit.xml la met à 0.
+    |
+    */
+
+    'timebox_duration' => is_numeric(env('AUTH_TIMEBOX_DURATION'))
+        ? (int) env('AUTH_TIMEBOX_DURATION')
+        : App\Support\DureeDesReponsesDAuthentification::PLANCHER_PAR_DEFAUT_MICROSECONDES,
+
 ];

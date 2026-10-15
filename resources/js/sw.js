@@ -4,6 +4,7 @@ import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
 import {
     activerLePrechargementDesNavigations,
     estUneNavigation,
+    garderLePrechargement,
     naviguerOuRetomber,
     URL_DE_LA_PAGE_HORS_LIGNE,
 } from '@/sw/navigationsHorsLigne'
@@ -59,6 +60,7 @@ self.addEventListener('activate', (event) => {
  */
 self.addEventListener('fetch', (event) => {
     if (estUneNavigation(event.request)) {
+        garderLePrechargement(event)
         event.respondWith(
             naviguerOuRetomber(
                 event,
@@ -99,9 +101,9 @@ self.addEventListener('fetch', (event) => {
  * traversait `waitUntil`.
  *
  * L'icône et le badge sont des PNG de public/, que pwa-assets.config.js tire de
- * public/logo.svg et de public/badge.svg (#1850). Le badge, la petite icône de
- * la barre d'état, est blanc sur transparent : Android n'en lit que l'alpha, et
- * un fond plein y ferait un carré.
+ * public/icone.svg (le logo sur sa tuile) et de public/badge.svg (#1850). Le
+ * badge, la petite icône de la barre d'état, est blanc sur transparent :
+ * Android n'en lit que l'alpha, et un fond plein y ferait un carré.
  */
 self.addEventListener('push', (event) => {
     let charge = {}

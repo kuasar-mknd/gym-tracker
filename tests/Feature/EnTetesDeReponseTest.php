@@ -90,8 +90,9 @@ function enTetesTailleDuBloc(TestResponse $reponseDeTest): int
 /**
  * Les pages GET de l'application, sans paramètre, servies par le groupe web.
  *
- * Le panneau d'administration a sa propre pile de middlewares, et les routes
- * des paquets ne rendent pas nos pages : seules comptent les actions de `App\`,
+ * Le panneau d'administration a sa propre pile de middlewares, un lien signé
+ * n'est pas une page qu'on visite sans sa signature, et les routes des
+ * paquets ne rendent pas nos pages : seules comptent les actions de `App\`,
  * les fermetures de `routes/web.php`, et les pages déclarées directement par
  * `Route::inertia()` ou `Route::view()`.
  *
@@ -104,6 +105,8 @@ function enTetesPagesDeLApplication(): array
     return collect(Route::getRoutes()->getRoutes())
         ->filter(fn (RouteLaravel $route): bool => in_array('GET', $route->methods(), true))
         ->filter(fn (RouteLaravel $route): bool => ! str_contains($route->uri(), '{'))
+        // Un lien signé (`adresse.confirmer`) ne se visite que depuis son courriel.
+        ->reject(fn (RouteLaravel $route): bool => in_array('signed', $route->gatherMiddleware(), true))
         ->filter(fn (RouteLaravel $route): bool => in_array('web', $route->gatherMiddleware(), true))
         ->filter(fn (RouteLaravel $route): bool => str_starts_with($route->getActionName(), 'App\\')
             || in_array(ltrim($route->getActionName(), '\\'), $controleursDePage, true)

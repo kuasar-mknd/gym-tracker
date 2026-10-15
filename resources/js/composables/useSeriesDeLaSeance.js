@@ -31,6 +31,8 @@ import { useAjoutEtRetraitDeSerie } from '@/composables/useAjoutEtRetraitDeSerie
  *   reportEditFailure: (message: string) => void,
  *   apresValidation: (exerciseRestTime: number|undefined) => void,
  *   bornesDUneSerie?: Record<string, number>|null,
+ *   noterUneEcritureNonConfirmee?: (cle: string, serie: object, champ: string, valeurDeRepli: unknown) => void,
+ *   oublierLEcritureNonConfirmee?: (cle: string) => void,
  * }} page
  */
 export const useSeriesDeLaSeance = ({
@@ -54,6 +56,8 @@ export const useSeriesDeLaSeance = ({
     reportEditFailure,
     apresValidation,
     bornesDUneSerie = null,
+    noterUneEcritureNonConfirmee = () => {},
+    oublierLEcritureNonConfirmee = () => {},
 }) => {
     const { patchSet, deleteSet, fondreDansLaFile } = useTransportDeSerie({ pendingIds, markUnsynced })
 
@@ -69,6 +73,8 @@ export const useSeriesDeLaSeance = ({
             writeDraftField,
             clearDraftField,
             reportEditFailure,
+            noterUneEcritureNonConfirmee,
+            oublierLEcritureNonConfirmee,
         })
 
     const { completionsEnVol, toggleSetCompletion } = useValidationDeSerie({
@@ -78,6 +84,8 @@ export const useSeriesDeLaSeance = ({
         flushPendingUpdates,
         reportSyncFailure,
         apresValidation,
+        noterUneEcritureNonConfirmee,
+        oublierLEcritureNonConfirmee,
     })
 
     const { addSet, removeSet, oublierLesEcrituresDeLaLigne } = useAjoutEtRetraitDeSerie({

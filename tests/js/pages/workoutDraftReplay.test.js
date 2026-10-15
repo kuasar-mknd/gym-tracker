@@ -13,6 +13,7 @@ vi.mock('@/Utils/SyncService', () => ({
         delete: vi.fn(),
         get: vi.fn(),
         identifiantsEnAttente: () => [],
+        entreesDuCompte: () => [],
         rejeuxDepuisLaDerniereVisite: 0,
         failedRequests: () => failedRequests(),
         clearFailedRequests: () => clearFailedRequests(),

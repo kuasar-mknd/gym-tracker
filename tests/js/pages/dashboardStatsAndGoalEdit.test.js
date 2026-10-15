@@ -113,6 +113,8 @@ import Dashboard from '@/Pages/Dashboard.vue'
 import GoalsEdit from '@/Pages/Goals/Edit.vue'
 import StatsIndex from '@/Pages/Stats/Index.vue'
 import { layoutStub, passesSlot } from './pageStubs'
+import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
 
 beforeAll(() => {
     globalThis.route = (name, params) => (params === undefined ? `/${name}` : `/${name}/${JSON.stringify(params)}`)
@@ -167,6 +169,18 @@ describe('Dashboard', () => {
         wrapper.findComponent({ name: 'QuickActions' }).vm.$emit('startWorkout')
 
         expect(formPost.mock.calls[0][0]).toBe('/workouts.store')
+    })
+
+    it('dit qu’il faut le réseau quand la séance part sans lui', () => {
+        const wrapper = mountDashboard()
+
+        wrapper.findComponent({ name: 'QuickActions' }).vm.$emit('startWorkout')
+        const { rendu, annonces } = annoncesPendant(() =>
+            formPost.mock.calls[0][1].onNetworkError({ code: 'ERR_NETWORK' }),
+        )
+
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
     })
 
     it('accepte la demande de démarrage des deux endroits qui la proposent', () => {

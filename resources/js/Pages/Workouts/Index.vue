@@ -16,6 +16,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassStat from '@/Components/UI/GlassStat.vue'
 import { entier } from '@/Utils/nombre'
+import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const WorkoutHistoryTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
@@ -43,7 +44,7 @@ const props = defineProps({
 const form = useForm({})
 
 const createWorkout = () => {
-    form.post(route('workouts.store'))
+    form.post(route('workouts.store'), { onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU) })
 }
 
 /**

@@ -5,6 +5,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
+import { CONNEXION_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 defineProps({
     canResetPassword: Boolean,
@@ -21,6 +22,7 @@ const submit = () => {
     form.post(route('login'), {
         onSuccess: () => triggerHaptic('success'),
         onError: () => triggerHaptic('error'),
+        onNetworkError: direSansReseau(CONNEXION_SANS_RESEAU),
         onFinish: () => form.reset('password'),
     })
 }

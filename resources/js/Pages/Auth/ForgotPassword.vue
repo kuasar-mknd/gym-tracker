@@ -3,6 +3,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
+import { ENVOI_DU_LIEN_NON_CONFIRME, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 defineProps({
     status: String,
@@ -13,7 +14,7 @@ const form = useForm({
 })
 
 const submit = () => {
-    form.post(route('password.email'))
+    form.post(route('password.email'), { onNetworkError: direSansReseau(ENVOI_DU_LIEN_NON_CONFIRME) })
 }
 </script>
 

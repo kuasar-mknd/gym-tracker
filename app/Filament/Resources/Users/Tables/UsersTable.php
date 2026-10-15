@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class UsersTable
 {
@@ -27,7 +30,9 @@ class UsersTable
              */
             ->maxSelectableRecords(100)
             ->columns(self::getColumns())
-            ->filters([])
+            ->filters([
+                self::filtreDeLAttente(),
+            ])
             ->recordActions([
                 EditAction::make(),
             ])
@@ -52,10 +57,46 @@ class UsersTable
             TextColumn::make('email')->label('Adresse e-mail')->searchable(),
             TextColumn::make('default_rest_time')->label('Repos par défaut (s)')->numeric()->sortable(),
             TextColumn::make('email_verified_at')->label('Adresse vérifiée le')->dateTime()->sortable(),
+            TextColumn::make('en_attente_depuis')->label('En attente du lien')->badge()->color('warning')->dateTime()->sortable(),
             TextColumn::make('provider')->label('Fournisseur de connexion')->searchable(),
             TextColumn::make('provider_id')->label('Identifiant chez le fournisseur')->searchable(),
             TextColumn::make('avatar')->label('Avatar')->searchable(),
         ];
+    }
+
+    /**
+     * Les comptes qui attendent encore la preuve de leur adresse
+     * (`AttendLaPreuveDeSonAdresse`) : oui, non, ou tous.
+     */
+    private static function filtreDeLAttente(): TernaryFilter
+    {
+        return TernaryFilter::make('en_attente')
+            ->label('En attente du lien')
+            ->placeholder('Tous')
+            ->trueLabel('Oui')
+            ->falseLabel('Non')
+            ->queries(
+                true: self::lesComptesEnAttente(...),
+                false: self::lesComptesOuverts(...),
+            );
+    }
+
+    /**
+     * @param  Builder<User>  $requete
+     * @return Builder<User>
+     */
+    private static function lesComptesEnAttente(Builder $requete): Builder
+    {
+        return $requete->enAttente();
+    }
+
+    /**
+     * @param  Builder<User>  $requete
+     * @return Builder<User>
+     */
+    private static function lesComptesOuverts(Builder $requete): Builder
+    {
+        return $requete->ouverts();
     }
 
     /** @return array<\Filament\Tables\Columns\Column> */

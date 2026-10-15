@@ -22,6 +22,10 @@
         <env name="APP_KEY" value="base64:2fl+Ktvkfl+Fuz4Qp/yWCIyvZbcTylZlcL/V5HAcqQo="/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
+        <!-- Sans plancher : chaque connexion ratée durerait sinon une seconde.
+             Les tests de durée reposent celui de production
+             (tests/Feature/Security/DureeDesReponsesDAuthentificationTest.php). -->
+        <env name="AUTH_TIMEBOX_DURATION" value="0"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="mysql"/>

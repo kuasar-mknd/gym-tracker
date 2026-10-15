@@ -19,6 +19,7 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Address;
 use Tests\Support\Appareil;
+use Tests\Support\LienDeChangementDAdresseRecu;
 
 /*
  * L'adresse d'un compte reçoit les liens de réinitialisation du mot de passe.
@@ -29,6 +30,13 @@ use Tests\Support\Appareil;
  * Changer l'adresse exige désormais le mot de passe actuel (le nom seul reste
  * libre), et l'ancienne adresse est prévenue de tout changement, qu'il vienne
  * du profil ou du panneau.
+ *
+ * Depuis le profil, la nouvelle adresse ne remplace l'actuelle qu'une fois
+ * suivi le lien qui lui est envoyé (`LienDeChangementDAdresseRecu`), et ce
+ * lien la vérifie : la réponse du profil ne dit plus si elle avait déjà un
+ * compte (`ChangementDAdresseMemeReponseTest`). Le panneau la change aussitôt,
+ * sans la vérifier : c'est le chemin où une chaîne de changements non
+ * vérifiés reste possible.
  */
 
 /**
@@ -124,11 +132,17 @@ it('change l’adresse avec le bon mot de passe et prévient l’ancienne', func
         ->assertSessionHasNoErrors()
         ->assertRedirect('/profile/edit');
 
+    expect($compte->refresh()->email)->toBe('titulaire@example.org')
+        ->and(RateLimiter::attempts('update-password-'.$compte->id))->toBe(0);
+    Notification::assertSentOnDemandTimes(AdresseDuCompteChangee::class, 0);
+
+    $this->get(LienDeChangementDAdresseRecu::pour('nouvelle@example.org'))->assertRedirect('/profile/edit');
+
     $compte->refresh();
 
+    // Le lien, arrivé à la nouvelle adresse, la prouve.
     expect($compte->email)->toBe('nouvelle@example.org')
-        ->and($compte->email_verified_at)->toBeNull()
-        ->and(RateLimiter::attempts('update-password-'.$compte->id))->toBe(0);
+        ->and($compte->email_verified_at)->not->toBeNull();
 
     Notification::assertSentOnDemand(
         AdresseDuCompteChangee::class,
@@ -223,8 +237,12 @@ it('exige le mot de passe pour un changement de la seule casse de l’adresse', 
         ->patch('/profile', ['name' => 'Titulaire', 'email' => 'titulaire@example.org', 'current_password' => 'password'])
         ->assertSessionHasNoErrors();
 
+    expect($compte->refresh()->email)->toBe('Titulaire@Example.org');
+
+    $this->get(LienDeChangementDAdresseRecu::pour('titulaire@example.org'))->assertRedirect('/profile/edit');
+
     expect($compte->refresh()->email)->toBe('titulaire@example.org')
-        ->and($compte->email_verified_at)->toBeNull();
+        ->and($compte->email_verified_at)->not->toBeNull();
 });
 
 it('tient le compteur d’essais : plein, il bloque l’adresse mais pas le nom, et le nom seul ne le vide pas', function (): void {
@@ -333,7 +351,7 @@ it('dit à un compte relié à un fournisseur comment obtenir un mot de passe', 
  * après un changement : tant que la nouvelle adresse n'est pas vérifiée, un
  * changement suivant ne prévient que la dernière adresse vérifiée.
  */
-it('dit au formulaire si l’adresse est vérifiée, et qu’elle ne l’est plus après un changement', function (): void {
+it('dit au formulaire si l’adresse est vérifiée, et qu’elle ne l’est plus après un changement du panneau', function (): void {
     Notification::fake();
     $compte = changementDAdresseLeCompte();
     $this->actingAs($compte);
@@ -347,9 +365,27 @@ it('dit au formulaire si l’adresse est vérifiée, et qu’elle ne l’est plu
         ->assertSessionHasNoErrors()
         ->assertRedirect('/profile/edit');
 
+    // Le profil attend le lien : l'adresse et sa vérification n'ont pas bougé.
+    $this->get('/profile/edit')->assertInertia(
+        fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page
+            ->where('auth.user.email', 'titulaire@example.org')
+            ->where('adresseVerifiee', true),
+    );
+
+    $this->get(LienDeChangementDAdresseRecu::pour('nouvelle@example.org'));
+
     $this->get('/profile/edit')->assertInertia(
         fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page
             ->where('auth.user.email', 'nouvelle@example.org')
+            ->where('adresseVerifiee', true),
+    );
+
+    // Le panneau change l'adresse sans la prouver.
+    $compte->refresh()->update(['email' => 'par-le-panneau@example.org']);
+
+    $this->get('/profile/edit')->assertInertia(
+        fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page
+            ->where('auth.user.email', 'par-le-panneau@example.org')
             ->where('adresseVerifiee', false),
     );
 
@@ -449,16 +485,24 @@ it('ne prévient pas une ancienne adresse que personne n’a vérifiée', functi
     $compte = User::factory()->unverified()->create(['email' => 'jamais-verifiee@example.org']);
     $this->actingAs($compte);
 
+    // Le profil ne change plus rien sans le lien : les demandes n'envoient que lui.
     foreach (range(1, 3) as $tour) {
         $this->patch('/profile', ['name' => 'X', 'email' => "ailleurs{$tour}@example.org", 'current_password' => 'password'])
             ->assertSessionHasNoErrors();
-        $this->patch('/profile', ['name' => 'X', 'email' => 'jamais-verifiee@example.org', 'current_password' => 'password'])
-            ->assertSessionHasNoErrors();
+    }
+
+    expect($compte->refresh()->email)->toBe('jamais-verifiee@example.org');
+    Notification::assertSentOnDemandTimes(AdresseDuCompteChangee::class, 0);
+
+    // Le panneau, lui, change l'adresse aussitôt, sans la vérifier.
+    foreach (range(1, 3) as $tour) {
+        $compte->refresh()->update(['email' => "ailleurs{$tour}@example.org"]);
+        $compte->refresh()->update(['email' => 'jamais-verifiee@example.org']);
     }
 
     expect($compte->refresh()->email)->toBe('jamais-verifiee@example.org')
         ->and($compte->email_verified_at)->toBeNull();
-    Notification::assertNothingSent();
+    Notification::assertSentOnDemandTimes(AdresseDuCompteChangee::class, 0);
 });
 
 /**
@@ -498,10 +542,10 @@ function changementDAdresseAvisEnvoyes(): array
 it('prévient la dernière adresse vérifiée de chaque changement tant que le compte n’est pas revérifié', function (): void {
     Notification::fake();
     $compte = changementDAdresseLeCompte();
-    $this->actingAs($compte);
 
-    $this->patch('/profile', ['name' => 'X', 'email' => 't@e.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
-    $this->patch('/profile', ['name' => 'X', 'email' => 'tiers@autre.example.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
+    // Le panneau change l'adresse sans la vérifier, deux fois de suite.
+    $compte->update(['email' => 't@e.org']);
+    $compte->refresh()->update(['email' => 'tiers@autre.example.org']);
 
     $compte->refresh();
 
@@ -526,10 +570,10 @@ it('prévient la dernière adresse vérifiée de chaque changement tant que le c
 it('ne prévient pas l’adresse que le compte reprend, mais la prévient du changement suivant', function (): void {
     Notification::fake();
     $compte = changementDAdresseLeCompte();
-    $this->actingAs($compte);
 
+    // Par le panneau, qui ne vérifie pas la nouvelle adresse.
     foreach (['ailleurs@example.org', 'titulaire@example.org', 'encore-ailleurs@example.org'] as $adresse) {
-        $this->patch('/profile', ['name' => 'X', 'email' => $adresse, 'current_password' => 'password'])->assertSessionHasNoErrors();
+        $compte->refresh()->update(['email' => $adresse]);
     }
 
     $avis = changementDAdresseAvisEnvoyes();
@@ -556,7 +600,8 @@ it('oublie l’ancienne adresse quand le compte est vérifié de nouveau', funct
     $compte = changementDAdresseLeCompte();
     $this->actingAs($compte);
 
-    $this->patch('/profile', ['name' => 'X', 'email' => 'nouvelle@example.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
+    // Le panneau change l'adresse sans la vérifier.
+    $compte->update(['email' => 'nouvelle@example.org']);
 
     expect($compte->refresh()->ancienne_adresse_verifiee)->toBe('titulaire@example.org');
 
@@ -572,12 +617,15 @@ it('oublie l’ancienne adresse quand le compte est vérifié de nouveau', funct
 
     // Le changement suivant prévient l'adresse vérifiée qu'il quitte, et elle seule.
     $this->patch('/profile', ['name' => 'X', 'email' => 'encore@example.org', 'current_password' => 'password'])->assertSessionHasNoErrors();
+    $this->get(LienDeChangementDAdresseRecu::pour('encore@example.org'))->assertRedirect('/profile/edit');
 
     $avis = changementDAdresseAvisEnvoyes();
 
+    // Le lien suivi vérifie la nouvelle adresse : il n'y a plus rien à retenir.
     expect(array_column($avis, 'destinataire'))->toBe([['mail' => 'titulaire@example.org'], ['mail' => 'nouvelle@example.org']])
         ->and(array_column($avis, 'nouvelle'))->toBe(['nouvelle@example.org', 'encore@example.org'])
-        ->and($compte->refresh()->ancienne_adresse_verifiee)->toBe('nouvelle@example.org');
+        ->and($compte->refresh()->ancienne_adresse_verifiee)->toBeNull()
+        ->and($compte->email_verified_at)->not->toBeNull();
 });
 
 it('envoie le courriel pour de bon, et seulement une fois la transaction validée', function (): void {
@@ -654,6 +702,7 @@ it('n’écrit dans l’avis aucune phrase venue de la nouvelle adresse', functi
     $this->actingAs($compte)
         ->patch('/profile', ['name' => 'Titulaire', 'email' => 'x@y.migration-automatique-rien-a-faire', 'current_password' => 'password'])
         ->assertSessionHasNoErrors();
+    $this->get(LienDeChangementDAdresseRecu::pour('x@y.migration-automatique-rien-a-faire'))->assertRedirect('/profile/edit');
 
     Notification::assertSentOnDemand(
         AdresseDuCompteChangee::class,

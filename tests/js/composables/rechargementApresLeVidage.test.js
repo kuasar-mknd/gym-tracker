@@ -33,8 +33,18 @@ const seanceDuServeur = () => ({
     })),
 })
 
-/** `router.reload` : la page reçoit la séance que le serveur rend à cet instant. */
-const recharger = vi.fn((page) => page.rafraichir(seanceDuServeur()))
+/**
+ * `router.reload` : la page reçoit la séance que le serveur rend, à la réponse
+ * de la visite. Une réponse arrive dans une tâche à elle, jamais pendant
+ * l'annonce du vidage : la page a déjà adopté, en microtâches, ce qu'elle
+ * suivait (#2048). Le test attend cette réponse par `reponseDuRechargement()`.
+ */
+const recharger = vi.fn((page) =>
+    new Promise((resolve) => setTimeout(resolve)).then(() => page.rafraichir(seanceDuServeur())),
+)
+
+/** La réponse du dernier rechargement demandé, appliquée à la page. */
+const reponseDuRechargement = () => recharger.mock.results.at(-1)?.value
 
 /** Sans réseau : l'exercice 7, une série corrigée à 60 kg, puis la page meurt. */
 const unExerciceHorsLigneAvantUnRechargement = async () => {
@@ -84,6 +94,7 @@ describe('la séance rechargée pendant que la file attend', () => {
         const page = await monterLaSeance(seanceVide(), { recharger })
 
         expect(recharger).toHaveBeenCalledTimes(1)
+        await reponseDuRechargement()
         expect(ecran(page)).toEqual([{ ligne: 70, series: [100] }])
         expect(page.ligne().sets[0]).toMatchObject({ weight: 60 })
     })
@@ -91,9 +102,10 @@ describe('la séance rechargée pendant que la file attend', () => {
     it('se recharge aussi quand le vidage aboutit après le montage, une fois la file vide', async () => {
         await unExerciceHorsLigneAvantUnRechargement()
 
-        // Toujours sans réseau au montage : la file attend, rien n'a changé.
+        // Toujours sans réseau au montage : la file attend, et la page la montre (#2048).
         const page = await monterLaSeance(seanceVide(), { recharger })
         expect(recharger).not.toHaveBeenCalled()
+        expect(page.ligne().sets[0]).toMatchObject({ weight: 60 })
 
         // Le réseau ne revient que le temps de créer l'exercice.
         reseau.serveur.enLigne = true
@@ -115,7 +127,9 @@ describe('la séance rechargée pendant que la file attend', () => {
         await flushPromises()
 
         expect(recharger).toHaveBeenCalledTimes(1)
+        await reponseDuRechargement()
         expect(ecran(page)).toEqual([{ ligne: 70, series: [100] }])
+        expect(page.unsyncedSetIds.value.size).toBe(0)
     })
 
     /*
@@ -139,7 +153,18 @@ describe('la séance rechargée pendant que la file attend', () => {
         ])
         expect(page.sync.enAttente()).toBe(0)
         expect(recharger).toHaveBeenCalledTimes(1)
-        expect(ecran(page)).toEqual([{ ligne: 70, series: [] }])
+        await reponseDuRechargement()
+
+        /*
+         * La série refusée reste à l'écran, marquée, comme celle qu'on vient
+         * d'ajouter quand le serveur la refuse au vidage : la page la montrait
+         * depuis son ouverture (#2048), et la faire disparaître effacerait une
+         * saisie sans un mot. Le rapport a dit laquelle.
+         */
+        const [serieRefusee] = page.ligne().sets
+        expect(ecran(page)).toEqual([{ ligne: 70, series: [serieRefusee.id] }])
+        expect(page.unsyncedSetIds.value.has(String(serieRefusee.id))).toBe(true)
+        expect(page.editError.value).toBe("La série 1 de « Squat » n'a pas pu être enregistrée.")
     })
 
     it('se recharge aussi quand la dernière écriture est refusée sans partir, son exercice refusé', async () => {
@@ -171,7 +196,15 @@ describe('la séance rechargée pendant que la file attend', () => {
         expect(page.sync.failedRequests().map((refus) => refus.url)).toEqual(['/api/v1/workout-lines', '/api/v1/sets'])
         expect(page.sync.enAttente()).toBe(0)
         expect(recharger).toHaveBeenCalledTimes(1)
-        expect(ecran(page)).toEqual([{ ligne: 70, series: [] }])
+        await reponseDuRechargement()
+
+        // L'exercice refusé et sa série restent à l'écran, la série marquée, comme refusés depuis la page.
+        const refusee = page.ligne(1)
+        expect(ecran(page)).toEqual([
+            { ligne: 70, series: [] },
+            { ligne: refusee.id, series: [refusee.sets[0].id] },
+        ])
+        expect(page.unsyncedSetIds.value.has(String(refusee.sets[0].id))).toBe(true)
     })
 
     /*

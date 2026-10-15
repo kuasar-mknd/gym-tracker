@@ -92,6 +92,8 @@ function allowedEntryPoints(): array
         'profile.edit',
         'verification.notice',
         'password.confirm',
+        // Reached from the confirmation email sent to a new address (signed link).
+        'adresse.confirmer',
 
         // Known dead: Route::resource scaffolding with no controller method and no
         // page — Goals creates through an inline form on its index. Left listed so

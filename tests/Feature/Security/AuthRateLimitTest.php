@@ -24,8 +24,8 @@ class AuthRateLimitTest extends TestCase
 
             $this->assertNotEquals(429, $response->status(), "Request $i failed with 429");
 
-            // Successful registration logs the user in. We must logout to try registering again as a guest.
-            // This also ensures we are testing the endpoint's IP rate limiting, not user-specific limits.
+            // L'inscription ne connecte plus personne (le compte attend son lien) :
+            // la déconnexion ne sert qu'à garder l'essai d'un invité si cela changeait.
             auth()->logout();
         }
 
