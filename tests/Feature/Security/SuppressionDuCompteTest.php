@@ -22,6 +22,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -813,11 +814,14 @@ it("laisse les entrées d'audit d'avant #1670 sur les données du compte à la p
  * posait de rotation, et cette copie vivait autant que le conteneur ; app,
  * worker et scheduler la bornent désormais par la taille (`logging`, pilote
  * `json-file`, `max-size` et `max-file`, #1938). Une rotation par taille ne
- * donne aucune durée : la page de profil dit seulement que de nouvelles
- * lignes remplacent ces traces, sans leur promettre un nombre de jours.
+ * donne aucune durée. La page de profil promet quatorze jours aux journaux du
+ * serveur, que tient la purge du volume `journaux` (#2053), et dit de cette
+ * seconde copie, bornée par sa taille, qu'elle n'a pas de durée garantie : de
+ * nouvelles lignes en remplacent les traces. Elle ne dit plus des journaux du
+ * serveur, tous confondus, qu'ils n'ont d'autre durée que ce remplacement.
  * `LesJournauxDesConteneursSontBornesTest` tient les valeurs du réglage.
  */
-it('dit des journaux du serveur ce que tient leur rotation par taille, sans leur promettre de durée', function (): void {
+it('promet quatorze jours aux journaux du serveur, et aucune durée à la copie de docker logs, que sa rotation par taille ne borne pas dans le temps', function (): void {
     $composition = Yaml::parseFile(base_path('docker-compose.prod.yml'));
     assert(is_array($composition) && is_array($composition['services'] ?? null));
     $promesse = preg_replace('/\s+/', ' ', (string) file_get_contents(resource_path('js/Pages/Profile/Partials/DeleteUserForm.vue')));
@@ -833,9 +837,9 @@ it('dit des journaux du serveur ce que tient leur rotation par taille, sans leur
             ->and(data_get($service, 'logging.options'))->toBeArray()->toHaveKeys(['max-size', 'max-file']);
     }
 
-    expect($promesse)->toContain('Les journaux du serveur peuvent aussi en garder des traces, le temps que de nouvelles lignes les remplacent')
-        ->and($promesse)->not->toContain('sans durée fixe')
-        ->and($promesse)->not->toMatch('/\d+ jours dans les journaux|trente jours dans les journaux/');
+    expect($promesse)->toContain('quatorze jours dans les journaux du serveur')
+        ->and($promesse)->toContain('Une seconde copie des journaux, bornée par sa taille, peut aussi en garder des traces sans durée garantie, le temps que de nouvelles lignes les remplacent.')
+        ->and($promesse)->not->toContain('Les journaux du serveur peuvent aussi en garder des traces');
 });
 
 /**
@@ -844,6 +848,22 @@ it('dit des journaux du serveur ce que tient leur rotation par taille, sans leur
 function compteSupprimeLeFichierDuJour(DateTimeImmutable $aujourdhui, int $jours): string
 {
     return 'app-'.$aujourdhui->modify("-{$jours} days")->format('Y-m-d').'.log';
+}
+
+/**
+ * Les fichiers du jour d'un dossier de journaux, par ordre alphabétique.
+ *
+ * @return list<string>
+ */
+function compteSupprimeLesFichiersDuJour(string $dossier): array
+{
+    $fichiers = glob($dossier.'/app-*.log');
+    assert(is_array($fichiers));
+
+    $restants = array_map(basename(...), $fichiers);
+    sort($restants);
+
+    return $restants;
 }
 
 /**
@@ -867,13 +887,22 @@ function compteSupprimeLesFichiersDuJourRestants(string $dossier, DateTimeImmuta
 
     Log::build([...$canal, 'path' => $dossier.'/app.log', 'level' => 'debug'])->info('nouvelle ligne');
 
-    $fichiers = glob($dossier.'/app-*.log');
-    assert(is_array($fichiers));
+    return compteSupprimeLesFichiersDuJour($dossier);
+}
 
-    $restants = array_map(basename(...), $fichiers);
-    sort($restants);
+/**
+ * Les fichiers du jour qui restent dans ce dossier de journaux après la
+ * purge planifiée, lancée sur lui.
+ *
+ * @return list<string>
+ */
+function compteSupprimeLesFichiersDuJourApresLaPurge(string $dossier): array
+{
+    config(['logging.channels.daily.path' => $dossier.'/app.log']);
 
-    return $restants;
+    expect(Artisan::call('journaux:purger'))->toBe(0, Artisan::output());
+
+    return compteSupprimeLesFichiersDuJour($dossier);
 }
 
 /*
@@ -882,14 +911,15 @@ function compteSupprimeLesFichiersDuJourRestants(string $dossier, DateTimeImmuta
  * les quatorze fichiers les plus récents de chaque conteneur, pas quatorze
  * jours de calendrier : Monolog n'efface le plus ancien qu'en ouvrant le
  * fichier d'un nouveau jour, et seulement s'il y en a plus de quatorze. Un
- * conteneur qui écrit peu (`LOG_LEVEL: info`) garde ainsi un fichier de
+ * conteneur qui écrit peu (`LOG_LEVEL: info`) gardait ainsi un fichier de
  * soixante jours, et ses traces d'un compte supprimé, tant que quatorze jours
- * plus récents n'ont pas été écrits. Le README disait ce fichier gardé
- * quatorze jours (#1938) : il dit désormais les quatorze derniers jours où le
- * conteneur a écrit, et la page de profil, qui ne promet aucune durée aux
- * journaux du serveur, reste vraie.
+ * plus récents n'avaient pas été écrits (#1938). La purge planifiée
+ * (`journaux:purger`, #2053) les efface chaque nuit à quatorze jours de
+ * calendrier, et le README le dit : il ne parle plus des « quatorze derniers
+ * jours où le conteneur a écrit ». La prémisse reste vérifiée : le jour où
+ * Monolog bornerait lui-même par la durée, la purge deviendrait redondante.
  */
-it('garde dans le volume `journaux` les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de calendrier, comme le dit le README', function (): void {
+it('efface du volume `journaux` ce que le canal `daily` y garde au-delà de quatorze jours de calendrier, comme le dit le README', function (): void {
     $dossier = sys_get_temp_dir().'/journaux-du-jour-'.bin2hex(random_bytes(6));
     $aujourdhui = new DateTimeImmutable();
     $readme = (string) preg_replace('/\s+/', ' ', (string) file_get_contents(base_path('README.md')));
@@ -906,11 +936,16 @@ it('garde dans le volume `journaux` les quatorze derniers jours où le conteneur
             ->and($peu)->toContain(...array_map(static fn (int $jours): string => compteSupprimeLeFichierDuJour($aujourdhui, $jours), [60, 40, 20]))
             ->and($chaqueJour)->toHaveCount(14)
             ->and($chaqueJour)->not->toContain(compteSupprimeLeFichierDuJour($aujourdhui, 60))
-            ->and($chaqueJour)->toContain(compteSupprimeLeFichierDuJour($aujourdhui, 13))
-            ->and(str_contains($readme, 'les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de calendrier'))
-            ->toBeTrue('Le README doit dire ce que garde le volume `journaux` : les quatorze derniers jours où le conteneur a écrit.')
-            ->and(preg_match_all('/gardé quatorze jours|quatorze jours dans le volume/', $readme))
-            ->toBe(0, 'Le README promet quatorze jours au volume `journaux`, que le canal `daily` ne borne pas par la durée.');
+            ->and($chaqueJour)->toContain(compteSupprimeLeFichierDuJour($aujourdhui, 13));
+
+        expect(compteSupprimeLesFichiersDuJourApresLaPurge($dossier.'/peu'))->toBe([compteSupprimeLeFichierDuJour($aujourdhui, 0)])
+            ->and(compteSupprimeLesFichiersDuJourApresLaPurge($dossier.'/chaque-jour'))->toBe($chaqueJour)
+            ->and(str_contains($readme, 'quatorze jours dans le volume `journaux`'))
+            ->toBeTrue('Le README doit dire ce que garde le volume `journaux` : quatorze jours, que tient la purge planifiée.')
+            ->and(str_contains($readme, '`journaux:purger`'))
+            ->toBeTrue('Le README doit nommer la purge planifiée qui borne le volume `journaux`.')
+            ->and(preg_match_all('/derniers jours où le conteneur a écrit|pas quatorze jours de calendrier/', $readme))
+            ->toBe(0, 'Le README dit encore que le volume `journaux` garde les quatorze derniers jours où le conteneur a écrit : la purge planifiée le borne à quatorze jours de calendrier.');
     } finally {
         File::deleteDirectory($dossier);
     }
