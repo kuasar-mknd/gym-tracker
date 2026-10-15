@@ -162,17 +162,20 @@ class CustomPolicyTest extends TestCase
         $directives = $this->getDirectivesFromPolicy($policy);
 
         /**
-         * bunny.net is still allowed because Horizon, Telescope, Pulse and
-         * Filament each pull their dashboard font from it, and none of those
-         * views are ours to change.
+         * Plus de site de polices : Horizon, Telescope et Pulse y prenaient la
+         * fonte de leur tableau de bord, et leurs gabarits sont compilés sans
+         * ces balises (`RetireLesRessourcesDistantesDesPaquets`). Plus de
+         * service d'avatars : celui du panneau est dessiné par l'application
+         * et servi en `data:` (`AvatarDesInitiales`). Affirmés absents, comme
+         * Google plus bas : une permission qui revient passe inaperçue en
+         * relecture. `LaCspNOuvreAucuneAutreOrigineTest` tient le reste.
          */
-        $this->assertContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertNotContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertNotContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::FONT)]);
+        $this->assertNotContains('https://ui-avatars.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
 
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::IMG)]);
-        $this->assertContains('https://ui-avatars.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
         $this->assertContains('https://www.svgrepo.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
-
-        $this->assertContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::FONT)]);
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::FONT)]);
 
         /**
