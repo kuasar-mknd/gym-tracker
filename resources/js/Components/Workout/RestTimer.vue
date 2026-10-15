@@ -212,7 +212,9 @@ watch(
 </script>
 
 <template>
-    <div class="animate-bounce-in z-flottant fixed right-4 bottom-36 left-4 sm:right-4 sm:left-auto sm:w-80">
+    <div
+        class="animate-bounce-in z-flottant right-sure-4 bottom-sure-36 left-sure-4 sm:right-sure-4 fixed sm:left-auto sm:w-80"
+    >
         <!-- Liquid Glass Card -->
         <div
             class="border-surface-card/20 bg-surface-card/10 overflow-hidden rounded-3xl border shadow-2xl backdrop-blur-md transition duration-300"

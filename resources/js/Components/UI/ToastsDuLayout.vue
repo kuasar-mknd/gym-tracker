@@ -145,7 +145,7 @@ onUnmounted(() => {
             >
                 <div
                     v-if="page.props.flash?.[type]"
-                    class="z-toast fixed top-20 right-4 left-4 sm:right-6 sm:left-auto sm:w-80"
+                    class="z-toast top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80"
                     role="alert"
                     :aria-live="type === 'error' ? 'assertive' : 'polite'"
                 >

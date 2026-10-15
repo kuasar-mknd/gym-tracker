@@ -133,4 +133,22 @@ describe('CelebrationModal', () => {
 
         wrapper.unmount()
     })
+
+    /**
+     * La carte se borne à la zone sûre (#2043), mais ne prend que 12 px
+     * au-dessus et au-dessous d'elle. Avec 24 px (`py-sure-6`, borne
+     * `hauteur-sure-12`), un téléphone couché sans encoche de 375 px de haut
+     * ne lui laissait que 327 px pour 342 : elle défilait, et le bas de son
+     * bouton touchait son bord arrondi. Elle tient entière dès 366 px.
+     */
+    it('garde 12 px au-dessus et au-dessous de la carte, bornée à la zone sûre', async () => {
+        const wrapper = await mountModal()
+        const carte = wrapper.find('#achievement-title').element.closest('.rounded-3xl.border')
+
+        expect(carte.parentElement.classList).toContain('py-sure-3')
+        expect(carte.classList).toContain('hauteur-sure-6')
+        expect(carte.classList).toContain('overflow-y-auto')
+
+        wrapper.unmount()
+    })
 })

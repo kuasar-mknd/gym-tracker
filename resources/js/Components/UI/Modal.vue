@@ -181,8 +181,6 @@ const isBottomSheet = computed(() => props.position === 'bottom')
 const containerClass = computed(() =>
     isBottomSheet.value ? 'flex min-h-full flex-col justify-end sm:justify-center' : '',
 )
-
-const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
 </script>
 
 <template>
@@ -194,7 +192,16 @@ const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
             @close="onDialogClose"
             @cancel="onDialogCancel"
         >
-            <div class="z-modale fixed inset-0 overflow-y-auto px-4 py-6 sm:px-0" :class="containerClass" scroll-region>
+            <!--
+              Les marges de la fenêtre comptent la barre d'état, l'encoche et
+              l'indicateur d'accueil (#2043) : `py-6` seul la posait à 24 px du
+              haut de l'écran, sous la barre d'état de l'application installée.
+            -->
+            <div
+                class="z-modale px-sure-4 py-sure-6 sm:px-sure-0 fixed inset-0 overflow-y-auto"
+                :class="containerClass"
+                scroll-region
+            >
                 <Transition
                     enter-active-class="ease-out duration-300"
                     enter-from-class="opacity-0"
@@ -217,16 +224,26 @@ const panelSpacingClass = computed(() => (isBottomSheet.value ? '' : 'mb-6'))
                     leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                 >
                     <!--
-                      overflow-y-auto, not overflow-hidden: the panel is capped
-                      at 85vh by glass-modal, and `hidden` clipped everything
-                      past that cap with no way to reach it — the bottom of a
-                      long exercise list simply did not exist. `auto` clips the
-                      same rounded corners and scrolls instead of swallowing.
+                      overflow-y-auto, et non overflow-hidden : `hidden` coupait
+                      tout ce qui dépassait la hauteur permise, sans moyen d'y
+                      accéder — le bas d'une longue liste d'exercices n'existait
+                      plus. `auto` garde les coins arrondis et fait défiler.
+
+                      La hauteur permise est la zone sûre moins les marges de la
+                      fenêtre (`hauteur-sure-12` sous le `py-sure-6` du dessus),
+                      et non plus 85vh, qui ignorait les barres (#2043). Pas de
+                      marge verticale ici : le `py-sure-6` fait déjà l'écart du
+                      bas, et un `mb-6` de plus faisait déborder la zone de
+                      défilement de 24 px, si bien que toute la fenêtre glissait
+                      contre la barre d'état. La fenêtre est une colonne flexible : un
+                      contenu qui doit remplir cette hauteur, comme la liste de
+                      « Ajouter un exercice », s'y étire et défile en lui-même
+                      au lieu de laisser un vide sous la fenêtre.
                     -->
                     <div
                         v-show="show"
-                        class="glass-modal text-text-main border-surface-card/20 bg-surface-card/80 transform overflow-y-auto rounded-3xl border shadow-2xl backdrop-blur-xl transition sm:mx-auto sm:w-full"
-                        :class="[maxWidthClass, panelSpacingClass]"
+                        class="glass-modal text-text-main border-surface-card/20 bg-surface-card/80 hauteur-sure-12 flex transform flex-col overflow-y-auto rounded-3xl border shadow-2xl backdrop-blur-xl transition sm:mx-auto sm:w-full"
+                        :class="maxWidthClass"
                     >
                         <slot v-if="showSlot" />
                     </div>

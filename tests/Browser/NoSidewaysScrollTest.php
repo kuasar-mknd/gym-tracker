@@ -180,10 +180,12 @@ class NoSidewaysScrollTest extends DuskTestCase
     /**
      * Les largeurs de bureau où la barre de navigation doit tenir.
      *
-     * Elle s'ouvre dès `sm` (640 px). Logo et nom ensemble lui demandaient
-     * 1 103 px de large avec un compte « Test User », 1 151 avec le nom long
-     * de userWithContent(), plus les 15 px de l'ascenseur que Chrome montre
-     * ici : en deçà, le menu du compte sortait de l'écran, chevron compris.
+     * Elle s'ouvre dès 640 px de large sur un écran haut, dès 1 024 px sur
+     * tout écran (variante `bureau:` de app.css). Logo et nom ensemble lui
+     * demandaient 1 103 px de large avec un compte « Test User », 1 151 avec
+     * le nom long de userWithContent(), plus les 15 px de l'ascenseur que
+     * Chrome montre ici : en deçà, le menu du compte sortait de l'écran,
+     * chevron compris.
      * Le logo seul en demande 947 avec ce nom. 1 080 px est la largeur d'un
      * écran 1080p tourné en portrait, entre `lg` et `xl` ; 1 280 px, la
      * largeur où elle montrait aussi le nom, avant que le logo ne s'y montre

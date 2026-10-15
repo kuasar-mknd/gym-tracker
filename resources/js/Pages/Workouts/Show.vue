@@ -253,7 +253,7 @@ onUnmounted(() => {
                 v-if="editError"
                 role="alert"
                 dusk="set-edit-error"
-                class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent z-toast fixed inset-x-3 top-20 rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
+                class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent z-toast left-sure-3 right-sure-3 top-sure-20 fixed rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
             >
                 {{ editError }}
             </div>

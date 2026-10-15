@@ -10,7 +10,7 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * Or c'est cette barre qui porte la CLOCHE des notifications. Une page qui
  * n'annonce pas son titre n'a donc pas seulement l'air différente des autres :
  * sur téléphone, elle ne donne aucun accès aux notifications, et rien à l'écran
- * ne dit où l'on se trouve puisque l'en-tête de bureau est en `hidden sm:block`.
+ * ne dit où l'on se trouve puisque l'en-tête de bureau est en `hidden bureau:block`.
  *
  * Quatre pages étaient dans ce cas — dont l'accueil, la bibliothèque et les
  * statistiques. Sam l'a vu à l'œil, en comparant deux captures.

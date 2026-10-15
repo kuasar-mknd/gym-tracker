@@ -412,6 +412,10 @@ final class AppServiceProvider extends ServiceProvider
      * s'ouvre au super administrateur sans passer par `shield:generate` en
      * production, et une permission Shield accordée à un autre rôle marche aussi.
      *
+     * `view-diagnostic` ouvre la page « Aperçu du diagnostic » (#2032), qui
+     * montre ce que l'agent de maintenance lirait des exceptions, de la
+     * santé, des files et des erreurs navigateur.
+     *
      * `viewPulse` aussi : Pulse pose sa propre porte, ouverte au seul
      * environnement `local`, si bien que `/backoffice/pulse` répondait 403 en
      * production et que son lien restait caché. La nôtre est définie après la
@@ -438,6 +442,7 @@ final class AppServiceProvider extends ServiceProvider
             'View:TachePlanifiee',
             'view-logs',
             'view-outils',
+            'view-diagnostic',
             'viewPulse',
         ];
 
