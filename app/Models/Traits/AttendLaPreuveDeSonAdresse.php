@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Traits;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Un compte ouvert par l'inscription attend la preuve de son adresse
@@ -52,5 +53,33 @@ trait AttendLaPreuveDeSonAdresse
     public function estEnAttente(): bool
     {
         return $this->getRawOriginal('en_attente_depuis') !== null;
+    }
+
+    /**
+     * Les comptes ouverts : tous ceux qui n'attendent pas la preuve de leur
+     * adresse, comptes d'avant la colonne, du panneau et des fournisseurs
+     * compris, vérifiés ou non. Ce que compte tout ce qui compte des comptes
+     * (tuiles et graphique du panneau) : un compte en attente ne se connecte
+     * pas, et s'efface s'il n'est jamais ouvert.
+     *
+     * @param  Builder<User>  $requete
+     * @return Builder<User>
+     */
+    public function scopeOuverts(Builder $requete): Builder
+    {
+        return $requete->whereNull('en_attente_depuis');
+    }
+
+    /**
+     * Les comptes qui attendent encore la preuve de leur adresse : la
+     * condition d'`estEnAttente()`, en requête. Le complément exact
+     * d'`ouverts()`.
+     *
+     * @param  Builder<User>  $requete
+     * @return Builder<User>
+     */
+    public function scopeEnAttente(Builder $requete): Builder
+    {
+        return $requete->whereNotNull('en_attente_depuis');
     }
 }
