@@ -187,7 +187,8 @@ it('ne laisse aucun canari dans la page servie au navigateur', function (): void
  * de ligne compris : celui-ci imite une exception enveloppante et des
  * cadres de pile qui portent le code canari. Le job échoue par
  * `queue:work`, après les autres : son échec est le premier de la liste, et
- * la page en montre le détail.
+ * la page en montre le détail. Il reste rangé sous l'exception que le job a
+ * levée : le « Next » du message ne suit pas la fin d'une pile.
  */
 it('ne laisse aucun canari dans la pile d’un job dont le message imite une pile', function (): void {
     dispatch(new JobDuDiagnosticAuMessageQuiImiteUnePile())->onConnection('database');
@@ -203,6 +204,8 @@ it('ne laisse aucun canari dans la pile d’un job dont le message imite une pil
 
     expect(DB::table('failed_jobs')->latest('id')->value('exception'))->toContain(JobDuDiagnosticAuMessageQuiImiteUnePile::message())
         ->and(data_get($structure, 'resume.donnees.files.echecs.0.job'))->toBe(JobDuDiagnosticAuMessageQuiImiteUnePile::class)
+        ->and(data_get($structure, 'resume.donnees.files.echecs.0.exception'))->toBe(RuntimeException::class)
+        ->and(data_get($structure, 'details.donnees.echec_de_job.exception'))->toBe(RuntimeException::class)
         ->and(CanarisDuDiagnostic::trouvesDans($commande))->toBe([])
         ->and(CanarisDuDiagnostic::trouvesDans($page))->toBe([])
         ->and(CanarisDuDiagnostic::trouvesDans((string) json_encode($structure, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))->toBe([])

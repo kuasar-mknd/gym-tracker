@@ -6,8 +6,8 @@ namespace App\Services\Diagnostic\Projections;
 
 use App\Services\Diagnostic\ValeurLue;
 use App\Services\Diagnostic\Vocabulaire;
+use Composer\Autoload\ClassLoader;
 use Illuminate\Database\Query\Builder;
-use Throwable;
 
 /**
  * L'exception d'un job échoué, telle que `failed_jobs` la garde : du texte,
@@ -15,13 +15,19 @@ use Throwable;
  * ligne.
  *
  * Quand l'exception en enveloppe une autre, PHP écrit d'abord la plus
- * ancienne, puis `\n\nNext ` et la suivante : celle que le job a levée vient
- * en dernier, et c'est elle que le diagnostic lit, comme la table des
- * exceptions garde la classe levée. La base extrait ce dernier bloc et la
- * tête du texte (`lire()`). Un message peut contenir `\n\nNext ` lui aussi :
- * le dernier bloc n'est pris que s'il nomme une exception que l'application
- * connaît, sinon la tête, que PHP écrit avant tout message et qu'aucun ne
- * peut contrefaire (`levee()`).
+ * ancienne, puis, à la fin de sa pile (`#N {main}`), `\n\nNext ` et la
+ * suivante : celle que le job a levée vient en dernier, et c'est elle que le
+ * diagnostic lit, comme la table des exceptions garde la classe levée. La
+ * base extrait ce dernier bloc et la tête du texte (`lire()`). Un message
+ * peut contenir `\n\nNext ` lui aussi : le séparateur n'est reconnu qu'à la
+ * fin d'une pile, et le dernier bloc n'est pris que s'il nomme une classe
+ * que l'application connaît, sinon la tête, que PHP écrit avant tout
+ * message et qu'aucun ne peut contrefaire (`levee()`). Savoir qu'une classe
+ * est connue ne charge aucun fichier : un nom lu en base ne choisit jamais
+ * le code qui s'exécute, et un chargement qui échoue ne fait pas tomber la
+ * lecture. Seul un message qui imite la fin d'une pile et nomme une classe
+ * connue fait encore ranger l'échec sous cette classe : le texte ne permet
+ * pas de les distinguer, et la valeur reste du vocabulaire fermé.
  *
  * La pile de l'exception levée est ce que PHP écrit en dernier, après son
  * message : la base l'extrait après le dernier `Stack trace:` de la colonne
@@ -54,8 +60,11 @@ final class ExceptionDUnJobEchoue
     /** Ce que la liste lit de chaque morceau : assez pour la classe. */
     public const int OCTETS_DE_LA_LISTE = 512;
 
-    /** Ce qui sépare, dans le texte, une exception de celle qu'elle enveloppe. */
-    public const string SUIVANTE = "\n\nNext ";
+    /**
+     * Ce qui sépare, dans le texte, une exception de celle qui l'enveloppe :
+     * la fin de sa pile, que PHP écrit toujours (`#N {main}`), puis `Next`.
+     */
+    public const string SUIVANTE = "{main}\n\nNext ";
 
     /** Ce qui sépare, dans le texte, une exception de sa pile. */
     public const string PILE = "\nStack trace:\n";
@@ -70,7 +79,7 @@ final class ExceptionDUnJobEchoue
 
     /**
      * La lecture, avec la tête de la colonne `exception`
-     * (`tete_de_l_exception`) et le bloc qui suit son dernier `\n\nNext `
+     * (`tete_de_l_exception`) et le bloc qui suit son dernier séparateur
      * (`fin_de_l_exception`), chacun coupé en base à `$octets` octets. Sans
      * exception enveloppée, les deux sont le même texte.
      */
@@ -97,13 +106,11 @@ final class ExceptionDUnJobEchoue
 
     /**
      * Le texte de l'exception que le job a levée : le dernier bloc s'il
-     * nomme une exception que l'application connaît, sinon la tête.
+     * nomme une classe que l'application connaît, sinon la tête.
      */
     public static function levee(mixed $tete, mixed $fin): string
     {
-        $classe = self::classe($fin);
-
-        return match ($classe !== null && is_a($classe, Throwable::class, true)) {
+        return match (self::connue(self::classe($fin))) {
             true => ValeurLue::morceau($fin),
             false => ValeurLue::morceau($tete),
         };
@@ -119,6 +126,20 @@ final class ExceptionDUnJobEchoue
         $tete = explode("\nStack trace:", is_string($texte) ? $texte : '', 2)[0];
 
         return self::sansLEndroit(self::morceau(self::APRES_LA_CLASSE, $tete, 'message') ?? $tete);
+    }
+
+    /**
+     * Une classe que l'application connaît, sans qu'aucun fichier soit
+     * chargé pour le savoir : déclarée (celles de PHP le sont toutes), ou
+     * trouvée par l'autochargeur de Composer, qui dit où elle est sans
+     * l'inclure. Savoir si elle est une exception demanderait de la charger.
+     */
+    private static function connue(?string $classe): bool
+    {
+        return $classe !== null && (
+            class_exists($classe, false)
+            || array_any(ClassLoader::getRegisteredLoaders(), static fn (ClassLoader $chargeur): bool => $chargeur->findFile($classe) !== false)
+        );
     }
 
     /**

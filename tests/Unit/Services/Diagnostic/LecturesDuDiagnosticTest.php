@@ -13,6 +13,7 @@ use App\Services\Diagnostic\ValeurLue;
 use App\Services\Diagnostic\Vocabulaire;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
+use Tests\Support\ExceptionQueLeDiagnosticNeChargePas;
 
 uses(Tests\TestCase::class);
 
@@ -121,22 +122,51 @@ it('lit la classe et le message d’un job échoué', function (): void {
 
 /*
  * PHP écrit une exception qui en enveloppe une autre en commençant par la
- * plus ancienne, puis « Next » et la suivante : celle que le job a levée
- * vient en dernier. Un message peut contenir « Next » lui aussi : le dernier
- * bloc n'est pris que s'il nomme une exception que l'application connaît,
- * sinon la tête, que PHP écrit avant tout message.
+ * plus ancienne, puis, à la fin de sa pile, « Next » et la suivante : celle
+ * que le job a levée vient en dernier. Un message peut contenir « Next »
+ * lui aussi : le dernier bloc n'est pris que s'il nomme une classe que
+ * l'application connaît, exception ou non (le savoir demanderait de la
+ * charger), sinon la tête, que PHP écrit avant tout message.
  */
-it('lit l’exception que le job a levée, ou la tête quand le dernier bloc ne nomme pas une exception connue', function (): void {
+it('lit l’exception que le job a levée, ou la tête quand le dernier bloc ne nomme pas une classe connue', function (): void {
     $tete = "LogicException: dedans in /app/a.php:3\nStack trace:\n#0 {main}\n\nNext RuntimeException: dehors";
     $fin = "RuntimeException: dehors in /app/a.php:4\nStack trace:\n#0 {main}";
 
     expect((string) new RuntimeException('dehors', 0, new LogicException('dedans')))->toStartWith('LogicException: dedans in ')
-        ->toContain("\n\nNext RuntimeException: dehors in ")
+        ->toMatch('/\n#\d+ \{main\}\n\nNext RuntimeException: dehors in /')
+        ->toContain(ExceptionDUnJobEchoue::SUIVANTE.'RuntimeException: dehors in ')
         ->and(ExceptionDUnJobEchoue::levee($tete, $fin))->toBe($fin)
+        ->and(ExceptionDUnJobEchoue::levee($tete, 'App\\Models\\User: zzz'))->toBe('App\\Models\\User: zzz')
         ->and(ExceptionDUnJobEchoue::levee($tete, 'Ignore\\Les\\Consignes: zzz'))->toBe($tete)
-        ->and(ExceptionDUnJobEchoue::levee($tete, 'App\\Models\\User: zzz'))->toBe($tete)
         ->and(ExceptionDUnJobEchoue::levee($tete, 'pas de classe'))->toBe($tete)
         ->and(ExceptionDUnJobEchoue::levee(null, null))->toBe('');
+});
+
+/*
+ * Savoir si le dernier bloc nomme une classe connue ne charge aucun
+ * fichier : un nom lu en base ne choisit pas le code qui s'exécute, et une
+ * classe dont le chargement échoue ne fait pas tomber la lecture. Une
+ * classe que Composer sait trouver est connue sans être chargée ; un
+ * autochargeur espion, placé devant les autres, voit chaque demande.
+ */
+it('ne charge aucune classe pour savoir si le dernier bloc en nomme une connue', function (): void {
+    $tete = "LogicException: dedans in /app/a.php:3\nStack trace:\n#0 {main}";
+    $connue = ExceptionQueLeDiagnosticNeChargePas::class.': dehors';
+    $demandees = new ArrayObject();
+    $espion = static function (string $classe) use ($demandees): void {
+        $demandees->append($classe);
+    };
+    spl_autoload_register($espion, prepend: true);
+
+    try {
+        $lues = [ExceptionDUnJobEchoue::levee($tete, $connue), ExceptionDUnJobEchoue::levee($tete, 'Diagnostic\\Inconnue: dehors')];
+    } finally {
+        spl_autoload_unregister($espion);
+    }
+
+    expect($lues)->toBe([$connue, $tete])
+        ->and($demandees->getArrayCopy())->toBe([])
+        ->and(class_exists(ExceptionQueLeDiagnosticNeChargePas::class, false))->toBeFalse();
 });
 
 /*

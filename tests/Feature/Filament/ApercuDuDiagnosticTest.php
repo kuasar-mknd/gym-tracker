@@ -12,10 +12,13 @@ use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\ResumeDuDiagnostic;
 use Filament\Facades\Filament;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 use Tests\Support\BoutonCopierLaStructure;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\JobDuDiagnosticAuMessageDonne;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\get;
@@ -189,4 +192,39 @@ it('ignore une portée forgée, n’en montre aucune quand rien n’est coché, 
         ->and(data_get($forgee, 'donnees.fenetre.depuis'))->toBe('2026-09-12T10:00:00+02:00')
         ->and(array_keys(is_array($vide['donnees'] ?? null) ? $vide['donnees'] : []))->toBe(['application', 'fenetre', 'portees'])
         ->and(data_get($vide, 'donnees.fenetre.depuis'))->toBe('2026-10-11T10:00:00+02:00');
+});
+
+/*
+ * Le message d'une exception peut écrire la fin d'une pile, « Next » et le
+ * nom d'une classe : le diagnostic ne charge aucune classe pour savoir s'il
+ * la connaît. Une classe dont le chargement échoue, comme celle qui étend
+ * la classe d'une extension absente, ferait sinon tomber la commande et la
+ * page tant que l'échec reste en base. L'autochargeur du test, placé devant
+ * les autres, lève comme ce chargement.
+ */
+it('ne charge aucune classe que nomme le message d’un job échoué : la commande et la page répondent', function (): void {
+    $classe = 'Diagnostic\\ClasseQuiNeSeChargePas';
+    $chargeur = static function (string $demandee) use ($classe): void {
+        if ($demandee === $classe) {
+            throw new Error('Class "Redis" not found');
+        }
+    };
+    dispatch(new JobDuDiagnosticAuMessageDonne("Réponse refusée\n#0 {main}\n\nNext {$classe}: refus"))->onConnection('database');
+    Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--tries' => 1, '--sleep' => 0]);
+    $administrateur = apercuDuDiagnosticSuperAdministrateur();
+    spl_autoload_register($chargeur, prepend: true);
+
+    try {
+        $code = Artisan::call('diagnostic:resume', ['--json' => true]);
+        $commande = json_decode(Artisan::output(), true);
+        $page = apercuDuDiagnosticPage($administrateur, [PorteeDeDiagnostic::Files, PorteeDeDiagnostic::TexteBrut]);
+    } finally {
+        spl_autoload_unregister($chargeur);
+    }
+
+    expect(DB::table('failed_jobs')->value('exception'))->toContain("{main}\n\nNext {$classe}: refus in ")
+        ->and($code)->toBe(0)
+        ->and(data_get($commande, 'donnees.files.echecs.0.exception'))->toBe(RuntimeException::class)
+        ->and(data_get(apercuDuDiagnosticJson($page, 'resume'), 'donnees.files.echecs.0.exception'))->toBe(RuntimeException::class)
+        ->and(data_get(apercuDuDiagnosticJson($page, 'details'), 'donnees.echec_de_job.exception'))->toBe(RuntimeException::class);
 });
