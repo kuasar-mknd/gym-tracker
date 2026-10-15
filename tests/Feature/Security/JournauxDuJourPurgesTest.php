@@ -5,12 +5,16 @@ declare(strict_types=1);
 use App\Models\TachePlanifiee;
 use Illuminate\Console\Scheduling\Event;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Console\Kernel as ConsoleKernel;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Symfony\Component\Console\Input\StringInput;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Yaml\Yaml;
 
 /*
@@ -49,19 +53,24 @@ function journauxDuJourLaPurge(): Event
 }
 
 /**
+ * La ligne du planning que le planificateur exécute, sans le binaire de PHP
+ * ni `artisan`, une fois posés la production et ce chemin du canal.
+ */
+function journauxDuJourLaLigne(string $cheminDuCanal): string
+{
+    config(['logging.channels.daily.path' => $cheminDuCanal]);
+    app()->detectEnvironment(static fn (): string => 'production');
+
+    return Str::after((string) journauxDuJourLaPurge()->command, "'artisan' ");
+}
+
+/**
  * Lance la purge par sa ligne du planning, en production, sur ce dossier de
  * journaux, et rend son code de sortie.
  */
 function journauxDuJourPurger(string $dossier): int
 {
-    config(['logging.channels.daily.path' => $dossier.'/scheduler.log']);
-
-    // La ligne que le planificateur exécute, sans le binaire de PHP ni `artisan`.
-    $commande = Str::after((string) journauxDuJourLaPurge()->command, "'artisan' ");
-
-    app()->detectEnvironment(static fn (): string => 'production');
-
-    return Artisan::call($commande);
+    return Artisan::call(journauxDuJourLaLigne($dossier.'/scheduler.log'));
 }
 
 /**
@@ -263,6 +272,37 @@ it('échoue en nommant le fichier du jour qu’elle n’a pas pu effacer', funct
         File::deleteDirectory($dossier);
     }
 });
+
+/*
+ * `glob()` rend une liste vide pour un dossier absent comme pour un dossier
+ * qui ne se lit pas : la purge y voyait un dossier sans fichier du jour, et
+ * réussissait sans rien effacer, le moniteur au vert. Elle lève une
+ * exception, que le processus `artisan` lancé par le planificateur rapporte
+ * avant de sortir en 1 : le moniteur des tâches met alors la santé au rouge.
+ * Les tests ont tous les droits, et un dossier sans droit de lecture s'y lit :
+ * un dossier qui manque, ou un fichier à sa place, suivent la même voie.
+ */
+it('échoue, par le processus que lance le planificateur, quand le dossier des journaux ne se lit pas', function (string $dossierDuCanal): void {
+    $dossier = journauxDuJourUnDossier();
+    $sortie = new BufferedOutput();
+    $message = 'Le dossier des journaux ne se lit pas : '.$dossier.'/'.$dossierDuCanal;
+
+    try {
+        journauxDuJourSemer($dossier, ['un-fichier']);
+        $ligne = journauxDuJourLaLigne($dossier.'/'.$dossierDuCanal.'/scheduler.log');
+        Exceptions::fake();
+
+        expect(app(ConsoleKernel::class)->handle(new StringInput($ligne), $sortie))->toBe(1)
+            ->and($sortie->fetch())->toContain('ne se lit pas');
+
+        Exceptions::assertReported(static fn (RuntimeException $exception): bool => $exception->getMessage() === $message);
+    } finally {
+        File::deleteDirectory($dossier);
+    }
+})->with([
+    'un dossier absent' => ['absent'],
+    'un fichier à la place du dossier' => ['un-fichier'],
+]);
 
 /*
  * Un conteneur qui ouvre le fichier d'un nouveau jour fait lui aussi son

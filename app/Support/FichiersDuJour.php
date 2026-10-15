@@ -22,24 +22,35 @@ final class FichiersDuJour
 {
     /**
      * Les fichiers du jour du dossier de ce canal datés de ce jour ou d'avant,
-     * le jour s'écrivant `AAAA-MM-JJ`. Un dossier qui ne se lit pas lève une
-     * exception plutôt que de passer pour un dossier sans fichier.
+     * le jour s'écrivant `AAAA-MM-JJ`. Un dossier absent, ou qui ne se lit
+     * pas, lève une exception plutôt que de passer pour un dossier sans
+     * fichier : `glob()` les rend tous deux vides, et ne rend `false` que pour
+     * une autre erreur, qui la lève aussi.
      *
      * @return list<string>
+     *
+     * @throws RuntimeException
      */
     public static function datesAuPlusLe(string $cheminDuCanal, string $dernierJour): array
     {
+        $dossier = dirname($cheminDuCanal);
         $extension = '.'.pathinfo($cheminDuCanal, PATHINFO_EXTENSION);
-        $fichiers = glob(dirname($cheminDuCanal).'/*-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'.$extension);
+        $chemins = is_dir($dossier) && is_readable($dossier)
+            ? glob($dossier.'/*-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'.$extension)
+            : false;
 
-        if ($fichiers === false) {
-            throw new RuntimeException('Le dossier des journaux ne se lit pas : '.dirname($cheminDuCanal));
+        if ($chemins === false) {
+            throw new RuntimeException('Le dossier des journaux ne se lit pas : '.$dossier);
         }
+
+        $fichiers = array_filter(
+            array_filter($chemins, is_file(...)),
+            static fn (string $fichier): bool => ! is_link($fichier),
+        );
 
         return array_values(array_filter(
             $fichiers,
-            static fn (string $fichier): bool => is_file($fichier) && ! is_link($fichier)
-                && self::estAuPlusLe(substr(basename($fichier, $extension), -10), $dernierJour),
+            static fn (string $fichier): bool => self::estAuPlusLe(substr(basename($fichier, $extension), -10), $dernierJour),
         ));
     }
 

@@ -25,8 +25,10 @@ use Illuminate\Support\Facades\File;
  * (`App\Support\FichiersDuJour`) ; celui du jour en cours, que le canal tient
  * ouvert, n'atteint jamais la limite. Une durée qui ne borne rien (zéro, que
  * Monolog lit « sans limite », ou ce qui n'est pas un entier) fait échouer la
- * purge sans rien effacer, comme un fichier resté en place : le moniteur des
- * tâches le dit, puisque la page de profil promet cette durée.
+ * purge sans rien effacer ; un fichier resté en place la fait échouer aussi,
+ * comme un dossier absent ou illisible, dont l'exception fait sortir le
+ * processus en 1 : le moniteur des tâches le dit, puisque la page de profil
+ * promet cette durée.
  */
 class PurgerLesJournaux extends Command
 {
