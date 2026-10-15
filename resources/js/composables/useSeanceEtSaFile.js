@@ -2,6 +2,11 @@ import { getCurrentInstance, onMounted, onUnmounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import SyncService from '@/Utils/SyncService'
 import { identifiantEnFile, seanceConnueDuServeur, superposerLaFile } from '@/Utils/seanceEtFile'
+import {
+    CLEF_DU_TITULAIRE_DE_L_APPAREIL,
+    CLEF_DU_TITULAIRE_DE_L_ONGLET,
+    titulaireDeLaPage,
+} from '@/Utils/historiqueDuCompte'
 import { effacerLesBrouillonsOrphelins } from '@/composables/useBrouillonsDeSeries'
 
 /**
@@ -18,6 +23,38 @@ const cheminDe = (adresse) => {
         return null
     }
 }
+
+/**
+ * Le titulaire qu'un stockage retient (`historiqueDuCompte`), ou `null` quand il
+ * n'en retient aucun ou se refuse.
+ *
+ * @param {'sessionStorage' | 'localStorage'} nom
+ * @param {string} clef
+ * @returns {string|null}
+ */
+const titulaireRetenu = (nom, clef) => {
+    try {
+        return window[nom]?.getItem(clef) ?? null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Un autre titulaire a pris l'onglet ou l'appareil depuis l'ouverture de la
+ * séance. `historiqueDuCompte` a alors jeté la clé de l'onglet : les pages du
+ * compte parti ne se relisent plus. Gardée maintenant, la séance serait
+ * chiffrée avec une clé neuve, que la garde jette à son tour avant toute
+ * relecture (Retour, visite, chargement) ; la page n'a de toute façon plus
+ * rien à écrire pour un compte parti.
+ *
+ * @param {string} titulaire celui de la page de séance
+ */
+const unAutreTitulaire = (titulaire) =>
+    [
+        titulaireRetenu('sessionStorage', CLEF_DU_TITULAIRE_DE_L_ONGLET),
+        titulaireRetenu('localStorage', CLEF_DU_TITULAIRE_DE_L_APPAREIL),
+    ].some((retenu) => retenu !== null && retenu !== titulaire)
 
 /**
  * La séance que l'entrée d'historique de la page a gardée, si c'est bien
@@ -50,26 +87,33 @@ const seanceGardee = (page, seance) => {
  * la copie locale est donc gardé dans l'état mémorisé de l'entrée, moins les
  * rangées provisoires que la file rend (`seanceConnueDuServeur`).
  *
- * Le piège : `router.remember` écrit dans l'entrée COURANTE, et Inertia la
- * change avant que la page parte. Une visite qui mène ailleurs pousse la page
+ * Deux pièges. `router.remember` écrit dans l'entrée COURANTE, et Inertia la
+ * change avant que la page parte : une visite qui mène ailleurs pousse la page
  * suivante avant de démonter celle-ci, et le bouton Retour change d'entrée
  * avant même qu'Inertia le sache. Écrit à ce moment, le souvenir de la séance
- * remplaçait la page suivante dans l'historique, adresse comprise. Il se garde
- * donc une dernière fois sur `beforeUpdate`, qu'Inertia émet avant de pousser
- * la page qui arrive, puis plus jamais, comme dès un `popstate` vers une autre
- * entrée. Une visite côté client (`router.push`, `router.replace`) n'émet pas
- * `beforeUpdate` : en ajouter une qui quitte cette page demande de figer ce
- * souvenir avant. Sans page d'Inertia (un test qui la simule), rien n'est gardé.
+ * remplaçait la page suivante dans l'historique, adresse comprise. Plus rien ne
+ * s'écrit donc dès `beforeUpdate` vers une autre page, qu'Inertia émet avant de
+ * la pousser, ni dès un `popstate` vers une autre entrée. Une visite côté
+ * client (`router.push`, `router.replace`) n'émet pas `beforeUpdate` : en
+ * ajouter une qui quitte cette page demande de figer ce souvenir avant. Et la
+ * clé de l'historique part avec le compte (`historiqueDuCompte`, #1965), sur
+ * ce même `beforeUpdate` quand la page qui arrive est celle d'un autre compte :
+ * rien ne s'écrit donc au départ, pas même une dernière fois, ni quand un
+ * autre titulaire a pris l'onglet ou l'appareil. Sans page d'Inertia (un test
+ * qui la simule), rien n'est gardé.
  *
  * @param {{ page: object, localWorkout: import('vue').Ref<object> }} seance
  */
 const garderDansLHistorique = ({ page, localWorkout }) => {
     const composant = page.component
     const adresse = cheminDe(page.url)
-    let figee = typeof composant !== 'string' || adresse === null
+    const titulaire = titulaireDeLaPage(page)
+    let figee = typeof composant !== 'string' || adresse === null || titulaire === null
     let derniere = JSON.stringify(seanceConnueDuServeur(localWorkout.value))
 
     const garder = () => {
+        figee ||= unAutreTitulaire(titulaire)
+
         if (figee || page.component !== composant || cheminDe(page.url) !== adresse) {
             return
         }
@@ -86,12 +130,9 @@ const garderDansLHistorique = ({ page, localWorkout }) => {
     const avantLaPageSuivante = (event) => {
         const suivante = event.detail?.page
 
-        if (suivante?.component === composant && cheminDe(suivante?.url) === adresse) {
-            return
+        if (suivante?.component !== composant || cheminDe(suivante?.url) !== adresse) {
+            figee = true
         }
-
-        garder()
-        figee = true
     }
 
     const auRetourOuALAvance = (event) => {

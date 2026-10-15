@@ -167,7 +167,7 @@ export const uneReponseRetenue = (serveur) => {
 
 /**
  * Un chargement de `/workouts` : le service de synchronisation d'abord, puis
- * Inertia, qui partagent ce chargement.
+ * la garde de l'historique et Inertia, qui partagent ce chargement.
  *
  * @param {{
  *   serveur: ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>,
@@ -249,7 +249,11 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
     document.body.replaceChildren(initiale, Object.assign(document.createElement('div'), { id: 'app' }))
 
     const inertia = await import('@inertiajs/vue3')
+    const { installerLaGardeDeLHistorique } = await import('@/Utils/historiqueDuCompte')
     const { default: Seance } = await chargerLaSeance()
+
+    // Comme `main.js` : la garde de l'historique de chaque compte, avant le démarrage d'Inertia.
+    installerLaGardeDeLHistorique({ routeur: inertia.router })
 
     await inertia.createInertiaApp({
         resolve: (nom) => (nom === 'Workouts/Show' ? Seance : ListeDesSeances),

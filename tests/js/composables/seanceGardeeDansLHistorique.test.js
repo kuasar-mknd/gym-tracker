@@ -13,8 +13,9 @@ import { SOUVENIR_DE_LA_SEANCE, useSeanceEtSaFile } from '@/composables/useSeanc
  * L'entrée d'historique de la séance, tenue à jour de ce que la page a fait
  * accepter (#2048). Les boutons Retour et Avance rendent la page de la visite,
  * sans le serveur : sans ce souvenir, ce qu'on avait enregistré depuis par
- * l'API en manquait. Et comme Inertia l'écrit dans l'entrée COURANTE, il ne
- * doit plus rien écrire une fois qu'une autre page la prend.
+ * l'API en manquait. Et comme Inertia l'écrit dans l'entrée COURANTE, chiffrée
+ * avec la clé de l'onglet, il ne doit plus rien écrire une fois qu'une autre
+ * page la prend, ni quand un autre compte a pris l'onglet ou l'appareil.
  */
 
 const seanceDuServeur = () => ({
@@ -23,9 +24,14 @@ const seanceDuServeur = () => ({
     workout_lines: [{ id: 1, exercise_id: 7, sets: [{ id: 11, weight: 80, reps: 5, is_completed: true }] }],
 })
 
-/** La page d'Inertia telle que `usePage()` la rend pour la séance 5. */
+/** La page d'Inertia telle que `usePage()` la rend pour la séance 5, au compte 1. */
 const pageDeLaSeance = (rememberedState = {}) =>
-    reactive({ component: 'Workouts/Show', url: '/workouts/5', rememberedState })
+    reactive({
+        component: 'Workouts/Show',
+        url: '/workouts/5',
+        props: { auth: { user: { id: 1 } } },
+        rememberedState,
+    })
 
 const montees = []
 
@@ -56,6 +62,8 @@ const avantLaPage = (page) => document.dispatchEvent(new CustomEvent('inertia:be
 afterEach(() => {
     montees.splice(0).forEach((page) => page.unmount())
     inertia.remember.mockReset()
+    localStorage.clear()
+    sessionStorage.clear()
 })
 
 describe('la séance de départ', () => {
@@ -120,21 +128,26 @@ describe('l’entrée d’historique de la séance', () => {
         expect(inertia.remember).toHaveBeenCalledTimes(1)
     })
 
-    it('se garde une dernière fois quand une autre page arrive, puis plus jamais', async () => {
+    it('ne s’écrit plus dès qu’une autre page arrive, pas même une dernière fois', async () => {
         const { localWorkout } = ouvrir(pageDeLaSeance())
         const [serie] = localWorkout.value.workout_lines[0].sets
 
-        // Changée dans le même tour que la réponse de la visite : avant qu'Inertia ne pousse la page suivante.
         serie.reps = 6
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+
+        /*
+         * Changée dans le même tour que la réponse de la visite. L'entrée
+         * courante sera celle de la page suivante, et la clé de l'onglet vient
+         * peut-être de partir avec le compte (`historiqueDuCompte` écoute le
+         * même évènement, avant la page) : rien ne s'écrit plus.
+         */
+        serie.reps = 7
         avantLaPage({ component: 'Workouts/Index', url: '/workouts' })
+        await nextTick()
 
         expect(inertia.remember).toHaveBeenCalledTimes(1)
         expect(derniereGardee().workout_lines[0].sets[0].reps).toBe(6)
-
-        // L'entrée courante est désormais celle de la page suivante.
-        serie.reps = 7
-        await nextTick()
-        expect(inertia.remember).toHaveBeenCalledTimes(1)
     })
 
     it('reste tenue quand la séance elle-même revient du serveur', async () => {
@@ -163,6 +176,33 @@ describe('l’entrée d’historique de la séance', () => {
         expect(inertia.remember).toHaveBeenCalledTimes(1)
     })
 
+    it('ne garde plus rien quand un autre compte a pris l’appareil ou l’onglet, même revenu depuis', async () => {
+        localStorage.setItem('gym-tracker:titulaire-de-l-appareil', 'compte:1')
+        sessionStorage.setItem('gym-tracker:titulaire-de-l-onglet', 'compte:1')
+        const { localWorkout } = ouvrir(pageDeLaSeance())
+        const [serie] = localWorkout.value.workout_lines[0].sets
+
+        serie.reps = 6
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+
+        // Un autre onglet a ouvert la session d'un autre compte : celui-ci a jeté sa clé.
+        localStorage.setItem('gym-tracker:titulaire-de-l-appareil', 'compte:2')
+        serie.reps = 7
+        await nextTick()
+        localStorage.setItem('gym-tracker:titulaire-de-l-appareil', 'compte:1')
+        serie.reps = 8
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+
+        // Même chose quand l'onglet lui-même est passé à un autre compte.
+        const autre = ouvrir(pageDeLaSeance())
+        sessionStorage.setItem('gym-tracker:titulaire-de-l-onglet', 'invite')
+        autre.localWorkout.value.workout_lines[0].sets[0].reps = 9
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+    })
+
     it('ne garde rien quand la page d’Inertia n’est plus la séance', async () => {
         const page = pageDeLaSeance()
         const { localWorkout } = ouvrir(page)
@@ -175,12 +215,14 @@ describe('l’entrée d’historique de la séance', () => {
         expect(inertia.remember).not.toHaveBeenCalled()
     })
 
-    it('ne garde rien sans page d’Inertia', async () => {
+    it('ne garde rien sans page d’Inertia, ni sans compte dans la page', async () => {
         const sansComposant = ouvrir(reactive({ props: {} }))
         const sansPage = ouvrir(null)
+        const sansCompte = ouvrir(reactive({ component: 'Workouts/Show', url: '/workouts/5', props: {} }))
 
-        sansComposant.localWorkout.value.workout_lines[0].sets[0].reps = 6
-        sansPage.localWorkout.value.workout_lines[0].sets[0].reps = 6
+        for (const { localWorkout } of [sansComposant, sansPage, sansCompte]) {
+            localWorkout.value.workout_lines[0].sets[0].reps = 6
+        }
         await nextTick()
 
         expect(inertia.remember).not.toHaveBeenCalled()
