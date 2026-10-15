@@ -72,6 +72,12 @@ return [
          * fichier (LOG_DAILY_NAME, posé par docker-compose.prod.yml) dans le
          * volume partagé storage/logs : le visualiseur du panneau, qui tourne
          * dans app, les lit tous, et dit qui a écrit quoi.
+         *
+         * Monolog garde les `days` fichiers les plus récents de chaque
+         * conteneur, quel que soit leur âge. `days` est aussi la durée de
+         * `journaux:purger`, qui efface chaque nuit les fichiers du jour de
+         * tous les conteneurs qui l'ont atteinte (#2053) : la page de profil
+         * promet ces quatorze jours.
          */
         'daily' => [
             'driver' => 'daily',
