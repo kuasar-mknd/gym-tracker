@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Models\User;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Illuminate\Routing\UrlGenerator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use LogicException;
 
 /**
@@ -61,16 +65,93 @@ final class LiensDesCourriels
             throw new LogicException('Le lien de vérification se bâtit pour un compte enregistré qui vérifie son adresse.');
         }
 
-        $duree = config('auth.verification.expire', 60);
-
         return self::generateurSurAppUrl()->temporarySignedRoute(
             'verification.verify',
-            Carbon::now()->addMinutes(is_numeric($duree) ? (int) $duree : 60),
+            Carbon::now()->addMinutes(self::minutesDeValiditeDUnLien()),
             [
                 'id' => $notifiable->getKey(),
                 'hash' => sha1($notifiable->getEmailForVerification()),
             ],
         );
+    }
+
+    /**
+     * Le lien signé du courriel qui ouvre un compte créé par l'inscription
+     * (`LienDOuvertureDuCompte`) : même durée et mêmes paramètres que le lien
+     * de vérification, vers la route des invités `inscription.ouvrir`, qui
+     * mène à la connexion.
+     */
+    public static function lienDOuvertureDuCompte(User $compte): string
+    {
+        return self::generateurSurAppUrl()->temporarySignedRoute(
+            'inscription.ouvrir',
+            Carbon::now()->addMinutes(self::minutesDeValiditeDUnLien()),
+            [
+                'id' => $compte->getKey(),
+                'hash' => sha1($compte->getEmailForVerification()),
+            ],
+        );
+    }
+
+    /**
+     * Le lien signé du courriel qui confirme la nouvelle adresse demandée
+     * depuis le profil (`LienDeChangementDAdresse`). Il nomme le compte, la
+     * nouvelle adresse et l'empreinte de l'adresse actuelle : un lien émis
+     * avant un autre changement ne vaut plus.
+     *
+     * La nouvelle adresse n'y paraît que chiffrée (`Crypt::encryptString()`),
+     * sous la signature : un lien suivi en GET finit dans les journaux
+     * d'accès, l'historique du navigateur, l'adresse que la connexion garde
+     * pour après (`url.intended`) et, si la requête échoue, la trace de
+     * l'exception. `ConfirmerLAdresseController` la lit par
+     * `adresseDuLienDeConfirmation()`.
+     */
+    public static function lienDeConfirmationDAdresse(User $compte, string $nouvelleAdresse): string
+    {
+        return self::generateurSurAppUrl()->temporarySignedRoute(
+            'adresse.confirmer',
+            Carbon::now()->addMinutes(self::minutesDeValiditeDUnLien()),
+            [
+                'compte' => $compte->getKey(),
+                'adresse' => Crypt::encryptString($nouvelleAdresse),
+                'actuelle' => sha1($compte->email),
+            ],
+        );
+    }
+
+    /**
+     * La nouvelle adresse que porte, chiffrée, le lien de confirmation suivi
+     * (`lienDeConfirmationDAdresse()`). Une valeur qui ne se déchiffre pas
+     * refuse le lien comme une signature fausse (403).
+     *
+     * @throws InvalidSignatureException
+     */
+    public static function adresseDuLienDeConfirmation(Request $requete): string
+    {
+        try {
+            return Crypt::decryptString($requete->string('adresse')->toString());
+        } catch (DecryptException) {
+            throw new InvalidSignatureException();
+        }
+    }
+
+    /**
+     * La page de connexion, pour les avis qui y renvoient.
+     */
+    public static function lienDeConnexion(): string
+    {
+        return self::generateurSurAppUrl()->route('login');
+    }
+
+    /**
+     * La durée de validité d'un lien signé, en minutes : celle du lien de
+     * vérification de Laravel (`auth.verification.expire`, 60 par défaut).
+     */
+    public static function minutesDeValiditeDUnLien(): int
+    {
+        $duree = config('auth.verification.expire', 60);
+
+        return is_numeric($duree) ? (int) $duree : 60;
     }
 
     /**

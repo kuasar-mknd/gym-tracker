@@ -3,12 +3,11 @@
 declare(strict_types=1);
 
 use App\Actions\Auth\SendPasswordResetLinkAction;
-use App\Http\Controllers\Auth\NewPasswordController;
 use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\User;
+use App\Support\DureeDesReponsesDAuthentification;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Passwords\PasswordBroker;
-use Illuminate\Contracts\Support\MessageBag;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Artisan;
@@ -21,12 +20,12 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
-use Illuminate\Support\ViewErrorBag;
 use Illuminate\Testing\TestResponse;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Email;
+use Tests\Support\CeQueLeClientLit;
+use Tests\Support\DureeSimulee;
 
 use function Pest\Laravel\post;
 
@@ -46,7 +45,9 @@ use function Pest\Laravel\post;
  * avec cette adresse email. », et sur un compte « Ce jeton … n'est pas
  * valide. ». Les deux reçoivent désormais le second. Le refus durait aussi plus
  * longtemps pour un compte qui venait de demander un lien : tout refus dure
- * désormais `NewPasswordController::DUREE_D_UN_REFUS_MICROSECONDES`.
+ * désormais au moins le plancher commun des réponses d'authentification
+ * (`DureeDesReponsesDAuthentification`), mesuré ici sans dormir pour de vrai
+ * (`DureeSimulee`).
  */
 
 /**
@@ -88,63 +89,15 @@ function motDePasseOublieDemander(string $adresse): TestResponse
 }
 
 /**
- * Tout ce qu'un client peut lire d'une demande : statut, en-têtes, cookies,
- * corps, session, puis la page qu'il retrouve après la redirection.
- *
- * Seuls les jetons tirés au hasard à chaque requête en sont ôtés : la valeur
- * des cookies, le jeton CSRF de la session et le nonce de la CSP. L'en-tête
- * `Date` et le `Max-Age` des cookies suivent l'horloge du système, que
- * `freezeSecond()` n'arrête pas : un cookie se lit par ses attributs, dont son
- * échéance. Les erreurs de la session se lisent en tableaux : un sac d'erreurs
- * est un objet, et deux objets distincts ne sont jamais identiques.
+ * Tout ce qu'un client peut lire d'une demande, puis de la page qu'il retrouve
+ * après la redirection (`CeQueLeClientLit`).
  *
  * @param  TestResponse<Response>  $reponse
  * @return array{statut: int, entetes: array<mixed>, cookies: list<array<string, mixed>>, corps: string|false, session: array<mixed>, page: string}
  */
 function motDePasseOublieCeQueLeClientLit(TestResponse $reponse, ?string $pageSuivante = null): array
 {
-    $enTetes = $reponse->headers->allPreserveCaseWithoutCookies();
-    unset($enTetes['Date']);
-    $enTetes['Content-Security-Policy'] = preg_replace("/'nonce-[^']+'/", "'nonce-…'", (string) $reponse->headers->get('Content-Security-Policy'));
-
-    $cookies = array_values(array_map(static fn (Cookie $cookie): array => [
-        'nom' => $cookie->getName(),
-        'expire' => $cookie->getExpiresTime(),
-        'chemin' => $cookie->getPath(),
-        'domaine' => $cookie->getDomain(),
-        'securise' => $cookie->isSecure(),
-        'http' => $cookie->isHttpOnly(),
-        'site' => $cookie->getSameSite(),
-    ], $reponse->headers->getCookies()));
-
-    $session = session()->all();
-    unset($session['_token']);
-
-    if (($session['errors'] ?? null) instanceof ViewErrorBag) {
-        $session['errors'] = array_map(static fn (MessageBag $erreurs): array => $erreurs->toArray(), $session['errors']->getBags());
-    }
-
-    return [
-        'statut' => $reponse->getStatusCode(),
-        'entetes' => $enTetes,
-        'cookies' => $cookies,
-        'corps' => $reponse->getContent(),
-        'session' => $session,
-        'page' => json_encode(motDePasseOublieOuvrir($pageSuivante ?? route('password.request'))->inertiaPage(), JSON_THROW_ON_ERROR),
-    ];
-}
-
-/**
- * La page où mène la redirection, chargée en entier.
- *
- * @return TestResponse<Response>
- */
-function motDePasseOublieOuvrir(string $page): TestResponse
-{
-    /** @var TestResponse<Response> $reponse */
-    $reponse = test()->flushHeaders()->get($page);
-
-    return $reponse;
+    return CeQueLeClientLit::de($reponse, $pageSuivante ?? route('password.request'));
 }
 
 it('répond à l’identique pour une adresse inconnue, connue, puis limitée par le courtier', function (): void {
@@ -460,8 +413,9 @@ it('lit les méthodes du courtier qu’un code appelle, quel que soit leur recev
 
 /*
  * Trois fichiers seulement atteignent le courtier, chacun pour un seul usage :
- * le job envoie le lien, `NewPasswordController` réinitialise sous le plancher
- * des refus et ne rend jamais `passwords.user`, et l'effacement d'un compte
+ * le job envoie le lien, par un courtier neuf qu'il crée sans plancher
+ * (`broker()`), `NewPasswordController` réinitialise sous le plancher des
+ * refus et ne rend jamais `passwords.user`, et l'effacement d'un compte
  * retire son jeton. Une autre entrée qui réinitialiserait (API, panneau)
  * rendrait `passwords.user` pour une adresse sans compte, et sans le
  * plancher : elle passe par `NewPasswordController::store()`, ou par une
@@ -476,7 +430,7 @@ it('ne laisse atteindre le courtier qu’à trois fichiers, chacun pour son seul
 
     expect($usages)->toBe([
         'app/Http/Controllers/Auth/NewPasswordController.php' => ['reset'],
-        'app/Jobs/EnvoyerLeLienDeReinitialisation.php' => ['sendResetLink'],
+        'app/Jobs/EnvoyerLeLienDeReinitialisation.php' => ['broker', 'sendResetLink'],
         'app/Models/Traits/EffaceSesTracesPolymorphes.php' => ['deleteToken'],
     ]);
 });
@@ -520,20 +474,6 @@ it('refuse à l’identique, à la réinitialisation, une adresse sans compte et
 });
 
 /**
- * Un essai de réinitialisation avec le jeton quelconque, et sa durée en
- * microsecondes.
- *
- * @return array{0: float, 1: TestResponse<Response>}
- */
-function motDePasseOublieChronometrerLeRefus(): array
-{
-    $debut = microtime(true);
-    $reponse = motDePasseOublieReinitialiser();
-
-    return [(microtime(true) - $debut) * 1_000_000, $reponse];
-}
-
-/**
  * Le coût bcrypt que `.env.example` donne à la production, et que phpunit.xml
  * baisse à 4.
  */
@@ -554,10 +494,11 @@ function motDePasseOublieCoutDeProduction(): int
  * que « Mot de passe oublié » vient de faire pour le compte.
  */
 it('refuse dans le même temps, à la réinitialisation, une adresse sans compte et le jeton faux d’un compte qui vient de demander un lien', function (): void {
-    $plancher = NewPasswordController::DUREE_D_UN_REFUS_MICROSECONDES;
+    $duree = DureeSimulee::demarrer();
+    $plancher = $duree->plancher;
 
-    [$dureeSansCompte, $sansCompte] = motDePasseOublieChronometrerLeRefus();
-    $sansCompte->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
+    $sansCompte = $duree->mesurer(motDePasseOublieReinitialiser(...));
+    $sansCompte['reponse']->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
 
     $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
     // Le jeton s'enregistre au coût de production, que sa vérification paiera.
@@ -565,10 +506,10 @@ it('refuse dans le même temps, à la réinitialisation, une adresse sans compte
     Hash::forgetDrivers();
     Password::createToken($compte);
 
-    [$dureeCompte, $jetonFaux] = motDePasseOublieChronometrerLeRefus();
-    $jetonFaux->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
+    $jetonFaux = $duree->mesurer(motDePasseOublieReinitialiser(...));
+    $jetonFaux['reponse']->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
 
-    // Le travail du refus le plus long, hors du plancher : la Timebox du courtier, puis la vérification de l'empreinte.
+    // Le travail du refus le plus long, hors des planchers (sommeil simulé) : la vérification de l'empreinte.
     $debut = microtime(true);
     expect(Password::reset([
         'token' => 'un-jeton-quelconque',
@@ -579,22 +520,28 @@ it('refuse dans le même temps, à la réinitialisation, une adresse sans compte
     }))->toBe(Password::INVALID_TOKEN);
     $travail = (microtime(true) - $debut) * 1_000_000;
 
-    expect($travail)->toBeLessThan($plancher)
-        ->and($dureeSansCompte)->toBeGreaterThanOrEqual($plancher)
-        ->and($dureeCompte)->toBeGreaterThanOrEqual($plancher);
+    expect($plancher)->toBe(DureeDesReponsesDAuthentification::PLANCHER_PAR_DEFAUT_MICROSECONDES)
+        ->and($travail)->toBeLessThan($plancher)
+        ->and($sansCompte['total'])->toBeGreaterThanOrEqual($plancher)
+        ->and($jetonFaux['total'])->toBeGreaterThanOrEqual($plancher)
+        ->and($sansCompte['dormi'])->toBeGreaterThan(0.0)
+        ->and($jetonFaux['dormi'])->toBeGreaterThan(0.0);
 });
 
 it('répond à une réinitialisation réussie sans attendre le plancher des refus', function (): void {
+    $duree = DureeSimulee::demarrer();
     $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
     $jeton = Password::createToken($compte);
 
-    $debut = microtime(true);
-    post(route('password.store'), [
+    $reussite = $duree->mesurer(static fn (): TestResponse => post(route('password.store'), [
         'token' => $jeton,
         'email' => motDePasseOublieAdresse(),
         'password' => 'Un-nouveau-mot-de-passe-2026!',
         'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
-    ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+    ]));
 
-    expect((microtime(true) - $debut) * 1_000_000)->toBeLessThan(NewPasswordController::DUREE_D_UN_REFUS_MICROSECONDES);
+    $reussite['reponse']->assertSessionHasNoErrors()->assertRedirect(route('login'));
+
+    expect($reussite['dormi'])->toBe(0.0)
+        ->and($reussite['total'])->toBeLessThan($duree->plancher);
 });

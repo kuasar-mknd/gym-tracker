@@ -9,6 +9,7 @@ use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Email;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\get;
 use function Pest\Laravel\post;
 use function Pest\Laravel\withServerVariables;
 
@@ -111,7 +112,11 @@ it('bâtit le lien de vérification sur APP_URL, quel que soit l’hôte de la r
         ->and($lien)->not->toContain('piege.example.org');
 })->with('liens courriels hotes annonces');
 
-it('bâtit sur APP_URL le lien de vérification envoyé à l’inscription, même sous un autre hôte', function (): void {
+/*
+ * L'inscription envoie désormais le lien qui ouvre le compte en attente, et
+ * non celui de la vérification d'adresse : il se bâtit et se signe de même.
+ */
+it('bâtit sur APP_URL le lien d’ouverture envoyé à l’inscription, même sous un autre hôte, et le refuse sous un autre', function (): void {
     post('http://piege.example.org/register', [
         'name' => 'Nouveau membre',
         'email' => 'nouveau@example.org',
@@ -119,7 +124,14 @@ it('bâtit sur APP_URL le lien de vérification envoyé à l’inscription, mêm
         'password_confirmation' => 'Un-mot-de-passe-2026!',
     ])->assertRedirect();
 
-    expect(liensCourrielsDernierLien('/verify-email/'))->toStartWith(liensCourrielsAppUrl().'/verify-email/');
+    $lien = liensCourrielsDernierLien('/inscription/ouvrir/');
+
+    expect($lien)->toStartWith(liensCourrielsAppUrl().'/inscription/ouvrir/')
+        ->and($lien)->toContain('&signature=')
+        ->and($lien)->not->toContain('piege.example.org');
+
+    get(str_replace(liensCourrielsAppUrl(), 'http://piege.example.org', $lien))->assertForbidden();
+    get($lien)->assertRedirect(route('login'));
 });
 
 /*

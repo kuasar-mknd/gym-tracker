@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Support\Charte;
+use Tests\Support\Contraste;
 
 /*
  * Les icônes de l'application (#1850).
@@ -20,6 +21,13 @@ use App\Support\Charte;
  * n'installe pas et que la CI ne demande pas : un PNG s'ouvre sur une
  * signature de huit octets suivie de l'en-tête IHDR, qui porte les dimensions
  * et le type de couleur, et ses pixels ne demandent que zlib.
+ *
+ * Le logo a changé le 2026-10-14, à la demande du propriétaire : un G
+ * hexagonal et trois barres, dessinés dans public/logo.svg, sans fond. Les
+ * icônes en sont tirées par public/icone.svg, qui pose ce dessin sur une tuile,
+ * et le badge par public/badge.svg, qui le peint en blanc ; l'application le
+ * trace depuis resources/js/Utils/dessinDuLogo.js. Ses trois couleurs sont les
+ * jetons `logo-*` de la charte.
  */
 
 /**
@@ -139,26 +147,88 @@ function iconePngCouleurDuPixel(string $pixels, int $rang): string
  * Vérifie qu'une icône montre le logo, dans les couleurs de la charte.
  *
  * La taille et l'opacité ne disent pas ce que l'icône dessine : un carré uni
- * aux couleurs du thème retiré les tient aussi. Deux pixels du dessin le
- * disent : le centre, où se croisent les tracés, et le milieu de la largeur à
- * un huitième de la hauteur, entre le bord et le cercle, où ne paraît que le
- * fond. Un huitième plutôt que le bord même : les icônes « any » et le favicon
- * gardent une marge transparente autour du logo.
+ * aux couleurs du thème retiré les tient aussi. Trois pixels du dessin le
+ * disent, chacun au cœur d'une des trois couleurs : la tuile au milieu de la
+ * largeur, à un dixième de la hauteur, au-dessus du G ; la lettre au milieu de
+ * la hauteur, dans le flanc gauche de l'hexagone ; l'orange dans la plus haute
+ * des barres. Ces points tiennent aussi bien sur les icônes opaques, où la
+ * tuile remplit l'image, que sur les icônes « any » et le favicon, qui gardent
+ * une marge transparente de 5 % autour d'elle.
  */
 function iconePngPorteLeLogo(string $png, string $nom): void
 {
     $entete = iconePngEnTete($png, $nom);
     $pixels = iconePngPixels($png, $nom);
-    $milieu = intdiv($entete['largeur'], 2);
+    $rang = static fn (int $x, int $y): int => $y * $entete['largeur'] + $x;
     $rangs = [
-        'fond' => intdiv($entete['hauteur'], 8) * $entete['largeur'] + $milieu,
-        'traces' => intdiv($entete['hauteur'], 2) * $entete['largeur'] + $milieu,
+        'tuile' => $rang(intdiv($entete['largeur'], 2), intdiv($entete['hauteur'], 10)),
+        'lettre' => $rang(intdiv($entete['largeur'] * 22, 100), intdiv($entete['hauteur'], 2)),
+        'barres' => $rang(intdiv($entete['largeur'] * 664, 1000), intdiv($entete['hauteur'] * 645, 1000)),
     ];
 
     expect(array_map(static fn (int $rang): string => iconePngCouleurDuPixel($pixels, $rang), $rangs))
-        ->toBe(['fond' => Charte::jeton('accent-primary-fill'), 'traces' => Charte::jeton('text-on-dark-accent')], "{$nom} ne montre pas le logo aux couleurs de la charte : à régénérer, voir pwa-assets.config.js.")
+        ->toBe([
+            'tuile' => Charte::jeton('logo-fond'),
+            'lettre' => Charte::jeton('logo-lettre'),
+            'barres' => Charte::jeton('logo-barres'),
+        ], "{$nom} ne montre pas le logo aux couleurs de la charte : à régénérer, voir pwa-assets.config.js.")
         ->and(array_map(static fn (int $rang): string => $pixels[$rang * 4 + 3], $rangs))
-        ->toBe(['fond' => "\xFF", 'traces' => "\xFF"], "{$nom} : le logo y est transparent.");
+        ->toBe(['tuile' => "\xFF", 'lettre' => "\xFF", 'barres' => "\xFF"], "{$nom} : le logo y est transparent.");
+}
+
+/**
+ * Le contenu d'un SVG de public/.
+ */
+function iconeSvg(string $fichier): string
+{
+    $chemin = public_path($fichier);
+
+    expect(is_file($chemin))->toBeTrue("public/{$fichier} n'existe pas.");
+
+    return (string) file_get_contents($chemin);
+}
+
+/**
+ * Les couleurs qu'un SVG écrit, en `#rrvvbb` minuscule, sans doublon.
+ *
+ * @return list<string>
+ */
+function iconeCouleursDuSvg(string $svg): array
+{
+    preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $svg, $couleurs);
+
+    return array_values(array_unique(array_map(strtolower(...), $couleurs[0])));
+}
+
+/**
+ * Les tracés d'un SVG ou d'un module, dans l'ordre : l'attribut `d` de chaque
+ * `<path>`, ou chaque chaîne d'un fichier JavaScript qui ouvre un tracé. Un
+ * tracé commence par un déplacement absolu, `M` : le gabarit `d="${trace}"`
+ * du module n'en est pas un.
+ *
+ * @return list<string>
+ */
+function iconeTraces(string $source): array
+{
+    preg_match_all('/\sd="(M[^"]+)"|\'(M[^\']+)\'/', $source, $traces, PREG_SET_ORDER);
+
+    return array_map(static function (array $trace): string {
+        $dansUnModule = $trace[2] ?? '';
+
+        return $dansUnModule !== '' ? $dansUnModule : ($trace[1] ?? '');
+    }, $traces);
+}
+
+/**
+ * Les tracés d'un groupe `<g fill="…">` d'un SVG.
+ *
+ * @return list<string>
+ */
+function iconeTracesDuGroupe(string $svg, string $couleur): array
+{
+    preg_match('/<g fill="'.preg_quote($couleur, '/').'">(.*?)<\/g>/s', $svg, $groupe);
+
+    return iconeTraces($groupe[1] ?? '');
 }
 
 /**
@@ -175,6 +245,33 @@ function iconePngAlphasDistincts(string $pixels): array
     }
 
     return array_map(strval(...), array_keys($alphas));
+}
+
+/**
+ * Le plus petit rectangle qui contient les pixels retenus, en pixels.
+ *
+ * @param  Closure(string): bool  $retenu  reçoit un pixel, quatre octets RVBA
+ * @return array{largeur: int, hauteur: int}
+ */
+function iconePngBoite(string $pixels, int $largeurDeLImage, Closure $retenu): array
+{
+    $gauche = $haut = PHP_INT_MAX;
+    $droite = $bas = -1;
+
+    foreach (str_split($pixels, 4) as $rang => $pixel) {
+        if ($retenu($pixel)) {
+            $x = $rang % $largeurDeLImage;
+            $y = intdiv($rang, $largeurDeLImage);
+            $gauche = min($gauche, $x);
+            $droite = max($droite, $x);
+            $haut = min($haut, $y);
+            $bas = max($bas, $y);
+        }
+    }
+
+    expect($droite)->toBeGreaterThanOrEqual(0, 'Aucun pixel de l’image n’est retenu.');
+
+    return ['largeur' => $droite - $gauche + 1, 'hauteur' => $bas - $haut + 1];
 }
 
 /**
@@ -335,24 +432,91 @@ it('sert le favicon du logo, à la taille que la mise en page annonce', function
     iconePngPorteLeLogo($image, 'L’image de public/favicon.ico');
 });
 
-it('peint le logo du couple fond et texte de l’utilitaire accent-fill', function (): void {
+it('peint le logo des deux couleurs de la charte, sans fond', function (): void {
     /*
      * Un SVG statique ne lit pas les variables CSS : ses couleurs sont écrites
-     * en clair, et c'est ici qu'elles se comparent à la charte. Le couple vient
-     * de `accent-fill`, qui pose le fond ET son texte : la charte interdit de
-     * choisir soi-même un texte sur un fond.
+     * en clair, et c'est ici qu'elles se comparent à la charte. Le logo n'a pas
+     * de fond : il se pose sur la surface de la page, du panneau ou de la tuile
+     * de l'icône. L'ancien portait le sien, un carré orange.
      */
-    $fond = Charte::jeton('accent-primary-fill');
-    $trace = Charte::jeton('text-on-dark-accent');
-    $logo = (string) file_get_contents(public_path('logo.svg'));
-    preg_match_all('/#[0-9a-fA-F]{3,8}\b/', $logo, $couleurs);
+    $lettre = Charte::jeton('logo-lettre');
+    $barres = Charte::jeton('logo-barres');
+    $logo = iconeSvg('logo.svg');
 
-    expect(array_values(array_unique(array_map(strtolower(...), $couleurs[0]))))->toEqualCanonicalizing([$fond, $trace])
-        ->and($logo)->toContain("fill=\"{$fond}\"")
-        ->and($logo)->toContain("stroke=\"{$trace}\"");
+    expect(iconeCouleursDuSvg($logo))->toEqualCanonicalizing([$lettre, $barres])
+        ->and(iconeTracesDuGroupe($logo, $lettre))->toHaveCount(2, 'Le G de public/logo.svg tient en deux tracés, dans le groupe de la couleur `logo-lettre`.')
+        ->and(iconeTracesDuGroupe($logo, $barres))->toHaveCount(3, 'Les trois barres de public/logo.svg sont dans le groupe de la couleur `logo-barres`.')
+        ->and($logo)->not->toContain('<rect');
 });
 
-it('tire les icônes opaques du fond du logo, sans marge', function (): void {
+it('pose l’icône sur la tuile de la charte', function (): void {
+    $icone = iconeSvg('icone.svg');
+
+    expect(iconeCouleursDuSvg($icone))->toEqualCanonicalizing([Charte::jeton('logo-fond'), Charte::jeton('logo-lettre'), Charte::jeton('logo-barres')])
+        ->and($icone)->toMatch('/<rect width="512" height="512" rx="\d+" fill="'.preg_quote(Charte::jeton('logo-fond'), '/').'"\/>/');
+});
+
+it('porte le même dessin dans ses quatre copies', function (): void {
+    /*
+     * Un SVG ne peut pas en inclure un autre quand il sert d'image : l'icône et
+     * le badge recopient donc les tracés de logo.svg, et l'application les
+     * trace depuis un module, pour rester entière hors ligne. Retoucher le
+     * dessin dans un seul fichier laisserait l'onglet, l'écran d'accueil, la
+     * barre d'état ou l'en-tête sur l'ancien.
+     */
+    $logo = iconeSvg('logo.svg');
+    $module = (string) file_get_contents(resource_path('js/Utils/dessinDuLogo.js'));
+    $traces = iconeTraces($logo);
+    preg_match('/viewBox="([^"]+)"/', $logo, $cadre);
+    preg_match("/CADRE_DU_LOGO = '([^']+)'/", $module, $cadreDuModule);
+    preg_match('/<svg x="[^"]+" y="[^"]+" width="[^"]+" height="[^"]+" viewBox="([^"]+)">/', iconeSvg('icone.svg'), $cadreDeLIcone);
+
+    expect($traces)->toHaveCount(5)
+        ->and(iconeTraces(iconeSvg('icone.svg')))->toBe($traces, 'public/icone.svg ne porte plus le dessin de public/logo.svg.')
+        ->and(iconeTraces(iconeSvg('badge.svg')))->toBe($traces, 'public/badge.svg ne porte plus le dessin de public/logo.svg.')
+        ->and(iconeTraces($module))->toBe($traces, 'resources/js/Utils/dessinDuLogo.js ne porte plus le dessin de public/logo.svg.')
+        ->and($cadreDuModule[1] ?? null)->toBe($cadre[1] ?? '', 'resources/js/Utils/dessinDuLogo.js ne cadre plus le dessin comme public/logo.svg.')
+        ->and($cadreDeLIcone[1] ?? null)->toBe($cadre[1] ?? '', 'public/icone.svg ne cadre plus le dessin comme public/logo.svg.')
+        ->and(iconeCouleursDuSvg(iconeSvg('badge.svg')))->toBe(['#ffffff'], 'public/badge.svg ne peint le dessin qu’en blanc.');
+});
+
+it('donne au logo 3:1 sur chaque surface qui le porte', function (): void {
+    /*
+     * WCAG 2.1, critère 1.4.11 : un élément graphique qui identifie se détache
+     * à 3:1 de ce qui l'entoure. Le logo se pose sur le fond de page (en-tête,
+     * pages invitées, page hors ligne), sur une carte blanche (panneau,
+     * courriels) et sur la tuile de ses icônes. L'orange y est au plus juste :
+     * 3,07:1 sur le fond de page.
+     */
+    $manques = [];
+
+    foreach (['logo-lettre', 'logo-barres'] as $couleur) {
+        foreach (['surface-page', 'surface-card', 'logo-fond'] as $surface) {
+            $mesure = Contraste::entre(Contraste::jeton($couleur), Contraste::jeton($surface));
+
+            if ($mesure < 3.0) {
+                $manques[] = sprintf('%s sur %s : %.2f:1', $couleur, $surface, $mesure);
+            }
+        }
+    }
+
+    expect($manques)->toBe([], "Le logo ne se détache plus de ces surfaces (3:1 attendu) :\n  ".implode("\n  ", $manques));
+});
+
+it('montre à l’onglet le logo sur sa tuile', function (): void {
+    /*
+     * Sans fond, la lettre `logo-lettre` rend 1,48:1 sur un onglet sombre de
+     * Chromium : il n'en reste que les barres. L'application n'a qu'une
+     * apparence, et le dépôt ne connaît pas `prefers-color-scheme: dark` : la
+     * tuile rend l'icône lisible sur un onglet clair comme sur un sombre.
+     */
+    $gabarit = (string) file_get_contents(resource_path('views/app.blade.php'));
+    preg_match_all('/<link\s+rel="icon"\s+href="([^"]+)"[^>]*type="image\/svg\+xml"/', $gabarit, $svg);
+
+    expect($svg[1])->toBe(['/icone.svg']);
+});
+
+it('tire les icônes opaques de la tuile du logo, sans marge', function (): void {
     $adresses = [
         ...(iconesDeLaMiseEnPage()['apple-touch-icon'] ?? []),
         ...array_column(array_filter(iconesDuManifeste(), static fn (array $icone): bool => ($icone['purpose'] ?? 'any') === 'maskable'), 'src'),
@@ -360,21 +524,84 @@ it('tire les icônes opaques du fond du logo, sans marge', function (): void {
 
     expect($adresses)->toHaveCount(2);
 
+    /*
+     * Le générateur réduit par défaut la source à 70 % de ces deux icônes, sur
+     * un fond blanc. Les coins ne la trahissent pas : la tuile est blanche, elle
+     * aussi. La taille du dessin la trahit. Sans marge, la tuile remplit
+     * l'image, et le dessin y couvre la même part du côté que de sa tuile sur
+     * la grande icône « any » du manifeste, où la tuile se détache par sa
+     * transparence, quelle que soit la marge qui l'entoure.
+     */
+    $tuile = substr((string) hex2bin(ltrim(Charte::jeton('logo-fond'), '#')), 0, 3);
+    $estDuDessin = static fn (string $pixel): bool => $pixel[3] === "\xFF" && substr($pixel, 0, 3) !== $tuile;
+    $ordinaires = array_column(array_filter(iconesDuManifeste(), static fn (array $icone): bool => ($icone['purpose'] ?? 'any') === 'any' && ($icone['sizes'] ?? '') === '512x512'), 'src');
+
+    expect($ordinaires)->toHaveCount(1, 'Le manifeste doit déclarer une icône « any » de 512 px.');
+
+    $reference = (string) file_get_contents(iconeFichierServi($ordinaires[0]));
+    $pixelsDeReference = iconePngPixels($reference, $ordinaires[0]);
+    $largeurDeReference = iconePngEnTete($reference, $ordinaires[0])['largeur'];
+    $tuileDeReference = iconePngBoite($pixelsDeReference, $largeurDeReference, static fn (string $pixel): bool => $pixel[3] !== "\x00");
+    $dessinDeReference = iconePngBoite($pixelsDeReference, $largeurDeReference, $estDuDessin);
+    $partDeLaTuile = [
+        'largeur' => round($dessinDeReference['largeur'] / $tuileDeReference['largeur'], 3),
+        'hauteur' => round($dessinDeReference['hauteur'] / $tuileDeReference['hauteur'], 3),
+    ];
+
     foreach ($adresses as $adresse) {
         $png = (string) file_get_contents(iconeFichierServi($adresse));
         $pixels = iconePngPixels($png, $adresse);
         $entete = iconePngEnTete($png, $adresse);
         $coins = [0, $entete['largeur'] - 1, ($entete['hauteur'] - 1) * $entete['largeur'], $entete['largeur'] * $entete['hauteur'] - 1];
+        $dessin = iconePngBoite($pixels, $entete['largeur'], $estDuDessin);
 
         /*
-         * Quatre coins au fond de la charte : ni la marge blanche que le
-         * générateur pose par défaut, ni la transparence des coins arrondis du
-         * logo. Une couleur retouchée dans la charte et dans logo.svg sans
-         * relancer la recette se voit aussi ici.
+         * Quatre coins à la tuile de la charte : ni la transparence des coins
+         * arrondis de la tuile, ni une autre couleur de fond. Une couleur
+         * retouchée dans la charte et dans icone.svg sans relancer la recette
+         * se voit aussi ici.
          */
         expect(array_map(static fn (int $rang): string => iconePngCouleurDuPixel($pixels, $rang), $coins))
-            ->toBe(array_fill(0, 4, Charte::jeton('accent-primary-fill')), "{$adresse} : à régénérer, voir pwa-assets.config.js.")
-            ->and(iconePngAlphasDistincts($pixels))->toBe(["\xFF"], "{$adresse} porte des pixels transparents.");
+            ->toBe(array_fill(0, 4, Charte::jeton('logo-fond')), "{$adresse} : à régénérer, voir pwa-assets.config.js.")
+            ->and(iconePngAlphasDistincts($pixels))->toBe(["\xFF"], "{$adresse} porte des pixels transparents.")
+            ->and([
+                'largeur' => round($dessin['largeur'] / $entete['largeur'], 3),
+                'hauteur' => round($dessin['hauteur'] / $entete['hauteur'], 3),
+            ])->toEqualWithDelta($partDeLaTuile, 0.02, "{$adresse} : le dessin n'y couvre pas la part du côté qu'il couvre de sa tuile sur {$ordinaires[0]}. Une marge entoure la tuile : à régénérer, voir pwa-assets.config.js.");
+    }
+});
+
+it('garde le dessin dans la zone sûre de l’icône masquable', function (): void {
+    /*
+     * Un lanceur Android découpe l'icône masquable à sa guise, en cercle ou en
+     * carré arrondi : seul est sûr le disque centré de 40 % du côté de rayon.
+     * Hors de ce disque, l'icône ne doit montrer que sa tuile, sans quoi le
+     * masque rogne le G.
+     */
+    $adresses = array_column(array_filter(iconesDuManifeste(), static fn (array $icone): bool => ($icone['purpose'] ?? 'any') === 'maskable'), 'src');
+
+    expect($adresses)->not->toBeEmpty();
+
+    foreach ($adresses as $adresse) {
+        $png = (string) file_get_contents(iconeFichierServi($adresse));
+        $pixels = iconePngPixels($png, $adresse);
+        $entete = iconePngEnTete($png, $adresse);
+        $centre = $entete['largeur'] / 2;
+        $rayonSur = $entete['largeur'] * 0.4;
+        $tuile = substr(strval(hex2bin(ltrim(Charte::jeton('logo-fond'), '#'))), 0, 3)."\xFF";
+        $rognes = 0;
+
+        for ($y = 0; $y < $entete['hauteur']; $y++) {
+            for ($x = 0; $x < $entete['largeur']; $x++) {
+                $hors = hypot($x + 0.5 - $centre, $y + 0.5 - $centre) > $rayonSur;
+
+                if ($hors && substr($pixels, ($y * $entete['largeur'] + $x) * 4, 4) !== $tuile) {
+                    $rognes++;
+                }
+            }
+        }
+
+        expect($rognes)->toBe(0, "{$adresse} : {$rognes} pixels du dessin sortent de la zone sûre, et le masque d'un lanceur les rognerait.");
     }
 });
 
@@ -446,4 +673,24 @@ it('dessine le badge des notifications en blanc sur transparent', function (): v
         ->and($pixels[0][3])->toBe("\x00", 'Le coin du badge doit être transparent.')
         ->and(count($visibles))->toBeGreaterThan(0)->toBeLessThan(count($pixels) / 2)
         ->and(array_values($teintes))->toBe(["\xFF\xFF\xFF"]);
+
+    /*
+     * La taille, le coin, la surface et la teinte ne disent pas ce que le
+     * badge dessine : l'ancien, un cercle et une croix blancs, les tenait
+     * aussi. Trois points du dessin le disent, en proportion du côté : le flanc
+     * gauche du G et la plus haute barre sont pleins, le jour entre le G et
+     * son bras est vide. Chacun est au cœur d'une zone de sept pixels de côté.
+     * Un pixel s'y lit en hexadécimal, rouge, vert, bleu puis alpha.
+     */
+    $point = static fn (int $x, int $y): string => bin2hex($pixels[intdiv($entete['hauteur'] * $y, 100) * $entete['largeur'] + intdiv($entete['largeur'] * $x, 100)]);
+
+    expect([
+        'flanc du G' => $point(17, 52),
+        'plus haute barre' => $point(81, 62),
+        'alpha du jour entre le G et son bras' => substr($point(32, 52), 6),
+    ])->toBe([
+        'flanc du G' => 'ffffffff',
+        'plus haute barre' => 'ffffffff',
+        'alpha du jour entre le G et son bras' => '00',
+    ], 'public/badge-96x96.png ne montre pas le dessin de public/badge.svg : à régénérer, voir pwa-assets.config.js.');
 });

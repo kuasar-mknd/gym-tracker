@@ -4,9 +4,13 @@ import { readFileSync } from 'node:fs'
  * La recette des icônes de l'application (#1850).
  *
  * Les PNG de public/ sont versionnés : rien ne les reconstruit, ni Vite ni
- * l'image Docker. On ne les régénère qu'après avoir retouché le dessin de
- * public/logo.svg ou de public/badge.svg, ou les couleurs de la charte, par
- * deux commandes lancées depuis la racine :
+ * l'image Docker. Le dessin vit dans public/logo.svg, et deux SVG le
+ * reprennent tel quel : public/icone.svg le pose sur sa tuile, d'où se tirent
+ * les icônes et le favicon, et public/badge.svg le peint en blanc pour la
+ * barre d'état. Après avoir retouché le dessin (dans ces trois SVG et dans
+ * resources/js/Utils/dessinDuLogo.js, d'où l'application le trace) ou les
+ * jetons `--color-logo-*` de la charte, on régénère les PNG par deux commandes
+ * lancées depuis la racine :
  *
  *     npx -y @vite-pwa/assets-generator@2.0.0
  *     npx -y @vite-pwa/assets-generator@2.0.0 public/badge.svg
@@ -17,21 +21,20 @@ import { readFileSync } from 'node:fs'
  * il faudrait lui passer l'option `pwaAssets`, que vite.config.js ne lui
  * passe pas.
  *
- * tests/Feature/IconesDeLApplicationTest.php vérifie le résultat : tailles,
- * opacité de l'icône iOS, couleur de son fond, badge blanc sur transparent.
+ * tests/Feature/IconesDeLApplicationTest.php vérifie le résultat : même dessin
+ * dans ses quatre copies, tailles, opacité de l'icône iOS, couleur de sa tuile,
+ * icônes opaques sans marge, dessin dans la zone sûre de l'icône masquable, les
+ * trois couleurs du logo sur chaque PNG, badge blanc sur transparent.
  */
 
 /**
- * Le fond du logo, lu dans la charte plutôt que recopié.
+ * La tuile de l'icône, lue dans la charte plutôt que recopiée.
  *
- * C'est le fond de l'utilitaire `accent-fill`, celui que public/logo.svg porte
- * en clair. Il comble ici les coins arrondis du logo sur les deux icônes
- * opaques : même résultat qu'une source carrée pleine, sans second dessin à
- * tenir.
+ * C'est le jeton `--color-logo-fond`, que public/icone.svg porte en clair. Il
+ * comble ici les coins arrondis de la tuile sur les deux icônes opaques : même
+ * résultat qu'une source carrée pleine, sans second dessin à tenir.
  */
-const fondDuLogo = readFileSync('resources/css/app.css', 'utf8').match(
-    /--color-accent-primary-fill:\s*(#[0-9a-f]{6});/i,
-)[1]
+const fondDeLIcone = readFileSync('resources/css/app.css', 'utf8').match(/--color-logo-fond:\s*(#[0-9a-f]{6});/i)[1]
 
 /**
  * PNG sans palette. La quantification par défaut du générateur (qualité 60)
@@ -44,11 +47,11 @@ const png = { compressionLevel: 9, palette: false }
 /**
  * Le jeu de minimal-2023, à deux réglages près.
  *
- * Le générateur réduit par défaut le logo à 70 % des icônes iOS et masquable,
- * sur fond blanc : il sortirait rapetissé au milieu d'un carré blanc. Sans
- * marge, son dessin tient dans un cercle de 140 px de rayon sur 512, quand la
- * zone sûre d'une icône masquable en fait 205 : le masque du lanceur ne rogne
- * que du fond.
+ * Le générateur réduit par défaut la source à 70 % des icônes iOS et
+ * masquable, sur fond blanc : le dessin sortirait rapetissé au milieu de sa
+ * tuile. Sans marge, il tient dans un cercle de 196 px de rayon sur 512, quand
+ * la zone sûre d'une icône masquable en fait 205 : le masque du lanceur ne
+ * rogne que la tuile.
  */
 const icones = {
     transparent: {
@@ -58,12 +61,12 @@ const icones = {
     maskable: {
         sizes: [512],
         padding: 0,
-        resizeOptions: { fit: 'contain', background: fondDuLogo },
+        resizeOptions: { fit: 'contain', background: fondDeLIcone },
     },
     apple: {
         sizes: [180],
         padding: 0,
-        resizeOptions: { fit: 'contain', background: fondDuLogo },
+        resizeOptions: { fit: 'contain', background: fondDeLIcone },
     },
     png,
 }
@@ -90,5 +93,5 @@ const pourLeBadge = process.argv.some((argument) => argument.endsWith('badge.svg
 export default {
     headLinkOptions: { preset: '2023' },
     preset: pourLeBadge ? badge : icones,
-    images: ['public/logo.svg'],
+    images: ['public/icone.svg'],
 }

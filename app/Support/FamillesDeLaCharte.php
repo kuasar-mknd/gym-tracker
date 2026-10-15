@@ -46,6 +46,9 @@ final class FamillesDeLaCharte
 
     private const string PLATES = 'Le code olympique. Une norme extérieure, pas un choix de charte.';
 
+    private const string LOGO = 'Le dessin de public/logo.svg et la tuile de ses icônes. Un dessin fixe, '
+        .'que ses SVG et ses PNG écrivent en clair.';
+
     private const string AUTRES = "Aucune famille ne les réclame — c'est en soi une information.";
 
     /**
@@ -94,6 +97,7 @@ final class FamillesDeLaCharte
             'Catégories' => [self::CATEGORIES, self::commence('category-')],
             'Palette utilisateur' => [self::PALETTE, self::commence('palette-')],
             'Disques de fonte' => [self::PLATES, self::commence('plate-')],
+            'Logo' => [self::LOGO, self::commence('logo-')],
         ];
     }
 
