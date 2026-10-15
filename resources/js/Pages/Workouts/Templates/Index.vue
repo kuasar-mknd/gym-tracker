@@ -10,6 +10,7 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 defineProps({
     templates: {
@@ -33,6 +34,7 @@ const executeTemplate = (templateId) => {
         route('templates.execute', { template: templateId }),
         {},
         {
+            onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU),
             onFinish: () => {
                 executingTemplateId.value = null
             },

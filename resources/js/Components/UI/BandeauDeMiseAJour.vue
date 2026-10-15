@@ -11,8 +11,17 @@ import { ref } from 'vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import { nouvelleVersionPrete, rechargerMaintenant } from '@/Utils/miseAJourDuWorker'
+import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 const range = ref(false)
+
+/*
+ * Recharger sans réseau remplaçait la séance ouverte par la page « hors
+ * ligne » du worker, minuteurs compris (#2048). « Recharger » attend donc que
+ * le serveur réponde ; la nouvelle version s'ouvrira de toute façon à la
+ * prochaine page.
+ */
+const { joignable } = useEtatDuReseau()
 </script>
 
 <template>
@@ -24,14 +33,21 @@ const range = ref(false)
         dusk="bandeau-mise-a-jour"
     >
         <div class="glass-panel-light flex items-center gap-3 rounded-2xl p-4 shadow-lg backdrop-blur-xl">
-            <p class="text-text-main flex-1 text-sm font-bold">
-                Nouvelle version prête. Elle s'ouvrira à la prochaine page.
-            </p>
+            <div class="flex-1 space-y-1">
+                <p class="text-text-main text-sm font-bold">
+                    Nouvelle version prête. Elle s'ouvrira à la prochaine page.
+                </p>
+                <p v-if="!joignable" id="recharger-sans-reseau" class="text-text-muted text-xs font-medium">
+                    Il faut le réseau pour recharger.
+                </p>
+            </div>
             <GlassButton
                 variant="primary"
                 size="sm"
                 icon="refresh"
                 dusk="recharger-la-nouvelle-version"
+                :disabled="!joignable"
+                :aria-describedby="joignable ? undefined : 'recharger-sans-reseau'"
                 @click="rechargerMaintenant()"
             >
                 Recharger

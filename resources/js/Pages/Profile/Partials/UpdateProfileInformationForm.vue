@@ -4,6 +4,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import { ENVOI_DU_LIEN_NON_CONFIRME, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const props = defineProps({
     mustVerifyEmail: Boolean,
@@ -22,6 +23,9 @@ const props = defineProps({
 })
 
 const page = usePage()
+
+/** Le renvoi du lien de vérification n'enregistre rien : sans réponse, il le dit (#2048). */
+const renvoiSansReseau = direSansReseau(ENVOI_DU_LIEN_NON_CONFIRME)
 
 /**
  * Lu à chaque rendu plutôt qu'une fois au montage : après un changement
@@ -153,6 +157,7 @@ const submit = () => {
                     <Link
                         :href="route('verification.send')"
                         method="post"
+                        :on-network-error="renvoiSansReseau"
                         as="button"
                         class="ml-1 underline hover:no-underline"
                     >

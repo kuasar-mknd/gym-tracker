@@ -11,6 +11,8 @@ vi.mock('@inertiajs/vue3', () => ({
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => triggerHaptic(...args) }))
 
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
+import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../../utils/annoncesSansReseau'
 
 /** Ziggy, reduced to the two forms the bar uses: route(name) and route().current(). */
 let currentRoute = 'dashboard'
@@ -112,6 +114,23 @@ describe('BottomNav — the central button', () => {
         expect(opened).not.toHaveBeenCalled()
 
         window.removeEventListener('open-add-exercise', opened)
+    })
+
+    /*
+     * Sans réseau, l'appui ne faisait rien, et rien ne disait pourquoi (#2048).
+     */
+    it('dit qu’il faut le réseau pour démarrer une séance, et rend le bouton', async () => {
+        const wrapper = mountNav('stats.index')
+
+        await fab(wrapper).trigger('click')
+        const options = routerPost.mock.calls[0][2]
+        const { rendu, annonces } = annoncesPendant(() => options.onNetworkError({ code: 'ERR_NETWORK' }))
+        options.onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
+        expect(fab(wrapper).attributes('disabled')).toBeUndefined()
     })
 
     it('ne crée pas deux séances quand on appuie deux fois', async () => {

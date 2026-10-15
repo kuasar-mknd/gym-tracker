@@ -37,7 +37,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
@@ -46,6 +45,7 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 use Mockery\MockInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\AppleSimule;
+use Tests\Support\FormulaireDeReinitialisation;
 use Tests\Support\LienDeChangementDAdresseRecu;
 
 use function Pest\Laravel\assertAuthenticatedAs;
@@ -472,12 +472,8 @@ it('n’ouvre plus le compte d’une identité dont l’adresse a changé depuis
     expect($compte->liaison_prouvee_le)->toBeNull();
     auth()->guard('web')->logout();
 
-    post(route('password.store'), [
-        'token' => Password::createToken($compte),
-        'email' => 'dominique.petit@example.org',
-        'password' => 'Un-mot-de-passe-solide-42!',
-        'password_confirmation' => 'Un-mot-de-passe-solide-42!',
-    ])->assertSessionHasNoErrors();
+    post(route('password.store'), FormulaireDeReinitialisation::pour($compte, 'Un-mot-de-passe-solide-42!'))
+        ->assertSessionHasNoErrors();
 
     $compte->refresh()->markEmailAsVerified();
     auth()->guard('web')->logout();

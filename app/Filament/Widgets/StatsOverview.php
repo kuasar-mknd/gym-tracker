@@ -16,17 +16,22 @@ class StatsOverview extends StatsOverviewWidget
     #[\Override]
     protected ?string $pollingInterval = '30s';
 
+    /**
+     * Les tuiles du tableau de bord. « Comptes » et « Nouveaux comptes (7 j) »
+     * ne comptent que les comptes ouverts ; ceux qui attendent encore le lien
+     * envoyé à leur adresse se comptent à part, sous « Comptes ».
+     */
     #[\Override]
     protected function getStats(): array
     {
         return [
-            Stat::make('Comptes', User::count())
-                ->description('Comptes inscrits')
+            Stat::make('Comptes', User::ouverts()->count())
+                ->description(sprintf('Comptes ouverts, et %d en attente du lien', User::enAttente()->count()))
                 ->descriptionIcon('heroicon-m-user-group')
                 ->chart([7, 2, 10, 3, 15, 4, 17])
                 ->color('success'),
             Stat::make('Nouveaux comptes (7 j)', $this->getNewUsersCount())
-                ->description('Inscrits ces sept derniers jours')
+                ->description('Ouverts, inscrits ces sept derniers jours')
                 ->descriptionIcon('heroicon-m-user-plus')
                 ->color('info'),
             Stat::make('Séances du jour', $this->getWorkoutsTodayCount())
@@ -40,9 +45,14 @@ class StatsOverview extends StatsOverviewWidget
         ];
     }
 
+    /**
+     * Les comptes ouverts inscrits ces sept derniers jours. Un compte encore en
+     * attente du lien n'en est pas un (`User::ouverts()`) : il ne se connecte
+     * pas, et s'efface s'il n'est jamais ouvert.
+     */
     private function getNewUsersCount(): int
     {
-        return User::where('created_at', '>=', Carbon::now()->subDays(7))->count();
+        return User::ouverts()->where('created_at', '>=', Carbon::now()->subDays(7))->count();
     }
 
     /**

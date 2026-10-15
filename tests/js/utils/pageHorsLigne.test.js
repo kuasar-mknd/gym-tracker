@@ -22,9 +22,20 @@ describe('la page « hors ligne »', () => {
         expect(page.querySelectorAll('script[src], img, iframe')).toHaveLength(0)
     })
 
+    /*
+     * Un démarrage à froid sans réseau ouvre cette page : l'icône `cloud_off`
+     * s'y affiche, la police Material Symbols étant au precache (#2048).
+     */
+    it('montre l’icône cloud_off, muette pour un lecteur d’écran', () => {
+        const icone = page.querySelector('.material-symbols-outlined')
+
+        expect(icone.textContent).toBe('cloud_off')
+        expect(icone.getAttribute('aria-hidden')).toBe('true')
+    })
+
     /**
      * Le logo de l'application sur sa tuile, tracé dans la page comme dans les
-     * pages invitées : sans réseau, une image de public/ ne se chargerait pas.
+     * pages invitées : il s'affiche sans aucune requête.
      */
     it('montre le logo de l’application seul, nom lu mais caché, sans le charger', () => {
         const logo = page.querySelector('main > div > svg')

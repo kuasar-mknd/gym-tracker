@@ -3,6 +3,7 @@ import { Link, router } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
+import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const navItems = [
     { name: 'Accueil', icon: 'grid_view', route: 'dashboard' },
@@ -55,6 +56,8 @@ const handleFabClick = () => {
         route('workouts.store'),
         {},
         {
+            // Sans réseau, le dire : l'appui ne faisait rien (#2048).
+            onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU),
             // `onFinish` et non `onSuccess` : un échec doit rendre le bouton
             // aussi, sinon un refus du serveur le condamne jusqu'au rechargement.
             onFinish: () => {
