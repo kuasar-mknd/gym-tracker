@@ -25,6 +25,23 @@
 @source not '../views/vendor';
 
 /*
+ * La barre de bureau ne s'ouvre que sur un écran large ET assez haut (#2043).
+ *
+ * Logo, six liens, cloche et compte lui demandent quelque 920 px de large, et
+ * davantage avec un nom de compte long (#2057). Un téléphone couché en a 667 à
+ * 956, moins l'encoche des deux côtés : à `sm` seul, la barre y débordait, la
+ * cloche et le menu du compte sous l'encoche ou hors de l'écran. Aucun
+ * téléphone couché ne dépasse 500 px de haut, aucune tablette n'en a si peu,
+ * et une fenêtre de bureau rarement : en deçà, l'en-tête mobile et la barre du
+ * bas restent, qui tiennent à toute largeur et comptent les marges latérales.
+ *
+ * `bureau:` remplace `sm:` partout où la page bascule avec la barre : l'en-tête
+ * mobile, la barre du bas, l'en-tête de page, et les titres et boutons qu'une
+ * page double entre les deux.
+ */
+@custom-variant bureau (@media (width >= 40rem) and (height >= 31.25rem));
+
+/*
  * `static` : Tailwind emet TOUTES les variables, pas seulement celles qu'une
  * classe utilise.
  *
@@ -1510,14 +1527,15 @@
 /*
  * Ce qui colle sous l'en-tête de l'application : le titre d'un mois du journal,
  * la ligne des jours des habitudes. L'en-tête mobile mesure 77 px sous la barre
- * d'état (16 + 44 + 16, et 1 de bordure), la barre de bureau 65 (64 + 1).
- * Collé plus haut, l'élément mordait sur l'en-tête ; plus bas, il laissait voir
- * entre les deux le contenu qui défile (#2043).
+ * d'état (16 + 44 + 16, et 1 de bordure), la barre de bureau 65 (64 + 1), et
+ * l'une remplace l'autre à `bureau`. Collé plus haut, l'élément mordait sur
+ * l'en-tête ; plus bas, il laissait voir entre les deux le contenu qui défile
+ * (#2043).
  */
 @utility top-sous-entete {
     top: calc(var(--spacing) * 19 + 1px + var(--safe-area-top));
 
-    @variant sm {
+    @variant bureau {
         top: calc(var(--spacing) * 16 + 1px + var(--safe-area-top));
     }
 }

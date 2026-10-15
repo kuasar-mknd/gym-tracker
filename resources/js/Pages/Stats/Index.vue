@@ -55,7 +55,7 @@ const handlePeriodChange = (period) => {
                     dirait deux fois — en plus de mettre deux `<h1>` dans une
                     même page.
                 -->
-                <div class="hidden sm:block">
+                <div class="bureau:block hidden">
                     <h1 class="titre-page">
                         Mon<br />
                         <span class="text-gradient-cyan-magenta">Évolution</span>

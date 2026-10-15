@@ -67,6 +67,42 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
         };
         JS;
 
+    /**
+     * Les en-têtes affichés, leurs commandes et le bord du contenu. Le
+     * défilement se mesure sans le `overflow-x: hidden` de la page, qui
+     * rognerait un débordement au lieu de le montrer.
+     */
+    private const string LIRE_LES_EN_TETES = <<<'JS'
+        const affiche = (element) => element !== null && getComputedStyle(element).display !== 'none';
+        const barres = [...document.querySelectorAll('nav.z-nav, header.z-collant, nav.glass-nav')].filter(affiche);
+        const commandes = barres
+            .flatMap((barre) => [...barre.querySelectorAll('a, button')])
+            .map((commande) => ({ commande, cadre: commande.getBoundingClientRect() }))
+            .filter(({ cadre }) => cadre.width > 0)
+            .map(({ commande, cadre }) => ({
+                nom: (commande.getAttribute('aria-label') ?? commande.textContent).trim().replace(/\s+/g, ' '),
+                gauche: cadre.left,
+                droite: cadre.right,
+            }));
+        const style = document.createElement('style');
+        style.textContent = 'html, body { overflow-x: visible !important; }';
+        document.head.appendChild(style);
+        const defilement = document.documentElement.scrollWidth;
+        style.remove();
+        const contenu = document.querySelector('#main-content > div:last-child').getBoundingClientRect();
+        return {
+            barreDeBureau: affiche(document.querySelector('nav.z-nav')),
+            enteteMobile: affiche(document.querySelector('header.z-collant')),
+            barreDuBas: affiche(document.querySelector('nav.glass-nav')),
+            titres: [...document.querySelectorAll('h1')].filter((titre) => titre.getClientRects().length > 0).length,
+            largeur: innerWidth,
+            defilement,
+            commandes,
+            contenuGauche: contenu.left,
+            contenuDroite: contenu.right,
+        };
+        JS;
+
     public function test_en_portrait_la_fenetre_d_ajout_d_exercice_tient_entre_la_barre_d_etat_et_l_indicateur_d_accueil(): void
     {
         [$compte, $seance] = $this->seanceAvecUneLongueBibliotheque();
@@ -165,7 +201,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
         });
     }
 
-    public function test_en_paysage_l_en_tete_et_le_contenu_s_ecartent_de_l_encoche(): void
+    public function test_en_paysage_un_telephone_garde_l_en_tete_mobile_et_tout_s_ecarte_de_l_encoche(): void
     {
         [$compte, $seance] = $this->seanceAvecUneLongueBibliotheque();
 
@@ -173,6 +209,18 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $browser->loginAs($compte)->resize(844, 390);
 
             $marges = $this->simulerLesMarges($browser, ['top' => 0, 'bottom' => 21, 'left' => 47, 'right' => 47]);
+
+            /*
+             * La barre de bureau demande quelque 920 px de large : couchée, sur
+             * un téléphone, elle débordait, cloche et menu du compte sous
+             * l'encoche ou hors de l'écran. L'en-tête mobile et la barre du bas
+             * restent, et chaque commande se mesure, bord droit compris.
+             */
+            foreach (['/dashboard', '/supplements', '/exercises', '/stats'] as $chemin) {
+                $browser->visit($chemin)->waitFor('#main-content', 30)->disableAnimations()->waitForStableLayout();
+
+                $this->verifierLEnTeteEnPaysage($browser, $marges, $chemin);
+            }
 
             $this->ouvrirLAjoutDExercice($browser, $seance);
 
@@ -183,25 +231,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $this->assertLessThanOrEqual($fenetre['largeur'] - $marges['droite'], $fenetre['panneauDroite'], 'La fenêtre s’écarte du bord droit.');
             $this->assertLessThanOrEqual($fenetre['hauteur'] - $marges['bas'], $fenetre['panneauBas'], 'Le bas de la fenêtre reste au-dessus de l’indicateur d’accueil.');
 
-            /*
-             * En paysage, l'en-tête de bureau s'affiche (la largeur dépasse `sm`) :
-             * son logo se posait à 24 px du bord, sous l'encoche, comme le
-             * contenu de la page. Le bord droit de l'en-tête n'est pas mesuré :
-             * à 844 px, ses liens débordent déjà de l'écran, encoche ou non.
-             */
-            /** @var array{logoGauche: float, contenuGauche: float, contenuDroite: float} $cadre */
-            $cadre = $browser->script(<<<'JS'
-                const contenu = document.querySelector('#main-content > div:last-child').getBoundingClientRect();
-                return {
-                    logoGauche: document.querySelector('nav.z-nav a').getBoundingClientRect().left,
-                    contenuGauche: contenu.left,
-                    contenuDroite: contenu.right,
-                };
-                JS)[0];
-
-            $this->assertGreaterThanOrEqual($marges['gauche'], $cadre['logoGauche'], 'Le logo de l’en-tête s’écarte de l’encoche.');
-            $this->assertGreaterThanOrEqual($marges['gauche'], $cadre['contenuGauche'], 'Le contenu de la page s’écarte de l’encoche.');
-            $this->assertLessThanOrEqual($fenetre['largeur'] - $marges['droite'], $cadre['contenuDroite'], 'Le contenu de la page s’écarte du bord droit.');
+            $this->verifierLEnTeteEnPaysage($browser, $marges, 'la séance');
 
             /*
              * Le formulaire de création dépasse la hauteur permise en paysage. Il
@@ -232,7 +262,53 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
                 $creation['margeSousLeBouton'],
                 sprintf('Le bouton « Créer » garde la marge du bas de la fenêtre (%.0f px).', $creation['margeSousLeBouton'])
             );
+
+            /*
+             * Sur un écran large et haut, celui d'une tablette ou d'un
+             * ordinateur, la barre de bureau revient.
+             */
+            $browser->resize(1280, 800);
+            $this->simulerLesMarges($browser, ['top' => 0, 'bottom' => 0, 'left' => 0, 'right' => 0]);
+
+            /** @var array{barreDeBureau: bool, enteteMobile: bool, barreDuBas: bool} $bureau */
+            $bureau = $browser->script(self::LIRE_LES_EN_TETES)[0];
+
+            $this->assertSame(
+                ['barreDeBureau' => true, 'enteteMobile' => false, 'barreDuBas' => false],
+                ['barreDeBureau' => $bureau['barreDeBureau'], 'enteteMobile' => $bureau['enteteMobile'], 'barreDuBas' => $bureau['barreDuBas']],
+                'Sur un écran de 1280 × 800, la barre de bureau remplace l’en-tête mobile et la barre du bas.'
+            );
         });
+    }
+
+    /**
+     * Couché, un téléphone montre l'en-tête mobile et la barre du bas, jamais
+     * la barre de bureau ; chacune de leurs commandes, et le contenu, restent
+     * entre les marges latérales, et la page ne défile pas de côté.
+     *
+     * @param  array{haut: float, droite: float, bas: float, gauche: float}  $marges
+     */
+    private function verifierLEnTeteEnPaysage(Browser $browser, array $marges, string $page): void
+    {
+        /** @var array{barreDeBureau: bool, enteteMobile: bool, barreDuBas: bool, titres: int, largeur: float, defilement: float, commandes: list<array{nom: string, gauche: float, droite: float}>, contenuGauche: float, contenuDroite: float} $mesure */
+        $mesure = $browser->script(self::LIRE_LES_EN_TETES)[0];
+
+        $this->assertFalse($mesure['barreDeBureau'], "{$page} : un téléphone couché ne montre pas la barre de bureau, qui n’y tient pas.");
+        $this->assertTrue($mesure['enteteMobile'], "{$page} : l’en-tête mobile porte le titre et la cloche.");
+        $this->assertTrue($mesure['barreDuBas'], "{$page} : la barre du bas reste.");
+        $this->assertSame(1, $mesure['titres'], "{$page} : un seul titre, celui de l’en-tête mobile.");
+        $this->assertNotEmpty($mesure['commandes']);
+
+        $horsDeLaZoneSure = array_values(array_filter(
+            $mesure['commandes'],
+            static fn (array $commande): bool => $commande['gauche'] < $marges['gauche'] - 0.5
+                || $commande['droite'] > $mesure['largeur'] - $marges['droite'] + 0.5
+        ));
+
+        $this->assertSame([], $horsDeLaZoneSure, "{$page} : chaque commande de l’en-tête et de la barre du bas s’écarte de l’encoche.");
+        $this->assertLessThanOrEqual($mesure['largeur'], $mesure['defilement'], "{$page} : la page ne défile pas de côté.");
+        $this->assertGreaterThanOrEqual($marges['gauche'], $mesure['contenuGauche'], "{$page} : le contenu s’écarte de l’encoche.");
+        $this->assertLessThanOrEqual($mesure['largeur'] - $marges['droite'], $mesure['contenuDroite'], "{$page} : le contenu s’écarte du bord droit.");
     }
 
     public function test_ce_qui_colle_sous_l_en_tete_s_y_pose_sans_jour_ni_chevauchement(): void
@@ -253,13 +329,19 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $this->verifierCeQuiColleSousLEnTete($browser, 'en portrait');
 
             /*
-             * En paysage, la largeur dépasse `sm` : c'est la barre de bureau qui
-             * sert d'en-tête, plus basse que l'en-tête mobile.
+             * Couché, le téléphone garde l'en-tête mobile, sans barre d'état
+             * au-dessus. Sur un écran large et haut, c'est la barre de bureau
+             * qui sert d'en-tête, plus basse que l'en-tête mobile.
              */
             $browser->resize(844, 390);
 
             $this->simulerLesMarges($browser, ['top' => 0, 'bottom' => 21, 'left' => 47, 'right' => 47]);
             $this->verifierCeQuiColleSousLEnTete($browser, 'en paysage');
+
+            $browser->resize(1280, 800);
+
+            $this->simulerLesMarges($browser, ['top' => 0, 'bottom' => 0, 'left' => 0, 'right' => 0]);
+            $this->verifierCeQuiColleSousLEnTete($browser, 'sur un écran de bureau');
         });
     }
 

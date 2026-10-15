@@ -218,7 +218,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
 
         <!-- Desktop Navigation -->
         <nav
-            class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 sticky top-0 hidden border-b backdrop-blur-xl sm:block"
+            class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b backdrop-blur-xl"
         >
             <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto max-w-7xl">
                 <div class="flex h-16 justify-between">
@@ -322,7 +322,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/80 border-surface-card/40 z-collant px-sure-5 pt-sure-4 sticky top-0 flex items-center justify-between border-b pb-4 backdrop-blur-xl sm:hidden"
+            class="bg-surface-page/80 border-surface-card/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between border-b pb-4 backdrop-blur-xl"
         >
             <div class="flex min-w-0 items-center gap-4">
                 <Link
@@ -369,7 +369,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         <!-- Desktop Page Heading Slot -->
         <header
             v-if="$slots.header"
-            class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 hidden border-b sm:block"
+            class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 bureau:block hidden border-b"
         >
             <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto py-6" :class="LARGEURS[largeur]">
                 <slot name="header" />
@@ -402,7 +402,7 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
         </main>
 
         <!-- Bottom Navigation (mobile only) -->
-        <BottomNav class="sm:hidden" />
+        <BottomNav class="bureau:hidden" />
 
         <!-- Achievement Celebration Modal -->
         <CelebrationModal />
