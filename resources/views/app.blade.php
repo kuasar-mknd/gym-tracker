@@ -16,9 +16,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     {{-- iOS ne lit pas un SVG en apple-touch-icon : sans PNG, l'écran
          d'accueil montrait une capture de la page (#1850). Il peint aussi en
-         noir tout pixel transparent, d'où une icône opaque, sans marge. --}}
+         noir tout pixel transparent, d'où une icône opaque, sans marge.
+         L'onglet prend icone.svg, le logo sur sa tuile, et non logo.svg :
+         sans fond, la lettre bleu nuit disparaît sur un onglet sombre. --}}
     <link rel="icon" href="/favicon.ico" sizes="48x48">
-    <link rel="icon" href="/logo.svg" sizes="any" type="image/svg+xml">
+    <link rel="icon" href="/icone.svg" sizes="any" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
     <link rel="manifest" href="/manifest.webmanifest">
 

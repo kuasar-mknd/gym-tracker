@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
-use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules;
@@ -12,11 +11,12 @@ use Illuminate\Validation\Rules;
 /**
  * L'inscription.
  *
- * Meme raison que `NewPasswordRequest` (#1482). `CreateUserAction::execute()`
- * attend un `array<string, string>` : c'est le controleur qui construit ce
- * tableau, champ par champ, plutot que d'elargir la signature de l'action
- * pour la faire taire. L'action veut trois chaines, on lui donne trois
- * chaines.
+ * Aucune règle ne regarde si l'adresse a déjà un compte (ni `unique`, ni
+ * `exists`) : une erreur « adresse déjà prise » le dirait à quiconque tape
+ * l'adresse d'un autre. C'est `TraiterUneInscription`, dans la file, qui
+ * cherche le compte ; la page répond la même chose dans les deux cas
+ * (`RegisteredUserController`). `AucuneRequeteNeDitQuUneAdresseAUnCompteTest`
+ * le tient.
  */
 class RegisterRequest extends FormRequest
 {
@@ -34,7 +34,8 @@ class RegisterRequest extends FormRequest
      * L'adresse s'écrit en minuscules et en ASCII imprimable : la base ne
      * confond alors deux adresses que si elles sont identiques, et une
      * inscription ne peut pas occuper l'adresse d'un autre
-     * (`AdresseEnAsciiImprimable`).
+     * (`AdresseEnAsciiImprimable`). Une adresse déjà prise passe la
+     * validation comme une autre.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -42,7 +43,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', new AdresseEnAsciiImprimable(), 'unique:'.User::class],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', new AdresseEnAsciiImprimable()],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
     }

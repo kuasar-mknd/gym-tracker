@@ -373,6 +373,25 @@
     --color-plate-2: #1a1a1a;
     --color-plate-small: #8a8f98;
 
+    /*
+     * --- Le logo --------------------------------------------------------
+     *
+     * Les couleurs du dessin de public/logo.svg : la lettre, ses barres, et la
+     * tuile de public/icone.svg, d'où se tirent les icônes de l'application.
+     *
+     * Ce ne sont pas des rôles de l'interface, comme les disques de fonte : le
+     * logo est un dessin fixe, que ses SVG et ses PNG écrivent en clair. La
+     * lettre vaut l'encre du texte, les barres l'orange de l'identité, la tuile
+     * le blanc d'une carte, et ces coïncidences sont déclarées dans
+     * `LesJetonsNeSeRecopientPasTest` : retoucher l'encre de l'interface ne
+     * doit pas repeindre un logo déjà installé sur les écrans d'accueil.
+     * `IconesDeLApplicationTest` compare les SVG et les PNG à ces jetons, et
+     * exige 3:1 de chaque couleur du dessin sur les surfaces qui le portent.
+     */
+    --color-logo-lettre: #0f172a;
+    --color-logo-barres: #ff5500;
+    --color-logo-fond: #ffffff;
+
     --backdrop-blur-glass: 20px;
     --backdrop-blur-glass-strong: 24px;
 

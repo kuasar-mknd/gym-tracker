@@ -167,6 +167,7 @@ return [
 
         App\Enums\ExerciseCategory::class,
         App\Enums\GoalType::class,
+        App\Enums\MotifDeLaTentative::class,
         App\Enums\PersonalRecordType::class,
         App\Enums\PorteeDeDiagnostic::class,
 
