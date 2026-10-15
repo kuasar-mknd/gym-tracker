@@ -20,7 +20,10 @@ use App\Services\Diagnostic\Expurgation\TexteIllisible;
  * Dans l'ordre :
  *
  * 1. l'entrée est coupée à 8 Kio, avant tout motif ;
- * 2. normalisée en NFKC, ses `%xx` décodés (`NormaliseLeTexte`) ;
+ * 2. normalisée en NFKC, ses `%xx` décodés (`NormaliseLeTexte`), puis
+ *    recoupée à 8 Kio : NFKC allonge certains caractères, U+FDFA de trois
+ *    octets à trente-trois, et les motifs liraient sinon près de onze fois
+ *    la borne ;
  * 3. sans caractères invisibles ni séquences ANSI (`RetireLesInvisibles`) ;
  * 4. un message d'erreur SQL réduit (`ReduitLesErreursSql`) ;
  * 5. les valeurs connues de la configuration marquées
@@ -34,9 +37,10 @@ use App\Services\Diagnostic\Expurgation\TexteIllisible;
  *
  * Chaque motif a des répétitions bornées, sauf celui du texte du serveur de
  * base, repris de la source (`TexteDuServeurSansValeurs`) et borné par la
- * coupe de l'entrée ; chaque appel est vérifié : une expression qui échoue
- * fait de tout le champ `[illisible]`, jamais le texte d'origine. L'expurgation est faite au mieux ; la première barrière reste de
- * ne pas rendre le texte, qui ne sort qu'au détail, sous `non_fiable`.
+ * coupe du texte normalisé ; chaque appel est vérifié : une expression qui
+ * échoue fait de tout le champ `[illisible]`, jamais le texte d'origine.
+ * L'expurgation est faite au mieux ; la première barrière reste de ne pas
+ * rendre le texte, qui ne sort qu'au détail, sous `non_fiable`.
  */
 final class ExpurgeLeTexte
 {
@@ -53,7 +57,7 @@ final class ExpurgeLeTexte
     public function __invoke(string $texte, int $budget = self::BUDGET_PAR_DEFAUT): TexteExpurge
     {
         try {
-            $visible = new RetireLesInvisibles()(new NormaliseLeTexte()(mb_strcut($texte, 0, self::OCTETS_LUS, 'UTF-8')));
+            $visible = new RetireLesInvisibles()($this->lire(new NormaliseLeTexte()($this->lire($texte))));
             $masque = array_reduce(
                 [
                     new ReduitLesErreursSql(),
@@ -70,6 +74,15 @@ final class ExpurgeLeTexte
         } catch (TexteIllisible) {
             return new TexteExpurge(self::ILLISIBLE, 0);
         }
+    }
+
+    /**
+     * Ce que les motifs lisent d'un texte : ses 8 premiers Kio, coupés sur
+     * une limite de caractère.
+     */
+    private function lire(string $texte): string
+    {
+        return mb_strcut($texte, 0, self::OCTETS_LUS, 'UTF-8');
     }
 
     /**

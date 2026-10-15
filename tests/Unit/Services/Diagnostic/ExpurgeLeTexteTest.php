@@ -51,6 +51,22 @@ it('coupe l’entrée sur une limite de caractère', function (): void {
         ->toBe(str_repeat('a', ExpurgeLeTexte::OCTETS_LUS - 1));
 });
 
+/*
+ * NFKC allonge certains caractères : U+FDFA, trois octets, devient une
+ * formule de dix-huit caractères et trente-trois octets. Le texte normalisé
+ * est recoupé à 8 Kio, sur une limite de caractère, avant le premier motif :
+ * sans quoi les motifs liraient près de onze fois la borne qu'ils supposent.
+ */
+it('recoupe à 8 Kio le texte que la normalisation allonge', function (): void {
+    $formule = 'صلى الله عليه وسلم';
+
+    $expurge = expurgeLeTexte(str_repeat("\u{FDFA}", 2_730), 100_000);
+
+    expect($expurge->texte)->toBe(str_repeat($formule, 248).'صلى ')
+        ->and(strlen($expurge->texte))->toBe(ExpurgeLeTexte::OCTETS_LUS - 1)
+        ->and(expurgeLeTexte(str_repeat("\u{FDFA}", 300).' jean@example.org', 100_000)->texte)->toBe(str_repeat($formule, 248).'صلى ');
+});
+
 it('normalise la pleine chasse en NFKC avant de chercher un courriel', function (): void {
     expect(expurgeLeTexte('écrire à ｊｅａｎ＠ｅｘａｍｐｌｅ．ｏｒｇ, ﬁn')->texte)->toBe('écrire à [courriel], fin');
 });
@@ -351,4 +367,7 @@ it('traite une chaîne adverse de 8 Kio en moins de 50 ms', function (string $ad
     'des adresses IPv4 écrites en IPv6' => [str_repeat('::ffff:1.2.3.', 631)],
     'de l’hexadécimal entre des tirets' => [str_repeat('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0-', 200)],
     'des courriels enchaînés' => [str_repeat('a.b@c.', 1_366)],
+    'des ligatures que NFKC allonge' => [str_repeat("\u{FDFA}", 2_731)],
+    'des ligatures que NFKC allonge, séparées par des points' => [str_repeat("\u{FDFA}.", 2_048)],
+    'des ligatures que NFKC allonge, dans une clé en double' => ['SQLSTATE[23000]: x: 1062 Duplicate entry \''.str_repeat("\u{FDFA}", 2_731)],
 ]);
