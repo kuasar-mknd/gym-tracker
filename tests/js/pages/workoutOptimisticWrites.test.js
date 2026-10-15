@@ -233,6 +233,7 @@ describe('Workouts/Show — writes made while a create is in flight', () => {
         expect(lines(wrapper)[0].sets[0].id).toBe(77)
         expect(post).toHaveBeenCalledWith('/api/v1/sets', expect.objectContaining({ workout_line_id: 10 }), {
             ajusterPar: expect.any(Function),
+            contexte: { workout_id: 1, exercise_id: 5 },
         })
     })
 })
@@ -348,6 +349,7 @@ describe('Workouts/Show — a set added onto a queued exercise', () => {
             url: '/api/v1/sets',
             data: expect.objectContaining({ workout_line_id: { enAttenteDe: 'q-77' } }),
             ajusterPar: expect.any(Function),
+            contexte: { workout_id: 1, exercise_id: 5 },
         })
         expect(wrapper.vm.unsyncedSetIds.size).toBe(1)
 
@@ -678,7 +680,7 @@ describe('Workouts/Show — une série recopiée au-delà des plafonds', () => {
                 weight: 100000,
                 reps: 999,
             },
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 1, exercise_id: 5 } },
         )
         expect(lines(wrapper)[0].sets.map((serie) => serie.id)).toEqual([42, 43])
     })

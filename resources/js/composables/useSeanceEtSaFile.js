@@ -171,7 +171,10 @@ const garderDansLHistorique = ({ page, localWorkout }) => {
  * Retour et Avance rendent aussi les props de la visite, d'avant tout ce que la
  * page a fait accepter par l'API : l'entrée d'historique garde donc la séance
  * à jour (`garderDansLHistorique`), et c'est elle qui sert de séance de départ
- * quand elle existe.
+ * quand elle existe. Elle ne peut l'être que de sa propre visite : une visite
+ * plus ancienne de la même séance n'a pas l'exercice ajouté depuis, et la
+ * superposition reconstruit alors la ligne d'une série en file d'après le
+ * contexte de son entrée.
  *
  * Les brouillons orphelins sont effacés d'abord : un brouillon rangé sous un
  * identifiant provisoire d'un montage précédent désignerait une autre série.

@@ -271,6 +271,86 @@ describe('superposer la file à la séance du serveur', () => {
         expect(copie).toEqual(seance())
     })
 
+    /*
+     * L'entrée d'historique d'une visite plus ancienne de la même séance n'a
+     * pas l'exercice ajouté en ligne depuis : la série mise en file sous lui
+     * ne trouvait plus sa ligne et disparaissait avec lui, alors que la file
+     * la gardait, et la personne la refaisait (#2048).
+     */
+    it('reconstruit la ligne réelle qu’une série en file nomme, d’après le contexte de son entrée', () => {
+        const contexte = { workout_id: 5, exercise_id: 7 }
+        const premiere = creationDeSerie(
+            { workout_line_id: 70, is_completed: true, weight: 60, reps: 10 },
+            { contexte },
+        )
+        const seconde = creationDeSerie({ workout_line_id: '70', is_completed: false, weight: 62.5 }, { contexte })
+        const inconnue = creationDeSerie(
+            { workout_line_id: 71, is_completed: false, reps: 3 },
+            { contexte: { workout_id: '5', exercise_id: 99 } },
+        )
+
+        const copie = superposerLaFile(seance(), [premiere, seconde, inconnue], { exercices: [SQUAT, COURSE] })
+
+        expect(ecran(copie)).toEqual([
+            [1, [11, 12]],
+            [2, [21]],
+            [70, [`temp-q${premiere.id}`, `temp-q${seconde.id}`]],
+            [71, [`temp-q${inconnue.id}`]],
+        ])
+        expect(copie.workout_lines[2]).toEqual({
+            id: 70,
+            exercise_id: 7,
+            exercise: SQUAT,
+            sets: copie.workout_lines[2].sets,
+            order: 2,
+            notes: null,
+            recommended_values: null,
+        })
+        expect(copie.workout_lines[2].sets[0]).toMatchObject({ is_completed: true, weight: 60, reps: 10 })
+        // Un exercice que la liste ne connaît pas reste montré : la série attend encore.
+        expect(copie.workout_lines[3].exercise).toEqual({ id: 99, name: 'Exercice', type: 'strength' })
+    })
+
+    it('ne reconstruit rien pour une autre séance, sans contexte, sous une ligne encore en file, ni pour une création retirée', () => {
+        const contexte = { workout_id: 5, exercise_id: 7 }
+        const copie = superposerLaFile(
+            seance(),
+            [
+                creationDeSerie(
+                    { workout_line_id: 70, is_completed: false },
+                    { contexte: { ...contexte, workout_id: 6 } },
+                ),
+                creationDeSerie({ workout_line_id: 71, is_completed: false }),
+                creationDeSerie({ workout_line_id: 72, is_completed: false }, { contexte: { workout_id: 5 } }),
+                creationDeSerie({ workout_line_id: { enAttenteDe: 'absente' }, is_completed: false }, { contexte }),
+                creationDeSerie({ workout_line_id: 'temp-4', is_completed: false }, { contexte }),
+                creationDeSerie(
+                    { workout_line_id: 73, is_completed: false },
+                    { contexte, tentee: true, aAnnuler: '/api/v1/sets/__produit__' },
+                ),
+            ],
+            { exercices: [SQUAT] },
+        )
+
+        expect(copie).toEqual(seance())
+    })
+
+    it('retire la ligne reconstruite quand la file la retire ensuite', () => {
+        const copie = superposerLaFile(
+            seance(),
+            [
+                creationDeSerie(
+                    { workout_line_id: 70, is_completed: true },
+                    { contexte: { workout_id: 5, exercise_id: 7 } },
+                ),
+                entree('delete', '/api/v1/workout-lines/70'),
+            ],
+            { exercices: [SQUAT] },
+        )
+
+        expect(copie).toEqual(seance())
+    })
+
     it('lit une charge déjà sérialisée, et passe sur une charge illisible', () => {
         const copie = superposerLaFile(seance(), [
             entree('patch', '/api/v1/sets/11', JSON.stringify({ weight: 70 })),

@@ -1208,7 +1208,7 @@ describe('Workouts/Show — a create that answers with nothing', () => {
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 10, weight: 0, reps: 10 }),
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 1, exercise_id: 5 } },
         )
     })
 
@@ -1232,7 +1232,7 @@ describe('Workouts/Show — a create that answers with nothing', () => {
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 10, weight: 62.5, reps: 8 }),
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 1, exercise_id: 5 } },
         )
     })
 })
@@ -1366,6 +1366,7 @@ describe('Workouts/Show — a set on an exercise that never reached the server',
             url: '/api/v1/sets',
             data: expect.objectContaining({ workout_line_id: { enAttenteDe: 'q-mine' } }),
             ajusterPar: expect.any(Function),
+            contexte: { workout_id: 1, exercise_id: 5 },
         })
 
         window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: 'q-other', data: { id: 99 } } }))
@@ -2329,7 +2330,7 @@ describe('Workouts/Show — a set added before the exercise’s recommendation h
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 77, weight: 62.5, reps: 8 }),
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 1, exercise_id: 5 } },
         )
     })
 
@@ -2345,7 +2346,7 @@ describe('Workouts/Show — a set added before the exercise’s recommendation h
         expect(post).toHaveBeenCalledWith(
             '/api/v1/sets',
             expect.objectContaining({ workout_line_id: 77, weight: 70, reps: 8 }),
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 1, exercise_id: 5 } },
         )
     })
 

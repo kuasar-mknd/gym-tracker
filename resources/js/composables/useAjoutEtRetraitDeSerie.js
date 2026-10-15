@@ -354,6 +354,15 @@ export const useAjoutEtRetraitDeSerie = ({
          */
         const ajusterPar = (realId) => route('api.v1.sets.update', { set: realId })
 
+        /*
+         * La séance et l'exercice de la ligne, que la file garde sur l'entrée
+         * sans les envoyer. Une page de cette séance qui ne connaît pas la
+         * ligne la reconstruit avec, plutôt que d'écarter la série : l'entrée
+         * d'historique d'une visite plus ancienne n'a pas l'exercice ajouté en
+         * ligne depuis, et la série en file disparaissait avec lui (#2048).
+         */
+        const contexte = { workout_id: localWorkout.value.id, exercise_id: line.exercise_id ?? line.exercise?.id }
+
         /**
          * Le premier envoi : la série créée, mise en file, ou refusée.
          *
@@ -412,15 +421,18 @@ export const useAjoutEtRetraitDeSerie = ({
                         url: route('api.v1.sets.store'),
                         data: charge,
                         ajusterPar,
+                        contexte,
                     })
 
                     return queueId === null ? null : { queueId }
                 }
 
-                return SyncService.post(route('api.v1.sets.store'), charge, { ajusterPar }).then((response) => ({
-                    created: response.data?.data ?? null,
-                    sent,
-                }))
+                return SyncService.post(route('api.v1.sets.store'), charge, { ajusterPar, contexte }).then(
+                    (response) => ({
+                        created: response.data?.data ?? null,
+                        sent,
+                    }),
+                )
             })
             /**
              * This is what makes the chain settle rather than reject, and it is

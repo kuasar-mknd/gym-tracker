@@ -127,6 +127,72 @@ const cleDeLaCreation = (entree) => {
 }
 
 /**
+ * Une ligne que la page montre sans que la séance reçue la porte : celle qu'une
+ * création encore en file ajoute, ou celle qu'une série en file nomme.
+ *
+ * @param {number|string} id
+ * @param {number|string} exerciseId
+ * @param {number} ordre
+ * @param {Array<object>} exercices les exercices du compte
+ */
+const ligneMontree = (id, exerciseId, ordre, exercices) => {
+    const exercice = exercices.find((candidat) => memeIdentifiant(candidat?.id, exerciseId))
+
+    return {
+        id,
+        exercise_id: exerciseId,
+        // Un exercice qui n'est plus dans la liste reste montré : son écriture attend encore.
+        exercise: exercice ? { ...exercice } : { id: exerciseId, name: 'Exercice', type: 'strength' },
+        sets: [],
+        order: ordre,
+        notes: null,
+        recommended_values: null,
+    }
+}
+
+/**
+ * La ligne qu'une création de série en file nomme sans que la séance la porte,
+ * reconstruite d'après ce que la page a noté sur l'entrée (`contexte`), quand
+ * c'est une ligne réelle de cette séance-ci ; sinon undefined.
+ *
+ * La séance de départ peut dater d'avant la ligne : l'entrée d'historique
+ * d'une visite plus ancienne de la même séance (la séance, la liste, puis la
+ * séance rouverte) n'a pas l'exercice ajouté en ligne depuis. La série en file
+ * sous cet exercice était écartée sans bruit, et disparaissait avec lui alors
+ * que la file la gardait : la personne la refaisait, et le vidage en créait
+ * une seconde (#2048). Une entrée sans contexte, d'une version précédente,
+ * reste écartée : rien ne dit de quelle séance elle est.
+ *
+ * @param {object} seance
+ * @param {object} entree
+ * @param {unknown} ligneId l'identifiant que nomme la série
+ * @param {Array<object>} exercices
+ * @returns {object|undefined}
+ */
+const ligneReconstruite = (seance, entree, ligneId, exercices) => {
+    const contexte = entree?.contexte
+
+    if (
+        contexte === null ||
+        typeof contexte !== 'object' ||
+        !memeIdentifiant(contexte.workout_id, seance.id) ||
+        contexte.exercise_id === undefined ||
+        ligneId === undefined ||
+        ligneId === null ||
+        typeof ligneId === 'object' ||
+        isTemporaryId(ligneId)
+    ) {
+        return undefined
+    }
+
+    const ligne = ligneMontree(ligneId, contexte.exercise_id, seance.workout_lines.length, exercices)
+
+    seance.workout_lines.push(ligne)
+
+    return ligne
+}
+
+/**
  * Range les rangées dans l'ordre qu'une écriture a donné. Celles qu'il ne nomme
  * pas, ajoutées depuis, le suivent dans leur ordre d'avant.
  */
@@ -198,19 +264,8 @@ const appliquer = (seance, entree, { exercices, produites }) => {
             }
 
             const id = identifiantEnFile(entree.id)
-            const exercice = exercices.find((candidat) => memeIdentifiant(candidat?.id, charge.exercise_id))
 
-            lignes.push({
-                id,
-                _rowKey: id,
-                exercise_id: charge.exercise_id,
-                // Un exercice qui n'est plus dans la liste reste montré : sa création attend encore.
-                exercise: exercice ? { ...exercice } : { id: charge.exercise_id, name: 'Exercice', type: 'strength' },
-                sets: [],
-                order: lignes.length,
-                notes: null,
-                recommended_values: null,
-            })
+            lignes.push({ ...ligneMontree(id, charge.exercise_id, lignes.length, exercices), _rowKey: id })
 
             return
         }
@@ -237,7 +292,12 @@ const appliquer = (seance, entree, { exercices, produites }) => {
                 return
             }
 
-            const ligne = retireeDeLEcran ? undefined : ligneDe(ligneNommee(charge.workout_line_id, produites))
+            if (retireeDeLEcran) {
+                return
+            }
+
+            const ligneId = ligneNommee(charge.workout_line_id, produites)
+            const ligne = ligneDe(ligneId) ?? ligneReconstruite(seance, entree, ligneId, exercices)
 
             if (ligne === undefined) {
                 return
@@ -309,6 +369,8 @@ const appliquer = (seance, entree, { exercices, produites }) => {
  * - les créations de lignes et de séries, une série sous une ligne encore en
  *   file comprise (`{ enAttenteDe }`), avec la saisie et la coche qui s'y sont
  *   fondues ; chaque rangée prend `temp-q<queueId>` pour identifiant et pour clef ;
+ * - une série sous une ligne réelle que la séance reçue ne porte pas encore :
+ *   la ligne est reconstruite d'après le contexte de l'entrée (`ligneReconstruite`) ;
  * - une création déjà arrivée au serveur, sa réponse perdue, reconnue à sa clé
  *   d'idempotence sur la rangée qu'elle a produite : pas de seconde rangée, ses
  *   valeurs se posent sur celle-là ;

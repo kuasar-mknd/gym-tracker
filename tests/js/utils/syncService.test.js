@@ -1791,6 +1791,54 @@ describe('SyncService une création tentée sans réponse', () => {
         ])
     })
 
+    /*
+     * La page de séance note sur la création d'une série la séance et
+     * l'exercice de sa ligne : une page qui ne connaît pas la ligne la
+     * reconstruit avec, au lieu d'écarter la série en file (#2048). Ce n'est
+     * pas une donnée de la série : le serveur ne la reçoit jamais.
+     */
+    it('garde sur l’entrée le contexte d’une création, la page le relit, et il ne part jamais au serveur', async () => {
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+        const contexte = { workout_id: 5, exercise_id: 8 }
+
+        await expect(
+            service.post('/api/v1/sets', { workout_line_id: 70, reps: 5 }, { contexte }),
+        ).rejects.toMatchObject({ isOffline: true })
+        service.mettreEnFile({ method: 'post', url: '/api/v1/sets', data: { workout_line_id: 71 }, contexte })
+        // Une modification n'a rien à montrer de plus que sa charge.
+        await expect(service.patch('/api/v1/sets/3', { reps: 6 }, { contexte })).rejects.toMatchObject({
+            isOffline: true,
+        })
+        contexte.exercise_id = 9
+
+        // La tentative directe, partie avant la file : sans contexte non plus.
+        expect(request.mock.calls[0][0]).not.toHaveProperty('contexte')
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.contexte)).toEqual([
+            { workout_id: 5, exercise_id: 8 },
+            { workout_id: 5, exercise_id: 8 },
+            undefined,
+        ])
+        expect(service.entreesDuCompte().map((entree) => entree.contexte)).toEqual([
+            { workout_id: 5, exercise_id: 8 },
+            { workout_id: 5, exercise_id: 8 },
+            undefined,
+        ])
+
+        request.mockReset()
+        request.mockResolvedValueOnce({ data: { data: { id: 100, workout_line_id: 70, reps: 5 } } })
+        request.mockResolvedValueOnce({ data: { data: { id: 101, workout_line_id: 71 } } })
+        request.mockResolvedValueOnce({ data: { data: { id: 3, reps: 6 } } })
+        await service.processQueue()
+
+        expect(request).toHaveBeenCalledTimes(3)
+        request.mock.calls.forEach(([config]) => {
+            expect(config).not.toHaveProperty('contexte')
+            expect(config.data).not.toHaveProperty('contexte')
+        })
+        expect(service.queue).toEqual([])
+    })
+
     it('oublie simplement une création qui n’est jamais partie', async () => {
         localStorage.setItem(
             'offline_sync_queue',
