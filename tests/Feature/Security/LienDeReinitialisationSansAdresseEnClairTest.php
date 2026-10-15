@@ -350,9 +350,11 @@ it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse
  * `markdown` de l'exception n'en sont pas : avec `APP_DEBUG`, celui de la CI,
  * elles gardent les requêtes réussies, valeurs comprises, dont la recherche
  * du compte par son adresse (`.ai/rules/tests.md`) ; la production ne les
- * remplit pas.
+ * remplit pas. La réponse se lit de même sans `APP_DEBUG`, comme en
+ * production : sa page de débogage montre ces requêtes.
  */
 it('ne recopie l’adresse déchiffrée ni dans le journal ni dans l’exception d’une réinitialisation qui échoue', function (string $format): void {
+    Config::set('app.debug', false);
     $production = parse_ini_file(base_path('docker/php-prod.ini'));
     $ignorerLesArguments = is_array($production) ? ($production['zend.exception_ignore_args'] ?? null) : null;
     expect($ignorerLesArguments)->toBeString('docker/php-prod.ini ne règle pas zend.exception_ignore_args.');
