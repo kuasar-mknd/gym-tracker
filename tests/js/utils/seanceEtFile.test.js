@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { entreeDeLaRangee, identifiantEnFile, superposerLaFile } from '@/Utils/seanceEtFile'
+import { entreeDeLaRangee, identifiantEnFile, seanceConnueDuServeur, superposerLaFile } from '@/Utils/seanceEtFile'
 
 /*
  * La séance rendue par le serveur, avec par-dessus ce qui attend encore dans la
@@ -291,5 +291,46 @@ describe('l’identifiant d’une rangée superposée', () => {
         expect(entreeDeLaRangee(42)).toBeNull()
         expect(entreeDeLaRangee('temp-q')).toBeNull()
         expect(entreeDeLaRangee(undefined)).toBeNull()
+    })
+})
+
+describe('la séance que garde l’entrée d’historique', () => {
+    it('garde les rangées que le serveur connaît, avec les valeurs de l’écran, sans les rangées provisoires', () => {
+        const aLEcran = seance()
+        aLEcran.workout_lines[0].sets[1].weight = 87.5
+        aLEcran.workout_lines[0].sets.push({ id: 'temp-2', _rowKey: 'row-2', weight: 90, reps: 1 })
+        aLEcran.workout_lines[0].sets.push({ id: 'temp-qq7', _rowKey: 'temp-qq7', weight: 95, reps: 1 })
+        aLEcran.workout_lines.push({ id: 'temp-1', _rowKey: 'row-1', exercise: COURSE, sets: [] })
+
+        const gardee = seanceConnueDuServeur(aLEcran)
+
+        expect(ecran(gardee)).toEqual([
+            [1, [11, 12]],
+            [2, [21]],
+        ])
+        expect(gardee.workout_lines[0].sets[1]).toMatchObject({ id: 12, weight: 87.5 })
+    })
+
+    it('retire les champs de l’écran, dont la clef qu’un montage suivant redonnerait à une autre rangée', () => {
+        const aLEcran = seance()
+        aLEcran.workout_lines[0]._rowKey = 'row-1'
+        aLEcran.workout_lines[0].sets[0]._rowKey = 'row-2'
+
+        const gardee = seanceConnueDuServeur(aLEcran)
+
+        expect(gardee).toEqual(seance())
+    })
+
+    it('rend une copie, lignes en tableau, sans toucher à la séance reçue', () => {
+        const aLEcran = {
+            id: 5,
+            workout_lines: { a: { id: 1, exercise: SQUAT, sets: [{ id: 11, _rowKey: 'row-1' }] } },
+        }
+        const avant = JSON.stringify(aLEcran)
+
+        const gardee = seanceConnueDuServeur(aLEcran)
+
+        expect(JSON.stringify(aLEcran)).toBe(avant)
+        expect(gardee.workout_lines).toEqual([{ id: 1, exercise: SQUAT, sets: [{ id: 11 }] }])
     })
 })

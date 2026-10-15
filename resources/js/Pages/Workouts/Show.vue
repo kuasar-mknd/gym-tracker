@@ -40,8 +40,8 @@ const props = defineProps({
 
 const page = usePage()
 
-// La copie locale, modifiable pour l'affichage optimiste : la séance du serveur, et par-dessus la file hors ligne.
-const localWorkout = useSeanceEtSaFile({ seance: props.workout, exercices: props.exercises })
+// La copie locale, modifiable pour l'affichage optimiste : la séance du serveur ou de l'historique, la file par-dessus.
+const { localWorkout, seanceDeDepart } = useSeanceEtSaFile({ seance: props.workout, exercices: props.exercises, page })
 
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(
@@ -205,9 +205,9 @@ const handleFabAddExercise = () => {
 }
 
 onMounted(() => {
-    // Le premier relevé : la séance telle qu'elle est arrivée. Les suivants se
-    // font dans l'observateur des props.
-    releverLesValeursDuServeur(props.workout)
+    // Le premier relevé : la séance telle qu'elle est arrivée, du serveur ou de
+    // l'historique. Les suivants se font dans l'observateur des props.
+    releverLesValeursDuServeur(seanceDeDepart)
 
     window.addEventListener('open-add-exercise', handleFabAddExercise)
 

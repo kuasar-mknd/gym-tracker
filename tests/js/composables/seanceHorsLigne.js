@@ -212,7 +212,7 @@ export const monterLaSeance = async (
     const Seance = defineComponent({
         setup() {
             // Comme la page : la séance du serveur, et par-dessus ce qui attend en file (#2048).
-            const localWorkout = useSeanceEtSaFile({ seance, exercices })
+            const { localWorkout } = useSeanceEtSaFile({ seance, exercices })
             const identite = useIdentiteDesRangees()
             const rapport = useRapportDeSynchronisation({
                 page: { props: {} },

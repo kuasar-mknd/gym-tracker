@@ -5,11 +5,13 @@
  * La page construisait sa copie locale depuis les seules props. Ce qui attendait
  * en file n'apparaissait qu'après le vidage : une série ajoutée et cochée sans
  * réseau disparaissait de l'écran au rechargement, et revenait sans elle au
- * bouton Retour puis Avance, qui rendent les props d'avant l'ajout (#2048). La
+ * bouton Retour puis Avance, qui rendent les props de la visite (#2048). La
  * file, elle, gardait tout ; la personne croyait sa série perdue, et la refaisait.
  *
  * Tout ici est pur : la séance et les entrées reçues ne sont jamais modifiées.
  */
+
+import { isTemporaryId } from '@/Utils/pendingIds'
 
 /**
  * Ce que porte l'identifiant d'une rangée superposée devant l'entrée de file
@@ -335,6 +337,41 @@ export const superposerLaFile = (seance, entrees, { exercices = [] } = {}) => {
     for (const entree of Array.isArray(entrees) ? entrees : []) {
         appliquer(copie, entree, contexte)
     }
+
+    return copie
+}
+
+/** Une rangée sans ce que l'écran y ajoute : les champs `_*`, comme `_rowKey`. */
+const sansLesChampsDeLEcran = (rangee) =>
+    Object.fromEntries(Object.entries(rangee ?? {}).filter(([champ]) => !champ.startsWith('_')))
+
+/**
+ * La séance à l'écran, sans ce que le serveur ne connaît pas encore : ce que
+ * l'entrée d'historique de la page garde pour les boutons Retour et Avance.
+ *
+ * Les rangées provisoires sortent : leur création attend en file, et la
+ * superposition les rend au retour sous `temp-q<queueId>`, ou elle vole, et
+ * elle n'a pas encore d'identifiant à garder. Les champs `_*` sortent aussi :
+ * `_rowKey` vient du compteur du montage qui l'a donné, et le montage suivant,
+ * qui repart de zéro, donnerait la même clef à une autre rangée. Les valeurs
+ * restent celles de l'écran : une saisie qui vole encore quand la personne
+ * part aboutit après, et l'entrée de la page, qu'on ne peut plus réécrire, ne
+ * l'aurait jamais.
+ *
+ * @param {object} seance la copie locale de la page
+ * @returns {object} une copie, la séance reçue n'est pas touchée
+ */
+export const seanceConnueDuServeur = (seance) => {
+    const copie = JSON.parse(JSON.stringify(seance))
+
+    copie.workout_lines = Object.values(copie.workout_lines ?? {})
+        .filter((ligne) => ligne !== null && !isTemporaryId(ligne.id))
+        .map((ligne) => ({
+            ...sansLesChampsDeLEcran(ligne),
+            sets: (Array.isArray(ligne.sets) ? ligne.sets : [])
+                .filter((serie) => serie !== null && !isTemporaryId(serie.id))
+                .map(sansLesChampsDeLEcran),
+        }))
 
     return copie
 }

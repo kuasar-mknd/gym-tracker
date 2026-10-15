@@ -1,0 +1,188 @@
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { defineComponent, h, nextTick, reactive } from 'vue'
+
+const inertia = vi.hoisted(() => ({ remember: vi.fn() }))
+
+vi.mock('@inertiajs/vue3', () => ({ router: { remember: (...args) => inertia.remember(...args) } }))
+vi.mock('@/Utils/SyncService', () => ({ default: { entreesDuCompte: () => [] } }))
+
+import { SOUVENIR_DE_LA_SEANCE, useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
+
+/*
+ * L'entrée d'historique de la séance, tenue à jour de ce que la page a fait
+ * accepter (#2048). Les boutons Retour et Avance rendent la page de la visite,
+ * sans le serveur : sans ce souvenir, ce qu'on avait enregistré depuis par
+ * l'API en manquait. Et comme Inertia l'écrit dans l'entrée COURANTE, il ne
+ * doit plus rien écrire une fois qu'une autre page la prend.
+ */
+
+const seanceDuServeur = () => ({
+    id: 5,
+    name: 'Séance',
+    workout_lines: [{ id: 1, exercise_id: 7, sets: [{ id: 11, weight: 80, reps: 5, is_completed: true }] }],
+})
+
+/** La page d'Inertia telle que `usePage()` la rend pour la séance 5. */
+const pageDeLaSeance = (rememberedState = {}) =>
+    reactive({ component: 'Workouts/Show', url: '/workouts/5', rememberedState })
+
+const montees = []
+
+/** Monte ce que la page de séance tire de `useSeanceEtSaFile`. */
+const ouvrir = (page, seance = seanceDuServeur()) => {
+    let ouverture
+
+    montees.push(
+        mount(
+            defineComponent({
+                setup() {
+                    ouverture = useSeanceEtSaFile({ seance, exercices: [], page })
+
+                    return () => h('div')
+                },
+            }),
+        ),
+    )
+
+    return ouverture
+}
+
+/** La dernière séance gardée dans l'entrée d'historique. */
+const derniereGardee = () => inertia.remember.mock.calls.at(-1)?.[0]
+
+const avantLaPage = (page) => document.dispatchEvent(new CustomEvent('inertia:beforeUpdate', { detail: { page } }))
+
+afterEach(() => {
+    montees.splice(0).forEach((page) => page.unmount())
+    inertia.remember.mockReset()
+})
+
+describe('la séance de départ', () => {
+    it('est celle que l’entrée d’historique a gardée pour cette séance', () => {
+        const gardee = {
+            ...seanceDuServeur(),
+            workout_lines: [
+                {
+                    id: 1,
+                    exercise_id: 7,
+                    sets: [
+                        { id: 11, weight: 80, reps: 5, is_completed: true },
+                        { id: 12, weight: 82.5, reps: 5, is_completed: true },
+                    ],
+                },
+            ],
+        }
+
+        const { localWorkout, seanceDeDepart } = ouvrir(pageDeLaSeance({ [SOUVENIR_DE_LA_SEANCE]: gardee }))
+
+        expect(seanceDeDepart).toEqual(gardee)
+        expect(localWorkout.value.workout_lines[0].sets.map((serie) => serie.id)).toEqual([11, 12])
+    })
+
+    it('est celle du serveur quand l’entrée n’a rien gardé, ou a gardé une autre séance', () => {
+        const autre = { id: 6, workout_lines: [] }
+
+        expect(ouvrir(pageDeLaSeance()).seanceDeDepart).toEqual(seanceDuServeur())
+        expect(ouvrir(pageDeLaSeance({ [SOUVENIR_DE_LA_SEANCE]: autre })).seanceDeDepart).toEqual(seanceDuServeur())
+        expect(ouvrir(null).localWorkout.value).toEqual(seanceDuServeur())
+    })
+})
+
+describe('l’entrée d’historique de la séance', () => {
+    it('garde chaque changement de ce que le serveur connaît, et rien de ce qu’il ne connaît pas encore', async () => {
+        const { localWorkout } = ouvrir(pageDeLaSeance())
+        const series = localWorkout.value.workout_lines[0].sets
+
+        // Rien n'a changé depuis l'ouverture : l'entrée a déjà cette séance.
+        await nextTick()
+        expect(inertia.remember).not.toHaveBeenCalled()
+
+        // Une série dont la création vole : la file ou la réponse la rendront.
+        series.push({ id: 'temp-1', _rowKey: 'row-1', weight: 80, reps: 5, is_completed: false })
+        await nextTick()
+        expect(inertia.remember).not.toHaveBeenCalled()
+
+        // Le serveur l'a créée : l'entrée la garde, sans la clef de l'écran.
+        series[1].id = 100
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+        expect(inertia.remember).toHaveBeenCalledWith(expect.any(Object), SOUVENIR_DE_LA_SEANCE)
+        expect(derniereGardee().workout_lines[0].sets).toEqual([
+            { id: 11, weight: 80, reps: 5, is_completed: true },
+            { id: 100, weight: 80, reps: 5, is_completed: false },
+        ])
+
+        // Revenue au même état dans le même tour : la même séance ne s'écrit pas deux fois.
+        series[1].weight = 82.5
+        series[1].weight = 80
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+    })
+
+    it('se garde une dernière fois quand une autre page arrive, puis plus jamais', async () => {
+        const { localWorkout } = ouvrir(pageDeLaSeance())
+        const [serie] = localWorkout.value.workout_lines[0].sets
+
+        // Changée dans le même tour que la réponse de la visite : avant qu'Inertia ne pousse la page suivante.
+        serie.reps = 6
+        avantLaPage({ component: 'Workouts/Index', url: '/workouts' })
+
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+        expect(derniereGardee().workout_lines[0].sets[0].reps).toBe(6)
+
+        // L'entrée courante est désormais celle de la page suivante.
+        serie.reps = 7
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+    })
+
+    it('reste tenue quand la séance elle-même revient du serveur', async () => {
+        const { localWorkout } = ouvrir(pageDeLaSeance())
+
+        avantLaPage({ component: 'Workouts/Show', url: '/workouts/5?rafraichie=1' })
+        expect(inertia.remember).not.toHaveBeenCalled()
+
+        localWorkout.value.workout_lines[0].sets[0].reps = 6
+        await nextTick()
+        expect(derniereGardee().workout_lines[0].sets[0].reps).toBe(6)
+    })
+
+    it('ne garde plus rien après un retour dans l’historique, mais une ancre ne change pas d’entrée', async () => {
+        const { localWorkout } = ouvrir(pageDeLaSeance())
+        const [serie] = localWorkout.value.workout_lines[0].sets
+
+        window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+        serie.reps = 6
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+
+        window.dispatchEvent(new PopStateEvent('popstate', { state: { page: {} } }))
+        serie.reps = 7
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+    })
+
+    it('ne garde rien quand la page d’Inertia n’est plus la séance', async () => {
+        const page = pageDeLaSeance()
+        const { localWorkout } = ouvrir(page)
+
+        page.component = 'Workouts/Index'
+        page.url = '/workouts'
+        localWorkout.value.workout_lines[0].sets[0].reps = 6
+        await nextTick()
+
+        expect(inertia.remember).not.toHaveBeenCalled()
+    })
+
+    it('ne garde rien sans page d’Inertia', async () => {
+        const sansComposant = ouvrir(reactive({ props: {} }))
+        const sansPage = ouvrir(null)
+
+        sansComposant.localWorkout.value.workout_lines[0].sets[0].reps = 6
+        sansPage.localWorkout.value.workout_lines[0].sets[0].reps = 6
+        await nextTick()
+
+        expect(inertia.remember).not.toHaveBeenCalled()
+    })
+})
