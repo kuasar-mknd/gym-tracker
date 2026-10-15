@@ -132,10 +132,12 @@ afterEach(function (): void {
 
 /*
  * Une ligne part avec le fichier de son jour, à la purge du quatorzième jour
- * qui suit : écrite au premier instant de ce jour, elle a alors quatorze jours
- * et l'heure de la purge. Dans la première heure du jour, la purge ne laisse
- * pas une ligne passer quatorze jours et une heure, et reste loin de l'heure
- * que les changements d'heure sautent ou répètent.
+ * de calendrier qui suit : écrite au premier instant de ce jour, elle a alors
+ * quatorze jours et l'heure de la purge, une heure de plus quand ces quatorze
+ * jours couvrent le passage à l'heure d'hiver. Dans la première heure du
+ * jour, la purge suit de près le minuit qui ouvre le fichier d'un nouveau
+ * jour, et reste loin de l'heure que les changements d'heure sautent ou
+ * répètent.
  */
 it('purge chaque nuit, dans la première heure du jour, sous le moniteur des tâches', function (): void {
     $tache = journauxDuJourLaPurge();
@@ -219,6 +221,30 @@ it('lit la durée dans `days` du canal, nombre ou texte venu de l’environnemen
 })->with([
     'quatorze' => [14, ['app-2026-10-02.log', 'app-2026-10-08.log', 'app-2026-10-09.log']],
     'sept, en texte' => ['7', ['app-2026-10-09.log']],
+]);
+
+/*
+ * Les quatorze jours sont des jours de calendrier, à l'heure de
+ * l'application, comme les noms des fichiers : quand ils couvrent un
+ * changement d'heure, ils durent une heure de plus ou de moins que quatorze
+ * fois vingt-quatre heures, et la purge efface encore le fichier du
+ * quatorzième jour, sans garder celui d'un quinzième.
+ */
+it('compte quatorze jours de calendrier quand ils couvrent un changement d’heure', function (string $maintenant, string $quatorzeJours, string $treizeJours): void {
+    Carbon::setTestNow($maintenant);
+    $dossier = journauxDuJourUnDossier();
+
+    try {
+        journauxDuJourSemer($dossier, [$quatorzeJours, $treizeJours]);
+
+        expect(journauxDuJourPurger($dossier))->toBe(0, Artisan::output())
+            ->and(journauxDuJourRestants($dossier))->toBe([$treizeJours]);
+    } finally {
+        File::deleteDirectory($dossier);
+    }
+})->with([
+    'le passage à l’heure d’hiver, quatorze jours et une heure' => ['2026-11-03 00:10:00', 'app-2026-10-20.log', 'app-2026-10-21.log'],
+    'le passage à l’heure d’été, quatorze jours moins une heure' => ['2027-04-11 00:10:00', 'app-2027-03-28.log', 'app-2027-03-29.log'],
 ]);
 
 /*

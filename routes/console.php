@@ -83,9 +83,10 @@ Artisan::command('inspire', function (): void {
  * compte supprimé comprises, bien au-delà (#2053). La purge efface chaque
  * nuit les fichiers du jour de tous les conteneurs qui ont atteint cette même
  * durée, que la page de profil promet. 00:10 : une ligne écrite au premier
- * instant d'un jour part à la purge du quatorzième jour suivant, donc au plus
- * quatorze jours et dix minutes après, et l'heure reste loin de celle que les
- * changements d'heure sautent ou répètent.
+ * instant d'un jour part à la purge du quatorzième jour de calendrier
+ * suivant, quatorze jours et dix minutes après, une heure de plus quand ces
+ * jours couvrent le passage à l'heure d'hiver ; l'heure reste loin de celle
+ * que les changements d'heure sautent ou répètent.
  */
 \Illuminate\Support\Facades\Schedule::command('journaux:purger')
     ->dailyAt('00:10');
