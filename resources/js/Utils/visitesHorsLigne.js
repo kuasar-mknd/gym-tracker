@@ -59,6 +59,36 @@ export const DEMARRAGE_SANS_RESEAU = 'Il faut le réseau pour démarrer une séa
 /** Ce que dit un rafraîchissement tiré du doigt quand le serveur ne répond pas. */
 export const RAFRAICHISSEMENT_SANS_RESEAU = "Pas de réseau : la page n'a pas été rafraîchie."
 
+/*
+ * Les formulaires d'invité et la suppression du compte n'enregistrent rien :
+ * « l'enregistrement n'est pas confirmé » serait faux pour eux, et chacun dit
+ * le sien par `direSansReseau`. Comme pour une écriture, aucun ne dit que rien
+ * n'a changé, sauf la connexion : la session qu'elle ouvre n'arrive à
+ * l'appareil que par sa réponse, et la refaire ne coûte rien, comme une
+ * déconnexion.
+ */
+
+/** Se connecter, sans réseau. */
+export const CONNEXION_SANS_RESEAU = "Pas de réseau : la connexion n'a pas eu lieu."
+
+/** Créer son compte, sans réponse : le compte a pu être créé. */
+export const INSCRIPTION_NON_CONFIRMEE = "Pas de réponse du serveur : l'inscription n'est pas confirmée."
+
+/** Demander un lien, de réinitialisation ou de vérification de l'adresse, sans réponse. */
+export const ENVOI_DU_LIEN_NON_CONFIRME = "Pas de réponse du serveur : l'envoi du lien n'est pas confirmé."
+
+/** Confirmer son mot de passe avant un geste protégé, sans réponse. */
+export const VERIFICATION_DU_MOT_DE_PASSE_NON_CONFIRMEE =
+    "Pas de réponse du serveur : la vérification du mot de passe n'est pas confirmée."
+
+/** Choisir un nouveau mot de passe depuis le lien reçu, sans réponse. */
+export const NOUVEAU_MOT_DE_PASSE_NON_CONFIRME =
+    "Pas de réponse du serveur : le nouveau mot de passe n'est pas confirmé."
+
+/** Supprimer son compte, sans réponse : la fenêtre de confirmation reste ouverte et le dit. */
+export const SUPPRESSION_DU_COMPTE_NON_CONFIRMEE =
+    "Pas de réponse du serveur : la suppression du compte n'est pas confirmée."
+
 /**
  * Si l'erreur vient du réseau : aucune réponse du serveur. Le client d'Inertia
  * et `http()` posent tous deux ce code.

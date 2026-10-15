@@ -1,7 +1,23 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
-import { installerLesVisitesHorsLigne, PAGE_INDISPONIBLE } from '@/Utils/visitesHorsLigne'
-import { RequeteSimulee, relayerLesRejetsNonGeres, requetes, reseau, uneTache } from '../utils/reseauSimule'
+import {
+    CONNEXION_SANS_RESEAU,
+    ECRITURE_NON_CONFIRMEE,
+    ENVOI_DU_LIEN_NON_CONFIRME,
+    INSCRIPTION_NON_CONFIRMEE,
+    NOUVEAU_MOT_DE_PASSE_NON_CONFIRME,
+    PAGE_INDISPONIBLE,
+    VERIFICATION_DU_MOT_DE_PASSE_NON_CONFIRMEE,
+    installerLesVisitesHorsLigne,
+} from '@/Utils/visitesHorsLigne'
+import {
+    RequeteSimulee,
+    relayerLesRejetsNonGeres,
+    reponseInertia,
+    requetes,
+    reseau,
+    uneTache,
+} from '../utils/reseauSimule'
 
 /*
  * Une page d'invité sans réseau, avec le vrai client d'Inertia (#2048).
@@ -12,6 +28,10 @@ import { RequeteSimulee, relayerLesRejetsNonGeres, requetes, reseau, uneTache } 
  * la vérification de l'adresse ne faisait rien, et la personne restait
  * connectée sans le savoir. Les deux layouts montent désormais les mêmes
  * toasts.
+ *
+ * Et chaque formulaire d'invité dit le sien : aucun n'enregistre rien, et le
+ * message général d'une écriture, « l'enregistrement n'est pas confirmé »,
+ * était faux pour une connexion comme pour une demande de lien.
  */
 
 // Le détachement de l'appareil et la file ont leurs propres tests.
@@ -38,7 +58,14 @@ beforeAll(async () => {
     const inertia = await import('@inertiajs/vue3')
     routeur = inertia.router
     ;({ DECONNEXION_SANS_RESEAU } = await import('@/composables/useDeconnexion'))
-    const VerifyEmail = (await import('@/Pages/Auth/VerifyEmail.vue')).default
+    const pages = {
+        'Auth/ConfirmPassword': (await import('@/Pages/Auth/ConfirmPassword.vue')).default,
+        'Auth/ForgotPassword': (await import('@/Pages/Auth/ForgotPassword.vue')).default,
+        'Auth/Login': (await import('@/Pages/Auth/Login.vue')).default,
+        'Auth/Register': (await import('@/Pages/Auth/Register.vue')).default,
+        'Auth/ResetPassword': (await import('@/Pages/Auth/ResetPassword.vue')).default,
+        'Auth/VerifyEmail': (await import('@/Pages/Auth/VerifyEmail.vue')).default,
+    }
 
     installerLesVisitesHorsLigne({ routeur })
 
@@ -49,10 +76,11 @@ beforeAll(async () => {
             version: 'v',
             props: { errors: {}, auth: { user: { id: 1 } }, status: null },
         },
-        resolve: () => VerifyEmail,
+        resolve: (nom) => pages[nom],
         setup: ({ el, App, props, plugin }) => {
             application = createApp({ render: () => h(App, props) })
             application.directive('press', {})
+            application.config.globalProperties.route = globalThis.route
             application.use(plugin).mount(el)
         },
     })
@@ -61,6 +89,7 @@ beforeAll(async () => {
 beforeEach(() => {
     requetes.length = 0
     reseau.mode = 'coupe'
+    reseau.prochains = []
     relais = relayerLesRejetsNonGeres()
 })
 
@@ -91,7 +120,9 @@ const attendreLaFinDeLaVisite = () => {
 const boutonNomme = (nom) =>
     [...document.querySelectorAll('button')].find((bouton) => bouton.textContent.trim() === nom)
 
-const toastsAffiches = () => [...document.querySelectorAll('[role="alert"] p')].map((p) => p.textContent.trim())
+/** Les toasts du layout ; l'erreur cachée d'un champ porte aussi `role="alert"`, mais pas `aria-live`. */
+const toastsAffiches = () =>
+    [...document.querySelectorAll('[role="alert"][aria-live] p')].map((p) => p.textContent.trim())
 
 describe('une page d’invité sans réseau', () => {
     it('dit qu’une déconnexion depuis la vérification de l’adresse n’a pas eu lieu', async () => {
@@ -111,6 +142,72 @@ describe('une page d’invité sans réseau', () => {
 
         expect(requetes).toHaveLength(1)
         expect(toastsAffiches()).toEqual([PAGE_INDISPONIBLE])
+        expect(relais.rejets).toEqual([])
+    })
+})
+
+/**
+ * Ouvre `composant` comme le serveur l'enverrait, puis coupe le réseau.
+ *
+ * @param {string} composant
+ * @param {string} adresse
+ * @param {Record<string, unknown>} props
+ */
+const ouvrirLaPage = async (composant, adresse, props = {}) => {
+    reseau.mode = 'repond'
+    reseau.reponse = reponseInertia({ component: composant, url: adresse, version: 'v', props })
+
+    await new Promise((resoudre) => routeur.visit(adresse, { onFinish: resoudre }))
+    await uneTache()
+
+    requetes.length = 0
+    reseau.mode = 'coupe'
+}
+
+describe('un formulaire d’invité envoyé sans réseau', () => {
+    it.each([
+        ['Auth/Login', '/login', { auth: { user: null } }, 'login', CONNEXION_SANS_RESEAU],
+        ['Auth/Register', '/register', { auth: { user: null } }, 'register', INSCRIPTION_NON_CONFIRMEE],
+        [
+            'Auth/ForgotPassword',
+            '/forgot-password',
+            { auth: { user: null } },
+            'password.email',
+            ENVOI_DU_LIEN_NON_CONFIRME,
+        ],
+        [
+            'Auth/ResetPassword',
+            '/reset-password/jeton',
+            { auth: { user: null }, email: 'sam@example.org', token: 'jeton' },
+            'password.store',
+            NOUVEAU_MOT_DE_PASSE_NON_CONFIRME,
+        ],
+        [
+            'Auth/ConfirmPassword',
+            '/confirm-password',
+            { auth: { user: { id: 1 } } },
+            'password.confirm',
+            VERIFICATION_DU_MOT_DE_PASSE_NON_CONFIRMEE,
+        ],
+        [
+            'Auth/VerifyEmail',
+            '/verify-email',
+            { auth: { user: { id: 1 } } },
+            'verification.send',
+            ENVOI_DU_LIEN_NON_CONFIRME,
+        ],
+    ])('%s dit ce qui manque, sans parler d’enregistrement', async (composant, adresse, props, route, message) => {
+        await ouvrirLaPage(composant, adresse, props)
+
+        const fin = attendreLaFinDeLaVisite()
+        document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true }))
+        await fin()
+
+        expect(requetes.map((requete) => `${requete.methode} ${new URL(requete.url).pathname}`)).toEqual([
+            `POST /${route}`,
+        ])
+        expect(toastsAffiches()).toEqual([message])
+        expect(toastsAffiches()).not.toContain(ECRITURE_NON_CONFIRMEE)
         expect(relais.rejets).toEqual([])
     })
 })
