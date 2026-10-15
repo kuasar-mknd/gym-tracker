@@ -71,9 +71,9 @@ trait AttendLaPreuveDeSonAdresse
     }
 
     /**
-     * Les comptes qui attendent encore que leur titulaire suive le lien envoyé
-     * à leur adresse : la condition d'`estEnAttente()`, en requête. Le
-     * complément exact d'`ouverts()`.
+     * Les comptes qui attendent encore la preuve de leur adresse : la
+     * condition d'`estEnAttente()`, en requête. Le complément exact
+     * d'`ouverts()`.
      *
      * @param  Builder<User>  $requete
      * @return Builder<User>

@@ -300,9 +300,12 @@ it('filtre les comptes en attente du lien : oui, non, tous', function (): void {
 
 /**
  * La fiche d'un compte en attente le dit, avec la date, et rappelle qu'il
- * s'efface s'il n'est jamais ouvert. L'enregistrer ne l'ouvre pas, même quand
- * le client réécrit le champ : seule la preuve de l'adresse efface l'attente.
- * La fiche d'un compte ouvert n'en dit rien.
+ * s'efface s'il n'est jamais ouvert. Elle dit comment il s'ouvre, comme
+ * `ConnecterLeCompte` l'ouvre : le lien suivi ne fait que marquer la session,
+ * et c'est la connexion qui suit dans le même navigateur qui ouvre le compte ;
+ * un fournisseur ne l'ouvre que s'il garantit l'adresse. L'enregistrer ne
+ * l'ouvre pas, même quand le client réécrit le champ : seule la preuve de
+ * l'adresse efface l'attente. La fiche d'un compte ouvert n'en dit rien.
  */
 it('dit sur la fiche qu’un compte attend le lien, sans l’ouvrir quand on l’enregistre', function (): void {
     $depuis = Carbon::parse('2026-10-12 08:30:00');
@@ -315,6 +318,8 @@ it('dit sur la fiche qu’un compte attend le lien, sans l’ouvrir quand on l�
         ->assertFormSet(['en_attente_depuis' => '2026-10-12 08:30:00'])
         ->assertSee('En attente du lien depuis')
         ->assertSee(sprintf('effacé au bout de %d jours', User::JOURS_AVANT_LA_PURGE))
+        ->assertSee("lien d'ouverture suivi puis connexion dans le même navigateur (le lien seul n'ouvre rien)")
+        ->assertSee("connexion par un fournisseur qui garantit l'adresse")
         ->fillForm(['name' => 'Nom Corrigé'])
         ->set('data.en_attente_depuis', null)
         ->call('save')
