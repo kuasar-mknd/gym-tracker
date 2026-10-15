@@ -186,7 +186,7 @@ const getProgressPercent = (habit) => {
                 de tête (#1807). Collé sous l'en-tête de l'application, il reste
                 au-dessus des cases qu'il décrit.
             -->
-            <div class="bg-surface-page z-collant sticky top-16 sm:top-20">
+            <div class="bg-surface-page z-collant top-sous-entete sticky" dusk="jours-des-habitudes">
                 <GlassCard class="overflow-hidden p-0">
                     <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
                         <div class="text-text-main col-span-7 p-4 font-bold sm:col-span-1">Habitude</div>

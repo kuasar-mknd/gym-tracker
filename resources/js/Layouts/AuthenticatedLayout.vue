@@ -100,7 +100,7 @@ onMounted(() => {
     <div class="bg-surface-page relative min-h-dvh w-full">
         <a
             href="#main-content"
-            class="accent-fill z-evitement absolute top-0 left-0 -translate-y-full rounded-br-xl px-4 py-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
+            class="accent-fill z-evitement pl-sure-4 pt-sure-2 absolute top-0 left-0 -translate-y-full rounded-br-xl pr-4 pb-2 font-bold transition-transform focus:translate-y-0 focus:ring-2 focus:outline-none"
         >
             Aller au contenu principal
         </a>
@@ -116,7 +116,7 @@ onMounted(() => {
         -->
         <div
             v-if="$page.props.pending_migrations > 0"
-            class="bg-accent-warning text-text-main z-alerte sticky top-0 px-4 py-2 text-center text-sm font-bold"
+            class="bg-accent-warning text-text-main z-alerte px-sure-4 pt-sure-2 sticky top-0 pb-2 text-center text-sm font-bold"
             role="alert"
             data-testid="pending-migrations-banner"
         >
@@ -133,9 +133,9 @@ onMounted(() => {
 
         <!-- Desktop Navigation -->
         <nav
-            class="bg-surface-page/80 border-surface-card/40 z-nav sticky top-0 hidden border-b backdrop-blur-xl sm:block"
+            class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b backdrop-blur-xl"
         >
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto max-w-7xl">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
                         <!-- Logo -->
@@ -146,7 +146,7 @@ onMounted(() => {
                         </div>
 
                         <!-- Desktop Navigation Links -->
-                        <div class="hidden space-x-1 sm:ms-8 sm:flex">
+                        <div class="bureau:flex hidden space-x-1 sm:ms-8">
                             <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                 Accueil
                             </NavLink>
@@ -169,7 +169,7 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div class="hidden gap-3 sm:ms-6 sm:flex sm:items-center">
+                    <div class="bureau:flex hidden gap-3 sm:ms-6 sm:items-center">
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
@@ -237,8 +237,7 @@ onMounted(() => {
         <!-- Mobile Header -->
         <header
             v-if="pageTitle || showBack"
-            class="bg-surface-page/80 border-surface-card/40 z-collant sticky top-0 flex items-center justify-between border-b px-5 py-4 backdrop-blur-xl sm:hidden"
-            :style="{ paddingTop: 'calc(1rem + var(--safe-area-top))' }"
+            class="bg-surface-page/80 border-surface-card/40 z-collant px-sure-5 pt-sure-4 bureau:hidden sticky top-0 flex items-center justify-between border-b pb-4 backdrop-blur-xl"
         >
             <div class="flex min-w-0 items-center gap-4">
                 <Link
@@ -285,9 +284,9 @@ onMounted(() => {
         <!-- Desktop Page Heading Slot -->
         <header
             v-if="$slots.header"
-            class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 hidden border-b sm:block"
+            class="bg-surface-page/50 backdrop-blur-glass border-surface-card/40 bureau:block hidden border-b"
         >
-            <div class="mx-auto px-4 py-6 sm:px-6 lg:px-8" :class="LARGEURS[largeur]">
+            <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto py-6" :class="LARGEURS[largeur]">
                 <slot name="header" />
             </div>
         </header>
@@ -295,7 +294,7 @@ onMounted(() => {
         <!-- Page Content -->
         <main
             id="main-content"
-            class="relative z-10 px-5 py-6 sm:px-6 lg:px-8"
+            class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6"
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
         >
             <div v-if="activeWorkout && !isWorkoutShow" class="mx-auto mb-6" :class="LARGEURS[largeur]">
@@ -318,7 +317,7 @@ onMounted(() => {
         </main>
 
         <!-- Bottom Navigation (mobile only) -->
-        <BottomNav class="sm:hidden" />
+        <BottomNav class="bureau:hidden" />
 
         <!-- Achievement Celebration Modal -->
         <CelebrationModal />

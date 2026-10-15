@@ -91,7 +91,7 @@ const goalDistribution = computed(() => {
     <Head title="Mes Objectifs" />
 
     <AuthenticatedLayout page-title="Mes Objectifs">
-        <!-- The #header slot is desktop-only (hidden sm:block in the layout), so the
+        <!-- The #header slot is desktop-only (hidden bureau:block in the layout), so the
              create action has to be mirrored here or it is unreachable on phones. -->
         <template #header-actions>
             <GlassButton

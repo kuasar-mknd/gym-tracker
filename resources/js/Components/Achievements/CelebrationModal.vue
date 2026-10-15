@@ -95,14 +95,21 @@ const close = () => {
             aria-describedby="achievement-description"
             @close="close"
         >
-            <div v-if="show" class="z-modale fixed inset-0 flex items-center justify-center px-4">
+            <!--
+              Centrée dans la zone sûre, et bornée à elle : en paysage, la carte
+              défile au lieu de passer sous les barres (#2043). Un écart de
+              12 px seulement au-dessus et au-dessous (`py-sure-3`, borne
+              `hauteur-sure-6`) : sans encoche, la carte tient encore entière
+              sur un écran de 375 px de haut, comme avant.
+            -->
+            <div v-if="show" class="z-modale px-sure-4 py-sure-3 fixed inset-0 flex items-center justify-center">
                 <!-- Backdrop -->
                 <div class="animate-fade-in bg-overlay absolute inset-0 backdrop-blur-sm" @click="close"></div>
 
                 <!-- Modal. No role or aria-modal here: the <dialog> above is the
                      dialog, and nesting a second one would announce two. -->
                 <div
-                    class="animate-bounce-in border-border bg-surface-card relative w-full max-w-sm rounded-3xl border p-6 text-center shadow-2xl transition duration-300"
+                    class="animate-bounce-in border-border bg-surface-card hauteur-sure-6 relative w-full max-w-sm overflow-y-auto rounded-3xl border p-6 text-center shadow-2xl transition duration-300"
                 >
                     <!-- Glow Effect -->
                     <div

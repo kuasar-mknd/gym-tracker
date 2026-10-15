@@ -110,9 +110,16 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
 
 <template>
     <Modal :show="show" @close="fermer" max-width="lg" aria-labelledby="add-exercise-title">
-        <div class="p-6">
+        <!--
+            Une colonne qui se plie à la hauteur de la fenêtre : la liste prend ce
+            que laissent le titre et la recherche, et défile en elle-même. Bornée
+            à 60vh, elle laissait un grand vide sous la fenêtre (#2043). Le
+            formulaire de création, lui, ne se plie pas : la fenêtre défile, et
+            son bouton garde la marge du bas au lieu d'être rogné par l'arrondi.
+        -->
+        <div class="flex flex-col p-6" :class="{ 'min-h-0': !showCreateForm }">
             <h2 id="add-exercise-title" class="titre-section mb-6">Ajouter un exercice</h2>
-            <div v-if="!showCreateForm">
+            <div v-if="!showCreateForm" class="flex min-h-0 flex-col">
                 <div class="pb-4">
                     <GlassInput
                         id="search-workout-exercise"
@@ -124,7 +131,7 @@ defineExpose({ searchQuery, showCreateForm, createExerciseForm, quickCreate, cre
                         placeholder="Rechercher..."
                     />
                 </div>
-                <div class="max-h-[60vh] space-y-3 overflow-y-auto">
+                <div class="min-h-0 space-y-3 overflow-y-auto" dusk="liste-des-exercices">
                     <button
                         v-if="filteredExercises.length === 0 && searchQuery"
                         type="button"

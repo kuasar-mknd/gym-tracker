@@ -41,7 +41,7 @@ export const pageHorsLigne = ({ feuilles }) => `<!DOCTYPE html>
 ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille)}">`).join('\n')}
 </head>
 <body class="bg-surface-page text-text-main font-sans antialiased">
-    <main id="main-content" class="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-12">
+    <main id="main-content" class="px-sure-6 py-sure-12 flex min-h-dvh flex-col items-center justify-center gap-8">
         <div class="flex items-center ${MARQUE.sens}">
             ${logoEnSvg(`${TUILE_DU_LOGO} ${MARQUE.logo}`)}
             <p class="text-gradient font-display ${MARQUE.nom} font-black tracking-tight uppercase italic">GymTracker</p>

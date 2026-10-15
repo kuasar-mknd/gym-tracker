@@ -557,6 +557,23 @@ describe('Notifications/Index — marking as read', () => {
         const wrapper = mountNotifications(paginator({ data: [readNotification] }))
 
         expect(wrapper.text()).not.toContain('Tout marquer comme lu')
+        expect(wrapper.find('[aria-label="Tout marquer comme lu"]').exists()).toBe(false)
+    })
+
+    /**
+     * L'en-tête de page, qui porte « Tout marquer comme lu », ne se montre
+     * qu'avec la barre de bureau : sur un téléphone, debout ou couché, le
+     * bouton n'existait pas (#2043). Son jumeau vit dans l'en-tête mobile.
+     */
+    it('offers "tout marquer" in the mobile header too', async () => {
+        const wrapper = mountNotifications()
+        const jumeau = wrapper.get('[dusk="tout-marquer-comme-lu-mobile"]')
+
+        expect(jumeau.attributes('aria-label')).toBe('Tout marquer comme lu')
+
+        await jumeau.trigger('click')
+
+        expect(routerPost).toHaveBeenCalledWith('/routes/notifications.mark-all-as-read', {}, { preserveScroll: true })
     })
 
     it('tells an unread notification apart from a read one', () => {

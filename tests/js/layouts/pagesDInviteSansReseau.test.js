@@ -32,6 +32,11 @@ import {
  * Et chaque formulaire d'invité dit le sien : aucun n'enregistre rien, et le
  * message général d'une écriture, « l'enregistrement n'est pas confirmé »,
  * était faux pour une connexion comme pour une demande de lien.
+ *
+ * Le client d'Inertia se monte une fois pour le fichier. Chaque cas retrouve
+ * pourtant la vérification de l'adresse telle qu'elle s'est ouverte, sans
+ * toast (#2044) : un formulaire ouvre sa propre page, et un cas tiré après lui
+ * en ordre aléatoire (`--sequence.shuffle`) n'y trouvait plus « Se déconnecter ».
  */
 
 // Le détachement de l'appareil et la file ont leurs propres tests.
@@ -42,6 +47,14 @@ vi.mock('@/composables/useAbonnementPush', () => ({
 vi.mock('@/Utils/SyncService', () => ({
     default: { compte: '1', enAttente: () => 0, clearFailedRequests: () => {} },
 }))
+
+/** La vérification de l'adresse, telle que le serveur l'a rendue. */
+const verificationDeLAdresse = () => ({
+    component: 'Auth/VerifyEmail',
+    url: '/verify-email',
+    version: 'v',
+    props: { errors: {}, auth: { user: { id: 1 } }, status: null },
+})
 
 let routeur
 let DECONNEXION_SANS_RESEAU
@@ -70,12 +83,7 @@ beforeAll(async () => {
     installerLesVisitesHorsLigne({ routeur })
 
     await inertia.createInertiaApp({
-        page: {
-            component: 'Auth/VerifyEmail',
-            url: '/verify-email',
-            version: 'v',
-            props: { errors: {}, auth: { user: { id: 1 } }, status: null },
-        },
+        page: verificationDeLAdresse(),
         resolve: (nom) => pages[nom],
         setup: ({ el, App, props, plugin }) => {
             application = createApp({ render: () => h(App, props) })
@@ -86,7 +94,13 @@ beforeAll(async () => {
     })
 })
 
-beforeEach(() => {
+beforeEach(async () => {
+    // Une visite du client seul, sans requête : la page revient, remontée, telle qu'elle s'est ouverte.
+    let remise = false
+    routeur.replace({ ...verificationDeLAdresse(), onFinish: () => (remise = true) })
+    await vi.waitUntil(() => remise)
+    await uneTache()
+
     requetes.length = 0
     reseau.mode = 'coupe'
     reseau.prochains = []
