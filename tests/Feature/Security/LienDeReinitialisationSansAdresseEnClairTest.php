@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Auth\NewPasswordController;
 use App\Models\ExceptionEnregistree;
 use App\Models\User;
 use App\Support\LiensDesCourriels;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Auth\Passwords\PasswordBrokerManager;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Arr;
@@ -13,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
@@ -342,7 +345,8 @@ it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse
  * Une panne pendant la réinitialisation, l'adresse déjà déchiffrée : ni le
  * journal, ni l'exception que le panneau garde ne la reçoivent. La pile est
  * réglée comme dans l'image, d'après `docker/php-prod.ini`
- * (`LesErreursSqlNeRecopientPasLesValeursTest`). Les colonnes `query` et
+ * (`LesErreursSqlNeRecopientPasLesValeursTest`) : sans ce réglage, elle
+ * garderait l'adresse (test suivant). Les colonnes `query` et
  * `markdown` de l'exception n'en sont pas : avec `APP_DEBUG`, celui de la CI,
  * elles gardent les requêtes réussies, valeurs comprises, dont la recherche
  * du compte par son adresse (`.ai/rules/tests.md`) ; la production ne les
@@ -387,6 +391,90 @@ it('ne recopie l’adresse déchiffrée ni dans le journal ni dans l’exception
         }
     }
 })->with('formats d’envoi du formulaire de réinitialisation');
+
+/**
+ * La panne d'une réinitialisation par le lien chiffré, l'adresse déjà
+ * déchiffrée : un écouteur de `PasswordReset` lève une exception, que le test
+ * reçoit telle que l'application l'a levée, pile comprise.
+ */
+function lienChiffrePanneDeLaReinitialisation(): RuntimeException
+{
+    $compte = User::factory()->create(['email' => lienChiffreAdresse()]);
+    $lien = LiensDesCourriels::lienDeReinitialisation($compte, Password::createToken($compte));
+    Event::listen(PasswordReset::class, static function (): never {
+        throw new RuntimeException('Panne simulée pendant la réinitialisation.');
+    });
+    test()->withoutExceptionHandling();
+
+    try {
+        lienChiffreEnvoyer($lien, FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse()), 'json');
+    } catch (RuntimeException $panne) {
+        return $panne;
+    }
+
+    throw new LogicException('La réinitialisation devait tomber en panne.');
+}
+
+/**
+ * Les cadres de la pile de `$panne` dont les arguments laissent lire
+ * l'adresse du compte, du plus profond au plus haut, écrits
+ * `Classe->méthode` ou `Classe::méthode`. Seuls les textes sont lus, dans les
+ * tableaux aussi ; un objet passé en argument ne compte que pour sa classe.
+ *
+ * @return list<string>
+ */
+function lienChiffreCadresQuiGardentLAdresse(Throwable $panne): array
+{
+    $cadres = [];
+
+    foreach ($panne->getTrace() as $cadre) {
+        $textes = [];
+        $arguments = $cadre['args'] ?? [];
+        array_walk_recursive($arguments, static function (mixed $valeur) use (&$textes): void {
+            $textes[] = is_scalar($valeur) ? (string) $valeur : get_debug_type($valeur);
+        });
+
+        if (lienChiffreLaisseLireLAdresse(implode(' ', $textes))) {
+            $cadres[] = ($cadre['class'] ?? '').($cadre['type'] ?? '').$cadre['function'];
+        }
+    }
+
+    return $cadres;
+}
+
+/*
+ * Ce qui tait l'adresse déchiffrée dans la pile d'une exception, c'est le
+ * réglage de l'image (test précédent), pas `#[SensitiveParameter]`. Le
+ * réglage est donc coupé ici, à dessein, comme dans un PHP lancé sans
+ * php.ini : l'attribut tait le cadre de
+ * `NewPasswordController::resetPassword()`, et le courtier marque les siens,
+ * mais `Password::reset()` passe les identifiants par la façade puis par le
+ * gestionnaire des courtiers, deux cadres que rien ne marque. Ce test tient
+ * ce que dit le docbloc du contrôleur : une mise à jour de Laravel qui change
+ * ces cadres le fait relire.
+ */
+it('ne doit qu’au réglage de l’image de taire l’adresse dans la pile : l’attribut du contrôleur ne tait que son cadre', function (): void {
+    ini_set('zend.exception_ignore_args', '0');
+
+    try {
+        $panne = lienChiffrePanneDeLaReinitialisation();
+    } finally {
+        ini_restore('zend.exception_ignore_args');
+    }
+
+    $cadreDuControleur = Arr::first(
+        $panne->getTrace(),
+        static fn (array $cadre): bool => ($cadre['class'] ?? null) === NewPasswordController::class
+            && $cadre['function'] === 'resetPassword',
+    );
+
+    expect($panne->getMessage())->toBe('Panne simulée pendant la réinitialisation.')
+        ->and($cadreDuControleur['args'][0] ?? null)->toBeInstanceOf(SensitiveParameterValue::class)
+        ->and(lienChiffreCadresQuiGardentLAdresse($panne))->toBe([
+            PasswordBrokerManager::class.'->__call',
+            Facade::class.'::__callStatic',
+        ]);
+});
 
 /*
  * La page du lien porte le jeton dans son chemin et l'adresse chiffrée dans
