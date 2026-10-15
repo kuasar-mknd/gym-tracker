@@ -22,8 +22,9 @@ const props = defineProps({
 })
 
 /**
- * Dans l'ordre d'affichage, Google en tête comme ses règles le demandent ;
- * `cle` est le segment de `social.redirect`. Le bouton d'Apple n'a ni fond ni
+ * Dans l'ordre d'affichage. Google en tête, ce qui le rend au moins aussi
+ * visible que ses voisins, comme ses règles le demandent ; elles n'imposent
+ * pas d'ordre. `cle` est le segment de `social.redirect`. Le bouton d'Apple n'a ni fond ni
  * bordure : le carré noir de son logo le remplit, et `overflow-hidden` le rogne
  * à la forme de ses voisins, le masque que demandent les règles d'Apple
  * (`Components/Marques/LogoApple.vue`).

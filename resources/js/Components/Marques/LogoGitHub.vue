@@ -11,11 +11,23 @@
  * GitHub et dire qu'un projet s'intègre à GitHub (« Use a permitted GitHub logo
  * to inform others that your project integrates with GitHub »), ce que fait un
  * bouton de connexion par GitHub ; le logo ne se modifie pas, ni sa couleur ni
- * ses dimensions, il reste blanc ou noir, sans effet (ombre, dégradé), sur un
- * fond uni qui contraste, moins en vue que le nom de l'application, et il ne
- * doit pas laisser croire que l'application est GitHub ou qu'elle en vient. Le
- * blanc est celui de GitHub, pas celui de la charte : ne pas le remplacer par
- * un jeton, qui pourrait changer sans lui.
+ * ses dimensions ; il paraît en blanc ou en noir (« or in few cases grey or
+ * green »), sans effet (ombre, dégradé), sur un fond qui contraste et sans
+ * motif, moins en vue que le nom de l'application, et il ne doit pas laisser
+ * croire que l'application est GitHub ou qu'elle en vient. Le blanc est celui
+ * de GitHub, pas celui de la charte : ne pas le remplacer par un jeton, qui
+ * pourrait changer sans lui.
+ *
+ * Une condition reste à trancher. GitHub emploie d'ordinaire l'Invertocat avec
+ * son nom écrit à côté, et réserve l'Invertocat seul à ses propres
+ * environnements et aux endroits où sa marque est déjà clairement établie
+ * (« The standalone invertocat may be used in GitHub-owned environments or
+ * where the brand is already clearly established »). Ce bouton n'affiche que
+ * lui : le nom de GitHub n'y est donné qu'aux lecteurs d'écran (« Continuer
+ * avec GitHub »). La lecture retenue ici, qui n'est pas un avis juridique, est
+ * qu'une rangée de boutons de connexion, où chaque fournisseur se reconnaît à
+ * son logo, est un tel endroit ; c'est au propriétaire du dépôt de la
+ * confirmer ou de demander un nom visible.
  */
 </script>
 
