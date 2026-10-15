@@ -336,8 +336,6 @@ class HandleInertiaRequests extends Middleware
 
         $notificationService = app(NotificationService::class);
 
-        $latestAchievement = $notificationService->getLatestAchievement($user);
-
         $activeWorkout = app(\App\Services\ActiveWorkoutService::class)->for($user);
 
         return [
@@ -346,11 +344,7 @@ class HandleInertiaRequests extends Middleware
             'email' => $user->email,
             'avatar' => $user->avatar,
             'unread_notifications_count' => $notificationService->getUnreadCount($user),
-            'latest_achievement' => $latestAchievement instanceof \Illuminate\Notifications\DatabaseNotification ? [
-                'id' => $latestAchievement->id,
-                'data' => $latestAchievement->data,
-                'created_at' => $latestAchievement->created_at,
-            ] : null,
+            'latest_achievement' => $this->dernierBadgeNonLu($user, $notificationService),
             /*
              * `Show.vue` lit `auth.user.default_rest_time` pour decider de la
              * duree du repos, avec un repli a 90 secondes. Ce champ n'etait pas
@@ -365,6 +359,40 @@ class HandleInertiaRequests extends Middleware
             'current_streak' => app(\App\Services\StreakService::class)->currentStreakFor($user),
             'longest_streak' => $user->longest_streak,
             'active_workout' => $activeWorkout,
+        ];
+    }
+
+    /**
+     * Le dernier badge non lu du compte, tel que la modale de célébration le montre.
+     *
+     * La notification ne range que son message et l'identifiant du badge
+     * (`AchievementUnlocked::toArray()`) : l'icône, le nom et la description se
+     * lisent sur le badge lui-même, dans la liste que
+     * `Achievement::enCachePourTous()` garde en cache. La modale lisait l'icône
+     * et le nom dans la notification, où ils n'ont jamais été, et célébrait un
+     * carré vide, sans nom (#2052). Un badge supprimé depuis les laisse à
+     * `null` : la modale retombe alors sur le message de la notification.
+     *
+     * @return array{id: string, name: string|null, icon: string|null, description: string|null, data: array<array-key, mixed>, created_at: \Carbon\CarbonInterface|null}|null
+     */
+    private function dernierBadgeNonLu(\App\Models\User $user, NotificationService $notificationService): ?array
+    {
+        $notification = $notificationService->getLatestAchievement($user);
+
+        if ($notification === null) {
+            return null;
+        }
+
+        $identifiantDuBadge = $notification->data['achievement_id'] ?? null;
+        $badge = \App\Models\Achievement::enCachePourTous()->firstWhere('id', $identifiantDuBadge);
+
+        return [
+            'id' => $notification->id,
+            'name' => $badge?->name,
+            'icon' => $badge?->icon,
+            'description' => $badge?->description,
+            'data' => $notification->data,
+            'created_at' => $notification->created_at,
         ];
     }
 }

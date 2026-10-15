@@ -33,9 +33,13 @@ beforeAll(() => {
     }
 })
 
+/** Un badge tel que le partage `HandleInertiaRequests` : la notification, et ce que le serveur lit sur le badge. */
 const anAchievement = (id = 'notif-1') => ({
     id,
-    data: { icon: '🏆', name: 'Premier record', message: 'Nouveau badge débloqué : Premier record !' },
+    name: 'Premier record',
+    icon: '🥇',
+    description: 'Tu as battu ton premier record.',
+    data: { type: 'achievement', message: 'Félicitations ! Tu as débloqué le badge : Premier record.' },
 })
 
 const mountModal = async (props = { is_testing: false, auth: { user: { latest_achievement: anAchievement() } } }) => {
@@ -49,7 +53,7 @@ const mountModal = async (props = { is_testing: false, auth: { user: { latest_ac
         attachTo: document.body,
     })
 
-    // The dialog opens from a watcher on `show`, which onMounted sets.
+    // Le montage ouvre le dialogue sur le badge que la page porte déjà.
     await nextTick()
 
     return wrapper
@@ -68,7 +72,7 @@ describe('CelebrationModal', () => {
 
         expect(dialog.tagName).toBe('DIALOG')
         expect(dialog.getAttribute('aria-labelledby')).toBe('achievement-title')
-        expect(dialog.getAttribute('aria-describedby')).toBe('achievement-description')
+        expect(dialog.getAttribute('aria-describedby')).toBe('achievement-name achievement-description')
 
         wrapper.unmount()
     })
@@ -83,6 +87,35 @@ describe('CelebrationModal', () => {
 
         expect(dialogOf(wrapper).open).toBe(true)
         expect(wrapper.text()).toContain('Premier record')
+
+        wrapper.unmount()
+    })
+
+    /**
+     * La notification ne porte ni l'icône ni le nom du badge : la modale les y
+     * lisait, et célébrait un carré vide, sans nom (#2052). Le serveur les joint
+     * désormais, avec la description, que le nom annoncé complète.
+     */
+    it('montre l’icône, le nom et la description que le serveur joint au badge', async () => {
+        const wrapper = await mountModal()
+
+        expect(wrapper.find('[aria-hidden="true"]').text()).toBe('🥇')
+        expect(wrapper.find('#achievement-name').text()).toBe('Premier record')
+        expect(wrapper.find('#achievement-description').text()).toBe('Tu as battu ton premier record.')
+
+        wrapper.unmount()
+    })
+
+    it('d’un badge supprimé depuis, montre le message de la notification sous l’icône par défaut, sans nom', async () => {
+        const supprime = { ...anAchievement(), name: null, icon: null, description: null }
+        const wrapper = await mountModal({ is_testing: false, auth: { user: { latest_achievement: supprime } } })
+
+        expect(dialogOf(wrapper).open).toBe(true)
+        expect(wrapper.find('[aria-hidden="true"]').text()).toBe('🏆')
+        expect(wrapper.find('#achievement-name').exists()).toBe(false)
+        expect(wrapper.find('#achievement-description').text()).toBe(
+            'Félicitations ! Tu as débloqué le badge : Premier record.',
+        )
 
         wrapper.unmount()
     })

@@ -91,23 +91,26 @@ class CustomPolicy extends Basic
     }
 
     /**
-     * Les seules sources d'une autre origine que la politique admet, chacune
-     * avec sa raison dans `LaCspNOuvreAucuneAutreOrigineTest`, qui refuse
-     * toute autre.
+     * Les seules sources d'une autre origine que la politique admet, les
+     * services push des navigateurs, chacune avec sa raison dans
+     * `LaCspNOuvreAucuneAutreOrigineTest`, qui refuse toute autre.
      *
      * Plus de site de polices : Horizon, Telescope et Pulse y prenaient la
      * fonte de leur tableau de bord, et leurs gabarits sont désormais
      * compilés sans ces balises (`RetireLesRessourcesDistantesDesPaquets`) ;
-     * le panneau sert la sienne. Plus de service d'avatars : l'avatar par
-     * défaut du panneau est dessiné par l'application (`AvatarDesInitiales`)
-     * et servi en `data:`. Les fontes de l'application sont auto-hébergées
-     * depuis longtemps.
+     * le panneau sert la sienne, et les fontes de l'application sont
+     * auto-hébergées. Plus de service d'avatars : l'avatar par défaut du
+     * panneau est dessiné par l'application (`AvatarDesInitiales`) et servi
+     * en `data:`. Plus de site d'icônes : les logos de connexion sont
+     * dessinés par l'application (#2051), et
+     * `LesRessourcesViennentDeLApplicationTest` refuse que ce qu'elle sert
+     * fasse charger quoi que ce soit d'une autre origine ; les gabarits des
+     * paquets, eux, sont tenus par `RessourcesDistantesDesTableauxDeBordTest`.
      */
     protected function configureExternalResources(Policy $policy): void
     {
         $policy
             ->add(Directive::IMG, 'data:')
-            ->add(Directive::IMG, 'https://www.svgrepo.com')
             ->add(Directive::FONT, 'data:')
             ->add(Directive::CONNECT, 'https://fcm.googleapis.com')
             ->add(Directive::CONNECT, 'https://updates.push.apple.com')

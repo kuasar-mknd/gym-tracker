@@ -76,6 +76,22 @@ Artisan::command('inspire', function (): void {
     ->dailyAt('01:30');
 
 /*
+ * Le canal `daily` écrit un fichier par jour et par conteneur dans le volume
+ * `journaux`, et Monolog n'en garde que les quatorze plus récents (`days`) :
+ * les quatorze derniers jours où le conteneur a écrit, pas quatorze jours de
+ * calendrier. Un conteneur qui écrit peu y gardait des traces, celles d'un
+ * compte supprimé comprises, bien au-delà (#2053). La purge efface chaque
+ * nuit les fichiers du jour de tous les conteneurs qui ont atteint cette même
+ * durée, que la page de profil promet. 00:10 : une ligne écrite au premier
+ * instant d'un jour part à la purge du quatorzième jour de calendrier
+ * suivant, quatorze jours et dix minutes après, une heure de plus quand ces
+ * jours couvrent le passage à l'heure d'hiver ; l'heure reste loin de celle
+ * que les changements d'heure sautent ou répètent.
+ */
+\Illuminate\Support\Facades\Schedule::command('journaux:purger')
+    ->dailyAt('00:10');
+
+/*
  * Les trois tâches de sauvegarde touchent le partage des sauvegardes, qui peut
  * cesser de répondre sans rendre d'erreur : au premier plan, un seul accès qui
  * attendait figeait le passage du planificateur, et les tâches suivantes de la

@@ -46,10 +46,6 @@ beforeEach(function (): void {
 function laCspAutresOriginesAdmises(): array
 {
     return [
-        'img-src' => [
-            'https://www.svgrepo.com' => 'Les logos de Google, GitHub et Apple sur les pages de connexion et d’inscription '
-                .'(#2051) : la PR qui les sert depuis l’application retire aussi cette ligne.',
-        ],
         'connect-src' => [
             'https://fcm.googleapis.com' => 'Abonnement Web Push : services push des navigateurs (Chrome et Edge, Safari, '
                 .'Windows). Le navigateur s’y abonne lui-même, l’application ne fait qu’envoyer, du serveur : leur '

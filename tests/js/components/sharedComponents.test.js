@@ -1120,9 +1120,12 @@ describe('DeleteUserForm', () => {
      * exceptions et les tâches en échec la gardent trente jours
      * (`TachesEnEchecTest`), les entrées d'audit d'avant #1670 sur les données
      * du compte 180 jours (`SuppressionDuCompteTest`). « Seules les
-     * sauvegardes » promettait plus que cela. Et la copie des journaux que
-     * garde `docker logs` tourne par taille, pas par durée (#1938) : la page
-     * dit que de nouvelles lignes remplacent ces traces, sans nombre de jours.
+     * sauvegardes » promettait plus que cela. Les journaux du serveur, eux,
+     * partent à quatorze jours, que la purge planifiée du volume `journaux`
+     * tient (#2053, `JournauxDuJourPurgesTest`) ; mais leur seconde copie,
+     * celle que garde `docker logs`, tourne par taille, pas par durée (#1938) :
+     * la page ne lui promet aucune durée, seulement que de nouvelles lignes en
+     * remplacent les traces.
      */
     it('ne promet pas un effacement que les sauvegardes et les journaux démentent', () => {
         const wrapper = mountForm()
@@ -1132,11 +1135,11 @@ describe('DeleteUserForm', () => {
         expect(promesse).toContain('sept mois au plus')
         expect(promesse).toContain("trente jours dans les rapports d'erreurs")
         expect(promesse).toContain("180 jours dans l'historique d'audit")
+        expect(promesse).toContain('quatorze jours dans les journaux du serveur')
         expect(promesse).toContain(
-            'Les journaux du serveur peuvent aussi en garder des traces, le temps que de nouvelles lignes les remplacent',
+            'Une seconde copie des journaux, bornée par sa taille, peut aussi en garder des traces sans durée garantie, le temps que de nouvelles lignes les remplacent.',
         )
-        expect(promesse).not.toContain('sans durée fixe')
-        expect(promesse).not.toMatch(/\d+ jours dans les journaux|trente jours dans les journaux/)
+        expect(promesse).not.toContain('Les journaux du serveur peuvent aussi en garder des traces')
         expect(promesse).not.toContain('définitivement')
         expect(promesse).not.toMatch(/seules?\b/i)
 

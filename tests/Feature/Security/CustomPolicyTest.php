@@ -175,7 +175,14 @@ class CustomPolicyTest extends TestCase
         $this->assertNotContains('https://ui-avatars.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
 
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::IMG)]);
-        $this->assertContains('https://www.svgrepo.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
+
+        /**
+         * Les logos des fournisseurs de connexion sont servis par
+         * l'application depuis #2051 : plus rien ne justifie d'ouvrir les
+         * images au site d'icônes d'où elles venaient.
+         */
+        $this->assertNotContains('https://www.svgrepo.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
+
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::FONT)]);
 
         /**
@@ -190,5 +197,57 @@ class CustomPolicyTest extends TestCase
         $this->assertContains('https://fcm.googleapis.com', $directives[$this->getDirectiveKey(Directive::CONNECT)]);
         $this->assertContains('https://updates.push.apple.com', $directives[$this->getDirectiveKey(Directive::CONNECT)]);
         $this->assertContains('https://*.notify.windows.com', $directives[$this->getDirectiveKey(Directive::CONNECT)]);
+    }
+
+    /**
+     * `img-src`, entière, dans chaque environnement : l'application et les
+     * images en ligne (`data:`), où vont les avatars que l'application
+     * dessine pour le panneau (`AvatarDesInitiales`) depuis que le service
+     * d'avatars en est parti. Comparée en entier plutôt qu'élément par
+     * élément : une origine d'images ajoutée ailleurs, comme l'était le site
+     * d'icônes des logos de connexion (#2051), fait tomber ce test au lieu de
+     * passer inaperçue.
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function environnementsDeLaPolitique(): array
+    {
+        return [
+            'local' => ['local'],
+            'tests' => ['testing'],
+            'production' => ['production'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('environnementsDeLaPolitique')]
+    public function test_img_src_ne_nomme_que_l_application_et_les_images_en_ligne(string $environnement): void
+    {
+        Config::set('app.env', $environnement);
+        $this->app['env'] = $environnement;
+        $this->app->instance('request', Request::create('/login'));
+
+        $policy = new Policy();
+        new CustomPolicy()->configure($policy);
+
+        $this->assertSame(
+            [$this->formatKeyword(Keyword::SELF), 'data:'],
+            $this->getDirectivesFromPolicy($policy)[$this->getDirectiveKey(Directive::IMG)],
+        );
+    }
+
+    /**
+     * La même directive, lue dans l'en-tête que reçoit le navigateur sur la
+     * page de connexion, celle qui affichait les logos du site d'icônes
+     * (#2051) : ce qui compte est la réponse, pas seulement la classe.
+     */
+    public function test_la_page_de_connexion_n_ouvre_les_images_qu_a_l_application(): void
+    {
+        Config::set('csp.enabled', true);
+
+        $politique = (string) $this->get('/login')->assertOk()->headers->get('Content-Security-Policy');
+
+        preg_match('/(?:^|;)\s*img-src ([^;]*)/', $politique, $imgSrc);
+
+        $this->assertSame("'self' data:", trim($imgSrc[1] ?? ''), $politique);
     }
 }
