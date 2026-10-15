@@ -11,6 +11,7 @@ use App\Models\Workout;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\HorlogeQuiPasseMinuit;
 
 beforeEach(function (): void {
     $this->actingAs(FilamentAdminPanel::admin(), 'admin');
@@ -74,6 +75,29 @@ it('compte les séances démarrées aujourd’hui, et elles seules', function ()
     expect(filamentStatsOverviewValues()['Séances du jour'])->toBe(3);
 });
 
+/*
+ * Le jour compté se tire d'une seule lecture de l'horloge : son début et sa fin
+ * venaient de deux, et quand minuit passait entre elles, « Séances du jour »
+ * comptait la veille avec le jour qui commençait (#2033).
+ */
+it('compte les séances d’un seul jour quand minuit passe pendant le calcul', function (): void {
+    $user = User::factory()->create();
+    Workout::factory()->count(2)->create([
+        'user_id' => $user->getKey(),
+        'started_at' => Carbon::parse('2026-05-20 07:15:00'),
+    ]);
+    Workout::factory()->create([
+        'user_id' => $user->getKey(),
+        'started_at' => Carbon::parse('2026-05-21 00:00:00'),
+    ]);
+    HorlogeQuiPasseMinuit::apres(1, '2026-05-20 23:59:59.999999', '2026-05-21 00:00:00.000001');
+
+    $seancesDuJour = new ReflectionMethod(StatsOverview::class, 'getWorkoutsTodayCount')->invoke(new StatsOverview());
+
+    // Les deux du 20 mai, ou celle du 21, jamais les trois réunies.
+    expect($seancesDuJour)->toBeIn([2, 1]);
+});
+
 it('ne compte comme exercices système que ceux sans propriétaire', function (): void {
     $owner = User::factory()->create();
     Exercise::factory()->count(5)->create(['user_id' => null]);
@@ -110,6 +134,27 @@ it('ventile les inscriptions par mois sur les douze mois de l’année en cours'
     expect($data['datasets'][0]['data'])->toBe([2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 1])
         ->and($data['datasets'][0]['label'])->toBe('Nouveaux comptes')
         ->and($data['labels'])->toBe(['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']);
+});
+
+/*
+ * L'année des barres se tire d'une seule lecture de l'horloge : son début et sa
+ * fin venaient de deux, et quand l'année changeait entre elles, le graphique
+ * couvrait deux ans et rangeait les inscrits de janvier prochain avec ceux de
+ * l'année qui s'achevait (#2033).
+ */
+it('ventile les inscriptions d’une seule année quand l’année change pendant le calcul', function (): void {
+    User::factory()->create(['created_at' => Carbon::parse('2026-03-05 09:00:00')]);
+    User::factory()->create(['created_at' => Carbon::parse('2027-01-01 00:00:00')]);
+    HorlogeQuiPasseMinuit::apres(1, '2026-12-31 23:59:59.999999', '2027-01-01 00:00:00.000001');
+
+    $donnees = new ReflectionMethod(UserActivityChart::class, 'getData')->invoke(new UserActivityChart());
+
+    // Mars de l'année qui s'achève, ou janvier de celle qui commence, chacun
+    // seul. L'administrateur du panneau n'est pas un compte de l'application.
+    expect(data_get($donnees, 'datasets.0.data'))->toBeIn([
+        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]);
 });
 
 it('renvoie douze barres à zéro quand aucun utilisateur n’est inscrit', function (): void {

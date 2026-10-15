@@ -13,11 +13,15 @@ class FetchWaterHistoryAction
     /**
      * L'hydratation des sept derniers jours.
      *
+     * La page Hydratation passe l'instant de son compteur du jour : la
+     * dernière barre est alors le même jour que lui (#2033).
+     *
+     * @param  Carbon|null  $maintenant  L'instant de l'opération ; à défaut, l'horloge.
      * @return array<int, array{date: string, day_name: string, total: float}>
      */
-    public function execute(User $user): array
+    public function execute(User $user, ?Carbon $maintenant = null): array
     {
-        $now = Carbon::now();
+        $now = ($maintenant ?? Carbon::now())->copy();
         $startDate = $now->copy()->subDays(6)->startOfDay();
         $historyLogs = $user->waterLogs()
             ->where('consumed_at', '>=', $startDate)

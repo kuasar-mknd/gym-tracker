@@ -11,17 +11,22 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\StreakService;
+use App\Support\BaseDeDonnees\ConnexionMariaDb;
+use App\Support\BaseDeDonnees\ConnexionMySql;
 use App\Support\ConnexionSociale\FournisseurApple;
 use App\Support\LiensDesCourriels;
+use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use PDO;
 use RuntimeException;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use Spatie\Backup\Events\BackupManifestWasCreated;
@@ -35,6 +40,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\AchievementService::class);
         $this->app->singleton(\App\Services\NotificationService::class);
         $this->app->singleton(\App\Services\PersonalRecordService::class);
+        $this->taireLesValeursCiteesParLeServeurDeBase();
 
         if (config('app.env') === 'testing') {
             config(['telescope.enabled' => false]);
@@ -98,6 +104,28 @@ final class AppServiceProvider extends ServiceProvider
         });
 
         $this->registerWebPushFailureLog();
+    }
+
+    /**
+     * Les connexions mysql et mariadb taisent les valeurs que cite le texte
+     * du serveur dans ses erreurs (#2032) ; `TexteDuServeurSansValeurs` dit
+     * ce qui reste. Posé dans `register()`, avant qu'un fournisseur n'ouvre
+     * une connexion. Le résolveur vit dans une propriété statique de Laravel,
+     * mais ne capture rien : sous Octane, il sert toutes les requêtes d'un
+     * worker sans rien garder de l'une à l'autre.
+     */
+    private function taireLesValeursCiteesParLeServeurDeBase(): void
+    {
+        Connection::resolverFor(
+            'mysql',
+            /** @param  array<string, mixed>  $configuration */
+            static fn (PDO|Closure $pdo, string $base, string $prefixe, array $configuration): ConnexionMySql => new ConnexionMySql($pdo, $base, $prefixe, $configuration),
+        );
+        Connection::resolverFor(
+            'mariadb',
+            /** @param  array<string, mixed>  $configuration */
+            static fn (PDO|Closure $pdo, string $base, string $prefixe, array $configuration): ConnexionMariaDb => new ConnexionMariaDb($pdo, $base, $prefixe, $configuration),
+        );
     }
 
     /**
