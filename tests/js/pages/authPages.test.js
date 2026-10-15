@@ -391,15 +391,6 @@ describe('ResetPassword', () => {
         expect(wrapper.vm.form).not.toHaveProperty('email')
     })
 
-    it('ne montre ni champ d’adresse ni la valeur chiffrée du lien', () => {
-        const wrapper = mountPage(ResetPassword, { props })
-        const libelles = wrapper.findAll('label').map((libelle) => libelle.text().replace(/\s*\*$/, ''))
-
-        expect(libelles).toEqual(['Nouveau mot de passe', 'Confirmer le mot de passe'])
-        expect(wrapper.find('input[type="email"]').exists()).toBe(false)
-        expect(wrapper.html()).not.toContain('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
-    })
-
     it('range les deux nouveaux mots de passe dans des champs distincts', async () => {
         const wrapper = mountPage(ResetPassword, { props })
 
@@ -408,6 +399,15 @@ describe('ResetPassword', () => {
 
         expect(wrapper.vm.form.password).toBe('hunter2')
         expect(wrapper.vm.form.password_confirmation).toBe('hunter2-bis')
+    })
+
+    it('ne laisse plus corriger l’adresse du lien : ni champ d’adresse, ni valeur chiffrée affichée', () => {
+        const wrapper = mountPage(ResetPassword, { props })
+        const libelles = wrapper.findAll('label').map((libelle) => libelle.text().replace(/\s*\*$/, ''))
+
+        expect(libelles).toEqual(['Nouveau mot de passe', 'Confirmer le mot de passe'])
+        expect(wrapper.find('input[type="email"]').exists()).toBe(false)
+        expect(wrapper.html()).not.toContain('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
     })
 
     it('poste vers la route de stockage du mot de passe', async () => {
