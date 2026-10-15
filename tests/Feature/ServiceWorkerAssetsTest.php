@@ -153,11 +153,11 @@ it('précache la police des icônes que la feuille de l’application demande', 
 });
 
 /*
- * Le logo, les icônes de l'application installée, celles des notifications et
- * le favicon vivent à la racine de public/, que les globs du precache ne lisent
- * pas : `/logo.svg` échouait sans réseau (#2048). Chacun entre au precache
- * avec l'empreinte de son contenu pour révision, pour qu'une icône redessinée
- * soit téléchargée de nouveau.
+ * Le favicon, les icônes de l'application installée, celles des notifications
+ * et les SVG du logo vivent à la racine de public/, que les globs du precache
+ * ne lisent pas : aucun ne venait sans réseau (#2048). Chacun entre au
+ * precache avec l'empreinte de son contenu pour révision, pour qu'une icône
+ * redessinée soit téléchargée de nouveau.
  */
 it('précache chaque icône de public/ avec l’empreinte de son contenu', function (): void {
     if (! is_file(public_path('sw.js'))) {
@@ -171,6 +171,7 @@ it('précache chaque icône de public/ avec l’empreinte de son contenu', funct
     $precache = entreesDuPrecacheDuWorker();
 
     expect($icones)->toContain('logo.svg')
+        ->toContain('icone.svg')
         ->toContain('favicon.ico')
         ->toContain('pwa-192x192.png')
         ->toContain('badge-96x96.png');
@@ -179,19 +180,4 @@ it('précache chaque icône de public/ avec l’empreinte de son contenu', funct
         expect($precache)->toHaveKey('/'.$icone)
             ->and($precache['/'.$icone])->toBe(hash_file('sha256', public_path($icone)));
     }
-});
-
-/*
- * Un démarrage à froid sans réseau ouvre la page « hors ligne » : son logo
- * vient du precache, comme sa feuille de style (#2048).
- */
-it('précache les images que la page « hors ligne » montre', function (): void {
-    if (! is_file(public_path('sw.js')) || ! is_file(public_path('build/hors-ligne.html'))) {
-        $this->markTestSkipped('public/sw.js absent : lancer npm run build.');
-    }
-
-    preg_match_all('/<img [^>]*src="([^"]+)"/', (string) file_get_contents(public_path('build/hors-ligne.html')), $images);
-
-    expect($images[1])->toBe(['/logo.svg'])
-        ->and(array_diff($images[1], array_keys(entreesDuPrecacheDuWorker())))->toBe([]);
 });

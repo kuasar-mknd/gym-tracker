@@ -7,8 +7,8 @@ import { iconesDuPrecache } from '@/sw/iconesDuPrecache'
 
 /*
  * Les icônes de public/ entrent au precache avec l'empreinte de leur contenu
- * (#2048) : le glob du precache ne lit que public/build, et `/logo.svg`
- * échouait sans réseau.
+ * (#2048) : le glob du precache ne lit que public/build, et aucune ne venait
+ * sans réseau.
  */
 describe('iconesDuPrecache', () => {
     let dossier

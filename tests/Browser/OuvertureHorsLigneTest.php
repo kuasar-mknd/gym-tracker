@@ -110,16 +110,16 @@ class OuvertureHorsLigneTest extends DuskTestCase
      * Un démarrage à froid sans réseau montre le logo et l'icône `cloud_off`
      * de la page « hors ligne » (#2048).
      *
-     * Ni l'un ni l'autre n'étaient au precache : `/logo.svg` vit à la racine de
-     * public/, que ses globs ne lisent pas, et la police Material Symbols
-     * n'entrait au cache qu'à sa première utilisation. Le parcours n'en laisse
-     * que le precache de l'installation : le cache des actifs mis de côté à la
-     * demande est vidé, comme le cache HTTP du navigateur. Couper le réseau par
-     * les outils de Chrome ne coupe que la page, pas le worker : le logo et la
-     * police sont donc aussi retirés du serveur pendant la coupure, pour qu'il
-     * ne puisse rien servir que le precache n'a pas.
+     * Le logo est tracé dans la page (#2056) et ne demande rien. L'icône vient
+     * de la police Material Symbols, qui n'entrait au cache qu'à sa première
+     * utilisation. Le parcours n'en laisse que le precache de l'installation :
+     * le cache des actifs mis de côté à la demande est vidé, comme le cache
+     * HTTP du navigateur. Couper le réseau par les outils de Chrome ne coupe
+     * que la page, pas le worker : la police est donc aussi retirée du serveur
+     * pendant la coupure, pour qu'il ne puisse rien servir que le precache n'a
+     * pas.
      */
-    public function test_un_demarrage_a_froid_sans_reseau_montre_le_logo_et_l_icone_du_precache(): void
+    public function test_un_demarrage_a_froid_sans_reseau_montre_le_logo_et_l_icone_cloud_off(): void
     {
         $compte = User::factory()->create([
             'email' => 'demarrage-a-froid-'.Str::lower(Str::random(10)).'@example.org',
@@ -158,21 +158,18 @@ class OuvertureHorsLigneTest extends DuskTestCase
             $retires = [];
 
             try {
-                foreach ([public_path('logo.svg'), ...(array) glob(public_path('build/assets/material-symbols-outlined-*.woff2'))] as $fichier) {
+                foreach ((array) glob(public_path('build/assets/material-symbols-outlined-*.woff2')) as $fichier) {
                     $fichier = (string) $fichier;
                     rename($fichier, $fichier.'.retire');
                     $retires[] = $fichier;
                 }
 
-                $this->assertCount(2, $retires, 'le logo et la police des icônes doivent exister dans la construction');
+                $this->assertCount(1, $retires, 'la police des icônes doit exister dans la construction');
 
                 $browser->visit('/dashboard')
                     ->waitFor('[dusk="page-hors-ligne"]', 15)
-                    ->waitUntil(
-                        "(() => { const logo = document.querySelector('[dusk=\"logo-hors-ligne\"]'); return logo !== null && logo.complete && logo.naturalWidth > 0; })()",
-                        15,
-                        'le logo ne s’affiche pas sans réseau',
-                    )
+                    // Le logo tracé, à sa taille, au-dessus de la carte.
+                    ->assertScript("(() => { const logo = document.querySelector('main > div > svg'); return logo !== null && logo.getBoundingClientRect().width > 0 && logo.querySelectorAll('path').length > 0; })()")
                     ->waitUntil(
                         "[...document.fonts].some((police) => police.family.includes('Material Symbols') && police.status === 'loaded')",
                         15,
