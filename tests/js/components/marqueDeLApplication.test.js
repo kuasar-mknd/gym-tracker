@@ -40,7 +40,7 @@ describe('MarqueDeLApplication', () => {
     })
 
     it.each([
-        ['barre', 'size-10', 'text-2xl', 'flex-row'],
+        ['barre', 'size-10', 'sr-only', 'flex-row'],
         ['page', 'size-20', 'sr-only', 'flex-col'],
     ])('se dispose pour %s', (disposition, taille, nom, sens) => {
         const marque = monter({ disposition })
@@ -63,23 +63,21 @@ describe('MarqueDeLApplication', () => {
     })
 
     /**
-     * La barre de bureau, ouverte dès `sm`, n'a pas la place du logo et du nom
-     * à la fois : les deux lui demandaient 1 103 px de large, et en deçà, le
-     * menu du compte sortait de l'écran. Le nom ne s'y montre qu'à partir de
-     * `xl`, et reste lu en deçà : le lien vers l'accueil se nomme toujours.
-     * Au-dessus d'une page, le logo se montre seul, à la demande du
-     * propriétaire, et le nom reste lu.
+     * Le logo se montre seul partout, à la demande du propriétaire : dans la
+     * barre comme au-dessus d'une page, le nom reste lu, et le lien vers
+     * l'accueil se nomme toujours.
      */
-    it('ne montre le nom dans la barre qu’à partir de xl, jamais au-dessus d’une page, et le laisse toujours lire', () => {
+    it('ne montre le nom ni dans la barre ni au-dessus d’une page, et le laisse toujours lire', () => {
         const barre = monter({ disposition: 'barre' })
         const nomDeLaBarre = barre.get('svg + span')
         const nomDeLaPage = monter({ disposition: 'page' }).get('svg + span')
 
-        expect(nomDeLaBarre.classes()).toEqual(expect.arrayContaining(['sr-only', 'xl:not-sr-only']))
+        expect(nomDeLaBarre.classes()).toContain('sr-only')
+        expect(nomDeLaBarre.classes().some((classe) => classe.includes('not-sr-only'))).toBe(false)
         expect(nomDeLaBarre.attributes('aria-hidden')).toBeUndefined()
         expect(barre.text()).toBe('GymTracker')
         expect(nomDeLaPage.classes()).toContain('sr-only')
-        expect(nomDeLaPage.classes()).not.toContain('xl:not-sr-only')
+        expect(nomDeLaPage.classes().some((classe) => classe.includes('not-sr-only'))).toBe(false)
         expect(nomDeLaPage.attributes('aria-hidden')).toBeUndefined()
         expect(nomDeLaPage.text()).toBe('GymTracker')
     })
