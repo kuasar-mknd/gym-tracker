@@ -178,21 +178,15 @@ jobs:
                   ls -la public/build
                   cat public/build/manifest.json || echo "Manifest not found"
 
-            # Chaque entree du precache doit commencer par /build/ et exister sous
-            # public/ : sans le prefixe, le worker demandait /assets/… (404) et n'a
-            # jamais ete installe en production (#1683).
+            # Chaque entrée du precache est un fichier de public/ servi tel quel,
+            # jamais un script PHP : une seule en 404 et Workbox annule toute
+            # l'installation ; sans le préfixe /build/, le worker demandait
+            # /assets/… et n'a jamais été installé en production (#1683). Les
+            # icônes de la racine de public/ y entrent depuis #2048. Le même
+            # script que le job des actifs, sur les actifs téléchargés ici ;
+            # ServiceWorkerAssetsTest tient la même règle côté PHP.
             - name: Verify Service Worker Precache
-              run: |
-                  node -e '
-                    const fs = require("fs");
-                    const sw = fs.readFileSync("public/sw.js", "utf8");
-                    const urls = [...sw.matchAll(/"url":"([^"]+)"/g)].map((m) => m[1]);
-                    if (urls.length === 0) { console.error("aucune entree de precache"); process.exit(1); }
-                    const chemin = (u) => "public" + u.split("?")[0];
-                    const mauvaises = urls.filter((u) => !(u.startsWith("/build/") || u === "/manifest.webmanifest") || !fs.existsSync(chemin(u)));
-                    if (mauvaises.length) { console.error("entrees de precache invalides :", mauvaises.slice(0, 10)); process.exit(1); }
-                    console.log(urls.length + " entrees de precache, toutes presentes sous public/");
-                  '
+              run: node scripts/verifier-le-precache.mjs
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
