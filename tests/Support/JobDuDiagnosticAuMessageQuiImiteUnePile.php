@@ -19,7 +19,7 @@ final class JobDuDiagnosticAuMessageQuiImiteUnePile implements ShouldQueue
 {
     use Queueable;
 
-    public function handle(): void
+    public function handle(): never
     {
         throw new RuntimeException(self::message());
     }

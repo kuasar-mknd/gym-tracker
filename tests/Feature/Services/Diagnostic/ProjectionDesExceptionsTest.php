@@ -144,7 +144,7 @@ it('rend le détail sans arguments de pile, et sans texte hors de TexteBrut', fu
         'path' => 'seances/1?jeton=abc',
         'route_context' => ['route name' => 'workouts.update'],
         'trace' => [
-            ['file' => base_path('app/Http/Controllers/WorkoutController.php'), 'line' => 40, 'class' => 'App\Http\Controllers\WorkoutController', 'type' => '->', 'function' => 'update', 'args' => ['secret-de-pile']],
+            ['file' => base_path('app/Http/Controllers/WorkoutController.php'), 'line' => 40, 'class' => \App\Http\Controllers\WorkoutController::class, 'type' => '->', 'function' => 'update', 'args' => ['secret-de-pile']],
             ['file' => '/usr/lib/php/x.php', 'line' => 2, 'function' => '{closure:{closure:/srv/x.php:1}:2}'],
             ['function' => 'array_map'],
         ],
