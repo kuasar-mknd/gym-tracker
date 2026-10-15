@@ -13,7 +13,8 @@ import { DISPOSITIONS_DE_LA_MARQUE, TUILE_DU_LOGO, logoEnSvg } from '../Utils/de
  * Rien à charger d'autre que cette feuille et ses polices : le logo est tracé
  * dans la page, comme dans l'en-tête de l'application, et « Réessayer »
  * redemande la page qui n'a pas pu s'ouvrir, ce que le retour du réseau fait
- * tout seul.
+ * tout seul. L'icône `cloud_off` vient de la police Material Symbols, au
+ * precache depuis #2048 : un démarrage à froid sans réseau l'affiche.
  */
 
 /** Le nom du fichier dans public/build, d'où le precache le prend. */
@@ -46,6 +47,7 @@ ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille
             <p class="text-gradient font-display ${MARQUE.nom} font-black tracking-tight uppercase italic">GymTracker</p>
         </div>
         <section class="glass-panel-light w-full max-w-md space-y-4 rounded-3xl p-8 text-center" dusk="page-hors-ligne">
+            <span class="material-symbols-outlined text-text-muted text-5xl" aria-hidden="true" dusk="icone-hors-ligne">cloud_off</span>
             <h1 class="titre-carte text-2xl">Pas de réseau</h1>
             <p class="text-text-muted text-base font-medium">
                 Cette page n'a pas pu s'ouvrir : l'appareil n'est pas connecté.

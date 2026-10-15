@@ -12,6 +12,11 @@ const props = defineProps({
      * « Annuler », le fond ou Échap l'abandonnent (`close`) : la séance reste ouverte.
      */
     enCours: { type: Boolean, default: false },
+    /**
+     * La dernière clôture n'a reçu aucune réponse du serveur (#2048) : la séance reste ouverte à l'écran, et
+     * rien ne dit si la requête est arrivée. Jamais « la séance n'est pas terminée » : seule la réponse a pu se perdre.
+     */
+    sansReseau: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['close', 'confirm'])
@@ -36,6 +41,15 @@ const avisDAttente = computed(() =>
                 dusk="finish-workout-sending"
             >
                 Envoi des modifications en attente…
+            </p>
+            <p
+                v-else-if="sansReseau"
+                role="status"
+                class="bg-accent-danger/10 text-accent-danger-deep mb-6 rounded-xl p-3 text-sm font-bold"
+                dusk="finish-workout-offline"
+            >
+                Pas de réponse du serveur : la fin de la séance n’est pas confirmée. Réessaie quand le réseau sera
+                revenu.
             </p>
             <p
                 v-else-if="enAttente > 0"

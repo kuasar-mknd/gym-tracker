@@ -37,6 +37,26 @@ export const activerLePrechargementDesNavigations = async (inscription) => {
 }
 
 /**
+ * Garde le worker en vie jusqu'à ce que la réponse préchargée soit réglée, et
+ * rattrape son échec (#2048).
+ *
+ * Sans réseau, cette promesse est rejetée. `naviguerOuRetomber` l'attend dans
+ * son `try`, mais seul `waitUntil` garantit au navigateur qu'elle sera
+ * attendue : un worker arrêté avant son règlement la fait annuler (« The
+ * service worker navigation preload request was cancelled before
+ * 'preloadResponse' settled », dans la console de Chrome). Le `catch` garde son
+ * rejet d'être la raison de l'attente. Un navigateur sans préchargement n'a pas
+ * de promesse.
+ *
+ * @param {{ preloadResponse?: Promise<Response|undefined>, waitUntil: (promesse: Promise<unknown>) => void }} event
+ */
+export const garderLePrechargement = (event) => {
+    if (event.preloadResponse) {
+        event.waitUntil(event.preloadResponse.catch(() => {}))
+    }
+}
+
+/**
  * Le réseau, ou la page « hors ligne » quand il ne répond pas.
  *
  * @param {{request: Request, preloadResponse?: Promise<Response|undefined>}} event

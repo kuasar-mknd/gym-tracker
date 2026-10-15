@@ -3,6 +3,14 @@ import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import SyncService from '@/Utils/SyncService'
 import { noterLesEcrituresGardees } from '@/Utils/ecrituresGardees'
+import { direSansReseau } from '@/Utils/visitesHorsLigne'
+
+/**
+ * Ce que dit une déconnexion restée sans réponse (#2048). La réponse a pu se
+ * perdre seule, mais le plus prudent est de se croire encore connecté : la
+ * refaire ne coûte rien.
+ */
+export const DECONNEXION_SANS_RESEAU = "Pas de réseau : la déconnexion n'a pas eu lieu."
 
 /** La déconnexion en cours, pour qu'un double clic ne la fasse pas deux fois. */
 let deconnexionEnCours = null
@@ -57,6 +65,9 @@ export const seDeconnecter = () => {
             const compte = SyncService.compte
             let acceptee = false
 
+            /** La visite a démarré : Inertia appellera `onFinish`, qui libère la déconnexion. */
+            let partie = false
+
             // Noté avant l'envoi : l'écran d'arrivée le lit à son montage, avant `onSuccess`.
             noterLesEcrituresGardees(SyncService.enAttente())
 
@@ -64,12 +75,21 @@ export const seDeconnecter = () => {
                 route('logout'),
                 {},
                 {
+                    onStart: () => {
+                        partie = true
+                    },
                     onSuccess: () => {
                         acceptee = true
                         laisserLAppareil(compte)
                     },
+                    // Sans réseau, le dire : la personne croyait être sortie de son compte.
+                    onNetworkError: direSansReseau(DECONNEXION_SANS_RESEAU),
+                    /*
+                     * Refusée, coupée en route ou annulée (Inertia appelle
+                     * `onCancel`, puis `onFinish`) : la personne reste connectée,
+                     * l'avis n'a pas lieu d'être.
+                     */
                     onFinish: () => {
-                        // Refusée ou coupée en route : la personne reste connectée, l'avis n'a pas lieu d'être.
                         if (!acceptee) {
                             noterLesEcrituresGardees(0)
                         }
@@ -78,6 +98,18 @@ export const seDeconnecter = () => {
                     },
                 },
             )
+
+            /*
+             * Un écouteur `before` qui annule la visite l'arrête avant son
+             * départ, et Inertia n'appelle alors aucun rappel, `onFinish`
+             * compris : la déconnexion restait « en cours », et chaque clic
+             * suivant rendait la même promesse, sans rien envoyer. `onStart`
+             * part dans l'appel même de `router.post` quand la visite part.
+             */
+            if (!partie) {
+                noterLesEcrituresGardees(0)
+                liberer()
+            }
         })
         .catch((erreur) => {
             liberer()

@@ -377,13 +377,18 @@ describe('ForgotPassword', () => {
 })
 
 describe('ResetPassword', () => {
-    const props = { token: 'jeton-du-mail', email: 'sam@example.com' }
+    /**
+     * Le lien du courriel ne porte l'adresse du compte que chiffrée : la page
+     * la reçoit sous `adresse`, opaque, et la renvoie sans la lire.
+     */
+    const props = { token: 'jeton-du-mail', adresse: 'eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9' }
 
-    it('embarque le jeton et l’email reçus du lien dans le formulaire', () => {
+    it('embarque le jeton et l’adresse chiffrée reçus du lien, tels quels, et aucune adresse en clair', () => {
         const wrapper = mountPage(ResetPassword, { props })
 
         expect(wrapper.vm.form.token).toBe('jeton-du-mail')
-        expect(wrapper.vm.form.email).toBe('sam@example.com')
+        expect(wrapper.vm.form.adresse).toBe('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
+        expect(wrapper.vm.form).not.toHaveProperty('email')
     })
 
     it('range les deux nouveaux mots de passe dans des champs distincts', async () => {
@@ -396,12 +401,13 @@ describe('ResetPassword', () => {
         expect(wrapper.vm.form.password_confirmation).toBe('hunter2-bis')
     })
 
-    it('laisse corriger l’email préchargé du lien', async () => {
+    it('ne laisse plus corriger l’adresse du lien : ni champ d’adresse, ni valeur chiffrée affichée', () => {
         const wrapper = mountPage(ResetPassword, { props })
+        const libelles = wrapper.findAll('label').map((libelle) => libelle.text().replace(/\s*\*$/, ''))
 
-        await typeInto(wrapper, 'Email', 'autre@example.com')
-
-        expect(wrapper.vm.form.email).toBe('autre@example.com')
+        expect(libelles).toEqual(['Nouveau mot de passe', 'Confirmer le mot de passe'])
+        expect(wrapper.find('input[type="email"]').exists()).toBe(false)
+        expect(wrapper.html()).not.toContain('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
     })
 
     it('poste vers la route de stockage du mot de passe', async () => {
@@ -412,17 +418,8 @@ describe('ResetPassword', () => {
         expect(submitted()[0]).toBe('/password.store')
     })
 
-    it('garde le jeton et l’email corrigé quand la requête retombe, et n’efface que les mots de passe', async () => {
+    it('garde le jeton et l’adresse chiffrée quand la requête retombe, et n’efface que les mots de passe', async () => {
         const wrapper = mountPage(ResetPassword, { props })
-
-        // The email is *corrected* rather than left as the link sent it, and
-        // that is the whole point of the fixture: reset to the initial state
-        // and reset of the two password fields only are indistinguishable on a
-        // form nobody touched, since the token and the prefilled email are the
-        // initial state. Correcting it first is what separates them — and a
-        // page that resets everything sends the user back to the address the
-        // link carried, which is the one that did not work.
-        await typeInto(wrapper, 'Email', 'autre@example.com')
         wrapper.vm.form.password = 'hunter2'
         wrapper.vm.form.password_confirmation = 'hunter3'
 
@@ -432,10 +429,28 @@ describe('ResetPassword', () => {
 
         // Both boxes, not just the first: a rejected password left sitting in
         // the confirmation field makes the next attempt fail on a mismatch the
-        // user cannot see, since the box above it is now empty.
+        // user cannot see, since the box above it is now empty. The token and
+        // the encrypted address stay: without them, the next attempt could
+        // only be refused.
         expect(wrapper.vm.form.token).toBe('jeton-du-mail')
-        expect(wrapper.vm.form.email).toBe('autre@example.com')
+        expect(wrapper.vm.form.adresse).toBe('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
         expect([wrapper.vm.form.password, wrapper.vm.form.password_confirmation]).toEqual(['', ''])
+    })
+
+    it('montre le refus du lien en tête, avec le chemin d’une nouvelle demande, et rien sans refus', async () => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        expect(wrapper.find('[data-testid="lien-refuse"]').exists()).toBe(false)
+
+        wrapper.vm.form.errors = { token: 'Ce jeton de réinitialisation du mot de passe n’est pas valide.' }
+        await nextTick()
+
+        const refus = wrapper.find('[data-testid="lien-refuse"]')
+        expect(refus.find('[role="alert"] p').text()).toBe(
+            'Ce jeton de réinitialisation du mot de passe n’est pas valide.',
+        )
+        expect(refus.find('a').attributes('href')).toBe('/password.request')
+        expect(refus.find('a').text()).toBe('Demander un nouveau lien')
     })
 })
 

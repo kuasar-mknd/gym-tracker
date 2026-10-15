@@ -11,6 +11,7 @@ import Modal from '@/Components/UI/Modal.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
+import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 defineProps({
     show: { type: Boolean, required: true },
@@ -18,13 +19,26 @@ defineProps({
 })
 
 const emit = defineEmits(['close', 'submit'])
+
+/**
+ * Les réglages ne s'enregistrent pas sans le serveur (#2048) : sans réseau,
+ * l'envoi échouait sans un mot. « Enregistrer » se désactive et dit pourquoi ;
+ * ce qui est saisi reste dans les champs.
+ */
+const { joignable } = useEtatDuReseau()
+
+const envoyer = () => {
+    if (joignable.value) {
+        emit('submit')
+    }
+}
 </script>
 
 <template>
     <Modal :show="show" @close="emit('close')" max-width="lg" aria-labelledby="workout-settings-title">
         <div class="p-6">
             <h2 id="workout-settings-title" class="titre-section mb-6">Paramètres</h2>
-            <form @submit.prevent="emit('submit')" class="space-y-5">
+            <form @submit.prevent="envoyer" class="space-y-5">
                 <GlassInput v-model="form.name" label="Nom" :error="form.errors.name" dusk="workout-name-input" />
                 <GlassInput
                     v-model="form.started_at"
@@ -52,11 +66,16 @@ const emit = defineEmits(['close', 'submit'])
                     type="submit"
                     variant="primary"
                     :loading="form.processing"
+                    :disabled="!joignable"
+                    :aria-describedby="joignable ? undefined : 'reglages-sans-reseau'"
                     class="w-full"
                     dusk="save-settings-button"
                 >
                     Enregistrer
                 </GlassButton>
+                <p v-if="!joignable" id="reglages-sans-reseau" class="text-text-muted text-center text-sm font-medium">
+                    Il faut le réseau pour enregistrer les réglages de la séance.
+                </p>
             </form>
         </div>
     </Modal>

@@ -80,6 +80,8 @@ beforeEach(() => {
     sessionStorage.clear()
     requete.mockReset()
     routeur.post.mockReset()
+    // Comme Inertia : une visite qui part appelle `onStart` dans l'appel même.
+    routeur.post.mockImplementation((_url, _donnees, options) => options?.onStart?.())
     formulaire.supprimer.mockReset()
     globalThis.route = (nom) => `/${nom}`
 })

@@ -203,6 +203,7 @@ export const monterLaSeance = async (
     const { useLignesDeLaSeance } = await import('@/composables/useLignesDeLaSeance')
     const { useReglagesDeLaSeance } = await import('@/composables/useReglagesDeLaSeance')
     const { useRechargementApresLeVidage } = await import('@/composables/useRechargementApresLeVidage')
+    const { useSeanceEtSaFile } = await import('@/composables/useSeanceEtSaFile')
     const { createWriteQueue, createWriteSequencer } = await import('@/Utils/writeOrdering')
     const { fusionnerLaSeance } = await import('@/Utils/fusionDeSeance')
 
@@ -210,7 +211,8 @@ export const monterLaSeance = async (
 
     const Seance = defineComponent({
         setup() {
-            const localWorkout = ref(JSON.parse(JSON.stringify(seance)))
+            // Comme la page : la séance du serveur, et par-dessus ce qui attend en file (#2048).
+            const { localWorkout } = useSeanceEtSaFile({ seance, exercices })
             const identite = useIdentiteDesRangees()
             const rapport = useRapportDeSynchronisation({
                 page: { props: {} },
