@@ -34,14 +34,15 @@ export const TRACES_DES_BARRES = [
  * au-dessus des pages, 2026-10-15 dans la barre) : le logo suffit, et le nom
  * reste lu, il nomme le lien vers l'accueil et la page « hors ligne ».
  *
- * La barre de bureau, ouverte dès `sm`, n'avait pas la place du logo et du
- * nom à la fois (#2057) : avec un
- * compte « Test User », ils lui demandaient 1 103 px de large jusqu'au bord du
- * menu du compte, et l'ancien en-tête, le nom seul, 1 051 px. Le logo seul en
- * demande 898, et 947 avec un nom de compte long. En deçà, la barre déborde et
- * rogne le menu du compte, chevron compris. Un ascenseur classique (Windows,
- * Linux, Dusk) prend 15 px de plus à la fenêtre ; Playwright le cache par
- * défaut (`--hide-scrollbars`). Mesures dans Chromium.
+ * La barre de bureau, ouverte dès 640 px de large sur un écran haut (variante
+ * `bureau:` de app.css), n'avait pas la place du logo et du nom à la fois
+ * (#2057) : avec un compte « Test User », ils lui demandaient 1 103 px de
+ * large jusqu'au bord du menu du compte, et l'ancien en-tête, le nom seul,
+ * 1 051 px. Le logo seul en demande 898, et 947 avec un nom de compte long.
+ * En deçà, la barre déborde et rogne le menu du compte, chevron compris. Un
+ * ascenseur classique (Windows, Linux, Dusk) prend 15 px de plus à la
+ * fenêtre ; Playwright le cache par défaut (`--hide-scrollbars`). Mesures dans
+ * Chromium.
  */
 export const DISPOSITIONS_DE_LA_MARQUE = {
     barre: {
