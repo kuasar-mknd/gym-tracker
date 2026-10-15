@@ -5,6 +5,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
+import { INSCRIPTION_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const form = useForm({
     name: '',
@@ -17,6 +18,7 @@ const submit = () => {
     form.post(route('register'), {
         onSuccess: () => triggerHaptic('success'),
         onError: () => triggerHaptic('error'),
+        onNetworkError: direSansReseau(INSCRIPTION_NON_CONFIRMEE),
         onFinish: () => form.reset('password', 'password_confirmation'),
     })
 }
@@ -29,6 +31,9 @@ const submit = () => {
         <div class="mb-6 text-center">
             <h2 class="titre-section">Bienvenue ! 💪</h2>
             <p class="text-text-muted mt-2">Crée ton compte pour commencer</p>
+            <p class="text-text-muted mt-2 text-sm" data-testid="register-link-notice">
+                Un lien partira à ton adresse : ton compte s’ouvre une fois ce lien suivi.
+            </p>
         </div>
 
         <form @submit.prevent="submit" class="space-y-5">

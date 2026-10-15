@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { http, ErreurHttp, ErreurReseau } from '@/Utils/http'
+import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 const reponse = (corps, { status = 200, type = 'application/json', entetes = {} } = {}) => ({
     ok: status >= 200 && status < 300,
@@ -109,5 +110,72 @@ describe('http', () => {
         await http.get('/api/v1/sets')
 
         expect(dernierAppel()[1].headers['X-CSRF-TOKEN']).toBeUndefined()
+    })
+})
+
+/*
+ * Chaque requête dit si le serveur répond (#2048) : « Recharger », les réglages
+ * de la séance et « Modèle » s'en servent pour ne pas partir dans le vide.
+ */
+describe('http et l’état du réseau', () => {
+    const joignable = () => useEtatDuReseau().joignable.value
+
+    afterEach(() => {
+        vi.useRealTimers()
+        noterQueLeServeurRepond()
+    })
+
+    it('rend le serveur joignable à la première réponse réussie, rejeu de la file compris', async () => {
+        noterQueLeServeurNeRepondPas()
+        globalThis.fetch.mockResolvedValue(reponse({}))
+
+        await http.post('/api/v1/sets', { reps: 8 })
+
+        expect(joignable()).toBe(true)
+    })
+
+    it('ne le rend pas joignable sur une réponse en erreur', async () => {
+        noterQueLeServeurNeRepondPas()
+        globalThis.fetch.mockResolvedValue(reponse({ message: 'refusé' }, { status: 401 }))
+
+        await http.get('/api/v1/sets').catch(() => {})
+
+        expect(joignable()).toBe(false)
+    })
+
+    it('en doute quand la requête n’a aucune réponse', async () => {
+        globalThis.fetch.mockRejectedValue(new TypeError('Failed to fetch'))
+
+        await http.get('/api/v1/sets').catch(() => {})
+
+        expect(joignable()).toBe(false)
+    })
+
+    it('en doute quand la réponse n’arrive pas à temps', async () => {
+        vi.useFakeTimers()
+        globalThis.fetch.mockImplementation(
+            (_url, { signal }) =>
+                new Promise((_, rejeter) => signal.addEventListener('abort', () => rejeter(new Error('abandonnée')))),
+        )
+
+        const requete = http.get('/api/v1/sets', { timeout: 15000 }).catch(() => {})
+        await vi.advanceTimersByTimeAsync(15000)
+        await requete
+
+        expect(joignable()).toBe(false)
+    })
+
+    it('n’en dit rien quand l’appelant abandonne sa requête', async () => {
+        const arret = new AbortController()
+        globalThis.fetch.mockImplementation(
+            (_url, { signal }) =>
+                new Promise((_, rejeter) => signal.addEventListener('abort', () => rejeter(new Error('abandonnée')))),
+        )
+
+        const requete = http.get('/api/v1/sets', { signal: arret.signal }).catch(() => {})
+        arret.abort()
+        await requete
+
+        expect(joignable()).toBe(true)
     })
 })

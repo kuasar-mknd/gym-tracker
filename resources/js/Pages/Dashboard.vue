@@ -17,6 +17,7 @@ import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
 import { defineAsyncComponent, ref } from 'vue'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
+import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const ActiveGoalsChart = defineAsyncComponent(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
@@ -46,7 +47,7 @@ defineProps({
 const form = useForm({})
 
 const startWorkout = () => {
-    form.post(route('workouts.store'))
+    form.post(route('workouts.store'), { onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU) })
 }
 
 /**

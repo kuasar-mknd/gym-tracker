@@ -11,7 +11,11 @@ use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
 use App\Notifications\AdresseDuCompteChangee;
 use Filament\Actions\Testing\TestAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
@@ -204,6 +208,131 @@ it('refuse au panneau une nouvelle adresse hors ASCII, à la création comme à 
     '« ß » pour « ss »' => ['straße@example.org'],
     'un domaine internationalisé' => ['jean@bücher.example.org'],
 ]);
+
+/**
+ * Un compte créé par un administrateur n'attend aucun lien : seule
+ * l'inscription crée des comptes en attente de la preuve de leur adresse
+ * (`AttendLaPreuveDeSonAdresse`). Il se connecte aussitôt, comme un compte
+ * d'avant l'attente.
+ */
+it('crée au panneau un compte qui n’est pas en attente, et qui se connecte', function (): void {
+    Notification::fake();
+
+    Livewire::test(CreateUser::class)
+        ->fillForm(['name' => 'Camille Panneau', 'email' => 'camille.panneau@example.org', 'default_rest_time' => 90, 'password' => 'Un-mot-de-passe-solide-42!'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $compte = User::query()->where('email', 'camille.panneau@example.org')->sole();
+
+    expect($compte->estEnAttente())->toBeFalse()
+        ->and($compte->en_attente_depuis)->toBeNull();
+
+    // L'administrateur quitte le panneau : la connexion est celle d'un invité.
+    Auth::guard('admin')->logout();
+    Auth::shouldUse('web');
+
+    $this->post(route('login'), ['email' => 'camille.panneau@example.org', 'password' => 'Un-mot-de-passe-solide-42!'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('dashboard'));
+
+    $this->assertAuthenticatedAs($compte, 'web');
+});
+
+/**
+ * Un compte ouvert par l'inscription attend la preuve de son adresse
+ * (`AttendLaPreuveDeSonAdresse`). La liste le montre pour ce qu'il est : un
+ * badge « En attente du lien » qui affiche la date de l'inscription, et rien
+ * sur un compte ouvert, même jamais vérifié (un compte d'avant l'attente, ou
+ * du panneau). La date se lit telle que la liste l'affiche, pas seulement dans
+ * l'état brut de la colonne : une colonne qui garderait la valeur mais
+ * afficherait autre chose (« Oui ») ne dirait plus depuis quand le compte
+ * attend.
+ */
+it('montre « En attente du lien » et sa date sur un compte en attente, et rien sur un compte ouvert', function (): void {
+    $depuis = Carbon::parse('2026-10-12 08:30:00');
+    $enAttente = User::factory()->enAttente()->create(['en_attente_depuis' => $depuis]);
+    $ouvert = User::factory()->unverified()->create();
+
+    Livewire::test(ListUsers::class)
+        ->assertCanSeeTableRecords([$enAttente, $ouvert])
+        ->assertTableColumnExists(
+            'en_attente_depuis',
+            static fn (TextColumn $colonne): bool => $colonne->getLabel() === 'En attente du lien' && $colonne->isBadge(),
+        )
+        ->assertTableColumnStateSet('en_attente_depuis', $depuis, $enAttente)
+        ->assertTableColumnStateSet('en_attente_depuis', null, $ouvert)
+        ->assertTableColumnFormattedStateSet('en_attente_depuis', 'oct. 12, 2026 08:30:00', $enAttente)
+        ->assertTableColumnFormattedStateSet('en_attente_depuis', null, $ouvert)
+        ->assertSee('En attente du lien')
+        ->assertSeeText('oct. 12, 2026 08:30:00');
+});
+
+/**
+ * Le filtre « En attente du lien » : oui, les comptes qui attendent ; non,
+ * tous les autres, ceux qu'une preuve de l'adresse a ouverts et ceux qui
+ * n'ont jamais attendu, vérifiés ou non ; tous, sans filtre.
+ */
+it('filtre les comptes en attente du lien : oui, non, tous', function (): void {
+    $enAttente = User::factory()->enAttente()->create();
+    $ouvert = User::factory()->create();
+    $jamaisVerifie = User::factory()->unverified()->create();
+    $ouvertParUnePreuve = User::factory()->enAttente()->create();
+    $ouvertParUnePreuve->markEmailAsVerified();
+
+    Livewire::test(ListUsers::class)
+        ->assertTableFilterExists(
+            'en_attente',
+            static fn (TernaryFilter $filtre): bool => $filtre->getLabel() === 'En attente du lien'
+                && $filtre->getTrueLabel() === 'Oui'
+                && $filtre->getFalseLabel() === 'Non'
+                && $filtre->getPlaceholder() === 'Tous',
+        )
+        ->filterTable('en_attente', true)
+        ->assertCanSeeTableRecords([$enAttente])
+        ->assertCanNotSeeTableRecords([$ouvert, $jamaisVerifie, $ouvertParUnePreuve])
+        ->filterTable('en_attente', false)
+        ->assertCanSeeTableRecords([$ouvert, $jamaisVerifie, $ouvertParUnePreuve])
+        ->assertCanNotSeeTableRecords([$enAttente])
+        ->resetTableFilters()
+        ->assertCanSeeTableRecords([$enAttente, $ouvert, $jamaisVerifie, $ouvertParUnePreuve]);
+});
+
+/**
+ * La fiche d'un compte en attente le dit, avec la date, et rappelle qu'il
+ * s'efface s'il n'est jamais ouvert. Elle dit comment il s'ouvre, comme
+ * `ConnecterLeCompte` l'ouvre : le lien suivi ne fait que marquer la session,
+ * et c'est la connexion qui suit dans le même navigateur qui ouvre le compte ;
+ * un fournisseur ne l'ouvre que s'il garantit l'adresse. L'enregistrer ne
+ * l'ouvre pas, même quand le client réécrit le champ : seule la preuve de
+ * l'adresse efface l'attente. La fiche d'un compte ouvert n'en dit rien.
+ */
+it('dit sur la fiche qu’un compte attend le lien, sans l’ouvrir quand on l’enregistre', function (): void {
+    $depuis = Carbon::parse('2026-10-12 08:30:00');
+    $enAttente = User::factory()->enAttente()->create(['name' => 'Nom Saisi', 'en_attente_depuis' => $depuis]);
+    $ouvert = User::factory()->unverified()->create();
+
+    Livewire::test(EditUser::class, ['record' => $enAttente->getKey()])
+        ->assertFormFieldVisible('en_attente_depuis')
+        ->assertFormFieldDisabled('en_attente_depuis')
+        ->assertFormSet(['en_attente_depuis' => '2026-10-12 08:30:00'])
+        ->assertSee('En attente du lien depuis')
+        ->assertSee(sprintf('effacé au bout de %d jours', User::JOURS_AVANT_LA_PURGE))
+        ->assertSee("lien d'ouverture suivi puis connexion dans le même navigateur (le lien seul n'ouvre rien)")
+        ->assertSee("connexion par un fournisseur qui garantit l'adresse")
+        ->fillForm(['name' => 'Nom Corrigé'])
+        ->set('data.en_attente_depuis', null)
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($enAttente->refresh()->name)->toBe('Nom Corrigé')
+        ->and($enAttente->estEnAttente())->toBeTrue()
+        ->and($enAttente->en_attente_depuis?->equalTo($depuis))->toBeTrue();
+
+    Livewire::test(EditUser::class, ['record' => $ouvert->getKey()])
+        ->assertFormFieldHidden('en_attente_depuis')
+        ->assertDontSee('En attente du lien depuis');
+});
 
 /**
  * L'adresse actuelle d'un compte ouvert avant la règle reste admise telle

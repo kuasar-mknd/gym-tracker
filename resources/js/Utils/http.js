@@ -11,7 +11,13 @@
  * La forme d'erreur est celle que `classifySyncError` lit déjà : `response`
  * quand le serveur a répondu, `code: 'ERR_NETWORK'` et `request` quand il n'a
  * pas répondu du tout.
+ *
+ * Chaque requête dit aussi à `useEtatDuReseau` si le serveur répond (#2048) :
+ * une réponse réussie le rend joignable, une requête sans réponse, ou sans
+ * réponse à temps, l'en fait douter. Une requête que son appelant abandonne
+ * ne dit rien du serveur.
  */
+import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
 
 /** Le jeton CSRF posé par Laravel dans l'en-tête du document. */
 const jetonCsrf = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? null
@@ -95,6 +101,10 @@ export const http = async (config) => {
             body: envoieUnCorps ? JSON.stringify(data) : undefined,
         })
     } catch (erreur) {
+        if (!signal?.aborted) {
+            noterQueLeServeurNeRepondPas()
+        }
+
         throw new ErreurReseau(url, erreur)
     } finally {
         if (echeance !== null) {
@@ -107,6 +117,8 @@ export const http = async (config) => {
     if (!reponse.ok) {
         throw new ErreurHttp(reponse.status, corps, url, lireLesEntetes(reponse))
     }
+
+    noterQueLeServeurRepond()
 
     return { data: corps, status: reponse.status }
 }

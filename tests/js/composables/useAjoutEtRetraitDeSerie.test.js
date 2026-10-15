@@ -14,7 +14,14 @@ const reponse = (data) => ({ data: { data } })
 const BORNES = { weight: 100000, reps: 999, distance_km: 1000, duration_seconds: 86400 }
 
 const monter = ({ bornesDUneSerie = null } = {}) => {
-    const ligne = { id: 1, _rowKey: 'row-1', exercise: { type: 'strength' }, sets: [], recommended_values: null }
+    const ligne = {
+        id: 1,
+        _rowKey: 'row-1',
+        exercise_id: 7,
+        exercise: { id: 7, type: 'strength' },
+        sets: [],
+        recommended_values: null,
+    }
     const localWorkout = ref({ id: 5, workout_lines: [ligne] })
     const pendingIds = new PendingIds()
     const fieldWrites = createWriteQueue()
@@ -115,7 +122,7 @@ describe('l’ajout et le retrait d’une série', () => {
                 weight: 100000,
                 reps: 999,
             },
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 5, exercise_id: 7 } },
         )
         expect(ligne().sets.at(-1)).toMatchObject({ id: 41, weight: 100000, reps: 999 })
         expect(ligne().sets[0]).toMatchObject({ weight: 150000, reps: 1500 })
@@ -137,7 +144,7 @@ describe('l’ajout et le retrait d’une série', () => {
                 weight: 62.5,
                 reps: 999,
             },
-            { ajusterPar: expect.any(Function) },
+            { ajusterPar: expect.any(Function), contexte: { workout_id: 5, exercise_id: 7 } },
         )
     })
 

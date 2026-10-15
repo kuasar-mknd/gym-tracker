@@ -35,6 +35,9 @@ RUN npm ci
 
 COPY vite.config.js ./
 COPY resources/ ./resources/
+# Les icônes de public/ entrent au precache avec l'empreinte de leur contenu :
+# sans elles, le worker de l'image différerait de celui de la CI.
+COPY public/*.ico public/*.png public/*.svg ./public/
 RUN npm run build
 
 # 3. Builder stage for Composer dependencies
@@ -110,4 +113,4 @@ ENV APP_REVISION=${APP_REVISION}
 USER www-data
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=2", "--caddyfile=/app/docker/octane/Caddyfile"]
+CMD ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=4", "--caddyfile=/app/docker/octane/Caddyfile"]

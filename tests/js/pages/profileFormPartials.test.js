@@ -25,7 +25,12 @@ vi.mock('@inertiajs/vue3', async () => {
     return {
         Head: { template: '<div />' },
         Link: {
-            props: { href: { type: String, default: '' }, method: { type: String, default: 'get' } },
+            name: 'Link',
+            props: {
+                href: { type: String, default: '' },
+                method: { type: String, default: 'get' },
+                onNetworkError: { type: Function, default: undefined },
+            },
             template: '<a :href="href" :data-method="method"><slot /></a>',
         },
         usePage: () => currentPage,
@@ -69,6 +74,8 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
 import ProfileEdit from '@/Pages/Profile/Edit.vue'
 import { layoutStub, passesSlot } from './pageStubs'
+import { ECRITURE_NON_CONFIRMEE, ENVOI_DU_LIEN_NON_CONFIRME } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
 
 beforeAll(() => {
     globalThis.route = (name) => `/${name}`
@@ -331,6 +338,25 @@ describe('UpdateProfileInformationForm', () => {
         expect(resend.attributes('data-method')).toBe('post')
     })
 
+    /*
+     * Le renvoi du lien n'enregistre rien : sans réponse du serveur, il dit que
+     * l'envoi n'est pas confirmé, et non le message général d'une écriture
+     * (#2048).
+     */
+    it('dit, sans réponse du serveur, que l’envoi du lien n’est pas confirmé', () => {
+        signedInAs(sam)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true })
+        const renvoi = wrapper
+            .findAllComponents({ name: 'Link' })
+            .find((lien) => lien.props('href') === '/verification.send')
+        const { rendu, annonces } = annoncesPendant(() => renvoi.props('onNetworkError')({ code: 'ERR_NETWORK' }))
+
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([ENVOI_DU_LIEN_NON_CONFIRME])
+        expect(annonces).not.toContain(ECRITURE_NON_CONFIRMEE)
+    })
+
     it('ne confirme le renvoi que pour le statut que Laravel envoie', () => {
         signedInAs(sam)
 
@@ -387,7 +413,7 @@ describe('UpdateProfileInformationForm', () => {
 
         expect(hasField(wrapper, currentPasswordLabel)).toBe(true)
         expect(wrapper.find('[data-testid="profile-email-change-notice"]').text()).toContain(
-            'Ton adresse actuelle sera prévenue du changement',
+            'Ton adresse actuelle sera alors prévenue du changement',
         )
 
         await typeInto(wrapper, currentPasswordLabel, 'secret')
@@ -404,11 +430,13 @@ describe('UpdateProfileInformationForm', () => {
         await typeInto(wrapper, 'Email', 'nouveau@example.com')
 
         // Le serveur ne prévient pas une adresse que personne n'a prouvée : le
-        // formulaire ne l'annonce pas non plus.
+        // formulaire ne l'annonce pas non plus. Il dit en revanche, dans les
+        // deux cas, que l'adresse ne change qu'une fois le lien suivi.
         const notice = wrapper.find('[data-testid="profile-email-change-notice"]').text()
 
-        expect(notice).not.toContain('sera prévenue')
-        expect(notice).toContain('La nouvelle adresse devra être vérifiée.')
+        expect(notice).not.toContain('sera alors prévenue')
+        expect(notice).toContain('Un lien partira à la nouvelle adresse')
+        expect(notice).toContain('qu’une fois ce lien suivi.')
     })
 
     it('oublie le mot de passe saisi quand l’adresse revient à celle du compte', async () => {
@@ -442,7 +470,7 @@ describe('UpdateProfileInformationForm', () => {
         expect(focusedFieldLabel(wrapper)).toBe(`${currentPasswordLabel} *`)
     })
 
-    it('referme le champ une fois la nouvelle adresse enregistrée', async () => {
+    it('referme le champ une fois la demande envoyée, l’adresse du compte n’ayant pas changé', async () => {
         currentPage = reactive({ props: { auth: { user: { ...sam } } } })
 
         const wrapper = mountPartial(UpdateProfileInformationForm)
@@ -451,16 +479,35 @@ describe('UpdateProfileInformationForm', () => {
         await typeInto(wrapper, currentPasswordLabel, 'secret')
         await submit(wrapper)
 
-        // Ce qu'Inertia rend après la redirection : le compte porte désormais la
-        // nouvelle adresse, qui devient celle à laquelle comparer.
-        currentPage.props.auth.user = { ...sam, email: 'nouveau@example.com' }
+        // Ce qu'Inertia rend après la redirection : le compte garde son adresse
+        // tant que le lien envoyé à la nouvelle n'est pas suivi. Le champ y
+        // revient, et le mot de passe, qui ne servait qu'à elle, s'efface.
+        formPatch.mock.calls[0][1].onSuccess()
         await nextTick()
 
+        expect(wrapper.vm.form.email).toBe('sam@example.com')
         expect(hasField(wrapper, currentPasswordLabel)).toBe(false)
         expect(wrapper.vm.form.current_password).toBe('')
     })
 
-    it('propose de renvoyer le lien une fois la nouvelle adresse enregistrée', async () => {
+    it('dit ce que devient la demande, avec la même phrase que la nouvelle adresse soit libre ou prise', () => {
+        signedInAs(sam)
+
+        const statut = (status) =>
+            mountPartial(UpdateProfileInformationForm, { status }).find('[data-testid="profile-email-status"]')
+
+        expect(statut('lien-de-changement-d-adresse-envoye').text()).toBe(
+            'Un courriel part vers la nouvelle adresse. Ton adresse ne changera qu’une fois le lien qu’il contient suivi, depuis un appareil où tu es connecté.',
+        )
+        expect(statut('lien-de-changement-d-adresse-envoye').attributes('role')).toBe('status')
+        expect(statut('adresse-confirmee').text()).toBe('Ta nouvelle adresse est enregistrée et vérifiée.')
+        expect(statut('lien-de-changement-d-adresse-perime').text()).toContain('Ce lien ne vaut plus')
+        expect(statut('adresse-deja-prise').text()).toContain('la tienne n’a pas changé')
+        expect(statut('verification-link-sent').exists()).toBe(false)
+        expect(statut(undefined).exists()).toBe(false)
+    })
+
+    it('propose de renvoyer le lien quand l’adresse n’est plus vérifiée', async () => {
         currentPage = reactive({ props: { auth: { user: { ...sam } } } })
 
         const wrapper = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true, adresseVerifiee: true })
@@ -468,13 +515,10 @@ describe('UpdateProfileInformationForm', () => {
 
         expect(unverifiedBanner().exists()).toBe(false)
 
-        await typeInto(wrapper, 'Email', 'nouveau@example.com')
-        await typeInto(wrapper, currentPasswordLabel, 'secret')
-        await submit(wrapper)
-
-        // Ce que la page reçoit après la redirection : la nouvelle adresse, qui
-        // n'est pas vérifiée. Tant qu'elle ne l'est pas, un nouveau changement
-        // ne prévient que la dernière adresse vérifiée : le renvoi doit se voir.
+        // Ce que la page reçoit quand le panneau a changé l'adresse : une
+        // adresse qui n'est pas vérifiée. Tant qu'elle ne l'est pas, un nouveau
+        // changement ne prévient que la dernière adresse vérifiée : le renvoi
+        // doit se voir. (Depuis le profil, le lien suivi vérifie l'adresse.)
         currentPage.props.auth.user = { ...sam, email: 'nouveau@example.com' }
         await wrapper.setProps({ adresseVerifiee: false })
 

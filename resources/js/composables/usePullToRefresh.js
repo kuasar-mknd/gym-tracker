@@ -1,11 +1,17 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
+import { RAFRAICHISSEMENT_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 export function usePullToRefresh(options = {}) {
     const {
         threshold = 150,
-        onRefresh = () => router.reload({ preserveScroll: true }),
+        /*
+         * Un rechargement en arrière-plan échoue en silence sans réseau ;
+         * celui-ci, la personne l'a demandé du doigt : il le dit (#2048).
+         */
+        onRefresh = () =>
+            router.reload({ preserveScroll: true, onNetworkError: direSansReseau(RAFRAICHISSEMENT_SANS_RESEAU) }),
         containerRef = null, // Optional: scroll container if not window
     } = options
 

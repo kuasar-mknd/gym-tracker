@@ -6,6 +6,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\DailyJournal;
 use App\Models\User;
 use App\Models\Workout;
+use App\Support\LiensDesCourriels;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -299,12 +300,23 @@ it('demande à la première page après une connexion d’effacer l’historique
             'password' => 'password',
         ], historiqueEntetesDeVisite());
     }],
-    'par l’inscription' => [fn (Appareil $appareil): TestResponse => $appareil->envoyer('POST', 'https://gym.example.org/register', [
-        'name' => 'Compte suivant',
-        'email' => 'compte-suivant@example.org',
-        'password' => 'un-mot-de-passe-solide-2026',
-        'password_confirmation' => 'un-mot-de-passe-solide-2026',
-    ], historiqueEntetesDeVisite())],
+    // L'inscription ne connecte plus : le compte s'ouvre par son lien, puis la connexion.
+    'par l’inscription, son lien et la connexion' => [function (Appareil $appareil): TestResponse {
+        $appareil->envoyer('POST', 'https://gym.example.org/register', [
+            'name' => 'Compte suivant',
+            'email' => 'compte-suivant@example.org',
+            'password' => 'un-mot-de-passe-solide-2026',
+            'password_confirmation' => 'un-mot-de-passe-solide-2026',
+        ], historiqueEntetesDeVisite())->assertRedirect();
+
+        $compte = User::query()->where('email', 'compte-suivant@example.org')->sole();
+        $appareil->envoyer('GET', LiensDesCourriels::lienDOuvertureDuCompte($compte))->assertRedirect();
+
+        return $appareil->envoyer('POST', 'https://gym.example.org/login', [
+            'email' => 'compte-suivant@example.org',
+            'password' => 'un-mot-de-passe-solide-2026',
+        ], historiqueEntetesDeVisite());
+    }],
 ]);
 
 it('ne demande pas d’effacer l’historique quand la suppression est refusée', function (): void {

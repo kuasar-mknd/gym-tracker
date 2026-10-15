@@ -9,6 +9,7 @@ import { installerLeRapporteurDErreurs } from '@/Utils/rapporteurDErreurs'
 import { installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
 import { inscrireLeWorker } from '@/Utils/miseAJourDuWorker'
 import { installerLaRouteGlobale } from '@/Utils/routeGlobale'
+import { installerLesVisitesHorsLigne } from '@/Utils/visitesHorsLigne'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -26,6 +27,12 @@ if (typeof window !== 'undefined') {
      * Avant `createInertiaApp`, qui lit l'historique dès son démarrage.
      */
     installerLaGardeDeLHistorique({ routeur: router })
+
+    /*
+     * Une visite sans réseau le dit, au lieu de ne rien faire, et une visite
+     * qui n'aboutit pas au bout de huit secondes propose de l'annuler (#2048).
+     */
+    installerLesVisitesHorsLigne({ routeur: router })
 }
 
 // Expose router for testing (Dusk)

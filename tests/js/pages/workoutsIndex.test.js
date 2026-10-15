@@ -80,6 +80,8 @@ import WorkoutsIndex from '@/Pages/Workouts/Index.vue'
 import GlassStat from '@/Components/UI/GlassStat.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
 import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
+import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
 
 /** La valeur que la carte de chiffre reçoit pour ce libellé. */
 const statistique = (wrapper, libelle) =>
@@ -479,7 +481,17 @@ describe('Workouts/Index — starting a session', () => {
 
         await wrapper.findAll('[aria-label="Nouvelle séance"]')[0].trigger('click')
 
-        expect(post).toHaveBeenCalledWith('/workouts')
+        expect(post).toHaveBeenCalledWith('/workouts', expect.any(Object))
+    })
+
+    it('dit qu’il faut le réseau quand la création part sans lui', async () => {
+        const wrapper = mountPage()
+
+        await wrapper.findAll('[aria-label="Nouvelle séance"]')[0].trigger('click')
+        const { rendu, annonces } = annoncesPendant(() => post.mock.calls[0][1].onNetworkError({ code: 'ERR_NETWORK' }))
+
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
     })
 
     it('creates a session from the empty state as well', async () => {
@@ -487,7 +499,7 @@ describe('Workouts/Index — starting a session', () => {
 
         await wrapper.find('[dusk="empty-state"]').trigger('click')
 
-        expect(post).toHaveBeenCalledWith('/workouts')
+        expect(post).toHaveBeenCalledWith('/workouts', expect.any(Object))
     })
 })
 

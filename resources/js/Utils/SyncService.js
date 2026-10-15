@@ -331,7 +331,7 @@ class SyncService {
      * du vidage qu'il attend.
      *
      * @param {Object} config La requête, au format de `Utils/http`. Une
-     *   création peut y joindre `ajusterPar`, voir `notesDeCreation`.
+     *   création peut y joindre `ajusterPar` et `contexte`, voir `notesDeCreation`.
      * @returns {Promise}
      */
     request(config) {
@@ -355,9 +355,9 @@ class SyncService {
      * @returns {Promise}
      */
     async envoyer(config) {
-        const { ajusterPar, ...requete } = config
+        const { ajusterPar, contexte, ...requete } = config
         const stamped = this.stampIdempotency(requete)
-        const notes = this.notesDeCreation(stamped, ajusterPar)
+        const notes = this.notesDeCreation(stamped, { ajusterPar, contexte })
 
         /*
          * Le compte qui fait l'écriture, pris à son départ : une écriture
@@ -420,12 +420,24 @@ class SyncService {
      * (#1960). La file la garde sous forme d'adresse, `__produit__` à la place
      * de l'identifiant, pour qu'elle survive à un rechargement.
      *
+     * `contexte` est ce que la page note pour montrer la création sans le
+     * serveur, et que la charge ne dit pas : pour une série, la séance et
+     * l'exercice de sa ligne (`Utils/seanceEtFile`, #2048). La file le garde sur
+     * l'entrée, jamais dans la charge : il ne part pas au serveur.
+     *
      * @param {Object} config la requête
-     * @param {((id: string) => string)|undefined} ajusterPar
-     * @returns {{ajusterPar?: string}}
+     * @param {{ajusterPar?: (id: string) => string, contexte?: Object}} notes
+     * @returns {{ajusterPar?: string, contexte?: Object}}
      */
-    notesDeCreation(config, ajusterPar) {
-        return estUneCreation(config) && typeof ajusterPar === 'function' ? { ajusterPar: ajusterPar(ID_A_VENIR) } : {}
+    notesDeCreation(config, { ajusterPar, contexte } = {}) {
+        if (!estUneCreation(config)) {
+            return {}
+        }
+
+        return {
+            ...(typeof ajusterPar === 'function' ? { ajusterPar: ajusterPar(ID_A_VENIR) } : {}),
+            ...(contexte !== null && typeof contexte === 'object' ? { contexte: { ...contexte } } : {}),
+        }
     }
 
     /**
@@ -488,9 +500,10 @@ class SyncService {
      *
      * @param {Object} config
      * @param {string|null} compte le compte connecté quand l'écriture est partie
-     * @param {{tentee?: boolean, ajusterPar?: string}} notes ce que la file sait
-     *   déjà de l'écriture : `tentee` quand elle est partie une fois sans
-     *   réponse, `ajusterPar` pour rattraper ce que le serveur en ignorera.
+     * @param {{tentee?: boolean, ajusterPar?: string, contexte?: Object}} notes ce
+     *   que la file sait déjà de l'écriture : `tentee` quand elle est partie une
+     *   fois sans réponse, `ajusterPar` pour rattraper ce que le serveur en
+     *   ignorera, `contexte` pour que la page la montre sans le serveur.
      * @returns {string|null} the queue entry's id, so a caller that depends on
      *   what this write eventually creates can recognise it when it goes out.
      */
@@ -521,13 +534,13 @@ class SyncService {
      * l'identifiant réel au moment où cette écriture-là aboutit.
      *
      * @param {Object} config la requête, au format de `Utils/http`, avec
-     *   `ajusterPar` pour une création (voir `notesDeCreation`)
+     *   `ajusterPar` et `contexte` pour une création (voir `notesDeCreation`)
      * @returns {string|null} l'entrée créée, ou null quand rien n'entre : pas de
      *   compte connecté, ou une écriture dont elle dépend est sortie de la file
      *   sans rien produire (refusée, retirée).
      */
     mettreEnFile(config) {
-        const { ajusterPar, ...requete } = config
+        const { ajusterPar, contexte, ...requete } = config
         let data = requete.data
 
         for (const [champ, valeur] of Object.entries(data ?? {})) {
@@ -556,7 +569,7 @@ class SyncService {
         return this.addToQueue(
             this.stampIdempotency({ ...requete, data }),
             this.compte,
-            this.notesDeCreation(requete, ajusterPar),
+            this.notesDeCreation(requete, { ajusterPar, contexte }),
         )
     }
 
@@ -631,6 +644,25 @@ class SyncService {
         return this.compte === null
             ? []
             : this.queue.filter((entree) => entree.compte === this.compte).map((entree) => entree.id)
+    }
+
+    /**
+     * Les écritures du compte connecté qui attendent encore, dans l'ordre de la
+     * file, celle qui vole comprise : une copie profonde, en lecture seule.
+     *
+     * La page de séance les superpose à la séance du serveur à son montage
+     * (`Utils/seanceEtFile`) : ce qui attendait en file n'apparaissait qu'après
+     * le vidage, et une série ajoutée sans réseau disparaissait de l'écran au
+     * rechargement ou au bouton Retour (#2048). La copie ne laisse personne
+     * modifier la file sans passer par `modifierEnFile` ou `retirerDeLaFile`,
+     * qui écrivent le stockage durable.
+     *
+     * @returns {Array<Object>}
+     */
+    entreesDuCompte() {
+        return this.compte === null
+            ? []
+            : JSON.parse(JSON.stringify(this.queue.filter((entree) => entree.compte === this.compte)))
     }
 
     /** Combien d'écritures directes attendent encore leur réponse. */
