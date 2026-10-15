@@ -35,20 +35,21 @@ function logoFichierServi(string $adresse): string
     return public_path(ltrim($chemin, '/'));
 }
 
-it('montre le logo et le nom dans l’en-tête du panneau', function (): void {
+it('montre le logo seul dans l’en-tête du panneau, nommé par son texte de remplacement', function (): void {
     $page = (string) get('/backoffice/login')->assertOk()->getContent();
     $marque = logoCapture('/<div[^>]*class="fi-logo"[^>]*>(.*?)<\/div>/s', $page);
 
     expect($marque)->toBeString('Le panneau ne pose plus sa marque dans `.fi-logo`.');
 
     /*
-     * Le logo est décoratif : le nom écrit à côté nomme le lien qui
-     * l'entoure. Filament, sans `brandLogo`, n'écrivait que le nom.
+     * Le logo se montre seul, à la demande du propriétaire : son texte de
+     * remplacement nomme le lien qui l'entoure, et aucun nom écrit à côté ne
+     * le répète. Filament, sans `brandLogo`, n'écrivait que le nom.
      */
-    $logo = logoCapture('/<img src="([^"]+)" alt=""/', (string) $marque);
+    $logo = logoCapture('/<img src="([^"]+)" alt="GymTracker"/', (string) $marque);
 
-    expect($logo)->toBe(asset('logo.svg'), 'Le panneau ne montre plus public/logo.svg, sans nom en double pour un lecteur d’écran.')
-        ->and(strip_tags((string) $marque))->toContain('GymTracker')
+    expect($logo)->toBe(asset('logo.svg'), 'Le panneau ne montre plus public/logo.svg nommé « GymTracker ».')
+        ->and(trim(strip_tags((string) $marque)))->toBe('', 'Le panneau écrit un nom à côté du logo.')
         ->and(is_file(logoFichierServi((string) $logo)))->toBeTrue();
 });
 
@@ -60,12 +61,13 @@ it('pose le logo dans l’en-tête des courriels', function (): void {
 
     /*
      * Un client de messagerie ne lit pas un SVG, et le courriel se lit hors de
-     * l'application : une adresse absolue vers un PNG qui existe, décorative
-     * puisque le nom est écrit à côté.
+     * l'application : une adresse absolue vers un PNG qui existe. Le logo
+     * se montre seul, nommé par son texte de remplacement, qu'un client qui
+     * bloque les images affiche à sa place.
      */
-    $logo = logoCapture('/<img src="([^"]+)"[^>]*\balt=""/', (string) $entete);
+    $logo = logoCapture('/<img src="([^"]+)"[^>]*\balt="GymTracker"/', (string) $entete);
 
-    expect($logo)->toBe(url('/pwa-64x64.png'), 'L’en-tête des courriels ne montre plus le logo, ou lui donne un nom en double.')
+    expect($logo)->toBe(url('/pwa-64x64.png'), 'L’en-tête des courriels ne montre plus le logo nommé « GymTracker ».')
         ->and(is_file(logoFichierServi((string) $logo)))->toBeTrue()
-        ->and(strip_tags((string) $entete))->toContain('GymTracker');
+        ->and(trim(strip_tags((string) $entete)))->toBe('', 'L’en-tête des courriels écrit un nom à côté du logo.');
 });

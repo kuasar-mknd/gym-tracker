@@ -25,6 +25,28 @@
 @source not '../views/vendor';
 
 /*
+ * La barre de bureau s'ouvre sur un écran d'au moins 640 px de large et
+ * 500 px de haut, ou d'au moins 1 024 px de large quelle que soit sa hauteur
+ * (#2043).
+ *
+ * Logo, six liens, cloche et compte lui demandent quelque 900 px de large, et
+ * davantage avec un nom de compte long (#2057). Un téléphone couché en a 667 à
+ * 1 000 environ, moins l'encoche : à `sm` seul, la barre y débordait, la
+ * cloche et le menu du compte sous l'encoche ou hors de l'écran. Aucun
+ * téléphone couché ne dépasse 500 px de haut, ni 1 024 px de large ; aucune
+ * tablette n'a si peu de hauteur. Une fenêtre de bureau basse mais large (un
+ * portable mis à l'échelle, une fenêtre réduite en hauteur) garde la barre de
+ * bureau et l'en-tête de page, qui porte des commandes que l'en-tête mobile
+ * n'a pas toutes. En deçà des deux, l'en-tête mobile et la barre du bas
+ * restent, qui tiennent à toute largeur et comptent les marges latérales.
+ *
+ * `bureau:` remplace `sm:` partout où la page bascule avec la barre : l'en-tête
+ * mobile, la barre du bas, l'en-tête de page, et les titres et boutons qu'une
+ * page double entre les deux.
+ */
+@custom-variant bureau (@media (width >= 40rem) and ((height >= 31.25rem) or (width >= 64rem)));
+
+/*
  * `static` : Tailwind emet TOUTES les variables, pas seulement celles qu'une
  * classe utilise.
  *
@@ -409,7 +431,6 @@
 
     --spacing-touch: 44px;
     --spacing-nav: 70px;
-    --spacing-safe: env(safe-area-inset-bottom, 0px);
 
     --animate-fade-in: fade-in 0.3s ease-out;
     --animate-slide-up: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1225,8 +1246,8 @@
     /* ===== FLOATING BOTTOM NAV ===== */
     position: fixed;
     bottom: calc(1rem + var(--safe-area-bottom));
-    left: 1rem;
-    right: 1rem;
+    left: calc(1rem + var(--safe-area-left));
+    right: calc(1rem + var(--safe-area-right));
     background: rgb(from var(--color-surface-card) r g b / 0.9);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
@@ -1351,7 +1372,7 @@
     -webkit-backdrop-filter: blur(var(--glass-blur-strong));
     border: 1px solid var(--glass-border);
     border-radius: 2rem;
-    max-height: 85vh;
+    /* Sa hauteur se borne dans Modal.vue, par `hauteur-sure-*` : la zone sûre, pas 85vh (#2043). */
     overflow-y: auto;
     box-shadow: 0 25px 50px rgb(from var(--color-shadow-cast) r g b / 0.15);
 }
@@ -1453,6 +1474,77 @@
     padding-bottom: calc(9rem + var(--safe-area-bottom));
 }
 
+/*
+ * ===== ZONES SÛRES (#2043) =====
+ *
+ * L'application s'étend sous la barre d'état, l'encoche et l'indicateur
+ * d'accueil (`viewport-fit=cover` dans app.blade.php) : tout ce qui se place
+ * par rapport à l'écran doit s'en écarter. Chaque utilitaire prend la valeur
+ * d'espacement de Tailwind et y ajoute la marge du côté qu'il vise :
+ * `pt-sure-4` vaut `pt-4` plus la barre d'état, `top-sure-20` vaut `top-20`
+ * plus la barre d'état, `px-sure-0` ne vaut que les marges latérales. Sur un
+ * écran sans encoche, les marges valent 0 et le rendu est celui de l'utilitaire
+ * ordinaire.
+ *
+ * `tests/js/conventions/zonesSures.test.js` refuse un élément `fixed` ou
+ * `sticky`, une fenêtre ou une hauteur en `vh` qui s'en passerait.
+ */
+@utility pt-sure-* {
+    padding-top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
+}
+@utility pl-sure-* {
+    padding-left: calc(var(--spacing) * --value(integer) + var(--safe-area-left));
+}
+@utility px-sure-* {
+    padding-left: calc(var(--spacing) * --value(integer) + var(--safe-area-left));
+    padding-right: calc(var(--spacing) * --value(integer) + var(--safe-area-right));
+}
+@utility py-sure-* {
+    padding-top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
+    padding-bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
+}
+@utility top-sure-* {
+    top: calc(var(--spacing) * --value(integer) + var(--safe-area-top));
+}
+@utility bottom-sure-* {
+    bottom: calc(var(--spacing) * --value(integer) + var(--safe-area-bottom));
+}
+@utility left-sure-* {
+    left: calc(var(--spacing) * --value(integer) + var(--safe-area-left));
+}
+@utility right-sure-* {
+    right: calc(var(--spacing) * --value(integer) + var(--safe-area-right));
+}
+
+/*
+ * La hauteur que ne dépasse pas une fenêtre : l'écran moins les deux marges
+ * verticales, moins l'espacement donné, celui que la fenêtre garde au-dessus et
+ * au-dessous d'elle (`hauteur-sure-12` sous un `py-sure-6`). Au-delà, la
+ * fenêtre défile en elle-même. Une hauteur en `vh` seule ignorait les barres :
+ * la fenêtre « Ajouter un exercice » se bornait à 85 % de l'écran et sa liste à
+ * 60 %, d'où un titre sous la barre d'état et un grand vide en bas.
+ */
+@utility hauteur-sure-* {
+    max-height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - var(--spacing) * --value(integer));
+    max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - var(--spacing) * --value(integer));
+}
+
+/*
+ * Ce qui colle sous l'en-tête de l'application : le titre d'un mois du journal,
+ * la ligne des jours des habitudes. L'en-tête mobile mesure 77 px sous la barre
+ * d'état (16 + 44 + 16, et 1 de bordure), la barre de bureau 65 (64 + 1), et
+ * l'une remplace l'autre à `bureau`. Collé plus haut, l'élément mordait sur
+ * l'en-tête ; plus bas, il laissait voir entre les deux le contenu qui défile
+ * (#2043).
+ */
+@utility top-sous-entete {
+    top: calc(var(--spacing) * 19 + 1px + var(--safe-area-top));
+
+    @variant bureau {
+        top: calc(var(--spacing) * 16 + 1px + var(--safe-area-top));
+    }
+}
+
 @utility hide-scrollbar {
     /* Hide scrollbar */
     -ms-overflow-style: none;
@@ -1488,8 +1580,15 @@
 
         /* Spacing for mobile touch */
         --touch-min: 44px;
+
+        /*
+         * Les marges de zone sûre (#2043), lues par les utilitaires `*-sure-*`.
+         * Elles valent 0 sur un écran sans encoche ni barre superposée.
+         */
         --safe-area-bottom: env(safe-area-inset-bottom, 0px);
         --safe-area-top: env(safe-area-inset-top, 0px);
+        --safe-area-left: env(safe-area-inset-left, 0px);
+        --safe-area-right: env(safe-area-inset-right, 0px);
     }
 
     /*

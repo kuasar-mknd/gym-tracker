@@ -27,7 +27,7 @@ const { joignable } = useEtatDuReseau()
 <template>
     <div
         v-if="nouvelleVersionPrete && !range"
-        class="z-flottant fixed top-20 right-4 left-4 sm:right-6 sm:left-auto sm:w-80"
+        class="z-flottant top-sure-20 right-sure-4 left-sure-4 sm:right-sure-6 fixed sm:left-auto sm:w-80"
         role="status"
         aria-live="polite"
         dusk="bandeau-mise-a-jour"

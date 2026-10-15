@@ -12,7 +12,7 @@ defineProps({
 
 <template>
     <div
-        class="z-flottant pointer-events-none fixed top-0 left-0 flex w-full justify-center transition-transform duration-200 ease-out"
+        class="z-flottant top-sure-0 px-sure-0 pointer-events-none fixed left-0 flex w-full justify-center transition-transform duration-200 ease-out"
         :style="{ transform: `translateY(${Math.min(distance, 150)}px)` }"
     >
         <div

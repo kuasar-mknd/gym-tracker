@@ -119,7 +119,7 @@ const formatDate = (dateString) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="titre-page hidden sm:block">Mes <span class="text-gradient">Compléments</span></h1>
+                    <h1 class="titre-page bureau:block hidden">Mes <span class="text-gradient">Compléments</span></h1>
                     <p class="text-text-muted mt-2 text-sm font-semibold tracking-wider uppercase">
                         {{ compte(supplements.length, 'produit suivi', 'produits suivis') }}
                     </p>
@@ -127,7 +127,7 @@ const formatDate = (dateString) => {
                 <GlassButton
                     @click="showAddForm = true"
                     variant="primary"
-                    class="hidden size-11 shrink-0 items-center justify-center sm:flex"
+                    class="bureau:flex hidden size-11 shrink-0 items-center justify-center"
                 >
                     <GlassIcon name="add" class="mr-2" />
                     Ajouter
@@ -340,7 +340,7 @@ const formatDate = (dateString) => {
                 </GlassCard>
             </div>
             <!-- List Padding for Mobile Bottom Nav -->
-            <div class="h-24 sm:hidden"></div>
+            <div class="bureau:hidden h-24"></div>
         </div>
         <ConfirmDialog
             :ouvert="suppressionDemandee"

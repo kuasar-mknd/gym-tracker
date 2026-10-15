@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
 import {
     VERSION_PERIMEE,
@@ -19,6 +19,12 @@ import {
  *
  * jsdom ne sait ni joindre un serveur ni naviguer : `XMLHttpRequest` et
  * `window.location` sont remplacés, et chaque navigation complète se compte.
+ *
+ * Le routeur d'Inertia est unique par module, et les écouteurs qu'il pose sur
+ * la fenêtre ne se retirent pas : la séance se monte donc une fois pour le
+ * fichier. Chaque cas la retrouve pourtant telle qu'elle s'est ouverte (#2044) :
+ * celui qui garde l'état de la page la remplace, et le cas sans réseau, tiré
+ * après lui en ordre aléatoire, voyait son minuteur au lieu de celui de départ.
  */
 
 /** Ce que le faux réseau fait de la prochaine requête. */
@@ -98,6 +104,14 @@ const lieuSimule = {
     reload: () => navigations.push('rechargement'),
 }
 
+/** La séance ouverte, telle que le serveur l'a rendue. */
+const seanceOuverte = () => ({
+    component: 'Workouts/Show',
+    url: depart.pathname,
+    version: 'version-de-la-page',
+    props: { errors: {}, minuteur: 'Repos : 0:42' },
+})
+
 let routeur
 const echecsReseau = []
 
@@ -129,12 +143,7 @@ beforeAll(async () => {
     }
 
     await inertia.createInertiaApp({
-        page: {
-            component: 'Workouts/Show',
-            url: depart.pathname,
-            version: 'version-de-la-page',
-            props: { errors: {}, minuteur: 'Repos : 0:42' },
-        },
+        page: seanceOuverte(),
         resolve: () => Seance,
         setup: ({ el, App, props, plugin }) =>
             createApp({ render: () => h(App, props) })
@@ -143,18 +152,26 @@ beforeAll(async () => {
     })
 })
 
-beforeEach(() => {
+beforeEach(async () => {
+    // Une visite du client seul, sans requête : la séance revient à l'écran telle qu'elle s'est ouverte.
+    let remise = false
+    routeur.replace({ ...seanceOuverte(), onFinish: () => (remise = true) })
+    await vi.waitUntil(() => remise)
+
     requetes.length = 0
     navigations.length = 0
     echecsReseau.length = 0
     nouvelleVersionPrete.value = true
 })
 
+afterEach(() => {
+    nouvelleVersionPrete.value = false
+})
+
 afterAll(() => {
     Object.defineProperty(window, 'location', locationOrigine)
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
-    nouvelleVersionPrete.value = false
 })
 
 /**

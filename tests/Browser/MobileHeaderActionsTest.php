@@ -9,7 +9,7 @@ use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 /**
- * AuthenticatedLayout renders the #header slot inside a `hidden sm:block`
+ * AuthenticatedLayout renders the #header slot inside a `hidden bureau:block`
  * element, so any primary action placed only there silently disappears on
  * phones — the app's main target. Pages are expected to mirror the action into
  * #header-actions; Goals shipped without it and became impossible to use on

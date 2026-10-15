@@ -41,13 +41,17 @@ final class TachePlanifiee extends MonitoredScheduledTask
         }
     }
 
-    public function etat(): string
+    /**
+     * L'état à l'instant donné, maintenant sans instant : le diagnostic juge
+     * toutes les tâches à l'instant de sa lecture (`.ai/rules/horloge.md`).
+     */
+    public function etat(?CarbonInterface $maintenant = null): string
     {
         if ($this->derniereExecutionEchouee()) {
             return self::ECHOUEE;
         }
 
-        return $this->derniereExecutionEnRetard() ? self::EN_RETARD : self::A_L_HEURE;
+        return $this->derniereExecutionEnRetard($maintenant ?? Date::now()) ? self::EN_RETARD : self::A_L_HEURE;
     }
 
     /** Comme `Task::lastRunFailed()` : un échec postérieur au dernier départ. */
@@ -61,17 +65,17 @@ final class TachePlanifiee extends MonitoredScheduledTask
             || $this->last_failed_at->isAfter($this->last_started_at->copy()->subSecond());
     }
 
-    private function derniereExecutionEnRetard(): bool
+    private function derniereExecutionEnRetard(CarbonInterface $maintenant): bool
     {
         $derniereFin = $this->last_finished_at instanceof CarbonInterface
             ? $this->last_finished_at
-            : $this->created_at?->subSecond() ?? Date::now();
+            : $this->created_at?->subSecond() ?? $maintenant;
 
         $expression = new CronExpression($this->cron_expression);
         $prochaineAttendue = Date::instance(
             $expression->getNextRunDate($derniereFin, 0, false, $this->timezone ?? config()->string('app.timezone')),
         );
 
-        return $prochaineAttendue->addMinutes($this->grace_time_in_minutes)->isPast();
+        return $prochaineAttendue->addMinutes($this->grace_time_in_minutes)->lessThan($maintenant);
     }
 }

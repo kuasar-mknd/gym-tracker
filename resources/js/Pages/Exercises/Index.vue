@@ -181,7 +181,7 @@ const typeLabel = (type) => {
             <!-- Header -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="titre-page hidden sm:block">
+                    <h1 class="titre-page bureau:block hidden">
                         La<br />
                         <span class="text-gradient">Bibliothèque</span>
                     </h1>
@@ -192,7 +192,7 @@ const typeLabel = (type) => {
                 <GlassButton
                     @click="showAddForm = true"
                     variant="primary"
-                    class="hidden sm:flex"
+                    class="bureau:flex hidden"
                     data-testid="create-exercise-desktop"
                     dusk="create-exercise-btn-desktop"
                 >
