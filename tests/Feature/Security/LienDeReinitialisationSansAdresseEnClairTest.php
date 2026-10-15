@@ -121,8 +121,9 @@ function lienChiffreCeQueLeClientLit(string $page, array $donnees): array
 /**
  * La valeur chiffrée, un caractère changé en son milieu.
  */
-function lienChiffreAlterer(string $valeur): string
+function lienChiffreAlterer(mixed $valeur): string
 {
+    assert(is_string($valeur));
     $milieu = intdiv(strlen($valeur), 2);
 
     return substr_replace($valeur, $valeur[$milieu] === 'A' ? 'B' : 'A', $milieu, 1);
@@ -152,9 +153,12 @@ it('ouvre une page qui ne montre l’adresse nulle part et lui rend la valeur ch
     $formulaire = FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse());
 
     $page = get($lien)->assertOk();
+    /** @var array<string, mixed> $pageInertia */
+    $pageInertia = $page->inertiaPage();
+    /** @var array<string, mixed> $proprietes */
     $proprietes = $page->inertiaProps();
 
-    expect($page->inertiaPage()['component'] ?? null)->toBe('Auth/ResetPassword')
+    expect($pageInertia['component'] ?? null)->toBe('Auth/ResetPassword')
         ->and(lienChiffreLaisseLireLAdresse((string) $page->getContent()))->toBeFalse()
         ->and($proprietes['token'] ?? null)->toBe($formulaire['token'])
         ->and($proprietes['adresse'] ?? null)->toBe($formulaire['adresse'])
@@ -166,6 +170,7 @@ it('réinitialise le mot de passe avec ce que la page renvoie, puis refuse le m�
     post(route('password.email'), ['email' => lienChiffreAdresse()])->assertSessionHasNoErrors();
     $lien = lienChiffreLienDuCourriel();
 
+    /** @var array<string, mixed> $proprietes */
     $proprietes = get($lien)->assertOk()->inertiaProps();
     $envoi = [
         'token' => $proprietes['token'] ?? null,
@@ -264,12 +269,14 @@ it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse
 
         $traces = ['page du lien' => (string) get($lien)->assertOk()->getContent()];
 
+        /** @var TestResponse<Response> $refus */
         $refus = test()->from($lien)->post(route('password.store'), [...$formulaire, 'token' => 'un-jeton-quelconque'])
             ->assertSessionHasErrors('token');
         $traces['redirection du refus'] = (string) $refus->headers->get('Location');
         $traces['session après le refus'] = serialize(session()->all());
         $traces['page après le refus'] = (string) get($traces['redirection du refus'])->getContent();
 
+        /** @var TestResponse<Response> $reussite */
         $reussite = test()->from($lien)->post(route('password.store'), $formulaire)->assertRedirect(route('login'));
         $traces['session après la réussite'] = serialize(session()->all());
         $traces['page de connexion'] = (string) get((string) $reussite->headers->get('Location'))->getContent();
@@ -316,14 +323,11 @@ it('ne recopie l’adresse déchiffrée ni dans le journal ni dans l’exception
 
         $exception = ExceptionEnregistree::query()->sole();
         $journal = is_file($fichier) ? (string) file_get_contents($fichier) : '';
-        $traces = [
-            'réponse' => (string) $reponse->getContent(),
-            'journal' => $journal,
-            ...Arr::map(
-                Arr::except($exception->getAttributes(), ['query', 'markdown']),
-                static fn (mixed $valeur): string => is_scalar($valeur) ? (string) $valeur : (string) json_encode($valeur),
-            ),
-        ];
+        $traces = ['réponse' => (string) $reponse->getContent(), 'journal' => $journal];
+
+        foreach (Arr::except($exception->getAttributes(), ['query', 'markdown']) as $colonne => $valeur) {
+            $traces[$colonne] = is_scalar($valeur) ? (string) $valeur : (string) json_encode($valeur);
+        }
 
         expect($exception->message)->toBe('Panne simulée pendant la réinitialisation.')
             ->and($journal)->toContain('Panne simulée pendant la réinitialisation.')
