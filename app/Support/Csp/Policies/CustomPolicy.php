@@ -101,12 +101,17 @@ class CustomPolicy extends Basic
          * fonts.bunny.net reste : Horizon, Telescope, Pulse et Filament y
          * prennent tous la fonte de leur tableau de bord, et aucun d'eux n'est à
          * nous pour qu'on la ré-héberge.
+         *
+         * Le site d'icônes d'où venaient les logos de connexion est parti avec
+         * eux : l'application les dessine elle-même (#2051), et
+         * `LesRessourcesViennentDeLApplicationTest` refuse que nos pages,
+         * scripts et feuilles fassent charger quoi que ce soit d'une autre
+         * origine.
          */
         $policy
             ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::IMG, 'data:')
             ->add(Directive::IMG, 'https://ui-avatars.com')
-            ->add(Directive::IMG, 'https://www.svgrepo.com')
             ->add(Directive::FONT, 'https://fonts.bunny.net')
             ->add(Directive::FONT, 'data:')
             ->add(Directive::CONNECT, 'https://fcm.googleapis.com')
