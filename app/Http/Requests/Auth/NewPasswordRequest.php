@@ -39,12 +39,16 @@ class NewPasswordRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * Le jeton est une chaîne : un tableau faisait lever la vérification de
+     * son empreinte, et le refus devenait une erreur 500 pour un compte qui
+     * venait de demander un lien, une redirection pour tout autre.
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'token' => 'required',
+            'token' => ['required', 'string'],
             'adresse' => ['nullable'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'password_confirmation' => 'required',

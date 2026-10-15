@@ -227,6 +227,31 @@ it('refuse comme un jeton faux, réponse entière comprise, un lien dont l’adr
         ->and(Password::tokenExists($compte, $jeton))->toBeTrue();
 })->with('liens dont l’adresse ne se déchiffre pas');
 
+/*
+ * Un jeton en tableau faisait lever la vérification de son empreinte : une
+ * erreur 500 pour un compte qui venait de demander un lien, une redirection
+ * pour toute autre adresse.
+ */
+it('refuse de la même façon un jeton qui n’est pas une chaîne, que l’adresse ait une demande en cours ou non', function (): void {
+    $this->freezeSecond();
+    $adresse = Crypt::encryptString(lienChiffreAdresse());
+    $page = route('password.reset', ['token' => 'un-jeton-quelconque', 'adresse' => $adresse]);
+    $donnees = [
+        'token' => ['un-jeton-quelconque'],
+        'adresse' => $adresse,
+        'password' => lienChiffreMotDePasse(),
+        'password_confirmation' => lienChiffreMotDePasse(),
+    ];
+
+    $sansCompte = lienChiffreCeQueLeClientLit($page, $donnees);
+    Password::createToken(User::factory()->create(['email' => lienChiffreAdresse()]));
+    $demandeEnCours = lienChiffreCeQueLeClientLit($page, $donnees);
+
+    expect($sansCompte['statut'])->toBe(302)
+        ->and($sansCompte['session']['errors'] ?? null)->toBe(['default' => ['token' => ['Le champ jeton doit être une chaîne de caractères.']]])
+        ->and($demandeEnCours)->toBe($sansCompte);
+});
+
 it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse, ni dans le journal', function (): void {
     $fichier = sys_get_temp_dir().'/lien-chiffre-'.bin2hex(random_bytes(6)).'.log';
     Config::set('logging.channels.lien_chiffre', ['driver' => 'single', 'path' => $fichier, 'level' => 'debug']);
