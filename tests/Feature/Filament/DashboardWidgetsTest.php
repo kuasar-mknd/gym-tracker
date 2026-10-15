@@ -54,8 +54,9 @@ it('compte le total des utilisateurs et ceux inscrits dans les 7 derniers jours'
 
 /*
  * Un compte ouvert par l'inscription attend la preuve de son adresse, et
- * s'efface s'il ne la reçoit jamais : ce n'est pas encore un compte. « Comptes » et « Nouveaux comptes (7 j) » ne comptent que
- * les comptes ouverts, dont ceux qu'un lien suivi a ouverts et ceux qui n'ont
+ * s'efface s'il ne la reçoit jamais : ce n'est pas encore un compte.
+ * « Comptes » et « Nouveaux comptes (7 j) » ne comptent que les comptes
+ * ouverts, dont ceux qu'une preuve de l'adresse a ouverts et ceux qui n'ont
  * jamais attendu, vérifiés ou non ; « Comptes » dit à part combien attendent.
  */
 it('ne compte pas les comptes en attente du lien dans les tuiles, et dit combien attendent', function (): void {

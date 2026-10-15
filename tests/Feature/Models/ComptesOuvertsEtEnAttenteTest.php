@@ -16,11 +16,11 @@ it('partage les comptes entre ouverts et en attente, comme estEnAttente()', func
     $enAttente = User::factory()->enAttente()->create();
     $ouvert = User::factory()->create();
     $jamaisVerifie = User::factory()->unverified()->create();
-    $ouvertParLeLien = User::factory()->enAttente()->create();
-    $ouvertParLeLien->markEmailAsVerified();
+    $ouvertParUnePreuve = User::factory()->enAttente()->create();
+    $ouvertParUnePreuve->markEmailAsVerified();
 
     expect(User::enAttente()->pluck('id')->all())->toBe([$enAttente->id])
-        ->and(User::ouverts()->orderBy('id')->pluck('id')->all())->toBe([$ouvert->id, $jamaisVerifie->id, $ouvertParLeLien->id]);
+        ->and(User::ouverts()->orderBy('id')->pluck('id')->all())->toBe([$ouvert->id, $jamaisVerifie->id, $ouvertParUnePreuve->id]);
 
     foreach (User::query()->get() as $compte) {
         expect(User::enAttente()->whereKey($compte->id)->exists())->toBe($compte->estEnAttente())

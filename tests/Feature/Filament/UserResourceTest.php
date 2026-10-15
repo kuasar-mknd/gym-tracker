@@ -270,15 +270,15 @@ it('montre « En attente du lien » et sa date sur un compte en attente, et rien
 
 /**
  * Le filtre « En attente du lien » : oui, les comptes qui attendent ; non,
- * tous les autres, ceux qu'un lien suivi a ouverts et ceux qui n'ont jamais
- * attendu, vérifiés ou non ; tous, sans filtre.
+ * tous les autres, ceux qu'une preuve de l'adresse a ouverts et ceux qui
+ * n'ont jamais attendu, vérifiés ou non ; tous, sans filtre.
  */
 it('filtre les comptes en attente du lien : oui, non, tous', function (): void {
     $enAttente = User::factory()->enAttente()->create();
     $ouvert = User::factory()->create();
     $jamaisVerifie = User::factory()->unverified()->create();
-    $ouvertParLeLien = User::factory()->enAttente()->create();
-    $ouvertParLeLien->markEmailAsVerified();
+    $ouvertParUnePreuve = User::factory()->enAttente()->create();
+    $ouvertParUnePreuve->markEmailAsVerified();
 
     Livewire::test(ListUsers::class)
         ->assertTableFilterExists(
@@ -290,12 +290,12 @@ it('filtre les comptes en attente du lien : oui, non, tous', function (): void {
         )
         ->filterTable('en_attente', true)
         ->assertCanSeeTableRecords([$enAttente])
-        ->assertCanNotSeeTableRecords([$ouvert, $jamaisVerifie, $ouvertParLeLien])
+        ->assertCanNotSeeTableRecords([$ouvert, $jamaisVerifie, $ouvertParUnePreuve])
         ->filterTable('en_attente', false)
-        ->assertCanSeeTableRecords([$ouvert, $jamaisVerifie, $ouvertParLeLien])
+        ->assertCanSeeTableRecords([$ouvert, $jamaisVerifie, $ouvertParUnePreuve])
         ->assertCanNotSeeTableRecords([$enAttente])
         ->resetTableFilters()
-        ->assertCanSeeTableRecords([$enAttente, $ouvert, $jamaisVerifie, $ouvertParLeLien]);
+        ->assertCanSeeTableRecords([$enAttente, $ouvert, $jamaisVerifie, $ouvertParUnePreuve]);
 });
 
 /**

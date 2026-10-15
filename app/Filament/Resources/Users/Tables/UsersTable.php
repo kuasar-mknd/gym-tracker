@@ -65,8 +65,8 @@ class UsersTable
     }
 
     /**
-     * Les comptes qui attendent encore que leur titulaire suive le lien envoyé
-     * à leur adresse (`AttendLaPreuveDeSonAdresse`) : oui, non, ou tous.
+     * Les comptes qui attendent encore la preuve de leur adresse
+     * (`AttendLaPreuveDeSonAdresse`) : oui, non, ou tous.
      */
     private static function filtreDeLAttente(): TernaryFilter
     {
