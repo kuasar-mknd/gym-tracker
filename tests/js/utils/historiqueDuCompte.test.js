@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
 import {
     CLEF_DE_L_HISTORIQUE,
@@ -414,6 +414,8 @@ describe('avec le vrai client d’Inertia', () => {
         window.localStorage.clear()
         document.body.innerHTML = '<div id="app"></div>'
         window.history.replaceState(null, '', '/daily-journals')
+        // jsdom ne fait pas défiler la page, et le dit à chaque visite.
+        vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 
         const inertia = await import('@inertiajs/vue3')
         routeur = inertia.router
@@ -452,6 +454,10 @@ describe('avec le vrai client d’Inertia', () => {
 
     afterEach(() => {
         retraits.splice(0).forEach((retirer) => retirer())
+    })
+
+    afterAll(() => {
+        vi.restoreAllMocks()
     })
 
     it('chiffre la page dans l’historique, avec une clé à l’endroit que lit la garde', () => {
