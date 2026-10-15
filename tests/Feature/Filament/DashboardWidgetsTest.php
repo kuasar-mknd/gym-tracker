@@ -8,6 +8,7 @@ use App\Filament\Widgets\UserActivityChart;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
@@ -241,12 +242,12 @@ it('affiche le nom, l’email et la dernière activité de chaque inscrit récen
 });
 
 /*
- * L'encart « Derniers comptes ouverts » ne montre que des comptes ouverts, par
- * date d'inscription : un compte en attente du lien, même plus récent, ne s'y
- * glisse pas, et l'encart dit où il est (la liste des utilisateurs le montre,
- * avec sa colonne « En attente du lien »).
+ * L'encart « Derniers inscrits parmi les comptes ouverts » ne montre que des
+ * comptes ouverts, par date d'inscription : un compte en attente du lien, même
+ * plus récent, ne s'y glisse pas, et l'encart dit où il est (la liste des
+ * utilisateurs le montre, avec sa colonne « En attente du lien »).
  */
-it('n’affiche dans les derniers comptes ouverts que des comptes ouverts', function (): void {
+it('n’affiche dans l’encart des derniers inscrits que des comptes ouverts', function (): void {
     $ouvert = User::factory()->create(['created_at' => Carbon::now()->subDays(2)]);
     $jamaisVerifie = User::factory()->unverified()->create(['created_at' => Carbon::now()->subDays(3)]);
     $enAttente = User::factory()->enAttente()->create();
@@ -255,6 +256,39 @@ it('n’affiche dans les derniers comptes ouverts que des comptes ouverts', func
         ->assertCanSeeTableRecords([$ouvert, $jamaisVerifie], inOrder: true)
         ->assertCanNotSeeTableRecords([$enAttente])
         ->assertDontSee($enAttente->email)
-        ->assertSee('Derniers comptes ouverts')
+        ->assertSee('Derniers inscrits parmi les comptes ouverts')
         ->assertSee("Classés par date d'inscription ; les comptes en attente du lien sont dans la liste des utilisateurs.");
+});
+
+/*
+ * L'encart range par date d'inscription, et rien ne garde le moment où un
+ * compte s'ouvre (l'ouverture efface `en_attente_depuis`) : un compte inscrit
+ * il y a trois jours et ouvert à l'instant reste à sa date d'inscription,
+ * derrière dix comptes ouverts inscrits depuis. Son titre ne promet donc pas
+ * les derniers comptes ouverts. Les comptes affichés se lisent par
+ * `getTableRecords()` : `assertCanSeeTableRecords()` cherche la clef du compte
+ * comme une sous-chaîne, et celle du compte 1 est dans celle du compte 10.
+ */
+it('range l’encart par date d’inscription, et son titre le dit', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-10-15 12:00:00'));
+
+    $inscritIlYATroisJours = User::factory()->enAttente()->create([
+        'created_at' => Carbon::parse('2026-10-12 09:00:00'),
+        'en_attente_depuis' => Carbon::parse('2026-10-12 09:00:00'),
+    ]);
+    $inscritsDepuis = collect(range(1, 10))->map(static fn (int $heures): User => User::factory()->create([
+        'created_at' => Carbon::parse('2026-10-15 12:00:00')->subHours($heures),
+    ]));
+
+    Carbon::setTestNow(Carbon::parse('2026-10-15 12:05:00'));
+    $inscritIlYATroisJours->markEmailAsVerified();
+
+    $encart = Livewire::test(RecentUsersTable::class)->instance();
+    assert($encart instanceof RecentUsersTable);
+    $affiches = $encart->getTableRecords();
+    assert($affiches instanceof Paginator);
+
+    expect($inscritIlYATroisJours->refresh()->estEnAttente())->toBeFalse()
+        ->and($encart->getTable()->getHeading())->toBe('Derniers inscrits parmi les comptes ouverts')
+        ->and(collect($affiches->items())->pluck('id')->all())->toBe($inscritsDepuis->pluck('id')->all());
 });
