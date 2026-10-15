@@ -7,6 +7,7 @@ import {
     DEVELOPPE_COUCHE,
     cliquer,
     fermerLaListeDesSeances,
+    historiqueAuRepos,
     naviguerDansLHistorique,
     ouvrirLaListeDesSeances,
     present,
@@ -95,7 +96,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
     await pages.demonterToutes()
-    fermerLaListeDesSeances()
+    await fermerLaListeDesSeances()
 })
 
 it('montre, au retour par Avance, l’exercice ajouté en ligne et la série ajoutée et cochée sans réseau sous lui', async () => {
@@ -153,4 +154,7 @@ it('montre, au retour par Avance, l’exercice ajouté en ligne et la série ajo
     expect([...reseau.serveur.lignes.keys()]).toEqual([1, 70])
     expect(rangees(1)).toBe(1)
     expect(fileDurable()).toEqual([])
+
+    // Ce qu'Inertia écrit encore (la réponse d'un rechargement, une séance gardée) part avant la fin du test.
+    await historiqueAuRepos()
 })

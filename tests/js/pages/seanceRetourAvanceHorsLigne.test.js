@@ -6,6 +6,7 @@ import { suivreLesPagesMontees } from './pagesMontees'
 import {
     cliquer,
     fermerLaListeDesSeances,
+    historiqueAuRepos,
     naviguerDansLHistorique,
     ouvrirLaListeDesSeances,
     present,
@@ -80,7 +81,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
     await pages.demonterToutes()
-    fermerLaListeDesSeances()
+    await fermerLaListeDesSeances()
 })
 
 it('montre, au retour par Avance, la série ajoutée et cochée sans réseau, et la saisie suivante rejoint la même entrée', async () => {
@@ -133,4 +134,7 @@ it('montre, au retour par Avance, la série ajoutée et cochée sans réseau, et
     expect(visites).toEqual(['/workouts/5'])
     expect(rangees()).toBe(2)
     expect(fileDurable()).toEqual([])
+
+    // Ce qu'Inertia écrit encore (la réponse d'un rechargement, une séance gardée) part avant la fin du test.
+    await historiqueAuRepos()
 })

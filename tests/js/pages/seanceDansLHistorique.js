@@ -22,10 +22,19 @@ import { routeDeTest } from '../composables/seanceHorsLigne'
  * Le fichier déclare ses `vi.mock` (`@/Utils/http` vers le faux serveur,
  * `useHaptics`, le glisser-déposer, la mise en page et les modales), passe à
  * `ouvrirLaListeDesSeances` l'import de la vraie page et de quoi retenir son
- * montage (`pages.retenir`), et ouvre son `afterEach` par
- * `await pages.demonterToutes()`, puis `fermerLaListeDesSeances()`. La page s'importe APRÈS le service de
+ * montage (`pages.retenir`), finit son test par `await historiqueAuRepos()`,
+ * et ouvre son `afterEach` par `await pages.demonterToutes()`, puis
+ * `await fermerLaListeDesSeances()`. La page s'importe APRÈS le service de
  * synchronisation, qui oublie les modules chargés : importée avant, elle
  * garderait un autre service et un autre client d'Inertia que ceux du test.
+ *
+ * Un test qui rend la main pendant qu'Inertia écrit encore l'historique (la
+ * réponse d'un rechargement, une séance gardée par `router.remember`) laissait
+ * l'écriture partir après la fin du fichier : sur un environnement déjà
+ * démonté, `replaceState` levait « window is not defined » en rejet non géré,
+ * et Vitest sortait en erreur, tous les tests au vert. `fermerLaListeDesSeances`
+ * attend donc que tout se taise avant de rien rétablir, et fait échouer le test
+ * qui a rendu la main trop tôt.
  */
 
 export const SQUAT = { id: 7, name: 'Squat', type: 'strength', category: 'Jambes', default_rest_time: 90 }
@@ -120,6 +129,21 @@ export const saisir = async (selecteur, valeur) => {
 /** Les opérations de chiffrement en cours, que compte `ouvrirLaListeDesSeances`. */
 let chiffrementsEnCours = 0
 
+/** Les visites d'Inertia et les écritures de l'API parties sans réponse encore. */
+let requetesEnVol = 0
+
+/**
+ * Ce qu'Inertia a fait depuis l'ouverture : visites, chiffrements, écritures
+ * dans l'historique. Un compte qui ne bouge plus dit qu'il ne fait plus rien.
+ */
+let activite = 0
+
+/** L'activité au dernier `historiqueAuRepos`, celui qui finit le test. */
+let activiteAuRepos = 0
+
+/** Au-delà, l'historique ne se taira pas : le test échoue au lieu de tourner. */
+const TOURS_AVANT_DE_RENONCER = 200
+
 /**
  * Attend qu'Inertia ait écrit dans l'historique ce qu'il chiffre encore.
  *
@@ -133,6 +157,30 @@ export const historiqueEcrit = async () => {
     do {
         await flushPromises()
     } while (chiffrementsEnCours > 0)
+}
+
+/**
+ * Attend que plus rien ne parte : ni visite, ni écriture de l'API, ni
+ * chiffrement, ni écriture dans l'historique, deux tours de suite, chacun
+ * jusqu'à la tâche suivante.
+ *
+ * Un test finit par là : la réponse d'un rechargement après le vidage, ou la
+ * séance qu'une adoption fait garder, s'écrivent dans l'historique quelques
+ * tâches après la dernière assertion.
+ */
+export const historiqueAuRepos = async () => {
+    for (let tour = 0, calmes = 0; calmes < 2; tour++) {
+        if (tour === TOURS_AVANT_DE_RENONCER) {
+            throw new Error(`L’historique ne se tait pas après ${TOURS_AVANT_DE_RENONCER} tours.`)
+        }
+
+        const avant = activite
+        await historiqueEcrit()
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        calmes = requetesEnVol === 0 && chiffrementsEnCours === 0 && activite === avant ? calmes + 1 : 0
+    }
+
+    activiteAuRepos = activite
 }
 
 /** Un bouton du navigateur, une fois l'historique écrit, jusqu'à la page affichée. */
@@ -208,14 +256,24 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
         send() {
             const chemin = new URL(this.url, window.location.href).pathname
             visites.push(chemin)
+            requetesEnVol++
+            activite++
 
             queueMicrotask(() => {
-                this.status = 200
-                this.responseText = JSON.stringify(pagesDeLAdresse[chemin]())
-                this.onload?.()
+                try {
+                    this.status = 200
+                    this.responseText = JSON.stringify(pagesDeLAdresse[chemin]())
+                    this.onload?.()
+                } finally {
+                    requetesEnVol--
+                }
             })
         }
     }
+
+    requetesEnVol = 0
+    activite = 0
+    activiteAuRepos = 0
 
     vi.stubGlobal('XMLHttpRequest', RequeteSimulee)
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
@@ -225,9 +283,33 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
 
         vi.spyOn(window.crypto.subtle, operation).mockImplementation((...parametres) => {
             chiffrementsEnCours++
+            activite++
 
             return originale(...parametres).finally(() => chiffrementsEnCours--)
         })
+    }
+
+    for (const ecriture of ['replaceState', 'pushState']) {
+        const originale = window.history[ecriture].bind(window.history)
+
+        vi.spyOn(window.history, ecriture).mockImplementation((...parametres) => {
+            activite++
+
+            return originale(...parametres)
+        })
+    }
+
+    // Les écritures de la séance ne sont pas d'Inertia, mais leur réponse fait encore bouger la page.
+    const repondre = serveur.repondre
+
+    serveur.repondre = async (config) => {
+        requetesEnVol++
+
+        try {
+            return await repondre(config)
+        } finally {
+            requetesEnVol--
+        }
     }
     Object.defineProperty(ArrayBuffer, Symbol.hasInstance, {
         value: (valeur) => Object.prototype.toString.call(valeur) === '[object ArrayBuffer]',
@@ -263,6 +345,7 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
     })
 
     await vi.waitUntil(() => present('#liste-des-seances'))
+    await historiqueAuRepos()
 
     const visiter = async (adresse, selecteur) => {
         inertia.router.visit(adresse)
@@ -273,8 +356,22 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
     return { sync, visites, visiter }
 }
 
-/** Ce qu'`ouvrirLaListeDesSeances` a posé, retiré après le démontage des pages. */
-export const fermerLaListeDesSeances = () => {
+/**
+ * Ce qu'`ouvrirLaListeDesSeances` a posé, retiré après le démontage des pages,
+ * une fois que plus rien n'écrit : rétablis plus tôt, les espions ne
+ * compteraient plus rien, et ce qui écrit encore partirait après la fin du
+ * fichier, sur un environnement démonté.
+ *
+ * Échoue quand quelque chose est parti après la fin du test : il a rendu la
+ * main trop tôt, et ce qui a suivi n'a été vu par aucune assertion.
+ */
+export const fermerLaListeDesSeances = async () => {
+    const auRepos = activiteAuRepos
+
+    await historiqueAuRepos()
+
+    const parties = activite - auRepos
+
     retirerLesEcouteursDuService()
     poserLaPage(null)
 
@@ -288,4 +385,10 @@ export const fermerLaListeDesSeances = () => {
     vi.restoreAllMocks()
     localStorage.clear()
     sessionStorage.clear()
+
+    if (parties > 0) {
+        throw new Error(
+            `Inertia a encore écrit ${parties} fois (visite, chiffrement ou historique) après la fin du test : le finir par \`await historiqueAuRepos()\`.`,
+        )
+    }
 }

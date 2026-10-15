@@ -5,6 +5,7 @@ import { suivreLesPagesMontees } from './pagesMontees'
 import {
     cliquer,
     fermerLaListeDesSeances,
+    historiqueAuRepos,
     historiqueEcrit,
     naviguerDansLHistorique,
     ouvrirLaListeDesSeances,
@@ -86,7 +87,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
     await pages.demonterToutes()
-    fermerLaListeDesSeances()
+    await fermerLaListeDesSeances()
 })
 
 it('montre, au retour par Avance, la série enregistrée en ligne, sans écrire dans l’entrée de la liste', async () => {
@@ -149,4 +150,7 @@ it('montre, au retour par Avance, la série enregistrée en ligne, sans écrire 
     expect(window.location.pathname).toBe('/workouts')
     expect(present('[dusk="exercise-card-0"]')).toBe(false)
     expect(visites).toEqual([])
+
+    // Ce qu'Inertia écrit encore (la réponse d'un rechargement, une séance gardée) part avant la fin du test.
+    await historiqueAuRepos()
 })
