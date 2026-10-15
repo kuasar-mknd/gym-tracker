@@ -133,12 +133,14 @@ describe('les brouillons d’un montage précédent', () => {
     })
 
     /*
-     * La page est morte entre la frappe et l'envoi : la saisie n'a laissé qu'un
-     * brouillon, rangé sous l'identifiant que la série porte d'un montage à
-     * l'autre tant que sa création attend, `temp-q<queueId>`. Il revient sur
-     * cette série, et sur elle seule, et rejoint son entrée de file.
+     * La page n'écrit jamais de brouillon pour une rangée provisoire : sa saisie
+     * rejoint aussitôt l'entrée de file qui la crée (cas suivant). Un brouillon
+     * trouvé sous `temp-q<queueId>` vient donc d'ailleurs, d'une autre version
+     * de l'application par exemple. Une entrée le tient : il n'est pas effacé
+     * comme un orphelin, mais il ne va qu'à cette série, et il rejoint son
+     * entrée, sans autre écriture. Une garde, pas un chemin de l'application.
      */
-    it('rejouent sur la série en file le brouillon rangé sous son entrée, dans cette même entrée', async () => {
+    it('rejouent sur la série en file seule un brouillon trouvé sous son entrée, dans cette même entrée', async () => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([creationEnFile]))
         localStorage.setItem('draft_set_temp-qq1', JSON.stringify({ reps: 9 }))
         reseau.serveur.enLigne = false
@@ -165,5 +167,35 @@ describe('les brouillons d’un montage précédent', () => {
         ])
         expect(enFile).toMatchObject({ id: 100, weight: 82.5, reps: 9 })
         expect(wrapper.find('[dusk="set-unsynced-0-1"]').exists()).toBe(false)
+    })
+
+    /*
+     * Ce que garantit la page : une frappe sur une série en file ne laisse aucun
+     * brouillon, elle entre aussitôt dans l'entrée qui la crée. C'est elle qui
+     * la garde d'un montage à l'autre.
+     */
+    it('ne naissent jamais d’une frappe sur la série en file, qui rejoint aussitôt son entrée', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([creationEnFile]))
+        reseau.serveur.enLigne = false
+
+        const { wrapper } = await monterLaPage()
+        const champ = wrapper.find('[dusk="reps-input-0-1"]')
+        champ.element.value = '9'
+        await champ.trigger('input')
+
+        expect(Object.keys(localStorage).filter((cle) => cle.startsWith('draft_set_'))).toEqual([])
+        expect(fileDurable()).toEqual([
+            expect.objectContaining({
+                id: 'q1',
+                data: { workout_line_id: 10, is_completed: true, weight: 82.5, reps: 9 },
+            }),
+        ])
+
+        // Rouverte, la page la retrouve dans la file, sans brouillon.
+        await pages.demonterToutes()
+        const { wrapper: rouverte } = await monterLaPage()
+
+        expect(rouverte.vm.localWorkout.workout_lines[0].sets[1]).toMatchObject({ id: 'temp-qq1', reps: 9 })
+        expect(reseau.serveur.requetes).toEqual([])
     })
 })
