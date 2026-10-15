@@ -25,21 +25,26 @@
 @source not '../views/vendor';
 
 /*
- * La barre de bureau ne s'ouvre que sur un écran large ET assez haut (#2043).
+ * La barre de bureau s'ouvre sur un écran d'au moins 640 px de large et
+ * 500 px de haut, ou d'au moins 1 024 px de large quelle que soit sa hauteur
+ * (#2043).
  *
- * Logo, six liens, cloche et compte lui demandent quelque 920 px de large, et
+ * Logo, six liens, cloche et compte lui demandent quelque 900 px de large, et
  * davantage avec un nom de compte long (#2057). Un téléphone couché en a 667 à
- * 956, moins l'encoche des deux côtés : à `sm` seul, la barre y débordait, la
+ * 1 000 environ, moins l'encoche : à `sm` seul, la barre y débordait, la
  * cloche et le menu du compte sous l'encoche ou hors de l'écran. Aucun
- * téléphone couché ne dépasse 500 px de haut, aucune tablette n'en a si peu,
- * et une fenêtre de bureau rarement : en deçà, l'en-tête mobile et la barre du
- * bas restent, qui tiennent à toute largeur et comptent les marges latérales.
+ * téléphone couché ne dépasse 500 px de haut, ni 1 024 px de large ; aucune
+ * tablette n'a si peu de hauteur. Une fenêtre de bureau basse mais large (un
+ * portable mis à l'échelle, une fenêtre réduite en hauteur) garde la barre de
+ * bureau et l'en-tête de page, qui porte des commandes que l'en-tête mobile
+ * n'a pas toutes. En deçà des deux, l'en-tête mobile et la barre du bas
+ * restent, qui tiennent à toute largeur et comptent les marges latérales.
  *
  * `bureau:` remplace `sm:` partout où la page bascule avec la barre : l'en-tête
  * mobile, la barre du bas, l'en-tête de page, et les titres et boutons qu'une
  * page double entre les deux.
  */
-@custom-variant bureau (@media (width >= 40rem) and (height >= 31.25rem));
+@custom-variant bureau (@media (width >= 40rem) and ((height >= 31.25rem) or (width >= 64rem)));
 
 /*
  * `static` : Tailwind emet TOUTES les variables, pas seulement celles qu'une

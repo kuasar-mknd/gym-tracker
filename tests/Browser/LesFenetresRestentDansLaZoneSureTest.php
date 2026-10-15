@@ -9,10 +9,12 @@ use App\Models\Exercise;
 use App\Models\Habit;
 use App\Models\User;
 use App\Models\Workout;
+use App\Notifications\PersonalRecordAchieved;
 use Carbon\CarbonImmutable;
 use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
 use Facebook\WebDriver\Exception\WebDriverException;
 use Illuminate\Database\Eloquent\Factories\Sequence;
+use Illuminate\Support\Str;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
@@ -204,6 +206,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
     public function test_en_paysage_un_telephone_garde_l_en_tete_mobile_et_tout_s_ecarte_de_l_encoche(): void
     {
         [$compte, $seance] = $this->seanceAvecUneLongueBibliotheque();
+        $this->notificationNonLue($compte);
 
         $this->browse(function (Browser $browser) use ($compte, $seance): void {
             $browser->loginAs($compte)->resize(844, 390);
@@ -211,15 +214,23 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             $marges = $this->simulerLesMarges($browser, ['top' => 0, 'bottom' => 21, 'left' => 47, 'right' => 47]);
 
             /*
-             * La barre de bureau demande quelque 920 px de large : couchée, sur
+             * La barre de bureau demande quelque 900 px de large : couchée, sur
              * un téléphone, elle débordait, cloche et menu du compte sous
              * l'encoche ou hors de l'écran. L'en-tête mobile et la barre du bas
              * restent, et chaque commande se mesure, bord droit compris.
              */
-            foreach (['/dashboard', '/supplements', '/exercises', '/stats'] as $chemin) {
+            foreach (['/dashboard', '/supplements', '/exercises', '/stats', '/notifications'] as $chemin) {
                 $browser->visit($chemin)->waitFor('#main-content', 30)->disableAnimations()->waitForStableLayout();
 
-                $this->verifierLEnTeteEnPaysage($browser, $marges, $chemin);
+                $commandes = $this->verifierLEnTeteEnPaysage($browser, $marges, $chemin);
+
+                /*
+                 * L'en-tête de page, caché ici, porte « Tout marquer comme
+                 * lu » : l'en-tête mobile en a le jumeau.
+                 */
+                if ($chemin === '/notifications') {
+                    $this->assertContains('Tout marquer comme lu', $commandes, '/notifications : « Tout marquer comme lu » reste à portée sur un téléphone couché.');
+                }
             }
 
             $this->ouvrirLAjoutDExercice($browser, $seance);
@@ -287,8 +298,9 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
      * entre les marges latérales, et la page ne défile pas de côté.
      *
      * @param  array{haut: float, droite: float, bas: float, gauche: float}  $marges
+     * @return list<string> le nom de chaque commande affichée
      */
-    private function verifierLEnTeteEnPaysage(Browser $browser, array $marges, string $page): void
+    private function verifierLEnTeteEnPaysage(Browser $browser, array $marges, string $page): array
     {
         /** @var array{barreDeBureau: bool, enteteMobile: bool, barreDuBas: bool, titres: int, largeur: float, defilement: float, commandes: list<array{nom: string, gauche: float, droite: float}>, contenuGauche: float, contenuDroite: float} $mesure */
         $mesure = $browser->script(self::LIRE_LES_EN_TETES)[0];
@@ -309,6 +321,74 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
         $this->assertLessThanOrEqual($mesure['largeur'], $mesure['defilement'], "{$page} : la page ne défile pas de côté.");
         $this->assertGreaterThanOrEqual($marges['gauche'], $mesure['contenuGauche'], "{$page} : le contenu s’écarte de l’encoche.");
         $this->assertLessThanOrEqual($mesure['largeur'] - $marges['droite'], $mesure['contenuDroite'], "{$page} : le contenu s’écarte du bord droit.");
+
+        return array_column($mesure['commandes'], 'nom');
+    }
+
+    /**
+     * Une fenêtre de bureau large mais basse (un portable mis à l'échelle, une
+     * fenêtre réduite en hauteur) garde la barre de bureau : elle y tient, et
+     * l'en-tête de page qu'elle ouvre porte des commandes que l'en-tête mobile
+     * n'a pas toutes. Seul un écran trop étroit pour elle, comme un téléphone
+     * couché, passe à l'en-tête mobile.
+     */
+    public function test_une_fenetre_large_et_basse_garde_la_barre_de_bureau_et_l_en_tete_de_page(): void
+    {
+        $compte = User::factory()->create(['email_verified_at' => now()]);
+        $this->notificationNonLue($compte);
+
+        $this->browse(function (Browser $browser) use ($compte): void {
+            $browser->loginAs($compte)
+                ->resize(1280, 480)
+                ->visit('/notifications')
+                ->waitFor('#main-content', 30)
+                ->disableAnimations()
+                ->waitForStableLayout();
+
+            /** @var array{largeur: int, hauteur: int} $ecran */
+            $ecran = $browser->script('return { largeur: innerWidth, hauteur: innerHeight };')[0];
+
+            $this->assertLessThan(500, $ecran['hauteur'], 'La fenêtre est plus basse que le seuil de hauteur de la barre de bureau.');
+            $this->assertGreaterThanOrEqual(1024, $ecran['largeur'], 'La fenêtre est plus large que tout téléphone couché.');
+
+            /** @var array{barreDeBureau: bool, enteteMobile: bool, barreDuBas: bool, largeur: float, defilement: float, commandes: list<array{nom: string, gauche: float, droite: float}>} $mesure */
+            $mesure = $browser->script(self::LIRE_LES_EN_TETES)[0];
+
+            $this->assertSame(
+                ['barreDeBureau' => true, 'enteteMobile' => false, 'barreDuBas' => false],
+                ['barreDeBureau' => $mesure['barreDeBureau'], 'enteteMobile' => $mesure['enteteMobile'], 'barreDuBas' => $mesure['barreDuBas']],
+                sprintf('Sur une fenêtre de %d × %d, la barre de bureau remplace l’en-tête mobile et la barre du bas.', $ecran['largeur'], $ecran['hauteur'])
+            );
+
+            $horsDeLEcran = array_values(array_filter(
+                $mesure['commandes'],
+                static fn (array $commande): bool => $commande['gauche'] < 0 || $commande['droite'] > $mesure['largeur']
+            ));
+
+            $this->assertSame([], $horsDeLEcran, 'Chaque commande de la barre de bureau tient dans la fenêtre.');
+            $this->assertLessThanOrEqual($mesure['largeur'], $mesure['defilement'], 'La page ne défile pas de côté.');
+
+            $browser->assertVisible('@tout-marquer-comme-lu')
+                ->assertMissing('@tout-marquer-comme-lu-mobile');
+        });
+    }
+
+    /**
+     * Une notification non lue, écrite dans la table plutôt que par notify() :
+     * un succès non lu ouvrirait la carte de succès par-dessus la page.
+     */
+    private function notificationNonLue(User $compte): void
+    {
+        $compte->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => PersonalRecordAchieved::class,
+            'data' => [
+                'type' => 'personal_record',
+                'title' => 'Nouveau record',
+                'message' => 'Développé couché 100 kg',
+            ],
+            'read_at' => null,
+        ]);
     }
 
     public function test_ce_qui_colle_sous_l_en_tete_s_y_pose_sans_jour_ni_chevauchement(): void

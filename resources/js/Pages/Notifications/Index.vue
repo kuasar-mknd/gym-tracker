@@ -3,13 +3,17 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, router } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-defineProps({
+const props = defineProps({
     notifications: Object,
 })
+
+/** Une notification au moins reste à lire : « Tout marquer comme lu » a un sens. */
+const aDesNonLues = computed(() => props.notifications.data.some((notification) => !notification.read_at))
 
 const markAsRead = (id) => {
     router.post(
@@ -58,13 +62,32 @@ const formatDate = (date) => {
     <Head title="Notifications" />
 
     <AuthenticatedLayout page-title="Notifications">
+        <!--
+            Le jumeau de « Tout marquer comme lu » pour l'en-tête mobile : celui
+            de l'en-tête de page ne se montre qu'avec la barre de bureau, et un
+            téléphone, debout ou couché, n'avait aucun moyen de tout lire d'un
+            geste (#2043).
+        -->
+        <template #header-actions>
+            <GlassIconButton
+                v-if="aDesNonLues"
+                icon="task_alt"
+                label="Tout marquer comme lu"
+                title="Tout marquer comme lu"
+                class="border-surface-card bg-surface-card/60 border"
+                dusk="tout-marquer-comme-lu-mobile"
+                @click="markAllAsRead"
+            />
+        </template>
+
         <template #header>
             <div class="flex items-center justify-between">
                 <h2 class="titre-carte">Notifications</h2>
                 <GlassButton
-                    v-if="notifications.data.some((n) => !n.read_at)"
+                    v-if="aDesNonLues"
                     @click="markAllAsRead"
                     class="py-1.5! text-xs!"
+                    dusk="tout-marquer-comme-lu"
                 >
                     Tout marquer comme lu
                 </GlassButton>

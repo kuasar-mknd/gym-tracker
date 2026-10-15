@@ -762,14 +762,100 @@ describe('les zones sûres', () => {
 /** Ce qui montre ou cache un élément selon la largeur. */
 const BASCULE = /^(?:sm|bureau):(?:hidden|block|flex|inline-flex|grid)$/
 
+/** La requête de la variante `bureau`, telle que app.css la déclare. */
+const REQUETE_DU_BUREAU = /@custom-variant bureau \(@media (.+)\);/.exec(appCss)?.[1] ?? ''
+
+/**
+ * La requête de la variante `bureau` vaut-elle pour un écran donné ?
+ *
+ * Elle se lit par ses jetons : des conditions `(width >= Nrem)` et
+ * `(height >= Nrem)`, réunies par `and` ou `or` entre parenthèses. Une forme
+ * que cette lecture ne connaît pas la fait échouer plutôt que de passer pour
+ * fausse.
+ *
+ * @param {string} requete
+ * @param {{width: number, height: number}} ecran en pixels CSS
+ * @returns {boolean}
+ */
+const requeteValable = (requete, ecran) => {
+    const jetons = requete.match(/\(|\)|\band\b|\bor\b|\b(?:width|height) >= [\d.]+rem\b/g) ?? []
+
+    if (jetons.join('').replace(/\s/g, '') !== requete.replace(/\s/g, '')) {
+        throw new Error(`Requête de la variante bureau illisible : ${requete}`)
+    }
+
+    let rang = 0
+
+    const terme = () => {
+        const jeton = jetons[rang]
+
+        rang += 1
+
+        if (jeton === '(') {
+            const valeur = condition()
+
+            rang += 1
+
+            return valeur
+        }
+
+        const [, dimension, rem] = /^(width|height) >= ([\d.]+)rem$/.exec(jeton)
+
+        return ecran[dimension] >= Number(rem) * 16
+    }
+
+    const condition = () => {
+        let valeur = terme()
+
+        while (jetons[rang] === 'and' || jetons[rang] === 'or') {
+            const operateur = jetons[rang]
+
+            rang += 1
+
+            const suivante = terme()
+
+            valeur = operateur === 'and' ? valeur && suivante : valeur || suivante
+        }
+
+        return valeur
+    }
+
+    return condition()
+}
+
 /**
  * Un téléphone couché garde l'en-tête mobile et la barre du bas (#2043) : la
  * barre de bureau n'y tient pas, et sa cloche et son menu du compte passaient
  * sous l'encoche ou hors de l'écran. Elle ne s'ouvre qu'à `bureau:` (large et
- * assez haut), et ce qui bascule avec elle suit la même variante : à `sm:`, un
- * téléphone couché montrerait le titre de la page deux fois.
+ * assez haut, ou assez large pour qu'aucun téléphone ne l'atteigne), et ce qui
+ * bascule avec elle suit la même variante : à `sm:`, un téléphone couché
+ * montrerait le titre de la page deux fois.
  */
 describe('la barre de bureau', () => {
+    it.each([
+        ['un téléphone debout', 390, 844, false],
+        ['un iPhone SE couché', 667, 375, false],
+        ['un iPhone couché', 844, 390, false],
+        ['le plus grand iPhone couché', 956, 440, false],
+        ['un grand Android couché', 998, 448, false],
+        ['juste sous les deux seuils', 1023, 499, false],
+        ['une tablette debout', 768, 1024, true],
+        ['une tablette couchée', 1024, 768, true],
+        ['juste au seuil de hauteur', 640, 500, true],
+        ['un écran de bureau', 1280, 800, true],
+        ['une fenêtre de bureau large et basse', 1280, 480, true],
+        ['un portable mis à l’échelle, fenêtre basse', 1093, 460, true],
+    ])('%s (%i × %i) : barre de bureau %s', (_ecran, largeur, hauteur, ouverte) => {
+        expect(requeteValable(REQUETE_DU_BUREAU, { width: largeur, height: hauteur })).toBe(ouverte)
+    })
+
+    it('lit la requête de la variante par ses jetons, et refuse ce qu’elle ne connaît pas', () => {
+        expect(requeteValable('(width >= 40rem) and (height >= 31.25rem)', { width: 1280, height: 480 })).toBe(false)
+        expect(requeteValable('(width >= 40rem) or (height >= 31.25rem)', { width: 390, height: 844 })).toBe(true)
+        expect(() => requeteValable('(min-width: 40rem)', { width: 1280, height: 800 })).toThrow()
+        expect(() => requeteValable('(width >= 40rem) and (pointer: fine)', { width: 1280, height: 800 })).toThrow()
+    })
+
     it('ne s’ouvre qu’à bureau:, comme l’en-tête mobile, la barre du bas et l’en-tête de page basculent', () => {
         const { elements } = elementsDuGabarit(
             gabarit(readFileSync(resolve(jsRoot, 'Layouts/AuthenticatedLayout.vue'), 'utf8')),
@@ -785,7 +871,7 @@ describe('la barre de bureau', () => {
             ['header', ['bureau:block']],
             ['BottomNav', ['bureau:hidden']],
         ])
-        expect(appCss).toContain('@custom-variant bureau (@media (width >= 40rem) and (height >= 31.25rem));')
+        expect(REQUETE_DU_BUREAU, 'app.css déclare la variante bureau').not.toBe('')
     })
 
     it('ne montre le titre de bureau d’une page qu’avec la barre de bureau', () => {
