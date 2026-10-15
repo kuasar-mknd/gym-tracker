@@ -1,38 +1,43 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
-const show = ref(false)
-const achievement = ref(null)
-const notificationId = ref(null)
 const dialog = ref(null)
 
 const page = usePage()
 
-const checkAchievement = () => {
-    if (page.props.is_testing) return
-    const latest = page.props.auth.user?.latest_achievement
-    if (latest && latest.data) {
-        // Avoid showing same achievement twice in same session if not cleared
-        if (notificationId.value !== latest.id) {
-            achievement.value = latest.data
-            notificationId.value = latest.id
-            show.value = true
-        }
+/**
+ * Les badges que la personne a fermés pendant ce montage.
+ *
+ * Le badge affiché se déduit de la page et de cette liste ; ce n'est plus une
+ * copie que deux écrivains se disputent (#2052). L'ancienne copie était posée
+ * par un observateur de `latest_achievement` et effacée par le `onSuccess` de
+ * la lecture. Or Inertia pose la page, Vue rejoue ses observateurs, et SEULEMENT
+ * ensuite appelle `onSuccess` : quand la réponse de la lecture portait le badge
+ * suivant, l'observateur l'affichait, puis le rappel l'effaçait, et la modale
+ * restait ouverte sur un badge nul (« Cannot read properties of null (reading
+ * 'icon') »). Ici, rien n'est effacé après coup : un badge fermé reste fermé
+ * même si une page le porte encore, et le suivant s'affiche dès que le serveur
+ * le rend.
+ */
+const badgesFermes = reactive(new Set())
+
+/**
+ * Le badge à célébrer : le plus récent des non lus, s'il n'a pas déjà été fermé ici.
+ *
+ * Son icône, son nom et sa description viennent du badge lui-même, que le
+ * serveur joint à la notification ; un badge supprimé depuis n'a que le message
+ * de la notification, qui le nomme.
+ */
+const badge = computed(() => {
+    if (page.props.is_testing) {
+        return null
     }
-}
 
-watch(
-    () => page.props.auth.user?.latest_achievement,
-    () => {
-        checkAchievement()
-    },
-    { deep: true },
-)
+    const dernier = page.props.auth?.user?.latest_achievement
 
-onMounted(() => {
-    checkAchievement()
+    return dernier?.data && !badgesFermes.has(dernier.id) ? dernier : null
 })
 
 /**
@@ -46,43 +51,44 @@ onMounted(() => {
  * Escape did nothing, and the page behind stayed reachable — on an overlay
  * that covers the whole screen. showModal() supplies all of that natively.
  */
-watch(
-    show,
-    (isVisible) => {
-        if (isVisible) {
-            dialog.value?.showModal()
-        } else if (dialog.value?.open) {
-            dialog.value.close()
-        }
-    },
-    // post: the panel inside the dialog is rendered by v-if on the same flag,
-    // so opening has to wait for that render or the dialog opens empty.
-    { flush: 'post' },
-)
+const ouvrirOuFermer = (ouvert) => {
+    if (ouvert && !dialog.value?.open) {
+        dialog.value?.showModal()
+    } else if (!ouvert && dialog.value?.open) {
+        dialog.value.close()
+    }
+}
 
-const close = () => {
-    // Re-entrant: closing the dialog fires its own close event, and Escape
-    // closes it before we ever get here. Without this the notification would
-    // be marked as read twice.
-    if (!show.value) {
+/**
+ * `post` : le panneau du dialogue est rendu par un `v-if` sur le même badge,
+ * l'ouverture attend donc ce rendu, sans quoi le dialogue s'ouvre vide. Le
+ * montage ouvre de lui-même le badge que la première page porte déjà.
+ */
+watch(() => badge.value !== null, ouvrirOuFermer, { flush: 'post' })
+
+onMounted(() => ouvrirOuFermer(badge.value !== null))
+
+/**
+ * Ferme le badge affiché et le marque lu.
+ *
+ * Réentrante : fermer le dialogue émet son propre `close`, et Échap le ferme
+ * avant qu'on n'arrive ici. Le badge fermé n'étant plus celui qu'on affiche,
+ * le second appel ne trouve rien à fermer, et la lecture ne part qu'une fois.
+ */
+const fermer = () => {
+    const badgeFerme = badge.value
+
+    if (badgeFerme === null) {
         return
     }
 
-    show.value = false
-    if (notificationId.value) {
-        router.post(
-            route('notifications.mark-as-read', { id: notificationId.value }),
-            {},
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () => {
-                    notificationId.value = null
-                    achievement.value = null
-                },
-            },
-        )
-    }
+    badgesFermes.add(badgeFerme.id)
+
+    router.post(
+        route('notifications.mark-as-read', { id: badgeFerme.id }),
+        {},
+        { preserveScroll: true, preserveState: true },
+    )
 }
 </script>
 
@@ -92,8 +98,8 @@ const close = () => {
             ref="dialog"
             class="m-0 h-full max-h-full w-full max-w-full bg-transparent p-0 backdrop:bg-transparent"
             aria-labelledby="achievement-title"
-            aria-describedby="achievement-description"
-            @close="close"
+            aria-describedby="achievement-name achievement-description"
+            @close="fermer"
         >
             <!--
               Centrée dans la zone sûre, et bornée à elle : en paysage, la carte
@@ -102,9 +108,9 @@ const close = () => {
               `hauteur-sure-6`) : sans encoche, la carte tient encore entière
               sur un écran de 375 px de haut, comme avant.
             -->
-            <div v-if="show" class="z-modale px-sure-4 py-sure-3 fixed inset-0 flex items-center justify-center">
+            <div v-if="badge" class="z-modale px-sure-4 py-sure-3 fixed inset-0 flex items-center justify-center">
                 <!-- Backdrop -->
-                <div class="animate-fade-in bg-overlay absolute inset-0 backdrop-blur-sm" @click="close"></div>
+                <div class="animate-fade-in bg-overlay absolute inset-0 backdrop-blur-sm" @click="fermer"></div>
 
                 <!-- Modal. No role or aria-modal here: the <dialog> above is the
                      dialog, and nesting a second one would announce two. -->
@@ -129,20 +135,17 @@ const close = () => {
                             <div
                                 class="animate-wobble border-border bg-surface-sunken flex h-24 w-24 items-center justify-center rounded-3xl border text-6xl shadow-lg backdrop-blur-md"
                             >
-                                {{ achievement.icon }}
+                                {{ badge.icon || '🏆' }}
                             </div>
                         </div>
 
                         <!-- Text -->
                         <h2 class="titre-carte mb-1" id="achievement-title">Badge débloqué !</h2>
-                        <h3 class="text-accent-primary-deep titre-carte mb-3">{{ achievement.name }}</h3>
+                        <h3 v-if="badge.name" class="text-accent-primary-deep titre-carte mb-3" id="achievement-name">
+                            {{ badge.name }}
+                        </h3>
                         <p class="text-text-muted mb-6 text-sm" id="achievement-description">
-                            {{
-                                achievement.message?.replace(
-                                    'Nouveau badge débloqué : ' + achievement.name + ' !',
-                                    '',
-                                ) || 'Félicitations pour cet exploit !'
-                            }}
+                            {{ badge.description || badge.data.message || 'Félicitations pour cet exploit !' }}
                         </p>
 
                         <!-- Action -->
@@ -151,7 +154,7 @@ const close = () => {
                             size="lg"
                             class="w-full"
                             dusk="celebration-dismiss"
-                            @click="close"
+                            @click="fermer"
                         >
                             Génial ! 🤩
                         </GlassButton>

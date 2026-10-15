@@ -98,15 +98,24 @@ class CustomPolicy extends Basic
          * n'a plus de raison de laisser une page joindre Google pour une feuille
          * de style ou une police.
          *
-         * fonts.bunny.net reste : Horizon, Telescope, Pulse et Filament y
-         * prennent tous la fonte de leur tableau de bord, et aucun d'eux n'est à
-         * nous pour qu'on la ré-héberge.
+         * fonts.bunny.net reste : Horizon, Telescope et Pulse y prennent tous
+         * la fonte de leur tableau de bord, et aucun d'eux n'est à nous pour
+         * qu'on la ré-héberge. Le panneau Filament, lui, sert la sienne tant
+         * qu'on ne lui choisit pas une autre fonte.
+         *
+         * Le site d'icônes d'où venaient les logos de connexion est parti avec
+         * eux : l'application les dessine elle-même (#2051), et
+         * `LesRessourcesViennentDeLApplicationTest` refuse que les pages Vue,
+         * les scripts, les feuilles et les gabarits de l'application, ou les
+         * icônes de la racine de public/, fassent charger quoi que ce soit
+         * d'une autre origine. Les pages des paquets restent hors de cette
+         * garde : ui-avatars.com sert l'avatar par défaut des administrateurs
+         * dans le panneau, et les tableaux de bord ci-dessus leur fonte.
          */
         $policy
             ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::IMG, 'data:')
             ->add(Directive::IMG, 'https://ui-avatars.com')
-            ->add(Directive::IMG, 'https://www.svgrepo.com')
             ->add(Directive::FONT, 'https://fonts.bunny.net')
             ->add(Directive::FONT, 'data:')
             ->add(Directive::CONNECT, 'https://fcm.googleapis.com')

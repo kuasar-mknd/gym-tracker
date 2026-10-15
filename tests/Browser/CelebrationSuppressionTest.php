@@ -25,11 +25,25 @@ use Tests\DuskTestCase;
  */
 class CelebrationSuppressionTest extends DuskTestCase
 {
+    /**
+     * Plusieurs badges non lus, et une console sans erreur (#2052).
+     *
+     * Fermer « Badge débloqué » sur un compte qui en avait trois levait deux
+     * fois « Cannot read properties of null (reading 'icon') ». Ce parcours ne
+     * garde pas contre cette erreur : sous Dusk, `is_testing` éteint la modale,
+     * qui ne rend rien, et sa console resterait aussi propre sur l'ancienne
+     * modale. La reproduction qui échoue sans le correctif est
+     * `tests/js/components/celebrationModalAvecInertia.test.js`, qui ferme les
+     * badges sous le vrai layout. Ce parcours exige seulement que la page qui
+     * porte ces badges se rende sans erreur.
+     */
     public function test_an_unread_achievement_does_not_pop_the_celebration_during_browser_tests(): void
     {
         $this->browse(function (Browser $browser): void {
             $user = User::factory()->create();
-            $user->notify(new AchievementUnlocked(Achievement::factory()->create()));
+            foreach (Achievement::factory()->count(3)->create() as $badge) {
+                $user->notify(new AchievementUnlocked($badge));
+            }
 
             $browser->loginAs($user)
                 ->resizeToIphone15()
@@ -46,6 +60,8 @@ class CelebrationSuppressionTest extends DuskTestCase
                 $celebrationVisible,
                 'The celebration overlay must stay suppressed during browser tests.'
             );
+
+            $browser->assertNoConsoleExceptions();
         });
     }
 

@@ -68,6 +68,9 @@ import Login from '@/Pages/Auth/Login.vue'
 import Register from '@/Pages/Auth/Register.vue'
 import ResetPassword from '@/Pages/Auth/ResetPassword.vue'
 import VerifyEmail from '@/Pages/Auth/VerifyEmail.vue'
+import LogoApple from '@/Components/Marques/LogoApple.vue'
+import LogoGitHub from '@/Components/Marques/LogoGitHub.vue'
+import LogoGoogle from '@/Components/Marques/LogoGoogle.vue'
 import { passesSlot } from './pageStubs'
 
 /** GuestLayout fills a card and a footer; a default-only stub drops the footer. */
@@ -124,8 +127,43 @@ const typeInto = async (wrapper, labelText, value) => {
     await wrapper.find(`#${label.attributes('for')}`).setValue(value)
 }
 
-/** The social providers a page actually offers, in the order it offers them. */
-const providersOffered = (wrapper) => wrapper.findAll('img[alt]').map((image) => image.attributes('alt'))
+/**
+ * The social providers a page actually offers, in the order it offers them,
+ * read from the name each button carries (« Continuer avec Google »).
+ */
+const providersOffered = (wrapper) =>
+    wrapper.findAll('a[href^="/social.redirect/"]').map((lien) => lien.attributes('aria-label').split(' avec ').at(-1))
+
+/** Les attributs par lesquels un élément fait télécharger une adresse au navigateur. */
+const ATTRIBUTS_QUI_CHARGENT = ['src', 'srcset', 'poster', 'data', 'href', 'xlink:href']
+
+/** Une adresse absolue (`https://…`) ou sans protocole (`//hote/…`) : une autre origine. */
+const VIENT_D_AILLEURS = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i
+
+/**
+ * Ce qu'une page montée ferait charger au navigateur depuis une autre origine
+ * (#2051) : un attribut qui télécharge (`src`, `srcset`, `href` d'un `<link>`
+ * ou d'un `<use>`…) ou un `url()` dans n'importe quel attribut, style compris.
+ * Le `href` d'un lien `<a>` n'en fait pas partie : seul un clic le suit.
+ *
+ * @param {import('@vue/test-utils').VueWrapper} wrapper
+ * @returns {string[]} Chaque adresse, avec l'élément et l'attribut qui la portent.
+ */
+const ressourcesDAutresOrigines = (wrapper) =>
+    [wrapper.element, ...wrapper.element.querySelectorAll('*')].flatMap((element) =>
+        [...element.attributes].flatMap(({ name, value }) => {
+            const charge = ATTRIBUTS_QUI_CHARGENT.includes(name) && !(name === 'href' && element.localName === 'a')
+            const adresses = [
+                ...(charge ? (name === 'srcset' ? value.split(',') : [value]) : []),
+                ...[...value.matchAll(/url\(\s*['"]?([^'")\s]+)/g)].map(([, adresse]) => adresse),
+            ]
+
+            return adresses
+                .map((adresse) => adresse.trim().split(/\s+/)[0])
+                .filter((adresse) => VIENT_D_AILLEURS.test(adresse))
+                .map((adresse) => `<${element.localName} ${name}="${adresse}">`)
+        }),
+    )
 
 describe('Login', () => {
     it('poste vers la route de connexion', async () => {
@@ -351,6 +389,107 @@ describe('Register', () => {
             'Un lien partira à ton adresse : ton compte s’ouvre une fois ce lien suivi.',
         )
     })
+})
+
+/*
+ * Les logos des fournisseurs venaient d'un site d'icônes tiers : chaque visite
+ * lui donnait l'adresse IP, le navigateur et la page de la personne, et la CSP
+ * devait lui ouvrir `img-src` (#2051). Ils sont désormais dessinés par
+ * l'application, dans le bouton même, et chaque bouton porte un nom.
+ */
+describe.each([
+    ['Login', Login, 'Continuer avec'],
+    ['Register', Register, "S'inscrire avec"],
+])('%s : les boutons des fournisseurs', (_page, page, verbe) => {
+    const tousDeclares = { page: { social_login_enabled: { google: true, github: true, apple: true } } }
+
+    /**
+     * Logo par logo : trois boutons qui dessineraient tous le « G » de Google
+     * porteraient encore chacun un logo.
+     */
+    it('dessine dans chaque bouton le logo de son fournisseur, sans image à télécharger', () => {
+        const liens = mountPage(page, tousDeclares).findAll('a[href^="/social.redirect/"]')
+
+        expect(
+            liens.map((lien) => [
+                lien.attributes('href'),
+                lien.findComponent(LogoGoogle).exists(),
+                lien.findComponent(LogoGitHub).exists(),
+                lien.findComponent(LogoApple).exists(),
+                lien.find('img').exists(),
+            ]),
+        ).toEqual([
+            ['/social.redirect/google', true, false, false, false],
+            ['/social.redirect/github', false, true, false, false],
+            ['/social.redirect/apple', false, false, true, false],
+        ])
+    })
+
+    it('nomme chaque bouton par son action, le logo restant muet', () => {
+        const liens = mountPage(page, tousDeclares).findAll('a[href^="/social.redirect/"]')
+
+        expect(
+            liens.map((lien) => [lien.attributes('aria-label'), lien.find('svg').attributes('aria-hidden')]),
+        ).toEqual([
+            [`${verbe} Google`, 'true'],
+            [`${verbe} GitHub`, 'true'],
+            [`${verbe} Apple`, 'true'],
+        ])
+    })
+
+    /**
+     * Les règles d'Apple : le logo remplit tout le bouton, sans marge ajoutée
+     * ni fichier rogné sur la sienne, et c'est un masque qui lui donne la forme
+     * des boutons voisins. Ce masque est le bouton lui-même.
+     */
+    it('rogne le carré d’Apple à la forme de ses voisins, sans marge autour du logo', () => {
+        const liens = mountPage(page, tousDeclares).findAll('a[href^="/social.redirect/"]')
+        const arrondi = (lien) => lien.classes().filter((classe) => classe.startsWith('rounded'))
+        const apple = liens.at(-1)
+        const taille = (element) => element.classes().filter((classe) => /^[hw]-/.test(classe))
+
+        expect(liens.map(arrondi)).toEqual([['rounded-xl'], ['rounded-xl'], ['rounded-xl']])
+        expect(apple.classes()).toContain('overflow-hidden')
+        expect(taille(apple.find('svg'))).toEqual(taille(apple))
+        expect(apple.find('svg').attributes('viewBox')).toBe('6 6 44 44')
+    })
+
+    it('ne fait rien charger d’une autre origine', () => {
+        expect(ressourcesDAutresOrigines(mountPage(page, tousDeclares))).toEqual([])
+    })
+
+    it('ne montre la séparation « Ou … » que s’il reste un fournisseur à proposer', () => {
+        const aucun = mountPage(page, {
+            page: { social_login_enabled: { google: false, github: false, apple: false } },
+        })
+        const un = mountPage(page, { page: { social_login_enabled: { google: false, github: false, apple: true } } })
+        const separation = `Ou ${verbe.charAt(0).toLowerCase()}${verbe.slice(1)}`
+
+        expect(aucun.text()).not.toContain(separation)
+        expect(un.text()).toContain(separation)
+    })
+})
+
+it('sait encore voir une ressource d’une autre origine dans une page montée', () => {
+    const echantillon = mount({
+        template: `
+            <div>
+                <a href="https://example.org/aide">Aide</a>
+                <img src="https://icones.example.org/logo.svg" alt="" />
+                <img srcset="/build/petit.png 1x, //cdn.example.org/grand.png 2x" alt="" />
+                <div style="background-image: url('https://cdn.example.org/motif.png')"></div>
+                <img src="data:image/png;base64,AAAA" alt="" />
+                <svg><use href="https://icones.example.org/sprite.svg#g" /></svg>
+            </div>
+        `,
+    })
+
+    expect(ressourcesDAutresOrigines(echantillon)).toEqual([
+        '<img src="https://icones.example.org/logo.svg">',
+        '<img srcset="//cdn.example.org/grand.png">',
+        '<div style="https://cdn.example.org/motif.png">',
+        '<use href="https://icones.example.org/sprite.svg#g">',
+    ])
 })
 
 describe('ForgotPassword', () => {
