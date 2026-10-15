@@ -240,11 +240,14 @@ it('crée au panneau un compte qui n’est pas en attente, et qui se connecte', 
 });
 
 /**
- * Un compte ouvert par l'inscription attend que son titulaire suive le lien
- * envoyé à son adresse (`AttendLaPreuveDeSonAdresse`). La liste le montre pour
- * ce qu'il est : un badge « En attente du lien » qui porte la date de
- * l'inscription, et rien sur un compte ouvert, même jamais vérifié (un compte
- * d'avant l'attente, ou du panneau).
+ * Un compte ouvert par l'inscription attend la preuve de son adresse
+ * (`AttendLaPreuveDeSonAdresse`). La liste le montre pour ce qu'il est : un
+ * badge « En attente du lien » qui affiche la date de l'inscription, et rien
+ * sur un compte ouvert, même jamais vérifié (un compte d'avant l'attente, ou
+ * du panneau). La date se lit telle que la liste l'affiche, pas seulement dans
+ * l'état brut de la colonne : une colonne qui garderait la valeur mais
+ * afficherait autre chose (« Oui ») ne dirait plus depuis quand le compte
+ * attend.
  */
 it('montre « En attente du lien » et sa date sur un compte en attente, et rien sur un compte ouvert', function (): void {
     $depuis = Carbon::parse('2026-10-12 08:30:00');
@@ -259,7 +262,10 @@ it('montre « En attente du lien » et sa date sur un compte en attente, et rien
         )
         ->assertTableColumnStateSet('en_attente_depuis', $depuis, $enAttente)
         ->assertTableColumnStateSet('en_attente_depuis', null, $ouvert)
-        ->assertSee('En attente du lien');
+        ->assertTableColumnFormattedStateSet('en_attente_depuis', 'oct. 12, 2026 08:30:00', $enAttente)
+        ->assertTableColumnFormattedStateSet('en_attente_depuis', null, $ouvert)
+        ->assertSee('En attente du lien')
+        ->assertSeeText('oct. 12, 2026 08:30:00');
 });
 
 /**
