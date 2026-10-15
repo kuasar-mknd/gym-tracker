@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Enums\PorteeDeDiagnostic;
 use App\Models\ErreurNavigateur;
 use App\Models\User;
+use App\Services\Diagnostic\ApercuDesDetails;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\FamilleDeNavigateur;
+use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\ProjectionDesErreursNavigateur;
+use App\Services\Diagnostic\ResumeDuDiagnostic;
 use App\Services\Diagnostic\TexteNonFiable;
 use Illuminate\Support\Carbon;
 use Tests\Support\BuildDuDiagnostic;
@@ -113,12 +117,49 @@ it('rend au détail, sous TexteBrut seulement, le message, la page sans requête
 
     expect($sans)->not->toHaveKey('non_fiable')
         ->and($sans['nombre'] ?? null)->toBe(2)
+        ->and($sans['echantillon'] ?? null)->toBeFalse()
         ->and($avec['non_fiable'] ?? null)->toEqual([
             'message' => new TexteNonFiable('récent', ProjectionDesErreursNavigateur::BUDGET_DU_MESSAGE),
             'page' => new TexteNonFiable('https://gym.example.org/seances/3', ProjectionDesErreursNavigateur::BUDGET_DE_LA_PAGE),
             'pile' => new TexteNonFiable(implode("\n", array_map(static fn (int $ligne): string => "at ligne {$ligne}", range(1, ProjectionDesErreursNavigateur::LIGNES_DE_PILE))), ProjectionDesErreursNavigateur::BUDGET_DE_LA_PILE),
         ])
         ->and(new ProjectionDesErreursNavigateur()->detail('pas-une-empreinte', erreursNavigateurDiagnosticFenetre(), true))->toBeNull();
+});
+
+/*
+ * Le détail d'un groupe compte, comme la liste, au plus 5 000 occurrences,
+ * en lit une de plus et dit s'il a débordé : l'enveloppe des détails le
+ * remonte, comme celle du résumé.
+ */
+it('ne compte au détail que 5 000 occurrences d’un groupe, et le dit jusque dans l’enveloppe', function (): void {
+    $compte = User::factory()->create();
+    $lignes = array_map(static fn (int $rang): array => [
+        'user_id' => $compte->id,
+        'type' => 'error',
+        'message' => 'Cannot read properties of undefined',
+        'source' => 'https://gym.example.org/build/assets/app-abc.js',
+        'ligne' => $rang,
+        'colonne' => 14,
+        'url' => 'https://gym.example.org/seances',
+        'agent' => 'Mozilla/5.0 Firefox/130',
+        'empreinte' => md5('deborde'),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ], range(1, LecturesBornees::LIGNES_AU_PLUS + 1));
+
+    foreach (array_chunk($lignes, 1_000) as $paquet) {
+        ErreurNavigateur::query()->insert($paquet);
+    }
+
+    $fenetre = erreursNavigateurDiagnosticFenetre();
+    $detail = new ProjectionDesErreursNavigateur()->detail(md5('deborde'), $fenetre, false);
+    $resume = new ResumeDuDiagnostic()([PorteeDeDiagnostic::ErreursNavigateur], $fenetre);
+    $details = new ApercuDesDetails()([PorteeDeDiagnostic::ErreursNavigateur], $fenetre, $resume->enveloppe['donnees']);
+
+    expect([$detail['nombre'] ?? null, $detail['echantillon'] ?? null])->toBe([LecturesBornees::LIGNES_AU_PLUS, true])
+        ->and(data_get($details->enveloppe, 'donnees.erreur_navigateur.echantillon'))->toBeTrue()
+        ->and([$details->enveloppe['echantillon'], $details->enveloppe['tronque']])->toBe([true, false])
+        ->and($resume->enveloppe['echantillon'])->toBeTrue();
 });
 
 it('ne rend qu’un fichier du build en place, jamais une autre source', function (?string $source, ?string $fichier): void {

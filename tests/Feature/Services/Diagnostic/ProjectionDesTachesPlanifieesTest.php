@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\PorteeDeDiagnostic;
 use App\Models\TachePlanifiee;
+use App\Services\Diagnostic\ApercuDesDetails;
 use App\Services\Diagnostic\FenetreDeDiagnostic;
 use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\ProjectionDesTachesPlanifiees;
@@ -144,6 +145,7 @@ it('ajoute au détail, sous TexteBrut seulement, le message de chaque échec', f
         ['le' => '2026-10-11T02:30:04+02:00', 'duree_en_secondes' => 3.0, 'code_de_sortie' => 1],
     ])
         ->and([$sans['echecs_sur_7_jours'] ?? null, $avec['echecs_sur_7_jours'] ?? null])->toBe([2, 2])
+        ->and($sans['echantillon'] ?? null)->toBeFalse()
         ->and($avec['derniers_echecs'] ?? null)->toEqual([
             ['le' => '2026-10-12T02:30:04+02:00', 'duree_en_secondes' => 4.0, 'code_de_sortie' => 1, 'non_fiable' => ['message' => new TexteNonFiable('disque plein', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE)]],
             ['le' => '2026-10-11T02:30:04+02:00', 'duree_en_secondes' => 3.0, 'code_de_sortie' => 1, 'non_fiable' => ['message' => new TexteNonFiable('', ProjectionDesTachesPlanifiees::BUDGET_DU_MESSAGE)]],
@@ -163,8 +165,9 @@ it('rend une commande ou un cron hors forme comme une valeur nulle', function ()
 /*
  * Une tâche de chaque minute qui échoue une semaine durant laisse plus de
  * 10 000 lignes au moniteur : le résumé n'en lit que 5 000, les compte, n'en
- * montre que les cinq dernières et le dit ; le détail en montre cinquante.
- * Le résumé reste sous les 256 Kio de toute réponse.
+ * montre que les cinq dernières et le dit ; le détail en montre cinquante,
+ * et le dit aussi, jusque dans l'enveloppe des détails. Le résumé reste
+ * sous les 256 Kio de toute réponse.
  */
 it('compte les échecs au résumé sans tous les lister, lit au plus 5 000 lignes et 50 tâches, et le dit', function (): void {
     $minute = tachesDiagnosticTache('app:chaque-minute', ['cron_expression' => '* * * * *', 'last_failed_at' => '2026-10-12 09:59:00']);
@@ -194,6 +197,9 @@ it('compte les échecs au résumé sans tous les lister, lit au plus 5 000 ligne
         ->and([$resume->enveloppe['echantillon'], $resume->enveloppe['tronque']])->toBe([true, true])
         ->and(strlen($resume->json()))->toBeLessThan(256 * 1_024)
         ->and($detail['echecs_sur_7_jours'] ?? null)->toBe(LecturesBornees::LIGNES_AU_PLUS)
+        ->and($detail['echantillon'] ?? null)->toBeTrue()
+        ->and(new ApercuDesDetails()([PorteeDeDiagnostic::Sante], tachesDiagnosticFenetre(), $resume->enveloppe['donnees'])->enveloppe)
+        ->toMatchArray(['echantillon' => true, 'tronque' => false])
         ->and($detail['derniers_echecs'] ?? [])->toHaveCount(LecturesBornees::GROUPES_AU_PLUS)
         ->and(data_get($detail, 'derniers_echecs.49'))->toEqual([
             'le' => '2026-10-12T09:10:00+02:00',

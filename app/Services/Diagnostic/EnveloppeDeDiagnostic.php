@@ -43,6 +43,17 @@ final class EnveloppeDeDiagnostic
     }
 
     /**
+     * Une section des données a-t-elle levé le drapeau donné (`tronque`,
+     * `echantillon`) ? L'enveloppe le dit alors pour toute la réponse.
+     *
+     * @param  array<array-key, mixed>  $donnees
+     */
+    public static function signale(array $donnees, string $drapeau): bool
+    {
+        return collect($donnees)->contains(static fn (mixed $section): bool => data_get($section, $drapeau) === true);
+    }
+
+    /**
      * @return array{0: mixed, 1: int}
      */
     private function nettoyer(mixed $valeur, bool $sousNonFiable): array

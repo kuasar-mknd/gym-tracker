@@ -188,10 +188,12 @@ it('détaille la première tâche quand aucune n’a échoué, et rien quand il 
  * La forme des requêtes, pas leur nombre de lignes : une lecture sans borne
  * ne se verrait pas dans le résumé, qui compte au plus 5 000 lignes
  * (`LecturesBornees::bilan()`), mais lirait toute la table
- * (`.ai/rules/services.md`). Une colonne de texte libre (message, page,
- * pile, chemin, trace) n'est lue entière que d'une ligne : 5 000 piles
- * d'erreur navigateur, lues pour n'en montrer qu'une, dépassaient la mémoire
- * d'une requête.
+ * (`.ai/rules/services.md`). Chaque agrégat, liste ou détail, lit une
+ * ligne de plus que sa borne pour dire s'il a débordé : les quatre listes,
+ * le détail d'une tâche et celui d'un groupe d'erreurs navigateur. Une
+ * colonne de texte libre (message, page, pile, chemin, trace) n'est lue
+ * entière que d'une ligne : 5 000 piles d'erreur navigateur, lues pour n'en
+ * montrer qu'une, dépassaient la mémoire d'une requête.
  */
 it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans limite, ni texte lu de plus d’une ligne', function (): void {
     $compte = User::factory()->create();
@@ -215,7 +217,7 @@ it('nomme ses colonnes et borne chaque lecture : ni select *, ni table lue sans 
     expect($lectures)->toHaveCount(13)
         ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, '*')))->toBe([])
         ->and($sansBorne)->toBe([])
-        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'limit '.(LecturesBornees::LIGNES_AU_PLUS + 1))))->toHaveCount(5)
+        ->and(array_filter($lectures, static fn (string $requete): bool => str_contains($requete, 'limit '.(LecturesBornees::LIGNES_AU_PLUS + 1))))->toHaveCount(6)
         ->and($texteEntier)->toHaveCount(2)
         ->and(array_filter($texteEntier, static fn (string $requete): bool => ! str_ends_with($requete, ' limit 1')))->toBe([]);
 });

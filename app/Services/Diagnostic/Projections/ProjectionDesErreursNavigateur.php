@@ -58,7 +58,8 @@ final class ProjectionDesErreursNavigateur
 
     /**
      * Le détail d'un groupe des trente derniers jours, `null` s'il n'y a
-     * rien.
+     * rien. Comme la liste, il compte au plus 5 000 occurrences, en lit une
+     * de plus et dit s'il a débordé (`echantillon`).
      *
      * @return array<string, mixed>|null
      */
@@ -67,12 +68,16 @@ final class ProjectionDesErreursNavigateur
         $lignes = $this->erreurs($fenetre->jusqua->subDays(FenetreDeDiagnostic::JOURS_AU_PLUS))
             ->select(self::COLONNES)
             ->where('e.empreinte', Vocabulaire::forme(Vocabulaire::EMPREINTE, $empreinte))
-            ->limit(LecturesBornees::LIGNES_AU_PLUS)
+            ->limit(LecturesBornees::LIGNES_AU_PLUS + 1)
             ->get();
 
         return match ($lignes->isEmpty()) {
             true => null,
-            false => [...$this->regrouper($lignes)->firstOrFail(), ...$this->texte($lignes->firstOrFail()->id, $texteBrut)],
+            false => [
+                ...$this->regrouper(LecturesBornees::bornees($lignes))->firstOrFail(),
+                'echantillon' => LecturesBornees::deborde($lignes),
+                ...$this->texte($lignes->firstOrFail()->id, $texteBrut),
+            ],
         };
     }
 

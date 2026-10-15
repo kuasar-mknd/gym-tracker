@@ -40,8 +40,8 @@ final class ResumeDuDiagnostic
         return new EnveloppeDeDiagnostic()(
             $donnees,
             $fenetre->jusqua,
-            tronque: $this->signale($donnees, 'tronque'),
-            echantillon: $this->signale($donnees, 'echantillon'),
+            tronque: EnveloppeDeDiagnostic::signale($donnees, 'tronque'),
+            echantillon: EnveloppeDeDiagnostic::signale($donnees, 'echantillon'),
         );
     }
 
@@ -61,15 +61,5 @@ final class ResumeDuDiagnostic
             PorteeDeDiagnostic::ErreursNavigateur => ['erreurs_navigateur' => new ProjectionDesErreursNavigateur()->liste($fenetre)],
             PorteeDeDiagnostic::TexteBrut => [],
         };
-    }
-
-    /**
-     * Une section a-t-elle levé le drapeau donné ?
-     *
-     * @param  array<string, mixed>  $donnees
-     */
-    private function signale(array $donnees, string $drapeau): bool
-    {
-        return collect($donnees)->contains(static fn (mixed $section): bool => data_get($section, $drapeau) === true);
     }
 }

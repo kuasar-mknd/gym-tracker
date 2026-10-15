@@ -6,6 +6,7 @@ use App\Enums\PorteeDeDiagnostic;
 use App\Services\Diagnostic\ChoixDeLApercu;
 use App\Services\Diagnostic\Projections\ExceptionDUnJobEchoue;
 use App\Services\Diagnostic\Projections\JsonLu;
+use App\Services\Diagnostic\Projections\LecturesBornees;
 use App\Services\Diagnostic\Projections\NomDeRoute;
 use App\Services\Diagnostic\Projections\PileSansArguments;
 use App\Services\Diagnostic\ValeurLue;
@@ -137,6 +138,21 @@ it('lit l’exception que le job a levée, ou la tête quand le dernier bloc ne 
         ->and(ExceptionDUnJobEchoue::levee($tete, 'pas de classe'))->toBe($tete)
         ->and(ExceptionDUnJobEchoue::levee(null, null))->toBe('');
 });
+
+/*
+ * Une lecture qui tient dans sa borne ne se dit ni échantillon ni tronquée :
+ * seule la ligne de plus, ou le groupe de plus, lève le drapeau.
+ */
+it('ne dit l’échantillon qu’au-delà de 5 000 lignes lues, et la liste tronquée qu’au-delà de 50 groupes', function (int $lignes, int $groupes, int $lues, bool $echantillon, bool $tronque): void {
+    expect(LecturesBornees::bilan(collect(range(1, $lignes)), collect(range(1, $groupes))))->toBe(['lignes_lues' => $lues, 'echantillon' => $echantillon, 'tronque' => $tronque])
+        ->and(LecturesBornees::deborde(collect(range(1, $lignes))))->toBe($echantillon)
+        ->and(LecturesBornees::bornees(collect(range(1, $lignes))))->toHaveCount($lues);
+})->with([
+    'une ligne, un groupe' => [1, 1, 1, false, false],
+    'à la borne' => [LecturesBornees::LIGNES_AU_PLUS, LecturesBornees::GROUPES_AU_PLUS, LecturesBornees::LIGNES_AU_PLUS, false, false],
+    'une ligne de plus' => [LecturesBornees::LIGNES_AU_PLUS + 1, LecturesBornees::GROUPES_AU_PLUS, LecturesBornees::LIGNES_AU_PLUS, true, false],
+    'un groupe de plus' => [LecturesBornees::LIGNES_AU_PLUS, LecturesBornees::GROUPES_AU_PLUS + 1, LecturesBornees::LIGNES_AU_PLUS, false, true],
+]);
 
 it('ne lit d’une pile que ses premiers cadres, sans leurs arguments', function (): void {
     $texte = implode("\n", array_map(

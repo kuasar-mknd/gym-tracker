@@ -13,7 +13,9 @@ use Illuminate\Support\Collection;
  * primaire, et le dit (`echantillon`) : une source qui déborde ne fait pas
  * lire toute sa table. Une liste rend au plus 50 groupes, et le dit
  * (`tronque`). Chaque projection en lit une de plus pour savoir si elle a
- * débordé.
+ * débordé, au détail comme à la liste : le détail d'un groupe ou d'une
+ * tâche compte aussi ses lignes, et l'enveloppe des détails remonte le
+ * drapeau comme celle du résumé.
  */
 final class LecturesBornees
 {
@@ -36,6 +38,19 @@ final class LecturesBornees
     }
 
     /**
+     * La source a-t-elle plus de lignes que la borne ? Il y en a une de plus
+     * dans la lecture.
+     *
+     * @template TLigne
+     *
+     * @param  Collection<int, TLigne>  $lignes  les lignes lues, celle de plus comprise
+     */
+    public static function deborde(Collection $lignes): bool
+    {
+        return $lignes->count() > self::LIGNES_AU_PLUS;
+    }
+
+    /**
      * Ce qu'une liste dit de sa lecture : les lignes lues, si la source a
      * débordé (`echantillon`), si la liste rend moins de groupes qu'elle n'en
      * a trouvé (`tronque`).
@@ -51,7 +66,7 @@ final class LecturesBornees
     {
         return [
             'lignes_lues' => min($lignes->count(), self::LIGNES_AU_PLUS),
-            'echantillon' => $lignes->count() > self::LIGNES_AU_PLUS,
+            'echantillon' => self::deborde($lignes),
             'tronque' => $groupes->count() > self::GROUPES_AU_PLUS,
         ];
     }

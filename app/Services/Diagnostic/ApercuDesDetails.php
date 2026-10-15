@@ -16,7 +16,9 @@ use App\Services\Diagnostic\Projections\ProjectionDesTachesPlanifiees;
  * (#2032) : la santé, la première tâche échouée, le premier groupe
  * d'exceptions, d'échecs de job et d'erreurs navigateur. C'est au détail, et
  * seulement sous `TexteBrut`, que le texte libre sort, expurgé, sous
- * `non_fiable` : la page de l'aperçu le montre tel quel.
+ * `non_fiable` : la page de l'aperçu le montre tel quel. Un détail qui a
+ * compté moins de lignes que sa source n'en a le dit (`echantillon`), et
+ * l'enveloppe le remonte, comme celle du résumé.
  */
 final class ApercuDesDetails
 {
@@ -35,7 +37,12 @@ final class ApercuDesDetails
             }
         }
 
-        return new EnveloppeDeDiagnostic()($details, $fenetre->jusqua);
+        return new EnveloppeDeDiagnostic()(
+            $details,
+            $fenetre->jusqua,
+            tronque: EnveloppeDeDiagnostic::signale($details, 'tronque'),
+            echantillon: EnveloppeDeDiagnostic::signale($details, 'echantillon'),
+        );
     }
 
     /**

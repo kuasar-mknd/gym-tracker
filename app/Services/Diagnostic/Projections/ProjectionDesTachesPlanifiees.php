@@ -26,8 +26,9 @@ use stdClass;
  * Comme les autres listes, le résumé lit au plus 50 tâches et 5 000 échecs,
  * un de plus pour savoir s'il a débordé, et le dit (`tronque`,
  * `echantillon`) : une tâche de chaque minute qui échoue une semaine durant
- * en laisse plus de 10 000. L'état de chaque tâche est jugé à l'instant de
- * la lecture, le même pour toutes.
+ * en laisse plus de 10 000. Le détail d'une tâche le dit aussi
+ * (`echantillon`). L'état de chaque tâche est jugé à l'instant de la
+ * lecture, le même pour toutes.
  */
 final class ProjectionDesTachesPlanifiees
 {
@@ -67,7 +68,9 @@ final class ProjectionDesTachesPlanifiees
     }
 
     /**
-     * Le détail d'une tâche, `null` si le moniteur ne la connaît pas.
+     * Le détail d'une tâche, `null` si le moniteur ne la connaît pas. Il
+     * compte au plus 5 000 échecs, et dit s'il en a trouvé plus
+     * (`echantillon`).
      *
      * @return array<string, mixed>|null
      */
@@ -77,8 +80,23 @@ final class ProjectionDesTachesPlanifiees
 
         return match ($tache) {
             null => null,
-            default => $this->tache($tache, $fenetre, LecturesBornees::bornees($this->echecs($fenetre, [$identifiant])), LecturesBornees::GROUPES_AU_PLUS, $texteBrut),
+            default => $this->detailDe($tache, $fenetre, $this->echecs($fenetre, [$identifiant]), $texteBrut),
         };
+    }
+
+    /**
+     * Le détail d'une tâche : ses 5 000 derniers échecs comptés, les
+     * cinquante derniers montrés, et si la lecture a débordé.
+     *
+     * @param  Collection<int, stdClass>  $echecs  du plus récent au plus ancien, un de plus que la borne
+     * @return array<string, mixed>
+     */
+    private function detailDe(TachePlanifiee $tache, FenetreDeDiagnostic $fenetre, Collection $echecs, bool $texteBrut): array
+    {
+        return [
+            ...$this->tache($tache, $fenetre, LecturesBornees::bornees($echecs), LecturesBornees::GROUPES_AU_PLUS, $texteBrut),
+            'echantillon' => LecturesBornees::deborde($echecs),
+        ];
     }
 
     /**
