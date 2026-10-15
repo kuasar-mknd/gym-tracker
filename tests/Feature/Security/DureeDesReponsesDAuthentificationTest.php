@@ -25,6 +25,7 @@ use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\DureeSimulee;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\FormulaireDeReinitialisation;
 use Tests\Support\TimeboxEspionnee;
 
 use function Pest\Laravel\assertGuest;
@@ -185,12 +186,28 @@ function dureeAuthentificationCas(): array
             $compte = User::factory()->create(['email' => 'prise@example.org']);
             Password::createToken($compte);
 
+            return static fn (): mixed => test()->post(
+                route('password.store'),
+                FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!', 'un-jeton-quelconque'),
+            )->assertSessionHasErrors('token');
+        }],
+        'réinitialisation, adresse du lien qui ne se déchiffre pas' => [static function (): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+            $formulaire = FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!');
+            $formulaire['adresse'] = strrev($formulaire['adresse']);
+
+            return static fn (): mixed => test()->post(route('password.store'), $formulaire)->assertSessionHasErrors('token');
+        }],
+        'réinitialisation, lien d’avant le chiffrement (adresse en clair)' => [static function (): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+            $jeton = Password::createToken($compte);
+
             return static fn (): mixed => test()->post(route('password.store'), [
-                'token' => 'un-jeton-quelconque',
+                'token' => $jeton,
                 'email' => 'prise@example.org',
                 'password' => 'Un-nouveau-mot-de-passe-2026!',
                 'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
-            ])->assertSessionHasErrors('email');
+            ])->assertSessionHasErrors('token');
         }],
         'panneau, adresse inconnue' => [static fn (): Closure => $panneau('personne@example.org')],
         'panneau, administrateur' => [static function () use ($panneau): Closure {

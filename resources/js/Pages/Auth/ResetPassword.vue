@@ -1,17 +1,27 @@
 <script setup>
+/**
+ * La page qu'ouvre le lien du courriel « mot de passe oublié ».
+ *
+ * Le lien ne porte l'adresse du compte que chiffrée : la page la reçoit telle
+ * quelle (`adresse`) et la renvoie avec le jeton et le nouveau mot de passe,
+ * sans la lire ni l'afficher. Un lien refusé (jeton faux ou périmé, lien d'avant
+ * le chiffrement) revient avec l'erreur sous `token`, montrée en tête avec le
+ * chemin d'une nouvelle demande.
+ */
+import InputError from '@/Components/Form/InputError.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 
 const props = defineProps({
-    email: String,
     token: String,
+    adresse: String,
 })
 
 const form = useForm({
     token: props.token,
-    email: props.email,
+    adresse: props.adresse,
     password: '',
     password_confirmation: '',
 })
@@ -32,16 +42,17 @@ const submit = () => {
             <p class="text-text-muted mt-1">Choisis un nouveau mot de passe sécurisé</p>
         </div>
 
-        <form @submit.prevent="submit" class="space-y-4">
-            <GlassInput
-                v-model="form.email"
-                type="email"
-                label="Email"
-                :error="form.errors.email"
-                autocomplete="username"
-                required
-            />
+        <div v-if="form.errors.token" class="mb-4" data-testid="lien-refuse">
+            <InputError id="lien-refuse" :message="form.errors.token" />
+            <Link
+                :href="route('password.request')"
+                class="text-accent-primary-deep hover:text-accent-tertiary-deep mt-2 inline-block text-sm font-semibold transition-colors"
+            >
+                Demander un nouveau lien
+            </Link>
+        </div>
 
+        <form @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.password"
                 type="password"

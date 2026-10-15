@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Support\LiensDesCourriels;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules;
 
@@ -17,6 +18,13 @@ use Illuminate\Validation\Rules;
  *
  * Une `FormRequest` rend un `array<string, mixed>` connu, et rejoint la
  * convention des trois classes voisines de ce dossier.
+ *
+ * Le formulaire n'envoie plus l'adresse du compte en clair : il renvoie
+ * `adresse`, la valeur chiffrée que porte le lien du courriel
+ * (`LiensDesCourriels::lienDeReinitialisation()`), et seul
+ * `identifiantsDuLien()` la déchiffre. Aucune règle n'en juge : absente ou
+ * illisible, elle refuse le lien comme un jeton faux, sous le même plancher
+ * de durée, là où une erreur de validation répondrait autrement et aussitôt.
  */
 class NewPasswordRequest extends FormRequest
 {
@@ -37,9 +45,36 @@ class NewPasswordRequest extends FormRequest
     {
         return [
             'token' => 'required',
-            'email' => 'required|email',
+            'adresse' => ['nullable'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'password_confirmation' => 'required',
+        ];
+    }
+
+    /**
+     * Ce que le courtier reçoit : le jeton, l'adresse du lien déchiffrée sous
+     * la clef `email` où il la cherche, et le nouveau mot de passe ; null quand
+     * le lien ne porte pas d'adresse qui se déchiffre.
+     *
+     * L'adresse en clair ne rejoint jamais la requête : fusionnée, elle
+     * partirait avec ses données dans la saisie que la session garde après un
+     * refus et dans le rapport d'une exception.
+     *
+     * @return array{token: string, email: string, password: string, password_confirmation: string}|null
+     */
+    public function identifiantsDuLien(): ?array
+    {
+        $adresse = LiensDesCourriels::adresseDuLienDeReinitialisation($this->validated('adresse'));
+
+        if ($adresse === null) {
+            return null;
+        }
+
+        return [
+            'token' => $this->string('token')->value(),
+            'email' => $adresse,
+            'password' => $this->string('password')->value(),
+            'password_confirmation' => $this->string('password_confirmation')->value(),
         ];
     }
 }
