@@ -16,12 +16,21 @@
     dans les deux environnements. Les couleurs viennent de `App\Support\Charte`,
     qui lit `app.css` — le rendu contient bien des litteraux, c'est inevitable
     pour une page autonome, mais ils ne sont ecrits qu'a un endroit.
+
+    Et elle porte sa propre politique, dans la balise `meta` ci-dessous : la
+    reponse n'en porte aucune quand l'erreur survient hors du groupe `web`
+    (adresse inconnue, methode refusee, maintenance), et la page que
+    `php artisan down --render` ecrit d'avance est servie avant Laravel, sans
+    aucun en-tete de l'application. Elle n'autorise que ce bloc `<style>` :
+    une ressource ajoutee a cette page y serait bloquee, comme elle doit
+    l'etre. Sous la politique de l'application, les deux s'appliquent.
 --}}
 <!DOCTYPE html>
 <html lang="fr">
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $titre }}</title>
     <style>
