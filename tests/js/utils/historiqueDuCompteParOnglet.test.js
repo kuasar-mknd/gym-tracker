@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
 import {
     CLEF_DE_L_HISTORIQUE,
@@ -19,14 +19,21 @@ import {
  *
  * jsdom ne joint pas de serveur : `XMLHttpRequest` est remplacé par un serveur
  * qui rend, pour chaque adresse, la page qu'on lui donne, et compte les
- * requêtes. jsdom recopie aussi l'état de l'historique dans un autre domaine,
- * où `instanceof ArrayBuffer`, que fait Inertia avant de déchiffrer, ne
- * reconnaît plus l'entrée chiffrée : Inertia la croirait absente et la
- * redemanderait toujours au serveur, avec ou sans clé. Un navigateur rend le
- * même `ArrayBuffer` ; le test le reconnaît par sa marque, comme lui, le temps
- * du fichier. Le premier cas vérifie que le Retour relit bien l'historique
- * sans le serveur quand la clé est là : les suivants ne passent donc pas par
- * hasard.
+ * requêtes. L'entrée qu'Inertia chiffre dans l'historique se reconnaît comme
+ * Inertia la reconnaît avant de la déchiffrer, par `instanceof ArrayBuffer` :
+ * une entrée qu'il ne reconnaîtrait pas, il la redemanderait toujours au
+ * serveur, avec ou sans clé. Un cas vérifie donc que le Retour relit bien
+ * l'historique sans le serveur quand la clé est là : les autres ne passent pas
+ * par hasard (`.ai/rules/tests-js.md`).
+ *
+ * Le routeur d'Inertia est unique par module, et les écouteurs qu'il pose sur
+ * la fenêtre ne se retirent pas : une seconde application répondrait deux fois
+ * au bouton Retour. L'onglet se monte donc une fois pour le fichier, comme
+ * `main.js` le monte une fois pour le document. Chaque cas bâtit pourtant
+ * lui-même l'historique qu'il remonte, par ses propres visites, face à un
+ * serveur vidé avant lui (#2044) : aucun ne dépend de la page, de la clé ou du
+ * titulaire que le cas d'avant a laissés, et l'ordre aléatoire
+ * (`--sequence.shuffle`) n'y change rien.
  */
 
 /** Les pages que le faux serveur rend, par chemin. */
@@ -88,15 +95,10 @@ const regarder = () => {
 }
 
 let routeur
-const reconnaitreUnArrayBuffer = Object.getOwnPropertyDescriptor(ArrayBuffer, Symbol.hasInstance)
 
 beforeAll(async () => {
     vi.stubGlobal('XMLHttpRequest', RequeteSimulee)
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    Object.defineProperty(ArrayBuffer, Symbol.hasInstance, {
-        value: (valeur) => Object.prototype.toString.call(valeur) === '[object ArrayBuffer]',
-        configurable: true,
-    })
 
     window.sessionStorage.clear()
     window.localStorage.clear()
@@ -135,17 +137,19 @@ beforeAll(async () => {
 
 beforeEach(() => {
     requetes.length = 0
+
+    for (const chemin of Object.keys(serveur)) {
+        delete serveur[chemin]
+    }
+})
+
+afterEach(() => {
+    observateur?.disconnect()
+    observateur = undefined
+    vus = []
 })
 
 afterAll(() => {
-    observateur?.disconnect()
-
-    if (reconnaitreUnArrayBuffer) {
-        Object.defineProperty(ArrayBuffer, Symbol.hasInstance, reconnaitreUnArrayBuffer)
-    } else {
-        delete ArrayBuffer[Symbol.hasInstance]
-    }
-
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
 })
@@ -170,6 +174,7 @@ const revenir = async (attendu) => {
 
 describe('un onglet qui reçoit les pages d’un seul compte', () => {
     it('garde sa clé, et le Retour relit l’historique sans rien demander au serveur', async () => {
+        await visiter('/daily-journals', page(1, '/daily-journals', 'Note privée de A'))
         const cle = window.sessionStorage.getItem(CLEF_DE_L_HISTORIQUE)
         await visiter('/profile', page(1, '/profile', 'Profil de A'))
 
@@ -225,6 +230,7 @@ describe('un onglet qui reçoit la page d’un autre titulaire, sans `clearHisto
 
 describe('un onglet resté sur une page du compte parti, sans rien visiter', () => {
     it('jette sa clé dès qu’un autre onglet reçoit la page d’un autre titulaire', async () => {
+        await visiter('/daily-journals', page(2, '/daily-journals', 'Note de B'))
         await visiter('/measurements', page(2, '/measurements', 'Mesures de B'))
         expect(window.sessionStorage.getItem(CLEF_DE_L_HISTORIQUE)).not.toBeNull()
 

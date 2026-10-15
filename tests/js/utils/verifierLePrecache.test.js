@@ -19,10 +19,14 @@ const SCRIPT = join(racineDuDepot, 'scripts/verifier-le-precache.mjs')
  * jamais un script PHP.
  */
 describe('la vérification du precache', () => {
+    /** Le dépôt factice du cas, s'il en a bâti un : le cas de la CI n'en bâtit pas. */
     let dossier
 
     afterEach(() => {
-        rmSync(dossier, { recursive: true, force: true })
+        if (dossier !== undefined) {
+            rmSync(dossier, { recursive: true, force: true })
+            dossier = undefined
+        }
     })
 
     /**

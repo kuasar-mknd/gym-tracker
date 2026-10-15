@@ -13,10 +13,7 @@ import { routeDeTest } from '../composables/seanceHorsLigne'
  * jsdom ne joint pas de serveur : les visites d'Inertia passent par une
  * `XMLHttpRequest` simulée, qui rend chaque page d'après ce que le faux serveur
  * de `seanceHorsLigne.js` a en base, et les écritures de la séance par ce faux
- * serveur, qu'on coupe. jsdom recopie aussi `history.state` dans un autre
- * domaine, où le `instanceof ArrayBuffer` d'Inertia ne reconnaît plus l'entrée
- * chiffrée : elle est reconnue à sa marque, comme dans un navigateur
- * (`.ai/rules/tests-js.md`).
+ * serveur, qu'on coupe.
  *
  * Le client d'Inertia ne démarre qu'une fois par fichier : un fichier, un test.
  * Le fichier déclare ses `vi.mock` (`@/Utils/http` vers le faux serveur,
@@ -103,8 +100,6 @@ const pagesDuServeur = (serveur) => ({
 })
 
 const ListeDesSeances = { name: 'ListeDesSeances', render: () => h('p', { id: 'liste-des-seances' }, 'Séances') }
-
-const reconnaitreUnArrayBuffer = Object.getOwnPropertyDescriptor(ArrayBuffer, Symbol.hasInstance)
 
 /** Le sélecteur trouve un élément dans la page. */
 export const present = (selecteur) => document.querySelector(selecteur) !== null
@@ -311,10 +306,6 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
             requetesEnVol--
         }
     }
-    Object.defineProperty(ArrayBuffer, Symbol.hasInstance, {
-        value: (valeur) => Object.prototype.toString.call(valeur) === '[object ArrayBuffer]',
-        configurable: true,
-    })
 
     localStorage.clear()
     sessionStorage.clear()
@@ -374,12 +365,6 @@ export const fermerLaListeDesSeances = async () => {
 
     retirerLesEcouteursDuService()
     poserLaPage(null)
-
-    if (reconnaitreUnArrayBuffer) {
-        Object.defineProperty(ArrayBuffer, Symbol.hasInstance, reconnaitreUnArrayBuffer)
-    } else {
-        delete ArrayBuffer[Symbol.hasInstance]
-    }
 
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
