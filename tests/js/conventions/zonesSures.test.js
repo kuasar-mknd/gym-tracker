@@ -823,6 +823,98 @@ const requeteValable = (requete, ecran) => {
     return condition()
 }
 
+/** Une valeur de `display`, que `hidden` cache et les autres montrent. */
+const AFFICHAGE = /^(?:hidden|block|inline|inline-block|flex|inline-flex|grid|inline-grid|table|flow-root|contents)$/
+
+/** Un point de rupture de Tailwind, dans un sens ou dans l'autre ; `bureau:` n'en est pas un. */
+const POINT_DE_RUPTURE = /^(?:max-)?(?:sm|md|lg|xl|2xl)$/
+
+/**
+ * Ce qu'une liste de classes montre ou cache selon la largeur, hors `bureau:` :
+ * `hidden sm:flex`, `sm:hidden`… `null` quand elle ne cache rien ainsi :
+ * `flex sm:grid` change d'affichage sans cacher, `sm:flex-row` de direction.
+ *
+ * @param {string} liste
+ * @returns {string|null}
+ */
+const basculeParLaLargeur = (liste) => {
+    const mots = classes(liste).map(decomposer)
+    const cacheAuDepart = mots.some(({ variante, base }) => variante === '' && base === 'hidden')
+    const basculants = mots
+        .filter(({ variante, base }) => POINT_DE_RUPTURE.test(variante) && AFFICHAGE.test(base))
+        .filter(({ base }) => cacheAuDepart || base === 'hidden')
+        .map(({ variante, base }) => `${variante}:${base}`)
+        .sort()
+
+    return basculants.length === 0 ? null : [...(cacheAuDepart ? ['hidden'] : []), ...basculants].join(' ')
+}
+
+/**
+ * Les bascules par la largeur d'une source, comptées : `{ 'hidden sm:flex': 2 }`.
+ *
+ * @param {string} source
+ * @param {boolean} vue
+ * @returns {Record<string, number>}
+ */
+const basculesDeLaSource = (source, vue = true) =>
+    listesDeLaSource(source, vue)
+        .map(basculeParLaLargeur)
+        .filter((bascule) => bascule !== null)
+        .reduce((comptes, bascule) => ({ ...comptes, [bascule]: (comptes[bascule] ?? 0) + 1 }), {})
+
+/**
+ * Les bascules par la largeur qui ne suivent pas la barre de bureau, à
+ * dessein : chacune change la mise en page d'un même composant, ses deux
+ * moitiés, s'il y en a deux, sur la même variante, et rien ne la double dans
+ * l'en-tête mobile. Le nombre compte : une bascule de plus dans le même
+ * fichier revient devant la garde, et une bascule disparue doit sortir de la
+ * liste.
+ */
+const BASCULES_DE_MISE_EN_PAGE = [
+    {
+        fichier: 'resources/js/Components/Journal/JournalList.vue',
+        bascule: 'sm:hidden',
+        nombre: 1,
+        raison: 'l’humeur d’une entrée, dans la colonne de la date tant que celle-ci est une ligne',
+    },
+    {
+        fichier: 'resources/js/Components/Journal/JournalList.vue',
+        bascule: 'hidden sm:block',
+        nombre: 1,
+        raison: 'la même humeur, à côté des étiquettes quand la colonne de la date passe à gauche',
+    },
+    {
+        fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
+        bascule: 'sm:hidden',
+        nombre: 1,
+        raison: 'le bouton « Modifier » d’un exercice au doigt, qui supprime d’un glissement',
+    },
+    {
+        fichier: 'resources/js/Components/Workout/ExerciseCard.vue',
+        bascule: 'hidden sm:inline-flex',
+        nombre: 2,
+        raison: '« Modifier » et « Supprimer » côte à côte dès sm, à la place du précédent',
+    },
+    {
+        fichier: 'resources/js/Components/Workout/RangeeDeSerie.vue',
+        bascule: 'hidden sm:block',
+        nombre: 1,
+        raison: 'la suppression d’une série pour la souris, que le glissement remplace au doigt',
+    },
+    {
+        fichier: 'resources/js/Components/Exercises/FiltresDeLaBibliotheque.vue',
+        bascule: 'hidden sm:flex',
+        nombre: 1,
+        raison: 'l’indication du raccourci ⌘K de la recherche, décorative',
+    },
+    {
+        fichier: 'resources/js/Pages/Habits/Index.vue',
+        bascule: 'hidden sm:flex',
+        nombre: 1,
+        raison: 'la vignette de l’icône d’une habitude, qui ne tient pas dans la rangée d’un téléphone',
+    },
+]
+
 /**
  * Un téléphone couché garde l'en-tête mobile et la barre du bas (#2043) : la
  * barre de bureau n'y tient pas, et sa cloche et son menu du compte passaient
@@ -902,6 +994,65 @@ describe('la barre de bureau', () => {
             'L’en-tête mobile porte le titre jusqu’à bureau: ; un titre caché jusqu’à sm: se montrerait en double ' +
                 'sur un téléphone couché (hidden bureau:block).',
         ).toEqual([])
+    })
+
+    /**
+     * Les boutons qu'une page double entre les deux en-têtes, et l'espace
+     * qu'elle réserve à la barre du bas, basculent avec la barre de bureau.
+     * Repassés à `sm:`, « Ajouter » des compléments et « Nouvel Exercice » de
+     * la bibliothèque se montraient deux fois sur un téléphone couché, une
+     * fois dans l'en-tête mobile et une fois dans la page, sans qu'aucun test
+     * ne le voie. Toute bascule par la largeur s'écrit donc `bureau:`, hors la
+     * mise en page d'un même composant, listée avec sa raison.
+     */
+    it('ne cache ni ne montre rien selon la largeur hors bureau:, sauf la mise en page d’un même composant', () => {
+        const trouvees = fichiers()
+            .flatMap((chemin) =>
+                Object.entries(basculesDeLaSource(readFileSync(chemin, 'utf8'), chemin.endsWith('.vue'))).map(
+                    ([bascule, nombre]) => `${relatif(chemin)} : ${bascule} × ${nombre}`,
+                ),
+            )
+            .sort()
+        const permises = BASCULES_DE_MISE_EN_PAGE.map(
+            ({ fichier, bascule, nombre }) => `${fichier} : ${bascule} × ${nombre}`,
+        ).sort()
+
+        expect(
+            trouvees,
+            'Ce qui bascule avec la barre de bureau s’écrit bureau: (hidden bureau:flex, bureau:hidden). ' +
+                'Une bascule sm:, md:… s’ouvre aussi sur un téléphone couché, où l’en-tête mobile reste : ' +
+                'une commande doublée s’y montre deux fois, ou nulle part. Seule la mise en page d’un même ' +
+                'composant s’écrit autrement, dans BASCULES_DE_MISE_EN_PAGE avec sa raison.',
+        ).toEqual(permises)
+    })
+
+    it.each([
+        ['hidden sm:flex', 'hidden sm:flex'],
+        ['h-24 sm:hidden', 'sm:hidden'],
+        ['hidden md:block', 'hidden md:block'],
+        ['flex max-sm:hidden', 'max-sm:hidden'],
+        ['hidden sm:flex sm:items-center', 'hidden sm:flex'],
+        ['bureau:flex hidden size-11', null],
+        ['bureau:hidden h-24', null],
+        ['flex flex-col sm:flex-row', null],
+        ['flex sm:grid', null],
+        ['hidden', null],
+    ])('lit « %s » comme la bascule %s', (liste, bascule) => {
+        expect(basculeParLaLargeur(liste)).toBe(bascule)
+    })
+
+    it('refuse un bouton de page doublé à sm:, écrit en class ou en :class', () => {
+        expect(
+            basculesDeLaSource(
+                '<template><GlassButton class="hidden size-11 sm:flex" @click="ajouter">Ajouter</GlassButton><div class="h-24 sm:hidden"></div></template>',
+            ),
+        ).toEqual({ 'hidden sm:flex': 1, 'sm:hidden': 1 })
+        expect(
+            basculesDeLaSource(`<template><GlassButton :class="['hidden', ouvert ? 'sm:flex' : '']" /></template>`),
+        ).toEqual({ 'hidden sm:flex': 1 })
+        expect(basculesDeLaSource(`const classes = computed(() => 'hidden lg:block')`, false)).toEqual({
+            'hidden lg:block': 1,
+        })
     })
 })
 

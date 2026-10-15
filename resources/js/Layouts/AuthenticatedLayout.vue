@@ -146,7 +146,7 @@ onMounted(() => {
                         </div>
 
                         <!-- Desktop Navigation Links -->
-                        <div class="hidden space-x-1 sm:ms-8 sm:flex">
+                        <div class="bureau:flex hidden space-x-1 sm:ms-8">
                             <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                 Accueil
                             </NavLink>
@@ -169,7 +169,7 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div class="hidden gap-3 sm:ms-6 sm:flex sm:items-center">
+                    <div class="bureau:flex hidden gap-3 sm:ms-6 sm:items-center">
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
