@@ -87,9 +87,16 @@ class NewPasswordController extends Controller
      * reprend ainsi le compte.
      *
      * Sans identifiants (adresse du lien illisible), le refus est celui d'un
-     * jeton faux. L'adresse déchiffrée n'est jamais recopiée hors d'ici : ni
-     * journal, ni message d'exception, et ce paramètre, comme celui du
-     * courtier, est tu dans la pile d'une exception (`SensitiveParameter`).
+     * jeton faux. L'adresse déchiffrée n'est recopiée ni dans un journal ni
+     * dans un message d'exception. Dans la pile d'une exception, c'est le
+     * réglage de l'image qui la tait, `zend.exception_ignore_args = On`
+     * (`docker/php-prod.ini`, tenu par `LesPilesNeGardentPasLeursArgumentsTest`) :
+     * `Password::reset()` passe ces identifiants par la façade puis par le
+     * gestionnaire des courtiers, deux cadres que rien ne marque, avant le
+     * courtier, qui les marque. `#[SensitiveParameter]` ne tait que le cadre de
+     * cette méthode : une ceinture, pas la protection. Appeler un courtier
+     * nommé ôterait ces deux cadres, mais la garde de
+     * `MotDePasseOublieMemeReponseTest` n'accorde à ce contrôleur que `reset`.
      *
      * @param  array{token: string, email: string, password: string, password_confirmation: string}|null  $credentials
      */
