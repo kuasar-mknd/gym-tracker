@@ -19,13 +19,12 @@ import {
  *
  * jsdom ne joint pas de serveur : `XMLHttpRequest` est remplacé par un serveur
  * qui rend, pour chaque adresse, la page qu'on lui donne, et compte les
- * requêtes. jsdom recopie aussi l'état de l'historique dans un autre domaine,
- * où `instanceof ArrayBuffer`, que fait Inertia avant de déchiffrer, ne
- * reconnaît plus l'entrée chiffrée : Inertia la croirait absente et la
- * redemanderait toujours au serveur, avec ou sans clé. Un navigateur rend le
- * même `ArrayBuffer` ; le test le reconnaît par sa marque, comme lui, le temps
- * du fichier. Un cas vérifie que le Retour relit bien l'historique sans le
- * serveur quand la clé est là : les autres ne passent donc pas par hasard.
+ * requêtes. L'entrée qu'Inertia chiffre dans l'historique se reconnaît comme
+ * Inertia la reconnaît avant de la déchiffrer, par `instanceof ArrayBuffer` :
+ * une entrée qu'il ne reconnaîtrait pas, il la redemanderait toujours au
+ * serveur, avec ou sans clé. Un cas vérifie donc que le Retour relit bien
+ * l'historique sans le serveur quand la clé est là : les autres ne passent pas
+ * par hasard (`.ai/rules/tests-js.md`).
  *
  * Le routeur d'Inertia est unique par module, et les écouteurs qu'il pose sur
  * la fenêtre ne se retirent pas : une seconde application répondrait deux fois
@@ -96,15 +95,10 @@ const regarder = () => {
 }
 
 let routeur
-const reconnaitreUnArrayBuffer = Object.getOwnPropertyDescriptor(ArrayBuffer, Symbol.hasInstance)
 
 beforeAll(async () => {
     vi.stubGlobal('XMLHttpRequest', RequeteSimulee)
     vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    Object.defineProperty(ArrayBuffer, Symbol.hasInstance, {
-        value: (valeur) => Object.prototype.toString.call(valeur) === '[object ArrayBuffer]',
-        configurable: true,
-    })
 
     window.sessionStorage.clear()
     window.localStorage.clear()
@@ -156,12 +150,6 @@ afterEach(() => {
 })
 
 afterAll(() => {
-    if (reconnaitreUnArrayBuffer) {
-        Object.defineProperty(ArrayBuffer, Symbol.hasInstance, reconnaitreUnArrayBuffer)
-    } else {
-        delete ArrayBuffer[Symbol.hasInstance]
-    }
-
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
 })

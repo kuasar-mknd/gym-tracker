@@ -34,11 +34,10 @@ const fenetreDeTest = ({
 }
 
 /**
- * Une entrée chiffrée par Inertia : un `ArrayBuffer`, reconnu par sa marque,
- * puisque l'historique de jsdom le recopie dans un autre domaine que celui du
- * test, où `instanceof` ne le reconnaît plus.
+ * Une entrée chiffrée par Inertia : un `ArrayBuffer`, reconnu comme Inertia le
+ * reconnaît avant de le déchiffrer.
  */
-const estChiffree = (donnees) => Object.prototype.toString.call(donnees) === '[object ArrayBuffer]'
+const estChiffree = (donnees) => donnees instanceof ArrayBuffer
 
 /** Un routeur qui retient ses écouteurs, et jette la clé comme Inertia. */
 const routeurDeTest = () => {
