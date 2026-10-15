@@ -241,11 +241,12 @@ it('affiche le nom, l’email et la dernière activité de chaque inscrit récen
 });
 
 /*
- * L'encart des derniers inscrits ne montre que des comptes ouverts : un compte
- * en attente du lien, même plus récent, ne s'y glisse pas (la liste des
- * utilisateurs le montre, avec son badge).
+ * L'encart « Derniers comptes ouverts » ne montre que des comptes ouverts, par
+ * date d'inscription : un compte en attente du lien, même plus récent, ne s'y
+ * glisse pas, et l'encart dit où il est (la liste des utilisateurs le montre,
+ * avec sa colonne « En attente du lien »).
  */
-it('n’affiche dans les derniers inscrits que les comptes ouverts', function (): void {
+it('n’affiche dans les derniers comptes ouverts que des comptes ouverts', function (): void {
     $ouvert = User::factory()->create(['created_at' => Carbon::now()->subDays(2)]);
     $jamaisVerifie = User::factory()->unverified()->create(['created_at' => Carbon::now()->subDays(3)]);
     $enAttente = User::factory()->enAttente()->create();
@@ -253,5 +254,7 @@ it('n’affiche dans les derniers inscrits que les comptes ouverts', function ()
     Livewire::test(RecentUsersTable::class)
         ->assertCanSeeTableRecords([$ouvert, $jamaisVerifie], inOrder: true)
         ->assertCanNotSeeTableRecords([$enAttente])
-        ->assertDontSee($enAttente->email);
+        ->assertDontSee($enAttente->email)
+        ->assertSee('Derniers comptes ouverts')
+        ->assertSee("Classés par date d'inscription ; les comptes en attente du lien sont dans la liste des utilisateurs.");
 });

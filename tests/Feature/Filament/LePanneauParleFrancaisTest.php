@@ -158,15 +158,20 @@ it('appelle « Compléments » la ressource des compléments, comme l’applicat
         ->and(SupplementResource::getNavigationLabel())->toBe('Compléments');
 });
 
-it('affiche en français l’encart des derniers inscrits', function (): void {
+/*
+ * Sans titre posé, Filament tirait celui de l'encart du nom de sa classe. Le
+ * titre dit ce que l'encart montre : des comptes ouverts, pas les dernières
+ * inscriptions, dont les comptes en attente du lien ne s'y glissent pas.
+ */
+it('affiche en français l’encart des derniers comptes ouverts', function (): void {
     $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('User')), 'admin');
     User::factory()->create();
 
     $html = panneauHtmlResserre(Livewire::test(RecentUsersTable::class)->html());
 
-    // Sans titre posé, Filament tirait celui de l'encart du nom de sa classe.
-    expect($html)->toContain('Derniers inscrits', 'Inscription', 'Dernière activité', 'Adresse e-mail')
-        ->and($html)->not->toContain('Recent Users Table');
+    expect($html)->toContain('Derniers comptes ouverts', 'les comptes en attente du lien sont dans la liste des utilisateurs', 'Inscription', 'Dernière activité', 'Adresse e-mail')
+        ->and($html)->not->toContain('Recent Users Table')
+        ->and($html)->not->toContain('Derniers inscrits');
 
     foreach (panneauLibellesAnglais() as $libelle) {
         expect($html)->not->toContain($libelle);

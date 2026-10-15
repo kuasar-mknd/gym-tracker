@@ -18,20 +18,25 @@ class RecentUsersTable extends TableWidget
     protected int|string|array $columnSpan = 'full';
 
     /**
-     * Les dix derniers inscrits dont le compte est ouvert. Un compte encore en
-     * attente du lien n'y figure pas (`User::ouverts()`) : il ne se connecte
-     * pas, s'efface s'il n'est jamais ouvert, et son adresse peut être celle
-     * d'un tiers. La liste des utilisateurs le montre, avec son badge et son
-     * filtre « En attente du lien ».
+     * Les dix derniers comptes ouverts, par date d'inscription. Un compte
+     * encore en attente du lien n'y figure pas (`User::ouverts()`) : il ne se
+     * connecte pas, s'efface s'il n'est jamais ouvert, et son adresse peut
+     * être celle d'un tiers. La liste des utilisateurs le montre, avec sa
+     * colonne et son filtre « En attente du lien », et la tuile « Comptes »
+     * dit combien attendent.
      *
-     * Le titre se pose ici : sans lui, Filament tire du nom de la classe
-     * « Recent Users Table », en anglais.
+     * Le titre dit ce que l'encart montre : « Derniers inscrits » promettait
+     * les inscriptions les plus récentes, que sont justement les comptes en
+     * attente. La description dit l'ordre, et où sont les autres. Sans titre
+     * posé, Filament tire du nom de la classe « Recent Users Table », en
+     * anglais.
      */
     #[\Override]
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Derniers inscrits')
+            ->heading('Derniers comptes ouverts')
+            ->description("Classés par date d'inscription ; les comptes en attente du lien sont dans la liste des utilisateurs.")
             ->query(User::ouverts()->latest()->limit(10))
             ->columns([
                 // Pas de `searchable()` : chaque frappe declenchait deux
