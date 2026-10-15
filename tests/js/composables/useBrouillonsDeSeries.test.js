@@ -138,6 +138,44 @@ describe('les valeurs que le serveur détient', () => {
     })
 })
 
+/*
+ * L'entrée d'historique de la séance garde, à la place d'une valeur dont
+ * l'écriture attend encore, celle que la page rétablit si le serveur refuse :
+ * gardée telle qu'à l'écran, une valeur refusée après le départ revenait au
+ * bouton Avance comme enregistrée (#2048).
+ */
+describe('les écritures que le serveur n’a pas encore confirmées', () => {
+    it('donnent leur valeur de repli sous l’identifiant que la série porte maintenant, jusqu’à leur réponse', () => {
+        const { noterUneEcritureNonConfirmee, oublierLEcritureNonConfirmee, valeursDeRepli } = useBrouillonsDeSeries()
+        const serie = { id: 'temp-2', weight: 99999, is_completed: true }
+
+        noterUneEcritureNonConfirmee('temp-2_weight', serie, 'weight', 80)
+        noterUneEcritureNonConfirmee('completion:row-2', serie, 'is_completed', false)
+        // La même écriture notée de nouveau : la dernière valeur de repli compte.
+        noterUneEcritureNonConfirmee('temp-2_weight', serie, 'weight', 82.5)
+        serie.id = 12
+
+        expect(valeursDeRepli()).toEqual([
+            { id: 12, champ: 'weight', valeur: 82.5 },
+            { id: 12, champ: 'is_completed', valeur: false },
+        ])
+
+        oublierLEcritureNonConfirmee('temp-2_weight')
+        expect(valeursDeRepli()).toEqual([{ id: 12, champ: 'is_completed', valeur: false }])
+    })
+
+    it('s’oublient avec la série retirée, et elle seule', () => {
+        const { noterUneEcritureNonConfirmee, oublierLaSerie, valeursDeRepli } = useBrouillonsDeSeries()
+
+        noterUneEcritureNonConfirmee('5_weight', { id: 5 }, 'weight', 80)
+        noterUneEcritureNonConfirmee('completion:5', { id: 5 }, 'is_completed', true)
+        noterUneEcritureNonConfirmee('6_reps', { id: 6 }, 'reps', 8)
+        oublierLaSerie('5')
+
+        expect(valeursDeRepli()).toEqual([{ id: 6, champ: 'reps', valeur: 8 }])
+    })
+})
+
 describe('le rejeu des brouillons au montage', () => {
     const page = (envoyer) => {
         const serie = { id: 11, weight: 50, reps: 5 }

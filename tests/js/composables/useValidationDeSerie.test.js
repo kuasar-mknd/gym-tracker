@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
+import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
 import { useValidationDeSerie } from '@/composables/useValidationDeSerie'
 import { createWriteSequencer } from '@/Utils/writeOrdering'
 
@@ -18,6 +19,7 @@ const monter = (patchSet) => {
     const flushPendingUpdates = vi.fn(() => Promise.resolve())
     const reportSyncFailure = vi.fn()
     const apresValidation = vi.fn()
+    const { noterUneEcritureNonConfirmee, oublierLEcritureNonConfirmee, valeursDeRepli } = useBrouillonsDeSeries()
 
     const validation = useValidationDeSerie({
         patchSet,
@@ -26,9 +28,11 @@ const monter = (patchSet) => {
         flushPendingUpdates,
         reportSyncFailure,
         apresValidation,
+        noterUneEcritureNonConfirmee,
+        oublierLEcritureNonConfirmee,
     })
 
-    return { validation, flushPendingUpdates, reportSyncFailure, apresValidation }
+    return { validation, flushPendingUpdates, reportSyncFailure, apresValidation, valeursDeRepli }
 }
 
 describe('la validation d’une série', () => {
@@ -71,5 +75,48 @@ describe('la validation d’une série', () => {
         await decoche
         expect(set.is_completed).toBe(false)
         expect(set.updated_at).toBe('t2')
+    })
+})
+
+/*
+ * L'entrée d'historique de la séance garde la coche d'avant tant que le
+ * serveur n'a pas répondu au dernier appui, comme une valeur saisie (#2048).
+ */
+describe('la coche d’avant, tant que le serveur n’a pas répondu', () => {
+    it('vaut jusqu’à la réponse du dernier appui', async () => {
+        const premiere = differee()
+        const seconde = differee()
+        const reponses = [premiere.promesse, seconde.promesse]
+        const { validation, valeursDeRepli } = monter(() => reponses.shift())
+        const set = { id: 4, _rowKey: 'row-4', is_completed: false }
+
+        const coche = validation.toggleSetCompletion(set, 60)
+        await flushPromises()
+        expect(valeursDeRepli()).toEqual([{ id: 4, champ: 'is_completed', valeur: false }])
+
+        const decoche = validation.toggleSetCompletion(set, 60)
+        expect(valeursDeRepli()).toEqual([{ id: 4, champ: 'is_completed', valeur: true }])
+
+        premiere.resoudre({ data: { data: { is_completed: true, personal_record: null, updated_at: 't1' } } })
+        await coche
+        expect(valeursDeRepli()).toHaveLength(1)
+
+        seconde.resoudre({ data: { data: { is_completed: false, personal_record: null, updated_at: 't2' } } })
+        await decoche
+        expect(valeursDeRepli()).toEqual([])
+    })
+
+    it('s’oublie au refus, qui rétablit la coche, et quand la file prend l’écriture', async () => {
+        const refus = [{ response: { status: 403 } }, { isOffline: true }]
+        const { validation, valeursDeRepli } = monter(() => Promise.reject(refus.shift()))
+        const refusee = { id: 4, _rowKey: 'row-4', is_completed: false }
+        const enFile = { id: 5, _rowKey: 'row-5', is_completed: false }
+
+        await validation.toggleSetCompletion(refusee, 60)
+        await validation.toggleSetCompletion(enFile, 60)
+
+        expect(refusee.is_completed).toBe(false)
+        expect(enFile.is_completed).toBe(true)
+        expect(valeursDeRepli()).toEqual([])
     })
 })

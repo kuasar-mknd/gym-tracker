@@ -415,16 +415,28 @@ const sansLesChampsDeLEcran = (rangee) =>
  * superposition les rend au retour sous `temp-q<queueId>`, ou elle vole, et
  * elle n'a pas encore d'identifiant à garder. Les champs `_*` sortent aussi :
  * `_rowKey` vient du compteur du montage qui l'a donné, et le montage suivant,
- * qui repart de zéro, donnerait la même clef à une autre rangée. Les valeurs
- * restent celles de l'écran : une saisie qui vole encore quand la personne
- * part aboutit après, et l'entrée de la page, qu'on ne peut plus réécrire, ne
- * l'aurait jamais.
+ * qui repart de zéro, donnerait la même clef à une autre rangée.
+ *
+ * Un champ d'une série réelle dont l'écriture attend le debounce ou sa réponse
+ * garde sa valeur de repli, celle que la page rétablit si le serveur refuse
+ * (`useBrouillonsDeSeries`). Gardée telle qu'à l'écran, une valeur refusée
+ * après le départ revenait au bouton Avance comme enregistrée, sans marque, et
+ * la page la relevait comme confirmée. La saisie en cours, elle, revient par
+ * son brouillon tant que sa réponse n'est pas arrivée, ou par la file.
  *
  * @param {object} seance la copie locale de la page
+ * @param {Array<{id: unknown, champ: string, valeur: unknown}>} valeursDeRepli
+ *   les champs dont une écriture attend encore, et leur valeur de repli
  * @returns {object} une copie, la séance reçue n'est pas touchée
  */
-export const seanceConnueDuServeur = (seance) => {
+export const seanceConnueDuServeur = (seance, valeursDeRepli = []) => {
     const copie = JSON.parse(JSON.stringify(seance))
+    const repliDe = (serie) =>
+        Object.fromEntries(
+            (Array.isArray(valeursDeRepli) ? valeursDeRepli : [])
+                .filter(({ id, champ }) => memeIdentifiant(id, serie.id) && typeof champ === 'string')
+                .map(({ champ, valeur }) => [champ, valeur]),
+        )
 
     copie.workout_lines = Object.values(copie.workout_lines ?? {})
         .filter((ligne) => ligne !== null && !isTemporaryId(ligne.id))
@@ -432,7 +444,7 @@ export const seanceConnueDuServeur = (seance) => {
             ...sansLesChampsDeLEcran(ligne),
             sets: (Array.isArray(ligne.sets) ? ligne.sets : [])
                 .filter((serie) => serie !== null && !isTemporaryId(serie.id))
-                .map(sansLesChampsDeLEcran),
+                .map((serie) => ({ ...sansLesChampsDeLEcran(serie), ...repliDe(serie) })),
         }))
 
     return copie

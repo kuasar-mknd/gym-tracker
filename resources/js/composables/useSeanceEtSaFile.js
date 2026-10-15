@@ -85,7 +85,9 @@ const seanceGardee = (page, seance) => {
  * ajouté en ligne ne trouvait plus sa ligne et disparaissait avec lui, et une
  * série enregistrée en ligne disparaissait aussi (#2048). Chaque changement de
  * la copie locale est donc gardé dans l'état mémorisé de l'entrée, moins les
- * rangées provisoires que la file rend (`seanceConnueDuServeur`).
+ * rangées provisoires que la file rend, et chaque valeur dont l'écriture
+ * attend encore sa réponse à sa valeur de repli (`seanceConnueDuServeur`) : une
+ * confirmation, qui ne change rien à l'écran, réécrit donc aussi l'entrée.
  *
  * Deux pièges. `router.remember` écrit dans l'entrée COURANTE, et Inertia la
  * change avant que la page parte : une visite qui mène ailleurs pousse la page
@@ -102,28 +104,30 @@ const seanceGardee = (page, seance) => {
  * autre titulaire a pris l'onglet ou l'appareil. Sans page d'Inertia (un test
  * qui la simule), rien n'est gardé.
  *
- * @param {{ page: object, localWorkout: import('vue').Ref<object> }} seance
+ * @param {{
+ *   page: object,
+ *   localWorkout: import('vue').Ref<object>,
+ *   valeursDeRepli: () => Array<{id: unknown, champ: string, valeur: unknown}>,
+ * }} seance
  */
-const garderDansLHistorique = ({ page, localWorkout }) => {
+const garderDansLHistorique = ({ page, localWorkout, valeursDeRepli }) => {
     const composant = page.component
     const adresse = cheminDe(page.url)
     const titulaire = titulaireDeLaPage(page)
+    const empreinteAGarder = () => JSON.stringify(seanceConnueDuServeur(localWorkout.value, valeursDeRepli()))
     let figee = typeof composant !== 'string' || adresse === null || titulaire === null
-    let derniere = JSON.stringify(seanceConnueDuServeur(localWorkout.value))
+    let derniere = empreinteAGarder()
 
-    const garder = () => {
+    const garder = (empreinte) => {
         figee ||= unAutreTitulaire(titulaire)
 
         if (figee || page.component !== composant || cheminDe(page.url) !== adresse) {
             return
         }
 
-        const seance = seanceConnueDuServeur(localWorkout.value)
-        const empreinte = JSON.stringify(seance)
-
         if (empreinte !== derniere) {
             derniere = empreinte
-            router.remember(seance, SOUVENIR_DE_LA_SEANCE)
+            router.remember(JSON.parse(empreinte), SOUVENIR_DE_LA_SEANCE)
         }
     }
 
@@ -141,7 +145,8 @@ const garderDansLHistorique = ({ page, localWorkout }) => {
         }
     }
 
-    watch(localWorkout, garder, { deep: true })
+    // La séance comme les valeurs de repli : l'empreinte lit l'une et les autres.
+    watch(empreinteAGarder, garder)
 
     onMounted(() => {
         document.addEventListener('inertia:beforeUpdate', avantLaPageSuivante)
@@ -179,13 +184,18 @@ const garderDansLHistorique = ({ page, localWorkout }) => {
  * Les brouillons orphelins sont effacés d'abord : un brouillon rangé sous un
  * identifiant provisoire d'un montage précédent désignerait une autre série.
  *
- * @param {{ seance: object, exercices?: Array<object>, page?: object|null }} ouverture
- *   la séance rendue par le serveur, les exercices du compte, et la page
- *   d'Inertia (`usePage()`), dont l'entrée d'historique garde la séance
+ * @param {{
+ *   seance: object,
+ *   exercices?: Array<object>,
+ *   page?: object|null,
+ *   valeursDeRepli?: () => Array<{id: unknown, champ: string, valeur: unknown}>,
+ * }} ouverture la séance rendue par le serveur, les exercices du compte, la
+ *   page d'Inertia (`usePage()`), dont l'entrée d'historique garde la séance,
+ *   et les valeurs de repli des écritures qui attendent (`useBrouillonsDeSeries`)
  * @returns {{ localWorkout: import('vue').Ref<object>, seanceDeDepart: object }}
  *   la copie locale, et la séance d'où elle part, celle du serveur ou de l'historique
  */
-export const useSeanceEtSaFile = ({ seance, exercices = [], page = null }) => {
+export const useSeanceEtSaFile = ({ seance, exercices = [], page = null, valeursDeRepli = () => [] }) => {
     const seanceDeDepart = seanceGardee(page, seance) ?? seance
     const entrees = SyncService.entreesDuCompte()
 
@@ -198,7 +208,7 @@ export const useSeanceEtSaFile = ({ seance, exercices = [], page = null }) => {
     )
 
     if (page !== null && getCurrentInstance()) {
-        garderDansLHistorique({ page, localWorkout })
+        garderDansLHistorique({ page, localWorkout, valeursDeRepli })
     }
 
     return { localWorkout, seanceDeDepart }

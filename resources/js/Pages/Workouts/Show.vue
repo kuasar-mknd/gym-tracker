@@ -40,8 +40,26 @@ const props = defineProps({
 
 const page = usePage()
 
+const {
+    releverLesValeursDuServeur,
+    rememberConfirmed,
+    lastConfirmed,
+    writeDraftField,
+    clearDraftField,
+    oublierLaSerie,
+    rejouerLesBrouillons,
+    noterUneEcritureNonConfirmee,
+    oublierLEcritureNonConfirmee,
+    valeursDeRepli,
+} = useBrouillonsDeSeries()
+
 // La copie locale, modifiable pour l'affichage optimiste : la séance du serveur ou de l'historique, la file par-dessus.
-const { localWorkout, seanceDeDepart } = useSeanceEtSaFile({ seance: props.workout, exercices: props.exercises, page })
+const { localWorkout, seanceDeDepart } = useSeanceEtSaFile({
+    seance: props.workout,
+    exercices: props.exercises,
+    page,
+    valeursDeRepli,
+})
 
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(
@@ -100,16 +118,6 @@ const { next: nextWrite, isLatest: isLatestWrite } = createWriteSequencer()
 const fieldWrites = createWriteQueue()
 
 const {
-    releverLesValeursDuServeur,
-    rememberConfirmed,
-    lastConfirmed,
-    writeDraftField,
-    clearDraftField,
-    oublierLaSerie,
-    rejouerLesBrouillons,
-} = useBrouillonsDeSeries()
-
-const {
     ordreEnVol,
     ordreConfirme,
     memoriserLOrdreDesSeries,
@@ -165,6 +173,8 @@ const {
     reportEditFailure,
     apresValidation,
     bornesDUneSerie: props.bornesDUneSerie,
+    noterUneEcritureNonConfirmee,
+    oublierLEcritureNonConfirmee,
 })
 
 useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })

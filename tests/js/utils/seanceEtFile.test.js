@@ -391,6 +391,34 @@ describe('la séance que garde l’entrée d’historique', () => {
         expect(gardee.workout_lines[0].sets[1]).toMatchObject({ id: 12, weight: 87.5 })
     })
 
+    /*
+     * Gardée telle qu'à l'écran, une valeur refusée après le départ de la
+     * page revenait au bouton Avance comme enregistrée, sans marque (#2048).
+     */
+    it('garde à sa valeur de repli un champ dont l’écriture attend encore, d’une série réelle seulement', () => {
+        const aLEcran = seance()
+        aLEcran.workout_lines[0].sets[1].weight = 99999
+        aLEcran.workout_lines[0].sets[1].is_completed = true
+        aLEcran.workout_lines[0].sets[0].reps = 6
+        aLEcran.workout_lines[0].sets.push({ id: 'temp-qq7', _rowKey: 'temp-qq7', weight: 95, reps: 1 })
+
+        const gardee = seanceConnueDuServeur(aLEcran, [
+            { id: '12', champ: 'weight', valeur: 85 },
+            { id: 12, champ: 'is_completed', valeur: false },
+            { id: 'temp-qq7', champ: 'weight', valeur: 1 },
+            { id: 40, champ: 'weight', valeur: 1 },
+        ])
+
+        expect(ecran(gardee)).toEqual([
+            [1, [11, 12]],
+            [2, [21]],
+        ])
+        expect(gardee.workout_lines[0].sets[1]).toMatchObject({ weight: 85, is_completed: false })
+        // Une valeur sans écriture en attente reste celle de l'écran.
+        expect(gardee.workout_lines[0].sets[0].reps).toBe(6)
+        expect(aLEcran.workout_lines[0].sets[1]).toMatchObject({ weight: 99999, is_completed: true })
+    })
+
     it('retire les champs de l’écran, dont la clef qu’un montage suivant redonnerait à une autre rangée', () => {
         const aLEcran = seance()
         aLEcran.workout_lines[0]._rowKey = 'row-1'

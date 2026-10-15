@@ -7,6 +7,7 @@ const inertia = vi.hoisted(() => ({ remember: vi.fn() }))
 vi.mock('@inertiajs/vue3', () => ({ router: { remember: (...args) => inertia.remember(...args) } }))
 vi.mock('@/Utils/SyncService', () => ({ default: { entreesDuCompte: () => [] } }))
 
+import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
 import { SOUVENIR_DE_LA_SEANCE, useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 
 /*
@@ -36,14 +37,14 @@ const pageDeLaSeance = (rememberedState = {}) =>
 const montees = []
 
 /** Monte ce que la page de séance tire de `useSeanceEtSaFile`. */
-const ouvrir = (page, seance = seanceDuServeur()) => {
+const ouvrir = (page, seance = seanceDuServeur(), valeursDeRepli = undefined) => {
     let ouverture
 
     montees.push(
         mount(
             defineComponent({
                 setup() {
-                    ouverture = useSeanceEtSaFile({ seance, exercices: [], page })
+                    ouverture = useSeanceEtSaFile({ seance, exercices: [], page, valeursDeRepli })
 
                     return () => h('div')
                 },
@@ -126,6 +127,37 @@ describe('l’entrée d’historique de la séance', () => {
         series[1].weight = 80
         await nextTick()
         expect(inertia.remember).toHaveBeenCalledTimes(1)
+    })
+
+    /*
+     * Gardée telle qu'à l'écran, une valeur refusée après le départ de la page
+     * revenait au bouton Avance comme enregistrée, et la page la relevait comme
+     * confirmée (#2048).
+     */
+    it('garde la valeur de repli d’une écriture qui attend, et se réécrit quand le serveur la confirme', async () => {
+        const brouillons = useBrouillonsDeSeries()
+        const { localWorkout } = ouvrir(pageDeLaSeance(), seanceDuServeur(), brouillons.valeursDeRepli)
+        const [serie] = localWorkout.value.workout_lines[0].sets
+
+        // Une saisie, et sa coche, dont le serveur n'a rien dit : l'entrée garde ce qu'il connaît.
+        serie.weight = 99999
+        serie.is_completed = false
+        brouillons.noterUneEcritureNonConfirmee('11_weight', serie, 'weight', 80)
+        brouillons.noterUneEcritureNonConfirmee('completion:11', serie, 'is_completed', true)
+        await nextTick()
+        expect(inertia.remember).not.toHaveBeenCalled()
+
+        // Le poids est refusé : l'écran le rétablit, l'entrée n'a rien à réécrire.
+        serie.weight = 80
+        brouillons.oublierLEcritureNonConfirmee('11_weight')
+        await nextTick()
+        expect(inertia.remember).not.toHaveBeenCalled()
+
+        // La coche est acceptée : rien ne change à l'écran, l'entrée la prend.
+        brouillons.oublierLEcritureNonConfirmee('completion:11')
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+        expect(derniereGardee().workout_lines[0].sets[0]).toEqual({ id: 11, weight: 80, reps: 5, is_completed: false })
     })
 
     it('ne s’écrit plus dès qu’une autre page arrive, pas même une dernière fois', async () => {
