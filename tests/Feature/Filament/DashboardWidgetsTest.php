@@ -166,7 +166,8 @@ it('ventile les inscriptions par mois sur les douze mois de l’année en cours'
 /*
  * Le graphique « Inscriptions » ne range que les comptes ouverts, au mois de
  * leur inscription : un compte en attente du lien n'y entre qu'une fois
- * ouvert, et compte alors au mois où il s'est inscrit.
+ * ouvert, et compte alors au mois où il s'est inscrit. Un compte qui n'a
+ * jamais attendu y compte, vérifié ou non : ouvert ne veut pas dire vérifié.
  */
 it('ne range dans les inscriptions que les comptes ouverts', function (): void {
     Carbon::setTestNow(Carbon::parse('2026-05-20 12:00:00'));
@@ -174,12 +175,13 @@ it('ne range dans les inscriptions que les comptes ouverts', function (): void {
     $mai = Carbon::parse('2026-05-18 09:00:00');
 
     User::factory()->count(2)->create(['created_at' => Carbon::parse('2026-03-05 09:00:00')]);
+    User::factory()->unverified()->create(['created_at' => Carbon::parse('2026-03-20 09:00:00')]);
     User::factory()->enAttente()->count(4)->create(['created_at' => $mai, 'en_attente_depuis' => $mai]);
     User::factory()->enAttente()->create(['created_at' => $finAvril, 'en_attente_depuis' => $finAvril])->markEmailAsVerified();
 
     $donnees = new ReflectionMethod(UserActivityChart::class, 'getData')->invoke(new UserActivityChart());
 
-    expect(data_get($donnees, 'datasets.0.data'))->toBe([0, 0, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(data_get($donnees, 'datasets.0.data'))->toBe([0, 0, 3, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
 });
 
 /*

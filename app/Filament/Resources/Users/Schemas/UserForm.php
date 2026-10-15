@@ -67,7 +67,7 @@ class UserForm
              */
             DateTimePicker::make('en_attente_depuis')
                 ->label('En attente du lien depuis')
-                ->helperText(sprintf("Le compte ne s'ouvre qu'une fois suivi le lien envoyé à son adresse ; jamais ouvert, il est effacé au bout de %d jours.", User::JOURS_AVANT_LA_PURGE))
+                ->helperText(sprintf("Le compte s'ouvre quand son titulaire prouve son adresse : lien d'ouverture suivi, mot de passe réinitialisé ou connexion par un fournisseur. Jamais ouvert, il est effacé au bout de %d jours.", User::JOURS_AVANT_LA_PURGE))
                 ->visible(fn (?User $record): bool => $record?->estEnAttente() ?? false)
                 ->disabled()
                 ->dehydrated(false),
