@@ -18,17 +18,28 @@ use Illuminate\Support\Timebox;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use SensitiveParameter;
 
 class NewPasswordController extends Controller
 {
     /**
-     * Display the password reset view.
+     * La page qu'ouvre le lien du courriel. Elle reçoit le jeton et l'adresse
+     * chiffrée tels que le lien les porte, et les renverra avec le nouveau mot
+     * de passe ; l'adresse n'y est ni déchiffrée ni affichée. La page ne
+     * vérifie pas le jeton : afficher l'adresse la donnerait en clair à
+     * quiconque ouvre un lien, même périmé, retrouvé dans un historique ou un
+     * journal, et la rangerait dans l'historique du navigateur, que les pages
+     * d'invité ne chiffrent pas. Un lien d'avant le chiffrement (`?email=` en
+     * clair) ouvre la même page, sans adresse : la réinitialisation le refuse
+     * comme un jeton faux.
      */
     public function create(Request $request): Response
     {
+        $adresse = $request->query('adresse');
+
         return Inertia::render('Auth/ResetPassword', [
-            'email' => $request->email,
             'token' => $request->route('token'),
+            'adresse' => is_string($adresse) ? $adresse : null,
         ]);
     }
 
@@ -41,13 +52,19 @@ class NewPasswordController extends Controller
      * le courtier ne vérifie l'empreinte du jeton (bcrypt) que pour un compte
      * qui a une demande récente. Une réussite répond sans attendre.
      *
+     * Un lien dont l'adresse chiffrée manque ou ne se déchiffre pas
+     * (`NewPasswordRequest::identifiantsDuLien()`) reçoit le même refus, sous
+     * le même plancher, sans que le courtier soit appelé. Le refus se range
+     * sous `token`, que la page affiche avec le chemin d'une nouvelle demande :
+     * elle n'a plus de champ d'adresse.
+     *
      * @throws \Illuminate\Validation\ValidationException
      */
     public function store(NewPasswordRequest $request): RedirectResponse
     {
         $status = DureeDesReponsesDAuthentification::appeler(
             fn (Timebox $delai): string => $this->resetPassword(
-                $request->validated(),
+                $request->identifiantsDuLien(),
                 $delai,
             ),
         );
@@ -57,7 +74,7 @@ class NewPasswordController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'email' => [trans(Password::INVALID_TOKEN)],
+            'token' => [trans(Password::INVALID_TOKEN)],
         ]);
     }
 
@@ -69,19 +86,32 @@ class NewPasswordController extends Controller
      * connexion), et le titulaire d'une adresse qu'un autre a inscrite
      * reprend ainsi le compte.
      *
-     * @param  array<string, mixed>  $credentials
+     * Sans identifiants (adresse du lien illisible), le refus est celui d'un
+     * jeton faux. L'adresse déchiffrée n'est recopiée ni dans un journal ni
+     * dans un message d'exception. Dans la pile d'une exception, c'est le
+     * réglage de l'image qui la tait, `zend.exception_ignore_args = On`
+     * (`docker/php-prod.ini`, tenu par `LesPilesNeGardentPasLeursArgumentsTest`) :
+     * `Password::reset()` passe ces identifiants par la façade puis par le
+     * gestionnaire des courtiers, deux cadres que rien ne marque, avant le
+     * courtier, qui les marque. `#[SensitiveParameter]` ne tait que le cadre de
+     * cette méthode : une ceinture, pas la protection. Appeler un courtier
+     * nommé ôterait ces deux cadres, mais la garde de
+     * `MotDePasseOublieMemeReponseTest` n'accorde à ce contrôleur que `reset`.
+     *
+     * @param  array{token: string, email: string, password: string, password_confirmation: string}|null  $credentials
      */
-    private function resetPassword(array $credentials, Timebox $delai): string
+    private function resetPassword(#[SensitiveParameter] ?array $credentials, Timebox $delai): string
     {
+        if ($credentials === null) {
+            return Password::INVALID_TOKEN;
+        }
+
         /** @phpstan-ignore-next-line */
         return Password::reset(
             $credentials,
             function (User $user) use ($credentials, $delai): void {
-                /** @var string $password */
-                $password = $credentials['password'];
-
                 $user->forceFill([
-                    'password' => $password,
+                    'password' => $credentials['password'],
                     'remember_token' => Str::random(60),
                 ])->save();
 

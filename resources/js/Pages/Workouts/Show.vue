@@ -18,12 +18,14 @@ import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
+import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
+import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
@@ -39,11 +41,17 @@ const props = defineProps({
 
 const page = usePage()
 
-// ⚡ Perf: Use a mutable reactive ref instead of computed to support optimistic UI updates
-const localWorkout = ref(JSON.parse(JSON.stringify(props.workout)))
-if (localWorkout.value.workout_lines && !Array.isArray(localWorkout.value.workout_lines)) {
-    localWorkout.value.workout_lines = Object.values(localWorkout.value.workout_lines)
-}
+// Ce que le serveur détient de chaque série, les brouillons, et les écritures qu'il n'a pas encore confirmées.
+const brouillons = useBrouillonsDeSeries()
+const { releverLesValeursDuServeur, rejouerLesBrouillons, valeursDeRepli } = brouillons
+
+// La copie locale, modifiable pour l'affichage optimiste : la séance du serveur ou de l'historique, la file par-dessus.
+const { localWorkout, seanceDeDepart } = useSeanceEtSaFile({
+    seance: props.workout,
+    exercices: props.exercises,
+    page,
+    valeursDeRepli,
+})
 
 // Sync with Inertia props when they change (e.g. after redirect-based actions)
 watch(
@@ -102,16 +110,6 @@ const { next: nextWrite, isLatest: isLatestWrite } = createWriteSequencer()
 const fieldWrites = createWriteQueue()
 
 const {
-    releverLesValeursDuServeur,
-    rememberConfirmed,
-    lastConfirmed,
-    writeDraftField,
-    clearDraftField,
-    oublierLaSerie,
-    rejouerLesBrouillons,
-} = useBrouillonsDeSeries()
-
-const {
     ordreEnVol,
     ordreConfirme,
     memoriserLOrdreDesSeries,
@@ -156,11 +154,7 @@ const {
     nextWrite,
     isLatestWrite,
     fieldWrites,
-    lastConfirmed,
-    rememberConfirmed,
-    writeDraftField,
-    clearDraftField,
-    oublierLaSerie,
+    ...brouillons,
     markUnsynced,
     clearUnsynced,
     reportSyncFailure,
@@ -178,6 +172,7 @@ const {
     showFinishModal,
     ecrituresEnAttente,
     clotureEnCours,
+    clotureSansReseau,
     finishWorkout,
     annulerLaCloture,
     confirmFinishWorkout,
@@ -207,9 +202,9 @@ const handleFabAddExercise = () => {
 }
 
 onMounted(() => {
-    // Le premier relevé : la séance telle qu'elle est arrivée. Les suivants se
-    // font dans l'observateur des props.
-    releverLesValeursDuServeur(props.workout)
+    // Le premier relevé : la séance telle qu'elle est arrivée, du serveur ou de
+    // l'historique. Les suivants se font dans l'observateur des props.
+    releverLesValeursDuServeur(seanceDeDepart)
 
     window.addEventListener('open-add-exercise', handleFabAddExercise)
 
@@ -325,34 +320,14 @@ onUnmounted(() => {
 
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
 
-            <div v-if="localWorkout.workout_lines.length > 0 && !isFinished" class="mt-8 space-y-3 px-1">
-                <!--
-                    Pas de variante : la carte pleine. Ajouter un exercice est
-                    l'action courante de cette page ; « Modele », en dessous, est
-                    occasionnelle et prend le contour. Elles etaient inversees —
-                    et invisiblement, puisque ni `secondary` ni `solid`
-                    n'existaient dans l'objet de classes.
-                -->
-                <GlassButton @click="showAddExercise = true" class="w-full" dusk="add-exercise-existing"
-                    >Ajouter un exercice</GlassButton
-                >
-                <GlassButton variant="secondary" @click="openRestTimer" class="w-full" dusk="open-rest-timer"
-                    >Démarrer un repos</GlassButton
-                >
-                <div class="grid grid-cols-2 gap-3">
-                    <GlassButton variant="secondary" @click="saveAsTemplate" :loading="savingTemplate" class="w-full"
-                        >Modèle</GlassButton
-                    >
-                    <GlassButton
-                        variant="primary"
-                        @click="finishWorkout"
-                        class="w-full"
-                        id="finish-workout-mobile"
-                        dusk="finish-workout-mobile"
-                        >Terminer</GlassButton
-                    >
-                </div>
-            </div>
+            <ActionsDeLaSeance
+                v-if="localWorkout.workout_lines.length > 0 && !isFinished"
+                :enregistrement-du-modele="savingTemplate"
+                @ajouter-un-exercice="showAddExercise = true"
+                @demarrer-un-repos="openRestTimer"
+                @enregistrer-comme-modele="saveAsTemplate"
+                @terminer="finishWorkout"
+            />
         </div>
 
         <!-- Modals -->
@@ -375,6 +350,7 @@ onUnmounted(() => {
             :show="showFinishModal"
             :en-attente="ecrituresEnAttente"
             :en-cours="clotureEnCours"
+            :sans-reseau="clotureSansReseau"
             @close="annulerLaCloture"
             @confirm="confirmFinishWorkout"
         />

@@ -25,7 +25,12 @@ vi.mock('@inertiajs/vue3', async () => {
     return {
         Head: { template: '<div />' },
         Link: {
-            props: { href: { type: String, default: '' }, method: { type: String, default: 'get' } },
+            name: 'Link',
+            props: {
+                href: { type: String, default: '' },
+                method: { type: String, default: 'get' },
+                onNetworkError: { type: Function, default: undefined },
+            },
             template: '<a :href="href" :data-method="method"><slot /></a>',
         },
         usePage: () => currentPage,
@@ -69,6 +74,8 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
 import ProfileEdit from '@/Pages/Profile/Edit.vue'
 import { layoutStub, passesSlot } from './pageStubs'
+import { ECRITURE_NON_CONFIRMEE, ENVOI_DU_LIEN_NON_CONFIRME } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
 
 beforeAll(() => {
     globalThis.route = (name) => `/${name}`
@@ -329,6 +336,25 @@ describe('UpdateProfileInformationForm', () => {
         const resend = wrapper.find('a[href="/verification.send"]')
 
         expect(resend.attributes('data-method')).toBe('post')
+    })
+
+    /*
+     * Le renvoi du lien n'enregistre rien : sans réponse du serveur, il dit que
+     * l'envoi n'est pas confirmé, et non le message général d'une écriture
+     * (#2048).
+     */
+    it('dit, sans réponse du serveur, que l’envoi du lien n’est pas confirmé', () => {
+        signedInAs(sam)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm, { mustVerifyEmail: true })
+        const renvoi = wrapper
+            .findAllComponents({ name: 'Link' })
+            .find((lien) => lien.props('href') === '/verification.send')
+        const { rendu, annonces } = annoncesPendant(() => renvoi.props('onNetworkError')({ code: 'ERR_NETWORK' }))
+
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([ENVOI_DU_LIEN_NON_CONFIRME])
+        expect(annonces).not.toContain(ECRITURE_NON_CONFIRMEE)
     })
 
     it('ne confirme le renvoi que pour le statut que Laravel envoie', () => {

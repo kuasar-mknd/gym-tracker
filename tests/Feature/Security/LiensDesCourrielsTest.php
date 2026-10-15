@@ -94,7 +94,8 @@ it('bâtit le lien de réinitialisation sur APP_URL, quel que soit l’hôte de 
 
     expect($lien)->toStartWith(liensCourrielsAppUrl().'/reset-password/')
         ->and($lien)->not->toContain('piege.example.org')
-        ->and($lien)->toContain('email=membre%40example.org');
+        ->and($lien)->toContain('?adresse=')
+        ->and($lien)->not->toContain('membre');
 })->with('liens courriels hotes annonces');
 
 it('bâtit le lien de vérification sur APP_URL, quel que soit l’hôte de la requête', function (array $serveur, array $entetes, string $racine): void {

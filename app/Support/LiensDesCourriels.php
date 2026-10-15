@@ -26,6 +26,10 @@ use LogicException;
  * reçoit l'utilisateur, jeton compris. L'application ne sert qu'une adresse
  * publique, celle d'`APP_URL` : les liens n'en prennent pas d'autre.
  *
+ * Une adresse de courriel n'y paraît que chiffrée (`Crypt::encryptString()`) :
+ * un lien suivi en GET finit dans les journaux d'accès, l'historique du
+ * navigateur et la trace d'une exception.
+ *
  * Le lien de vérification est signé, et la signature couvre l'URL complète,
  * hôte compris. Elle est donc calculée sur l'URL bâtie sur `APP_URL`, celle
  * que l'utilisateur suivra : le middleware `signed` de la route la valide
@@ -40,8 +44,13 @@ use LogicException;
 final class LiensDesCourriels
 {
     /**
-     * Le lien du courriel « mot de passe oublié », le même que celui de
-     * Laravel, racine mise à part.
+     * Le lien du courriel « mot de passe oublié » : la route de Laravel et son
+     * jeton, sur `APP_URL`, mais l'adresse du compte n'y paraît que chiffrée
+     * (`Crypt::encryptString()`), pour les raisons de
+     * `lienDeConfirmationDAdresse()`. Laravel l'y mettait en clair (`?email=`).
+     * La page la renvoie telle quelle avec le nouveau mot de passe, sans
+     * l'avoir lue, et `NewPasswordRequest` la lit par
+     * `adresseDuLienDeReinitialisation()`.
      */
     public static function lienDeReinitialisation(mixed $notifiable, string $jeton): string
     {
@@ -51,8 +60,30 @@ final class LiensDesCourriels
 
         return self::generateurSurAppUrl()->route('password.reset', [
             'token' => $jeton,
-            'email' => $notifiable->getEmailForPasswordReset(),
+            'adresse' => Crypt::encryptString($notifiable->getEmailForPasswordReset()),
         ]);
+    }
+
+    /**
+     * L'adresse que porte, chiffrée, le lien de réinitialisation
+     * (`lienDeReinitialisation()`), ou null quand la valeur reçue n'en donne
+     * pas : absente (lien d'avant le chiffrement, qui la portait en clair),
+     * altérée, ou chiffrée sous une clef que l'application ne connaît pas
+     * (`APP_KEY`, `APP_PREVIOUS_KEYS`). `NewPasswordController` refuse
+     * alors le lien comme un jeton faux, même message et même durée : une
+     * réponse à part dirait quelles valeurs viennent de l'application.
+     */
+    public static function adresseDuLienDeReinitialisation(mixed $valeur): ?string
+    {
+        if (! is_string($valeur)) {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($valeur);
+        } catch (DecryptException) {
+            return null;
+        }
     }
 
     /**

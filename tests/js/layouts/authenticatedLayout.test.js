@@ -18,6 +18,7 @@ const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { PAGE_INDISPONIBLE, RESEAU_LENT, annoncerSansReseau, retirerLAnnonce } from '@/Utils/visitesHorsLigne'
 import { chargerSyncService, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
 /** Ziggy, including the wildcard patterns the desktop nav matches on. */
@@ -263,6 +264,95 @@ describe('AuthenticatedLayout — flash messages', () => {
         vi.advanceTimersByTime(10000)
 
         expect(page.props.flash.success).toBe('Séance enregistrée')
+    })
+})
+
+/*
+ * Sans réseau, l'application le dit par ce toast (#2048) : une page qui
+ * n'est pas disponible, une écriture sans confirmation, un réseau qui ne
+ * répond pas, avec de quoi annuler la visite qui attend.
+ */
+describe('AuthenticatedLayout — sans réseau', () => {
+    const boutonDuToast = (wrapper) => wrapper.find('[dusk="action-du-toast"]')
+
+    it('montre ce que le filet des visites annonce, et le retire après ses huit secondes', async () => {
+        vi.useFakeTimers()
+        const wrapper = mountLayout()
+
+        annoncerSansReseau(PAGE_INDISPONIBLE)
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper).map(messageOf)).toEqual([PAGE_INDISPONIBLE])
+        expect(toasts(wrapper)[0].attributes('aria-live')).toBe('assertive')
+        expect(boutonDuToast(wrapper).exists()).toBe(false)
+
+        expect(await dismissalTimes(wrapper, [PAGE_INDISPONIBLE])).toEqual({ [PAGE_INDISPONIBLE]: 8000 })
+    })
+
+    it('redonne ses huit secondes au même message annoncé une seconde fois', async () => {
+        vi.useFakeTimers()
+        const wrapper = mountLayout()
+
+        annoncerSansReseau(PAGE_INDISPONIBLE)
+        await wrapper.vm.$nextTick()
+        vi.advanceTimersByTime(6000)
+        annoncerSansReseau(PAGE_INDISPONIBLE)
+        await wrapper.vm.$nextTick()
+
+        // Sans quoi le second appui sur un lien mort ne laisserait le message que deux secondes.
+        expect(await dismissalTimes(wrapper, [PAGE_INDISPONIBLE])).toEqual({ [PAGE_INDISPONIBLE]: 8000 })
+    })
+
+    it('garde « Le réseau ne répond pas » tant que la visite attend, et « Annuler » l’arrête', async () => {
+        vi.useFakeTimers()
+        const annuler = vi.fn()
+        const wrapper = mountLayout()
+
+        annoncerSansReseau(RESEAU_LENT, { annuler })
+        await wrapper.vm.$nextTick()
+        vi.advanceTimersByTime(30000)
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper).map(messageOf)).toEqual([RESEAU_LENT])
+        expect(boutonDuToast(wrapper).text()).toBe('Annuler')
+
+        await boutonDuToast(wrapper).trigger('click')
+
+        expect(annuler).toHaveBeenCalledTimes(1)
+        expect(toasts(wrapper)).toHaveLength(0)
+    })
+
+    it('retire l’annonce de la lenteur avec sa visite, mais pas un message qui l’a remplacée', async () => {
+        const wrapper = mountLayout()
+
+        annoncerSansReseau(RESEAU_LENT, { annuler: () => {} })
+        await wrapper.vm.$nextTick()
+        retirerLAnnonce(RESEAU_LENT)
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper)).toHaveLength(0)
+
+        annoncerSansReseau(RESEAU_LENT, { annuler: () => {} })
+        await wrapper.vm.$nextTick()
+        annoncerSansReseau(PAGE_INDISPONIBLE)
+        await wrapper.vm.$nextTick()
+
+        // Le bouton appartenait à l'annonce remplacée.
+        expect(boutonDuToast(wrapper).exists()).toBe(false)
+
+        retirerLAnnonce(RESEAU_LENT)
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper).map(messageOf)).toEqual([PAGE_INDISPONIBLE])
+    })
+
+    it('n’écoute plus rien une fois la page partie', async () => {
+        const wrapper = mountLayout()
+        unmountLayout(wrapper)
+
+        annoncerSansReseau(PAGE_INDISPONIBLE)
+
+        expect(page.props.flash).toEqual({})
     })
 })
 

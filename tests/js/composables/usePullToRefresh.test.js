@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref, nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
+import { router } from '@inertiajs/vue3'
+import { RAFRAICHISSEMENT_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
 
 vi.mock('@inertiajs/vue3', () => ({
     router: { reload: vi.fn() },
@@ -73,6 +76,30 @@ describe('usePullToRefresh composable', () => {
 
         expect(onRefresh).toHaveBeenCalledTimes(1)
         expect(state.isRefreshing.value).toBe(true)
+    })
+
+    /*
+     * Un rechargement en arrière-plan échoue en silence sans réseau ; celui-ci,
+     * la personne l'a demandé du doigt, et il ne faisait rien (#2048).
+     */
+    it('rafraîchit la page par défaut, et dit quand le réseau manque', async () => {
+        router.reload.mockClear()
+        mountWithPullToRefresh({ threshold: 100 })
+
+        emitTouch(window, 'touchstart', 0)
+        emitTouch(window, 'touchmove', 400)
+        emitTouch(window, 'touchend', 400)
+        await nextTick()
+
+        expect(router.reload).toHaveBeenCalledTimes(1)
+
+        const { rendu, annonces } = annoncesPendant(() =>
+            router.reload.mock.calls[0][0].onNetworkError({ code: 'ERR_NETWORK' }),
+        )
+
+        expect(router.reload.mock.calls[0][0]).toMatchObject({ preserveScroll: true })
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([RAFRAICHISSEMENT_SANS_RESEAU])
     })
 
     it('applies resistance so the indicator lags behind the finger', () => {

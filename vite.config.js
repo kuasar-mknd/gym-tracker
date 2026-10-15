@@ -1,9 +1,11 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import laravel from 'laravel-vite-plugin'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { FICHIER_DE_LA_PAGE_HORS_LIGNE, greffonDeLaPageHorsLigne } from './resources/js/sw/pageHorsLigne.js'
+import { iconesDuPrecache } from './resources/js/sw/iconesDuPrecache.js'
 
 export default defineConfig({
     plugins: [
@@ -47,10 +49,14 @@ export default defineConfig({
                  * Kio du graphique et le morceau de chaque page jamais visitée
                  * (#1814). Les actifs portent leur hachage et un an de cache
                  * immuable — le navigateur les garde déjà. Restent ici la
-                 * coquille commune, les polices latines, les morceaux des deux
+                 * coquille commune, les polices latines, celle des icônes
+                 * (Material Symbols, dont `cloud_off`, qui n'entrait au cache
+                 * qu'à sa première utilisation, #2048), les morceaux des deux
                  * écrans qu'on ouvre le plus, l'accueil et la séance, et la
                  * page « hors ligne ». Le reste se met en cache à la première
-                 * visite, dans le worker.
+                 * visite, dans le worker. Les icônes de public/ viennent à
+                 * part, par `additionalManifestEntries` : ce glob ne lit que
+                 * public/build.
                  *
                  * Aucun document de l'application n'est précaché : une page
                  * s'ouvre par le réseau, et sans lui, toute navigation reçoit
@@ -64,9 +70,10 @@ export default defineConfig({
                     'assets/Dashboard-*.js',
                     'assets/Show-*.js',
                     'assets/*latin-*.woff2',
-                    '*.{ico,png,svg,webp}',
+                    'assets/material-symbols-outlined-*.woff2',
                 ],
                 globIgnores: ['**/*latin-ext-*.woff2'],
+                additionalManifestEntries: iconesDuPrecache(fileURLToPath(new URL('./public', import.meta.url))),
                 manifestTransforms: [
                     (entries) => ({
                         manifest: entries.map((entry) =>

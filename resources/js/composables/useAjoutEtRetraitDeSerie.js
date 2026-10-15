@@ -1,6 +1,7 @@
 import { getCurrentInstance, onUnmounted } from 'vue'
 import SyncService from '@/Utils/SyncService'
 import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
+import { entreeDeLaRangee } from '@/Utils/seanceEtFile'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 import { raisonDuRefus } from '@/composables/useSaisieDeSerie'
 
@@ -143,6 +144,135 @@ export const useAjoutEtRetraitDeSerie = ({
         onUnmounted(() => attentes.oublierTout())
     }
 
+    /**
+     * The server owns the identity, the user owns the values.
+     *
+     * Assigning the server's copy over the row reverted whatever the user
+     * typed while the create was in flight — and typing into a set the
+     * instant you add it is the normal way to use this screen. The payload
+     * left with the old numbers, so the server's answer necessarily carries
+     * them back; taking it wholesale overwrote the new ones on screen and
+     * left the database holding values the user had already corrected.
+     *
+     * Mutating in place also keeps the row identity that v-model and the
+     * per-set debounce timers are bound to.
+     *
+     * Les valeurs, et elles seules : `is_completed` est exclue. La charge
+     * envoyee la porte, donc cocher pendant que la creation etait en vol la
+     * faisait entrer dans ce diff. Ce PATCH-ci part SANS sequenceur ni
+     * file : il courait contre la chaine de completion, qui elle est
+     * ordonnee, et rien n'arbitrait entre les deux sinon l'ordre d'arrivee
+     * au serveur. Il etait de toute facon redondant : `toggleSetCompletion`
+     * est garee sur `pendingIds.resolve(set.id)`, qui se resout sur la
+     * creation ; son ecriture ordonnee part donc a l'instant ou la creation
+     * retombe, et elle porte deja la validation.
+     *
+     * Ce qui est comparé à l'écran, c'est ce que le serveur GARDERA, et
+     * non ce qui est parti. Ils diffèrent quand le serveur avait déjà fait
+     * cette création, sa réponse perdue en route : il reconnaît la clé
+     * d'idempotence, rend la série telle qu'il l'avait enregistrée et
+     * ignore la charge rejouée, saisie et coche fondues comprises. Le
+     * vidage renvoie lui-même ce qu'il a ignoré, par une modification mise
+     * en file à la place de la création (`ajusterPar`), et l'annonce dans
+     * `created` : un rechargement ne le perd plus (#1960). L'écran ne
+     * renvoie donc que ce qui a été tapé pendant que la requête volait.
+     * Tant que cette modification attend, la série reste « non
+     * enregistrée », et une fusion des props ne reprend pas la copie
+     * d'avant.
+     *
+     * @param {object} tempSet la rangée à l'écran, sous son identifiant provisoire
+     * @param {Array<string>} measured ce que mesure son exercice
+     * @param {object} created la série telle que le serveur la gardera
+     * @param {object|null} sent ce que la création a réellement emporté
+     * @param {string|null} ajustement l'entrée de file qui lui porte ce
+     *   qu'il a ignoré, s'il y en a une
+     * @returns {number|string} l'identifiant réel
+     */
+    const adopterLaSerie = (tempSet, measured, created, sent, ajustement = null) => {
+        /** Ce que le serveur garde pour ce champ : sa réponse, ou à défaut ce qui est parti. */
+        const tenu = (field) => (Object.hasOwn(created, field) ? created[field] : sent?.[field])
+
+        const edited = Object.fromEntries(
+            measured
+                .filter((field) => !memeValeur(tempSet[field], tenu(field)))
+                .map((field) => [field, tempSet[field]]),
+        )
+
+        const realSetId = created.id
+
+        if (ajustement === null) {
+            // It is in the database now, under either id it has worn.
+            clearUnsynced(tempSet.id, realSetId)
+        } else {
+            clearUnsynced(tempSet.id)
+
+            if (SyncService.estEnFile(ajustement)) {
+                markUnsynced(realSetId)
+
+                // Refusée, la modification laisse la série marquée : le rapport l'a dit.
+                attentes.attendre(ajustement).then((issue) => {
+                    if (issue?.data !== undefined) clearUnsynced(realSetId)
+                })
+            }
+        }
+
+        tempSet.id = realSetId
+        tempSet.created_at = created.created_at
+        tempSet.updated_at = created.updated_at
+        tempSet.personal_record = created.personal_record
+
+        // Typed after the payload left: the server has never seen it.
+        if (Object.keys(edited).length > 0) {
+            SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
+                if (!err.isOffline) markUnsynced(realSetId)
+            })
+        }
+
+        return realSetId
+    }
+
+    /**
+     * Une série dont la création attend dans la file hors ligne : celle qu'on
+     * vient d'y mettre, ou celle que la file tenait déjà à l'ouverture de la
+     * page (`useSeanceEtSaFile`, #2048). Elle est marquée « non enregistrée »,
+     * sa saisie et sa coche se fondent dans cette entrée, et elle attend le
+     * vidage, puis prend l'identifiant que le serveur a émis.
+     *
+     * @param {object} serie la rangée à l'écran, sous son identifiant provisoire
+     * @param {Array<string>} measured ce que mesure son exercice
+     * @param {string} queueId l'entrée de file qui la crée
+     * @returns {Promise<number|string|null>} l'identifiant réel, ou null
+     */
+    const suivreUneSerieEnFile = (serie, measured, queueId) => {
+        markUnsynced(serie.id)
+        pendingIds.noterEnFile(serie.id, queueId)
+
+        return attentes
+            .attendre(queueId)
+            .then((rejeu) =>
+                rejeu?.data?.id === undefined
+                    ? null
+                    : adopterLaSerie(serie, measured, rejeu.data, rejeu.envoye, rejeu.ajustement),
+            )
+    }
+
+    /*
+     * Les séries que la file tenait déjà quand la page s'est ouverte, posées
+     * par-dessus la séance du serveur, se suivent comme celle qu'on vient d'y
+     * mettre : sans cela, leur saisie ne trouverait aucune entrée où se fondre,
+     * leur retrait ne sortirait pas leur création de la file, et elles
+     * garderaient leur identifiant provisoire après le vidage (#2048).
+     */
+    for (const ligne of Array.isArray(localWorkout.value.workout_lines) ? localWorkout.value.workout_lines : []) {
+        for (const serie of Array.isArray(ligne.sets) ? ligne.sets : []) {
+            const queueId = entreeDeLaRangee(serie.id)
+
+            if (queueId !== null) {
+                pendingIds.track(serie.id, suivreUneSerieEnFile(serie, measuredFieldsFor(ligne.exercise), queueId))
+            }
+        }
+    }
+
     const addSet = (lineId) => {
         const line = localWorkout.value.workout_lines.find((l) => l.id === lineId)
         if (!line) return
@@ -219,94 +349,19 @@ export const useAjoutEtRetraitDeSerie = ({
         const tentativePrecedente = setCreateChains.get(chaineDeLigne) ?? Promise.resolve()
 
         /**
-         * The server owns the identity, the user owns the values.
-         *
-         * Assigning the server's copy over the row reverted whatever the user
-         * typed while the create was in flight — and typing into a set the
-         * instant you add it is the normal way to use this screen. The payload
-         * left with the old numbers, so the server's answer necessarily carries
-         * them back; taking it wholesale overwrote the new ones on screen and
-         * left the database holding values the user had already corrected.
-         *
-         * Mutating in place also keeps the row identity that v-model and the
-         * per-set debounce timers are bound to.
-         *
-         * Les valeurs, et elles seules : `is_completed` est exclue. La charge
-         * envoyee la porte, donc cocher pendant que la creation etait en vol la
-         * faisait entrer dans ce diff. Ce PATCH-ci part SANS sequenceur ni
-         * file : il courait contre la chaine de completion, qui elle est
-         * ordonnee, et rien n'arbitrait entre les deux sinon l'ordre d'arrivee
-         * au serveur. Il etait de toute facon redondant : `toggleSetCompletion`
-         * est garee sur `pendingIds.resolve(set.id)`, qui se resout sur la
-         * creation ; son ecriture ordonnee part donc a l'instant ou la creation
-         * retombe, et elle porte deja la validation.
-         *
-         * Ce qui est comparé à l'écran, c'est ce que le serveur GARDERA, et
-         * non ce qui est parti. Ils diffèrent quand le serveur avait déjà fait
-         * cette création, sa réponse perdue en route : il reconnaît la clé
-         * d'idempotence, rend la série telle qu'il l'avait enregistrée et
-         * ignore la charge rejouée, saisie et coche fondues comprises. Le
-         * vidage renvoie lui-même ce qu'il a ignoré, par une modification mise
-         * en file à la place de la création (`ajusterPar`), et l'annonce dans
-         * `created` : un rechargement ne le perd plus (#1960). L'écran ne
-         * renvoie donc que ce qui a été tapé pendant que la requête volait.
-         * Tant que cette modification attend, la série reste « non
-         * enregistrée », et une fusion des props ne reprend pas la copie
-         * d'avant.
-         *
-         * @param {object} created la série telle que le serveur la gardera
-         * @param {object|null} sent ce que la création a réellement emporté
-         * @param {string|null} ajustement l'entrée de file qui lui porte ce
-         *   qu'il a ignoré, s'il y en a une
-         */
-        const adopter = (created, sent, ajustement = null) => {
-            /** Ce que le serveur garde pour ce champ : sa réponse, ou à défaut ce qui est parti. */
-            const tenu = (field) => (Object.hasOwn(created, field) ? created[field] : sent?.[field])
-
-            const edited = Object.fromEntries(
-                measured
-                    .filter((field) => !memeValeur(tempSet[field], tenu(field)))
-                    .map((field) => [field, tempSet[field]]),
-            )
-
-            const realSetId = created.id
-
-            if (ajustement === null) {
-                // It is in the database now, under either id it has worn.
-                clearUnsynced(tempSet.id, realSetId)
-            } else {
-                clearUnsynced(tempSet.id)
-
-                if (SyncService.estEnFile(ajustement)) {
-                    markUnsynced(realSetId)
-
-                    // Refusée, la modification laisse la série marquée : le rapport l'a dit.
-                    attentes.attendre(ajustement).then((issue) => {
-                        if (issue?.data !== undefined) clearUnsynced(realSetId)
-                    })
-                }
-            }
-
-            tempSet.id = realSetId
-            tempSet.created_at = created.created_at
-            tempSet.updated_at = created.updated_at
-            tempSet.personal_record = created.personal_record
-
-            // Typed after the payload left: the server has never seen it.
-            if (Object.keys(edited).length > 0) {
-                SyncService.patch(route('api.v1.sets.update', { set: realSetId }), edited).catch((err) => {
-                    if (!err.isOffline) markUnsynced(realSetId)
-                })
-            }
-
-            return realSetId
-        }
-
-        /**
          * L'adresse qui modifie la série que cette création aura produite : le
          * vidage y renvoie ce que le serveur aura ignoré d'une création rejouée.
          */
         const ajusterPar = (realId) => route('api.v1.sets.update', { set: realId })
+
+        /*
+         * La séance et l'exercice de la ligne, que la file garde sur l'entrée
+         * sans les envoyer. Une page de cette séance qui ne connaît pas la
+         * ligne la reconstruit avec, plutôt que d'écarter la série : l'entrée
+         * d'historique d'une visite plus ancienne n'a pas l'exercice ajouté en
+         * ligne depuis, et la série en file disparaissait avec lui (#2048).
+         */
+        const contexte = { workout_id: localWorkout.value.id, exercise_id: line.exercise_id ?? line.exercise?.id }
 
         /**
          * Le premier envoi : la série créée, mise en file, ou refusée.
@@ -366,15 +421,18 @@ export const useAjoutEtRetraitDeSerie = ({
                         url: route('api.v1.sets.store'),
                         data: charge,
                         ajusterPar,
+                        contexte,
                     })
 
                     return queueId === null ? null : { queueId }
                 }
 
-                return SyncService.post(route('api.v1.sets.store'), charge, { ajusterPar }).then((response) => ({
-                    created: response.data?.data ?? null,
-                    sent,
-                }))
+                return SyncService.post(route('api.v1.sets.store'), charge, { ajusterPar, contexte }).then(
+                    (response) => ({
+                        created: response.data?.data ?? null,
+                        sent,
+                    }),
+                )
             })
             /**
              * This is what makes the chain settle rather than reject, and it is
@@ -420,7 +478,7 @@ export const useAjoutEtRetraitDeSerie = ({
          */
         const creation = tentative.then((issue) => {
             if (issue?.queueId) {
-                pendingIds.noterEnFile(tempSet.id, issue.queueId)
+                const suivie = suivreUneSerieEnFile(tempSet, measured, issue.queueId)
 
                 /*
                  * Ce qui a été saisi ou coché pendant la tentative n'avait pas
@@ -433,14 +491,10 @@ export const useAjoutEtRetraitDeSerie = ({
                     ...Object.fromEntries(measured.map((field) => [field, tempSet[field]])),
                 })
 
-                return attentes
-                    .attendre(issue.queueId)
-                    .then((rejeu) =>
-                        rejeu?.data?.id === undefined ? null : adopter(rejeu.data, rejeu.envoye, rejeu.ajustement),
-                    )
+                return suivie
             }
 
-            return issue?.created ? adopter(issue.created, issue.sent) : null
+            return issue?.created ? adopterLaSerie(tempSet, measured, issue.created, issue.sent) : null
         })
 
         setCreateChains.set(chaineDeLigne, tentative)

@@ -35,6 +35,8 @@ export const raisonDuRefus = (erreur, champ) => {
  *   writeDraftField: (setId: unknown, field: string, valeur: unknown) => void,
  *   clearDraftField: (setId: unknown, field: string) => void,
  *   reportEditFailure: (message: string) => void,
+ *   noterUneEcritureNonConfirmee?: (cle: string, serie: object, champ: string, valeurDeRepli: unknown) => void,
+ *   oublierLEcritureNonConfirmee?: (cle: string) => void,
  * }} page
  */
 export const useSaisieDeSerie = ({
@@ -48,6 +50,8 @@ export const useSaisieDeSerie = ({
     writeDraftField,
     clearDraftField,
     reportEditFailure,
+    noterUneEcritureNonConfirmee = () => {},
+    oublierLEcritureNonConfirmee = () => {},
 }) => {
     const updateTimers = {}
 
@@ -141,9 +145,24 @@ export const useSaisieDeSerie = ({
 
         const seq = nextWrite(timerKey)
 
+        /*
+         * La valeur de repli, tant que le serveur n'a pas répondu à la dernière
+         * écriture de ce champ : l'entrée d'historique la garde à la place de
+         * la saisie (#2048). Une réponse dépassée par une saisie plus récente ne
+         * l'oublie pas ; celle de la dernière, oui, quelle qu'elle soit.
+         */
+        noterUneEcritureNonConfirmee(timerKey, set, field, previousValue)
+
+        const oublierSiDerniere = () => {
+            if (isLatestWrite(timerKey, seq)) {
+                oublierLEcritureNonConfirmee(timerKey)
+            }
+        }
+
         const send = () =>
             patchSet(set, { [field]: value })
                 .then((response) => {
+                    oublierSiDerniere()
                     clearDraftField(set.id, field)
 
                     // Only merge back the specific field we updated + metadata
@@ -165,6 +184,9 @@ export const useSaisieDeSerie = ({
                 })
                 .catch((err) => {
                     const kind = classifySyncError(err)
+
+                    // Refusée, elle est rétablie ci-dessous ; en file, la file la garde.
+                    oublierSiDerniere()
 
                     if (kind === SYNC_OFFLINE) {
                         // SyncService owns it now; a draft would be a second copy of

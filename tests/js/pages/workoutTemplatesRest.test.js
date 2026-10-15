@@ -48,6 +48,8 @@ import TemplateForm from '@/Components/Templates/TemplateForm.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import TemplateIndex from '@/Pages/Workouts/Templates/Index.vue'
 import { passesSlot, layoutStub } from './pageStubs'
+import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
+import { annoncesPendant } from '../utils/annoncesSansReseau'
 
 // Le formulaire vit dans TemplateForm, sous la page : ses internes se lisent là.
 const interne = (wrapper) => {
@@ -216,6 +218,18 @@ describe('the template listing', () => {
 
         expect(router.post).toHaveBeenCalledTimes(1)
         expect(router.post.mock.calls[0][0]).toBe('/templates.execute/{"template":7}')
+    })
+
+    it('dit qu’il faut le réseau quand le modèle se lance sans lui', async () => {
+        const wrapper = mountIndex([pushA])
+
+        await wrapper.find('[dusk="execute-template-7"]').trigger('click')
+        const { rendu, annonces } = annoncesPendant(() =>
+            router.post.mock.calls[0][2].onNetworkError({ code: 'ERR_NETWORK' }),
+        )
+
+        expect(rendu).toBe(false)
+        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
     })
 
     it('ignores a second launch fired before the buttons have had time to grey out', () => {
