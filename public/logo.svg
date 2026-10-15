@@ -1,13 +1,22 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="760" height="760" viewBox="247.5 243 760 760" xmlns="http://www.w3.org/2000/svg">
   <!--
-    Les couleurs sont le couple de l'utilitaire accent-fill de resources/css/app.css :
-    le fond est le jeton color-accent-primary-fill, les tracés le jeton
-    color-text-on-dark-accent. Un SVG ne lit pas les variables CSS, d'où les
-    valeurs en clair ; tests/Feature/IconesDeLApplicationTest.php les compare à la
-    charte. Les PNG de public/ en sont tirés par pwa-assets.config.js.
+    Le logo de l'application : le G hexagonal et ses trois barres, sans fond,
+    pour une surface claire. Le panneau le sert tel quel ; l'application en
+    trace le même dessin depuis resources/js/Utils/dessinDuLogo.js, sans
+    requête. icone.svg le pose sur sa tuile, badge.svg le peint en blanc.
+
+    Les couleurs sont les jetons color-logo-lettre et color-logo-barres de
+    resources/css/app.css. Un SVG ne lit pas les variables CSS, d'où les
+    valeurs en clair ; tests/Feature/IconesDeLApplicationTest.php les compare à
+    la charte, et exige les mêmes tracés dans les quatre copies du dessin.
   -->
-  <rect width="512" height="512" rx="100" fill="#ce4400"/>
-  <path d="M128 256C128 185.308 185.308 128 256 128C326.692 128 384 185.308 384 256C384 326.692 326.692 384 256 384C185.308 384 128 326.692 128 256Z" stroke="#ffffff" stroke-width="24"/>
-  <path d="M256 160V352M160 256H352" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
-  <path d="M210 210L302 302M302 210L210 302" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <g fill="#0f172a">
+    <path d="M358 405q-54 30-52 96l-1 262q5 50 49 77l223 129q42 22 79-1l51-30q17-9-4-24l-262-157q-14-9-16-32v-196q0-31 22-41l163-92q17-9 36 0l135 77q17 9 35-2l87-48q9-6-3-14l-220-128q-50-27-99-2"/>
+    <path d="M537 616q-8 5-9 19v68q0 9 20-1l174-94q4-2 9-2h109q13-1 14 9v230q0 8 15 1l48-28q31-17 33-49v-198q2-42-34-46l-195-3q-6 0-15 4"/>
+  </g>
+  <g fill="#ff5500">
+    <path d="M745 662q-9 5-9 17v225q0 19 17 8l72-42q8-5 7-16v-215q0-19-24-9"/>
+    <path d="M633 719q-8 5-8 17v99q0 9 8 14l73 44q6 3 7-9v-197q0-9-14-3"/>
+    <path d="M544 766c-9 5-9 24-3 28l55 33q7 4 8-9v-74q0-9-14-3"/>
+  </g>
 </svg>
