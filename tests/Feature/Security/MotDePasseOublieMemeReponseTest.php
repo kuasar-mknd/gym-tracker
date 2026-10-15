@@ -12,6 +12,7 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
@@ -26,6 +27,7 @@ use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Email;
 use Tests\Support\CeQueLeClientLit;
 use Tests\Support\DureeSimulee;
+use Tests\Support\FormulaireDeReinitialisation;
 
 use function Pest\Laravel\post;
 
@@ -180,14 +182,11 @@ it('envoie depuis la file un courriel chiffré en attente, dans la langue de la 
         ->and($message->getTo()[0]->getAddress())->toBe(motDePasseOublieAdresse());
 
     $corps = html_entity_decode((string) $message->getHtmlBody(), ENT_QUOTES | ENT_HTML5);
-    expect(preg_match('#https://gym\.example\.org/reset-password/([A-Za-z0-9]+)\?email=membre%40example\.org#', $corps, $lien))->toBe(1);
+    expect(preg_match('#https://gym\.example\.org/reset-password/[A-Za-z0-9]+\?adresse=[^\s"<>]+#', $corps, $lien))->toBe(1);
 
-    post('/reset-password', [
-        'token' => $lien[1] ?? '',
-        'email' => motDePasseOublieAdresse(),
-        'password' => 'Un-nouveau-mot-de-passe-2026!',
-        'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
-    ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+    post('/reset-password', FormulaireDeReinitialisation::depuisLeLien($lien[0] ?? '', 'Un-nouveau-mot-de-passe-2026!'))
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('login'));
 
     expect(Hash::check('Un-nouveau-mot-de-passe-2026!', (string) $compte->fresh()?->getAuthPassword()))->toBeTrue();
 });
@@ -436,11 +435,13 @@ it('ne laisse atteindre le courtier qu’à trois fichiers, chacun pour son seul
 });
 
 /**
- * La page qu'ouvre un lien de réinitialisation, avec un jeton quelconque.
+ * La page qu'ouvre un lien de réinitialisation, avec un jeton quelconque et
+ * cette adresse chiffrée. Le chiffrement tire un vecteur au hasard : un test
+ * qui compare deux essais chiffre l'adresse une fois et la passe aux deux.
  */
-function motDePasseOubliePageDuLien(): string
+function motDePasseOubliePageDuLien(string $adresseChiffree): string
 {
-    return route('password.reset', ['token' => 'un-jeton-quelconque', 'email' => motDePasseOublieAdresse()]);
+    return route('password.reset', ['token' => 'un-jeton-quelconque', 'adresse' => $adresseChiffree]);
 }
 
 /**
@@ -448,11 +449,11 @@ function motDePasseOubliePageDuLien(): string
  *
  * @return TestResponse<Response>
  */
-function motDePasseOublieReinitialiser(): TestResponse
+function motDePasseOublieReinitialiser(string $adresseChiffree): TestResponse
 {
-    return motDePasseOublieEnvoyer(motDePasseOubliePageDuLien(), 'password.store', [
+    return motDePasseOublieEnvoyer(motDePasseOubliePageDuLien($adresseChiffree), 'password.store', [
         'token' => 'un-jeton-quelconque',
-        'email' => motDePasseOublieAdresse(),
+        'adresse' => $adresseChiffree,
         'password' => 'Un-nouveau-mot-de-passe-2026!',
         'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
     ]);
@@ -460,15 +461,16 @@ function motDePasseOublieReinitialiser(): TestResponse
 
 it('refuse à l’identique, à la réinitialisation, une adresse sans compte et le jeton faux d’un compte', function (): void {
     $this->freezeSecond();
+    $adresse = Crypt::encryptString(motDePasseOublieAdresse());
 
-    $sansCompte = motDePasseOublieCeQueLeClientLit(motDePasseOublieReinitialiser(), motDePasseOubliePageDuLien());
+    $sansCompte = motDePasseOublieCeQueLeClientLit(motDePasseOublieReinitialiser($adresse), motDePasseOubliePageDuLien($adresse));
 
     $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
     Password::createToken($compte);
-    $jetonFaux = motDePasseOublieCeQueLeClientLit(motDePasseOublieReinitialiser(), motDePasseOubliePageDuLien());
+    $jetonFaux = motDePasseOublieCeQueLeClientLit(motDePasseOublieReinitialiser($adresse), motDePasseOubliePageDuLien($adresse));
 
     expect($sansCompte['statut'])->toBe(302)
-        ->and($sansCompte['session']['errors'] ?? null)->toBe(['default' => ['email' => ['Ce jeton de réinitialisation du mot de passe n\'est pas valide.']]])
+        ->and($sansCompte['session']['errors'] ?? null)->toBe(['default' => ['token' => ['Ce jeton de réinitialisation du mot de passe n\'est pas valide.']]])
         ->and($jetonFaux)->toBe($sansCompte)
         ->and(Hash::check('password', (string) $compte->fresh()?->getAuthPassword()))->toBeTrue();
 });
@@ -496,9 +498,10 @@ function motDePasseOublieCoutDeProduction(): int
 it('refuse dans le même temps, à la réinitialisation, une adresse sans compte et le jeton faux d’un compte qui vient de demander un lien', function (): void {
     $duree = DureeSimulee::demarrer();
     $plancher = $duree->plancher;
+    $adresse = Crypt::encryptString(motDePasseOublieAdresse());
 
-    $sansCompte = $duree->mesurer(motDePasseOublieReinitialiser(...));
-    $sansCompte['reponse']->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
+    $sansCompte = $duree->mesurer(static fn (): TestResponse => motDePasseOublieReinitialiser($adresse));
+    $sansCompte['reponse']->assertSessionHasErrors(['token' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
 
     $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
     // Le jeton s'enregistre au coût de production, que sa vérification paiera.
@@ -506,8 +509,8 @@ it('refuse dans le même temps, à la réinitialisation, une adresse sans compte
     Hash::forgetDrivers();
     Password::createToken($compte);
 
-    $jetonFaux = $duree->mesurer(motDePasseOublieReinitialiser(...));
-    $jetonFaux['reponse']->assertSessionHasErrors(['email' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
+    $jetonFaux = $duree->mesurer(static fn (): TestResponse => motDePasseOublieReinitialiser($adresse));
+    $jetonFaux['reponse']->assertSessionHasErrors(['token' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.']);
 
     // Le travail du refus le plus long, hors des planchers (sommeil simulé) : la vérification de l'empreinte.
     $debut = microtime(true);
@@ -533,12 +536,10 @@ it('répond à une réinitialisation réussie sans attendre le plancher des refu
     $compte = User::factory()->create(['email' => motDePasseOublieAdresse()]);
     $jeton = Password::createToken($compte);
 
-    $reussite = $duree->mesurer(static fn (): TestResponse => post(route('password.store'), [
-        'token' => $jeton,
-        'email' => motDePasseOublieAdresse(),
-        'password' => 'Un-nouveau-mot-de-passe-2026!',
-        'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
-    ]));
+    $reussite = $duree->mesurer(static fn (): TestResponse => post(
+        route('password.store'),
+        FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!', $jeton),
+    ));
 
     $reussite['reponse']->assertSessionHasNoErrors()->assertRedirect(route('login'));
 
