@@ -93,6 +93,42 @@ function ressourcesTiercesBlocsDeCode(string $source, string $chemin): array
 }
 
 /**
+ * Les plages des commentaires d'un bloc de code, décalées de sa position.
+ *
+ * Les littéraux de chaîne se lisent d'abord, et seuls les commentaires
+ * restent : `'image/*'` ou `content: "/*"` n'ouvrent pas un commentaire qui
+ * cacherait le code jusqu'au prochain `*\/`, ni `' // '` un commentaire qui
+ * cacherait la fin de sa ligne. Le gabarit littéral (`` `…` ``) et le
+ * commentaire `//` n'existent qu'en JavaScript.
+ *
+ * @param  array{position: int, texte: string, javascript: bool}  $bloc
+ * @return list<array{0: int, 1: int}>
+ */
+function ressourcesTiercesCommentairesDuBloc(array $bloc): array
+{
+    $chaines = ['\'(?:\\\\.|[^\'\\\\\n])*\'', '"(?:\\\\.|[^"\\\\\n])*"'];
+    $commentaire = '(/\*.*?\*/)';
+
+    if ($bloc['javascript']) {
+        $chaines[] = '`(?:\\\\.|[^`\\\\])*`';
+        $commentaire = '(/\*.*?\*/|//[^\n]*)';
+    }
+
+    preg_match_all('~'.implode('|', [...$chaines, $commentaire]).'~s', $bloc['texte'], $trouvees, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+
+    $plages = [];
+
+    foreach ($trouvees as $trouvee) {
+        if (isset($trouvee[1]) && $trouvee[1][1] >= 0) {
+            $debut = $bloc['position'] + $trouvee[1][1];
+            $plages[] = [$debut, $debut + strlen($trouvee[1][0])];
+        }
+    }
+
+    return $plages;
+}
+
+/**
  * Les plages d'un source où une adresse ne fait rien charger : les
  * commentaires (HTML et Blade partout, CSS et JavaScript dans le code), le
  * `<!DOCTYPE>`, que les gabarits de courriel écrivent avec l'adresse de leur
@@ -109,11 +145,7 @@ function ressourcesTiercesPlagesInertes(string $source, string $chemin): array
     ];
 
     foreach (ressourcesTiercesBlocsDeCode($source, $chemin) as $bloc) {
-        array_push($plages, ...ressourcesTiercesPlagesDuMotif('~/\*.*?\*/~s', $bloc['texte'], $bloc['position']));
-
-        if ($bloc['javascript']) {
-            array_push($plages, ...ressourcesTiercesPlagesDuMotif('~(?<![:"\'`\\\\/])//[^\n]*~', $bloc['texte'], $bloc['position']));
-        }
+        array_push($plages, ...ressourcesTiercesCommentairesDuBloc($bloc));
     }
 
     preg_match_all('~<a\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>~i', $source, $liens, PREG_OFFSET_CAPTURE);
@@ -134,15 +166,17 @@ function ressourcesTiercesPlagesInertes(string $source, string $chemin): array
  * précédée de sa ligne : `113 : https://…`.
  *
  * Une adresse absolue, même réduite à son protocole (`'https://' + hote`), ou
- * sans protocole (`//hote.example/…`) après un guillemet, une parenthèse ou un
- * `=`.
+ * sans protocole (`//hote.example/…`) après un guillemet, une parenthèse, un
+ * `=`, une virgule ou une espace : le deuxième candidat d'un `srcset` suit la
+ * virgule du premier. Le nom d'hôte doit toucher les deux barres obliques, si
+ * bien qu'un commentaire `// voir …` n'en est pas une.
  *
  * @return list<string>
  */
 function ressourcesTiercesDans(string $source, string $chemin): array
 {
     $inertes = ressourcesTiercesPlagesInertes($source, $chemin);
-    $adresse = '~\bhttps?://[^\s"\'`)<>]*|(?<=["\'`(=])//[a-z0-9][a-z0-9.-]*\.[a-z]{2,}[^\s"\'`)<>]*~i';
+    $adresse = '~\bhttps?://[^\s"\'`)<>]*|(?<=["\'`(=,\s])//[a-z0-9][a-z0-9.-]*\.[a-z]{2,}[^\s"\'`)<>]*~i';
 
     preg_match_all($adresse, $source, $adresses, PREG_OFFSET_CAPTURE);
 
@@ -239,6 +273,7 @@ it('reconnaît encore une ressource d’une autre origine, et laisse passer ce q
             <Link href="https://example.org/xhr">Inertia passe par une requête</Link>
             <input type="file" accept="image/*" />
             <img src="https://icones.example.org/apple.svg" alt="" />
+            <img srcset="/build/petit.png 1x, //cdn.example.org/grand.png 2x" alt="" />
         </template>
 
         <script setup>
@@ -247,6 +282,9 @@ it('reconnaît encore une ressource d’une autre origine, et laisse passer ce q
         const image = new Image()
         image.src = 'https://cdn.example.org/pixel.gif'
         const hote = 'https://' + domaine
+        const ACCEPTES = 'image/*'
+        image.src = 'https://pixel.example.org/suivi.gif'
+        /** Fin du script. */
         </script>
 
         <style>
@@ -262,9 +300,11 @@ it('reconnaît encore une ressource d’une autre origine, et laisse passer ce q
         '9 : https://cdn.example.org/motif.png',
         '10 : https://example.org/xhr',
         '12 : https://icones.example.org/apple.svg',
-        '19 : https://cdn.example.org/pixel.gif',
-        '20 : https://',
-        '25 : https://polices.example.org/police.css',
+        '13 : //cdn.example.org/grand.png',
+        '20 : https://cdn.example.org/pixel.gif',
+        '21 : https://',
+        '23 : https://pixel.example.org/suivi.gif',
+        '29 : https://polices.example.org/police.css',
     ]);
 
     $gabarit = <<<'BLADE'
@@ -280,17 +320,28 @@ it('reconnaît encore une ressource d’une autre origine, et laisse passer ce q
         // https://example.org/explication
         const chemin = '//pas-un-commentaire.example.org/script.js'
         export const API = 'https://api.example.org' // https://example.org/raison
+        export const TYPES = ['image/*', 'video/*']
+        fetch('https://api.example.org/suivi')
+        const separateur = ' // '; fetch("https://api.example.org/ligne") // https://example.org/fin
+        /** Fin. */
         JS;
 
     expect(ressourcesTiercesDans($script, 'module.js'))->toBe([
         '2 : //pas-un-commentaire.example.org/script.js',
         '3 : https://api.example.org',
+        '5 : https://api.example.org/suivi',
+        '6 : https://api.example.org/ligne',
     ]);
 
     $feuille = <<<'CSS'
         /* https://example.org/source-de-la-regle */
         .fond { background: url("//cdn.example.org/fond.png"); }
+        .icone::before { content: "/*"; background: url(https://cdn.example.org/icone.png); }
+        /* Fin. */
         CSS;
 
-    expect(ressourcesTiercesDans($feuille, 'feuille.css'))->toBe(['2 : //cdn.example.org/fond.png']);
+    expect(ressourcesTiercesDans($feuille, 'feuille.css'))->toBe([
+        '2 : //cdn.example.org/fond.png',
+        '3 : https://cdn.example.org/icone.png',
+    ]);
 });
