@@ -16,11 +16,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\CeQueLeClientLit;
+use Tests\Support\FormulaireDeReinitialisation;
 
 use function Pest\Laravel\assertAuthenticatedAs;
 use function Pest\Laravel\assertGuest;
@@ -251,12 +251,8 @@ it('ouvre le compte en attente par une réinitialisation du mot de passe, sans l
     $ouvert = User::factory()->create(['name' => 'Camille Martin', 'email' => 'ouvert@example.org']);
 
     foreach ([$compte, $ouvert] as $titulaire) {
-        post(route('password.store'), [
-            'token' => Password::createToken($titulaire),
-            'email' => $titulaire->email,
-            'password' => 'Le-mot-de-passe-du-titulaire-42!',
-            'password_confirmation' => 'Le-mot-de-passe-du-titulaire-42!',
-        ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+        post(route('password.store'), FormulaireDeReinitialisation::pour($titulaire, 'Le-mot-de-passe-du-titulaire-42!'))
+            ->assertSessionHasNoErrors()->assertRedirect(route('login'));
     }
 
     assertGuest();

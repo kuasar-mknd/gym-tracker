@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\FormulaireDeReinitialisation;
 use Tests\TestCase;
 
 class PasswordResetTest extends TestCase
@@ -58,12 +59,9 @@ class PasswordResetTest extends TestCase
         $this->post('/forgot-password', ['email' => $user->email]);
 
         Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): true {
-            $response = $this->post('/reset-password', [
-                'token' => $notification->token,
-                'email' => $user->email,
-                'password' => 'password',
-                'password_confirmation' => 'password',
-            ]);
+            $lien = $notification->toMail($user)->actionUrl;
+
+            $response = $this->post('/reset-password', FormulaireDeReinitialisation::depuisLeLien($lien, 'password'));
 
             $response
                 ->assertSessionHasNoErrors()

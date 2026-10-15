@@ -4,6 +4,7 @@ import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { seDeconnecter } from '@/composables/useDeconnexion'
+import { ENVOI_DU_LIEN_NON_CONFIRME, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const props = defineProps({
     status: String,
@@ -12,7 +13,7 @@ const props = defineProps({
 const form = useForm({})
 
 const submit = () => {
-    form.post(route('verification.send'))
+    form.post(route('verification.send'), { onNetworkError: direSansReseau(ENVOI_DU_LIEN_NON_CONFIRME) })
 }
 
 const verificationLinkSent = computed(() => props.status === 'verification-link-sent')

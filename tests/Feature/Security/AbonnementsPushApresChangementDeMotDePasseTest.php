@@ -17,7 +17,6 @@ use Illuminate\Database\Events\TransactionCommitted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Testing\TestResponse;
 use Livewire\Livewire;
 use Minishlink\WebPush\SubscriptionInterface;
@@ -27,6 +26,7 @@ use NotificationChannels\WebPush\WebPushChannel;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\FormulaireDeReinitialisation;
 
 use function Pest\Laravel\actingAs;
 
@@ -239,12 +239,8 @@ it('ne laisse aucun abonnement au compte quand le mot de passe est réinitialis�
     $adresses = detachementPushAdressesPoussees();
 
     // Depuis un appareil où personne n'est connecté : il n'a rien à garder.
-    new Appareil()->envoyer('POST', '/reset-password', [
-        'token' => Password::createToken($compte),
-        'email' => $compte->email,
-        'password' => detachementPushNouveauMotDePasse(),
-        'password_confirmation' => detachementPushNouveauMotDePasse(),
-    ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+    new Appareil()->envoyer('POST', '/reset-password', FormulaireDeReinitialisation::pour($compte, detachementPushNouveauMotDePasse()))
+        ->assertSessionHasNoErrors()->assertRedirect(route('login'));
 
     detachementPushTransmettre($tablettePerdue, 'https://fcm.googleapis.com/fcm/send/tablette-perdue')->assertUnauthorized();
 

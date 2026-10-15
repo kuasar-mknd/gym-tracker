@@ -4,6 +4,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
+import { INSCRIPTION_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const form = useForm({
     name: '',
@@ -16,6 +17,7 @@ const submit = () => {
     form.post(route('register'), {
         onSuccess: () => triggerHaptic('success'),
         onError: () => triggerHaptic('error'),
+        onNetworkError: direSansReseau(INSCRIPTION_NON_CONFIRMEE),
         onFinish: () => form.reset('password', 'password_confirmation'),
     })
 }
