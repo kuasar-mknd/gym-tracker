@@ -4,6 +4,7 @@ import { Link, usePage } from '@inertiajs/vue3'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
+import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
 import { marquerLAbonnementARetransmettre } from '@/composables/useAbonnementPush'
 import { messageDesEcrituresGardees, reprendreLesEcrituresGardees } from '@/Utils/ecrituresGardees'
 
@@ -44,6 +45,9 @@ onMounted(() => {
         <LiquidBackground variant="default" />
 
         <BandeauDeMiseAJour />
+
+        <!-- Sans réseau, une page d'invité le dit aussi (#2048). -->
+        <ToastsDuLayout />
 
         <!-- Logo -->
         <div class="animate-fade-in relative z-10 mb-8">

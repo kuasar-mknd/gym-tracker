@@ -14,8 +14,8 @@ import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composa
  *
  * Ce module, branché une fois par `main.js`, écoute `networkError` et rend
  * `false` pour un échec du réseau : Inertia ne rejette plus rien, et le message
- * qui convient passe par le toast d'erreur du layout authentifié (évènement
- * `gym:sans-reseau`) :
+ * qui convient passe par le toast d'erreur des layouts, authentifié comme
+ * invité (`ToastsDuLayout.vue`, évènement `gym:sans-reseau`) :
  * - une visite en GET que la personne a demandée : la page n'est pas disponible ;
  * - une écriture : sa confirmation manque. Jamais « rien n'a été enregistré » :
  *   la requête a pu arriver, et seule sa réponse se perdre ;
@@ -38,7 +38,7 @@ import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composa
  * vol par cette adresse.
  */
 
-/** L'évènement de fenêtre que le layout authentifié écoute pour montrer le toast. */
+/** L'évènement de fenêtre que les toasts des layouts écoutent (`ToastsDuLayout.vue`). */
 export const EVENEMENT_SANS_RESEAU = 'gym:sans-reseau'
 
 /** Ce qu'une visite qui quitte la page attend avant de dire que le réseau ne répond pas. */
@@ -68,7 +68,7 @@ export const RAFRAICHISSEMENT_SANS_RESEAU = "Pas de réseau : la page n'a pas é
 export const estUnEchecDuReseau = (erreur) => erreur?.code === 'ERR_NETWORK'
 
 /**
- * Montre `message` dans le toast d'erreur du layout authentifié.
+ * Montre `message` dans le toast d'erreur du layout, authentifié ou invité.
  *
  * @param {string} message
  * @param {{ annuler?: (() => void) | null, fenetre?: Window }} options
