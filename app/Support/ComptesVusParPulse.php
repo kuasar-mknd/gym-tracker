@@ -26,10 +26,13 @@ final class ComptesVusParPulse extends Users
     }
 
     /**
-     * @return object{name: string, extra: string, avatar: string}
+     * Le compte de la clé, tel que la carte l'affiche : `name`, `extra` (son
+     * adresse) et `avatar`.
+     *
+     * @return \stdClass&object{name: string, extra: string, avatar: string}
      */
     #[\Override]
-    public function find(int|string|null $key): object
+    public function find(int|string|null $key): \stdClass
     {
         $compte = $this->resolvedUsers->first(
             fn (mixed $compte): bool => $compte instanceof Authenticatable && (string) $this->key($compte) === (string) $key,

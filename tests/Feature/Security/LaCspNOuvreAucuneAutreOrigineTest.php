@@ -86,7 +86,7 @@ function laCspSourcesDUneAutreOrigine(string $entete): array
 
     foreach (array_filter(array_map(trim(...), explode(';', $entete)), static fn (string $directive): bool => $directive !== '') as $directive) {
         $sources = explode(' ', (string) preg_replace('/\s+/', ' ', $directive));
-        $nom = (string) array_shift($sources);
+        $nom = array_shift($sources);
         $etrangeres = array_values(array_filter(
             $sources,
             static fn (string $source): bool => ! str_starts_with($source, "'") && ! in_array(strtolower($source), ['data:', 'blob:'], true),
