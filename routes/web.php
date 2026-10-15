@@ -15,6 +15,12 @@ Route::get('/dashboard', \App\Http\Controllers\DashboardController::class)
 Route::middleware('auth')->group(function (): void {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    // Le lien envoyé à la nouvelle adresse demandée depuis le profil : seul
+    // lui la fait devenir celle du compte. Hors de `profile.*`, donc hors de
+    // la table de Ziggy : le front ne l'appelle pas.
+    Route::get('/adresse/confirmer', \App\Http\Controllers\ConfirmerLAdresseController::class)
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('adresse.confirmer');
     Route::get('/raccourcis', fn (): \Inertia\Response => Inertia::render('Raccourcis'))->name('shortcuts.index');
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index'])->name('achievements.index');

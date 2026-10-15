@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Notifications\AdresseDuCompteChangee;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
@@ -204,6 +205,36 @@ it('refuse au panneau une nouvelle adresse hors ASCII, à la création comme à 
     '« ß » pour « ss »' => ['straße@example.org'],
     'un domaine internationalisé' => ['jean@bücher.example.org'],
 ]);
+
+/**
+ * Un compte créé par un administrateur n'attend aucun lien : seule
+ * l'inscription crée des comptes en attente de la preuve de leur adresse
+ * (`AttendLaPreuveDeSonAdresse`). Il se connecte aussitôt, comme un compte
+ * d'avant l'attente.
+ */
+it('crée au panneau un compte qui n’est pas en attente, et qui se connecte', function (): void {
+    Notification::fake();
+
+    Livewire::test(CreateUser::class)
+        ->fillForm(['name' => 'Camille Panneau', 'email' => 'camille.panneau@example.org', 'default_rest_time' => 90, 'password' => 'Un-mot-de-passe-solide-42!'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $compte = User::query()->where('email', 'camille.panneau@example.org')->sole();
+
+    expect($compte->estEnAttente())->toBeFalse()
+        ->and($compte->en_attente_depuis)->toBeNull();
+
+    // L'administrateur quitte le panneau : la connexion est celle d'un invité.
+    Auth::guard('admin')->logout();
+    Auth::shouldUse('web');
+
+    $this->post(route('login'), ['email' => 'camille.panneau@example.org', 'password' => 'Un-mot-de-passe-solide-42!'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('dashboard'));
+
+    $this->assertAuthenticatedAs($compte, 'web');
+});
 
 /**
  * L'adresse actuelle d'un compte ouvert avant la règle reste admise telle

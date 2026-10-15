@@ -10,6 +10,7 @@ import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
+import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -304,11 +305,8 @@ onUnmounted(() => Object.values(toasts).forEach((t) => clearTimeout(t.id)))
                     <div class="flex">
                         <!-- Logo -->
                         <div class="flex shrink-0 items-center">
-                            <Link
-                                :href="route('dashboard')"
-                                class="text-gradient font-display text-2xl font-black tracking-tight uppercase italic"
-                            >
-                                GymTracker
+                            <Link :href="route('dashboard')" class="flex">
+                                <MarqueDeLApplication disposition="barre" />
                             </Link>
                         </div>
 
