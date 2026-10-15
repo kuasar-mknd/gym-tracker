@@ -60,9 +60,10 @@ class NewPasswordRequest extends FormRequest
      * la clef `email` où il la cherche, et le nouveau mot de passe ; null quand
      * le lien ne porte pas d'adresse qui se déchiffre.
      *
-     * L'adresse en clair ne rejoint jamais la requête : fusionnée, elle
-     * partirait avec ses données dans la saisie que la session garde après un
-     * refus et dans le rapport d'une exception.
+     * L'adresse en clair n'est fusionnée dans aucune requête : dans celle de
+     * l'application (`request()`), elle partirait avec ses données dans la
+     * saisie que la session garde après un refus et dans le corps
+     * qu'enregistre une exception.
      *
      * @return array{token: string, email: string, password: string, password_confirmation: string}|null
      */
