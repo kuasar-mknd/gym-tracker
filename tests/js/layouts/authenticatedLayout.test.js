@@ -168,17 +168,17 @@ describe('la marque de la barre de navigation', () => {
     })
 
     /**
-     * Logo et nom ensemble demandaient 1 103 px de large à la barre de
-     * bureau, menu du compte coupé en deçà : le nom n'y apparaît qu'à
-     * partir de `xl`, et nomme le lien à toute largeur.
+     * Le logo se montre seul, à la demande du propriétaire : le nom, caché,
+     * nomme le lien à toute largeur.
      */
-    it('garde le nom pour les lecteurs d’écran, et ne le montre qu’à partir de xl', () => {
+    it('garde le nom pour les lecteurs d’écran, sans le montrer', () => {
         const accueil = mountLayout()
             .findAll('a[href="/resolved/dashboard"]')
             .find((lien) => lien.find('[data-testid="logo-de-l-application"]').exists())
         const nom = accueil.get('[data-testid="logo-de-l-application"] + span')
 
-        expect(nom.classes()).toEqual(expect.arrayContaining(['sr-only', 'xl:not-sr-only']))
+        expect(nom.classes()).toContain('sr-only')
+        expect(nom.classes().some((classe) => classe.includes('not-sr-only'))).toBe(false)
         expect(nom.text()).toBe('GymTracker')
     })
 })
