@@ -7,14 +7,17 @@
  * - `muet` : aucune réponse, jamais, comme un réseau qui ne répond plus. Le
  *   test répond lui-même par `repondre`, ou la requête attend son abandon ;
  * - `repond` : `reseau.reponse` arrive.
+ * `reseau.prochains` règle les requêtes suivantes une à une, dans l'ordre de
+ * leur départ, avant que `reseau.mode` reprenne : une visite au premier plan
+ * muette, et un rechargement en arrière-plan coupé, par exemple.
  *
  * Les rejets que personne n'attend sont relayés à la fenêtre sous la forme
  * qu'un navigateur leur donne, l'évènement `unhandledrejection` que le
  * rapporteur d'erreurs écoute : jsdom ne le fait pas lui-même.
  */
 
-/** @type {{ mode: 'coupe'|'muet'|'repond', reponse: { statut: number, entetes: Record<string, string>, corps: string } | null }} */
-export const reseau = { mode: 'coupe', reponse: null }
+/** @type {{ mode: 'coupe'|'muet'|'repond', prochains: Array<'coupe'|'muet'|'repond'>, reponse: { statut: number, entetes: Record<string, string>, corps: string } | null }} */
+export const reseau = { mode: 'coupe', prochains: [], reponse: null }
 
 /** Les requêtes parties, dans l'ordre. */
 export const requetes = []
@@ -59,12 +62,14 @@ export class RequeteSimulee {
         requetes.push(this)
         this.corps = corps
 
-        if (reseau.mode === 'muet') {
+        const mode = reseau.prochains.shift() ?? reseau.mode
+
+        if (mode === 'muet') {
             return
         }
 
         queueMicrotask(() => {
-            if (reseau.mode === 'coupe') {
+            if (mode === 'coupe') {
                 this.onerror?.()
 
                 return

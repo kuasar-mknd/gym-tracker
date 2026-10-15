@@ -88,6 +88,7 @@ beforeEach(() => {
     annonces.length = 0
     envoisAuRapporteur.length = 0
     reseau.mode = 'coupe'
+    reseau.prochains.length = 0
     reseau.reponse = null
     noterQueLeServeurRepond()
     relais = relayerLesRejetsNonGeres()
@@ -168,6 +169,33 @@ describe('sans réseau, une visite le dit', () => {
 
         expect(useEtatDuReseau().joignable.value).toBe(false)
     })
+
+    /*
+     * Une page qui porte des erreurs de validation est une réponse du serveur :
+     * Inertia n'émet alors que `error`, pas `success`.
+     */
+    it('le serveur redevient joignable sur une réponse qui porte des erreurs de validation', async () => {
+        await visiter('/stats')
+
+        expect(useEtatDuReseau().joignable.value).toBe(false)
+
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia({
+            component: 'Workouts/Show',
+            url: '/workouts/12',
+            version: 'version-de-la-page',
+            props: { texte: 'Séance en cours', errors: { name: 'Le nom est obligatoire.' } },
+        })
+        let erreursRecues = null
+        await visiter('/workouts/12', {
+            method: 'patch',
+            preserveState: true,
+            onError: (erreurs) => (erreursRecues = erreurs),
+        })
+
+        expect(erreursRecues).toEqual({ name: 'Le nom est obligatoire.' })
+        expect(useEtatDuReseau().joignable.value).toBe(true)
+    })
 })
 
 describe('ce que le filet laisse passer', () => {
@@ -238,6 +266,37 @@ describe('un réseau qui ne répond pas', () => {
 
         expect(annonces).toEqual([])
         expect(contenu()).toBe('Accueil')
+    })
+
+    /*
+     * L'évènement ne dit que l'adresse de la requête : l'échec d'un rechargement
+     * de la page courante, parti pendant une visite au premier plan, ne doit
+     * pas être imputé à celle-ci, ni lui annoncer une page indisponible, ni
+     * couper son minuteur de lenteur.
+     */
+    it('n’impute pas à la visite au premier plan l’échec d’un rechargement parti pendant elle', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+        reseau.prochains.push('muet', 'coupe')
+        let rechargementFini = false
+        const pageCourante = window.location.pathname
+
+        routeur.visit('/exercises')
+        routeur.reload({ only: ['texte'], onFinish: () => (rechargementFini = true) })
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(requetes.map((requete) => new URL(requete.url, window.location.href).pathname)).toEqual([
+            '/exercises',
+            pageCourante,
+        ])
+        expect(rechargementFini).toBe(true)
+        expect(annonces).toEqual([])
+        expect(relais.rejets).toEqual([])
+
+        await vi.advanceTimersByTimeAsync(DELAI_DU_RESEAU_LENT_MS)
+
+        expect(annonces).toEqual([{ message: RESEAU_LENT, annuler: expect.any(Function) }])
+
+        routeur.cancelAll()
     })
 
     it('ne compte pas le délai d’un rechargement en arrière-plan', async () => {
