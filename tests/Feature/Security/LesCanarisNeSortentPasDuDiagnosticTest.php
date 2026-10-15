@@ -237,7 +237,8 @@ it('ne laisse aucun canari dans le détail d’aucun élément du résumé', fun
         ),
     ];
 
-    expect($details)->toHaveCount(8)->not->toContain(null)
+    expect($details)->toHaveCount(8)
+        ->and($details)->not->toContain(null)
         ->and(CanarisDuDiagnostic::trouvesDans(new EnveloppeDeDiagnostic()(['details' => $details], $maintenant)->json()))->toBe([]);
 });
 
