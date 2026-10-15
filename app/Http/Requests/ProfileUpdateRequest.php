@@ -51,7 +51,10 @@ class ProfileUpdateRequest extends FormRequest
      *
      * Une nouvelle adresse s'écrit en ASCII imprimable, comme à l'inscription
      * (`AdresseEnAsciiImprimable`) ; l'adresse actuelle du compte reste admise
-     * telle quelle.
+     * telle quelle. Aucune règle ne regarde si la nouvelle adresse a déjà un
+     * compte : la réponse le dirait. Le changement attend le lien envoyé à
+     * cette adresse (`TraiterUnChangementDAdresse`), qui prévient au contraire
+     * son titulaire quand elle est prise.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -66,7 +69,6 @@ class ProfileUpdateRequest extends FormRequest
                 'email',
                 'max:255',
                 new AdresseEnAsciiImprimable($this->compte()?->email),
-                Rule::unique(User::class)->ignore($this->user()?->id),
             ],
             'current_password' => $this->changeLAdresse()
                 ? ['required', 'string', 'current_password:web', 'max:255']
@@ -126,7 +128,7 @@ class ProfileUpdateRequest extends FormRequest
      * Comparée telle quelle, comme `isDirty('email')` la comparera à
      * l'enregistrement : un changement de casse est un changement d'adresse.
      */
-    private function changeLAdresse(): bool
+    public function changeLAdresse(): bool
     {
         $adresseDemandee = $this->input('email');
 

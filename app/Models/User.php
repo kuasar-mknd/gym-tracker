@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\AttendLaPreuveDeSonAdresse;
 use App\Models\Traits\DetacheSesAppareilsPush;
 use App\Models\Traits\EffaceSesTracesPolymorphes;
 use App\Models\Traits\HasFitnessData;
 use App\Models\Traits\HasToolsData;
 use App\Models\Traits\OublieLaPreuveDeSaLiaison;
 use App\Models\Traits\SurveilleSonAdresse;
+use App\Notifications\LienDOuvertureDuCompte;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -29,6 +33,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property \Illuminate\Support\Carbon|null $en_attente_depuis Depuis quand le compte ouvert par l'inscription attend la preuve de son adresse ; effacée par toute preuve (`AttendLaPreuveDeSonAdresse`).
  * @property string|null $ancienne_adresse_verifiee Dernière adresse vérifiée quittée, tant que le compte n'est pas revérifié (`SurveilleSonAdresse`).
  * @property string|null $provider
  * @property string|null $provider_id
@@ -44,6 +49,7 @@ use Spatie\Activitylog\Support\LogOptions;
  */
 final class User extends Authenticatable implements MustVerifyEmail
 {
+    use AttendLaPreuveDeSonAdresse;
     use DetacheSesAppareilsPush;
     use EffaceSesTracesPolymorphes;
     use HasApiTokens;
@@ -57,7 +63,14 @@ final class User extends Authenticatable implements MustVerifyEmail
     use LogsActivity;
     use Notifiable;
     use OublieLaPreuveDeSaLiaison;
+    use Prunable;
     use SurveilleSonAdresse;
+
+    /**
+     * Les jours qu'un compte ouvert par l'inscription attend la preuve de son
+     * adresse avant d'être effacé (`prunable()`). Le lien d'ouverture le dit.
+     */
+    public const int JOURS_AVANT_LA_PURGE = 7;
 
     /**
      * La valeur en memoire d'une instance fraiche, alignee sur celle de la base.
@@ -170,6 +183,39 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Les comptes ouverts par l'inscription dont l'adresse n'a jamais été
+     * prouvée, au-delà de `JOURS_AVANT_LA_PURGE` jours : effacés chaque nuit
+     * par `model:prune` (`routes/console.php`), un à un, par `delete()`, qui
+     * efface aussi leurs traces (`EffaceSesTracesPolymorphes`). Un compte
+     * vérifié n'en est jamais, même si son attente restait posée.
+     *
+     * @return Builder<self>
+     */
+    public function prunable(): Builder
+    {
+        return self::query()
+            ->where('en_attente_depuis', '<', now()->subDays(self::JOURS_AVANT_LA_PURGE))
+            ->whereNull('email_verified_at');
+    }
+
+    /**
+     * Un compte en attente reçoit le lien qui l'ouvre, mené à la connexion
+     * (`LienDOuvertureDuCompte`) ; tout autre compte non vérifié, celui de
+     * Laravel, qui vérifie l'adresse depuis une session ouverte.
+     */
+    #[\Override]
+    public function sendEmailVerificationNotification(): void
+    {
+        if ($this->estEnAttente()) {
+            $this->notify(new LienDOuvertureDuCompte());
+
+            return;
+        }
+
+        parent::sendEmailVerificationNotification();
+    }
+
+    /**
      * Le fournisseur de connexion relié au compte, nommé pour l'écran, ou null.
      *
      * Un compte ouvert par un fournisseur a reçu un mot de passe aléatoire que
@@ -215,6 +261,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'en_attente_depuis' => 'datetime',
             'liaison_prouvee_le' => 'datetime',
             'password' => 'hashed',
             'default_rest_time' => 'integer',

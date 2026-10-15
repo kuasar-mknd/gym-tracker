@@ -13,7 +13,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | **/*.md | .ai/rules/general.md |
 | app/** | .ai/rules/horloge.md |
 | app/Jobs/** | .ai/rules/jobs.md |
-| resources/js/**, resources/js/**/*.vue, resources/css/** | .ai/rules/js.md |
+| resources/js/**, resources/js/**/*.vue, resources/css/**, public/*.svg, pwa-assets.config.js | .ai/rules/js.md |
 | bootstrap/app.php, app/Http/Middleware/** | .ai/rules/middleware.md |
 | app/Models/** | .ai/rules/models.md |
 | app/Actions/**, app/Services/**, app/Policies/** | .ai/rules/mutation.md |

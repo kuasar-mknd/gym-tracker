@@ -343,6 +343,14 @@ describe('Register', () => {
 
         expect(button().attributes('aria-busy')).toBe('false')
     })
+
+    it('annonce avant l’envoi que le compte s’ouvre par le lien envoyé à l’adresse', () => {
+        // Le serveur ne connecte plus personne à l'inscription : sans cette
+        // phrase, la page de connexion qui suit surprendrait.
+        expect(mountPage(Register).find('[data-testid="register-link-notice"]').text()).toBe(
+            'Un lien partira à ton adresse : ton compte s’ouvre une fois ce lien suivi.',
+        )
+    })
 })
 
 describe('ForgotPassword', () => {

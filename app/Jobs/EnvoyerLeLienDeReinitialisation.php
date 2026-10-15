@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use Illuminate\Auth\Passwords\PasswordBrokerManager;
+use Illuminate\Contracts\Auth\PasswordBroker;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Traits\Localizable;
 
 /**
@@ -28,6 +29,14 @@ use Illuminate\Support\Traits\Localizable;
  * s'il y en a une, et il est chiffré dans la file : l'adresse est une saisie,
  * peut-être celle d'un tiers, et ne doit se lire ni dans la file ni parmi les
  * jobs échoués.
+ *
+ * Le courtier du conteneur pose le plancher commun des réponses
+ * d'authentification (`auth.timebox_duration`, une seconde) autour de
+ * `sendResetLink()`, sans jamais rendre la main tôt : il endormirait le
+ * travailleur une seconde par demande, pour une durée que personne ne voit.
+ * Le job prend donc un courtier neuf, créé sans plancher : la valeur ne
+ * change que le temps de sa création, et redevient celle de la configuration
+ * pour toute autre lecture.
  */
 final class EnvoyerLeLienDeReinitialisation implements ShouldBeEncrypted, ShouldQueue
 {
@@ -43,7 +52,23 @@ final class EnvoyerLeLienDeReinitialisation implements ShouldBeEncrypted, Should
     {
         $this->withLocale(
             $this->langue,
-            fn (): string => Password::sendResetLink(['email' => $this->adresse]),
+            fn (): string => self::courtierSansPlancher()->sendResetLink(['email' => $this->adresse]),
         );
+    }
+
+    /**
+     * Un courtier des mots de passe neuf, dont la Timebox ne dort pas : il lit
+     * `auth.timebox_duration` à sa création, posée à 0 le temps de celle-ci.
+     */
+    private static function courtierSansPlancher(): PasswordBroker
+    {
+        $plancher = config('auth.timebox_duration');
+        config(['auth.timebox_duration' => 0]);
+
+        try {
+            return new PasswordBrokerManager(app())->broker();
+        } finally {
+            config(['auth.timebox_duration' => $plancher]);
+        }
     }
 }
