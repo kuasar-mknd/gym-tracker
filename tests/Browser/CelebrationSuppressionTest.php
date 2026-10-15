@@ -29,10 +29,13 @@ class CelebrationSuppressionTest extends DuskTestCase
      * Plusieurs badges non lus, et une console sans erreur (#2052).
      *
      * Fermer « Badge débloqué » sur un compte qui en avait trois levait deux
-     * fois « Cannot read properties of null (reading 'icon') ». La modale reste
-     * éteinte sous Dusk : ce parcours ne la ferme pas, la fermeture et la page
-     * qui suit se jouent dans `tests/js/components/celebrationModalAvecInertia.test.js`.
-     * Il exige au moins que la page qui porte ces badges se rende sans erreur.
+     * fois « Cannot read properties of null (reading 'icon') ». Ce parcours ne
+     * garde pas contre cette erreur : sous Dusk, `is_testing` éteint la modale,
+     * qui ne rend rien, et sa console resterait aussi propre sur l'ancienne
+     * modale. La reproduction qui échoue sans le correctif est
+     * `tests/js/components/celebrationModalAvecInertia.test.js`, qui ferme les
+     * badges sous le vrai layout. Ce parcours exige seulement que la page qui
+     * porte ces badges se rende sans erreur.
      */
     public function test_an_unread_achievement_does_not_pop_the_celebration_during_browser_tests(): void
     {
