@@ -23,7 +23,20 @@ import { jsRoot } from '../conventions/sourceFiles'
  * faisait rien : la visite échouait, Inertia rejetait une promesse que
  * personne n'attend, et le rapporteur d'erreurs tentait en vain de l'envoyer.
  * Sur un réseau qui ne répond plus, la visite attendait sans fin.
+ *
+ * Le client d'Inertia se monte une fois pour le fichier. Chaque cas retrouve
+ * pourtant la séance telle qu'elle s'est ouverte (#2044) : celui dont la
+ * visite aboutit affiche l'accueil, et un cas tiré après lui en ordre
+ * aléatoire (`--sequence.shuffle`) voyait l'accueil au lieu de la séance.
  */
+
+/** La séance ouverte, telle que le serveur l'a rendue. */
+const seanceOuverte = () => ({
+    component: 'Workouts/Show',
+    url: '/workouts/12',
+    version: 'version-de-la-page',
+    props: { errors: {}, texte: 'Séance en cours' },
+})
 
 let routeur
 const annonces = []
@@ -64,12 +77,7 @@ beforeAll(async () => {
     }
 
     await inertia.createInertiaApp({
-        page: {
-            component: 'Workouts/Show',
-            url: '/workouts/12',
-            version: 'version-de-la-page',
-            props: { errors: {}, texte: 'Séance en cours' },
-        },
+        page: seanceOuverte(),
         resolve: () => Page,
         setup: ({ el, App, props, plugin }) => {
             const app = createApp({ render: () => h(App, props) }).use(plugin)
@@ -83,7 +91,12 @@ beforeAll(async () => {
     window.addEventListener(EVENEMENT_SANS_RESEAU, ecouterLesAnnonces)
 })
 
-beforeEach(() => {
+beforeEach(async () => {
+    // Une visite du client seul, sans requête : la séance revient à l'écran telle qu'elle s'est ouverte.
+    let remise = false
+    routeur.replace({ ...seanceOuverte(), onFinish: () => (remise = true) })
+    await vi.waitUntil(() => remise)
+
     requetes.length = 0
     annonces.length = 0
     envoisAuRapporteur.length = 0
