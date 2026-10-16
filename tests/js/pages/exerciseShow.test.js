@@ -85,7 +85,7 @@ vi.mock('vue', async (importOriginal) => ({
 }))
 
 import ExerciseShow from '@/Pages/Exercises/Show.vue'
-import { passesSlot } from './pageStubs'
+import { passesSlot, layoutSansEnTeteDePage } from './pageStubs'
 
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
@@ -316,5 +316,34 @@ describe('only the sets that were done', () => {
         expect(wrapper.vm.averageWeightData.map((point) => point.weight)).toEqual([95, null, 100])
         // Rien n'a été soulevé : un volume nul est la vérité, pas un trou.
         expect(wrapper.vm.volumeData.map((point) => point.volume)).toEqual([475, 0, 500])
+    })
+})
+
+/**
+ * La catégorie et le type ne vivaient que dans l'en-tête de page, que le
+ * layout cache sous 1 024 px, et l'en-tête mobile ne porte que le nom : une
+ * tablette debout et un téléphone ne les voyaient nulle part (#2057).
+ */
+describe('sans l’en-tête de page, sur une tablette debout comme sur un téléphone', () => {
+    it.each([
+        ['strength', 'Pectoraux • Force'],
+        ['cardio', 'Pectoraux • Cardio'],
+        ['timed', 'Pectoraux • Temps'],
+    ])('dit la catégorie et le type d’un exercice « %s »', async (type, attendu) => {
+        const wrapper = mount(ExerciseShow, {
+            props: {
+                exercise: { id: 1, name: 'Développé Couché', type, category: 'Pectoraux' },
+                progress: [],
+                history: [],
+            },
+            global: {
+                mocks: { route: globalThis.route },
+                stubs: { AuthenticatedLayout: layoutSansEnTeteDePage, GlassCard: passesSlot },
+            },
+        })
+
+        await flushPromises()
+
+        expect(wrapper.text().replace(/\s+/g, ' ')).toContain(attendu)
     })
 })

@@ -167,11 +167,16 @@ onUnmounted(() => {
         <!-- Avant une déconnexion qui perdrait des écritures pas encore envoyées (#2050). -->
         <QuestionDeDeconnexion />
 
-        <!-- Desktop Navigation -->
+        <!--
+            La barre de bureau, à partir de 1 024 px de large (variante
+            `bureau:` de app.css, #2057). Le nom du compte prend la place qui
+            reste et s'abrège au-delà : sur plusieurs lignes, un nom long
+            faisait déborder le bouton du compte hors de la barre.
+        -->
         <nav
             class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b backdrop-blur-xl"
         >
-            <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto max-w-7xl">
+            <div class="px-sure-8 mx-auto max-w-7xl">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
                         <!-- Logo -->
@@ -182,7 +187,7 @@ onUnmounted(() => {
                         </div>
 
                         <!-- Desktop Navigation Links -->
-                        <div class="bureau:flex hidden space-x-1 sm:ms-8">
+                        <div class="bureau:flex ms-8 hidden space-x-1">
                             <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                 Accueil
                             </NavLink>
@@ -205,7 +210,7 @@ onUnmounted(() => {
                         </div>
                     </div>
 
-                    <div class="bureau:flex hidden gap-3 sm:ms-6 sm:items-center">
+                    <div class="bureau:flex ms-6 hidden min-w-0 items-center gap-3">
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
@@ -226,22 +231,22 @@ onUnmounted(() => {
                         </Link>
 
                         <!-- User Dropdown -->
-                        <div class="relative">
+                        <div class="relative min-w-0">
                             <Dropdown align="right" width="48">
                                 <template #trigger="{ open }">
                                     <button
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex max-w-full items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
-                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
+                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black"
                                         >
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
-                                        {{ $page.props.auth.user.name }}
-                                        <GlassIcon name="expand_more" size="sm" class="text-text-muted" />
+                                        <span class="truncate">{{ $page.props.auth.user.name }}</span>
+                                        <GlassIcon name="expand_more" size="sm" class="text-text-muted shrink-0" />
                                     </button>
                                 </template>
 
