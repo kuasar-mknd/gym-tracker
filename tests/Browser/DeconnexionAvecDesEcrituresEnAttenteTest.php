@@ -63,11 +63,13 @@ class DeconnexionAvecDesEcrituresEnAttenteTest extends DuskTestCase
             JS);
 
             /*
-             * Les libellés des boutons se lisent dans le DOM : `glass-button`
-             * les passe en majuscules, et WebDriver rend le texte transformé
-             * (« RESTER CONNECTÉ »), où « Rester connecté » ne se trouve pas
-             * (#2079). `waitFor` et `assertVisible` disent que les deux
-             * boutons sont à l'écran.
+             * Chaque libellé se vérifie deux fois (#2079). Dans le DOM, à
+             * l'identique, casse comprise : `glass-button` le passe en
+             * majuscules, et WebDriver rend le texte transformé (« RESTER
+             * CONNECTÉ »), où « Rester connecté » ne se trouve pas. À l'écran,
+             * sans tenir compte de la casse : `textContent` lit aussi un texte
+             * caché, et `waitFor` comme `assertVisible` ne disent que le bouton
+             * affiché, pas son libellé.
              */
             $libelleDe = static fn (string $selecteur): string => 'document.querySelector('.json_encode($selecteur, JSON_THROW_ON_ERROR).').textContent.trim()';
 
@@ -79,7 +81,9 @@ class DeconnexionAvecDesEcrituresEnAttenteTest extends DuskTestCase
                 ->assertVisible('[dusk="confirm-dialog-confirm"]')
                 ->assertSee("Une modification faite hors ligne n'a pas encore été envoyée.")
                 ->assertScript($libelleDe('[dusk="confirm-dialog-cancel"]'), 'Rester connecté')
+                ->assertSeeIn('[dusk="confirm-dialog-cancel"]', 'Rester connecté', true)
                 ->assertScript($libelleDe('[dusk="confirm-dialog-confirm"]'), 'Se déconnecter quand même')
+                ->assertSeeIn('[dusk="confirm-dialog-confirm"]', 'Se déconnecter quand même', true)
                 ->clickWhenSettled('[dusk="confirm-dialog-cancel"]')
                 ->waitUntilMissing('[dusk="confirm-dialog-cancel"]', 15)
                 ->assertPathIs('/profile');
