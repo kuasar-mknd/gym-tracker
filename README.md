@@ -47,7 +47,7 @@
 ### 🔐 Sécurité & Outils
 - **OAuth Social** — Connexion via Google, GitHub et Apple, dès que l'identité OAuth du fournisseur est complète ; pour Apple, l'application signe elle-même le secret client à chaque échange, avec la clé `.p8` (#1911).
 - **Outils** — Calculateurs de plaques, de 1RM, de Wilks et de macros, échauffement, hydratation, minuteur d'intervalles et jeûne.
-- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce neuf à chaque requête, Octane compris). Aucune page, panneau et tableaux de bord compris, ne fait rien charger à un autre site, et la CSP n'admet d'autre origine que les services push des navigateurs : les logos de connexion sont servis par l'application, les avatars du panneau et de Pulse sont des initiales qu'elle dessine, et Horizon, Pulse et Telescope s'affichent dans la police du système, sans leur fonte en ligne.
+- **Sécurité renforcée** — Throttling API, CSP strict et Nonce-based protection (un nonce neuf à chaque requête, Octane compris). La CSP n'admet d'autre origine que les services push des navigateurs, et le panneau, Horizon, Pulse et Telescope ne font plus rien charger à un autre site : les logos de connexion sont servis par l'application, les avatars du panneau et de Pulse sont des initiales qu'elle dessine, et Horizon, Pulse et Telescope s'affichent dans la police du système, sans leur fonte en ligne. La page `/up` du framework, servie hors de la CSP, charge encore sa fonte et un script d'autres sites.
 - **Compte ouvert par le lien** — L'inscription et le changement d'adresse répondent de la même façon, dans le même temps, qu'une adresse ait déjà un compte ou non. Un compte ne s'ouvre, et une nouvelle adresse ne remplace l'ancienne, qu'une fois suivi le lien envoyé à cette adresse ; après l'inscription, on suit le lien puis on se connecte sur le même appareil. Le titulaire d'une adresse déjà prise en est prévenu par courriel. Un compte jamais ouvert s'efface au bout de sept jours ; les comptes créés avant ce changement, ou depuis le panneau, ne sont pas concernés. Le panneau montre les comptes en attente pour ce qu'ils sont : colonne « En attente du lien », dont le badge affiche la date de l'inscription, et filtre du même nom dans la liste des utilisateurs, mention sur la fiche ; ses tuiles, son graphique des inscriptions et l'encart « Derniers inscrits parmi les comptes ouverts » ne lisent que les comptes ouverts, et la tuile « Comptes » dit combien attendent.
 
 ---
@@ -59,7 +59,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 3 829 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 3 831 tests, couverture ≥ **94 %** | bloquant par PR |
 | **Tests frontend** | 2 880 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 128 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
