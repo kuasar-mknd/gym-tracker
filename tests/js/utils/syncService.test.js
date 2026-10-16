@@ -2131,7 +2131,7 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         expect(localStorage.getItem('offline_sync_queue')).toBeNull()
     })
 
-    it('n’oublie rien sur un avis d’un autre compte, illisible ou retiré', async () => {
+    it('n’oublie que sur l’avis de ce compte, pas sur celui d’un autre, illisible ou retiré', async () => {
         const service = await chargé()
         await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ isOffline: true })
 
@@ -2144,5 +2144,16 @@ describe('SyncService un compte qui quitte l’appareil', () => {
 
         expect(service.enAttente()).toBe(1)
         expect(service.compte).toBe(COMPTE)
+
+        // Seul l'avis de ce compte le fait oublier.
+        window.dispatchEvent(
+            new StorageEvent('storage', {
+                key: 'gym-tracker:compte-oublie-de-la-file',
+                newValue: JSON.stringify({ compte: Number(COMPTE) }),
+            }),
+        )
+
+        expect(service.enAttente()).toBe(0)
+        expect(service.compte).toBeNull()
     })
 })
