@@ -9,8 +9,37 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        health: '/up',
+        /*
+         * `/up`, que sondent le `HEALTHCHECK` de l'image et la composition de
+         * production, répond par `SanteController`, et non par la route de
+         * santé de Laravel, qui rendait une page chargeant une fonte et un
+         * script d'autres sites. `/sonde` est ce que la page interroge pour
+         * savoir si le serveur répond de nouveau (#2048). Toutes deux hors
+         * des groupes `web` et `api` : ni session, ni cookie, ni jeton. Le
+         * docbloc de chaque contrôleur dit ce qu'il fait, et celui de
+         * `SondeController` pourquoi la page n'interroge pas `/up`.
+         */
+        then: static function (): void {
+            \Illuminate\Support\Facades\Route::get('/up', \App\Http\Controllers\SanteController::class);
+            \Illuminate\Support\Facades\Route::get('/sonde', \App\Http\Controllers\SondeController::class)->name('sonde');
+        },
     )
+    /*
+     * Et `/up` répond pendant une maintenance, comme la route de Laravel le
+     * faisait. Sous Octane, en production, `PreventRequestsDuringMaintenance`
+     * lit cette liste à chaque requête : c'est lui qui sert, dans Laravel, la
+     * page que `php artisan down --render` écrit d'avance. Hors d'Octane
+     * (`php artisan serve` : Sail, Dusk en CI), `public/index.php` sert cette
+     * page avant Laravel, sauf aux chemins que `down --render` a lus dans
+     * cette liste, en console : sans elle, la sonde y recevrait 503. D'où un
+     * appel posé au démarrage de l'application, console comprise, et non dans
+     * `withMiddleware()`, qui ne tourne qu'à la résolution du noyau HTTP, que
+     * la console ne doit aujourd'hui qu'aux fournisseurs d'Inertia et de
+     * Livewire.
+     */
+    ->booting(static function (): void {
+        \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::except('up');
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         /*
          * Pas de `trustProxies(at:)` ici, et c'est voulu : la liste des proxys

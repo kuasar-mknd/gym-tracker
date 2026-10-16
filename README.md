@@ -59,8 +59,8 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 3 815 tests, couverture ≥ **94 %** | bloquant par PR |
-| **Tests frontend** | 2 886 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
+| **Tests backend** | 3 835 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests frontend** | 2 907 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 128 parcours Dusk sous Chrome headless | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
@@ -102,6 +102,8 @@ La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul 
 - **Réglages de la base** relit en production `innodb_flush_log_at_trx_commit` et `log_bin` dans MySQL, et l'état de Pulse (#1668) : rouge si une écriture repaie la synchronisation du disque, orange si Pulse enregistre ou si MySQL ne rend pas l'un des deux réglages.
 
 `docker-compose.prod.yml` déclare cinq services : `app`, `db`, `redis`, `worker` (Horizon) et **`scheduler`** — ce dernier exécute les tâches planifiées. Sans lui, les tâches ne tournent pas — ni le contrôle de santé qui enverrait l'alerte : la page « Santé » garde des résultats qui vieillissent, et seul son bouton de rafraîchissement fait passer le planificateur au rouge. `scheduler` porte `init: true` : ses tâches d'arrière-plan (les sauvegardes) sont orphelines dès leur lancement, et `schedule:work`, qui ne récolte pas les enfants qu'il n'a pas lancés, les laisserait en processus zombies jusqu'à la recréation du conteneur (#1929).
+
+La sonde de santé de `app` (le `HEALTHCHECK` de l'image et celui de la composition, toutes les trente secondes) demande `/up` avec `curl -f` : `{"status":"up"}` et 200, ou `{"status":"down"}` et 500 quand un écouteur de `DiagnosingHealth` lève, l'exception partant dans les journaux (#2072). La même réponse JSON pour tout client, sans session ni cookie, que ni le navigateur ni le service worker de la PWA ne gardent (`Cache-Control: no-store`), et `/up` répond aussi pendant une maintenance. Le sondage ne lit pas la base : il réécrit seulement l'annonce de version de `app` dans le cache, comme avant. Un outil de surveillance qui cherchait un mot dans l'ancienne page HTML de Laravel cherche désormais `"status":"up"`.
 
 Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
 

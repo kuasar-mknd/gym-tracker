@@ -10,6 +10,7 @@ import { installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
 import { inscrireLeWorker } from '@/Utils/miseAJourDuWorker'
 import { installerLaRouteGlobale } from '@/Utils/routeGlobale'
 import { installerLesVisitesHorsLigne } from '@/Utils/visitesHorsLigne'
+import { installerLaSondeDuServeur } from '@/Utils/sondeDuServeur'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -33,6 +34,13 @@ if (typeof window !== 'undefined') {
      * qui n'aboutit pas au bout de huit secondes propose de l'annuler (#2048).
      */
     installerLesVisitesHorsLigne({ routeur: router })
+
+    /*
+     * Tant que le serveur ne répond pas, la page lui demande la sonde au
+     * retour du réseau, puis de loin en loin : ce qui attendait le serveur se
+     * réactive sans un geste (#2048).
+     */
+    installerLaSondeDuServeur()
 }
 
 // Expose router for testing (Dusk)

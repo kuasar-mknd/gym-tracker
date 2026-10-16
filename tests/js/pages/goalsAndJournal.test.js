@@ -120,8 +120,13 @@ beforeEach(() => {
 const posts = () => submissions.filter((s) => s.method === 'post')
 const deletions = () => submissions.filter((s) => s.method === 'delete')
 
-/** Replays what Inertia does when the server accepts the last submission. */
-const succeed = () => submissions[submissions.length - 1].options.onSuccess()
+/** Replays what Inertia does when the server accepts the last submission: `onSuccess`, then `onFinish`. */
+const succeed = () => {
+    const { options } = submissions[submissions.length - 1]
+
+    options.onSuccess?.()
+    options.onFinish?.()
+}
 
 const passesSlot = { template: '<div><slot /></div>' }
 
