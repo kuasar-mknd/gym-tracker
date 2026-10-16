@@ -983,12 +983,17 @@ const BASCULES_DE_MISE_EN_PAGE = [
 ]
 
 /**
- * Un téléphone couché garde l'en-tête mobile et la barre du bas (#2043) : la
- * barre de bureau n'y tient pas, et sa cloche et son menu du compte passaient
- * sous l'encoche ou hors de l'écran. Elle ne s'ouvre qu'à `bureau:` (large et
- * assez haut, ou assez large pour qu'aucun téléphone ne l'atteigne), et ce qui
- * bascule avec elle suit la même variante : à `sm:`, un téléphone couché
- * montrerait le titre de la page deux fois.
+ * La barre de bureau ne s'ouvre qu'à `bureau:`, à partir de 1 024 px de large
+ * (#2057). Elle en demande 971 avec un nom de compte court, 986 avec
+ * l'ascenseur de Windows ou de Linux : ouverte dès 640 px sur un écran haut
+ * (#2043), elle débordait jusqu'à 960 px avec un nom long, menu du compte
+ * rogné, sur une tablette debout comme dans une fenêtre de bureau étroite. En
+ * deçà, l'en-tête mobile et la barre du bas restent, qui tiennent à toute
+ * largeur : un téléphone couché les garde, puisqu'aucun n'atteint 1 024 px de
+ * large, et la barre de bureau y posait sa cloche et son menu du compte sous
+ * l'encoche ou hors de l'écran (#2043). Ce qui bascule avec elle suit la même
+ * variante : à `sm:`, un téléphone couché ou une tablette debout montreraient
+ * le titre de la page deux fois.
  */
 describe('la barre de bureau', () => {
     it.each([
@@ -997,10 +1002,15 @@ describe('la barre de bureau', () => {
         ['un iPhone couché', 844, 390, false],
         ['le plus grand iPhone couché', 956, 440, false],
         ['un grand Android couché', 998, 448, false],
-        ['juste sous les deux seuils', 1023, 499, false],
-        ['une tablette debout', 768, 1024, true],
+        ['l’ancien seuil, un écran haut de 640 px de large', 640, 500, false],
+        ['une tablette debout', 768, 1024, false],
+        ['un iPad Air debout', 820, 1180, false],
+        ['une fenêtre de bureau étroite', 900, 900, false],
+        ['juste sous le seuil, sur un écran haut', 1023, 1366, false],
         ['une tablette couchée', 1024, 768, true],
-        ['juste au seuil de hauteur', 640, 500, true],
+        ['un iPad Air couché', 1180, 820, true],
+        ['un iPad Pro 12,9 pouces couché', 1366, 1024, true],
+        ['un iPad Pro 12,9 pouces debout', 1024, 1366, true],
         ['un écran de bureau', 1280, 800, true],
         ['une fenêtre de bureau large et basse', 1280, 480, true],
         ['un portable mis à l’échelle, fenêtre basse', 1093, 460, true],
@@ -1009,6 +1019,7 @@ describe('la barre de bureau', () => {
     })
 
     it('lit la requête de la variante par ses jetons, et refuse ce qu’elle ne connaît pas', () => {
+        expect(requeteValable('(width >= 64rem)', { width: 1023, height: 1366 })).toBe(false)
         expect(requeteValable('(width >= 40rem) and (height >= 31.25rem)', { width: 1280, height: 480 })).toBe(false)
         expect(requeteValable('(width >= 40rem) or (height >= 31.25rem)', { width: 390, height: 844 })).toBe(true)
         expect(() => requeteValable('(min-width: 40rem)', { width: 1280, height: 800 })).toThrow()
