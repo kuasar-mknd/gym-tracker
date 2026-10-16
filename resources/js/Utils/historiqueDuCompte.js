@@ -55,6 +55,9 @@ export const CLEF_DU_TITULAIRE_DE_L_APPAREIL = 'gym-tracker:titulaire-de-l-appar
 /** Le titulaire d'une page servie sans compte. */
 export const INVITE = 'invite'
 
+/** La balise où un chargement complet écrit la page initiale, qu'Inertia lit au démarrage. */
+const BALISE_DE_LA_PAGE_INITIALE = 'script[data-page="app"][type="application/json"]'
+
 /**
  * Le titulaire qu'une page déclare : `compte:<id>`, un invité, ou `null` quand
  * la page ne porte pas `auth` et ne dit donc rien.
@@ -82,12 +85,38 @@ export const titulaireDeLaPage = (page) => {
  */
 export const pageInitialeDuDocument = (document) => {
     try {
-        const script = document?.querySelector?.('script[data-page="app"][type="application/json"]')
+        const script = document?.querySelector?.(BALISE_DE_LA_PAGE_INITIALE)
 
         return script?.textContent ? JSON.parse(script.textContent) : null
     } catch {
         return null
     }
+}
+
+/**
+ * Vide la page initiale du document quand elle est celle de ce composant.
+ *
+ * Inertia ne lit cette balise qu'au démarrage et ne la retire jamais : elle
+ * garde ce que la première page a reçu tant que le document vit, hors de
+ * portée du chiffrement de l'historique, après une visite qui quitte la page,
+ * connexion et déconnexion comprises. Une page qui y reçoit ce qui ne doit pas
+ * rester (le lien de la page de réinitialisation, jeton et valeur chiffrée)
+ * la vide une fois montée : Inertia et la garde de l'historique l'ont lue
+ * avant, et `SyncService`, s'il se charge plus tard, n'y lirait de toute
+ * façon aucun compte, la page étant celle d'un invité. Seule la page initiale
+ * de ce composant se vide :
+ * `SyncService` lit le compte connecté dans celle d'une autre page, au
+ * chargement de son module, qui peut venir après le montage.
+ *
+ * @param {Document | undefined} document
+ * @param {string} composant
+ */
+export const viderLaPageInitialeDuDocument = (document, composant) => {
+    if (pageInitialeDuDocument(document)?.component !== composant) {
+        return
+    }
+
+    document.querySelector(BALISE_DE_LA_PAGE_INITIALE).textContent = ''
 }
 
 /**

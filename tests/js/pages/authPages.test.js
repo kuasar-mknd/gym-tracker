@@ -517,17 +517,27 @@ describe('ForgotPassword', () => {
 
 describe('ResetPassword', () => {
     /**
-     * Le lien du courriel ne porte l'adresse du compte que chiffrée : la page
-     * la reçoit sous `adresse`, opaque, et la renvoie sans la lire.
+     * Le serveur vérifie le lien avant d'ouvrir la page. Un lien qui vaut lui
+     * donne le jeton et l'adresse chiffrée (`adresse`), opaque, qu'elle renvoie
+     * sans la lire, et rien de l'adresse du compte : la personne, ou son
+     * gestionnaire de mots de passe, la saisit, et le serveur la compare à
+     * celle du lien.
      */
-    const props = { token: 'jeton-du-mail', adresse: 'eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9' }
+    const props = {
+        token: 'jeton-du-mail',
+        adresse: 'eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9',
+    }
 
-    it('embarque le jeton et l’adresse chiffrée reçus du lien, tels quels, et aucune adresse en clair', () => {
+    /** Le champ de l'identifiant, s'il y en a un. */
+    const champDuCompte = (wrapper) => wrapper.find('input[autocomplete="username"]')
+
+    it('embarque le jeton et l’adresse chiffrée reçus du lien, tels quels, et une adresse vide à saisir', () => {
         const wrapper = mountPage(ResetPassword, { props })
 
         expect(wrapper.vm.form.token).toBe('jeton-du-mail')
         expect(wrapper.vm.form.adresse).toBe('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
-        expect(wrapper.vm.form).not.toHaveProperty('email')
+        expect(wrapper.vm.form.email).toBe('')
+        expect(wrapper.vm.form).not.toHaveProperty('compte')
     })
 
     it('range les deux nouveaux mots de passe dans des champs distincts', async () => {
@@ -540,13 +550,67 @@ describe('ResetPassword', () => {
         expect(wrapper.vm.form.password_confirmation).toBe('hunter2-bis')
     })
 
-    it('ne laisse plus corriger l’adresse du lien : ni champ d’adresse, ni valeur chiffrée affichée', () => {
+    /*
+     * Un gestionnaire de mots de passe range le nouveau mot de passe sous le
+     * champ `autocomplete="username"` du formulaire qu'il voit envoyer : sans
+     * lui, il le rangeait sans identifiant. Le champ est vide et modifiable :
+     * la page ne connaît pas l'adresse, que la personne ou son gestionnaire
+     * remplit.
+     */
+    it('offre un champ d’adresse vide et modifiable, dans le formulaire, comme identifiant des gestionnaires de mots de passe', () => {
         const wrapper = mountPage(ResetPassword, { props })
         const libelles = wrapper.findAll('label').map((libelle) => libelle.text().replace(/\s*\*$/, ''))
+        const champ = champDuCompte(wrapper)
 
-        expect(libelles).toEqual(['Nouveau mot de passe', 'Confirmer le mot de passe'])
-        expect(wrapper.find('input[type="email"]').exists()).toBe(false)
+        expect(libelles).toEqual(['Email', 'Nouveau mot de passe', 'Confirmer le mot de passe'])
+        expect(champ.element.value).toBe('')
+        expect(champ.attributes('type')).toBe('email')
+        expect(champ.attributes('name')).toBe('email')
+        expect(champ.attributes('required')).toBeDefined()
+        expect(champ.attributes('readonly')).toBeUndefined()
+        expect(champ.attributes('disabled')).toBeUndefined()
+        expect(champ.attributes('id')).toBe(wrapper.find('label').attributes('for'))
+        expect(wrapper.find('form').element.contains(champ.element)).toBe(true)
+        expect(
+            wrapper.findAll('input[type="password"]').map((motDePasse) => motDePasse.attributes('autocomplete')),
+        ).toEqual(['new-password', 'new-password'])
+    })
+
+    it('envoie l’adresse saisie avec le formulaire, à côté de la valeur chiffrée, qui ne s’affiche pas', async () => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        await champDuCompte(wrapper).setValue('Sam@Example.org')
+        await submit(wrapper)
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(submitted()[0]).toBe('/password.store')
+        expect(openRequest.email).toBe('Sam@Example.org')
+        expect(openRequest.adresse).toBe('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
+        expect(openRequest.token).toBe('jeton-du-mail')
         expect(wrapper.html()).not.toContain('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
+    })
+
+    /*
+     * La page ne lit aucune adresse du serveur : une prop `compte`, que le
+     * serveur n'envoie plus, ne remplirait rien.
+     */
+    it('laisse le champ vide même si le serveur donnait une adresse : la page n’en lit aucune', () => {
+        const wrapper = mountPage(ResetPassword, { props: { ...props, compte: 'sam@example.org' } })
+
+        expect(champDuCompte(wrapper).element.value).toBe('')
+        expect(wrapper.vm.form.email).toBe('')
+        expect(Object.values(wrapper.vm.form)).not.toContain('sam@example.org')
+    })
+
+    it('affiche sous le champ l’erreur de validation de l’adresse', async () => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        wrapper.vm.form.errors = { email: 'Le champ adresse e-mail est obligatoire.' }
+        await nextTick()
+
+        expect(champDuCompte(wrapper).attributes('aria-invalid')).toBe('true')
+        expect(wrapper.text()).toContain('Le champ adresse e-mail est obligatoire.')
+        expect(wrapper.find('[data-testid="lien-refuse"]').exists()).toBe(false)
     })
 
     it('poste vers la route de stockage du mot de passe', async () => {
@@ -557,8 +621,9 @@ describe('ResetPassword', () => {
         expect(submitted()[0]).toBe('/password.store')
     })
 
-    it('garde le jeton et l’adresse chiffrée quand la requête retombe, et n’efface que les mots de passe', async () => {
+    it('garde le jeton, l’adresse chiffrée et l’adresse saisie quand la requête retombe, et n’efface que les mots de passe', async () => {
         const wrapper = mountPage(ResetPassword, { props })
+        await champDuCompte(wrapper).setValue('sam@example.org')
         wrapper.vm.form.password = 'hunter2'
         wrapper.vm.form.password_confirmation = 'hunter3'
 
@@ -574,9 +639,11 @@ describe('ResetPassword', () => {
         expect(wrapper.vm.form.token).toBe('jeton-du-mail')
         expect(wrapper.vm.form.adresse).toBe('eyJpdiI6InZhbGV1ci1jaGlmZnJlZSJ9')
         expect([wrapper.vm.form.password, wrapper.vm.form.password_confirmation]).toEqual(['', ''])
+        expect(wrapper.vm.form.email).toBe('sam@example.org')
+        expect(champDuCompte(wrapper).element.value).toBe('sam@example.org')
     })
 
-    it('montre le refus du lien en tête, avec le chemin d’une nouvelle demande, et rien sans refus', async () => {
+    it('montre le refus d’un envoi en tête, avec le chemin d’une nouvelle demande, et rien sans refus', async () => {
         const wrapper = mountPage(ResetPassword, { props })
 
         expect(wrapper.find('[data-testid="lien-refuse"]').exists()).toBe(false)
@@ -590,6 +657,27 @@ describe('ResetPassword', () => {
         )
         expect(refus.find('a').attributes('href')).toBe('/password.request')
         expect(refus.find('a').text()).toBe('Demander un nouveau lien')
+    })
+
+    /*
+     * Un lien refusé dès l'ouverture (jeton faux ou périmé, lien d'avant le
+     * chiffrement) ne reçoit ni jeton, ni valeur chiffrée, ni adresse : la page
+     * le dit tout de suite, et n'offre pas de formulaire voué au refus.
+     */
+    it('dit dès l’ouverture qu’un lien refusé ne vaut pas, sans formulaire ni compte', () => {
+        const wrapper = mountPage(ResetPassword, {
+            props: { lienRefuse: 'Ce jeton de réinitialisation du mot de passe n’est pas valide.' },
+        })
+        const refus = wrapper.find('[data-testid="lien-refuse"]')
+
+        expect(refus.find('[role="alert"] p').text()).toBe(
+            'Ce jeton de réinitialisation du mot de passe n’est pas valide.',
+        )
+        expect(refus.find('a').attributes('href')).toBe('/password.request')
+        expect(refus.find('a').text()).toBe('Demander un nouveau lien')
+        expect(wrapper.find('form').exists()).toBe(false)
+        expect(wrapper.find('input').exists()).toBe(false)
+        expect(wrapper.find('button[type="submit"]').exists()).toBe(false)
     })
 })
 

@@ -35,8 +35,12 @@ use function Pest\Laravel\post;
  * champ modifiable. Un lien suivi en GET finit dans les journaux d'accès,
  * l'historique du navigateur et la trace d'une exception. Il ne la porte
  * plus que chiffrée (`adresse`, `Crypt::encryptString()`), comme le lien de
- * confirmation d'une nouvelle adresse ; la page la renvoie telle quelle sans
- * l'afficher, et seule la réinitialisation la déchiffre.
+ * confirmation d'une nouvelle adresse ; la page la renvoie telle quelle, et
+ * seul le serveur la déchiffre. Il la déchiffre aussi pour vérifier le lien à
+ * l'ouverture de la page, qui ne la montre jamais
+ * (`OuvertureDuLienDeReinitialisationTest`) : la personne saisit l'adresse de
+ * son compte, que le serveur compare à celle du lien
+ * (`IdentifiantSaisiALaReinitialisationTest`).
  *
  * Une valeur qui ne se déchiffre pas, comme un lien émis avant ce changement,
  * est refusée comme un jeton faux : même réponse, entière, et même plancher
@@ -51,6 +55,19 @@ use function Pest\Laravel\post;
 function lienChiffreAdresse(): string
 {
     return 'titulaire.du-lien@example.org';
+}
+
+/**
+ * L'adresse du compte telle que la personne la saisit dans le formulaire, en
+ * capitales : la saisie suit le chemin de celle de la connexion (la saisie que
+ * la session garde après un refus, le corps d'une exception enregistrée).
+ * Écrite autrement que l'adresse du lien, elle laisse voir toute copie de
+ * l'adresse déchiffrée, que `lienChiffreLaisseLireLAdresse()` cherche en
+ * minuscules.
+ */
+function lienChiffreAdresseSaisie(): string
+{
+    return strtoupper(lienChiffreAdresse());
 }
 
 /**
@@ -193,7 +210,12 @@ it('n’écrit l’adresse du compte que chiffrée dans le lien du courriel', fu
         ->and(Crypt::decryptString($formulaire['adresse']))->toBe(lienChiffreAdresse());
 });
 
-it('ouvre une page qui ne montre l’adresse nulle part et lui rend la valeur chiffrée telle que le lien la porte', function (): void {
+/*
+ * La page vérifie le lien, mais ne montre l'adresse du compte nulle part, même
+ * pour un lien qui vaut : la personne la saisit dans un champ vide, que le
+ * serveur compare à celle du lien.
+ */
+it('ouvre, pour un lien qui vaut, une page qui ne montre l’adresse nulle part et lui rend la valeur chiffrée telle que le lien la porte', function (): void {
     $compte = User::factory()->create(['email' => lienChiffreAdresse()]);
     $lien = LiensDesCourriels::lienDeReinitialisation($compte, Password::createToken($compte));
     $formulaire = FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse());
@@ -205,9 +227,10 @@ it('ouvre une page qui ne montre l’adresse nulle part et lui rend la valeur ch
     $proprietes = $page->inertiaProps();
 
     expect($pageInertia['component'] ?? null)->toBe('Auth/ResetPassword')
-        ->and(lienChiffreLaisseLireLAdresse((string) $page->getContent()))->toBeFalse()
+        ->and(lienChiffreLaisseLireLAdresse(strtolower((string) $page->getContent())))->toBeFalse()
         ->and($proprietes['token'] ?? null)->toBe($formulaire['token'])
         ->and($proprietes['adresse'] ?? null)->toBe($formulaire['adresse'])
+        ->and($proprietes)->not->toHaveKey('compte')
         ->and($proprietes)->not->toHaveKey('email');
 });
 
@@ -221,6 +244,7 @@ it('réinitialise le mot de passe avec ce que la page renvoie, puis refuse le m�
     $envoi = [
         'token' => $proprietes['token'] ?? null,
         'adresse' => $proprietes['adresse'] ?? null,
+        'email' => lienChiffreAdresseSaisie(),
         'password' => lienChiffreMotDePasse(),
         'password_confirmation' => lienChiffreMotDePasse(),
     ];
@@ -290,6 +314,7 @@ it('refuse de la même façon un jeton qui n’est pas une chaîne, que l’adre
     $donnees = [
         'token' => ['un-jeton-quelconque'],
         'adresse' => $adresse,
+        'email' => lienChiffreAdresse(),
         'password' => lienChiffreMotDePasse(),
         'password_confirmation' => lienChiffreMotDePasse(),
     ];
@@ -306,7 +331,11 @@ it('refuse de la même façon un jeton qui n’est pas une chaîne, que l’adre
 /*
  * Sous les deux formes d'envoi : la page envoie du JSON, dont la requête
  * validée partage le corps avec celle de l'application (voir le jeu
- * `formats d’envoi du formulaire de réinitialisation`).
+ * `formats d’envoi du formulaire de réinitialisation`). La page du lien, qui
+ * vaut encore après le refus et que le refus fait rouvrir, ne montre l'adresse
+ * ni avant ni après, sous aucune casse. La personne saisit l'adresse en
+ * capitales (`lienChiffreAdresseSaisie()`) : dans la session, les réponses et
+ * le journal, seule une copie de l'adresse déchiffrée se lirait ici.
  */
 it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse, ni dans le journal', function (string $format): void {
     $fichier = sys_get_temp_dir().'/lien-chiffre-'.bin2hex(random_bytes(6)).'.log';
@@ -316,15 +345,15 @@ it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse
     try {
         $compte = User::factory()->create(['email' => lienChiffreAdresse()]);
         $lien = LiensDesCourriels::lienDeReinitialisation($compte, Password::createToken($compte));
-        $formulaire = FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse());
+        $formulaire = FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse(), lienChiffreAdresseSaisie());
 
-        $traces = ['page du lien' => (string) get($lien)->assertOk()->getContent()];
+        $pagesDuLien = ['page du lien' => (string) get($lien)->assertOk()->getContent()];
 
         $refus = lienChiffreEnvoyer($lien, [...$formulaire, 'token' => 'un-jeton-quelconque'], $format)
             ->assertSessionHasErrors('token');
-        $traces['redirection du refus'] = (string) $refus->headers->get('Location');
+        $traces = ['redirection du refus' => (string) $refus->headers->get('Location')];
         $traces['session après le refus'] = serialize(session()->all());
-        $traces['page après le refus'] = (string) get($traces['redirection du refus'])->getContent();
+        $pagesDuLien['page après le refus'] = (string) get($traces['redirection du refus'])->getContent();
 
         $reussite = lienChiffreEnvoyer($lien, $formulaire, $format)->assertRedirect(route('login'));
         $traces['session après la réussite'] = serialize(session()->all());
@@ -332,6 +361,8 @@ it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse
         $traces['journal'] = is_file($fichier) ? (string) file_get_contents($fichier) : '';
 
         expect(array_keys(array_filter($traces, lienChiffreLaisseLireLAdresse(...))))->toBe([])
+            ->and(array_map(static fn (string $page): int => substr_count(strtolower($page), 'titulaire.du-lien'), $pagesDuLien))
+            ->toBe(['page du lien' => 0, 'page après le refus' => 0])
             ->and(session('url.intended'))->toBeNull()
             ->and(Hash::check(lienChiffreMotDePasse(), (string) $compte->fresh()?->getAuthPassword()))->toBeTrue();
     } finally {
@@ -351,7 +382,9 @@ it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse
  * elles gardent les requêtes réussies, valeurs comprises, dont la recherche
  * du compte par son adresse (`.ai/rules/tests.md`) ; la production ne les
  * remplit pas. La réponse se lit de même sans `APP_DEBUG`, comme en
- * production : sa page de débogage montre ces requêtes.
+ * production : sa page de débogage montre ces requêtes. L'adresse saisie, en
+ * capitales, part dans le corps enregistré comme celle d'une connexion qui
+ * échoue ; le test cherche l'adresse déchiffrée.
  */
 it('ne recopie l’adresse déchiffrée ni dans le journal ni dans l’exception d’une réinitialisation qui échoue', function (string $format): void {
     Config::set('app.debug', false);
@@ -367,7 +400,7 @@ it('ne recopie l’adresse déchiffrée ni dans le journal ni dans l’exception
     try {
         $compte = User::factory()->create(['email' => lienChiffreAdresse()]);
         $lien = LiensDesCourriels::lienDeReinitialisation($compte, Password::createToken($compte));
-        $formulaire = FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse());
+        $formulaire = FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse(), lienChiffreAdresseSaisie());
         Event::listen(PasswordReset::class, static function (): never {
             throw new RuntimeException('Panne simulée pendant la réinitialisation.');
         });
@@ -409,7 +442,7 @@ function lienChiffrePanneDeLaReinitialisation(): RuntimeException
     test()->withoutExceptionHandling();
 
     try {
-        lienChiffreEnvoyer($lien, FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse()), 'json');
+        lienChiffreEnvoyer($lien, FormulaireDeReinitialisation::depuisLeLien($lien, lienChiffreMotDePasse(), lienChiffreAdresseSaisie()), 'json');
     } catch (RuntimeException $panne) {
         return $panne;
     }

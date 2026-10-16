@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Inertia\Testing\AssertableInertia;
 use Tests\Support\FormulaireDeReinitialisation;
 use Tests\TestCase;
 
@@ -41,10 +42,13 @@ class PasswordResetTest extends TestCase
 
         $this->post('/forgot-password', ['email' => $user->email]);
 
-        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification): true {
-            $response = $this->get('/reset-password/'.$notification->token);
+        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): true {
+            $response = $this->get($notification->toMail($user)->actionUrl);
 
-            $response->assertStatus(200);
+            $response->assertStatus(200)->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->component('Auth/ResetPassword')
+                ->where('token', $notification->token)
+                ->missing('compte'));
 
             return true;
         });

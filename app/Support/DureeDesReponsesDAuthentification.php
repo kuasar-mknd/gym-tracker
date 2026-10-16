@@ -14,15 +14,17 @@ use Illuminate\Support\Timebox;
  * le mot de passe (bcrypt) au-delà de la Timebox de la garde, et l'inscription
  * d'une adresse libre hachait le mot de passe là où celle d'une adresse prise
  * répondait aussitôt. L'inscription, la connexion, « Mot de passe oublié » et
- * la réinitialisation passent donc par `appeler()`, et la garde de session,
- * le courtier des mots de passe et la connexion du panneau lisent la même
- * valeur (`auth.timebox_duration`). La demande de changement d'adresse du
- * profil n'y passe pas : elle ne lit pas l'adresse demandée, qu'un job
- * cherche hors de la requête.
+ * la réinitialisation, ouverture de la page du lien comprise, passent donc
+ * par `appeler()`, et la garde de session, le courtier des mots de passe et
+ * la connexion du panneau lisent la même valeur (`auth.timebox_duration`).
+ * La demande de changement d'adresse du profil n'y passe pas : elle ne lit
+ * pas l'adresse demandée, qu'un job cherche hors de la requête.
  * Une réussite qui connecte peut rendre la main plus tôt (`returnEarly()`) :
- * seul le titulaire la voit. Pas au panneau : il déclare la double
- * authentification, et Filament fait alors durer sa Timebox à chaque étape
- * de la connexion, réussie ou non, pour ne pas dire quel compte l'a activée.
+ * seul le titulaire la voit. De même l'ouverture d'un lien de
+ * réinitialisation qui vaut : sa page, qui ouvre le formulaire, dit déjà
+ * qu'il vaut. Pas au panneau : il déclare la double authentification, et
+ * Filament fait alors durer sa Timebox à chaque étape de la connexion,
+ * réussie ou non, pour ne pas dire quel compte l'a activée.
  *
  * Le plancher ne sert que là où un client mesure la durée : dans une requête.
  * Le courtier lit la même valeur, et sa Timebox ne rend jamais la main tôt

@@ -411,15 +411,18 @@ it('lit les méthodes du courtier qu’un code appelle, quel que soit leur recev
 ]);
 
 /*
- * Trois fichiers seulement atteignent le courtier, chacun pour un seul usage :
- * le job envoie le lien, par un courtier neuf qu'il crée sans plancher
- * (`broker()`), `NewPasswordController` réinitialise sous le plancher des
- * refus et ne rend jamais `passwords.user`, et l'effacement d'un compte
- * retire son jeton. Une autre entrée qui réinitialiserait (API, panneau)
- * rendrait `passwords.user` pour une adresse sans compte, et sans le
- * plancher : elle passe par `NewPasswordController::store()`, ou par une
- * classe extraite de lui qui garde ce plancher et ce message, et qui prend sa
- * place ici.
+ * Trois fichiers seulement atteignent le courtier, chacun pour son seul
+ * usage : le job envoie le lien, par un courtier neuf qu'il crée sans
+ * plancher (`broker()`), `NewPasswordController` réinitialise sous le
+ * plancher des refus et ne rend jamais `passwords.user`, et l'effacement d'un
+ * compte retire son jeton. Le contrôleur vérifie aussi le lien à l'ouverture
+ * de sa page (`getUser`, `tokenExists`), sous le même plancher et avec le même
+ * refus, sans consommer ni prolonger le jeton
+ * (`OuvertureDuLienDeReinitialisationTest`). Une autre entrée qui
+ * réinitialiserait ou vérifierait un lien (API, panneau) rendrait
+ * `passwords.user` pour une adresse sans compte, et sans le plancher : elle
+ * passe par `NewPasswordController`, ou par une classe extraite de lui qui
+ * garde ce plancher et ce message, et qui prend sa place ici.
  */
 it('ne laisse atteindre le courtier qu’à trois fichiers, chacun pour son seul usage', function (): void {
     $usages = array_map(
@@ -428,7 +431,7 @@ it('ne laisse atteindre le courtier qu’à trois fichiers, chacun pour son seul
     );
 
     expect($usages)->toBe([
-        'app/Http/Controllers/Auth/NewPasswordController.php' => ['reset'],
+        'app/Http/Controllers/Auth/NewPasswordController.php' => ['getUser', 'reset', 'tokenExists'],
         'app/Jobs/EnvoyerLeLienDeReinitialisation.php' => ['broker', 'sendResetLink'],
         'app/Models/Traits/EffaceSesTracesPolymorphes.php' => ['deleteToken'],
     ]);
@@ -454,6 +457,7 @@ function motDePasseOublieReinitialiser(string $adresseChiffree): TestResponse
     return motDePasseOublieEnvoyer(motDePasseOubliePageDuLien($adresseChiffree), 'password.store', [
         'token' => 'un-jeton-quelconque',
         'adresse' => $adresseChiffree,
+        'email' => motDePasseOublieAdresse(),
         'password' => 'Un-nouveau-mot-de-passe-2026!',
         'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
     ]);

@@ -8,6 +8,7 @@ import {
     installerLaGardeDeLHistorique,
     pageInitialeDuDocument,
     titulaireDeLaPage,
+    viderLaPageInitialeDuDocument,
 } from '@/Utils/historiqueDuCompte'
 
 /**
@@ -199,6 +200,36 @@ describe('le titulaire que déclare chaque page', () => {
 
         expect(pageInitialeDuDocument(document)).toBeNull()
         expect(pageInitialeDuDocument(undefined)).toBeNull()
+    })
+
+    it('ne se vide que pour la page qui le demande, et seulement si elle est la page initiale', () => {
+        const script = document.createElement('script')
+        script.dataset.page = 'app'
+        script.type = 'application/json'
+        const compte = JSON.stringify({ ...pageServieA(7), component: 'Dashboard' })
+        const reinitialisation = JSON.stringify({ ...pageServieA(null), component: 'Auth/ResetPassword' })
+        document.body.append(script)
+
+        try {
+            // La page initiale d'un autre composant reste : SyncService y lit le compte connecté.
+            script.textContent = compte
+            viderLaPageInitialeDuDocument(document, 'Auth/ResetPassword')
+            expect(script.textContent).toBe(compte)
+
+            script.textContent = '{ pas du JSON'
+            viderLaPageInitialeDuDocument(document, 'Auth/ResetPassword')
+            expect(script.textContent).toBe('{ pas du JSON')
+
+            script.textContent = reinitialisation
+            viderLaPageInitialeDuDocument(document, 'Auth/ResetPassword')
+            expect(script.textContent).toBe('')
+            expect(pageInitialeDuDocument(document)).toBeNull()
+        } finally {
+            script.remove()
+        }
+
+        expect(() => viderLaPageInitialeDuDocument(document, 'Auth/ResetPassword')).not.toThrow()
+        expect(() => viderLaPageInitialeDuDocument(undefined, 'Auth/ResetPassword')).not.toThrow()
     })
 })
 
