@@ -87,6 +87,31 @@ it("refuse une date de début qui n'est pas une date", function (): void {
     expect(Workout::query()->where('name', 'Séance mal datée')->exists())->toBeFalse();
 });
 
+/*
+ * Le début d'une séance devient la dernière séance du compte, un horodatage :
+ * hors de sa plage, la base refusait la série de jours recalculée, et
+ * l'enregistrement répondait 500 ; la fin, un `DATETIME`, faisait de même en
+ * l'an 10000 dans le formatage de Filament (#2071).
+ */
+it('refuse une date que la colonne de la séance ne tient pas', function (string $champ, string $date): void {
+    $workout = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-02-10 07:30:00'),
+        'ended_at' => Carbon::parse('2026-02-10 08:45:00'),
+    ]);
+
+    Livewire::test(EditWorkout::class, ['record' => $workout->getKey()])
+        ->fillForm([$champ => $date])
+        ->call('save')
+        ->assertHasFormErrors([$champ]);
+
+    expect($workout->fresh()?->started_at?->format('Y-m-d H:i:s'))->toBe('2026-02-10 07:30:00')
+        ->and($workout->fresh()?->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-02-10 08:45:00');
+})->with([
+    'début après 2038' => ['started_at', '2099-01-01 10:00:00'],
+    'début avant 1970' => ['started_at', '1960-01-01 10:00:00'],
+    'fin en l’an 10000' => ['ended_at', '+10000-01-01 10:00:00'],
+]);
+
 it("charge la séance existante dans le formulaire d'édition", function (): void {
     $owner = User::factory()->create();
     $workout = Workout::factory()->create([

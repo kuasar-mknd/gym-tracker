@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Concerns;
 
 use App\Models\Exercise;
+use App\Services\Diagnostic\ValeurLue;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Validation\Validator;
 
@@ -20,6 +21,11 @@ use Illuminate\Validation\Validator;
  * Le message nomme le champ comme le validateur le ferait, par son nom de
  * `lang/fr/validation.php` (« exercice ») : un nom ecrit ici en dur
  * contournait la traduction et affichait « exercise id » (#1975).
+ *
+ * La verification tourne apres les regles, meme quand `integer` a refuse la
+ * valeur : un identifiant ne s'y lit donc qu'entier ou en chiffres
+ * (`ValeurLue::entier()`), et tout autre est refuse. Converti par `(int)`, un
+ * flottant demesure faisait avertir PHP, et la requete repondait 500 (#2071).
  */
 trait VerifieLesExercicesDuGabarit
 {
@@ -34,10 +40,10 @@ trait VerifieLesExercicesDuGabarit
         $identifiants = [];
 
         foreach ($exercices as $exercice) {
-            $identifiant = is_array($exercice) ? ($exercice['id'] ?? null) : null;
+            $identifiant = self::identifiantLu($exercice);
 
-            if (is_numeric($identifiant)) {
-                $identifiants[] = (int) $identifiant;
+            if ($identifiant !== null) {
+                $identifiants[] = $identifiant;
             }
         }
 
@@ -52,13 +58,13 @@ trait VerifieLesExercicesDuGabarit
             ->whereIn('id', array_values(array_unique($identifiants)))
             ->where(fn (Builder $requete): Builder => $requete->whereNull('user_id')->orWhere('user_id', $idUtilisateur))
             ->pluck('id')
-            ->map(fn (mixed $id): int => is_numeric($id) ? (int) $id : 0)
+            ->map(fn (mixed $id): int => ValeurLue::entier($id) ?? 0)
             ->all();
 
         foreach ($exercices as $rang => $exercice) {
-            $identifiant = is_array($exercice) ? ($exercice['id'] ?? null) : null;
+            $identifiant = self::identifiantLu($exercice);
 
-            if (! is_numeric($identifiant) || ! in_array((int) $identifiant, $autorises, true)) {
+            if ($identifiant === null || ! in_array($identifiant, $autorises, true)) {
                 $cle = "exercises.{$rang}.id";
 
                 $validator->errors()->add(
@@ -67,5 +73,14 @@ trait VerifieLesExercicesDuGabarit
                 );
             }
         }
+    }
+
+    /**
+     * L'identifiant d'un exercice du gabarit, `null` s'il n'est ni un entier
+     * ni une chaine de chiffres.
+     */
+    private static function identifiantLu(mixed $exercice): ?int
+    {
+        return ValeurLue::entier(is_array($exercice) ? ($exercice['id'] ?? null) : null);
     }
 }

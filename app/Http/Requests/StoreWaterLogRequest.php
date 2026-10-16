@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\WaterLog;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreWaterLogRequest extends FormRequest
@@ -31,7 +32,7 @@ class StoreWaterLogRequest extends FormRequest
     {
         return [
             'amount' => ['required', 'integer', 'min:1', 'max:'.WaterLog::QUANTITE_MAX_ML],
-            'consumed_at' => ['required', 'date'],
+            'consumed_at' => ['bail', 'required', 'date', DateQueSaColonneTient::horodatage()],
         ];
     }
 

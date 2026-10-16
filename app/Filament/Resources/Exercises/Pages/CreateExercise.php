@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Exercises\Pages;
 
 use App\Filament\Resources\Exercises\ExerciseResource;
 use App\Models\Exercise;
+use App\Services\Diagnostic\ValeurLue;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
@@ -28,6 +29,10 @@ class CreateExercise extends CreateRecord
      * requete utilisateur. C'est pourquoi il est ecrit ici, et declare dans
      * `CHAMPS_ASSIGNES_EXPLICITEMENT` sur la ressource.
      *
+     * Un exercice du catalogue n'a pas de compte : le champ vide reste vide
+     * (`ValeurLue::entier()`), là où `(int)` en faisait le compte 0, que la
+     * clé étrangère refusait, et la création finissait en 500 (#2071).
+     *
      * @param  array<string, mixed>  $data
      */
     #[\Override]
@@ -38,7 +43,7 @@ class CreateExercise extends CreateRecord
          * tableau deshydrate du formulaire, donc non type. Le champ vient d'un
          * `Select` sur les comptes, il porte un identifiant.
          */
-        /** @var int|string $identifiant */
+        /** @var int|string|null $identifiant */
         $identifiant = $data['user_id'];
 
         /*
@@ -51,7 +56,7 @@ class CreateExercise extends CreateRecord
         $attributs = Arr::except($data, ExerciseResource::CHAMPS_ASSIGNES_EXPLICITEMENT);
 
         $enregistrement = new Exercise();
-        $enregistrement->user_id = (int) $identifiant;
+        $enregistrement->user_id = ValeurLue::entier($identifiant);
         $enregistrement->fill($attributs);
         $enregistrement->save();
 

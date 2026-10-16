@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Foundation\Http\FormRequest;
 
 class DailyJournalStoreRequest extends FormRequest
@@ -28,7 +29,7 @@ class DailyJournalStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date' => ['required', 'date'],
+            'date' => ['bail', 'required', 'date', DateQueSaColonneTient::date()],
             'content' => ['nullable', 'string', 'max:5000'],
             'mood_score' => ['nullable', 'integer', 'min:1', 'max:5'],
             'sleep_quality' => ['nullable', 'integer', 'min:1', 'max:5'],

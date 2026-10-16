@@ -100,6 +100,29 @@ it("charge l'exercice existant dans le formulaire d'édition", function (): void
         ]);
 });
 
+/*
+ * Un exercice du catalogue n'a pas de compte : `(int)` faisait du champ vide
+ * le compte 0, que la clé étrangère refusait, et la création comme
+ * l'enregistrement répondaient 500 (#2071).
+ */
+it('crée et modifie un exercice du catalogue, sans compte', function (): void {
+    Livewire::test(CreateExercise::class)
+        ->fillForm(['name' => 'Gainage', 'type' => 'timed', 'user_id' => null])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $exercise = Exercise::query()->where('name', 'Gainage')->sole();
+    expect($exercise->user_id)->toBeNull();
+
+    Livewire::test(EditExercise::class, ['record' => $exercise->getKey()])
+        ->fillForm(['name' => 'Gainage latéral', 'category' => ExerciseCategory::Abdominaux->value])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($exercise->fresh()?->only(['name', 'user_id', 'category']))
+        ->toBe(['name' => 'Gainage latéral', 'user_id' => null, 'category' => ExerciseCategory::Abdominaux]);
+});
+
 it('interdit la gestion des exercices à un admin sans les permissions Exercise', function (): void {
     $exercise = Exercise::factory()->create();
 

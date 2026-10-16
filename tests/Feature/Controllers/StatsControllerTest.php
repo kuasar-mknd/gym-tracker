@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\Stats\ClesDeStats;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -59,6 +62,57 @@ test('stats dashboard accepts invalid period and passes it through to view while
                 ->where('selectedPeriod', 'invalid-period')
         );
 });
+
+/**
+ * La page des statistiques ouverte avec cette chaîne de requête, ses props
+ * différées chargées : la période affichée, et le nombre de jours que la vue
+ * « performance » a calculés, lu dans la clef sous laquelle elle les garde.
+ *
+ * @return array{periode: mixed, jours: list<int>}
+ */
+function statsPeriodeLue(string $chaineDeRequete): array
+{
+    Carbon::setTestNow('2026-10-16 10:00:00');
+    $compte = User::factory()->create();
+    $periode = null;
+
+    actingAs($compte)
+        ->get(route('stats.index').'?'.$chaineDeRequete)
+        ->assertOk()
+        ->assertInertia(
+            function (Assert $page) use (&$periode): Assert {
+                $periode = data_get($page->toArray(), 'props.selectedPeriod');
+
+                return $page->component('Stats/Index')->loadDeferredProps(
+                    fn (Assert $differees): Assert => $differees->has('deferredData.performance')
+                );
+            }
+        );
+
+    $jours = array_values(array_filter(
+        [7, 30, 90, 365],
+        fn (int $nombre): bool => Cache::has(ClesDeStats::seances($compte, "performance_overview.{$nombre}.2026-10")),
+    ));
+
+    return ['periode' => $periode, 'jours' => $jours];
+}
+
+test('une période qui n’est pas une chaîne non vide donne trente jours, sans erreur', function (string $chaineDeRequete): void {
+    expect(statsPeriodeLue($chaineDeRequete))->toBe(['periode' => '30j', 'jours' => [30]]);
+})->with([
+    'tableau' => 'period[]=7j',
+    'tableau imbriqué' => 'period[a][b]=7j',
+    'chaîne vide' => 'period=',
+]);
+
+test('une période en chaîne se lit comme avant, période inconnue comprise', function (string $chaineDeRequete, string $periode, int $jours): void {
+    expect(statsPeriodeLue($chaineDeRequete))->toBe(['periode' => $periode, 'jours' => [$jours]]);
+})->with([
+    'sept jours' => ['period=7j', '7j', 7],
+    'un an' => ['period=1a', '1a', 365],
+    'inconnue' => ['period=inconnue', 'inconnue', 30],
+    'zéro, une chaîne que PHP tient pour fausse' => ['period=0', '0', 30],
+]);
 
 test('authenticated user can fetch progress for their exercise', function (): void {
     $user = User::factory()->create();

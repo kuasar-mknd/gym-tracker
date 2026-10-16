@@ -6,6 +6,7 @@ namespace App\Http\Requests\Api;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Fast;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreFastRequest extends FormRequest
@@ -31,7 +32,7 @@ class StoreFastRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'start_time' => 'required|date',
+            'start_time' => ['bail', 'required', 'date', DateQueSaColonneTient::horodatage()],
             'target_duration_minutes' => 'required|integer|min:1|max:'.Fast::DUREE_CIBLE_MAX_MINUTES,
             'type' => 'required|string|in:16:8,18:6,20:4,24:0,36:0,48:0,custom',
         ];

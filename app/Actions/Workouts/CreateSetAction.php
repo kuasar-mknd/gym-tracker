@@ -92,12 +92,19 @@ final class CreateSetAction
     }
 
     /**
+     * La clé de la tentative, lue dans un en-tête que rien ne valide : de 1 à
+     * 64 caractères ASCII imprimables, sans espace, ce qu'écrit le client
+     * (un UUID). Toute autre est ignorée, et la création a lieu sans clé :
+     * un octet hors UTF-8 (un « é » qu'un navigateur envoie en latin-1)
+     * allait jusqu'à la colonne, que MySQL refuse, et la création répondait
+     * 500, que la file hors ligne réessaie (#2071).
+     *
      * @param  array<string, mixed>  $data
      */
     public static function idempotencyKey(array $data): ?string
     {
         $key = $data['idempotency_key'] ?? null;
 
-        return is_string($key) && $key !== '' && mb_strlen($key) <= 64 ? $key : null;
+        return is_string($key) && preg_match('/^[\x21-\x7E]{1,64}$/D', $key) === 1 ? $key : null;
     }
 }

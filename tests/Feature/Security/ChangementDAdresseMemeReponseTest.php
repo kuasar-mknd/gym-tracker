@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
@@ -340,6 +341,30 @@ it('refuse un lien signé dont l’adresse ne se déchiffre pas', function (): v
 
     expect($compte->refresh()->email)->toBe('titulaire@example.org');
 });
+
+/*
+ * La signature ne couvre que la chaîne de requête : le lien se lit là, et nulle
+ * part ailleurs. Un corps JSON, même sur un GET, passait avant elle sous
+ * `input()` (#2071).
+ */
+it('ne lit le lien que dans sa chaîne de requête, que la signature couvre', function (array $corps): void {
+    Notification::fake();
+    Exceptions::fake();
+    $compte = changementMemeReponseLeCompte();
+    $lien = LiensDesCourriels::lienDeConfirmationDAdresse($compte, 'libre@example.org');
+
+    actingAs($compte)
+        ->call('GET', $lien, [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/html'], json_encode($corps, JSON_THROW_ON_ERROR))
+        ->assertRedirect(route('profile.edit'))
+        ->assertSessionHas('status', 'adresse-confirmee');
+
+    expect($compte->refresh()->email)->toBe('libre@example.org');
+    Exceptions::assertNothingReported();
+})->with([
+    'une autre adresse chiffrée' => fn (): array => ['adresse' => Crypt::encryptString('autre@example.org')],
+    'une empreinte en tableau' => fn (): array => ['actuelle' => ['x']],
+    'une adresse en tableau' => fn (): array => ['adresse' => ['x']],
+]);
 
 it('envoie un invité qui suit le lien vers la connexion', function (): void {
     $compte = changementMemeReponseLeCompte();

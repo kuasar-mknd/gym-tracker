@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Stats;
 
 use App\Models\User;
+use App\Services\Diagnostic\ValeurLue;
 use App\Services\Stats\BodyStatsService;
 use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\ExerciseStatsService;
@@ -25,11 +26,17 @@ class GetStatsDashboardAction
     }
 
     /**
+     * La période que la page affiche quand la requête n'en demande aucune
+     * qui se lise.
+     */
+    public const string PERIODE_PAR_DEFAUT = '30j';
+
+    /**
      * @return array<string, mixed>
      */
     public function execute(User $user, Request $request): array
     {
-        $period = $request->query('period', '30j');
+        $period = self::periodeDemandee($request);
         $jours = $this->fetchStatsOverview->parsePeriod($period);
 
         $immediateData = $this->fetchStatsOverview->chiffresImmediats($user, $period);
@@ -41,6 +48,21 @@ class GetStatsDashboardAction
                 'body' => $this->bodyStats->getBodyProgressOverview($user, $jours),
             ],
         ];
+    }
+
+    /**
+     * La période de la chaîne de requête, si c'est une chaîne non vide :
+     * telle qu'elle arrive, période inconnue comprise, que `parsePeriod()`
+     * compte pour trente jours et que la page recopie. Toute autre forme
+     * (`?period[]=7j`, `?period=`, que `ConvertEmptyStringsToNull` rend nul)
+     * donne la période par défaut : un tableau atteignait
+     * `parsePeriod(string)` et la page répondait 500 (signalé dans #2071).
+     */
+    private static function periodeDemandee(Request $request): string
+    {
+        $periode = ValeurLue::texte($request->query('period'));
+
+        return $periode !== '' ? $periode : self::PERIODE_PAR_DEFAUT;
     }
 
     /**

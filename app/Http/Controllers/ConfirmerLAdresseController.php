@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Diagnostic\ValeurLue;
 use App\Support\LiensDesCourriels;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -34,6 +35,11 @@ use Illuminate\Support\Facades\Redirect;
  * Une adresse prise entre-temps par un autre compte (l'index unique refuse)
  * laisse le compte tel qu'il était : seul le titulaire de la boîte, qui a reçu
  * le lien, l'apprend.
+ *
+ * Le compte, l'adresse et l'empreinte se lisent dans la chaîne de requête, la
+ * seule que la signature couvre, et seulement dans la forme attendue
+ * (`ValeurLue`) : lus par `input()`, un corps JSON les remplaçait, et une
+ * valeur en tableau répondait 500 (#2071).
  */
 final class ConfirmerLAdresseController extends Controller
 {
@@ -41,7 +47,7 @@ final class ConfirmerLAdresseController extends Controller
     {
         $compte = $this->user();
 
-        if ($request->integer('compte') !== $compte->id) {
+        if (ValeurLue::entier($request->query('compte')) !== $compte->id) {
             abort(404);
         }
 
@@ -51,7 +57,7 @@ final class ConfirmerLAdresseController extends Controller
             return Redirect::route('profile.edit')->with('status', 'adresse-confirmee');
         }
 
-        if (! hash_equals(sha1($compte->email), $request->string('actuelle')->toString())) {
+        if (! hash_equals(sha1($compte->email), ValeurLue::texte($request->query('actuelle')))) {
             return Redirect::route('profile.edit')->with('status', 'lien-de-changement-d-adresse-perime');
         }
 

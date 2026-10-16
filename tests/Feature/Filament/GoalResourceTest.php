@@ -132,6 +132,26 @@ it("charge l'objectif existant dans le formulaire d'édition", function (): void
         ]);
 });
 
+/*
+ * L'échéance est une colonne `DATE`, la date d'atteinte un horodatage : une
+ * date hors de leur plage partait jusqu'à la base, ou jusqu'au formatage de
+ * Filament pour l'an 10000, et l'enregistrement répondait 500 (#2071).
+ */
+it('refuse une date que la colonne de l’objectif ne tient pas', function (string $champ, string $date): void {
+    $goal = Goal::factory()->create(['type' => 'frequency', 'completed_at' => null]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm([$champ => $date])
+        ->call('save')
+        ->assertHasFormErrors([$champ]);
+
+    expect($goal->fresh()?->completed_at)->toBeNull();
+})->with([
+    'atteint après 2038' => ['completed_at', '2099-01-01 10:00:00'],
+    'atteint avant 1970' => ['completed_at', '1960-01-01 10:00:00'],
+    'échéance en l’an 10000' => ['deadline', '+10000-01-01'],
+]);
+
 it('interdit la gestion des objectifs à un admin sans les permissions Goal', function (): void {
     $goal = Goal::factory()->create();
 
