@@ -33,10 +33,16 @@ class ProfileEditTest extends DuskTestCase
             $browser->assertSee('MON PROFIL');
 
             // Verify Profile Info Section
+            // Le champ d'adresse porte la nouvelle adresse (`email`) ;
+            // l'identifiant du compte, pour les gestionnaires de mots de passe,
+            // est à part, caché (#PR).
             $browser->assertSee('INFORMATIONS DU PROFIL')
                 ->waitFor('@profile-name-input', 15)
                 ->assertInputValue('@profile-name-input', 'Original Name')
-                ->assertInputValue('input[autocomplete="username"]', $user->email);
+                ->assertInputValue('input[type="email"][autocomplete="email"]', $user->email)
+                ->assertAttribute('[data-testid="identifiant-du-changement-d-adresse"]', 'autocomplete', 'username')
+                ->assertInputValue('[data-testid="identifiant-du-changement-d-adresse"]', $user->email)
+                ->assertMissing('[data-testid="identifiant-du-changement-d-adresse"]');
 
             $newName = 'Updated Name '.time();
             $browser->clear('@profile-name-input')
@@ -65,7 +71,13 @@ class ProfileEditTest extends DuskTestCase
             // matche AUSSI le premier champ. Dusk prenait la première occurrence et
             // laissait la confirmation vide, donc la validation échouait — sans que
             // personne ne le voie, faute d'assertion sur la base.
+            // Le formulaire du mot de passe porte l'adresse du compte pour les
+            // gestionnaires de mots de passe (#PR), dans un champ que personne
+            // ne voit : présent, à la bonne valeur, et caché.
             $browser->assertSee('MOT DE PASSE')
+                ->assertAttribute('[data-testid="identifiant-du-compte"]', 'autocomplete', 'username')
+                ->assertInputValue('[data-testid="identifiant-du-compte"]', $user->email)
+                ->assertMissing('[data-testid="identifiant-du-compte"]')
                 ->type('@current-password-input', 'password123')
                 ->type('@new-password-input', 'newpassword123')
                 ->type('@confirm-password-input', 'newpassword123')

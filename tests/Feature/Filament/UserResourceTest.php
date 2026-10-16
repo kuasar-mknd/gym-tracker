@@ -432,6 +432,28 @@ it('écrit le mot de passe quand on en saisit un', function (): void {
     expect(Illuminate\Support\Facades\Hash::check('un-nouveau-mot-de-passe', (string) $nouveau))->toBeTrue();
 });
 
+/*
+ * Le panneau fixe le mot de passe d'un autre compte : le champ le dit
+ * (`autocomplete="new-password"`), pour qu'un gestionnaire de mots de passe
+ * n'y propose pas celui de l'administrateur, et le formulaire ne porte pas
+ * d'identifiant caché, que seul le profil donne pour son propre compte (#PR).
+ */
+it('demande un nouveau mot de passe, jamais celui de l’administrateur, à la création comme à la modification', function (): void {
+    $compte = User::factory()->create();
+    $pages = [
+        'création' => Livewire::test(CreateUser::class)->html(),
+        'modification' => Livewire::test(EditUser::class, ['record' => $compte->getKey()])->html(),
+    ];
+
+    foreach ($pages as $page => $html) {
+        preg_match_all('/<input\b[^>]*\btype="password"[^>]*>/', $html, $champs);
+
+        expect($champs[0])->toHaveCount(1, "La page de {$page} n'a pas un seul champ de mot de passe.")
+            ->and($champs[0][0] ?? '')->toContain('autocomplete="new-password"')
+            ->and($html)->not->toContain('autocomplete="username"');
+    }
+});
+
 /**
  * Un compte cree sans mot de passe ne peut pas se connecter, et rien ne le
  * signalait : le champ n'etait pas requis, et `users.password` est nullable.
