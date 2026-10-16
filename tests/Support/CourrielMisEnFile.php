@@ -8,7 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 
 /**
- * Un courriel que Laravel met en file au lieu de l'envoyer (#PR) :
+ * Un courriel que Laravel met en file au lieu de l'envoyer (#2076) :
  * `Mailer::send()` rend alors ce que rend la file, l'identifiant du job, et
  * non un message envoyé. `CourrielsSansAdresseDansLeursErreursTest` vérifie
  * que `CourrielleurQuiTaitLesAdresses` le rend aussi.

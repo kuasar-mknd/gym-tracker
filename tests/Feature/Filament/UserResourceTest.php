@@ -436,7 +436,7 @@ it('écrit le mot de passe quand on en saisit un', function (): void {
  * Le panneau fixe le mot de passe d'un autre compte : le champ le dit
  * (`autocomplete="new-password"`), pour qu'un gestionnaire de mots de passe
  * n'y propose pas celui de l'administrateur, et le formulaire ne porte pas
- * d'identifiant caché, que seul le profil donne pour son propre compte (#PR).
+ * d'identifiant caché, que seul le profil donne pour son propre compte (#2076).
  */
 it('demande un nouveau mot de passe, jamais celui de l’administrateur, à la création comme à la modification', function (): void {
     $compte = User::factory()->create();

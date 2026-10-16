@@ -31,7 +31,7 @@ use Illuminate\Support\Traits\Localizable;
  * jobs échoués. Le chiffrement ne couvre que la charge : l'erreur d'un envoi
  * refusé, que `failed_jobs` et le journal recopient, ne cite pas d'adresse
  * parce que le courrielleur la relève sans (`CourrielleurQuiTaitLesAdresses`,
- * #PR).
+ * #2076).
  *
  * Le courtier du conteneur pose le plancher commun des réponses
  * d'authentification (`auth.timebox_duration`, une seconde) autour de

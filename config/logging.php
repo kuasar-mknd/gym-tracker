@@ -56,7 +56,7 @@ return [
     /*
      * Chaque canal qui écrit porte `JournalSansAdresse` : ses lignes sortent
      * sans adresse de courriel en clair, message, contexte et pile compris
-     * (#PR). La pile reprend les gestionnaires de ses canaux, déjà masqués.
+     * (#2076). La pile reprend les gestionnaires de ses canaux, déjà masqués.
      * `LeJournalNeGardeAucuneAdresseTest` exige le réglage de tout canal
      * qui écrit, nouveau canal compris.
      */

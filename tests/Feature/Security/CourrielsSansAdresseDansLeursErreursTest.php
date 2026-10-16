@@ -22,7 +22,7 @@ use Tests\Support\CourrielMisEnFile;
 use Tests\Support\TransportQuiRefuseLeDestinataire;
 
 /*
- * Une erreur d'envoi de courriel ne cite aucune adresse (#PR).
+ * Une erreur d'envoi de courriel ne cite aucune adresse (#2076).
  *
  * Le serveur de courriel nomme souvent le destinataire qu'il refuse, et
  * Symfony recopie sa réponse dans le message de son exception : celui du

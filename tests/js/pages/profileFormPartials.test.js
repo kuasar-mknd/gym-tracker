@@ -270,7 +270,7 @@ describe('UpdatePasswordForm', () => {
     /*
      * Un gestionnaire de mots de passe range le nouveau mot de passe sous le
      * champ `autocomplete="username"` du formulaire qu'il voit envoyer : sans
-     * lui, il le rangeait sans savoir sous quel compte (#PR). Le champ porte
+     * lui, il le rangeait sans savoir sous quel compte (#2076). Le champ porte
      * l'adresse du compte connecté, lue sur la page, caché à tous ; il n'est
      * pas envoyé (identifiantDuChangementDeMotDePasse.test.js le lit dans la
      * requête du vrai client d'Inertia).
@@ -625,7 +625,7 @@ describe('UpdateProfileInformationForm', () => {
      * l'identifiant du compte qu'une fois le lien suivi. Déclarée `username`,
      * elle faisait du formulaire une connexion pour un gestionnaire de mots de
      * passe, qui proposait de ranger le mot de passe actuel, demandé à côté,
-     * sous elle (#PR). Le champ se déclare `email`, et le formulaire porte
+     * sous elle (#2076). Le champ se déclare `email`, et le formulaire porte
      * l'identifiant du compte, caché et jamais envoyé, comme celui du mot de
      * passe.
      */

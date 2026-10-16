@@ -35,7 +35,7 @@ class ProfileEditTest extends DuskTestCase
             // Verify Profile Info Section
             // Le champ d'adresse porte la nouvelle adresse (`email`) ;
             // l'identifiant du compte, pour les gestionnaires de mots de passe,
-            // est à part, caché (#PR).
+            // est à part, caché (#2076).
             $browser->assertSee('INFORMATIONS DU PROFIL')
                 ->waitFor('@profile-name-input', 15)
                 ->assertInputValue('@profile-name-input', 'Original Name')
@@ -72,7 +72,7 @@ class ProfileEditTest extends DuskTestCase
             // laissait la confirmation vide, donc la validation échouait — sans que
             // personne ne le voie, faute d'assertion sur la base.
             // Le formulaire du mot de passe porte l'adresse du compte pour les
-            // gestionnaires de mots de passe (#PR), dans un champ que personne
+            // gestionnaires de mots de passe (#2076), dans un champ que personne
             // ne voit : présent, à la bonne valeur, et caché.
             $browser->assertSee('MOT DE PASSE')
                 ->assertAttribute('[data-testid="identifiant-du-compte"]', 'autocomplete', 'username')

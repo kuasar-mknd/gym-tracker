@@ -104,7 +104,7 @@ class UserForm
              * celui d'un autre compte que l'administrateur fixe. Sans le dire,
              * un champ de mot de passe sous une adresse se lit comme un
              * formulaire de connexion, et un gestionnaire de mots de passe y
-             * proposait celui de l'administrateur (#PR). Il ne reçoit pas
+             * proposait celui de l'administrateur (#2076). Il ne reçoit pas
              * l'identifiant de l'administrateur, que le formulaire du mot de
              * passe du profil donne : ce mot de passe n'est pas le sien.
              */

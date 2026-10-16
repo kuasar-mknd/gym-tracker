@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Support\TexteSansAdresse;
 
 /*
- * Toute adresse de courriel d'un texte devient « [adresse masquée] » (#PR) :
+ * Toute adresse de courriel d'un texte devient « [adresse masquée] » (#2076) :
  * le message d'une erreur d'envoi, une ligne du journal. Chaque texte est
  * comparé en entier : un masque qui laisserait un morceau de l'adresse, ou
  * qui avalerait autre chose qu'elle, échouerait ici.

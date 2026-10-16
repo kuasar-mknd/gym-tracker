@@ -112,7 +112,7 @@ const submit = () => {
                 Le formulaire change l'identifiant : celui sous lequel un
                 gestionnaire de mots de passe tient le compte, et le mot de passe
                 actuel demandé ci-dessous, reste l'adresse actuelle, cachée et
-                jamais envoyée (`IdentifiantDuCompte`, #PR).
+                jamais envoyée (`IdentifiantDuCompte`, #2076).
             -->
             <GlassInput
                 v-model="form.email"
