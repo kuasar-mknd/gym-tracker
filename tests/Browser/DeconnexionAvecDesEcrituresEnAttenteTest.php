@@ -49,6 +49,8 @@ class DeconnexionAvecDesEcrituresEnAttenteTest extends DuskTestCase
                 'compte' => (string) $compte->id,
                 'transientAttempts' => 1,
             ]], JSON_THROW_ON_ERROR);
+            // La recherche d'exercice est rangée avec son compte (#2050).
+            $recherche = json_encode(['compte' => (string) $compte->id, 'texte' => 'Squat'], JSON_THROW_ON_ERROR);
 
             $browser->script(<<<JS
                 const entrees = {$entree}.map((entree) => ({
@@ -57,7 +59,7 @@ class DeconnexionAvecDesEcrituresEnAttenteTest extends DuskTestCase
                     prochainEssai: Date.now() + 60 * 60 * 1000,
                 }));
                 localStorage.setItem('offline_sync_queue', JSON.stringify(entrees));
-                localStorage.setItem('gymtracker_add_exercise_search', 'Squat');
+                localStorage.setItem('gymtracker_add_exercise_search', JSON.stringify({$recherche}));
             JS);
 
             // Un nouveau chargement : la file lit l'écriture en attente.

@@ -81,7 +81,8 @@ const closeModal = () => {
                 jours dans l'historique d'audit et sept mois au plus dans les sauvegardes de la base. Une seconde copie
                 des journaux, bornée par sa taille, peut aussi en garder des traces sans durée garantie, le temps que de
                 nouvelles lignes les remplacent. Sur un autre appareil, les modifications faites hors ligne et jamais
-                envoyées s'effacent à la première ouverture de l'application passé trente jours.
+                envoyées s'effacent à la première ouverture de l'application passé trente jours, et la dernière
+                recherche d'exercice dès qu'une page de connexion s'y affiche.
             </p>
         </header>
 

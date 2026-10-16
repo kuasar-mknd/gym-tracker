@@ -13,6 +13,7 @@ import {
     reprendreLesAbandonsALaDeconnexion,
     reprendreLesEcrituresEffaceesALaDeconnexion,
 } from '@/Utils/ecrituresEffaceesALaDeconnexion'
+import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 
 const page = usePage()
 
@@ -41,11 +42,15 @@ onMounted(() => {
      * fermée par un changement de mot de passe, qui retire aussi tous les
      * abonnements push du compte : le mémo de l'appareil ne prouve plus que le
      * serveur tient le sien, et la connexion suivante au même compte le
-     * retransmet. La vérification de l'adresse et la confirmation du mot de passe
-     * prennent ce gabarit sous une session ouverte : rien à marquer.
+     * retransmet. La dernière recherche d'exercice part aussi : la session a pu
+     * être fermée par le serveur (expirée, mot de passe changé ailleurs) sans
+     * que la déconnexion l'efface, et le compte suivant la retrouvait (#2050).
+     * La vérification de l'adresse et la confirmation du mot de passe prennent
+     * ce gabarit sous une session ouverte : rien à marquer ni à effacer.
      */
     if (!page.props.auth?.user) {
         marquerLAbonnementARetransmettre()
+        effacerLaRecherche()
     }
 })
 </script>
