@@ -19,6 +19,11 @@
  * 429 is deliberately transient: SyncService retries it once itself, and a rate
  * limit is by definition temporary.
  *
+ * Une écriture que le réseau a refusée et que la file n'a pas pu garder, faute
+ * de compte connecté (`nonGardee` dans SyncService, #2050), n'est jamais
+ * `offline` : elle ne porte ni `code` ni `request`, et se lit `transient`.
+ * L'appelant rétablit la valeur et le dit ; rien ne la rejouera.
+ *
  * Dans le vidage de la file, un `transient` garde l'écriture en tête et relance
  * plus tard, après une attente qui double, ou celle que demande `Retry-After` ;
  * elle n'est classée refusée qu'après six échecs espacés (#1963).

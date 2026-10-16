@@ -5,30 +5,52 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
+import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import { marquerLAbonnementARetransmettre } from '@/composables/useAbonnementPush'
-import { messageDesEcrituresGardees, reprendreLesEcrituresGardees } from '@/Utils/ecrituresGardees'
+import { messageDesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
+import {
+    messageDesEcrituresEffaceesALaDeconnexion,
+    reprendreLesAbandonsALaDeconnexion,
+    reprendreLesEcrituresEffaceesALaDeconnexion,
+} from '@/Utils/ecrituresEffaceesALaDeconnexion'
+import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 
 const page = usePage()
 
 /**
- * Les écritures hors ligne que la dernière déconnexion a laissées en file pour
- * son compte : l'écran qui la suit le dit, une fois (#1964).
+ * Les écritures hors ligne pas encore envoyées que la dernière déconnexion a
+ * effacées, la personne l'ayant accepté : l'écran qui la suit le dit, une fois
+ * (#2050).
  */
-const ecrituresGardees = ref(0)
+const ecrituresEffacees = ref(0)
+
+/**
+ * Les écritures que la file avait abandonnées après trente jours pour le compte
+ * qui vient de se déconnecter, et dont il n'avait peut-être jamais vu l'avis :
+ * la déconnexion l'a effacé avec le reste, l'écran qui la suit le dit (#2050).
+ *
+ * @type {import('vue').Ref<{nombre: number, depuis: number|null}|null>}
+ */
+const ecrituresAbandonnees = ref(null)
 
 onMounted(() => {
-    ecrituresGardees.value = reprendreLesEcrituresGardees()
+    ecrituresEffacees.value = reprendreLesEcrituresEffaceesALaDeconnexion()
+    ecrituresAbandonnees.value = reprendreLesAbandonsALaDeconnexion()
 
     /*
      * Une page d'invité dit que cet appareil n'a plus de session. Elle a pu être
      * fermée par un changement de mot de passe, qui retire aussi tous les
      * abonnements push du compte : le mémo de l'appareil ne prouve plus que le
      * serveur tient le sien, et la connexion suivante au même compte le
-     * retransmet. La vérification de l'adresse et la confirmation du mot de passe
-     * prennent ce gabarit sous une session ouverte : rien à marquer.
+     * retransmet. La dernière recherche d'exercice part aussi : la session a pu
+     * être fermée par le serveur (expirée, mot de passe changé ailleurs) sans
+     * que la déconnexion l'efface, et le compte suivant la retrouvait (#2050).
+     * La vérification de l'adresse et la confirmation du mot de passe prennent
+     * ce gabarit sous une session ouverte : rien à marquer ni à effacer.
      */
     if (!page.props.auth?.user) {
         marquerLAbonnementARetransmettre()
+        effacerLaRecherche()
     }
 })
 </script>
@@ -43,6 +65,9 @@ onMounted(() => {
         <!-- Sans réseau, une page d'invité le dit aussi (#2048). -->
         <ToastsDuLayout />
 
+        <!-- La vérification de l'adresse se déconnecte sous ce layout (#2050). -->
+        <QuestionDeDeconnexion />
+
         <!-- Logo -->
         <div class="animate-fade-in relative z-10 mb-8">
             <Link href="/" class="flex">
@@ -56,12 +81,20 @@ onMounted(() => {
                 class="border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 rounded-3xl border p-8 shadow-2xl backdrop-blur-md transition duration-300"
             >
                 <p
-                    v-if="ecrituresGardees > 0"
+                    v-if="ecrituresEffacees > 0"
                     role="status"
                     class="info-fill border-accent-info mb-4 rounded-xl border p-3 text-sm font-medium"
-                    dusk="ecritures-gardees"
+                    dusk="ecritures-effacees-a-la-deconnexion"
                 >
-                    {{ messageDesEcrituresGardees(ecrituresGardees) }}
+                    {{ messageDesEcrituresEffaceesALaDeconnexion(ecrituresEffacees) }}
+                </p>
+                <p
+                    v-if="ecrituresAbandonnees !== null"
+                    role="status"
+                    class="info-fill border-accent-info mb-4 rounded-xl border p-3 text-sm font-medium"
+                    dusk="ecritures-abandonnees-a-la-deconnexion"
+                >
+                    {{ messageDesEcrituresAbandonnees(ecrituresAbandonnees) }}
                 </p>
                 <slot />
             </div>

@@ -1,9 +1,40 @@
 import { http } from '@/Utils/http'
+import {
+    DUREE_EN_FILE_AU_PLUS_MS,
+    noterLesEcrituresAbandonnees,
+    oublierLesAvisPerimes,
+    oublierLesEcrituresAbandonnees,
+} from '@/Utils/ecrituresAbandonnees'
 import { noterLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { classifySyncError, estPourUnAutreCompte, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
 const FAILED_KEY = 'offline_sync_failed'
+
+/**
+ * La clé par laquelle un onglet dit aux autres qu'un compte a quitté
+ * l'appareil (#2050) : déconnecté après avoir accepté de perdre ses écritures,
+ * ou supprimé. Écrite puis retirée aussitôt, elle ne sert qu'à l'évènement
+ * `storage` que les autres onglets reçoivent ; elle ne reste jamais.
+ */
+const CLEF_DU_COMPTE_OUBLIE = 'gym-tracker:compte-oublie-de-la-file'
+
+/**
+ * Le rejet d'une écriture que le réseau a refusée et que la file ne peut pas
+ * garder : son compte a quitté l'appareil depuis son départ (`oublis`), ou
+ * aucun compte n'est connecté (#2050).
+ *
+ * Ni `isOffline`, ni `code`, ni `request`. L'échec réseau, rejeté tel quel, se
+ * lisait « en file » (`classifySyncError` le classe `offline`) : la saisie
+ * d'une série effaçait son brouillon et gardait à l'écran une valeur que plus
+ * rien ne gardait, dans l'onglet resté sur la séance quand la personne se
+ * déconnecte dans un autre. L'appelant la lit comme un échec : il rétablit la
+ * valeur, et le dit.
+ *
+ * @param {string} message
+ * @returns {{nonGardee: true, message: string}}
+ */
+const nonGardee = (message) => ({ nonGardee: true, message })
 
 /** How many refused mutations are worth keeping. See recordFailure. */
 const MAX_FAILED = 50
@@ -111,10 +142,63 @@ const lireLaListe = (cle) => {
 }
 
 /**
+ * Les identifiants des entrées que le stockage garde encore, file et refus
+ * ensemble, ou null quand il ne se lit pas.
+ *
+ * @returns {Set<string>|null}
+ */
+const identifiantsStockes = () => {
+    try {
+        const listes = [QUEUE_KEY, FAILED_KEY].map((cle) => JSON.parse(localStorage.getItem(cle) || '[]'))
+
+        return new Set(listes.flatMap((liste) => (Array.isArray(liste) ? liste.map((entree) => entree?.id) : [])))
+    } catch {
+        return null
+    }
+}
+
+/**
  * L'identifiant d'un compte tel que la file le note : une chaîne, ou null quand
  * personne n'est connecté. `42` et `'42'` désignent le même compte.
  */
 const normaliserLeCompte = (id) => (id === undefined || id === null || id === '' ? null : String(id))
+
+/**
+ * Réécrit une liste du stockage sans les entrées d'un compte. La liste du
+ * stockage, et non la copie en mémoire : un autre onglet a pu y mettre des
+ * écritures de ce compte que cet onglet n'a jamais vues (#2050).
+ *
+ * @param {string} cle
+ * @param {string} compte
+ */
+const oublierDansLeStockage = (cle, compte) => {
+    const restantes = lireLaListe(cle).filter((entree) => normaliserLeCompte(entree?.compte) !== compte)
+
+    try {
+        if (restantes.length === 0) {
+            localStorage.removeItem(cle)
+
+            return
+        }
+
+        localStorage.setItem(cle, JSON.stringify(restantes))
+    } catch {
+        // Stockage refusé : la mémoire est déjà oubliée, la prochaine écriture de la file réessaie.
+    }
+}
+
+/**
+ * Depuis quand une entrée attend, d'après le moment où elle a été faite.
+ *
+ * @returns {number} en millisecondes, NaN quand elle ne le dit pas
+ */
+const ageDe = (entree, maintenant) => maintenant - Date.parse(entree?.timestamp)
+
+/**
+ * Une entrée qui attend sur l'appareil depuis plus de trente jours (#2050) :
+ * aucun envoi ne l'a fait aboutir, et elle est abandonnée.
+ */
+const estPerimee = (entree, maintenant) => ageDe(entree, maintenant) > DUREE_EN_FILE_AU_PLUS_MS
 
 /**
  * Le compte connecté d'après la page que le serveur a rendue, lue dans le même
@@ -226,11 +310,20 @@ class SyncService {
         this.queue = file.filter(aUnCompte)
         this.failed = refusees.filter(aUnCompte)
 
-        if (this.queue.length !== file.length) {
+        /*
+         * Une entrée qui ne dit pas quand elle a été faite (un stockage abîmé)
+         * prend la date de ce chargement : la durée de trente jours compte
+         * alors à partir d'aujourd'hui, au lieu de ne jamais la borner ou de
+         * l'abandonner sans qu'elle ait attendu (#2050).
+         */
+        const fileDatee = this.daterLesEntreesSansDate(this.queue)
+        const refusDates = this.daterLesEntreesSansDate(this.failed)
+
+        if (this.queue.length !== file.length || fileDatee) {
             this.saveQueue()
         }
 
-        if (this.failed.length !== refusees.length) {
+        if (this.failed.length !== refusees.length || refusDates) {
             this.saveFailed()
         }
 
@@ -267,6 +360,24 @@ class SyncService {
         this.ecrituresDirectes = new Set()
 
         /**
+         * Combien de fois chaque compte a quitté l'appareil depuis le
+         * chargement de la page : déconnecté après avoir accepté de perdre ses
+         * écritures, ou supprimé, dans cet onglet ou dans un autre (#2050).
+         *
+         * Une écriture partie avant ce départ et revenue après, sans réseau ou
+         * refusée, était remise en file ou parmi les refus au nom du compte
+         * parti, en clair, après que la déconnexion avait tout effacé. Elle
+         * note ce nombre à son départ ; s'il a changé à sa réponse, rien d'elle
+         * ne revient sur l'appareil. Un nombre, et non une marque sur le
+         * compte : le même compte peut se reconnecter sur la même page, sans
+         * rechargement, et ses écritures suivantes doivent pouvoir attendre en
+         * file comme avant.
+         *
+         * @type {Map<string, number>}
+         */
+        this.oublis = new Map()
+
+        /**
          * Combien d'écritures le vidage a fait aboutir depuis la dernière
          * réponse du serveur à une visite Inertia : ce que les props de la page
          * affichée ne montrent peut-être pas encore. Au chargement, la page est
@@ -275,7 +386,48 @@ class SyncService {
          */
         this.rejeuxDepuisLaDerniereVisite = 0
 
+        /*
+         * Ce qui attend depuis plus de trente jours ne partira plus : abandonné
+         * dès le chargement, avant que la page ne superpose la file à la
+         * séance (#2050).
+         */
+        this.abandonnerLesEntreesPerimees()
+
         window.addEventListener('online', () => this.processQueue())
+
+        /**
+         * Un autre onglet a vu ce compte quitter l'appareil : déconnecté après
+         * avoir accepté de perdre ses écritures, ou supprimé (#2050). Cet
+         * onglet garde sa propre copie de la file en mémoire, qu'il réécrirait
+         * au stockage à sa prochaine écriture : il l'oublie aussi. La session
+         * du compte n'existe plus, les cookies étant communs aux onglets :
+         * l'onglet ne le croit plus connecté, et rien n'entre plus en file à
+         * son nom ; une écriture qu'il ne peut ni envoyer ni garder échoue
+         * (`nonGardee`). Quand c'était le compte de cet onglet,
+         * `sync:compte-parti` le dit à l'écran.
+         */
+        window.addEventListener('storage', (evenement) => {
+            if (evenement.key !== CLEF_DU_COMPTE_OUBLIE || evenement.newValue === null) {
+                return
+            }
+
+            let compte
+
+            try {
+                compte = normaliserLeCompte(JSON.parse(evenement.newValue)?.compte)
+            } catch {
+                // Un avis illisible ne vient pas de l'application.
+                return
+            }
+
+            const etaitConnecte = compte !== null && this.compte === compte
+
+            this.oublierEnMemoire(compte, { deconnecte: true })
+
+            if (etaitConnecte) {
+                window.dispatchEvent(new CustomEvent('sync:compte-parti', { detail: { compte } }))
+            }
+        })
 
         /**
          * Chaque réponse du serveur à une visite Inertia dit qui est connecté.
@@ -361,10 +513,19 @@ class SyncService {
 
         /*
          * Le compte qui fait l'écriture, pris à son départ : une écriture
-         * partie juste avant une déconnexion, et tombée sur un réseau absent
-         * juste après, reste à celui qui l'a faite.
+         * partie juste avant que la session se ferme, et tombée sur un réseau
+         * absent juste après, reste à celui qui l'a faite.
          */
         const compte = this.compte
+        const oublis = this.oublisDe(compte)
+
+        /*
+         * Sauf si ce compte a quitté l'appareil depuis son départ (#2050) :
+         * la personne a accepté de perdre ce qui n'était pas encore
+         * enregistré, et la déconnexion l'a effacé. L'écriture ne part plus et
+         * n'entre pas en file ; elle échoue (`nonGardee`).
+         */
+        const compteParti = () => this.oublisDe(compte) !== oublis
 
         /*
          * Une écriture directe ne doit pas doubler celles qui attendent : la
@@ -376,6 +537,13 @@ class SyncService {
          */
         if (this.isMutation(stamped) && this.enAttente() > 0) {
             await this.processQueue()
+
+            if (compteParti()) {
+                return Promise.reject({
+                    ...nonGardee('Request dropped: its account left the device'),
+                    compteParti: true,
+                })
+            }
 
             if (this.enAttente() > 0) {
                 const queueId = this.addToQueue(stamped, compte, notes)
@@ -401,11 +569,11 @@ class SyncService {
                      */
                     return await http(stamped)
                 } catch (retryError) {
-                    return this.queueOrThrow(retryError, stamped, compte, notes)
+                    return this.queueOrThrow(retryError, stamped, compteParti() ? null : compte, notes)
                 }
             }
 
-            return this.queueOrThrow(error, stamped, compte, notes)
+            return this.queueOrThrow(error, stamped, compteParti() ? null : compte, notes)
         }
     }
 
@@ -465,6 +633,11 @@ class SyncService {
             if (queueId !== null) {
                 return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
             }
+
+            // Une écriture que rien ne garde : l'échec réseau brut se lirait « en file ».
+            if (this.isMutation(config)) {
+                return Promise.reject(nonGardee('Network error: request not kept, no account to keep it for'))
+            }
         }
 
         throw error
@@ -495,11 +668,13 @@ class SyncService {
      *
      * Sans compte connu, rien n'entre : une écriture que la file ne sait
      * attribuer à personne ne pourrait jamais repartir sans risquer de partir
-     * sous un autre compte. L'appelant reçoit alors l'échec réseau tel quel, et
-     * le dit au lieu de garder la valeur comme si elle allait partir.
+     * sous un autre compte. `queueOrThrow` rejette alors l'écriture par
+     * `nonGardee`, que nul appelant ne prend pour « en file » : il rétablit la
+     * valeur et le dit, au lieu de la garder comme si elle allait partir.
      *
      * @param {Object} config
-     * @param {string|null} compte le compte connecté quand l'écriture est partie
+     * @param {string|null} compte le compte connecté quand l'écriture est partie,
+     *   null quand il a quitté l'appareil depuis (voir `oublis`)
      * @param {{tentee?: boolean, ajusterPar?: string, contexte?: Object}} notes ce
      *   que la file sait déjà de l'écriture : `tentee` quand elle est partie une
      *   fois sans réponse, `ajusterPar` pour rattraper ce que le serveur en
@@ -611,13 +786,21 @@ class SyncService {
     }
 
     /**
-     * Oublie tout ce que la file garde pour ce compte : ses écritures en
-     * attente et ses refus.
+     * Oublie tout ce que la file garde pour ce compte, sur tout l'appareil :
+     * ses écritures en attente, ses refus et l'avis de ce qui a été abandonné.
      *
      * Un compte supprimé ne se reconnectera jamais. Ce qu'il laissait en file
      * ne partirait donc jamais, et resterait sur l'appareil, lisible par qui
      * s'en sert ensuite, alors que la suppression promet d'effacer ses
-     * données (#1964). Les écritures des autres comptes restent à eux.
+     * données (#1964). Un compte qui se déconnecte après avoir accepté de
+     * perdre ses écritures en attente les laisse de même (#2050). Les
+     * écritures des autres comptes restent à eux.
+     *
+     * Le stockage est relu, et non seulement la copie de cet onglet : un autre
+     * onglet a pu y mettre des écritures de ce compte. Les autres onglets
+     * l'apprennent par l'évènement `storage`, et oublient leur propre copie.
+     * Une écriture de ce compte encore en vol, ici ou là-bas, n'y revient pas à
+     * sa réponse (`oublis`).
      *
      * @param {number|string|null|undefined} id
      */
@@ -628,15 +811,187 @@ class SyncService {
             return
         }
 
-        this.queue = this.queue.filter((entree) => entree.compte !== compte)
-        this.failed = this.failed.filter((entree) => entree.compte !== compte)
-        this.saveQueue()
-        this.saveFailed()
+        this.oublierEnMemoire(compte)
+        oublierDansLeStockage(QUEUE_KEY, compte)
+        oublierDansLeStockage(FAILED_KEY, compte)
+        oublierLesEcrituresAbandonnees(compte)
+
+        try {
+            localStorage.setItem(CLEF_DU_COMPTE_OUBLIE, JSON.stringify({ compte }))
+            localStorage.removeItem(CLEF_DU_COMPTE_OUBLIE)
+        } catch {
+            // Stockage refusé : les autres onglets n'ont pas pu écrire la file non plus.
+        }
+    }
+
+    /**
+     * Oublie ce que cette copie de la file garde pour ce compte.
+     *
+     * @param {string|null} compte
+     * @param {{deconnecte?: boolean}} options `deconnecte` quand un autre
+     *   onglet dit que ce compte n'a plus de session sur l'appareil
+     */
+    oublierEnMemoire(compte, { deconnecte = false } = {}) {
+        if (compte === null) {
+            return
+        }
+
+        this.oublis.set(compte, this.oublisDe(compte) + 1)
+        this.queue = this.queue.filter((entree) => normaliserLeCompte(entree.compte) !== compte)
+        this.failed = this.failed.filter((entree) => normaliserLeCompte(entree.compte) !== compte)
+
+        if (deconnecte && this.compte === compte) {
+            this.compte = null
+        }
+    }
+
+    /**
+     * Combien de fois ce compte a quitté l'appareil depuis le chargement de la
+     * page (voir `oublis`).
+     *
+     * @param {string|null} compte
+     * @returns {number}
+     */
+    oublisDe(compte) {
+        return this.oublis.get(compte) ?? 0
     }
 
     /** Combien d'écritures du compte connecté attendent encore d'être envoyées. */
     enAttente() {
         return this.compte === null ? 0 : this.queue.filter((entree) => entree.compte === this.compte).length
+    }
+
+    /**
+     * Combien d'écritures de ce compte attendent sur l'appareil, celles qu'un
+     * autre onglet a mises en file comprises : la copie de cet onglet peut ne
+     * pas les connaître, et la déconnexion doit les compter avant de les
+     * effacer (#2050).
+     *
+     * @param {number|string|null|undefined} id le compte connecté par défaut
+     * @returns {number}
+     */
+    enAttenteSurLAppareil(id = this.compte) {
+        const compte = normaliserLeCompte(id)
+
+        if (compte === null) {
+            return 0
+        }
+
+        const identifiants = new Set(
+            [...lireLaListe(QUEUE_KEY), ...this.queue]
+                .filter((entree) => normaliserLeCompte(entree?.compte) === compte)
+                .map((entree) => entree.id),
+        )
+
+        return identifiants.size
+    }
+
+    /**
+     * Donne la date de maintenant aux entrées qui n'en ont pas de lisible.
+     *
+     * @param {Array<Object>} entrees
+     * @returns {boolean} vrai quand une entrée a été datée
+     */
+    daterLesEntreesSansDate(entrees) {
+        const maintenant = new Date().toISOString()
+        let datee = false
+
+        entrees.forEach((entree) => {
+            if (Number.isNaN(Date.parse(entree.timestamp))) {
+                entree.timestamp = maintenant
+                datee = true
+            }
+        })
+
+        return datee
+    }
+
+    /**
+     * Abandonne et efface ce qui attend sur l'appareil depuis plus de trente
+     * jours, de tout compte, refus compris, et le note pour chaque compte
+     * (`Utils/ecrituresAbandonnees`), que son prochain écran le lui dise
+     * (#2050).
+     *
+     * La file gardait pour toujours, en clair, les écritures d'un compte qui
+     * ne revenait pas : supprimé depuis un autre appareil ou depuis le
+     * panneau, ou dont la session avait expiré sans qu'il se reconnecte.
+     * Aucune réponse du serveur ne dit qu'un compte n'existe plus (le serveur
+     * se garde de le dire, `VerifieLeCompteDeLEcriture`) : la durée est la
+     * seule borne. Une écriture qui dépend d'une création abandonnée part
+     * avec elle, puisqu'elle ne pourrait plus aboutir. L'entrée qui vole n'est
+     * pas touchée : sa réponse dira ce qu'elle est devenue.
+     *
+     * Seul ce que le stockage garde encore est compté : un autre onglet, qui
+     * garde sa propre copie, a pu abandonner les mêmes avant, ou les envoyer.
+     * Les entrées du compte connecté sortent aussi de l'écran
+     * (`sync:retired`), et `sync:abandoned` prévient l'écran déjà monté. Les
+     * avis qui ont attendu leur compte plus de trente jours s'effacent aussi.
+     *
+     * @param {number} maintenant
+     */
+    abandonnerLesEntreesPerimees(maintenant = Date.now()) {
+        oublierLesAvisPerimes(maintenant)
+
+        const abandonnees = new Set()
+
+        this.queue.forEach((entree) => {
+            if (entree.id === this.enVol) {
+                return
+            }
+
+            if (
+                estPerimee(entree, maintenant) ||
+                filesReferencees(entree.data).some((parent) => abandonnees.has(parent))
+            ) {
+                abandonnees.add(entree.id)
+            }
+        })
+
+        const refusPerimes = this.failed.filter((entree) => estPerimee(entree, maintenant))
+
+        if (abandonnees.size === 0 && refusPerimes.length === 0) {
+            return
+        }
+
+        const sorties = this.queue.filter((entree) => abandonnees.has(entree.id))
+        const stockees = identifiantsStockes()
+        const aDire = [...sorties, ...refusPerimes].filter((entree) => stockees === null || stockees.has(entree.id))
+
+        if (abandonnees.size > 0) {
+            this.queue = this.queue.filter((entree) => !abandonnees.has(entree.id))
+            this.saveQueue()
+        }
+
+        if (refusPerimes.length > 0) {
+            this.failed = this.failed.filter((entree) => !refusPerimes.includes(entree))
+            this.saveFailed()
+        }
+
+        /** @type {Map<string, {nombre: number, depuis: number|null}>} */
+        const parCompte = new Map()
+
+        aDire.forEach((entree) => {
+            const compte = normaliserLeCompte(entree.compte)
+            const faite = Date.parse(entree.timestamp)
+            const avis = parCompte.get(compte) ?? { nombre: 0, depuis: null }
+
+            parCompte.set(compte, {
+                nombre: avis.nombre + 1,
+                depuis: Number.isFinite(faite) && (avis.depuis === null || faite < avis.depuis) ? faite : avis.depuis,
+            })
+        })
+
+        noterLesEcrituresAbandonnees(parCompte, maintenant)
+
+        const duCompte = sorties.filter((entree) => entree.compte === this.compte).map((entree) => entree.id)
+
+        if (duCompte.length > 0) {
+            window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: duCompte } }))
+        }
+
+        if (parCompte.size > 0) {
+            window.dispatchEvent(new CustomEvent('sync:abandoned', { detail: { comptes: [...parCompte.keys()] } }))
+        }
     }
 
     /** Les entrées de file du compte connecté qui attendent encore, par leur identifiant. */
@@ -808,6 +1163,13 @@ class SyncService {
      * and overwrite it.
      */
     async drainQueue() {
+        /*
+         * Une page ouverte des semaines (la PWA suspendue, puis reprise) ne
+         * se recharge pas : chaque vidage commence par abandonner ce qui a
+         * dépassé trente jours (#2050).
+         */
+        this.abandonnerLesEntreesPerimees()
+
         for (let config = this.teteDeFile(); config !== undefined; config = this.teteDeFile()) {
             /*
              * Une erreur passagère a fixé l'heure du prochain essai. Un autre
@@ -862,12 +1224,25 @@ class SyncService {
 
             let reponse
 
+            /** Combien de fois son compte avait quitté l'appareil à son départ. */
+            const oublis = this.oublisDe(normaliserLeCompte(config.compte))
+
             try {
                 // Celle-ci est partie : plus rien ne se fond dans sa charge.
                 this.enVol = config.id
 
                 reponse = await http(requete)
             } catch (error) {
+                /*
+                 * Son compte a quitté l'appareil pendant qu'elle volait
+                 * (#2050) : la déconnexion acceptée l'a retirée de la file avec
+                 * le reste, et rien d'elle n'y revient, pas même parmi les
+                 * refus, qu'elle a effacés aussi.
+                 */
+                if (this.oublisDe(normaliserLeCompte(config.compte)) !== oublis) {
+                    continue
+                }
+
                 /*
                  * Le serveur a refusé de l'exécuter sous la session d'un autre
                  * compte. L'écriture reste en tête pour le sien, sans essai
