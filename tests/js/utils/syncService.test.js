@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
     COMPTE,
     chargerSyncService,
+    horodatageRecent,
     naviguer,
     poserLaPage,
     restaurerDepuisLHistorique,
@@ -27,7 +28,7 @@ const aQueuedPatch = (url = '/api/v1/sets/1') => ({
     url,
     data: { weight: 100 },
     id: 'queued-1',
-    timestamp: '2026-07-29T10:00:00.000Z',
+    timestamp: horodatageRecent(),
     compte: COMPTE,
 })
 
@@ -432,7 +433,7 @@ describe('SyncService drain durability', () => {
         url,
         data: { weight: 100 },
         id,
-        timestamp: '2026-08-04T10:00:00.000Z',
+        timestamp: horodatageRecent(),
         compte: COMPTE,
     })
 
@@ -515,7 +516,7 @@ describe('SyncService failed-request bucket', () => {
             url: `/api/v1/sets/${i}`,
             data: { weight: i },
             id: `q${i}`,
-            timestamp: '2026-08-04T10:00:00.000Z',
+            timestamp: horodatageRecent(),
             compte: COMPTE,
         }))
         localStorage.setItem('offline_sync_queue', JSON.stringify(many))
@@ -726,7 +727,7 @@ describe('SyncService erreurs passagères', () => {
             url: `/api/v1/sets?n=${n}`,
             data: { reps: n },
             id: `q${n}`,
-            timestamp: '2026-10-05T10:00:00.000Z',
+            timestamp: horodatageRecent(),
             compte: COMPTE,
         }))
 
@@ -1165,7 +1166,7 @@ describe('SyncService une écriture qui attend encore', () => {
         url: '/api/v1/sets',
         data: { workout_line_id: 1, is_completed: false, reps: 5 },
         id,
-        timestamp: '2026-10-05T10:00:00.000Z',
+        timestamp: horodatageRecent(),
         compte,
     })
 
@@ -1335,7 +1336,7 @@ describe('SyncService une écriture qui en attend une autre', () => {
         url: '/api/v1/workout-lines',
         data: { workout_id: 5, exercise_id: 7 },
         id: 'qL',
-        timestamp: '2026-10-05T10:00:00.000Z',
+        timestamp: horodatageRecent(),
         compte: COMPTE,
     }
 
@@ -1557,7 +1558,7 @@ describe('SyncService une création tentée sans réponse', () => {
         data: { workout_line_id: 1, is_completed: false, reps: 5 },
         headers: { 'Idempotency-Key': `cle-${id}` },
         id,
-        timestamp: '2026-10-05T10:00:00.000Z',
+        timestamp: horodatageRecent(),
         compte: COMPTE,
         ...autres,
     })
@@ -1901,5 +1902,247 @@ describe('SyncService les écritures en cours', () => {
         ])
         expect(service.queue).toEqual([])
         expect(service.ecrituresEnCours()).toBe(0)
+    })
+})
+
+/*
+ * Trente jours au plus (#2050). La file gardait pour toujours, en clair sur
+ * l'appareil, ce qui ne partait jamais : les écritures d'un compte supprimé
+ * depuis un autre appareil, ou d'une session expirée jamais rouverte. Aucune
+ * réponse du serveur ne dit qu'un compte n'existe plus ; la durée est la seule
+ * borne. Au-delà, l'entrée est abandonnée, effacée, et notée pour son compte.
+ */
+describe('SyncService trente jours au plus', () => {
+    const MAINTENANT = new Date('2026-10-16T12:00:00.000Z')
+    const JOUR = 24 * 60 * 60 * 1000
+
+    const entree = (id, ilYA, autres = {}) => ({
+        method: 'patch',
+        url: `/api/v1/sets/${id}`,
+        data: { weight: 80 },
+        id,
+        timestamp: new Date(MAINTENANT.getTime() - ilYA).toISOString(),
+        compte: COMPTE,
+        ...autres,
+    })
+
+    const avis = () => JSON.parse(localStorage.getItem('gym-tracker:ecritures-abandonnees') ?? '{}')
+    const idsStockes = (cle) => JSON.parse(localStorage.getItem(cle) ?? '[]').map((e) => e.id)
+
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(MAINTENANT)
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('garde une écriture de 29 jours et de 30 jours tout juste, abandonne au-delà', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                entree('j29', 29 * JOUR),
+                entree('j30', 30 * JOUR),
+                entree('j30-1ms', 30 * JOUR + 1),
+                entree('j31', 31 * JOUR),
+            ]),
+        )
+        const retirees = []
+        const surRetrait = (evenement) => retirees.push(...evenement.detail.queueIds)
+        window.addEventListener('sync:retired', surRetrait)
+
+        const service = await chargé()
+        window.removeEventListener('sync:retired', surRetrait)
+
+        expect(service.queue.map((e) => e.id)).toEqual(['j29', 'j30'])
+        expect(idsStockes('offline_sync_queue')).toEqual(['j29', 'j30'])
+        // Une page qui les montrait les retire de l'écran.
+        expect(retirees).toEqual(['j30-1ms', 'j31'])
+        expect(avis()).toEqual({
+            [COMPTE]: { nombre: 2, depuis: MAINTENANT.getTime() - 31 * JOUR, le: MAINTENANT.getTime() },
+        })
+    })
+
+    it('abandonne pendant qu’une page reste ouverte, au vidage suivant, et l’annonce', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([entree('q1', 29 * JOUR)]))
+        const service = await chargé()
+        const annonces = []
+        const surAbandon = (evenement) => annonces.push(evenement.detail)
+        window.addEventListener('sync:abandoned', surAbandon)
+
+        vi.setSystemTime(new Date(MAINTENANT.getTime() + 2 * JOUR))
+        await service.processQueue()
+        window.removeEventListener('sync:abandoned', surAbandon)
+
+        expect(service.queue).toEqual([])
+        expect(annonces).toEqual([{ comptes: [COMPTE] }])
+        expect(avis()[COMPTE].nombre).toBe(1)
+    })
+
+    it('abandonne aussi les écritures d’un autre compte, et les note pour lui seul', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                entree('a', 31 * JOUR, { compte: '7' }),
+                entree('b', 2 * JOUR, { compte: '7' }),
+                entree('c', 2 * JOUR),
+            ]),
+        )
+        localStorage.setItem(
+            'offline_sync_failed',
+            JSON.stringify([entree('r', 45 * JOUR, { compte: '7', status: 422 }), entree('s', JOUR, { status: 422 })]),
+        )
+
+        const service = await freshService({ compte: null })
+
+        expect(service.queue.map((e) => e.id)).toEqual(['b', 'c'])
+        expect(service.failed.map((e) => e.id)).toEqual(['s'])
+        expect(Object.keys(avis())).toEqual(['7'])
+        expect(avis()['7']).toMatchObject({ nombre: 2, depuis: MAINTENANT.getTime() - 45 * JOUR })
+    })
+
+    it('emporte une écriture qui dépend d’une création abandonnée, qui ne pourrait plus aboutir', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                entree('ligne', 31 * JOUR, { method: 'post', url: '/api/v1/workout-lines', data: { exercise_id: 7 } }),
+                entree('serie', 3 * JOUR, {
+                    method: 'post',
+                    url: '/api/v1/sets',
+                    data: { workout_line_id: { enAttenteDe: 'ligne' }, reps: 5 },
+                }),
+                entree('autre', 3 * JOUR),
+            ]),
+        )
+
+        const service = await chargé()
+
+        expect(service.queue.map((e) => e.id)).toEqual(['autre'])
+        expect(avis()[COMPTE].nombre).toBe(2)
+    })
+
+    it('ne touche pas à l’écriture qui vole, et ne compte pas deux fois ce qu’un autre onglet a déjà abandonné', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([entree('q1', 29 * JOUR), entree('q2', 29 * JOUR)]))
+        const service = await chargé()
+        vi.setSystemTime(new Date(MAINTENANT.getTime() + 2 * JOUR))
+
+        service.enVol = 'q1'
+        // Un autre onglet a déjà abandonné q2, et l'a noté.
+        localStorage.setItem('offline_sync_queue', JSON.stringify([service.queue[0]]))
+        service.abandonnerLesEntreesPerimees()
+
+        expect(service.queue.map((e) => e.id)).toEqual(['q1'])
+        expect(avis()).toEqual({})
+    })
+
+    it('date au chargement une entrée qui ne dit pas quand elle a été faite, et compte trente jours à partir de là', async () => {
+        const sansDate = { ...entree('q1', 0), timestamp: 'illisible' }
+        localStorage.setItem('offline_sync_queue', JSON.stringify([sansDate]))
+
+        const service = await chargé()
+
+        expect(service.queue.map((e) => e.id)).toEqual(['q1'])
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue'))[0].timestamp).toBe(MAINTENANT.toISOString())
+
+        vi.setSystemTime(new Date(MAINTENANT.getTime() + 31 * JOUR))
+        const rechargee = await chargé()
+
+        expect(rechargee.queue).toEqual([])
+    })
+})
+
+/*
+ * Un compte qui quitte l'appareil, déconnecté après avoir accepté de perdre ses
+ * écritures, ou supprimé, n'y laisse rien, même ce qu'un autre onglet a mis en
+ * file ou garde en mémoire (#2050).
+ */
+describe('SyncService un compte qui quitte l’appareil', () => {
+    const stockee = (id, compte) => ({
+        method: 'patch',
+        url: `/api/v1/sets/${id}`,
+        data: { reps: 8 },
+        id,
+        timestamp: horodatageRecent(),
+        compte,
+    })
+
+    beforeEach(() => {
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+    })
+
+    it('compte ce qu’un autre onglet a mis en file pour ce compte, sans compter deux fois', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([stockee('q1', COMPTE)]))
+        const service = await chargé()
+
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([stockee('q1', COMPTE), stockee('q2', COMPTE), stockee('q3', '2')]),
+        )
+
+        expect(service.enAttente()).toBe(1)
+        expect(service.enAttenteSurLAppareil()).toBe(2)
+        expect(service.enAttenteSurLAppareil(2)).toBe(1)
+        expect(service.enAttenteSurLAppareil(null)).toBe(0)
+    })
+
+    it('efface du stockage ce qu’un autre onglet y a mis pour ce compte, et laisse les autres comptes', async () => {
+        const service = await chargé()
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([stockee('q1', COMPTE), stockee('q2', '2'), stockee('q3', COMPTE)]),
+        )
+        localStorage.setItem('offline_sync_failed', JSON.stringify([{ ...stockee('r1', COMPTE), status: 422 }]))
+        localStorage.setItem(
+            'gym-tracker:ecritures-abandonnees',
+            JSON.stringify({ [COMPTE]: { nombre: 1, depuis: null, le: Date.now() } }),
+        )
+
+        service.oublierLeCompte(COMPTE)
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((e) => e.id)).toEqual(['q2'])
+        expect(localStorage.getItem('offline_sync_failed')).toBeNull()
+        expect(localStorage.getItem('gym-tracker:ecritures-abandonnees')).toBeNull()
+        // L'avis aux autres onglets ne reste pas dans le stockage.
+        expect(localStorage.getItem('gym-tracker:compte-oublie-de-la-file')).toBeNull()
+    })
+
+    it('fait oublier sa copie à un autre onglet, qui ne la réécrit plus et ne croit plus le compte connecté', async () => {
+        const service = await chargé()
+        await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ isOffline: true })
+
+        expect(service.enAttente()).toBe(1)
+
+        // L'autre onglet efface la file du compte, et le dit.
+        localStorage.removeItem('offline_sync_queue')
+        window.dispatchEvent(
+            new StorageEvent('storage', {
+                key: 'gym-tracker:compte-oublie-de-la-file',
+                newValue: JSON.stringify({ compte: COMPTE }),
+            }),
+        )
+
+        expect(service.queue).toEqual([])
+        expect(service.compte).toBeNull()
+
+        // Une écriture suivante, toujours sans réseau, n'entre plus en file au nom du compte parti.
+        await expect(service.patch('/api/v1/sets/2', { reps: 9 })).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        expect(localStorage.getItem('offline_sync_queue')).toBeNull()
+    })
+
+    it('n’oublie rien sur un avis d’un autre compte, illisible ou retiré', async () => {
+        const service = await chargé()
+        await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ isOffline: true })
+
+        for (const newValue of [JSON.stringify({ compte: '2' }), '{coupé', null]) {
+            window.dispatchEvent(new StorageEvent('storage', { key: 'gym-tracker:compte-oublie-de-la-file', newValue }))
+        }
+        window.dispatchEvent(
+            new StorageEvent('storage', { key: 'une-autre-clef', newValue: JSON.stringify({ compte: COMPTE }) }),
+        )
+
+        expect(service.enAttente()).toBe(1)
+        expect(service.compte).toBe(COMPTE)
     })
 })

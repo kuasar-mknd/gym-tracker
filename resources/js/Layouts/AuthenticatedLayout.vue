@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
@@ -9,6 +9,7 @@ import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
+import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
@@ -17,6 +18,7 @@ import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
+import { messageDesEcrituresAbandonnees, reprendreLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
 
 defineProps({
     pageTitle: {
@@ -76,24 +78,38 @@ const banniereCompacte = computed(() => !route().current('dashboard') && !route(
 onMounted(() => rapprocherLAbonnementPush(page.props.auth?.user?.id))
 
 /*
- * Les écritures hors ligne que le chargement a effacées sans pouvoir les
- * envoyer, faute de savoir à quel compte elles appartenaient (#1964) : le
- * premier écran authentifié le dit, une fois, par le toast d'erreur. Un message
- * déjà affiché n'est pas remplacé : l'avis attend l'écran suivant.
+ * Ce que la file hors ligne a effacé sans pouvoir l'envoyer, dit une fois par
+ * le toast d'erreur. D'abord les écritures que le chargement a effacées faute
+ * de savoir à quel compte elles appartenaient (#1964) ; puis celles du compte
+ * connecté qui ont attendu plus de trente jours et ont été abandonnées
+ * (#2050), notées pour lui même quand un autre compte était connecté à ce
+ * moment. Un message déjà affiché n'est pas remplacé : l'avis attend l'écran
+ * suivant. L'abandon pendant que la page est ouverte (une PWA reprise après
+ * des semaines) l'annonce par `sync:abandoned`.
  */
-onMounted(() => {
+const direCeQuiAEteEfface = () => {
     if (page.props.flash?.error) {
         return
     }
 
     const effacees = reprendreLesEcrituresEffacees()
+    const abandonnees = effacees > 0 ? null : reprendreLesEcrituresAbandonnees(page.props.auth?.user?.id)
 
-    if (effacees > 0) {
-        const flash = page.props.flash ?? (page.props.flash = {})
-
-        flash.error = messageDesEcrituresEffacees(effacees)
+    if (effacees === 0 && abandonnees === null) {
+        return
     }
+
+    const flash = page.props.flash ?? (page.props.flash = {})
+
+    flash.error = effacees > 0 ? messageDesEcrituresEffacees(effacees) : messageDesEcrituresAbandonnees(abandonnees)
+}
+
+onMounted(() => {
+    direCeQuiAEteEfface()
+    window.addEventListener('sync:abandoned', direCeQuiAEteEfface)
 })
+
+onUnmounted(() => window.removeEventListener('sync:abandoned', direCeQuiAEteEfface))
 </script>
 
 <template>
@@ -130,6 +146,9 @@ onMounted(() => {
 
         <!-- Les messages de la page et ceux du réseau (#2048). -->
         <ToastsDuLayout />
+
+        <!-- Avant une déconnexion qui perdrait des écritures pas encore envoyées (#2050). -->
+        <QuestionDeDeconnexion />
 
         <!-- Desktop Navigation -->
         <nav

@@ -41,8 +41,12 @@ vi.mock('@/composables/useAbonnementPush', () => ({
  * ses séries revenaient en 403, perdues pour leur auteur.
  *
  * La règle retenue : une écriture en file porte le compte qui l'a faite et ne
- * part que sous sa session. La déconnexion la garde pour ce compte, sans
- * attendre, et l'écran qui suit le dit.
+ * part que sous sa session. Une session qui expire, ou que le serveur ferme,
+ * lui laisse ses écritures jusqu'à son retour, trente jours au plus (#2050).
+ * La déconnexion, elle, ne les garde plus en clair sur l'appareil : elle
+ * prévient, puis les efface, et l'écran qui suit le dit (#2050). Le parcours
+ * avec le vrai client d'Inertia est dans
+ * `deconnexionEffaceLaFileAvecInertia.test.js`.
  */
 
 const envoyees = () =>
@@ -50,7 +54,7 @@ const envoyees = () =>
 
 const PREFERENCES = { preferences: { personal_record: false, training_reminder: false } }
 
-/** A modifie ses préférences sans réseau ; au rejeu, sa session a expiré. */
+/** A modifie ses préférences sans réseau ; au rejeu, sa session a expiré, sans qu'il se soit déconnecté. */
 const aLaisseUneEcritureEnFile = async () => {
     const sync = await chargerSyncService({ compte: 1 })
     await sync.pending
@@ -65,7 +69,19 @@ const aLaisseUneEcritureEnFile = async () => {
     return sync
 }
 
-const seDeconnecter = async () => (await import('@/composables/useDeconnexion')).seDeconnecter()
+const deconnexion = async () => import('@/composables/useDeconnexion')
+
+const seDeconnecter = async () => (await deconnexion()).seDeconnecter()
+
+/** La question posée, puis « Se déconnecter quand même ». */
+const seDeconnecterQuandMeme = async () => {
+    const { questionDeDeconnexion, seDeconnecterQuandMeme: confirmer } = await deconnexion()
+
+    await seDeconnecter()
+    expect(questionDeDeconnexion.value).not.toBeNull()
+
+    return confirmer()
+}
 
 const ecranDeConnexion = async () => {
     const GuestLayout = (await import('@/Layouts/GuestLayout.vue')).default
@@ -93,13 +109,15 @@ afterEach(() => {
     poserLaPage(null)
 })
 
-describe('la file d’un compte, à la déconnexion', () => {
+describe('la file d’un compte dont la session a expiré', () => {
+    /*
+     * A ne s'est pas déconnecté : le serveur a fermé sa session. Rien ne lui a
+     * été demandé, et rien n'est effacé ; son écriture l'attend.
+     */
     it('n’envoie jamais sous la session de B ce que A a laissé en file, et le rend à A à son retour', async () => {
         await aLaisseUneEcritureEnFile()
 
-        await seDeconnecter()
-
-        expect(routeur.post).toHaveBeenCalledWith('/logout', {}, expect.any(Object))
+        expect(routeur.post).not.toHaveBeenCalled()
         expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.url)).toEqual([
             '/profile/preferences',
         ])
@@ -126,7 +144,6 @@ describe('la file d’un compte, à la déconnexion', () => {
 
     it('ne l’envoie pas non plus quand B se connecte sans recharger la page', async () => {
         const sync = await aLaisseUneEcritureEnFile()
-        await seDeconnecter()
 
         requete.mockReset()
         requete.mockResolvedValue({ data: { data: {} } })
@@ -146,7 +163,6 @@ describe('la file d’un compte, à la déconnexion', () => {
      */
     it('ne l’envoie pas quand B revient, par le bouton Retour, sur une page de A', async () => {
         const sync = await aLaisseUneEcritureEnFile()
-        await seDeconnecter()
 
         requete.mockReset()
         requete.mockResolvedValue({ data: { data: {} } })
@@ -188,37 +204,88 @@ describe('la file d’un compte, à la déconnexion', () => {
         expect(sync.queue).toEqual([expect.objectContaining({ url: '/profile/preferences', authAttempts: 1 })])
         expect(sync.failedRequests()).toEqual([])
     })
+})
+
+describe('la file d’un compte, à la déconnexion', () => {
+    /*
+     * La déconnexion gardait la file de A pour son retour, en clair sur
+     * l'appareil, et l'écran de connexion disait qu'elle partirait à sa
+     * prochaine connexion (#1964). Elle prévient désormais, puis efface (#2050).
+     */
+    it('demande d’abord, et ne part pas tant que la personne n’a pas répondu', async () => {
+        await aLaisseUneEcritureEnFile()
+        const { questionDeDeconnexion, resterConnecte } = await deconnexion()
+
+        await seDeconnecter()
+
+        expect(questionDeDeconnexion.value).toEqual({ nombre: 1 })
+        expect(routeur.post).not.toHaveBeenCalled()
+
+        resterConnecte()
+
+        expect(questionDeDeconnexion.value).toBeNull()
+        expect(routeur.post).not.toHaveBeenCalled()
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.url)).toEqual([
+            '/profile/preferences',
+        ])
+    })
+
+    it('efface la file de A une fois la déconnexion acceptée : B ne la voit jamais, et A revenu ne trouve rien', async () => {
+        await aLaisseUneEcritureEnFile()
+
+        await seDeconnecterQuandMeme()
+
+        expect(routeur.post).toHaveBeenCalledWith('/logout', {}, expect.any(Object))
+        naviguer(null)
+        routeur.post.mock.calls[0][2].onSuccess()
+        routeur.post.mock.calls[0][2].onFinish()
+
+        expect(localStorage.getItem('offline_sync_queue')).toBeNull()
+
+        // B se connecte (nouveau chargement), puis A revient : rien de A ne part plus.
+        requete.mockReset()
+        requete.mockResolvedValue({ data: { data: {} } })
+        const sousB = await chargerSyncService({ compte: 2 })
+        await sousB.pending
+        const sousA = await chargerSyncService({ compte: 1 })
+        await sousA.pending
+
+        expect(envoyees()).toEqual([])
+        expect(sousA.enAttente()).toBe(0)
+    })
 
     it('le dit sur l’écran qui suit, une seule fois, sans retenir la déconnexion', async () => {
         await aLaisseUneEcritureEnFile()
 
-        await seDeconnecter()
+        await seDeconnecterQuandMeme()
 
         const ecran = await ecranDeConnexion()
-        expect(ecran.find('[dusk="ecritures-gardees"]').text()).toBe(
-            "Une modification faite hors ligne n'a pas encore été envoyée. Elle reste sur cet appareil et partira à la prochaine connexion de ce compte, jamais sous un autre.",
+        expect(ecran.find('[dusk="ecritures-effacees-a-la-deconnexion"]').text()).toBe(
+            "Une modification faite hors ligne n'avait pas encore été envoyée : elle a été effacée de cet appareil avec la déconnexion.",
         )
 
         const ecranSuivant = await ecranDeConnexion()
-        expect(ecranSuivant.find('[dusk="ecritures-gardees"]').exists()).toBe(false)
+        expect(ecranSuivant.find('[dusk="ecritures-effacees-a-la-deconnexion"]').exists()).toBe(false)
 
-        // Un compte qui n'a rien en attente se déconnecte sans avis.
+        // Un compte qui n'a rien en attente se déconnecte sans question ni avis.
         const sousC = await chargerSyncService({ compte: 3 })
         await sousC.pending
         await seDeconnecter()
 
+        expect((await deconnexion()).questionDeDeconnexion.value).toBeNull()
         const apresUneDeconnexionSansAttente = await ecranDeConnexion()
-        expect(apresUneDeconnexionSansAttente.find('[dusk="ecritures-gardees"]').exists()).toBe(false)
+        expect(apresUneDeconnexionSansAttente.find('[dusk="ecritures-effacees-a-la-deconnexion"]').exists()).toBe(false)
         expect(routeur.post).toHaveBeenCalledTimes(2)
     })
 
-    it('efface les refus et les brouillons de séries que le compte laisse, une fois la déconnexion acceptée', async () => {
+    it('efface les refus, les brouillons de séries et la recherche d’exercice que le compte laisse, une fois la déconnexion acceptée', async () => {
         localStorage.setItem(
             'offline_sync_failed',
             JSON.stringify([{ method: 'post', url: '/api/v1/sets', data: { reps: 8 }, compte: '1', status: 422 }]),
         )
         localStorage.setItem('draft_set_12', JSON.stringify({ reps: 8 }))
         localStorage.setItem('draft_set_13', JSON.stringify({ weight: 60 }))
+        localStorage.setItem('gymtracker_add_exercise_search', 'Développé couché')
         localStorage.setItem('une-autre-clef', 'gardée')
         const sync = await chargerSyncService({ compte: 1 })
         await sync.pending
@@ -227,6 +294,7 @@ describe('la file d’un compte, à la déconnexion', () => {
 
         // Rien avant la réponse : la déconnexion peut encore échouer.
         expect(localStorage.getItem('draft_set_12')).not.toBeNull()
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBe('Développé couché')
 
         // La réponse mène à l'écran de connexion : le service n'a plus de compte quand `onSuccess` arrive.
         naviguer(null)
@@ -236,6 +304,7 @@ describe('la file d’un compte, à la déconnexion', () => {
         expect(localStorage.getItem('offline_sync_failed')).toBeNull()
         expect(localStorage.getItem('draft_set_12')).toBeNull()
         expect(localStorage.getItem('draft_set_13')).toBeNull()
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBeNull()
         expect(localStorage.getItem('une-autre-clef')).toBe('gardée')
 
         // Un stockage qui refuse tout ne retient pas la déconnexion suivante.
@@ -258,7 +327,9 @@ describe('la file d’un compte, à la déconnexion', () => {
      * reste connectée. Ses refus pas encore montrés et ses brouillons, seul
      * endroit où survit une valeur dont l'écriture a échoué, étaient effacés
      * avant l'envoi, et l'avis noté pour l'écran de connexion ressortait sur la
-     * prochaine page d'invité.
+     * prochaine page d'invité. Ses écritures en attente non plus ne sont pas
+     * effacées : elle a accepté de les perdre en se déconnectant, et elle ne
+     * s'est pas déconnectée (#2050).
      */
     it('garde tout quand la déconnexion n’aboutit pas, et retire l’avis noté pour l’écran suivant', async () => {
         localStorage.setItem(
@@ -272,16 +343,19 @@ describe('la file d’un compte, à la déconnexion', () => {
         // Inertia finit la visite sans succès : le réseau a coupé en route.
         routeur.post.mockImplementation((_url, _donnees, options) => options.onFinish())
 
-        await seDeconnecter()
+        await seDeconnecterQuandMeme()
 
         expect(sync.compte).toBe('1')
         expect(sync.failedRequests()).toHaveLength(1)
         expect(localStorage.getItem('draft_set_12')).not.toBeNull()
         expect(sync.queue.map((entree) => entree.url)).toEqual(['/profile/preferences'])
-        expect((await ecranDeConnexion()).find('[dusk="ecritures-gardees"]').exists()).toBe(false)
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.url)).toEqual([
+            '/profile/preferences',
+        ])
+        expect((await ecranDeConnexion()).find('[dusk="ecritures-effacees-a-la-deconnexion"]').exists()).toBe(false)
 
-        // Elle se relance.
-        await seDeconnecter()
+        // Elle se relance, et repose la question : rien n'a été effacé.
+        await seDeconnecterQuandMeme()
 
         expect(routeur.post).toHaveBeenCalledTimes(2)
     })
@@ -293,12 +367,13 @@ describe('la file d’un compte supprimé', () => {
      * partirait jamais, et resterait sur l'appareil, alors que la suppression
      * promet d'effacer ses données.
      */
-    it('s’efface avec lui, une fois la suppression acceptée, et laisse aux autres comptes ce qui est à eux', async () => {
+    it('s’efface avec lui, une fois la suppression acceptée, avec sa recherche d’exercice, et laisse aux autres comptes ce qui est à eux', async () => {
         const entree = (id, compte) => ({ id, method: 'patch', url: `/api/v1/sets/${id}`, data: { reps: 8 }, compte })
         const refus = (compte) => ({ method: 'post', url: '/api/v1/sets', data: { reps: 8 }, compte, status: 422 })
         localStorage.setItem('offline_sync_queue', JSON.stringify([entree('1', '1'), entree('2', '2')]))
         localStorage.setItem('offline_sync_failed', JSON.stringify([refus('1'), refus('2')]))
         localStorage.setItem('draft_set_12', JSON.stringify({ reps: 8 }))
+        localStorage.setItem('gymtracker_add_exercise_search', 'Squat')
         requete.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
         const sync = await chargerSyncService({ compte: 1 })
         await sync.pending
@@ -317,58 +392,61 @@ describe('la file d’un compte supprimé', () => {
         expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((e) => e.compte)).toEqual(['2'])
         expect(JSON.parse(localStorage.getItem('offline_sync_failed')).map((e) => e.compte)).toEqual(['2'])
         expect(localStorage.getItem('draft_set_12')).toBeNull()
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBeNull()
     })
 })
 
-describe('l’avis des écritures gardées', () => {
-    const avis = async () => import('@/Utils/ecrituresGardees')
+describe('l’avis des écritures effacées à la déconnexion', () => {
+    const avis = async () => import('@/Utils/ecrituresEffaceesALaDeconnexion')
 
     it('se périme au bout d’une minute : une déconnexion qui n’a pas abouti ne ressort pas plus tard', async () => {
         vi.useFakeTimers()
-        const { noterLesEcrituresGardees, reprendreLesEcrituresGardees } = await avis()
+        const { noterLesEcrituresEffaceesALaDeconnexion, reprendreLesEcrituresEffaceesALaDeconnexion } = await avis()
 
-        noterLesEcrituresGardees(3)
+        noterLesEcrituresEffaceesALaDeconnexion(3)
         vi.advanceTimersByTime(59_999)
-        expect(reprendreLesEcrituresGardees()).toBe(3)
+        expect(reprendreLesEcrituresEffaceesALaDeconnexion()).toBe(3)
 
-        noterLesEcrituresGardees(3)
+        noterLesEcrituresEffaceesALaDeconnexion(3)
         vi.advanceTimersByTime(60_000)
-        expect(reprendreLesEcrituresGardees()).toBe(0)
+        expect(reprendreLesEcrituresEffaceesALaDeconnexion()).toBe(0)
     })
 
     it('n’écrit qu’un nombre, et efface l’avis précédent quand rien n’attend', async () => {
-        const { noterLesEcrituresGardees, reprendreLesEcrituresGardees } = await avis()
+        const { noterLesEcrituresEffaceesALaDeconnexion, reprendreLesEcrituresEffaceesALaDeconnexion } = await avis()
 
-        noterLesEcrituresGardees(2)
-        expect(Object.keys(JSON.parse(sessionStorage.getItem('gym-tracker:ecritures-gardees')))).toEqual([
-            'nombre',
-            'le',
-        ])
+        noterLesEcrituresEffaceesALaDeconnexion(2)
+        expect(
+            Object.keys(JSON.parse(sessionStorage.getItem('gym-tracker:ecritures-effacees-a-la-deconnexion'))),
+        ).toEqual(['nombre', 'le'])
 
-        noterLesEcrituresGardees(0)
-        expect(reprendreLesEcrituresGardees()).toBe(0)
+        noterLesEcrituresEffaceesALaDeconnexion(0)
+        expect(reprendreLesEcrituresEffaceesALaDeconnexion()).toBe(0)
     })
 
     it('lit un avis illisible ou un stockage qui refuse comme « rien »', async () => {
-        const { noterLesEcrituresGardees, reprendreLesEcrituresGardees } = await avis()
+        const { noterLesEcrituresEffaceesALaDeconnexion, reprendreLesEcrituresEffaceesALaDeconnexion } = await avis()
 
-        sessionStorage.setItem('gym-tracker:ecritures-gardees', '{coupé')
-        expect(reprendreLesEcrituresGardees()).toBe(0)
+        sessionStorage.setItem('gym-tracker:ecritures-effacees-a-la-deconnexion', '{coupé')
+        expect(reprendreLesEcrituresEffaceesALaDeconnexion()).toBe(0)
 
-        sessionStorage.setItem('gym-tracker:ecritures-gardees', JSON.stringify({ nombre: 'deux', le: Date.now() }))
-        expect(reprendreLesEcrituresGardees()).toBe(0)
+        sessionStorage.setItem(
+            'gym-tracker:ecritures-effacees-a-la-deconnexion',
+            JSON.stringify({ nombre: 'deux', le: Date.now() }),
+        )
+        expect(reprendreLesEcrituresEffaceesALaDeconnexion()).toBe(0)
 
         vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
             throw new DOMException('bloqué', 'SecurityError')
         })
-        expect(() => noterLesEcrituresGardees(2)).not.toThrow()
+        expect(() => noterLesEcrituresEffaceesALaDeconnexion(2)).not.toThrow()
     })
 
     it('accorde le message au nombre', async () => {
-        const { messageDesEcrituresGardees } = await avis()
+        const { messageDesEcrituresEffaceesALaDeconnexion } = await avis()
 
-        expect(messageDesEcrituresGardees(4)).toBe(
-            "4 modifications faites hors ligne n'ont pas encore été envoyées. Elles restent sur cet appareil et partiront à la prochaine connexion de ce compte, jamais sous un autre.",
+        expect(messageDesEcrituresEffaceesALaDeconnexion(4)).toBe(
+            "4 modifications faites hors ligne n'avaient pas encore été envoyées : elles ont été effacées de cet appareil avec la déconnexion.",
         )
     })
 })

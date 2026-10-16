@@ -10,6 +10,19 @@ import { vi } from 'vitest'
 export const COMPTE = '1'
 
 /**
+ * Le moment d'une écriture mise en file il y a une heure, pour une entrée posée
+ * à la main dans le stockage.
+ *
+ * Une date écrite en dur expire : la file abandonne ce qui attend depuis plus
+ * de trente jours (#2050), et une entrée datée du 29 juillet disparaissait au
+ * chargement, un mois et demi après qu'on avait écrit le test. Un test qui
+ * vérifie cette durée pose lui-même l'heure (`vi.setSystemTime`).
+ *
+ * @returns {string}
+ */
+export const horodatageRecent = () => new Date(Date.now() - 60 * 60 * 1000).toISOString()
+
+/**
  * Pose la page rendue par le serveur dans l'élément où Inertia la lit au
  * démarrage.
  *

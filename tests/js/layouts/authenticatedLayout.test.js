@@ -13,13 +13,19 @@ vi.mock('@inertiajs/vue3', () => ({
 const rapprocherLAbonnementPush = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useAbonnementPush', () => ({ rapprocherLAbonnementPush }))
 
+/**
+ * Le réseau ne répond pas : une écriture du compte que la file garde y reste,
+ * sans partir vers un serveur que jsdom ne joint pas.
+ */
+vi.mock('@/Utils/http', () => ({ http: () => Promise.reject({ code: 'ERR_NETWORK', request: {} }) }))
+
 /** La déconnexion se teste dans useDeconnexion.test.js ; ici, seulement l'appel. */
 const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { PAGE_INDISPONIBLE, RESEAU_LENT, annoncerSansReseau, retirerLAnnonce } from '@/Utils/visitesHorsLigne'
-import { chargerSyncService, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
+import { chargerSyncService, horodatageRecent, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
 /** Ziggy, including the wildcard patterns the desktop nav matches on. */
 let currentRoute = 'dashboard'
@@ -52,6 +58,8 @@ const stubs = {
     DropdownLink: { props: ['href'], template: '<a :href="href"><slot /></a>' },
     Dropdown: { template: '<div><slot name="trigger" :open="false" /><slot name="content" /></div>' },
     ActiveWorkoutBanner: { name: 'ActiveWorkoutBanner', props: ['workout'], template: '<div />' },
+    // La question d'avant la déconnexion a ses propres tests (questionDeDeconnexion.test.js).
+    QuestionDeDeconnexion: true,
 }
 
 const user = (overrides = {}) => ({ name: 'Samuel', unread_notifications_count: 0, ...overrides })
@@ -485,7 +493,7 @@ describe('AuthenticatedLayout — les écritures hors ligne effacées au chargem
         url: `/api/v1/sets/${id}`,
         data: { is_completed: true },
         id: `ancienne-${id}`,
-        timestamp: '2026-10-01T10:00:00.000Z',
+        timestamp: horodatageRecent(),
     })
 
     beforeEach(() => {
@@ -548,6 +556,119 @@ describe('AuthenticatedLayout — les écritures hors ligne effacées au chargem
 
         expect(toasts(suivant).map(messageOf)).toEqual([
             "Une modification faite hors ligne avant la mise à jour de l'application n'a pas pu être enregistrée et a été effacée de cet appareil. Vérifie ta dernière séance.",
+        ])
+    })
+})
+
+/*
+ * Une écriture qui attend sur l'appareil depuis plus de trente jours est
+ * abandonnée et effacée (#2050). La personne le sait, au premier écran de son
+ * compte, avec le nombre et la date : jamais une perte sans un mot (#1964).
+ */
+describe('AuthenticatedLayout — les écritures abandonnées après trente jours', () => {
+    const MAINTENANT = new Date('2026-10-16T12:00:00.000Z')
+    const JOUR = 24 * 60 * 60 * 1000
+
+    const ecriture = (id, compte, ilYA) => ({
+        method: 'patch',
+        url: `/api/v1/sets/${id}`,
+        data: { weight: 80 },
+        id: `q${id}`,
+        timestamp: new Date(MAINTENANT.getTime() - ilYA).toISOString(),
+        compte,
+    })
+
+    beforeEach(() => {
+        localStorage.clear()
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(MAINTENANT)
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+        retirerLesEcouteursDuService()
+        poserLaPage(null)
+        localStorage.clear()
+    })
+
+    it('dit au compte combien ont été abandonnées, et depuis quand, une seule fois', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([ecriture(1, '42', 31 * JOUR), ecriture(2, '42', 40 * JOUR), ecriture(3, '42', JOUR)]),
+        )
+
+        const service = await chargerSyncService({ compte: 42 })
+        const wrapper = mountLayout({ auth: { user: user({ id: 42 }) } })
+        await wrapper.vm.$nextTick()
+
+        expect(service.queue.map((entree) => entree.id)).toEqual(['q3'])
+        expect(toasts(wrapper).map(messageOf)).toEqual([
+            "2 modifications faites hors ligne depuis le 06/09/2026 n'ont pas pu être enregistrées : gardées 30 jours sur cet appareil sans pouvoir partir, elles ont été abandonnées et effacées. Vérifie tes séances.",
+        ])
+        expect(messageOf(toasts(wrapper)[0])).not.toContain('80')
+
+        unmountLayout(wrapper)
+        const ecranSuivant = mountLayout({ auth: { user: user({ id: 42 }) } })
+        await ecranSuivant.vm.$nextTick()
+
+        expect(toasts(ecranSuivant)).toHaveLength(0)
+    })
+
+    it('le dit sur l’écran déjà ouvert quand l’application reprise après des semaines les abandonne', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([ecriture(1, '42', 20 * JOUR)]))
+        const service = await chargerSyncService({ compte: 42 })
+        const wrapper = mountLayout({ auth: { user: user({ id: 42 }) } })
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper)).toHaveLength(0)
+
+        vi.setSystemTime(new Date(MAINTENANT.getTime() + 11 * JOUR))
+        await service.processQueue()
+        await wrapper.vm.$nextTick()
+
+        expect(service.queue).toEqual([])
+        expect(toasts(wrapper).map(messageOf)).toEqual([
+            "Une modification faite hors ligne le 26/09/2026 n'a pas pu être enregistrée : gardée 30 jours sur cet appareil sans pouvoir partir, elle a été abandonnée et effacée. Vérifie tes séances.",
+        ])
+    })
+
+    it('garde l’avis des écritures d’un autre compte pour ce compte, sans le montrer à celui qui est connecté', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([ecriture(1, '7', 31 * JOUR), ecriture(2, '42', 2 * JOUR)]),
+        )
+
+        const service = await chargerSyncService({ compte: 42 })
+        const sousLeCompte42 = mountLayout({ auth: { user: user({ id: 42 }) } })
+        await sousLeCompte42.vm.$nextTick()
+
+        expect(service.queue.map((entree) => entree.compte)).toEqual(['42'])
+        expect(toasts(sousLeCompte42)).toHaveLength(0)
+
+        unmountLayout(sousLeCompte42)
+        const sousLeCompte7 = mountLayout({ auth: { user: user({ id: 7 }) } })
+        await sousLeCompte7.vm.$nextTick()
+
+        expect(toasts(sousLeCompte7).map(messageOf)).toEqual([
+            expect.stringMatching(/^Une modification faite hors ligne le 15\/09\/2026 n'a pas pu être enregistrée/),
+        ])
+    })
+
+    it('ne remplace pas un message déjà affiché : l’avis attend l’écran suivant', async () => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify([ecriture(1, '42', 31 * JOUR)]))
+        await chargerSyncService({ compte: 42 })
+
+        const avecUneErreur = mountLayout({ flash: { error: 'Séance introuvable' }, auth: { user: user({ id: 42 }) } })
+        await avecUneErreur.vm.$nextTick()
+
+        expect(toasts(avecUneErreur).map(messageOf)).toEqual(['Séance introuvable'])
+
+        unmountLayout(avecUneErreur)
+        const suivant = mountLayout({ auth: { user: user({ id: 42 }) } })
+        await suivant.vm.$nextTick()
+
+        expect(toasts(suivant).map(messageOf)).toEqual([
+            expect.stringMatching(/^Une modification faite hors ligne le 15\/09\/2026/),
         ])
     })
 })

@@ -5,19 +5,24 @@ import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
+import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import { marquerLAbonnementARetransmettre } from '@/composables/useAbonnementPush'
-import { messageDesEcrituresGardees, reprendreLesEcrituresGardees } from '@/Utils/ecrituresGardees'
+import {
+    messageDesEcrituresEffaceesALaDeconnexion,
+    reprendreLesEcrituresEffaceesALaDeconnexion,
+} from '@/Utils/ecrituresEffaceesALaDeconnexion'
 
 const page = usePage()
 
 /**
- * Les écritures hors ligne que la dernière déconnexion a laissées en file pour
- * son compte : l'écran qui la suit le dit, une fois (#1964).
+ * Les écritures hors ligne pas encore envoyées que la dernière déconnexion a
+ * effacées, la personne l'ayant accepté : l'écran qui la suit le dit, une fois
+ * (#2050).
  */
-const ecrituresGardees = ref(0)
+const ecrituresEffacees = ref(0)
 
 onMounted(() => {
-    ecrituresGardees.value = reprendreLesEcrituresGardees()
+    ecrituresEffacees.value = reprendreLesEcrituresEffaceesALaDeconnexion()
 
     /*
      * Une page d'invité dit que cet appareil n'a plus de session. Elle a pu être
@@ -43,6 +48,9 @@ onMounted(() => {
         <!-- Sans réseau, une page d'invité le dit aussi (#2048). -->
         <ToastsDuLayout />
 
+        <!-- La vérification de l'adresse se déconnecte sous ce layout (#2050). -->
+        <QuestionDeDeconnexion />
+
         <!-- Logo -->
         <div class="animate-fade-in relative z-10 mb-8">
             <Link href="/" class="flex">
@@ -56,12 +64,12 @@ onMounted(() => {
                 class="border-surface-card/20 bg-surface-card/10 hover:border-surface-card/30 hover:bg-surface-card/15 rounded-3xl border p-8 shadow-2xl backdrop-blur-md transition duration-300"
             >
                 <p
-                    v-if="ecrituresGardees > 0"
+                    v-if="ecrituresEffacees > 0"
                     role="status"
                     class="info-fill border-accent-info mb-4 rounded-xl border p-3 text-sm font-medium"
-                    dusk="ecritures-gardees"
+                    dusk="ecritures-effacees-a-la-deconnexion"
                 >
-                    {{ messageDesEcrituresGardees(ecrituresGardees) }}
+                    {{ messageDesEcrituresEffaceesALaDeconnexion(ecrituresEffacees) }}
                 </p>
                 <slot />
             </div>

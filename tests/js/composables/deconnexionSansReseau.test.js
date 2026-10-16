@@ -21,12 +21,13 @@ import {
 
 // Le détachement de l'appareil et la file ont leurs propres tests.
 vi.mock('@/composables/useAbonnementPush', () => ({ detacherLAppareil: () => Promise.resolve() }))
-const laisse = vi.hoisted(() => ({ refusEffaces: [] }))
+const laisse = vi.hoisted(() => ({ comptesOublies: [] }))
 vi.mock('@/Utils/SyncService', () => ({
     default: {
         compte: '1',
         enAttente: () => 0,
-        clearFailedRequests: (compte) => laisse.refusEffaces.push(compte),
+        enAttenteSurLAppareil: () => 0,
+        oublierLeCompte: (compte) => laisse.comptesOublies.push(compte),
     },
 }))
 
@@ -75,7 +76,7 @@ beforeAll(async () => {
 beforeEach(() => {
     requetes.length = 0
     annonces.length = 0
-    laisse.refusEffaces.length = 0
+    laisse.comptesOublies.length = 0
     reseau.mode = 'coupe'
     reseau.reponse = null
     relais = relayerLesRejetsNonGeres()
@@ -114,7 +115,7 @@ describe('se déconnecter sans réseau', () => {
         expect(annonces).toEqual([DECONNEXION_SANS_RESEAU])
         expect(relais.rejets).toEqual([])
         // Toujours connectée : rien de ce que le compte laisse n'est effacé.
-        expect(laisse.refusEffaces).toEqual([])
+        expect(laisse.comptesOublies).toEqual([])
 
         reseau.mode = 'repond'
         reseau.reponse = reponseInertia({
@@ -129,7 +130,7 @@ describe('se déconnecter sans réseau', () => {
 
         expect(logouts()).toHaveLength(2)
         expect(document.getElementById('contenu').textContent).toBe('Connexion')
-        expect(laisse.refusEffaces).toEqual(['1'])
+        expect(laisse.comptesOublies).toEqual(['1'])
         expect(annonces).toEqual([DECONNEXION_SANS_RESEAU])
     })
 

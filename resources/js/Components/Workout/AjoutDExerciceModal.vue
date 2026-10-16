@@ -3,7 +3,8 @@
  * Choisir un exercice de la bibliothèque, ou en créer un sur le champ.
  *
  * La recherche est gardée dans le stockage local : on revient souvent chercher
- * le même exercice d'une séance à l'autre. Un nom sans résultat propose de le
+ * le même exercice d'une séance à l'autre. La déconnexion l'efface
+ * (`Utils/rechercheDExercice`, #2050). Un nom sans résultat propose de le
  * créer ; la création parle au serveur elle-même et rend l'exercice au parent,
  * qui l'ajoute à sa liste puis à la séance.
  */
@@ -15,6 +16,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import { EXERCISE_CATEGORIES, EXERCISE_TYPES } from '@/Utils/constants'
+import { garderLaRecherche, lireLaRecherche } from '@/Utils/rechercheDExercice'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 const props = defineProps({
@@ -24,12 +26,8 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'add', 'created'])
 
-const CLEF_DE_RECHERCHE = 'gymtracker_add_exercise_search'
-
-const searchQuery = ref(localStorage.getItem(CLEF_DE_RECHERCHE) || '')
-watch(searchQuery, (valeur) => {
-    localStorage.setItem(CLEF_DE_RECHERCHE, valeur)
-})
+const searchQuery = ref(lireLaRecherche())
+watch(searchQuery, garderLaRecherche)
 
 const showCreateForm = ref(false)
 const createExerciseForm = useForm({ name: '', type: 'strength', category: 'Pectoraux' })

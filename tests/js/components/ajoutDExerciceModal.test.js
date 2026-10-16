@@ -53,6 +53,25 @@ describe('choisir un exercice', () => {
         wrapper.unmount()
     })
 
+    /*
+     * La recherche passe par `Utils/rechercheDExercice`, que la déconnexion
+     * efface (#2050). Un stockage refusé (navigation privée, quota) levait à
+     * l'ouverture de la fenêtre et à chaque frappe.
+     */
+    it('s’ouvre et cherche quand le stockage refuse, sans rien garder', async () => {
+        const refuser = () => {
+            throw new DOMException('bloqué', 'SecurityError')
+        }
+        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(refuser)
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(refuser)
+
+        const wrapper = monter()
+        await wrapper.get('#search-workout-exercise').setValue('squ')
+
+        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual(['SquatJambes'])
+        wrapper.unmount()
+    })
+
     it('rend l’exercice choisi au parent et oublie la recherche', async () => {
         const wrapper = monter()
         await wrapper.get('#search-workout-exercise').setValue('dév')

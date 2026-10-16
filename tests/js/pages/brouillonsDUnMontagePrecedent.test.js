@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
-import { chargerSyncService, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
+import { chargerSyncService, horodatageRecent, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 import { creerUnFauxServeur, fileDurable, routeDeTest } from '../composables/seanceHorsLigne'
 import { suivreLesPagesMontees } from './pagesMontees'
 
@@ -48,7 +48,7 @@ const creationEnFile = {
     data: { workout_line_id: 10, is_completed: true, weight: 82.5, reps: 7 },
     headers: { 'Idempotency-Key': 'cle-de-la-serie' },
     id: 'q1',
-    timestamp: '2026-10-12T18:04:00.000Z',
+    timestamp: horodatageRecent(),
     compte: '1',
     tentee: true,
     ajusterPar: '/api/v1/sets/__produit__',

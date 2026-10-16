@@ -45,7 +45,7 @@ vi.mock('@/composables/useAbonnementPush', () => ({
     marquerLAbonnementARetransmettre: () => {},
 }))
 vi.mock('@/Utils/SyncService', () => ({
-    default: { compte: '1', enAttente: () => 0, clearFailedRequests: () => {} },
+    default: { compte: '1', enAttente: () => 0, enAttenteSurLAppareil: () => 0, oublierLeCompte: () => {} },
 }))
 
 /** La vérification de l'adresse, telle que le serveur l'a rendue. */
