@@ -6,11 +6,32 @@ namespace App\Models;
 
 use BezhanSalleh\FilamentExceptions\Models\Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 /**
  * Une exception gardée en base pour le panneau, sans ce qu'une requête porte
- * de secret : les cookies ne sont pas gardés, et les champs et en-têtes
- * sensibles sont masqués avant l'écriture.
+ * de secret : les cookies ne sont pas gardés, et les champs, les en-têtes et
+ * les paramètres de route sensibles sont masqués avant l'écriture
+ * (`CLEFS_MASQUEES`).
+ *
+ * Sensibles : les mots de passe et les jetons, et (#PR) l'identifiant
+ * qu'une personne tape pour se connecter ou réinitialiser son mot de passe
+ * (`email`, et `adresse`, la valeur chiffrée du lien de réinitialisation),
+ * comme le mot de passe : le paquet garde le corps entier de la requête
+ * (`request()->all()`), et une adresse tapée à la connexion, qui n'est pas
+ * forcément celle d'un compte, voire un mot de passe tapé dans le mauvais
+ * champ, y restait trente jours en clair. Et l'en-tête `Referer`, qui porte
+ * la page d'où part l'envoi : celle d'un lien de réinitialisation porte le
+ * lien lui-même, jeton et adresse chiffrée.
+ *
+ * Une clef se reconnaît sous toutes ses écritures (`formeComparable()`) :
+ * casse, `_` et `-` n'y comptent pas, et seul compte le dernier segment d'un
+ * chemin à points. Livewire envoie ainsi la saisie d'un formulaire du
+ * panneau sous `components.*.updates`, `data.password` ou
+ * `data.currentPassword`, que la seule clef `password` laissait en clair, et
+ * l'état du composant dans un instantané, du JSON écrit en texte
+ * (`CLEFS_EN_JSON`), qui porte le mot de passe d'un essai refusé : il est lu,
+ * masqué comme le reste, puis réécrit.
  *
  * Et à taille bornée : le paquet garde le corps entier de la requête, le
  * message d'une exception peut recopier une valeur reçue, que le texte
@@ -82,19 +103,38 @@ final class ExceptionEnregistree extends Exception
     /** Au-delà de cette profondeur, un tableau imbriqué n'est plus gardé. */
     private const int PROFONDEUR_MAX = 16;
 
-    /** @var list<string> */
+    /**
+     * Les clefs dont la valeur ne s'écrit jamais, sous leur forme comparable
+     * (`formeComparable()`) : `_token` et `password_confirmation` s'y lisent
+     * `token` et `passwordconfirmation`, et `data.currentPassword` de
+     * Livewire `currentpassword`.
+     *
+     * @var list<string>
+     */
     private const array CLEFS_MASQUEES = [
         'password',
-        'password_confirmation',
-        'current_password',
+        'passwordconfirmation',
+        'currentpassword',
         'token',
-        '_token',
         'secret',
         'authorization',
         'cookie',
-        'x-csrf-token',
-        'x-xsrf-token',
+        'xcsrftoken',
+        'xxsrftoken',
+        'email',
+        'adresse',
+        'identifiant',
+        'referer',
     ];
+
+    /**
+     * Les clefs dont la valeur est un document JSON écrit en texte, à lire
+     * pour le masquer : l'instantané d'un composant Livewire
+     * (`components.*.snapshot`), qui porte tout l'état de son formulaire.
+     *
+     * @var list<string>
+     */
+    private const array CLEFS_EN_JSON = ['snapshot'];
 
     protected static function booted(): void
     {
@@ -126,7 +166,7 @@ final class ExceptionEnregistree extends Exception
             $exception->route_context = $contexte;
 
             /** @var array<string, mixed>|null $parametres */
-            $parametres = self::bornerLeJson($exception->route_parameters, self::OCTETS_MAX_PAR_COLONNE['route_parameters']);
+            $parametres = self::bornerLeJson(self::masquer($exception->route_parameters), self::OCTETS_MAX_PAR_COLONNE['route_parameters']);
             $exception->route_parameters = $parametres;
 
             $exception->message = self::couper((string) $exception->message, self::OCTETS_MAX_PAR_COLONNE['message']);
@@ -167,6 +207,9 @@ final class ExceptionEnregistree extends Exception
     }
 
     /**
+     * Les valeurs, à toute profondeur, dont la clef est sensible remplacées
+     * par « [masqué] », et chaque instantané JSON lu et masqué de même.
+     *
      * @param  array<mixed>|null  $valeurs
      * @return array<mixed>|null
      */
@@ -177,14 +220,48 @@ final class ExceptionEnregistree extends Exception
         }
 
         foreach ($valeurs as $clef => $valeur) {
-            if (is_string($clef) && in_array(strtolower($clef), self::CLEFS_MASQUEES, true)) {
+            $forme = self::formeComparable($clef);
+
+            if (in_array($forme, self::CLEFS_MASQUEES, true)) {
                 $valeurs[$clef] = '[masqué]';
             } elseif (is_array($valeur)) {
                 $valeurs[$clef] = self::masquer($valeur);
+            } elseif (is_string($valeur) && in_array($forme, self::CLEFS_EN_JSON, true)) {
+                $valeurs[$clef] = self::masquerLeJson($valeur);
             }
         }
 
         return $valeurs;
+    }
+
+    /**
+     * La forme sous laquelle une clef se compare à `CLEFS_MASQUEES` : le
+     * dernier segment d'un chemin à points (`data.password` de Livewire), en
+     * minuscules, sans `_` ni `-`. Une clef de liste n'a pas de forme.
+     */
+    private static function formeComparable(int|string $clef): ?string
+    {
+        if (is_int($clef)) {
+            return null;
+        }
+
+        return str_replace(['_', '-'], '', strtolower(Str::afterLast($clef, '.')));
+    }
+
+    /**
+     * Un document JSON écrit en texte, masqué comme un tableau puis réécrit.
+     * Un texte qui ne se lit pas comme un objet ou une liste JSON n'est pas
+     * gardé : rien ne dit ce qu'il porte.
+     */
+    private static function masquerLeJson(string $texte): string
+    {
+        $document = json_decode($texte, true);
+
+        if (! is_array($document)) {
+            return '[masqué]';
+        }
+
+        return (string) json_encode(self::masquer($document), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
     /**

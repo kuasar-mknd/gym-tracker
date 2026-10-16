@@ -60,10 +60,10 @@ function lienChiffreAdresse(): string
 /**
  * L'adresse du compte telle que la personne la saisit dans le formulaire, en
  * capitales : la saisie suit le chemin de celle de la connexion (la saisie que
- * la session garde après un refus, le corps d'une exception enregistrée).
- * Écrite autrement que l'adresse du lien, elle laisse voir toute copie de
- * l'adresse déchiffrée, que `lienChiffreLaisseLireLAdresse()` cherche en
- * minuscules.
+ * la session garde après un refus ; le corps d'une exception enregistrée la
+ * masque, `IdentifiantsHorsDesExceptionsTest`). Écrite autrement que
+ * l'adresse du lien, elle laisse voir toute copie de l'adresse déchiffrée,
+ * que `lienChiffreLaisseLireLAdresse()` cherche en minuscules.
  */
 function lienChiffreAdresseSaisie(): string
 {
@@ -383,8 +383,9 @@ it('ne recopie l’adresse déchiffrée ni dans la session, ni dans une réponse
  * du compte par son adresse (`.ai/rules/tests.md`) ; la production ne les
  * remplit pas. La réponse se lit de même sans `APP_DEBUG`, comme en
  * production : sa page de débogage montre ces requêtes. L'adresse saisie, en
- * capitales, part dans le corps enregistré comme celle d'une connexion qui
- * échoue ; le test cherche l'adresse déchiffrée.
+ * capitales, est masquée dans le corps enregistré comme celle d'une
+ * connexion qui échoue (`IdentifiantsHorsDesExceptionsTest`) ; le test
+ * cherche l'adresse déchiffrée.
  */
 it('ne recopie l’adresse déchiffrée ni dans le journal ni dans l’exception d’une réinitialisation qui échoue', function (string $format): void {
     Config::set('app.debug', false);

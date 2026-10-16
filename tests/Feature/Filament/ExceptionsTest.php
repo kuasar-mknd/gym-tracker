@@ -114,6 +114,74 @@ it('masque les champs sensibles et ne garde aucun cookie', function (): void {
     }
 });
 
+/*
+ * Une clef sensible se reconnaît sous toutes ses écritures : casse, `_` et
+ * `-` n'y comptent pas, ni ce qui précède le dernier point d'un chemin, celui
+ * sous lequel Livewire envoie la saisie (`data.currentPassword`). Les
+ * paramètres de route se masquent comme le corps, et l'en-tête `Referer`,
+ * qui recopie la page d'où part l'envoi, comme les autres en-têtes sensibles.
+ * L'adresse qu'une personne tape (`email`, `E-Mail`…) en est, comme le mot
+ * de passe (#PR).
+ */
+it('masque chaque écriture d’une clef sensible, les paramètres de route et la page d’origine', function (): void {
+    Route::post('/_boum/{token}', function (): never {
+        throw new RuntimeException('boum');
+    });
+
+    $this->withHeader('Referer', 'https://gym.example.org/reset-password/jeton-de-la-page?adresse=valeur-chiffree')
+        ->post('/_boum/jeton-du-chemin', [
+            'name' => 'Rowing',
+            'E-Mail' => 'saisie@example.org',
+            'adresse' => 'valeur-chiffree',
+            'identifiant' => 'saisie@example.org',
+            'Password_Confirmation' => 'secret',
+            'components' => [['updates' => ['data.email' => 'saisie@example.org', 'data.currentPassword' => 'secret', 'data.name' => 'Rowing']]],
+        ])
+        ->assertStatus(500);
+
+    $exception = ExceptionEnregistree::query()->sole();
+
+    expect($exception->body)->toEqual([
+        'name' => 'Rowing',
+        'E-Mail' => '[masqué]',
+        'adresse' => '[masqué]',
+        'identifiant' => '[masqué]',
+        'Password_Confirmation' => '[masqué]',
+        'components' => [['updates' => ['data.email' => '[masqué]', 'data.currentPassword' => '[masqué]', 'data.name' => 'Rowing']]],
+    ])
+        ->and($exception->route_parameters)->toBe(['token' => '[masqué]'])
+        ->and($exception->headers['referer'] ?? null)->toBe('[masqué]');
+});
+
+/*
+ * L'instantané d'un composant Livewire est du JSON écrit en texte, qui porte
+ * tout l'état du formulaire : il est lu, masqué comme le reste, puis réécrit.
+ * Un instantané qui ne se lit pas n'est pas gardé.
+ */
+it('masque l’état d’un formulaire Livewire que porte son instantané, et ne garde pas un instantané illisible', function (): void {
+    Route::post('/_boum', function (): never {
+        throw new RuntimeException('boum');
+    });
+
+    $instantane = (string) json_encode([
+        'data' => ['data' => [['email' => 'saisie@example.org', 'password' => 'secret', 'remember' => false], ['s' => 'arr']]],
+        'memo' => ['name' => 'filament.auth.pages.login'],
+    ]);
+
+    $this->postJson('/_boum', ['components' => [['snapshot' => $instantane], ['snapshot' => '{"data": "coupé']]])
+        ->assertStatus(500);
+
+    $corps = ExceptionEnregistree::query()->sole()->body;
+    $instantaneGarde = data_get($corps, 'components.0.snapshot');
+
+    expect($instantaneGarde)->toBeString()
+        ->and(json_decode(is_string($instantaneGarde) ? $instantaneGarde : '', true))->toBe([
+            'data' => ['data' => [['email' => '[masqué]', 'password' => '[masqué]', 'remember' => false], ['s' => 'arr']]],
+            'memo' => ['name' => 'filament.auth.pages.login'],
+        ])
+        ->and(data_get($corps, 'components.1.snapshot'))->toBe('[masqué]');
+});
+
 /**
  * Le plus d'octets qu'occupe la ligne d'une exception : la somme des budgets
  * de `ExceptionEnregistree::OCTETS_MAX_PAR_COLONNE` (90 Kio), des colonnes
