@@ -8,10 +8,26 @@ import {
     restaurerDepuisLHistorique,
     retirerLesEcouteursDuService,
 } from './fileHorsLigne'
+import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
 
 const request = vi.fn()
 
 vi.mock('@/Utils/http', () => ({ http: (...args) => request(...args) }))
+
+/**
+ * L'échec d'une écriture que la file ne peut pas garder, faute de compte
+ * connecté : jamais lu « en file » (#2050). L'échec réseau brut l'était, et la
+ * saisie d'une série gardait à l'écran une valeur que rien ne gardait plus.
+ */
+const echoueSansEtreGardee = async (ecriture) => {
+    const echec = await ecriture.then(
+        () => null,
+        (erreur) => erreur,
+    )
+
+    expect(echec).toMatchObject({ nonGardee: true })
+    expect(classifySyncError(echec)).not.toBe(SYNC_OFFLINE)
+}
 
 const setOnline = (value) => {
     Object.defineProperty(navigator, 'onLine', { writable: true, configurable: true, value })
@@ -1067,13 +1083,16 @@ describe('SyncService une file par compte', () => {
         expect(localStorage.getItem('gym-tracker:ecritures-effacees')).toBeNull()
     })
 
-    it('ne met rien en file quand personne n’est connecté, et rend l’échec tel quel', async () => {
+    it('ne met rien en file quand personne n’est connecté, et rend un échec qui ne se lit pas « en file »', async () => {
         request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
 
         const service = await freshService({ compte: null })
 
-        await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        await echoueSansEtreGardee(service.patch('/api/v1/sets/1', { reps: 8 }))
         expect(service.queue).toEqual([])
+
+        // Une lecture n'entre jamais en file : son échec reste celui du réseau.
+        await expect(service.get('/api/v1/sets/1')).rejects.toMatchObject({ code: 'ERR_NETWORK' })
     })
 
     it('ne vide rien tant que personne n’est connecté, et vide la file du compte qui se connecte', async () => {
@@ -2128,6 +2147,79 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         expect(localStorage.getItem('gym-tracker:compte-oublie-de-la-file')).toBeNull()
     })
 
+    /*
+     * Les autres cas de ce bloc fabriquent eux-mêmes l'évènement de l'autre
+     * onglet : ils passaient encore si l'onglet qui efface n'écrivait plus
+     * l'avis, ou l'écrivait sous une autre clé ou une autre forme. L'autre
+     * onglet gardait alors sa copie, et la réécrivait au stockage à sa
+     * prochaine écriture, en clair. Ici, ce que le premier écrit est relayé tel
+     * quel au second, comme le navigateur le fait entre deux onglets.
+     */
+    it('dit aux autres onglets que le compte quitte l’appareil : leur copie ne revient pas dans le stockage', async () => {
+        const ceTOnglet = await chargé()
+        const lAutreOnglet = await chargé()
+        await expect(lAutreOnglet.patch('/api/v1/sets/5', { weight: 80, notes: 'Note privée' })).rejects.toMatchObject({
+            isOffline: true,
+        })
+        const ecrire = Storage.prototype.setItem
+        const relais = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (cle, valeur) {
+            ecrire.call(this, cle, valeur)
+
+            if (this === localStorage) {
+                window.dispatchEvent(new StorageEvent('storage', { key: cle, newValue: String(valeur) }))
+            }
+        })
+
+        try {
+            ceTOnglet.oublierLeCompte(COMPTE)
+        } finally {
+            relais.mockRestore()
+        }
+
+        expect(lAutreOnglet.queue).toEqual([])
+        expect(lAutreOnglet.compte).toBeNull()
+
+        // Sa prochaine écriture de la file ne remet rien du compte parti dans le stockage.
+        lAutreOnglet.saveQueue()
+
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+    })
+
+    /*
+     * Un stockage qui refuse l'écriture (quota atteint, navigation privée) :
+     * l'écriture n'attend qu'en mémoire, et la question doit la compter
+     * quand même, sans quoi la déconnexion l'effacerait sans rien demander.
+     */
+    it('compte ce que le stockage n’a pas pu garder, et l’oublie aussi', async () => {
+        const service = await chargé()
+        const ecrire = Storage.prototype.setItem
+        const refus = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (cle, valeur) {
+            if (cle === 'offline_sync_queue') {
+                throw new DOMException('plein', 'QuotaExceededError')
+            }
+
+            ecrire.call(this, cle, valeur)
+        })
+        const plein = vi.fn()
+        window.addEventListener('sync:storage-full', plein)
+
+        try {
+            await expect(service.patch('/api/v1/sets/5', { weight: 80 })).rejects.toMatchObject({ isOffline: true })
+        } finally {
+            window.removeEventListener('sync:storage-full', plein)
+            refus.mockRestore()
+        }
+
+        expect(plein).toHaveBeenCalled()
+        expect(localStorage.getItem('offline_sync_queue')).toBeNull()
+        expect(service.enAttenteSurLAppareil()).toBe(1)
+
+        service.oublierLeCompte(COMPTE)
+
+        expect(service.queue).toEqual([])
+        expect(service.enAttenteSurLAppareil()).toBe(0)
+    })
+
     it('fait oublier sa copie à un autre onglet, qui ne la réécrit plus et ne croit plus le compte connecté', async () => {
         const service = await chargé()
         await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ isOffline: true })
@@ -2146,16 +2238,19 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         expect(service.queue).toEqual([])
         expect(service.compte).toBeNull()
 
-        // Une écriture suivante, toujours sans réseau, n'entre plus en file au nom du compte parti.
-        await expect(service.patch('/api/v1/sets/2', { reps: 9 })).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        // Une écriture suivante, toujours sans réseau, n'entre plus en file au nom du compte parti, et échoue.
+        await echoueSansEtreGardee(service.patch('/api/v1/sets/2', { reps: 9 }))
         expect(localStorage.getItem('offline_sync_queue')).toBeNull()
     })
 
     it('n’oublie que sur l’avis de ce compte, pas sur celui d’un autre, illisible ou retiré', async () => {
         const service = await chargé()
         await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ isOffline: true })
+        const departs = []
+        const surDepart = (evenement) => departs.push(evenement.detail)
+        window.addEventListener('sync:compte-parti', surDepart)
 
-        for (const newValue of [JSON.stringify({ compte: '2' }), '{coupé', null]) {
+        for (const newValue of [JSON.stringify({ compte: '2' }), '{coupé', 'null', null]) {
             window.dispatchEvent(new StorageEvent('storage', { key: 'gym-tracker:compte-oublie-de-la-file', newValue }))
         }
         window.dispatchEvent(
@@ -2164,8 +2259,9 @@ describe('SyncService un compte qui quitte l’appareil', () => {
 
         expect(service.enAttente()).toBe(1)
         expect(service.compte).toBe(COMPTE)
+        expect(departs).toEqual([])
 
-        // Seul l'avis de ce compte le fait oublier.
+        // Seul l'avis de ce compte le fait oublier, et l'écran l'apprend.
         window.dispatchEvent(
             new StorageEvent('storage', {
                 key: 'gym-tracker:compte-oublie-de-la-file',
@@ -2175,6 +2271,18 @@ describe('SyncService un compte qui quitte l’appareil', () => {
 
         expect(service.enAttente()).toBe(0)
         expect(service.compte).toBeNull()
+        expect(departs).toEqual([{ compte: COMPTE }])
+
+        // Le même avis, de nouveau : l'onglet n'avait plus ce compte, il ne le redit pas.
+        window.dispatchEvent(
+            new StorageEvent('storage', {
+                key: 'gym-tracker:compte-oublie-de-la-file',
+                newValue: JSON.stringify({ compte: COMPTE }),
+            }),
+        )
+        window.removeEventListener('sync:compte-parti', surDepart)
+
+        expect(departs).toHaveLength(1)
     })
 
     /*
@@ -2192,7 +2300,7 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         naviguer(null)
         echouer({ code: 'ERR_NETWORK', request: {} })
 
-        await expect(ecriture).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        await echoueSansEtreGardee(ecriture)
         expect(service.queue).toEqual([])
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
 
@@ -2218,7 +2326,7 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         )
         echouer({ code: 'ERR_NETWORK', request: {} })
 
-        await expect(ecriture).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        await echoueSansEtreGardee(ecriture)
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
     })
 
@@ -2289,6 +2397,7 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         repondre({ data: { data: {} } })
 
         await expect(ecriture).rejects.toMatchObject({ compteParti: true })
+        await echoueSansEtreGardee(ecriture)
         expect(request.mock.calls.map(([config]) => config.url)).not.toContain('/api/v1/sets/5')
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
         expect(service.queue.map((e) => e.compte)).toEqual(['2'])

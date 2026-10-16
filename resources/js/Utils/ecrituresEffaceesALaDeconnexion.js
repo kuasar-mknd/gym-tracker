@@ -52,6 +52,16 @@ export const reprendreLesEcrituresEffaceesALaDeconnexion = () => {
     }
 }
 
+/**
+ * Ce que dit un onglet resté sur une page du compte quand ce compte quitte
+ * l'appareil depuis un autre onglet : déconnecté après avoir accepté de perdre
+ * ses écritures, ou supprimé (`sync:compte-parti`). La session est commune aux
+ * onglets : ce qu'on fait ensuite dans celui-ci n'est plus enregistré, ni
+ * gardé sur l'appareil, et chaque écriture qui échoue le dit aussi.
+ */
+export const SESSION_FINIE_DANS_UN_AUTRE_ONGLET =
+    "La session de ce compte a pris fin dans un autre onglet : ce qui n'était pas encore envoyé a été effacé de cet appareil. Reconnecte-toi pour continuer, sinon tes modifications ne seront pas enregistrées."
+
 /** @param {number} nombre */
 export const messageDesEcrituresEffaceesALaDeconnexion = (nombre) =>
     nombre > 1

@@ -323,6 +323,44 @@ describe('la file d’un compte, à la déconnexion', () => {
     })
 
     /*
+     * Le stockage refuse l'écriture de la file (quota atteint, navigation
+     * privée) : l'écriture n'attend qu'en mémoire. La question ne lisait que le
+     * stockage, elle aurait compté zéro, et la déconnexion l'aurait effacée
+     * sans rien demander.
+     */
+    it('compte aussi l’écriture que le stockage n’a pas pu garder, et l’oublie une fois la déconnexion acceptée', async () => {
+        const sync = await chargerSyncService({ compte: 1 })
+        await sync.pending
+        const ecrire = Storage.prototype.setItem
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (cle, valeur) {
+            if (cle === 'offline_sync_queue') {
+                throw new DOMException('plein', 'QuotaExceededError')
+            }
+
+            ecrire.call(this, cle, valeur)
+        })
+        requete.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        await expect(sync.patch('/api/v1/sets/5', { weight: 80 })).rejects.toMatchObject({ isOffline: true })
+        expect(localStorage.getItem('offline_sync_queue')).toBeNull()
+        const { questionDeDeconnexion, seDeconnecterQuandMeme: confirmer } = await deconnexion()
+
+        await seDeconnecter()
+
+        expect(questionDeDeconnexion.value).toEqual({ nombre: 1 })
+        expect(routeur.post).not.toHaveBeenCalled()
+
+        await confirmer()
+        naviguer(null)
+        routeur.post.mock.calls[0][2].onSuccess()
+        routeur.post.mock.calls[0][2].onFinish()
+
+        expect(sync.queue).toEqual([])
+        expect((await ecranDeConnexion()).find('[dusk="ecritures-effacees-a-la-deconnexion"]').text()).toBe(
+            "Une modification faite hors ligne n'avait pas encore été envoyée : elle a été effacée de cet appareil avec la déconnexion.",
+        )
+    })
+
+    /*
      * En salle sans réseau, la déconnexion part et n'aboutit pas : la personne
      * reste connectée. Ses refus pas encore montrés et ses brouillons, seul
      * endroit où survit une valeur dont l'écriture a échoué, étaient effacés
@@ -472,7 +510,7 @@ describe('une écriture partie juste avant le clic', () => {
         // Le réseau tombe après la déconnexion : la réponse ne la remet pas en file au nom du compte parti.
         reglement.echouer({ code: 'ERR_NETWORK', request: {} })
 
-        await expect(ecriture).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        await expect(ecriture).rejects.toMatchObject({ nonGardee: true })
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
     })
 })

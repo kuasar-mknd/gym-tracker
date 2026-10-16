@@ -19,6 +19,7 @@ import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { messageDesEcrituresAbandonnees, reprendreLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
+import { SESSION_FINIE_DANS_UN_AUTRE_ONGLET } from '@/Utils/ecrituresEffaceesALaDeconnexion'
 
 defineProps({
     pageTitle: {
@@ -104,12 +105,28 @@ const direCeQuiAEteEfface = () => {
     flash.error = effacees > 0 ? messageDesEcrituresEffacees(effacees) : messageDesEcrituresAbandonnees(abandonnees)
 }
 
+/*
+ * Ce compte a quitté l'appareil depuis un autre onglet (#2050) : la session,
+ * commune aux onglets, n'existe plus, et ce que la personne fait dans celui-ci
+ * n'est plus enregistré ni gardé. Le toast d'erreur le dit, à la place de ce
+ * qu'il montrait : rien n'est plus urgent.
+ */
+const direQueLaSessionAPrisFin = () => {
+    const flash = page.props.flash ?? (page.props.flash = {})
+
+    flash.error = SESSION_FINIE_DANS_UN_AUTRE_ONGLET
+}
+
 onMounted(() => {
     direCeQuiAEteEfface()
     window.addEventListener('sync:abandoned', direCeQuiAEteEfface)
+    window.addEventListener('sync:compte-parti', direQueLaSessionAPrisFin)
 })
 
-onUnmounted(() => window.removeEventListener('sync:abandoned', direCeQuiAEteEfface))
+onUnmounted(() => {
+    window.removeEventListener('sync:abandoned', direCeQuiAEteEfface)
+    window.removeEventListener('sync:compte-parti', direQueLaSessionAPrisFin)
+})
 </script>
 
 <template>

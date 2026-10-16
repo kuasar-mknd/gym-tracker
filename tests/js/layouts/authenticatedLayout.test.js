@@ -673,6 +673,57 @@ describe('AuthenticatedLayout — les écritures abandonnées après trente jour
     })
 })
 
+/*
+ * La personne se déconnecte dans un autre onglet, ou y supprime son compte
+ * (#2050) : la session, commune aux onglets, n'existe plus. Celui-ci, resté sur
+ * une page du compte, ne disait rien, et ce qu'on y faisait ensuite sans réseau
+ * n'était ni envoyé ni gardé.
+ */
+describe('AuthenticatedLayout — la session finie dans un autre onglet', () => {
+    const SESSION_FINIE =
+        "La session de ce compte a pris fin dans un autre onglet : ce qui n'était pas encore envoyé a été effacé de cet appareil. Reconnecte-toi pour continuer, sinon tes modifications ne seront pas enregistrées."
+
+    /** L'avis qu'un autre onglet écrit quand un compte quitte l'appareil. */
+    const avisDUnAutreOnglet = (compte) =>
+        window.dispatchEvent(
+            new StorageEvent('storage', {
+                key: 'gym-tracker:compte-oublie-de-la-file',
+                newValue: JSON.stringify({ compte }),
+            }),
+        )
+
+    afterEach(() => {
+        retirerLesEcouteursDuService()
+        poserLaPage(null)
+        localStorage.clear()
+    })
+
+    it('le dit par le toast d’erreur, à la place de ce qu’il montrait, et seulement pour son compte', async () => {
+        await chargerSyncService({ compte: 42 })
+        const wrapper = mountLayout({ flash: { error: 'Séance introuvable' }, auth: { user: user({ id: 42 }) } })
+
+        avisDUnAutreOnglet('7')
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper).map(messageOf)).toEqual(['Séance introuvable'])
+
+        avisDUnAutreOnglet('42')
+        await wrapper.vm.$nextTick()
+
+        expect(toasts(wrapper).map(messageOf)).toEqual([SESSION_FINIE])
+    })
+
+    it('n’écoute plus une fois la page partie', async () => {
+        await chargerSyncService({ compte: 42 })
+        const wrapper = mountLayout({ auth: { user: user({ id: 42 }) } })
+        unmountLayout(wrapper)
+
+        avisDUnAutreOnglet('42')
+
+        expect(page.props.flash.error).toBeUndefined()
+    })
+})
+
 describe('AuthenticatedLayout — la déconnexion', () => {
     beforeEach(() => {
         seDeconnecter.mockClear()

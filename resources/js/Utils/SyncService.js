@@ -19,6 +19,23 @@ const FAILED_KEY = 'offline_sync_failed'
  */
 const CLEF_DU_COMPTE_OUBLIE = 'gym-tracker:compte-oublie-de-la-file'
 
+/**
+ * Le rejet d'une écriture que le réseau a refusée et que la file ne peut pas
+ * garder : son compte a quitté l'appareil depuis son départ (`oublis`), ou
+ * aucun compte n'est connecté (#2050).
+ *
+ * Ni `isOffline`, ni `code`, ni `request`. L'échec réseau, rejeté tel quel, se
+ * lisait « en file » (`classifySyncError` le classe `offline`) : la saisie
+ * d'une série effaçait son brouillon et gardait à l'écran une valeur que plus
+ * rien ne gardait, dans l'onglet resté sur la séance quand la personne se
+ * déconnecte dans un autre. L'appelant la lit comme un échec : il rétablit la
+ * valeur, et le dit.
+ *
+ * @param {string} message
+ * @returns {{nonGardee: true, message: string}}
+ */
+const nonGardee = (message) => ({ nonGardee: true, message })
+
 /** How many refused mutations are worth keeping. See recordFailure. */
 const MAX_FAILED = 50
 
@@ -385,19 +402,30 @@ class SyncService {
          * au stockage à sa prochaine écriture : il l'oublie aussi. La session
          * du compte n'existe plus, les cookies étant communs aux onglets :
          * l'onglet ne le croit plus connecté, et rien n'entre plus en file à
-         * son nom.
+         * son nom ; une écriture qu'il ne peut ni envoyer ni garder échoue
+         * (`nonGardee`). Quand c'était le compte de cet onglet,
+         * `sync:compte-parti` le dit à l'écran.
          */
         window.addEventListener('storage', (evenement) => {
             if (evenement.key !== CLEF_DU_COMPTE_OUBLIE || evenement.newValue === null) {
                 return
             }
 
+            let compte
+
             try {
-                this.oublierEnMemoire(normaliserLeCompte(JSON.parse(evenement.newValue)?.compte), {
-                    deconnecte: true,
-                })
+                compte = normaliserLeCompte(JSON.parse(evenement.newValue)?.compte)
             } catch {
                 // Un avis illisible ne vient pas de l'application.
+                return
+            }
+
+            const etaitConnecte = compte !== null && this.compte === compte
+
+            this.oublierEnMemoire(compte, { deconnecte: true })
+
+            if (etaitConnecte) {
+                window.dispatchEvent(new CustomEvent('sync:compte-parti', { detail: { compte } }))
             }
         })
 
@@ -495,7 +523,7 @@ class SyncService {
          * Sauf si ce compte a quitté l'appareil depuis son départ (#2050) :
          * la personne a accepté de perdre ce qui n'était pas encore
          * enregistré, et la déconnexion l'a effacé. L'écriture ne part plus et
-         * n'entre pas en file ; l'échec remonte tel quel.
+         * n'entre pas en file ; elle échoue (`nonGardee`).
          */
         const compteParti = () => this.oublisDe(compte) !== oublis
 
@@ -511,7 +539,10 @@ class SyncService {
             await this.processQueue()
 
             if (compteParti()) {
-                return Promise.reject({ compteParti: true, message: 'Request dropped: its account left the device' })
+                return Promise.reject({
+                    ...nonGardee('Request dropped: its account left the device'),
+                    compteParti: true,
+                })
             }
 
             if (this.enAttente() > 0) {
@@ -602,6 +633,11 @@ class SyncService {
             if (queueId !== null) {
                 return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
             }
+
+            // Une écriture que rien ne garde : l'échec réseau brut se lirait « en file ».
+            if (this.isMutation(config)) {
+                return Promise.reject(nonGardee('Network error: request not kept, no account to keep it for'))
+            }
         }
 
         throw error
@@ -632,8 +668,9 @@ class SyncService {
      *
      * Sans compte connu, rien n'entre : une écriture que la file ne sait
      * attribuer à personne ne pourrait jamais repartir sans risquer de partir
-     * sous un autre compte. L'appelant reçoit alors l'échec réseau tel quel, et
-     * le dit au lieu de garder la valeur comme si elle allait partir.
+     * sous un autre compte. `queueOrThrow` rejette alors l'écriture par
+     * `nonGardee`, que nul appelant ne prend pour « en file » : il rétablit la
+     * valeur et le dit, au lieu de la garder comme si elle allait partir.
      *
      * @param {Object} config
      * @param {string|null} compte le compte connecté quand l'écriture est partie,
