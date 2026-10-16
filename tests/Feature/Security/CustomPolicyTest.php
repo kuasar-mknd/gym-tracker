@@ -162,14 +162,19 @@ class CustomPolicyTest extends TestCase
         $directives = $this->getDirectivesFromPolicy($policy);
 
         /**
-         * bunny.net is still allowed because Horizon, Telescope, Pulse and
-         * Filament each pull their dashboard font from it, and none of those
-         * views are ours to change.
+         * Plus de site de polices : Horizon, Telescope et Pulse y prenaient la
+         * fonte de leur tableau de bord, et leurs gabarits sont compilés sans
+         * ces balises (`RetireLesRessourcesDistantesDesPaquets`). Plus de
+         * service d'avatars : celui du panneau est dessiné par l'application
+         * et servi en `data:` (`AvatarDesInitiales`). Affirmés absents, comme
+         * Google plus bas : une permission qui revient passe inaperçue en
+         * relecture. `LaCspNOuvreAucuneAutreOrigineTest` tient le reste.
          */
-        $this->assertContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertNotContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::STYLE)]);
+        $this->assertNotContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::FONT)]);
+        $this->assertNotContains('https://ui-avatars.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
 
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::IMG)]);
-        $this->assertContains('https://ui-avatars.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
 
         /**
          * Les logos des fournisseurs de connexion sont servis par
@@ -178,7 +183,6 @@ class CustomPolicyTest extends TestCase
          */
         $this->assertNotContains('https://www.svgrepo.com', $directives[$this->getDirectiveKey(Directive::IMG)]);
 
-        $this->assertContains('https://fonts.bunny.net', $directives[$this->getDirectiveKey(Directive::FONT)]);
         $this->assertContains('data:', $directives[$this->getDirectiveKey(Directive::FONT)]);
 
         /**
@@ -196,12 +200,13 @@ class CustomPolicyTest extends TestCase
     }
 
     /**
-     * `img-src`, entière, dans chaque environnement : l'application, les
-     * images en ligne (`data:`), et les avatars que le panneau Filament
-     * demande pour ses administrateurs. Comparée en entier plutôt
-     * qu'élément par élément : une origine d'images ajoutée ailleurs, comme
-     * l'était le site d'icônes des logos de connexion (#2051), fait tomber
-     * ce test au lieu de passer inaperçue.
+     * `img-src`, entière, dans chaque environnement : l'application et les
+     * images en ligne (`data:`), où vont les avatars que l'application
+     * dessine pour le panneau (`AvatarDesInitiales`) depuis que le service
+     * d'avatars en est parti. Comparée en entier plutôt qu'élément par
+     * élément : une origine d'images ajoutée ailleurs, comme l'était le site
+     * d'icônes des logos de connexion (#2051), fait tomber ce test au lieu de
+     * passer inaperçue.
      *
      * @return array<string, array{0: string}>
      */
@@ -215,7 +220,7 @@ class CustomPolicyTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('environnementsDeLaPolitique')]
-    public function test_img_src_ne_nomme_que_l_application_les_images_en_ligne_et_les_avatars_du_panneau(string $environnement): void
+    public function test_img_src_ne_nomme_que_l_application_et_les_images_en_ligne(string $environnement): void
     {
         Config::set('app.env', $environnement);
         $this->app['env'] = $environnement;
@@ -225,7 +230,7 @@ class CustomPolicyTest extends TestCase
         new CustomPolicy()->configure($policy);
 
         $this->assertSame(
-            [$this->formatKeyword(Keyword::SELF), 'data:', 'https://ui-avatars.com'],
+            [$this->formatKeyword(Keyword::SELF), 'data:'],
             $this->getDirectivesFromPolicy($policy)[$this->getDirectiveKey(Directive::IMG)],
         );
     }
@@ -235,7 +240,7 @@ class CustomPolicyTest extends TestCase
      * page de connexion, celle qui affichait les logos du site d'icônes
      * (#2051) : ce qui compte est la réponse, pas seulement la classe.
      */
-    public function test_la_page_de_connexion_n_ouvre_les_images_qu_a_l_application_et_aux_avatars_du_panneau(): void
+    public function test_la_page_de_connexion_n_ouvre_les_images_qu_a_l_application(): void
     {
         Config::set('csp.enabled', true);
 
@@ -243,6 +248,6 @@ class CustomPolicyTest extends TestCase
 
         preg_match('/(?:^|;)\s*img-src ([^;]*)/', $politique, $imgSrc);
 
-        $this->assertSame("'self' data: https://ui-avatars.com", trim($imgSrc[1] ?? ''), $politique);
+        $this->assertSame("'self' data:", trim($imgSrc[1] ?? ''), $politique);
     }
 }

@@ -9,12 +9,12 @@ Before planning or editing, find the row whose globs match the file's path and r
 | tests/Browser/**, tests/DuskTestCase.php, tests/Support/PiloteDesParcours.php, tests/Support/NavigateurDesParcours.php | .ai/rules/browser.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | package.json, package-lock.json, composer.json, composer.lock | .ai/rules/dependencies.md |
-| app/Filament/** | .ai/rules/filament.md |
+| app/Filament/**, app/Support/AvatarDesInitiales.php, app/Support/ComptesVusParPulse.php, app/Providers/TelescopeServiceProvider.php | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
 | app/** | .ai/rules/horloge.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/**, public/*.svg, pwa-assets.config.js | .ai/rules/js.md |
-| bootstrap/app.php, app/Http/Middleware/**, app/Http/Controllers/SanteController.php, resources/views/errors/** | .ai/rules/middleware.md |
+| bootstrap/app.php, app/Http/Middleware/**, app/Support/Csp/**, app/Http/Controllers/SanteController.php, resources/views/errors/** | .ai/rules/middleware.md |
 | app/Models/** | .ai/rules/models.md |
 | app/Actions/**, app/Services/**, app/Policies/** | .ai/rules/mutation.md |
 | app/Providers/**, routes/console.php, config/backup.php, lang/vendor/health/**, resources/views/vendor/health/**, app/Console/Commands/PurgerLesJournaux.php, app/Support/FichiersDuJour.php | .ai/rules/providers.md |

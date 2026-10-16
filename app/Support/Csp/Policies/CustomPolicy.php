@@ -90,33 +90,27 @@ class CustomPolicy extends Basic
         return $chemin !== '' && request()->is($chemin, $chemin.'/*');
     }
 
+    /**
+     * Les seules sources d'une autre origine que la politique admet, les
+     * services push des navigateurs, chacune avec sa raison dans
+     * `LaCspNOuvreAucuneAutreOrigineTest`, qui refuse toute autre.
+     *
+     * Plus de site de polices : Horizon, Telescope et Pulse y prenaient la
+     * fonte de leur tableau de bord, et leurs gabarits sont désormais
+     * compilés sans ces balises (`RetireLesRessourcesDistantesDesPaquets`) ;
+     * le panneau sert la sienne, et les fontes de l'application sont
+     * auto-hébergées. Plus de service d'avatars : l'avatar par défaut du
+     * panneau est dessiné par l'application (`AvatarDesInitiales`) et servi
+     * en `data:`. Plus de site d'icônes : les logos de connexion sont
+     * dessinés par l'application (#2051), et
+     * `LesRessourcesViennentDeLApplicationTest` refuse que ce qu'elle sert
+     * fasse charger quoi que ce soit d'une autre origine ; les gabarits des
+     * paquets, eux, sont tenus par `RessourcesDistantesDesTableauxDeBordTest`.
+     */
     protected function configureExternalResources(Policy $policy): void
     {
-        /**
-         * fonts.googleapis.com et fonts.gstatic.com sont partis avec les fontes
-         * elles-mêmes — elles sont auto-hébergées désormais, donc l'application
-         * n'a plus de raison de laisser une page joindre Google pour une feuille
-         * de style ou une police.
-         *
-         * fonts.bunny.net reste : Horizon, Telescope et Pulse y prennent tous
-         * la fonte de leur tableau de bord, et aucun d'eux n'est à nous pour
-         * qu'on la ré-héberge. Le panneau Filament, lui, sert la sienne tant
-         * qu'on ne lui choisit pas une autre fonte.
-         *
-         * Le site d'icônes d'où venaient les logos de connexion est parti avec
-         * eux : l'application les dessine elle-même (#2051), et
-         * `LesRessourcesViennentDeLApplicationTest` refuse que les pages Vue,
-         * les scripts, les feuilles et les gabarits de l'application, ou les
-         * icônes de la racine de public/, fassent charger quoi que ce soit
-         * d'une autre origine. Les pages des paquets restent hors de cette
-         * garde : ui-avatars.com sert l'avatar par défaut des administrateurs
-         * dans le panneau, et les tableaux de bord ci-dessus leur fonte.
-         */
         $policy
-            ->add(Directive::STYLE, 'https://fonts.bunny.net')
             ->add(Directive::IMG, 'data:')
-            ->add(Directive::IMG, 'https://ui-avatars.com')
-            ->add(Directive::FONT, 'https://fonts.bunny.net')
             ->add(Directive::FONT, 'data:')
             ->add(Directive::CONNECT, 'https://fcm.googleapis.com')
             ->add(Directive::CONNECT, 'https://updates.push.apple.com')

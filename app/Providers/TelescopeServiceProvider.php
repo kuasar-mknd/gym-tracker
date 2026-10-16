@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Admin;
+use App\Models\User;
+use App\Support\AvatarDesInitiales;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Telescope\IncomingEntry;
 use Laravel\Telescope\Telescope;
@@ -23,6 +26,32 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         $this->hideSensitiveRequestDetails();
 
         $this->registerFilter();
+
+        $this->dessinerLesAvatars();
+    }
+
+    /**
+     * L'avatar du compte d'une entrée, dans son détail : les initiales
+     * dessinées par l'application (`AvatarDesInitiales`), comme au panneau et
+     * dans Pulse.
+     *
+     * Sans ce rappel, Telescope prend cet avatar chez un service d'avatars
+     * tiers, d'après l'empreinte de l'adresse du compte. La CSP le bloque,
+     * une violation à chaque fois, sauf quand elle est coupée : en mode
+     * débogage, tant que Vite sert à chaud. Telescope ne passe au rappel que le
+     * numéro et l'adresse : le numéro seul désignerait aussi bien un compte de
+     * l'application qu'un administrateur, et le nom se cherche donc sous le
+     * numéro et l'adresse, dans l'une puis l'autre table. Un compte qu'aucune
+     * ne retrouve reçoit une silhouette.
+     */
+    private function dessinerLesAvatars(): void
+    {
+        Telescope::avatar(static function (mixed $numero, mixed $adresse): string {
+            $nom = User::query()->whereKey($numero)->where('email', $adresse)->value('name')
+                ?? Admin::query()->whereKey($numero)->where('email', $adresse)->value('name');
+
+            return app(AvatarDesInitiales::class)->pourLeNom(is_string($nom) ? $nom : '');
+        });
     }
 
     protected function registerFilter(): void
