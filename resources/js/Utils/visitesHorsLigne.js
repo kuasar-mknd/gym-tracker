@@ -18,7 +18,9 @@ import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composa
  * invité (`ToastsDuLayout.vue`, évènement `gym:sans-reseau`) :
  * - une visite en GET que la personne a demandée : la page n'est pas disponible ;
  * - une écriture : sa confirmation manque. Jamais « rien n'a été enregistré » :
- *   la requête a pu arriver, et seule sa réponse se perdre ;
+ *   la requête a pu arriver, et seule sa réponse se perdre. Une suppression
+ *   (DELETE) dit que la suppression n'est pas confirmée, les autres méthodes
+ *   que l'enregistrement ne l'est pas ;
  * - un rechargement en arrière-plan (props différées, rechargement partiel,
  *   préchargement) : rien.
  * Une autre erreur que celle du réseau, levée pendant le traitement de la
@@ -46,6 +48,13 @@ export const DELAI_DU_RESEAU_LENT_MS = 8000
 
 export const PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau."
 export const ECRITURE_NON_CONFIRMEE = "Pas de réponse du serveur : l'enregistrement n'est pas confirmé."
+
+/**
+ * Une suppression (DELETE) sans réponse, où « l'enregistrement » ne disait pas
+ * le geste : l'élément a pu être effacé, ou non (décision du propriétaire,
+ * 2026-10-15).
+ */
+export const SUPPRESSION_NON_CONFIRMEE = "Pas de réponse du serveur : la suppression n'est pas confirmée."
 export const RESEAU_LENT = 'Le réseau ne répond pas.'
 
 /**
@@ -156,7 +165,13 @@ export const messageDeLEchec = (visite) => {
         return null
     }
 
-    if (String(visite.method).toLowerCase() !== 'get') {
+    const methode = String(visite.method).toLowerCase()
+
+    if (methode === 'delete') {
+        return SUPPRESSION_NON_CONFIRMEE
+    }
+
+    if (methode !== 'get') {
         return ECRITURE_NON_CONFIRMEE
     }
 

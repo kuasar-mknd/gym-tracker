@@ -10,6 +10,14 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        /*
+         * La sonde que la page interroge pour savoir si le serveur répond de
+         * nouveau (#2048), hors des groupes `web` et `api` : ni session, ni
+         * cookie, ni jeton. Le docbloc du contrôleur dit pourquoi pas `/up`.
+         */
+        then: static function (): void {
+            \Illuminate\Support\Facades\Route::get('/sonde', \App\Http\Controllers\SondeController::class)->name('sonde');
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         /*

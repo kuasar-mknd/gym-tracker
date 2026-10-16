@@ -55,6 +55,13 @@ const closeDeletion = () => {
     goalPendingDeletion.value = null
 }
 
+/**
+ * La fenêtre se referme à la fin de la visite, quelle qu'en soit l'issue, comme
+ * celles de `useConfirmation`. Refermée seulement sur un succès, elle restait
+ * ouverte sans réseau, et le toast « la suppression n'est pas confirmée »
+ * partait sous elle : la fenêtre que `showModal()` ouvre passe au-dessus de
+ * toute la page (#2048).
+ */
 const deleteGoal = () => {
     if (!goalPendingDeletion.value) {
         return
@@ -62,7 +69,7 @@ const deleteGoal = () => {
 
     deleteForm.delete(route('goals.destroy', { goal: goalPendingDeletion.value.id }), {
         preserveScroll: true,
-        onSuccess: () => closeDeletion(),
+        onFinish: closeDeletion,
     })
 }
 
