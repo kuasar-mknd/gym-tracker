@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
 import { ordreRetabli, retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
-import { RequeteSimulee, reponseInertia, requetes, reseau, uneTache } from './reseauSimule'
+import { RequeteSimulee, chargementsCompletsPendant, reponseInertia, requetes, reseau, uneTache } from './reseauSimule'
 
 /*
  * L'utilitaire des mises à jour optimistes (#2077), avec le vrai client
@@ -196,6 +196,76 @@ describe('revenirSiLaVisiteEchoue, avec le vrai client d’Inertia', () => {
         expect(vu.retours).toBe(retours)
     })
 
+    /*
+     * Une suppression faite juste après une mise en production : le DELETE
+     * répond 303, et le GET qui le suit 409 `X-Inertia-Location`, la version
+     * des actifs ayant changé. Inertia recharge toute la page sans appeler
+     * `onSuccess` ni aucun rappel d'échec, puis appelle `onFinish`. Ce n'est
+     * pas un échec : le serveur a répondu, et la page rechargée montre ce
+     * qu'il a fait. jsdom ne navigue pas : le rechargement se compte sur une
+     * `window.location` simulée le temps de la réponse.
+     */
+    it('ne revient pas quand la réponse recharge toute la page (409 X-Inertia-Location)', async () => {
+        const vu = supprimer()
+        await uneTache()
+
+        const adresse = new URL('/liste', window.location.href).href
+        const chargements = await chargementsCompletsPendant(async () => {
+            requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-location': adresse, 'x-inertia-version': 'v2' } })
+            await vi.waitUntil(() => vu.fins === 1)
+        })
+
+        expect(chargements).toEqual([adresse])
+        expect(vu).toEqual({ retours: 0, succes: 0, fins: 1 })
+    })
+
+    it('ne revient pas non plus quand un écouteur `location` retient ce rechargement', async () => {
+        const renvois = []
+        const retirer = routeur.on('location', (evenement) => {
+            renvois.push(evenement.detail.url.pathname)
+
+            return false
+        })
+
+        const vu = supprimer()
+        await uneTache()
+
+        requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-location': '/liste' } })
+        await vi.waitUntil(() => vu.fins === 1)
+        retirer()
+
+        expect(renvois).toEqual(['/liste'])
+        expect(vu).toEqual({ retours: 0, succes: 0, fins: 1 })
+    })
+
+    /*
+     * Le même renvoi, reçu par une autre visite : après une mise en
+     * production, un rechargement en arrière-plan (`async`) répond 409
+     * `X-Inertia-Location`, et Inertia émet `location` sans recharger la page
+     * (version changée sur une visite asynchrone). La suppression en vol, qui
+     * échoue ensuite, revient : ce renvoi n'était pas le sien.
+     */
+    it.each([
+        ['sans réseau', (requete) => requete.onerror()],
+        ['sur un 500', (requete) => requete.repondre(pageDErreur(500))],
+        ['quand la visite est annulée', () => routeur.cancelAll()],
+    ])('revient %s, même quand une autre visite a été renvoyée vers un chargement complet', async (_cas, echouer) => {
+        const vu = supprimer()
+        await uneTache()
+
+        routeur.reload({ only: ['graphiques'] })
+        await uneTache()
+        requetes[1].repondre({ statut: 409, entetes: { 'x-inertia-location': '/liste', 'x-inertia-version': 'v2' } })
+        await uneTache()
+        await uneTache()
+
+        echouer(requetes[0])
+        await vi.waitUntil(() => vu.fins === 1)
+        window.sessionStorage.removeItem('inertiaLocationVisit')
+
+        expect(vu).toEqual({ retours: 1, succes: 0, fins: 1 })
+    })
+
     it('garde les autres options et les rappels de l’appelant', () => {
         const onBefore = vi.fn(() => true)
         const options = revenirSiLaVisiteEchoue(() => {}, { preserveScroll: true, only: ['a'], onBefore })
@@ -203,6 +273,20 @@ describe('revenirSiLaVisiteEchoue, avec le vrai client d’Inertia', () => {
         expect(options).toMatchObject({ preserveScroll: true, only: ['a'] })
         expect(options.onBefore({})).toBe(true)
         expect(onBefore).toHaveBeenCalledOnce()
+    })
+
+    /*
+     * `onHttpException` et `onNetworkError` rendent `false` pour taire la
+     * fenêtre d'erreur ou le filet des visites : l'enveloppe rend ce que rend
+     * le rappel de l'appelant.
+     */
+    it.each(['onError', 'onHttpException', 'onNetworkError'])('rend ce que rend le `%s` de l’appelant', (nom) => {
+        const rappel = vi.fn(() => false)
+        const options = revenirSiLaVisiteEchoue(() => {}, { [nom]: rappel })
+
+        expect(options[nom]('détail')).toBe(false)
+        expect(rappel).toHaveBeenCalledWith('détail')
+        expect(revenirSiLaVisiteEchoue(() => {})[nom]('détail')).toBeUndefined()
     })
 
     it('revient sur une fin sans succès quand un faux routeur n’appelle que `onFinish`', () => {

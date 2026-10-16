@@ -8,6 +8,7 @@ import {
 import { REPOS_AUTOMATIQUE_SANS_RESEAU, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import {
     RequeteSimulee,
+    chargementsCompletsPendant,
     relayerLesRejetsNonGeres,
     reponseInertia,
     requetes,
@@ -443,6 +444,29 @@ describe.each(PAGES)('$nom : une ligne retirée avant la réponse', (page) => {
         )
         await attendreLesVisites()
 
+        expect(page.lignes()).toEqual([1, 3, 4])
+        expect(vibrations).toEqual(['warning'])
+        expect(toastsAffiches()).toEqual([])
+    })
+
+    /*
+     * Une suppression faite juste après une mise en production : la
+     * redirection qui la suit répond 409 `X-Inertia-Location`, la version des
+     * actifs ayant changé, et Inertia recharge toute la page sans `onSuccess`.
+     * La ligne ne revient pas, et rien ne vibre comme un échec : la page
+     * rechargée montre ce que le serveur a fait.
+     */
+    it('reste partie, sans vibration d’erreur, quand la suppression faite recharge toute la page', async () => {
+        await ouvrirLaPage(page.nom, page.adresse, page.props())
+
+        await supprimer(page, 2)
+        const adresse = new URL(page.adresse, window.location.href).href
+        const chargements = await chargementsCompletsPendant(async () => {
+            requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-location': adresse, 'x-inertia-version': 'v2' } })
+            await attendreLesVisites()
+        })
+
+        expect(chargements).toEqual([adresse])
         expect(page.lignes()).toEqual([1, 3, 4])
         expect(vibrations).toEqual(['warning'])
         expect(toastsAffiches()).toEqual([])

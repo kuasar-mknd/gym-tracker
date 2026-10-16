@@ -15,8 +15,9 @@
  * part une fois, à la fin de la visite (`onFinish`, qu'Inertia appelle à toute
  * issue, annulation comprise), si la visite n'a pas réussi (`onSuccess`), et
  * aussi quand elle n'est jamais partie, un écouteur `before` l'ayant arrêtée
- * (Inertia n'appelle alors aucun rappel, `onFinish` compris). Les messages
- * restent ceux de toujours : sans réseau, le filet des visites
+ * (Inertia n'appelle alors aucun rappel, `onFinish` compris). Une réponse qui
+ * recharge toute la page (409 `X-Inertia-Location`) n'est pas un échec. Les
+ * messages restent ceux de toujours : sans réseau, le filet des visites
  * (`visitesHorsLigne.js`) dit ce qui n'est pas confirmé ; `revenir` ne dit
  * rien de plus.
  *
@@ -43,26 +44,66 @@
  * écoute cet évènement après tous les autres, posée dans `onBefore` même, et
  * lit s'il a été annulé.
  *
+ * Une réponse 409 `X-Inertia-Location` recharge toute la page, sans
+ * `onSuccess` ni rappel d'échec : c'est ce que reçoit une suppression faite
+ * quand la version des actifs a changé depuis l'ouverture de la page (la
+ * redirection qui la suit répond ainsi), et la page rechargée montre ce que
+ * le serveur a fait. Inertia émet alors `inertia:location`, que l'enveloppe
+ * écoute tant que sa visite est en vol. L'évènement ne dit pas quelle visite
+ * l'a reçu : un rechargement en arrière-plan renvoyé de même (Inertia ne
+ * recharge pas la page pour une visite asynchrone) ne doit pas faire passer
+ * pour réussie une visite qui échoue. Le renvoi ne compte donc que pour une
+ * visite allée à son terme sans qu'aucun rappel d'échec (`onError`,
+ * `onHttpException`, `onNetworkError`) n'ait parlé.
+ *
  * @template {Record<string, unknown>} Options
  * @param {() => void} revenir remet l'écran où il était avant la visite
  * @param {Options} options les options de la visite, rappels compris
- * @returns {Options} les mêmes options, `onBefore`, `onSuccess` et `onFinish` enveloppés
+ * @returns {Options} les mêmes options, `onBefore`, `onSuccess`, `onFinish` et les rappels d'échec enveloppés
  */
 export const revenirSiLaVisiteEchoue = (revenir, options = {}) => {
     /** Les visites parties et pas encore finies. */
     let enVol = 0
 
     let reussie = false
+    let echouee = false
+    let renvoyee = false
     let revenue = false
 
+    const surRenvoi = () => {
+        renvoyee = true
+    }
+
     const conclure = () => {
-        if (enVol > 0 || reussie || revenue) {
+        if (enVol > 0) {
+            return
+        }
+
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('inertia:location', surRenvoi)
+        }
+
+        if (reussie || revenue || (renvoyee && !echouee)) {
             return
         }
 
         revenue = true
         revenir()
     }
+
+    /**
+     * Le rappel d'échec `nom`, qui note l'échec et rend ce que rend celui de
+     * l'appelant : `false` y tait la fenêtre d'erreur ou le filet des visites.
+     *
+     * @param {'onError' | 'onHttpException' | 'onNetworkError'} nom
+     */
+    const noterLEchec =
+        (nom) =>
+        (...details) => {
+            echouee = true
+
+            return options[nom]?.(...details)
+        }
 
     return {
         ...options,
@@ -79,6 +120,7 @@ export const revenirSiLaVisiteEchoue = (revenir, options = {}) => {
             enVol += 1
 
             if (typeof document !== 'undefined') {
+                document.addEventListener('inertia:location', surRenvoi)
                 document.addEventListener(
                     'inertia:before',
                     (evenement) => {
@@ -98,7 +140,14 @@ export const revenirSiLaVisiteEchoue = (revenir, options = {}) => {
 
             return options.onSuccess?.(page)
         },
+        onError: noterLEchec('onError'),
+        onHttpException: noterLEchec('onHttpException'),
+        onNetworkError: noterLEchec('onNetworkError'),
         onFinish: (visite) => {
+            if (visite?.cancelled || visite?.interrupted) {
+                echouee = true
+            }
+
             enVol = Math.max(0, enVol - 1)
             conclure()
 
