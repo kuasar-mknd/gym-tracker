@@ -4,7 +4,11 @@ import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import { attendreAuPlus } from '@/Utils/attendreAuPlus'
 import SyncService from '@/Utils/SyncService'
-import { noterLesEcrituresEffaceesALaDeconnexion } from '@/Utils/ecrituresEffaceesALaDeconnexion'
+import { lireLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
+import {
+    noterLesAbandonsALaDeconnexion,
+    noterLesEcrituresEffaceesALaDeconnexion,
+} from '@/Utils/ecrituresEffaceesALaDeconnexion'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
 
@@ -62,13 +66,35 @@ export const messageDeLaQuestionDeDeconnexion = (nombre) =>
 const nonEnregistrees = (compte) => SyncService.enAttenteSurLAppareil(compte) + SyncService.ecrituresEnCours()
 
 /**
+ * Note pour l'écran de connexion ce que la déconnexion de ce compte effacera,
+ * avant l'envoi : l'écran d'arrivée le lit à son montage, avant `onSuccess`.
+ * Ses écritures pas encore enregistrées, et l'avis de celles que la file a
+ * abandonnées après trente jours, qu'il n'a peut-être jamais vu : la
+ * déconnexion l'efface avec le reste (`Utils/ecrituresEffaceesALaDeconnexion`).
+ *
+ * @param {string|null} compte
+ */
+const noterLeRecu = (compte) => {
+    noterLesEcrituresEffaceesALaDeconnexion(nonEnregistrees(compte))
+    noterLesAbandonsALaDeconnexion(lireLesEcrituresAbandonnees(compte))
+}
+
+/** La déconnexion n'a pas eu lieu : rien n'est effacé, et l'écran suivant n'a rien à en dire. */
+const retirerLeRecu = () => {
+    noterLesEcrituresEffaceesALaDeconnexion(0)
+    noterLesAbandonsALaDeconnexion(null)
+}
+
+/**
  * Ce que le compte qui part laisse sur l'appareil, effacé une fois la
  * déconnexion acceptée (#1964, #2050).
  *
  * Ses écritures encore en file et ses refus, sur tout l'appareil, autres
  * onglets compris (`SyncService.oublierLeCompte`) : depuis #2050, rien ne
  * reste en clair pour une connexion future, la personne ayant accepté de les
- * perdre. Ses brouillons de séries et sa dernière recherche d'exercice aussi.
+ * perdre. L'avis de ses écritures abandonnées aussi, que l'écran de connexion
+ * dit à sa place (`noterLeRecu`). Ses brouillons de séries et sa dernière
+ * recherche d'exercice aussi.
  * Pas avant la réponse : une déconnexion partie sans réseau laisse la personne
  * connectée, et elle aurait perdu ses écritures en attente, ses refus pas
  * encore montrés et ses brouillons, seul endroit où survit une valeur dont
@@ -107,8 +133,7 @@ const partir = () => {
             /** La visite a démarré : Inertia appellera `onFinish`, qui libère la déconnexion. */
             let partie = false
 
-            // Noté avant l'envoi : l'écran d'arrivée le lit à son montage, avant `onSuccess`.
-            noterLesEcrituresEffaceesALaDeconnexion(nonEnregistrees(compte))
+            noterLeRecu(compte)
 
             router.post(
                 route('logout'),
@@ -130,7 +155,7 @@ const partir = () => {
                      */
                     onFinish: () => {
                         if (!acceptee) {
-                            noterLesEcrituresEffaceesALaDeconnexion(0)
+                            retirerLeRecu()
                         }
 
                         liberer()
@@ -146,7 +171,7 @@ const partir = () => {
              * part dans l'appel même de `router.post` quand la visite part.
              */
             if (!partie) {
-                noterLesEcrituresEffaceesALaDeconnexion(0)
+                retirerLeRecu()
                 liberer()
             }
         })

@@ -550,6 +550,126 @@ describe('la file d’un compte supprimé', () => {
     })
 })
 
+/*
+ * Une écriture qui attend depuis plus de trente jours est abandonnée, et un
+ * avis attend le prochain écran du compte. La déconnexion l'effaçait avec le
+ * reste, même jamais montré : sous le layout invité (la vérification de
+ * l'adresse), qui ne le lit pas, ou quand un autre message occupait le toast.
+ * La perte passait sans un mot (#2050).
+ */
+describe('l’avis des écritures abandonnées, à la déconnexion', () => {
+    const MAINTENANT = new Date('2026-10-16T12:00:00.000Z')
+    const JOUR = 24 * 60 * 60 * 1000
+    const AVIS = 'gym-tracker:ecritures-abandonnees'
+    const MESSAGE =
+        "Une modification faite hors ligne le 15/09/2026 n'a pas pu être enregistrée : gardée 30 jours sur cet appareil sans pouvoir partir, elle a été abandonnée et effacée. Vérifie tes séances."
+
+    /** Une écriture du compte 1 faite il y a 31 jours : le chargement l'abandonne et note l'avis. */
+    const unAbandonPasEncoreDit = async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(MAINTENANT)
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                {
+                    method: 'patch',
+                    url: '/api/v1/sets/5',
+                    data: { weight: 80 },
+                    id: 'q1',
+                    timestamp: new Date(MAINTENANT.getTime() - 31 * JOUR).toISOString(),
+                    compte: '1',
+                },
+            ]),
+        )
+        const sync = await chargerSyncService({ compte: 1 })
+        await sync.pending
+
+        expect(sync.queue).toEqual([])
+        expect(JSON.parse(localStorage.getItem(AVIS))['1'].nombre).toBe(1)
+
+        return sync
+    }
+
+    it('le dit sur l’écran de connexion, une fois, quand la déconnexion l’efface', async () => {
+        await unAbandonPasEncoreDit()
+
+        // File vide : la déconnexion part sans question.
+        await seDeconnecter()
+        expect((await deconnexion()).questionDeDeconnexion.value).toBeNull()
+
+        naviguer(null)
+        routeur.post.mock.calls[0][2].onSuccess()
+        routeur.post.mock.calls[0][2].onFinish()
+
+        expect(localStorage.getItem(AVIS)).toBeNull()
+
+        const ecran = await ecranDeConnexion()
+        expect(ecran.find('[dusk="ecritures-abandonnees-a-la-deconnexion"]').text()).toBe(MESSAGE)
+        expect(ecran.find('[dusk="ecritures-effacees-a-la-deconnexion"]').exists()).toBe(false)
+
+        const ecranSuivant = await ecranDeConnexion()
+        expect(ecranSuivant.find('[dusk="ecritures-abandonnees-a-la-deconnexion"]').exists()).toBe(false)
+    })
+
+    it('le garde pour le compte quand la déconnexion n’aboutit pas', async () => {
+        await unAbandonPasEncoreDit()
+        // Inertia finit la visite sans succès : le réseau a coupé en route.
+        routeur.post.mockImplementation((_url, _donnees, options) => {
+            options.onStart()
+            options.onFinish()
+        })
+
+        await seDeconnecter()
+
+        expect(JSON.parse(localStorage.getItem(AVIS))['1'].nombre).toBe(1)
+        expect((await ecranDeConnexion()).find('[dusk="ecritures-abandonnees-a-la-deconnexion"]').exists()).toBe(false)
+    })
+
+    it('ne dit rien de l’avis d’un autre compte, qui l’attend toujours', async () => {
+        localStorage.setItem(AVIS, JSON.stringify({ 2: { nombre: 3, depuis: null, le: Date.now() } }))
+        const sync = await chargerSyncService({ compte: 1 })
+        await sync.pending
+
+        await seDeconnecter()
+        naviguer(null)
+        routeur.post.mock.calls[0][2].onSuccess()
+        routeur.post.mock.calls[0][2].onFinish()
+
+        expect((await ecranDeConnexion()).find('[dusk="ecritures-abandonnees-a-la-deconnexion"]').exists()).toBe(false)
+        expect(JSON.parse(localStorage.getItem(AVIS))['2'].nombre).toBe(3)
+    })
+
+    it('se périme au bout d’une minute, et lit un avis illisible comme « rien »', async () => {
+        vi.useFakeTimers()
+        const { noterLesAbandonsALaDeconnexion, reprendreLesAbandonsALaDeconnexion } =
+            await import('@/Utils/ecrituresEffaceesALaDeconnexion')
+
+        noterLesAbandonsALaDeconnexion({ nombre: 2, depuis: 1 })
+        vi.advanceTimersByTime(59_999)
+        expect(reprendreLesAbandonsALaDeconnexion()).toEqual({ nombre: 2, depuis: 1 })
+        expect(reprendreLesAbandonsALaDeconnexion()).toBeNull()
+
+        noterLesAbandonsALaDeconnexion({ nombre: 2, depuis: null })
+        vi.advanceTimersByTime(60_000)
+        expect(reprendreLesAbandonsALaDeconnexion()).toBeNull()
+
+        sessionStorage.setItem('gym-tracker:ecritures-abandonnees-a-la-deconnexion', '{coupé')
+        expect(reprendreLesAbandonsALaDeconnexion()).toBeNull()
+
+        sessionStorage.setItem(
+            'gym-tracker:ecritures-abandonnees-a-la-deconnexion',
+            JSON.stringify({ nombre: 0, depuis: null, le: Date.now() }),
+        )
+        expect(reprendreLesAbandonsALaDeconnexion()).toBeNull()
+
+        sessionStorage.setItem(
+            'gym-tracker:ecritures-abandonnees-a-la-deconnexion',
+            JSON.stringify({ nombre: 1, depuis: 'hier', le: Date.now() }),
+        )
+        expect(reprendreLesAbandonsALaDeconnexion()).toEqual({ nombre: 1, depuis: null })
+    })
+})
+
 describe('l’avis des écritures effacées à la déconnexion', () => {
     const avis = async () => import('@/Utils/ecrituresEffaceesALaDeconnexion')
 

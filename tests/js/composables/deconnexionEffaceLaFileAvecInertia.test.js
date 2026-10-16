@@ -69,6 +69,17 @@ const pageDuProfil = () => ({
     },
 })
 
+/**
+ * La vérification de l'adresse, sous le layout invité, d'où l'on se déconnecte
+ * aussi : la session est ouverte, l'adresse pas encore vérifiée.
+ */
+const pageDeVerification = () => ({
+    ...pageDuProfil(),
+    component: 'VerificationDeLAdresse',
+    url: '/verify-email',
+    props: { ...pageDuProfil().props, status: null },
+})
+
 /** L'écran de connexion, où mène la déconnexion acceptée. */
 const pageDeConnexion = () => ({
     component: 'Connexion',
@@ -141,6 +152,7 @@ beforeAll(async () => {
     const { seDeconnecter } = await import('@/composables/useDeconnexion')
     const { default: AuthenticatedLayout } = await import('@/Layouts/AuthenticatedLayout.vue')
     const { default: GuestLayout } = await import('@/Layouts/GuestLayout.vue')
+    const { default: VerifyEmail } = await import('@/Pages/Auth/VerifyEmail.vue')
 
     installerLesVisitesHorsLigne({ routeur })
 
@@ -158,6 +170,8 @@ beforeAll(async () => {
                 ]),
         },
         Connexion: { render: () => h(GuestLayout, null, () => h('p', { id: 'contenu' }, 'Connexion')) },
+        // La vraie page, et son bouton « Se déconnecter ».
+        VerificationDeLAdresse: VerifyEmail,
     }
 
     await inertia.createInertiaApp({
@@ -415,5 +429,86 @@ describe('trente jours au plus', () => {
         })
 
         expect(contenu()).toBe('Connexion')
+    })
+})
+
+/*
+ * La vérification de l'adresse se déconnecte sous le layout invité, qui monte
+ * sa propre question (#2050). Seul le layout authentifié était joué : sans la
+ * question dans le layout invité, le bouton ne faisait plus rien, sans un mot.
+ */
+describe('depuis la vérification de l’adresse, sous le layout invité', () => {
+    const allerALaVerification = () =>
+        new Promise((fini) => routeur.replace({ ...pageDeVerification(), onFinish: fini }))
+
+    const seDeconnecterDeLaVerification = async () => {
+        ;[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Se déconnecter').click()
+        await uneTache()
+    }
+
+    it('pose la question : « Rester connecté » garde tout, « Se déconnecter quand même » déconnecte et efface', async () => {
+        await allerALaVerification()
+        await modifierHorsLigne(1)
+
+        await seDeconnecterDeLaVerification()
+
+        expect(texteDeLaQuestion()).toContain('Se déconnecter et perdre ces modifications ?')
+        expect(texteDeLaQuestion()).toContain("Une modification faite hors ligne n'a pas encore été envoyée.")
+        expect(logouts()).toEqual([])
+
+        bouton('confirm-dialog-cancel').click()
+        await vi.waitUntil(() => question() === null)
+
+        expect(logouts()).toEqual([])
+        expect(comptesDeLaFile()).toEqual(['1'])
+
+        await jusquALaFinDeLaVisite(async () => {
+            await seDeconnecterDeLaVerification()
+            bouton('confirm-dialog-confirm').click()
+            await vi.waitUntil(() => logouts().length === 1)
+            logouts()[0].repondre(reponseInertia(pageDeConnexion()))
+        })
+
+        expect(contenu()).toBe('Connexion')
+        expect(fileStockee()).toEqual([])
+        expect(document.querySelector('[dusk="ecritures-effacees-a-la-deconnexion"]').textContent.trim()).toBe(
+            "Une modification faite hors ligne n'avait pas encore été envoyée : elle a été effacée de cet appareil avec la déconnexion.",
+        )
+        expect(relais.rejets).toEqual([])
+    })
+
+    /*
+     * Le layout invité ne lit pas l'avis des écritures abandonnées : sous la
+     * vérification de l'adresse, il attendait un écran authentifié, et la
+     * déconnexion l'effaçait sans qu'il ait été dit.
+     */
+    it('dit sur l’écran de connexion l’avis d’abandon qu’elle n’avait pas montré', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-09-15T08:00:00.000Z'))
+        await allerALaVerification()
+        await modifierHorsLigne(1)
+
+        vi.setSystemTime(new Date('2026-10-16T08:00:00.000Z'))
+        Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+        document.dispatchEvent(new Event('visibilitychange'))
+        await SyncService.pending
+        await uneTache()
+
+        expect(fileStockee()).toEqual([])
+        expect(document.querySelector('[role="alert"][aria-live]')).toBeNull()
+
+        await jusquALaFinDeLaVisite(async () => {
+            await seDeconnecterDeLaVerification()
+            expect(question()).toBeNull()
+            await vi.waitUntil(() => logouts().length === 1)
+            logouts()[0].repondre(reponseInertia(pageDeConnexion()))
+        })
+
+        expect(contenu()).toBe('Connexion')
+        expect(document.querySelector('[dusk="ecritures-abandonnees-a-la-deconnexion"]').textContent.trim()).toBe(
+            "Une modification faite hors ligne le 15/09/2026 n'a pas pu être enregistrée : gardée 30 jours sur cet appareil sans pouvoir partir, elle a été abandonnée et effacée. Vérifie tes séances.",
+        )
+        expect(localStorage.getItem('gym-tracker:ecritures-abandonnees')).toBeNull()
+        expect(relais.rejets).toEqual([])
     })
 })

@@ -16,22 +16,62 @@
  */
 const CLEF = 'gym-tracker:ecritures-effacees-a-la-deconnexion'
 
+/**
+ * Les écritures que la file avait abandonnées pour le compte qui part, après
+ * trente jours, et dont l'avis attendait encore un écran de ce compte
+ * (`Utils/ecrituresAbandonnees`). La déconnexion efface cet avis avec le reste,
+ * et il n'avait pas toujours été montré : la vérification de l'adresse est sous
+ * le layout invité, qui ne le lit pas, et un autre message pouvait occuper le
+ * toast. La perte passait alors sans un mot ; l'écran de connexion la dit à sa
+ * place, une fois, comme le nombre ci-dessus. Seuls le nombre et la date de la
+ * plus ancienne y sont écrits.
+ */
+const CLEF_DES_ABANDONS = 'gym-tracker:ecritures-abandonnees-a-la-deconnexion'
+
 const DUREE_DE_VALIDITE_MS = 60 * 1000
 
-/** @param {number} nombre les écritures du compte encore en file, que la déconnexion efface */
-export const noterLesEcrituresEffaceesALaDeconnexion = (nombre) => {
+/**
+ * Écrit un avis pour l'écran d'arrivée, daté, ou l'efface quand il n'y a rien
+ * à dire.
+ *
+ * @param {string} cle
+ * @param {Object|null} avis
+ */
+const noter = (cle, avis) => {
     try {
-        if (nombre > 0) {
-            sessionStorage.setItem(CLEF, JSON.stringify({ nombre, le: Date.now() }))
+        if (avis !== null) {
+            sessionStorage.setItem(cle, JSON.stringify({ ...avis, le: Date.now() }))
 
             return
         }
 
-        sessionStorage.removeItem(CLEF)
+        sessionStorage.removeItem(cle)
     } catch {
         // Stockage indisponible : l'avis se perd, l'effacement suit son cours.
     }
 }
+
+/**
+ * Rend l'avis noté par la dernière déconnexion s'il a moins d'une minute, et
+ * l'oublie. Un avis illisible ou un stockage qui refuse valent « rien ».
+ *
+ * @param {string} cle
+ * @returns {Object|null}
+ */
+const reprendre = (cle) => {
+    try {
+        const avis = JSON.parse(sessionStorage.getItem(cle) ?? 'null')
+
+        sessionStorage.removeItem(cle)
+
+        return Number.isFinite(avis?.le) && Date.now() - avis.le < DUREE_DE_VALIDITE_MS ? avis : null
+    } catch {
+        return null
+    }
+}
+
+/** @param {number} nombre les écritures du compte encore en file, que la déconnexion efface */
+export const noterLesEcrituresEffaceesALaDeconnexion = (nombre) => noter(CLEF, nombre > 0 ? { nombre } : null)
 
 /**
  * Rend le nombre noté par la dernière déconnexion, et l'oublie.
@@ -39,17 +79,33 @@ export const noterLesEcrituresEffaceesALaDeconnexion = (nombre) => {
  * @returns {number}
  */
 export const reprendreLesEcrituresEffaceesALaDeconnexion = () => {
-    try {
-        const avis = JSON.parse(sessionStorage.getItem(CLEF) ?? 'null')
+    const avis = reprendre(CLEF)
 
-        sessionStorage.removeItem(CLEF)
+    return Number.isInteger(avis?.nombre) && avis.nombre > 0 ? avis.nombre : 0
+}
 
-        const recent = Number.isFinite(avis?.le) && Date.now() - avis.le < DUREE_DE_VALIDITE_MS
+/**
+ * @param {{nombre: number, depuis: number|null}|null} abandonnees l'avis des
+ *   écritures abandonnées du compte qui part, que la déconnexion efface, ou
+ *   null
+ */
+export const noterLesAbandonsALaDeconnexion = (abandonnees) =>
+    noter(CLEF_DES_ABANDONS, abandonnees === null ? null : { nombre: abandonnees.nombre, depuis: abandonnees.depuis })
 
-        return recent && Number.isInteger(avis.nombre) && avis.nombre > 0 ? avis.nombre : 0
-    } catch {
-        return 0
+/**
+ * Rend l'avis des écritures abandonnées noté par la dernière déconnexion, et
+ * l'oublie.
+ *
+ * @returns {{nombre: number, depuis: number|null}|null}
+ */
+export const reprendreLesAbandonsALaDeconnexion = () => {
+    const avis = reprendre(CLEF_DES_ABANDONS)
+
+    if (!Number.isInteger(avis?.nombre) || avis.nombre <= 0) {
+        return null
     }
+
+    return { nombre: avis.nombre, depuis: Number.isFinite(avis.depuis) ? avis.depuis : null }
 }
 
 /**

@@ -15,7 +15,9 @@ import { dateCourte } from '@/Utils/date'
  *
  * Seuls le nombre et la date de la plus ancienne sont gardés ici, par compte,
  * jusqu'à ce que ce compte ouvre une page sur cet appareil, rien de ce que
- * contenaient les écritures. L'avis attend son compte trente jours au plus :
+ * contenaient les écritures. S'il se déconnecte avant de l'avoir vu, l'écran
+ * de connexion le dit (`Utils/ecrituresEffaceesALaDeconnexion`) : la
+ * déconnexion efface l'avis avec le reste. L'avis attend son compte trente jours au plus :
  * passé ce délai, la première lecture l'efface du stockage (le chargement de
  * la file, chaque vidage, chaque écran authentifié), et un compte qui revient
  * plus tard n'en voit rien. Le garder pour toujours garderait l'identifiant
@@ -142,24 +144,33 @@ export const noterLesEcrituresAbandonnees = (abandons, maintenant = Date.now()) 
 }
 
 /**
+ * L'avis de ce compte, sans l'oublier. La déconnexion le recopie pour l'écran
+ * de connexion avant de partir : il reste ici tant qu'elle n'a pas abouti.
+ *
+ * @param {number|string|null|undefined} compte
+ * @returns {{nombre: number, depuis: number|null}|null}
+ */
+export const lireLesEcrituresAbandonnees = (compte) => {
+    const clef = normaliser(compte)
+    const avisDuCompte = clef === null ? undefined : lire(Date.now())[clef]
+
+    return avisDuCompte === undefined ? null : { nombre: avisDuCompte.nombre, depuis: avisDuCompte.depuis }
+}
+
+/**
  * Rend l'avis de ce compte, et l'oublie.
  *
  * @param {number|string|null|undefined} compte
  * @returns {{nombre: number, depuis: number|null}|null}
  */
 export const reprendreLesEcrituresAbandonnees = (compte) => {
-    const clef = normaliser(compte)
-    const avis = lire(Date.now())
-    const avisDuCompte = clef === null ? undefined : avis[clef]
+    const avis = lireLesEcrituresAbandonnees(compte)
 
-    if (avisDuCompte === undefined) {
-        return null
+    if (avis !== null) {
+        oublierLesEcrituresAbandonnees(compte)
     }
 
-    delete avis[clef]
-    ecrire(avis)
-
-    return { nombre: avisDuCompte.nombre, depuis: avisDuCompte.depuis }
+    return avis
 }
 
 /**

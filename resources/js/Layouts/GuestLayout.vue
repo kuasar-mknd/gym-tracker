@@ -7,8 +7,10 @@ import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
 import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import { marquerLAbonnementARetransmettre } from '@/composables/useAbonnementPush'
+import { messageDesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
 import {
     messageDesEcrituresEffaceesALaDeconnexion,
+    reprendreLesAbandonsALaDeconnexion,
     reprendreLesEcrituresEffaceesALaDeconnexion,
 } from '@/Utils/ecrituresEffaceesALaDeconnexion'
 
@@ -21,8 +23,18 @@ const page = usePage()
  */
 const ecrituresEffacees = ref(0)
 
+/**
+ * Les écritures que la file avait abandonnées après trente jours pour le compte
+ * qui vient de se déconnecter, et dont il n'avait peut-être jamais vu l'avis :
+ * la déconnexion l'a effacé avec le reste, l'écran qui la suit le dit (#2050).
+ *
+ * @type {import('vue').Ref<{nombre: number, depuis: number|null}|null>}
+ */
+const ecrituresAbandonnees = ref(null)
+
 onMounted(() => {
     ecrituresEffacees.value = reprendreLesEcrituresEffaceesALaDeconnexion()
+    ecrituresAbandonnees.value = reprendreLesAbandonsALaDeconnexion()
 
     /*
      * Une page d'invité dit que cet appareil n'a plus de session. Elle a pu être
@@ -70,6 +82,14 @@ onMounted(() => {
                     dusk="ecritures-effacees-a-la-deconnexion"
                 >
                     {{ messageDesEcrituresEffaceesALaDeconnexion(ecrituresEffacees) }}
+                </p>
+                <p
+                    v-if="ecrituresAbandonnees !== null"
+                    role="status"
+                    class="info-fill border-accent-info mb-4 rounded-xl border p-3 text-sm font-medium"
+                    dusk="ecritures-abandonnees-a-la-deconnexion"
+                >
+                    {{ messageDesEcrituresAbandonnees(ecrituresAbandonnees) }}
                 </p>
                 <slot />
             </div>
