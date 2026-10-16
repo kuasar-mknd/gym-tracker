@@ -52,16 +52,17 @@ use function Pest\Laravel\post;
  * `AdresseQueLaMessagerieSaitEcrire` refuse ce que Mime refuse, aux quatre
  * entrées d'une adresse qui recevra un courriel : l'inscription, le profil, le
  * panneau, et l'adresse que rend un fournisseur de connexion, qui ne passait
- * par aucune règle `email`, et qui refuse désormais tout ce que l'inscription
- * refuserait. Le refus est le message de toute adresse mal formée, et ne dit
+ * par aucune règle `email`, et qui refuse désormais aussi une adresse dont
+ * l'inscription refuserait la forme ou la longueur. Le refus est le message de toute adresse mal formée, et ne dit
  * rien d'un compte. Le profil et le panneau ne jugent la forme que d'une
  * adresse qui change : un compte dont l'adresse est antérieure à la règle,
  * quelle qu'elle soit, enregistre son nom et change d'adresse comme avant ; il
  * ne reçoit pas de lien de vérification que Mime n'écrirait pas. La connexion
  * et « mot de passe oublié » ne jugent pas l'adresse davantage.
  *
- * Les courriels partent pour de bon, par le transport `array` des tests : une
- * adresse admise reçoit son lien.
+ * Les courriels partent pour de bon, par le transport `array` des tests, à
+ * l'inscription, au profil et au renvoi du lien de vérification : une adresse
+ * admise reçoit son lien.
  */
 
 $admisesParLaRegleEmailRefuseesParMime = [

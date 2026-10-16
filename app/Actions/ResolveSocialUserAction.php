@@ -44,8 +44,9 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  *     lié à aucune autre identité du même fournisseur.
  *  3. Sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
  *     adresse que la base tiendrait pour la même, et que l'inscription admette
- *     l'adresse : bien formée, tenant dans sa colonne, et que Symfony Mime
- *     sache écrire (`AdresseQueLaMessagerieSaitEcrire`).
+ *     la forme de l'adresse : bien formée, tenant dans sa colonne, et que
+ *     Symfony Mime sache écrire (`AdresseQueLaMessagerieSaitEcrire`) ; la
+ *     casse rendue est gardée, que l'inscription exigerait en minuscules.
  *
  * Toute comparaison d'adresse et d'identifiant se fait en PHP, octet par
  * octet. La base ne sert qu'à trouver les candidats : sa collation
@@ -292,15 +293,16 @@ final readonly class ResolveSocialUserAction
      * détient l'adresse, dont le titulaire peut reprendre le compte par la
      * réinitialisation du mot de passe.
      *
-     * Une adresse que l'inscription refuserait ne crée pas de compte (#2075) :
-     * mal formée (règle `email`), plus longue que sa colonne, ou que Symfony
-     * Mime ne sait pas écrire, auquel cas aucun courriel ne lui parviendrait,
-     * lien « mot de passe oublié » compris. Le compte naîtrait sinon sous une
-     * adresse que « mot de passe oublié » refuse, et que le profil comme le
-     * panneau ne jugent plus tant qu'elle ne change pas ; une adresse trop
-     * longue finissait en erreur 500 à l'insertion. Seule la création est
-     * refusée : un compte qui porte déjà l'adresse, ou l'identité, s'ouvre
-     * comme avant.
+     * Une adresse dont l'inscription refuserait la forme ne crée pas de compte
+     * (#2075) : mal formée (règle `email`), plus longue que sa colonne, ou que
+     * Symfony Mime ne sait pas écrire, auquel cas aucun courriel ne lui
+     * parviendrait, lien « mot de passe oublié » compris. Les minuscules, que
+     * l'inscription exige aussi, ne le sont pas ici : le compte garde la casse
+     * que rend le fournisseur. Le compte naîtrait sinon sous une adresse que
+     * « mot de passe oublié » refuse, et que le profil comme le panneau ne
+     * jugent plus tant qu'elle ne change pas ; une adresse trop longue
+     * finissait en erreur 500 à l'insertion. Seule la création est refusée :
+     * un compte qui porte déjà l'adresse, ou l'identité, s'ouvre comme avant.
      *
      * @throws SocialAuthException
      */
@@ -311,7 +313,7 @@ final readonly class ResolveSocialUserAction
         string $adresse,
         bool $adresseVerifiee,
     ): User {
-        if (! $this->lInscriptionLAdmettrait($adresse)) {
+        if (! $this->lInscriptionAdmettraitSaForme($adresse)) {
             throw new SocialAuthException($this->refusDAdresseQueLInscriptionRefuse($fournisseur));
         }
 
@@ -425,14 +427,16 @@ final readonly class ResolveSocialUserAction
     }
 
     /**
-     * L'inscription admettrait-elle cette adresse ?
+     * L'inscription admettrait-elle la forme de cette adresse ?
      *
-     * Les règles d'adresse de `RegisterRequest`, sauf deux : `lowercase`, le
-     * compte gardant l'adresse avec la casse que le fournisseur rend, et
-     * `AdresseEnAsciiImprimable`, dont `adresseComparable()` a déjà jugé le
-     * motif.
+     * Les règles de forme et de longueur de l'adresse dans `RegisterRequest` :
+     * `email`, `max:255` et `AdresseQueLaMessagerieSaitEcrire`. Pas les deux
+     * autres : `lowercase`, parce que le compte garde l'adresse avec la casse
+     * que le fournisseur rend (une adresse en capitales, que l'inscription
+     * refuse, crée donc le compte), ni `AdresseEnAsciiImprimable`, dont
+     * `adresseComparable()` a déjà jugé le motif.
      */
-    private function lInscriptionLAdmettrait(string $adresse): bool
+    private function lInscriptionAdmettraitSaForme(string $adresse): bool
     {
         return Validator::make(
             ['email' => $adresse],
