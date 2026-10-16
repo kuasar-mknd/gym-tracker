@@ -20,27 +20,38 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * un `++` ou un `--` sur un champ, ou un appel qui modifie en place (`splice`,
  * `push`, `unshift`, `add`, `delete`…). Une visite précédée d'un tel
  * changement passe ses options par `revenirSiLaVisiteEchoue`
- * (`resources/js/Utils/miseAJourOptimiste.js`) ou par l'option `optimistic`
- * d'Inertia. Deux changements n'en sont pas : les champs d'un formulaire de
- * `useForm`, que la visite envoie, et un état que le `onFinish` de la même
- * visite rétablit (un bouton occupé, qu'Inertia libère à toute issue).
+ * (`resources/js/Utils/miseAJourOptimiste.js`), posé à la place des options
+ * (`router.get(url, données, options)`, comme `post`), ou par l'option
+ * `optimistic` d'Inertia, une fonction, dans les options ou en chaîne
+ * (`router.optimistic(fonction).delete(…)`). Deux changements n'en sont pas :
+ * les champs du formulaire de `useForm` qui lance la visite, qu'elle envoie,
+ * et le chemin même qu'une affectation du `onFinish` de la même visite
+ * rétablit, ou ce qui est dessous (`etat.occupe` rétabli couvre
+ * `etat.occupe`, pas `etat.choix`) : un bouton occupé, qu'Inertia libère à
+ * toute issue.
  *
  * Ses limites. Elle ne suit pas les appels : un changement fait dans une
  * fonction appelée avant la visite lui échappe, comme un changement fait par
  * une affectation simple (`compteur = 1`) ou par une variable qui recopie
- * l'état sous un autre nom. Elle ne lit que les visites d'Inertia : les
- * écritures de la séance passent par `SyncService`, dont le `catch` défait le
- * changement hors file (`.ai/rules/js.md`). Elle ne juge pas ce que fait
- * `revenir` : `tests/js/pages/misesAJourOptimistesAvecInertia.test.js` joue
- * chaque échec sur les pages. Ce qui n'est pas une mise à jour optimiste et
- * qu'elle prendrait pour une va dans `EXEMPTIONS`, avec sa raison ; une
- * exemption devenue inutile la fait échouer.
+ * l'état sous un autre nom. Une option `optimistic` nommée passe si le
+ * fichier déclare ce nom comme une fonction, sans regarder ce qu'elle rend.
+ * Un indice calculé (`liste[i]`) ne se rétablit que par un chemin plus court
+ * (`liste = …`). Elle ne lit que les visites d'Inertia : les écritures de la
+ * séance passent par `SyncService`, dont le `catch` défait le changement hors
+ * file (`.ai/rules/js.md`). Elle ne juge pas ce que fait `revenir` :
+ * `tests/js/pages/misesAJourOptimistesAvecInertia.test.js` joue chaque échec
+ * sur les pages. Ce qui n'est pas une mise à jour optimiste et qu'elle
+ * prendrait pour une va dans `EXEMPTIONS`, avec sa raison ; une exemption
+ * devenue inutile la fait échouer.
  */
 
 const VISITES = new Set(['post', 'put', 'patch', 'delete', 'visit', 'get', 'reload', 'submit'])
 
-/** La place des options parmi les arguments, selon l'appel. */
-const PLACE_DES_OPTIONS_DU_ROUTEUR = { post: 2, put: 2, patch: 2, delete: 1, visit: 1, get: 1, reload: 0 }
+/**
+ * La place des options parmi les arguments, selon l'appel : celle de la
+ * version installée (`get(url, data = {}, options = {})` comme `post`).
+ */
+const PLACE_DES_OPTIONS_DU_ROUTEUR = { post: 2, put: 2, patch: 2, delete: 1, visit: 1, get: 2, reload: 0 }
 const PLACE_DES_OPTIONS_DU_FORMULAIRE = { post: 1, put: 1, patch: 1, delete: 1, get: 1, submit: 2 }
 
 const MUTATEURS = new Set([
@@ -135,23 +146,100 @@ const racineDe = (noeud) => {
 const nomDeLaPropriete = (membre) =>
     !membre.computed && membre.property.type === 'Identifier' ? membre.property.name : null
 
+/** Un indice calculé, qu'aucun autre ne vaut : `liste[i]` et `liste[j]` ne se confondent pas. */
+const INDICE_CALCULE = '[?]'
+
+/**
+ * Le chemin d'une cible : `etat.choix`, `liste.value[0]`, `f().b`, et
+ * `liste.value[?]` pour un indice calculé ; `null` pour ce qu'il ne sait lire.
+ *
+ * @param {object} noeud
+ * @returns {string | null}
+ */
+const cheminDe = (noeud) => {
+    if (noeud.type === 'Identifier') {
+        return noeud.name
+    }
+
+    if (noeud.type === 'ThisExpression') {
+        return 'this'
+    }
+
+    if (noeud.type === 'TSNonNullExpression' || noeud.type === 'ParenthesizedExpression') {
+        return cheminDe(noeud.expression)
+    }
+
+    if (noeud.type === 'CallExpression' || noeud.type === 'OptionalCallExpression') {
+        const appele = cheminDe(noeud.callee)
+
+        return appele === null ? null : `${appele}()`
+    }
+
+    if (noeud.type !== 'MemberExpression' && noeud.type !== 'OptionalMemberExpression') {
+        return null
+    }
+
+    const objet = cheminDe(noeud.object)
+
+    if (objet === null) {
+        return null
+    }
+
+    if (!noeud.computed) {
+        return `${objet}.${noeud.property.name}`
+    }
+
+    return ['StringLiteral', 'NumericLiteral'].includes(noeud.property.type)
+        ? `${objet}[${noeud.property.value}]`
+        : `${objet}${INDICE_CALCULE}`
+}
+
+/**
+ * Le chemin changé est rétabli : une affectation du `onFinish` vise ce chemin
+ * même, ou un chemin au-dessus (`liste.value` rétablit `liste.value[?].x`).
+ *
+ * @param {string | null} chemin
+ * @param {Set<string | null>} retablis
+ */
+const estRetabli = (chemin, retablis) =>
+    chemin !== null &&
+    [...retablis].some(
+        (retabli) =>
+            retabli !== null &&
+            !retabli.includes(INDICE_CALCULE) &&
+            (chemin === retabli || chemin.startsWith(`${retabli}.`) || chemin.startsWith(`${retabli}[`)),
+    )
+
 const estUneFonction = (noeud) =>
     ['ArrowFunctionExpression', 'FunctionExpression', 'FunctionDeclaration', 'ObjectMethod'].includes(noeud.type)
 
 /**
- * Les noms que la source lie à un formulaire de `useForm`.
+ * Les noms que la source lie à un formulaire de `useForm`, et ceux qu'elle
+ * déclare comme des fonctions.
  *
  * @param {object} programme
+ * @returns {{ formulaires: Set<string>, fonctions: Set<string> }}
  */
-const formulairesDe = (programme) => {
+const declarationsDe = (programme) => {
     const formulaires = new Set()
+    const fonctions = new Set()
 
     walk(programme, {
         enter(noeud) {
+            if (noeud.type === 'FunctionDeclaration' && noeud.id) {
+                fonctions.add(noeud.id.name)
+            }
+
+            if (noeud.type !== 'VariableDeclarator' || noeud.id.type !== 'Identifier' || !noeud.init) {
+                return
+            }
+
+            if (estUneFonction(noeud.init)) {
+                fonctions.add(noeud.id.name)
+            }
+
             if (
-                noeud.type === 'VariableDeclarator' &&
-                noeud.id.type === 'Identifier' &&
-                noeud.init?.type === 'CallExpression' &&
+                noeud.init.type === 'CallExpression' &&
                 noeud.init.callee.type === 'Identifier' &&
                 noeud.init.callee.name === 'useForm'
             ) {
@@ -160,16 +248,20 @@ const formulairesDe = (programme) => {
         },
     })
 
-    return formulaires
+    return { formulaires, fonctions }
 }
 
 /**
- * Si l'appel est une visite d'Inertia, la place de ses options ; sinon `null`.
+ * Si l'appel est une visite d'Inertia : la place de ses options, le
+ * formulaire qui la lance (`null` pour `router`), et la fonction que lui
+ * passe `optimistic(…)` en chaîne (`router.optimistic(f).delete(…)`) ; sinon
+ * `null`.
  *
  * @param {object} appel
  * @param {Set<string>} formulaires
+ * @returns {{ place: number, formulaire: string | null, optimisteEnChaine: object | null } | null}
  */
-const placeDesOptions = (appel, formulaires) => {
+const visiteDe = (appel, formulaires) => {
     const appele = appel.callee
 
     if (appele.type !== 'MemberExpression' || !VISITES.has(nomDeLaPropriete(appele))) {
@@ -177,23 +269,60 @@ const placeDesOptions = (appel, formulaires) => {
     }
 
     const methode = nomDeLaPropriete(appele)
-    const objet = appele.object
+    let objet = appele.object
+    let optimisteEnChaine = null
+
+    if (
+        objet.type === 'CallExpression' &&
+        objet.callee.type === 'MemberExpression' &&
+        nomDeLaPropriete(objet.callee) === 'optimistic'
+    ) {
+        optimisteEnChaine = objet.arguments[0] ?? null
+        objet = objet.callee.object
+    }
 
     if (objet.type === 'Identifier' && objet.name === 'router') {
-        return PLACE_DES_OPTIONS_DU_ROUTEUR[methode] ?? null
+        const place = PLACE_DES_OPTIONS_DU_ROUTEUR[methode]
+
+        return place === undefined ? null : { place, formulaire: null, optimisteEnChaine }
     }
 
     // `form`, `useForm({})`, ou `form.transform(…)` qui rend le même formulaire.
     const racine = racineDe(objet)
-    const estUnFormulaire =
-        formulaires.has(racine) ||
-        (objet.type === 'CallExpression' && objet.callee.type === 'Identifier' && objet.callee.name === 'useForm')
+    const formulaireEnLigne =
+        objet.type === 'CallExpression' && objet.callee.type === 'Identifier' && objet.callee.name === 'useForm'
+    const place = PLACE_DES_OPTIONS_DU_FORMULAIRE[methode]
 
-    return estUnFormulaire ? (PLACE_DES_OPTIONS_DU_FORMULAIRE[methode] ?? null) : null
+    if ((!formulaires.has(racine) && !formulaireEnLigne) || place === undefined) {
+        return null
+    }
+
+    return { place, formulaire: formulaireEnLigne ? null : racine, optimisteEnChaine }
 }
 
-/** Les options passent par l'utilitaire, ou portent l'option `optimistic` d'Inertia. */
-const optionsQuiReviennent = (options) => {
+/**
+ * Une fonction : écrite là, ou un nom que le fichier déclare comme tel.
+ * `optimistic: false` ou `undefined` ne reviennent pas.
+ *
+ * @param {object | null | undefined} noeud
+ * @param {Set<string>} fonctions
+ */
+const estUneFonctionDuFichier = (noeud, fonctions) =>
+    Boolean(noeud) && (estUneFonction(noeud) || (noeud.type === 'Identifier' && fonctions.has(noeud.name)))
+
+/**
+ * Les options passent par l'utilitaire, ou la visite porte l'option
+ * `optimistic` d'Inertia : une fonction, dans les options ou en chaîne.
+ *
+ * @param {object | undefined} options
+ * @param {object | null} optimisteEnChaine
+ * @param {Set<string>} fonctions
+ */
+const optionsQuiReviennent = (options, optimisteEnChaine, fonctions) => {
+    if (estUneFonctionDuFichier(optimisteEnChaine, fonctions)) {
+        return true
+    }
+
     if (!options) {
         return false
     }
@@ -208,12 +337,16 @@ const optionsQuiReviennent = (options) => {
 
     return (
         options.type === 'ObjectExpression' &&
-        options.properties.some((propriete) => propriete.key?.name === 'optimistic')
+        options.properties.some(
+            (propriete) =>
+                propriete.key?.name === 'optimistic' &&
+                (propriete.type === 'ObjectMethod' || estUneFonctionDuFichier(propriete.value, fonctions)),
+        )
     )
 }
 
-/** L'état que le `onFinish` des options rétablit. */
-const etatsRetablisALaFin = (options) => {
+/** Les chemins que les affectations du `onFinish` des options rétablissent. */
+const cheminsRetablisALaFin = (options) => {
     const retablis = new Set()
 
     if (options?.type !== 'ObjectExpression') {
@@ -230,7 +363,7 @@ const etatsRetablisALaFin = (options) => {
     walk(corps, {
         enter(noeud) {
             if (noeud.type === 'AssignmentExpression' && noeud.left.type === 'MemberExpression') {
-                retablis.add(racineDe(noeud.left))
+                retablis.add(cheminDe(noeud.left))
             }
         },
     })
@@ -240,15 +373,16 @@ const etatsRetablisALaFin = (options) => {
 
 /**
  * Ce que `fonction` change avant la position `avant`, hors de ses fonctions
- * imbriquées et des formulaires.
+ * imbriquées et des champs du formulaire qui lance la visite.
  *
  * @param {object} fonction
  * @param {number} avant
- * @param {Set<string>} formulaires
- * @returns {string[]} les noms des états changés
+ * @param {Set<string>} formulaires les formulaires du fichier, dont les visites ne sont pas des changements
+ * @param {string | null} formulaireDeLaVisite
+ * @returns {Array<{ racine: string, chemin: string | null }>} les états changés, et le chemin de chaque changement
  */
-const changementsAvant = (fonction, avant, formulaires) => {
-    const etats = new Set()
+const changementsAvant = (fonction, avant, formulaires, formulaireDeLaVisite) => {
+    const changements = []
     const corps = fonction.type === 'Program' ? fonction : fonction.body
 
     walk(corps, {
@@ -275,7 +409,7 @@ const changementsAvant = (fonction, avant, formulaires) => {
                 noeud.type === 'CallExpression' &&
                 noeud.callee.type === 'MemberExpression' &&
                 MUTATEURS.has(nomDeLaPropriete(noeud.callee)) &&
-                placeDesOptions(noeud, formulaires) === null
+                visiteDe(noeud, formulaires) === null
             ) {
                 cible = noeud.callee.object
             }
@@ -286,13 +420,13 @@ const changementsAvant = (fonction, avant, formulaires) => {
 
             const racine = racineDe(cible)
 
-            if (racine !== null && !HORS_DE_L_ETAT.has(racine) && !formulaires.has(racine)) {
-                etats.add(racine)
+            if (racine !== null && !HORS_DE_L_ETAT.has(racine) && racine !== formulaireDeLaVisite) {
+                changements.push({ racine, chemin: cheminDe(cible) })
             }
         },
     })
 
-    return [...etats]
+    return changements
 }
 
 /**
@@ -305,7 +439,7 @@ const changementsAvant = (fonction, avant, formulaires) => {
  */
 export const visitesSansRetour = (code, decalage = 0) => {
     const programme = babelParse(code, { sourceType: 'module' }).program
-    const formulaires = formulairesDe(programme)
+    const { formulaires, fonctions } = declarationsDe(programme)
     const fautes = []
     const pile = [programme]
 
@@ -319,20 +453,26 @@ export const visitesSansRetour = (code, decalage = 0) => {
                 return
             }
 
-            const place = placeDesOptions(noeud, formulaires)
+            const visite = visiteDe(noeud, formulaires)
 
-            if (place === null) {
+            if (visite === null) {
                 return
             }
 
-            const options = noeud.arguments[place]
+            const options = noeud.arguments[visite.place]
 
-            if (optionsQuiReviennent(options)) {
+            if (optionsQuiReviennent(options, visite.optimisteEnChaine, fonctions)) {
                 return
             }
 
-            const retablis = etatsRetablisALaFin(options)
-            const etats = changementsAvant(pile.at(-1), noeud.start, formulaires).filter((etat) => !retablis.has(etat))
+            const retablis = cheminsRetablisALaFin(options)
+            const etats = [
+                ...new Set(
+                    changementsAvant(pile.at(-1), noeud.start, formulaires, visite.formulaire)
+                        .filter(({ chemin }) => !estRetabli(chemin, retablis))
+                        .map(({ racine }) => racine),
+                ),
+            ]
 
             if (etats.length > 0) {
                 fautes.push({ ligne: noeud.loc.start.line + decalage, etats })
@@ -467,6 +607,66 @@ describe('ce que la garde refuse et ce qu’elle laisse passer', () => {
             }`,
             ['choix'],
         ],
+        [
+            'un champ rétabli dans onFinish, quand un autre champ du même objet a changé',
+            `const envoyer = () => {
+                etat.occupe = true
+                etat.choix = 'b'
+                router.post('/envoi', {}, { onFinish: () => { etat.occupe = false } })
+            }`,
+            ['etat'],
+        ],
+        [
+            'un indice calculé rétabli par un autre indice calculé',
+            `const cocher = (i, j) => {
+                lignes.value[i] = true
+                router.post('/cocher', {}, { onFinish: () => { lignes.value[j] = false } })
+            }`,
+            ['lignes'],
+        ],
+        [
+            'un router.get dont l’enveloppe est à la place des données, qu’Inertia enverrait sans l’appeler',
+            `const choisir = (periode) => {
+                periodeCourante.value = periode
+                router.get('/stats', revenirSiLaVisiteEchoue(() => {}, { preserveState: true }))
+            }`,
+            ['periodeCourante'],
+        ],
+        [
+            'une option optimistic qui n’est pas une fonction',
+            `const supprimer = () => {
+                liste.value.splice(0, 1)
+                router.delete('/seances/1', { optimistic: false })
+            }`,
+            ['liste'],
+        ],
+        [
+            'une option optimistic en chaîne qui n’est pas une fonction',
+            `const supprimer = () => {
+                liste.value.splice(0, 1)
+                router.optimistic(undefined).delete('/seances/1')
+            }`,
+            ['liste'],
+        ],
+        [
+            'les champs d’un autre formulaire que celui de la visite',
+            `const filtres = useForm({ recherche: '' })
+            const form = useForm({})
+            const envoyer = () => {
+                filtres.recherche = ''
+                form.post('/envoi')
+            }`,
+            ['filtres'],
+        ],
+        [
+            'les champs d’un formulaire avant une visite du routeur, qui ne les envoie pas',
+            `const form = useForm({ recherche: '' })
+            const envoyer = () => {
+                form.recherche = ''
+                router.post('/envoi', {})
+            }`,
+            ['form'],
+        ],
     ])('refuse %s', (_cas, code, etats) => {
         expect(visitesSansRetour(code).map((faute) => faute.etats)).toEqual([etats])
     })
@@ -484,6 +684,48 @@ describe('ce que la garde refuse et ce qu’elle laisse passer', () => {
             `const supprimer = (seance) => {
                 liste.value.splice(0, 1)
                 router.delete('/seances/1', { optimistic: (props) => props })
+            }`,
+        ],
+        [
+            'une option optimistic écrite en méthode, ou nommée et déclarée comme fonction dans le fichier',
+            `const sansLaSeance = (props) => props
+            function sansLExercice(props) { return props }
+            const supprimer = () => {
+                liste.value.splice(0, 1)
+                router.delete('/seances/1', { optimistic(props) { return props } })
+                router.delete('/seances/2', { optimistic: sansLaSeance })
+                router.delete('/exercices/3', { optimistic: sansLExercice })
+            }`,
+        ],
+        [
+            'une option optimistic en chaîne, sur le routeur ou sur un formulaire',
+            `const form = useForm({})
+            const supprimer = () => {
+                liste.value.splice(0, 1)
+                router.optimistic((props) => props).delete('/seances/1')
+                form.optimistic((props) => props).delete('/seances/2')
+            }`,
+        ],
+        [
+            'un router.get dont l’enveloppe est à la place des options',
+            `const choisir = (periode) => {
+                periodeCourante.value = periode
+                router.get('/stats', { periode }, revenirSiLaVisiteEchoue(() => {}, { preserveState: true }))
+            }`,
+        ],
+        [
+            'le chemin même que onFinish rétablit, ou ce qui est dessous',
+            `const envoyer = () => {
+                etat.occupe = true
+                etat.choix.valeur = 'b'
+                lignes.value[0] = true
+                router.post('/envoi', {}, {
+                    onFinish: () => {
+                        etat.occupe = false
+                        etat.choix = {}
+                        lignes.value[0] = false
+                    },
+                })
             }`,
         ],
         [
