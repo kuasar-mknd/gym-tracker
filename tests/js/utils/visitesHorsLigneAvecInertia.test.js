@@ -8,6 +8,7 @@ import {
     EVENEMENT_SANS_RESEAU,
     PAGE_INDISPONIBLE,
     RESEAU_LENT,
+    SUPPRESSION_NON_CONFIRMEE,
     direSansReseau,
     installerLesVisitesHorsLigne,
 } from '@/Utils/visitesHorsLigne'
@@ -130,12 +131,39 @@ describe('sans réseau, une visite le dit', () => {
         expect(useEtatDuReseau().joignable.value).toBe(false)
     })
 
-    it('une écriture dit que sa confirmation manque, sans dire que rien n’est enregistré', async () => {
-        await visiter('/workouts', { method: 'post' })
+    it.each(['post', 'put', 'patch'])(
+        'une écriture en %s dit que sa confirmation manque, sans dire que rien n’est enregistré',
+        async (methode) => {
+            await visiter('/workouts', { method: methode })
 
-        expect(annonces).toEqual([{ message: ECRITURE_NON_CONFIRMEE, annuler: null }])
-        expect(ECRITURE_NON_CONFIRMEE).not.toMatch(/rien n.a été enregistré/)
+            expect(annonces).toEqual([{ message: ECRITURE_NON_CONFIRMEE, annuler: null }])
+            expect(ECRITURE_NON_CONFIRMEE).not.toMatch(/rien n.a été enregistré/)
+            expect(relais.rejets).toEqual([])
+        },
+    )
+
+    /*
+     * Décision du propriétaire (2026-10-15) : « l'enregistrement » ne dit pas
+     * une suppression. Elle a pu arriver sans que sa réponse revienne : rien
+     * ne dit non plus qu'elle n'a pas eu lieu.
+     */
+    it('une suppression dit que la suppression n’est pas confirmée', async () => {
+        await visiter('/supplements/3', { method: 'delete' })
+
+        expect(requetes.map((requete) => requete.methode.toUpperCase())).toEqual(['DELETE'])
+        expect(annonces).toEqual([{ message: SUPPRESSION_NON_CONFIRMEE, annuler: null }])
+        expect(SUPPRESSION_NON_CONFIRMEE).toBe("Pas de réponse du serveur : la suppression n'est pas confirmée.")
         expect(relais.rejets).toEqual([])
+        expect(useEtatDuReseau().joignable.value).toBe(false)
+    })
+
+    it('router.delete passe par le même message', async () => {
+        let finie = false
+        routeur.delete('/habits/7', { onFinish: () => (finie = true) })
+        await vi.waitUntil(() => finie)
+        await uneTache()
+
+        expect(annonces).toEqual([{ message: SUPPRESSION_NON_CONFIRMEE, annuler: null }])
     })
 
     it('un rechargement en arrière-plan échoue sans un mot, mais le serveur n’est plus joignable', async () => {

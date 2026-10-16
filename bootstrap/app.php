@@ -13,12 +13,15 @@ return Application::configure(basePath: dirname(__DIR__))
          * `/up`, que sondent le `HEALTHCHECK` de l'image et la composition de
          * production, répond par `SanteController`, et non par la route de
          * santé de Laravel, qui rendait une page chargeant une fonte et un
-         * script d'autres sites. Hors des groupes `web` et `api`, comme elle :
-         * ni session ni cookie. Le docbloc du contrôleur dit ce qu'il reprend
-         * d'elle.
+         * script d'autres sites. `/sonde` est ce que la page interroge pour
+         * savoir si le serveur répond de nouveau (#2048). Toutes deux hors
+         * des groupes `web` et `api` : ni session, ni cookie, ni jeton. Le
+         * docbloc de chaque contrôleur dit ce qu'il fait, et celui de
+         * `SondeController` pourquoi la page n'interroge pas `/up`.
          */
         then: static function (): void {
             \Illuminate\Support\Facades\Route::get('/up', \App\Http\Controllers\SanteController::class);
+            \Illuminate\Support\Facades\Route::get('/sonde', \App\Http\Controllers\SondeController::class)->name('sonde');
         },
     )
     /*

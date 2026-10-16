@@ -11,7 +11,8 @@ import { readonly, ref } from 'vue'
  * `joignable` devient faux sur un échec réseau, d'une visite d'Inertia comme
  * d'une requête de `http()`, et sur l'évènement `offline` du navigateur. Il
  * redevient vrai sur toute réponse réussie : une visite d'Inertia, une requête
- * de `http()`, dont le rejeu de la file hors ligne. Jamais sur le seul
+ * de `http()`, dont le rejeu de la file hors ligne, ou la sonde que la page
+ * demande tant qu'il est faux (`Utils/sondeDuServeur.js`). Jamais sur le seul
  * `navigator.onLine`, ni sur l'évènement `online` : ils décrivent l'interface
  * réseau de l'appareil, pas le serveur, et un réseau qui ne répond plus laisse
  * l'appareil se croire en ligne.

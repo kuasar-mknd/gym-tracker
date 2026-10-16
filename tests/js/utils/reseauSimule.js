@@ -11,12 +11,14 @@
  * leur départ, avant que `reseau.mode` reprenne : une visite au premier plan
  * muette, et un rechargement en arrière-plan coupé, par exemple.
  *
+ * `fetchSimule` passe `fetch` sur le même réseau, pour la sonde du serveur.
+ *
  * Les rejets que personne n'attend sont relayés à la fenêtre sous la forme
  * qu'un navigateur leur donne, l'évènement `unhandledrejection` que le
  * rapporteur d'erreurs écoute : jsdom ne le fait pas lui-même.
  */
 
-/** @type {{ mode: 'coupe'|'muet'|'repond', prochains: Array<'coupe'|'muet'|'repond'>, reponse: { statut: number, entetes: Record<string, string>, corps: string } | null }} */
+/** @type {{ mode: 'coupe'|'muet'|'repond', prochains: Array<'coupe'|'muet'|'repond'>, reponse: { statut: number, entetes: Record<string, string>, corps: string } | null, statutDeFetch?: number }} */
 export const reseau = { mode: 'coupe', prochains: [], reponse: null }
 
 /** Les requêtes parties, dans l'ordre. */
@@ -79,6 +81,49 @@ export class RequeteSimulee {
         })
     }
 }
+
+/**
+ * Les appels de `fetchSimule`, dans l'ordre : la sonde du serveur passe par
+ * `fetch`, pas par `XMLHttpRequest`.
+ *
+ * @type {Array<{ adresse: string, options: RequestInit, repondre: (statut: number) => void }>}
+ */
+export const appelsDeFetch = []
+
+/**
+ * `fetch` sur le même réseau simulé (`vi.stubGlobal('fetch', fetchSimule)`) :
+ * `coupe` rejette aussitôt, comme un navigateur sans réseau (`TypeError`) ;
+ * `muet` ne répond jamais, sauf par `repondre`, et rejette quand son signal
+ * l'abandonne ; `repond` rend une réponse vide au statut `reseau.statutDeFetch`
+ * (204 par défaut).
+ *
+ * @param {string} adresse
+ * @param {RequestInit} options
+ * @returns {Promise<Response>}
+ */
+export const fetchSimule = (adresse, options = {}) =>
+    new Promise((resoudre, rejeter) => {
+        const repondre = (statut) => resoudre(new Response(null, { status: statut }))
+        appelsDeFetch.push({ adresse, options, repondre })
+
+        const mode = reseau.prochains.shift() ?? reseau.mode
+
+        if (mode === 'coupe') {
+            queueMicrotask(() => rejeter(new TypeError('Failed to fetch')))
+
+            return
+        }
+
+        if (mode === 'muet') {
+            options.signal?.addEventListener('abort', () =>
+                rejeter(new DOMException('The operation was aborted.', 'AbortError')),
+            )
+
+            return
+        }
+
+        queueMicrotask(() => repondre(reseau.statutDeFetch ?? 204))
+    })
 
 /** La réponse d'Inertia qui porte `page`. */
 export const reponseInertia = (page) => ({
