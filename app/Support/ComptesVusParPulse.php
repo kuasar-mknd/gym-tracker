@@ -52,13 +52,7 @@ final class ComptesVusParPulse extends Users
     #[\Override]
     public function key(Authenticatable $user): int|string|null
     {
-        $identifiant = $user->getAuthIdentifier();
-
-        if (! is_int($identifiant) && ! is_string($identifiant)) {
-            return null;
-        }
-
-        return $user instanceof Admin ? self::PREFIXE_ADMINISTRATEUR.$identifiant : $identifiant;
+        return $user instanceof Admin ? self::PREFIXE_ADMINISTRATEUR.$user->id : parent::key($user);
     }
 
     /**
