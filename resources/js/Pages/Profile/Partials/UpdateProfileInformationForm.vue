@@ -109,9 +109,10 @@ const submit = () => {
             <!--
                 Le champ porte la nouvelle adresse, qui ne devient l'identifiant
                 du compte qu'une fois le lien suivi : `email`, pas `username`.
-                L'identifiant, sous lequel un gestionnaire de mots de passe
-                reconnaît le mot de passe actuel demandé ci-dessous, est celui du
-                compte, caché et jamais envoyé (`IdentifiantDuCompte`, #PR).
+                Le formulaire change l'identifiant : celui sous lequel un
+                gestionnaire de mots de passe tient le compte, et le mot de passe
+                actuel demandé ci-dessous, reste l'adresse actuelle, cachée et
+                jamais envoyée (`IdentifiantDuCompte`, #PR).
             -->
             <GlassInput
                 v-model="form.email"

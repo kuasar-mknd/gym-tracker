@@ -4,12 +4,14 @@ import { computed } from 'vue'
 
 /**
  * L'identifiant du compte connecté, pour les gestionnaires de mots de passe
- * (#PR), dans un formulaire du profil qui demande un mot de passe du compte
- * sans demander son identifiant : le changement du mot de passe, et le
- * changement d'adresse, dont le champ porte la nouvelle adresse, qui ne
+ * (#PR), dans un formulaire du profil qui change le mot de passe ou l'adresse
+ * du compte sans demander son identifiant : le changement du mot de passe, et
+ * le changement d'adresse, dont le champ porte la nouvelle adresse, qui ne
  * remplace l'actuelle qu'une fois le lien suivi. Sans lui, un gestionnaire
  * rangeait le mot de passe sans savoir sous quel compte, ou sous la nouvelle
- * adresse.
+ * adresse. Un formulaire qui ne demande le mot de passe actuel que pour
+ * confirmer une action (la suppression du compte, la confirmation du mot de
+ * passe) ne le porte pas : il n'y a rien à y ranger.
  *
  * Chromium demande d'inclure ce que le contexte rend évident, « the username
  * field in a change password form », dans un champ caché ; 1Password, sur un
