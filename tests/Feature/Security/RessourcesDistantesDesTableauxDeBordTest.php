@@ -28,15 +28,19 @@ function ressourcesDistantesPrecompile(string $cheminRelatif, string $gabarit): 
 }
 
 /**
- * Le HTML, chaque script et chaque style vidé de son contenu : Pulse recopie
- * livewire.js dans sa page, Horizon tout son app.js, et le texte d'un script
- * n'est pas une balise. Parcours linéaire : une expression paresseuse sur le
- * mégaoctet d'app.js dépasse la limite de retour arrière de PCRE, et
- * `preg_replace()` rendrait alors une page vide, sans ressource à trouver.
+ * Le HTML, chaque script et chaque style vidé de son contenu, et le contenu de
+ * chaque style à part : Pulse recopie livewire.js dans sa page, Horizon tout
+ * son app.js, et le texte d'un script n'est ni une balise ni une feuille de
+ * style. Parcours linéaire : une expression paresseuse sur le mégaoctet
+ * d'app.js dépasse la limite de retour arrière de PCRE, et `preg_replace()`
+ * rendrait alors une page vide, sans ressource à trouver.
+ *
+ * @return array{html: string, feuilles: list<string>}
  */
-function ressourcesDistantesSansContenu(string $html): string
+function ressourcesDistantesDecoupe(string $html): array
 {
     $sortie = '';
+    $feuilles = [];
     $position = 0;
 
     while (preg_match('/<(script|style)\b[^>]*>/i', $html, $ouverture, PREG_OFFSET_CAPTURE, $position) === 1) {
@@ -44,33 +48,79 @@ function ressourcesDistantesSansContenu(string $html): string
         $sortie .= substr($html, $position, $finDeLOuverture - $position);
         $fermeture = stripos($html, '</'.$ouverture[1][0], $finDeLOuverture);
         $position = $fermeture === false ? strlen($html) : $fermeture;
+
+        if (strtolower($ouverture[1][0]) === 'style') {
+            $feuilles[] = substr($html, $finDeLOuverture, $position - $finDeLOuverture);
+        }
     }
 
-    return $sortie.substr($html, $position);
+    return ['html' => $sortie.substr($html, $position), 'feuilles' => $feuilles];
 }
 
 /**
- * Les balises d'un HTML qui chargeraient une ressource d'une autre origine :
- * tout `src`, `href` ou `srcset` absolu ou relatif au protocole qui ne mène pas
- * à l'origine de l'application (`APP_URL`, d'où Livewire sert son script), hors
- * des liens `<a>`, que le navigateur ne suit qu'au clic. Un gabarit d'un paquet
- * ne connaît pas cette origine : toute adresse absolue y est d'une autre.
+ * Une adresse absolue ou relative au protocole qui ne mène pas à l'origine de
+ * l'application (`APP_URL`, d'où Livewire sert son script). Un gabarit d'un
+ * paquet ne connaît pas cette origine : toute adresse absolue y est d'une
+ * autre.
+ */
+function ressourcesDistantesAutreOrigine(string $adresse): bool
+{
+    return ! str_starts_with($adresse.'/', rtrim(config()->string('app.url'), '/').'/');
+}
+
+/**
+ * Ce qu'une feuille de style ferait charger d'une autre origine : chaque
+ * `url(…)` et chaque `@import` dont l'adresse est absolue ou relative au
+ * protocole. Une image en `data:`, l'espace de noms XML qu'elle porte ou une
+ * adresse dans un commentaire n'y comptent pas : ils ne suivent ni `url(` ni
+ * `@import`.
+ *
+ * @return list<string>
+ */
+function ressourcesDistantesDansUneFeuille(string $css): array
+{
+    if (preg_match_all('/(?:\burl\(|@import\b)\s*["\']?\s*((?:https?:)?\/\/[^"\'\s)]*)/i', $css, $appels, PREG_SET_ORDER) === false) {
+        throw new RuntimeException('Le balayage de la feuille de style a échoué : '.preg_last_error_msg());
+    }
+
+    return array_values(array_map(
+        static fn (array $appel): string => $appel[0],
+        array_filter($appels, static fn (array $appel): bool => ressourcesDistantesAutreOrigine($appel[1])),
+    ));
+}
+
+/**
+ * Ce qu'un HTML ferait charger d'une autre origine : chaque balise, hors des
+ * liens `<a>`, que le navigateur ne suit qu'au clic, dont un `src`, un `href`
+ * ou un `srcset` mène à une autre origine, ou dont l'attribut `style` y fait
+ * charger quelque chose ; puis chaque `url(…)` ou `@import` d'une autre origine
+ * dans un `<style>`, précédé de `<style>`.
  *
  * @return list<string>
  */
 function ressourcesDistantesDans(string $html): array
 {
-    if (preg_match_all('/<(?!a\b)[a-z][a-z0-9-]*\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>/i', ressourcesDistantesSansContenu($html), $balises) === false) {
+    $decoupe = ressourcesDistantesDecoupe($html);
+
+    if (preg_match_all('/<(?!a\b)[a-z][a-z0-9-]*\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>/i', $decoupe['html'], $balises) === false) {
         throw new RuntimeException('Le balayage des balises a échoué : '.preg_last_error_msg());
     }
 
-    $origineDeLApplication = rtrim(config()->string('app.url'), '/').'/';
-
-    return array_values(array_filter($balises[0], static function (string $balise) use ($origineDeLApplication): bool {
+    $distantes = array_values(array_filter($balises[0], static function (string $balise): bool {
         preg_match_all('/\s(?:src|href|srcset)\s*=\s*["\']?\s*((?:https?:)?\/\/[^"\'\s>]*)/i', $balise, $adresses);
+        preg_match_all('/\sstyle\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/i', $balise, $styles);
 
-        return array_any($adresses[1], static fn (string $adresse): bool => ! str_starts_with($adresse.'/', $origineDeLApplication));
+        return array_any($adresses[1], ressourcesDistantesAutreOrigine(...))
+            || array_any([...$styles[1], ...$styles[2]], static fn (string $style): bool => ressourcesDistantesDansUneFeuille($style) !== []);
     }));
+
+    foreach ($decoupe['feuilles'] as $feuille) {
+        foreach (ressourcesDistantesDansUneFeuille($feuille) as $appel) {
+            $distantes[] = '<style> '.$appel;
+        }
+    }
+
+    return $distantes;
 }
 
 /**
@@ -92,6 +142,17 @@ it('reconnaît une ressource d’une autre origine, et rien d’autre', function
         <script src="http://localhost/livewire/livewire.min.js?id=1"></script>
         <img src="http://localhost.example.org/piege.png">
         <svg xmlns="http://www.w3.org/2000/svg"></svg>
+        <div style="background-image:url(https://images.example.org/fond.png)"></div>
+        <span style='background: url("/build/fond.png")'></span>
+        <style>@import url("https://fonts.example.org/css?family=figtree");</style>
+        <style>
+            /*! Bootstrap (https://getbootstrap.com/) */
+            @IMPORT '//fonts.example.org/b.css';
+            .a { background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg'%3e%3c/svg%3e"); }
+            .b { background: url(/build/a.png), URL( 'http://localhost/b.png' ); }
+            @font-face { font-family: Figtree; src: url(https://fonts.example.org/figtree.woff2) format("woff2"); }
+        </style>
+        <script>const feuille = '<style>@import url(https://ailleurs.example.org/c.css)</style>';</script>
         HTML;
 
     expect(ressourcesDistantesDans($html))->toBe([
@@ -100,8 +161,39 @@ it('reconnaît une ressource d’une autre origine, et rien d’autre', function
         "<img srcset='http://images.example.org/a.png 2x' alt=\"\">",
         '<script src="//cdn.example.org/a.js">',
         '<img src="http://localhost.example.org/piege.png">',
+        '<div style="background-image:url(https://images.example.org/fond.png)">',
+        '<style> url("https://fonts.example.org/css?family=figtree',
+        "<style> @IMPORT '//fonts.example.org/b.css",
+        '<style> url(https://fonts.example.org/figtree.woff2',
     ])->and(ressourcesDistantesDans('<script>'.str_repeat('a()', 1_000_000).'</script><link href="https://fonts.example.org/a.css" rel="stylesheet">'))
         ->toBe(['<link href="https://fonts.example.org/a.css" rel="stylesheet">']);
+});
+
+/**
+ * Les feuilles que Horizon, Pulse et Telescope recopient en ligne dans leurs
+ * pages (`Horizon::css()`, `Pulse::css()`, `Telescope::css()`), lues dans
+ * leurs fichiers : la page de Telescope n'est pas servie dans les tests, et
+ * une fonte déplacée dans l'une d'elles échapperait au précompilateur, qui ne
+ * retire que des balises.
+ */
+it('n’a rien d’une autre origine dans les feuilles que Horizon, Pulse et Telescope recopient dans leurs pages', function (): void {
+    $feuilles = [];
+    $distantes = [];
+
+    foreach (['horizon', 'pulse', 'telescope'] as $paquet) {
+        $fichiers = glob(base_path('vendor/laravel/'.$paquet.'/dist/*.css'));
+
+        foreach ($fichiers === false ? [] : $fichiers as $feuille) {
+            $feuilles[] = substr($feuille, strlen(base_path()) + 1);
+
+            foreach (ressourcesDistantesDansUneFeuille((string) file_get_contents($feuille)) as $appel) {
+                $distantes[] = substr($feuille, strlen(base_path()) + 1).' : '.$appel;
+            }
+        }
+    }
+
+    expect($feuilles)->toContain('vendor/laravel/horizon/dist/app.css', 'vendor/laravel/horizon/dist/styles.css', 'vendor/laravel/pulse/dist/pulse.css')
+        ->and($distantes)->toBe([]);
 });
 
 /**
@@ -174,9 +266,11 @@ it('ne touche à aucun autre gabarit', function (string $cheminRelatif): void {
 /**
  * La garde contre la dérive : chaque gabarit des trois paquets, tel que le
  * livre la version installée, compilé par le compilateur de l'application. Une
- * mise à jour qui chargerait une ressource d'une autre origine d'une façon que
- * le précompilateur ne retire pas (une autre balise, une adresse construite)
- * fait tomber ce test.
+ * mise à jour qui y écrirait une ressource d'une autre origine d'une façon que
+ * le précompilateur ne retire pas (une autre balise, un attribut `style`, une
+ * feuille en ligne) fait tomber ce test. Une adresse que le PHP ou le
+ * JavaScript d'un paquet construit à l'exécution ne s'écrit dans aucun
+ * gabarit : il ne la voit pas, et seule la CSP la bloque.
  */
 it('compile chaque gabarit de Horizon, Pulse et Telescope sans ressource d’une autre origine', function (): void {
     $gabarits = ressourcesDistantesGabaritsDesTableauxDeBord();
