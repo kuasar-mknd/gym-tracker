@@ -116,7 +116,8 @@ final class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             /*
              * Sans ce réglage, Filament prend l'avatar de l'administrateur chez
-             * un service tiers, à qui chaque page du panneau envoyait son nom.
+             * un service tiers, à qui chaque page du panneau envoyait les
+             * initiales de son nom.
              */
             ->defaultAvatarProvider(AvatarDesInitiales::class)
             ->multiFactorAuthentication([AppAuthentication::make()]);

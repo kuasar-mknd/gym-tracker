@@ -20,8 +20,8 @@ use function Pest\Laravel\get;
  * Une source d'une autre origine, c'est une page de l'application qui peut
  * faire charger au navigateur une ressource d'un tiers, à qui partent alors
  * l'adresse IP et le navigateur de qui la lit. Le panneau prenait ainsi
- * l'avatar de l'administrateur chez un service d'avatars, son nom dans
- * l'adresse ; Horizon, Telescope et Pulse leur fonte sur un site de polices ;
+ * l'avatar de l'administrateur chez un service d'avatars, les initiales de son
+ * nom dans l'adresse ; Horizon, Telescope et Pulse leur fonte sur un site de polices ;
  * et Pulse admettait toute image en `https:`. Une source par schéma (`https:`,
  * `wss:`) ou l'étoile admettent toutes les origines : elles comptent aussi.
  * `data:` et `blob:` ne mènent à aucune autre origine.
