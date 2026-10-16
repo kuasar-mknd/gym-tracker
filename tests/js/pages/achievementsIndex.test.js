@@ -6,7 +6,7 @@ vi.mock('@inertiajs/vue3', () => ({
     Link: { template: '<a><slot /></a>' },
 }))
 
-import { passesSlot, layoutStub } from './pageStubs'
+import { passesSlot, layoutStub, layoutSansEnTeteDePage } from './pageStubs'
 
 import AchievementsIndex from '@/Pages/Achievements/Index.vue'
 
@@ -64,6 +64,22 @@ describe('Achievements/Index', () => {
         const wrapper = mountPage({ summary: { unlocked: 4, total: 8 } })
 
         expect(wrapper.text()).toContain('4 / 8')
+    })
+
+    /**
+     * Le compte ne vivait que dans l'en-tête de page, que le layout cache
+     * sous 1 024 px : une tablette debout et un téléphone ne le voyaient
+     * nulle part (#2057).
+     */
+    it('compte les badges sans l’en-tête de page, sur une tablette debout comme sur un téléphone', () => {
+        const wrapper = mount(AchievementsIndex, {
+            props: { achievements: badges, summary: { unlocked: 4, total: 8 } },
+            global: {
+                stubs: { AuthenticatedLayout: layoutSansEnTeteDePage, GlassCard: passesSlot },
+            },
+        })
+
+        expect(wrapper.text()).toMatch(/4 \/ 8\s+débloqués/)
     })
 
     it('shows every badge until a category is chosen', () => {

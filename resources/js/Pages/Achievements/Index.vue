@@ -33,21 +33,22 @@ const filteredAchievements = computed(() => {
 
     <AuthenticatedLayout page-title="Badges">
         <template #header>
-            <div class="flex items-end justify-between">
-                <div>
-                    <h1 class="titre-section flex items-center gap-2">Badges 🏆</h1>
-                    <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
-                </div>
-                <div class="text-right">
-                    <div class="text-accent-primary-deep text-2xl font-bold">
-                        {{ summary.unlocked }} / {{ summary.total }}
-                    </div>
-                    <div class="text-text-muted/50 text-xs tracking-wider uppercase">Débloqués</div>
-                </div>
-            </div>
+            <h1 class="titre-section flex items-center gap-2">Badges 🏆</h1>
+            <p class="text-text-muted mt-1">Tes exploits et récompenses.</p>
         </template>
 
         <div class="space-y-6 pb-24">
+            <!--
+                Le compte des badges se lit à toute largeur : l'en-tête de page
+                n'existe qu'avec la barre de bureau, à partir de 1 024 px (#2057).
+            -->
+            <p class="text-text-muted text-xs font-semibold tracking-wider uppercase">
+                <span class="text-accent-primary-deep text-2xl font-bold">
+                    {{ summary.unlocked }} / {{ summary.total }}
+                </span>
+                débloqués
+            </p>
+
             <!-- Categories -->
             <div class="stagger-2 animate-slide-up flex scrollbar-none gap-2 overflow-x-auto pb-2">
                 <GlassChip
