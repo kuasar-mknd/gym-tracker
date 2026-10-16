@@ -23,12 +23,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     /*
      * Et `/up` répond pendant une maintenance, comme la route de Laravel le
-     * faisait. `php artisan down --render` lit cette liste en console pour la
-     * page qu'il écrit, que `public/index.php` sert avant Laravel : sans elle,
-     * la sonde y recevrait 503. Posé au démarrage de l'application, console
-     * comprise, et non dans `withMiddleware()`, qui ne tourne qu'à la
-     * résolution du noyau HTTP, que la console ne doit aujourd'hui qu'aux
-     * fournisseurs d'Inertia et de Livewire.
+     * faisait. Sous Octane, en production, `PreventRequestsDuringMaintenance`
+     * lit cette liste à chaque requête : c'est lui qui sert, dans Laravel, la
+     * page que `php artisan down --render` écrit d'avance. Hors d'Octane
+     * (`php artisan serve` : Sail, Dusk en CI), `public/index.php` sert cette
+     * page avant Laravel, sauf aux chemins que `down --render` a lus dans
+     * cette liste, en console : sans elle, la sonde y recevrait 503. D'où un
+     * appel posé au démarrage de l'application, console comprise, et non dans
+     * `withMiddleware()`, qui ne tourne qu'à la résolution du noyau HTTP, que
+     * la console ne doit aujourd'hui qu'aux fournisseurs d'Inertia et de
+     * Livewire.
      */
     ->booting(static function (): void {
         \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::except('up');

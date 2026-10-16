@@ -183,7 +183,9 @@ it('relance l’exception en mode debug, comme Laravel', function (): void {
 /*
  * Laravel exclut sa route de santé de la maintenance : la sonde des
  * conteneurs ne doit pas tenir pour malade une application qu'on a mise en
- * maintenance.
+ * maintenance. Sous Octane, en production, `PreventRequestsDuringMaintenance`
+ * répond à toute requête pendant une maintenance, page écrite d'avance par
+ * `down --render` comprise, et lit la liste des chemins exclus avant tout.
  */
 it('répond pendant une maintenance, quand les pages répondent 503', function (): void {
     santeSansTiersMaintenanceHorsDuDisque();
@@ -206,7 +208,8 @@ it('répond pendant une maintenance, quand les pages répondent 503', function (
 });
 
 /*
- * `php artisan down --render` écrit une page que `public/index.php` sert avant
+ * Hors d'Octane (`php artisan serve` : Sail, Dusk en CI), la page que
+ * `php artisan down --render` écrit d'avance, `public/index.php` la sert avant
  * même de démarrer Laravel, sauf aux chemins que la commande a notés comme
  * exclus, qu'elle lit en console. Laravel notait `/up`, nous `up` : la page
  * écrite d'avance compare les chemins sans leurs barres obliques.

@@ -95,12 +95,15 @@ it('répond en français à la septième tentative de connexion de la minute, m�
 
 /*
  * Hors du groupe `web`, la réponse d'erreur ne porte aucune politique de
- * contenu : adresse inconnue, méthode refusée, maintenance. Et la page que
- * `php artisan down --render` écrit d'avance est servie avant Laravel, sans
- * aucun en-tête de l'application. La page porte donc la sienne, en tête, avant
- * le bloc `<style>`, le seul qu'elle autorise. Le pilote du cache, sur le
- * magasin `array`, garde l'état de la maintenance hors du dossier storage, que
- * les processus d'une suite parallèle partagent.
+ * contenu : adresse inconnue, méthode refusée, maintenance. La page que
+ * `php artisan down --render` écrit d'avance non plus : sous Octane, en
+ * production, `PreventRequestsDuringMaintenance` la sert dans Laravel, avec
+ * les en-têtes de `SecurityHeaders` mais sans CSP ; hors d'Octane
+ * (`php artisan serve`), `public/index.php` la sert avant Laravel, sans aucun
+ * en-tête de l'application. La page porte donc la sienne, en tête, avant son
+ * bloc `<style>`. Le pilote du cache, sur le magasin `array`, garde l'état de
+ * la maintenance hors du dossier storage, que les processus d'une suite
+ * parallèle partagent.
  */
 it('porte sa propre politique de contenu, même hors du groupe web et dans la page de maintenance écrite d’avance', function (): void {
     $politique = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src \'self\'; base-uri \'none\'; form-action \'none\'">';
@@ -112,11 +115,15 @@ it('porte sa propre politique de contenu, même hors du groupe web et dans la pa
     config(['app.maintenance.driver' => 'cache', 'app.maintenance.store' => 'array']);
 
     try {
+        expect(Artisan::call('down'))->toBe(0);
+        $pages['maintenance'] = (string) get('/login')->assertServiceUnavailable()->getContent();
+        Artisan::call('up');
+
         expect(Artisan::call('down', ['--render' => 'errors::503']))->toBe(0);
 
         $gabarit = app()->maintenanceMode()->data()['template'] ?? null;
-        $pages['maintenance'] = (string) get('/login')->assertServiceUnavailable()->getContent();
-        $pages['maintenance écrite d’avance'] = is_string($gabarit) ? $gabarit : '';
+        $pages['page écrite d’avance, servie par Laravel (Octane)'] = (string) get('/login')->assertServiceUnavailable()->getContent();
+        $pages['page écrite d’avance, telle que public/index.php la sert'] = is_string($gabarit) ? $gabarit : '';
     } finally {
         Artisan::call('up');
     }
