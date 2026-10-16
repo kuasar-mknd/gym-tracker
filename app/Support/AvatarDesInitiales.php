@@ -36,6 +36,23 @@ final class AvatarDesInitiales implements AvatarProvider
     private const string SURFACE = 'accent-fill';
 
     /**
+     * Le carré de fond, que le panneau et Pulse arrondissent en disque : sa
+     * couleur, puis ce qu'il porte.
+     */
+    private const string DESSIN = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="%s"/>%s</svg>';
+
+    /**
+     * Les initiales, en police du système : la couleur du texte, puis les
+     * lettres, échappées.
+     */
+    private const string INITIALES = '<text x="32" y="32" dy="0.35em" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="600" fill="%1$s">%2$s</text>';
+
+    /**
+     * La silhouette d'un nom sans lettre, de la couleur du texte.
+     */
+    private const string SILHOUETTE = '<circle cx="32" cy="25" r="10" fill="%1$s"/><path d="M14 52c0-10 8-16 18-16s18 6 18 16z" fill="%1$s"/>';
+
+    /**
      * Le contrat de Filament : l'avatar d'un administrateur, d'après le nom
      * que le panneau affiche pour lui.
      */
@@ -74,8 +91,8 @@ final class AvatarDesInitiales implements AvatarProvider
     }
 
     /**
-     * Le SVG : un carré de la couleur de fond (le panneau et Pulse l'arrondissent
-     * en disque), et les initiales, ou une silhouette quand il n'y en a pas.
+     * Le SVG : le carré de fond, et les initiales, ou une silhouette quand il
+     * n'y en a pas.
      */
     private function dessin(string $initiales): string
     {
@@ -86,11 +103,10 @@ final class AvatarDesInitiales implements AvatarProvider
         $texte = self::echappe(Charte::jeton($surface['texte']));
 
         $contenu = $initiales === ''
-            ? '<circle cx="32" cy="25" r="10" fill="'.$texte.'"/><path d="M14 52c0-10 8-16 18-16s18 6 18 16z" fill="'.$texte.'"/>'
-            : '<text x="32" y="32" dy="0.35em" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="600" fill="'.$texte.'">'.self::echappe($initiales).'</text>';
+            ? sprintf(self::SILHOUETTE, $texte)
+            : sprintf(self::INITIALES, $texte, self::echappe($initiales));
 
-        return '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">'
-            .'<rect width="64" height="64" fill="'.$fond.'"/>'.$contenu.'</svg>';
+        return sprintf(self::DESSIN, $fond, $contenu);
     }
 
     private static function echappe(string $valeur): string

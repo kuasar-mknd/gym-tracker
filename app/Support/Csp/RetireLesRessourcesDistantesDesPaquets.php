@@ -44,8 +44,6 @@ final class RetireLesRessourcesDistantesDesPaquets
     /**
      * Les dossiers, relatifs à la racine du dépôt, dont les gabarits sont
      * nettoyés.
-     *
-     * @var list<string>
      */
     private const array DOSSIERS = [
         'vendor/laravel/horizon/',
