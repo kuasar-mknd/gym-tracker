@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateWorkoutRequest extends FormRequest
@@ -23,13 +24,20 @@ class UpdateWorkoutRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * Le début se change, il ne s'efface pas : la colonne le demande, et un
+     * début vide ou nul passait la validation pour finir en erreur 500 à
+     * l'écriture (#2071). Absent, il reste ce qu'il est. Sa colonne est un
+     * `DATETIME`, mais il devient la dernière séance du compte
+     * (`users.last_workout_at`, un `TIMESTAMP`) : il prend la plage d'un
+     * horodatage (`DateQueSaColonneTient`).
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'name' => 'nullable|string|max:255',
-            'started_at' => 'nullable|date',
+            'started_at' => ['bail', 'sometimes', 'required', 'date', DateQueSaColonneTient::horodatage()],
             'notes' => 'nullable|string|max:1000',
             'is_finished' => 'nullable|boolean',
         ];

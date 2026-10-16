@@ -17,12 +17,16 @@ class UpdatePasswordRequest extends FormRequest
     }
 
     /**
+     * `bail` et `string` avant `current_password`, qui passe la valeur telle
+     * quelle à `password_verify()` : un tableau y levait une erreur 500 au
+     * lieu d'un refus (#2071).
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'current_password' => ['required', 'current_password', 'max:255'],
+            'current_password' => ['bail', 'required', 'string', 'current_password', 'max:255'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ];
     }

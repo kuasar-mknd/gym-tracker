@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Models\Exercise;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use Filament\Forms\Components\DateTimePicker;
@@ -18,11 +19,18 @@ class UserForm
             ->components(self::getComponents());
     }
 
-    /** @return array<int, \Illuminate\Contracts\Support\Htmlable|string> */
+    /**
+     * Chaque champ écrit tient dans sa colonne (#2071) : les textes dans
+     * leurs 255 caractères, le repos sous `Exercise::REPOS_MAX_SECONDES`.
+     * Sans borne, un texte trop long ou un nombre plus grand qu'un entier
+     * finissaient en 500 à l'enregistrement.
+     *
+     * @return array<int, \Illuminate\Contracts\Support\Htmlable|string>
+     */
     private static function getComponents(): array
     {
         return [
-            TextInput::make('name')->label('Nom')->required(),
+            TextInput::make('name')->label('Nom')->required()->maxLength(255),
             /*
              * Une nouvelle adresse s'écrit en ASCII imprimable, comme à
              * l'inscription et dans le profil. La colonne et son index unique
@@ -36,8 +44,9 @@ class UserForm
                 ->label('Adresse e-mail')
                 ->email()
                 ->required()
+                ->maxLength(255)
                 ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email)),
-            TextInput::make('default_rest_time')->label('Repos par défaut (s)')->required()->numeric()->default(90),
+            TextInput::make('default_rest_time')->label('Repos par défaut (s)')->required()->integer()->minValue(0)->maxValue(Exercise::REPOS_MAX_SECONDES)->default(90),
             /*
              * Montres, jamais ecrits.
              *
@@ -75,7 +84,7 @@ class UserForm
                 ->dehydrated(false),
             TextInput::make('provider')->label('Fournisseur de connexion')->disabled()->dehydrated(false),
             TextInput::make('provider_id')->label('Identifiant chez le fournisseur')->disabled()->dehydrated(false),
-            TextInput::make('avatar')->label('Avatar'),
+            TextInput::make('avatar')->label('Avatar')->maxLength(255),
             /*
              * Le champ ne s'ecrit que lorsqu'il porte quelque chose.
              *

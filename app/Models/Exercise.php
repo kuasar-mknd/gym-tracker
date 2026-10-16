@@ -28,6 +28,15 @@ class Exercise extends Model
     /** @use HasFactory<\Database\Factories\ExerciseFactory> */
     use HasFactory;
 
+    /**
+     * Le plus long repos par défaut, d'un exercice comme d'un compte, en
+     * secondes : une heure, comme le plus long intervalle d'un minuteur
+     * (`IntervalTimer::SECONDES_MAX_PAR_INTERVALLE`). La colonne (int) est
+     * loin ; le panneau, seul à l'écrire, acceptait tout nombre, et un nombre
+     * plus grand qu'un entier finissait en 500.
+     */
+    public const int REPOS_MAX_SECONDES = 3_600;
+
     #[\Override]
     protected $fillable = ['name', 'type', 'category', 'default_rest_time'];
 

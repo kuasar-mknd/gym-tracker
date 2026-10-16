@@ -235,6 +235,7 @@ return [
         'is_completed' => 'validation',
         'is_finished' => 'fin de séance',
         'is_warmup' => 'échauffement',
+        'keys' => 'clefs de l\'abonnement',
         'keys.auth' => 'clef d\'authentification',
         'keys.p256dh' => 'clef de chiffrement',
         'ligne' => 'ligne',

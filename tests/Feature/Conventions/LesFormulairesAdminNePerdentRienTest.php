@@ -126,3 +126,99 @@ it('n’expose aucun champ que le modèle refuserait d’écrire', function (): 
         implode("\n  ", $ecarts)
     ));
 });
+
+/**
+ * Les fichiers que désigne un motif, aucun si la recherche échoue.
+ *
+ * @return list<string>
+ */
+function formulairesAdminFichiers(string $motif): array
+{
+    $fichiers = glob($motif);
+
+    return is_array($fichiers) ? $fichiers : [];
+}
+
+/**
+ * Le texte, mis bout à bout, des fichiers que désigne un motif.
+ */
+function formulairesAdminSource(string $motif): string
+{
+    return implode("\n", array_map(static fn (string $chemin): string => (string) file_get_contents($chemin), formulairesAdminFichiers($motif)));
+}
+
+/**
+ * Les champs assignés explicitement qu'une action de modification de table
+ * enregistrerait par `$record->update($data)` : l'action est là sans
+ * `->using(...)`, et le formulaire ne désactive pas le champ à la
+ * modification.
+ *
+ * @param  list<string>  $explicites
+ * @return list<string>
+ */
+function formulairesAdminPerdusParLaTable(string $sourceDeLaTable, string $sourceDuFormulaire, array $explicites): array
+{
+    if (preg_match('/EditAction::make\(\)(?!\s*->using\()/', $sourceDeLaTable) !== 1) {
+        return [];
+    }
+
+    $morceaux = preg_split('/(?=\b[A-Z]\w*::make\(\')/', $sourceDuFormulaire);
+    $morceaux = is_array($morceaux) ? $morceaux : [];
+    $perdus = [];
+
+    foreach ($explicites as $champ) {
+        $morceau = array_first(array_filter($morceaux, static fn (string $morceau): bool => str_contains($morceau, "::make('{$champ}')"))) ?? '';
+
+        if (! str_contains($morceau, 'disabledOn(Operation::Edit)')) {
+            $perdus[] = $champ;
+        }
+    }
+
+    return $perdus;
+}
+
+/*
+ * Le second chemin : l'action de modification d'une table partage le
+ * formulaire de sa ressource, mais enregistre par `$record->update($data)`,
+ * sans passer par la page. Un champ que la page écrit elle-même y était
+ * refusé hors production (mode strict) et perdu en silence en production :
+ * le changement de propriétaire d'un exercice ou d'un objectif depuis la
+ * table (#2071). L'action reprend l'écriture de la page (`->using(...)`), ou
+ * le formulaire désactive le champ à la modification (`WorkoutForm`).
+ */
+it('fait écrire depuis la table, comme la page, chaque champ assigné explicitement', function (): void {
+    $ecarts = [];
+    $verifiees = 0;
+
+    foreach (formulairesAdminFichiers(app_path('Filament/Resources/*/*Resource.php')) as $cheminDeLaRessource) {
+        $dossier = dirname($cheminDeLaRessource);
+        $classe = 'App\\Filament\\Resources\\'.basename($dossier).'\\'.basename($cheminDeLaRessource, '.php');
+
+        if (! defined($classe.'::CHAMPS_ASSIGNES_EXPLICITEMENT')) {
+            continue;
+        }
+
+        /** @var list<string> $explicites */
+        $explicites = constant($classe.'::CHAMPS_ASSIGNES_EXPLICITEMENT');
+        $verifiees++;
+
+        foreach (formulairesAdminPerdusParLaTable(formulairesAdminSource($dossier.'/Tables/*Table.php'), formulairesAdminSource($dossier.'/Schemas/*Form.php'), $explicites) as $champ) {
+            $ecarts[] = basename($dossier)." → {$champ}";
+        }
+    }
+
+    expect($ecarts)->toBe([], "l'action de modification de la table perdrait ces champs :\n  ".implode("\n  ", $ecarts))
+        ->and($verifiees)->toBeGreaterThanOrEqual(3);
+});
+
+/*
+ * La garde voit le défaut d'origine : sans quoi elle ne prouverait rien.
+ */
+it('refuse l’action de modification d’origine, et accepte l’écriture de la page ou le champ désactivé', function (): void {
+    $formulaire = "Select::make('user_id')->label('Compte')->relationship('user', 'name'),\nTextInput::make('name')->label('Nom'),";
+    $desactive = "Select::make('user_id')->label('Compte')->disabledOn(Operation::Edit),\nTextInput::make('name')->label('Nom'),";
+
+    expect(formulairesAdminPerdusParLaTable("->recordActions([\n    EditAction::make(),\n])", $formulaire, ['user_id']))->toBe(['user_id'])
+        ->and(formulairesAdminPerdusParLaTable("EditAction::make()\n    ->using(static fn () => null),", $formulaire, ['user_id']))->toBe([])
+        ->and(formulairesAdminPerdusParLaTable('EditAction::make(),', $desactive, ['user_id']))->toBe([]);
+});

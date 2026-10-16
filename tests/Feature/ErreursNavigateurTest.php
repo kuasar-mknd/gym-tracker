@@ -7,6 +7,7 @@ use App\Models\Admin;
 use App\Models\ErreurNavigateur;
 use App\Models\User;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Support\Facades\Exceptions;
 use Spatie\Permission\Models\Role;
 use Tests\Support\FilamentAdminPanel;
 
@@ -39,6 +40,32 @@ it('garde une erreur rapportée par un utilisateur connecté, avec son empreinte
         ->and($erreur->empreinte)->toBe(ErreurNavigateur::empreinteDe('error', "Cannot read properties of undefined (reading 'id')", 'https://gym.example/build/assets/main-abc.js', 12))
         ->and($erreur->user->is($user))->toBeTrue();
 });
+
+/*
+ * La colonne `pile` est un `TEXT` de 65 535 octets : vingt mille caractères
+ * de quatre octets passaient la validation, puis la base les refusait, et le
+ * rapport répondait 500 (#2071). La pile se coupe à ce que la colonne tient.
+ */
+it('garde une pile plus longue que sa colonne, coupée à ce qu’elle tient', function (string $caractere, int $longueur, int $gardee): void {
+    $user = User::factory()->create();
+    Exceptions::fake();
+
+    $this->actingAs($user)
+        ->postJson(route('erreurs-navigateur.store'), [
+            'type' => 'error',
+            'message' => 'Boum',
+            'pile' => str_repeat($caractere, $longueur),
+            'url' => 'https://example.org/workouts/3',
+        ])
+        ->assertNoContent();
+
+    expect(ErreurNavigateur::query()->sole()->pile)->toBe(str_repeat($caractere, $gardee));
+    Exceptions::assertNothingReported();
+})->with([
+    'vingt mille caractères de quatre octets' => ["\u{1F600}", 20_000, ErreurNavigateur::PILE_MAX_CARACTERES],
+    'vingt mille caractères ASCII' => ['a', 20_000, ErreurNavigateur::PILE_MAX_CARACTERES],
+    'une pile qui tient, entière' => ["\u{1F600}", ErreurNavigateur::PILE_MAX_CARACTERES, ErreurNavigateur::PILE_MAX_CARACTERES],
+]);
 
 it('refuse un visiteur et une charge qui ne dit pas ce qu’elle est', function (): void {
     $this->postJson(route('erreurs-navigateur.store'), ['type' => 'error', 'message' => 'x', 'url' => '/'])

@@ -73,6 +73,18 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $middleware->prepend(\App\Http\Middleware\TempsDuServeur::class);
 
+        /*
+         * Une chaîne de requête ou un formulaire qui n'est pas de l'UTF-8
+         * répond 400, comme un tel chemin, et les paramètres que des paquets
+         * lisent sans en vérifier la forme (`page`, `search`) n'arrivent que
+         * sous celle qu'ils savent lire (#2071). En fin de pile globale, hors des
+         * groupes : le panneau, Livewire et les outils d'administration n'ont
+         * pas le groupe `web`, et leurs lecteurs répondaient 500. Les docblocs
+         * des deux maillons disent pourquoi.
+         */
+        $middleware->append(\App\Http\Middleware\RefuseUneRequeteHorsUtf8::class);
+        $middleware->append(\App\Http\Middleware\OublieLesParametresIllisibles::class);
+
         $middleware->statefulApi();
 
         $middleware->api(append: [

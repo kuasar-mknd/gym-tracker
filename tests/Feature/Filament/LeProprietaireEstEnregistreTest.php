@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 use App\Filament\Resources\Exercises\Pages\CreateExercise;
 use App\Filament\Resources\Exercises\Pages\EditExercise;
+use App\Filament\Resources\Exercises\Pages\ListExercises;
 use App\Filament\Resources\Goals\Pages\CreateGoal;
 use App\Filament\Resources\Goals\Pages\EditGoal;
+use App\Filament\Resources\Goals\Pages\ListGoals;
 use App\Filament\Resources\Workouts\Pages\CreateWorkout;
 use App\Filament\Resources\Workouts\Pages\EditWorkout;
 use App\Filament\Resources\Workouts\Pages\ListWorkouts;
 use App\Models\Exercise;
+use App\Models\Goal;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -202,3 +205,28 @@ it('ne change pas le propriétaire d’une séance par l’action de modificatio
         ->and($ligne->refresh()->user_id)->toBe($avant->getKey())
         ->and($serie->refresh()->user_id)->toBe($avant->getKey());
 });
+
+/*
+ * L'action de modification de la table des exercices et de celle des
+ * objectifs partage le formulaire de la page, propriétaire compris, mais
+ * enregistrait par `$record->update($data)` : hors production, le mode strict
+ * refusait `user_id`, hors du `$fillable` ; en production, le changement de
+ * propriétaire se perdait en silence. Elle reprend désormais l'écriture de la
+ * page (#2071).
+ */
+it('enregistre le changement de propriétaire par l’action de modification de la table', function (string $liste, string $modele, string $permission, array $champs): void {
+    $this->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions($permission)), 'admin');
+    $avant = User::factory()->create();
+    $apres = User::factory()->create();
+    /** @var Exercise|Goal $ligne */
+    $ligne = $modele::factory()->create(['user_id' => $avant->getKey()]);
+
+    Livewire::test($liste)
+        ->callAction(TestAction::make('edit')->table($ligne), [...$champs, 'user_id' => $apres->getKey()])
+        ->assertHasNoFormErrors();
+
+    expect($ligne->refresh()->user_id)->toBe($apres->getKey());
+})->with([
+    'exercice' => [ListExercises::class, Exercise::class, 'Exercise', ['name' => 'Fente arrière']],
+    'objectif' => [ListGoals::class, Goal::class, 'Goal', ['title' => 'Cent séances']],
+]);
