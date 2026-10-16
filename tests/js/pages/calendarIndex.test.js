@@ -195,7 +195,9 @@ describe('moving between months', () => {
         const wrapper = mountPage({ year: 2026, month: 3 })
 
         wrapper.vm.changeMonth(1)
-        visit.mock.calls[0][1].onError()
+        // Comme Inertia : le refus (sans rappel `onError`, rien), puis la fin de la visite.
+        visit.mock.calls[0][1].onError?.()
+        visit.mock.calls[0][1].onFinish()
 
         wrapper.vm.changeMonth(1)
 
@@ -203,6 +205,34 @@ describe('moving between months', () => {
         // again. Without the rollback the user would be stepping from a month
         // they were never shown.
         expect(visit.mock.calls[1][0]).toContain('"month":4')
+    })
+
+    /*
+     * Sans réseau, sur une réponse en erreur ou une visite annulée, Inertia
+     * n'appelle pas `onError` : l'appui suivant comptait depuis un mois jamais
+     * montré (#2077). Le vrai client joue chaque cas dans
+     * `misesAJourOptimistesAvecInertia.test.js`.
+     */
+    it('forgets a step that ended without succeeding, refusal or not', () => {
+        const wrapper = mountPage({ year: 2026, month: 3 })
+
+        wrapper.vm.changeMonth(1)
+        visit.mock.calls[0][1].onFinish()
+        wrapper.vm.changeMonth(1)
+
+        expect(visit.mock.calls[1][0]).toContain('"month":4')
+    })
+
+    it('keeps counting from a step that a later tap interrupted', () => {
+        const wrapper = mountPage({ year: 2026, month: 3 })
+
+        wrapper.vm.changeMonth(1)
+        wrapper.vm.changeMonth(1)
+        // Inertia interrompt la première visite quand la seconde part.
+        visit.mock.calls[0][1].onFinish()
+        wrapper.vm.changeMonth(1)
+
+        expect(visit.mock.calls[2][0]).toContain('"month":6')
     })
 
     it('steps from today after jumping home', () => {

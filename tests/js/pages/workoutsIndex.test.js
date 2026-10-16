@@ -411,11 +411,42 @@ describe('Workouts/Index — deleting a session', () => {
         await deleteRow(wrapper, 2)
         expect(rowIds(wrapper)).toEqual([1, 3])
 
-        destroy.mock.calls[0][1].onError()
+        // Comme Inertia : le refus (sans rappel `onError`, rien), puis la fin de la visite.
+        destroy.mock.calls[0][1].onError?.()
+        destroy.mock.calls[0][1].onFinish()
         await wrapper.vm.$nextTick()
 
         expect(rowIds(wrapper)).toEqual([1, 2, 3])
         expect(haptic).toHaveBeenLastCalledWith('error')
+    })
+
+    /*
+     * Sans réseau, sur un 403, un 419 ou un 500, sur une visite annulée,
+     * Inertia n'appelle pas `onError` : la visite finit sans succès, et la
+     * ligne revenait seulement au prochain chargement (#2077). Le vrai client
+     * joue chaque cas dans `misesAJourOptimistesAvecInertia.test.js`.
+     */
+    it('puts the session back when the visit ends without succeeding, refusal or not', async () => {
+        const wrapper = mountPage()
+
+        await deleteRow(wrapper, 2)
+        destroy.mock.calls[0][1].onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(rowIds(wrapper)).toEqual([1, 2, 3])
+        expect(haptic).toHaveBeenLastCalledWith('error')
+    })
+
+    it('leaves the session gone once the server has deleted it', async () => {
+        const wrapper = mountPage()
+
+        await deleteRow(wrapper, 2)
+        destroy.mock.calls[0][1].onSuccess()
+        destroy.mock.calls[0][1].onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(rowIds(wrapper)).toEqual([1, 3])
+        expect(haptic).not.toHaveBeenCalledWith('error')
     })
 
     /**

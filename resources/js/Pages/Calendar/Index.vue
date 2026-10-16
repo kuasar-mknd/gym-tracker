@@ -7,6 +7,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { parseCalendarDate } from '@/Utils/date'
 import { compte } from '@/Utils/nombre'
+import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
 const props = defineProps({
@@ -90,6 +91,41 @@ const isToday = (dateStr) => {
     )
 }
 
+/** Le numéro de la dernière demande : un appui interrompu n'efface pas le compte du suivant. */
+let derniereDemande = 0
+
+/**
+ * Demande un mois, et compte les appuis suivants depuis lui. Le compte revient
+ * au mois affiché sur tout échec de la dernière demande (#2077) : il ne
+ * revenait que sur `onError`, et sans réseau l'appui suivant sautait un mois.
+ */
+const viserLeMois = (year, month) => {
+    const demande = ++derniereDemande
+    pendingMonth.value = month
+    pendingYear.value = year
+
+    router.visit(
+        route('calendar.index', { year, month }),
+        revenirSiLaVisiteEchoue(
+            () => {
+                if (demande === derniereDemande) {
+                    pendingMonth.value = currentMonth.value
+                    pendingYear.value = currentYear.value
+                }
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    currentMonth.value = month
+                    currentYear.value = year
+                    selectedDate.value = null // Reset selection on month change
+                },
+            },
+        ),
+    )
+}
+
 /**
  * Steps a month, counting from where the user believes they are.
  *
@@ -114,23 +150,7 @@ const changeMonth = (delta) => {
         newYear--
     }
 
-    pendingMonth.value = newMonth
-    pendingYear.value = newYear
-
-    router.visit(route('calendar.index', { year: newYear, month: newMonth }), {
-        preserveState: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            currentMonth.value = newMonth
-            currentYear.value = newYear
-            selectedDate.value = null // Reset selection on month change
-        },
-        onError: () => {
-            // The step never happened, so the next tap must not count from it.
-            pendingMonth.value = currentMonth.value
-            pendingYear.value = currentYear.value
-        },
-    })
+    viserLeMois(newYear, newMonth)
 }
 
 /**
@@ -140,23 +160,10 @@ const changeMonth = (delta) => {
  */
 const goToToday = () => {
     const today = new Date()
-    const targetMonth = today.getMonth() + 1
-    const targetYear = today.getFullYear()
 
     // Jumping home resets where stepping counts from, or the next arrow would
     // step off the month this button just left.
-    pendingMonth.value = targetMonth
-    pendingYear.value = targetYear
-
-    router.visit(route('calendar.index', { year: targetYear, month: targetMonth }), {
-        preserveState: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            currentMonth.value = targetMonth
-            currentYear.value = targetYear
-            selectedDate.value = null
-        },
-    })
+    viserLeMois(today.getFullYear(), today.getMonth() + 1)
 }
 
 const selectDate = (day) => {
