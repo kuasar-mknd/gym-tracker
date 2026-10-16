@@ -11,6 +11,7 @@ use Illuminate\Foundation\Exceptions\Handler;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use Livewire\Mechanisms\HandleRequests\HandleRequests;
 use Symfony\Component\HttpFoundation\Response;
@@ -173,14 +174,38 @@ function identifiantsHorsDesExceptionsEnvoyer(string $page, string $route, array
     return $reponse;
 }
 
-it('ne recopie l’adresse tapée à la connexion ni dans le journal, ni dans le rapport, ni dans l’exception enregistrée', function (string $format): void {
+/*
+ * Les formulaires où l'on tape son adresse sans lien : la connexion, et la
+ * demande d'un lien « mot de passe oublié », qui met l'envoi en file (#1951) ;
+ * la file des tests est synchrone, et le job cherche le compte pendant la
+ * requête. Pour chacun, la page d'où part l'envoi, sa route, les autres
+ * champs, et ce que le corps enregistré en garde.
+ */
+dataset('formulaires où l’on tape son adresse', [
+    'connexion' => [
+        'login',
+        'login',
+        ['password' => 'Un-mot-de-passe-2026!', 'remember' => false],
+        ['email' => '[masqué]', 'password' => '[masqué]', 'remember' => false],
+    ],
+    'mot de passe oublié' => [
+        'password.request',
+        'password.email',
+        [],
+        ['email' => '[masqué]'],
+    ],
+]);
+
+/* Chaque formulaire, sous les deux formes d'envoi. */
+it('ne recopie l’adresse tapée ni dans le journal, ni dans le rapport, ni dans l’exception enregistrée', function (string $page, string $route, array $autresChamps, array $corpsGarde, string $format): void {
+    /** @var array<string, mixed> $autresChamps */
     Config::set('app.debug', false);
     identifiantsHorsDesExceptionsCouperLaTable('users');
 
     $traces = identifiantsHorsDesExceptionsTracesDe(static fn (): TestResponse => identifiantsHorsDesExceptionsEnvoyer(
-        route('login'),
-        route('login'),
-        ['email' => identifiantsHorsDesExceptionsAdresseTapee(), 'password' => 'Un-mot-de-passe-2026!', 'remember' => false],
+        route($page),
+        route($route),
+        ['email' => identifiantsHorsDesExceptionsAdresseTapee(), ...$autresChamps],
         $format,
     )->assertInternalServerError());
 
@@ -193,11 +218,12 @@ it('ne recopie l’adresse tapée à la connexion ni dans le journal, ni dans le
     ];
 
     expect($exception->message)->toBe('La base ne répond plus.')
+        ->and($exception->path)->toBe(ltrim((string) parse_url(route($route), PHP_URL_PATH), '/'))
         ->and($traces['journal'])->toContain('La base ne répond plus.')
         ->and($traces['rapport'])->toHaveCount(1)
-        ->and($exception->body)->toMatchArray(['email' => '[masqué]', 'password' => '[masqué]'])
+        ->and($exception->body)->toEqual($corpsGarde)
         ->and(array_keys(array_filter($lues, identifiantsHorsDesExceptionsLaissentLire(...))))->toBe([]);
-})->with('formats d’envoi des formulaires d’identification');
+})->with('formulaires où l’on tape son adresse')->with('formats d’envoi des formulaires d’identification');
 
 it('ne recopie l’adresse tapée à la réinitialisation ni dans le journal, ni dans le rapport, ni dans l’exception enregistrée', function (string $format): void {
     Config::set('app.debug', false);
@@ -235,6 +261,58 @@ it('ne recopie l’adresse tapée à la réinitialisation ni dans le journal, ni
         ->and($exception->headers['referer'] ?? null)->toBe('[masqué]')
         ->and(array_keys(array_filter($lues, identifiantsHorsDesExceptionsLaissentLire(...))))->toBe([]);
 })->with('formats d’envoi des formulaires d’identification');
+
+/**
+ * Ce texte laisse-t-il lire `$secret`, tel quel, encodé dans une URL, ou
+ * écrit en JSON (`/` échappé) ?
+ */
+function identifiantsHorsDesExceptionsPorte(string $texte, string $secret): bool
+{
+    return str_contains($texte, $secret)
+        || str_contains($texte, rawurlencode($secret))
+        || str_contains($texte, urlencode($secret))
+        || str_contains($texte, str_replace('/', '\/', $secret));
+}
+
+/*
+ * L'ouverture du lien (#2070) lit le compte avant de montrer le formulaire :
+ * une panne à cet instant garde l'exception d'une requête dont le chemin
+ * porte le jeton, et l'adresse de la page sa valeur chiffrée. Le chemin
+ * enregistré porte « [masqué] » à la place du jeton, comme le paramètre de
+ * route, et la valeur chiffrée se masque comme dans le corps de l'envoi. Le
+ * Markdown, que Laravel ne remplit qu'en mode debug, recopie le chemin et les
+ * paramètres bruts, à dessein (`.ai/rules/models.md`) : il n'est pas lu.
+ */
+it('ne garde ni le jeton ni l’adresse chiffrée d’un lien de réinitialisation ouvert pendant une panne', function (): void {
+    Config::set('app.debug', false);
+    $compte = User::factory()->create(['email' => 'compte.du-lien@example.org']);
+    $jeton = Password::createToken($compte);
+    $lien = LiensDesCourriels::lienDeReinitialisation($compte, $jeton);
+    $adresseChiffree = FormulaireDeReinitialisation::depuisLeLien($lien, 'sans-objet', 'sans-objet@example.org')['adresse'];
+    identifiantsHorsDesExceptionsCouperLaTable('users');
+
+    $traces = identifiantsHorsDesExceptionsTracesDe(static fn (): TestResponse => get($lien)->assertInternalServerError());
+
+    $exception = ExceptionEnregistree::query()->sole();
+    $colonnes = identifiantsHorsDesExceptionsColonnes($exception);
+    unset($colonnes['markdown']);
+    $lues = [
+        'réponse' => (string) $traces['reponse']->getContent(),
+        'journal' => $traces['journal'],
+        'rapport' => implode("\n", $traces['rapport']),
+        ...$colonnes,
+    ];
+
+    expect($exception->message)->toBe('La base ne répond plus.')
+        ->and($exception->path)->toBe('reset-password/[masqué]')
+        ->and($exception->route_parameters)->toBe(['token' => '[masqué]'])
+        ->and($exception->body)->toBe(['adresse' => '[masqué]'])
+        ->and(array_keys(array_filter(
+            $lues,
+            static fn (string $texte): bool => identifiantsHorsDesExceptionsPorte($texte, $jeton)
+                || identifiantsHorsDesExceptionsPorte($texte, $adresseChiffree),
+        )))->toBe([]);
+});
 
 /**
  * L'instantané du formulaire de connexion du panneau, tel que la page le
@@ -319,3 +397,39 @@ it('ne garde en clair ni le mot de passe ni l’adresse d’une connexion au pan
                 || identifiantsHorsDesExceptionsLaissentLire($texte),
         )))->toBe([]);
 });
+
+/*
+ * Une authentification HTTP : Symfony décode l'en-tête `Authorization` et en
+ * tire d'autres, que la requête range parmi ses en-têtes : `php-auth-user` et
+ * `php-auth-pw` pour Basic, l'identifiant et le mot de passe en clair,
+ * `php-auth-digest` pour Digest, l'en-tête recopié. Ils se masquent comme
+ * lui (#PR). Le Markdown, que Laravel ne remplit qu'en mode debug, recopie
+ * les en-têtes bruts, à dessein (`.ai/rules/models.md`) : il n'est pas lu.
+ */
+it('masque les en-têtes qu’une authentification HTTP tire de l’en-tête Authorization', function (string $entete, array $masques): void {
+    /** @var list<string> $masques */
+    Route::post('/_boum', static function (): never {
+        throw new RuntimeException('boum');
+    });
+
+    test()->withHeader('Authorization', $entete)->post('/_boum')->assertInternalServerError();
+
+    $exception = ExceptionEnregistree::query()->sole();
+    $colonnes = identifiantsHorsDesExceptionsColonnes($exception);
+    unset($colonnes['markdown']);
+
+    expect($exception->headers)->toMatchArray(array_fill_keys($masques, '[masqué]'))
+        ->and(array_keys(array_filter(
+            $colonnes,
+            static fn (string $texte): bool => str_contains($texte, 'Mot-De-Passe-Http-2026') || str_contains($texte, 'titulaire.http'),
+        )))->toBe([]);
+})->with([
+    'Basic' => [
+        'Basic '.base64_encode('titulaire.http@example.org:Mot-De-Passe-Http-2026'),
+        ['authorization', 'php-auth-user', 'php-auth-pw'],
+    ],
+    'Digest' => [
+        'Digest username="titulaire.http@example.org", realm="gym", nonce="n", uri="/_boum", response="Mot-De-Passe-Http-2026"',
+        ['authorization', 'php-auth-digest'],
+    ],
+]);

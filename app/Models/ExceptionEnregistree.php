@@ -22,7 +22,9 @@ use Illuminate\Support\Str;
  * forcément celle d'un compte, voire un mot de passe tapé dans le mauvais
  * champ, y restait trente jours en clair. Et l'en-tête `Referer`, qui porte
  * la page d'où part l'envoi : celle d'un lien de réinitialisation porte le
- * lien lui-même, jeton et adresse chiffrée.
+ * lien lui-même, jeton et adresse chiffrée. Le jeton, paramètre de route,
+ * est aussi un segment du chemin enregistré, masqué de même
+ * (`masquerLeChemin()`).
  *
  * Une clef se reconnaît sous toutes ses écritures (`formeComparable()`) :
  * casse, `_` et `-` n'y comptent pas, et seul compte le dernier segment d'un
@@ -109,6 +111,11 @@ final class ExceptionEnregistree extends Exception
      * `token` et `passwordconfirmation`, et `data.currentPassword` de
      * Livewire `currentpassword`.
      *
+     * Les en-têtes `php-auth-*` sont ceux que Symfony tire de
+     * `Authorization` (`ServerBag::getHeaders()`) : l'identifiant et le mot
+     * de passe d'une authentification Basic, en clair, ou l'en-tête Digest
+     * recopié.
+     *
      * @var list<string>
      */
     private const array CLEFS_MASQUEES = [
@@ -118,6 +125,9 @@ final class ExceptionEnregistree extends Exception
         'token',
         'secret',
         'authorization',
+        'phpauthuser',
+        'phpauthpw',
+        'phpauthdigest',
         'cookie',
         'xcsrftoken',
         'xxsrftoken',
@@ -164,6 +174,10 @@ final class ExceptionEnregistree extends Exception
             /** @var array<string, string>|null $contexte */
             $contexte = self::bornerLeJson($exception->route_context, self::OCTETS_MAX_PAR_COLONNE['route_context']);
             $exception->route_context = $contexte;
+
+            if (is_string($exception->getAttribute('path'))) {
+                $exception->path = self::masquerLeChemin($exception->path, $exception->route_parameters);
+            }
 
             /** @var array<string, mixed>|null $parametres */
             $parametres = self::bornerLeJson(self::masquer($exception->route_parameters), self::OCTETS_MAX_PAR_COLONNE['route_parameters']);
@@ -232,6 +246,32 @@ final class ExceptionEnregistree extends Exception
         }
 
         return $valeurs;
+    }
+
+    /**
+     * Le chemin de la requête, où chaque segment qui porte la valeur d'un
+     * paramètre de route masqué devient « [masqué] » : le jeton du lien de
+     * réinitialisation est un segment de son chemin (`reset-password/{token}`),
+     * que le paquet garde tel quel (`request()->path()`). Un paramètre occupe
+     * un segment, le motif par défaut de Laravel n'admettant pas `/` ; le
+     * chemin garde son encodage, la valeur du paramètre est décodée.
+     *
+     * @param  array<mixed>|null  $parametres
+     */
+    private static function masquerLeChemin(string $chemin, ?array $parametres): string
+    {
+        $valeursMasquees = [];
+
+        foreach ($parametres ?? [] as $clef => $valeur) {
+            if ((is_string($valeur) || is_int($valeur)) && $valeur !== '' && in_array(self::formeComparable($clef), self::CLEFS_MASQUEES, true)) {
+                $valeursMasquees[] = (string) $valeur;
+            }
+        }
+
+        return implode('/', array_map(
+            static fn (string $segment): string => in_array(rawurldecode($segment), $valeursMasquees, true) ? '[masqué]' : $segment,
+            explode('/', $chemin),
+        ));
     }
 
     /**
