@@ -563,6 +563,47 @@ describe('UpdateProfileInformationForm', () => {
         expect(statut(undefined).exists()).toBe(false)
     })
 
+    it('dit à une adresse que la messagerie n’écrit pas qu’aucun lien ne lui parvient, et d’en changer', () => {
+        signedInAs(sam)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm, {
+            mustVerifyEmail: true,
+            status: 'adresse-que-la-messagerie-n-ecrit-pas',
+        })
+        const avis = wrapper.find('[data-testid="profile-email-status"]')
+
+        expect(avis.attributes('role')).toBe('status')
+        expect(avis.text()).toBe(
+            'Notre messagerie ne sait pas écrire à ton adresse actuelle : aucun lien ne peut lui parvenir. Change-la ci-dessus, le lien partira à la nouvelle.',
+        )
+        expect(wrapper.text()).not.toContain('Un nouveau lien a été envoyé.')
+    })
+
+    /*
+     * Un compte ancien peut porter une adresse que la spécification HTML d'un
+     * champ `type="email"` refuse (commentaire, tiret bas dans le domaine,
+     * point final) : le navigateur n'envoyait pas le formulaire, nom compris,
+     * que le serveur accepte (#2075). `requestSubmit()` juge le formulaire
+     * comme un clic sur « Enregistrer ».
+     */
+    it('enregistre le nom d’un compte dont le navigateur refuserait l’adresse actuelle', async () => {
+        signedInAs({ name: 'Avant', email: 'camille(salle)@example.org' })
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+        const champDeLAdresse = wrapper.find('input[type="email"]').element
+
+        expect(champDeLAdresse.validity.typeMismatch).toBe(true)
+
+        await typeInto(wrapper, 'Nom', 'Après')
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPatch).toHaveBeenCalledTimes(1)
+        expect(formPatch.mock.calls[0][0]).toBe('/profile.update')
+        expect(wrapper.vm.form.name).toBe('Après')
+        expect(wrapper.vm.form.email).toBe('camille(salle)@example.org')
+    })
+
     it('propose de renvoyer le lien quand l’adresse n’est plus vérifiée', async () => {
         currentPage = reactive({ props: { auth: { user: { ...sam } } } })
 

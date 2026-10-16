@@ -22,11 +22,14 @@ use Illuminate\Validation\ValidationException;
  * se l'approprier. Le nom seul reste libre ; le champ `current_password` est
  * alors écarté, quoi qu'il porte.
  *
- * Les minuscules ne sont exigées, elles aussi, que d'une adresse qui change.
- * GitHub rend l'adresse avec sa casse à l'inscription, et le panneau ne
- * l'impose pas : exigées d'une adresse inchangée, elles bloqueraient le seul
- * nom, et ramener l'adresse en minuscules, c'est la changer, donc donner le
- * mot de passe, qu'un compte relié à un fournisseur peut n'avoir jamais choisi.
+ * Les minuscules ne sont exigées, elles aussi, que d'une adresse qui change,
+ * comme la forme de l'adresse (règle `email`, #2075). GitHub rend l'adresse
+ * avec sa casse à l'inscription, et le panneau ne l'impose pas ; la connexion
+ * sociale, avant #2075, créait le compte de toute adresse en ASCII
+ * imprimable, points consécutifs ou tiret bas dans le domaine compris. Jugée
+ * sur une adresse inchangée, l'une ou l'autre règle bloquerait le seul nom, et
+ * corriger l'adresse, c'est la changer, donc donner le mot de passe, qu'un
+ * compte relié à un fournisseur peut n'avoir jamais choisi.
  *
  * Les essais manqués avancent le compteur du changement de mot de passe
  * (`UpdatePasswordRequest::throttleKey()`), que seul un mot de passe accepté
@@ -54,13 +57,13 @@ class ProfileUpdateRequest extends FormRequest
      * (`AdresseEnAsciiImprimable`), et sous une forme que Symfony Mime sait
      * écrire, sans quoi le lien de confirmation ne partirait pas
      * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; l'adresse actuelle du
-     * compte reste admise telle quelle par l'une et l'autre, pour qu'un compte
-     * plus ancien enregistre son nom. Aucune règle ne regarde si la nouvelle
-     * adresse a déjà un compte : la réponse le dirait, et le refus d'une
-     * adresse que Mime n'écrit pas est le message de toute adresse mal
-     * formée. Le changement attend le lien envoyé à
-     * cette adresse (`TraiterUnChangementDAdresse`), qui prévient au contraire
-     * son titulaire quand elle est prise. `bail` tient `current_password`
+     * compte reste admise telle quelle par l'une et l'autre, et la règle
+     * `email` ne juge qu'une adresse qui change, pour qu'un compte plus ancien
+     * enregistre son nom. Aucune règle ne regarde si la nouvelle adresse a
+     * déjà un compte : la réponse le dirait, et le refus d'une adresse que Mime
+     * n'écrit pas est le message de toute adresse mal formée. Le changement
+     * attend le lien envoyé à cette adresse (`TraiterUnChangementDAdresse`),
+     * qui prévient au contraire son titulaire quand elle est prise. `bail` tient `current_password`
      * derrière `string` : la règle passe la valeur telle quelle à
      * `password_verify()`, et un tableau y levait une erreur 500 (#2071).
      *
@@ -73,8 +76,7 @@ class ProfileUpdateRequest extends FormRequest
             'email' => [
                 'required',
                 'string',
-                Rule::when($this->changeLAdresse(), ['lowercase']),
-                'email',
+                Rule::when($this->changeLAdresse(), ['lowercase', 'email']),
                 'max:255',
                 new AdresseEnAsciiImprimable($this->compte()?->email),
                 new AdresseQueLaMessagerieSaitEcrire($this->compte()?->email),

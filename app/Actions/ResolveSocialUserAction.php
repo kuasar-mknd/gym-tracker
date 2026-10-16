@@ -11,6 +11,7 @@ use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
 
@@ -42,8 +43,9 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  *     ASCII imprimable, vérifiée par le fournisseur, et que le compte n'est
  *     lié à aucune autre identité du même fournisseur.
  *  3. Sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
- *     adresse que la base tiendrait pour la même, et que Symfony Mime sache
- *     écrire l'adresse (`AdresseQueLaMessagerieSaitEcrire`).
+ *     adresse que la base tiendrait pour la même, et que l'inscription admette
+ *     l'adresse : bien formée, tenant dans sa colonne, et que Symfony Mime
+ *     sache écrire (`AdresseQueLaMessagerieSaitEcrire`).
  *
  * Toute comparaison d'adresse et d'identifiant se fait en PHP, octet par
  * octet. La base ne sert qu'à trouver les candidats : sa collation
@@ -290,11 +292,15 @@ final readonly class ResolveSocialUserAction
      * détient l'adresse, dont le titulaire peut reprendre le compte par la
      * réinitialisation du mot de passe.
      *
-     * Une adresse que Symfony Mime ne sait pas écrire ne crée pas de compte
-     * (#2075) : aucun courriel ne lui parviendrait, lien « mot de passe
-     * oublié » compris, et l'inscription comme le profil la refusent aussi.
-     * Seule la création est refusée : un compte qui porte déjà l'adresse, ou
-     * l'identité, s'ouvre comme avant.
+     * Une adresse que l'inscription refuserait ne crée pas de compte (#2075) :
+     * mal formée (règle `email`), plus longue que sa colonne, ou que Symfony
+     * Mime ne sait pas écrire, auquel cas aucun courriel ne lui parviendrait,
+     * lien « mot de passe oublié » compris. Le compte naîtrait sinon sous une
+     * adresse que « mot de passe oublié » refuse, et que le profil comme le
+     * panneau ne jugent plus tant qu'elle ne change pas ; une adresse trop
+     * longue finissait en erreur 500 à l'insertion. Seule la création est
+     * refusée : un compte qui porte déjà l'adresse, ou l'identité, s'ouvre
+     * comme avant.
      *
      * @throws SocialAuthException
      */
@@ -305,8 +311,8 @@ final readonly class ResolveSocialUserAction
         string $adresse,
         bool $adresseVerifiee,
     ): User {
-        if (! AdresseQueLaMessagerieSaitEcrire::laMessagerieSaitLEcrire($adresse)) {
-            throw new SocialAuthException($this->refusDAdresseQueLaMessagerieNEcritPas($fournisseur));
+        if (! $this->lInscriptionLAdmettrait($adresse)) {
+            throw new SocialAuthException($this->refusDAdresseQueLInscriptionRefuse($fournisseur));
         }
 
         $user = User::create([
@@ -419,16 +425,31 @@ final readonly class ResolveSocialUserAction
     }
 
     /**
-     * Le refus d'une adresse que Symfony Mime ne sait pas écrire, qu'aucun
-     * compte n'occupe.
+     * L'inscription admettrait-elle cette adresse ?
      *
-     * L'inscription la refuse aussi : le message renvoie au compte que la
-     * personne aurait sous une autre adresse, ou à l'inscription avec une
-     * autre adresse.
+     * Les règles d'adresse de `RegisterRequest`, sauf deux : `lowercase`, le
+     * compte gardant l'adresse avec la casse que le fournisseur rend, et
+     * `AdresseEnAsciiImprimable`, dont `adresseComparable()` a déjà jugé le
+     * motif.
      */
-    private function refusDAdresseQueLaMessagerieNEcritPas(string $fournisseur): string
+    private function lInscriptionLAdmettrait(string $adresse): bool
     {
-        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas recevoir nos courriels : notre messagerie ne sait pas l\'écrire comme destinataire. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
+        return Validator::make(
+            ['email' => $adresse],
+            ['email' => ['email', 'max:255', new AdresseQueLaMessagerieSaitEcrire()]],
+        )->passes();
+    }
+
+    /**
+     * Le refus d'une adresse que l'inscription refuserait, qu'aucun compte
+     * n'occupe.
+     *
+     * Le message renvoie au compte que la personne aurait sous une autre
+     * adresse, ou à l'inscription avec une autre adresse.
+     */
+    private function refusDAdresseQueLInscriptionRefuse(string $fournisseur): string
+    {
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' n\'est pas une adresse email que nous acceptons, et l\'inscription la refuserait de même. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
     }
 
     /**

@@ -44,12 +44,24 @@ class UserForm
              * L'adresse actuelle du compte reste admise telle quelle par les
              * deux règles, pour qu'un compte ancien s'enregistre sans en
              * changer.
+             *
+             * La forme (règle `email`) ne se juge, de même, que d'une adresse
+             * qui change : la connexion sociale créait, avant #2075, le compte
+             * de toute adresse en ASCII imprimable (points consécutifs, tiret
+             * bas dans le domaine…), dont le nom ne s'enregistrait plus ici.
+             * D'où une règle conditionnelle plutôt que `->email()`, qui pose
+             * aussi `type="email"` : le navigateur, qui juge l'adresse selon la
+             * spécification HTML, refusait d'envoyer le formulaire d'un compte
+             * dont l'adresse porte un commentaire, un tiret bas dans le domaine
+             * ou un point final. Le champ garde le clavier d'une adresse
+             * (`inputmode`).
              */
             TextInput::make('email')
                 ->label('Adresse e-mail')
-                ->email()
+                ->inputMode('email')
                 ->required()
                 ->maxLength(255)
+                ->rule('email', static fn (?User $record, mixed $state): bool => $state !== $record?->email)
                 ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email))
                 ->rule(fn (?User $record): AdresseQueLaMessagerieSaitEcrire => new AdresseQueLaMessagerieSaitEcrire($record?->email)),
             TextInput::make('default_rest_time')->label('Repos par défaut (s)')->required()->integer()->minValue(0)->maxValue(Exercise::REPOS_MAX_SECONDES)->default(90),

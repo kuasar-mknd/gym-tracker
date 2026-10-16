@@ -12,6 +12,7 @@ use App\Models\Traits\HasToolsData;
 use App\Models\Traits\OublieLaPreuveDeSaLiaison;
 use App\Models\Traits\SurveilleSonAdresse;
 use App\Notifications\LienDOuvertureDuCompte;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -202,10 +203,22 @@ final class User extends Authenticatable implements MustVerifyEmail
      * Un compte en attente reçoit le lien qui l'ouvre, mené à la connexion
      * (`LienDOuvertureDuCompte`) ; tout autre compte non vérifié, celui de
      * Laravel, qui vérifie l'adresse depuis une session ouverte.
+     *
+     * Rien ne part à une adresse que Symfony Mime ne sait pas écrire, qu'un
+     * compte d'avant #2075 peut porter (`AdresseQueLaMessagerieSaitEcrire`) :
+     * le lien n'y parviendrait pas. Celui de Laravel, qui n'est pas mis en
+     * file, faisait répondre 500 à la demande d'un nouveau lien ; celui d'un
+     * compte en attente laissait un job en échec à chaque bon mot de passe.
+     * Le contrôleur du renvoi le dit et renvoie au profil, où changer
+     * d'adresse (`EmailVerificationNotificationController`).
      */
     #[\Override]
     public function sendEmailVerificationNotification(): void
     {
+        if (! $this->laMessagerieSaitEcrireSonAdresse()) {
+            return;
+        }
+
         if ($this->estEnAttente()) {
             $this->notify(new LienDOuvertureDuCompte());
 
@@ -213,6 +226,18 @@ final class User extends Authenticatable implements MustVerifyEmail
         }
 
         parent::sendEmailVerificationNotification();
+    }
+
+    /**
+     * Symfony Mime sait-il écrire l'adresse du compte comme destinataire ?
+     *
+     * Non pour certaines adresses d'avant #2075 : un commentaire dans la
+     * partie locale, ou, pour un compte créé par la connexion sociale, des
+     * points consécutifs ou un point final. Aucun courriel ne leur parvient.
+     */
+    public function laMessagerieSaitEcrireSonAdresse(): bool
+    {
+        return AdresseQueLaMessagerieSaitEcrire::laMessagerieSaitLEcrire($this->getEmailForVerification());
     }
 
     /**

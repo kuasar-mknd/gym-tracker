@@ -69,6 +69,8 @@ const messagesDAdresse = {
     'lien-de-changement-d-adresse-perime':
         'Ce lien ne vaut plus : l’adresse du compte a changé depuis. Refais la demande si besoin.',
     'adresse-deja-prise': 'Cette adresse est devenue celle d’un autre compte entre-temps : la tienne n’a pas changé.',
+    'adresse-que-la-messagerie-n-ecrit-pas':
+        'Notre messagerie ne sait pas écrire à ton adresse actuelle : aucun lien ne peut lui parvenir. Change-la ci-dessus, le lien partira à la nouvelle.',
 }
 
 const messageDAdresse = computed(() => messagesDAdresse[props.status] ?? null)
@@ -95,7 +97,14 @@ const submit = () => {
             <p class="text-text-muted mt-1 text-sm">Modifie tes informations de compte et ton adresse email.</p>
         </header>
 
-        <form @submit.prevent="submit" class="mt-6 space-y-4">
+        <!--
+            `novalidate` : le navigateur juge un champ `type="email"` selon la
+            spécification HTML, qui refuse une adresse qu'un compte ancien peut
+            porter (commentaire, tiret bas dans le domaine, point final), et
+            n'enverrait pas le seul nom. Le serveur ne juge la forme que d'une
+            adresse qui change, et ses refus s'affichent sous chaque champ (#2075).
+        -->
+        <form novalidate @submit.prevent="submit" class="mt-6 space-y-4">
             <GlassInput
                 dusk="profile-name-input"
                 v-model="form.name"
