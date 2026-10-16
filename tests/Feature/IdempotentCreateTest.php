@@ -7,7 +7,10 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use Illuminate\Support\Facades\Exceptions;
 use Inertia\Testing\AssertableInertia as Assert;
+
+use function Pest\Laravel\actingAs;
 
 /**
  * A create the server accepted and wrote, whose response never reached the
@@ -177,3 +180,35 @@ describe('idempotent creates', function (): void {
                 ->where('workout.workout_lines.0.sets.0.idempotency_key', 'tentative-de-la-serie'));
     });
 });
+
+/**
+ * La clé arrive dans un en-tête que rien ne valide : un octet hors UTF-8 (un
+ * « é » qu'un navigateur envoie en latin-1) allait jusqu'à la colonne, que
+ * MySQL refuse, et la création répondait 500, que la file hors ligne réessaie
+ * sans fin (#2071). Une clé qui n'est pas de l'ASCII imprimable est ignorée,
+ * comme une clé trop longue : la création a lieu, sans clé.
+ */
+it('crée sans clé quand la clé n’est pas de l’ASCII imprimable', function (string $cle): void {
+    Exceptions::fake();
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
+    $exercice = Exercise::factory()->create();
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+
+    actingAs($compte)
+        ->postJson(route('api.v1.sets.store'), ['workout_line_id' => $ligne->id, 'weight' => 80, 'reps' => 8], ['Idempotency-Key' => $cle])
+        ->assertCreated();
+    actingAs($compte)
+        ->postJson(route('api.v1.workout-lines.store'), ['workout_id' => $seance->id, 'exercise_id' => $exercice->id], ['Idempotency-Key' => $cle])
+        ->assertCreated();
+
+    expect($ligne->sets()->sole()->idempotency_key)->toBeNull()
+        ->and(WorkoutLine::query()->whereKeyNot($ligne->id)->where('workout_id', $seance->id)->sole()->idempotency_key)->toBeNull();
+    Exceptions::assertNothingReported();
+})->with([
+    'octets hors UTF-8' => ["\xFF\xFE"],
+    'é en latin-1' => ["cl\xE9"],
+    'é en UTF-8' => ['clé'],
+    'espace' => ['une cle'],
+    'trop longue' => [str_repeat('a', 65)],
+]);
