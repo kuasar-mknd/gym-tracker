@@ -9,10 +9,15 @@ use App\Support\Charte;
 use App\Support\ComptesVusParPulse;
 use Filament\Facades\Filament;
 use Laravel\Pulse\Contracts\ResolvesUsers;
+use Laravel\Pulse\Contracts\Storage;
+use Laravel\Pulse\Entry;
 use Laravel\Pulse\Facades\Pulse;
+use Laravel\Pulse\Value;
+use Livewire\Mechanisms\HandleRequests\HandleRequests;
 use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\postJson;
 
 /**
  * L'avatar par défaut du panneau et ceux de la carte « Usage » de Pulse sont
@@ -149,4 +154,98 @@ it('donne à Pulse le nom, l’adresse et un avatar dessiné de chaque compte, j
             'extra' => '',
             'avatar' => new AvatarDesInitiales()->pourLeNom(''),
         ]);
+});
+
+/**
+ * La carte « Usage » telle que le tableau de bord de Pulse la charge : après la
+ * page, par la requête Livewire (`__lazyLoad`) qui rejoue la pile de Pulse, où
+ * le middleware du panneau fait de `admin` la garde par défaut.
+ */
+function avatarSansTiersCarteUsage(Admin $administrateur): string
+{
+    $page = (string) actingAs($administrateur, 'admin')->get('/backoffice/pulse')->assertOk()->getContent();
+
+    preg_match_all('/wire:snapshot="([^"]*)"[^>]*x-intersect="\$wire\.__lazyLoad\(&#039;([^&]+)&#039;\)"/', $page, $cartes, PREG_SET_ORDER);
+
+    foreach ($cartes as $carte) {
+        $instantane = html_entity_decode($carte[1], ENT_QUOTES);
+
+        if (! str_contains($instantane, '"name":"pulse.usage"')) {
+            continue;
+        }
+
+        $adresse = app(HandleRequests::class)->getUpdateUri();
+
+        if (! is_string($adresse)) {
+            throw new RuntimeException('Livewire ne donne pas l’adresse de ses mises à jour.');
+        }
+
+        $html = postJson($adresse, [
+            'components' => [[
+                'snapshot' => $instantane,
+                'updates' => [],
+                'calls' => [['method' => '__lazyLoad', 'params' => [$carte[2]], 'metadata' => []]],
+            ]],
+        ], ['X-Livewire' => '1'])->assertOk()->json('components.0.effects.html');
+
+        if (! is_string($html)) {
+            throw new RuntimeException('La carte « Usage » ne s’est pas rendue.');
+        }
+
+        expect($html)->toContain('wire:name="pulse.usage"');
+
+        return $html;
+    }
+
+    throw new RuntimeException('Aucune carte « Usage » paresseuse dans la page de Pulse.');
+}
+
+/**
+ * Un compte de l'application et un administrateur portent des numéros tirés de
+ * deux tables : le même numéro peut désigner l'un et l'autre. Pulse compte les
+ * requêtes du panneau sous l'administrateur, celles de l'application sous le
+ * compte, et la carte se charge sous la garde du panneau : elle cherchait
+ * chaque numéro parmi les administrateurs, et montrait l'administrateur à la
+ * place du compte.
+ */
+it('montre dans la carte « Usage » le compte de l’application et l’administrateur pour ce qu’ils sont, même de même numéro', function (): void {
+    $administrateur = Admin::factory()->create(['name' => 'Alice Administratrice', 'email' => 'alice@example.org']);
+    $administrateur->assignRole(Role::findOrCreate('super_admin', 'admin'));
+    $usager = User::factory()->create(['id' => $administrateur->id, 'name' => 'Ulysse Usager', 'email' => 'ulysse@example.org']);
+    $resolveur = app(ResolvesUsers::class);
+    $maintenant = now()->getTimestamp();
+
+    /** @var list<Entry|Value> $requetes trois requêtes du compte, deux de l'administrateur */
+    $requetes = [
+        ...array_map(static fn (int $rang): Entry => new Entry($maintenant - $rang, 'user_request', (string) $resolveur->key($usager))->count(), [1, 2, 3]),
+        ...array_map(static fn (int $rang): Entry => new Entry($maintenant - $rang, 'user_request', (string) $resolveur->key($administrateur))->count(), [1, 2]),
+    ];
+    app(Storage::class)->store(collect($requetes));
+
+    $carte = avatarSansTiersCarteUsage($administrateur->fresh() ?? $administrateur);
+
+    expect($carte)->toContain('Ulysse Usager', 'ulysse@example.org', 'src="'.new AvatarDesInitiales()->pourLeNom('Ulysse Usager').'"')
+        ->toContain('Alice Administratrice', 'Administrateur · alice@example.org', 'src="'.new AvatarDesInitiales()->pourLeNom('Alice Administratrice').'"');
+    expect($carte)->not->toContain('ID: ');
+});
+
+/**
+ * Pulse lit la clé d'un compte à la fin de chaque requête
+ * (`Pulse::resolveAuthenticatedUserId()`, dans `UserRequests`), sous la garde
+ * par défaut de la requête : celle du panneau pour une page du panneau, `web`
+ * pour une page de l'application.
+ */
+it('compte une requête du panneau sous la clé de l’administrateur, une requête de l’application sous le numéro du compte', function (): void {
+    $administrateur = avatarSansTiersSuperAdministrateur('Alice Administratrice');
+    $usager = User::factory()->create(['id' => $administrateur->id]);
+    $cles = [];
+    app()->terminating(static function () use (&$cles): void {
+        $cles[] = Pulse::resolveAuthenticatedUserId();
+    });
+
+    actingAs($administrateur, 'admin')->get('/backoffice')->assertOk();
+    $this->withoutVite();
+    actingAs($usager)->get('/raccourcis')->assertOk();
+
+    expect($cles)->toBe(['admin:'.$administrateur->id, $usager->id]);
 });

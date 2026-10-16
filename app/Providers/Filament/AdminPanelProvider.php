@@ -56,8 +56,10 @@ final class AdminPanelProvider extends PanelProvider
     /**
      * Les comptes de la carte « Usage » de Pulse portent l'avatar que
      * l'application dessine, comme l'administrateur du panneau, et non celui
-     * qu'il prenait chez des tiers. Pulse lie son résolveur par `singletonIf` :
-     * celui-ci l'emporte, quel que soit l'ordre des fournisseurs.
+     * qu'il prenait chez des tiers ; chacun, compte de l'application ou
+     * administrateur, se cherche dans sa table. Pulse lie son résolveur par
+     * `singletonIf` : celui-ci l'emporte, quel que soit l'ordre des
+     * fournisseurs.
      */
     #[\Override]
     public function register(): void
