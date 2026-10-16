@@ -76,6 +76,44 @@ final class RequetesMalFormees
     }
 
     /**
+     * Les formes d'un corps JSON porté par un GET, chaque nom lu prenant la
+     * valeur : `input()` cherche dans le corps avant la chaîne de requête, et
+     * un corps JSON y porte un nombre, ce qu'une chaîne de requête ne fait
+     * pas (la pagination prenait une page démesurée). Une seule forme, pour
+     * une requête de plus par page.
+     *
+     * @return array<string, mixed>
+     */
+    public static function formesDeCorpsSurGet(): array
+    {
+        return [
+            'corps JSON, nombre hors bornes' => PHP_INT_MAX,
+        ];
+    }
+
+    /**
+     * Les variables de serveur d'une visite : ses en-têtes, et le type d'un
+     * corps JSON quand elle en porte un.
+     *
+     * @param  array<string, string>  $entetes
+     * @return array<string, string>
+     */
+    public static function serveur(array $entetes, ?string $corps): array
+    {
+        $serveur = [];
+
+        foreach ($entetes as $nom => $valeur) {
+            $serveur['HTTP_'.strtoupper(str_replace('-', '_', $nom))] = $valeur;
+        }
+
+        if ($corps !== null) {
+            $serveur['CONTENT_TYPE'] = 'application/json';
+        }
+
+        return $serveur;
+    }
+
+    /**
      * Les formes d'un champ du corps, envoyé en JSON (qui ne porte pas un
      * octet hors UTF-8). Un tableau imbriqué d'au moins deux éléments passe
      * `array_unique()` d'`exists`, puis lève dans `whereIn()` ; un flottant
@@ -190,8 +228,10 @@ final class RequetesMalFormees
     }
 
     /**
-     * Le premier niveau de chaque champ que valide une requête de
-     * app/Http/Requests (`exercises.*.id` donne `exercises`).
+     * Le chemin de chaque champ que valide une requête de app/Http/Requests,
+     * jusqu'à sa première liste : `keys.auth` reste `keys.auth`,
+     * `exercises.*.id` donne `exercises` (la liste d'objets porte ce qui la
+     * suit).
      *
      * @return list<string>
      */
@@ -201,11 +241,31 @@ final class RequetesMalFormees
 
         foreach (array_keys(ReglesDesRequetes::toutes()) as $classe) {
             foreach (array_keys(ReglesDesRequetes::de($classe)) as $champ) {
-                $champs[] = Str::before($champ, '.');
+                $champs[] = Str::before($champ, '.*');
             }
         }
 
         return array_values(array_unique($champs));
+    }
+
+    /**
+     * Un corps où chaque chemin validé prend la valeur, un chemin imbriqué
+     * hors liste (`keys.auth`) à sa place, son parent devenant l'objet qui le
+     * porte.
+     *
+     * @return array<mixed>
+     */
+    public static function corpsMalForme(mixed $valeur): array
+    {
+        $chemins = self::champsValides();
+        usort($chemins, static fn (string $a, string $b): int => substr_count($a, '.') <=> substr_count($b, '.'));
+        $corps = [];
+
+        foreach ($chemins as $chemin) {
+            Arr::set($corps, $chemin, $valeur);
+        }
+
+        return $corps;
     }
 
     /**
@@ -480,17 +540,18 @@ final class RequetesMalFormees
 
     /**
      * Demande chaque page une fois par forme de chaîne de requête, avec tous
-     * les noms qu'elle peut lire sous cette forme, puis ses props différées
-     * si c'est une page Inertia. Rend ce qui ne va pas : une 500, une
-     * exception rapportée, une page Inertia sans JSON lisible, un témoin qui
-     * n'atteint pas la page.
+     * les noms qu'elle peut lire sous cette forme, et, sauf `$corpsJson` à
+     * faux, une fois par forme d'un corps JSON qui les porte, puis ses props
+     * différées si c'est une page Inertia. Rend ce qui ne va pas : une 500,
+     * une exception rapportée, une page Inertia sans JSON lisible, un témoin
+     * qui n'atteint pas la page.
      *
      * @param  list<Route>  $routes
      * @param  Closure(string): string  $valeurs
-     * @param  Closure(Route, string, array<string, string>): TestResponse<Response>  $visiter
+     * @param  Closure(Route, string, array<string, string>, ?string): TestResponse<Response>  $visiter
      * @return array{defauts: list<string>, requetes: int}
      */
-    public static function visiterChaquePage(array $routes, Closure $valeurs, Closure $visiter): array
+    public static function visiterChaquePage(array $routes, Closure $valeurs, Closure $visiter, bool $corpsJson = true): array
     {
         $nomsLus = self::nomsLus();
         $defauts = [];
@@ -499,11 +560,19 @@ final class RequetesMalFormees
         foreach ($routes as $route) {
             $adresse = self::adresse($route, $valeurs);
             $noms = array_values(array_unique([...$nomsLus, ...self::nomsLiesParLivewire(self::classeDeLAction($route))]));
+            $essais = [];
 
             foreach (self::formesDeChaine() as $forme => $morceau) {
+                $essais[$forme] = [$adresse.'?'.implode('&', array_map($morceau, $noms)), null];
+            }
+
+            foreach ($corpsJson ? self::formesDeCorpsSurGet() : [] as $forme => $valeur) {
+                $essais[$forme] = [$adresse, json_encode(array_fill_keys($noms, $valeur), JSON_THROW_ON_ERROR)];
+            }
+
+            foreach ($essais as $forme => [$url, $corps]) {
                 $cas = "GET {$route->uri()} ({$forme})";
-                $url = $adresse.'?'.implode('&', array_map($morceau, $noms));
-                $reponse = $visiter($route, $url, []);
+                $reponse = $visiter($route, $url, [], $corps);
                 $requetes++;
                 $defauts = [...$defauts, ...self::defauts($reponse, $cas)];
 
@@ -520,7 +589,7 @@ final class RequetesMalFormees
                 $entetes = is_array($page) ? self::entetesDesDifferees($page) : null;
 
                 if ($entetes !== null) {
-                    $defauts = [...$defauts, ...self::defauts($visiter($route, $url, $entetes), "{$cas}, props différées")];
+                    $defauts = [...$defauts, ...self::defauts($visiter($route, $url, $entetes, $corps), "{$cas}, props différées")];
                     $requetes++;
                 }
             }

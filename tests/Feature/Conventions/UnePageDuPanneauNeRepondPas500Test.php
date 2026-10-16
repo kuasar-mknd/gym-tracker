@@ -16,13 +16,17 @@ use function Pest\Laravel\actingAs;
  * (#2071) : la moitié de `UneRequeteMalFormeeNeRepondPas500Test` pour les
  * pages du panneau, dont les classes vivent dans app/Filament, séparée pour
  * tourner en parallèle (une page du panneau coûte quatre fois une page
- * Inertia). Même portée, mêmes formes, mêmes limites. Les tables de Filament
- * lisaient `search` par `strval()` (un tableau répondait 500), Livewire
- * recopie dans l'état du composant chaque nom qu'il lie à la chaîne de
- * requête (un octet hors UTF-8 répondait 500), et la pagination de Livewire
- * prenait toute page : ces noms (`#[Url]`, sous leur alias) s'ajoutent à ceux
- * que la garde essaie. Un administrateur qui ouvre chaque page les visite ;
- * le limiteur du panneau est remis à zéro avant chaque requête.
+ * Inertia). Même portée, mêmes formes de chaîne de requête, mêmes limites.
+ * Les tables de Filament lisaient `search` par `strval()` (un tableau
+ * répondait 500), Livewire recopie dans l'état du composant chaque nom
+ * qu'il lie à la chaîne de requête (un octet hors UTF-8 répondait 500), et
+ * la pagination de Livewire prenait toute page : ces noms (`#[Url]`, sous
+ * leur alias) s'ajoutent à ceux que la garde essaie. Un administrateur qui
+ * ouvre chaque page les visite ; le limiteur du panneau est remis à zéro
+ * avant chaque requête. Le corps JSON n'y est pas essayé : Livewire lit
+ * l'état lié à l'adresse, page des tables comprise, dans la chaîne de
+ * requête seule (`request()->query()`), et l'essai, sans défaut à trouver
+ * sur l'ancien maillon, coûtait un quart de la garde.
  */
 
 it('aucune page du panneau ne répond 500 à une chaîne de requête mal formée', function (): void {
@@ -32,15 +36,16 @@ it('aucune page du panneau ne répond 500 à une chaîne de requête mal formée
     $visite = RequetesMalFormees::visiterChaquePage(
         $routes,
         RequetesMalFormees::valeursDeRoute(User::factory()->create()),
-        static function (Route $route, string $url, array $entetes) use ($administrateur): TestResponse {
+        static function (Route $route, string $url, array $entetes, ?string $corps) use ($administrateur): TestResponse {
             Exceptions::fake();
             RateLimiter::clear('admin-panel:127.0.0.1');
 
-            return actingAs($administrateur, 'admin')->get($url, $entetes);
+            return actingAs($administrateur, 'admin')->call('GET', $url, [], [], [], RequetesMalFormees::serveur($entetes, $corps), $corps);
         },
+        corpsJson: false,
     );
 
     expect($visite['defauts'])->toBe([])
         ->and(count($routes))->toBeGreaterThanOrEqual(20)
-        ->and($visite['requetes'])->toBe(5 * count($routes));
+        ->and($visite['requetes'])->toBe(count(RequetesMalFormees::formesDeChaine()) * count($routes));
 });
