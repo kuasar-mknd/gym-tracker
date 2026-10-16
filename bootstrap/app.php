@@ -14,8 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
          * production, répond par `SanteController`, et non par la route de
          * santé de Laravel, qui rendait une page chargeant une fonte et un
          * script d'autres sites. Hors des groupes `web` et `api`, comme elle :
-         * ni session, ni cookie, ni requête en base. Le docbloc du contrôleur
-         * dit ce qu'il reprend d'elle.
+         * ni session ni cookie. Le docbloc du contrôleur dit ce qu'il reprend
+         * d'elle.
          */
         then: static function (): void {
             \Illuminate\Support\Facades\Route::get('/up', \App\Http\Controllers\SanteController::class);

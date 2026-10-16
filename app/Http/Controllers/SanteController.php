@@ -28,10 +28,12 @@ use Throwable;
  * répondait 200. Le message ne sort jamais dans la réponse.
  *
  * Hors des groupes `web` et `api` (`bootstrap/app.php`) : ni session, ni
- * cookie, ni requête en base, et la maintenance ne la ferme pas. La réponse
- * porte sa propre politique, qui n'autorise rien, et `no-store` ; les autres
- * en-têtes de sécurité, `nosniff` et `X-Frame-Options` compris, viennent de
- * `SecurityHeaders`, comme pour toute réponse.
+ * cookie, et la maintenance ne la ferme pas. Le contrôleur ne lit ni la base
+ * ni le cache ; seul l'écouteur de `SanteServiceProvider` réécrit l'annonce de
+ * version dans le cache, comme avant. La réponse porte sa propre politique,
+ * qui n'autorise rien, et `no-store` ; les autres en-têtes de sécurité,
+ * `nosniff` et `X-Frame-Options` compris, viennent de `SecurityHeaders`, comme
+ * pour toute réponse.
  */
 final class SanteController extends Controller
 {
