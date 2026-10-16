@@ -27,6 +27,8 @@ class SetStoreRequest extends FormRequest
      * sous la capacité de leurs colonnes : au-delà, la base refusait
      * l'écriture et la requête finissait en 500, que la file hors ligne prend
      * pour une erreur passagère à réessayer, au lieu d'un refus lisible.
+     * L'identifiant de la ligne passe `bail` et `integer` avant `exists` :
+     * un tableau imbriqué partait sinon dans `whereIn()`, qui lève (#2071).
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -34,7 +36,9 @@ class SetStoreRequest extends FormRequest
     {
         return [
             'workout_line_id' => [
+                'bail',
                 'required',
+                'integer',
                 Rule::exists('workout_lines', 'id')->where(function (Builder $query): void {
                     /** @var \Illuminate\Database\Query\Builder $query */
                     $query->whereIn('workout_id', function (Builder $q): void {

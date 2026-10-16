@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutTemplate;
 use Illuminate\Support\Facades\Exceptions;
 
 use function Pest\Laravel\actingAs;
@@ -14,9 +16,12 @@ use function Pest\Laravel\actingAs;
  * (#2071) : `current_password` passait un tableau à `password_verify()`, une
  * comparaison de dates (`after:today`, `before_or_equal:today`) un nombre
  * trop grand à Carbon, même quand `date` l'avait déjà refusé, et le début
- * d'une séance, effacé, allait jusqu'à la colonne qui l'exige. Chacun
- * répondait 500 ; chacun est désormais refusé sur son champ, en 422, sans
- * qu'aucune exception ne soit rapportée.
+ * d'une séance, effacé, allait jusqu'à la colonne qui l'exige. Un
+ * identifiant que `Rule::exists` cherche en base, reçu en tableau imbriqué,
+ * partait dans `whereIn()` ou `array_unique()`, qui lèvent ; un identifiant
+ * d'exercice d'un modèle, flottant démesuré, était converti en entier hors de
+ * toute règle. Chacun répondait 500 ; chacun est désormais refusé sur son
+ * champ, en 422, sans qu'aucune exception ne soit rapportée.
  */
 
 beforeEach(function (): void {
@@ -58,6 +63,37 @@ function champsMalFormesRequete(string $cas, User $compte): array
             'unit' => 'cm',
             'measured_at' => -PHP_INT_MAX,
         ], 'measured_at'],
+        'ligne d’une série en tableau imbriqué' => ['POST', route('api.v1.sets.store'), ['workout_line_id' => [[1, 2]], 'weight' => 10, 'reps' => 5], 'workout_line_id'],
+        'séance d’une ligne en tableau imbriqué' => ['POST', route('api.v1.workout-lines.store'), [
+            'workout_id' => [[1, 2]],
+            'exercise_id' => Exercise::factory()->create()->id,
+        ], 'workout_id'],
+        'exercice d’une ligne en objet à deux clefs' => ['POST', route('api.v1.workout-lines.store'), [
+            'workout_id' => Workout::withoutEvents(fn (): Workout => Workout::factory()->create(['user_id' => $compte->id]))->id,
+            'exercise_id' => [['a' => 1, 'b' => 2]],
+        ], 'exercise_id'],
+        'exercice d’un nouvel objectif en tableau imbriqué' => ['POST', route('goals.store'), [
+            'title' => 'Développé couché',
+            'type' => 'weight',
+            'target_value' => 100,
+            'exercise_id' => [[1, 2]],
+        ], 'exercise_id'],
+        'exercice d’un objectif modifié en tableau de tableaux' => [
+            'PUT',
+            route('goals.update', Goal::factory()->create(['user_id' => $compte->id, 'type' => 'frequency'])),
+            ['title' => 'Développé couché', 'type' => 'weight', 'target_value' => 100, 'exercise_id' => [[1], [2]]],
+            'exercise_id',
+        ],
+        'identifiant d’exercice flottant démesuré, nouveau modèle' => ['POST', route('templates.store'), [
+            'name' => 'Modèle',
+            'exercises' => [['id' => 1e30]],
+        ], 'exercises.0.id'],
+        'identifiant d’exercice flottant démesuré, modèle modifié' => [
+            'PUT',
+            route('templates.update', WorkoutTemplate::factory()->create(['user_id' => $compte->id])),
+            ['name' => 'Modèle', 'exercises' => [['id' => -1e30]]],
+            'exercises.0.id',
+        ],
         default => throw new LogicException("Cas inconnu : {$cas}"),
     };
 }
@@ -79,6 +115,13 @@ it('refuse sur son champ une valeur que la validation laissait passer jusqu’à
     'échéance d’un nouvel objectif trop grande',
     'échéance d’un objectif déplacée, nombre flottant démesuré',
     'date d’une mensuration trop grande',
+    'ligne d’une série en tableau imbriqué',
+    'séance d’une ligne en tableau imbriqué',
+    'exercice d’une ligne en objet à deux clefs',
+    'exercice d’un nouvel objectif en tableau imbriqué',
+    'exercice d’un objectif modifié en tableau de tableaux',
+    'identifiant d’exercice flottant démesuré, nouveau modèle',
+    'identifiant d’exercice flottant démesuré, modèle modifié',
 ]);
 
 it('refuse d’effacer le début d’une séance, et le laisse tel qu’il était', function (mixed $debut): void {
@@ -115,3 +158,23 @@ it('laisse changer le nom d’une séance sans renvoyer son début', function ()
         ->and($seance->fresh()?->started_at?->format('Y-m-d H:i:s'))->toBe('2026-10-15 18:00:00');
     Exceptions::assertNothingReported();
 });
+
+it('lit comme avant un identifiant envoyé en nombre ou en chiffres', function (bool $enChiffres): void {
+    $compte = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $compte->id]);
+    $valeur = $enChiffres ? (string) $exercice->id : $exercice->id;
+
+    actingAs($compte)
+        ->postJson(route('templates.store'), ['name' => 'Modèle', 'exercises' => [['id' => $valeur]]])
+        ->assertRedirect(route('templates.index'));
+    actingAs($compte)
+        ->postJson(route('goals.store'), ['title' => 'Squat', 'type' => 'weight', 'target_value' => 100, 'exercise_id' => $valeur])
+        ->assertRedirect();
+
+    expect(WorkoutTemplate::query()->where('user_id', $compte->id)->sole()->workoutTemplateLines()->sole()->exercise_id)->toBe($exercice->id)
+        ->and(Goal::query()->where('user_id', $compte->id)->sole()->exercise_id)->toBe($exercice->id);
+    Exceptions::assertNothingReported();
+})->with([
+    'nombre' => [false],
+    'chiffres' => [true],
+]);

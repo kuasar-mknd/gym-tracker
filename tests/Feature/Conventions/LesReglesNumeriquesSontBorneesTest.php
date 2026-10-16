@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use App\Http\Requests\Api\SetOrderRequest;
+use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\WorkoutLineOrderRequest;
+use App\Http\Requests\Api\WorkoutLineStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
+use App\Http\Requests\GoalStoreRequest;
 use App\Http\Requests\StoreWorkoutTemplateRequest;
 use Illuminate\Foundation\Http\FormRequest;
 use Tests\Support\ReglesDesRequetes;
@@ -37,12 +40,16 @@ function reglesNumeriquesExceptions(): array
 {
     $identifiantDeSerie = 'identifiant comparé aux séries de la ligne : ReorderAction exige une permutation de celles qui existent';
     $identifiantDExercice = 'identifiant comparé en une requête aux exercices du compte (VerifieLesExercicesDuGabarit)';
+    $identifiantCherche = 'identifiant que Rule::exists cherche parmi les lignes du compte : une valeur sans ligne est refusée';
 
     return [
         SetOrderRequest::class => ['sets.*' => $identifiantDeSerie],
         WorkoutLineOrderRequest::class => ['lines.*' => 'identifiant comparé aux lignes de la séance : ReorderAction exige une permutation de celles qui existent'],
         StoreWorkoutTemplateRequest::class => ['exercises.*.id' => $identifiantDExercice],
         WorkoutTemplateUpdateRequest::class => ['exercises.*.id' => $identifiantDExercice],
+        SetStoreRequest::class => ['workout_line_id' => $identifiantCherche],
+        WorkoutLineStoreRequest::class => ['workout_id' => $identifiantCherche, 'exercise_id' => $identifiantCherche],
+        GoalStoreRequest::class => ['exercise_id' => $identifiantCherche],
     ];
 }
 

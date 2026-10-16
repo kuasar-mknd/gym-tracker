@@ -22,7 +22,9 @@ class WorkoutLineStoreRequest extends FormRequest
     /**
      * Le rang d'une ligne va de zéro à `WorkoutLine::RANG_MAX` : au-delà de
      * la colonne (int), la base refusait l'écriture et la requête finissait
-     * en 500.
+     * en 500. La séance et l'exercice passent `bail` et `integer` avant
+     * `exists` : un tableau imbriqué partait sinon dans `whereIn()`, qui
+     * lève (#2071).
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -30,13 +32,17 @@ class WorkoutLineStoreRequest extends FormRequest
     {
         return [
             'workout_id' => [
+                'bail',
                 'required',
+                'integer',
                 \Illuminate\Validation\Rule::exists('workouts', 'id')->where(function (Builder $query): void {
                     $query->where('user_id', $this->user()?->id);
                 }),
             ],
             'exercise_id' => [
+                'bail',
                 'required',
+                'integer',
                 \Illuminate\Validation\Rule::exists('exercises', 'id')->where(function (Builder $query): void {
                     $query->where(function (Builder $q): void {
                         $q->whereNull('user_id')

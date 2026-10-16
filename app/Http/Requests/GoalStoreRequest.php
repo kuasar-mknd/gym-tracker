@@ -48,7 +48,9 @@ class GoalStoreRequest extends FormRequest
      * aucun type d'objectif n'a l'usage d'une valeur négative, ni d'une valeur
      * démesurée. `bail` devant l'échéance qui bouge : sans lui, `after:today`
      * comparait aussi une valeur que `date` refuse, et Carbon levait une
-     * erreur 500 sur un nombre trop grand (#2071).
+     * erreur 500 sur un nombre trop grand (#2071). De même, l'exercice passe
+     * `bail` et `integer` avant `exists`, qui donnait un tableau imbriqué à
+     * `whereIn()`.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -59,8 +61,10 @@ class GoalStoreRequest extends FormRequest
             'type' => ['required', 'in:weight,frequency,volume,measurement'],
             'target_value' => ['required', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
             'exercise_id' => [
+                'bail',
                 'required_if:type,weight,volume',
                 'nullable',
+                'integer',
                 Rule::exists('exercises', 'id')->where(function (Builder $query): void {
                     $query->where(function (Builder $q): void {
                         $q->whereNull('user_id')->orWhere('user_id', $this->user()?->id);
