@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { ADRESSE_DE_LA_SONDE } from '@/Utils/sondeDuServeur'
 
 const clientsClaim = vi.fn()
 const cleanupOutdatedCaches = vi.fn()
@@ -438,6 +439,29 @@ describe('ouverture d’une page', () => {
 
     it('ne remet rien à waitUntil quand le navigateur n’a rien préchargé', () => {
         expect(demander(navigation('/dashboard')).waitUntil).not.toHaveBeenCalled()
+    })
+
+    /*
+     * La sonde que la page demande au retour du réseau (#2048) dit si le
+     * serveur répond : servie par le worker, elle répondrait sans lui. Le
+     * worker la laisse au navigateur, ni gardée ni servie hors ligne ; le
+     * precache, lui, ne liste aucune adresse de l'application
+     * (`ServiceWorkerAssetsTest`).
+     */
+    it('laisse la sonde du serveur au réseau, sans la garder ni la servir hors ligne', () => {
+        // L'origine du worker : une sonde d'ailleurs ne serait pas la nôtre.
+        const sonde = new Request(new URL(ADRESSE_DE_LA_SONDE, self.location.origin), {
+            cache: 'no-store',
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
+            redirect: 'error',
+        })
+        const { respondWith, waitUntil } = demander(sonde)
+
+        expect(sonde.mode).not.toBe('navigate')
+        expect(respondWith).not.toHaveBeenCalled()
+        expect(waitUntil).not.toHaveBeenCalled()
+        expect(matchPrecache).not.toHaveBeenCalled()
     })
 
     it('ne touche pas à un formulaire posté', () => {

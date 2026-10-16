@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
+
+use function Pest\Laravel\get;
+use function Pest\Laravel\post;
 
 /*
  * Seules les erreurs 404 et 500 avaient une page française. Les autres codes
@@ -87,4 +91,49 @@ it('répond en français à la septième tentative de connexion de la minute, m�
         ->assertSee('Trop de tentatives')
         ->assertSee('Patiente une minute, puis réessaie.')
         ->assertDontSee('Too Many Requests');
+});
+
+/*
+ * Hors du groupe `web`, la réponse d'erreur ne porte aucune politique de
+ * contenu : adresse inconnue, méthode refusée, maintenance. La page que
+ * `php artisan down --render` écrit d'avance non plus : sous Octane, en
+ * production, `PreventRequestsDuringMaintenance` la sert dans Laravel, avec
+ * les en-têtes de `SecurityHeaders` mais sans CSP ; hors d'Octane
+ * (`php artisan serve`), `public/index.php` la sert avant Laravel, sans aucun
+ * en-tête de l'application. La page porte donc la sienne, en tête, avant son
+ * bloc `<style>`. Le pilote du cache, sur le magasin `array`, garde l'état de
+ * la maintenance hors du dossier storage, que les processus d'une suite
+ * parallèle partagent.
+ */
+it('porte sa propre politique de contenu, même hors du groupe web et dans la page de maintenance écrite d’avance', function (): void {
+    $politique = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src \'self\'; base-uri \'none\'; form-action \'none\'">';
+    $pages = [
+        'adresse inconnue' => (string) get('/une-adresse-que-rien-ne-sert')->assertNotFound()->getContent(),
+        'méthode refusée' => (string) post('/up')->assertMethodNotAllowed()->getContent(),
+    ];
+
+    config(['app.maintenance.driver' => 'cache', 'app.maintenance.store' => 'array']);
+
+    try {
+        expect(Artisan::call('down'))->toBe(0);
+        $pages['maintenance'] = (string) get('/login')->assertServiceUnavailable()->getContent();
+        Artisan::call('up');
+
+        expect(Artisan::call('down', ['--render' => 'errors::503']))->toBe(0);
+
+        $gabarit = app()->maintenanceMode()->data()['template'] ?? null;
+        $pages['page écrite d’avance, servie par Laravel (Octane)'] = (string) get('/login')->assertServiceUnavailable()->getContent();
+        $pages['page écrite d’avance, telle que public/index.php la sert'] = is_string($gabarit) ? $gabarit : '';
+    } finally {
+        Artisan::call('up');
+    }
+
+    foreach ($pages as $page => $html) {
+        $politiqueA = strpos($html, $politique);
+        $styleA = strpos($html, '<style>');
+
+        expect($politiqueA)->toBeInt("La page « {$page} » ne porte pas sa politique.")
+            ->and($styleA)->toBeInt()
+            ->and((int) $politiqueA)->toBeLessThan((int) $styleA);
+    }
 });
