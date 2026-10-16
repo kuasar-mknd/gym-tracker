@@ -3,11 +3,16 @@
 declare(strict_types=1);
 
 use App\Http\Requests\UpdatePushSubscriptionRequest;
+use App\Models\DailyJournal;
 use App\Models\Exercise;
+use App\Models\Fast;
 use App\Models\Goal;
+use App\Models\Habit;
 use App\Models\User;
+use App\Models\WaterLog;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Support\Facades\Exceptions;
 
 use function Pest\Laravel\actingAs;
@@ -207,4 +212,108 @@ it('lit comme avant un identifiant envoyé en nombre ou en chiffres', function (
 })->with([
     'nombre' => [false],
     'chiffres' => [true],
+]);
+
+/**
+ * Une écriture qui porte une date, sans la date : méthode, adresse, corps,
+ * et le champ qui la reçoit.
+ *
+ * @return array{0: string, 1: string, 2: array<string, mixed>, 3: string}
+ */
+function champsMalFormesEcritureDatee(string $cas, User $compte): array
+{
+    $proprietaire = ['user_id' => $compte->id];
+    $jeune = static fn (): Fast => Fast::factory()->create([...$proprietaire, 'status' => 'completed', 'end_time' => '2026-10-01 18:00:00']);
+    $objectif = ['title' => 'Séances', 'type' => 'frequency', 'target_value' => 12];
+
+    return match ($cas) {
+        'prise d’eau' => ['POST', route('tools.water.store'), ['amount' => 250], 'consumed_at'],
+        'début d’un nouveau jeûne' => ['POST', route('tools.fasting.store'), ['target_duration_minutes' => 960, 'type' => '16:8'], 'start_time'],
+        'début d’un jeûne modifié' => ['PATCH', route('tools.fasting.update', $jeune()), [], 'start_time'],
+        'fin d’un jeûne' => ['PATCH', route('tools.fasting.update', $jeune()), [], 'end_time'],
+        'début d’une séance' => ['PATCH', route('workouts.update', Workout::withoutEvents(fn (): Workout => Workout::factory()->create($proprietaire))), [], 'started_at'],
+        'jour d’un journal' => ['POST', route('daily-journals.store'), ['content' => 'Bonne journée'], 'date'],
+        'jour d’une habitude' => ['POST', route('habits.toggle', Habit::factory()->create($proprietaire)), [], 'date'],
+        'jour d’une pesée' => ['POST', route('body-measurements.store'), ['weight' => 80], 'measured_at'],
+        'jour d’une mensuration' => ['POST', route('body-parts.store'), ['part' => 'Biceps', 'value' => 35, 'unit' => 'cm'], 'measured_at'],
+        'échéance d’un nouvel objectif' => ['POST', route('goals.store'), $objectif, 'deadline'],
+        'échéance d’un objectif déplacée' => ['PUT', route('goals.update', Goal::factory()->create([...$proprietaire, 'type' => 'frequency'])), $objectif, 'deadline'],
+        default => throw new LogicException("Cas inconnu : {$cas}"),
+    };
+}
+
+/*
+ * La règle `date` accepte une date que sa colonne ne tient pas : avant 1970
+ * ou après 2038 pour un horodatage (le début d'une séance devient la
+ * dernière séance du compte, un horodatage), l'an 10000 pour une date, que
+ * PHP lit même au 1er janvier 2000 quand elle s'écrit sans signe. Chacune
+ * répondait 500 ; chacune est refusée sur son champ (`DateQueSaColonneTient`).
+ */
+it('refuse sur son champ une date que sa colonne ne tient pas', function (string $cas, string $date): void {
+    $compte = User::factory()->create();
+    [$methode, $adresse, $corps, $champ] = champsMalFormesEcritureDatee($cas, $compte);
+
+    actingAs($compte)
+        ->json($methode, $adresse, [...$corps, $champ => $date])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors([$champ]);
+
+    Exceptions::assertNothingReported();
+})->with([
+    'prise d’eau après 2038' => ['prise d’eau', '2099-01-01 10:00:00'],
+    'prise d’eau avant 1970' => ['prise d’eau', '1960-01-01 10:00:00'],
+    'prise d’eau en l’an 10000' => ['prise d’eau', '+10000-01-01 10:00:00'],
+    'début d’un nouveau jeûne après 2038' => ['début d’un nouveau jeûne', '2099-01-01 10:00:00'],
+    'début d’un nouveau jeûne avant 1970' => ['début d’un nouveau jeûne', '1960-01-01 10:00:00'],
+    'début d’un nouveau jeûne en l’an 10000' => ['début d’un nouveau jeûne', '+10000-01-01 10:00:00'],
+    'début d’un jeûne modifié après 2038' => ['début d’un jeûne modifié', '2099-01-01 10:00:00'],
+    'début d’un jeûne modifié avant 1970' => ['début d’un jeûne modifié', '1960-01-01 10:00:00'],
+    'début d’un jeûne modifié en l’an 10000' => ['début d’un jeûne modifié', '+10000-01-01 10:00:00'],
+    'fin d’un jeûne après 2038' => ['fin d’un jeûne', '2099-01-01 10:00:00'],
+    'fin d’un jeûne avant 1970' => ['fin d’un jeûne', '1960-01-01 10:00:00'],
+    'fin d’un jeûne en l’an 10000' => ['fin d’un jeûne', '+10000-01-01 10:00:00'],
+    'début d’une séance après 2038' => ['début d’une séance', '2099-01-01 10:00:00'],
+    'début d’une séance avant 1970' => ['début d’une séance', '1960-01-01 10:00:00'],
+    'début d’une séance en l’an 10000' => ['début d’une séance', '+10000-01-01 10:00:00'],
+    'jour d’un journal en l’an 10000' => ['jour d’un journal', '10000-01-01'],
+    'jour d’un journal en l’an 10000, signé' => ['jour d’un journal', '+10000-01-01'],
+    'jour d’une habitude en l’an 10000, signé' => ['jour d’une habitude', '+10000-01-01'],
+    'jour d’une pesée en l’an 10000' => ['jour d’une pesée', '10000-01-01'],
+    'jour d’une pesée en l’an 10000, signé' => ['jour d’une pesée', '+10000-01-01'],
+    'jour d’une mensuration en l’an 10000' => ['jour d’une mensuration', '10000-01-01'],
+    'échéance d’un nouvel objectif en l’an 10000, signée' => ['échéance d’un nouvel objectif', '+10000-01-01'],
+    'échéance d’un objectif déplacée en l’an 10000, signée' => ['échéance d’un objectif déplacée', '+10000-01-01'],
+]);
+
+it('écrit encore une date au bord de la plage de sa colonne', function (string $cas, string $date): void {
+    $compte = User::factory()->create();
+    [$methode, $adresse, $corps, $champ] = champsMalFormesEcritureDatee($cas, $compte);
+
+    actingAs($compte)
+        ->json($methode, $adresse, [...$corps, $champ => $date])
+        ->assertValid();
+
+    Exceptions::assertNothingReported();
+    expect(match ($cas) {
+        'prise d’eau' => WaterLog::query()->where('user_id', $compte->id)->sole()->consumed_at?->format('Y-m-d H:i:s'),
+        'jour d’un journal' => DailyJournal::query()->where('user_id', $compte->id)->sole()->date->format('Y-m-d'),
+        default => throw new LogicException("Cas inconnu : {$cas}"),
+    })->toBe($date);
+})->with([
+    'premier instant d’une prise d’eau' => ['prise d’eau', DateQueSaColonneTient::horodatage()->premierInstant()],
+    'dernier instant d’une prise d’eau' => ['prise d’eau', DateQueSaColonneTient::horodatage()->dernierInstant()],
+    'premier jour d’un journal' => ['jour d’un journal', DateQueSaColonneTient::PREMIER_JOUR_D_UNE_DATE],
+    'dernier jour d’un journal' => ['jour d’un journal', DateQueSaColonneTient::DERNIER_JOUR_D_UNE_DATE],
+]);
+
+it('dit la plage de la colonne dans le refus, en français', function (string $cas, string $date, string $message): void {
+    $compte = User::factory()->create();
+    [$methode, $adresse, $corps, $champ] = champsMalFormesEcritureDatee($cas, $compte);
+
+    actingAs($compte)
+        ->json($methode, $adresse, [...$corps, $champ => $date])
+        ->assertJsonValidationErrors([$champ => $message]);
+})->with([
+    'horodatage' => ['prise d’eau', '2099-01-01 10:00:00', 'Le champ heure de consommation doit être une date comprise entre le 2 janvier 1970 et le 17 janvier 2038.'],
+    'date' => ['jour d’un journal', '10000-01-01', 'Le champ date doit être une date comprise entre le 1er janvier 1000 et le 31 décembre 9999.'],
 ]);

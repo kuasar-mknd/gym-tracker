@@ -4,12 +4,23 @@ declare(strict_types=1);
 
 use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
+use App\Http\Requests\Api\StoreFastRequest;
+use App\Http\Requests\Api\UpdateFastRequest;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
+use App\Http\Requests\BodyMeasurementStoreRequest;
+use App\Http\Requests\BodyPartMeasurementStoreRequest;
+use App\Http\Requests\DailyJournalStoreRequest;
+use App\Http\Requests\GoalStoreRequest;
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
+use App\Http\Requests\StoreWaterLogRequest;
 use App\Http\Requests\StoreWorkoutTemplateRequest;
+use App\Http\Requests\ToggleHabitRequest;
 use App\Http\Requests\UpdatePushSubscriptionRequest;
+use App\Http\Requests\UpdateWorkoutRequest;
 use App\Models\Set;
+use App\Rules\DateQueSaColonneTient;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
 use Tests\Support\ReglesDesRequetes;
@@ -26,6 +37,11 @@ use Tests\Support\ReglesDesRequetes;
  * migration récente n'entre dans le dump que bien plus tard. Un champ recopié
  * ailleurs (les séries d'un modèle deviennent celles d'une séance) se
  * confronte aussi à la colonne d'arrivée.
+ *
+ * Un champ `date` se confronte de même à la plage de sa colonne (#2071) : la
+ * règle `date` accepte l'an 10000 et un horodatage d'avant 1970, que MySQL
+ * refuse. Chaque champ `date` des requêtes doit y être inventorié, avec sa
+ * plage posée par `DateQueSaColonneTient`.
  */
 
 /**
@@ -166,6 +182,114 @@ it('borne chaque champ listé sous la capacité de la colonne qui le reçoit', f
     }
 
     expect($fautes)->toBe([], "règles plus larges que leur colonne :\n  ".implode("\n  ", $fautes));
+});
+
+/**
+ * Les champs `date` et les colonnes qui les reçoivent, celles où ils sont
+ * recopiés comprises.
+ *
+ * @return list<array{0: class-string<FormRequest>, 1: string, 2: list<string>}>
+ */
+function bornesBaseDates(): array
+{
+    return [
+        [StoreWaterLogRequest::class, 'consumed_at', ['water_logs.consumed_at']],
+        [StoreFastRequest::class, 'start_time', ['fasts.start_time']],
+        [UpdateFastRequest::class, 'start_time', ['fasts.start_time']],
+        [UpdateFastRequest::class, 'end_time', ['fasts.end_time']],
+        // Le début d'une séance devient la dernière séance du compte.
+        [UpdateWorkoutRequest::class, 'started_at', ['workouts.started_at', 'users.last_workout_at']],
+        [DailyJournalStoreRequest::class, 'date', ['daily_journals.date']],
+        [ToggleHabitRequest::class, 'date', ['habit_logs.date']],
+        [BodyMeasurementStoreRequest::class, 'measured_at', ['body_measurements.measured_at']],
+        [BodyPartMeasurementStoreRequest::class, 'measured_at', ['body_part_measurements.measured_at']],
+        [GoalStoreRequest::class, 'deadline', ['goals.deadline']],
+    ];
+}
+
+/**
+ * Ce qui, dans les règles d'un champ `date`, laisse passer une date que la
+ * colonne refuserait. Une colonne `TIMESTAMP` tient du 1970-01-01 00:00:01 au
+ * 2038-01-19 03:14:07 en UTC, et l'heure que l'application écrit se lit dans
+ * le fuseau de la session de la base, de UTC−12 à UTC+14 ; une colonne `DATE`
+ * ou `DATETIME`, de l'an 1000 à l'an 9999, sans fuseau.
+ *
+ * @param  list<string|object>  $regles
+ * @return list<string>
+ */
+function bornesBaseFautesDeDate(array $regles, string $cible): array
+{
+    [$table, $colonne] = explode('.', $cible, 2);
+    $definition = collect(Schema::getColumns($table))->firstWhere('name', $colonne);
+    $type = is_array($definition) && is_string($definition['type'] ?? null) ? strtolower($definition['type']) : '';
+    $plage = array_values(array_filter($regles, static fn (mixed $regle): bool => $regle instanceof DateQueSaColonneTient))[0] ?? null;
+
+    if (! $plage instanceof DateQueSaColonneTient) {
+        return ['n’a pas de plage (DateQueSaColonneTient)'];
+    }
+
+    $premier = CarbonImmutable::parse($plage->premierInstant(), 'UTC');
+    $dernier = CarbonImmutable::parse($plage->dernierInstant(), 'UTC');
+
+    [$min, $max] = match (true) {
+        str_starts_with($type, 'timestamp') => [CarbonImmutable::parse('1970-01-01 00:00:01', 'UTC')->addHours(14), CarbonImmutable::parse('2038-01-19 03:14:07', 'UTC')->subHours(12)],
+        str_starts_with($type, 'date') => [CarbonImmutable::parse('1000-01-01 00:00:00', 'UTC'), CarbonImmutable::parse('9999-12-31 23:59:59', 'UTC')],
+        default => throw new LogicException("Type de colonne non confronté : {$cible} ({$type})."),
+    };
+
+    return array_values(array_filter([
+        $premier->lessThan($min) ? "accepte dès {$plage->premierInstant()}, la colonne ({$type}) commence plus tard" : null,
+        $dernier->greaterThan($max) ? "accepte jusqu’à {$plage->dernierInstant()}, la colonne ({$type}) s’arrête avant" : null,
+    ]));
+}
+
+it('borne chaque champ date dans la plage de chaque colonne qui le reçoit', function (): void {
+    $fautes = [];
+
+    foreach (bornesBaseDates() as [$requete, $champ, $cibles]) {
+        $regles = ReglesDesRequetes::de($requete)[$champ] ?? null;
+
+        if ($regles === null) {
+            $fautes[] = "{$requete} : aucune règle pour {$champ}";
+
+            continue;
+        }
+
+        foreach ($cibles as $cible) {
+            foreach (bornesBaseFautesDeDate($regles, $cible) as $faute) {
+                $fautes[] = "{$requete} : {$champ} ({$cible}) {$faute}";
+            }
+        }
+    }
+
+    expect($fautes)->toBe([], "dates plus larges que leur colonne :\n  ".implode("\n  ", $fautes));
+});
+
+it('confronte à sa colonne chaque champ date des requêtes', function (): void {
+    $inventories = array_map(static fn (array $ligne): string => $ligne[0].' : '.$ligne[1], bornesBaseDates());
+    $oublies = [];
+
+    foreach (array_keys(ReglesDesRequetes::toutes()) as $requete) {
+        foreach (ReglesDesRequetes::de($requete) as $champ => $regles) {
+            $estUneDate = array_filter(ReglesDesRequetes::textes($regles), static fn (string $regle): bool => in_array(strtolower(explode(':', $regle, 2)[0]), ['date', 'date_format'], true)) !== [];
+
+            if ($estUneDate && ! in_array("{$requete} : {$champ}", $inventories, true)) {
+                $oublies[] = "{$requete} : {$champ}";
+            }
+        }
+    }
+
+    expect($oublies)->toBe([], "champs date sans colonne inventoriée dans bornesBaseDates() :\n  ".implode("\n  ", $oublies));
+});
+
+/*
+ * La garde voit le défaut d'origine : sans quoi elle ne prouverait rien.
+ */
+it('refuse une date sans plage, et une plage de date posée sur un horodatage', function (): void {
+    expect(bornesBaseFautesDeDate(['required', 'date'], 'water_logs.consumed_at'))->toBe(['n’a pas de plage (DateQueSaColonneTient)'])
+        ->and(bornesBaseFautesDeDate(['bail', 'required', 'date', DateQueSaColonneTient::date()], 'users.last_workout_at'))->toHaveCount(2)
+        ->and(bornesBaseFautesDeDate(['bail', 'required', 'date', DateQueSaColonneTient::date()], 'workouts.started_at'))->toBe([])
+        ->and(bornesBaseFautesDeDate(['bail', 'required', 'date', DateQueSaColonneTient::horodatage()], 'users.last_workout_at'))->toBe([]);
 });
 
 /*

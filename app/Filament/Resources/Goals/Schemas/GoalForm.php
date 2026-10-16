@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Goals\Schemas;
 
+use App\Rules\DateQueSaColonneTient;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -32,7 +33,13 @@ class GoalForm
             ->components(self::getComponents());
     }
 
-    /** @return array<int, \Illuminate\Contracts\Support\Htmlable|string> */
+    /**
+     * L'échéance (`DATE`) et la date d'atteinte (`TIMESTAMP`) se bornent à la
+     * plage de leur colonne (`DateQueSaColonneTient`) : au-delà, la base
+     * refusait l'écriture, et l'enregistrement finissait en 500 (#2071).
+     *
+     * @return array<int, \Illuminate\Contracts\Support\Htmlable|string>
+     */
     private static function getComponents(): array
     {
         return [
@@ -44,8 +51,12 @@ class GoalForm
             TextInput::make('start_value')->label('Valeur de départ')->required()->numeric()->default(0),
             Select::make('exercise_id')->label('Exercice')->relationship('exercise', 'name')->searchable(),
             TextInput::make('measurement_type')->label('Mensuration'),
-            DatePicker::make('deadline')->label('Échéance'),
-            DateTimePicker::make('completed_at')->label('Atteint le'),
+            DatePicker::make('deadline')->label('Échéance')
+                ->minDate(DateQueSaColonneTient::date()->premierJour)
+                ->maxDate(DateQueSaColonneTient::date()->dernierJour),
+            DateTimePicker::make('completed_at')->label('Atteint le')
+                ->minDate(DateQueSaColonneTient::horodatage()->premierInstant())
+                ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant()),
         ];
     }
 }

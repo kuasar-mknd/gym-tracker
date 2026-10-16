@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Foundation\Http\FormRequest;
 
 class BodyMeasurementStoreRequest extends FormRequest
@@ -30,7 +31,7 @@ class BodyMeasurementStoreRequest extends FormRequest
         return [
             'weight' => ['required', 'numeric', 'min:1', 'max:500'],
             'body_fat' => ['nullable', 'numeric', 'min:1', 'max:100'],
-            'measured_at' => ['required', 'date'],
+            'measured_at' => ['bail', 'required', 'date', DateQueSaColonneTient::date()],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

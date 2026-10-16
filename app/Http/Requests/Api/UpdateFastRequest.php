@@ -6,6 +6,7 @@ namespace App\Http\Requests\Api;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Fast;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateFastRequest extends FormRequest
@@ -30,8 +31,8 @@ class UpdateFastRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'start_time' => ['sometimes', 'date'],
-            'end_time' => ['nullable', 'date'],
+            'start_time' => ['bail', 'sometimes', 'date', DateQueSaColonneTient::horodatage()],
+            'end_time' => ['bail', 'nullable', 'date', DateQueSaColonneTient::horodatage()],
             'target_duration_minutes' => ['sometimes', 'integer', 'min:1', 'max:'.Fast::DUREE_CIBLE_MAX_MINUTES],
             'type' => ['sometimes', 'string', 'max:255'],
             'status' => ['sometimes', 'required', 'string', 'in:active,completed,broken'],

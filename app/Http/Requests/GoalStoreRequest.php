@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Goal;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -84,8 +85,8 @@ class GoalStoreRequest extends FormRequest
                 Rule::in(\App\Http\Controllers\GoalController::measurementTypeValues()),
             ],
             'deadline' => $this->deadlineIsUnchanged()
-                ? ['nullable', 'date']
-                : ['bail', 'nullable', 'date', 'after:today'],
+                ? ['bail', 'nullable', 'date', DateQueSaColonneTient::date()]
+                : ['bail', 'nullable', 'date', DateQueSaColonneTient::date(), 'after:today'],
             'start_value' => ['nullable', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
         ];
     }

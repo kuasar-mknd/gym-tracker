@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
+use App\Rules\DateQueSaColonneTient;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ToggleHabitRequest extends FormRequest
@@ -28,7 +29,7 @@ class ToggleHabitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date' => ['required', 'date'],
+            'date' => ['bail', 'required', 'date', DateQueSaColonneTient::date()],
         ];
     }
 
