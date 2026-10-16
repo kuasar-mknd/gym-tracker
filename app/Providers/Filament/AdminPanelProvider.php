@@ -6,7 +6,10 @@ namespace App\Providers\Filament;
 
 use App\Filament\Sauvegardes\PageDesSauvegardes;
 use App\Http\Middleware\ConditionalCspHeaders;
+use App\Support\AvatarDesInitiales;
+use App\Support\ComptesVusParPulse;
 use App\Support\Csp\Nonce\SigneLesScriptsEnLigneDesPaquets;
+use App\Support\Csp\RetireLesRessourcesDistantesDesPaquets;
 use BezhanSalleh\FilamentExceptions\FilamentExceptionsPlugin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
@@ -27,6 +30,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Laravel\Pulse\Contracts\ResolvesUsers;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use ShuvroRoy\FilamentSpatieLaravelHealth\FilamentSpatieLaravelHealthPlugin;
 
@@ -38,10 +42,31 @@ final class AdminPanelProvider extends PanelProvider
      * CSP bloquerait : ils sont signés à la compilation de leurs gabarits, y
      * compris ceux qu'un gabarit recopie depuis du PHP (le JavaScript du détail
      * d'une exception, celui de Pulse) (#1920, #1922).
+     *
+     * Horizon, Pulse et Telescope chargent leur fonte, et Pulse des icônes,
+     * depuis d'autres sites : ces balises sont retirées de leurs gabarits à la
+     * compilation.
      */
     public function boot(): void
     {
         Blade::precompiler(new SigneLesScriptsEnLigneDesPaquets());
+        Blade::precompiler(new RetireLesRessourcesDistantesDesPaquets());
+    }
+
+    /**
+     * Les comptes de la carte « Usage » de Pulse portent l'avatar que
+     * l'application dessine, comme l'administrateur du panneau, et non celui
+     * qu'il prenait chez des tiers ; chacun, compte de l'application ou
+     * administrateur, se cherche dans sa table. Pulse lie son résolveur par
+     * `singletonIf` : celui-ci l'emporte, quel que soit l'ordre des
+     * fournisseurs.
+     */
+    #[\Override]
+    public function register(): void
+    {
+        parent::register();
+
+        $this->app->singleton(ResolvesUsers::class, ComptesVusParPulse::class);
     }
 
     public function panel(Panel $panel): Panel
@@ -89,6 +114,12 @@ final class AdminPanelProvider extends PanelProvider
              * apparence, ici comme ailleurs.
              */
             ->darkMode(false)
+            /*
+             * Sans ce réglage, Filament prend l'avatar de l'administrateur chez
+             * un service tiers, à qui chaque page du panneau envoyait les
+             * initiales de son nom.
+             */
+            ->defaultAvatarProvider(AvatarDesInitiales::class)
             ->multiFactorAuthentication([AppAuthentication::make()]);
     }
 

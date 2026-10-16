@@ -19,6 +19,14 @@ class PulsePolicy extends Basic
      * sans lui, le navigateur refusait le `style="display: none;"` du menu de
      * thème de Pulse, qui s'affichait alors jusqu'au démarrage d'Alpine. Il ne
      * vaut que pour les attributs : les balises `<style>` restent sous le nonce.
+     *
+     * Aucune autre origine : ni le site de polices où Pulse prend sa fonte, ni
+     * `https:` en `img-src`, qui admettait toute image de n'importe quel site.
+     * La fonte et l'icône des hôtes de la carte des requêtes sortantes sont
+     * retirées de ses gabarits à la compilation
+     * (`RetireLesRessourcesDistantesDesPaquets`), et les avatars de la carte
+     * « Usage », que Pulse prenait chez des tiers, sont dessinés par
+     * l'application et servis en `data:` (`ComptesVusParPulse`).
      */
     #[\Override]
     public function configure(Policy $policy): void
@@ -30,8 +38,6 @@ class PulsePolicy extends Basic
             ->addNonce(Directive::SCRIPT)
             ->addNonce(Directive::STYLE)
             ->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE)
-            ->add(Directive::STYLE, 'https://fonts.bunny.net')
-            ->add(Directive::FONT, [Keyword::SELF, 'https://fonts.bunny.net'])
-            ->add(Directive::IMG, [Keyword::SELF, 'data:', 'https:']);
+            ->add(Directive::IMG, [Keyword::SELF, 'data:']);
     }
 }
