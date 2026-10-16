@@ -30,6 +30,7 @@ use Filament\Resources\Resource;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\Route;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Route as Routeur;
 use Illuminate\Support\Str;
@@ -76,7 +77,12 @@ final class RequetesMalFormees
 
     /**
      * Les formes d'un champ du corps, envoyé en JSON (qui ne porte pas un
-     * octet hors UTF-8).
+     * octet hors UTF-8). Un tableau imbriqué d'au moins deux éléments passe
+     * `array_unique()` d'`exists`, puis lève dans `whereIn()` ; un flottant
+     * démesuré avertit à la conversion en entier, là où un entier démesuré
+     * n'avertit pas ; la liste d'objets porte, à chaque profondeur, chaque
+     * nom qu'une requête valide sous un champ (`exercises.*.id`,
+     * `exercises.*.sets.*.reps`…), ce qu'un lecteur hors des règles lit aussi.
      *
      * @return array<string, mixed>
      */
@@ -84,10 +90,60 @@ final class RequetesMalFormees
     {
         return [
             'tableau' => ['7j'],
+            'tableau imbriqué' => [['7j', '7j']],
             'chaîne vide' => '',
             'chaîne énorme' => str_repeat('a', 4096),
             'nombre hors bornes' => PHP_INT_MAX,
+            'flottant hors bornes' => 1e30,
+            'liste d’objets' => self::listeDObjets(1e30),
         ];
+    }
+
+    /**
+     * Les formes d'un champ d'un formulaire (`application/x-www-form-urlencoded`),
+     * qui peut porter ce que JSON ne porte pas.
+     *
+     * @return array<string, string>
+     */
+    public static function formesDeFormulaire(): array
+    {
+        return [
+            'formulaire, pas de l’UTF-8' => "\xFF\xFE",
+        ];
+    }
+
+    /**
+     * Une liste d'un objet qui porte, à chaque profondeur, chaque nom qu'une
+     * requête de app/Http/Requests valide dans les éléments d'une liste, la
+     * feuille valant `$feuille` : `exercises.*.id` et `exercises.*.sets.*.reps`
+     * donnent `[['id' => $feuille, 'sets' => [['reps' => $feuille]]]]`.
+     *
+     * @return list<array<mixed>>
+     */
+    public static function listeDObjets(mixed $feuille): array
+    {
+        $chemins = [];
+
+        foreach (array_keys(ReglesDesRequetes::toutes()) as $classe) {
+            foreach (array_keys(ReglesDesRequetes::de($classe)) as $champ) {
+                $dansLaListe = Str::after($champ, '.');
+
+                if (str_starts_with($dansLaListe, '*.')) {
+                    $chemins[] = str_replace('*', '0', Str::after($dansLaListe, '*.'));
+                }
+            }
+        }
+
+        $chemins = array_values(array_unique($chemins));
+        usort($chemins, static fn (string $a, string $b): int => substr_count($a, '.') <=> substr_count($b, '.'));
+
+        $objet = [];
+
+        foreach ($chemins as $chemin) {
+            Arr::set($objet, $chemin, $feuille);
+        }
+
+        return [$objet];
     }
 
     /**
