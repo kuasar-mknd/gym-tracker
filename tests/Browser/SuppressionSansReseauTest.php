@@ -25,6 +25,12 @@ use Tests\DuskTestCase;
  * prend que les GET), et elle échoue comme sur un téléphone sans réseau.
  * Les cas des réponses en erreur et des visites annulées se jouent en Vitest,
  * avec le vrai client d'Inertia (`tests/js/pages/misesAJourOptimistesAvecInertia.test.js`).
+ *
+ * Le parcours ne demande pas une base vide : la bibliothèque montre aussi le
+ * catalogue commun (exercices sans compte, que la graine de la CI pose), et
+ * l'ordre de passage des parcours change avec chaque pesée des éclats. Il
+ * retrouve donc ses trois cartes parmi les autres, et compare l'écran entier
+ * avant et après.
  */
 class SuppressionSansReseauTest extends DuskTestCase
 {
@@ -42,12 +48,16 @@ class SuppressionSansReseauTest extends DuskTestCase
             'name' => $nom.' '.Str::random(6),
             'category' => 'Pectoraux',
         ]);
-        $exercice('Alpha');
+        $premier = $exercice('Alpha');
         $milieu = $exercice('Bravo');
-        $exercice('Charlie');
+        $dernier = $exercice('Charlie');
         $boutonDuMilieu = '[dusk="delete-exercise-btn-'.$milieu->id.'"]';
+        $cartesDuCompte = array_map(
+            static fn (Exercise $exerciceDuCompte): string => 'exercise-card-'.$exerciceDuCompte->id,
+            [$premier, $milieu, $dernier],
+        );
 
-        $this->browse(function (Browser $browser) use ($compte, $boutonDuMilieu): void {
+        $this->browse(function (Browser $browser) use ($compte, $boutonDuMilieu, $cartesDuCompte): void {
             // Un écran de bureau : au doigt, la carte cache sa suppression derrière un glissement.
             $browser->loginAs($compte)
                 ->resize(1280, 900)
@@ -60,7 +70,8 @@ class SuppressionSansReseauTest extends DuskTestCase
             $ordreAvant = $browser->script($ordreDesCartes)[0];
 
             $this->assertIsArray($ordreAvant);
-            $this->assertCount(3, $ordreAvant);
+            // Les trois cartes du compte, dans l'ordre des noms, parmi celles du catalogue commun.
+            $this->assertSame($cartesDuCompte, array_values(array_intersect($ordreAvant, $cartesDuCompte)));
 
             $outils = new ChromeDevToolsDriver($browser->driver);
             $outils->execute('Network.enable');
