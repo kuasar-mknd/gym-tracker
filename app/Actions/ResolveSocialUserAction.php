@@ -8,6 +8,7 @@ use App\Actions\Auth\ReprendreUnCompteEnAttente;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -41,7 +42,8 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  *     ASCII imprimable, vérifiée par le fournisseur, et que le compte n'est
  *     lié à aucune autre identité du même fournisseur.
  *  3. Sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
- *     adresse que la base tiendrait pour la même.
+ *     adresse que la base tiendrait pour la même, et que Symfony Mime sache
+ *     écrire l'adresse (`AdresseQueLaMessagerieSaitEcrire`).
  *
  * Toute comparaison d'adresse et d'identifiant se fait en PHP, octet par
  * octet. La base ne sert qu'à trouver les candidats : sa collation
@@ -287,6 +289,14 @@ final readonly class ResolveSocialUserAction
      * preuve, comme le compte reste non vérifié : rien ne dit que l'identité
      * détient l'adresse, dont le titulaire peut reprendre le compte par la
      * réinitialisation du mot de passe.
+     *
+     * Une adresse que Symfony Mime ne sait pas écrire ne crée pas de compte
+     * (#2075) : aucun courriel ne lui parviendrait, lien « mot de passe
+     * oublié » compris, et l'inscription comme le profil la refusent aussi.
+     * Seule la création est refusée : un compte qui porte déjà l'adresse, ou
+     * l'identité, s'ouvre comme avant.
+     *
+     * @throws SocialAuthException
      */
     private function creerLeCompte(
         string $fournisseur,
@@ -295,6 +305,10 @@ final readonly class ResolveSocialUserAction
         string $adresse,
         bool $adresseVerifiee,
     ): User {
+        if (! AdresseQueLaMessagerieSaitEcrire::laMessagerieSaitLEcrire($adresse)) {
+            throw new SocialAuthException($this->refusDAdresseQueLaMessagerieNEcritPas($fournisseur));
+        }
+
         $user = User::create([
             'name' => $utilisateurSocial->getName() ?? $utilisateurSocial->getNickname() ?? 'Utilisateur',
             'email' => $adresse,
@@ -402,6 +416,19 @@ final readonly class ResolveSocialUserAction
     private function refusDAdresseHorsAscii(string $fournisseur): string
     {
         return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une adresse en caractères ASCII, sans accent.';
+    }
+
+    /**
+     * Le refus d'une adresse que Symfony Mime ne sait pas écrire, qu'aucun
+     * compte n'occupe.
+     *
+     * L'inscription la refuse aussi : le message renvoie au compte que la
+     * personne aurait sous une autre adresse, ou à l'inscription avec une
+     * autre adresse.
+     */
+    private function refusDAdresseQueLaMessagerieNEcritPas(string $fournisseur): string
+    {
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas recevoir nos courriels : notre messagerie ne sait pas l\'écrire comme destinataire. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
     }
 
     /**

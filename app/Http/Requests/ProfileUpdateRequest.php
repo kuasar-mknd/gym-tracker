@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
@@ -50,9 +51,14 @@ class ProfileUpdateRequest extends FormRequest
      * Get the validation rules that apply to the request.
      *
      * Une nouvelle adresse s'écrit en ASCII imprimable, comme à l'inscription
-     * (`AdresseEnAsciiImprimable`) ; l'adresse actuelle du compte reste admise
-     * telle quelle. Aucune règle ne regarde si la nouvelle adresse a déjà un
-     * compte : la réponse le dirait. Le changement attend le lien envoyé à
+     * (`AdresseEnAsciiImprimable`), et sous une forme que Symfony Mime sait
+     * écrire, sans quoi le lien de confirmation ne partirait pas
+     * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; l'adresse actuelle du
+     * compte reste admise telle quelle par l'une et l'autre, pour qu'un compte
+     * plus ancien enregistre son nom. Aucune règle ne regarde si la nouvelle
+     * adresse a déjà un compte : la réponse le dirait, et le refus d'une
+     * adresse que Mime n'écrit pas est le message de toute adresse mal
+     * formée. Le changement attend le lien envoyé à
      * cette adresse (`TraiterUnChangementDAdresse`), qui prévient au contraire
      * son titulaire quand elle est prise. `bail` tient `current_password`
      * derrière `string` : la règle passe la valeur telle quelle à
@@ -71,6 +77,7 @@ class ProfileUpdateRequest extends FormRequest
                 'email',
                 'max:255',
                 new AdresseEnAsciiImprimable($this->compte()?->email),
+                new AdresseQueLaMessagerieSaitEcrire($this->compte()?->email),
             ],
             'current_password' => $this->changeLAdresse()
                 ? ['bail', 'required', 'string', 'current_password:web', 'max:255']

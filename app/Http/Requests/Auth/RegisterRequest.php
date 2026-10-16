@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Auth;
 
 use App\Rules\AdresseEnAsciiImprimable;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules;
 
@@ -34,7 +35,10 @@ class RegisterRequest extends FormRequest
      * L'adresse s'écrit en minuscules et en ASCII imprimable : la base ne
      * confond alors deux adresses que si elles sont identiques, et une
      * inscription ne peut pas occuper l'adresse d'un autre
-     * (`AdresseEnAsciiImprimable`). Une adresse déjà prise passe la
+     * (`AdresseEnAsciiImprimable`). Symfony Mime doit savoir l'écrire, sans
+     * quoi le lien qui ouvre le compte ne partirait jamais
+     * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; son refus est le message
+     * de toute adresse mal formée. Une adresse déjà prise passe la
      * validation comme une autre.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -43,7 +47,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', new AdresseEnAsciiImprimable()],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', new AdresseEnAsciiImprimable(), new AdresseQueLaMessagerieSaitEcrire()],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
     }

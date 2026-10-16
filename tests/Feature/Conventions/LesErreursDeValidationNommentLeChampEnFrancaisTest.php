@@ -350,9 +350,11 @@ const VALIDATION_FRANCAISE_MESSAGE_DE_REGLE_MAISON = '/\$fail\(\s*([\'"])((?:\\\
 
 /**
  * Les clefs qui sont aussi des mots français, qu'un message peut écrire sans
- * citer le champ : « une part », « content », « les types ».
+ * citer le champ : « une part », « content », « les types », « une adresse
+ * e-mail » (le message de la règle `email`, que reprend
+ * `AdresseQueLaMessagerieSaitEcrire`).
  */
-const VALIDATION_FRANCAISE_CLEFS_QUI_SONT_DES_MOTS = ['agent', 'content', 'label', 'part', 'pile', 'types'];
+const VALIDATION_FRANCAISE_CLEFS_QUI_SONT_DES_MOTS = ['adresse', 'agent', 'content', 'label', 'part', 'pile', 'types'];
 
 /**
  * Les clefs de règle qu'un message ne doit pas citer : le dernier segment de
@@ -386,6 +388,24 @@ function validationFrancaiseClefsACiterParLeurNom(): array
     return $formes;
 }
 
+/**
+ * Le message qu'affiche un `$fail('…')` dont `$suite` est le code qui suit la
+ * chaîne : le texte lui-même, ou, quand `->translate()` le suit, la phrase
+ * que `lang/fr` donne à cette clef de traduction (`validation.email`, que
+ * reprend `AdresseQueLaMessagerieSaitEcrire`, #2075). Une clef sans phrase
+ * française reste telle quelle, et se lit comme un message.
+ */
+function validationFrancaiseMessageAffiche(string $message, string $suite): string
+{
+    if (preg_match('/\A\s*\)\s*->\s*translate\(/', $suite) !== 1 || ! Lang::hasForLocale($message, 'fr')) {
+        return $message;
+    }
+
+    $phrase = Lang::get($message, [], 'fr');
+
+    return is_string($phrase) ? $phrase : $message;
+}
+
 it('ne cite aucune clef de règle dans le message d’une règle maison', function (): void {
     $formes = validationFrancaiseClefsACiterParLeurNom();
     $citeUneClef = static fn (string $message): ?string => array_find(
@@ -398,7 +418,11 @@ it('ne cite aucune clef de règle dans le message d’une règle maison', functi
         ->and($citeUneClef('Endpoint invalide.'))->toBe('endpoint')
         ->and($citeUneClef('La target value est trop grande.'))->toBe('target value')
         ->and($citeUneClef('Le champ :attribute doit être une URL https.'))->toBeNull()
-        ->and($citeUneClef('Le champ :attribute ne dépasse pas :value.'))->toBeNull();
+        ->and($citeUneClef('Le champ :attribute ne dépasse pas :value.'))->toBeNull()
+        ->and(validationFrancaiseMessageAffiche('validation.email', ')->translate();'))->toBe('Le champ :attribute doit être une adresse e-mail valide.')
+        ->and($citeUneClef(validationFrancaiseMessageAffiche('validation.email', ')->translate();')))->toBeNull()
+        ->and($citeUneClef(validationFrancaiseMessageAffiche('validation.email', ');')))->toBe('email')
+        ->and($citeUneClef(validationFrancaiseMessageAffiche('validation.endpoint', ')->translate();')))->toBe('endpoint');
 
     $citations = [];
 
@@ -410,7 +434,7 @@ it('ne cite aucune clef de règle dans le message d’une règle maison', functi
         }
 
         foreach ($trouves as $trouve) {
-            $message = stripslashes($trouve[2][0]);
+            $message = validationFrancaiseMessageAffiche(stripslashes($trouve[2][0]), substr($source, $trouve[0][1] + strlen($trouve[0][0]), 40));
             $clef = $citeUneClef($message);
 
             if ($clef !== null) {

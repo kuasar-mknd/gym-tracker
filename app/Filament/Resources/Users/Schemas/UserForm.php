@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Users\Schemas;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -37,15 +38,20 @@ class UserForm
              * confondent une adresse accentuée, un « ß » ou une lettre pleine
              * chasse avec l'adresse ASCII voisine : un compte créé ou modifié
              * ici sur l'une occuperait l'autre, et son titulaire ne pourrait
-             * plus s'inscrire. L'adresse actuelle du compte reste admise telle
-             * quelle, pour qu'un compte ancien s'enregistre sans en changer.
+             * plus s'inscrire. Symfony Mime doit aussi savoir l'écrire : sans
+             * quoi aucun courriel n'atteindrait le compte, lien « mot de passe
+             * oublié » compris (`AdresseQueLaMessagerieSaitEcrire`, #2075).
+             * L'adresse actuelle du compte reste admise telle quelle par les
+             * deux règles, pour qu'un compte ancien s'enregistre sans en
+             * changer.
              */
             TextInput::make('email')
                 ->label('Adresse e-mail')
                 ->email()
                 ->required()
                 ->maxLength(255)
-                ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email)),
+                ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email))
+                ->rule(fn (?User $record): AdresseQueLaMessagerieSaitEcrire => new AdresseQueLaMessagerieSaitEcrire($record?->email)),
             TextInput::make('default_rest_time')->label('Repos par défaut (s)')->required()->integer()->minValue(0)->maxValue(Exercise::REPOS_MAX_SECONDES)->default(90),
             /*
              * Montres, jamais ecrits.

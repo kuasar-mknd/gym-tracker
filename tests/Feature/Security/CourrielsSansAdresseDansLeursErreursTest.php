@@ -264,13 +264,30 @@ it('ne cite pas l’adresse tapée à l’inscription quand le serveur la refuse
 })->with('formes de la réponse du serveur');
 
 /*
- * La validation de l'inscription admet un commentaire dans l'adresse
- * (« ada(x)@… », conforme à la RFC 5322), que Symfony Mime refuse d'écrire :
- * son erreur citait l'adresse tapée.
+ * Symfony Mime refuse d'écrire une adresse à commentaire (« ada(x)@… »,
+ * conforme à la RFC 5322), que la règle `email` admet : son erreur citait
+ * l'adresse. L'inscription la refuse désormais à la validation
+ * (`AdresseQueLaMessagerieSaitEcrire`, #2075), sans rien envoyer ; un compte
+ * plus ancien peut encore la porter, et le lien « mot de passe oublié » qui lui
+ * part échoue sans la citer.
  */
-it('ne cite pas l’adresse tapée à l’inscription que Symfony Mime refuse d’écrire', function (): void {
+it('refuse à l’inscription l’adresse que Symfony Mime refuse d’écrire, et ne cite pas celle d’un compte plus ancien quand l’envoi échoue', function (): void {
+    test()->from(route('register'))->post(route('register'), [
+        'name' => 'Saisie',
+        'email' => 'saisie.commentee(x)@example.org',
+        'password' => 'Un-Mot-De-Passe-Solide-2026!',
+        'password_confirmation' => 'Un-Mot-De-Passe-Solide-2026!',
+    ])->assertSessionHasErrors('email');
+
+    expect(ExceptionEnregistree::query()->count())->toBe(0)
+        ->and(User::query()->count())->toBe(0);
+
+    User::factory()->create(['email' => 'saisie.commentee(x)@example.org']);
+
     $traces = courrielsSansAdresseTracesDe(static function (): void {
-        courrielsSansAdresseSInscrire('saisie.commentee(x)@example.org');
+        test()->from(route('password.request'))
+            ->post(route('password.email'), ['email' => 'saisie.commentee(x)@example.org'])
+            ->assertInternalServerError();
     });
 
     $exception = ExceptionEnregistree::query()->sole();
