@@ -112,7 +112,7 @@ it('aucune écriture de l’application ne répond 500 à un corps mal formé', 
     $defauts = [];
 
     foreach ($routes as $route) {
-        $methode = array_values(array_diff($route->methods(), ['GET', 'HEAD']))[0];
+        $methode = array_first(array_diff($route->methods(), ['GET', 'HEAD'])) ?? 'POST';
         $adresse = RequetesMalFormees::adresse($route, RequetesMalFormees::valeursDeRoute($compte, neuve: true));
         $temoin = true;
 

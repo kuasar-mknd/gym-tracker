@@ -123,7 +123,7 @@ final class RequetesMalFormees
 
         $noms = [];
 
-        foreach ((new ReflectionClass($classe))->getProperties() as $propriete) {
+        foreach (new ReflectionClass($classe)->getProperties() as $propriete) {
             foreach ($propriete->getAttributes(Url::class, ReflectionAttribute::IS_INSTANCEOF) as $attribut) {
                 $alias = $attribut->newInstance()->as;
                 $noms[] = is_string($alias) ? $alias : $propriete->getName();
@@ -495,8 +495,8 @@ final class RequetesMalFormees
         $classe = self::classeDeLAction($route);
 
         $fichier = match (true) {
-            $action instanceof Closure => (new ReflectionFunction($action))->getFileName(),
-            class_exists($classe) => (new ReflectionClass($classe))->getFileName(),
+            $action instanceof Closure => new ReflectionFunction($action)->getFileName(),
+            class_exists($classe) => new ReflectionClass($classe)->getFileName(),
             default => false,
         };
 
