@@ -2,6 +2,7 @@
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import IdentifiantDuCompte from '@/Components/Form/IdentifiantDuCompte.vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { ENVOI_DU_LIEN_NON_CONFIRME, direSansReseau } from '@/Utils/visitesHorsLigne'
@@ -105,14 +106,23 @@ const submit = () => {
                 required
             />
 
+            <!--
+                Le champ porte la nouvelle adresse, qui ne devient l'identifiant
+                du compte qu'une fois le lien suivi : `email`, pas `username`.
+                L'identifiant, sous lequel un gestionnaire de mots de passe
+                reconnaît le mot de passe actuel demandé ci-dessous, est celui du
+                compte, caché et jamais envoyé (`IdentifiantDuCompte`, #PR).
+            -->
             <GlassInput
                 v-model="form.email"
                 type="email"
                 label="Email"
                 :error="form.errors.email"
-                autocomplete="username"
+                autocomplete="email"
                 required
             />
+
+            <IdentifiantDuCompte data-testid="identifiant-du-changement-d-adresse" />
 
             <template v-if="adresseChangee">
                 <GlassInput

@@ -619,6 +619,59 @@ describe('UpdateProfileInformationForm', () => {
 
         expect(wrapper.text()).toContain('Enregistré ✓')
     })
+
+    /*
+     * Le champ d'adresse porte la nouvelle adresse, qui ne devient
+     * l'identifiant du compte qu'une fois le lien suivi. Déclarée `username`,
+     * elle faisait du formulaire une connexion pour un gestionnaire de mots de
+     * passe, qui proposait de ranger le mot de passe actuel, demandé à côté,
+     * sous elle (#PR). Le champ se déclare `email`, et le formulaire porte
+     * l'identifiant du compte, caché et jamais envoyé, comme celui du mot de
+     * passe.
+     */
+    describe('identifiant du compte pour les gestionnaires de mots de passe', () => {
+        const identifiant = (wrapper) => wrapper.find('input[autocomplete="username"]')
+
+        it('déclare la nouvelle adresse `email`, et porte à part l’identifiant actuel du compte', async () => {
+            signedInAs(sam)
+            const wrapper = mountPartial(UpdateProfileInformationForm)
+
+            await typeInto(wrapper, 'Email', 'nouveau@example.com')
+            const champs = wrapper.findAll('form input').map((champ) => champ.attributes('autocomplete'))
+
+            expect(wrapper.find('input[type="email"]').attributes('autocomplete')).toBe('email')
+            expect(champs).toEqual(['name', 'email', 'username', 'current-password'])
+            expect(identifiant(wrapper).element.value).toBe('sam@example.com')
+            expect(identifiant(wrapper).attributes('type')).toBe('text')
+        })
+
+        it('se cache à tous : hors de l’écran, de la tabulation et de l’arbre d’accessibilité, sans libellé à lire', async () => {
+            signedInAs(sam)
+            const wrapper = mountPartial(UpdateProfileInformationForm)
+
+            await typeInto(wrapper, 'Email', 'nouveau@example.com')
+            const libelles = wrapper.findAll('label').map((libelle) => libelle.text().replace(/\s*\*$/, ''))
+
+            expect(identifiant(wrapper).element.hidden).toBe(true)
+            expect(identifiant(wrapper).attributes('aria-hidden')).toBe('true')
+            expect(libelles).toEqual(['Nom', 'Email', currentPasswordLabel])
+        })
+
+        it('ne part pas avec le formulaire : ni nom, ni place dans les données envoyées', async () => {
+            signedInAs(sam)
+            const wrapper = mountPartial(UpdateProfileInformationForm)
+
+            await typeInto(wrapper, 'Email', 'nouveau@example.com')
+            await typeInto(wrapper, currentPasswordLabel, 'secret')
+            await submit(wrapper)
+
+            expect(identifiant(wrapper).element.value).toBe('sam@example.com')
+            expect(identifiant(wrapper).attributes('name')).toBeUndefined()
+            expect([...new FormData(wrapper.find('form').element).values()]).not.toContain('sam@example.com')
+            expect(openRequest.email).toBe('nouveau@example.com')
+            expect(Object.values(openRequest)).not.toContain('sam@example.com')
+        })
+    })
 })
 
 describe('Profile/Edit', () => {

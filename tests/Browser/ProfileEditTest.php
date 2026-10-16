@@ -33,10 +33,16 @@ class ProfileEditTest extends DuskTestCase
             $browser->assertSee('MON PROFIL');
 
             // Verify Profile Info Section
+            // Le champ d'adresse porte la nouvelle adresse (`email`) ;
+            // l'identifiant du compte, pour les gestionnaires de mots de passe,
+            // est à part, caché (#PR).
             $browser->assertSee('INFORMATIONS DU PROFIL')
                 ->waitFor('@profile-name-input', 15)
                 ->assertInputValue('@profile-name-input', 'Original Name')
-                ->assertInputValue('input[autocomplete="username"]', $user->email);
+                ->assertInputValue('input[type="email"][autocomplete="email"]', $user->email)
+                ->assertAttribute('[data-testid="identifiant-du-changement-d-adresse"]', 'autocomplete', 'username')
+                ->assertInputValue('[data-testid="identifiant-du-changement-d-adresse"]', $user->email)
+                ->assertMissing('[data-testid="identifiant-du-changement-d-adresse"]');
 
             $newName = 'Updated Name '.time();
             $browser->clear('@profile-name-input')

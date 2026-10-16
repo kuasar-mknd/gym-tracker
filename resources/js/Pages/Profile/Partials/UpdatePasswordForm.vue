@@ -2,32 +2,20 @@
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import IdentifiantDuCompte from '@/Components/Form/IdentifiantDuCompte.vue'
 import { retransmettreLAbonnementPush } from '@/composables/useAbonnementPush'
 import { useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
 const page = usePage()
 const passwordInput = ref(null)
 const currentPasswordInput = ref(null)
 
 /*
- * L'identifiant du compte connecté, pour les gestionnaires de mots de passe
- * (#PR). Le formulaire change le mot de passe sans demander l'adresse : un
- * gestionnaire rangeait le nouveau mot de passe sans savoir sous quel compte.
- * Chromium demande d'inclure ce que le contexte rend évident, « the username
- * field in a change password form », dans un champ caché ; 1Password, sur un
- * formulaire qui réinitialise un mot de passe, l'identifiant dans un champ
- * `autocomplete="username"` en `display: none`, et `aria-hidden` sur un champ
- * qu'on ne voit pas. Le champ est donc caché (`hidden`) : hors de l'écran,
- * de l'ordre de tabulation et de l'arbre d'accessibilité, il n'a pas besoin
- * de libellé. En `type="text"`, que la validation du navigateur ne juge pas :
- * une adresse ancienne qu'un champ `email` refuserait bloquerait l'envoi sans
- * rien montrer. Il n'est pas envoyé : il n'a pas de nom, et n'est pas dans
- * le formulaire d'Inertia. L'adresse vient de la page (`auth.user`), aucune
- * prop ne l'ajoute.
+ * Le formulaire change le mot de passe sans demander l'adresse : il porte
+ * l'identifiant du compte, caché et jamais envoyé, sous lequel un
+ * gestionnaire de mots de passe range le nouveau (`IdentifiantDuCompte`, #PR).
  */
-const identifiantDuCompte = computed(() => page.props.auth?.user?.email ?? '')
-
 const form = useForm({
     current_password: '',
     password: '',
@@ -71,14 +59,7 @@ const updatePassword = () => {
         </header>
 
         <form @submit.prevent="updatePassword" class="mt-6 space-y-4">
-            <input
-                type="text"
-                autocomplete="username"
-                :value="identifiantDuCompte"
-                hidden
-                aria-hidden="true"
-                data-testid="identifiant-du-compte"
-            />
+            <IdentifiantDuCompte data-testid="identifiant-du-compte" />
 
             <GlassInput
                 v-model="form.current_password"
