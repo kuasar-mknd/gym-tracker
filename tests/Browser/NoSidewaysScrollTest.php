@@ -23,7 +23,9 @@ use Tests\DuskTestCase;
  * WorkoutRowOverflowTest already guards one page. This guards the rest, which
  * is where the defect can actually appear unnoticed — nobody was measuring.
  *
- * 375px is the iPhone SE and the narrowest device this app targets.
+ * 375px is the iPhone SE and the narrowest device this app targets. Chaque
+ * page se mesure aussi à 640 px, où les mises en page `sm:` s'ouvrent à leur
+ * plus étroit.
  *
  * Le bureau a son propre piège : la barre de navigation de bureau demande
  * quelque 1 000 px de large, et ce qu'on y ajoute la fait déborder. Elle se
@@ -194,6 +196,35 @@ class NoSidewaysScrollTest extends DuskTestCase
                 $client,
                 $scroll,
                 "La page {$routeName} déborde de ".($scroll - $client)."px. Élément le plus à droite : {$widest}"
+            );
+        });
+    }
+
+    /**
+     * À 640 px, les mises en page `sm:` s'ouvrent sur la largeur la plus
+     * étroite qu'elles connaîtront, ascenseur compris (625 px de page) : un
+     * iPhone SE couché en a 667. La grille des habitudes y débordait de 36 px
+     * jusqu'à 675 px de large, la colonne du dimanche coupée et les cases
+     * décalées sous leurs jours : ses sept colonnes réservaient la largeur
+     * de leur case à cocher, celles de l'en-tête non (#2057).
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('mainPages')]
+    public function test_la_page_ne_defile_pas_de_cote_ou_s_ouvrent_les_mises_en_page_sm(string $routeName): void
+    {
+        $this->browse(function (Browser $browser) use ($routeName): void {
+            $browser->loginAs($this->userWithContent())
+                ->resize(640, 900)
+                ->visit(route($routeName))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitForStableLayout();
+
+            ['scroll' => $scroll, 'client' => $client, 'widest' => $widest] = $this->debordementDeLaPage($browser);
+
+            $this->assertLessThanOrEqual(
+                $client,
+                $scroll,
+                "À 640px, la page {$routeName} déborde de ".($scroll - $client)."px. Élément le plus à droite : {$widest}"
             );
         });
     }
