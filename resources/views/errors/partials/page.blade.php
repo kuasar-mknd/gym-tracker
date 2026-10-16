@@ -16,12 +16,27 @@
     dans les deux environnements. Les couleurs viennent de `App\Support\Charte`,
     qui lit `app.css` — le rendu contient bien des litteraux, c'est inevitable
     pour une page autonome, mais ils ne sont ecrits qu'a un endroit.
+
+    Et elle porte sa propre politique, dans la balise `meta` ci-dessous : la
+    reponse n'en porte aucune quand l'erreur survient hors du groupe `web`
+    (adresse inconnue, methode refusee, maintenance). La page que
+    `php artisan down --render` ecrit d'avance non plus : sous Octane, en
+    production, `PreventRequestsDuringMaintenance` la sert dans Laravel, avec
+    les en-tetes de `SecurityHeaders` mais sans CSP ; hors d'Octane
+    (`php artisan serve` : Sail, Dusk en CI), `public/index.php` la sert avant
+    Laravel, sans aucun en-tete de l'application. Cette politique n'autorise
+    que des styles ecrits dans la page (`style-src 'unsafe-inline'`, pour le
+    bloc `<style>`) et les images du site (`img-src 'self'`, pour l'icone que
+    le navigateur demande de lui-meme, `/favicon.ico`) : ni script, ni fonte,
+    ni feuille ou image d'un autre site, ni envoi de formulaire. Sous la
+    politique de l'application, les deux s'appliquent.
 --}}
 <!DOCTYPE html>
 <html lang="fr">
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $titre }}</title>
     <style>

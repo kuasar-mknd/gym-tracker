@@ -14,7 +14,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/** | .ai/rules/horloge.md |
 | app/Jobs/** | .ai/rules/jobs.md |
 | resources/js/**, resources/js/**/*.vue, resources/css/**, public/*.svg, pwa-assets.config.js | .ai/rules/js.md |
-| bootstrap/app.php, app/Http/Middleware/** | .ai/rules/middleware.md |
+| bootstrap/app.php, app/Http/Middleware/**, app/Http/Controllers/SanteController.php, resources/views/errors/** | .ai/rules/middleware.md |
 | app/Models/** | .ai/rules/models.md |
 | app/Actions/**, app/Services/**, app/Policies/** | .ai/rules/mutation.md |
 | app/Providers/**, routes/console.php, config/backup.php, lang/vendor/health/**, resources/views/vendor/health/**, app/Console/Commands/PurgerLesJournaux.php, app/Support/FichiersDuJour.php | .ai/rules/providers.md |
