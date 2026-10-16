@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\Journaux\JournalSansAdresse;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -52,6 +53,13 @@ return [
     |
     */
 
+    /*
+     * Chaque canal qui écrit porte `JournalSansAdresse` : ses lignes sortent
+     * sans adresse de courriel en clair, message, contexte et pile compris
+     * (#PR). La pile reprend les gestionnaires de ses canaux, déjà masqués.
+     * `LeJournalNeGardeAucuneAdresseTest` exige le réglage de tout canal
+     * qui écrit, nouveau canal compris.
+     */
     'channels' => [
 
         'stack' => [
@@ -62,6 +70,7 @@ return [
 
         'single' => [
             'driver' => 'single',
+            'tap' => [JournalSansAdresse::class],
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
@@ -81,14 +90,30 @@ return [
          */
         'daily' => [
             'driver' => 'daily',
+            'tap' => [JournalSansAdresse::class],
             'path' => storage_path('logs/'.env('LOG_DAILY_NAME', 'laravel').'.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
         ],
 
+        /*
+         * Le canal mensuel de Laravel, que sa configuration ajoute à celle-ci
+         * quand elle ne le nomme pas : nommé ici, tel quel, pour porter le
+         * masque des adresses comme les autres.
+         */
+        'monthly' => [
+            'driver' => 'monthly',
+            'tap' => [JournalSansAdresse::class],
+            'path' => storage_path('logs/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'max_files' => 3,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
+            'tap' => [JournalSansAdresse::class],
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
             'username' => env('LOG_SLACK_USERNAME', 'Laravel Log'),
             'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
@@ -98,6 +123,7 @@ return [
 
         'papertrail' => [
             'driver' => 'monolog',
+            'tap' => [JournalSansAdresse::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'handler' => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
             'handler_with' => [
@@ -110,6 +136,7 @@ return [
 
         'stderr' => [
             'driver' => 'monolog',
+            'tap' => [JournalSansAdresse::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'handler' => StreamHandler::class,
             'handler_with' => [
@@ -121,6 +148,7 @@ return [
 
         'syslog' => [
             'driver' => 'syslog',
+            'tap' => [JournalSansAdresse::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'facility' => env('LOG_SYSLOG_FACILITY', LOG_USER),
             'replace_placeholders' => true,
@@ -128,6 +156,7 @@ return [
 
         'errorlog' => [
             'driver' => 'errorlog',
+            'tap' => [JournalSansAdresse::class],
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],

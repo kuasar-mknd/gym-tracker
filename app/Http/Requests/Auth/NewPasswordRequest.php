@@ -87,8 +87,9 @@ class NewPasswordRequest extends FormRequest
      * JSON, et `Request::createFrom()` donne à cette requête le même corps
      * JSON que celle de l'application, si bien qu'une valeur fusionnée ici
      * s'y lit aussi. Elle partirait alors dans la saisie que la session garde
-     * après un refus et dans le corps qu'enregistre une exception. Seul un
-     * corps encodé comme un formulaire HTML est copié d'une requête à l'autre.
+     * après un refus, et dans le corps qu'enregistre une exception sous toute
+     * clef que `ExceptionEnregistree` ne masque pas. Seul un corps encodé
+     * comme un formulaire HTML est copié d'une requête à l'autre.
      *
      * @return array{token: string, email: string, identifiant: Closure(Builder<User>): void, password: string, password_confirmation: string}|null
      */

@@ -4,13 +4,42 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\TexteSansAdresse;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 /**
  * Une exception gardée en base pour le panneau, sans ce qu'une requête porte
- * de secret : les cookies ne sont pas gardés, et les champs et en-têtes
- * sensibles sont masqués avant l'écriture.
+ * de secret : les cookies ne sont pas gardés, et les champs, les en-têtes et
+ * les paramètres de route sensibles sont masqués avant l'écriture
+ * (`CLEFS_MASQUEES`).
+ *
+ * Sensibles : les mots de passe et les jetons, et (#PR) l'identifiant
+ * qu'une personne tape pour se connecter ou réinitialiser son mot de passe
+ * (`email`, et `adresse`, la valeur chiffrée du lien de réinitialisation),
+ * comme le mot de passe : le paquet garde le corps entier de la requête
+ * (`request()->all()`), et une adresse tapée à la connexion, qui n'est pas
+ * forcément celle d'un compte, voire un mot de passe tapé dans le mauvais
+ * champ, y restait trente jours en clair. Et l'en-tête `Referer`, qui porte
+ * la page d'où part l'envoi : celle d'un lien de réinitialisation porte le
+ * lien lui-même, jeton et adresse chiffrée. Le jeton, paramètre de route,
+ * est aussi un segment du chemin enregistré, masqué de même
+ * (`masquerLeChemin()`).
+ *
+ * Une clef se reconnaît sous toutes ses écritures (`formeComparable()`) :
+ * casse, `_` et `-` n'y comptent pas, et seul compte le dernier segment d'un
+ * chemin à points. Livewire envoie ainsi la saisie d'un formulaire du
+ * panneau sous `components.*.updates`, `data.password` ou
+ * `data.currentPassword`, que la seule clef `password` laissait en clair, et
+ * l'état du composant dans un instantané, du JSON écrit en texte
+ * (`CLEFS_EN_JSON`), qui porte le mot de passe d'un essai refusé : il est lu,
+ * masqué comme le reste, puis réécrit.
+ *
+ * Le message et le texte Markdown, eux, se lisent sans clef : toute adresse
+ * de courriel y devient « [adresse masquée] » (`TexteSansAdresse`). Les
+ * erreurs d'envoi n'en citent plus (`CourrielleurQuiTaitLesAdresses`), et
+ * c'est une défense contre celles d'un paquet qui en citerait une.
  *
  * Et à taille bornée : le paquet garde le corps entier de la requête, le
  * message d'une exception peut recopier une valeur reçue, que le texte
@@ -82,19 +111,46 @@ final class ExceptionEnregistree extends Exception
     /** Au-delà de cette profondeur, un tableau imbriqué n'est plus gardé. */
     private const int PROFONDEUR_MAX = 16;
 
-    /** @var list<string> */
+    /**
+     * Les clefs dont la valeur ne s'écrit jamais, sous leur forme comparable
+     * (`formeComparable()`) : `_token` et `password_confirmation` s'y lisent
+     * `token` et `passwordconfirmation`, et `data.currentPassword` de
+     * Livewire `currentpassword`.
+     *
+     * Les en-têtes `php-auth-*` sont ceux que Symfony tire de
+     * `Authorization` (`ServerBag::getHeaders()`) : l'identifiant et le mot
+     * de passe d'une authentification Basic, en clair, ou l'en-tête Digest
+     * recopié.
+     *
+     * @var list<string>
+     */
     private const array CLEFS_MASQUEES = [
         'password',
-        'password_confirmation',
-        'current_password',
+        'passwordconfirmation',
+        'currentpassword',
         'token',
-        '_token',
         'secret',
         'authorization',
+        'phpauthuser',
+        'phpauthpw',
+        'phpauthdigest',
         'cookie',
-        'x-csrf-token',
-        'x-xsrf-token',
+        'xcsrftoken',
+        'xxsrftoken',
+        'email',
+        'adresse',
+        'identifiant',
+        'referer',
     ];
+
+    /**
+     * Les clefs dont la valeur est un document JSON écrit en texte, à lire
+     * pour le masquer : l'instantané d'un composant Livewire
+     * (`components.*.snapshot`), qui porte tout l'état de son formulaire.
+     *
+     * @var list<string>
+     */
+    private const array CLEFS_EN_JSON = ['snapshot'];
 
     protected static function booted(): void
     {
@@ -125,14 +181,18 @@ final class ExceptionEnregistree extends Exception
             $contexte = self::bornerLeJson($exception->route_context, self::OCTETS_MAX_PAR_COLONNE['route_context']);
             $exception->route_context = $contexte;
 
+            if (is_string($exception->getAttribute('path'))) {
+                $exception->path = self::masquerLeChemin($exception->path, $exception->route_parameters);
+            }
+
             /** @var array<string, mixed>|null $parametres */
-            $parametres = self::bornerLeJson($exception->route_parameters, self::OCTETS_MAX_PAR_COLONNE['route_parameters']);
+            $parametres = self::bornerLeJson(self::masquer($exception->route_parameters), self::OCTETS_MAX_PAR_COLONNE['route_parameters']);
             $exception->route_parameters = $parametres;
 
-            $exception->message = self::couper((string) $exception->message, self::OCTETS_MAX_PAR_COLONNE['message']);
+            $exception->message = self::couper(TexteSansAdresse::de((string) $exception->message), self::OCTETS_MAX_PAR_COLONNE['message']);
             $exception->markdown = $exception->markdown === null
                 ? null
-                : self::couper($exception->markdown, self::OCTETS_MAX_PAR_COLONNE['markdown']);
+                : self::couper(TexteSansAdresse::de($exception->markdown), self::OCTETS_MAX_PAR_COLONNE['markdown']);
 
             foreach (self::CARACTERES_MAX_PAR_COLONNE as $colonne => $caracteres) {
                 $valeur = $exception->getAttribute($colonne);
@@ -167,6 +227,9 @@ final class ExceptionEnregistree extends Exception
     }
 
     /**
+     * Les valeurs, à toute profondeur, dont la clef est sensible remplacées
+     * par « [masqué] », et chaque instantané JSON lu et masqué de même.
+     *
      * @param  array<mixed>|null  $valeurs
      * @return array<mixed>|null
      */
@@ -177,14 +240,74 @@ final class ExceptionEnregistree extends Exception
         }
 
         foreach ($valeurs as $clef => $valeur) {
-            if (is_string($clef) && in_array(strtolower($clef), self::CLEFS_MASQUEES, true)) {
+            $forme = self::formeComparable($clef);
+
+            if (in_array($forme, self::CLEFS_MASQUEES, true)) {
                 $valeurs[$clef] = '[masqué]';
             } elseif (is_array($valeur)) {
                 $valeurs[$clef] = self::masquer($valeur);
+            } elseif (is_string($valeur) && in_array($forme, self::CLEFS_EN_JSON, true)) {
+                $valeurs[$clef] = self::masquerLeJson($valeur);
             }
         }
 
         return $valeurs;
+    }
+
+    /**
+     * Le chemin de la requête, où chaque segment qui porte la valeur d'un
+     * paramètre de route masqué devient « [masqué] » : le jeton du lien de
+     * réinitialisation est un segment de son chemin (`reset-password/{token}`),
+     * que le paquet garde tel quel (`request()->path()`). Un paramètre occupe
+     * un segment, le motif par défaut de Laravel n'admettant pas `/` ; le
+     * chemin garde son encodage, la valeur du paramètre est décodée.
+     *
+     * @param  array<mixed>|null  $parametres
+     */
+    private static function masquerLeChemin(string $chemin, ?array $parametres): string
+    {
+        $valeursMasquees = [];
+
+        foreach ($parametres ?? [] as $clef => $valeur) {
+            if ((is_string($valeur) || is_int($valeur)) && $valeur !== '' && in_array(self::formeComparable($clef), self::CLEFS_MASQUEES, true)) {
+                $valeursMasquees[] = (string) $valeur;
+            }
+        }
+
+        return implode('/', array_map(
+            static fn (string $segment): string => in_array(rawurldecode($segment), $valeursMasquees, true) ? '[masqué]' : $segment,
+            explode('/', $chemin),
+        ));
+    }
+
+    /**
+     * La forme sous laquelle une clef se compare à `CLEFS_MASQUEES` : le
+     * dernier segment d'un chemin à points (`data.password` de Livewire), en
+     * minuscules, sans `_` ni `-`. Une clef de liste n'a pas de forme.
+     */
+    private static function formeComparable(int|string $clef): ?string
+    {
+        if (is_int($clef)) {
+            return null;
+        }
+
+        return str_replace(['_', '-'], '', strtolower(Str::afterLast($clef, '.')));
+    }
+
+    /**
+     * Un document JSON écrit en texte, masqué comme un tableau puis réécrit.
+     * Un texte qui ne se lit pas comme un objet ou une liste JSON n'est pas
+     * gardé : rien ne dit ce qu'il porte.
+     */
+    private static function masquerLeJson(string $texte): string
+    {
+        $document = json_decode($texte, true);
+
+        if (! is_array($document)) {
+            return '[masqué]';
+        }
+
+        return (string) json_encode(self::masquer($document), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
     /**

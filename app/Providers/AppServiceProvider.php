@@ -14,6 +14,7 @@ use App\Services\StreakService;
 use App\Support\BaseDeDonnees\ConnexionMariaDb;
 use App\Support\BaseDeDonnees\ConnexionMySql;
 use App\Support\ConnexionSociale\FournisseurApple;
+use App\Support\Courriels\GestionnaireDesCourriels;
 use App\Support\LiensDesCourriels;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -22,6 +23,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Application;
+use Illuminate\Mail\MailManager;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -41,6 +44,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\NotificationService::class);
         $this->app->singleton(\App\Services\PersonalRecordService::class);
         $this->taireLesValeursCiteesParLeServeurDeBase();
+        $this->taireLesAdressesDansLesErreursDEnvoi();
 
         if (config('app.env') === 'testing') {
             config(['telescope.enabled' => false]);
@@ -125,6 +129,22 @@ final class AppServiceProvider extends ServiceProvider
             'mariadb',
             /** @param  array<string, mixed>  $configuration */
             static fn (PDO|Closure $pdo, string $base, string $prefixe, array $configuration): ConnexionMariaDb => new ConnexionMariaDb($pdo, $base, $prefixe, $configuration),
+        );
+    }
+
+    /**
+     * Les erreurs d'un envoi de courriel ne citent pas d'adresse (#PR) :
+     * chaque courrielleur est un `CourrielleurQuiTaitLesAdresses`, que crée
+     * `GestionnaireDesCourriels`, posé ici à la place du gestionnaire de
+     * Laravel. Par `extend()` : le fournisseur des courriels de Laravel est
+     * différé, et poserait le sien par-dessus une liaison faite ici. Le
+     * gestionnaire de Laravel, créé puis remplacé, n'a encore servi à rien.
+     */
+    private function taireLesAdressesDansLesErreursDEnvoi(): void
+    {
+        $this->app->extend(
+            'mail.manager',
+            static fn (MailManager $_gestionnaire, Application $application): GestionnaireDesCourriels => new GestionnaireDesCourriels($application),
         );
     }
 

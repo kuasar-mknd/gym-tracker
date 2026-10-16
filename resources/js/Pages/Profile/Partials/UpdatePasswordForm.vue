@@ -2,6 +2,7 @@
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import IdentifiantDuCompte from '@/Components/Form/IdentifiantDuCompte.vue'
 import { retransmettreLAbonnementPush } from '@/composables/useAbonnementPush'
 import { useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
@@ -10,6 +11,11 @@ const page = usePage()
 const passwordInput = ref(null)
 const currentPasswordInput = ref(null)
 
+/*
+ * Le formulaire change le mot de passe sans demander l'adresse : il porte
+ * l'identifiant du compte, caché et jamais envoyé, sous lequel un
+ * gestionnaire de mots de passe range le nouveau (`IdentifiantDuCompte`, #PR).
+ */
 const form = useForm({
     current_password: '',
     password: '',
@@ -53,6 +59,8 @@ const updatePassword = () => {
         </header>
 
         <form @submit.prevent="updatePassword" class="mt-6 space-y-4">
+            <IdentifiantDuCompte data-testid="identifiant-du-compte" />
+
             <GlassInput
                 v-model="form.current_password"
                 ref="currentPasswordInput"

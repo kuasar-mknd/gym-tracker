@@ -170,8 +170,13 @@ it('rend le détail sans arguments de pile, et sans texte hors de TexteBrut', fu
     ]);
 });
 
+/*
+ * La ligne est écrite sans les rappels du modèle, comme avant #PR, qui masque
+ * désormais les adresses du message à l'écriture : une ligne de cet âge vit
+ * trente jours, et la projection en rend le texte brut, à expurger.
+ */
 it('ajoute sous TexteBrut le message et le chemin, à expurger au budget de chacun', function (): void {
-    $exception = exceptionsDiagnosticEnregistrer(['message' => 'boum pour jean@example.org', 'path' => 'seances/1']);
+    $exception = ExceptionEnregistree::withoutEvents(static fn (): ExceptionEnregistree => exceptionsDiagnosticEnregistrer(['message' => 'boum pour jean@example.org', 'path' => 'seances/1']));
 
     $detail = new ProjectionDesExceptions()->detail($exception->id, exceptionsDiagnosticFenetre(), true);
 

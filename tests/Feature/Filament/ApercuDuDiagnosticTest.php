@@ -43,11 +43,14 @@ function apercuDuDiagnosticSuperAdministrateur(): Admin
 }
 
 /**
- * Une exception récente, dont le message porte un caractère invisible.
+ * Une exception récente, dont le message porte un caractère invisible et une
+ * adresse. Écrite sans les rappels du modèle, comme avant #PR, qui masque
+ * désormais les adresses du message à l'écriture : une ligne de cet âge vit
+ * trente jours, et l'expurgation du diagnostic la couvre encore.
  */
 function apercuDuDiagnosticException(): ExceptionEnregistree
 {
-    return ExceptionEnregistree::query()->create([
+    return ExceptionEnregistree::withoutEvents(static fn (): ExceptionEnregistree => ExceptionEnregistree::query()->create([
         'type' => RuntimeException::class,
         'code' => '0',
         'message' => "Lecture\u{200B} impossible pour jean@example.org",
@@ -56,7 +59,7 @@ function apercuDuDiagnosticException(): ExceptionEnregistree
         'trace' => [],
         'method' => 'GET',
         'path' => 'seances/1',
-    ]);
+    ]));
 }
 
 beforeEach(function (): void {

@@ -123,6 +123,7 @@ const closeModal = () => {
                         hide-label
                         placeholder="Mot de passe"
                         :error="form.errors.password"
+                        autocomplete="current-password"
                         @keyup.enter="deleteUser"
                         data-testid="delete-password-input"
                     />

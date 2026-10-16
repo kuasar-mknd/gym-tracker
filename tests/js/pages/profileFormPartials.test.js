@@ -266,6 +266,62 @@ describe('UpdatePasswordForm', () => {
 
         expect(wrapper.text()).toContain('Enregistré ✓')
     })
+
+    /*
+     * Un gestionnaire de mots de passe range le nouveau mot de passe sous le
+     * champ `autocomplete="username"` du formulaire qu'il voit envoyer : sans
+     * lui, il le rangeait sans savoir sous quel compte (#PR). Le champ porte
+     * l'adresse du compte connecté, lue sur la page, caché à tous ; il n'est
+     * pas envoyé (identifiantDuChangementDeMotDePasse.test.js le lit dans la
+     * requête du vrai client d'Inertia).
+     */
+    describe('identifiant du compte pour les gestionnaires de mots de passe', () => {
+        const signedIn = () => {
+            currentPage = { props: { auth: { user: { id: 7, email: 'titulaire@example.org' } } } }
+        }
+
+        const identifiant = (wrapper) => wrapper.find('input[autocomplete="username"]')
+
+        it('porte l’adresse du compte connecté, dans le formulaire, avant les trois mots de passe', () => {
+            signedIn()
+            const wrapper = mountPartial(UpdatePasswordForm)
+            const champs = wrapper.findAll('form input').map((champ) => champ.attributes('autocomplete'))
+
+            expect(identifiant(wrapper).element.value).toBe('titulaire@example.org')
+            expect(identifiant(wrapper).attributes('type')).toBe('text')
+            expect(champs).toEqual(['username', 'current-password', 'new-password', 'new-password'])
+        })
+
+        it('se cache à tous : hors de l’écran, de la tabulation et de l’arbre d’accessibilité, sans libellé à lire', () => {
+            signedIn()
+            const wrapper = mountPartial(UpdatePasswordForm)
+            const libelles = wrapper.findAll('label').map((libelle) => libelle.text().replace(/\s*\*$/, ''))
+
+            expect(identifiant(wrapper).element.hidden).toBe(true)
+            expect(identifiant(wrapper).attributes('aria-hidden')).toBe('true')
+            expect(libelles).toEqual(['Mot de passe actuel', 'Nouveau mot de passe', 'Confirmer le mot de passe'])
+        })
+
+        it('ne part pas avec le formulaire : ni nom, ni place dans les données envoyées', async () => {
+            signedIn()
+            const wrapper = filled()
+
+            await submit(wrapper)
+
+            expect(identifiant(wrapper).attributes('name')).toBeUndefined()
+            expect([...new FormData(wrapper.find('form').element).values()]).not.toContain('titulaire@example.org')
+            expect(Object.keys(openRequest)).not.toContain('email')
+            expect(Object.values(openRequest)).not.toContain('titulaire@example.org')
+        })
+
+        it('suit l’adresse que la page déclare, sans prop à lui', () => {
+            currentPage = { props: { auth: { user: { id: 7, email: 'nouvelle@example.org' } } } }
+            const wrapper = mountPartial(UpdatePasswordForm)
+
+            expect(identifiant(wrapper).element.value).toBe('nouvelle@example.org')
+            expect(Object.keys(wrapper.props())).toEqual([])
+        })
+    })
 })
 
 describe('UpdateProfileInformationForm', () => {
@@ -562,6 +618,59 @@ describe('UpdateProfileInformationForm', () => {
         await nextTick()
 
         expect(wrapper.text()).toContain('Enregistré ✓')
+    })
+
+    /*
+     * Le champ d'adresse porte la nouvelle adresse, qui ne devient
+     * l'identifiant du compte qu'une fois le lien suivi. Déclarée `username`,
+     * elle faisait du formulaire une connexion pour un gestionnaire de mots de
+     * passe, qui proposait de ranger le mot de passe actuel, demandé à côté,
+     * sous elle (#PR). Le champ se déclare `email`, et le formulaire porte
+     * l'identifiant du compte, caché et jamais envoyé, comme celui du mot de
+     * passe.
+     */
+    describe('identifiant du compte pour les gestionnaires de mots de passe', () => {
+        const identifiant = (wrapper) => wrapper.find('input[autocomplete="username"]')
+
+        it('déclare la nouvelle adresse `email`, et porte à part l’identifiant actuel du compte', async () => {
+            signedInAs(sam)
+            const wrapper = mountPartial(UpdateProfileInformationForm)
+
+            await typeInto(wrapper, 'Email', 'nouveau@example.com')
+            const champs = wrapper.findAll('form input').map((champ) => champ.attributes('autocomplete'))
+
+            expect(wrapper.find('input[type="email"]').attributes('autocomplete')).toBe('email')
+            expect(champs).toEqual(['name', 'email', 'username', 'current-password'])
+            expect(identifiant(wrapper).element.value).toBe('sam@example.com')
+            expect(identifiant(wrapper).attributes('type')).toBe('text')
+        })
+
+        it('se cache à tous : hors de l’écran, de la tabulation et de l’arbre d’accessibilité, sans libellé à lire', async () => {
+            signedInAs(sam)
+            const wrapper = mountPartial(UpdateProfileInformationForm)
+
+            await typeInto(wrapper, 'Email', 'nouveau@example.com')
+            const libelles = wrapper.findAll('label').map((libelle) => libelle.text().replace(/\s*\*$/, ''))
+
+            expect(identifiant(wrapper).element.hidden).toBe(true)
+            expect(identifiant(wrapper).attributes('aria-hidden')).toBe('true')
+            expect(libelles).toEqual(['Nom', 'Email', currentPasswordLabel])
+        })
+
+        it('ne part pas avec le formulaire : ni nom, ni place dans les données envoyées', async () => {
+            signedInAs(sam)
+            const wrapper = mountPartial(UpdateProfileInformationForm)
+
+            await typeInto(wrapper, 'Email', 'nouveau@example.com')
+            await typeInto(wrapper, currentPasswordLabel, 'secret')
+            await submit(wrapper)
+
+            expect(identifiant(wrapper).element.value).toBe('sam@example.com')
+            expect(identifiant(wrapper).attributes('name')).toBeUndefined()
+            expect([...new FormData(wrapper.find('form').element).values()]).not.toContain('sam@example.com')
+            expect(openRequest.email).toBe('nouveau@example.com')
+            expect(Object.values(openRequest)).not.toContain('sam@example.com')
+        })
     })
 })
 
