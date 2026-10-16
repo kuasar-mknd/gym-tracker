@@ -36,6 +36,11 @@ use Illuminate\Support\Str;
  * Les adresses données (le destinataire d'un courriel) se masquent en plus
  * par leur seule partie locale, quelle que soit la casse : un serveur peut
  * ne citer qu'elle (« 550 ada... User unknown »).
+ *
+ * Le motif des courriels du diagnostic (`MasqueLesCoordonnees`) n'est pas
+ * repris : écrit pour un texte déjà coupé à 8 Kio, il ne reconnaît ni une
+ * partie locale entre guillemets ou à commentaire, que Symfony Mime cite,
+ * ni un domaine sans point.
  */
 final class TexteSansAdresse
 {
