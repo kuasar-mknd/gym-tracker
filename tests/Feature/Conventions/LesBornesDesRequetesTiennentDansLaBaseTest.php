@@ -227,7 +227,7 @@ function bornesBaseFautesDeDate(array $regles, string $cible): array
     [$table, $colonne] = explode('.', $cible, 2);
     $definition = collect(Schema::getColumns($table))->firstWhere('name', $colonne);
     $type = is_array($definition) && is_string($definition['type'] ?? null) ? strtolower($definition['type']) : '';
-    $plage = array_values(array_filter($regles, static fn (mixed $regle): bool => $regle instanceof DateQueSaColonneTient))[0] ?? null;
+    $plage = array_first(array_filter($regles, static fn (mixed $regle): bool => $regle instanceof DateQueSaColonneTient)) ?? null;
 
     if (! $plage instanceof DateQueSaColonneTient) {
         return ['n’a pas de plage (DateQueSaColonneTient)'];

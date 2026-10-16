@@ -167,7 +167,7 @@ function formulairesAdminPerdusParLaTable(string $sourceDeLaTable, string $sourc
     $perdus = [];
 
     foreach ($explicites as $champ) {
-        $morceau = array_values(array_filter($morceaux, static fn (string $morceau): bool => str_contains($morceau, "::make('{$champ}')")))[0] ?? '';
+        $morceau = array_first(array_filter($morceaux, static fn (string $morceau): bool => str_contains($morceau, "::make('{$champ}')"))) ?? '';
 
         if (! str_contains($morceau, 'disabledOn(Operation::Edit)')) {
             $perdus[] = $champ;
