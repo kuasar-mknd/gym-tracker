@@ -87,6 +87,10 @@ class BodyPartMeasurementStoreRequest extends FormRequest
     }
 
     /**
+     * `bail` devant la date : sans lui, `before_or_equal:today` comparait
+     * aussi une valeur que `date` refuse, et Carbon levait une erreur 500 sur
+     * un nombre trop grand (#2071).
+     *
      * @return array<string, array<int, string>|string>
      */
     public function rules(): array
@@ -95,7 +99,7 @@ class BodyPartMeasurementStoreRequest extends FormRequest
             'part' => ['required', 'string', 'max:50'],
             'value' => ['required', 'numeric', 'min:0', 'max:999.99'],
             'unit' => ['required', 'string', 'in:cm,in'],
-            'measured_at' => ['required', 'date', 'before_or_equal:today'],
+            'measured_at' => ['bail', 'required', 'date', 'before_or_equal:today'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }

@@ -23,13 +23,17 @@ class UpdateWorkoutRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * Le début se change, il ne s'efface pas : la colonne le demande, et un
+     * début vide ou nul passait la validation pour finir en erreur 500 à
+     * l'écriture (#2071). Absent, il reste ce qu'il est.
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
             'name' => 'nullable|string|max:255',
-            'started_at' => 'nullable|date',
+            'started_at' => 'sometimes|required|date',
             'notes' => 'nullable|string|max:1000',
             'is_finished' => 'nullable|boolean',
         ];

@@ -54,7 +54,9 @@ class ProfileUpdateRequest extends FormRequest
      * telle quelle. Aucune règle ne regarde si la nouvelle adresse a déjà un
      * compte : la réponse le dirait. Le changement attend le lien envoyé à
      * cette adresse (`TraiterUnChangementDAdresse`), qui prévient au contraire
-     * son titulaire quand elle est prise.
+     * son titulaire quand elle est prise. `bail` tient `current_password`
+     * derrière `string` : la règle passe la valeur telle quelle à
+     * `password_verify()`, et un tableau y levait une erreur 500 (#2071).
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -71,7 +73,7 @@ class ProfileUpdateRequest extends FormRequest
                 new AdresseEnAsciiImprimable($this->compte()?->email),
             ],
             'current_password' => $this->changeLAdresse()
-                ? ['required', 'string', 'current_password:web', 'max:255']
+                ? ['bail', 'required', 'string', 'current_password:web', 'max:255']
                 : ['exclude'],
         ];
     }

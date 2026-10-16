@@ -46,7 +46,9 @@ class GoalStoreRequest extends FormRequest
     /**
      * La cible et le départ d'un objectif vont de zéro à `Goal::VALEUR_MAX` :
      * aucun type d'objectif n'a l'usage d'une valeur négative, ni d'une valeur
-     * démesurée.
+     * démesurée. `bail` devant l'échéance qui bouge : sans lui, `after:today`
+     * comparait aussi une valeur que `date` refuse, et Carbon levait une
+     * erreur 500 sur un nombre trop grand (#2071).
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -79,7 +81,7 @@ class GoalStoreRequest extends FormRequest
             ],
             'deadline' => $this->deadlineIsUnchanged()
                 ? ['nullable', 'date']
-                : ['nullable', 'date', 'after:today'],
+                : ['bail', 'nullable', 'date', 'after:today'],
             'start_value' => ['nullable', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
         ];
     }

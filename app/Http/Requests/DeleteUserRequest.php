@@ -22,12 +22,16 @@ class DeleteUserRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
+     * `bail` et `string` avant `current_password`, qui passe la valeur telle
+     * quelle à `password_verify()` : un tableau y levait une erreur 500 au
+     * lieu d'un refus (#2071).
+     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'password' => ['required', 'current_password', 'max:255'],
+            'password' => ['bail', 'required', 'string', 'current_password', 'max:255'],
         ];
     }
 
