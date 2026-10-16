@@ -241,7 +241,10 @@ class NoSidewaysScrollTest extends DuskTestCase
      * nom de userWithContent(), menu du compte rogné, et ce menu passait sur
      * trois lignes, hors de la barre, jusqu'à 1 000 px. En deçà de 1 024 px,
      * l'en-tête mobile et la barre du bas la remplacent. 768 px est une
-     * tablette debout, 1 080 un écran 1080p tourné en portrait, 1 280 `xl`.
+     * tablette debout, 1 080 un écran 1080p tourné en portrait, 1 100 la
+     * largeur jusqu'où #2057 voyait le défaut (le nom long y passait sur deux
+     * lignes, il s'y abrège ; il tient entier à partir de 1 160 px), 1 280
+     * `xl`.
      *
      * @return array<string, array{int, bool}>
      */
@@ -254,7 +257,7 @@ class NoSidewaysScrollTest extends DuskTestCase
             'juste sous le seuil' => [1000, false],
             'au seuil, tablette couchée' => [1024, true],
             '1080p en portrait' => [1080, true],
-            'nom long sur une ligne, avant #2057' => [1100, true],
+            'nom long abrégé, largeur citée par #2057' => [1100, true],
             'xl' => [1280, true],
         ];
     }
