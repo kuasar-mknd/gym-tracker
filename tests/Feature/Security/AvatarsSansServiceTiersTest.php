@@ -233,19 +233,22 @@ it('montre dans la carte « Usage » le compte de l’application et l’adminis
  * Pulse lit la clé d'un compte à la fin de chaque requête
  * (`Pulse::resolveAuthenticatedUserId()`, dans `UserRequests`), sous la garde
  * par défaut de la requête : celle du panneau pour une page du panneau, `web`
- * pour une page de l'application.
+ * pour une page de l'application. `actingAs()` sans garde reprendrait la garde
+ * par défaut que le premier `actingAs($administrateur, 'admin')` a laissée,
+ * `admin` : le compte est donc connecté sous `web`, nommément, et le test
+ * relève la garde de chaque requête.
  */
 it('compte une requête du panneau sous la clé de l’administrateur, une requête de l’application sous le numéro du compte', function (): void {
     $administrateur = avatarSansTiersSuperAdministrateur('Alice Administratrice');
     $usager = User::factory()->create(['id' => $administrateur->id]);
     $cles = [];
     app()->terminating(static function () use (&$cles): void {
-        $cles[] = Pulse::resolveAuthenticatedUserId();
+        $cles[] = [auth()->getDefaultDriver(), Pulse::resolveAuthenticatedUserId()];
     });
 
     actingAs($administrateur, 'admin')->get('/backoffice')->assertOk();
     $this->withoutVite();
-    actingAs($usager)->get('/raccourcis')->assertOk();
+    actingAs($usager, 'web')->get('/raccourcis')->assertOk();
 
-    expect($cles)->toBe(['admin:'.$administrateur->id, $usager->id]);
+    expect($cles)->toBe([['admin', 'admin:'.$administrateur->id], ['web', $usager->id]]);
 });
