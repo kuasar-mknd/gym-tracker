@@ -71,7 +71,10 @@ class SuppressionSansReseauTest extends DuskTestCase
 
             $this->assertIsArray($ordreAvant);
             // Les trois cartes du compte, dans l'ordre des noms, parmi celles du catalogue commun.
-            $this->assertSame($cartesDuCompte, array_values(array_intersect($ordreAvant, $cartesDuCompte)));
+            $this->assertSame($cartesDuCompte, array_values(array_filter(
+                $ordreAvant,
+                static fn (mixed $carte): bool => in_array($carte, $cartesDuCompte, true),
+            )));
 
             $outils = new ChromeDevToolsDriver($browser->driver);
             $outils->execute('Network.enable');
