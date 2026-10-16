@@ -10,6 +10,7 @@ use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
 use App\Http\Requests\DailyJournalStoreRequest;
+use App\Http\Requests\ErreurNavigateurStoreRequest;
 use App\Http\Requests\GoalStoreRequest;
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
@@ -71,6 +72,10 @@ function bornesBaseInventaire(): array
             $champs[] = [$requete, 'exercises.*.sets.*.'.$champ, 'workout_template_sets.'.$champ];
             $champs[] = [$requete, 'exercises.*.sets.*.'.$champ, 'sets.'.$champ];
         }
+    }
+
+    foreach (['message', 'source', 'pile', 'url', 'agent'] as $champ) {
+        $champs[] = [ErreurNavigateurStoreRequest::class, $champ, 'erreurs_navigateur.'.$champ];
     }
 
     // Les clés d'un abonnement push vont aux colonnes du paquet WebPush.

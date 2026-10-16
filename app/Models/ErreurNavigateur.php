@@ -43,6 +43,15 @@ final class ErreurNavigateur extends Model
      */
     public const int POSITION_MAX = 10_000_000;
 
+    /**
+     * Les caractères d'une pile que garde la colonne `pile` : un `TEXT` de
+     * 65 535 octets, à quatre octets au plus par caractère en utf8mb4. La
+     * page en envoie jusqu'à 20 000 unités UTF-16 (`rapporteurDErreurs.js`) ;
+     * au-delà de ce que la colonne tient, la base refusait l'écriture, et le
+     * rapport finissait en 500.
+     */
+    public const int PILE_MAX_CARACTERES = 16_383;
+
     #[\Override]
     protected $table = 'erreurs_navigateur';
 
