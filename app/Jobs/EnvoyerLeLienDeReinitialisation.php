@@ -28,7 +28,10 @@ use Illuminate\Support\Traits\Localizable;
  * comme le serveur web. Le job attend la validation de la transaction en cours,
  * s'il y en a une, et il est chiffré dans la file : l'adresse est une saisie,
  * peut-être celle d'un tiers, et ne doit se lire ni dans la file ni parmi les
- * jobs échoués.
+ * jobs échoués. Le chiffrement ne couvre que la charge : l'erreur d'un envoi
+ * refusé, que `failed_jobs` et le journal recopient, ne cite pas d'adresse
+ * parce que le courrielleur la relève sans (`CourrielleurQuiTaitLesAdresses`,
+ * #PR).
  *
  * Le courtier du conteneur pose le plancher commun des réponses
  * d'authentification (`auth.timebox_duration`, une seconde) autour de
