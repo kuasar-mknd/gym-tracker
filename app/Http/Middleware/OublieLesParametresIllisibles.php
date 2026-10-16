@@ -6,16 +6,24 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Retire de la chaîne de requête les paramètres que des paquets lisent sans
- * en vérifier la forme, quand ils n'ont pas celle qu'ils savent lire (#2071) :
+ * Retire de la requête les paramètres que des paquets lisent sans en
+ * vérifier la forme, quand ils n'ont pas celle qu'ils savent lire (#2071) :
  * le paquet retombe alors sur sa valeur par défaut, comme pour un paramètre
  * absent.
  *
+ * Les paquets les lisent par `input()`, qui cherche d'abord dans le corps
+ * puis dans la chaîne de requête : un corps JSON, même porté par un GET, y
+ * passe avant elle. Le maillon nettoie donc la chaîne de requête et le corps,
+ * formulaire ou JSON, que Laravel range dans `$request->request`
+ * (`createFromBase()`).
+ *
  * - `page`, que lisent la pagination de Laravel (pages Inertia) et celle de
- *   Livewire (tables du panneau) : un entier de 1 à `PAGE_AU_PLUS`. Les deux
+ *   Livewire (tables du panneau) : un entier de 1 à `PAGE_AU_PLUS`, en
+ *   chiffres ou, dans un corps JSON, en nombre entier. Les deux
  *   prennent tout entier positif, et `forPage()` multiplie la page par la
  *   taille de la page : au-delà de ce qu'un entier tient, PHP 8.5 avertit
  *   que le décalage n'en est plus un, et la liste répondait 500 dès qu'elle
@@ -47,23 +55,45 @@ final class OublieLesParametresIllisibles
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->query->has('page') && ! self::pageLisible($request->query->all()['page'])) {
-            $request->query->remove('page');
-        }
+        foreach (self::sacsLus($request) as $sac) {
+            $parametres = $sac->all();
 
-        if ($request->query->has('search') && ! is_string($request->query->all()['search'])) {
-            $request->query->remove('search');
+            if (array_key_exists('page', $parametres) && ! self::pageLisible($parametres['page'])) {
+                $sac->remove('page');
+            }
+
+            if (array_key_exists('search', $parametres) && ! is_string($parametres['search'])) {
+                $sac->remove('search');
+            }
         }
 
         return $next($request);
     }
 
     /**
-     * Un entier écrit en chiffres, de 1 à `PAGE_AU_PLUS`.
+     * Les sacs où `input()` cherche : la chaîne de requête, le corps, et le
+     * corps JSON s'il n'est pas déjà celui-là.
+     *
+     * @return list<ParameterBag>
+     */
+    private static function sacsLus(Request $request): array
+    {
+        $sacs = [$request->query, $request->request];
+        $json = $request->isJson() ? $request->json() : null;
+
+        if ($json instanceof ParameterBag && $json !== $request->request) {
+            $sacs[] = $json;
+        }
+
+        return $sacs;
+    }
+
+    /**
+     * Un entier de 1 à `PAGE_AU_PLUS`, en chiffres ou en nombre entier.
      */
     private static function pageLisible(mixed $page): bool
     {
-        return is_string($page)
+        return (is_string($page) || is_int($page))
             && filter_var($page, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => self::PAGE_AU_PLUS]]) !== false;
     }
 }

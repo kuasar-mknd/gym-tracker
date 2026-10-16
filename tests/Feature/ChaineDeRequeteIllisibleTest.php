@@ -147,6 +147,44 @@ it('lit comme la première une page plus grande que ce que la pagination sait sa
     'jeûnes terminés' => ['tools.fasting.index', 'history', fn (User $compte): Fast => Fast::factory()->create(['user_id' => $compte->id, 'status' => 'completed', 'end_time' => now()])],
 ]);
 
+/*
+ * La pagination lit la page par `input()`, qui cherche d'abord dans le corps :
+ * un corps JSON, même sur un GET, passait avant la chaîne de requête que le
+ * maillon nettoyait.
+ */
+it('lit comme la première une page démesurée envoyée dans un corps JSON, même sur un GET', function (string $route, string $prop, Closure $uneLigne, int|string $page): void {
+    $compte = User::factory()->create();
+    $uneLigne($compte);
+
+    actingAs($compte)
+        ->call('GET', route($route), [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/html'], json_encode(['page' => $page], JSON_THROW_ON_ERROR))
+        ->assertOk()
+        ->assertInertia(fn (Assert $vue): Assert => $vue->where("{$prop}.current_page", 1)->count("{$prop}.data", 1));
+
+    Exceptions::assertNothingReported();
+})->with([
+    'séances' => ['workouts.index', 'workouts', fn (User $compte): Workout => Workout::withoutEvents(fn (): Workout => Workout::factory()->create(['user_id' => $compte->id]))],
+    'jeûnes terminés' => ['tools.fasting.index', 'history', fn (User $compte): Fast => Fast::factory()->create(['user_id' => $compte->id, 'status' => 'completed', 'end_time' => now()])],
+])->with([
+    'en nombre' => [PHP_INT_MAX],
+    'en chiffres' => [(string) PHP_INT_MAX],
+]);
+
+it('lit comme avant une page lisible envoyée dans un corps JSON', function (int|string $page): void {
+    $compte = User::factory()->create();
+    Workout::withoutEvents(fn (): Workout => Workout::factory()->create(['user_id' => $compte->id]));
+
+    actingAs($compte)
+        ->call('GET', route('workouts.index'), [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'text/html'], json_encode(['page' => $page], JSON_THROW_ON_ERROR))
+        ->assertOk()
+        ->assertInertia(fn (Assert $vue): Assert => $vue->where('workouts.current_page', 2));
+
+    Exceptions::assertNothingReported();
+})->with([
+    'en nombre' => [2],
+    'en chiffres' => ['2'],
+]);
+
 it('lit une page jusqu’à la borne comme avant, et une page illisible comme la première', function (string $page, int $pageLue): void {
     $compte = User::factory()->create();
     Workout::withoutEvents(fn (): Workout => Workout::factory()->create(['user_id' => $compte->id]));

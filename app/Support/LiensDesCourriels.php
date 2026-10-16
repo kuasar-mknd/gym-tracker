@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\Diagnostic\ValeurLue;
 use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -156,15 +157,17 @@ final class LiensDesCourriels
 
     /**
      * La nouvelle adresse que porte, chiffrée, le lien de confirmation suivi
-     * (`lienDeConfirmationDAdresse()`). Une valeur qui ne se déchiffre pas
-     * refuse le lien comme une signature fausse (403).
+     * (`lienDeConfirmationDAdresse()`). Elle se lit dans la chaîne de
+     * requête, que la signature couvre, jamais dans un corps qui la
+     * remplacerait. Une valeur qui ne se déchiffre pas, ou qui n'est pas une
+     * chaîne, refuse le lien comme une signature fausse (403).
      *
      * @throws InvalidSignatureException
      */
     public static function adresseDuLienDeConfirmation(Request $requete): string
     {
         try {
-            return Crypt::decryptString($requete->string('adresse')->toString());
+            return Crypt::decryptString(ValeurLue::texte($requete->query('adresse')));
         } catch (DecryptException) {
             throw new InvalidSignatureException();
         }
