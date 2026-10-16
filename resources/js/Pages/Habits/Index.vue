@@ -188,7 +188,7 @@ const getProgressPercent = (habit) => {
             -->
             <div class="bg-surface-page z-collant top-sous-entete sticky" dusk="jours-des-habitudes">
                 <GlassCard class="overflow-hidden p-0">
-                    <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
+                    <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,minmax(0,1fr))]">
                         <div class="text-text-main col-span-7 p-4 font-bold sm:col-span-1">Habitude</div>
                         <div
                             v-for="day in weekDates"
@@ -226,7 +226,14 @@ const getProgressPercent = (habit) => {
                     :key="habit.id"
                     class="group hover:bg-surface-card/10 overflow-hidden p-0 transition"
                 >
-                    <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,1fr)]">
+                    <!--
+                        Les mêmes colonnes que l'en-tête des jours, en `minmax(0,1fr)` :
+                        en `1fr`, chaque jour réservait la largeur de sa case à cocher
+                        et pas celui de l'en-tête ; entre 640 et 675 px, les cases se
+                        décalaient sous leurs jours et le dimanche sortait de la carte
+                        (#2057).
+                    -->
+                    <div class="grid grid-cols-7 sm:grid-cols-[200px_repeat(7,minmax(0,1fr))]">
                         <!-- Habit Info -->
                         <div class="relative col-span-7 flex min-w-0 flex-col justify-center p-4 sm:col-span-1">
                             <div class="flex items-center gap-3">

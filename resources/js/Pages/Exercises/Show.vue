@@ -184,19 +184,23 @@ const scatterData = computed(() => {
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <div>
-                    <h1 class="titre-section">
-                        {{ exercise.name }}
-                    </h1>
-                    <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
-                        {{ exercise.category }} •
-                        {{ exercise.type === 'strength' ? 'Force' : exercise.type === 'cardio' ? 'Cardio' : 'Temps' }}
-                    </p>
-                </div>
+                <h1 class="titre-section">
+                    {{ exercise.name }}
+                </h1>
             </div>
         </template>
 
         <div class="space-y-6">
+            <!--
+                La catégorie et le type se lisent à toute largeur : l'en-tête de
+                page n'existe qu'avec la barre de bureau, à partir de 1 024 px
+                (#2057), et l'en-tête mobile ne porte que le nom.
+            -->
+            <p class="text-text-muted text-xs font-bold tracking-wider uppercase">
+                {{ exercise.category }} •
+                {{ exercise.type === 'strength' ? 'Force' : exercise.type === 'cardio' ? 'Cardio' : 'Temps' }}
+            </p>
+
             <!-- Progress Chart -->
             <GlassCard class="animate-slide-up">
                 <div class="mb-4">
