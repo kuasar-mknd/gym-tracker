@@ -47,7 +47,16 @@ const monter = ({ bornesDUneSerie = null } = {}) => {
         bornesDUneSerie,
     })
 
-    return { series, ligne: () => localWorkout.value.workout_lines[0], oublierLesRafales, deleteSet, reportSyncFailure }
+    return {
+        series,
+        ligne: () => localWorkout.value.workout_lines[0],
+        remplacerLaLigne: (nouvelle) => {
+            localWorkout.value.workout_lines = [nouvelle]
+        },
+        oublierLesRafales,
+        deleteSet,
+        reportSyncFailure,
+    }
 }
 
 beforeEach(() => {
@@ -99,6 +108,47 @@ describe('l’ajout et le retrait d’une série', () => {
         series.removeSet(33)
         await flushPromises()
         expect(ligne().sets.map((s) => s.id)).toEqual([31, 32])
+    })
+
+    /*
+     * Deux retraits en vol, refusés dans l'ordre de leur départ : remise à son
+     * indice de départ, la seconde passait devant la première (#2077).
+     */
+    it('remet chaque série à sa place exacte quand deux retraits sont refusés l’un après l’autre', async () => {
+        const { series, ligne, deleteSet } = monter()
+        ligne().sets = [{ id: 31 }, { id: 32 }, { id: 33 }, { id: 34 }]
+        const refus = []
+        deleteSet.mockImplementation(() => new Promise((_resoudre, rejeter) => refus.push(rejeter)))
+
+        series.removeSet(32)
+        series.removeSet(33)
+        expect(ligne().sets.map((s) => s.id)).toEqual([31, 34])
+
+        refus[0]({ isOffline: false })
+        await flushPromises()
+        refus[1]({ isOffline: false })
+        await flushPromises()
+
+        expect(ligne().sets.map((s) => s.id)).toEqual([31, 32, 33, 34])
+    })
+
+    /*
+     * Une réponse du serveur reconstruit les lignes (`fusionnerLaSeance`) :
+     * la série refusée revient dans la ligne affichée, pas dans l'ancienne, et
+     * une seule fois si la séance rendue la porte déjà.
+     */
+    it('remet la série dans la ligne affichée, même reconstruite depuis le retrait', async () => {
+        const { series, ligne, deleteSet, remplacerLaLigne } = monter()
+        ligne().sets = [{ id: 31 }, { id: 32 }, { id: 33 }]
+        let refuser
+        deleteSet.mockImplementation(() => new Promise((_resoudre, rejeter) => (refuser = rejeter)))
+
+        series.removeSet(32)
+        remplacerLaLigne({ ...ligne(), sets: [{ id: 31 }, { id: 33 }] })
+        refuser({ isOffline: false })
+        await flushPromises()
+
+        expect(ligne().sets.map((s) => s.id)).toEqual([31, 32, 33])
     })
 
     /*

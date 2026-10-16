@@ -2,6 +2,7 @@ import { getCurrentInstance, onUnmounted } from 'vue'
 import SyncService from '@/Utils/SyncService'
 import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
 import { entreeDeLaRangee } from '@/Utils/seanceEtFile'
+import { retirerDeLaListe } from '@/Utils/miseAJourOptimiste'
 import { NUMERIC_SET_FIELDS } from '@/composables/useBrouillonsDeSeries'
 import { raisonDuRefus } from '@/composables/useSaisieDeSerie'
 
@@ -511,20 +512,31 @@ export const useAjoutEtRetraitDeSerie = ({
 
         oublierLaSerie(setId)
 
-        // Find the line and set
-        for (const line of localWorkout.value.workout_lines) {
-            const setIdx = line.sets.findIndex((s) => s.id === setId)
-            if (setIdx !== -1) {
-                const removedSet = line.sets.splice(setIdx, 1)[0]
-                deleteSet(setId).catch((err) => {
-                    if (!err.isOffline) {
-                        line.sets.splice(setIdx, 0, removedSet)
-                        reportSyncFailure('La série n’a pas pu être supprimée. Réessaie.')
-                    }
-                })
-                break
-            }
+        const line = localWorkout.value.workout_lines.find((candidate) => candidate.sets.some((s) => s.id === setId))
+
+        if (line === undefined) {
+            return
         }
+
+        /*
+         * Refusé, le retrait remet la série à sa place exacte, jamais deux fois,
+         * dans la ligne que l'écran montre alors : une réponse du serveur a pu
+         * reconstruire les lignes (`fusionnerLaSeance`) depuis le retrait, et
+         * la remettre dans l'ancienne ne la montrait plus (#2077).
+         */
+        const cleDeLaLigne = rowKey(line)
+        const remettre = retirerDeLaListe(
+            () =>
+                (localWorkout.value.workout_lines.find((candidate) => rowKey(candidate) === cleDeLaLigne) ?? line).sets,
+            setId,
+        )
+
+        deleteSet(setId).catch((err) => {
+            if (!err.isOffline) {
+                remettre()
+                reportSyncFailure('La série n’a pas pu être supprimée. Réessaie.')
+            }
+        })
     }
 
     /**

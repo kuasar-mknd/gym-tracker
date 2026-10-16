@@ -95,6 +95,24 @@ describe('l’ordre des exercices', () => {
         expect(ordre.ordreEnVol.value).toBe(0)
     })
 
+    /*
+     * L'ordre confirmé est relevé à l'ouverture et à chaque réponse d'Inertia ;
+     * un exercice ajouté depuis par l'API n'y est pas. Le retour à l'ordre
+     * confirmé ne gardait que les lignes qu'il connaissait : l'exercice
+     * disparaissait de l'écran alors qu'il existait (#2077).
+     */
+    it('garde, à la fin, l’exercice ajouté depuis l’ordre confirmé quand le serveur refuse', async () => {
+        sync.patch.mockRejectedValue({ isOffline: false })
+        const { ordre, lignes } = monter()
+        lignes().push({ id: 3, exercise: { name: 'Squat' }, sets: [] })
+
+        ordre.deplacerExercice(2, 0)
+        expect(lignes().map((l) => l.id)).toEqual([3, 1, 2])
+        await flushPromises()
+
+        expect(lignes().map((l) => l.id)).toEqual([1, 2, 3])
+    })
+
     it('garde le nouvel ordre quand l’écriture est seulement mise en file', async () => {
         sync.patch.mockRejectedValue({ isOffline: true })
         const { ordre, lignes, reportSyncFailure } = monter()
@@ -128,6 +146,18 @@ describe('l’ordre des séries', () => {
 
         expect(lignes()[0].sets.map((s) => s.id)).toEqual([11, 12])
         expect(reportSyncFailure).toHaveBeenCalledWith('L’ordre des séries n’a pas pu être enregistré. Réessaie.')
+    })
+
+    it('garde, à la fin, la série ajoutée depuis l’ordre confirmé quand le serveur refuse', async () => {
+        sync.patch.mockRejectedValue({ isOffline: false })
+        const { ordre, lignes } = monter()
+        lignes()[0].sets.push({ id: 13 })
+
+        ordre.deplacerSerie(lignes()[0], 2, 0)
+        expect(lignes()[0].sets.map((s) => s.id)).toEqual([13, 11, 12])
+        await flushPromises()
+
+        expect(lignes()[0].sets.map((s) => s.id)).toEqual([11, 12, 13])
     })
 
     it('ne réordonne ni une ligne d’une seule série ni une séance close', () => {

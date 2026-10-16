@@ -47,6 +47,9 @@ const monter = ({ lignes = [] } = {}) => {
     return {
         wrapper,
         lignes: () => lignesRef.value.workout_lines,
+        remplacerLesLignes: (lignes) => {
+            lignesRef.value.workout_lines = lignes
+        },
         showAddExercise: () => showAddExercise.value,
         pendingIds,
         queuedLineIds,
@@ -172,6 +175,49 @@ describe('retirer un exercice', () => {
         await flushPromises()
 
         expect(page.lignes().map((l) => l.id)).toEqual([9])
+    })
+
+    /*
+     * Deux retraits en vol, refusés dans l'ordre de leur départ : remise à son
+     * indice de départ, la seconde passait devant la première (#2077).
+     */
+    it('remet chaque ligne à sa place exacte quand deux retraits sont refusés l’un après l’autre', async () => {
+        const refus = []
+        sync.delete.mockImplementation(() => new Promise((_resoudre, rejeter) => refus.push(rejeter)))
+        const page = monter({
+            lignes: [9, 10, 11, 12].map((id) => ({ id, exercise: { name: `Exercice ${id}` }, sets: [] })),
+        })
+
+        page.removeLine(10)
+        page.confirmerLeRetrait()
+        page.removeLine(11)
+        page.confirmerLeRetrait()
+        await flushPromises()
+        expect(page.lignes().map((l) => l.id)).toEqual([9, 12])
+
+        refus[0]({ isOffline: false })
+        await flushPromises()
+        refus[1]({ isOffline: false })
+        await flushPromises()
+
+        expect(page.lignes().map((l) => l.id)).toEqual([9, 10, 11, 12])
+    })
+
+    it('ne remet pas une ligne que la séance du serveur a déjà rendue', async () => {
+        let refuser
+        sync.delete.mockImplementation(() => new Promise((_resoudre, rejeter) => (refuser = rejeter)))
+        const page = monter({ lignes: [{ id: 9, exercise: { name: 'Fentes' }, sets: [] }, ligneDeSquat()] })
+
+        page.removeLine(10)
+        page.confirmerLeRetrait()
+        await flushPromises()
+
+        // Une réponse du serveur, pendant le retrait, rend la séance qu'il tient encore.
+        page.remplacerLesLignes([{ id: 9, exercise: { name: 'Fentes' }, sets: [] }, ligneDeSquat()])
+        refuser({ isOffline: false })
+        await flushPromises()
+
+        expect(page.lignes().map((l) => l.id)).toEqual([9, 10])
     })
 
     it('n’envoie rien pour une ligne que le serveur n’a jamais reçue', async () => {
