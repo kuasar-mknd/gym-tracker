@@ -62,14 +62,24 @@ class DeconnexionAvecDesEcrituresEnAttenteTest extends DuskTestCase
                 localStorage.setItem('gymtracker_add_exercise_search', JSON.stringify({$recherche}));
             JS);
 
+            /*
+             * Les libellés des boutons se lisent dans le DOM : `glass-button`
+             * les passe en majuscules, et WebDriver rend le texte transformé
+             * (« RESTER CONNECTÉ »), où « Rester connecté » ne se trouve pas
+             * (#2079). `waitFor` et `assertVisible` disent que les deux
+             * boutons sont à l'écran.
+             */
+            $libelleDe = static fn (string $selecteur): string => 'document.querySelector('.json_encode($selecteur, JSON_THROW_ON_ERROR).').textContent.trim()';
+
             // Un nouveau chargement : la file lit l'écriture en attente.
             $browser->visit('/profile')
                 ->waitFor('[data-testid="logout-button"]', 30)
                 ->clickWhenSettled('[data-testid="logout-button"]')
                 ->waitFor('[dusk="confirm-dialog-cancel"]', 15)
+                ->assertVisible('[dusk="confirm-dialog-confirm"]')
                 ->assertSee("Une modification faite hors ligne n'a pas encore été envoyée.")
-                ->assertSeeIn('[dusk="confirm-dialog-cancel"]', 'Rester connecté')
-                ->assertSeeIn('[dusk="confirm-dialog-confirm"]', 'Se déconnecter quand même')
+                ->assertScript($libelleDe('[dusk="confirm-dialog-cancel"]'), 'Rester connecté')
+                ->assertScript($libelleDe('[dusk="confirm-dialog-confirm"]'), 'Se déconnecter quand même')
                 ->clickWhenSettled('[dusk="confirm-dialog-cancel"]')
                 ->waitUntilMissing('[dusk="confirm-dialog-cancel"]', 15)
                 ->assertPathIs('/profile');
