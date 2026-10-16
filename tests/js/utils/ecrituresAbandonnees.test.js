@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
     messageDesEcrituresAbandonnees,
     noterLesEcrituresAbandonnees,
+    oublierLesAvisPerimes,
     oublierLesEcrituresAbandonnees,
     reprendreLesEcrituresAbandonnees,
 } from '@/Utils/ecrituresAbandonnees'
@@ -61,6 +62,45 @@ describe('l’avis des écritures abandonnées', () => {
         noterLesEcrituresAbandonnees(new Map([['42', { nombre: 1, depuis: MAINTENANT - 31 * JOUR }]]))
         vi.setSystemTime(MAINTENANT + 60 * JOUR + 1)
         expect(reprendreLesEcrituresAbandonnees('42')).toBeNull()
+    })
+
+    /*
+     * Écarté à la lecture, l'avis restait dans le stockage : l'identifiant du
+     * compte, un nombre et une date, pour toujours, sur l'appareil d'un compte
+     * qui ne reviendrait pas.
+     */
+    it('s’efface du stockage, et pas seulement de la lecture, quand il a attendu son compte plus de trente jours', () => {
+        noterLesEcrituresAbandonnees(new Map([['2', { nombre: 3, depuis: MAINTENANT - 40 * JOUR }]]))
+
+        // Ce que fait le layout à chaque écran d'un autre compte.
+        vi.setSystemTime(MAINTENANT + 30 * JOUR)
+        expect(reprendreLesEcrituresAbandonnees('1')).toBeNull()
+        expect(Object.keys(JSON.parse(localStorage.getItem(CLEF)))).toEqual(['2'])
+
+        vi.setSystemTime(MAINTENANT + 30 * JOUR + 1)
+        expect(reprendreLesEcrituresAbandonnees('1')).toBeNull()
+
+        expect(localStorage.getItem(CLEF)).toBeNull()
+    })
+
+    it('efface de même ce qui ne se lit pas, et garde les avis qui attendent encore leur compte', () => {
+        localStorage.setItem(
+            CLEF,
+            JSON.stringify({
+                2: { nombre: 1, depuis: null, le: MAINTENANT - 31 * JOUR },
+                7: { nombre: 2, depuis: null, le: MAINTENANT - JOUR },
+                9: { nombre: 'deux', depuis: null, le: MAINTENANT },
+            }),
+        )
+
+        oublierLesAvisPerimes()
+
+        expect(Object.keys(JSON.parse(localStorage.getItem(CLEF)))).toEqual(['7'])
+
+        localStorage.setItem(CLEF, '{coupé')
+        oublierLesAvisPerimes()
+
+        expect(localStorage.getItem(CLEF)).toBeNull()
     })
 
     it('s’oublie avec le compte qui quitte l’appareil, sans toucher aux autres', () => {

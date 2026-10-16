@@ -15,8 +15,11 @@ import { dateCourte } from '@/Utils/date'
  *
  * Seuls le nombre et la date de la plus ancienne sont gardés ici, par compte,
  * jusqu'à ce que ce compte ouvre une page sur cet appareil, rien de ce que
- * contenaient les écritures. L'avis d'un compte qui ne revient pas s'efface
- * lui-même trente jours après avoir été noté.
+ * contenaient les écritures. L'avis attend son compte trente jours au plus :
+ * passé ce délai, la première lecture l'efface du stockage (le chargement de
+ * la file, chaque vidage, chaque écran authentifié), et un compte qui revient
+ * plus tard n'en voit rien. Le garder pour toujours garderait l'identifiant
+ * d'un compte qui ne reviendra pas, supprimé ailleurs, sur l'appareil.
  */
 const CLEF = 'gym-tracker:ecritures-abandonnees'
 
@@ -37,31 +40,6 @@ const estUnAvis = (avis) =>
     Number.isFinite(avis.le) &&
     (avis.depuis === null || Number.isFinite(avis.depuis))
 
-/**
- * Les avis encore valables, par compte. Un stockage illisible ou refusé vaut
- * « aucun avis ».
- *
- * @param {number} maintenant
- * @returns {Record<string, {nombre: number, depuis: number|null, le: number}>}
- */
-const lire = (maintenant) => {
-    try {
-        const avis = JSON.parse(localStorage.getItem(CLEF) ?? '{}')
-
-        if (avis === null || typeof avis !== 'object' || Array.isArray(avis)) {
-            return {}
-        }
-
-        return Object.fromEntries(
-            Object.entries(avis).filter(
-                ([, unAvis]) => estUnAvis(unAvis) && maintenant - unAvis.le <= DUREE_EN_FILE_AU_PLUS_MS,
-            ),
-        )
-    } catch {
-        return {}
-    }
-}
-
 /** @param {Record<string, object>} avis */
 const ecrire = (avis) => {
     try {
@@ -75,6 +53,56 @@ const ecrire = (avis) => {
     } catch {
         // Stockage plein ou refusé : l'avis se perd, l'effacement est déjà fait.
     }
+}
+
+/**
+ * Le contenu du stockage, ou null quand il ne se lit pas.
+ *
+ * @returns {Record<string, unknown>|null}
+ */
+const lireLeStockage = () => {
+    try {
+        const avis = JSON.parse(localStorage.getItem(CLEF) ?? '{}')
+
+        return avis !== null && typeof avis === 'object' && !Array.isArray(avis) ? avis : null
+    } catch {
+        return null
+    }
+}
+
+/**
+ * Les avis encore valables, par compte. Ceux de plus de trente jours, et ce
+ * qui ne se lit pas, sont effacés du stockage, pas seulement écartés : l'avis
+ * d'un compte qui ne revient pas y restait pour toujours. Un stockage illisible
+ * ou refusé vaut « aucun avis ».
+ *
+ * @param {number} maintenant
+ * @returns {Record<string, {nombre: number, depuis: number|null, le: number}>}
+ */
+const lire = (maintenant) => {
+    const stocke = lireLeStockage()
+    const entrees = Object.entries(stocke ?? {})
+    const valables = Object.fromEntries(
+        entrees.filter(([, unAvis]) => estUnAvis(unAvis) && maintenant - unAvis.le <= DUREE_EN_FILE_AU_PLUS_MS),
+    )
+
+    if (stocke === null || Object.keys(valables).length < entrees.length) {
+        ecrire(valables)
+    }
+
+    return valables
+}
+
+/**
+ * Efface du stockage les avis qui ont attendu leur compte plus de trente
+ * jours. La file l'appelle à son chargement et à chaque vidage, comme elle
+ * abandonne ses propres entrées : même sur un appareil où plus personne ne se
+ * connecte.
+ *
+ * @param {number} maintenant
+ */
+export const oublierLesAvisPerimes = (maintenant = Date.now()) => {
+    lire(maintenant)
 }
 
 /** La plus ancienne de deux dates, l'une ou l'autre pouvant manquer. */

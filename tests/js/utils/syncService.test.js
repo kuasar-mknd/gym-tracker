@@ -2051,6 +2051,26 @@ describe('SyncService trente jours au plus', () => {
 
         expect(rechargee.queue).toEqual([])
     })
+
+    /*
+     * L'avis d'un compte qui ne revenait pas n'était plus montré passé trente
+     * jours, mais restait dans le stockage pour toujours, avec l'identifiant du
+     * compte. La file l'efface comme elle abandonne ses entrées : au
+     * chargement, même sur un écran où personne n'est connecté.
+     */
+    it('efface au chargement l’avis d’un compte qui n’est pas revenu en trente jours, et garde celui qui attend encore', async () => {
+        localStorage.setItem(
+            'gym-tracker:ecritures-abandonnees',
+            JSON.stringify({
+                7: { nombre: 3, depuis: MAINTENANT.getTime() - 70 * JOUR, le: MAINTENANT.getTime() - 30 * JOUR - 1 },
+                8: { nombre: 1, depuis: MAINTENANT.getTime() - 40 * JOUR, le: MAINTENANT.getTime() - 10 * JOUR },
+            }),
+        )
+
+        await freshService({ compte: null })
+
+        expect(Object.keys(avis())).toEqual(['8'])
+    })
 })
 
 /*

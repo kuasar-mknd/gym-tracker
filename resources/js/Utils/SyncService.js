@@ -2,6 +2,7 @@ import { http } from '@/Utils/http'
 import {
     DUREE_EN_FILE_AU_PLUS_MS,
     noterLesEcrituresAbandonnees,
+    oublierLesAvisPerimes,
     oublierLesEcrituresAbandonnees,
 } from '@/Utils/ecrituresAbandonnees'
 import { noterLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
@@ -886,11 +887,14 @@ class SyncService {
      * Seul ce que le stockage garde encore est compté : un autre onglet, qui
      * garde sa propre copie, a pu abandonner les mêmes avant, ou les envoyer.
      * Les entrées du compte connecté sortent aussi de l'écran
-     * (`sync:retired`), et `sync:abandoned` prévient l'écran déjà monté.
+     * (`sync:retired`), et `sync:abandoned` prévient l'écran déjà monté. Les
+     * avis qui ont attendu leur compte plus de trente jours s'effacent aussi.
      *
      * @param {number} maintenant
      */
     abandonnerLesEntreesPerimees(maintenant = Date.now()) {
+        oublierLesAvisPerimes(maintenant)
+
         const abandonnees = new Set()
 
         this.queue.forEach((entree) => {
