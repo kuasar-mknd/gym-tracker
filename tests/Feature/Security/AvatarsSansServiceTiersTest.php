@@ -4,15 +4,25 @@ declare(strict_types=1);
 
 use App\Models\Admin;
 use App\Models\User;
+use App\Providers\TelescopeServiceProvider;
 use App\Support\AvatarDesInitiales;
 use App\Support\Charte;
 use App\Support\ComptesVusParPulse;
 use Filament\Facades\Filament;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 use Laravel\Pulse\Contracts\ResolvesUsers;
 use Laravel\Pulse\Contracts\Storage;
 use Laravel\Pulse\Entry;
 use Laravel\Pulse\Facades\Pulse;
 use Laravel\Pulse\Value;
+use Laravel\Telescope\Avatar;
+use Laravel\Telescope\Contracts\EntriesRepository;
+use Laravel\Telescope\EntryType;
+use Laravel\Telescope\Http\Controllers\RequestsController;
+use Laravel\Telescope\IncomingEntry;
+use Laravel\Telescope\Telescope;
 use Livewire\Mechanisms\HandleRequests\HandleRequests;
 use Spatie\Permission\Models\Role;
 
@@ -20,12 +30,13 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\postJson;
 
 /**
- * L'avatar par défaut du panneau et ceux de la carte « Usage » de Pulse sont
- * dessinés par l'application, en SVG servi en `data:`. Filament prenait le sien
- * chez un service tiers, à qui chaque page du panneau envoyait le nom de
- * l'administrateur ; Pulse prenait les siens chez d'autres, d'après chaque
- * compte. Le nom n'entre dans le dessin que par ses initiales, des lettres :
- * rien de ce qu'il porte d'autre ne peut y écrire du SVG.
+ * L'avatar par défaut du panneau, ceux de la carte « Usage » de Pulse et celui
+ * du détail d'une entrée de Telescope sont dessinés par l'application, en SVG
+ * servi en `data:`. Filament prenait le sien chez un service tiers, à qui
+ * chaque page du panneau envoyait les initiales du nom de l'administrateur ;
+ * Pulse et Telescope prenaient les leurs chez d'autres, d'après chaque compte.
+ * Le nom n'entre dans le dessin que par ses initiales, des lettres : rien de ce
+ * qu'il porte d'autre ne peut y écrire du SVG.
  */
 function avatarSansTiersSvg(string $adresse): string
 {
@@ -251,4 +262,72 @@ it('compte une requête du panneau sous la clé de l’administrateur, une requ�
     actingAs($usager, 'web')->get('/raccourcis')->assertOk();
 
     expect($cles)->toBe([['admin', 'admin:'.$administrateur->id], ['web', $usager->id]]);
+});
+
+/**
+ * Le fournisseur de Telescope de l'application, enregistré comme en local, le
+ * temps de l'essai. Telescope range ses réglages, rappel de l'avatar compris,
+ * dans des propriétés statiques : elles reprennent ensuite leur valeur, pour
+ * les tests suivants.
+ *
+ * @template T
+ *
+ * @param  Closure(): T  $essai
+ * @return T
+ */
+function avatarSansTiersSousTelescope(Closure $essai): mixed
+{
+    $proprietes = array_values(array_filter(
+        [...new ReflectionClass(Telescope::class)->getProperties(), ...new ReflectionClass(Avatar::class)->getProperties()],
+        static fn (ReflectionProperty $propriete): bool => $propriete->isStatic(),
+    ));
+    $valeurs = array_map(static fn (ReflectionProperty $propriete): mixed => $propriete->getValue(), $proprietes);
+
+    config(['telescope.enabled' => true]);
+    new TelescopeServiceProvider(app())->register();
+
+    try {
+        return $essai();
+    } finally {
+        foreach ($proprietes as $rang => $propriete) {
+            $propriete->setValue(null, $valeurs[$rang]);
+        }
+    }
+}
+
+/**
+ * Telescope montre, dans le détail d'une entrée, l'avatar du compte qui l'a
+ * faite. Sans réglage, il le prenait chez un service d'avatars tiers, d'après
+ * l'empreinte de son adresse. Il ne passe au rappel que le numéro et
+ * l'adresse : le numéro seul désignerait aussi l'administrateur de même
+ * numéro.
+ */
+it('donne à Telescope l’avatar dessiné du compte de chaque entrée, pris dans la bonne table, jamais celui d’un tiers', function (): void {
+    $usager = User::factory()->create(['name' => 'Camille Martin', 'email' => 'camille.martin@example.org']);
+    $administrateur = Admin::factory()->create(['id' => $usager->id, 'name' => 'Alice Administratrice', 'email' => 'alice@example.org']);
+    $inconnu = User::factory()->make(['id' => $usager->id + 1000, 'name' => 'Fantôme', 'email' => 'fantome@example.org']);
+
+    $avatars = avatarSansTiersSousTelescope(static function () use ($usager, $administrateur, $inconnu): array {
+        $lot = (string) Str::orderedUuid();
+        $entrees = array_map(
+            static fn (Authenticatable $compte): IncomingEntry => IncomingEntry::make(['uri' => '/raccourcis'])->batchId($lot)->type(EntryType::REQUEST)->user($compte),
+            [$usager, $administrateur, $inconnu],
+        );
+        app(EntriesRepository::class)->store(collect($entrees));
+
+        return array_map(
+            static function (IncomingEntry $entree): mixed {
+                $reponse = app()->call([app(RequestsController::class), 'show'], ['id' => $entree->uuid]);
+
+                return $reponse instanceof JsonResponse ? data_get($reponse->getData(true), 'entry.content.user.avatar') : $reponse;
+            },
+            $entrees,
+        );
+    });
+
+    expect($avatars)->toBe([
+        new AvatarDesInitiales()->pourLeNom('Camille Martin'),
+        new AvatarDesInitiales()->pourLeNom('Alice Administratrice'),
+        new AvatarDesInitiales()->pourLeNom(''),
+    ]);
 });

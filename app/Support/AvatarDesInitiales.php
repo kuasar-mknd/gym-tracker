@@ -11,13 +11,14 @@ use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 
 /**
- * L'avatar par défaut du panneau et de Pulse : les initiales du nom, dessinées
- * en SVG par l'application et servies en `data:`, sans requête.
+ * L'avatar par défaut du panneau, de Pulse et de Telescope : les initiales du
+ * nom, dessinées en SVG par l'application et servies en `data:`, sans requête.
  *
  * Filament prend le sien chez un service d'avatars tiers, dont l'adresse porte
- * le nom de l'administrateur : chaque page du panneau lui envoyait ce nom, avec
- * l'adresse IP et le navigateur de qui la lisait. Pulse prenait ceux de sa
- * carte « Usage » chez d'autres (`ComptesVusParPulse`). Les deux passent
+ * les initiales du nom de l'administrateur : chaque page du panneau les lui
+ * envoyait, avec l'adresse IP et le navigateur de qui la lisait. Pulse prenait
+ * ceux de sa carte « Usage » chez d'autres (`ComptesVusParPulse`), et Telescope
+ * celui du détail d'une entrée (`TelescopeServiceProvider`). Tous passent
  * désormais par cette classe.
  *
  * Seules des lettres entrent dans le dessin : la première lettre du premier et
