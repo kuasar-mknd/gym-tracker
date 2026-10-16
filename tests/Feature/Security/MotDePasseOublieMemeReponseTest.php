@@ -457,6 +457,7 @@ function motDePasseOublieReinitialiser(string $adresseChiffree): TestResponse
     return motDePasseOublieEnvoyer(motDePasseOubliePageDuLien($adresseChiffree), 'password.store', [
         'token' => 'un-jeton-quelconque',
         'adresse' => $adresseChiffree,
+        'email' => motDePasseOublieAdresse(),
         'password' => 'Un-nouveau-mot-de-passe-2026!',
         'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
     ]);

@@ -7,13 +7,15 @@ import { createApp, h } from 'vue'
  *
  * Un chargement complet écrit la page dans une balise
  * `<script data-page="app" type="application/json">`. Inertia ne la lit qu'au
- * démarrage et ne la retire jamais : elle gardait le compte, le jeton et la
- * valeur chiffrée tant que le document vivait, après que l'historique chiffré
- * les avait rangés hors de portée, après une visite qui quitte la page
+ * démarrage et ne la retire jamais : elle gardait le lien lui-même, le jeton
+ * et la valeur chiffrée, qui suffisent à changer le mot de passe avec
+ * l'adresse du compte, tant que le document vivait, après que l'historique
+ * chiffré les avait rangés hors de portée, après une visite qui quitte la page
  * (réinitialisation réussie, puis connexion), et même après la visite qui jette
  * la clé de l'historique. La page la vide une fois montée
  * (`viderLaPageInitialeDuDocument()`) : Inertia, la garde de l'historique et
- * `SyncService` l'ont déjà lue.
+ * `SyncService` l'ont déjà lue. Elle n'y reçoit pas l'adresse du compte, que la
+ * personne saisit ; celle qu'elle tape ne s'y écrit pas non plus.
  *
  * Le client d'Inertia se monte une fois pour le fichier, qui n'a qu'un cas
  * (`.ai/rules/tests-js.md`).
@@ -28,7 +30,7 @@ vi.mock('@/Utils/SyncService', () => ({
     default: { compte: null, enAttente: () => 0, clearFailedRequests: () => {} },
 }))
 
-const ADRESSE = 'titulaire.document@example.org'
+const ADRESSE_SAISIE = 'titulaire.document@example.org'
 const PARTIE_LOCALE = 'titulaire.document'
 const JETON = 'jeton-du-courriel-document'
 const VALEUR_CHIFFREE = 'valeur-chiffree-du-document'
@@ -44,7 +46,6 @@ const PAGE_DU_LIEN = {
         flash: { success: null, error: null },
         token: JETON,
         adresse: VALEUR_CHIFFREE,
-        compte: ADRESSE,
     },
     encryptHistory: true,
 }
@@ -100,9 +101,11 @@ afterAll(() => {
 })
 
 describe('la page initiale du document, après la page d’un lien qui vaut', () => {
-    it('ne garde ni le compte, ni le jeton, ni la valeur chiffrée, page ouverte puis quittée', async () => {
-        // La page a bien reçu le compte : elle le montre.
-        expect(document.querySelector('input[autocomplete="username"]').value).toBe(ADRESSE)
+    it('ne garde ni le jeton, ni la valeur chiffrée, ni l’adresse saisie, page ouverte puis quittée', async () => {
+        // La page a bien reçu le lien : son formulaire est ouvert, et la personne y saisit son adresse.
+        const champ = document.querySelector('input[autocomplete="username"]')
+        champ.value = ADRESSE_SAISIE
+        champ.dispatchEvent(new Event('input'))
         expect(traces(pageInitiale())).toEqual([])
 
         // La réinitialisation réussie mène à la connexion, par une visite : le document reste.

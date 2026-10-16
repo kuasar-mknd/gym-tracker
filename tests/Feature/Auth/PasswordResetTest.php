@@ -48,7 +48,7 @@ class PasswordResetTest extends TestCase
             $response->assertStatus(200)->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
                 ->component('Auth/ResetPassword')
                 ->where('token', $notification->token)
-                ->where('compte', $user->email));
+                ->missing('compte'));
 
             return true;
         });

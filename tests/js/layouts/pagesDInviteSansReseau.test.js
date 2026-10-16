@@ -192,7 +192,7 @@ describe('un formulaire d’invité envoyé sans réseau', () => {
         [
             'Auth/ResetPassword',
             '/reset-password/jeton',
-            { auth: { user: null }, token: 'jeton', adresse: 'valeur-chiffree', compte: 'sam@example.org' },
+            { auth: { user: null }, token: 'jeton', adresse: 'valeur-chiffree' },
             'password.store',
             NOUVEAU_MOT_DE_PASSE_NON_CONFIRME,
         ],

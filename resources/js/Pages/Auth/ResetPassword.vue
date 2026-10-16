@@ -2,21 +2,18 @@
 /**
  * La page qu'ouvre le lien du courriel « mot de passe oublié ».
  *
- * Le serveur vérifie le lien avant de rien montrer. Un lien qui vaut ouvre le
- * formulaire : la page reçoit le jeton et l'adresse chiffrée tels que le lien
- * les porte (`token`, `adresse`), qu'elle renvoie avec le nouveau mot de passe
- * sans les lire, et l'adresse du compte en clair (`compte`). Elle la montre en
- * lecture seule, sous « Compte », dans un champ `autocomplete="username"` du
- * formulaire : un gestionnaire de mots de passe range ainsi le nouveau sous le
- * bon identifiant. Ce champ n'est pas envoyé : le formulaire ne porte que la
- * valeur chiffrée. Pour le garder sans le montrer, passer `MONTRER_LE_COMPTE`
- * à `false` : le champ reste dans le formulaire, caché (`hidden`), comme le
- * recommandent les gestionnaires. Le serveur ne donne pas l'adresse là où le
- * navigateur ne saurait pas chiffrer l'historique : le champ manque alors.
- * Une fois montée, la page vide la page initiale du document
+ * Le serveur vérifie le lien avant d'ouvrir le formulaire. Un lien qui vaut
+ * donne à la page le jeton et l'adresse chiffrée tels que le lien les porte
+ * (`token`, `adresse`), qu'elle renvoie avec le nouveau mot de passe sans les
+ * lire, et rien de l'adresse du compte. La personne la saisit sous « Email »,
+ * dans un champ vide et modifiable, `autocomplete="username"`, envoyé avec le
+ * formulaire (`email`) : un gestionnaire de mots de passe le remplit, et
+ * range le nouveau mot de passe sous cet identifiant. Le serveur ne
+ * réinitialise que si elle désigne le compte du lien ; sinon, il répond comme
+ * à un jeton faux. Une fois montée, la page vide la page initiale du document
  * (`viderLaPageInitialeDuDocument()`), que le chiffrement de l'historique ne
- * couvre pas et qu'Inertia garderait, compte, jeton et valeur chiffrée
- * compris, tant que l'onglet ne recharge pas.
+ * couvre pas et qu'Inertia garderait, jeton et valeur chiffrée compris, tant
+ * que l'onglet ne recharge pas.
  *
  * Un lien refusé (jeton faux ou périmé, lien d'avant le chiffrement) le dit
  * dès l'ouverture (`lienRefuse`), avec le chemin d'une nouvelle demande, sans
@@ -32,19 +29,16 @@ import { Head, Link, useForm } from '@inertiajs/vue3'
 import { viderLaPageInitialeDuDocument } from '@/Utils/historiqueDuCompte'
 import { NOUVEAU_MOT_DE_PASSE_NON_CONFIRME, direSansReseau } from '@/Utils/visitesHorsLigne'
 
-/** Le compte du lien se voit ; à `false`, il reste dans le formulaire, caché. */
-const MONTRER_LE_COMPTE = true
-
 const props = defineProps({
     token: String,
     adresse: String,
-    compte: String,
     lienRefuse: String,
 })
 
 const form = useForm({
     token: props.token,
     adresse: props.adresse,
+    email: '',
     password: '',
     password_confirmation: '',
 })
@@ -81,17 +75,17 @@ const submit = () => {
         </div>
 
         <form v-if="!lienRefuse" @submit.prevent="submit" class="space-y-4">
-            <div v-if="compte" :hidden="!MONTRER_LE_COMPTE" data-testid="compte-du-lien">
-                <GlassInput
-                    id="compte-du-lien"
-                    :model-value="compte"
-                    type="email"
-                    name="email"
-                    label="Compte"
-                    autocomplete="username"
-                    readonly
-                />
-            </div>
+            <GlassInput
+                v-model="form.email"
+                type="email"
+                name="email"
+                label="Email"
+                placeholder="ton@email.com"
+                :error="form.errors.email"
+                autocomplete="username"
+                required
+                autofocus
+            />
 
             <GlassInput
                 v-model="form.password"
@@ -101,7 +95,6 @@ const submit = () => {
                 :error="form.errors.password"
                 autocomplete="new-password"
                 required
-                autofocus
             />
 
             <GlassInput

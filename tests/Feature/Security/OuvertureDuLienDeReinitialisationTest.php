@@ -30,33 +30,34 @@ use function Pest\Laravel\post;
 
 /*
  * La page qu'ouvre le lien du courriel « mot de passe oublié » vérifie le lien
- * avant de rien montrer.
+ * avant d'ouvrir le formulaire, et ne donne jamais l'adresse du compte.
  *
  * Depuis #2058, le lien ne porte l'adresse du compte que chiffrée, et la page
  * ne la montrait plus : un gestionnaire de mots de passe rangeait alors le
- * nouveau mot de passe sans identifiant. Elle la montre de nouveau, en
- * lecture seule, mais seulement pour un lien qui vaut : son adresse se
- * déchiffre, nomme un compte, et son jeton est celui, encore valable, de la
- * demande du compte. Elle en dit plus que le lien seul : à qui le tient, elle
- * donne l'identifiant de la connexion, que #2058 lui taisait, jusqu'à ce que
- * le lien serve ou expire (un test le tient, `.ai/rules/controllers.md` dit
- * pourquoi). Elle sort alors comme une page de compte : historique chiffré,
- * document en `no-store`, et pas d'adresse là où le navigateur ne saurait pas
- * chiffrer.
+ * nouveau mot de passe sans identifiant. #2070 l'a d'abord montrée en lecture
+ * seule pour un lien qui vaut, ce qui donnait l'identifiant de la connexion à
+ * quiconque tenait le lien. Le propriétaire a choisi l'autre voie
+ * (2026-10-16) : la page d'un lien qui vaut n'envoie l'adresse sous aucune
+ * forme, et la personne, ou son gestionnaire, la saisit dans un champ vide
+ * (`autocomplete="username"`), que le serveur compare à l'adresse du lien
+ * (`IdentifiantSaisiALaReinitialisationTest`). La page sort comme une page de
+ * compte, historique chiffré et document en `no-store`, pour le lien qu'elle
+ * porte (jeton et valeur chiffrée).
  *
- * Tout autre lien reçoit la même page, sans adresse ni formulaire, après le
- * même plancher de durée (`DureeDesReponsesDAuthentification`) : ni la page ni
- * sa durée ne disent, à qui tient un vieux lien, si le compte existe encore ou
- * s'il a demandé un lien depuis. La vérification ne consomme ni ne prolonge
- * le jeton du titulaire. Le côté client (champ « Compte » en lecture seule,
- * `autocomplete="username"`, historique chiffré par le vrai client
- * d'Inertia) est tenu par tests/js/pages/authPages.test.js et
- * tests/js/pages/reinitialisationDansLHistorique.test.js.
+ * Tout autre lien reçoit la même page, sans formulaire, après le même plancher
+ * de durée (`DureeDesReponsesDAuthentification`) : ni la page ni sa durée ne
+ * disent, à qui tient un vieux lien, si le compte existe encore ou s'il a
+ * demandé un lien depuis. La vérification ne consomme ni ne prolonge le jeton
+ * du titulaire. Le côté client (champ vide et modifiable,
+ * `autocomplete="username"`, envoyé avec le formulaire ; historique chiffré
+ * par le vrai client d'Inertia) est tenu par tests/js/pages/authPages.test.js
+ * et tests/js/pages/reinitialisationDansLHistorique.test.js.
  */
 
 /**
  * L'adresse du compte de chaque cas. Sa partie locale ne se trouve nulle part
- * ailleurs : la lire dans un texte, c'est y lire l'adresse.
+ * ailleurs : la lire dans un texte, quelle qu'en soit la casse, c'est y lire
+ * l'adresse.
  */
 function ouvertureDuLienAdresse(): string
 {
@@ -68,15 +69,7 @@ function ouvertureDuLienAdresse(): string
  */
 function ouvertureDuLienLaisseLireLAdresse(string $texte): bool
 {
-    return str_contains($texte, 'titulaire.ouverture');
-}
-
-/**
- * Combien de fois ce texte laisse lire l'adresse du compte.
- */
-function ouvertureDuLienOccurrencesDeLAdresse(string $texte): int
-{
-    return substr_count($texte, 'titulaire.ouverture');
+    return str_contains(strtolower($texte), 'titulaire.ouverture');
 }
 
 /**
@@ -177,7 +170,7 @@ function ouvertureDuLienAvec(string $lien, array $parametres): string
     return Str::before($lien, '?').'?'.http_build_query(array_filter([...$requete, ...$parametres], static fn (mixed $valeur): bool => $valeur !== null));
 }
 
-it('montre l’adresse du compte une fois, pour un lien qui vaut, et rend au formulaire la valeur chiffrée telle que le lien la porte', function (): void {
+it('ouvre, pour un lien qui vaut, le formulaire sans l’adresse du compte, et lui rend la valeur chiffrée telle que le lien la porte', function (): void {
     $compte = User::factory()->create(['email' => ouvertureDuLienAdresse()]);
     $lien = ouvertureDuLienPour($compte);
     $formulaire = FormulaireDeReinitialisation::depuisLeLien($lien, 'Un-nouveau-mot-de-passe-2026!');
@@ -188,74 +181,85 @@ it('montre l’adresse du compte une fois, pour un lien qui vaut, et rend au for
         ->and(ouvertureDuLienPropsDeLaPage($page))->toBe([
             'token' => $formulaire['token'],
             'adresse' => $formulaire['adresse'],
-            'compte' => ouvertureDuLienAdresse(),
         ])
-        ->and(ouvertureDuLienOccurrencesDeLAdresse((string) $page->getContent()))->toBe(1);
+        ->and(ouvertureDuLienLaisseLireLAdresse((string) $page->getContent()))->toBeFalse();
 });
 
-it('montre l’adresse telle que le compte la porte, et ouvre le formulaire d’un compte en attente', function (): void {
+it('ouvre le formulaire d’un compte en attente sans son adresse, même quand le compte la porte dans une autre casse', function (): void {
     $compte = User::factory()->enAttente()->create(['email' => ouvertureDuLienAdresse()]);
     $lien = ouvertureDuLienPour($compte);
     $compte->forceFill(['email' => 'Titulaire.Ouverture@example.org'])->save();
 
-    expect(ouvertureDuLienPropsDeLaPage(get($lien)->assertOk())['compte'] ?? null)->toBe('Titulaire.Ouverture@example.org');
+    $page = get($lien)->assertOk();
+
+    expect(array_keys(ouvertureDuLienPropsDeLaPage($page)))->toBe(['token', 'adresse'])
+        ->and(ouvertureDuLienLaisseLireLAdresse((string) $page->getContent()))->toBeFalse();
 });
 
 /*
- * Ce que l'affichage coûte (`.ai/rules/controllers.md`). Un lien qui vaut
- * suffit à changer le mot de passe ; depuis #2058, il ne disait pas sous quel
- * identifiant se connecter ensuite. La page le donne désormais à qui tient le
- * lien : partie de la seule URL, sans rien savoir du compte, la connexion
- * réussit, et ce jusqu'à ce que le lien serve ou expire. Servi, il ne donne
- * plus rien. Ce test tient l'affichage retenu : un champ d'identifiant vide,
- * que l'envoi comparerait à l'adresse du lien, le ferait échouer.
+ * Ce que la page ne donne plus (`.ai/rules/controllers.md`). Un lien qui vaut
+ * montrait l'adresse du compte, en lecture seule : partie de la seule URL,
+ * sans rien savoir du compte, une personne lisait l'identifiant de la
+ * connexion, changeait le mot de passe et se connectait. La page d'un lien
+ * qui vaut ne porte plus l'adresse sous aucune forme : ni dans ses props, ni
+ * dans le document complet (la page initiale du `data-page` comprise), ni
+ * dans la réponse d'une visite d'Inertia, ni dans les en-têtes, quelle que
+ * soit la façon dont le navigateur sait chiffrer l'historique. La personne la
+ * saisit (`IdentifiantSaisiALaReinitialisationTest`).
  */
-it('donne à qui tient un lien qui vaut l’identifiant de la connexion, et plus rien une fois le lien servi', function (): void {
+it('ne donne l’adresse du compte nulle part à qui ouvre un lien qui vaut : ni props, ni document complet, ni visite d’Inertia, ni en-têtes', function (string $origine): void {
     $compte = User::factory()->create(['email' => ouvertureDuLienAdresse()]);
-    $lien = ouvertureDuLienPour($compte);
-    $motDePasse = 'Un-nouveau-mot-de-passe-2026!';
+    $lien = ouvertureDuLienPour($compte, origine: $origine);
 
-    $proprietes = ouvertureDuLienPropsDeLaPage(get($lien)->assertOk());
-    $identifiant = $proprietes['compte'] ?? null;
+    $document = get($lien)->assertOk();
+    /** @var TestResponse<Response> $visite */
+    $visite = test()->withHeaders([
+        'X-Inertia' => 'true',
+        'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
+        'X-Requested-With' => 'XMLHttpRequest',
+    ])->get($lien)->assertOk();
+    $traces = [
+        'page du document' => (string) json_encode(ouvertureDuLienPageInertia($document)),
+        'document complet' => (string) $document->getContent(),
+        'en-têtes du document' => (string) $document->headers,
+        'visite d’Inertia' => (string) $visite->getContent(),
+        'en-têtes de la visite' => (string) $visite->headers,
+        'session' => serialize(session()->all()),
+    ];
 
-    expect($identifiant)->toBe(ouvertureDuLienAdresse());
+    /** @var array<string, mixed> $proprietesDeLaVisite */
+    $proprietesDeLaVisite = $visite->json('props');
 
-    post(route('password.store'), [
-        ...Arr::only($proprietes, ['token', 'adresse']),
-        'password' => $motDePasse,
-        'password_confirmation' => $motDePasse,
-    ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
-    post(route('login'), ['email' => $identifiant, 'password' => $motDePasse]);
-
-    $this->assertAuthenticatedAs($compte);
-
-    auth()->logout();
-    $servi = get($lien)->assertOk();
-
-    expect(ouvertureDuLienPropsDeLaPage($servi))->toBe(['lienRefuse' => trans(Password::INVALID_TOKEN)])
-        ->and(ouvertureDuLienLaisseLireLAdresse((string) $servi->getContent()))->toBeFalse();
-});
+    expect(array_keys(ouvertureDuLienPropsDeLaPage($document)))->toBe(['token', 'adresse'])
+        ->and(array_keys(Arr::only($proprietesDeLaVisite, ['token', 'adresse', 'compte', 'lienRefuse', 'email'])))->toBe(['token', 'adresse'])
+        ->and(array_keys(array_filter($traces, ouvertureDuLienLaisseLireLAdresse(...))))->toBe([]);
+})->with([
+    'en HTTPS, derrière le proxy inverse' => ['https://gym.example.org'],
+    'sur localhost' => ['http://localhost'],
+    'en http hors de la boucle locale' => ['http://laravel.test'],
+]);
 
 /*
  * Inertia range chaque page dans l'historique du navigateur, que le bouton
  * Retour relit sans requête, et le cache HTTP peut resservir un document
- * gardé : la page qui montre l'adresse sort comme une page de compte
+ * gardé : la page d'un lien qui vaut, qui porte le lien lui-même (jeton et
+ * valeur chiffrée), sort comme une page de compte
  * (`HandleInertiaRequests::traiterCommeUnePageDeCompte()`).
  */
-it('chiffre l’historique de la page qui montre l’adresse, et la tient hors du cache', function (string $origine): void {
+it('chiffre l’historique de la page d’un lien qui vaut, et la tient hors du cache', function (string $origine): void {
     $compte = User::factory()->create(['email' => ouvertureDuLienAdresse()]);
 
     $page = get(ouvertureDuLienPour($compte, origine: $origine))->assertOk();
 
     expect(ouvertureDuLienPageInertia($page)['encryptHistory'] ?? false)->toBeTrue()
-        ->and(ouvertureDuLienPropsDeLaPage($page)['compte'] ?? null)->toBe(ouvertureDuLienAdresse())
+        ->and(array_keys(ouvertureDuLienPropsDeLaPage($page)))->toBe(['token', 'adresse'])
         ->and($page->headers->get('Cache-Control'))->toBe('no-store, private');
 })->with([
     'en HTTPS, derrière le proxy inverse' => ['https://gym.example.org'],
     'sur localhost' => ['http://localhost'],
 ]);
 
-it('ne donne pas l’adresse là où le navigateur ne saurait pas chiffrer l’historique, et garde le formulaire', function (): void {
+it('ne chiffre pas l’historique là où le navigateur ne saurait pas, et garde le formulaire, sans l’adresse', function (): void {
     $compte = User::factory()->create(['email' => ouvertureDuLienAdresse()]);
     $lien = ouvertureDuLienPour($compte, origine: 'http://laravel.test');
 
@@ -263,8 +267,7 @@ it('ne donne pas l’adresse là où le navigateur ne saurait pas chiffrer l’h
     $proprietes = ouvertureDuLienPropsDeLaPage($page);
 
     expect(ouvertureDuLienPageInertia($page))->not->toHaveKey('encryptHistory')
-        ->and(array_keys($proprietes))->toBe(['token', 'adresse', 'compte'])
-        ->and($proprietes['compte'])->toBeNull()
+        ->and(array_keys($proprietes))->toBe(['token', 'adresse'])
         ->and($proprietes['token'])->toBeString()
         ->and($proprietes['adresse'])->toBeString()
         ->and(ouvertureDuLienLaisseLireLAdresse((string) $page->getContent()))->toBeFalse()
@@ -390,7 +393,7 @@ it('ouvre un lien qui vaut sans attendre le plancher des refus', function (): vo
 
     $ouverture = $duree->mesurer(static fn (): TestResponse => get($lien)->assertOk());
 
-    expect(ouvertureDuLienPropsDeLaPage($ouverture['reponse'])['compte'] ?? null)->toBe(ouvertureDuLienAdresse())
+    expect(array_keys(ouvertureDuLienPropsDeLaPage($ouverture['reponse'])))->toBe(['token', 'adresse'])
         ->and($ouverture['dormi'])->toBe(0.0)
         ->and($ouverture['total'])->toBeLessThan($duree->plancher);
 });
@@ -434,7 +437,8 @@ it('n’écrit l’adresse ni dans la session, ni dans l’adresse gardée pour 
         $traces['session après un lien refusé'] = serialize(session()->all());
         $traces['journal'] = is_file($fichier) ? (string) file_get_contents($fichier) : '';
 
-        expect(ouvertureDuLienPropsDeLaPage($ouverture)['compte'] ?? null)->toBe(ouvertureDuLienAdresse())
+        // Le formulaire ouvert dit que le lien vaut : l'adresse a été déchiffrée et le compte trouvé.
+        expect(array_keys(ouvertureDuLienPropsDeLaPage($ouverture)))->toBe(['token', 'adresse'])
             ->and(array_keys(array_filter($traces, ouvertureDuLienLaisseLireLAdresse(...))))->toBe([])
             ->and(session('url.intended'))->toBeNull();
     } finally {
@@ -528,7 +532,7 @@ it('laisse à l’envoi du formulaire ses six essais par minute : chaque refus r
         $erreurs = $proprietes['errors'] ?? [];
 
         expect(array_keys($erreurs))->toBe(['password'], "Essai {$essai}, {$cas}")
-            ->and(ouvertureDuLienPropsDeLaPage($page)['compte'] ?? null)->toBe(ouvertureDuLienAdresse());
+            ->and(ouvertureDuLienPropsDeLaPage($page)['token'] ?? null)->toBe($formulaire['token']);
     }
 
     // Le septième envoi de la minute bute, comme avant, sur le limiteur commun.

@@ -100,10 +100,11 @@ export const pageInitialeDuDocument = (document) => {
  * garde ce que la première page a reçu tant que le document vit, hors de
  * portée du chiffrement de l'historique, après une visite qui quitte la page,
  * connexion et déconnexion comprises. Une page qui y reçoit ce qui ne doit pas
- * rester (le compte de la page de réinitialisation) la vide une fois montée :
- * Inertia et la garde de l'historique l'ont lue avant, et `SyncService`, s'il
- * se charge plus tard, n'y lirait de toute façon aucun compte, la page étant
- * celle d'un invité. Seule la page initiale de ce composant se vide :
+ * rester (le lien de la page de réinitialisation, jeton et valeur chiffrée)
+ * la vide une fois montée : Inertia et la garde de l'historique l'ont lue
+ * avant, et `SyncService`, s'il se charge plus tard, n'y lirait de toute
+ * façon aucun compte, la page étant celle d'un invité. Seule la page initiale
+ * de ce composant se vide :
  * `SyncService` lit le compte connecté dans celle d'une autre page, au
  * chargement de son module, qui peut venir après le montage.
  *

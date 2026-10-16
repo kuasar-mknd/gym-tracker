@@ -74,8 +74,9 @@ class HandleInertiaRequests extends Middleware
      * Le chiffrement et le cache se décident ici, à chaque requête, et jamais
      * ailleurs : `ResponseFactory` est un singleton, une valeur posée une fois
      * resterait pour la requête suivante du même processus, celle d'un invité
-     * comprise. Une page d'invité qui porte une donnée d'un compte le demande
-     * par `traiterCommeUnePageDeCompte()`, que la requête suivante oublie.
+     * comprise. Une page d'invité que l'historique ne doit pas garder en clair
+     * (celle d'un lien de réinitialisation qui vaut) le demande par
+     * `traiterCommeUnePageDeCompte()`, que la requête suivante oublie.
      */
     #[\Override]
     public function handle(Request $request, Closure $next): Response
@@ -99,27 +100,23 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Fait sortir la page d'invité de cette requête comme une page de compte :
-     * historique chiffré, document en `no-store` (`handle()`). À appeler avant
+     * document en `no-store` (`handle()`), et historique chiffré là où le
+     * navigateur sait chiffrer (`leNavigateurPeutChiffrer()`). À appeler avant
      * `Inertia::render()`, qui lit le chiffrement en construisant la page.
      *
-     * La page de réinitialisation du mot de passe montre l'adresse du compte
-     * que son lien vient de prouver (`NewPasswordController::create()`) : sans
-     * cela, l'historique du navigateur la garderait en clair, et le cache HTTP
-     * le document qui la porte. Rend faux quand le navigateur ne saurait pas
-     * chiffrer (`leNavigateurPeutChiffrer()`) : la page ne porte alors pas la
-     * donnée, plutôt que de la ranger en clair.
+     * La page d'un lien de réinitialisation qui vaut porte le lien lui-même,
+     * le jeton et l'adresse chiffrée (`NewPasswordController::create()`) :
+     * sans cela, l'historique du navigateur les garderait en clair dans
+     * l'état de la page, et le cache HTTP le document qui les porte. Elle ne
+     * porte pas l'adresse du compte, que la personne saisit.
      */
-    public static function traiterCommeUnePageDeCompte(Request $request): bool
+    public static function traiterCommeUnePageDeCompte(Request $request): void
     {
         $request->attributes->set(self::PAGE_QUI_PORTE_UN_COMPTE, true);
 
-        if (! self::leNavigateurPeutChiffrer($request)) {
-            return false;
+        if (self::leNavigateurPeutChiffrer($request)) {
+            Inertia::encryptHistory();
         }
-
-        Inertia::encryptHistory();
-
-        return true;
     }
 
     /**

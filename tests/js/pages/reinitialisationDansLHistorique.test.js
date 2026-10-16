@@ -3,18 +3,20 @@ import { createApp, h } from 'vue'
 
 /*
  * La page de réinitialisation du mot de passe, ouverte par un lien qui vaut,
- * avec le vrai client d'Inertia : elle montre l'adresse du compte, et Inertia
- * la range dans l'historique du navigateur, que le bouton Retour relit sans
- * requête. Le serveur la sert donc avec `encryptHistory`, comme une page de
- * compte (`HandleInertiaRequests::traiterCommeUnePageDeCompte()`,
+ * avec le vrai client d'Inertia. Le serveur ne lui donne pas l'adresse du
+ * compte : la personne la tape dans un champ vide (`autocomplete="username"`),
+ * et ce qu'elle tape ne doit rien laisser que le navigateur garde. Inertia
+ * range la page dans l'historique du navigateur, que le bouton Retour relit
+ * sans requête ; le serveur la sert avec `encryptHistory`, comme une page de
+ * compte, pour le lien qu'elle porte, jeton et valeur chiffrée
+ * (`HandleInertiaRequests::traiterCommeUnePageDeCompte()`,
  * `OuvertureDuLienDeReinitialisationTest`) : Inertia chiffre l'entrée avec la
  * clé de l'onglet (`crypto.subtle`, que le navigateur n'offre qu'en HTTPS et
  * sur la boucle locale). Ce fichier vérifie que le client le fait bien de
- * cette page : l'entrée est un `ArrayBuffer` où l'adresse ne se lit pas, et
- * rien d'autre que le navigateur garde ne la recopie. Reste le champ de la
- * page ouverte, où elle se lit en clair, en lecture seule ; la page initiale
- * du document, que l'historique chiffré ne couvre pas, est vidée au montage
- * (pageInitialeDeLaReinitialisation.test.js).
+ * cette page, et que l'adresse tapée ne va ni dans l'entrée, un `ArrayBuffer`,
+ * ni dans les stockages : seul le champ de la page ouverte la tient. La page
+ * initiale du document, que l'historique chiffré ne couvre pas, est vidée au
+ * montage (pageInitialeDeLaReinitialisation.test.js).
  *
  * L'entrée se reconnaît comme Inertia la reconnaît avant de la déchiffrer,
  * par `instanceof ArrayBuffer`, jamais par sa marque (`.ai/rules/tests-js.md`).
@@ -30,7 +32,7 @@ vi.mock('@/Utils/SyncService', () => ({
     default: { compte: null, enAttente: () => 0, clearFailedRequests: () => {} },
 }))
 
-const ADRESSE = 'titulaire.historique@example.org'
+const ADRESSE_SAISIE = 'titulaire.historique@example.org'
 const PARTIE_LOCALE = 'titulaire.historique'
 
 /** La page telle que le serveur la rend pour un lien qui vaut, en HTTPS. */
@@ -44,7 +46,6 @@ const PAGE_DU_LIEN = {
         flash: { success: null, error: null },
         token: 'jeton-du-courriel',
         adresse: 'valeur-chiffree',
-        compte: ADRESSE,
     },
     encryptHistory: true,
 }
@@ -96,13 +97,18 @@ afterAll(() => {
 })
 
 describe('la page d’un lien de réinitialisation qui vaut', () => {
-    it('montre le compte en lecture seule, et Inertia la range chiffrée dans l’historique, sans l’adresse en clair', () => {
+    it('offre un champ vide à remplir, et ce que la personne y tape ne va ni dans l’historique chiffré ni dans les stockages', async () => {
         const champ = document.querySelector('input[autocomplete="username"]')
-        const etat = window.history.state
 
-        expect(champ.value).toBe(ADRESSE)
-        expect(champ.readOnly).toBe(true)
+        expect(champ.value).toBe('')
+        expect(champ.readOnly).toBe(false)
         expect(champ.closest('form')).not.toBeNull()
+
+        champ.value = ADRESSE_SAISIE
+        champ.dispatchEvent(new Event('input'))
+        // Une tâche, le temps qu'une écriture de l'historique ou d'un stockage se fasse.
+        await new Promise((fin) => setTimeout(fin, 0))
+        const etat = window.history.state
 
         expect(etat.page).toBeInstanceOf(ArrayBuffer)
         expect(new TextDecoder().decode(new Uint8Array(etat.page))).not.toContain(PARTIE_LOCALE)

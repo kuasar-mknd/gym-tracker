@@ -52,8 +52,8 @@ final class LiensDesCourriels
      * lire : seul le serveur la déchiffre, par
      * `adresseDuLienDeReinitialisation()`, à l'ouverture de la page pour
      * vérifier le lien (`NewPasswordController::create()`, qui ne montre
-     * l'adresse du compte que pour un lien qui vaut), puis à l'envoi
-     * (`NewPasswordRequest`).
+     * jamais l'adresse du compte), puis à l'envoi (`NewPasswordRequest`), où
+     * il la compare à l'adresse que la personne a saisie.
      */
     public static function lienDeReinitialisation(mixed $notifiable, string $jeton): string
     {

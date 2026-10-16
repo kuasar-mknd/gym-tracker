@@ -198,6 +198,13 @@ function dureeAuthentificationCas(): array
                 FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!', 'un-jeton-quelconque'),
             )->assertSessionHasErrors('token');
         }],
+        'réinitialisation, adresse saisie qui ne désigne pas le compte du lien' => [static function (): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+            $formulaire = FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!');
+            $formulaire['email'] = 'personne@example.org';
+
+            return static fn (): mixed => test()->post(route('password.store'), $formulaire)->assertSessionHasErrors('token');
+        }],
         'réinitialisation, adresse du lien qui ne se déchiffre pas' => [static function (): Closure {
             $compte = User::factory()->create(['email' => 'prise@example.org']);
             $formulaire = FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!');
