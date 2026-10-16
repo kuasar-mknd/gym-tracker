@@ -182,6 +182,37 @@ it('masque l’état d’un formulaire Livewire que porte son instantané, et ne
         ->and(data_get($corps, 'components.1.snapshot'))->toBe('[masqué]');
 });
 
+/*
+ * Le message et le texte Markdown n'ont pas de clef : toute adresse de
+ * courriel y devient « [adresse masquée] » (#PR). Les erreurs d'envoi n'en
+ * citent plus (`CourrielsSansAdresseDansLeursErreursTest`) ; c'est une
+ * défense contre l'erreur d'un paquet qui en citerait une. Le Markdown, que
+ * le paquet n'écrit qu'en mode debug, est écrit directement.
+ */
+it('masque toute adresse du message et du texte Markdown', function (): void {
+    Route::post('/_boum', function (): never {
+        throw new RuntimeException('Refus de <Titulaire.Du-Message@Example.org> et de "titulaire.du-message@example.org"');
+    });
+
+    $this->post('/_boum')->assertStatus(500);
+
+    $rapportee = ExceptionEnregistree::query()->sole();
+    $ecrite = ExceptionEnregistree::query()->create([
+        'type' => RuntimeException::class,
+        'code' => '0',
+        'message' => 'boum',
+        'file' => '/app/x.php',
+        'line' => 1,
+        'trace' => [],
+        'method' => 'POST',
+        'path' => '_boum',
+        'markdown' => "# RuntimeException\n\nRefus de Titulaire.Du-Markdown@Example.org\n\n```json\n{\"email\":\"titulaire.du-markdown@example.org\"}\n```",
+    ]);
+
+    expect($rapportee->message)->toBe('Refus de <[adresse masquée]> et de "[adresse masquée]"')
+        ->and($ecrite->refresh()->markdown)->toBe("# RuntimeException\n\nRefus de [adresse masquée]\n\n```json\n{\"email\":\"[adresse masquée]\"}\n```");
+});
+
 /**
  * Le plus d'octets qu'occupe la ligne d'une exception : la somme des budgets
  * de `ExceptionEnregistree::OCTETS_MAX_PAR_COLONNE` (90 Kio), des colonnes

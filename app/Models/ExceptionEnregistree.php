@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\TexteSansAdresse;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -34,6 +35,11 @@ use Illuminate\Support\Str;
  * l'état du composant dans un instantané, du JSON écrit en texte
  * (`CLEFS_EN_JSON`), qui porte le mot de passe d'un essai refusé : il est lu,
  * masqué comme le reste, puis réécrit.
+ *
+ * Le message et le texte Markdown, eux, se lisent sans clef : toute adresse
+ * de courriel y devient « [adresse masquée] » (`TexteSansAdresse`). Les
+ * erreurs d'envoi n'en citent plus (`CourrielleurQuiTaitLesAdresses`), et
+ * c'est une défense contre celles d'un paquet qui en citerait une.
  *
  * Et à taille bornée : le paquet garde le corps entier de la requête, le
  * message d'une exception peut recopier une valeur reçue, que le texte
@@ -183,10 +189,10 @@ final class ExceptionEnregistree extends Exception
             $parametres = self::bornerLeJson(self::masquer($exception->route_parameters), self::OCTETS_MAX_PAR_COLONNE['route_parameters']);
             $exception->route_parameters = $parametres;
 
-            $exception->message = self::couper((string) $exception->message, self::OCTETS_MAX_PAR_COLONNE['message']);
+            $exception->message = self::couper(TexteSansAdresse::de((string) $exception->message), self::OCTETS_MAX_PAR_COLONNE['message']);
             $exception->markdown = $exception->markdown === null
                 ? null
-                : self::couper($exception->markdown, self::OCTETS_MAX_PAR_COLONNE['markdown']);
+                : self::couper(TexteSansAdresse::de($exception->markdown), self::OCTETS_MAX_PAR_COLONNE['markdown']);
 
             foreach (self::CARACTERES_MAX_PAR_COLONNE as $colonne => $caracteres) {
                 $valeur = $exception->getAttribute($colonne);
