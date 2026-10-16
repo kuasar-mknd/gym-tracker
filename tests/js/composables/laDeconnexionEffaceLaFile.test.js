@@ -361,6 +361,122 @@ describe('la file d’un compte, à la déconnexion', () => {
     })
 })
 
+/*
+ * Une écriture partie juste avant le clic, encore sans réponse, n'est pas
+ * encore en file : la question ne la comptait pas, la déconnexion partait sans
+ * rien demander, et si le réseau tombait ensuite, l'écriture entrait en file au
+ * nom du compte parti, en clair, après l'effacement (#2050).
+ */
+describe('une écriture partie juste avant le clic', () => {
+    const MESSAGE_UNE =
+        "Une modification faite hors ligne n'avait pas encore été envoyée : elle a été effacée de cet appareil avec la déconnexion."
+
+    /** Une écriture à laquelle le serveur ne répond pas encore : le test règle sa réponse. */
+    const enVol = () => {
+        const reglement = {}
+        requete.mockImplementationOnce(
+            () =>
+                new Promise((resoudre, rejeter) => {
+                    reglement.repondre = resoudre
+                    reglement.echouer = rejeter
+                }),
+        )
+
+        return reglement
+    }
+
+    it('attend sa réponse avant de compter : enregistrée, la déconnexion part sans question, une seule fois', async () => {
+        const sync = await chargerSyncService({ compte: 1 })
+        await sync.pending
+        const reglement = enVol()
+        const ecriture = sync.patch('/api/v1/sets/5', { weight: 80 })
+        const { questionDeDeconnexion, seDeconnecter: deconnecter } = await deconnexion()
+
+        const premier = deconnecter()
+        expect(deconnecter()).toBe(premier)
+        await flushPromises()
+
+        // Elle vole encore : ni question, ni déconnexion.
+        expect(questionDeDeconnexion.value).toBeNull()
+        expect(routeur.post).not.toHaveBeenCalled()
+
+        reglement.repondre({ data: { data: { id: 5, weight: 80 } } })
+        await ecriture
+        await premier
+
+        expect(questionDeDeconnexion.value).toBeNull()
+        expect(routeur.post).toHaveBeenCalledTimes(1)
+    })
+
+    it('tombée sans réseau pendant l’attente, elle est comptée par la question, puis effacée avec la déconnexion acceptée', async () => {
+        const sync = await chargerSyncService({ compte: 1 })
+        await sync.pending
+        requete.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const reglement = enVol()
+        const ecriture = sync.patch('/api/v1/sets/5', { weight: 80, notes: 'Note privée' })
+        const { questionDeDeconnexion } = await deconnexion()
+
+        const deconnexionDemandee = seDeconnecter()
+        await flushPromises()
+        expect(routeur.post).not.toHaveBeenCalled()
+
+        reglement.echouer({ code: 'ERR_NETWORK', request: {} })
+        await expect(ecriture).rejects.toMatchObject({ isOffline: true })
+        await deconnexionDemandee
+
+        expect(questionDeDeconnexion.value).toEqual({ nombre: 1 })
+        expect(routeur.post).not.toHaveBeenCalled()
+
+        await (await deconnexion()).seDeconnecterQuandMeme()
+        naviguer(null)
+        routeur.post.mock.calls[0][2].onSuccess()
+        routeur.post.mock.calls[0][2].onFinish()
+
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+        expect((await ecranDeConnexion()).find('[dusk="ecritures-effacees-a-la-deconnexion"]').text()).toBe(MESSAGE_UNE)
+    })
+
+    it('encore sans réponse au bout de l’attente, elle est comptée ; acceptée, la déconnexion ne la laisse pas revenir sur l’appareil', async () => {
+        vi.useFakeTimers()
+        const sync = await chargerSyncService({ compte: 1 })
+        await sync.pending
+        const reglement = enVol()
+        const ecriture = sync.patch('/api/v1/sets/5', { weight: 80, notes: 'Note privée' })
+        const {
+            ATTENTE_MAX_DES_ECRITURES_MS,
+            questionDeDeconnexion,
+            seDeconnecterQuandMeme: confirmer,
+        } = await deconnexion()
+        const { reprendreLesEcrituresEffaceesALaDeconnexion } = await import('@/Utils/ecrituresEffaceesALaDeconnexion')
+
+        const deconnexionDemandee = seDeconnecter()
+        await vi.advanceTimersByTimeAsync(ATTENTE_MAX_DES_ECRITURES_MS - 1)
+
+        expect(questionDeDeconnexion.value).toBeNull()
+        expect(routeur.post).not.toHaveBeenCalled()
+
+        await vi.advanceTimersByTimeAsync(1)
+        await deconnexionDemandee
+
+        expect(questionDeDeconnexion.value).toEqual({ nombre: 1 })
+        expect(routeur.post).not.toHaveBeenCalled()
+
+        await confirmer()
+        naviguer(null)
+        routeur.post.mock.calls[0][2].onSuccess()
+        routeur.post.mock.calls[0][2].onFinish()
+
+        // L'écran de connexion dit celle-là aussi effacée.
+        expect(reprendreLesEcrituresEffaceesALaDeconnexion()).toBe(1)
+
+        // Le réseau tombe après la déconnexion : la réponse ne la remet pas en file au nom du compte parti.
+        reglement.echouer({ code: 'ERR_NETWORK', request: {} })
+
+        await expect(ecriture).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+    })
+})
+
 describe('la file d’un compte supprimé', () => {
     /**
      * Un compte supprimé ne se reconnecte jamais : ce qu'il laissait en file ne

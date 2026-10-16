@@ -27,6 +27,7 @@ vi.mock('@/Utils/SyncService', () => ({
         compte: '1',
         enAttente: () => 0,
         enAttenteSurLAppareil: () => 0,
+        ecrituresEnCours: () => 0,
         oublierLeCompte: (compte) => laisse.comptesOublies.push(compte),
     },
 }))

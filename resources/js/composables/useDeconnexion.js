@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
+import { attendreAuPlus } from '@/Utils/attendreAuPlus'
 import SyncService from '@/Utils/SyncService'
 import { noterLesEcrituresEffaceesALaDeconnexion } from '@/Utils/ecrituresEffaceesALaDeconnexion'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
@@ -24,8 +25,19 @@ export const DECONNEXION_SANS_RESEAU = "Pas de réseau : la déconnexion n'a pas
  */
 export const questionDeDeconnexion = ref(null)
 
+/**
+ * Ce que la déconnexion attend, au plus, les écritures parties avant le clic
+ * et encore sans réponse (#2050). Revenues, elles sont enregistrées, ou en file
+ * et comptées par la question ; au-delà, la question les compte encore en vol.
+ * Rien n'est attendu quand aucune écriture ne vole.
+ */
+export const ATTENTE_MAX_DES_ECRITURES_MS = 3000
+
 /** La déconnexion en cours, pour qu'un double clic ne la fasse pas deux fois. */
 let deconnexionEnCours = null
+
+/** L'attente des écritures en vol, pour qu'un double clic ne la refasse pas. */
+let attenteEnCours = null
 
 /**
  * Ce que dit la question : combien d'écritures, et qu'elles seront perdues.
@@ -37,6 +49,17 @@ export const messageDeLaQuestionDeDeconnexion = (nombre) =>
     nombre > 1
         ? `${nombre} modifications faites hors ligne n'ont pas encore été envoyées. Si tu te déconnectes maintenant, elles seront effacées de cet appareil et perdues. Reste connecté pour qu'elles partent dès que le serveur répondra.`
         : "Une modification faite hors ligne n'a pas encore été envoyée. Si tu te déconnectes maintenant, elle sera effacée de cet appareil et perdue. Reste connecté pour qu'elle parte dès que le serveur répondra."
+
+/**
+ * Combien d'écritures du compte ne sont pas encore enregistrées : en file sur
+ * l'appareil, autres onglets compris, ou parties de cet onglet sans réponse
+ * encore. Ce que la question compte, et ce que l'écran de connexion dira
+ * effacé.
+ *
+ * @param {string|null} compte
+ * @returns {number}
+ */
+const nonEnregistrees = (compte) => SyncService.enAttenteSurLAppareil(compte) + SyncService.ecrituresEnCours()
 
 /**
  * Ce que le compte qui part laisse sur l'appareil, effacé une fois la
@@ -85,7 +108,7 @@ const partir = () => {
             let partie = false
 
             // Noté avant l'envoi : l'écran d'arrivée le lit à son montage, avant `onSuccess`.
-            noterLesEcrituresEffaceesALaDeconnexion(SyncService.enAttenteSurLAppareil(compte))
+            noterLesEcrituresEffaceesALaDeconnexion(nonEnregistrees(compte))
 
             router.post(
                 route('logout'),
@@ -137,6 +160,24 @@ const partir = () => {
 }
 
 /**
+ * Pose la question quand des écritures du compte ne sont pas encore
+ * enregistrées, en file sur l'appareil ou en vol ; sinon, part.
+ *
+ * @returns {Promise<void>}
+ */
+const demanderOuPartir = () => {
+    const nombre = nonEnregistrees(SyncService.compte)
+
+    if (nombre > 0) {
+        questionDeDeconnexion.value = { nombre }
+
+        return Promise.resolve()
+    }
+
+    return partir()
+}
+
+/**
  * La seule façon de se déconnecter depuis l'application (#1926).
  *
  * Le menu du layout, le profil et la page de vérification de l'adresse passent
@@ -156,23 +197,37 @@ const partir = () => {
  * File vide, la déconnexion part sans question. Les gestes l'appellent par
  * `@click` : un premier argument, l'évènement du clic, n'y change rien.
  *
+ * Une écriture partie juste avant le clic et encore sans réponse n'est pas
+ * encore en file : la question ne la voyait pas, et la déconnexion partait
+ * sans rien demander. Elle est d'abord attendue, `ATTENTE_MAX_DES_ECRITURES_MS`
+ * au plus : enregistrée, elle ne compte plus ; tombée sans réseau, elle est en
+ * file et compte. Encore en vol au-delà, elle compte aussi. Si la personne
+ * accepte, sa réponse tardive ne la remet ni en file ni parmi les refus
+ * (`SyncService.oublis`).
+ *
  * @returns {Promise<void>} Réglée quand la requête de déconnexion est envoyée,
- *   ou tout de suite quand la question est posée.
+ *   ou quand la question est posée.
  */
 export const seDeconnecter = () => {
     if (deconnexionEnCours !== null) {
         return deconnexionEnCours
     }
 
-    const nombre = SyncService.enAttenteSurLAppareil()
-
-    if (nombre > 0) {
-        questionDeDeconnexion.value = { nombre }
-
-        return Promise.resolve()
+    if (attenteEnCours !== null) {
+        return attenteEnCours
     }
 
-    return partir()
+    if (SyncService.ecrituresEnCours() === 0) {
+        return demanderOuPartir()
+    }
+
+    attenteEnCours = attendreAuPlus(SyncService.attendreLesEcritures(), ATTENTE_MAX_DES_ECRITURES_MS).then(() => {
+        attenteEnCours = null
+
+        return demanderOuPartir()
+    })
+
+    return attenteEnCours
 }
 
 /** « Rester connecté » : la question se ferme, rien ne part et rien n'est effacé. */

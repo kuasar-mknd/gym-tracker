@@ -342,6 +342,24 @@ class SyncService {
         this.ecrituresDirectes = new Set()
 
         /**
+         * Combien de fois chaque compte a quitté l'appareil depuis le
+         * chargement de la page : déconnecté après avoir accepté de perdre ses
+         * écritures, ou supprimé, dans cet onglet ou dans un autre (#2050).
+         *
+         * Une écriture partie avant ce départ et revenue après, sans réseau ou
+         * refusée, était remise en file ou parmi les refus au nom du compte
+         * parti, en clair, après que la déconnexion avait tout effacé. Elle
+         * note ce nombre à son départ ; s'il a changé à sa réponse, rien d'elle
+         * ne revient sur l'appareil. Un nombre, et non une marque sur le
+         * compte : le même compte peut se reconnecter sur la même page, sans
+         * rechargement, et ses écritures suivantes doivent pouvoir attendre en
+         * file comme avant.
+         *
+         * @type {Map<string, number>}
+         */
+        this.oublis = new Map()
+
+        /**
          * Combien d'écritures le vidage a fait aboutir depuis la dernière
          * réponse du serveur à une visite Inertia : ce que les props de la page
          * affichée ne montrent peut-être pas encore. Au chargement, la page est
@@ -466,10 +484,19 @@ class SyncService {
 
         /*
          * Le compte qui fait l'écriture, pris à son départ : une écriture
-         * partie juste avant une déconnexion, et tombée sur un réseau absent
-         * juste après, reste à celui qui l'a faite.
+         * partie juste avant que la session se ferme, et tombée sur un réseau
+         * absent juste après, reste à celui qui l'a faite.
          */
         const compte = this.compte
+        const oublis = this.oublisDe(compte)
+
+        /*
+         * Sauf si ce compte a quitté l'appareil depuis son départ (#2050) :
+         * la personne a accepté de perdre ce qui n'était pas encore
+         * enregistré, et la déconnexion l'a effacé. L'écriture ne part plus et
+         * n'entre pas en file ; l'échec remonte tel quel.
+         */
+        const compteParti = () => this.oublisDe(compte) !== oublis
 
         /*
          * Une écriture directe ne doit pas doubler celles qui attendent : la
@@ -481,6 +508,10 @@ class SyncService {
          */
         if (this.isMutation(stamped) && this.enAttente() > 0) {
             await this.processQueue()
+
+            if (compteParti()) {
+                return Promise.reject({ compteParti: true, message: 'Request dropped: its account left the device' })
+            }
 
             if (this.enAttente() > 0) {
                 const queueId = this.addToQueue(stamped, compte, notes)
@@ -506,11 +537,11 @@ class SyncService {
                      */
                     return await http(stamped)
                 } catch (retryError) {
-                    return this.queueOrThrow(retryError, stamped, compte, notes)
+                    return this.queueOrThrow(retryError, stamped, compteParti() ? null : compte, notes)
                 }
             }
 
-            return this.queueOrThrow(error, stamped, compte, notes)
+            return this.queueOrThrow(error, stamped, compteParti() ? null : compte, notes)
         }
     }
 
@@ -604,7 +635,8 @@ class SyncService {
      * le dit au lieu de garder la valeur comme si elle allait partir.
      *
      * @param {Object} config
-     * @param {string|null} compte le compte connecté quand l'écriture est partie
+     * @param {string|null} compte le compte connecté quand l'écriture est partie,
+     *   null quand il a quitté l'appareil depuis (voir `oublis`)
      * @param {{tentee?: boolean, ajusterPar?: string, contexte?: Object}} notes ce
      *   que la file sait déjà de l'écriture : `tentee` quand elle est partie une
      *   fois sans réponse, `ajusterPar` pour rattraper ce que le serveur en
@@ -729,6 +761,8 @@ class SyncService {
      * Le stockage est relu, et non seulement la copie de cet onglet : un autre
      * onglet a pu y mettre des écritures de ce compte. Les autres onglets
      * l'apprennent par l'évènement `storage`, et oublient leur propre copie.
+     * Une écriture de ce compte encore en vol, ici ou là-bas, n'y revient pas à
+     * sa réponse (`oublis`).
      *
      * @param {number|string|null|undefined} id
      */
@@ -764,12 +798,24 @@ class SyncService {
             return
         }
 
+        this.oublis.set(compte, this.oublisDe(compte) + 1)
         this.queue = this.queue.filter((entree) => normaliserLeCompte(entree.compte) !== compte)
         this.failed = this.failed.filter((entree) => normaliserLeCompte(entree.compte) !== compte)
 
         if (deconnecte && this.compte === compte) {
             this.compte = null
         }
+    }
+
+    /**
+     * Combien de fois ce compte a quitté l'appareil depuis le chargement de la
+     * page (voir `oublis`).
+     *
+     * @param {string|null} compte
+     * @returns {number}
+     */
+    oublisDe(compte) {
+        return this.oublis.get(compte) ?? 0
     }
 
     /** Combien d'écritures du compte connecté attendent encore d'être envoyées. */
@@ -1137,12 +1183,25 @@ class SyncService {
 
             let reponse
 
+            /** Combien de fois son compte avait quitté l'appareil à son départ. */
+            const oublis = this.oublisDe(normaliserLeCompte(config.compte))
+
             try {
                 // Celle-ci est partie : plus rien ne se fond dans sa charge.
                 this.enVol = config.id
 
                 reponse = await http(requete)
             } catch (error) {
+                /*
+                 * Son compte a quitté l'appareil pendant qu'elle volait
+                 * (#2050) : la déconnexion acceptée l'a retirée de la file avec
+                 * le reste, et rien d'elle n'y revient, pas même parmi les
+                 * refus, qu'elle a effacés aussi.
+                 */
+                if (this.oublisDe(normaliserLeCompte(config.compte)) !== oublis) {
+                    continue
+                }
+
                 /*
                  * Le serveur a refusé de l'exécuter sous la session d'un autre
                  * compte. L'écriture reste en tête pour le sien, sans essai

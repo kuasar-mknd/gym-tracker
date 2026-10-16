@@ -310,6 +310,45 @@ describe('se déconnecter avec des écritures en attente', () => {
         expect(fileStockee()).toEqual([])
     })
 
+    /*
+     * Partie juste avant le clic, elle n'était pas encore en file : la
+     * déconnexion partait sans question, et l'écriture tombée sans réseau
+     * ensuite entrait en file au nom du compte parti, après l'effacement.
+     */
+    it('attend l’écriture partie juste avant le clic : tombée sans réseau, la question la compte, et la déconnexion acceptée l’efface', async () => {
+        let couper
+        vi.stubGlobal(
+            'fetch',
+            () => new Promise((_, rejeter) => (couper = () => rejeter(new TypeError('Failed to fetch')))),
+        )
+        const ecriture = SyncService.patch('/api/v1/sets/7', { weight: 90, notes: 'Note privée 7' })
+
+        await cliquerDeconnexion()
+
+        // Elle vole encore : ni question, ni déconnexion, ni détachement.
+        expect(question()).toBeNull()
+        expect(logouts()).toEqual([])
+        expect(appareil.detacher).not.toHaveBeenCalled()
+
+        vi.stubGlobal('fetch', () => Promise.reject(new TypeError('Failed to fetch')))
+        couper()
+        await expect(ecriture).rejects.toMatchObject({ isOffline: true })
+        await vi.waitUntil(() => question() !== null)
+
+        expect(texteDeLaQuestion()).toContain("Une modification faite hors ligne n'a pas encore été envoyée.")
+
+        await jusquALaFinDeLaVisite(async () => {
+            bouton('confirm-dialog-confirm').click()
+            await vi.waitUntil(() => logouts().length === 1)
+            logouts()[0].repondre(reponseInertia(pageDeConnexion()))
+        })
+
+        expect(contenu()).toBe('Connexion')
+        expect(fileStockee()).toEqual([])
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+        expect(relais.rejets).toEqual([])
+    })
+
     it('sans réseau, la déconnexion n’a pas lieu, le dit, et n’efface rien', async () => {
         await modifierHorsLigne(1)
         localStorage.setItem('gymtracker_add_exercise_search', 'Squat')

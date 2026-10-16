@@ -2156,4 +2156,121 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         expect(service.enAttente()).toBe(0)
         expect(service.compte).toBeNull()
     })
+
+    /*
+     * Une écriture partie avant le départ du compte revient après : sans
+     * réseau, elle était remise en file au nom du compte parti, que la
+     * déconnexion venait d'effacer, et y restait en clair (#2050).
+     */
+    it('ne remet pas en file l’écriture partie avant que son compte quitte l’appareil, et laisse au compte revenu sur la même page sa file', async () => {
+        const service = await chargé()
+        let echouer
+        request.mockImplementationOnce(() => new Promise((_, reject) => (echouer = reject)))
+        const ecriture = service.patch('/api/v1/sets/5', { weight: 80, notes: 'Note privée' })
+
+        service.oublierLeCompte(COMPTE)
+        naviguer(null)
+        echouer({ code: 'ERR_NETWORK', request: {} })
+
+        await expect(ecriture).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        expect(service.queue).toEqual([])
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+
+        // Le même compte se reconnecte sans recharger la page : ce qu'il écrit ensuite attend en file, comme avant.
+        naviguer(Number(COMPTE))
+        await service.pending
+        await expect(service.patch('/api/v1/sets/6', { reps: 9 })).rejects.toMatchObject({ isOffline: true })
+
+        expect(service.queue.map((e) => e.url)).toEqual(['/api/v1/sets/6'])
+    })
+
+    it('ne la remet pas en file non plus quand c’est un autre onglet qui a vu le compte partir', async () => {
+        const service = await chargé()
+        let echouer
+        request.mockImplementationOnce(() => new Promise((_, reject) => (echouer = reject)))
+        const ecriture = service.patch('/api/v1/sets/5', { weight: 80, notes: 'Note privée' })
+
+        window.dispatchEvent(
+            new StorageEvent('storage', {
+                key: 'gym-tracker:compte-oublie-de-la-file',
+                newValue: JSON.stringify({ compte: COMPTE }),
+            }),
+        )
+        echouer({ code: 'ERR_NETWORK', request: {} })
+
+        await expect(ecriture).rejects.toMatchObject({ code: 'ERR_NETWORK' })
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+    })
+
+    /*
+     * L'entrée que le vidage envoyait quand le compte est parti : la
+     * déconnexion l'a retirée de la file, et un refus arrivé ensuite la
+     * rangeait parmi les refus, en clair, au nom du compte parti.
+     */
+    it.each([
+        ['dans cet onglet', (service) => service.oublierLeCompte(COMPTE)],
+        [
+            'dans un autre onglet',
+            () => {
+                // L'autre onglet efface la file du compte, et le dit.
+                localStorage.removeItem('offline_sync_queue')
+                window.dispatchEvent(
+                    new StorageEvent('storage', {
+                        key: 'gym-tracker:compte-oublie-de-la-file',
+                        newValue: JSON.stringify({ compte: COMPTE }),
+                    }),
+                )
+            },
+        ],
+    ])(
+        'ne range pas parmi les refus l’entrée qui volait quand son compte a quitté l’appareil %s',
+        async (_ou, partir) => {
+            const service = await chargé()
+            await expect(service.patch('/api/v1/sets/5', { weight: 80, notes: 'Note privée' })).rejects.toMatchObject({
+                isOffline: true,
+            })
+            let refuser
+            request.mockImplementationOnce(() => new Promise((_, reject) => (refuser = reject)))
+            const vidage = service.processQueue()
+            await vi.waitUntil(() => service.enVol !== null)
+            const refus = []
+            const surRefus = (evenement) => refus.push(evenement.detail)
+            window.addEventListener('sync:failed', surRefus)
+
+            partir(service)
+            refuser({ response: { status: 422, data: {} } })
+            await vidage
+            window.removeEventListener('sync:failed', surRefus)
+
+            expect(service.failed).toEqual([])
+            expect(refus).toEqual([])
+            expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+        },
+    )
+
+    /*
+     * Une écriture directe attend que la file se vide avant de partir. Le
+     * compte qui l'a faite part pendant ce temps, et un autre se connecte sur
+     * la même page, avec sa propre file : elle était mise en file au nom du
+     * compte parti, ou serait partie sous la session du suivant.
+     */
+    it('n’envoie pas et ne met pas en file l’écriture qui attendait le vidage quand son compte a quitté l’appareil', async () => {
+        const service = await chargé()
+        await expect(service.patch('/api/v1/sets/1', { reps: 8 })).rejects.toMatchObject({ isOffline: true })
+        // L'écriture du compte 2, laissée par une session expirée.
+        service.addToQueue({ method: 'patch', url: '/api/v1/sets/9', data: { reps: 3 } }, '2')
+        let repondre
+        request.mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+        const ecriture = service.patch('/api/v1/sets/5', { weight: 80, notes: 'Note privée' })
+        await vi.waitUntil(() => service.enVol !== null)
+
+        service.oublierLeCompte(COMPTE)
+        naviguer(2)
+        repondre({ data: { data: {} } })
+
+        await expect(ecriture).rejects.toMatchObject({ compteParti: true })
+        expect(request.mock.calls.map(([config]) => config.url)).not.toContain('/api/v1/sets/5')
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+        expect(service.queue.map((e) => e.compte)).toEqual(['2'])
+    })
 })
