@@ -27,8 +27,10 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * Un champ que personne ne voit n'a pas besoin de nom : `type="hidden"`, ou
  * l'attribut `hidden` écrit tel quel, qui l'ôte de l'écran, de l'ordre de
  * tabulation et de l'arbre d'accessibilité, comme l'identifiant du compte
- * que le formulaire du mot de passe donne aux gestionnaires de mots de passe.
- * Pas `:hidden="…"`, qu'une valeur peut rendre visible.
+ * que les formulaires du profil donnent aux gestionnaires de mots de passe.
+ * Pas `:hidden="…"`, qu'une valeur peut rendre visible, ni
+ * `hidden="until-found"`, ni le mot dans la valeur d'un autre attribut
+ * (`estCacheATous()`).
  *
  * Un moyen ne compte que là où il atteint le contrôle. Un attribut `label` sur
  * un `<input>` brut ne nomme rien. `GlassTextarea` et `Checkbox` laissent leurs
@@ -70,7 +72,25 @@ const PROP_LABEL = /(?:^|\s)(?:label="[^"]*\S[^"]*"|:label="[^"]+")/
 
 const ATTRIBUT_ARIA = /(?:^|\s):?aria-label(?:ledby)?="[^"]*\S[^"]*"/
 
-const CACHE_A_TOUS = /(?:^|\s)hidden(?=[\s/=]|$)/
+/** Un attribut d'une balise : son nom, puis sa valeur, entre guillemets ou non. */
+const ATTRIBUT = /([^\s"'=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g
+
+/**
+ * Le champ est-il caché à tous, par `type="hidden"` ou par l'attribut
+ * `hidden` ? Les attributs se lisent par leur nom : le mot `hidden` dans la
+ * valeur d'un autre (une classe `hidden sm:block`, qui montre le champ à
+ * partir de `sm`, un placeholder) ne cache rien. `hidden="until-found"` non
+ * plus, que la recherche dans la page montre.
+ *
+ * @param {string} attributs
+ * @returns {boolean}
+ */
+const estCacheATous = (attributs) =>
+    [...attributs.matchAll(ATTRIBUT)].some(([, nom, ...valeurs]) => {
+        const valeur = (valeurs.find((candidate) => candidate !== undefined) ?? '').trim().toLowerCase()
+
+        return (nom === 'type' && valeur === 'hidden') || (nom === 'hidden' && valeur !== 'until-found')
+    })
 
 /**
  * Les champs d'un composant monofichier qu'aucune étiquette ne nomme.
@@ -85,7 +105,7 @@ export const champsSansNom = (source) => {
 
     return [...gabarit.matchAll(baliseDeChamp)]
         .filter(({ 1: champ, 2: attributs, index }) => {
-            if (/(?:^|\s)type="hidden"/.test(attributs) || CACHE_A_TOUS.test(attributs)) {
+            if (estCacheATous(attributs)) {
                 return false
             }
 
@@ -154,10 +174,19 @@ describe('chaque champ a un nom qui survit à sa saisie', () => {
         expect(champsSansNom(gabarit('<input type="hidden" name="jeton" />'))).toEqual([])
         expect(champsSansNom(gabarit('<input type="text" autocomplete="username" hidden />'))).toEqual([])
         expect(champsSansNom(gabarit('<input hidden aria-hidden="true" />'))).toEqual([])
+        expect(champsSansNom(gabarit('<input hidden="" />'))).toEqual([])
         // Un champ qu'une valeur peut montrer, ou que seul `aria-hidden` cache, se nomme.
         expect(champsSansNom(gabarit('<input :hidden="replie" />'))).toHaveLength(1)
         expect(champsSansNom(gabarit('<input aria-hidden="true" />'))).toHaveLength(1)
         expect(champsSansNom(gabarit('<input v-show="ouvert" />'))).toHaveLength(1)
+        // `hidden="until-found"` se montre à la recherche dans la page.
+        expect(champsSansNom(gabarit('<input hidden="until-found" />'))).toHaveLength(1)
+        expect(champsSansNom(gabarit("<input hidden='Until-Found' />"))).toHaveLength(1)
+        // Le mot `hidden` dans la valeur d'un autre attribut ne cache rien :
+        // une classe responsive montre le champ à partir de `sm`.
+        expect(champsSansNom(gabarit('<input v-model="a" class="w-full hidden sm:block" />'))).toHaveLength(1)
+        expect(champsSansNom(gabarit('<input v-model="a" placeholder="mot hidden ici" />'))).toHaveLength(1)
+        expect(champsSansNom(gabarit('<input v-model="a" :class="{ \'hidden\': replie }" />'))).toHaveLength(1)
     })
 
     /**
