@@ -48,9 +48,12 @@ final class LiensDesCourriels
      * jeton, sur `APP_URL`, mais l'adresse du compte n'y paraît que chiffrée
      * (`Crypt::encryptString()`), pour les raisons de
      * `lienDeConfirmationDAdresse()`. Laravel l'y mettait en clair (`?email=`).
-     * La page la renvoie telle quelle avec le nouveau mot de passe, sans
-     * l'avoir lue, et `NewPasswordRequest` la lit par
-     * `adresseDuLienDeReinitialisation()`.
+     * La page la renvoie telle quelle avec le nouveau mot de passe, sans la
+     * lire : seul le serveur la déchiffre, par
+     * `adresseDuLienDeReinitialisation()`, à l'ouverture de la page pour
+     * vérifier le lien (`NewPasswordController::create()`, qui ne montre
+     * jamais l'adresse du compte), puis à l'envoi (`NewPasswordRequest`), où
+     * il la compare à l'adresse que la personne a saisie.
      */
     public static function lienDeReinitialisation(mixed $notifiable, string $jeton): string
     {
@@ -70,8 +73,9 @@ final class LiensDesCourriels
      * pas : absente (lien d'avant le chiffrement, qui la portait en clair),
      * altérée, ou chiffrée sous une clef que l'application ne connaît pas
      * (`APP_KEY`, `APP_PREVIOUS_KEYS`). `NewPasswordController` refuse
-     * alors le lien comme un jeton faux, même message et même durée : une
-     * réponse à part dirait quelles valeurs viennent de l'application.
+     * alors le lien comme un jeton faux, à l'ouverture de la page comme à
+     * l'envoi, même message et même durée : une réponse à part dirait
+     * quelles valeurs viennent de l'application.
      */
     public static function adresseDuLienDeReinitialisation(mixed $valeur): ?string
     {

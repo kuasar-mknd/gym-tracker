@@ -6,6 +6,7 @@ use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\Admin;
 use App\Models\User;
 use App\Support\DureeDesReponsesDAuthentification;
+use App\Support\LiensDesCourriels;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Illuminate\Support\Timebox;
+use Inertia\Testing\AssertableInertia;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use Tests\Support\DureeSimulee;
@@ -149,6 +151,11 @@ function dureeAuthentificationCas(): array
     ])->assertSessionHasErrors('email');
     $oubli = static fn (string $adresse): Closure => static fn (): mixed => test()->post(route('password.email'), ['email' => $adresse])
         ->assertSessionHasNoErrors();
+    $ouverture = static fn (string $lien): Closure => static fn (): mixed => test()->get($lien)
+        ->assertOk()
+        ->assertInertia(static fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('lienRefuse', __('passwords.token'))
+            ->missing('compte'));
     $panneau = static fn (string $adresse): Closure => static function () use ($adresse): mixed {
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
@@ -191,6 +198,13 @@ function dureeAuthentificationCas(): array
                 FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!', 'un-jeton-quelconque'),
             )->assertSessionHasErrors('token');
         }],
+        'réinitialisation, adresse saisie qui ne désigne pas le compte du lien' => [static function (): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+            $formulaire = FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!');
+            $formulaire['email'] = 'personne@example.org';
+
+            return static fn (): mixed => test()->post(route('password.store'), $formulaire)->assertSessionHasErrors('token');
+        }],
         'réinitialisation, adresse du lien qui ne se déchiffre pas' => [static function (): Closure {
             $compte = User::factory()->create(['email' => 'prise@example.org']);
             $formulaire = FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!');
@@ -208,6 +222,23 @@ function dureeAuthentificationCas(): array
                 'password' => 'Un-nouveau-mot-de-passe-2026!',
                 'password_confirmation' => 'Un-nouveau-mot-de-passe-2026!',
             ])->assertSessionHasErrors('token');
+        }],
+        'ouverture du lien de réinitialisation, jeton faux d’un compte' => [static function () use ($ouverture): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+            Password::createToken($compte);
+
+            return $ouverture(LiensDesCourriels::lienDeReinitialisation($compte, 'un-jeton-quelconque'));
+        }],
+        'ouverture du lien de réinitialisation, adresse du lien qui ne se déchiffre pas' => [static function () use ($ouverture): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+            $formulaire = FormulaireDeReinitialisation::pour($compte, 'Un-nouveau-mot-de-passe-2026!');
+
+            return $ouverture(route('password.reset', ['token' => $formulaire['token'], 'adresse' => strrev($formulaire['adresse'])]));
+        }],
+        'ouverture du lien de réinitialisation, lien d’avant le chiffrement (adresse en clair)' => [static function () use ($ouverture): Closure {
+            $compte = User::factory()->create(['email' => 'prise@example.org']);
+
+            return $ouverture(route('password.reset', ['token' => Password::createToken($compte), 'email' => 'prise@example.org']));
         }],
         'panneau, adresse inconnue' => [static fn (): Closure => $panneau('personne@example.org')],
         'panneau, administrateur' => [static function () use ($panneau): Closure {
