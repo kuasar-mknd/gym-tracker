@@ -93,6 +93,18 @@ it('refuse en 400 un formulaire qui n’est pas de l’UTF-8, et n’écrit rien
     'clef' => 'clef',
 ]);
 
+it('laisse à la validation un corps JSON, nombre infini compris, sans le refuser en 400', function (): void {
+    actingAs(User::factory()->create())
+        ->call('POST', route('goals.store'), [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_ACCEPT' => 'application/json',
+        ], '{"title":"Séances","type":"frequency","target_value":1e999}')
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['target_value']);
+
+    Exceptions::assertNothingReported();
+});
+
 it('enregistre comme avant un formulaire en UTF-8 qui n’est pas de l’ASCII', function (): void {
     $compte = User::factory()->create(['name' => 'Avant']);
 

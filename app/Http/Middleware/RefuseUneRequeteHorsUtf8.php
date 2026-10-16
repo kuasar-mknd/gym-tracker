@@ -32,9 +32,9 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  * doivent pouvoir s'écrire en JSON, ce que `json_encode()` refuse d'un
  * octet hors UTF-8 (l'imbrication, que PHP borne à 64 niveaux en lisant la
  * requête, reste loin des 512 de JSON). Un corps JSON n'est pas relu : PHP
- * refuse de décoder un JSON hors UTF-8, et le relire en JSON refuserait à
- * tort un nombre que le décodage a rendu infini (`1e999`), que la
- * validation refuse déjà sur son champ. Les fichiers envoyés ne sont pas
+ * refuse de décoder un JSON hors UTF-8, et le réécrire en JSON refuserait à
+ * tort un nombre que le décodage a rendu infini (`1e999`), que la règle
+ * numérique de son champ refuse déjà (422). Les fichiers envoyés ne sont pas
  * lus, ni les en-têtes : un lecteur d'en-tête vérifie lui-même sa forme
  * (`CreateSetAction::idempotencyKey()`).
  *
