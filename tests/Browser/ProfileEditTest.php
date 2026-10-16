@@ -65,7 +65,13 @@ class ProfileEditTest extends DuskTestCase
             // matche AUSSI le premier champ. Dusk prenait la première occurrence et
             // laissait la confirmation vide, donc la validation échouait — sans que
             // personne ne le voie, faute d'assertion sur la base.
+            // Le formulaire du mot de passe porte l'adresse du compte pour les
+            // gestionnaires de mots de passe (#PR), dans un champ que personne
+            // ne voit : présent, à la bonne valeur, et caché.
             $browser->assertSee('MOT DE PASSE')
+                ->assertAttribute('[data-testid="identifiant-du-compte"]', 'autocomplete', 'username')
+                ->assertInputValue('[data-testid="identifiant-du-compte"]', $user->email)
+                ->assertMissing('[data-testid="identifiant-du-compte"]')
                 ->type('@current-password-input', 'password123')
                 ->type('@new-password-input', 'newpassword123')
                 ->type('@confirm-password-input', 'newpassword123')

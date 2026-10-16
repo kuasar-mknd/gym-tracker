@@ -24,6 +24,12 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * - `enveloppe` : un `<label>` qui l'enveloppe, comme une case et son texte, que
  *   le texte coche.
  *
+ * Un champ que personne ne voit n'a pas besoin de nom : `type="hidden"`, ou
+ * l'attribut `hidden` écrit tel quel, qui l'ôte de l'écran, de l'ordre de
+ * tabulation et de l'arbre d'accessibilité, comme l'identifiant du compte
+ * que le formulaire du mot de passe donne aux gestionnaires de mots de passe.
+ * Pas `:hidden="…"`, qu'une valeur peut rendre visible.
+ *
  * Un moyen ne compte que là où il atteint le contrôle. Un attribut `label` sur
  * un `<input>` brut ne nomme rien. `GlassTextarea` et `Checkbox` laissent leurs
  * attributs sur leur div racine : un `aria-label` ou un `id` posé sur eux n'y
@@ -64,6 +70,8 @@ const PROP_LABEL = /(?:^|\s)(?:label="[^"]*\S[^"]*"|:label="[^"]+")/
 
 const ATTRIBUT_ARIA = /(?:^|\s):?aria-label(?:ledby)?="[^"]*\S[^"]*"/
 
+const CACHE_A_TOUS = /(?:^|\s)hidden(?=[\s/=]|$)/
+
 /**
  * Les champs d'un composant monofichier qu'aucune étiquette ne nomme.
  *
@@ -77,7 +85,7 @@ export const champsSansNom = (source) => {
 
     return [...gabarit.matchAll(baliseDeChamp)]
         .filter(({ 1: champ, 2: attributs, index }) => {
-            if (/(?:^|\s)type="hidden"/.test(attributs)) {
+            if (/(?:^|\s)type="hidden"/.test(attributs) || CACHE_A_TOUS.test(attributs)) {
                 return false
             }
 
@@ -144,6 +152,12 @@ describe('chaque champ a un nom qui survit à sa saisie', () => {
         expect(champsSansNom(gabarit('<GlassSelect v-model="a" aria-label="Unité" />'))).toEqual([])
         expect(champsSansNom(gabarit('<GlassTextarea v-model="a" label="Notes" />'))).toEqual([])
         expect(champsSansNom(gabarit('<input type="hidden" name="jeton" />'))).toEqual([])
+        expect(champsSansNom(gabarit('<input type="text" autocomplete="username" hidden />'))).toEqual([])
+        expect(champsSansNom(gabarit('<input hidden aria-hidden="true" />'))).toEqual([])
+        // Un champ qu'une valeur peut montrer, ou que seul `aria-hidden` cache, se nomme.
+        expect(champsSansNom(gabarit('<input :hidden="replie" />'))).toHaveLength(1)
+        expect(champsSansNom(gabarit('<input aria-hidden="true" />'))).toHaveLength(1)
+        expect(champsSansNom(gabarit('<input v-show="ouvert" />'))).toHaveLength(1)
     })
 
     /**
