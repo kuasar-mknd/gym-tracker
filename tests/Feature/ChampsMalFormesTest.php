@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Requests\UpdatePushSubscriptionRequest;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\User;
@@ -20,8 +21,11 @@ use function Pest\Laravel\actingAs;
  * identifiant que `Rule::exists` cherche en base, reçu en tableau imbriqué,
  * partait dans `whereIn()` ou `array_unique()`, qui lèvent ; un identifiant
  * d'exercice d'un modèle, flottant démesuré, était converti en entier hors de
- * toute règle. Chacun répondait 500 ; chacun est désormais refusé sur son
- * champ, en 422, sans qu'aucune exception ne soit rapportée.
+ * toute règle. Les clés d'un abonnement push, validées par `required` seul,
+ * allaient en tableau, en nombre ou plus longues que leur colonne au paquet
+ * WebPush, qui les attend en chaînes. Chacun répondait 500 ; chacun est
+ * désormais refusé sur son champ, en 422, sans qu'aucune exception ne soit
+ * rapportée.
  */
 
 beforeEach(function (): void {
@@ -94,8 +98,30 @@ function champsMalFormesRequete(string $cas, User $compte): array
             ['name' => 'Modèle', 'exercises' => [['id' => -1e30]]],
             'exercises.0.id',
         ],
+        'clef d’authentification d’un abonnement push en tableau' => ['POST', route('push-subscriptions.update'), champsMalFormesAbonnement(['a'], 'p256dh-key'), 'keys.auth'],
+        'clef de chiffrement d’un abonnement push en tableau imbriqué' => ['POST', route('push-subscriptions.update'), champsMalFormesAbonnement('auth-token', [['a', 'b']]), 'keys.p256dh'],
+        'clef d’authentification d’un abonnement push en nombre' => ['POST', route('push-subscriptions.update'), champsMalFormesAbonnement(12, 'p256dh-key'), 'keys.auth'],
+        'clef d’authentification d’un abonnement push plus longue que sa colonne' => [
+            'POST',
+            route('push-subscriptions.update'),
+            champsMalFormesAbonnement(str_repeat('a', UpdatePushSubscriptionRequest::CLEF_MAX + 1), 'p256dh-key'),
+            'keys.auth',
+        ],
         default => throw new LogicException("Cas inconnu : {$cas}"),
     };
+}
+
+/**
+ * Le corps d'un abonnement push, sur une adresse publique, avec ces clés.
+ *
+ * @return array{endpoint: string, keys: array{auth: mixed, p256dh: mixed}}
+ */
+function champsMalFormesAbonnement(mixed $auth, mixed $p256dh): array
+{
+    return [
+        'endpoint' => 'https://fcm.googleapis.com/fcm/send/telephone',
+        'keys' => ['auth' => $auth, 'p256dh' => $p256dh],
+    ];
 }
 
 it('refuse sur son champ une valeur que la validation laissait passer jusqu’à une erreur', function (string $cas): void {
@@ -122,6 +148,10 @@ it('refuse sur son champ une valeur que la validation laissait passer jusqu’à
     'exercice d’un objectif modifié en tableau de tableaux',
     'identifiant d’exercice flottant démesuré, nouveau modèle',
     'identifiant d’exercice flottant démesuré, modèle modifié',
+    'clef d’authentification d’un abonnement push en tableau',
+    'clef de chiffrement d’un abonnement push en tableau imbriqué',
+    'clef d’authentification d’un abonnement push en nombre',
+    'clef d’authentification d’un abonnement push plus longue que sa colonne',
 ]);
 
 it('refuse d’effacer le début d’une séance, et le laisse tel qu’il était', function (mixed $debut): void {

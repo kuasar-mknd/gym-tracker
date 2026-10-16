@@ -8,6 +8,7 @@ use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Requests\HabitStoreRequest;
 use App\Http\Requests\HabitUpdateRequest;
 use App\Http\Requests\StoreWorkoutTemplateRequest;
+use App\Http\Requests\UpdatePushSubscriptionRequest;
 use App\Models\Set;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
@@ -55,6 +56,10 @@ function bornesBaseInventaire(): array
             $champs[] = [$requete, 'exercises.*.sets.*.'.$champ, 'sets.'.$champ];
         }
     }
+
+    // Les clés d'un abonnement push vont aux colonnes du paquet WebPush.
+    $champs[] = [UpdatePushSubscriptionRequest::class, 'keys.auth', 'push_subscriptions.auth_token'];
+    $champs[] = [UpdatePushSubscriptionRequest::class, 'keys.p256dh', 'push_subscriptions.public_key'];
 
     return $champs;
 }
