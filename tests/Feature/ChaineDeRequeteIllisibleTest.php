@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\OublieLesParametresIllisibles;
+use App\Models\Exercise;
 use App\Models\Fast;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutTemplate;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\RateLimiter;
@@ -61,6 +63,47 @@ it('refuse en 400 une chaîne de requête qui n’est pas de l’UTF-8, page com
     'page complète' => false,
     'visite Inertia' => true,
 ]);
+
+it('refuse en 400 un formulaire qui n’est pas de l’UTF-8, et n’écrit rien', function (string $type, string $champ): void {
+    $compte = User::factory()->create(['name' => 'Avant']);
+    $valeur = "Nom\xFF\xFE";
+    $envois = [
+        ['PATCH', route('profile.update'), ['name' => $valeur, 'email' => $compte->email]],
+        ['POST', route('templates.store'), ['name' => $valeur, 'description' => $valeur]],
+        ['POST', route('exercises.store'), ['name' => $valeur, 'type' => 'strength']],
+    ];
+
+    foreach ($envois as [$methode, $adresse, $corps]) {
+        $corps = $champ === 'clef' ? [$valeur => 'x', ...array_combine(array_keys($corps), array_fill(0, count($corps), 'Nom'))] : $corps;
+
+        actingAs($compte)
+            ->call($methode, $adresse, $corps, [], [], ['CONTENT_TYPE' => $type])
+            ->assertStatus(400);
+    }
+
+    expect($compte->fresh()?->name)->toBe('Avant')
+        ->and(WorkoutTemplate::query()->where('user_id', $compte->id)->exists())->toBeFalse()
+        ->and(Exercise::query()->where('user_id', $compte->id)->exists())->toBeFalse();
+    Exceptions::assertNothingReported();
+})->with([
+    'formulaire' => 'application/x-www-form-urlencoded',
+    'formulaire en plusieurs parties' => 'multipart/form-data; boundary=----limite',
+])->with([
+    'valeur' => 'valeur',
+    'clef' => 'clef',
+]);
+
+it('enregistre comme avant un formulaire en UTF-8 qui n’est pas de l’ASCII', function (): void {
+    $compte = User::factory()->create(['name' => 'Avant']);
+
+    actingAs($compte)
+        ->call('PATCH', route('profile.update'), ['name' => 'Éloïse', 'email' => $compte->email], [], [], ['CONTENT_TYPE' => 'application/x-www-form-urlencoded'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect($compte->fresh()?->name)->toBe('Éloïse');
+    Exceptions::assertNothingReported();
+});
 
 it('laisse passer une adresse en UTF-8 qui n’est pas de l’ASCII, telle quelle', function (): void {
     actingAs(User::factory()->create())
