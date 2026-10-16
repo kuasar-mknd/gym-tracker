@@ -23,45 +23,62 @@ beforeEach(function (): void {
     Exceptions::fake();
 });
 
-it('refuse sur son champ une valeur que la validation laissait passer jusqu’à une erreur', function (string $methode, Closure $adresse, array $corps, string $champ): void {
+/**
+ * Une requête à envoyer au nom du compte : méthode, adresse, corps, et le
+ * champ que la réponse doit refuser.
+ *
+ * @return array{0: string, 1: string, 2: array<string, mixed>, 3: string}
+ */
+function champsMalFormesRequete(string $cas, User $compte): array
+{
+    $objectif = ['title' => 'Séances', 'type' => 'frequency', 'target_value' => 12];
+
+    return match ($cas) {
+        'mot de passe en tableau, suppression du compte' => ['DELETE', route('profile.destroy'), ['password' => ['password']], 'password'],
+        'mot de passe actuel en tableau, changement de mot de passe' => ['PUT', route('password.update'), [
+            'current_password' => ['password'],
+            'password' => 'Un-Nouveau-Mot-De-Passe-42',
+            'password_confirmation' => 'Un-Nouveau-Mot-De-Passe-42',
+        ], 'current_password'],
+        'mot de passe actuel en tableau, changement d’adresse' => ['PATCH', route('profile.update'), [
+            'name' => 'Nom',
+            'email' => 'nouvelle@example.org',
+            'current_password' => ['password'],
+        ], 'current_password'],
+        'échéance d’un nouvel objectif trop grande' => ['POST', route('goals.store'), [...$objectif, 'deadline' => PHP_INT_MAX], 'deadline'],
+        'échéance d’un objectif déplacée, nombre flottant démesuré' => [
+            'PUT',
+            route('goals.update', Goal::factory()->create(['user_id' => $compte->id, 'type' => 'frequency'])),
+            [...$objectif, 'deadline' => 1e300],
+            'deadline',
+        ],
+        'date d’une mensuration trop grande' => ['POST', route('body-parts.store'), [
+            'part' => 'Biceps',
+            'value' => 35,
+            'unit' => 'cm',
+            'measured_at' => -PHP_INT_MAX,
+        ], 'measured_at'],
+        default => throw new LogicException("Cas inconnu : {$cas}"),
+    };
+}
+
+it('refuse sur son champ une valeur que la validation laissait passer jusqu’à une erreur', function (string $cas): void {
     $compte = User::factory()->create();
+    [$methode, $adresse, $corps, $champ] = champsMalFormesRequete($cas, $compte);
 
     actingAs($compte)
-        ->json($methode, $adresse($compte), $corps)
+        ->json($methode, $adresse, $corps)
         ->assertUnprocessable()
         ->assertJsonValidationErrors([$champ]);
 
     Exceptions::assertNothingReported();
 })->with([
-    'mot de passe en tableau, suppression du compte' => ['DELETE', fn (): string => route('profile.destroy'), ['password' => ['password']], 'password'],
-    'mot de passe actuel en tableau, changement de mot de passe' => ['PUT', fn (): string => route('password.update'), [
-        'current_password' => ['password'],
-        'password' => 'Un-Nouveau-Mot-De-Passe-42',
-        'password_confirmation' => 'Un-Nouveau-Mot-De-Passe-42',
-    ], 'current_password'],
-    'mot de passe actuel en tableau, changement d’adresse' => ['PATCH', fn (): string => route('profile.update'), [
-        'name' => 'Nom',
-        'email' => 'nouvelle@example.org',
-        'current_password' => ['password'],
-    ], 'current_password'],
-    'échéance d’un nouvel objectif trop grande' => ['POST', fn (): string => route('goals.store'), [
-        'title' => 'Séances',
-        'type' => 'frequency',
-        'target_value' => 12,
-        'deadline' => PHP_INT_MAX,
-    ], 'deadline'],
-    'échéance d’un objectif déplacée, nombre flottant démesuré' => ['PUT', fn (User $compte): string => route('goals.update', Goal::factory()->create(['user_id' => $compte->id, 'type' => 'frequency'])), [
-        'title' => 'Séances',
-        'type' => 'frequency',
-        'target_value' => 12,
-        'deadline' => 1e300,
-    ], 'deadline'],
-    'date d’une mensuration trop grande' => ['POST', fn (): string => route('body-parts.store'), [
-        'part' => 'Biceps',
-        'value' => 35,
-        'unit' => 'cm',
-        'measured_at' => -PHP_INT_MAX,
-    ], 'measured_at'],
+    'mot de passe en tableau, suppression du compte',
+    'mot de passe actuel en tableau, changement de mot de passe',
+    'mot de passe actuel en tableau, changement d’adresse',
+    'échéance d’un nouvel objectif trop grande',
+    'échéance d’un objectif déplacée, nombre flottant démesuré',
+    'date d’une mensuration trop grande',
 ]);
 
 it('refuse d’effacer le début d’une séance, et le laisse tel qu’il était', function (mixed $debut): void {

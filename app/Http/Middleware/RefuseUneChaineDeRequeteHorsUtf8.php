@@ -23,9 +23,12 @@ use Symfony\Component\HttpFoundation\Response;
  * telle adresse : seule une adresse forgée ou abîmée en porte, et le refus le
  * dit plutôt que de répondre à côté.
  *
- * Clefs et valeurs sont vérifiées, à toute profondeur (`mb_check_encoding()`
- * parcourt un tableau). Le corps d'une requête n'est pas lu : un corps JSON
- * ne peut pas porter un tel octet, et un formulaire se valide champ par champ.
+ * Le critère est celui des lecteurs : la chaîne de requête, clefs et valeurs
+ * à toute profondeur, doit pouvoir s'écrire en JSON, ce que `json_encode()`
+ * refuse d'un octet hors UTF-8 (l'imbrication, que PHP borne à 64 niveaux
+ * en lisant la requête, reste loin des 512 de JSON). Le corps d'une requête
+ * n'est pas lu : un corps JSON ne peut pas porter un tel octet, et un
+ * formulaire se valide champ par champ.
  * En fin de pile globale (`append`), après les maillons de Laravel, que la
  * valeur ne gêne pas, et hors des groupes : il refuse aussi pour le panneau,
  * Livewire et les outils d'administration, qui n'ont pas le groupe `web`.
@@ -40,7 +43,7 @@ final class RefuseUneChaineDeRequeteHorsUtf8
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! mb_check_encoding($request->query->all(), 'UTF-8')) {
+        if (json_encode($request->query->all()) === false) {
             throw new MalformedUrlException();
         }
 

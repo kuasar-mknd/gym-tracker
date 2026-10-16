@@ -81,7 +81,7 @@ function statsPeriodeLue(string $chaineDeRequete): array
         ->assertOk()
         ->assertInertia(
             function (Assert $page) use (&$periode): Assert {
-                $periode = $page->toArray()['props']['selectedPeriod'] ?? null;
+                $periode = data_get($page->toArray(), 'props.selectedPeriod');
 
                 return $page->component('Stats/Index')->loadDeferredProps(
                     fn (Assert $differees): Assert => $differees->has('deferredData.performance')
