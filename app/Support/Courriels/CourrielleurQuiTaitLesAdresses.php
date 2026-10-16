@@ -40,14 +40,17 @@ final class CourrielleurQuiTaitLesAdresses extends Mailer
 {
     /**
      * Envoie comme Laravel ; une adresse que Symfony Mime refuse n'est pas
-     * citée par l'erreur.
+     * citée par l'erreur. Rend ce que rend Laravel, sans type natif : pour
+     * un courriel à mettre en file, ce que rend la file (l'identifiant du
+     * job), que son type déclaré tait.
      *
      * @param  \Illuminate\Contracts\Mail\Mailable|string|array<array-key, mixed>  $view
      * @param  array<array-key, mixed>  $data
      * @param  \Closure|string|null  $callback
+     * @return SentMessage|null
      */
     #[\Override]
-    public function send($view, array $data = [], $callback = null): ?SentMessage
+    public function send($view, array $data = [], $callback = null)
     {
         try {
             return parent::send($view, $data, $callback);
@@ -75,18 +78,17 @@ final class CourrielleurQuiTaitLesAdresses extends Mailer
     }
 
     /**
-     * Les adresses des destinataires, telles que le courriel les porte et
-     * telles que le transport les écrit (domaine internationalisé en ASCII).
+     * Les adresses des destinataires. Le transport n'en encode que le domaine
+     * (internationalisé, en ASCII), que le masque reconnaît sous les deux
+     * formes : leur partie locale suffit.
      *
      * @return list<string>
      */
     private static function destinatairesDe(Email $message): array
     {
-        $adresses = [...$message->getTo(), ...$message->getCc(), ...$message->getBcc()];
-
-        return array_values(array_unique([
-            ...array_map(static fn (Address $adresse): string => $adresse->getAddress(), $adresses),
-            ...array_map(static fn (Address $adresse): string => $adresse->getEncodedAddress(), $adresses),
-        ]));
+        return array_values(array_unique(array_map(
+            static fn (Address $adresse): string => $adresse->getAddress(),
+            [...$message->getTo(), ...$message->getCc(), ...$message->getBcc()],
+        )));
     }
 }

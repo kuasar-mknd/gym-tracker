@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\Mailer\Exception\UnexpectedResponseException;
 use Symfony\Component\Mime\Exception\RfcComplianceException;
+use Tests\Support\CourrielMisEnFile;
 use Tests\Support\TransportQuiRefuseLeDestinataire;
 
 /*
@@ -169,6 +170,19 @@ it('crée chaque courrielleur sans adresse dans ses erreurs, comme Laravel le cr
         ->and(array_filter($proprietes, static fn (array $paire): bool => $paire[0] !== $paire[1]))->toBe([])
         ->and($proprietes)->toHaveKeys(['name', 'views', 'transport', 'events', 'queue']);
 })->with(['array', 'smtp', 'log']);
+
+/*
+ * Un courriel à mettre en file n'est pas envoyé : `send()` rend ce que rend
+ * la file, l'identifiant du job, comme celui de Laravel.
+ */
+it('rend l’identifiant du job d’un courriel mis en file, comme Laravel', function (): void {
+    Config::set('queue.default', 'database');
+
+    $retour = Mail::mailer()->send(new CourrielMisEnFile()->to('titulaire.en-file@example.org'));
+
+    expect(DB::table('jobs')->count())->toBe(1)
+        ->and($retour)->toEqual(DB::table('jobs')->value('id'));
+});
 
 it('relève l’erreur du transport sans adresse, avec sa classe, son code et la réponse du serveur', function (string $forme): void {
     courrielsSansAdresseRefuserLeDestinataire($forme);
