@@ -35,8 +35,9 @@ class GoalForm
 
     /**
      * L'échéance (`DATE`) et la date d'atteinte (`TIMESTAMP`) se bornent à la
-     * plage de leur colonne (`DateQueSaColonneTient`) : au-delà, la base
-     * refusait l'écriture, et l'enregistrement finissait en 500 (#2071).
+     * plage de leur colonne (`DateQueSaColonneTient`), le titre et la
+     * mensuration à leurs 255 caractères : au-delà, la base refusait
+     * l'écriture, et l'enregistrement finissait en 500 (#2071).
      *
      * @return array<int, \Illuminate\Contracts\Support\Htmlable|string>
      */
@@ -44,13 +45,13 @@ class GoalForm
     {
         return [
             Select::make('user_id')->label('Compte')->relationship('user', 'name')->searchable()->required(),
-            TextInput::make('title')->label('Titre')->required(),
+            TextInput::make('title')->label('Titre')->required()->maxLength(255),
             Select::make('type')->label('Type')->options(self::TYPES)->required(),
             TextInput::make('target_value')->label('Valeur cible')->required()->numeric(),
             TextInput::make('current_value')->label('Valeur actuelle')->required()->numeric()->default(0),
             TextInput::make('start_value')->label('Valeur de départ')->required()->numeric()->default(0),
             Select::make('exercise_id')->label('Exercice')->relationship('exercise', 'name')->searchable(),
-            TextInput::make('measurement_type')->label('Mensuration'),
+            TextInput::make('measurement_type')->label('Mensuration')->maxLength(255),
             DatePicker::make('deadline')->label('Échéance')
                 ->minDate(DateQueSaColonneTient::date()->premierJour)
                 ->maxDate(DateQueSaColonneTient::date()->dernierJour),

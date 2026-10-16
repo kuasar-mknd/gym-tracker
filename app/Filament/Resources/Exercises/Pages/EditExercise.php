@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Exercises\Pages;
 
 use App\Filament\Resources\Exercises\ExerciseResource;
+use App\Services\Diagnostic\ValeurLue;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -22,13 +23,17 @@ class EditExercise extends EditRecord
      * exactement le meme chemin d'assignation en masse que la creation — et
      * perdait la meme valeur en silence en production (#1352).
      *
+     * Un exercice du catalogue n'a pas de compte : le champ vide reste vide
+     * (`ValeurLue::entier()`), là où `(int)` en faisait le compte 0, que la
+     * clé étrangère refusait, et l'enregistrement finissait en 500 (#2071).
+     *
      * @param  array<string, mixed>  $data
      */
     #[\Override]
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
         /** @var \App\Models\Exercise $record */
-        /** @var int|string $identifiant */
+        /** @var int|string|null $identifiant */
         $identifiant = $data['user_id'];
 
         /*
@@ -40,7 +45,7 @@ class EditExercise extends EditRecord
         /** @var array<string, mixed> $attributs */
         $attributs = Arr::except($data, ExerciseResource::CHAMPS_ASSIGNES_EXPLICITEMENT);
 
-        $record->user_id = (int) $identifiant;
+        $record->user_id = ValeurLue::entier($identifiant);
         $record->fill($attributs);
         $record->save();
 
