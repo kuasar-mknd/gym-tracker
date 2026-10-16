@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Goals\Pages;
 
 use App\Filament\Resources\Goals\GoalResource;
+use App\Models\Goal;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
@@ -27,7 +28,20 @@ class EditGoal extends EditRecord
     #[\Override]
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        /** @var \App\Models\Goal $record */
+        /** @var Goal $record */
+        return self::modifier($record, $data);
+    }
+
+    /**
+     * L'écriture de la page, que l'action de modification de la table reprend
+     * (`GoalsTable`) : sans elle, l'action enregistrait par
+     * `$record->update($data)`, que le mode strict refusait pour `user_id` et
+     * que la production faisait sans lui, en silence (#2071).
+     *
+     * @param  array<mixed>  $data
+     */
+    public static function modifier(Goal $record, array $data): Goal
+    {
         /** @var int|string $identifiant */
         $identifiant = $data['user_id'];
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Exercises\Pages;
 
 use App\Filament\Resources\Exercises\ExerciseResource;
+use App\Models\Exercise;
 use App\Services\Diagnostic\ValeurLue;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -32,7 +33,20 @@ class EditExercise extends EditRecord
     #[\Override]
     protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        /** @var \App\Models\Exercise $record */
+        /** @var Exercise $record */
+        return self::modifier($record, $data);
+    }
+
+    /**
+     * L'écriture de la page, que l'action de modification de la table reprend
+     * (`ExercisesTable`) : sans elle, l'action enregistrait par
+     * `$record->update($data)`, que le mode strict refusait pour `user_id` et
+     * que la production faisait sans lui, en silence (#2071).
+     *
+     * @param  array<mixed>  $data
+     */
+    public static function modifier(Exercise $record, array $data): Exercise
+    {
         /** @var int|string|null $identifiant */
         $identifiant = $data['user_id'];
 

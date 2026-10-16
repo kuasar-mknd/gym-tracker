@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Exercises\Tables;
 
+use App\Filament\Resources\Exercises\Pages\EditExercise;
 use App\Filament\Resources\Exercises\Schemas\ExerciseForm;
+use App\Models\Exercise;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -30,7 +32,8 @@ class ExercisesTable
             ->columns(self::getColumns())
             ->filters([])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->using(static fn (Exercise $record, array $data): Exercise => EditExercise::modifier($record, $data)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

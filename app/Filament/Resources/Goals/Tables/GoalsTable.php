@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Goals\Tables;
 
 use App\Enums\GoalType;
+use App\Filament\Resources\Goals\Pages\EditGoal;
 use App\Filament\Resources\Goals\Schemas\GoalForm;
+use App\Models\Goal;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -31,7 +33,8 @@ class GoalsTable
             ->columns(self::getColumns())
             ->filters([])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->using(static fn (Goal $record, array $data): Goal => EditGoal::modifier($record, $data)),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
