@@ -44,9 +44,9 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  *     lié à aucune autre identité du même fournisseur.
  *  3. Sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
  *     adresse que la base tiendrait pour la même, et que l'inscription admette
- *     la forme de l'adresse : bien formée, tenant dans sa colonne, et que
- *     Symfony Mime sache écrire (`AdresseQueLaMessagerieSaitEcrire`) ; la
- *     casse rendue est gardée, que l'inscription exigerait en minuscules.
+ *     la forme de l'adresse : bien formée, tenant dans sa colonne, et que la
+ *     messagerie écrive telle quelle (`AdresseQueLaMessagerieSaitEcrire`) ;
+ *     la casse rendue est gardée, que l'inscription exigerait en minuscules.
  *
  * Toute comparaison d'adresse et d'identifiant se fait en PHP, octet par
  * octet. La base ne sert qu'à trouver les candidats : sa collation
@@ -295,7 +295,7 @@ final readonly class ResolveSocialUserAction
      *
      * Une adresse dont l'inscription refuserait la forme ne crée pas de compte
      * (#2075) : mal formée (règle `email`), plus longue que sa colonne, ou que
-     * Symfony Mime ne sait pas écrire, auquel cas aucun courriel ne lui
+     * la messagerie n'écrit pas telle quelle, auquel cas aucun courriel ne lui
      * parviendrait, lien « mot de passe oublié » compris. Les minuscules, que
      * l'inscription exige aussi, ne le sont pas ici : le compte garde la casse
      * que rend le fournisseur. Le compte naîtrait sinon sous une adresse que

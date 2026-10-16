@@ -35,8 +35,8 @@ class RegisterRequest extends FormRequest
      * L'adresse s'écrit en minuscules et en ASCII imprimable : la base ne
      * confond alors deux adresses que si elles sont identiques, et une
      * inscription ne peut pas occuper l'adresse d'un autre
-     * (`AdresseEnAsciiImprimable`). Symfony Mime doit savoir l'écrire, sans
-     * quoi le lien qui ouvre le compte ne partirait jamais
+     * (`AdresseEnAsciiImprimable`). La messagerie doit l'écrire telle quelle,
+     * sans quoi le lien qui ouvre le compte ne lui parviendrait jamais
      * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; son refus est le message
      * de toute adresse mal formée. Une adresse déjà prise passe la
      * validation comme une autre.

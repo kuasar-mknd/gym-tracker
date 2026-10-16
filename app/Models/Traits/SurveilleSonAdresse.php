@@ -36,10 +36,11 @@ use Illuminate\Support\Facades\Notification;
  *   celle d'un tiers, qui n'a pas à recevoir les avis d'un compte qui n'est
  *   pas le sien. L'avis ne part pas non plus à l'adresse que le compte vient
  *   de prendre (à la casse ASCII près), celle d'un titulaire qui remet la
- *   sienne, ni à une adresse que Symfony Mime ne sait pas écrire, qu'un
- *   compte d'avant la règle peut porter (`AdresseQueLaMessagerieSaitEcrire`,
- *   #2075) : l'avis ne partirait pas, et le changement qui la corrige ne
- *   laisserait qu'un job en échec.
+ *   sienne, ni à une adresse que la messagerie n'écrit pas telle quelle,
+ *   qu'un compte d'avant la règle peut porter
+ *   (`AdresseQueLaMessagerieSaitEcrire`, #2075) : l'avis ne partirait pas, ou
+ *   partirait ailleurs, et le changement qui la corrige ne laisserait qu'un
+ *   job en échec.
  *
  * Le mot de passe actuel n'est pas exigé ici : c'est l'affaire de la requête
  * du profil (`ProfileUpdateRequest`). Un administrateur du panneau change une

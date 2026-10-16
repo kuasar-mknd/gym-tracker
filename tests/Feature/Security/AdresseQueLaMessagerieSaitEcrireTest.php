@@ -7,9 +7,10 @@ use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Models\User;
+use App\Notifications\AdresseDuCompteChangee;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Filament\Actions\Testing\TestAction;
 use Filament\Forms\Components\TextInput;
-use Illuminate\Mail\Message;
 use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
@@ -24,7 +25,6 @@ use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mime\Email;
-use Symfony\Component\Mime\Exception\RfcComplianceException;
 use Tests\Support\CeQueLeClientLit;
 use Tests\Support\FilamentAdminPanel;
 
@@ -43,22 +43,26 @@ use function Pest\Laravel\post;
  * destinataire (`Address`, `RfcComplianceException`). Le compte était créé,
  * son lien d'ouverture ne partait jamais, et il restait en attente jusqu'à la
  * purge ; au profil, le lien de changement ne partait pas davantage. La
- * mesure ci-dessous dit quelles formes la règle `email` admet et Mime refuse :
- * le commentaire dans la partie locale, seul. La partie locale entre
- * guillemets, le domaine littéral, le domaine sans point, la partie locale de
- * plus de 64 caractères et le commentaire dans le domaine passent l'une et
- * l'autre ; les points consécutifs, aucune.
+ * mesure ci-dessous dit quelles formes la règle `email` admet et que la
+ * messagerie n'écrit pas telle quelle : le commentaire dans la partie locale,
+ * et le chevron (`<`) dans une partie locale entre guillemets, que Mime lit,
+ * dans une notification, comme l'ouverture d'une forme « Nom <adresse> ». La
+ * partie locale entre guillemets sans chevron, le domaine littéral, le domaine
+ * sans point, la partie locale de plus de 64 caractères et le commentaire dans
+ * le domaine passent l'une et l'autre ; les points consécutifs, aucune.
  *
- * `AdresseQueLaMessagerieSaitEcrire` refuse ce que Mime refuse, aux quatre
- * entrées d'une adresse qui recevra un courriel : l'inscription, le profil, le
- * panneau, et l'adresse que rend un fournisseur de connexion, qui ne passait
- * par aucune règle `email`, et qui refuse désormais aussi une adresse dont
- * l'inscription refuserait la forme ou la longueur. Le refus est le message de toute adresse mal formée, et ne dit
+ * `AdresseQueLaMessagerieSaitEcrire` n'admet que ce que la messagerie écrit
+ * tel quel, aux quatre entrées d'une adresse qui recevra un courriel :
+ * l'inscription, le profil, le panneau, et l'adresse que rend un fournisseur
+ * de connexion, qui ne passait par aucune règle `email`, et qui refuse
+ * désormais aussi une adresse dont l'inscription refuserait la forme ou la
+ * longueur. Le refus est le message de toute adresse mal formée, et ne dit
  * rien d'un compte. Le profil et le panneau ne jugent la forme que d'une
  * adresse qui change : un compte dont l'adresse est antérieure à la règle,
  * quelle qu'elle soit, enregistre son nom et change d'adresse comme avant ; il
- * ne reçoit pas de lien de vérification que Mime n'écrirait pas. La connexion
- * et « mot de passe oublié » ne jugent pas l'adresse davantage.
+ * ne reçoit pas de lien de vérification que la messagerie n'écrirait pas
+ * telle quelle. La connexion et « mot de passe oublié » ne jugent pas
+ * l'adresse davantage.
  *
  * Les courriels partent pour de bon, par le transport `array` des tests, à
  * l'inscription, au profil et au renvoi du lien de vérification : une adresse
@@ -70,6 +74,9 @@ $admisesParLaRegleEmailRefuseesParMime = [
     'un commentaire avant la partie locale' => ['(salle)camille@example.org'],
     'un commentaire imbriqué' => ['camille((salle))@example.org'],
     'un commentaire dans la partie locale et dans le domaine' => ['camille(salle)@example(sud).org'],
+    'un chevron ouvrant entre guillemets' => ['"camille<"@example.org'],
+    'des chevrons entre guillemets' => ['"camille<salle>"@example.org'],
+    'une adresse entre chevrons, entre guillemets' => ['"camille<autre@example.net>"@example.org'],
 ];
 
 $refuseesParLaRegleEmailCommeParMime = [
@@ -94,6 +101,21 @@ $ecritesParMime = [
 
 $refuseesParLaRegleEmailEcritesParMime = [
     'un tiret bas dans le domaine' => ['camille@exa_mple.org'],
+];
+
+/*
+ * Ce que la messagerie coupe avant de l'écrire, ou refuse : Mime ôte les
+ * blancs autour de l'adresse (`trim()`), et Laravel refuse un saut de ligne
+ * (`ensureAddressIsSafe()`). Aucune entrée ne les admet (`TrimStrings`, la
+ * règle `email`, le motif ASCII) ; la règle, qui juge aussi l'adresse d'un
+ * compte existant, ne les admet pas davantage.
+ */
+$coupeesParLaMessagerie = [
+    'un saut de ligne au bout' => ["camille@example.org\n"],
+    'un saut de ligne en tête' => ["\ncamille@example.org"],
+    'un retour chariot au bout' => ["camille@example.org\r"],
+    'une tabulation au bout' => ["camille@example.org\t"],
+    'une espace en tête' => [' camille@example.org'],
 ];
 
 dataset('adresses que la règle email admet et que Mime refuse', $admisesParLaRegleEmailRefuseesParMime);
@@ -121,6 +143,16 @@ dataset('adresses d’un compte antérieur à la règle', [
     ...$refuseesParLaRegleEmailEcritesParMime,
 ]);
 
+/*
+ * Deux adresses de compte d'avant la règle que la connexion admet : l'une que
+ * Mime refuse d'écrire, l'autre qu'une notification écrirait à une autre
+ * adresse.
+ */
+dataset('adresses d’un compte que la messagerie n’écrit pas telle quelle', [
+    'un commentaire' => ['camille(salle)@example.org'],
+    'une adresse entre chevrons, entre guillemets' => ['"camille<autre@example.net>"@example.org'],
+]);
+
 /**
  * Le message de la règle `email`, celui de toute adresse mal formée.
  */
@@ -130,25 +162,23 @@ function adresseMessagerieMessageDuFormat(): string
 }
 
 /**
- * Un courriel part-il à cette adresse ? Il part par le courrielleur de
- * l'application, comme les liens, et Symfony Mime refuse d'écrire ce qu'il ne
- * sait pas écrire.
+ * Un courriel part-il à cette adresse, telle quelle ? Il part comme chaque
+ * courriel de l'application, par une notification : celle qui prévient une
+ * ancienne adresse, par sa route à la demande, sans attendre la file. Laravel
+ * refuse un saut de ligne, Symfony Mime refuse ce qu'il ne sait pas écrire,
+ * coupe les blancs autour, et lit un chevron comme l'ouverture d'une forme
+ * « Nom <adresse> » : le courriel part alors à une autre adresse, ou ne part
+ * pas.
  */
 function adresseMessagerieUnCourrielPart(string $adresse): bool
 {
     try {
-        Mail::raw('Bonjour', static function (Message $message) use ($adresse): void {
-            $message->to($adresse)->subject('Essai');
-        });
-    } catch (Throwable $erreur) {
-        if ($erreur instanceof RfcComplianceException) {
-            return false;
-        }
-
-        throw $erreur;
+        Notification::route('mail', $adresse)->notifyNow(new AdresseDuCompteChangee('camille.martin@example.org'));
+    } catch (InvalidArgumentException) {
+        return false;
     }
 
-    return true;
+    return adresseMessagerieDestinataires() === [$adresse];
 }
 
 /**
@@ -294,18 +324,25 @@ function adresseMessagerieRefusSocial(string $fournisseur): string
     return 'L\'adresse transmise par '.ucfirst($fournisseur).' n\'est pas une adresse email que nous acceptons, et l\'inscription la refuserait de même. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
 }
 
+/*
+ * La règle dit d'une adresse ce qu'en fait la messagerie : elle n'admet que
+ * celle à laquelle un courriel part, telle quelle.
+ */
 it('mesure ce que la règle email admet et que Symfony Mime refuse d’écrire', function (string $adresse, bool $laRegleEmailLAdmet, bool $unCourrielPart): void {
     expect([
         'la règle email' => Validator::make(['email' => $adresse], ['email' => ['email']])->passes(),
+        'AdresseQueLaMessagerieSaitEcrire' => AdresseQueLaMessagerieSaitEcrire::laMessagerieSaitLEcrire($adresse),
         'Symfony Mime' => adresseMessagerieUnCourrielPart($adresse),
     ])->toBe([
         'la règle email' => $laRegleEmailLAdmet,
+        'AdresseQueLaMessagerieSaitEcrire' => $unCourrielPart,
         'Symfony Mime' => $unCourrielPart,
     ]);
 })->with([
     ...array_map(static fn (array $cas): array => [...$cas, true, false], $admisesParLaRegleEmailRefuseesParMime),
     ...array_map(static fn (array $cas): array => [...$cas, false, false], $refuseesParLaRegleEmailCommeParMime),
     ...array_map(static fn (array $cas): array => [...$cas, false, true], $refuseesParLaRegleEmailEcritesParMime),
+    ...array_map(static fn (array $cas): array => [...$cas, false, false], $coupeesParLaMessagerie),
     ...array_map(static fn (array $cas): array => [...$cas, true, true], $ecritesParMime),
 ]);
 
@@ -510,25 +547,26 @@ it('ne change pas la réponse de « mot de passe oublié » pour une adresse que
  * règle ne juge qu'une adresse qui change. Il se connecte, enregistre son nom
  * au profil et au panneau sans toucher à son adresse, et en change pour une
  * adresse que Mime écrit, qui reçoit son lien. L'ancienne adresse n'est pas
- * prévenue du changement (`SurveilleSonAdresse`) : Mime ne l'écrirait pas, et
- * l'avis ne laisserait qu'un job en échec, ou une erreur 500 quand la file est
- * synchrone, comme ici.
+ * prévenue du changement (`SurveilleSonAdresse`) : la messagerie ne
+ * l'écrirait pas telle quelle, et l'avis ne laisserait qu'un job en échec, une
+ * erreur 500 quand la file est synchrone, comme ici, ou partirait à une autre
+ * adresse.
  */
-it('laisse un compte dont l’adresse est antérieure à la règle se connecter, enregistrer son nom et changer d’adresse', function (): void {
-    $compte = User::factory()->create(['name' => 'Camille Martin', 'email' => 'camille(salle)@example.org']);
+it('laisse un compte dont l’adresse est antérieure à la règle se connecter, enregistrer son nom et changer d’adresse', function (string $adresse): void {
+    $compte = User::factory()->create(['name' => 'Camille Martin', 'email' => $adresse]);
 
-    post(route('login'), ['email' => 'camille(salle)@example.org', 'password' => 'password'])
+    post(route('login'), ['email' => $adresse, 'password' => 'password'])
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('dashboard'));
 
     assertAuthenticatedAs($compte);
 
     actingAs($compte)
-        ->patch(route('profile.update'), ['name' => 'Camille Durand', 'email' => 'camille(salle)@example.org'])
+        ->patch(route('profile.update'), ['name' => 'Camille Durand', 'email' => $adresse])
         ->assertSessionHasNoErrors();
 
     expect($compte->refresh()->name)->toBe('Camille Durand')
-        ->and($compte->email)->toBe('camille(salle)@example.org');
+        ->and($compte->email)->toBe($adresse);
 
     adresseMessagerieChangerDAdresse($compte, 'camille.martin@example.org')
         ->assertSessionHasNoErrors()
@@ -542,7 +580,7 @@ it('laisse un compte dont l’adresse est antérieure à la règle se connecter,
     expect($compte->refresh()->email)->toBe('camille.martin@example.org')
         ->and($compte->hasVerifiedEmail())->toBeTrue()
         ->and(adresseMessagerieDestinataires())->toBe(['camille.martin@example.org']);
-});
+})->with('adresses d’un compte que la messagerie n’écrit pas telle quelle');
 
 it('laisse le panneau enregistrer un compte dont l’adresse est antérieure à la règle, puis la changer', function (): void {
     actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('User')), 'admin');
@@ -625,8 +663,8 @@ it('saisit l’adresse au panneau sans la validation du navigateur, au clavier d
  * vérification de Laravel, qui part dans la requête : Mime refusait l'adresse
  * et la page répondait 500. Rien ne part plus, et la page renvoie au profil.
  */
-it('n’envoie pas de lien de vérification à une adresse que Mime refuse d’écrire, et dit d’en changer', function (): void {
-    $compte = User::factory()->unverified()->create(['email' => 'camille(salle)@example.org']);
+it('n’envoie pas de lien de vérification à une adresse que Mime refuse d’écrire, et dit d’en changer', function (string $adresse): void {
+    $compte = User::factory()->unverified()->create(['email' => $adresse]);
 
     expect($compte->estEnAttente())->toBeFalse();
 
@@ -637,7 +675,7 @@ it('n’envoie pas de lien de vérification à une adresse que Mime refuse d’�
         ->assertSessionHas('status', 'adresse-que-la-messagerie-n-ecrit-pas');
 
     expect(adresseMessagerieDestinataires())->toBe([]);
-});
+})->with('adresses d’un compte que la messagerie n’écrit pas telle quelle');
 
 it('envoie toujours le lien de vérification à un compte non vérifié dont Mime écrit l’adresse', function (): void {
     $compte = User::factory()->unverified()->create(['email' => 'camille@example.org']);
@@ -667,17 +705,20 @@ it('ne renvoie pas le lien d’ouverture à un compte en attente dont Mime refus
     Notification::assertNothingSent();
 });
 
-it('n’envoie aucun lien de vérification à une adresse que Mime refuse d’écrire, que le compte soit en attente ou non', function (bool $enAttente): void {
+it('n’envoie aucun lien de vérification à une adresse que Mime refuse d’écrire, que le compte soit en attente ou non', function (bool $enAttente, string $adresse): void {
     Notification::fake();
     $fabrique = User::factory()->unverified();
-    $compte = ($enAttente ? $fabrique->enAttente() : $fabrique)->create(['email' => 'camille(salle)@example.org']);
+    $compte = ($enAttente ? $fabrique->enAttente() : $fabrique)->create(['email' => $adresse]);
 
     $compte->sendEmailVerificationNotification();
 
     expect($compte->estEnAttente())->toBe($enAttente)
         ->and($compte->laMessagerieSaitEcrireSonAdresse())->toBeFalse();
     Notification::assertNothingSent();
-})->with(['en attente' => [true], 'hors attente' => [false]]);
+})->with(['en attente' => [true], 'hors attente' => [false]])->with([
+    ...$admisesParLaRegleEmailRefuseesParMime,
+    ...$coupeesParLaMessagerie,
+]);
 
 /*
  * La connexion sociale ne refuse que le compte qu'elle créerait : un compte

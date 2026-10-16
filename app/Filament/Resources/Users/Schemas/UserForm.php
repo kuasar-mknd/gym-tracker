@@ -38,9 +38,9 @@ class UserForm
              * confondent une adresse accentuée, un « ß » ou une lettre pleine
              * chasse avec l'adresse ASCII voisine : un compte créé ou modifié
              * ici sur l'une occuperait l'autre, et son titulaire ne pourrait
-             * plus s'inscrire. Symfony Mime doit aussi savoir l'écrire : sans
-             * quoi aucun courriel n'atteindrait le compte, lien « mot de passe
-             * oublié » compris (`AdresseQueLaMessagerieSaitEcrire`, #2075).
+             * plus s'inscrire. La messagerie doit aussi l'écrire telle quelle :
+             * sans quoi aucun courriel n'atteindrait le compte, lien « mot de
+             * passe oublié » compris (`AdresseQueLaMessagerieSaitEcrire`, #2075).
              * L'adresse actuelle du compte reste admise telle quelle par les
              * deux règles, pour qu'un compte ancien s'enregistre sans en
              * changer.

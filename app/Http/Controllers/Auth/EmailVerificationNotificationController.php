@@ -13,10 +13,10 @@ class EmailVerificationNotificationController extends Controller
     /**
      * Send a new email verification notification.
      *
-     * Une adresse que Symfony Mime ne sait pas écrire ne reçoit pas de lien
-     * (`User::sendEmailVerificationNotification()`, #2075) : la page le dit,
-     * plutôt qu'un envoi qui n'a pas eu lieu, et renvoie au profil, ouvert
-     * sans adresse vérifiée, pour en changer.
+     * Une adresse que la messagerie n'écrit pas telle quelle ne reçoit pas de
+     * lien (`User::sendEmailVerificationNotification()`, #2075) : la page le
+     * dit, plutôt qu'un envoi qui n'a pas eu lieu, et renvoie au profil,
+     * ouvert sans adresse vérifiée, pour en changer.
      */
     public function store(Request $request): RedirectResponse
     {

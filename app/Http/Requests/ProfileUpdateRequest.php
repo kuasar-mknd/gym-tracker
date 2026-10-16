@@ -54,16 +54,17 @@ class ProfileUpdateRequest extends FormRequest
      * Get the validation rules that apply to the request.
      *
      * Une nouvelle adresse s'écrit en ASCII imprimable, comme à l'inscription
-     * (`AdresseEnAsciiImprimable`), et sous une forme que Symfony Mime sait
-     * écrire, sans quoi le lien de confirmation ne partirait pas
+     * (`AdresseEnAsciiImprimable`), et sous une forme que la messagerie écrit
+     * telle quelle, sans quoi le lien de confirmation ne lui parviendrait pas
      * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; l'adresse actuelle du
      * compte reste admise telle quelle par l'une et l'autre, et la règle
      * `email` ne juge qu'une adresse qui change, pour qu'un compte plus ancien
      * enregistre son nom. Aucune règle ne regarde si la nouvelle adresse a
-     * déjà un compte : la réponse le dirait, et le refus d'une adresse que Mime
-     * n'écrit pas est le message de toute adresse mal formée. Le changement
-     * attend le lien envoyé à cette adresse (`TraiterUnChangementDAdresse`),
-     * qui prévient au contraire son titulaire quand elle est prise. `bail` tient `current_password`
+     * déjà un compte : la réponse le dirait, et le refus d'une adresse que la
+     * messagerie n'écrit pas est le message de toute adresse mal formée. Le
+     * changement attend le lien envoyé à cette adresse
+     * (`TraiterUnChangementDAdresse`), qui prévient au contraire son titulaire
+     * quand elle est prise. `bail` tient `current_password`
      * derrière `string` : la règle passe la valeur telle quelle à
      * `password_verify()`, et un tableau y levait une erreur 500 (#2071).
      *
