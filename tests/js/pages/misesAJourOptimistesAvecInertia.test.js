@@ -309,30 +309,28 @@ const requetesParties = () => requetes.map((r) => `${r.methode.toUpperCase()} ${
 /*
  * Chaque requête simulée se dit finie quand elle a répondu, échoué ou été
  * abandonnée : le test attend ainsi la fin de toutes les visites, celle qui
- * supprime comme celle qui l'interrompt.
+ * supprime comme celle qui l'interrompt. Des espions, que `vi.restoreAllMocks()`
+ * rétablit après le fichier (`.ai/rules/tests-js.md`).
  */
 beforeAll(() => {
-    const envoyer = RequeteSimulee.prototype.send
-    const repondre = RequeteSimulee.prototype.repondre
-    const abandonner = RequeteSimulee.prototype.abort
+    const { send: envoyer, repondre, abort: abandonner } = RequeteSimulee.prototype
 
-    RequeteSimulee.prototype.send = function send(corps) {
-        const onerror = () => {
+    vi.spyOn(RequeteSimulee.prototype, 'send').mockImplementation(function envoyerEtSuivre(corps) {
+        const surErreur = this.onerror
+        this.onerror = () => {
             this.finie = true
-            this.surErreur?.()
+            surErreur?.()
         }
-        this.surErreur = this.onerror
-        this.onerror = onerror
         envoyer.call(this, corps)
-    }
-    RequeteSimulee.prototype.repondre = function repondreEtFinir(reponse) {
+    })
+    vi.spyOn(RequeteSimulee.prototype, 'repondre').mockImplementation(function repondreEtFinir(reponse) {
         this.finie = true
         repondre.call(this, reponse)
-    }
-    RequeteSimulee.prototype.abort = function abandonnerEtFinir() {
+    })
+    vi.spyOn(RequeteSimulee.prototype, 'abort').mockImplementation(function abandonnerEtFinir() {
         this.finie = true
         abandonner.call(this)
-    }
+    })
 })
 
 const ECHECS = [
