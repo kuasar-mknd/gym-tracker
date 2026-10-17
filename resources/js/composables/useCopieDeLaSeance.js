@@ -77,6 +77,11 @@ const aDesRangeesProvisoires = (seance) =>
  * instantané effacerait de la copie ce qui est enregistré. Il n'en est pris
  * que si la séance de départ est exactement celle de la copie, ou après une
  * réponse du serveur qui la rafraîchit (le rechargement d'après le vidage).
+ * Et seulement si les props n'ont pas changé avant que la copie soit relue :
+ * un document rouvert par Retour monte la page du document, fraîche, puis
+ * Inertia remplace ses props par l'entrée d'historique, plus ancienne, sans
+ * remonter la page (`InitialVisit.handleBackForward`) ; comparée à la séance
+ * du document, la copie aurait laissé verser celle de l'entrée.
  * Une visite côté client, ou une page qui porte la marque d'une copie
  * (`props.horsLigne`, parties E et F), n'en prend jamais.
  *
@@ -142,6 +147,8 @@ export const useCopieDeLaSeance = ({
     let derniere = aJour ? enTexteStable(seanceConnueDuServeur(localWorkout.value)) : null
     let minuterie = null
     let enPlace = true
+    /** La séance des props a changé depuis le montage : celle du départ ne se compare plus à la copie. */
+    let seanceRemplacee = false
 
     const toutEstEnregistre = () =>
         SyncService.enAttente() === 0 &&
@@ -224,7 +231,11 @@ export const useCopieDeLaSeance = ({
 
     /*
      * Une séance rendue par l'historique n'est à jour que si elle est
-     * exactement celle de la copie : la copie se lit, sans rien servir.
+     * exactement celle de la copie : la copie se lit, sans rien servir. La
+     * comparaison vaut pour la séance du départ seulement : un document
+     * rouvert par Retour monte la page du document, puis Inertia remplace
+     * ses props par l'entrée d'historique, sans remonter la page, souvent
+     * avant que la copie soit relue.
      */
     if (!aJour && ecriture.origineDeLaPage() === 'historique') {
         const depart = enTexteStable(seanceConnueDuServeur(seanceDeDepart))
@@ -237,6 +248,7 @@ export const useCopieDeLaSeance = ({
                 if (
                     enPlace &&
                     !aJour &&
+                    !seanceRemplacee &&
                     gardee !== undefined &&
                     enTexteStable(seanceConnueDuServeur(gardee)) === depart
                 ) {
@@ -250,6 +262,7 @@ export const useCopieDeLaSeance = ({
 
     // Une réponse du serveur rafraîchit la séance ; l'historique, non.
     watch(seance, () => {
+        seanceRemplacee = true
         aJour = ecriture.origineDeLaPage() === 'reseau'
     })
 

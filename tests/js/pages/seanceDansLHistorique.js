@@ -74,8 +74,13 @@ const seanceDuServeur = (serveur) => ({
         })),
 })
 
-/** Les pages de chaque adresse, comme le serveur les rend. */
-const pagesDuServeur = (serveur) => ({
+/**
+ * Les pages de chaque adresse, comme le serveur les rend maintenant.
+ *
+ * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>} serveur
+ * @returns {Record<string, () => object>}
+ */
+export const pagesDuServeur = (serveur) => ({
     '/workouts': () => ({
         component: 'Workouts/Index',
         url: '/workouts',
@@ -212,15 +217,23 @@ export const uneReponseRetenue = (serveur) => {
  * Un chargement de `/workouts` : le service de synchronisation d'abord, puis
  * la garde de l'historique et Inertia, qui partagent ce chargement.
  *
+ * Un autre document s'ouvre par `ouverture` : son adresse, ce qui dit qu'il
+ * est affiché, et l'état que l'entrée courante de l'historique porte à son
+ * chargement (`{ page }` : celle qu'Inertia rend quand le document est rouvert
+ * par Retour ou Avance, `performance.getEntriesByType('navigation')` simulé
+ * par le test avant l'appel).
+ *
  * @param {{
  *   serveur: ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>,
  *   chargerLaSeance: () => Promise<{ default: object }>,
  *   retenir: (application: import('@vue/test-utils').VueWrapper) => void,
  *   avantInertia?: (inertia: typeof import('@inertiajs/vue3')) => Promise<void> | void,
+ *   ouverture?: { adresse: string, selecteur: string, etatDeLHistorique?: object | null },
  * }} chargement le faux serveur, l'import de la vraie page de séance, ce
- *   qui retient le montage pour le démonter après le test, et ce que le test
+ *   qui retient le montage pour le démonter après le test, ce que le test
  *   branche après la garde de l'historique et avant le démarrage d'Inertia,
- *   comme `main.js` (l'écriture des copies hors ligne, #2048)
+ *   comme `main.js` (l'écriture des copies hors ligne, #2048), et le document
+ *   ouvert, la liste des séances sans lui
  * @returns {Promise<{
  *   sync: object,
  *   visites: Array<string>,
@@ -228,7 +241,13 @@ export const uneReponseRetenue = (serveur) => {
  * }>} le service de synchronisation, les chemins que les visites d'Inertia ont
  *   demandés au serveur, et une visite jusqu'à la page affichée
  */
-export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, retenir, avantInertia = () => {} }) => {
+export const ouvrirLaListeDesSeances = async ({
+    serveur,
+    chargerLaSeance,
+    retenir,
+    avantInertia = () => {},
+    ouverture = { adresse: '/workouts', selecteur: '#liste-des-seances', etatDeLHistorique: null },
+}) => {
     const pagesDeLAdresse = pagesDuServeur(serveur)
     const visites = []
 
@@ -317,11 +336,11 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
     const sync = await chargerSyncService({ compte: 1 })
     await sync.pending
 
-    window.history.replaceState(null, '', '/workouts')
+    window.history.replaceState(ouverture.etatDeLHistorique ?? null, '', ouverture.adresse)
     const initiale = document.createElement('script')
     initiale.dataset.page = 'app'
     initiale.type = 'application/json'
-    initiale.textContent = JSON.stringify(pagesDeLAdresse['/workouts']())
+    initiale.textContent = JSON.stringify(pagesDeLAdresse[ouverture.adresse]())
     document.body.replaceChildren(initiale, Object.assign(document.createElement('div'), { id: 'app' }))
 
     const inertia = await import('@inertiajs/vue3')
@@ -339,7 +358,7 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
         },
     })
 
-    await vi.waitUntil(() => present('#liste-des-seances'))
+    await vi.waitUntil(() => present(ouverture.selecteur))
     await historiqueAuRepos()
 
     const visiter = async (adresse, selecteur) => {

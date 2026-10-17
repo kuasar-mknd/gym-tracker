@@ -43,9 +43,22 @@ let ecriture
 /**
  * Monte la séance avec le composable, et rend sa copie locale.
  *
- * @param {{ page?: object, depart?: object, origine?: string, ordreEnVol?: import('vue').Ref<number> }} [options]
+ * @param {{
+ *   page?: object,
+ *   depart?: object,
+ *   origine?: string,
+ *   ordreEnVol?: import('vue').Ref<number>,
+ *   seanceDesProps?: import('vue').Ref<object>,
+ * }} [options] la séance des props, que le test remplace comme Inertia, est
+ *   celle du départ quand il n'en donne pas
  */
-const monter = ({ page = pageDeLaSeance(), depart = seance(), origine = 'reseau', ordreEnVol = ref(0) } = {}) => {
+const monter = ({
+    page = pageDeLaSeance(),
+    depart = seance(),
+    origine = 'reseau',
+    ordreEnVol = ref(0),
+    seanceDesProps = ref(depart),
+} = {}) => {
     const localWorkout = ref(JSON.parse(JSON.stringify(depart)))
 
     ecriture.origineDeLaPage.mockReturnValue(origine)
@@ -56,7 +69,7 @@ const monter = ({ page = pageDeLaSeance(), depart = seance(), origine = 'reseau'
                     useCopieDeLaSeance({
                         localWorkout,
                         seanceDeDepart: depart,
-                        seance: () => depart,
+                        seance: () => seanceDesProps.value,
                         page,
                         valeursDeRepli: () => [],
                         unsyncedSetIds: ref(new Set()),
@@ -153,6 +166,59 @@ describe('la copie de la séance, seule', () => {
 
         expect(ecriture.completer).toHaveBeenCalledTimes(1)
         expect(ecriture.completer.mock.calls[0][0].props.workout.workout_lines[0].sets[0].weight).toBe(90)
+    })
+
+    /*
+     * Un document rouvert par Retour : Inertia monte la page du document,
+     * fraîche, puis remplace ses props par l'entrée d'historique, plus
+     * ancienne, sans remonter la page (`InitialVisit.handleBackForward`). La
+     * lecture de la copie, partie au montage, revient après : la copie est la
+     * séance fraîche du départ, et la page montre déjà l'ancienne.
+     */
+    it('rendue par l’historique, ne verse rien quand ses props sont remplacées avant que la copie soit relue', async () => {
+        const fraiche = {
+            ...seance(),
+            workout_lines: [
+                { id: 1, sets: [...seance().workout_lines[0].sets, { id: 4, weight: 90, is_completed: true }] },
+            ],
+        }
+        let rendreLaCopie
+        ecriture.lireLaCopie.mockReturnValueOnce(new Promise((resoudre) => (rendreLaCopie = resoudre)))
+        const seanceDesProps = ref(fraiche)
+        const locale = monter({ origine: 'historique', depart: fraiche, seanceDesProps })
+
+        seanceDesProps.value = seance()
+        locale.value = seance()
+        await vi.advanceTimersByTimeAsync(0)
+        rendreLaCopie({ page: { props: { workout: JSON.parse(JSON.stringify(fraiche)) } } })
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+        window.dispatchEvent(new Event('pagehide'))
+
+        expect(ecriture.completer).not.toHaveBeenCalled()
+    })
+
+    it('ne verse plus rien quand l’historique remplace la séance, et reprend à la réponse suivante du serveur', async () => {
+        const seanceDesProps = ref(seance())
+        const locale = monter({ seanceDesProps })
+        const ancienne = { ...seance(), workout_lines: [{ id: 1, sets: [] }] }
+
+        ecriture.origineDeLaPage.mockReturnValue('historique')
+        seanceDesProps.value = ancienne
+        locale.value = JSON.parse(JSON.stringify(ancienne))
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+        window.dispatchEvent(new Event('pagehide'))
+
+        expect(ecriture.completer).not.toHaveBeenCalled()
+
+        ecriture.origineDeLaPage.mockReturnValue('reseau')
+        seanceDesProps.value = seance()
+        locale.value = seance()
+        await vi.advanceTimersByTimeAsync(0)
+        locale.value.workout_lines[0].sets[0].weight = 85
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS)
+
+        expect(ecriture.completer).toHaveBeenCalledTimes(1)
+        expect(ecriture.completer.mock.calls[0][0].props.workout.workout_lines[0].sets[0].weight).toBe(85)
     })
 
     it('au démontage, verse l’instantané qui attendait, et plus rien ensuite', async () => {
