@@ -153,6 +153,12 @@ services:
     db:
         image: mysql:8.4
         restart: always
+        # Sans ce délai, un arrêt, un redémarrage ou une recréation du service
+        # coupe mysqld au bout de dix secondes, qu'il ait fini d'écrire son
+        # tampon ou non ; avec lui, mysqld rend la main dès qu'il a fini. La
+        # bascule vers une autre version de MySQL commence par cet arrêt
+        # propre (.ai/rules/dependencies.md).
+        stop_grace_period: 5m
         # Le disque de production synchronise chaque validation en 250 à 500 ms
         # (310 ms par écriture synchronisée, mesuré le 03/09) ; le journal est
         # écrit à chaque validation et synchronisé une fois par seconde, au prix
