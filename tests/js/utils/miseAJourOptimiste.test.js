@@ -97,6 +97,21 @@ const supprimer = (options = {}) => {
     return vu
 }
 
+/**
+ * Un rechargement en arrière-plan (`async`), renvoyé vers un chargement
+ * complet (409 `X-Inertia-Location`, version des actifs changée) : Inertia
+ * émet `location` sans recharger la page. Ce renvoi n'est celui d'aucune
+ * visite enveloppée.
+ */
+const renvoyerUnRechargementEnArrierePlan = async () => {
+    routeur.reload({ only: ['graphiques'] })
+    await uneTache()
+    requetes.at(-1).repondre({ statut: 409, entetes: { 'x-inertia-location': '/liste', 'x-inertia-version': 'v2' } })
+    await uneTache()
+    await uneTache()
+    window.sessionStorage.removeItem('inertiaLocationVisit')
+}
+
 describe('revenirSiLaVisiteEchoue, avec le vrai client d’Inertia', () => {
     it.each([
         ['sans réseau', (requete) => requete.onerror()],
@@ -200,6 +215,51 @@ describe('revenirSiLaVisiteEchoue, avec le vrai client d’Inertia', () => {
     })
 
     /*
+     * La visite relancée interrompt la première : Inertia appelle le
+     * `onFinish` de celle-ci avec `interrupted`, avant que la seconde
+     * réponde. Cette interruption n'est pas un échec : la seconde, renvoyée
+     * vers un chargement complet (la version des actifs a changé), ne fait
+     * rien revenir.
+     */
+    it('ne revient pas quand la visite relancée par un 409 `X-Inertia-Redirect` recharge toute la page', async () => {
+        const vu = supprimer()
+        await uneTache()
+
+        requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-redirect': '/liste#fin' } })
+        await vi.waitUntil(() => requetes.length === 2)
+
+        const adresse = new URL('/liste', window.location.href).href
+        const chargements = await chargementsCompletsPendant(async () => {
+            requetes[1].repondre({ statut: 409, entetes: { 'x-inertia-location': adresse, 'x-inertia-version': 'v2' } })
+            await vi.waitUntil(() => vu.fins === 2)
+        })
+
+        expect(chargements).toEqual([adresse])
+        expect(vu).toEqual({ retours: 0, succes: 0, fins: 2 })
+    })
+
+    /*
+     * Une autre visite qui interrompt la relance fait échouer la suppression,
+     * elle : l'écran revient, même quand un rechargement en arrière-plan a
+     * été renvoyé vers un chargement complet pendant ce temps.
+     */
+    it('revient quand une autre visite interrompt la visite relancée par un 409 `X-Inertia-Redirect`', async () => {
+        const vu = supprimer()
+        await uneTache()
+
+        requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-redirect': '/liste#fin' } })
+        await vi.waitUntil(() => requetes.length === 2)
+        await renvoyerUnRechargementEnArrierePlan()
+
+        routeur.visit('/ailleurs')
+        await vi.waitUntil(() => vu.fins === 2)
+        routeur.cancelAll()
+        await uneTache()
+
+        expect(vu).toEqual({ retours: 1, succes: 0, fins: 2 })
+    })
+
+    /*
      * Une suppression faite juste après une mise en production : le DELETE
      * répond 303, et le GET qui le suit 409 `X-Inertia-Location`, la version
      * des actifs ayant changé. Inertia recharge toute la page sans appeler
@@ -255,16 +315,10 @@ describe('revenirSiLaVisiteEchoue, avec le vrai client d’Inertia', () => {
     ])('revient %s, même quand une autre visite a été renvoyée vers un chargement complet', async (_cas, echouer) => {
         const vu = supprimer()
         await uneTache()
-
-        routeur.reload({ only: ['graphiques'] })
-        await uneTache()
-        requetes[1].repondre({ statut: 409, entetes: { 'x-inertia-location': '/liste', 'x-inertia-version': 'v2' } })
-        await uneTache()
-        await uneTache()
+        await renvoyerUnRechargementEnArrierePlan()
 
         echouer(requetes[0])
         await vi.waitUntil(() => vu.fins === 1)
-        window.sessionStorage.removeItem('inertiaLocationVisit')
 
         expect(vu).toEqual({ retours: 1, succes: 0, fins: 1 })
     })
@@ -399,16 +453,10 @@ describe('siLaVisiteAboutit, avec le vrai client d’Inertia', () => {
     it('n’aboutit pas quand une autre visite a été renvoyée vers un chargement complet et que celle-ci échoue', async () => {
         const vu = envoyer()
         await uneTache()
-
-        routeur.reload({ only: ['graphiques'] })
-        await uneTache()
-        requetes[1].repondre({ statut: 409, entetes: { 'x-inertia-location': '/liste', 'x-inertia-version': 'v2' } })
-        await uneTache()
-        await uneTache()
+        await renvoyerUnRechargementEnArrierePlan()
 
         requetes[0].repondre(pageDErreur(500))
         await vi.waitUntil(() => vu.includes('fin'))
-        window.sessionStorage.removeItem('inertiaLocationVisit')
 
         expect(vu).toEqual(['fin'])
     })
@@ -423,6 +471,44 @@ describe('siLaVisiteAboutit, avec le vrai client d’Inertia', () => {
         await vi.waitUntil(() => vu.filter((rappel) => rappel === 'fin').length === 2)
 
         expect(vu.filter((rappel) => rappel === 'aboutie')).toEqual(['aboutie'])
+    })
+
+    /*
+     * La relance interrompt la première visite, qui finit avec `interrupted`
+     * avant que la seconde réponde : ce n'est pas un échec, et la seconde,
+     * renvoyée vers un chargement complet, aboutit.
+     */
+    it('aboutit une fois quand la visite relancée par un 409 `X-Inertia-Redirect` recharge toute la page', async () => {
+        const vu = envoyer()
+        await uneTache()
+
+        requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-redirect': '/liste#fin' } })
+        await vi.waitUntil(() => requetes.length === 2)
+
+        const adresse = new URL('/', window.location.href).href
+        const chargements = await chargementsCompletsPendant(async () => {
+            requetes[1].repondre({ statut: 409, entetes: { 'x-inertia-location': adresse, 'x-inertia-version': 'v2' } })
+            await vi.waitUntil(() => vu.filter((rappel) => rappel === 'fin').length === 2)
+        })
+
+        expect(chargements).toEqual([adresse])
+        expect(vu).toEqual(['fin', 'aboutie', 'fin'])
+    })
+
+    it('n’aboutit pas quand une autre visite interrompt la visite relancée par un 409 `X-Inertia-Redirect`', async () => {
+        const vu = envoyer()
+        await uneTache()
+
+        requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-redirect': '/liste#fin' } })
+        await vi.waitUntil(() => requetes.length === 2)
+        await renvoyerUnRechargementEnArrierePlan()
+
+        routeur.visit('/ailleurs')
+        await vi.waitUntil(() => vu.filter((rappel) => rappel === 'fin').length === 2)
+        routeur.cancelAll()
+        await uneTache()
+
+        expect(vu).toEqual(['fin', 'fin'])
     })
 
     it('aboutit sur `onSuccess` quand un faux routeur l’appelle seul, et une seule fois', () => {

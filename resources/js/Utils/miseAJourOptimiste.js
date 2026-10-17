@@ -44,7 +44,10 @@
  * Une enveloppe par visite : elle compte les visites qu'elle a vues partir et
  * finir. Une réponse 409 `X-Inertia-Redirect` relance la visite avec les mêmes
  * rappels, et la seconde part avant que la première finisse : le compte
- * attend la fin de la seconde.
+ * attend la fin de la seconde. Au premier plan, la seconde interrompt la
+ * première, dont le `onFinish` arrive avec `interrupted` pendant que la
+ * seconde est en vol : cette interruption-là n'est pas un échec, et c'est
+ * l'issue de la seconde qui compte.
  *
  * Inertia appelle `onBefore`, puis émet `inertia:before` sur le document ; un
  * écouteur qui l'annule arrête la visite sans autre rappel. L'enveloppe
@@ -166,7 +169,10 @@ const suivreLIssueDeLaVisite = ({ aboutir = () => {}, revenir = () => {} }, opti
         onHttpException: noterLEchec('onHttpException'),
         onNetworkError: noterLEchec('onNetworkError'),
         onFinish: (visite) => {
-            if (visite?.cancelled || visite?.interrupted) {
+            // Une autre visite de l'enveloppe en vol : la relance qui l'a interrompue.
+            const interrompueParSaRelance = visite?.interrupted && enVol > 1
+
+            if (visite?.cancelled || (visite?.interrupted && !interrompueParSaRelance)) {
                 echouee = true
             }
 
