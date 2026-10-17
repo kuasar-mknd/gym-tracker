@@ -16,6 +16,16 @@ const props = defineProps({
         default: null,
     },
     /**
+     * La messagerie écrit-elle l'adresse actuelle telle quelle ? Non pour
+     * certaines adresses d'avant #2075 (`User::laMessagerieSaitEcrireSonAdresse()`) :
+     * aucun lien ne leur parvient, « Mot de passe oublié ? » compris, et
+     * l'aide à un compte relié à un fournisseur ne le promet pas.
+     */
+    laMessagerieSaitEcrireSonAdresse: {
+        type: Boolean,
+        default: true,
+    },
+    /**
      * L'adresse actuelle est-elle vérifiée ? Donné par la page
      * (`ProfileController::edit`) : `auth.user` ne le partage pas. Après un
      * changement d'adresse, la page revient avec `false`.
@@ -159,10 +169,15 @@ const submit = () => {
                     class="bg-accent-info/10 rounded-xl p-3"
                     data-testid="profile-social-password-help"
                 >
-                    <p class="text-accent-info-deep text-sm">
+                    <p v-if="props.laMessagerieSaitEcrireSonAdresse" class="text-accent-info-deep text-sm">
                         Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de
                         passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de
                         connexion. Le lien part à ton adresse actuelle, {{ user.email }}.
+                    </p>
+                    <p v-else class="text-accent-info-deep text-sm">
+                        Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de
+                        passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse
+                        actuelle, {{ user.email }}. Demande à un administrateur de l’application de la changer.
                     </p>
                 </div>
             </template>

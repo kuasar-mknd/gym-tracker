@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -676,6 +677,58 @@ it('laisse un compte relié à un fournisseur, dont l’adresse est antérieure 
         ->and($compte->email)->toBe($adresse)
         ->and(adresseMessagerieDestinataires())->toBe([]);
 })->with('adresses d’un compte antérieur à la règle');
+
+/*
+ * Changer d'adresse demande le mot de passe, qu'un compte relié à un
+ * fournisseur peut n'avoir jamais choisi : le profil l'envoyait à « Mot de
+ * passe oublié ? », dont le lien part à l'adresse actuelle. Il ne part pas à
+ * une adresse que la messagerie n'écrit pas telle quelle (route vide), et
+ * « mot de passe oublié » refuse même, par la règle `email`, des points
+ * consécutifs ou un point final. Le message et la page ne le promettent plus,
+ * et renvoient à un administrateur, qui change l'adresse au panneau.
+ */
+it('ne promet pas le lien « mot de passe oublié » à un compte relié à un fournisseur dont la messagerie n’écrit pas l’adresse', function (string $adresse): void {
+    $compte = User::factory()->create(['email' => $adresse]);
+    $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
+    $chemin = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
+
+    actingAs($compte)
+        ->patch(route('profile.update'), ['name' => $compte->name, 'email' => 'camille.martin@example.org'])
+        ->assertSessionHasErrors(['current_password' => $chemin]);
+
+    actingAs($compte)
+        ->patch(route('profile.update'), ['name' => $compte->name, 'email' => 'camille.martin@example.org', 'current_password' => 'devine'])
+        ->assertSessionHasErrors(['current_password' => 'Ce mot de passe ne correspond pas à ton compte. '.$chemin]);
+
+    actingAs($compte)->get(route('profile.edit'))->assertInertia(
+        fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('fournisseurDeConnexion', 'Google')
+            ->where('laMessagerieSaitEcrireSonAdresse', false),
+    );
+
+    expect($compte->refresh()->email)->toBe($adresse)
+        ->and(adresseMessagerieDestinataires())->toBe([]);
+})->with([
+    ...$admisesParLaRegleEmailRefuseesParMime,
+    ...$refuseesParLaRegleEmailCommeParMime,
+]);
+
+/*
+ * Une adresse d'avant la règle que la messagerie écrit reçoit le lien
+ * « mot de passe oublié » : le profil le promet toujours.
+ */
+it('promet toujours le lien « mot de passe oublié » à un compte relié à un fournisseur dont la messagerie écrit l’adresse antérieure à la règle', function (string $adresse): void {
+    $compte = User::factory()->create(['email' => $adresse]);
+    $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
+
+    actingAs($compte)
+        ->patch(route('profile.update'), ['name' => $compte->name, 'email' => 'camille.martin@example.org'])
+        ->assertSessionHasErrors(['current_password' => 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.']);
+
+    actingAs($compte)->get(route('profile.edit'))->assertInertia(
+        fn (AssertableInertia $page): AssertableInertia => $page->where('laMessagerieSaitEcrireSonAdresse', true),
+    );
+})->with($refuseesParLaRegleEmailEcritesParMime);
 
 it('laisse le panneau enregistrer le nom d’un compte dont l’adresse est antérieure à la règle, par la page comme par la table', function (string $adresse): void {
     actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('User')), 'admin');

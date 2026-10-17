@@ -92,7 +92,8 @@ class ProfileUpdateRequest extends FormRequest
      * Un compte relié à un fournisseur de connexion peut ne connaître aucun
      * mot de passe : le message lui donne le chemin plutôt qu'un refus sec.
      * « Mot de passe oublié ? » n'est ouvert qu'aux invités, d'où la
-     * déconnexion d'abord ; le lien part à l'adresse actuelle du compte.
+     * déconnexion d'abord ; le lien part à l'adresse actuelle du compte, quand
+     * la messagerie l'écrit (`cheminVersUnMotDePasse()`).
      *
      * @return array<string, string>
      */
@@ -108,7 +109,7 @@ class ProfileUpdateRequest extends FormRequest
             ];
         }
 
-        $chemin = "Ton compte est relié à {$fournisseur}. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.";
+        $chemin = "Ton compte est relié à {$fournisseur}. Si tu n’as jamais choisi de mot de passe, ".$this->cheminVersUnMotDePasse();
 
         return [
             'current_password.required' => $chemin,
@@ -174,6 +175,25 @@ class ProfileUpdateRequest extends FormRequest
         if ($this->changeLAdresse()) {
             RateLimiter::clear($this->throttleKey());
         }
+    }
+
+    /**
+     * Comment un compte relié à un fournisseur obtient un mot de passe.
+     *
+     * Le lien « mot de passe oublié » ne part pas à une adresse que la
+     * messagerie n'écrit pas telle quelle, qu'un compte d'avant #2075 peut
+     * porter (`User::routeNotificationForMail()`), et la demande refuse même
+     * des points consécutifs ou un point final (règle `email`) : le message ne
+     * le promet pas, et renvoie à un administrateur, qui change l'adresse au
+     * panneau.
+     */
+    private function cheminVersUnMotDePasse(): string
+    {
+        if ($this->compte()?->laMessagerieSaitEcrireSonAdresse() === false) {
+            return 'aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
+        }
+
+        return 'choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.';
     }
 
     private function compte(): ?User

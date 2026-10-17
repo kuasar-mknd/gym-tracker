@@ -35,8 +35,11 @@ class ProfileController extends Controller
             'mustVerifyEmail' => true,
             'status' => session('status'),
             // Le formulaire d'adresse explique à un compte relié à un
-            // fournisseur comment obtenir le mot de passe qu'il exige.
+            // fournisseur comment obtenir le mot de passe qu'il exige, sans
+            // promettre le lien « mot de passe oublié » à une adresse que la
+            // messagerie n'écrit pas telle quelle, qui ne le reçoit pas (#2075).
             'fournisseurDeConnexion' => $this->user()->fournisseurDeConnexion(),
+            'laMessagerieSaitEcrireSonAdresse' => $this->user()->laMessagerieSaitEcrireSonAdresse(),
             // `auth.user` ne dit pas si l'adresse est vérifiée : le formulaire
             // en tire l'annonce de l'avis à l'adresse actuelle et le bandeau
             // qui propose de renvoyer le lien de vérification.

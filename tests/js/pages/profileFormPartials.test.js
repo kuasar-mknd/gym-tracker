@@ -648,6 +648,28 @@ describe('UpdateProfileInformationForm', () => {
         expect(help(social).exists()).toBe(false)
     })
 
+    /*
+     * Le lien « mot de passe oublié » ne part pas à une adresse que la
+     * messagerie n'écrit pas telle quelle, qu'un compte d'avant #2075 peut
+     * porter : l'encadré ne le promet pas, et renvoie à un administrateur.
+     */
+    it('ne promet aucun lien à un compte relié à un fournisseur dont la messagerie n’écrit pas l’adresse', async () => {
+        signedInAs({ name: 'Camille', email: 'camille(salle)@example.org' })
+
+        const wrapper = mountPartial(UpdateProfileInformationForm, {
+            fournisseurDeConnexion: 'Google',
+            laMessagerieSaitEcrireSonAdresse: false,
+        })
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+        const aide = wrapper.find('[data-testid="profile-social-password-help"]').text()
+
+        expect(aide).toBe(
+            'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+        )
+        expect(aide).not.toContain('Mot de passe oublié')
+    })
+
     it('ne confirme l’enregistrement qu’une fois qu’il a eu lieu', async () => {
         signedInAs(sam)
 
@@ -748,5 +770,25 @@ describe('Profile/Edit', () => {
         // n'avoir aucun mot de passe, et le refus du serveur resterait la seule
         // explication.
         expect(wrapper.findComponent(UpdateProfileInformationForm).props('fournisseurDeConnexion')).toBe('GitHub')
+    })
+
+    it('dit au formulaire d’adresse si la messagerie écrit l’adresse actuelle', () => {
+        const mountEdit = (props) =>
+            mount(ProfileEdit, {
+                props: { mustVerifyEmail: true, fournisseurDeConnexion: 'GitHub', ...props },
+                shallow: true,
+                global: {
+                    mocks: { route: globalThis.route },
+                    stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+                },
+            })
+        const formProp = (wrapper) =>
+            wrapper.findComponent(UpdateProfileInformationForm).props('laMessagerieSaitEcrireSonAdresse')
+
+        // Sans elle, le formulaire promettait le lien « mot de passe oublié »
+        // à une adresse qui ne le reçoit pas.
+        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: false }))).toBe(false)
+        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: true }))).toBe(true)
+        expect(formProp(mountEdit({}))).toBe(true)
     })
 })
