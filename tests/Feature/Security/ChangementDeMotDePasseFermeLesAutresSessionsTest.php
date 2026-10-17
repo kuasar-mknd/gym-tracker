@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Http\Middleware\AuthentifieLaSessionDuCompte;
+use App\Http\Middleware\CleDesCopiesHorsLigne;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -173,6 +174,42 @@ it('ferme les autres sessions quand le mot de passe change depuis le profil, et 
 
     sessionsOuvrirLAccueil($cetAppareil)->assertOk();
     sessionsSupprimerUneSerieParLApi($cetAppareil, $utilisateur)->assertNoContent();
+});
+
+/**
+ * Une session fermée par le changement du mot de passe est refusée avant que
+ * l'API ne cherche la série : le même 401, au corps près, pour une série qui
+ * n'existe pas et pour celle d'un autre compte. Sans quoi la réponse dirait
+ * laquelle existe : l'oracle que #1418 et #1432 ont fermé. Le `AuthenticateSession` de Sanctum, posé
+ * dans le groupe `api` depuis #2048, est classé juste après `auth:sanctum`
+ * (bootstrap/app.php), devant le débit, `VerifieLeCompteDeLEcriture` et la
+ * liaison de modèle. Le refus efface aussi le témoin des copies hors ligne.
+ *
+ * Deux appareils, parce que le premier refus vide sa session : la seconde
+ * requête du même appareil serait celle d'un invité.
+ */
+it('refuse la session fermée avant de chercher la série : même 401 pour une série inconnue et pour celle d’un autre compte', function (): void {
+    $utilisateur = User::factory()->create();
+    $unAutreCompte = User::factory()->create();
+    $seanceDeLAutre = Workout::factory()->create(['user_id' => $unAutreCompte->id, 'ended_at' => null]);
+    $serieDeLAutre = Set::factory()->create([
+        'workout_line_id' => WorkoutLine::factory()->create(['workout_id' => $seanceDeLAutre->id])->id,
+    ]);
+    $seanceDuCompte = Workout::factory()->create(['user_id' => $utilisateur->id, 'ended_at' => null]);
+    $premier = sessionsAppareilConnecte($utilisateur);
+    $second = sessionsAppareilConnecte($utilisateur);
+
+    sessionsChangerLeMotDePasseDepuis(sessionsAppareilConnecte($utilisateur));
+
+    $entetes = ['Accept' => 'application/json', 'Referer' => url('/workouts/'.$seanceDuCompte->id)];
+    $inconnue = $premier->envoyer('DELETE', route('api.v1.sets.destroy', ['set' => $serieDeLAutre->id + 1000], absolute: false), [], $entetes);
+    $dUnAutreCompte = $second->envoyer('DELETE', route('api.v1.sets.destroy', ['set' => $serieDeLAutre->id], absolute: false), [], $entetes);
+
+    $inconnue->assertUnauthorized()->assertCookieExpired(CleDesCopiesHorsLigne::TEMOIN);
+    $dUnAutreCompte->assertUnauthorized()->assertCookieExpired(CleDesCopiesHorsLigne::TEMOIN);
+
+    expect($inconnue->getContent())->toBe($dUnAutreCompte->getContent())
+        ->and(Set::query()->whereKey($serieDeLAutre->id)->exists())->toBeTrue();
 });
 
 /**

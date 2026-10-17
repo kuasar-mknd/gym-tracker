@@ -260,11 +260,17 @@ const getProgressPercent = (habit) => {
                                 </div>
                             </div>
 
-                            <!-- Actions (Absolute) -->
-                            <!-- Visible by default, hover-revealed only from sm: up. A plain
-                                 opacity-0 hides these on touch, where there is no hover at all. -->
+                            <!--
+                                Sous une souris, les actions n'apparaissent qu'au survol ou au
+                                focus. Elles ne se posent en haut à droite de la cellule que
+                                dans la colonne de 200 px (`sm:souris:`) ; sous 640 px, elles
+                                restent sous le nom, qu'elles couvraient au survol. Sans souris
+                                (une tablette, un téléphone), elles restent visibles, sous le
+                                nom à toute largeur : posées sur lui à demeure, elles le
+                                couvriraient (#2082).
+                            -->
                             <div
-                                class="mt-2 flex gap-1 opacity-100 transition sm:absolute sm:top-2 sm:right-2 sm:mt-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+                                class="sm:souris:absolute sm:souris:top-2 sm:souris:right-2 sm:souris:mt-0 souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 mt-2 flex gap-1 transition"
                             >
                                 <GlassIconButton icon="edit" label="Modifier l'habitude" @click="editHabit(habit)" />
                                 <GlassIconButton

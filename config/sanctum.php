@@ -76,7 +76,13 @@ return [
     */
 
     'middleware' => [
-        'authenticate_session' => Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+        /*
+         * Pas dans la pile que Sanctum ouvre autour du groupe `api` : le
+         * `AuthenticateSession` de Sanctum est posé dans ce groupe, juste
+         * après `auth:sanctum`, pour que son 401 traverse le témoin des
+         * copies hors ligne (bootstrap/app.php, #2048).
+         */
+        'authenticate_session' => null,
         'encrypt_cookies' => Illuminate\Cookie\Middleware\EncryptCookies::class,
         'validate_csrf_token' => Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
     ],
