@@ -55,7 +55,11 @@ const aDesRangeesProvisoires = (seance) =>
  * ordre n'est en vol (`ordreEnVol`), et aucune valeur n'attend son envoi ou
  * sa réponse (`valeursDeRepli`). L'instantané est alors ce que le serveur
  * connaît (`seanceConnueDuServeur`). Une valeur qu'il pourrait refuser n'y
- * entre jamais ; ce qui attend en file revient par la file.
+ * entre jamais ; ce qui attend en file revient par la file. Sur la vraie
+ * page, un ordre en vol et une rangée provisoire vont avec une écriture que
+ * le service compte aussi (en vol, ou en file) : ces deux conditions, que
+ * l'issue impose, gardent l'instantané si un jour elles s'en séparent, et
+ * `useCopieDeLaSeance.test.js` les vérifie chacune seule.
  *
  * **Quand.** Une seconde après le dernier changement (anti-rebond), et
  * aussitôt quand la page se cache (`visibilitychange` vers `hidden`) ou part

@@ -355,6 +355,45 @@ describe('une réponse partielle', () => {
     })
 })
 
+describe('une réponse qu’Inertia n’a pas posée', () => {
+    /*
+     * Une réponse asynchrone revenue quand la page a changé de composant,
+     * Inertia ne la pose pas (`shouldSetPage`) et émet pourtant `success`,
+     * avec la page courante : rien de ce `success` n'est une réponse.
+     */
+    it('des props différées revenues après une visite côté client ne s’écrivent nulle part, sans lever', async () => {
+        const erreurs = []
+        const surUneErreur = (evenement) => erreurs.push(evenement.error ?? evenement.message)
+        const succes = []
+
+        window.addEventListener('error', surUneErreur)
+        reseau.mode = 'muet'
+        routeur.visit('/dashboard')
+        await vi.waitUntil(() => requetes.length === 1)
+        requetes[0].repondre(reponseInertia(pageDe({ deferredProps: { default: ['graphique'] } })))
+        await vi.waitUntil(() => requetes.length === 2)
+        await ecriture.ecrituresFinies()
+
+        // La page quitte l'accueil par une visite côté client, avant la réponse des props différées.
+        await new Promise((fini) =>
+            routeur.push({ ...pageDe({ component: 'Workouts/Index', url: '/workouts' }), onFinish: fini }),
+        )
+        const arreter = routeur.on('success', (evenement) => succes.push(evenement.detail.page.component))
+        requetes[1].repondre(reponsePartielle({ graphique: [1, 2] }))
+        await vi.waitUntil(() => succes.length === 1)
+        arreter()
+        await uneTache()
+        await ecriture.ecrituresFinies()
+        window.removeEventListener('error', surUneErreur)
+
+        expect(succes).toEqual(['Workouts/Index'])
+        expect([...copiesRangees().keys()]).toEqual(['/dashboard'])
+        expect((await magasin.lireUneCopie('/dashboard')).page.props).not.toHaveProperty('graphique')
+        expect(erreurs).toEqual([])
+        expect(relais.rejets).toEqual([])
+    })
+})
+
 describe('l’écriture au repos', () => {
     it('sans requestIdleCallback (Safari, Safari iOS), écrit quand même, sans ReferenceError', async () => {
         expect('requestIdleCallback' in globalThis).toBe(false)

@@ -43,9 +43,9 @@ let ecriture
 /**
  * Monte la séance avec le composable, et rend sa copie locale.
  *
- * @param {{ page?: object, depart?: object, origine?: string }} [options]
+ * @param {{ page?: object, depart?: object, origine?: string, ordreEnVol?: import('vue').Ref<number> }} [options]
  */
-const monter = ({ page = pageDeLaSeance(), depart = seance(), origine = 'reseau' } = {}) => {
+const monter = ({ page = pageDeLaSeance(), depart = seance(), origine = 'reseau', ordreEnVol = ref(0) } = {}) => {
     const localWorkout = ref(JSON.parse(JSON.stringify(depart)))
 
     ecriture.origineDeLaPage.mockReturnValue(origine)
@@ -60,7 +60,7 @@ const monter = ({ page = pageDeLaSeance(), depart = seance(), origine = 'reseau'
                         page,
                         valeursDeRepli: () => [],
                         unsyncedSetIds: ref(new Set()),
-                        ordreEnVol: ref(0),
+                        ordreEnVol,
                         ecriture,
                     })
 
@@ -168,6 +168,49 @@ describe('la copie de la séance, seule', () => {
         window.dispatchEvent(new Event('pagehide'))
 
         expect(ecriture.completer).toHaveBeenCalledTimes(1)
+    })
+
+    /*
+     * Sur la vraie page, un ordre en vol et une rangée provisoire vont avec
+     * une écriture en vol ou en file, que le service compte aussi ; ici, le
+     * service ne compte rien, et chaque condition se vérifie seule.
+     */
+    it('n’en prend aucun tant qu’un ordre des exercices vole, même quand rien d’autre n’attend', async () => {
+        const ordreEnVol = ref(1)
+        const locale = monter({ ordreEnVol })
+
+        locale.value.workout_lines[0].sets[0].weight = 85
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+        window.dispatchEvent(new Event('pagehide'))
+
+        expect(ecriture.completer).not.toHaveBeenCalled()
+
+        ordreEnVol.value = 0
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS)
+
+        expect(ecriture.completer).toHaveBeenCalledTimes(1)
+    })
+
+    it('n’en prend aucun tant qu’une rangée attend l’identifiant du serveur, même quand rien d’autre n’attend', async () => {
+        const locale = monter()
+
+        locale.value.workout_lines[0].sets.push({ id: 'temp-4', weight: 90, is_completed: false })
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+        window.dispatchEvent(new Event('pagehide'))
+
+        expect(ecriture.completer).not.toHaveBeenCalled()
+
+        locale.value.workout_lines.push({ id: 'temp-2', sets: [] })
+        locale.value.workout_lines[0].sets[1].id = 4
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+
+        expect(ecriture.completer).not.toHaveBeenCalled()
+
+        locale.value.workout_lines[1].id = 2
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS)
+
+        expect(ecriture.completer).toHaveBeenCalledTimes(1)
+        expect(ecriture.completer.mock.calls[0][0].props.workout.workout_lines.map((ligne) => ligne.id)).toEqual([1, 2])
     })
 
     it('ne reverse pas une séance qui n’a pas changé', async () => {
