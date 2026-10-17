@@ -8,6 +8,7 @@ import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import SyncService from '@/Utils/SyncService'
+import { oublierLesCopies } from '@/Utils/copiesHorsLigne'
 import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 import { SUPPRESSION_DU_COMPTE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
@@ -45,16 +46,25 @@ const confirmUserDeletion = () => {
  * page (409 `X-Inertia-Location`, la version des actifs ayant changé depuis
  * l'ouverture de la page) arrive sans `onSuccess`, le compte pourtant
  * supprimé : l'effacement part aussi (`siLaVisiteAboutit`, #2077).
+ *
+ * Les copies hors ligne des pages, elles, s'oublient AVANT l'envoi (#2048,
+ * décision 6 du propriétaire) : une réponse perdue ne laisse rien de lisible
+ * sur l'appareil. Sans fermer la clé du témoin : un mot de passe refusé ne
+ * coûte que des copies, que les pages suivantes de la session refont. Une
+ * suppression acceptée la ferme ensuite, avec un second oubli : une réponse
+ * en vol d'un autre onglet, partie avant elle, n'a rien rouvert.
  */
 const deleteUser = () => {
     const compteSupprime = SyncService.compte
     suppressionSansReseau.value = false
 
+    oublierLesCopies({ fermerLEtat: false })
     form.delete(
         route('profile.destroy'),
         siLaVisiteAboutit(
             () => {
                 closeModal()
+                oublierLesCopies({ fermerLeTemoin: true })
                 detacherLAppareil({ prevenirLeServeur: false })
                 SyncService.oublierLeCompte(compteSupprime)
                 effacerLesBrouillons()

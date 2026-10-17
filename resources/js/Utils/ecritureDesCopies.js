@@ -39,6 +39,13 @@ import { cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
  * arrivent souvent avant que sa copie soit écrite, et doivent la trouver.
  * Une purge survenue entre-temps la refuse.
  *
+ * **Les purges** qui ne passent pas par un geste : la fin de la session que
+ * la file hors ligne constate (`sync:auth-required`, sur un 401 ou un 419
+ * du rejeu), la clé du témoin fermée avec elle ; et l'hygiène du magasin à
+ * chaque chargement (sept jours, un autre contrat). La déconnexion, la
+ * suppression du compte et le changement de titulaire ont les leurs
+ * (`useDeconnexion`, `DeleteUserForm`, la garde de `historiqueDuCompte`).
+ *
  * Rien n'est gardé d'un compte à l'autre dans ce module : il ne retient que
  * la forme des visites en vol et la dernière page reçue, celle qu'Inertia
  * tient aussi, jamais la charge d'une visite.
@@ -289,6 +296,11 @@ export const installerLEcritureDesCopies = ({
         garder(page)
     }
 
+    /** La file hors ligne voit la porte fermée (401, 419) : la session est finie. */
+    const surLaFinDeLaSession = () => {
+        magasin.oublierLesCopies({ fermerLeTemoin: true })
+    }
+
     const arrets = [
         routeur.on('before', surUneVisite),
         routeur.on('beforeUpdate', avantLaMiseAJour),
@@ -296,6 +308,11 @@ export const installerLEcritureDesCopies = ({
         routeur.on('clientVisit', suivreLaPage),
         routeur.on('success', surUneReponse),
     ]
+
+    fenetre.addEventListener('sync:auth-required', surLaFinDeLaSession)
+
+    // L'hygiène d'abord : une copie de plus de sept jours, ou d'un autre contrat, ne sert plus.
+    decider(() => magasin.entretenir())
 
     if (pageInitiale !== null && pageInitiale !== undefined && documentVenuDuReseau(fenetre)) {
         garder(pageInitiale)
@@ -305,6 +322,7 @@ export const installerLEcritureDesCopies = ({
         desinstaller: () => {
             branchee = false
             arrets.forEach((arreter) => (typeof arreter === 'function' ? arreter() : undefined))
+            fenetre.removeEventListener('sync:auth-required', surLaFinDeLaSession)
         },
         ecrituresFinies: async () => {
             let attendue

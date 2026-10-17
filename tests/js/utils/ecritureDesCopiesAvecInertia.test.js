@@ -17,6 +17,7 @@ import {
 } from '@/Utils/copiesHorsLigne'
 import { installerLEcritureDesCopies } from '@/Utils/ecritureDesCopies'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL, installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
+import { chargerSyncService, horodatageRecent, retirerLesEcouteursDuService } from './fileHorsLigne'
 
 /*
  * La page écrit la copie des pages gardées qu'elle reçoit du réseau (#2048,
@@ -80,6 +81,9 @@ const pageDe = ({
 /** La table des routes que `@routes` déclare dans le document. */
 const ZIGGY = { url: 'http://localhost', port: null, defaults: {}, routes: { dashboard: { uri: 'dashboard' } } }
 
+/** L'heure du magasin, que l'hygiène des sept jours fait avancer. */
+let maintenant = Date.parse('2026-10-12T18:04:00Z')
+
 let routeur
 let fabrique
 let magasin
@@ -138,13 +142,20 @@ beforeAll(async () => {
     window.history.replaceState(null, '', '/dashboard')
 
     fabrique = creerUneFabriqueEnMemoire()
-    magasin = creerLeMagasinDesCopies({ ouvrirLaBase: () => ouvrirLaBaseDuNavigateur(fabrique) })
+    magasin = creerLeMagasinDesCopies({
+        ouvrirLaBase: () => ouvrirLaBaseDuNavigateur(fabrique),
+        horloge: () => maintenant,
+    })
 
     const inertia = await import('@inertiajs/vue3')
     routeur = inertia.router
 
     // Comme main.js : la garde de l'historique, puis l'écriture des copies, avant le démarrage d'Inertia.
-    installerLaGardeDeLHistorique({ routeur, pageInitiale: null })
+    installerLaGardeDeLHistorique({
+        routeur,
+        pageInitiale: null,
+        surUnAutreTitulaire: () => magasin.oublierLesCopiesDUnAutreTitulaire(),
+    })
     ecriture = installerLEcritureDesCopies({ routeur, magasin, pageInitiale: null })
 
     await inertia.createInertiaApp({
@@ -180,8 +191,10 @@ afterEach(() => {
     delete globalThis.requestIdleCallback
 })
 
-afterAll(() => {
+afterAll(async () => {
     application.unmount()
+    ecriture.desinstaller()
+    await magasin.fermer()
     delete globalThis.Ziggy
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
@@ -397,6 +410,154 @@ describe('l’écriture au repos', () => {
 })
 
 /*
+ * Les purges que l'écriture branche (#2048, « Vie privée ») : un autre
+ * titulaire de l'appareil, la fin de la session que la file constate,
+ * l'hygiène du chargement, et la barrière qu'une purge pose devant une copie
+ * décidée avant elle. La déconnexion et la suppression du compte ont leur
+ * fichier, avec le vrai layout.
+ */
+describe('les purges', () => {
+    it('un autre onglet qui reçoit la page d’un autre compte fait oublier les copies de celui-ci', async () => {
+        await recevoir(pageDe())
+        const empreinte = etatRange().empreinte
+
+        // L'autre onglet : sa propre garde, son propre sessionStorage, le même localStorage.
+        const sonOnglet = new Map()
+        const relais = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (clef, valeur) {
+            relais.mockRestore()
+            this.setItem(clef, valeur)
+            window.dispatchEvent(new StorageEvent('storage', { key: clef, newValue: valeur, storageArea: this }))
+        })
+        installerLaGardeDeLHistorique({
+            routeur: { on: () => {}, clearHistory: () => {} },
+            fenetre: {
+                localStorage,
+                sessionStorage: {
+                    getItem: (clef) => sonOnglet.get(clef) ?? null,
+                    setItem: (clef, valeur) => sonOnglet.set(clef, valeur),
+                },
+                document: { documentElement: { style: {} } },
+                addEventListener: () => {},
+            },
+            pageInitiale: pageDe({ compte: 8 }),
+        })
+        await vi.waitUntil(() => etatRange().ouvert === false)
+
+        expect(localStorage.getItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL)).toBe('compte:8')
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange().empreintesFermees).toEqual([empreinte])
+    })
+
+    /**
+     * Rejoue un chargement de la file hors ligne avec une écriture en
+     * attente, et un serveur qui répond 401 à son rejeu : la session est
+     * finie. Rend la file, et ce qu'elle a annoncé.
+     */
+    const rejouerSousUneSessionFinie = async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                {
+                    method: 'patch',
+                    url: '/api/v1/sets/1',
+                    data: { weight: 100 },
+                    id: 'en-file-1',
+                    timestamp: horodatageRecent(),
+                    compte: String(COMPTE),
+                },
+            ]),
+        )
+        vi.stubGlobal('fetch', () =>
+            Promise.resolve(
+                new Response('{"message":"Unauthenticated."}', {
+                    status: 401,
+                    headers: { 'content-type': 'application/json' },
+                }),
+            ),
+        )
+        const annonces = []
+        const ecouter = (evenement) => annonces.push(evenement.detail)
+        window.addEventListener('sync:auth-required', ecouter)
+
+        try {
+            const file = await chargerSyncService({ compte: COMPTE })
+            await file.pending
+            await vi.waitUntil(() => etatRange()?.ouvert === false)
+
+            return { file, annonces }
+        } finally {
+            window.removeEventListener('sync:auth-required', ecouter)
+            retirerLesEcouteursDuService()
+        }
+    }
+
+    it('la fin de la session que la file hors ligne constate (401 du rejeu) les fait oublier', async () => {
+        await recevoir(pageDe())
+        const empreinte = etatRange().empreinte
+
+        const { file, annonces } = await rejouerSousUneSessionFinie()
+
+        expect(annonces).toEqual([expect.objectContaining({ status: 401, pending: 1 })])
+        // La file, elle, reste au compte pour son retour (#1964).
+        expect(file.enAttente()).toBe(1)
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange().empreintesFermees).toEqual([empreinte])
+    })
+
+    it('et ferme la clé du témoin, même quand aucune copie n’avait encore été écrite', async () => {
+        localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, `compte:${COMPTE}`)
+
+        await rejouerSousUneSessionFinie()
+
+        // Une réponse en vol qui reposerait la clé de la session finie ne rouvre rien.
+        expect(etatRange().empreintesFermees).toHaveLength(1)
+        expect(await magasin.ecrireUneCopie(pageDe())).toBe('cle-fermee')
+    })
+
+    it('l’hygiène du chargement efface une copie de plus de sept jours', async () => {
+        await recevoir(pageDe())
+        maintenant += 7 * 24 * 60 * 60 * 1000 + 1
+
+        const autreChargement = installerLEcritureDesCopies({ routeur, magasin, pageInitiale: null })
+        await autreChargement.ecrituresFinies()
+        autreChargement.desinstaller()
+
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toMatchObject({ ouvert: true, compte: String(COMPTE) })
+    })
+
+    /*
+     * La suppression du compte oublie les copies sans fermer la clé : une
+     * copie décidée avant elle, pas encore écrite, rouvrirait le magasin
+     * pour le compte qui part si elle prenait sa génération en s'écrivant.
+     */
+    it('une copie décidée avant une purge ne s’écrit pas après, même sous la même clé', async () => {
+        const auRepos = []
+        globalThis.requestIdleCallback = (rappel) => {
+            auRepos.push(rappel)
+        }
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDe())
+
+        let finie = false
+        routeur.visit('/dashboard', { onFinish: () => (finie = true) })
+        await vi.waitUntil(() => finie)
+        await magasin.oublierLesCopies({ fermerLEtat: false })
+        auRepos.forEach((rappel) => rappel())
+        await ecriture.ecrituresFinies()
+
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toMatchObject({ ouvert: false, empreintesFermees: [] })
+
+        // La page suivante de la session, elle, garde de nouveau.
+        delete globalThis.requestIdleCallback
+        await recevoir(pageDe())
+
+        expect(copiesRangees().has('/dashboard')).toBe(true)
+    })
+})
+
+/*
  * La page initiale d'un document qui ne vient pas du réseau : la coquille
  * hors ligne (partie F) la tire d'une copie, et une copie montrée porte sa
  * marque (`props.horsLigne`, partie E). La réécrire la daterait d'aujourd'hui.
@@ -455,11 +616,19 @@ describe('la page initiale d’un document qui ne vient pas du réseau', () => {
 })
 
 describe('le branchement', () => {
-    it('est posé par main.js après la garde de l’historique, avant le montage de l’application', () => {
-        const main = readFileSync(resolve(jsRoot, 'main.js'), 'utf-8')
-        const pose = main.indexOf('installerLEcritureDesCopies({ routeur: router })')
+    const main = () => readFileSync(resolve(jsRoot, 'main.js'), 'utf-8')
 
-        expect(pose).toBeGreaterThan(main.indexOf('installerLaGardeDeLHistorique('))
-        expect(pose).toBeLessThan(main.indexOf('createInertiaApp({'))
+    it('est posé par main.js après la garde de l’historique, avant le montage de l’application', () => {
+        const pose = main().indexOf('installerLEcritureDesCopies({ routeur: router })')
+
+        expect(pose).toBeGreaterThan(main().indexOf('installerLaGardeDeLHistorique('))
+        expect(pose).toBeLessThan(main().indexOf('createInertiaApp({'))
+    })
+
+    it('fait oublier par la garde de l’historique les copies d’un autre titulaire, celles du magasin de la page', () => {
+        expect(main()).toContain(
+            'installerLaGardeDeLHistorique({ routeur: router, surUnAutreTitulaire: oublierLesCopiesDUnAutreTitulaire })',
+        )
+        expect(main()).toContain("import { oublierLesCopiesDUnAutreTitulaire } from '@/Utils/copiesHorsLigne'")
     })
 })

@@ -41,6 +41,11 @@
  *
  * Le module s'installe avant `createInertiaApp`, qui lit l'historique dès son
  * démarrage, et ses écouteurs passent avant ceux d'Inertia.
+ *
+ * Il prévient aussi qui le demande quand le titulaire de l'appareil change
+ * (`surUnAutreTitulaire`), dans l'onglet qui reçoit la page d'un autre
+ * titulaire comme dans les autres, à l'évènement `storage` : les copies hors
+ * ligne d'un compte s'oublient alors (#2048, `copiesHorsLigne.js`).
  */
 
 /** La clé où Inertia range celle de l'historique (`historySessionStorageKeys`). */
@@ -185,16 +190,34 @@ const laCleEstEncoreLa = (stockage) => {
  *   },
  *   fenetre?: Window,
  *   pageInitiale?: object | null,
- * }} options
+ *   surUnAutreTitulaire?: (titulaire: string | null) => unknown,
+ * }} options `surUnAutreTitulaire` reçoit le nouveau titulaire de
+ *   l'appareil, déjà écrit : une page d'un autre titulaire reçue par cet
+ *   onglet (page initiale ou `beforeUpdate`), ou par un autre (`storage`).
  */
 export const installerLaGardeDeLHistorique = ({
     routeur,
     fenetre = window,
     pageInitiale = pageInitialeDuDocument(fenetre.document),
+    surUnAutreTitulaire = () => {},
 }) => {
     const onglet = stockageDe(fenetre, 'sessionStorage')
     const appareil = stockageDe(fenetre, 'localStorage')
     let pageChiffree = pageInitiale?.encryptHistory === true
+
+    /**
+     * Prévient du changement de titulaire, sans que rien de ce qui suit
+     * puisse retenir la garde.
+     *
+     * @param {string | null} titulaire
+     */
+    const prevenir = (titulaire) => {
+        try {
+            Promise.resolve(surUnAutreTitulaire(titulaire)).catch(() => {})
+        } catch {
+            // Celui qu'on prévient a échoué : la garde, elle, a fait son travail.
+        }
+    }
 
     const jeterLaCle = () => {
         try {
@@ -219,6 +242,7 @@ export const installerLaGardeDeLHistorique = ({
 
         if (lire(appareil, CLEF_DU_TITULAIRE_DE_L_APPAREIL) !== titulaire) {
             ecrire(appareil, CLEF_DU_TITULAIRE_DE_L_APPAREIL, titulaire)
+            prevenir(titulaire)
         }
     }
 
@@ -244,6 +268,7 @@ export const installerLaGardeDeLHistorique = ({
     fenetre.addEventListener('storage', (evenement) => {
         if (evenement.key === CLEF_DU_TITULAIRE_DE_L_APPAREIL) {
             suivreLAppareil()
+            prevenir(evenement.newValue)
         }
     })
 

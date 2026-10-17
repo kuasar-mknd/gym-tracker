@@ -894,6 +894,130 @@ describe('le contrat', () => {
     })
 })
 
+describe('l’hygiène du chargement', () => {
+    it('efface les copies de plus de sept jours, et garde celles de sept jours tout juste', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+        instant += 1
+        await onglet.ecrireUneCopie(pageDe({ url: '/tools', component: 'Tools/Index' }))
+
+        instant += 7 * 24 * 60 * 60 * 1000
+
+        expect(await onglet.entretenir()).toBe(1)
+        expect(cheminsRanges()).toEqual(['/tools'])
+        expect(etatRange()).toMatchObject({ ouvert: true, compte: '7' })
+
+        instant += 1
+
+        expect(await onglet.entretenir()).toBe(1)
+        expect(cheminsRanges()).toEqual([])
+    })
+
+    it('vide et ferme un magasin d’un autre contrat, sans fermer sa clé', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+        await onglet.ecrireUneCopie(pageDe({ url: '/tools', component: 'Tools/Index' }))
+        etatRange().contrat = VERSION_DU_CONTRAT + 1
+
+        expect(await onglet.entretenir()).toBe(2)
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toMatchObject({ ouvert: false, contrat: VERSION_DU_CONTRAT, empreintesFermees: [] })
+
+        // La session continue : la réponse complète suivante rouvre le magasin, sous ce contrat.
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('ecrite')
+    })
+
+    it('ne touche à rien de récent, ni à un magasin vide', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        expect(await onglet.entretenir()).toBe(0)
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+
+        expect(await onglet.entretenir()).toBe(0)
+        expect(cheminsRanges()).toEqual(['/dashboard'])
+    })
+})
+
+describe('le changement de titulaire de l’appareil', () => {
+    it('oublie les copies d’un autre compte que le titulaire, et ferme leur clé', async () => {
+        const onglet = ouvrirUnOnglet()
+        const prevenus = vi.fn()
+
+        onglet.surUnePurge(prevenus)
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+        const empreinte = etatRange().empreinte
+
+        // Un invité, ou un autre compte, a reçu une page dans un onglet.
+        localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, 'invite')
+
+        expect(await onglet.oublierLesCopiesDUnAutreTitulaire()).toBe(true)
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toMatchObject({ ouvert: false, compte: null, empreintesFermees: [empreinte] })
+        expect(prevenus).toHaveBeenCalledTimes(1)
+    })
+
+    it('ne touche pas au magasin du titulaire, ni à un magasin fermé', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        expect(await onglet.oublierLesCopiesDUnAutreTitulaire()).toBe(false)
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+
+        expect(await onglet.oublierLesCopiesDUnAutreTitulaire()).toBe(false)
+        expect(cheminsRanges()).toEqual(['/dashboard'])
+
+        await onglet.oublierLesCopies()
+        poserLeTitulaire(8)
+
+        expect(await onglet.oublierLesCopiesDUnAutreTitulaire()).toBe(false)
+    })
+
+    /*
+     * L'onglet qui reçoit la page du compte suivant ouvre le magasin pour
+     * lui ; un autre onglet apprend le changement après coup, par l'évènement
+     * `storage`. Fermer alors la clé de l'état fermerait celle du compte
+     * suivant, privé de copies jusqu'au terme de sa session.
+     */
+    it('appris après coup par un autre onglet, ne ferme pas la clé du compte suivant', async () => {
+        const premier = ouvrirUnOnglet()
+        const second = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await premier.ecrireUneCopie(pageDe())
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(8)
+        expect(await premier.oublierLesCopiesDUnAutreTitulaire()).toBe(true)
+        expect(await premier.ecrireUneCopie(pageDe({ compte: 8 }))).toBe('ecrite')
+
+        expect(await second.oublierLesCopiesDUnAutreTitulaire()).toBe(false)
+        expect(etatRange()).toMatchObject({ ouvert: true, compte: '8' })
+        expect((await second.lireUneCopie('/dashboard')).page.props.auth.user.id).toBe(8)
+    })
+
+    it('sans crypto.subtle, n’ouvre même pas la base', async () => {
+        const onglet = ouvrirUnOnglet({ subtle: null })
+
+        expect(await onglet.oublierLesCopiesDUnAutreTitulaire()).toBe(false)
+        expect(await onglet.entretenir()).toBe(0)
+        expect(fabrique.ouvertures()).toBe(0)
+    })
+})
+
 describe('sans les moyens du chiffrement ou de la base', () => {
     it('sans crypto.subtle, rien ne s’écrit ni ne se lit, sans erreur', async () => {
         poserLeTemoin(cleAuHasard())

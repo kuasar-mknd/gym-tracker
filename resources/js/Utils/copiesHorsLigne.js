@@ -47,6 +47,12 @@ import {
  * chiffrement se fait donc avant. Une clé fermée ne fait plus rien écrire ni
  * lire, même reposée par la réponse en vol d'un autre onglet.
  *
+ * **Les autres purges.** Un magasin ouvert pour un autre compte que le
+ * titulaire de l'appareil se vide quand ce titulaire change
+ * (`oublierLesCopiesDUnAutreTitulaire`), et l'hygiène du chargement
+ * (`entretenir`) efface les copies de plus de sept jours et un magasin d'un
+ * autre contrat.
+ *
  * **Le volume** est borné (`PLAFOND_DES_COPIES_EN_OCTETS`) : la copie la plus
  * anciennement écrite sort la première, jamais la séance en cours ; trois
  * séances closes au plus restent à côté d'elle ; une copie de plus de sept
@@ -888,6 +894,137 @@ export const creerLeMagasinDesCopies = ({
     }
 
     /**
+     * Oublie les copies quand l'appareil a changé de titulaire : un autre
+     * compte, ou un invité, a reçu une page dans un onglet
+     * (`historiqueDuCompte.js`). Dans une seule transaction, qui relit le
+     * titulaire : un magasin ouvert pour un autre compte que lui se vide, et
+     * sa clé rejoint les fermées ; un magasin déjà à lui, ou fermé, reste tel
+     * quel. Un onglet qui apprend le changement après celui qui l'a vu ne
+     * ferme donc pas la clé du compte suivant, que ce dernier vient d'ouvrir.
+     *
+     * Sans génération ni annonce : chaque écriture relit le titulaire dans sa
+     * transaction, et celles de l'ancien compte, en vol ici ou ailleurs, sont
+     * déjà refusées ; une annonce ferait refuser, dans les autres onglets,
+     * celles du compte suivant. Ce qui suit les purges ici (le préchauffage)
+     * en est prévenu.
+     *
+     * @returns {Promise<boolean>} vrai quand les copies d'un autre compte ont été oubliées
+     */
+    const oublierLesCopiesDUnAutreTitulaire = async () => {
+        if (subtle === undefined || subtle === null) {
+            return false
+        }
+
+        try {
+            const ouverte = await base()
+            const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
+            const fin = finDe(transaction)
+            const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
+            const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
+            let oubliees = false
+
+            demandeDeLEtat.onsuccess = () => {
+                /** @type {EtatDuMagasin | undefined} */
+                const etat = demandeDeLEtat.result
+
+                if (etat?.ouvert !== true || lireLeTitulaire() === `compte:${etat.compte}`) {
+                    return
+                }
+
+                oubliees = true
+                transaction.objectStore(MAGASIN_DES_PAGES).clear()
+                magasinDeLEtat.put(
+                    {
+                        ouvert: false,
+                        compte: null,
+                        empreinte: null,
+                        contrat: VERSION_DU_CONTRAT,
+                        empreintesFermees: empreintesFermees(etat.empreintesFermees ?? [], [etat.empreinte]),
+                        dernierRejeu: null,
+                    },
+                    CLE_DE_L_ETAT,
+                )
+            }
+
+            await fin
+
+            if (oubliees) {
+                prevenirDUnePurge()
+            }
+
+            return oubliees
+        } catch {
+            return false
+        }
+    }
+
+    /**
+     * L'hygiène du magasin, à chaque chargement de la page : une copie
+     * gardée il y a plus de sept jours s'efface, et un magasin ouvert sous un
+     * autre contrat se vide entier et se ferme, sans fermer sa clé (la
+     * session peut être encore vivante : une réponse complète le rouvrira
+     * sous ce contrat). Une seule transaction.
+     *
+     * @returns {Promise<number>} le nombre de copies effacées
+     */
+    const entretenir = async () => {
+        if (subtle === undefined || subtle === null) {
+            return 0
+        }
+
+        try {
+            const ouverte = await base()
+            const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
+            const fin = finDe(transaction)
+            const pages = transaction.objectStore(MAGASIN_DES_PAGES)
+            const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
+            const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
+            const demandeDesCopies = pages.getAll()
+            let effacees = 0
+
+            demandeDesCopies.onsuccess = () => {
+                /** @type {EtatDuMagasin | undefined} */
+                const etat = demandeDeLEtat.result
+                /** @type {EnregistrementDUneCopie[]} */
+                const copies = demandeDesCopies.result
+
+                if (etat !== undefined && etat.contrat !== VERSION_DU_CONTRAT) {
+                    effacees = copies.length
+                    pages.clear()
+                    magasinDeLEtat.put(
+                        {
+                            ouvert: false,
+                            compte: null,
+                            empreinte: null,
+                            contrat: VERSION_DU_CONTRAT,
+                            empreintesFermees: empreintesFermees(etat.empreintesFermees ?? [], []),
+                            dernierRejeu: null,
+                        },
+                        CLE_DE_L_ETAT,
+                    )
+
+                    return
+                }
+
+                const maintenant = horloge()
+
+                for (const copie of copies) {
+                    if (maintenant - copie.copieDu > AGE_MAXIMAL_D_UNE_COPIE_MS) {
+                        pages.delete(copie.chemin)
+                        effacees += 1
+                    }
+                }
+            }
+
+            await fin
+
+            return effacees
+        } catch {
+            return 0
+        }
+    }
+
+    /**
      * Déchiffre la copie d'une adresse, ou `null`.
      *
      * Elle ne se lit que si tout tient : un état ouvert sous ce contrat, la
@@ -1013,6 +1150,8 @@ export const creerLeMagasinDesCopies = ({
         completerUneCopie,
         lireUneCopie,
         oublierLesCopies,
+        oublierLesCopiesDUnAutreTitulaire,
+        entretenir,
         surUnePurge,
         generationCourante: () => generation,
         fermer,
@@ -1031,3 +1170,21 @@ export const magasinDesCopies = () => {
 
     return magasinDeLaPage
 }
+
+/**
+ * Oublie les copies du magasin de la page (voir `oublierLesCopies` du
+ * magasin) : ce qu'appellent la déconnexion, avant son envoi, et la
+ * suppression du compte (#2048, décision 6 du propriétaire).
+ *
+ * @param {{ fermerLEtat?: boolean, fermerLeTemoin?: boolean }} [options]
+ * @returns {Promise<boolean>}
+ */
+export const oublierLesCopies = (options) => magasinDesCopies().oublierLesCopies(options)
+
+/**
+ * Oublie les copies du magasin de la page quand l'appareil a changé de
+ * titulaire : ce que la garde de l'historique appelle (`main.js`).
+ *
+ * @returns {Promise<boolean>}
+ */
+export const oublierLesCopiesDUnAutreTitulaire = () => magasinDesCopies().oublierLesCopiesDUnAutreTitulaire()

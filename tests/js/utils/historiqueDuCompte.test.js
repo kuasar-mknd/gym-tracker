@@ -367,6 +367,91 @@ describe('un autre onglet a reçu la page d’un autre titulaire', () => {
     })
 })
 
+/*
+ * Les copies hors ligne d'un compte s'oublient quand l'appareil change de
+ * titulaire (#2048) : la garde prévient, une fois le nouveau titulaire écrit,
+ * quel que soit l'onglet qui a reçu la page.
+ */
+describe('le changement de titulaire de l’appareil', () => {
+    beforeEach(() => {
+        window.sessionStorage.clear()
+        window.localStorage.clear()
+    })
+
+    it('se dit à la page initiale d’un autre titulaire, puis à chaque réponse d’un autre, jamais pour le même', () => {
+        window.localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, 'compte:7')
+        const ecritAuMomentDeDire = []
+        const surUnAutreTitulaire = vi.fn(() =>
+            ecritAuMomentDeDire.push(window.localStorage.getItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL)),
+        )
+        const routeur = routeurDeTest()
+
+        installerLaGardeDeLHistorique({
+            routeur,
+            fenetre: fenetreDeTest(),
+            pageInitiale: pageServieA(8),
+            surUnAutreTitulaire,
+        })
+
+        expect(surUnAutreTitulaire.mock.calls).toEqual([['compte:8']])
+        expect(ecritAuMomentDeDire).toEqual(['compte:8'])
+
+        routeur.ecouteurs.beforeUpdate({ detail: { page: pageServieA(8) } })
+        routeur.ecouteurs.beforeUpdate({ detail: { page: { component: 'Erreur', props: {} } } })
+
+        expect(surUnAutreTitulaire).toHaveBeenCalledTimes(1)
+
+        routeur.ecouteurs.beforeUpdate({ detail: { page: pageServieA(null) } })
+
+        expect(surUnAutreTitulaire.mock.calls).toEqual([['compte:8'], [INVITE]])
+    })
+
+    it('se dit quand un autre onglet a écrit un autre titulaire, et pas pour une autre clé', () => {
+        const fenetre = fenetreDeTest()
+        const surUnAutreTitulaire = vi.fn()
+
+        installerLaGardeDeLHistorique({ routeur: routeurDeTest(), fenetre, pageInitiale: null, surUnAutreTitulaire })
+
+        fenetre.dispatchEvent(new StorageEvent('storage', { key: 'une-autre-clef', newValue: 'compte:8' }))
+        fenetre.dispatchEvent(
+            new StorageEvent('storage', { key: CLEF_DU_TITULAIRE_DE_L_APPAREIL, newValue: 'compte:8' }),
+        )
+
+        expect(surUnAutreTitulaire.mock.calls).toEqual([['compte:8']])
+    })
+
+    it('ne retient pas la garde quand celui qu’elle prévient échoue', async () => {
+        const routeur = routeurDeTest()
+        const rejets = []
+        const surLeRejet = (raison) => rejets.push(raison)
+        process.on('unhandledRejection', surLeRejet)
+
+        installerLaGardeDeLHistorique({
+            routeur,
+            fenetre: fenetreDeTest(),
+            pageInitiale: pageServieA(8),
+            surUnAutreTitulaire: () => {
+                throw new Error('boum')
+            },
+        })
+        routeur.ecouteurs.beforeUpdate({ detail: { page: pageServieA(9) } })
+
+        expect(window.localStorage.getItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL)).toBe('compte:9')
+
+        installerLaGardeDeLHistorique({
+            routeur,
+            fenetre: fenetreDeTest(),
+            pageInitiale: pageServieA(10),
+            surUnAutreTitulaire: () => Promise.reject(new Error('boum')),
+        })
+        await new Promise((resoudre) => setTimeout(resoudre, 0))
+        process.off('unhandledRejection', surLeRejet)
+
+        expect(window.localStorage.getItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL)).toBe('compte:10')
+        expect(rejets).toEqual([])
+    })
+})
+
 describe('des stockages que le navigateur refuse', () => {
     it('n’empêchent ni l’installation ni la navigation', () => {
         const refuse = () => {
