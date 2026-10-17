@@ -515,8 +515,8 @@ it('ne nomme parmi les champs toujours nuls que des champs que les pages gardée
     foreach (array_keys(contratDesPagesToujoursNuls()) as $admis) {
         [$page, $chemin] = str_contains($admis, ' › ') ? explode(' › ', $admis, 2) : [null, $admis];
         $types = $page === null
-            ? array_filter(array_map(static fn (array $forme): ?string => $forme['props'][$chemin] ?? null, $formes))
-            : array_filter([$formes[$page]['props'][$chemin] ?? null]);
+            ? array_filter(array_map(static fn (array $forme): ?string => $forme['props'][$chemin] ?? null, $formes), is_string(...))
+            : array_filter([$formes[$page]['props'][$chemin] ?? null], is_string(...));
 
         if (! in_array('null', $types, true)) {
             $inconnus[] = $admis;
