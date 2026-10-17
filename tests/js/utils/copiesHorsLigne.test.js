@@ -409,6 +409,38 @@ describe('la clé du témoin', () => {
         expect(await onglet.ecrireUneCopie(pageDe())).toBe('cle-fermee')
     })
 
+    it('relevée avant qu’une réponse l’efface, se ferme encore après, même jamais ouverte', async () => {
+        const cle = cleAuHasard()
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cle)
+        poserLeTitulaire(7)
+        await onglet.oublierLesCopies({ fermerLEtat: false })
+
+        const relevee = onglet.empreinteDuTemoin()
+
+        // Lu tout de suite : le témoin effacé ensuite ne change pas ce qui a été relevé.
+        retirerLeTemoin()
+        await onglet.oublierLesCopies({ fermerLeTemoin: true, fermerAussi: relevee })
+        poserLeTemoin(cle)
+
+        expect(await relevee).toMatch(/^[A-Za-z0-9_-]{22}$/)
+        expect(etatRange().empreintesFermees).toEqual([await relevee])
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('cle-fermee')
+    })
+
+    it('ne se relève pas sans témoin ni chiffrement, et rien ne se ferme alors en plus', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        expect(await onglet.empreinteDuTemoin()).toBeNull()
+
+        poserLeTemoin(cleAuHasard())
+        expect(await ouvrirUnOnglet({ subtle: null }).empreinteDuTemoin()).toBeNull()
+
+        await onglet.oublierLesCopies({ fermerAussi: Promise.reject(new Error('relevé impossible')) })
+        expect(etatRange()).toMatchObject({ ouvert: false, empreintesFermees: [] })
+    })
+
     it('changée pendant l’écriture, fait refuser l’écriture dans sa transaction', async () => {
         const onglet = ouvrirUnOnglet()
 
@@ -1285,11 +1317,14 @@ describe('sans les moyens du chiffrement ou de la base', () => {
                 }
             },
         )
-        const { oublierLesCopies, oublierLesCopiesDUnAutreTitulaire } = await import('@/Utils/copiesHorsLigne')
+        const { empreinteDuTemoin, oublierLesCopies, oublierLesCopiesDUnAutreTitulaire } =
+            await import('@/Utils/copiesHorsLigne')
 
         expect(() => oublierLesCopies({ fermerLeTemoin: true })).not.toThrow()
         await expect(oublierLesCopies({ fermerLeTemoin: true })).resolves.toBe(false)
         await expect(oublierLesCopiesDUnAutreTitulaire()).resolves.toBe(false)
+        expect(() => empreinteDuTemoin()).not.toThrow()
+        await expect(empreinteDuTemoin()).resolves.toBeNull()
     })
 
     it('quand le cookie ou le stockage sont refusés, rien ne s’écrit, sans erreur', async () => {

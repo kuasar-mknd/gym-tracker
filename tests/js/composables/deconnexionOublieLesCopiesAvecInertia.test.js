@@ -90,6 +90,11 @@ const suppressions = () => requetes.filter((requete) => requete.url.endsWith('/p
 const bouton = (dusk) => document.querySelector(`[dusk="${dusk}"]`)
 const question = () => document.querySelector('dialog[open]')
 const contenu = () => document.getElementById('contenu')?.textContent
+const temoinDuDocument = () =>
+    document.cookie
+        .split('; ')
+        .find((morceau) => morceau.startsWith(`${TEMOIN}=`))
+        ?.slice(TEMOIN.length + 1) ?? null
 
 /** Ce que le magasin gardait au moment où chaque déconnexion ou suppression est partie. */
 const auDepart = []
@@ -347,6 +352,32 @@ describe('supprimer le compte', () => {
         expect(copiesRangees().size).toBe(0)
         expect(etatRange().empreintesFermees).toHaveLength(1)
         expect(await magasin.ecrireUneCopie(pageGardee('/dashboard', 'Dashboard'))).toBe('cle-fermee')
+        expect(relais.rejets).toEqual([])
+    })
+
+    it('acceptée, ferme la clé lue avant l’envoi, que sa réponse a déjà effacée du témoin', async () => {
+        await allerALaSuppression()
+        await garderDesCopies()
+        const cleDeLaSession = temoinDuDocument()
+
+        await jusquALaFinDeLaVisite(async () => {
+            await supprimerLeCompte()
+            // La réponse d'une suppression acceptée efface le témoin (`CleDesCopiesHorsLigne`), avant `onSuccess`.
+            document.cookie = `${TEMOIN}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`
+            suppressions()[0].repondre(reponseInertia(pageDeConnexion()))
+        })
+
+        expect(contenu()).toBe('Connexion')
+        expect(temoinDuDocument()).toBeNull()
+        expect(copiesRangees().size).toBe(0)
+
+        // La réponse d'un autre onglet, partie avant la suppression, repose le témoin et le titulaire.
+        document.cookie = `${TEMOIN}=${cleDeLaSession}; path=/`
+        localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, `compte:${COMPTE}`)
+
+        expect(await magasin.ecrireUneCopie(pageGardee('/dashboard', 'Dashboard'))).toBe('cle-fermee')
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange().empreintesFermees).toHaveLength(1)
         expect(relais.rejets).toEqual([])
     })
 })

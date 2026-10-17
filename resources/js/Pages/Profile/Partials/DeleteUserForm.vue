@@ -8,7 +8,7 @@ import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import SyncService from '@/Utils/SyncService'
-import { oublierLesCopies } from '@/Utils/copiesHorsLigne'
+import { empreinteDuTemoin, oublierLesCopies } from '@/Utils/copiesHorsLigne'
 import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 import { SUPPRESSION_DU_COMPTE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
@@ -52,10 +52,14 @@ const confirmUserDeletion = () => {
  * sur l'appareil. Sans fermer la clé du témoin : un mot de passe refusé ne
  * coûte que des copies, que les pages suivantes de la session refont. Une
  * suppression acceptée la ferme ensuite, avec un second oubli : une réponse
- * en vol d'un autre onglet, partie avant elle, n'a rien rouvert.
+ * en vol d'un autre onglet, partie avant elle, qui reposerait le témoin, ne
+ * rouvre rien. La clé se relève avant l'envoi (`empreinteDuTemoin`) : la
+ * réponse d'une suppression acceptée a déjà effacé le témoin quand
+ * `onSuccess` arrive.
  */
 const deleteUser = () => {
     const compteSupprime = SyncService.compte
+    const cleDeLaSession = empreinteDuTemoin()
     suppressionSansReseau.value = false
 
     oublierLesCopies({ fermerLEtat: false })
@@ -64,7 +68,7 @@ const deleteUser = () => {
         siLaVisiteAboutit(
             () => {
                 closeModal()
-                oublierLesCopies({ fermerLeTemoin: true })
+                oublierLesCopies({ fermerLeTemoin: true, fermerAussi: cleDeLaSession })
                 detacherLAppareil({ prevenirLeServeur: false })
                 SyncService.oublierLeCompte(compteSupprime)
                 effacerLesBrouillons()

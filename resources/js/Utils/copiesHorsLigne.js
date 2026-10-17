@@ -865,11 +865,20 @@ export const creerLeMagasinDesCopies = ({
      * suppression du compte, un signal de fin de session), même si le magasin
      * ne lui a jamais été ouvert : une réponse en vol qui la reposerait ne
      * rouvrirait rien. Une clé fermée reste fermée tant que l'état la retient.
+     * Celle que le témoin portait avant une réponse qui l'a effacé (la
+     * suppression du compte acceptée) se ferme par `fermerAussi`, l'empreinte
+     * relevée avant l'envoi (`empreinteDuTemoin`).
      *
-     * @param {{ fermerLEtat?: boolean, fermerLeTemoin?: boolean }} [options]
+     * @param {{
+     *   fermerLEtat?: boolean,
+     *   fermerLeTemoin?: boolean,
+     *   fermerAussi?: Promise<string | null> | string | null,
+     * }} [options]
      * @returns {Promise<boolean>} vrai quand la transaction a abouti
      */
-    const oublierLesCopies = async ({ fermerLEtat = true, fermerLeTemoin = false } = {}) => {
+    const oublierLesCopies = async ({ fermerLEtat = true, fermerLeTemoin = false, fermerAussi = null } = {}) => {
+        const releveeAvant = Promise.resolve(fermerAussi).catch(() => null)
+
         generation += 1
         annoncer()
         prevenirDUnePurge()
@@ -878,6 +887,7 @@ export const creerLeMagasinDesCopies = ({
         try {
             const octets = fermerLeTemoin && subtle ? octetsDeLaCle(lireLeTemoin()) : null
             const empreinteDuTemoin = octets === null ? null : await empreinteDe(octets)
+            const empreinteRelevee = await releveeAvant
             const ouverte = await base()
             const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
             const fin = finDe(transaction)
@@ -898,6 +908,7 @@ export const creerLeMagasinDesCopies = ({
                         empreintesFermees: empreintesFermees(etat?.empreintesFermees ?? [], [
                             fermerLEtat ? (etat?.empreinte ?? null) : null,
                             empreinteDuTemoin,
+                            empreinteRelevee,
                         ]),
                         dernierRejeu: null,
                     },
@@ -911,6 +922,21 @@ export const creerLeMagasinDesCopies = ({
         } catch {
             return false
         }
+    }
+
+    /**
+     * L'empreinte de la clé que porte le témoin à cet instant, ou `null` : le
+     * cookie se lit tout de suite, l'empreinte se calcule ensuite. Ce que la
+     * suppression du compte relève avant son envoi, pour fermer cette clé une
+     * fois la suppression acceptée (`oublierLesCopies({ fermerAussi })`) :
+     * sa réponse a alors déjà effacé le témoin. Ne rejette jamais.
+     *
+     * @returns {Promise<string | null>}
+     */
+    const empreinteDuTemoin = () => {
+        const octets = subtle ? octetsDeLaCle(lireLeTemoin()) : null
+
+        return octets === null ? Promise.resolve(null) : empreinteDe(octets).catch(() => null)
     }
 
     /**
@@ -1398,6 +1424,7 @@ export const creerLeMagasinDesCopies = ({
         noterUnRejeu,
         retirerLesSeancesQuiNeSontPlusEnCours,
         oublierLesCopies,
+        empreinteDuTemoin,
         oublierLesCopiesDUnAutreTitulaire,
         entretenir,
         surUnePurge,
@@ -1426,7 +1453,11 @@ export const magasinDesCopies = () => {
  * pas même à la création du magasin : rien ici ne doit retenir une
  * déconnexion.
  *
- * @param {{ fermerLEtat?: boolean, fermerLeTemoin?: boolean }} [options]
+ * @param {{
+ *   fermerLEtat?: boolean,
+ *   fermerLeTemoin?: boolean,
+ *   fermerAussi?: Promise<string | null> | string | null,
+ * }} [options]
  * @returns {Promise<boolean>}
  */
 export const oublierLesCopies = (options) => {
@@ -1434,6 +1465,21 @@ export const oublierLesCopies = (options) => {
         return magasinDesCopies().oublierLesCopies(options)
     } catch {
         return Promise.resolve(false)
+    }
+}
+
+/**
+ * L'empreinte de la clé que porte le témoin à cet instant, relevée par le
+ * magasin de la page (voir `empreinteDuTemoin` du magasin) : ce que la
+ * suppression du compte lit avant son envoi. Ne lève ni ne rejette jamais.
+ *
+ * @returns {Promise<string | null>}
+ */
+export const empreinteDuTemoin = () => {
+    try {
+        return magasinDesCopies().empreinteDuTemoin()
+    } catch {
+        return Promise.resolve(null)
     }
 }
 
