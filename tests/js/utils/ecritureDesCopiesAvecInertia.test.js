@@ -15,7 +15,7 @@ import {
     creerLeMagasinDesCopies,
     ouvrirLaBaseDuNavigateur,
 } from '@/Utils/copiesHorsLigne'
-import { installerLEcritureDesCopies } from '@/Utils/ecritureDesCopies'
+import { installerLEcritureDesCopies, propsRecues } from '@/Utils/ecritureDesCopies'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL, installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
 import { chargerSyncService, horodatageRecent, retirerLesEcouteursDuService } from './fileHorsLigne'
 
@@ -280,6 +280,27 @@ describe('une réponse partielle', () => {
         expect(lue.page.props.recentWorkouts).toEqual(['Jambes'])
         expect(lue.page.props.auth.user.name).toBe('Camille Horsligne')
         expect(lue.datesDesProps.statistiques).toBeGreaterThanOrEqual(lue.copieDu)
+    })
+
+    it('qui écarte des props (`except`) verse toutes les autres, et garde les écartées', async () => {
+        await recevoir(pageDe({ props: { statistiques: { seances: 2 }, recentWorkouts: ['Jambes'] } }))
+
+        await recevoirEnPartie({ statistiques: { seances: 4 } }, { except: ['recentWorkouts'] })
+
+        expect(requetes.at(-1).entetes['X-Inertia-Partial-Except']).toBe('recentWorkouts')
+
+        const lue = await magasin.lireUneCopie('/dashboard')
+
+        expect(lue.page.props.statistiques).toEqual({ seances: 4 })
+        expect(lue.page.props.recentWorkouts).toEqual(['Jambes'])
+        expect(lue.page.props.auth.user.name).toBe('Camille Horsligne')
+    })
+
+    it('nomme les props reçues comme Inertia les fusionne : une prop imbriquée l’est dans sa racine', () => {
+        const page = { props: { auth: {}, errors: {}, a: {}, b: [], c: 1 } }
+
+        expect(propsRecues({ only: ['a.x', 'a.y', 'b'], except: [], reset: ['c'] }, page)).toEqual(['a', 'b', 'c'])
+        expect(propsRecues({ only: [], except: ['b', 'a.x'], reset: [] }, page)).toEqual(['auth', 'errors', 'a', 'c'])
     })
 
     it('qui rend un autre composant est une réponse complète : le serveur a tout rendu', async () => {
