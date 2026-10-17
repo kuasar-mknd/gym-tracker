@@ -64,11 +64,15 @@ use Symfony\Component\HttpFoundation\Response;
  * page, d'invité, efface le témoin.
  *
  * Exclu d'`EncryptCookies` (bootstrap/app.php) : la page lit la clé telle
- * quelle. Hors des groupes `web` et `api`, rien : le panneau a sa propre pile,
- * `/up` et `/sonde` n'en ont aucune. Horizon et Telescope, servis par `web`, le
- * reconduisent pour le compte de l'application que la session tient, comme
- * toute page, et les mises à jour de Livewire aussi : elles passent par `web`
- * avant les middlewares du panneau.
+ * quelle. Le panneau, hors des groupes, le reprend dans sa propre pile
+ * (`AdminPanelProvider`) : sa session est celle de l'application, et sa
+ * déconnexion la vide, compte de l'application et clé compris ; sa réponse
+ * efface donc le témoin. Ailleurs dans le panneau, la session tient un compte
+ * que personne n'y lit, et le témoin reste tel quel. `/up` et `/sonde` n'ont
+ * aucune pile. Horizon et Telescope, servis par `web`, le reconduisent pour le
+ * compte de l'application que la session tient, comme toute page, et les
+ * mises à jour de Livewire aussi : elles passent par `web` avant les
+ * middlewares du panneau.
  *
  * Rien d'une requête à l'autre sous Octane : ni propriété statique, ni
  * singleton ; la garde et le bocal à cookies viennent du conteneur de la

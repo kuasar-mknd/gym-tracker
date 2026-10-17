@@ -223,6 +223,9 @@ return Application::configure(basePath: dirname(__DIR__))
          * survivait à la session. Il vérifie le même compte, avant le débit,
          * les écritures d'un autre compte et la liaison de modèle, comme avant.
          *
+         * Le panneau, hors des groupes, le reprend dans sa propre pile
+         * (`AdminPanelProvider`) : sa déconnexion vide la session du compte.
+         *
          * La page lit la clé que porte le témoin : il échappe au chiffrement
          * des cookies, sous ses deux noms.
          */

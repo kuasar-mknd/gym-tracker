@@ -28,6 +28,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
 
 use function Pest\Laravel\get;
+use function Pest\Laravel\post;
 use function Pest\Laravel\withServerVariables;
 use function Pest\Laravel\withSession;
 use function Pest\Laravel\withUnencryptedCookie;
@@ -245,7 +246,7 @@ function temoinSessionDuCompteEtDuPanneau(bool $avecLeCompte = true): void
     }
 
     withSession($session);
-    withUnencryptedCookie(CleDesCopiesHorsLigne::TEMOIN, 'cle-du-compte');
+    withUnencryptedCookie(CleDesCopiesHorsLigne::nom(), 'cle-du-compte');
 }
 
 beforeEach(function (): void {
@@ -654,7 +655,8 @@ it('ne touche à aucun autre en-tête de la réponse', function (): void {
  * personne ne lise la garde `web` : la requête ne sait rien du compte de
  * l'application que la session tient, et le témoin reste tel quel. Horizon,
  * servi par `web` lui aussi, lit la garde `web`, et le reconduit comme une
- * page. Le panneau a sa propre pile, sans le témoin.
+ * page. Le panneau a sa propre pile, qui reprend le témoin : ses pages ne
+ * lisent pas non plus le compte de l'application, et le laissent tel quel.
  */
 it('laisse le témoin tel quel sous Pulse et le lecteur de journaux, qui ne lisent que l’administrateur', function (string $chemin): void {
     temoinSessionDuCompteEtDuPanneau();
@@ -668,7 +670,32 @@ it('laisse le témoin tel quel sous Pulse et le lecteur de journaux, qui ne lise
 })->with([
     'Pulse' => ['/backoffice/pulse'],
     'le lecteur de journaux' => ['/backoffice/journaux'],
-    'le panneau, hors des groupes' => ['/backoffice'],
+    'une page du panneau, hors des groupes' => ['/backoffice'],
+]);
+
+/*
+ * La session du panneau est celle de l'application : sa déconnexion la vide,
+ * compte de l'application et clé des copies compris. Sa réponse efface donc
+ * le témoin, sous l'un et l'autre de ses noms.
+ */
+it('efface le témoin à la déconnexion du panneau, qui ferme aussi la session du compte', function (bool $reglagesDeProduction): void {
+    $origine = $reglagesDeProduction ? temoinReglagesDeProduction() : '';
+    temoinSessionDuCompteEtDuPanneau();
+
+    $reponse = post($origine.'/backoffice/logout', [], ['Sec-Fetch-Site' => 'same-origin']);
+
+    $reponse->assertRedirect($origine.'/backoffice/login')
+        ->assertCookieExpired(CleDesCopiesHorsLigne::nom());
+
+    expect(session()->has(temoinGarde('web')->getName()))->toBeFalse()
+        ->and(temoinCleDeLaSession())->toBeNull();
+
+    if ($reglagesDeProduction) {
+        temoinEffaceSousSonNomDeProduction($reponse);
+    }
+})->with([
+    'gt_copies' => [false],
+    '__Host-gt_copies, sous les réglages de production' => [true],
 ]);
 
 it('efface sous Pulse le témoin d’une session qui ne tient plus de compte', function (): void {
