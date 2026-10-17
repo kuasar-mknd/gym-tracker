@@ -46,7 +46,8 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * - une liste liée par une variable (`:class="classes"`) se lit dans le
  *   script, comme toute chaîne, sans balise : elle n'y passe jamais pour un
  *   décor ;
- * - elle ne lit ni `<style>` ni les `@utility` d'app.css : une règle qui
+ * - elle ne lit que `resources/js` : ni `<style>`, ni les `@utility`
+ *   d'app.css, ni les gabarits Blade de `resources/views` ; une règle qui
  *   cacherait au survol en CSS lui échappe ;
  * - un décor se juge à son contenu dans le gabarit : un `div` vide que le
  *   script remplirait (`innerHTML`) passerait pour un décor, `v-html` et
