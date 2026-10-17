@@ -713,3 +713,21 @@ it('reconduit le témoin sous Horizon, qui lit le compte de l’application comm
 
     expect(temoinDe($reponse)?->getValue())->toBe('cle-du-compte');
 });
+
+/*
+ * La page lit le témoin sans Ziggy ni le serveur : ses deux noms sont écrits
+ * en dur dans le magasin des copies (resources/js/Utils/copiesHorsLigne.js,
+ * partie D de #2048). Un nom changé ici laisserait la page sans clé, donc sans
+ * copie, sans que rien ne le dise.
+ */
+it('est lu par la page sous les deux noms que le serveur pose', function (string $constante, string $nom): void {
+    $source = (string) file_get_contents(resource_path('js/Utils/copiesHorsLigne.js'));
+
+    expect(preg_match("/export const {$constante} = '([^']+)'/", $source, $correspondance))
+        ->toBe(1, "`{$constante}` est introuvable dans le magasin des copies : si sa forme a changé, ce contrôle doit suivre.");
+
+    expect($correspondance[1] ?? null)->toBe($nom);
+})->with([
+    'hors HTTPS' => ['TEMOIN', CleDesCopiesHorsLigne::TEMOIN],
+    'réservé à HTTPS' => ['TEMOIN_EN_HTTPS', CleDesCopiesHorsLigne::TEMOIN_EN_HTTPS],
+]);
