@@ -28,6 +28,14 @@ import {
  * minutes sous une même clé de session (`gym-tracker:dernier-prechauffage`,
  * pour tous les onglets).
  *
+ * **Jamais sous les parcours navigateur** (`is_testing`, que le serveur ne
+ * pose vrai que sous Dusk ou en test, jamais en production). Ses GET partent
+ * en arrière-plan et croisaient la connexion du parcours suivant
+ * (`loginAs`, qui remplace la session) : la page suivante tombait une fois
+ * sur deux sur la page de connexion (`WorkoutSyncRaceTest`). Le préchauffage
+ * se joue avec le vrai client d'Inertia sous Vitest
+ * (`prechauffageAvecInertia.test.js`).
+ *
  * **Comment.** Au plus huit GET (`GET_AU_PLUS`), l'un après l'autre, par
  * `fetch`, avec `X-Inertia`, la `X-Inertia-Version` de la page,
  * `X-Requested-With` et `redirect: 'manual'`, chacun sous un délai de quinze
@@ -175,7 +183,7 @@ export const installerLePrechauffage = ({
     /**
      * Si une page peut faire partir un préchauffage : une page d'un compte,
      * dans un historique chiffré (rien ne se garde ailleurs), qui n'est pas
-     * une copie, la page visible.
+     * une copie, hors des parcours navigateur, la page visible.
      *
      * @param {object | null | undefined} page
      */
@@ -185,6 +193,7 @@ export const installerLePrechauffage = ({
         typeof page === 'object' &&
         page.encryptHistory === true &&
         page.props?.horsLigne === undefined &&
+        page.props?.is_testing !== true &&
         (page.props?.auth?.user?.id ?? null) !== null &&
         fenetre.document?.visibilityState === 'visible'
 

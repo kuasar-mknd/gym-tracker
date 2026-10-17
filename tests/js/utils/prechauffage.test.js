@@ -148,6 +148,7 @@ describe('le préchauffage, seul', () => {
         ['une page sans compte', pageDe('/tools', { compte: null })],
         ['un historique en clair', pageDe('/tools', { encryptHistory: false })],
         ['une copie montrée hors ligne', pageDe('/tools', { props: { horsLigne: { copieDu: 1, raison: 'reseau' } } })],
+        ['une page des parcours navigateur', pageDe('/tools', { props: { is_testing: true } })],
         ['une réponse sans page', null],
     ])('ne part pas pour %s', async (_cas, page) => {
         installer()
