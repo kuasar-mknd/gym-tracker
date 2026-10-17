@@ -29,9 +29,12 @@
 		}
 	}
 
+	# Compressing the Mercure stream costs memory per subscriber and enables BREACH-style attacks...
+	@compressible not path /.well-known/mercure
+
 	route {
 		root * "{$APP_PUBLIC_PATH}"
-		encode zstd br gzip
+		encode @compressible zstd br gzip
 
 		# Les actifs de /build/assets portent leur hachage dans leur nom : un
 		# fichier qui existe ne changera jamais sous cette URL. Un fichier

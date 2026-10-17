@@ -7,6 +7,7 @@ use BezhanSalleh\FilamentShield\Facades\FilamentShield;
 use Filament\Facades\Filament;
 use Filament\Navigation\NavigationGroup;
 use Filament\Navigation\NavigationItem;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\RateLimiter;
 use Spatie\Permission\Models\Permission;
@@ -104,7 +105,8 @@ function liensDuMenuVisibles(): array
 
         foreach ($elements as $element) {
             if ($element instanceof NavigationItem && $element->isVisible() && filled($element->getUrl())) {
-                $liens[$element->getLabel()] = $element->getUrl();
+                $libelle = $element->getLabel();
+                $liens[$libelle instanceof Htmlable ? $libelle->toHtml() : $libelle] = $element->getUrl();
             }
         }
     }
