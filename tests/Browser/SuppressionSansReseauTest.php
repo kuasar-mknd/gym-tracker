@@ -31,6 +31,15 @@ use Tests\DuskTestCase;
  * l'ordre de passage des parcours change avec chaque pesée des éclats. Il
  * retrouve donc ses trois cartes parmi les autres, et compare l'écran entier
  * avant et après.
+ *
+ * À partir de 640 px, la carte ne montre ses boutons qu'au survol ou au focus
+ * (`sm:opacity-0 sm:group-hover:opacity-100`). Chrome sans tête n'a pas de
+ * pointeur qui survole (`(hover: hover)` y est faux, et Tailwind ne pose
+ * `group-hover` que sous cette requête) : le bouton y reste transparent, carte
+ * survolée comprise, et WebDriver tient un élément transparent pour caché.
+ * `waitFor` sur le bouton ne venait donc jamais. Le parcours attend la carte,
+ * visible, puis clique le bouton, que la transparence n'empêche pas de
+ * recevoir le clic, comme `ExerciseListLiveUpdateTest`.
  */
 class SuppressionSansReseauTest extends DuskTestCase
 {
@@ -51,20 +60,21 @@ class SuppressionSansReseauTest extends DuskTestCase
         $premier = $exercice('Alpha');
         $milieu = $exercice('Bravo');
         $dernier = $exercice('Charlie');
+        $carteDuMilieu = '[dusk="exercise-card-'.$milieu->id.'"]';
         $boutonDuMilieu = '[dusk="delete-exercise-btn-'.$milieu->id.'"]';
         $cartesDuCompte = array_map(
             static fn (Exercise $exerciceDuCompte): string => 'exercise-card-'.$exerciceDuCompte->id,
             [$premier, $milieu, $dernier],
         );
 
-        $this->browse(function (Browser $browser) use ($compte, $boutonDuMilieu, $cartesDuCompte): void {
+        $this->browse(function (Browser $browser) use ($compte, $carteDuMilieu, $boutonDuMilieu, $cartesDuCompte): void {
             // Un écran de bureau : au doigt, la carte cache sa suppression derrière un glissement.
             $browser->loginAs($compte)
                 ->resize(1280, 900)
                 ->visit('/exercises')
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
-                ->waitFor($boutonDuMilieu, 15);
+                ->waitFor($carteDuMilieu, 15);
 
             $ordreDesCartes = 'return [...document.querySelectorAll(\'[dusk^="exercise-card-"]\')].map((carte) => carte.getAttribute("dusk"));';
             $ordreAvant = $browser->script($ordreDesCartes)[0];
@@ -91,7 +101,7 @@ class SuppressionSansReseauTest extends DuskTestCase
                     ->click('@confirm-dialog-confirm')
                     // Le texte se lit dans le DOM : WebDriver rendrait le texte que la feuille transforme.
                     ->waitUntil('document.body.textContent.includes('.json_encode(self::SUPPRESSION_NON_CONFIRMEE, JSON_THROW_ON_ERROR).')', 15)
-                    ->waitFor($boutonDuMilieu, 15);
+                    ->waitFor($carteDuMilieu, 15);
 
                 $this->assertSame($ordreAvant, $browser->script($ordreDesCartes)[0]);
             } finally {
