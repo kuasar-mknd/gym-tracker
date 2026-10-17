@@ -146,10 +146,11 @@ jobs:
                   [ "${{ needs.frontend-assets.result }}" = "success" ] && [ "${{ needs.frontend-tests.result }}" = "success" ]
 
     # Chaque job qui a une base tourne sur la version de MySQL de la production
-    # (celle de docker-compose.prod.yml) et sur la LTS vers laquelle elle
-    # basculera, à sa version exacte : la même liste dans laravel-tests-mysql,
-    # browser-shard et demarrage, que LesJobsAvecUneBaseTournentSurChaqueMySqlTest
-    # tient (.ai/rules/dependencies.md). Le verdict passe par `laravel-tests`
+    # (celle de docker-compose.prod.yml) et, tant que la pile n'a pas basculé,
+    # sur la LTS visée, à sa version exacte : la même liste dans
+    # laravel-tests-mysql, browser-shard et demarrage, que
+    # LesJobsAvecUneBaseTournentSurChaqueMySqlTest tient
+    # (.ai/rules/dependencies.md). Le verdict passe par `laravel-tests`
     # ci-dessous, qui garde le nom du contrôle exigé.
     laravel-tests-mysql:
         name: laravel-tests (MySQL ${{ matrix.mysql }})
@@ -264,10 +265,9 @@ jobs:
     # Trois éclats de durée comparable (poids mesurés dans
     # .github/scripts/dusk-eclats.json) ; le job « browser-tests » ci-dessous
     # les agrège, pour que la protection de branche et la promotion gardent
-    # le même nom de contrôle. Chaque éclat tourne sur les deux versions de
-    # MySQL de laravel-tests-mysql : un éclat prend deux à trois minutes et
-    # demie, en parallèle de la suite, et la seconde version n'allonge pas le
-    # run.
+    # le même nom de contrôle. Chaque éclat tourne sur les versions de MySQL
+    # de laravel-tests-mysql : un éclat prend deux à trois minutes et demie,
+    # en parallèle de la suite, et la seconde version n'allonge pas le run.
     browser-shard:
         name: browser-shard (${{ matrix.shard }}, MySQL ${{ matrix.mysql }})
         runs-on: ubuntu-latest
@@ -871,9 +871,8 @@ jobs:
         env:
             REGISTRY: ghcr.io
             IMAGE_NAME: ${{ github.repository }}
-        # Le client mysql de l'image charge le schéma figé sur une base neuve :
-        # celle de la production, et celle de la LTS vers laquelle elle
-        # basculera, comme laravel-tests-mysql.
+        # Le client mysql de l'image charge le schéma figé sur une base neuve,
+        # sur chaque version de MySQL de laravel-tests-mysql.
         strategy:
             fail-fast: false
             matrix:
