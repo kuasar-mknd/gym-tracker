@@ -197,6 +197,55 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         /*
+         * Le témoin des copies hors ligne (#2048) se pose sur toute réponse
+         * faite à un compte et s'efface sur celle qui dit la fin de la
+         * session : il doit envelopper ce qui la dit. Le docbloc du middleware
+         * dit le reste.
+         *
+         * Classé devant `AuthenticatesRequests`, il enveloppe `auth`,
+         * `auth:sanctum` et `AuthentifieLaSessionDuCompte`, et reste derrière
+         * l'ouverture de la session, que l'ordre de priorité met devant. Posé
+         * en tête du groupe `web`, il passe aussi devant la vérification CSRF,
+         * que cet ordre ne classe pas, et voit son 419 : `web(append:)` l'y
+         * aurait mis derrière. Dans `api`, Sanctum classe
+         * `EnsureFrontendRequestsAreStateful` en tête de l'ordre : sa pile
+         * (session, CSRF) enveloppe toujours le témoin, où qu'on le pose.
+         *
+         * Le `AuthenticateSession` de Sanctum, qui ferme une session dont le
+         * mot de passe a changé ailleurs (#1940), passe donc de cette pile au
+         * groupe `api`, juste après `auth:sanctum` (config/sanctum.php) : resté
+         * dans la pile de Sanctum, son 401 ne traversait pas le témoin, qui
+         * survivait à la session. Il vérifie le même compte, avant le débit,
+         * les écritures d'un autre compte et la liaison de modèle, comme avant.
+         *
+         * La page lit la clé que porte le témoin : il échappe au chiffrement
+         * des cookies, sous ses deux noms.
+         */
+        $middleware->web(prepend: [
+            \App\Http\Middleware\CleDesCopiesHorsLigne::class,
+        ]);
+
+        $middleware->api(append: [
+            \App\Http\Middleware\CleDesCopiesHorsLigne::class,
+            \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+        ]);
+
+        $middleware->prependToPriorityList(
+            \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            \App\Http\Middleware\CleDesCopiesHorsLigne::class,
+        );
+
+        $middleware->appendToPriorityList(
+            \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+            \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+        );
+
+        $middleware->encryptCookies(except: [
+            \App\Http\Middleware\CleDesCopiesHorsLigne::TEMOIN,
+            \App\Http\Middleware\CleDesCopiesHorsLigne::TEMOIN_EN_HTTPS,
+        ]);
+
+        /*
          * Le rappel d'Apple est un formulaire posté depuis son site (#1911) :
          * il ne peut porter ni notre jeton ni `Sec-Fetch-Site: same-origin`,
          * et refusé, il répondait 419. Exclu seul, chemin exact : sa

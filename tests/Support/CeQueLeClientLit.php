@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Support\CleDesCopiesEnSession;
 use Illuminate\Contracts\Support\MessageBag;
+use Illuminate\Support\Arr;
 use Illuminate\Support\ViewErrorBag;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Cookie;
@@ -17,9 +19,10 @@ use function Pest\Laravel\flushHeaders;
  * corps, session, puis la page qu'il retrouve après la redirection (#1951).
  *
  * Deux réponses qui ne doivent pas dire si une adresse a un compte se
- * comparent par ce relevé, en entier. Seuls les jetons tirés au hasard à
- * chaque requête en sont ôtés : la valeur des cookies, le jeton CSRF de la
- * session et le nonce de la CSP. L'en-tête `Date` et le `Max-Age` des cookies
+ * comparent par ce relevé, en entier. Seuls les jetons tirés au hasard en
+ * sont ôtés : la valeur des cookies, le jeton CSRF de la session, la clé des
+ * copies hors ligne que chaque session tire pour son compte (#2048) et le
+ * nonce de la CSP. L'en-tête `Date` et le `Max-Age` des cookies
  * suivent l'horloge du système, que `freezeSecond()` n'arrête pas : un cookie
  * se lit par ses attributs, dont son échéance. Les erreurs de la session se
  * lisent en tableaux : un sac d'erreurs est un objet, et deux objets distincts
@@ -49,6 +52,7 @@ final class CeQueLeClientLit
 
         $session = session()->all();
         unset($session['_token']);
+        Arr::forget($session, CleDesCopiesEnSession::CLE);
 
         if (($session['errors'] ?? null) instanceof ViewErrorBag) {
             $session['errors'] = array_map(static fn (MessageBag $erreurs): array => $erreurs->toArray(), $session['errors']->getBags());

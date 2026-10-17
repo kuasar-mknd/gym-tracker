@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\CleDesCopiesHorsLigne;
 use App\Models\Admin;
 use App\Models\User;
 use App\Models\Workout;
@@ -16,6 +17,7 @@ use Illuminate\Testing\TestResponse;
 use Inertia\Controller as InertiaController;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Role;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
 use Tests\Support\AppleSimule;
@@ -85,6 +87,20 @@ function enTetesTailleDuBloc(TestResponse $reponseDeTest): int
     }
 
     return $taille + 2;
+}
+
+/**
+ * Si la réponse pose le témoin des copies hors ligne (#2048), sous l'un ou
+ * l'autre de ses noms : environ 140 octets de plus sur toute réponse faite à
+ * un compte.
+ *
+ * @param  TestResponse<Response>  $reponseDeTest
+ */
+function enTetesPorteLeTemoinDesCopies(TestResponse $reponseDeTest): bool
+{
+    return collect($reponseDeTest->baseResponse->headers->getCookies())
+        ->contains(fn (Cookie $cookie): bool => in_array($cookie->getName(), [CleDesCopiesHorsLigne::TEMOIN, CleDesCopiesHorsLigne::TEMOIN_EN_HTTPS], true)
+            && ! $cookie->isCleared());
 }
 
 /**
@@ -192,6 +208,7 @@ it('garde les en-têtes de chaque page complète sous le budget', function (bool
     $tropLourdes = [];
     $nonRendues = [];
     $mesurees = [];
+    $sansTemoin = [];
 
     foreach ($pages as $route) {
         enTetesRemettreAZeroCommeOctane();
@@ -221,6 +238,10 @@ it('garde les en-têtes de chaque page complète sous le budget', function (bool
         if ($base->headers->has('Server-Timing')) {
             $mesurees[] = $chemin;
         }
+
+        if (enTetesExigeUneConnexion($route) && ! enTetesPorteLeTemoinDesCopies($reponse)) {
+            $sansTemoin[] = $chemin;
+        }
     }
 
     // Allumé, l'en-tête doit être dans la mesure, sans quoi le budget le
@@ -230,6 +251,9 @@ it('garde les en-têtes de chaque page complète sous le budget', function (bool
     } else {
         expect($mesurees)->toBe([]);
     }
+
+    // De même pour le témoin des copies hors ligne, sur chaque page d'un compte.
+    expect($sansTemoin)->toBe([]);
 
     expect($pages)->not->toBeEmpty()
         ->and($nonRendues)->toBeEmpty(
@@ -254,9 +278,9 @@ it('garde les en-têtes de chaque page complète sous le budget', function (bool
  * remplissait.
  *
  * La réponse à la connexion est la plus chargée de l'application : elle pose
- * trois cookies (session, XSRF, et celui qui se souvient). Si elle passait la
- * limite, le 502 tomberait à la connexion même, et effacer les cookies ne
- * suffirait plus.
+ * quatre cookies (session, XSRF, celui qui se souvient, et depuis #2048 le
+ * témoin des copies hors ligne). Si elle passait la limite, le 502 tomberait
+ * à la connexion même, et effacer les cookies ne suffirait plus.
  */
 it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » sous le budget', function (): void {
     $utilisateur = User::factory()->create();
@@ -271,7 +295,8 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
     $cookie = $connexion->getCookie($nomDuCookie);
 
     expect($cookie)->not->toBeNull()
-        ->and($connexion->baseResponse->headers->getCookies())->toHaveCount(3)
+        ->and($connexion->baseResponse->headers->getCookies())->toHaveCount(4)
+        ->and(enTetesPorteLeTemoinDesCopies($connexion))->toBeTrue()
         ->and(enTetesTailleDuBloc($connexion))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 
     // Des semaines plus tard : la session a expiré, seul le cookie reste.
@@ -298,10 +323,11 @@ it('ouvre l’accueil en entier depuis le seul cookie « se souvenir de moi » s
 
 /**
  * Changer son mot de passe rouvre la session sous le nouveau (#1940) : la
- * réponse pose, comme la connexion, la session, le jeton XSRF et le cookie
- * « se souvenir de moi » réémis. La session que le changement ferme ailleurs
- * repart avec ses deux cookies et l'effacement du sien. Aucune des deux n'en
- * porte davantage que la connexion, et toutes deux tiennent sous le budget.
+ * réponse pose, comme la connexion, la session, le jeton XSRF, le cookie
+ * « se souvenir de moi » réémis et le témoin des copies hors ligne. La session
+ * que le changement ferme ailleurs repart avec ses deux cookies, l'effacement
+ * du sien et celui du témoin. Aucune des deux n'en porte davantage que la
+ * connexion, et toutes deux tiennent sous le budget.
  */
 it('garde sous le budget le changement de mot de passe et la session qu’il ferme', function (): void {
     $utilisateur = User::factory()->create();
@@ -326,11 +352,13 @@ it('garde sous le budget le changement de mot de passe et la session qu’il fer
 
     $refus = $appareils['un autre']->envoyer('GET', enTetesHoteDeProduction().'/dashboard');
 
-    $refus->assertRedirect(enTetesHoteDeProduction().'/login');
+    $refus->assertRedirect(enTetesHoteDeProduction().'/login')
+        ->assertCookieExpired(CleDesCopiesHorsLigne::nom());
 
-    expect($changement->baseResponse->headers->getCookies())->toHaveCount(3)
+    expect($changement->baseResponse->headers->getCookies())->toHaveCount(4)
+        ->and(enTetesPorteLeTemoinDesCopies($changement))->toBeTrue()
         ->and(enTetesTailleDuBloc($changement))->toBeLessThanOrEqual(enTetesBudgetEnOctets())
-        ->and($refus->baseResponse->headers->getCookies())->toHaveCount(3)
+        ->and($refus->baseResponse->headers->getCookies())->toHaveCount(4)
         ->and(enTetesTailleDuBloc($refus))->toBeLessThanOrEqual(enTetesBudgetEnOctets());
 });
 

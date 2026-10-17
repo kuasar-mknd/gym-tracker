@@ -8,7 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\AuthentifieLaSessionDuCompte;
 use App\Http\Requests\Auth\UpdatePasswordRequest;
 use App\Models\User;
-use Illuminate\Auth\Recaller;
+use App\Support\RappelDeLAppareil;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +25,10 @@ class PasswordController extends Controller
      * `AuthentifieLaSessionDuCompte` : l'empreinte du mot de passe qu'elles
      * portent ne correspond plus. Leurs cookies « se souvenir de moi » aussi : la
      * garde vérifie la même empreinte avant de reconnecter par ce cookie.
+     *
+     * Le cookie « se souvenir de moi » de cet appareil se juge avant le
+     * changement, contre l'empreinte du mot de passe d'avant
+     * (`RappelDeLAppareil::vautPour()`), jamais sur sa seule présence.
      */
     public function update(UpdatePasswordRequest $request): RedirectResponse
     {
@@ -32,7 +36,7 @@ class PasswordController extends Controller
         $donneesValidees = $request->validated();
         $utilisateur = $this->user();
         $garde = self::gardeDesComptes();
-        $seSouvenaitDeCetAppareil = self::seSouvenaitDeCetAppareil($request, $garde, $utilisateur);
+        $seSouvenaitDeCetAppareil = RappelDeLAppareil::vautPour($request, $garde, $utilisateur);
 
         $utilisateur->update([
             'password' => $donneesValidees['password'],
@@ -57,35 +61,6 @@ class PasswordController extends Controller
         }
 
         return $garde;
-    }
-
-    /**
-     * Dit si l'appareil porte un cookie « se souvenir de moi » que la garde
-     * accepterait pour CE compte : son identifiant, son jeton de rappel, et
-     * l'empreinte du mot de passe d'avant. À lire avant le changement.
-     *
-     * La simple présence du cookie ne suffit pas. La garde ignore sans l'effacer
-     * un cookie périmé (mot de passe changé ou compte déconnecté ailleurs, cookie
-     * d'un autre compte), et une connexion sans « se souvenir de moi » le laisse
-     * en place : l'ordinateur partagé où la personne n'a pas coché la case peut
-     * en porter un. Le réémettre sur sa seule présence le rendrait valide pour
-     * toute la durée de rappel, et la personne suivante entrerait dans le compte
-     * une fois la session expirée avec le navigateur.
-     */
-    private static function seSouvenaitDeCetAppareil(Request $request, SessionGuard $garde, User $utilisateur): bool
-    {
-        $cookie = $request->cookies->get($garde->getRecallerName());
-
-        if (! is_string($cookie)) {
-            return false;
-        }
-
-        $rappel = new Recaller($cookie);
-
-        return $rappel->valid()
-            && $rappel->id() === (string) $utilisateur->id
-            && hash_equals((string) $utilisateur->getRememberToken(), $rappel->token())
-            && hash_equals($garde->hashPasswordForCookie($utilisateur->getAuthPassword()), $rappel->hash());
     }
 
     /**
