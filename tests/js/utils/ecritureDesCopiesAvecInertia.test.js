@@ -15,7 +15,7 @@ import {
     creerLeMagasinDesCopies,
     ouvrirLaBaseDuNavigateur,
 } from '@/Utils/copiesHorsLigne'
-import { installerLEcritureDesCopies, propsRecues } from '@/Utils/ecritureDesCopies'
+import { ecritureDesCopiesInstallee, installerLEcritureDesCopies, propsRecues } from '@/Utils/ecritureDesCopies'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL, installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
 import { chargerSyncService, horodatageRecent, retirerLesEcouteursDuService } from './fileHorsLigne'
 
@@ -427,6 +427,173 @@ describe('l’écriture au repos', () => {
         expect((await magasin.lireUneCopie('/dashboard')).page.props.recentWorkouts).toEqual([
             { name: 'Jambes du mardi' },
         ])
+    })
+})
+
+/*
+ * La séance en cours que dit chaque page complète (#2048, section « La
+ * séance » de l'issue) : terminer une séance mène à l'accueil, et sa copie
+ * la montrait encore en cours. Et le rejeu d'une écriture de séance par la
+ * file, qui date dans l'état ce que la copie de la séance n'a pas.
+ */
+describe('la séance en cours', () => {
+    /** La séance 5 d'un compte qui a `enCours` en cours, close ou non. */
+    const pageDeLaSeance = ({ id = 5, enCours = id, close = false } = {}) => {
+        const page = pageDe({
+            component: 'Workouts/Show',
+            url: `/workouts/${id}`,
+            props: { workout: { id, name: 'Séance du soir', ended_at: close ? '2026-10-12T19:00:00Z' : null } },
+        })
+
+        page.props.auth.user.active_workout = enCours === null ? null : { id: enCours }
+
+        return page
+    }
+
+    /** L'accueil d'un compte qui a `enCours` en cours. */
+    const accueil = (enCours) => {
+        const page = pageDe()
+
+        page.props.auth.user.active_workout = enCours === null ? null : { id: enCours }
+
+        return page
+    }
+
+    it('retire la copie d’une séance terminée qui la montre encore en cours, et garde une séance close', async () => {
+        await recevoir(pageDeLaSeance({ id: 4, enCours: 5, close: true }))
+        await recevoir(pageDeLaSeance({ id: 5, enCours: 5 }))
+
+        expect([...copiesRangees().keys()].sort()).toEqual(['/workouts/4', '/workouts/5'])
+
+        // Terminer la séance 5 mène à l'accueil : le compte n'a plus de séance en cours.
+        await recevoir(accueil(null))
+
+        expect([...copiesRangees().keys()].sort()).toEqual(['/dashboard', '/workouts/4'])
+        expect(await magasin.lireUneCopie('/workouts/5')).toBeNull()
+    })
+
+    it('une autre séance démarrée retire la copie de la précédente, qui la montrait en cours', async () => {
+        await recevoir(pageDeLaSeance({ id: 4, enCours: 4 }))
+        await recevoir(pageDeLaSeance({ id: 5, enCours: 5 }))
+
+        expect([...copiesRangees().keys()]).toEqual(['/workouts/5'])
+    })
+
+    it('rafraîchit, sans la retirer, la copie de la séance terminée quand la réponse est son compte rendu', async () => {
+        await recevoir(accueil(5))
+        await recevoir(pageDeLaSeance({ id: 5, enCours: 5 }))
+
+        await recevoir(pageDeLaSeance({ id: 5, enCours: null, close: true }))
+
+        expect((await magasin.lireUneCopie('/workouts/5')).page.props.workout.ended_at).toBe('2026-10-12T19:00:00Z')
+    })
+
+    it('ne retire pas une séance close, ni rien tant que la séance en cours ne change pas', async () => {
+        await recevoir(accueil(6))
+        await recevoir(pageDeLaSeance({ id: 3, enCours: 6, close: true }))
+        await recevoir(pageDeLaSeance({ id: 6, enCours: 6 }))
+        await recevoir(accueil(6))
+
+        expect([...copiesRangees().keys()].sort()).toEqual(['/dashboard', '/workouts/3', '/workouts/6'])
+
+        await recevoir(accueil(null))
+
+        expect([...copiesRangees().keys()].sort()).toEqual(['/dashboard', '/workouts/3'])
+    })
+
+    it('dès la première page de l’onglet, retire une séance close ailleurs, application fermée', async () => {
+        await recevoir(accueil(5))
+        await recevoir(pageDeLaSeance({ id: 5, enCours: 5 }))
+
+        // Un autre chargement de la page : la séance 5 a été terminée sur un autre appareil.
+        ecriture.desinstaller()
+        ecriture = installerLEcritureDesCopies({ routeur, magasin, pageInitiale: accueil(null) })
+        await ecriture.ecrituresFinies()
+
+        expect([...copiesRangees().keys()]).toEqual(['/dashboard'])
+    })
+
+    it('le rejeu d’une écriture de séance par la file date le dernier rejeu ; celui d’une autre écriture, non', async () => {
+        await recevoir(pageDe())
+
+        window.dispatchEvent(
+            new CustomEvent('sync:replayed', { detail: { queueId: 'q1', url: '/profile/preferences', data: {} } }),
+        )
+        await uneTache()
+        await fabrique.auRepos()
+
+        expect(etatRange().dernierRejeu).toBeNull()
+
+        maintenant += 60_000
+        window.dispatchEvent(
+            new CustomEvent('sync:replayed', {
+                detail: { queueId: 'q2', url: 'http://localhost/api/v1/sets/3', data: { id: 3 } },
+            }),
+        )
+
+        await vi.waitFor(() => expect(etatRange().dernierRejeu).toBe(maintenant))
+    })
+})
+
+describe('pour la page de séance et le préchauffage', () => {
+    it('est l’écriture installée, que lisent la page de séance et le préchauffage', () => {
+        expect(ecritureDesCopiesInstallee()).toBe(ecriture)
+    })
+
+    it('dit d’où vient la page : du réseau, d’une visite côté client, de l’historique', async () => {
+        await recevoir(pageDe())
+        expect(ecriture.origineDeLaPage()).toBe('reseau')
+
+        await new Promise((fini) =>
+            routeur.replace({ ...pageDe({ component: 'Tools/Index', url: '/tools' }), onFinish: fini }),
+        )
+        expect(ecriture.origineDeLaPage()).toBe('client')
+
+        await recevoir(pageDe({ component: 'Workouts/Index', url: '/workouts' }))
+        expect(ecriture.origineDeLaPage()).toBe('reseau')
+
+        const retour = new Promise((fini) => window.addEventListener('popstate', fini, { once: true }))
+        window.history.back()
+        await retour
+
+        expect(ecriture.origineDeLaPage()).toBe('historique')
+    })
+
+    it('fait passer sans attendre le repos ce qui est décidé, quand la page se cache', async () => {
+        const auRepos = []
+        globalThis.requestIdleCallback = (rappel) => {
+            auRepos.push(rappel)
+        }
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDe())
+
+        let finie = false
+        routeur.visit('/dashboard', { onFinish: () => (finie = true) })
+        await vi.waitUntil(() => finie)
+        await fabrique.auRepos()
+
+        expect(copiesRangees().size).toBe(0)
+
+        ecriture.presser()
+        await ecriture.ecrituresFinies()
+
+        expect(copiesRangees().has('/dashboard')).toBe(true)
+        expect(auRepos.length).toBeGreaterThan(0)
+    })
+
+    it('verse une réponse partielle venue d’ailleurs qu’une visite, sans auth, dans la copie existante', async () => {
+        await recevoir(pageDe({ props: { statistiques: { seances: 2 } } }))
+
+        ecriture.completer(
+            pageDe({ props: { statistiques: { seances: 5 }, auth: { user: { id: COMPTE, name: 'Autre nom' } } } }),
+            ['statistiques', 'auth'],
+        )
+        await ecriture.ecrituresFinies()
+
+        const lue = await ecriture.lireLaCopie('/dashboard')
+
+        expect(lue.page.props.statistiques).toEqual({ seances: 5 })
+        expect(lue.page.props.auth.user.name).toBe('Camille Horsligne')
     })
 })
 

@@ -216,8 +216,11 @@ export const uneReponseRetenue = (serveur) => {
  *   serveur: ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>,
  *   chargerLaSeance: () => Promise<{ default: object }>,
  *   retenir: (application: import('@vue/test-utils').VueWrapper) => void,
- * }} chargement le faux serveur, l'import de la vraie page de séance, et ce
- *   qui retient le montage pour le démonter après le test
+ *   avantInertia?: (inertia: typeof import('@inertiajs/vue3')) => Promise<void> | void,
+ * }} chargement le faux serveur, l'import de la vraie page de séance, ce
+ *   qui retient le montage pour le démonter après le test, et ce que le test
+ *   branche après la garde de l'historique et avant le démarrage d'Inertia,
+ *   comme `main.js` (l'écriture des copies hors ligne, #2048)
  * @returns {Promise<{
  *   sync: object,
  *   visites: Array<string>,
@@ -225,7 +228,7 @@ export const uneReponseRetenue = (serveur) => {
  * }>} le service de synchronisation, les chemins que les visites d'Inertia ont
  *   demandés au serveur, et une visite jusqu'à la page affichée
  */
-export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, retenir }) => {
+export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, retenir, avantInertia = () => {} }) => {
     const pagesDeLAdresse = pagesDuServeur(serveur)
     const visites = []
 
@@ -327,6 +330,7 @@ export const ouvrirLaListeDesSeances = async ({ serveur, chargerLaSeance, reteni
 
     // Comme `main.js` : la garde de l'historique de chaque compte, avant le démarrage d'Inertia.
     installerLaGardeDeLHistorique({ routeur: inertia.router })
+    await avantInertia(inertia)
 
     await inertia.createInertiaApp({
         resolve: (nom) => (nom === 'Workouts/Show' ? Seance : ListeDesSeances),

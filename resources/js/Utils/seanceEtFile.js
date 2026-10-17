@@ -78,6 +78,30 @@ const lireLEcriture = (entree) => {
     return null
 }
 
+/**
+ * Si une écriture (une entrée de file, ou la requête d'une écriture directe)
+ * est l'une des sept de la séance : ce que la copie hors ligne de la séance
+ * suit (#2048, `Utils/ecrituresAcceptees.js`).
+ *
+ * @param {{ method?: string, url?: string } | null | undefined} ecriture
+ * @returns {boolean}
+ */
+export const estUneEcritureDeLaSeance = (ecriture) => lireLEcriture(ecriture) !== null
+
+/**
+ * Si une adresse est celle d'une des sept écritures de la séance, quelle que
+ * soit la méthode : chacune de ces adresses ne sert qu'à elles. Ce que lit un
+ * écouteur de `sync:replayed`, qui ne porte que l'adresse.
+ *
+ * @param {unknown} url
+ * @returns {boolean}
+ */
+export const estUneAdresseDEcritureDeLaSeance = (url) => {
+    const chemin = String(url ?? '').split(/[?#]/, 1)[0]
+
+    return ECRITURES.some(({ motif }) => motif.test(chemin))
+}
+
 /** La charge d'une entrée, qu'elle ait été mise en file en objet ou déjà sérialisée. */
 const chargeDe = (entree) => {
     const data = entree?.data

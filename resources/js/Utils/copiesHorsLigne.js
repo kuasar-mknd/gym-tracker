@@ -1,3 +1,4 @@
+import { oublierLesEcrituresAcceptees } from '@/Utils/ecrituresAcceptees'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL } from '@/Utils/historiqueDuCompte'
 import {
     AGE_MAXIMAL_D_UNE_COPIE_MS,
@@ -32,7 +33,9 @@ import {
  *
  * **L'état** (`etat`) dit à quelle clé le magasin est ouvert : le compte,
  * l'empreinte de la clé, la version du contrat, `ouvert`, les empreintes des
- * vingt dernières clés fermées, et `dernierRejeu`.
+ * vingt dernières clés fermées, et `dernierRejeu`, l'instant du dernier rejeu
+ * d'une écriture de séance par la file hors ligne (`noterUnRejeu`) : une copie
+ * de séance écrite avant lui ne l'a pas, et le préchauffage la redemande.
  *
  * **La purge est une barrière.** `oublierLesCopies` vide les copies et ferme
  * l'état en une seule transaction, l'empreinte de la clé courante ajoutée aux
@@ -47,11 +50,16 @@ import {
  * chiffrement se fait donc avant. Une clé fermée ne fait plus rien écrire ni
  * lire, même reposée par la réponse en vol d'un autre onglet.
  *
+ * Elle efface aussi la note des écritures de séance acceptées
+ * (`Utils/ecrituresAcceptees.js`), avant toute attente.
+ *
  * **Les autres purges.** Un magasin ouvert pour un autre compte que le
  * titulaire de l'appareil se vide quand ce titulaire change
  * (`oublierLesCopiesDUnAutreTitulaire`), et l'hygiène du chargement
  * (`entretenir`) efface les copies de plus de sept jours et un magasin d'un
- * autre contrat.
+ * autre contrat. Une copie de séance qui la montre encore en cours se retire
+ * quand ce n'est pas la séance que le compte a en cours
+ * (`retirerLesSeancesQuiNeSontPlusEnCours`).
  *
  * **Le volume** est borné (`PLAFOND_DES_COPIES_EN_OCTETS`) : la copie la plus
  * anciennement écrite sort la première, jamais la séance en cours ; trois
@@ -434,6 +442,15 @@ export const creerLeMagasinDesCopies = ({
             return fenetre?.localStorage?.getItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL) ?? null
         } catch {
             return null
+        }
+    }
+
+    /** @returns {Storage | undefined} le `localStorage` de la fenêtre, ou rien quand il se refuse */
+    const stockageDeLAppareil = () => {
+        try {
+            return fenetre?.localStorage ?? undefined
+        } catch {
+            return undefined
         }
     }
 
@@ -840,6 +857,8 @@ export const creerLeMagasinDesCopies = ({
      * s'annonce aux autres onglets avant toute attente : ce qui était en vol
      * ne s'écrit plus, ici comme ailleurs.
      *
+     * La note des écritures de séance acceptées s'efface avec elles, aussitôt.
+     *
      * L'empreinte de la clé à laquelle le magasin était ouvert rejoint les
      * fermées (`fermerLEtat`). Celle de la clé que porte encore le témoin
      * aussi quand la session finit (`fermerLeTemoin` : la déconnexion, la
@@ -854,6 +873,7 @@ export const creerLeMagasinDesCopies = ({
         generation += 1
         annoncer()
         prevenirDUnePurge()
+        oublierLesEcrituresAcceptees(stockageDeLAppareil())
 
         try {
             const octets = fermerLeTemoin && subtle ? octetsDeLaCle(lireLeTemoin()) : null
@@ -902,6 +922,9 @@ export const creerLeMagasinDesCopies = ({
      * quel. Un onglet qui apprend le changement après celui qui l'a vu ne
      * ferme donc pas la clé du compte suivant, que ce dernier vient d'ouvrir.
      *
+     * La note des écritures de séance acceptées d'un autre compte que le
+     * titulaire s'efface aussi.
+     *
      * Sans génération ni annonce : chaque écriture relit le titulaire dans sa
      * transaction, et celles de l'ancien compte, en vol ici ou ailleurs, sont
      * déjà refusées ; une annonce ferait refuser, dans les autres onglets,
@@ -911,6 +934,12 @@ export const creerLeMagasinDesCopies = ({
      * @returns {Promise<boolean>} vrai quand les copies d'un autre compte ont été oubliées
      */
     const oublierLesCopiesDUnAutreTitulaire = async () => {
+        const titulaire = lireLeTitulaire()
+
+        oublierLesEcrituresAcceptees(stockageDeLAppareil(), {
+            saufDuCompte: titulaire?.startsWith('compte:') ? titulaire.slice('compte:'.length) : null,
+        })
+
         if (subtle === undefined || subtle === null) {
             return false
         }
@@ -1120,6 +1149,222 @@ export const creerLeMagasinDesCopies = ({
     }
 
     /**
+     * Ce que le magasin garde pour le compte d'une page, sans rien déchiffrer :
+     * le chemin, le composant et les dates de chaque copie, et le dernier
+     * rejeu d'une écriture de séance. Ce que le préchauffage lit pour savoir
+     * quelle page du noyau manque ou a vieilli.
+     *
+     * `possible` est faux quand aucune copie ne pourrait s'écrire pour ce
+     * compte : sans `crypto.subtle`, sans compte, sans clé au témoin, un autre
+     * titulaire de l'appareil, une clé fermée, ou IndexedDB qui se refuse.
+     * Un état ouvert pour une autre clé, un autre compte ou un autre contrat
+     * ne montre aucune copie : la prochaine réponse complète le videra.
+     *
+     * @param {object} page la page d'Inertia qui dit le compte
+     * @returns {Promise<{
+     *   possible: boolean,
+     *   raison: string | null,
+     *   empreinte: string | null,
+     *   copies: Array<{ chemin: string, composant: string, copieDu: number, ecriteLe: number }>,
+     *   dernierRejeu: number | null,
+     * }>}
+     */
+    const inventaire = async (page) => {
+        const refus = (raison) => ({ possible: false, raison, empreinte: null, copies: [], dernierRejeu: null })
+
+        if (subtle === undefined || subtle === null) {
+            return refus('indisponible')
+        }
+
+        const compte = compteDeLaPage(page)
+
+        if (compte === null) {
+            return refus('sans-compte')
+        }
+
+        const octets = octetsDeLaCle(lireLeTemoin())
+
+        if (octets === null) {
+            return refus('sans-cle')
+        }
+
+        if (lireLeTitulaire() !== `compte:${compte}`) {
+            return refus('autre-titulaire')
+        }
+
+        try {
+            const ouverte = await base()
+            const empreinte = await empreinteDe(octets)
+            const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
+            const [etat, copies] = await Promise.all([
+                resultatDe(transaction.objectStore(MAGASIN_DE_L_ETAT).get(CLE_DE_L_ETAT)),
+                resultatDe(transaction.objectStore(MAGASIN_DES_PAGES).getAll()),
+            ])
+
+            if (etat?.empreintesFermees?.includes(empreinte)) {
+                return refus('cle-fermee')
+            }
+
+            const ouvert = ouvertPour(etat, compte, empreinte)
+
+            return {
+                possible: true,
+                raison: null,
+                empreinte,
+                copies: ouvert
+                    ? copies
+                          .filter((copie) => copie.empreinte === empreinte)
+                          .map(({ chemin, composant, copieDu, ecriteLe }) => ({ chemin, composant, copieDu, ecriteLe }))
+                    : [],
+                dernierRejeu: ouvert && Number.isFinite(etat.dernierRejeu) ? etat.dernierRejeu : null,
+            }
+        } catch {
+            return refus('indisponible')
+        }
+    }
+
+    /**
+     * Note dans l'état l'instant d'un rejeu d'écriture de séance par la file
+     * hors ligne : la copie de la séance, écrite avant, ne l'a pas, et le
+     * prochain préchauffage la redemande. Rien quand l'état est fermé.
+     *
+     * @returns {Promise<boolean>} vrai quand l'instant est noté
+     */
+    const noterUnRejeu = async () => {
+        if (subtle === undefined || subtle === null) {
+            return false
+        }
+
+        const instant = horloge()
+
+        try {
+            const ouverte = await base()
+            const transaction = ouverte.transaction([MAGASIN_DE_L_ETAT], 'readwrite')
+            const fin = finDe(transaction)
+            const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
+            const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
+            let note = false
+
+            demandeDeLEtat.onsuccess = () => {
+                /** @type {EtatDuMagasin | undefined} */
+                const etat = demandeDeLEtat.result
+
+                if (etat?.ouvert !== true) {
+                    return
+                }
+
+                note = true
+                magasinDeLEtat.put({ ...etat, dernierRejeu: Math.max(instant, etat.dernierRejeu ?? 0) }, CLE_DE_L_ETAT)
+            }
+
+            await fin
+
+            return note
+        } catch {
+            return false
+        }
+    }
+
+    /**
+     * Retire les copies de séance qui la montrent encore en cours, sauf celle
+     * de la séance que le compte a en cours (`auth.user.active_workout`) :
+     * close ou supprimée depuis, ici ou sur un autre appareil, une telle copie
+     * ferait croire qu'elle attend des séries. Une copie qui montre sa séance
+     * close reste.
+     *
+     * Chaque copie se déchiffre d'abord ; elles ne se retirent que dans une
+     * transaction qui les retrouve telles quelles, sous la génération notée à
+     * la décision.
+     *
+     * @param {string | null} enCours la clé de la séance en cours, ou `null`
+     * @param {{ generation?: number }} [options]
+     * @returns {Promise<string[] | string>} les chemins retirés, ou la raison de ne rien avoir fait
+     */
+    const retirerLesSeancesQuiNeSontPlusEnCours = async (
+        enCours,
+        { generation: generationDeDepart = generation } = {},
+    ) => {
+        if (subtle === undefined || subtle === null) {
+            return 'indisponible'
+        }
+
+        try {
+            const ouverte = await base()
+            const lecture = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
+            const [etat, copies] = await Promise.all([
+                resultatDe(lecture.objectStore(MAGASIN_DE_L_ETAT).get(CLE_DE_L_ETAT)),
+                resultatDe(lecture.objectStore(MAGASIN_DES_PAGES).getAll()),
+            ])
+
+            if (etat?.ouvert !== true || etat.contrat !== VERSION_DU_CONTRAT) {
+                return 'etat-ferme'
+            }
+
+            const octets = octetsDeLaCle(lireLeTemoin())
+
+            if (octets === null || (await empreinteDe(octets)) !== etat.empreinte) {
+                return 'sans-cle'
+            }
+
+            const cle = await importer(octets)
+            const aRetirer = []
+
+            for (const copie of copies) {
+                if (
+                    copie.composant !== COMPOSANT_DE_LA_SEANCE ||
+                    copie.chemin === enCours ||
+                    copie.empreinte !== etat.empreinte
+                ) {
+                    continue
+                }
+
+                const contenu = await dechiffrer(cle, donneesAuthentifiees(etat.compte, copie.chemin), copie).catch(
+                    () => null,
+                )
+                const seance = contenu?.page?.props?.workout
+
+                if (seance !== null && typeof seance === 'object' && !seance.ended_at) {
+                    aRetirer.push(copie)
+                }
+            }
+
+            if (aRetirer.length === 0) {
+                return []
+            }
+
+            const transaction = ouverte.transaction([MAGASIN_DES_PAGES], 'readwrite')
+            const fin = finDe(transaction)
+            const pages = transaction.objectStore(MAGASIN_DES_PAGES)
+            const retirees = []
+
+            if (generation !== generationDeDepart) {
+                transaction.abort()
+                await fin.catch(() => {})
+
+                return 'perimee'
+            }
+
+            for (const copie of aRetirer) {
+                const demande = pages.get(copie.chemin)
+
+                demande.onsuccess = () => {
+                    // Une copie réécrite depuis la lecture est celle d'une réponse plus récente : elle reste.
+                    if (demande.result?.ecriteLe === copie.ecriteLe) {
+                        pages.delete(copie.chemin)
+                        retirees.push(copie.chemin)
+                    }
+                }
+            }
+
+            await fin
+
+            return retirees
+        } catch {
+            return 'erreur'
+        }
+    }
+
+    /**
      * Suit les purges, de cet onglet comme des autres : le préchauffage s'y
      * arrête. Rend de quoi ne plus suivre.
      *
@@ -1149,6 +1394,9 @@ export const creerLeMagasinDesCopies = ({
         ecrireUneCopie,
         completerUneCopie,
         lireUneCopie,
+        inventaire,
+        noterUnRejeu,
+        retirerLesSeancesQuiNeSontPlusEnCours,
         oublierLesCopies,
         oublierLesCopiesDUnAutreTitulaire,
         entretenir,

@@ -13,6 +13,7 @@ import {
     magasinDesCopies,
     ouvrirLaBaseDuNavigateur,
 } from '@/Utils/copiesHorsLigne'
+import { CLEF_DES_ECRITURES_ACCEPTEES, noterUneEcritureAcceptee } from '@/Utils/ecrituresAcceptees'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL } from '@/Utils/historiqueDuCompte'
 import { PLAFOND_DES_COPIES_EN_OCTETS, VERSION_DU_CONTRAT } from '@/Utils/pagesGardees'
 
@@ -1015,6 +1016,227 @@ describe('le changement de titulaire de l’appareil', () => {
         expect(await onglet.oublierLesCopiesDUnAutreTitulaire()).toBe(false)
         expect(await onglet.entretenir()).toBe(0)
         expect(fabrique.ouvertures()).toBe(0)
+    })
+})
+
+describe('la note des écritures de séance acceptées', () => {
+    it('s’efface avec les copies, aussitôt, avant même la transaction', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        noterUneEcritureAcceptee({ compte: 7, seance: 5, instant })
+        const oubli = onglet.oublierLesCopies()
+
+        expect(localStorage.getItem(CLEF_DES_ECRITURES_ACCEPTEES)).toBeNull()
+        await oubli
+    })
+
+    it('s’efface quand l’appareil change de titulaire, sauf celle du titulaire', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        noterUneEcritureAcceptee({ compte: 7, seance: 5, instant })
+        poserLeTitulaire(7)
+        await onglet.oublierLesCopiesDUnAutreTitulaire()
+
+        expect(localStorage.getItem(CLEF_DES_ECRITURES_ACCEPTEES)).not.toBeNull()
+
+        poserLeTitulaire(8)
+        await onglet.oublierLesCopiesDUnAutreTitulaire()
+
+        expect(localStorage.getItem(CLEF_DES_ECRITURES_ACCEPTEES)).toBeNull()
+
+        noterUneEcritureAcceptee({ compte: 7, seance: 5, instant })
+        localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, 'invite')
+        await ouvrirUnOnglet({ subtle: null }).oublierLesCopiesDUnAutreTitulaire()
+
+        expect(localStorage.getItem(CLEF_DES_ECRITURES_ACCEPTEES)).toBeNull()
+    })
+})
+
+describe('l’inventaire', () => {
+    it('dit, sans rien déchiffrer, le chemin, le composant et les dates de chaque copie du compte', async () => {
+        const onglet = ouvrirUnOnglet()
+        const ouverture = instant
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+        instant += 60_000
+        await onglet.ecrireUneCopie(pageDeLaSeance(5, { seanceEnCours: 5 }))
+        const dechiffrement = vi.spyOn(crypto.subtle, 'decrypt')
+
+        const inventaire = await onglet.inventaire(pageDe())
+
+        expect(inventaire).toMatchObject({ possible: true, raison: null, dernierRejeu: null })
+        expect(inventaire.empreinte).toBe(etatRange().empreinte)
+        expect(inventaire.copies.sort((a, b) => (a.chemin < b.chemin ? -1 : 1))).toEqual([
+            { chemin: '/dashboard', composant: 'Dashboard', copieDu: ouverture, ecriteLe: ouverture },
+            { chemin: '/workouts/5', composant: 'Workouts/Show', copieDu: instant, ecriteLe: instant },
+        ])
+        expect(dechiffrement).not.toHaveBeenCalled()
+    })
+
+    it('ne montre aucune copie d’une autre clé ou d’un autre compte, mais permet de les refaire', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+
+        // Une session plus récente : sa clé n'a encore rien ouvert.
+        poserLeTemoin(cleAuHasard())
+
+        expect(await onglet.inventaire(pageDe())).toMatchObject({ possible: true, copies: [], dernierRejeu: null })
+    })
+
+    it('n’est pas possible sans compte, sans clé, pour un autre titulaire, sous une clé fermée ou sans chiffrement', async () => {
+        const onglet = ouvrirUnOnglet()
+        const raison = async (page = pageDe(), magasin = onglet) => (await magasin.inventaire(page)).raison
+
+        expect(await raison()).toBe('sans-cle')
+
+        poserLeTemoin(cleAuHasard())
+        expect(await raison()).toBe('autre-titulaire')
+
+        poserLeTitulaire(7)
+        expect(await raison({ ...pageDe(), props: { auth: { user: null } } })).toBe('sans-compte')
+        expect(await raison()).toBeNull()
+
+        await onglet.ecrireUneCopie(pageDe())
+        await onglet.oublierLesCopies({ fermerLeTemoin: true })
+        expect(await raison()).toBe('cle-fermee')
+        expect(await raison(pageDe(), ouvrirUnOnglet({ subtle: null }))).toBe('indisponible')
+        expect(await raison(pageDe(), ouvrirUnOnglet({ ouvrirLaBase: () => Promise.reject(new Error('refus')) }))).toBe(
+            'indisponible',
+        )
+    })
+})
+
+describe('le dernier rejeu', () => {
+    it('se note dans un état ouvert, ne recule pas, et part avec la purge', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        expect(await onglet.noterUnRejeu()).toBe(false)
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+        instant += 1000
+
+        expect(await onglet.noterUnRejeu()).toBe(true)
+        expect(etatRange().dernierRejeu).toBe(instant)
+        expect((await onglet.inventaire(pageDe())).dernierRejeu).toBe(instant)
+
+        const note = instant
+        instant -= 500
+        await onglet.noterUnRejeu()
+        expect(etatRange().dernierRejeu).toBe(note)
+
+        await onglet.oublierLesCopies()
+        expect(etatRange().dernierRejeu).toBeNull()
+        expect(await onglet.noterUnRejeu()).toBe(false)
+        expect(await ouvrirUnOnglet({ subtle: null }).noterUnRejeu()).toBe(false)
+    })
+})
+
+describe('les séances qui ne sont plus en cours', () => {
+    /** La copie de la séance `identifiant`, en cours ou close. */
+    const ecrireLaSeance = (onglet, identifiant, { close = false, seanceEnCours = identifiant } = {}) =>
+        onglet.ecrireUneCopie(
+            pageDeLaSeance(identifiant, {
+                seanceEnCours,
+                props: { workout: { id: identifiant, ended_at: close ? '2026-10-12T17:00:00Z' : null } },
+            }),
+        )
+
+    it('retire celles qui montrent leur séance en cours, sauf la séance en cours', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+
+        // Trois séances à côté de celle en cours, la dernière écrite : le plafond les garde toutes.
+        for (const [identifiant, options] of [
+            [3, { close: true, seanceEnCours: null }],
+            [4, {}],
+            [5, {}],
+            [6, {}],
+        ]) {
+            instant += 1000
+            await ecrireLaSeance(onglet, identifiant, options)
+        }
+
+        expect(cheminsRanges()).toEqual(['/dashboard', '/workouts/3', '/workouts/4', '/workouts/5', '/workouts/6'])
+
+        expect(await onglet.retirerLesSeancesQuiNeSontPlusEnCours('/workouts/6')).toEqual([
+            '/workouts/4',
+            '/workouts/5',
+        ])
+        expect(cheminsRanges()).toEqual(['/dashboard', '/workouts/3', '/workouts/6'])
+
+        expect(await onglet.retirerLesSeancesQuiNeSontPlusEnCours(null)).toEqual(['/workouts/6'])
+        expect(cheminsRanges()).toEqual(['/dashboard', '/workouts/3'])
+    })
+
+    it('ne retire rien après une purge décidée depuis, ni une copie réécrite entre la lecture et le retrait', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await ecrireLaSeance(onglet, 5)
+
+        const generation = onglet.generationCourante()
+        await ouvrirUnOnglet().oublierLesCopies({ fermerLEtat: false })
+        await ecrireLaSeance(onglet, 5)
+
+        expect(await onglet.retirerLesSeancesQuiNeSontPlusEnCours(null, { generation })).toBe('perimee')
+        expect(cheminsRanges()).toEqual(['/workouts/5'])
+
+        // Le déchiffrement retenu : une réponse récrit la copie pendant ce temps.
+        let liberer
+        const retenu = new Promise((resoudre) => {
+            liberer = resoudre
+        })
+        const lent = ouvrirUnOnglet({
+            subtle: {
+                digest: (...arguments_) => crypto.subtle.digest(...arguments_),
+                importKey: (...arguments_) => crypto.subtle.importKey(...arguments_),
+                encrypt: (...arguments_) => crypto.subtle.encrypt(...arguments_),
+                decrypt: async (...arguments_) => {
+                    await retenu
+
+                    return crypto.subtle.decrypt(...arguments_)
+                },
+            },
+        })
+        const retrait = lent.retirerLesSeancesQuiNeSontPlusEnCours(null)
+
+        instant += 1000
+        await ecrireLaSeance(onglet, 5)
+        liberer()
+
+        expect(await retrait).toEqual([])
+        expect(cheminsRanges()).toEqual(['/workouts/5'])
+    })
+
+    it('ne fait rien sans état ouvert, sans la clé de l’état, ni sans chiffrement', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        expect(await onglet.retirerLesSeancesQuiNeSontPlusEnCours(null)).toBe('etat-ferme')
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await ecrireLaSeance(onglet, 5)
+        poserLeTemoin(cleAuHasard())
+
+        expect(await onglet.retirerLesSeancesQuiNeSontPlusEnCours(null)).toBe('sans-cle')
+        expect(cheminsRanges()).toEqual(['/workouts/5'])
+        expect(await ouvrirUnOnglet({ subtle: null }).retirerLesSeancesQuiNeSontPlusEnCours(null)).toBe('indisponible')
+        expect(
+            await ouvrirUnOnglet({
+                ouvrirLaBase: () => Promise.reject(new Error('refus')),
+            }).retirerLesSeancesQuiNeSontPlusEnCours(null),
+        ).toBe('erreur')
     })
 })
 

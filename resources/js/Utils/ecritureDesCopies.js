@@ -1,7 +1,8 @@
 import { auRepos } from '@/Utils/auRepos'
 import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
 import { pageInitialeDuDocument } from '@/Utils/historiqueDuCompte'
-import { cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
+import { cleDeLaCopie, cleDeLaSeanceEnCours, pageGardee } from '@/Utils/pagesGardees'
+import { estUneAdresseDEcritureDeLaSeance } from '@/Utils/seanceEtFile'
 
 /**
  * L'écriture des copies hors ligne (#2048, partie D, décisions du propriétaire
@@ -46,6 +47,30 @@ import { cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
  * suppression du compte et le changement de titulaire ont les leurs
  * (`useDeconnexion`, `DeleteUserForm`, la garde de `historiqueDuCompte`).
  *
+ * **La séance en cours.** Chaque page complète dit la séance que le compte a
+ * en cours (`auth.user.active_workout`). À la première de l'onglet, puis
+ * chaque fois qu'elle change, les copies des autres séances qui les montrent
+ * encore en cours se retirent (`retirerLesSeancesQuiNeSontPlusEnCours`), et
+ * la page même, si c'est l'une d'elles (le compte rendu d'une séance close),
+ * se réécrit juste après depuis cette réponse : terminer une séance mène à
+ * l'accueil, et sa copie aurait fait croire hors ligne qu'elle attendait
+ * encore des séries. La
+ * première page compte aussi, puisqu'une séance a pu se clore ailleurs, sur
+ * un autre appareil ou application fermée. Un rejeu d'écriture de séance par la file
+ * hors ligne (`sync:replayed`) date le dernier rejeu dans l'état du magasin :
+ * la copie de la séance, écrite avant, ne l'a pas, et le préchauffage la
+ * redemande (`prechauffage.js`). Sur la page de séance, l'instantané qui suit
+ * le rechargement d'après le vidage la rafraîchit avant lui.
+ *
+ * **Pour les autres.** L'écriture installée se lit par
+ * `ecritureDesCopiesInstallee()` : la page de séance y verse son instantané
+ * (`useCopieDeLaSeance`), et le préchauffage les pages qu'il demande, dans la
+ * même file, dans l'ordre des décisions. `presser()` fait passer tout de
+ * suite ce qui attend le repos, quand la page se cache ; `origineDeLaPage()`
+ * dit d'où vient la page affichée : du réseau, de l'historique de l'onglet,
+ * ou d'une visite côté client ; `lireLaCopie()` relit une copie, que la page
+ * de séance compare à une séance rendue par l'historique.
+ *
  * Rien n'est gardé d'un compte à l'autre dans ce module : il ne retient que
  * la forme des visites en vol et la dernière page reçue, celle qu'Inertia
  * tient aussi, jamais la charge d'une visite.
@@ -53,6 +78,31 @@ import { cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
 
 /** Les visites dont la forme est retenue, au plus : celles d'une réponse qui ne viendra pas sortent. */
 const VISITES_RETENUES = 32
+
+/**
+ * @typedef {'reseau' | 'historique' | 'client' | 'aucune'} OrigineDeLaPage
+ *   `reseau` : une réponse du serveur, ou la page initiale d'un document venu
+ *   du réseau ; `historique` : une entrée de l'historique de l'onglet,
+ *   boutons Retour et Avance, ou un document rouvert par eux ; `client` : une
+ *   visite côté client (`router.push`, `router.replace`) ; `aucune` : pas de
+ *   page encore.
+ */
+
+/**
+ * Les écritures installées par `installerLEcritureDesCopies` et pas encore
+ * désinstallées : une par document, plusieurs dans un test qui rejoue un
+ * autre chargement.
+ *
+ * @type {Array<ReturnType<typeof installerLEcritureDesCopies>>}
+ */
+const ecrituresInstallees = []
+
+/**
+ * L'écriture installée en dernier, ou `null` avant `installerLEcritureDesCopies`
+ * (et dans un test qui ne l'installe pas) : la page de séance et le
+ * préchauffage y passent leurs copies.
+ */
+export const ecritureDesCopiesInstallee = () => ecrituresInstallees.at(-1) ?? null
 
 /**
  * La forme d'une visite, telle que l'évènement `before` la donne : ce qu'elle
@@ -159,9 +209,21 @@ const meriteUneCopie = (page) =>
  *   tableDesRoutes?: () => object | null,
  *   planifier?: (tache: () => void) => void,
  * }} options
- * @returns {{ desinstaller: () => void, ecrituresFinies: () => Promise<void> }}
- *   `ecrituresFinies` se règle quand tout ce qui a été décidé est écrit ou
- *   refusé.
+ * @returns {{
+ *   desinstaller: () => void,
+ *   ecrituresFinies: () => Promise<void>,
+ *   garder: (page: object) => void,
+ *   completer: (page: object, noms: string[]) => void,
+ *   presser: () => void,
+ *   origineDeLaPage: () => OrigineDeLaPage,
+ *   lireLaCopie: (adresse: string) => Promise<object | null>,
+ * }} `ecrituresFinies` se règle quand tout ce qui a été décidé est écrit ou
+ *   refusé ; `garder` et `completer` décident la copie d'une page complète
+ *   ou partielle reçue d'ailleurs que d'une visite (le préchauffage, la page
+ *   de séance) ; `presser` fait passer sans attendre le repos ce qui est
+ *   décidé ; `origineDeLaPage` dit d'où vient la page affichée ;
+ *   `lireLaCopie` déchiffre une copie pour la comparer, jamais pour la
+ *   servir (partie E).
  */
 export const installerLEcritureDesCopies = ({
     routeur,
@@ -178,17 +240,44 @@ export const installerLEcritureDesCopies = ({
     let derniereReponse = null
     let file = Promise.resolve()
     let branchee = true
+    /** @type {OrigineDeLaPage} */
+    let origine = pageInitiale === null || pageInitiale === undefined ? 'aucune' : 'historique'
+    /** @type {Set<() => void>} */
+    const enAttenteDuRepos = new Set()
+
+    /**
+     * La séance en cours que la dernière page complète du compte a dite :
+     * `undefined` tant qu'aucune page ne l'a dite, `null` sans séance.
+     *
+     * @type {string | null | undefined}
+     */
+    let seanceEnCours
 
     /**
      * Fait passer une écriture au repos, après celles décidées avant elle : la
      * génération du magasin se note ici, au moment de décider, et l'ordre
-     * des décisions est celui des écritures.
+     * des décisions est celui des écritures. `presser` lève l'attente du repos
+     * de tout ce qui est décidé. Ce qui ne fait que relire et retirer des
+     * copies, sans en écrire (`sansAttendreLeRepos`), passe dès que son tour
+     * vient.
      *
      * @param {(generation: number) => Promise<unknown>} ecrire
+     * @param {{ sansAttendreLeRepos?: boolean }} [options]
      */
-    const decider = (ecrire) => {
+    const decider = (ecrire, { sansAttendreLeRepos = false } = {}) => {
         const generation = magasin.generationCourante()
-        const auReposAtteint = new Promise((resoudre) => planifier(resoudre))
+        let liberer
+        const auReposAtteint = new Promise((resoudre) => {
+            liberer = resoudre
+        })
+
+        if (sansAttendreLeRepos) {
+            liberer()
+        } else {
+            enAttenteDuRepos.add(liberer)
+            auReposAtteint.then(() => enAttenteDuRepos.delete(liberer))
+            planifier(() => liberer())
+        }
 
         file = file
             .then(() => auReposAtteint)
@@ -199,12 +288,46 @@ export const installerLEcritureDesCopies = ({
     }
 
     /**
+     * Suit la séance en cours que dit une page complète du compte. À la
+     * première, puis quand elle change, les copies des autres séances qui les
+     * montrent encore en cours se retirent ; celle de la page même, si elle
+     * en est, est réécrite juste après par cette réponse, qui la montre telle
+     * que le serveur la rend maintenant.
+     *
+     * @param {object} page
+     */
+    const suivreLaSeanceEnCours = (page) => {
+        const utilisateur = page?.props?.auth?.user
+
+        if (utilisateur === null || typeof utilisateur !== 'object' || !('active_workout' in utilisateur)) {
+            return
+        }
+
+        const nouvelle = cleDeLaSeanceEnCours(page)
+
+        if (nouvelle === seanceEnCours) {
+            return
+        }
+
+        seanceEnCours = nouvelle
+        decider((generation) => magasin.retirerLesSeancesQuiNeSontPlusEnCours(nouvelle, { generation }), {
+            sansAttendreLeRepos: true,
+        })
+    }
+
+    /**
      * La copie d'une page reçue en entier.
      *
      * @param {object} page
      */
     const garder = (page) => {
-        if (!meriteUneCopie(page) || page.props?.horsLigne !== undefined) {
+        if (page?.props?.horsLigne !== undefined) {
+            return
+        }
+
+        suivreLaSeanceEnCours(page)
+
+        if (!meriteUneCopie(page)) {
             return
         }
 
@@ -266,11 +389,42 @@ export const installerLEcritureDesCopies = ({
 
         derniereReponse = page === null ? null : { page, composantAvant: pageCourante?.component ?? null }
         pageCourante = page ?? pageCourante
+        origine = 'reseau'
     }
 
     /** @param {CustomEvent} evenement */
     const suivreLaPage = (evenement) => {
         pageCourante = evenement.detail?.page ?? pageCourante
+    }
+
+    /** @param {CustomEvent} evenement */
+    const suivreUneVisiteCoteClient = (evenement) => {
+        suivreLaPage(evenement)
+        origine = 'client'
+    }
+
+    /**
+     * Les boutons Retour et Avance : Inertia rend l'entrée d'historique, sans
+     * le serveur. Écouté avant Inertia, installé après.
+     *
+     * @param {PopStateEvent} evenement
+     */
+    const auRetourOuALAvance = (evenement) => {
+        if (evenement.state?.page !== undefined) {
+            origine = 'historique'
+        }
+    }
+
+    /**
+     * Une écriture de séance rejouée par la file : la copie de la séance,
+     * écrite avant, ne l'a pas.
+     *
+     * @param {CustomEvent} evenement
+     */
+    const surUnRejeu = (evenement) => {
+        if (estUneAdresseDEcritureDeLaSeance(evenement.detail?.url)) {
+            magasin.noterUnRejeu()
+        }
     }
 
     /** @param {CustomEvent} evenement */
@@ -305,24 +459,33 @@ export const installerLEcritureDesCopies = ({
         routeur.on('before', surUneVisite),
         routeur.on('beforeUpdate', avantLaMiseAJour),
         routeur.on('navigate', suivreLaPage),
-        routeur.on('clientVisit', suivreLaPage),
+        routeur.on('clientVisit', suivreUneVisiteCoteClient),
         routeur.on('success', surUneReponse),
     ]
 
     fenetre.addEventListener('sync:auth-required', surLaFinDeLaSession)
+    fenetre.addEventListener('sync:replayed', surUnRejeu)
+    fenetre.addEventListener('popstate', auRetourOuALAvance)
 
     // L'hygiène d'abord : une copie de plus de sept jours, ou d'un autre contrat, ne sert plus.
     decider(() => magasin.entretenir())
 
     if (pageInitiale !== null && pageInitiale !== undefined && documentVenuDuReseau(fenetre)) {
+        origine = 'reseau'
         garder(pageInitiale)
     }
 
-    return {
+    const installee = {
         desinstaller: () => {
             branchee = false
             arrets.forEach((arreter) => (typeof arreter === 'function' ? arreter() : undefined))
             fenetre.removeEventListener('sync:auth-required', surLaFinDeLaSession)
+            fenetre.removeEventListener('sync:replayed', surUnRejeu)
+            fenetre.removeEventListener('popstate', auRetourOuALAvance)
+
+            if (ecrituresInstallees.includes(installee)) {
+                ecrituresInstallees.splice(ecrituresInstallees.indexOf(installee), 1)
+            }
         },
         ecrituresFinies: async () => {
             let attendue
@@ -332,5 +495,26 @@ export const installerLEcritureDesCopies = ({
                 await attendue
             } while (attendue !== file)
         },
+        garder: (page) => {
+            if (branchee) {
+                garder(page)
+            }
+        },
+        completer: (page, noms) => {
+            if (branchee) {
+                completer(page, noms)
+            }
+        },
+        presser: () => {
+            for (const liberer of enAttenteDuRepos) {
+                liberer()
+            }
+        },
+        origineDeLaPage: () => origine,
+        lireLaCopie: (adresse) => magasin.lireUneCopie(adresse),
     }
+
+    ecrituresInstallees.push(installee)
+
+    return installee
 }
