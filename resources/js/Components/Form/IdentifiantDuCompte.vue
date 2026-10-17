@@ -4,7 +4,7 @@ import { computed } from 'vue'
 
 /**
  * L'identifiant du compte connecté, pour les gestionnaires de mots de passe
- * (#PR), dans un formulaire du profil qui change le mot de passe ou l'adresse
+ * (#2076), dans un formulaire du profil qui change le mot de passe ou l'adresse
  * du compte sans demander son identifiant : le changement du mot de passe, et
  * le changement d'adresse, dont le champ porte la nouvelle adresse, qui ne
  * remplace l'actuelle qu'une fois le lien suivi. Sans lui, un gestionnaire

@@ -726,6 +726,23 @@ describe('VerifyEmail', () => {
     })
 
     /*
+     * Aucun lien ne part à une adresse que la messagerie ne sait pas écrire
+     * (#2075) : la page ne dit pas qu'il est parti, et renvoie au profil, où
+     * changer d'adresse.
+     */
+    it('dit qu’aucun lien ne part à une adresse que la messagerie n’écrit pas, et renvoie au profil', () => {
+        const refusee = mountPage(VerifyEmail, { props: { status: 'adresse-que-la-messagerie-n-ecrit-pas' } })
+        const envoyee = mountPage(VerifyEmail, { props: { status: 'verification-link-sent' } })
+        const avis = refusee.find('[data-testid="adresse-que-la-messagerie-n-ecrit-pas"]')
+
+        expect(avis.attributes('role')).toBe('status')
+        expect(avis.text()).toContain('Notre messagerie ne sait pas écrire à ton adresse')
+        expect(avis.find('a').attributes('href')).toBe('/profile.edit')
+        expect(refusee.text()).not.toContain('Un nouveau lien de vérification a été envoyé')
+        expect(envoyee.find('[data-testid="adresse-que-la-messagerie-n-ecrit-pas"]').exists()).toBe(false)
+    })
+
+    /*
      * Un compte qui n'a pas encore vérifié son adresse peut déjà activer le
      * push depuis son profil : sa déconnexion détache l'appareil comme les
      * autres (#1926). Un bouton sans adresse, que le navigateur ne peut pas

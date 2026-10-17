@@ -10,7 +10,7 @@ use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\AbstractTransport;
 
 /**
- * Un transport dont le serveur refuse le destinataire, et le cite (#PR).
+ * Un transport dont le serveur refuse le destinataire, et le cite (#2076).
  *
  * L'erreur a la forme exacte de celle de Symfony
  * (`SmtpTransport::assertResponseCode()`), qui recopie la réponse du

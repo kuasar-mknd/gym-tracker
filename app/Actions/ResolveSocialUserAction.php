@@ -8,8 +8,10 @@ use App\Actions\Auth\ReprendreUnCompteEnAttente;
 use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialUser;
 
@@ -41,7 +43,10 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  *     ASCII imprimable, vérifiée par le fournisseur, et que le compte n'est
  *     lié à aucune autre identité du même fournisseur.
  *  3. Sinon, un compte est créé, à condition qu'aucun compte n'occupe déjà une
- *     adresse que la base tiendrait pour la même.
+ *     adresse que la base tiendrait pour la même, et que l'inscription admette
+ *     la forme de l'adresse : bien formée, tenant dans sa colonne, et que la
+ *     messagerie écrive telle quelle (`AdresseQueLaMessagerieSaitEcrire`) ;
+ *     la casse rendue est gardée, que l'inscription exigerait en minuscules.
  *
  * Toute comparaison d'adresse et d'identifiant se fait en PHP, octet par
  * octet. La base ne sert qu'à trouver les candidats : sa collation
@@ -287,6 +292,19 @@ final readonly class ResolveSocialUserAction
      * preuve, comme le compte reste non vérifié : rien ne dit que l'identité
      * détient l'adresse, dont le titulaire peut reprendre le compte par la
      * réinitialisation du mot de passe.
+     *
+     * Une adresse dont l'inscription refuserait la forme ne crée pas de compte
+     * (#2075) : mal formée (règle `email`), plus longue que sa colonne, ou que
+     * la messagerie n'écrit pas telle quelle, auquel cas aucun courriel ne lui
+     * parviendrait, lien « mot de passe oublié » compris. Les minuscules, que
+     * l'inscription exige aussi, ne le sont pas ici : le compte garde la casse
+     * que rend le fournisseur. Le compte naîtrait sinon sous une adresse que
+     * « mot de passe oublié » refuse, et que le profil comme le panneau ne
+     * jugent plus tant qu'elle ne change pas ; une adresse trop longue
+     * finissait en erreur 500 à l'insertion. Seule la création est refusée :
+     * un compte qui porte déjà l'adresse, ou l'identité, s'ouvre comme avant.
+     *
+     * @throws SocialAuthException
      */
     private function creerLeCompte(
         string $fournisseur,
@@ -295,6 +313,10 @@ final readonly class ResolveSocialUserAction
         string $adresse,
         bool $adresseVerifiee,
     ): User {
+        if (! $this->lInscriptionAdmettraitSaForme($adresse)) {
+            throw new SocialAuthException($this->refusDAdresseQueLInscriptionRefuse($fournisseur));
+        }
+
         $user = User::create([
             'name' => $utilisateurSocial->getName() ?? $utilisateurSocial->getNickname() ?? 'Utilisateur',
             'email' => $adresse,
@@ -402,6 +424,36 @@ final readonly class ResolveSocialUserAction
     private function refusDAdresseHorsAscii(string $fournisseur): string
     {
         return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une adresse en caractères ASCII, sans accent.';
+    }
+
+    /**
+     * L'inscription admettrait-elle la forme de cette adresse ?
+     *
+     * Les règles de forme et de longueur de l'adresse dans `RegisterRequest` :
+     * `email`, `max:255` et `AdresseQueLaMessagerieSaitEcrire`. Pas les deux
+     * autres : `lowercase`, parce que le compte garde l'adresse avec la casse
+     * que le fournisseur rend (une adresse en capitales, que l'inscription
+     * refuse, crée donc le compte), ni `AdresseEnAsciiImprimable`, dont
+     * `adresseComparable()` a déjà jugé le motif.
+     */
+    private function lInscriptionAdmettraitSaForme(string $adresse): bool
+    {
+        return Validator::make(
+            ['email' => $adresse],
+            ['email' => ['email', 'max:255', new AdresseQueLaMessagerieSaitEcrire()]],
+        )->passes();
+    }
+
+    /**
+     * Le refus d'une adresse que l'inscription refuserait, qu'aucun compte
+     * n'occupe.
+     *
+     * Le message renvoie au compte que la personne aurait sous une autre
+     * adresse, ou à l'inscription avec une autre adresse.
+     */
+    private function refusDAdresseQueLInscriptionRefuse(string $fournisseur): string
+    {
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' n\'est pas une adresse email que nous acceptons, et l\'inscription la refuserait de même. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
     }
 
     /**

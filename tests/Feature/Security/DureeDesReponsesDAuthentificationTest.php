@@ -11,11 +11,14 @@ use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\Pages\Login as ConnexionDuPanneau;
 use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Notifications\Events\NotificationSending;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
@@ -362,6 +365,42 @@ it('n’endort pas le travailleur qui envoie le lien de réinitialisation', func
         Notification::assertNothingSent();
     }
 })->with(['connue@example.org', 'inconnue@example.org']);
+
+/*
+ * Un compte dont la messagerie n'écrit pas l'adresse telle quelle ne reçoit
+ * aucun courriel (`User::routeNotificationForMail()`) : sa demande de lien
+ * dure le plancher, comme pour une adresse sans compte. Les courriels partent
+ * ici pour de bon, et le job tourne dans la requête, la file des tests étant
+ * synchrone : l'envoi que Mime refusait finissait en erreur 500, après le
+ * plancher. Le jeton dit que le courtier a trouvé le compte.
+ */
+it('fait durer le plancher à « mot de passe oublié » pour un compte dont la messagerie n’écrit pas l’adresse, sans rien lui envoyer', function (string $adresse): void {
+    $duree = DureeSimulee::demarrer();
+    $oubli = static fn (string $adresseDemandee): Closure => static fn (): mixed => test()->from(route('password.request'))
+        ->post(route('password.email'), ['email' => $adresseDemandee])
+        ->assertRedirect(route('password.request'))
+        ->assertSessionHas('status', __('passwords.sent'));
+
+    $inconnue = $duree->mesurer($oubli('personne@example.org'));
+    User::factory()->create(['email' => $adresse]);
+    Cache::flush();
+    $nonEcrite = $duree->mesurer($oubli($adresse));
+
+    $transport = Mail::mailer()->getSymfonyTransport();
+    assert($transport instanceof ArrayTransport);
+
+    foreach ([$inconnue, $nonEcrite] as $mesure) {
+        expect($mesure['total'])->toBeGreaterThanOrEqual($duree->plancher)
+            ->and($mesure['total'])->toBeLessThanOrEqual($duree->plancher + $mesure['reel'] + 1_000)
+            ->and($mesure['dormi'])->toBeGreaterThan(0.0);
+    }
+
+    expect(DB::table('password_reset_tokens')->count())->toBe(1)
+        ->and($transport->messages())->toHaveCount(0);
+})->with([
+    'un commentaire' => ['camille(salle)@example.org'],
+    'une adresse entre chevrons, entre guillemets' => ['"camille<autre@example.net>"@example.org'],
+]);
 
 it('rend la main sans attendre à une connexion réussie', function (): void {
     $duree = DureeSimulee::demarrer();

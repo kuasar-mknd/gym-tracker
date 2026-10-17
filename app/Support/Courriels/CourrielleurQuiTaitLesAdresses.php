@@ -17,7 +17,7 @@ use Symfony\Component\Mime\Exception\RfcComplianceException;
 
 /**
  * Le courrielleur de Laravel, dont les erreurs ne citent pas d'adresse
- * (#PR). `GestionnaireDesCourriels` le crée pour chaque courrielleur.
+ * (#2076). `GestionnaireDesCourriels` le crée pour chaque courrielleur.
  *
  * Deux erreurs d'un envoi en citaient une. Celle du transport recopie la
  * réponse du serveur de courriel, qui nomme souvent le destinataire qu'il

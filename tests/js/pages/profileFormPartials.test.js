@@ -270,7 +270,7 @@ describe('UpdatePasswordForm', () => {
     /*
      * Un gestionnaire de mots de passe range le nouveau mot de passe sous le
      * champ `autocomplete="username"` du formulaire qu'il voit envoyer : sans
-     * lui, il le rangeait sans savoir sous quel compte (#PR). Le champ porte
+     * lui, il le rangeait sans savoir sous quel compte (#2076). Le champ porte
      * l'adresse du compte connecté, lue sur la page, caché à tous ; il n'est
      * pas envoyé (identifiantDuChangementDeMotDePasse.test.js le lit dans la
      * requête du vrai client d'Inertia).
@@ -563,6 +563,47 @@ describe('UpdateProfileInformationForm', () => {
         expect(statut(undefined).exists()).toBe(false)
     })
 
+    it('dit à une adresse que la messagerie n’écrit pas qu’aucun lien ne lui parvient, et d’en changer', () => {
+        signedInAs(sam)
+
+        const wrapper = mountPartial(UpdateProfileInformationForm, {
+            mustVerifyEmail: true,
+            status: 'adresse-que-la-messagerie-n-ecrit-pas',
+        })
+        const avis = wrapper.find('[data-testid="profile-email-status"]')
+
+        expect(avis.attributes('role')).toBe('status')
+        expect(avis.text()).toBe(
+            'Notre messagerie ne sait pas écrire à ton adresse actuelle : aucun lien ne peut lui parvenir. Change-la ci-dessus, le lien partira à la nouvelle.',
+        )
+        expect(wrapper.text()).not.toContain('Un nouveau lien a été envoyé.')
+    })
+
+    /*
+     * Un compte ancien peut porter une adresse que la spécification HTML d'un
+     * champ `type="email"` refuse (commentaire, tiret bas dans le domaine,
+     * point final) : le navigateur n'envoyait pas le formulaire, nom compris,
+     * que le serveur accepte (#2075). `requestSubmit()` juge le formulaire
+     * comme un clic sur « Enregistrer ».
+     */
+    it('enregistre le nom d’un compte dont le navigateur refuserait l’adresse actuelle', async () => {
+        signedInAs({ name: 'Avant', email: 'camille(salle)@example.org' })
+
+        const wrapper = mountPartial(UpdateProfileInformationForm)
+        const champDeLAdresse = wrapper.find('input[type="email"]').element
+
+        expect(champDeLAdresse.validity.typeMismatch).toBe(true)
+
+        await typeInto(wrapper, 'Nom', 'Après')
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPatch).toHaveBeenCalledTimes(1)
+        expect(formPatch.mock.calls[0][0]).toBe('/profile.update')
+        expect(wrapper.vm.form.name).toBe('Après')
+        expect(wrapper.vm.form.email).toBe('camille(salle)@example.org')
+    })
+
     it('propose de renvoyer le lien quand l’adresse n’est plus vérifiée', async () => {
         currentPage = reactive({ props: { auth: { user: { ...sam } } } })
 
@@ -607,6 +648,28 @@ describe('UpdateProfileInformationForm', () => {
         expect(help(social).exists()).toBe(false)
     })
 
+    /*
+     * Le lien « mot de passe oublié » ne part pas à une adresse que la
+     * messagerie n'écrit pas telle quelle, qu'un compte d'avant #2075 peut
+     * porter : l'encadré ne le promet pas, et renvoie à un administrateur.
+     */
+    it('ne promet aucun lien à un compte relié à un fournisseur dont la messagerie n’écrit pas l’adresse', async () => {
+        signedInAs({ name: 'Camille', email: 'camille(salle)@example.org' })
+
+        const wrapper = mountPartial(UpdateProfileInformationForm, {
+            fournisseurDeConnexion: 'Google',
+            laMessagerieSaitEcrireSonAdresse: false,
+        })
+
+        await typeInto(wrapper, 'Email', 'nouveau@example.com')
+        const aide = wrapper.find('[data-testid="profile-social-password-help"]').text()
+
+        expect(aide).toBe(
+            'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+        )
+        expect(aide).not.toContain('Mot de passe oublié')
+    })
+
     it('ne confirme l’enregistrement qu’une fois qu’il a eu lieu', async () => {
         signedInAs(sam)
 
@@ -625,7 +688,7 @@ describe('UpdateProfileInformationForm', () => {
      * l'identifiant du compte qu'une fois le lien suivi. Déclarée `username`,
      * elle faisait du formulaire une connexion pour un gestionnaire de mots de
      * passe, qui proposait de ranger le mot de passe actuel, demandé à côté,
-     * sous elle (#PR). Le champ se déclare `email`, et le formulaire porte
+     * sous elle (#2076). Le champ se déclare `email`, et le formulaire porte
      * l'identifiant du compte, caché et jamais envoyé, comme celui du mot de
      * passe.
      */
@@ -707,5 +770,25 @@ describe('Profile/Edit', () => {
         // n'avoir aucun mot de passe, et le refus du serveur resterait la seule
         // explication.
         expect(wrapper.findComponent(UpdateProfileInformationForm).props('fournisseurDeConnexion')).toBe('GitHub')
+    })
+
+    it('dit au formulaire d’adresse si la messagerie écrit l’adresse actuelle', () => {
+        const mountEdit = (props) =>
+            mount(ProfileEdit, {
+                props: { mustVerifyEmail: true, fournisseurDeConnexion: 'GitHub', ...props },
+                shallow: true,
+                global: {
+                    mocks: { route: globalThis.route },
+                    stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+                },
+            })
+        const formProp = (wrapper) =>
+            wrapper.findComponent(UpdateProfileInformationForm).props('laMessagerieSaitEcrireSonAdresse')
+
+        // Sans elle, le formulaire promettait le lien « mot de passe oublié »
+        // à une adresse qui ne le reçoit pas.
+        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: false }))).toBe(false)
+        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: true }))).toBe(true)
+        expect(formProp(mountEdit({}))).toBe(true)
     })
 })

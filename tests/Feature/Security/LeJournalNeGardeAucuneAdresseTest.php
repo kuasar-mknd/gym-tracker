@@ -11,7 +11,7 @@ use Monolog\Handler\NullHandler;
 
 /*
  * Chaque canal du journal qui écrit sort ses lignes sans adresse de courriel
- * en clair, message, contexte et pile d'une exception compris (#PR). C'est
+ * en clair, message, contexte et pile d'une exception compris (#2076). C'est
  * une défense : les erreurs d'envoi n'en citent plus
  * (`CourrielsSansAdresseDansLeursErreursTest`), mais un transport de secours
  * de Symfony écrit lui-même l'erreur de chacun de ses transports, et un

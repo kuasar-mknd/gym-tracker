@@ -11,7 +11,7 @@ use Illuminate\Mail\MailManager;
 
 /**
  * Le gestionnaire des courriels de Laravel, dont chaque courrielleur est un
- * `CourrielleurQuiTaitLesAdresses` (#PR). `AppServiceProvider` le pose à la
+ * `CourrielleurQuiTaitLesAdresses` (#2076). `AppServiceProvider` le pose à la
  * place de celui de Laravel.
  *
  * `build()` reprend celle de Laravel, qui écrit la classe en dur, à la

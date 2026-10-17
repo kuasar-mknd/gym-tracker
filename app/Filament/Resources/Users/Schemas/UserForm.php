@@ -7,6 +7,7 @@ namespace App\Filament\Resources\Users\Schemas;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -37,15 +38,32 @@ class UserForm
              * confondent une adresse accentuée, un « ß » ou une lettre pleine
              * chasse avec l'adresse ASCII voisine : un compte créé ou modifié
              * ici sur l'une occuperait l'autre, et son titulaire ne pourrait
-             * plus s'inscrire. L'adresse actuelle du compte reste admise telle
-             * quelle, pour qu'un compte ancien s'enregistre sans en changer.
+             * plus s'inscrire. La messagerie doit aussi l'écrire telle quelle :
+             * sans quoi aucun courriel n'atteindrait le compte, lien « mot de
+             * passe oublié » compris (`AdresseQueLaMessagerieSaitEcrire`, #2075).
+             * L'adresse actuelle du compte reste admise telle quelle par les
+             * deux règles, pour qu'un compte ancien s'enregistre sans en
+             * changer.
+             *
+             * La forme (règle `email`) ne se juge, de même, que d'une adresse
+             * qui change : la connexion sociale créait, avant #2075, le compte
+             * de toute adresse en ASCII imprimable (points consécutifs, tiret
+             * bas dans le domaine…), dont le nom ne s'enregistrait plus ici.
+             * D'où une règle conditionnelle plutôt que `->email()`, qui pose
+             * aussi `type="email"` : le navigateur, qui juge l'adresse selon la
+             * spécification HTML, refusait d'envoyer le formulaire d'un compte
+             * dont l'adresse porte un commentaire, un tiret bas dans le domaine
+             * ou un point final. Le champ garde le clavier d'une adresse
+             * (`inputmode`).
              */
             TextInput::make('email')
                 ->label('Adresse e-mail')
-                ->email()
+                ->inputMode('email')
                 ->required()
                 ->maxLength(255)
-                ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email)),
+                ->rule('email', static fn (?User $record, mixed $state): bool => $state !== $record?->email)
+                ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email))
+                ->rule(fn (?User $record): AdresseQueLaMessagerieSaitEcrire => new AdresseQueLaMessagerieSaitEcrire($record?->email)),
             TextInput::make('default_rest_time')->label('Repos par défaut (s)')->required()->integer()->minValue(0)->maxValue(Exercise::REPOS_MAX_SECONDES)->default(90),
             /*
              * Montres, jamais ecrits.
@@ -104,7 +122,7 @@ class UserForm
              * celui d'un autre compte que l'administrateur fixe. Sans le dire,
              * un champ de mot de passe sous une adresse se lit comme un
              * formulaire de connexion, et un gestionnaire de mots de passe y
-             * proposait celui de l'administrateur (#PR). Il ne reçoit pas
+             * proposait celui de l'administrateur (#2076). Il ne reçoit pas
              * l'identifiant de l'administrateur, que le formulaire du mot de
              * passe du profil donne : ce mot de passe n'est pas le sien.
              */

@@ -14,7 +14,7 @@ const currentPasswordInput = ref(null)
 /*
  * Le formulaire change le mot de passe sans demander l'adresse : il porte
  * l'identifiant du compte, caché et jamais envoyé, sous lequel un
- * gestionnaire de mots de passe range le nouveau (`IdentifiantDuCompte`, #PR).
+ * gestionnaire de mots de passe range le nouveau (`IdentifiantDuCompte`, #2076).
  */
 const form = useForm({
     current_password: '',
