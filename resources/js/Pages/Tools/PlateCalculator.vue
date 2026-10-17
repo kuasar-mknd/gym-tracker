@@ -186,7 +186,7 @@
                                     ton="danger"
                                     title="Supprimer la plaque"
                                     compact
-                                    class="bg-surface-card absolute -top-2 -right-2 rounded-full opacity-100 shadow-md sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                    class="bg-surface-card souris:opacity-0 souris:group-hover:opacity-100 souris:focus-visible:opacity-100 absolute -top-2 -right-2 rounded-full shadow-md"
                                     @click="demanderSuppression(plate)"
                                 />
                             </div>

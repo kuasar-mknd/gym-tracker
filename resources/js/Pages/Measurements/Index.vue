@@ -300,7 +300,7 @@ const latestBodyFat = computed(() => {
                                 icon="delete"
                                 :label="`Supprimer la mesure du ${measurement.measured_at.substring(0, 10)}`"
                                 ton="danger"
-                                class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                                class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-visible:opacity-100"
                                 @click="demanderSuppression(measurement)"
                             />
                         </div>

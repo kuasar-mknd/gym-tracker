@@ -99,7 +99,7 @@ const emit = defineEmits(['edit', 'delete'])
                                 </div>
 
                                 <div
-                                    class="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+                                    class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 flex gap-1 transition-opacity"
                                 >
                                     <GlassIconButton
                                         v-press

@@ -5,6 +5,7 @@ import { Head } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import GlassChip from '@/Components/UI/GlassChip.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { dateCourte } from '@/Utils/date'
 
 const props = defineProps({
     achievements: Array,
@@ -26,6 +27,16 @@ const filteredAchievements = computed(() => {
     }
     return props.achievements.filter((a) => a.category === currentCategory.value)
 })
+
+/**
+ * Le jour du déblocage, dans le fuseau de l'appareil : le serveur envoie
+ * l'instant en ISO 8601 (#2082). Vide pour une date illisible, que la carte
+ * tait plutôt que d'écrire « Invalid Date ».
+ *
+ * @param {{unlocked_at: string|null}} achievement
+ * @returns {string}
+ */
+const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(new Date(achievement.unlocked_at)) : '')
 </script>
 
 <template>
@@ -81,18 +92,34 @@ const filteredAchievements = computed(() => {
                             {{ achievement.icon }}
                         </div>
 
-                        <!-- Name -->
-                        <h3 class="titre-carte mb-1 line-clamp-1">
+                        <!--
+                            Le nom et la description ne se coupent que sous une souris,
+                            dont le survol montre l'infobulle qui les écrit en entier ;
+                            la date du déblocage se lit dans la carte. Sans souris, rien ne
+                            montre l'infobulle : le nom et la description restaient coupés,
+                            et la date ne se voyait nulle part (#2082).
+                        -->
+                        <h3 class="titre-carte souris:line-clamp-1 mb-1">
                             {{ achievement.name }}
                         </h3>
 
-                        <!-- Description -->
-                        <p class="text-text-muted text-2xs line-clamp-2">
+                        <p class="text-text-muted text-2xs souris:line-clamp-2">
                             {{ achievement.description }}
                         </p>
 
-                        <!-- Tooltip Overlay -->
+                        <p
+                            v-if="achievement.is_unlocked && jourDuDeblocage(achievement)"
+                            class="text-text-muted text-2xs mt-2 italic"
+                        >
+                            Débloqué le {{ jourDuDeblocage(achievement) }}
+                        </p>
+
+                        <!--
+                            Infobulle du survol, muette : elle redit ce que la carte écrit,
+                            qu'un lecteur d'écran lit déjà en entier.
+                        -->
                         <div
+                            aria-hidden="true"
                             class="bg-text-main/80 pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
                             <!--
@@ -108,10 +135,10 @@ const filteredAchievements = computed(() => {
                                 achievement.description
                             }}</span>
                             <div
-                                v-if="achievement.is_unlocked"
+                                v-if="achievement.is_unlocked && jourDuDeblocage(achievement)"
                                 class="text-text-on-dark-accent/30 text-2xs mt-2 italic"
                             >
-                                Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
+                                Débloqué le {{ jourDuDeblocage(achievement) }}
                             </div>
                         </div>
 

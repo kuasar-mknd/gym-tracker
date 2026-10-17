@@ -83,3 +83,23 @@ test('achievements are ordered or retrieved correctly', function (): void {
             ->has('achievements', 5)
         );
 });
+
+/**
+ * Le pivot rend `achieved_at` tel que la base le garde, sans fuseau : la page
+ * le lisait comme une heure de l'appareil. Elle reçoit l'instant en ISO 8601,
+ * en UTC, comme toute date qu'un modèle sert (#2082). Minuit et demi à Paris,
+ * le 14 octobre, est encore le 13 en UTC.
+ */
+test('achievements page sends the unlock instant in ISO 8601, in UTC', function (): void {
+    $user = User::factory()->create();
+    $achievement = Achievement::factory()->create();
+    $user->achievements()->attach($achievement, ['achieved_at' => '2026-10-14 00:30:00']);
+
+    actingAs($user)
+        ->get(route('achievements.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('achievements.0.is_unlocked', true)
+            ->where('achievements.0.unlocked_at', '2026-10-13T22:30:00.000000Z')
+        );
+});
