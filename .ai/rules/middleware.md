@@ -1,6 +1,6 @@
 ---
 paths:
-  - 'bootstrap/app.php, app/Http/Middleware/**, app/Support/Csp/**, app/Support/CleDesCopiesEnSession.php, app/Support/RappelDeLAppareil.php, app/Support/EcheanceDuCookie.php, config/sanctum.php, app/Http/Controllers/SanteController.php, resources/views/errors/**'
+  - 'bootstrap/app.php, app/Http/Middleware/**, app/Support/Csp/**, app/Support/CleDesCopiesEnSession.php, app/Support/RappelDeLAppareil.php, app/Support/EcheanceDuCookie.php, config/sanctum.php, app/Providers/Filament/AdminPanelProvider.php, app/Http/Controllers/SanteController.php, resources/views/errors/**'
 ---
 
 # Middleware
