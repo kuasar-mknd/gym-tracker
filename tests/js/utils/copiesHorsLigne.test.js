@@ -1048,6 +1048,28 @@ describe('sans les moyens du chiffrement ou de la base', () => {
         await magasin.fermer()
     })
 
+    /*
+     * La déconnexion et la suppression du compte oublient les copies avant
+     * leur envoi : un magasin qui ne pourrait pas même se créer ne doit pas
+     * les empêcher de partir.
+     */
+    it('la page oublie sans jamais lever, même quand son magasin ne peut pas se créer', async () => {
+        vi.resetModules()
+        vi.stubGlobal(
+            'TextEncoder',
+            class {
+                constructor() {
+                    throw new Error('Un navigateur qui refuse')
+                }
+            },
+        )
+        const { oublierLesCopies, oublierLesCopiesDUnAutreTitulaire } = await import('@/Utils/copiesHorsLigne')
+
+        expect(() => oublierLesCopies({ fermerLeTemoin: true })).not.toThrow()
+        await expect(oublierLesCopies({ fermerLeTemoin: true })).resolves.toBe(false)
+        await expect(oublierLesCopiesDUnAutreTitulaire()).resolves.toBe(false)
+    })
+
     it('quand le cookie ou le stockage sont refusés, rien ne s’écrit, sans erreur', async () => {
         const refuse = () => {
             throw new DOMException('Refusé', 'SecurityError')

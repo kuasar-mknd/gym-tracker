@@ -1174,17 +1174,32 @@ export const magasinDesCopies = () => {
 /**
  * Oublie les copies du magasin de la page (voir `oublierLesCopies` du
  * magasin) : ce qu'appellent la déconnexion, avant son envoi, et la
- * suppression du compte (#2048, décision 6 du propriétaire).
+ * suppression du compte (#2048, décision 6 du propriétaire). Ne lève jamais,
+ * pas même à la création du magasin : rien ici ne doit retenir une
+ * déconnexion.
  *
  * @param {{ fermerLEtat?: boolean, fermerLeTemoin?: boolean }} [options]
  * @returns {Promise<boolean>}
  */
-export const oublierLesCopies = (options) => magasinDesCopies().oublierLesCopies(options)
+export const oublierLesCopies = (options) => {
+    try {
+        return magasinDesCopies().oublierLesCopies(options)
+    } catch {
+        return Promise.resolve(false)
+    }
+}
 
 /**
  * Oublie les copies du magasin de la page quand l'appareil a changé de
- * titulaire : ce que la garde de l'historique appelle (`main.js`).
+ * titulaire : ce que la garde de l'historique appelle (`main.js`). Ne lève
+ * jamais.
  *
  * @returns {Promise<boolean>}
  */
-export const oublierLesCopiesDUnAutreTitulaire = () => magasinDesCopies().oublierLesCopiesDUnAutreTitulaire()
+export const oublierLesCopiesDUnAutreTitulaire = () => {
+    try {
+        return magasinDesCopies().oublierLesCopiesDUnAutreTitulaire()
+    } catch {
+        return Promise.resolve(false)
+    }
+}
