@@ -25,8 +25,10 @@ use Tests\DuskTestCase;
  * Le réseau est coupé par les outils de développement de Chrome, sur la page :
  * la requête d'une navigation, que le navigateur précharge pour le worker, y
  * échoue comme sur un téléphone sans réseau. Le compte se déconnecte avant :
- * la page servie ne doit rien porter de lui, puisqu'aucune page de compte
- * n'est gardée.
+ * la page servie ne doit rien porter de lui, puisque le worker ne garde ni ne
+ * sert aucune page de compte. Les copies que la page garde depuis #2048
+ * (`CopiesHorsLigneTest`) ne seront servies que par elle, jamais par le
+ * worker.
  */
 class OuvertureHorsLigneTest extends DuskTestCase
 {
