@@ -23,7 +23,8 @@ use function Pest\Laravel\flushHeaders;
  * session, l'adresse de la boîte aux notifications de Filament
  * (`filament.notifications.mailbox`, que Filament 5.10.2 tire dans chaque
  * session de son identifiant et de ce jeton, et retire au hasard à chaque
- * connexion ; elle reste dans la session, côté serveur) et le nonce de la CSP.
+ * connexion et à chaque déconnexion ; elle reste dans la session, côté
+ * serveur) et le nonce de la CSP.
  * L'en-tête `Date` et le `Max-Age` des cookies suivent l'horloge du système,
  * que `freezeSecond()` n'arrête pas : un cookie se lit par ses attributs, dont
  * son échéance. Les erreurs de la session se lisent en tableaux : un sac

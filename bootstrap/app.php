@@ -69,7 +69,9 @@ return Application::configure(basePath: dirname(__DIR__))
          * dernier, passe devant les deux autres. Seuls les maillons d'Inertia
          * et des notifications de Filament, ajoutés depuis leur fournisseur,
          * restent devant : ce que le second fait au retour, ranger dans le
-         * cache les notifications du panneau, échappe à la mesure. Ce
+         * cache les notifications du panneau et, sur chaque mise à jour
+         * Livewire (panneau, Pulse), y regarder sous verrou s'il en reste,
+         * échappe à la mesure. Ce
          * middleware ne lit aucun nonce et ne rend rien : il note une heure en
          * entrant, ajoute l'en-tête au retour, et coupé, ne fait que passer la
          * main.
