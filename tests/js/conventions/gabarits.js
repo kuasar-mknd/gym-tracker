@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { babelParse, walk } from 'vue/compiler-sfc'
 
 /**
  * La lecture des gabarits et des listes de classes, que les gardes partagent.
@@ -181,20 +182,107 @@ export const chainesDuScript = (script) =>
     )
 
 /**
- * Le script d'un composant, ou tout le module.
+ * Les classes qu'un littéral du script réunit, comme Vue les réunit dans
+ * `:class` : les chaînes d'un tableau, tableaux et objets imbriqués compris,
+ * les clés d'un objet (ses valeurs sont des conditions), les deux branches
+ * d'une condition, les opérandes d'un `&&` ou d'un `||`, les morceaux d'un
+ * gabarit de chaîne.
  *
- * Les blocs `<script>` se découpent par `indexOf`, et non par une expression
- * régulière : CodeQL lit toute expression qui reconnaît `<script>` comme un
- * filtre de balises HTML, et refuse celle qui ne reconnaît pas `<SCRIPT>`. Un
- * composant Vue n'écrit que `<script>` et `<script setup>`, en minuscules.
+ * @param {object|null} noeud Un nœud de l'arbre de Babel.
+ * @returns {string[]}
+ */
+const classesDuLitteral = (noeud) => {
+    switch (noeud?.type) {
+        case 'StringLiteral':
+            return [noeud.value]
+        case 'TemplateLiteral':
+            return [
+                ...noeud.quasis.map((morceau) => morceau.value.cooked ?? morceau.value.raw),
+                ...noeud.expressions.flatMap(classesDuLitteral),
+            ]
+        case 'ArrayExpression':
+            return noeud.elements.flatMap(classesDuLitteral)
+        case 'ObjectExpression':
+            return noeud.properties.flatMap(clesDeLaPropriete)
+        case 'SpreadElement':
+            return classesDuLitteral(noeud.argument)
+        case 'ConditionalExpression':
+            return [...classesDuLitteral(noeud.consequent), ...classesDuLitteral(noeud.alternate)]
+        case 'LogicalExpression':
+            return [...classesDuLitteral(noeud.left), ...classesDuLitteral(noeud.right)]
+        default:
+            return []
+    }
+}
+
+/** La clé d'une propriété d'objet : un nom, une chaîne, ou la chaîne d'une clé calculée. */
+const clesDeLaPropriete = (propriete) => {
+    if (propriete.type === 'SpreadElement') {
+        return classesDuLitteral(propriete)
+    }
+
+    if (propriete.type !== 'ObjectProperty') {
+        return []
+    }
+
+    if (propriete.computed) {
+        return classesDuLitteral(propriete.key)
+    }
+
+    return propriete.key.type === 'Identifier' ? [propriete.key.name] : classesDuLitteral(propriete.key)
+}
+
+/**
+ * Les listes de classes qu'un littéral de tableau ou d'objet du script réunit
+ * (#2082) : `['sm:opacity-0', 'sm:group-hover:opacity-100']` ou `{
+ * 'sm:opacity-0': true, … }`, lié ensuite par `:class="masque"`. Lues chaîne
+ * par chaîne, ces listes échappaient à une garde. Un littéral se lit entier,
+ * une fois : un tableau ou un objet placé dans un tableau compte pour celui
+ * qui le contient. Une liste répartie entre plusieurs variables, ou entre
+ * `class` et une variable, ne se réunit pas.
+ *
+ * @param {string} script Un bloc `<script>` ou un module entier.
+ * @returns {string[]}
+ */
+export const listesDesLitteraux = (script) => {
+    const listes = []
+
+    walk(babelParse(script, { sourceType: 'module' }).program, {
+        enter(noeud, parent) {
+            const litteral = noeud.type === 'ArrayExpression' || noeud.type === 'ObjectExpression'
+            const reuniParSonParent = parent?.type === 'ArrayExpression' || parent?.type === 'SpreadElement'
+
+            if (!litteral || reuniParSonParent) {
+                return
+            }
+
+            const liste = classesDuLitteral(noeud)
+
+            if (liste.length > 1) {
+                listes.push(liste.join(' '))
+            }
+        },
+    })
+
+    return listes
+}
+
+/**
+ * Les blocs `<script>` d'un composant, ou tout le module.
+ *
+ * Les blocs se découpent par `indexOf`, et non par une expression régulière :
+ * CodeQL lit toute expression qui reconnaît `<script>` comme un filtre de
+ * balises HTML, et refuse celle qui ne reconnaît pas `<SCRIPT>`. Un composant
+ * Vue n'écrit que `<script>` et `<script setup>`, en minuscules. Chaque bloc
+ * se lit à part : deux blocs peuvent importer le même nom.
  *
  * @param {string} source
  * @param {boolean} vue
- * @returns {string}
+ * @returns {string[]}
  */
-export const scriptDe = (source, vue) => {
+export const blocsDuScript = (source, vue) => {
     if (!vue) {
-        return source
+        return [source]
     }
 
     const blocs = []
@@ -219,8 +307,17 @@ export const scriptDe = (source, vue) => {
         debut = source.indexOf('<script', fin + '</script>'.length)
     }
 
-    return blocs.join('\n')
+    return blocs
 }
+
+/**
+ * Le script d'un composant, ses blocs réunis, ou tout le module.
+ *
+ * @param {string} source
+ * @param {boolean} vue
+ * @returns {string}
+ */
+export const scriptDe = (source, vue) => blocsDuScript(source, vue).join('\n')
 
 /**
  * Les listes de classes écrites dans une source : une par élément du gabarit,

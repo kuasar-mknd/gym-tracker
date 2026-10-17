@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { chainesDuScript, classes, elementsDuGabarit, gabarit, scriptDe } from './gabarits'
+import { blocsDuScript, chainesDuScript, classes, elementsDuGabarit, gabarit, listesDesLitteraux } from './gabarits'
 import { collectSourceFiles, jsRoot } from './sourceFiles'
 
 /**
@@ -19,16 +19,24 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * appui à leur place déclenchait l'action.
  *
  * La garde lit chaque gabarit balise par balise (`class`, `:class` et
- * `v-bind:class` ensemble, par `gabarits.js`) et chaque chaîne des scripts. Un
+ * `v-bind:class` ensemble, par `gabarits.js`), chaque chaîne des scripts, et
+ * chaque littéral de tableau ou d'objet des scripts, dont elle réunit les
+ * chaînes comme Vue les réunit dans `:class` (`listesDesLitteraux`). Un
  * élément attend le survol quand une de ses classes le cache (`opacity-0`,
  * `invisible`, `hidden`) et qu'une autre, de la même propriété, le montre sous
  * une variante de survol (`hover:`, `group-hover:`, `peer-hover:`, leurs formes
  * nommées, une variante arbitraire qui nomme `:hover`). Il doit alors :
  * - ne se cacher que sous `souris:` (app.css), `sm:souris:opacity-0` compris :
  *   sans souris, il reste visible ;
- * - être montré par le focus aussi (`focus-within:` sur le conteneur,
- *   `focus-visible:` sur le bouton), dans la même propriété : le clavier
- *   atteint ce que la souris révèle.
+ * - être montré par le focus aussi, dans la même propriété, pour que le
+ *   clavier atteigne ce que la souris révèle. Un élément transparent prend le
+ *   focus : l'opacité admet toute variante de focus (`focus-within:` sur le
+ *   conteneur, `focus-visible:` sur le bouton). Un élément invisible ou
+ *   masqué ne le prend pas, ni rien en lui : `focus-within:`, `focus-visible:`
+ *   ou `has-focus:` ne s'y allument jamais, et la touche Tab passe par-dessus
+ *   (relevé dans Chromium 141). La visibilité et l'affichage n'admettent
+ *   qu'un focus lu ailleurs, sur un ancêtre ou un voisin
+ *   (`group-focus-within:`, `peer-focus:`, `in-focus:`).
  *
  * Un décor y échappe : un `div` ou un `span` sans contenu, sans écouteur ni
  * rôle (un halo, un dégradé qui s'allume au survol), ne cache rien. Tout autre
@@ -41,11 +49,16 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  *   par sa taille (`w-0`, `max-h-0`, `scale-0`), hors de l'écran (`translate-`)
  *   ou par `sr-only` lui échappe ;
  * - elle juge une liste, pas ses ancêtres : un `group-hover:` sans parent
- *   `group` ne révèle rien, et elle ne le voit pas ; une classe passée à un
+ *   `group` ne révèle rien, et elle ne le voit pas ; un `group-focus-within:`
+ *   dont le groupe ne contient rien d'autre qui prenne le focus ne montre
+ *   rien au clavier, et elle ne le voit pas non plus ; une classe passée à un
  *   composant compte pour la balise du composant, pas pour sa racine ;
- * - une liste liée par une variable (`:class="classes"`) se lit dans le
- *   script, comme toute chaîne, sans balise : elle n'y passe jamais pour un
- *   décor ;
+ * - une liste liée par une variable (`:class="masque"`) se lit dans le
+ *   script, sans balise : elle n'y passe jamais pour un décor. Elle s'y lit
+ *   entière si elle tient dans une chaîne, ou dans un même littéral de tableau
+ *   ou d'objet ; répartie entre plusieurs variables (`:class="[masque,
+ *   survol]"`), entre `class` et une variable, ou dans les valeurs d'un objet
+ *   (Vue n'y lit que des conditions), elle lui échappe ;
  * - elle ne lit que `resources/js` : ni `<style>`, ni les `@utility`
  *   d'app.css, ni les gabarits Blade de `resources/views` ; une règle qui
  *   cacherait au survol en CSS lui échappe ;
@@ -58,14 +71,18 @@ const appCss = readFileSync(resolve(jsRoot, '../css/app.css'), 'utf8')
 
 const relatif = (chemin) => chemin.replace(jsRoot, 'resources/js')
 
-/** Les propriétés que la garde lit : la classe qui cache, celles qui montrent. */
+/**
+ * Les propriétés que la garde lit : la classe qui cache, celles qui montrent,
+ * et si l'élément caché prend encore le focus.
+ */
 const PROPRIETES = [
-    { nom: 'opacité', cache: /^opacity-0$/, montre: /^opacity-(?!0$)(?:\d+|\[[^\]]+\])$/ },
-    { nom: 'visibilité', cache: /^invisible$/, montre: /^visible$/ },
+    { nom: 'opacité', cache: /^opacity-0$/, montre: /^opacity-(?!0$)(?:\d+|\[[^\]]+\])$/, prendLeFocus: true },
+    { nom: 'visibilité', cache: /^invisible$/, montre: /^visible$/, prendLeFocus: false },
     {
         nom: 'affichage',
         cache: /^hidden$/,
         montre: /^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|table|flow-root|contents)$/,
+        prendLeFocus: false,
     },
 ]
 
@@ -75,6 +92,13 @@ const SURVOL = /^(?:(?:group|peer|in)-)?hover(?:\/[\w-]+)?$|^(?:(?:group|peer|in
 /** Une variante de focus : `focus-within`, `focus-visible`, `group-focus-within`… */
 const FOCUS =
     /^(?:(?:group|peer|in|has)-)?focus(?:-within|-visible)?(?:\/[\w-]+)?$|^(?:(?:group|peer|in|has)-)?\[[^\]]*:focus(?:-within|-visible)?\b[^\]]*\]$/
+
+/**
+ * Une variante de focus lue hors de l'élément et de ce qu'il contient : sur un
+ * ancêtre (`group-`, `in-`), un voisin (`peer-`), ou une variante arbitraire
+ * qui ne part pas de l'élément (`[.carte:focus-within_&]`, pas `[&:focus]`).
+ */
+const FOCUS_D_AILLEURS = /^(?:group|peer|in)-|^\[(?!&)/
 
 /** Ce qui fait d'un élément vide autre chose qu'un décor : un écouteur, un rôle, un contenu posé par Vue. */
 const PAS_UN_DECOR = /(?:^|\s)(?:@|v-on:|v-html\b|v-text\b|tabindex\b|role\b|:tabindex\b|:role\b)/
@@ -110,7 +134,7 @@ const lireLeMot = (classe) => {
 const defautsDeLaListe = (liste) => {
     const mots = classes(liste).map(lireLeMot)
 
-    return PROPRIETES.flatMap(({ nom, cache, montre }) => {
+    return PROPRIETES.flatMap(({ nom, cache, montre, prendLeFocus }) => {
         const caches = mots.filter((mot) => cache.test(mot.base))
         const auSurvol = mots.filter(
             (mot) => montre.test(mot.base) && mot.variantes.some((variante) => SURVOL.test(variante)),
@@ -128,11 +152,26 @@ const defautsDeLaListe = (liste) => {
             )
         }
 
-        const auFocus = mots.some(
+        const auFocus = mots.filter(
             (mot) => montre.test(mot.base) && mot.variantes.some((variante) => FOCUS.test(variante)),
         )
 
-        return auFocus ? [] : [`${auSurvol[0].classe} : le survol le montre, le focus non (${nom})`]
+        if (auFocus.length === 0) {
+            return [`${auSurvol[0].classe} : le survol le montre, le focus non (${nom})`]
+        }
+
+        const focusAtteignable =
+            prendLeFocus ||
+            auFocus.some(({ variantes }) =>
+                variantes.some((variante) => FOCUS.test(variante) && FOCUS_D_AILLEURS.test(variante)),
+            )
+
+        return focusAtteignable
+            ? []
+            : [
+                  `${auFocus[0].classe} ne s’allume jamais : rien ne prend le focus dans un élément caché (${nom}) ; ` +
+                      'seule l’opacité, ou un focus lu sur un ancêtre ou un voisin (group-focus-within:, peer-focus:), le montre au clavier',
+              ]
     })
 }
 
@@ -141,6 +180,13 @@ const estUnDecor = (element) =>
     ['div', 'span'].includes(element.nom) && element.contenu?.trim() === '' && !PAS_UN_DECOR.test(element.attributs)
 
 const memeListe = (a, b) => classes(a).join(' ') === classes(b).join(' ')
+
+/** Les listes des scripts : chaque chaîne, et chaque littéral de tableau ou d'objet réuni, sans doublon. */
+const listesDuScript = (source, vue) => {
+    const blocs = blocsDuScript(source, vue)
+
+    return [...new Set([...blocs.flatMap(chainesDuScript), ...blocs.flatMap(listesDesLitteraux)])]
+}
 
 /**
  * Les défauts d'une source, avec les listes que les exemptions ont couvertes.
@@ -167,7 +213,7 @@ const lireLaSource = (source, { vue = true, exemptions = [] } = {}) => {
             .map(({ liste }) => liste)
             .filter(retenue)
             .flatMap((liste) => defautsDeLaListe(liste).map((defaut) => `« ${liste.trim()} » : ${defaut}`)),
-        ...chainesDuScript(scriptDe(source, vue))
+        ...listesDuScript(source, vue)
             .filter(retenue)
             .flatMap((liste) => defautsDeLaListe(liste).map((defaut) => `« ${liste.trim()} » : ${defaut}`)),
     ]
@@ -241,6 +287,22 @@ describe('touch affordances', () => {
             'une souris doublée d’un masque sans variante',
             '<div class="opacity-0 souris:opacity-0 souris:group-hover:opacity-100 focus-within:opacity-100"><a>x</a></div>',
         ],
+        [
+            'un conteneur invisible que son propre focus devrait montrer',
+            '<div class="souris:invisible souris:group-hover:visible souris:focus-within:visible"><button>x</button></div>',
+        ],
+        [
+            'un conteneur masqué que son propre focus devrait montrer',
+            '<div class="souris:hidden souris:group-hover:flex souris:focus-within:flex"><button>x</button></div>',
+        ],
+        [
+            'un bouton invisible que son focus visible devrait montrer',
+            '<GlassIconButton class="souris:invisible souris:group-hover:visible souris:focus-visible:visible" icon="x" label="x" />',
+        ],
+        [
+            'un conteneur masqué qu’un focus en lui devrait montrer',
+            '<div class="souris:hidden souris:group-hover:block souris:has-focus:block souris:[&:focus-within]:block"><a>x</a></div>',
+        ],
     ])('refuse %s', (_cas, balise) => {
         expect(lireLaSource(`<template>${balise}</template>`).defauts).not.toEqual([])
     })
@@ -252,6 +314,34 @@ describe('touch affordances', () => {
         expect(
             lireLaSource(`const masque = 'sm:opacity-0 sm:group-hover:opacity-100'`, { vue: false }).defauts,
         ).toHaveLength(1)
+    })
+
+    it.each([
+        ['un tableau', `const masque = ['sm:opacity-0', 'sm:group-hover:opacity-100']`],
+        ['un objet', `const masque = { 'sm:opacity-0': true, 'sm:group-hover:opacity-100': true }`],
+        ['un objet aux clés nues et calculées', `const masque = { invisible: cache, ['group-hover:visible']: true }`],
+        [
+            'un tableau qui mêle chaîne, condition et objet',
+            `const masque = computed(() => ['opacity-0', actif.value ? 'group-hover:opacity-100' : '', { 'focus-within:opacity-100': true }])`,
+        ],
+        ['un gabarit de chaîne', 'const masque = [`opacity-0 ${taille}`, `group-hover:opacity-100`]'],
+    ])('refuse une liste répartie entre les chaînes d’un même littéral du script : %s', (_cas, script) => {
+        const source = `<script setup>${script}</script><template><div :class="masque"><button>x</button></div></template>`
+
+        expect(lireLaSource(source).defauts).toHaveLength(1)
+        expect(lireLaSource(script, { vue: false }).defauts).toHaveLength(1)
+    })
+
+    it('lit chaque bloc du script à part, et une seule fois une liste qu’une chaîne et un littéral redisent', () => {
+        const source = [
+            `<script>import { computed } from 'vue'\nexport const masque = ['opacity-0 group-hover:opacity-100']</script>`,
+            `<script setup>import { computed } from 'vue'</script>`,
+            '<template><div :class="masque"><button>x</button></div></template>',
+        ].join('')
+
+        expect(lireLaSource(source).defauts).toEqual([
+            '« opacity-0 group-hover:opacity-100 » : opacity-0 cache hors de souris: ce que seul le survol montre (opacité)',
+        ])
     })
 
     it.each([
@@ -275,8 +365,33 @@ describe('touch affordances', () => {
             '<Transition enter-from-class="opacity-0" leave-to-class="opacity-0"><p class="hover:opacity-80">x</p></Transition>',
         ],
         ['une bascule par la largeur, sans survol', '<div class="hidden sm:flex"><button>x</button></div>'],
+        [
+            'un conteneur invisible que le focus d’un ancêtre montre',
+            '<div class="souris:invisible souris:group-hover:visible souris:group-focus-within:visible"><button>x</button></div>',
+        ],
+        [
+            'un conteneur masqué que le focus d’un voisin montre',
+            '<div class="souris:hidden souris:group-hover:flex souris:peer-focus:flex"><button>x</button></div>',
+        ],
+        [
+            'un conteneur masqué qu’un sélecteur arbitraire sur un ancêtre montre',
+            '<div class="souris:hidden souris:group-hover:block souris:[.carte:focus-within_&]:block"><a>x</a></div>',
+        ],
     ])('accepte %s', (_cas, balise) => {
         expect(lireLaSource(`<template>${balise}</template>`).defauts).toEqual([])
+    })
+
+    it.each([
+        [
+            'des objets de réglage, dont les valeurs ne se réunissent pas',
+            `const actions = [{ classe: 'opacity-0' }, { classe: 'group-hover:opacity-100' }]`,
+        ],
+        [
+            'des chaînes d’un même bloc, hors de tout littéral',
+            `function f() {\n    const a = 'opacity-0'\n    const b = 'group-hover:opacity-100'\n    return [a, b]\n}`,
+        ],
+    ])('laisse au docbloc ce qu’elle ne réunit pas : %s', (_cas, script) => {
+        expect(lireLaSource(script, { vue: false }).defauts).toEqual([])
     })
 
     it('laisse passer une liste exemptée, et elle seule', () => {
