@@ -152,6 +152,47 @@ describe('Achievements/Index', () => {
         expect(wrapper.text()).not.toContain('Débloqué le')
     })
 
+    /**
+     * Sans souris, rien ne montre l'infobulle du survol : sur un écran tactile,
+     * la date du déblocage ne se voyait nulle part, et la carte coupait le nom
+     * et la description que seule l'infobulle écrivait en entier (#2082).
+     */
+    describe('sans souris', () => {
+        const carteDuBadgeGagne = () => mountPage().findAll('.group.relative')[0].element
+        const horsDeLInfobulle = (carte, selecteur) =>
+            [...carte.querySelectorAll(selecteur)].filter((element) => element.closest('[aria-hidden="true"]') === null)
+
+        it('écrit la date du déblocage dans la carte, hors de l’infobulle', () => {
+            const dates = horsDeLInfobulle(carteDuBadgeGagne(), 'p').filter((paragraphe) =>
+                paragraphe.textContent.includes('Débloqué le'),
+            )
+
+            expect(dates.map((paragraphe) => paragraphe.textContent.trim())).toEqual(['Débloqué le 23/05/2026'])
+        })
+
+        it('ne coupe le nom et la description que sous une souris', () => {
+            const carte = carteDuBadgeGagne()
+            const [nom] = horsDeLInfobulle(carte, 'h3')
+            const description = horsDeLInfobulle(carte, 'p').find((paragraphe) =>
+                paragraphe.textContent.includes('Sept jours de suite'),
+            )
+
+            expect(
+                [nom, description].flatMap((element) =>
+                    [...element.classList].filter((classe) => classe.includes('line-clamp')),
+                ),
+            ).toEqual(['souris:line-clamp-1', 'souris:line-clamp-2'])
+        })
+
+        it('tait l’infobulle, qui redit ce que la carte écrit', () => {
+            const infobulles = [...carteDuBadgeGagne().querySelectorAll('.pointer-events-none')]
+
+            expect(infobulles).toHaveLength(1)
+            expect(infobulles[0].getAttribute('aria-hidden')).toBe('true')
+            expect(infobulles[0].textContent).toContain('Débloqué le 23/05/2026')
+        })
+    })
+
     it('greys a locked badge out and leaves a won one in colour', () => {
         const wrapper = mountPage()
 

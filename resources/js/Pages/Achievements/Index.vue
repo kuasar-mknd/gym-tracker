@@ -81,18 +81,31 @@ const filteredAchievements = computed(() => {
                             {{ achievement.icon }}
                         </div>
 
-                        <!-- Name -->
-                        <h3 class="titre-carte mb-1 line-clamp-1">
+                        <!--
+                            Le nom et la description ne se coupent que sous une souris,
+                            dont le survol montre l'infobulle qui les écrit en entier ;
+                            la date du déblocage se lit dans la carte. Sans souris, rien ne
+                            montre l'infobulle : le nom et la description restaient coupés,
+                            et la date ne se voyait nulle part (#2082).
+                        -->
+                        <h3 class="titre-carte souris:line-clamp-1 mb-1">
                             {{ achievement.name }}
                         </h3>
 
-                        <!-- Description -->
-                        <p class="text-text-muted text-2xs line-clamp-2">
+                        <p class="text-text-muted text-2xs souris:line-clamp-2">
                             {{ achievement.description }}
                         </p>
 
-                        <!-- Tooltip Overlay -->
+                        <p v-if="achievement.is_unlocked" class="text-text-muted text-2xs mt-2 italic">
+                            Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
+                        </p>
+
+                        <!--
+                            Infobulle du survol, muette : elle redit ce que la carte écrit,
+                            qu'un lecteur d'écran lit déjà en entier.
+                        -->
                         <div
+                            aria-hidden="true"
                             class="bg-text-main/80 pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl p-4 text-center opacity-0 transition-opacity group-hover:opacity-100"
                         >
                             <!--
