@@ -213,13 +213,10 @@ function contratDesPagesType(mixed $valeur): string
  */
 function contratDesPagesEstUneTable(stdClass $objet): bool
 {
-    foreach (array_keys(get_object_vars($objet)) as $cle) {
-        if (preg_match('/^(\d+|\d{4}-\d{2}(-\d{2})?)$/', (string) $cle) !== 1) {
-            return false;
-        }
-    }
-
-    return true;
+    return array_all(
+        array_keys(get_object_vars($objet)),
+        fn (int|string $cle): bool => preg_match('/^(\d+|\d{4}-\d{2}(-\d{2})?)$/', (string) $cle) === 1,
+    );
 }
 
 /**

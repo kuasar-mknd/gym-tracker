@@ -48,7 +48,7 @@ class CopiesHorsLigneTest extends DuskTestCase
      * son contenu en texte (les octets en latin1, où un texte ASCII se lit
      * tel quel), et l'état du magasin. Une base absente ne se crée pas ici.
      */
-    private const string LIRE_LE_MAGASIN = <<<'JS'
+    private const string LIRE_LE_MAGASIN = <<<'SCRIPT'
         const fini = arguments[arguments.length - 1];
         const enTexte = (valeur) =>
             valeur instanceof ArrayBuffer || ArrayBuffer.isView(valeur)
@@ -79,14 +79,14 @@ class CopiesHorsLigneTest extends DuskTestCase
                 });
             };
         };
-    JS;
+    SCRIPT;
 
     /**
      * Déchiffre une copie par la clé que porte le témoin, avec les données
      * authentifiées du magasin (`compte|chemin|contrat`) : rend la page, ou
      * la raison de l'échec.
      */
-    private const string DECHIFFRER_UNE_COPIE = <<<'JS'
+    private const string DECHIFFRER_UNE_COPIE = <<<'SCRIPT'
         const [chemin, compte, contrat, fini] = arguments;
         (async () => {
             const temoin = document.cookie
@@ -131,7 +131,7 @@ class CopiesHorsLigneTest extends DuskTestCase
                 compte: page.props?.auth?.user?.name ?? null,
             };
         })().then(fini, (erreur) => fini({ erreur: String(erreur) }));
-    JS;
+    SCRIPT;
 
     public function test_les_copies_s_ecrivent_chiffrees_et_la_deconnexion_par_le_menu_les_efface(): void
     {
@@ -274,11 +274,11 @@ class CopiesHorsLigneTest extends DuskTestCase
     }
 
     /**
-     * @return array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array<string, mixed>|null, etatEnTexte: string}
+     * @return array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string}
      */
     private function lireLeMagasin(Browser $browser): array
     {
-        /** @var array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array<string, mixed>|null, etatEnTexte: string} $magasin */
+        /** @var array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string} $magasin */
         $magasin = $browser->driver->executeAsyncScript(self::LIRE_LE_MAGASIN);
 
         return $magasin;
@@ -289,7 +289,7 @@ class CopiesHorsLigneTest extends DuskTestCase
      * au repos, après la page qu'elles gardent.
      *
      * @param  list<string>  $chemins
-     * @return array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array<string, mixed>|null, etatEnTexte: string}
+     * @return array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string}
      */
     private function attendreLesCopies(Browser $browser, array $chemins, int $secondes = 30): array
     {
