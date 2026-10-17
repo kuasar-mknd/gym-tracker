@@ -162,7 +162,7 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
                             icon="delete"
                             :label="`Supprimer la mesure du ${formatMeasuredAt(item.measured_at)}`"
                             ton="danger"
-                            class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                            class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-visible:opacity-100"
                             :dusk="`delete-measurement-${item.id}`"
                             @click="demanderSuppression(item)"
                         />
