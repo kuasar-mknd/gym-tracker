@@ -5,6 +5,7 @@ import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import { attendreAuPlus } from '@/Utils/attendreAuPlus'
 import SyncService from '@/Utils/SyncService'
 import { lireLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
+import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
 import {
     noterLesAbandonsALaDeconnexion,
     noterLesEcrituresEffaceesALaDeconnexion,
@@ -87,7 +88,10 @@ const retirerLeRecu = () => {
 
 /**
  * Ce que le compte qui part laisse sur l'appareil, effacé une fois la
- * déconnexion acceptée (#1964, #2050).
+ * déconnexion acceptée (#1964, #2050) : sur `onSuccess`, ou quand la réponse
+ * recharge toute la page (409 `X-Inertia-Location`, la version des actifs
+ * ayant changé depuis l'ouverture de la page), la session étant fermée dans
+ * les deux cas (`siLaVisiteAboutit`, #2077).
  *
  * Ses écritures encore en file et ses refus, sur tout l'appareil, autres
  * onglets compris (`SyncService.oublierLeCompte`) : depuis #2050, rien ne
@@ -138,29 +142,34 @@ const partir = () => {
             router.post(
                 route('logout'),
                 {},
-                {
-                    onStart: () => {
-                        partie = true
-                    },
-                    onSuccess: () => {
+                siLaVisiteAboutit(
+                    () => {
                         acceptee = true
                         laisserLAppareil(compte)
                     },
-                    // Sans réseau, le dire : la personne croyait être sortie de son compte.
-                    onNetworkError: direSansReseau(DECONNEXION_SANS_RESEAU),
-                    /*
-                     * Refusée, coupée en route ou annulée (Inertia appelle
-                     * `onCancel`, puis `onFinish`) : la personne reste connectée,
-                     * rien n'est effacé, et l'avis n'a pas lieu d'être.
-                     */
-                    onFinish: () => {
-                        if (!acceptee) {
-                            retirerLeRecu()
-                        }
+                    {
+                        onStart: () => {
+                            partie = true
+                        },
+                        // Sans réseau, le dire : la personne croyait être sortie de son compte.
+                        onNetworkError: direSansReseau(DECONNEXION_SANS_RESEAU),
+                        /*
+                         * Refusée, coupée en route ou annulée (Inertia appelle
+                         * `onCancel`, puis `onFinish`) : la personne reste
+                         * connectée, rien n'est effacé, et l'avis n'a pas lieu
+                         * d'être. L'enveloppe conclut avant ce rappel : une
+                         * déconnexion renvoyée vers un chargement complet est
+                         * déjà acceptée ici.
+                         */
+                        onFinish: () => {
+                            if (!acceptee) {
+                                retirerLeRecu()
+                            }
 
-                        liberer()
+                            liberer()
+                        },
                     },
-                },
+                ),
             )
 
             /*

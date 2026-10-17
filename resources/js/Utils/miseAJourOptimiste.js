@@ -21,6 +21,12 @@
  * (`visitesHorsLigne.js`) dit ce qui n'est pas confirmé ; `revenir` ne dit
  * rien de plus.
  *
+ * `siLaVisiteAboutit` en est le pendant : ce qui ne doit se faire qu'une fois
+ * la visite aboutie, et que la page rechargée ne ferait pas. La déconnexion et
+ * la suppression du compte effacent ce que l'appareil gardait pour lui ; elles
+ * le faisaient dans `onSuccess`, et une réponse qui recharge toute la page,
+ * session pourtant fermée, le laissait sur l'appareil.
+ *
  * Pourquoi pas l'option `optimistic` d'Inertia 3 : elle ne change que les
  * props de la page, alors que l'état à défaire vit souvent dans une copie
  * locale ou hors des props (le mois demandé, la période, l'interrupteur) ; elle
@@ -32,7 +38,8 @@
  */
 
 /**
- * Les options d'une visite d'Inertia qui appellent `revenir` sur tout échec.
+ * Les options d'une visite d'Inertia qui appellent `aboutir` une fois si elle
+ * aboutit, `revenir` une fois sinon.
  *
  * Une enveloppe par visite : elle compte les visites qu'elle a vues partir et
  * finir. Une réponse 409 `X-Inertia-Redirect` relance la visite avec les mêmes
@@ -56,19 +63,24 @@
  * visite allée à son terme sans qu'aucun rappel d'échec (`onError`,
  * `onHttpException`, `onNetworkError`) n'ait parlé.
  *
+ * `aboutir` part dans `onSuccess`, avant celui de l'appelant, ou à la fin
+ * d'une visite renvoyée vers un chargement complet ; `revenir`, à la fin de la
+ * visite. L'un ou l'autre, jamais les deux.
+ *
  * @template {Record<string, unknown>} Options
- * @param {() => void} revenir remet l'écran où il était avant la visite
+ * @param {{ aboutir?: () => void, revenir?: () => void }} issues
  * @param {Options} options les options de la visite, rappels compris
  * @returns {Options} les mêmes options, `onBefore`, `onSuccess`, `onFinish` et les rappels d'échec enveloppés
  */
-export const revenirSiLaVisiteEchoue = (revenir, options = {}) => {
+const suivreLIssueDeLaVisite = ({ aboutir = () => {}, revenir = () => {} }, options = {}) => {
     /** Les visites parties et pas encore finies. */
     let enVol = 0
 
-    let reussie = false
     let echouee = false
     let renvoyee = false
-    let revenue = false
+
+    /** `aboutir` ou `revenir` est parti. */
+    let conclue = false
 
     const surRenvoi = () => {
         renvoyee = true
@@ -83,11 +95,18 @@ export const revenirSiLaVisiteEchoue = (revenir, options = {}) => {
             document.removeEventListener('inertia:location', surRenvoi)
         }
 
-        if (reussie || revenue || (renvoyee && !echouee)) {
+        if (conclue) {
             return
         }
 
-        revenue = true
+        conclue = true
+
+        if (renvoyee && !echouee) {
+            aboutir()
+
+            return
+        }
+
         revenir()
     }
 
@@ -136,7 +155,10 @@ export const revenirSiLaVisiteEchoue = (revenir, options = {}) => {
             return verdict
         },
         onSuccess: (page) => {
-            reussie = true
+            if (!conclue) {
+                conclue = true
+                aboutir()
+            }
 
             return options.onSuccess?.(page)
         },
@@ -155,6 +177,35 @@ export const revenirSiLaVisiteEchoue = (revenir, options = {}) => {
         },
     }
 }
+
+/**
+ * Les options d'une visite d'Inertia qui appellent `revenir` sur tout échec.
+ *
+ * @template {Record<string, unknown>} Options
+ * @param {() => void} revenir remet l'écran où il était avant la visite
+ * @param {Options} options les options de la visite, rappels compris
+ * @returns {Options} les mêmes options, `onBefore`, `onSuccess`, `onFinish` et les rappels d'échec enveloppés
+ */
+export const revenirSiLaVisiteEchoue = (revenir, options = {}) => suivreLIssueDeLaVisite({ revenir }, options)
+
+/**
+ * Les options d'une visite d'Inertia qui appellent `aboutir` une fois la
+ * visite aboutie : sur `onSuccess`, avant celui de l'appelant, ou quand sa
+ * réponse recharge toute la page (409 `X-Inertia-Location`) sans qu'un rappel
+ * d'échec ait parlé. Ni sur un échec, ni sur une visite annulée, interrompue
+ * ou arrêtée avant son départ.
+ *
+ * Pour ce que la page rechargée ne fera pas : effacer ce que l'appareil garde
+ * pour un compte qui n'a plus de session. La redirection qui suit une
+ * déconnexion ou une suppression du compte répond ainsi quand la version des
+ * actifs a changé depuis l'ouverture de la page.
+ *
+ * @template {Record<string, unknown>} Options
+ * @param {() => void} aboutir ce qui suit la visite aboutie
+ * @param {Options} options les options de la visite, rappels compris
+ * @returns {Options} les mêmes options, `onBefore`, `onSuccess`, `onFinish` et les rappels d'échec enveloppés
+ */
+export const siLaVisiteAboutit = (aboutir, options = {}) => suivreLIssueDeLaVisite({ aboutir }, options)
 
 /**
  * Retire de la liste l'élément de clé `cle`, et rend de quoi le remettre à sa

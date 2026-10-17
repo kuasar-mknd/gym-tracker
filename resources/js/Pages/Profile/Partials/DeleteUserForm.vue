@@ -8,6 +8,7 @@ import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import SyncService from '@/Utils/SyncService'
+import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 import { SUPPRESSION_DU_COMPTE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
 
@@ -40,27 +41,35 @@ const confirmUserDeletion = () => {
  * hors ligne encore en file, qui ne partiraient jamais, et ses refus, autres
  * onglets compris (#1964, #2050), les brouillons de séries et la dernière
  * recherche d'exercice (#2050). Le compte se lit avant la réponse, qui mène à
- * une page où plus personne n'est connecté.
+ * une page où plus personne n'est connecté. Une réponse qui recharge toute la
+ * page (409 `X-Inertia-Location`, la version des actifs ayant changé depuis
+ * l'ouverture de la page) arrive sans `onSuccess`, le compte pourtant
+ * supprimé : l'effacement part aussi (`siLaVisiteAboutit`, #2077).
  */
 const deleteUser = () => {
     const compteSupprime = SyncService.compte
     suppressionSansReseau.value = false
 
-    form.delete(route('profile.destroy'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            closeModal()
-            detacherLAppareil({ prevenirLeServeur: false })
-            SyncService.oublierLeCompte(compteSupprime)
-            effacerLesBrouillons()
-            effacerLaRecherche()
-        },
-        onError: () => passwordInput.value?.focus(),
-        onNetworkError: direSansReseau(null, () => {
-            suppressionSansReseau.value = true
-        }),
-        onFinish: () => form.reset(),
-    })
+    form.delete(
+        route('profile.destroy'),
+        siLaVisiteAboutit(
+            () => {
+                closeModal()
+                detacherLAppareil({ prevenirLeServeur: false })
+                SyncService.oublierLeCompte(compteSupprime)
+                effacerLesBrouillons()
+                effacerLaRecherche()
+            },
+            {
+                preserveScroll: true,
+                onError: () => passwordInput.value?.focus(),
+                onNetworkError: direSansReseau(null, () => {
+                    suppressionSansReseau.value = true
+                }),
+                onFinish: () => form.reset(),
+            },
+        ),
+    )
 }
 
 const closeModal = () => {

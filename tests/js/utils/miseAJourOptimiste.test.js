@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
-import { ordreRetabli, retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
+import { ordreRetabli, retirerDeLaListe, revenirSiLaVisiteEchoue, siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
 import { RequeteSimulee, chargementsCompletsPendant, reponseInertia, requetes, reseau, uneTache } from './reseauSimule'
 
 /*
  * L'utilitaire des mises à jour optimistes (#2077), avec le vrai client
  * d'Inertia : `revenir` part une fois sur toute issue qui n'est pas un succès,
- * jamais sur un succès. Les pages qui s'en servent sont jouées dans
- * `tests/js/pages/misesAJourOptimistesAvecInertia.test.js`.
+ * jamais sur un succès ; `aboutir` part une fois sur un succès ou un
+ * rechargement complet, jamais sur un échec. Les pages qui s'en servent sont
+ * jouées dans `tests/js/pages/misesAJourOptimistesAvecInertia.test.js`, la
+ * déconnexion et la suppression du compte dans
+ * `tests/js/composables/deconnexionEffaceLaFileAvecInertia.test.js`.
  */
 
 /** La page de la liste, telle que le serveur l'a rendue. */
@@ -299,6 +302,139 @@ describe('revenirSiLaVisiteEchoue, avec le vrai client d’Inertia', () => {
         reussie.onSuccess()
         reussie.onFinish()
         expect(revenir).toHaveBeenCalledOnce()
+    })
+})
+
+/** Lance une visite enveloppée par `siLaVisiteAboutit`, et rend ce que ses rappels ont vu, dans l'ordre. */
+const envoyer = (options = {}) => {
+    const vu = []
+
+    routeur.delete(
+        '/liste/2',
+        siLaVisiteAboutit(() => vu.push('aboutie'), {
+            onHttpException: () => false,
+            onNetworkError: () => false,
+            ...options,
+            onSuccess: () => vu.push('succès'),
+            onFinish: () => vu.push('fin'),
+        }),
+    )
+
+    return vu
+}
+
+/*
+ * Le pendant de `revenirSiLaVisiteEchoue`, pour ce que la page rechargée ne
+ * ferait pas : la déconnexion et la suppression du compte effacent ce que
+ * l'appareil garde pour lui. Dans `onSuccess` seul, une réponse qui recharge
+ * toute la page, la session pourtant fermée, le laissait sur l'appareil.
+ */
+describe('siLaVisiteAboutit, avec le vrai client d’Inertia', () => {
+    it('aboutit une fois sur un succès, avant le `onSuccess` de l’appelant', async () => {
+        const vu = envoyer()
+        await uneTache()
+
+        requetes[0].repondre(reponseInertia(pageDeLaListe([1, 3])))
+        await vi.waitUntil(() => vu.includes('fin'))
+
+        expect(vu).toEqual(['aboutie', 'succès', 'fin'])
+    })
+
+    /*
+     * La redirection qui suit une déconnexion ou une suppression du compte
+     * répond 409 `X-Inertia-Location` quand la version des actifs a changé :
+     * Inertia recharge toute la page sans `onSuccess`, puis appelle
+     * `onFinish`. `aboutir` part avant ce dernier, que la déconnexion lit.
+     */
+    it('aboutit une fois, avant `onFinish`, quand la réponse recharge toute la page', async () => {
+        const vu = envoyer()
+        await uneTache()
+
+        const adresse = new URL('/', window.location.href).href
+        const chargements = await chargementsCompletsPendant(async () => {
+            requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-location': adresse, 'x-inertia-version': 'v2' } })
+            await vi.waitUntil(() => vu.includes('fin'))
+        })
+
+        expect(chargements).toEqual([adresse])
+        expect(vu).toEqual(['aboutie', 'fin'])
+    })
+
+    it.each([
+        ['sans réseau', (requete) => requete.onerror()],
+        ['sur un 500', (requete) => requete.repondre(pageDErreur(500))],
+        ['sur un 419', (requete) => requete.repondre(pageDErreur(419))],
+        [
+            'sur un refus de validation',
+            (requete) =>
+                requete.repondre(
+                    reponseInertia({ ...pageDeLaListe(), props: { elements: [1, 2, 3], errors: { nom: 'Requis.' } } }),
+                ),
+        ],
+        ['quand la visite est annulée', () => routeur.cancelAll()],
+        ['quand une autre visite l’interrompt', () => routeur.visit('/ailleurs')],
+    ])('n’aboutit pas %s', async (_cas, echouer) => {
+        const vu = envoyer()
+        await uneTache()
+
+        echouer(requetes[0])
+        await vi.waitUntil(() => vu.includes('fin'))
+        routeur.cancelAll()
+        await uneTache()
+
+        expect(vu).toEqual(['fin'])
+    })
+
+    it('n’aboutit pas quand un écouteur `before` arrête la visite avant son départ', async () => {
+        const retirer = routeur.on('before', () => false)
+
+        const vu = envoyer()
+        retirer()
+        await uneTache()
+
+        expect(requetes).toEqual([])
+        expect(vu).toEqual([])
+    })
+
+    it('n’aboutit pas quand une autre visite a été renvoyée vers un chargement complet et que celle-ci échoue', async () => {
+        const vu = envoyer()
+        await uneTache()
+
+        routeur.reload({ only: ['graphiques'] })
+        await uneTache()
+        requetes[1].repondre({ statut: 409, entetes: { 'x-inertia-location': '/liste', 'x-inertia-version': 'v2' } })
+        await uneTache()
+        await uneTache()
+
+        requetes[0].repondre(pageDErreur(500))
+        await vi.waitUntil(() => vu.includes('fin'))
+        window.sessionStorage.removeItem('inertiaLocationVisit')
+
+        expect(vu).toEqual(['fin'])
+    })
+
+    it('aboutit une fois quand la visite relancée par un 409 `X-Inertia-Redirect` réussit', async () => {
+        const vu = envoyer()
+        await uneTache()
+
+        requetes[0].repondre({ statut: 409, entetes: { 'x-inertia-redirect': '/liste#fin' } })
+        await vi.waitUntil(() => requetes.length === 2)
+        requetes[1].repondre(reponseInertia(pageDeLaListe([1, 3])))
+        await vi.waitUntil(() => vu.filter((rappel) => rappel === 'fin').length === 2)
+
+        expect(vu.filter((rappel) => rappel === 'aboutie')).toEqual(['aboutie'])
+    })
+
+    it('aboutit sur `onSuccess` quand un faux routeur l’appelle seul, et une seule fois', () => {
+        const aboutir = vi.fn()
+        const options = siLaVisiteAboutit(aboutir)
+
+        options.onSuccess()
+        options.onFinish()
+        expect(aboutir).toHaveBeenCalledOnce()
+
+        siLaVisiteAboutit(aboutir).onFinish()
+        expect(aboutir).toHaveBeenCalledOnce()
     })
 })
 
