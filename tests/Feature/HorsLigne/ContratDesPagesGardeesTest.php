@@ -49,6 +49,14 @@ use function Pest\Laravel\actingAs;
  * (`{}`), une clé absente d'une partie des éléments d'une liste comme
  * `absent`.
  *
+ * La copie de la séance ne vient pas que de sa page : la page de séance y
+ * verse sa copie locale, où entrent les données que ses écritures de l'API
+ * rendent (une série créée ou modifiée, un exercice ajouté, et leurs rejeux
+ * par la file), d'autres ressources que la page d'Inertia (`SetResource`,
+ * `WorkoutLineResource`, `ExerciseResource`, `PersonalRecordResource`). Leur
+ * forme se relève donc aussi, sous `Workouts/Show (écritures de la séance en
+ * cours)`, et une ressource qui change fait monter la version comme une prop.
+ *
  * Quand la forme change, à dessein : monter `VERSION_DU_CONTRAT`, puis
  * réécrire le fichier par
  * `CONTRAT_DES_PAGES_GARDEES=reecrire vendor/bin/pest tests/Feature/HorsLigne/ContratDesPagesGardeesTest.php`.
@@ -167,6 +175,76 @@ function contratDesPagesVisite(User $compte, string $chemin, array $enTetes = []
     assert($page instanceof stdClass);
 
     return $page;
+}
+
+/**
+ * Les données qu'une écriture de l'API rend (`data`), objets JSON gardés
+ * comme objets, comme la page de séance l'envoie.
+ *
+ * @param  array<array-key, mixed>  $corps
+ */
+function contratDesPagesEcriture(User $compte, string $methode, string $chemin, array $corps, ?string $cleDIdempotence = null): stdClass
+{
+    /** @var TestResponse<Response> $reponse */
+    $reponse = actingAs($compte)->withHeaders(array_filter([
+        'X-Requested-With' => 'XMLHttpRequest',
+        'Idempotency-Key' => $cleDIdempotence,
+    ], static fn (?string $valeur): bool => $valeur !== null))->json($methode, $chemin, $corps);
+
+    $reponse->assertSuccessful();
+    $contenu = json_decode((string) $reponse->getContent(), flags: JSON_THROW_ON_ERROR);
+    assert($contenu instanceof stdClass && ($contenu->data ?? null) instanceof stdClass, "`{$methode} {$chemin}` ne rend pas de données.");
+
+    return $contenu->data;
+}
+
+/**
+ * Ce que les écritures de la page de séance rendent, et que la page verse
+ * dans sa copie locale de la séance, d'où l'instantané de la copie se prend
+ * (`useCopieDeLaSeance`) : la série créée (`adopterLaSerie`, force et cardio,
+ * cochée ou non), la série modifiée (`useSaisieDeSerie`,
+ * `useValidationDeSerie`), l'exercice ajouté (`adopterLaLigne`, son exercice
+ * et sa recommandation compris), et la création rejouée d'un exercice, que le
+ * serveur reconnaît à sa clé d'idempotence et rend avec ses séries. Le vidage
+ * de la file rend les mêmes (`rejeu.data`). Une ressource de l'API qui change
+ * change donc la forme des copies de séance, comme une prop de la page.
+ *
+ * Après les pages : ces écritures changent la séance en cours du compte.
+ */
+function contratDesPagesReponsesDeLaSeance(User $compte, Workout $enCours): stdClass
+{
+    $lignes = $enCours->workoutLines()->with(['exercise', 'sets'])->orderBy('order')->get();
+    $force = $lignes->firstOrFail(fn (WorkoutLine $ligne): bool => $ligne->exercise?->type === 'strength');
+    $cardio = $lignes->firstOrFail(fn (WorkoutLine $ligne): bool => $ligne->exercise?->type === 'cardio');
+    $nonFaite = $force->sets->firstOrFail(fn (Set $serie): bool => ! $serie->is_completed);
+    $traction = Exercise::query()->where('user_id', $compte->id)->where('name', 'Traction')->firstOrFail();
+    $creerUneLigne = fn (int $exercice, string $cle): stdClass => contratDesPagesEcriture($compte, 'POST', route('api.v1.workout-lines.store', absolute: false), ['workout_id' => $enCours->id, 'exercise_id' => $exercice], $cle);
+    $creerUneSerie = fn (array $corps, string $cle): stdClass => contratDesPagesEcriture($compte, 'POST', route('api.v1.sets.store', absolute: false), $corps, $cle);
+    $modifierUneSerie = fn (int $serie, array $corps): stdClass => contratDesPagesEcriture($compte, 'PATCH', route('api.v1.sets.update', ['set' => $serie], absolute: false), $corps);
+
+    $lignesAjoutees = [
+        $creerUneLigne($traction->id, '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0003'),
+        $creerUneLigne($cardio->exercise_id, '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0004'),
+    ];
+    $seriesCreees = [
+        $creerUneSerie(['workout_line_id' => $force->id, 'weight' => 100, 'reps' => 3, 'is_completed' => true], '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0005'),
+        $creerUneSerie(['workout_line_id' => $lignesAjoutees[1]->id, 'distance_km' => 3, 'duration_seconds' => 900, 'is_completed' => false], '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0006'),
+    ];
+
+    return (object) ['props' => (object) [
+        'POST /api/v1/sets' => $seriesCreees,
+        'PATCH /api/v1/sets/{set}' => [
+            $modifierUneSerie($nonFaite->id, ['weight' => 105]),
+            $modifierUneSerie($nonFaite->id, ['is_completed' => true]),
+            $modifierUneSerie($cardio->sets->firstOrFail()->id, ['duration_seconds' => 660]),
+        ],
+        'POST /api/v1/workout-lines' => [
+            ...$lignesAjoutees,
+            // Rejouées : le serveur reconnaît la clé, et rend la ligne qu'il a déjà, ses séries comprises.
+            $creerUneLigne($force->exercise_id, (string) $force->idempotency_key),
+            $creerUneLigne($cardio->exercise_id, '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0004'),
+        ],
+    ]];
 }
 
 /**
@@ -344,7 +422,8 @@ function contratDesPagesForme(stdClass $page): array
 
 /**
  * La forme de chaque page gardée, pour le compte de référence : la séance en
- * deux états, en cours et close, les autres une fois chacune.
+ * deux états, en cours et close, les autres une fois chacune ; puis celle de
+ * ce que les écritures de la séance en cours rendent, que sa copie garde aussi.
  *
  * @return array<string, array{props: array<string, string>, differees: array<string, list<string>>}>
  */
@@ -368,6 +447,8 @@ function contratDesPagesFormes(): array
             $formes["{$page['composant']} ({$etat})"] = contratDesPagesForme(contratDesPagesPageEntiere($compte, $chemin, $page['composant']));
         }
     }
+
+    $formes['Workouts/Show (écritures de la séance en cours)'] = contratDesPagesForme(contratDesPagesReponsesDeLaSeance($compte, $enCours));
 
     ksort($formes, SORT_STRING);
 
@@ -492,7 +573,7 @@ it('garde la forme des props des pages gardées tant que la version du contrat n
             'tests/Feature/HorsLigne/ContratDesPagesGardeesTest.php',
         ))
         ->and($ecarts)->toBe([], sprintf(
-            "La forme des props des pages gardées a changé sans que `VERSION_DU_CONTRAT` monte. Une copie restée sur un appareil garde l’ancienne forme, et la page qui la relira compte sur celle-ci. Monte `VERSION_DU_CONTRAT` dans %s (les copies de l’ancienne version s’oublient), puis refige la forme par `CONTRAT_DES_PAGES_GARDEES=reecrire vendor/bin/pest %s`.\n%s",
+            "La forme des props des pages gardées, ou de ce que les écritures de la séance rendent, a changé sans que `VERSION_DU_CONTRAT` monte. Une copie restée sur un appareil garde l’ancienne forme, et la page qui la relira compte sur celle-ci. Monte `VERSION_DU_CONTRAT` dans %s (les copies de l’ancienne version s’oublient), puis refige la forme par `CONTRAT_DES_PAGES_GARDEES=reecrire vendor/bin/pest %s`.\n%s",
             PagesGardees::MODULE,
             'tests/Feature/HorsLigne/ContratDesPagesGardeesTest.php',
             implode("\n", $ecarts),
