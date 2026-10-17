@@ -8,8 +8,9 @@ use Symfony\Component\Yaml\Yaml;
  * Sans `stop_grace_period`, la composition laisse dix secondes à mysqld avant
  * de le couper net : un arrêt, un redémarrage ou une recréation du service
  * `db` n'est propre que si le serveur a fini d'écrire son tampon d'ici là. La
- * bascule vers MySQL 9.7 commence par cet arrêt, et la copie du volume qui le
- * suit doit être celle d'un arrêt propre (`.ai/rules/dependencies.md`).
+ * bascule vers MySQL 9.7 passe par cet arrêt, une fois l'application arrêtée
+ * et la base sauvegardée, et la copie du volume qui le suit doit être celle
+ * d'un arrêt propre (étapes 4 à 7 de `.ai/rules/dependencies.md`).
  */
 
 /**
