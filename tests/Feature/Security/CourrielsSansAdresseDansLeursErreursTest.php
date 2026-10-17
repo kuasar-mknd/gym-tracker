@@ -318,7 +318,7 @@ it('relève sans l’adresse l’erreur de Symfony Mime qui refuse de l’écrir
             Mail::raw('Bonjour', static function (Illuminate\Mail\Message $message): void {
                 $message->to('saisie.commentee(x)@example.org')->subject('Essai');
             });
-        } catch (RfcComplianceException $exception) {
+        } catch (Throwable $exception) {
             $erreur = $exception;
             report($exception);
         }

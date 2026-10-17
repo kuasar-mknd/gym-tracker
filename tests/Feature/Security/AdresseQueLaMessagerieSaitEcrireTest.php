@@ -231,22 +231,30 @@ function adresseMessagerieEnTetesDesDestinataires(): array
         $message = $envoi->getOriginalMessage();
         assert($message instanceof Email);
 
-        $enTetes[] = array_map(
+        $enTetes[] = array_values(array_map(
             static fn (Address $destinataire): array => ['adresse' => $destinataire->getAddress(), 'nom' => $destinataire->getName()],
             $message->getTo(),
-        );
+        ));
     }
 
     return $enTetes;
 }
 
 /**
- * Fait tourner le worker de la file `database` jusqu'à la vider, un essai par
- * job, comme Horizon en production.
+ * Vide la file `database` par un worker, un job à la fois (`--once`), un essai
+ * par job. Un worker continu (`--stop-when-empty`) s'arrêterait après le
+ * premier job dès que la mémoire du processus de test dépasse sa borne
+ * (`--memory`, 128 Mo), ce qu'elle fait au fil d'une suite (`.ai/rules/tests.md`).
  */
 function adresseMessagerieViderLaFile(): void
 {
-    Artisan::call('queue:work', ['connection' => 'database', '--stop-when-empty' => true, '--tries' => 1, '--sleep' => 0]);
+    foreach (range(1, 10) as $_tour) {
+        if (DB::table('jobs')->doesntExist()) {
+            return;
+        }
+
+        Artisan::call('queue:work', ['connection' => 'database', '--once' => true, '--tries' => 1, '--sleep' => 0]);
+    }
 }
 
 /**
@@ -857,8 +865,10 @@ it('laisse une notification à la demande partir à l’adresse qu’elle nomme,
         ->notifyNow(new LienDeChangementDAdresse('https://gym.example.org/adresse/confirmer'));
 
     expect(adresseMessagerieEnTetesDesDestinataires())->toBe([[['adresse' => 'camille.martin@example.org', 'nom' => '']]])
-        ->and(static fn (): mixed => Notification::route('mail', 'camille(salle)@example.org')
-            ->notifyNow(new LienDeChangementDAdresse('https://gym.example.org/adresse/confirmer')))
+        ->and(static function (): void {
+            Notification::route('mail', 'camille(salle)@example.org')
+                ->notifyNow(new LienDeChangementDAdresse('https://gym.example.org/adresse/confirmer'));
+        })
         ->toThrow(RfcComplianceException::class);
 });
 
