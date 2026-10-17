@@ -73,8 +73,8 @@ const aDesRangeesProvisoires = (seance) =>
  * instantané effacerait de la copie ce qui est enregistré. Il n'en est pris
  * que si la séance de départ est exactement celle de la copie, ou après une
  * réponse du serveur qui la rafraîchit (le rechargement d'après le vidage).
- * Une visite côté client (une copie montrée par la partie E) n'en prend
- * jamais.
+ * Une visite côté client, ou une page qui porte la marque d'une copie
+ * (`props.horsLigne`, parties E et F), n'en prend jamais.
  *
  * Les écritures directes de la séance que le serveur accepte se notent
  * aussitôt (`Utils/ecrituresAcceptees.js`) : la page dit au service de
@@ -112,7 +112,13 @@ export const useCopieDeLaSeance = ({
 }) => {
     SyncService.suivreLesEcrituresDeLaSeance?.(localWorkout.value?.id)
 
-    if (ecriture === null || page?.component !== COMPOSANT || !getCurrentInstance()) {
+    // Une page qui porte la marque d'une copie (partie E) n'est pas la séance du serveur : rien ne s'en verse.
+    if (
+        ecriture === null ||
+        page?.component !== COMPOSANT ||
+        page.props?.horsLigne !== undefined ||
+        !getCurrentInstance()
+    ) {
         return
     }
 
