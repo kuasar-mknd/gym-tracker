@@ -8,7 +8,7 @@ import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import SyncService from '@/Utils/SyncService'
-import { empreinteDuTemoin, oublierLesCopies } from '@/Utils/copiesHorsLigne'
+import { oublierLesCopies, oublierLesCopiesAvantUnEnvoi } from '@/Utils/copiesHorsLigne'
 import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 import { SUPPRESSION_DU_COMPTE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
@@ -47,28 +47,31 @@ const confirmUserDeletion = () => {
  * l'ouverture de la page) arrive sans `onSuccess`, le compte pourtant
  * supprimé : l'effacement part aussi (`siLaVisiteAboutit`, #2077).
  *
- * Les copies hors ligne des pages, elles, s'oublient AVANT l'envoi (#2048,
- * décision 6 du propriétaire) : une réponse perdue ne laisse rien de lisible
- * sur l'appareil. Sans fermer la clé du témoin : un mot de passe refusé ne
- * coûte que des copies, que les pages suivantes de la session refont. Une
- * suppression acceptée la ferme ensuite, avec un second oubli : une réponse
- * en vol d'un autre onglet, partie avant elle, qui reposerait le témoin, ne
- * rouvre rien. La clé se relève avant l'envoi (`empreinteDuTemoin`) : la
+ * Les copies hors ligne des pages, elles, s'oublient AVANT l'envoi, la clé
+ * du témoin fermée avec elles (#2048, décision 6 du propriétaire,
+ * `oublierLesCopiesAvantUnEnvoi`) : une réponse perdue ne laisse rien de
+ * lisible sur l'appareil, et une réponse en vol d'un autre onglet, partie
+ * avant elle, qui reposerait le témoin, ne rouvre rien. Une suppression
+ * sans réponse laisse ainsi la clé fermée jusqu'à la fin de la session,
+ * comme une déconnexion sans réseau. Refusée (le mot de passe : un refus de
+ * validation ne vient que d'une session vivante), la clé se rouvre
+ * (`rouvrir`), et la suppression ne coûte que des
+ * copies, que le préchauffage refait à la réponse suivante. Acceptée, un
+ * second oubli ferme encore la clé relevée avant l'envoi (`empreinte`) : la
  * réponse d'une suppression acceptée a déjà effacé le témoin quand
  * `onSuccess` arrive.
  */
 const deleteUser = () => {
     const compteSupprime = SyncService.compte
-    const cleDeLaSession = empreinteDuTemoin()
     suppressionSansReseau.value = false
 
-    oublierLesCopies({ fermerLEtat: false })
+    const copiesOubliees = oublierLesCopiesAvantUnEnvoi()
     form.delete(
         route('profile.destroy'),
         siLaVisiteAboutit(
             () => {
                 closeModal()
-                oublierLesCopies({ fermerLeTemoin: true, fermerAussi: cleDeLaSession })
+                oublierLesCopies({ fermerLeTemoin: true, fermerAussi: copiesOubliees.empreinte })
                 detacherLAppareil({ prevenirLeServeur: false })
                 SyncService.oublierLeCompte(compteSupprime)
                 effacerLesBrouillons()
@@ -76,7 +79,10 @@ const deleteUser = () => {
             },
             {
                 preserveScroll: true,
-                onError: () => passwordInput.value?.focus(),
+                onError: () => {
+                    copiesOubliees.rouvrir(compteSupprime)
+                    passwordInput.value?.focus()
+                },
                 onNetworkError: direSansReseau(null, () => {
                     suppressionSansReseau.value = true
                 }),

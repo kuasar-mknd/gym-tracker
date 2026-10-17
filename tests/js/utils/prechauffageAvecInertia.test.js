@@ -397,6 +397,28 @@ describe('le préchauffage', () => {
         expect(cheminsDemandes().length).toBeGreaterThan(premiers.length + 1)
     })
 
+    it('refait aussitôt les copies qu’une suppression du compte refusée a oubliées, sans attendre la demi-heure', async () => {
+        await recevoir(pageDe('/tools'))
+        const premiers = cheminsDemandes().length
+
+        expect(cheminsRanges().length).toBeGreaterThan(5)
+
+        // Comme DeleteUserForm : l'oubli avant l'envoi, la clé fermée, puis rouverte au refus du mot de passe.
+        const empreinte = magasin.empreinteDuTemoin()
+        const purge = magasin.oublierLesCopies({ fermerLeTemoin: true })
+        const generation = magasin.generationCourante()
+
+        await purge
+        expect(await magasin.rouvrirLaCle({ empreinte, compte: COMPTE, generation })).toBe(true)
+        expect(cheminsRanges()).toEqual([])
+
+        maintenant += 60 * 1000
+        await recevoir(pageDe('/profile'))
+
+        expect(cheminsDemandes().length).toBeGreaterThan(premiers)
+        expect(cheminsRanges()).toEqual(expect.arrayContaining(['/dashboard', '/profile', '/tools', '/workouts']))
+    })
+
     it('ne demande rien quand tout le noyau est là et récent, et redemande une copie de plus de deux heures', async () => {
         await recevoir(pageDe('/tools'))
         maintenant += INTERVALLE_DU_PRECHAUFFAGE_MS

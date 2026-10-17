@@ -13,6 +13,7 @@ import {
     magasinDesCopies,
     ouvrirLaBaseDuNavigateur,
 } from '@/Utils/copiesHorsLigne'
+import { CLEF_DU_DERNIER_PRECHAUFFAGE } from '@/Utils/dernierPrechauffage'
 import { CLEF_DES_ECRITURES_ACCEPTEES, noterUneEcritureAcceptee } from '@/Utils/ecrituresAcceptees'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL } from '@/Utils/historiqueDuCompte'
 import { PLAFOND_DES_COPIES_EN_OCTETS, VERSION_DU_CONTRAT } from '@/Utils/pagesGardees'
@@ -467,6 +468,133 @@ describe('la clé du témoin', () => {
         expect(await onglet.lireUneCopie('/dashboard')).toBeNull()
         expect(copiesRangees().size).toBe(0)
         expect(etatRange()).toMatchObject({ ouvert: false, empreintesFermees: [] })
+    })
+})
+
+describe('la clé fermée avant un envoi', () => {
+    it('ne se rouvre pas pour la réponse en vol d’un autre onglet, même sans réponse à l’envoi', async () => {
+        const autre = ouvrirUnOnglet()
+        const supprime = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        expect(await autre.ecrireUneCopie(pageDe())).toBe('ecrite')
+
+        // La suppression du compte part : les copies s'oublient, la clé fermée. Sa réponse ne vient pas.
+        expect(await supprime.oublierLesCopies({ fermerLeTemoin: true })).toBe(true)
+        expect(copiesRangees().size).toBe(0)
+
+        // La réponse d'une visite que l'autre onglet avait lancée avant arrive.
+        expect(await autre.ecrireUneCopie(pageDe())).toBe('cle-fermee')
+        expect(await supprime.lireUneCopie('/dashboard')).toBeNull()
+        expect(copiesRangees().size).toBe(0)
+    })
+
+    it('se rouvre quand le serveur refuse l’envoi, la session vivante, et la réponse suivante la rouvre', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+
+        const empreinte = onglet.empreinteDuTemoin()
+        const purge = onglet.oublierLesCopies({ fermerLeTemoin: true })
+        const generation = onglet.generationCourante()
+
+        await purge
+        expect(etatRange().empreintesFermees).toEqual([await empreinte])
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('cle-fermee')
+
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: '7', generation })).toBe(true)
+        expect(etatRange()).toMatchObject({ ouvert: false, empreintesFermees: [] })
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('ecrite')
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: '7', generation })).toBe(false)
+    })
+
+    it('ne se rouvre ni après une autre purge, ni pour une autre clé, un autre titulaire ou sans empreinte', async () => {
+        const onglet = ouvrirUnOnglet()
+        const cle = cleAuHasard()
+
+        poserLeTemoin(cle)
+        poserLeTitulaire(7)
+
+        const empreinte = onglet.empreinteDuTemoin()
+        const purge = onglet.oublierLesCopies({ fermerLeTemoin: true })
+        const generation = onglet.generationCourante()
+
+        await purge
+
+        // Une déconnexion est partie depuis : elle a fermé la clé, et rien ne la rouvre.
+        await onglet.oublierLesCopies({ fermerLeTemoin: true })
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: '7', generation })).toBe(false)
+
+        const plusTard = onglet.generationCourante()
+
+        poserLeTitulaire(8)
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: '7', generation: plusTard })).toBe(false)
+        poserLeTitulaire(7)
+        poserLeTemoin(cleAuHasard())
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: '7', generation: plusTard })).toBe(false)
+        poserLeTemoin(cle)
+        expect(await onglet.rouvrirLaCle({ empreinte: null, compte: '7', generation: plusTard })).toBe(false)
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: null, generation: plusTard })).toBe(false)
+        expect(await ouvrirUnOnglet({ subtle: null }).rouvrirLaCle({ empreinte, compte: '7', generation: 0 })).toBe(
+            false,
+        )
+        expect(etatRange().empreintesFermees).toEqual([await empreinte])
+
+        // Chaque refus tenait à sa condition : tout rétabli, sous la génération d'après la dernière purge, elle se rouvre.
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: '7', generation: plusTard })).toBe(true)
+    })
+
+    it('ne se rouvre pas quand un autre onglet a purgé depuis', async () => {
+        const onglet = ouvrirUnOnglet()
+        const autre = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+
+        const empreinte = onglet.empreinteDuTemoin()
+        const purge = onglet.oublierLesCopies({ fermerLeTemoin: true })
+        const generation = onglet.generationCourante()
+
+        await purge
+        await autre.oublierLesCopies({ fermerLeTemoin: true })
+        await vi.waitFor(() => expect(onglet.generationCourante()).toBeGreaterThan(generation))
+
+        expect(await onglet.rouvrirLaCle({ empreinte, compte: '7', generation })).toBe(false)
+        expect(etatRange().empreintesFermees).toEqual([await empreinte])
+    })
+})
+
+describe('la note du dernier préchauffage', () => {
+    const note = () => localStorage.getItem(CLEF_DU_DERNIER_PRECHAUFFAGE)
+    const noter = () => localStorage.setItem(CLEF_DU_DERNIER_PRECHAUFFAGE, JSON.stringify({ empreinte: 'e', a: 1 }))
+
+    it('s’efface avec les copies, aussitôt, même quand la clé reste ouverte', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        noter()
+        const purge = onglet.oublierLesCopies({ fermerLEtat: false })
+
+        expect(note()).toBeNull()
+        await purge
+    })
+
+    it('s’efface quand l’hygiène vide un magasin d’un autre contrat, et reste sinon', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+        noter()
+
+        await onglet.entretenir()
+        expect(note()).not.toBeNull()
+
+        etatRange().contrat = VERSION_DU_CONTRAT + 1
+        await onglet.entretenir()
+        expect(note()).toBeNull()
     })
 })
 
@@ -1442,14 +1570,19 @@ describe('sans les moyens du chiffrement ou de la base', () => {
                 }
             },
         )
-        const { empreinteDuTemoin, oublierLesCopies, oublierLesCopiesDUnAutreTitulaire } =
+        const { oublierLesCopies, oublierLesCopiesAvantUnEnvoi, oublierLesCopiesDUnAutreTitulaire } =
             await import('@/Utils/copiesHorsLigne')
 
         expect(() => oublierLesCopies({ fermerLeTemoin: true })).not.toThrow()
         await expect(oublierLesCopies({ fermerLeTemoin: true })).resolves.toBe(false)
         await expect(oublierLesCopiesDUnAutreTitulaire()).resolves.toBe(false)
-        expect(() => empreinteDuTemoin()).not.toThrow()
-        await expect(empreinteDuTemoin()).resolves.toBeNull()
+        expect(() => oublierLesCopiesAvantUnEnvoi()).not.toThrow()
+
+        const avantUnEnvoi = oublierLesCopiesAvantUnEnvoi()
+
+        await expect(avantUnEnvoi.empreinte).resolves.toBeNull()
+        await expect(avantUnEnvoi.fini).resolves.toBe(false)
+        await expect(avantUnEnvoi.rouvrir('7')).resolves.toBe(false)
     })
 
     it('quand le cookie ou le stockage sont refusés, rien ne s’écrit, sans erreur', async () => {

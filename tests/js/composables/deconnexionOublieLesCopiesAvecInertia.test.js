@@ -49,6 +49,9 @@ let NOM_DE_LA_BASE
 let MAGASIN_DES_PAGES
 let MAGASIN_DE_L_ETAT
 let TEMOIN
+let creerLeMagasinDesCopies
+let ouvrirLaBaseDuNavigateur
+let CLEF_DU_DERNIER_PRECHAUFFAGE
 
 /** Le compte, tel que chaque page le déclare. */
 const auth = () => ({
@@ -171,7 +174,15 @@ beforeAll(async () => {
     routeur = inertia.router
     SyncService = (await import('@/Utils/SyncService')).default
     const copies = await import('@/Utils/copiesHorsLigne')
-    ;({ NOM_DE_LA_BASE, MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT, TEMOIN } = copies)
+    ;({
+        NOM_DE_LA_BASE,
+        MAGASIN_DES_PAGES,
+        MAGASIN_DE_L_ETAT,
+        TEMOIN,
+        creerLeMagasinDesCopies,
+        ouvrirLaBaseDuNavigateur,
+    } = copies)
+    ;({ CLEF_DU_DERNIER_PRECHAUFFAGE } = await import('@/Utils/dernierPrechauffage'))
     magasin = copies.magasinDesCopies()
     const { installerLesVisitesHorsLigne } = await import('@/Utils/visitesHorsLigne')
     const { seDeconnecter } = await import('@/composables/useDeconnexion')
@@ -319,12 +330,35 @@ describe('supprimer le compte', () => {
         expect(relais.rejets).toEqual([])
     })
 
-    it('refusée (mot de passe), ne coûte que les copies : la clé reste, la page suivante les refait', async () => {
+    it('dont la réponse se perd, laisse la clé fermée : la réponse en vol d’un autre onglet n’y écrit rien', async () => {
         await allerALaSuppression()
         await garderDesCopies()
+        const autreOnglet = creerLeMagasinDesCopies({ ouvrirLaBase: () => ouvrirLaBaseDuNavigateur(fabrique) })
+        reseau.prochains = ['muet']
+
+        await supprimerLeCompte()
+        await uneTache()
+        await fabrique.auRepos()
+
+        // Une visite que l'autre onglet avait lancée avant la suppression reçoit sa réponse, témoin compris.
+        expect(await autreOnglet.ecrireUneCopie(pageGardee('/dashboard', 'Dashboard'))).toBe('cle-fermee')
+        expect(copiesRangees().size).toBe(0)
+        expect(await magasin.lireUneCopie('/dashboard')).toBeNull()
+        expect(relais.rejets).toEqual([])
+        await autreOnglet.fermer()
+    })
+
+    it('refusée (mot de passe), ne coûte que les copies : la clé, fermée pendant l’envoi, se rouvre', async () => {
+        await allerALaSuppression()
+        await garderDesCopies()
+        const empreinte = etatRange().empreinte
+        localStorage.setItem(CLEF_DU_DERNIER_PRECHAUFFAGE, JSON.stringify({ empreinte, a: Date.now() }))
 
         await jusquALaFinDeLaVisite(async () => {
             await supprimerLeCompte()
+            // Pendant l'envoi : le magasin vide, la clé de la session fermée.
+            await vi.waitFor(() => expect(etatRange()).toMatchObject({ ouvert: false, empreintesFermees: [empreinte] }))
+            expect(copiesRangees().size).toBe(0)
             suppressions()[0].repondre(
                 reponseInertia({
                     ...pageDuProfil(),
@@ -334,8 +368,10 @@ describe('supprimer le compte', () => {
             )
         })
 
+        await vi.waitFor(() => expect(etatRange()).toMatchObject({ ouvert: false, empreintesFermees: [] }))
         expect(copiesRangees().size).toBe(0)
-        expect(etatRange()).toMatchObject({ ouvert: false, empreintesFermees: [] })
+        // Le préchauffage refait les copies à la réponse suivante, sans attendre la demi-heure.
+        expect(localStorage.getItem(CLEF_DU_DERNIER_PRECHAUFFAGE)).toBeNull()
         expect(await magasin.ecrireUneCopie(pageGardee('/dashboard', 'Dashboard'))).toBe('ecrite')
     })
 

@@ -1,4 +1,5 @@
 import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
+import { lireLeDernierPrechauffage, noterLeDernierPrechauffage } from '@/Utils/dernierPrechauffage'
 import { documentVenuDuReseau, ecritureDesCopiesInstallee } from '@/Utils/ecritureDesCopies'
 import { pageInitialeDuDocument } from '@/Utils/historiqueDuCompte'
 import {
@@ -26,7 +27,9 @@ import {
  * de la séance en cours est plus ancienne que le dernier rejeu d'une de ses
  * écritures par la file (`dernierRejeu`). Au plus une fois par trente
  * minutes sous une même clé de session (`gym-tracker:dernier-prechauffage`,
- * pour tous les onglets).
+ * `Utils/dernierPrechauffage.js`, pour tous les onglets), une note que toute
+ * purge du magasin efface : des copies oubliées sous une clé restée ouverte
+ * se refont à la réponse suivante.
  *
  * **Jamais sous les parcours navigateur** (`is_testing`, que le serveur ne
  * pose vrai que sous Dusk ou en test, jamais en production). Ses GET partent
@@ -70,8 +73,7 @@ export const AGE_D_UNE_COPIE_A_REFAIRE_MS = 2 * 60 * 60 * 1000
 /** Le délai d'une demande du préchauffage : au-delà, il s'arrête. */
 export const DELAI_D_UNE_DEMANDE_MS = 15_000
 
-/** La clé du `localStorage` qui dit quand le dernier préchauffage est parti, et sous quelle clé de session. */
-export const CLEF_DU_DERNIER_PRECHAUFFAGE = 'gym-tracker:dernier-prechauffage'
+export { CLEF_DU_DERNIER_PRECHAUFFAGE } from '@/Utils/dernierPrechauffage'
 
 /** Les composants dont le préchauffage demande les props différées, en partiel : l'accueil seul. */
 const PROPS_DIFFEREES_DEMANDEES = new Set(['Dashboard'])
@@ -153,32 +155,14 @@ export const installerLePrechauffage = ({
         }
     }
 
-    /**
-     * L'instant du dernier préchauffage sous cette clé de session, ou `null`.
-     *
-     * @param {string} empreinte
-     */
-    const dernierPrechauffage = (empreinte) => {
-        try {
-            const note = JSON.parse(stockage()?.getItem(CLEF_DU_DERNIER_PRECHAUFFAGE) ?? 'null')
-
-            return note?.empreinte === empreinte && Number.isFinite(note.a) ? note.a : null
-        } catch {
-            return null
-        }
-    }
+    /** @param {string} empreinte */
+    const dernierPrechauffage = (empreinte) => lireLeDernierPrechauffage(stockage(), empreinte)
 
     /**
      * @param {string} empreinte
      * @param {number} instant
      */
-    const noterLePrechauffage = (empreinte, instant) => {
-        try {
-            stockage()?.setItem(CLEF_DU_DERNIER_PRECHAUFFAGE, JSON.stringify({ empreinte, a: instant }))
-        } catch {
-            // Un stockage refusé : le préchauffage repartira plus tôt, sans plus de huit demandes à la fois.
-        }
-    }
+    const noterLePrechauffage = (empreinte, instant) => noterLeDernierPrechauffage(stockage(), empreinte, instant)
 
     /**
      * Si une page peut faire partir un préchauffage : une page d'un compte,

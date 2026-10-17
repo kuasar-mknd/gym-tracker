@@ -1,3 +1,4 @@
+import { oublierLeDernierPrechauffage } from '@/Utils/dernierPrechauffage'
 import { oublierLesEcrituresAcceptees } from '@/Utils/ecrituresAcceptees'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL } from '@/Utils/historiqueDuCompte'
 import {
@@ -56,8 +57,13 @@ import {
  * chiffrement se fait donc avant. Une clé fermée ne fait plus rien écrire ni
  * lire, même reposée par la réponse en vol d'un autre onglet.
  *
- * Elle efface aussi la note des écritures de séance acceptées
- * (`Utils/ecrituresAcceptees.js`), avant toute attente.
+ * Elle efface aussi, avant toute attente, la note des écritures de séance
+ * acceptées (`Utils/ecrituresAcceptees.js`) et celle du dernier préchauffage
+ * (`Utils/dernierPrechauffage.js`) : une purge qui laisse la clé ouverte ne
+ * fait pas attendre une demi-heure les copies que le préchauffage refait.
+ * Une clé fermée par prudence avant un envoi que le serveur refuse ensuite,
+ * la session vivante (la suppression du compte, mot de passe refusé), se
+ * rouvre par `rouvrirLaCle`.
  *
  * **Les autres purges.** Un magasin ouvert pour un autre compte que le
  * titulaire de l'appareil se vide quand ce titulaire change
@@ -873,7 +879,8 @@ export const creerLeMagasinDesCopies = ({
      * s'annonce aux autres onglets avant toute attente : ce qui était en vol
      * ne s'écrit plus, ici comme ailleurs.
      *
-     * La note des écritures de séance acceptées s'efface avec elles, aussitôt.
+     * La note des écritures de séance acceptées et celle du dernier
+     * préchauffage s'effacent avec elles, aussitôt.
      *
      * L'empreinte de la clé à laquelle le magasin était ouvert rejoint les
      * fermées (`fermerLEtat`). Celle de la clé que porte encore le témoin
@@ -899,6 +906,7 @@ export const creerLeMagasinDesCopies = ({
         annoncer()
         prevenirDUnePurge()
         oublierLesEcrituresAcceptees(stockageDeLAppareil())
+        oublierLeDernierPrechauffage(stockageDeLAppareil())
 
         try {
             const octets = fermerLeTemoin && subtle ? octetsDeLaCle(lireLeTemoin()) : null
@@ -935,6 +943,75 @@ export const creerLeMagasinDesCopies = ({
             await fin
 
             return true
+        } catch {
+            return false
+        }
+    }
+
+    /**
+     * Rouvre la clé de la session qu'une purge a fermée avant un envoi dont le
+     * serveur a refusé l'effet en gardant la session : la suppression du
+     * compte, mot de passe refusé. En une seule transaction, l'empreinte sort
+     * des fermées, et seulement si tout tient encore : aucune purge depuis
+     * celle-là, ici ou annoncée par un autre onglet (`generation`, notée juste
+     * après elle), le témoin qui porte encore cette clé, et le titulaire de
+     * l'appareil qui est toujours ce compte. L'état reste fermé : la
+     * prochaine réponse complète le rouvre, et le préchauffage refait les
+     * copies.
+     *
+     * @param {{
+     *   empreinte: Promise<string | null> | string | null,
+     *   compte: string | number | null,
+     *   generation: number,
+     * }} cle l'empreinte relevée avant l'envoi (`empreinteDuTemoin`), le
+     *   compte qui l'envoyait, la génération notée après la purge
+     * @returns {Promise<boolean>} vrai quand la clé est rouverte
+     */
+    const rouvrirLaCle = async ({ empreinte: relevee, compte, generation: generationDeDepart }) => {
+        const empreinte = await Promise.resolve(relevee).catch(() => null)
+        const temoin = lireLeTemoin()
+        const octets = subtle ? octetsDeLaCle(temoin) : null
+
+        if (typeof empreinte !== 'string' || compte === null || compte === undefined || octets === null) {
+            return false
+        }
+
+        try {
+            if ((await empreinteDe(octets)) !== empreinte) {
+                return false
+            }
+
+            const ouverte = await base()
+            const transaction = ouverte.transaction([MAGASIN_DE_L_ETAT], 'readwrite')
+            const fin = finDe(transaction)
+            const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
+            const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
+            let rouverte = false
+
+            demandeDeLEtat.onsuccess = () => {
+                /** @type {EtatDuMagasin | undefined} */
+                const etat = demandeDeLEtat.result
+
+                if (
+                    generation !== generationDeDepart ||
+                    lireLeTemoin() !== temoin ||
+                    lireLeTitulaire() !== `compte:${compte}` ||
+                    etat === undefined ||
+                    !etat.empreintesFermees?.includes(empreinte)
+                ) {
+                    return
+                }
+
+                rouverte = true
+                magasinDeLEtat.put(
+                    { ...etat, empreintesFermees: etat.empreintesFermees.filter((fermee) => fermee !== empreinte) },
+                    CLE_DE_L_ETAT,
+                )
+            }
+
+            await fin
+
+            return rouverte
         } catch {
             return false
         }
@@ -1034,7 +1111,8 @@ export const creerLeMagasinDesCopies = ({
      * gardée il y a plus de sept jours s'efface, et un magasin ouvert sous un
      * autre contrat se vide entier et se ferme, sans fermer sa clé (la
      * session peut être encore vivante : une réponse complète le rouvrira
-     * sous ce contrat). Une seule transaction.
+     * sous ce contrat ; la note du dernier préchauffage s'efface alors,
+     * pour qu'il les refasse sans attendre). Une seule transaction.
      *
      * @returns {Promise<number>} le nombre de copies effacées
      */
@@ -1052,6 +1130,7 @@ export const creerLeMagasinDesCopies = ({
             const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
             const demandeDesCopies = pages.getAll()
             let effacees = 0
+            let autreContrat = false
 
             demandeDesCopies.onsuccess = () => {
                 /** @type {EtatDuMagasin | undefined} */
@@ -1060,6 +1139,7 @@ export const creerLeMagasinDesCopies = ({
                 const copies = demandeDesCopies.result
 
                 if (etat !== undefined && etat.contrat !== VERSION_DU_CONTRAT) {
+                    autreContrat = true
                     effacees = copies.length
                     pages.clear()
                     magasinDeLEtat.put(
@@ -1088,6 +1168,10 @@ export const creerLeMagasinDesCopies = ({
             }
 
             await fin
+
+            if (autreContrat) {
+                oublierLeDernierPrechauffage(stockageDeLAppareil())
+            }
 
             return effacees
         } catch {
@@ -1440,6 +1524,7 @@ export const creerLeMagasinDesCopies = ({
         noterUnRejeu,
         retirerLesSeancesQuiNeSontPlusEnCours,
         oublierLesCopies,
+        rouvrirLaCle,
         empreinteDuTemoin,
         oublierLesCopiesDUnAutreTitulaire,
         entretenir,
@@ -1485,17 +1570,37 @@ export const oublierLesCopies = (options) => {
 }
 
 /**
- * L'empreinte de la clé que porte le témoin à cet instant, relevée par le
- * magasin de la page (voir `empreinteDuTemoin` du magasin) : ce que la
- * suppression du compte lit avant son envoi. Ne lève ni ne rejette jamais.
+ * Oublie les copies du magasin de la page avant un envoi qui peut finir la
+ * session, la clé du témoin fermée avec elles : ce que la suppression du
+ * compte fait avant son envoi (#2048, décision 6 du propriétaire). Une
+ * réponse perdue ne laisse donc rien de lisible, et une réponse en vol d'un
+ * autre onglet ne rouvre rien. Rend de quoi fermer encore la clé relevée
+ * avant l'envoi une fois l'envoi accepté (`empreinte`, que sa réponse a
+ * déjà effacée du témoin), et de quoi la rouvrir s'il est refusé, la session
+ * vivante (`rouvrir`, voir `rouvrirLaCle` du magasin). Ne lève ni ne rejette
+ * jamais.
  *
- * @returns {Promise<string | null>}
+ * @returns {{
+ *   empreinte: Promise<string | null>,
+ *   fini: Promise<boolean>,
+ *   rouvrir: (compte: string | number | null) => Promise<boolean>,
+ * }}
  */
-export const empreinteDuTemoin = () => {
+export const oublierLesCopiesAvantUnEnvoi = () => {
     try {
-        return magasinDesCopies().empreinteDuTemoin()
+        const magasin = magasinDesCopies()
+        const empreinte = magasin.empreinteDuTemoin()
+        const fini = magasin.oublierLesCopies({ fermerLeTemoin: true }).catch(() => false)
+        const generation = magasin.generationCourante()
+
+        return {
+            empreinte,
+            fini,
+            rouvrir: (compte) =>
+                fini.then(() => magasin.rouvrirLaCle({ empreinte, compte, generation })).catch(() => false),
+        }
     } catch {
-        return Promise.resolve(null)
+        return { empreinte: Promise.resolve(null), fini: Promise.resolve(false), rouvrir: () => Promise.resolve(false) }
     }
 }
 
