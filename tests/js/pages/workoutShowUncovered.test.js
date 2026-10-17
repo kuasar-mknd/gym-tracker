@@ -661,8 +661,8 @@ describe('Workouts/Show — creating an exercise without leaving the session', (
 
         expect(modale(wrapper).showCreateForm).toBe(true)
         expect(modale(wrapper).createExerciseForm.name).toBe('Rowing')
-        // Kept across a reload of the modal, which is why it is written down.
-        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBe('Rowing')
+        // Kept across a reload of the modal, which is why it is written down, with its account (#2050).
+        expect(JSON.parse(localStorage.getItem('gymtracker_add_exercise_search'))).toMatchObject({ texte: 'Rowing' })
     })
 
     it('adds the created exercise to the session and to the picker', async () => {

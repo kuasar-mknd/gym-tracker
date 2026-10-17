@@ -23,11 +23,14 @@ use Tests\DuskTestCase;
  * WorkoutRowOverflowTest already guards one page. This guards the rest, which
  * is where the defect can actually appear unnoticed — nobody was measuring.
  *
- * 375px is the iPhone SE and the narrowest device this app targets.
+ * 375px is the iPhone SE and the narrowest device this app targets. Chaque
+ * page se mesure aussi à 640 px, où les mises en page `sm:` s'ouvrent à leur
+ * plus étroit.
  *
- * Le bureau a son propre piège : la barre de navigation s'ouvre dès 640 px et
- * tient tout juste dans sa largeur. Elle se mesure donc aussi, sur l'accueil,
- * aux largeurs de `largeursDeLaBarreDeBureau()`.
+ * Le bureau a son propre piège : la barre de navigation de bureau demande
+ * quelque 1 000 px de large, et ce qu'on y ajoute la fait déborder. Elle se
+ * mesure donc aussi, sur l'accueil, aux largeurs de
+ * `largeursDeLaBarreDeBureau()`, et avec un nom de compte démesuré.
  */
 class NoSidewaysScrollTest extends DuskTestCase
 {
@@ -74,6 +77,26 @@ class NoSidewaysScrollTest extends DuskTestCase
         .'const result = {scroll: Math.round(worst), client: d.clientWidth, widest};'
         .'style.remove();'
         .'return result;';
+
+    /**
+     * Quelle barre la page montre, et où se pose le bouton du compte dans la
+     * barre de bureau : son bord droit, son haut et son bas, et ceux de la
+     * barre. Les sélecteurs sont ceux de LesFenetresRestentDansLaZoneSureTest.
+     */
+    private const string LIRE_LA_BARRE = <<<'JS'
+        const affiche = (element) => element !== null && getComputedStyle(element).display !== 'none';
+        const barre = document.querySelector('nav.z-nav');
+        const ouverte = affiche(barre);
+        const compte = ouverte ? barre.querySelector('button[aria-haspopup]').getBoundingClientRect() : null;
+        const ligne = ouverte ? barre.querySelector('.h-16').getBoundingClientRect() : null;
+        return {
+            barreDeBureau: ouverte,
+            enteteMobile: affiche(document.querySelector('header.z-collant')),
+            barreDuBas: affiche(document.querySelector('nav.glass-nav')),
+            compte: compte === null ? null : { droite: compte.right, haut: compte.top, bas: compte.bottom },
+            barre: ligne === null ? null : { haut: ligne.top, bas: ligne.bottom },
+        };
+        JS;
 
     /**
      * @return array<string, array{string}>
@@ -178,36 +201,20 @@ class NoSidewaysScrollTest extends DuskTestCase
     }
 
     /**
-     * Les largeurs de bureau où la barre de navigation doit tenir.
-     *
-     * Elle s'ouvre dès 640 px de large sur un écran haut, dès 1 024 px sur
-     * tout écran (variante `bureau:` de app.css). Logo et nom ensemble lui
-     * demandaient 1 103 px de large avec un compte « Test User », 1 151 avec
-     * le nom long de userWithContent(), plus les 15 px de l'ascenseur que
-     * Chrome montre ici : en deçà, le menu du compte sortait de l'écran,
-     * chevron compris.
-     * Le logo seul en demande 947 avec ce nom. 1 080 px est la largeur d'un
-     * écran 1080p tourné en portrait, entre `lg` et `xl` ; 1 280 px, la
-     * largeur où elle montrait aussi le nom, avant que le logo ne s'y montre
-     * seul à toute largeur.
-     *
-     * @return array<string, array{int}>
+     * À 640 px, les mises en page `sm:` s'ouvrent sur la largeur la plus
+     * étroite qu'elles connaîtront, ascenseur compris (625 px de page) : un
+     * iPhone SE couché en a 667. La grille des habitudes y débordait de 36 px
+     * jusqu'à 675 px de large, la colonne du dimanche coupée et les cases
+     * décalées sous leurs jours : ses sept colonnes réservaient la largeur
+     * de leur case à cocher, celles de l'en-tête non (#2057).
      */
-    public static function largeursDeLaBarreDeBureau(): array
+    #[\PHPUnit\Framework\Attributes\DataProvider('mainPages')]
+    public function test_la_page_ne_defile_pas_de_cote_ou_s_ouvrent_les_mises_en_page_sm(string $routeName): void
     {
-        return [
-            'logo seul, 1080p en portrait' => [1080],
-            'à partir de xl' => [1280],
-        ];
-    }
-
-    #[\PHPUnit\Framework\Attributes\DataProvider('largeursDeLaBarreDeBureau')]
-    public function test_la_barre_de_bureau_tient_dans_la_largeur_de_l_ecran(int $largeur): void
-    {
-        $this->browse(function (Browser $browser) use ($largeur): void {
+        $this->browse(function (Browser $browser) use ($routeName): void {
             $browser->loginAs($this->userWithContent())
-                ->resize($largeur, 900)
-                ->visit(route('dashboard'))
+                ->resize(640, 900)
+                ->visit(route($routeName))
                 ->disableAnimations()
                 ->waitFor('#main-content', 30)
                 ->waitForStableLayout();
@@ -217,9 +224,132 @@ class NoSidewaysScrollTest extends DuskTestCase
             $this->assertLessThanOrEqual(
                 $client,
                 $scroll,
-                "À {$largeur}px, l'accueil déborde de ".($scroll - $client)."px. Élément le plus à droite : {$widest}"
+                "À 640px, la page {$routeName} déborde de ".($scroll - $client)."px. Élément le plus à droite : {$widest}"
             );
         });
+    }
+
+    /**
+     * Les largeurs de bureau où la page ne doit pas défiler de côté, et la
+     * barre que chacune montre.
+     *
+     * La barre de bureau s'ouvre à partir de 1 024 px de large (variante
+     * `bureau:` de app.css, #2057). Logo, six liens, cloche et menu du compte
+     * lui demandent 971 px avec un compte « Test User », plus les 15 px de
+     * l'ascenseur que Chrome montre ici ; un nom plus long s'abrège dans ce
+     * qui reste. Ouverte dès 640 px, elle débordait jusqu'à 960 px avec le
+     * nom de userWithContent(), menu du compte rogné, et ce menu passait sur
+     * trois lignes, hors de la barre, jusqu'à 1 000 px. En deçà de 1 024 px,
+     * l'en-tête mobile et la barre du bas la remplacent. 768 px est une
+     * tablette debout, 1 080 un écran 1080p tourné en portrait, 1 100 la
+     * largeur jusqu'où #2057 voyait le défaut (le nom long y passait sur deux
+     * lignes, il s'y abrège ; il tient entier à partir de 1 160 px), 1 280
+     * `xl`.
+     *
+     * @return array<string, array{int, bool}>
+     */
+    public static function largeursDeLaBarreDeBureau(): array
+    {
+        return [
+            'sm, l’ancien seuil' => [640, false],
+            'tablette debout' => [768, false],
+            'fenêtre étroite' => [900, false],
+            'juste sous le seuil' => [1000, false],
+            'au seuil, tablette couchée' => [1024, true],
+            '1080p en portrait' => [1080, true],
+            'nom long abrégé, largeur citée par #2057' => [1100, true],
+            'xl' => [1280, true],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('largeursDeLaBarreDeBureau')]
+    public function test_la_barre_de_bureau_tient_dans_la_largeur_de_l_ecran(int $largeur, bool $barreDeBureau): void
+    {
+        $this->browse(function (Browser $browser) use ($largeur, $barreDeBureau): void {
+            $browser->loginAs($this->userWithContent())
+                ->resize($largeur, 900)
+                ->visit(route('dashboard'))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitForStableLayout();
+
+            $this->assertLaBarreTient($browser, $largeur, $barreDeBureau);
+        });
+    }
+
+    /**
+     * Un nom de compte va jusqu'à 255 caractères, et un mot sans espace ne se
+     * coupe nulle part. Le bouton du compte repliait le nom sur autant de
+     * lignes qu'il fallait et sortait de la barre à toute largeur (138 px de
+     * haut à 1 280 px pour un nom de 246 caractères), et ce nom-ci, qui finit
+     * par 50 lettres sans espace, le poussait hors de la fenêtre (de 281 px à
+     * 1 024 px, de 25 à 1 280). Il prend désormais la place qui reste et
+     * s'abrège.
+     *
+     * @return array<string, array{int}>
+     */
+    public static function largeursDUnNomDemesure(): array
+    {
+        return [
+            'au seuil' => [1024],
+            'xl' => [1280],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('largeursDUnNomDemesure')]
+    public function test_un_nom_de_compte_demesure_s_abrege_dans_la_barre_de_bureau(int $largeur): void
+    {
+        $user = User::factory()->create([
+            'name' => str_repeat('Maximilien-Alexandre de La Rochefoucauld ', 5).str_repeat('x', 50),
+        ]);
+
+        $this->browse(function (Browser $browser) use ($user, $largeur): void {
+            $browser->loginAs($user)
+                ->resize($largeur, 900)
+                ->visit(route('dashboard'))
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->waitForStableLayout();
+
+            $this->assertLaBarreTient($browser, $largeur, true);
+        });
+    }
+
+    /**
+     * La page ne défile pas de côté, montre la barre attendue, et le bouton
+     * du compte de la barre de bureau tient entier dans la fenêtre et dans
+     * la hauteur de la barre.
+     */
+    private function assertLaBarreTient(Browser $browser, int $largeur, bool $barreDeBureau): void
+    {
+        ['scroll' => $scroll, 'client' => $client, 'widest' => $widest] = $this->debordementDeLaPage($browser);
+
+        $this->assertLessThanOrEqual(
+            $client,
+            $scroll,
+            "À {$largeur}px, l'accueil déborde de ".($scroll - $client)."px. Élément le plus à droite : {$widest}"
+        );
+
+        /** @var array{barreDeBureau: bool, enteteMobile: bool, barreDuBas: bool, compte: array{droite: float, haut: float, bas: float}|null, barre: array{haut: float, bas: float}|null} $barre */
+        $barre = $browser->script(self::LIRE_LA_BARRE)[0];
+
+        $this->assertSame(
+            ['barreDeBureau' => $barreDeBureau, 'enteteMobile' => ! $barreDeBureau, 'barreDuBas' => ! $barreDeBureau],
+            ['barreDeBureau' => $barre['barreDeBureau'], 'enteteMobile' => $barre['enteteMobile'], 'barreDuBas' => $barre['barreDuBas']],
+            $barreDeBureau
+                ? "À {$largeur}px, la barre de bureau remplace l'en-tête mobile et la barre du bas."
+                : "À {$largeur}px, l'en-tête mobile et la barre du bas remplacent la barre de bureau, qui n'y tient pas."
+        );
+
+        if (! $barreDeBureau) {
+            return;
+        }
+
+        $this->assertNotNull($barre['compte']);
+        $this->assertNotNull($barre['barre']);
+        $this->assertLessThanOrEqual($client, $barre['compte']['droite'], "À {$largeur}px, le menu du compte sort de la fenêtre.");
+        $this->assertGreaterThanOrEqual($barre['barre']['haut'], $barre['compte']['haut'], "À {$largeur}px, le menu du compte dépasse en haut de la barre.");
+        $this->assertLessThanOrEqual($barre['barre']['bas'], $barre['compte']['bas'], "À {$largeur}px, le menu du compte dépasse en bas de la barre.");
     }
 
     /**

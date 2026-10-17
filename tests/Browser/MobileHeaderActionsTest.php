@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Browser;
 
+use App\Models\Exercise;
 use App\Models\User;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
@@ -15,6 +16,10 @@ use Tests\DuskTestCase;
  * #header-actions; Goals shipped without it and became impossible to use on
  * mobile. These tests pin that contract at the viewport sizes users actually
  * have.
+ *
+ * Depuis #2057, `bureau:` s'ouvre à 1 024 px de large : une tablette debout
+ * perd l'en-tête de page comme un téléphone. Ce qu'il dit, et pas seulement
+ * ce qu'il commande, se lit donc aussi dans la page.
  */
 class MobileHeaderActionsTest extends DuskTestCase
 {
@@ -93,6 +98,42 @@ class MobileHeaderActionsTest extends DuskTestCase
                 ->click('@create-goal-btn-desktop')
                 ->waitFor('@goal-create-form', 10)
                 ->assertVisible('@goal-create-form');
+        });
+    }
+
+    /**
+     * Le compte des badges et la catégorie d'un exercice ne vivaient que dans
+     * l'en-tête de page : sous 1 024 px, ils ne s'affichaient nulle part. Le
+     * texte se lit en minuscules, WebDriver rendant les capitales de la CSS.
+     *
+     * @return array<string, array{0: string, 1: int, 2: int, 3: string}>
+     */
+    public static function informationsDeLEnTeteDePage(): array
+    {
+        return [
+            'le compte des badges, tablette debout' => ['achievements.index', 768, 1024, '~\d+ / \d+\s+débloqués~u'],
+            'le compte des badges, téléphone' => ['achievements.index', 390, 844, '~\d+ / \d+\s+débloqués~u'],
+            'la catégorie de l’exercice, tablette debout' => ['exercises.show', 768, 1024, '~pectoraux • force~u'],
+            'la catégorie de l’exercice, téléphone' => ['exercises.show', 390, 844, '~pectoraux • force~u'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('informationsDeLEnTeteDePage')]
+    public function test_ce_que_dit_l_en_tete_de_page_se_lit_sans_la_barre_de_bureau(string $routeName, int $largeur, int $hauteur, string $attendu): void
+    {
+        $user = User::factory()->create();
+        $exercise = Exercise::factory()->create(['user_id' => $user->id, 'category' => 'Pectoraux', 'type' => 'strength']);
+        $adresse = $routeName === 'exercises.show' ? route($routeName, $exercise) : route($routeName);
+
+        $this->browse(function (Browser $browser) use ($user, $adresse, $largeur, $hauteur, $attendu): void {
+            $browser->loginAs($user)
+                ->resize($largeur, $hauteur)
+                ->visit($adresse)
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                ->assertMissing('nav.z-nav');
+
+            $this->assertMatchesRegularExpression($attendu, mb_strtolower($browser->text('')));
         });
     }
 }

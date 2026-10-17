@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import LiquidBackground from '@/Components/UI/LiquidBackground.vue'
 import CelebrationModal from '@/Components/Achievements/CelebrationModal.vue'
@@ -9,6 +9,7 @@ import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
 import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
+import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
@@ -17,6 +18,8 @@ import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
+import { messageDesEcrituresAbandonnees, reprendreLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
+import { SESSION_FINIE_DANS_UN_AUTRE_ONGLET } from '@/Utils/ecrituresEffaceesALaDeconnexion'
 
 defineProps({
     pageTitle: {
@@ -76,23 +79,53 @@ const banniereCompacte = computed(() => !route().current('dashboard') && !route(
 onMounted(() => rapprocherLAbonnementPush(page.props.auth?.user?.id))
 
 /*
- * Les écritures hors ligne que le chargement a effacées sans pouvoir les
- * envoyer, faute de savoir à quel compte elles appartenaient (#1964) : le
- * premier écran authentifié le dit, une fois, par le toast d'erreur. Un message
- * déjà affiché n'est pas remplacé : l'avis attend l'écran suivant.
+ * Ce que la file hors ligne a effacé sans pouvoir l'envoyer, dit une fois par
+ * le toast d'erreur. D'abord les écritures que le chargement a effacées faute
+ * de savoir à quel compte elles appartenaient (#1964) ; puis celles du compte
+ * connecté qui ont attendu plus de trente jours et ont été abandonnées
+ * (#2050), notées pour lui même quand un autre compte était connecté à ce
+ * moment. Un message déjà affiché n'est pas remplacé : l'avis attend l'écran
+ * suivant. L'abandon pendant que la page est ouverte (une PWA reprise après
+ * des semaines) l'annonce par `sync:abandoned`.
  */
-onMounted(() => {
+const direCeQuiAEteEfface = () => {
     if (page.props.flash?.error) {
         return
     }
 
     const effacees = reprendreLesEcrituresEffacees()
+    const abandonnees = effacees > 0 ? null : reprendreLesEcrituresAbandonnees(page.props.auth?.user?.id)
 
-    if (effacees > 0) {
-        const flash = page.props.flash ?? (page.props.flash = {})
-
-        flash.error = messageDesEcrituresEffacees(effacees)
+    if (effacees === 0 && abandonnees === null) {
+        return
     }
+
+    const flash = page.props.flash ?? (page.props.flash = {})
+
+    flash.error = effacees > 0 ? messageDesEcrituresEffacees(effacees) : messageDesEcrituresAbandonnees(abandonnees)
+}
+
+/*
+ * Ce compte a quitté l'appareil depuis un autre onglet (#2050) : la session,
+ * commune aux onglets, n'existe plus, et ce que la personne fait dans celui-ci
+ * n'est plus enregistré ni gardé. Le toast d'erreur le dit, à la place de ce
+ * qu'il montrait : rien n'est plus urgent.
+ */
+const direQueLaSessionAPrisFin = () => {
+    const flash = page.props.flash ?? (page.props.flash = {})
+
+    flash.error = SESSION_FINIE_DANS_UN_AUTRE_ONGLET
+}
+
+onMounted(() => {
+    direCeQuiAEteEfface()
+    window.addEventListener('sync:abandoned', direCeQuiAEteEfface)
+    window.addEventListener('sync:compte-parti', direQueLaSessionAPrisFin)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('sync:abandoned', direCeQuiAEteEfface)
+    window.removeEventListener('sync:compte-parti', direQueLaSessionAPrisFin)
 })
 </script>
 
@@ -131,11 +164,19 @@ onMounted(() => {
         <!-- Les messages de la page et ceux du réseau (#2048). -->
         <ToastsDuLayout />
 
-        <!-- Desktop Navigation -->
+        <!-- Avant une déconnexion qui perdrait des écritures pas encore envoyées (#2050). -->
+        <QuestionDeDeconnexion />
+
+        <!--
+            La barre de bureau, à partir de 1 024 px de large (variante
+            `bureau:` de app.css, #2057). Le nom du compte prend la place qui
+            reste et s'abrège au-delà : sur plusieurs lignes, un nom long
+            faisait déborder le bouton du compte hors de la barre.
+        -->
         <nav
             class="bg-surface-page/80 border-surface-card/40 z-nav pt-sure-0 bureau:block sticky top-0 hidden border-b backdrop-blur-xl"
         >
-            <div class="px-sure-4 sm:px-sure-6 lg:px-sure-8 mx-auto max-w-7xl">
+            <div class="px-sure-8 mx-auto max-w-7xl">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
                         <!-- Logo -->
@@ -146,7 +187,7 @@ onMounted(() => {
                         </div>
 
                         <!-- Desktop Navigation Links -->
-                        <div class="bureau:flex hidden space-x-1 sm:ms-8">
+                        <div class="bureau:flex ms-8 hidden space-x-1">
                             <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                 Accueil
                             </NavLink>
@@ -169,7 +210,7 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div class="bureau:flex hidden gap-3 sm:ms-6 sm:items-center">
+                    <div class="bureau:flex ms-6 hidden min-w-0 items-center gap-3">
                         <!-- Notification Bell -->
                         <Link
                             :href="route('notifications.index')"
@@ -190,22 +231,22 @@ onMounted(() => {
                         </Link>
 
                         <!-- User Dropdown -->
-                        <div class="relative">
+                        <div class="relative min-w-0">
                             <Dropdown align="right" width="48">
                                 <template #trigger="{ open }">
                                     <button
                                         type="button"
                                         aria-haspopup="true"
                                         :aria-expanded="open"
-                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        class="text-text-main focus-visible:ring-accent-primary border-border bg-surface-card hover:bg-surface-card inline-flex max-w-full items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                                     >
                                         <div
-                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 items-center justify-center rounded-full text-xs font-black"
+                                            class="bg-gradient-main text-text-on-dark-accent flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black"
                                         >
                                             {{ $page.props.auth.user.name?.charAt(0).toUpperCase() }}
                                         </div>
-                                        {{ $page.props.auth.user.name }}
-                                        <GlassIcon name="expand_more" size="sm" class="text-text-muted" />
+                                        <span class="truncate">{{ $page.props.auth.user.name }}</span>
+                                        <GlassIcon name="expand_more" size="sm" class="text-text-muted shrink-0" />
                                     </button>
                                 </template>
 

@@ -348,7 +348,7 @@ class LesFenetresRestentDansLaZoneSureTest extends DuskTestCase
             /** @var array{largeur: int, hauteur: int} $ecran */
             $ecran = $browser->script('return { largeur: innerWidth, hauteur: innerHeight };')[0];
 
-            $this->assertLessThan(500, $ecran['hauteur'], 'La fenêtre est plus basse que le seuil de hauteur de la barre de bureau.');
+            $this->assertLessThan(500, $ecran['hauteur'], 'La fenêtre est aussi basse qu’un téléphone couché.');
             $this->assertGreaterThanOrEqual(1024, $ecran['largeur'], 'La fenêtre est plus large que tout téléphone couché.');
 
             /** @var array{barreDeBureau: bool, enteteMobile: bool, barreDuBas: bool, largeur: float, defilement: float, commandes: list<array{nom: string, gauche: float, droite: float}>} $mesure */

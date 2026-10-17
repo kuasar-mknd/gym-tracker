@@ -8,6 +8,7 @@ import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import SyncService from '@/Utils/SyncService'
+import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 import { SUPPRESSION_DU_COMPTE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
 
 const confirmingUserDeletion = ref(false)
@@ -36,8 +37,9 @@ const confirmUserDeletion = () => {
  * refusé ne coûte pas l'abonnement d'un compte qui reste.
  *
  * Ce que l'appareil gardait pour ce compte s'efface aussi : ses écritures
- * hors ligne encore en file, qui ne partiraient jamais, ses refus et les
- * brouillons de séries (#1964). Le compte se lit avant la réponse, qui mène à
+ * hors ligne encore en file, qui ne partiraient jamais, et ses refus, autres
+ * onglets compris (#1964, #2050), les brouillons de séries et la dernière
+ * recherche d'exercice (#2050). Le compte se lit avant la réponse, qui mène à
  * une page où plus personne n'est connecté.
  */
 const deleteUser = () => {
@@ -51,6 +53,7 @@ const deleteUser = () => {
             detacherLAppareil({ prevenirLeServeur: false })
             SyncService.oublierLeCompte(compteSupprime)
             effacerLesBrouillons()
+            effacerLaRecherche()
         },
         onError: () => passwordInput.value?.focus(),
         onNetworkError: direSansReseau(null, () => {
@@ -77,7 +80,9 @@ const closeModal = () => {
                 limité : quatorze jours dans les journaux du serveur, trente jours dans les rapports d'erreurs, 180
                 jours dans l'historique d'audit et sept mois au plus dans les sauvegardes de la base. Une seconde copie
                 des journaux, bornée par sa taille, peut aussi en garder des traces sans durée garantie, le temps que de
-                nouvelles lignes les remplacent.
+                nouvelles lignes les remplacent. Sur un autre appareil, les modifications faites hors ligne et jamais
+                envoyées s'effacent à la première ouverture de l'application passé trente jours, et la dernière
+                recherche d'exercice dès qu'une page de connexion s'y affiche.
             </p>
         </header>
 

@@ -18,14 +18,15 @@ vi.mock('@inertiajs/vue3', () => ({
 }))
 
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
+import { chargerSyncService, naviguer, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
 const bibliotheque = [
     { id: 1, name: 'Développé couché', category: 'Pectoraux' },
     { id: 2, name: 'Squat', category: 'Jambes' },
 ]
 
-const monter = (props = {}) =>
-    mount(AjoutDExerciceModal, {
+const monter = (props = {}, Modale = AjoutDExerciceModal) =>
+    mount(Modale, {
         props: { show: true, exercises: bibliotheque, ...props },
         global: { stubs: { Modal: { template: '<div><slot /></div>', props: ['show'] } } },
         attachTo: document.body,
@@ -40,6 +41,8 @@ beforeEach(() => {
 afterEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
+    retirerLesEcouteursDuService()
+    poserLaPage(null)
 })
 
 describe('choisir un exercice', () => {
@@ -49,7 +52,65 @@ describe('choisir un exercice', () => {
         await wrapper.get('#search-workout-exercise').setValue('squ')
 
         expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual(['SquatJambes'])
-        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBe('squ')
+        expect(JSON.parse(localStorage.getItem('gymtracker_add_exercise_search'))).toMatchObject({ texte: 'squ' })
+        wrapper.unmount()
+
+        expect(monter().vm.searchQuery).toBe('squ')
+    })
+
+    /*
+     * La recherche survivait à une session fermée par le serveur (expirée,
+     * mot de passe changé ailleurs), que la déconnexion n'efface pas : le
+     * compte suivant ouvrait la fenêtre sur ce que le précédent avait cherché
+     * (#2050). Elle est rangée avec son compte.
+     */
+    it('ne rend la recherche qu’au compte qui l’a tapée, et l’efface pour un autre', async () => {
+        await chargerSyncService({ compte: 1 })
+        const { default: Modale } = await import('@/Components/Workout/AjoutDExerciceModal.vue')
+        const sousA = monter({}, Modale)
+        await sousA.get('#search-workout-exercise').setValue('Hip thrust')
+        sousA.unmount()
+
+        expect(JSON.parse(localStorage.getItem('gymtracker_add_exercise_search'))).toEqual({
+            compte: '1',
+            texte: 'Hip thrust',
+        })
+        expect(monter({}, Modale).vm.searchQuery).toBe('Hip thrust')
+
+        // Le serveur ferme la session de A, puis B se connecte sur la même page.
+        naviguer(null)
+        naviguer(2)
+        const sousB = monter({}, Modale)
+
+        expect(sousB.vm.searchQuery).toBe('')
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBeNull()
+    })
+
+    it('efface la recherche qu’une version précédente gardait sans son compte', async () => {
+        localStorage.setItem('gymtracker_add_exercise_search', 'Squat')
+        await chargerSyncService({ compte: 1 })
+        const { default: Modale } = await import('@/Components/Workout/AjoutDExerciceModal.vue')
+
+        expect(monter({}, Modale).vm.searchQuery).toBe('')
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBeNull()
+    })
+
+    /*
+     * La recherche passe par `Utils/rechercheDExercice`, que la déconnexion
+     * efface (#2050). Un stockage refusé (navigation privée, quota) levait à
+     * l'ouverture de la fenêtre et à chaque frappe.
+     */
+    it('s’ouvre et cherche quand le stockage refuse, sans rien garder', async () => {
+        const refuser = () => {
+            throw new DOMException('bloqué', 'SecurityError')
+        }
+        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(refuser)
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(refuser)
+
+        const wrapper = monter()
+        await wrapper.get('#search-workout-exercise').setValue('squ')
+
+        expect(wrapper.findAll('[dusk^="select-exercise-"]').map((b) => b.text())).toEqual(['SquatJambes'])
         wrapper.unmount()
     })
 
