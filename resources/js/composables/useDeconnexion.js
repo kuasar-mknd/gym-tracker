@@ -247,13 +247,14 @@ const demanderOuPartir = () => {
  *
  * Les copies hors ligne des pages s'oublient au départ, avant l'envoi
  * (#2048, `partir`). Une déconnexion acceptée efface ce que la file hors
- * ligne garde pour le compte (#2050). Quand des écritures du compte attendent encore, sur cet
- * onglet ou un autre, rien ne part : la question est posée d'abord (combien,
- * et qu'elles seront perdues), et seul « Se déconnecter quand même »
- * (`seDeconnecterQuandMeme`) détache l'appareil et déconnecte. Avant le
- * détachement, et non après : « Rester connecté » laisse l'appareil abonné.
- * File vide, la déconnexion part sans question. Les gestes l'appellent par
- * `@click` : un premier argument, l'évènement du clic, n'y change rien.
+ * ligne garde pour le compte (#2050). Quand des écritures du compte
+ * attendent encore, sur cet onglet ou un autre, rien ne part : la question
+ * est posée d'abord (combien, et qu'elles seront perdues), et seul « Se
+ * déconnecter quand même » (`seDeconnecterQuandMeme`) détache l'appareil et
+ * déconnecte. Avant le détachement, et non après : « Rester connecté »
+ * laisse l'appareil abonné. File vide, la déconnexion part sans question.
+ * Les gestes l'appellent par `@click` : un premier argument, l'évènement du
+ * clic, n'y change rien.
  *
  * Une écriture partie juste avant le clic et encore sans réponse n'est pas
  * encore en file : la question ne la voyait pas, et la déconnexion partait
