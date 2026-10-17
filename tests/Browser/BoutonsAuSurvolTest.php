@@ -36,7 +36,12 @@ use Tests\DuskTestCase;
  * `Emulation.setTouchEmulationEnabled` (`pointer: coarse`, `hover: none`).
  * Retirer l'émulation tactile rend `pointer: none`, pas la souris du
  * lancement : le parcours tactile ferme son navigateur en finissant, et
- * l'autre en démarre un neuf, quel que soit leur ordre.
+ * ceux de la souris en démarrent un neuf, quel que soit leur ordre.
+ *
+ * À la souris, les actions d'une habitude ne se posent sur la cellule de son
+ * nom que dans la colonne de 200 px (`sm:souris:absolute`) : un parcours le
+ * vérifie aussi dans une fenêtre de 500 px, où la cellule prend toute la
+ * carte.
  *
  * L'opacité se lit sur l'élément et tous ses ancêtres (`OPACITE_VUE`) : un
  * bouton garde l'opacité 1 dans un conteneur à 0. WebDriver la lit de même,
@@ -154,6 +159,47 @@ class BoutonsAuSurvolTest extends DuskTestCase
         });
     }
 
+    /**
+     * Sous 640 px, la cellule du nom prend toute la largeur de la carte : les
+     * actions y restent sous le nom, même à la souris. Posées en haut à droite
+     * de la cellule, comme dans la colonne de 200 px, elles couvraient le nom
+     * au survol.
+     */
+    public function test_a_la_souris_dans_une_fenetre_etroite_les_actions_d_une_habitude_restent_sous_son_nom(): void
+    {
+        $compte = $this->compte('fenetre-etroite');
+        $habitude = Habit::factory()->for($compte)->create(['name' => 'Gainage du matin, tenu sur toute la longueur de la planche']);
+
+        $modifierLHabitude = 'button[aria-label="Modifier l\'habitude"]';
+        $supprimerLHabitude = 'button[aria-label="Supprimer l\'habitude"]';
+
+        $this->browse(function (Browser $browser) use ($compte, $habitude, $modifierLHabitude, $supprimerLHabitude): void {
+            $browser->loginAs($compte)
+                ->resize(500, 900)
+                ->visit('/habits')
+                ->disableAnimations()
+                ->waitFor('#main-content', 30)
+                // Présent, pas visible : WebDriver tient le bouton transparent pour caché.
+                ->waitUntil('document.querySelector('.json_encode($supprimerLHabitude, JSON_THROW_ON_ERROR).') !== null', 15);
+
+            $this->assertSame(['souris' => true, 'tactile' => false], $browser->script(self::LIRE_LE_POINTEUR)[0]);
+
+            // Sous 1 024 px, la barre de bureau est masquée : la souris attend sur le titre de l'en-tête mobile, collant.
+            $this->amenerAuCentre($browser, $supprimerLHabitude);
+            $browser->mouseover('header h1');
+            $this->assertOpacite($browser, [$modifierLHabitude => 0.0, $supprimerLHabitude => 0.0], 'avant le survol de l’habitude, dans une fenêtre étroite');
+            $browser->driver->action()->moveToElement($browser->driver->findElement(WebDriverBy::xpath(
+                '//h3[normalize-space(.) = '.json_encode($habitude->name, JSON_THROW_ON_ERROR).']',
+            )))->perform();
+            $this->assertOpacite($browser, [$modifierLHabitude => 1.0, $supprimerLHabitude => 1.0], 'au survol de l’habitude, dans une fenêtre étroite');
+
+            $this->assertFalse(
+                $this->couvreLeNom($browser, $habitude->name, $supprimerLHabitude),
+                'Au survol, dans une fenêtre étroite, les boutons de l’habitude couvrent son nom, ou le nom est introuvable.',
+            );
+        });
+    }
+
     public function test_sur_une_tablette_tactile_les_boutons_se_voient_sans_survol(): void
     {
         $compte = $this->compte('tablette');
@@ -193,20 +239,10 @@ class BoutonsAuSurvolTest extends DuskTestCase
                 $browser->assertVisible($modifierLHabitude)->assertVisible($supprimerLHabitude);
 
                 // Visibles à demeure, ils ne se posent plus sur le nom de l'habitude.
-                $chevauchement = $browser->script(sprintf(
-                    <<<'JS'
-                        const nom = [...document.querySelectorAll('h3')].find((titre) => titre.textContent.trim() === %s);
-                        const actions = document.querySelector(%s).parentElement;
-                        if (nom === undefined || actions === null) { return null; }
-                        const a = nom.getBoundingClientRect();
-                        const b = actions.getBoundingClientRect();
-                        return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-                        JS,
-                    json_encode($habitude->name, JSON_THROW_ON_ERROR),
-                    json_encode($supprimerLHabitude, JSON_THROW_ON_ERROR),
-                ))[0];
-
-                $this->assertFalse($chevauchement, 'Les boutons de l’habitude couvrent son nom, ou le nom est introuvable.');
+                $this->assertFalse(
+                    $this->couvreLeNom($browser, $habitude->name, $supprimerLHabitude),
+                    'Les boutons de l’habitude couvrent son nom, ou le nom est introuvable.',
+                );
 
                 $outils->execute('Emulation.setTouchEmulationEnabled', ['enabled' => false]);
             });
@@ -250,6 +286,28 @@ class BoutonsAuSurvolTest extends DuskTestCase
         } while (microtime(true) < $limite);
 
         $this->assertSame($attendues, $lues, "Opacités {$quand}.");
+    }
+
+    /**
+     * Si le conteneur des actions d'une habitude recouvre son nom : `null`
+     * quand l'un ou l'autre manque, ce qu'`assertFalse` refuse aussi.
+     */
+    private function couvreLeNom(Browser $browser, string $nom, string $bouton): ?bool
+    {
+        $couvre = $browser->script(sprintf(
+            <<<'JS'
+                const nom = [...document.querySelectorAll('h3')].find((titre) => titre.textContent.trim() === %s);
+                const actions = document.querySelector(%s)?.parentElement ?? null;
+                if (nom === undefined || actions === null) { return null; }
+                const a = nom.getBoundingClientRect();
+                const b = actions.getBoundingClientRect();
+                return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+                JS,
+            json_encode($nom, JSON_THROW_ON_ERROR),
+            json_encode($bouton, JSON_THROW_ON_ERROR),
+        ))[0] ?? null;
+
+        return is_bool($couvre) ? $couvre : null;
     }
 
     /** Fait défiler la page jusqu'à l'élément : la bibliothèque montre aussi le catalogue commun. */

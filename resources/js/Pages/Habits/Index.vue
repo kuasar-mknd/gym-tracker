@@ -261,14 +261,16 @@ const getProgressPercent = (habit) => {
                             </div>
 
                             <!--
-                                Sous une souris, les actions se posent en haut à droite de la
-                                cellule et n'apparaissent qu'au survol ou au focus. Sans souris
+                                Sous une souris, les actions n'apparaissent qu'au survol ou au
+                                focus. Elles ne se posent en haut à droite de la cellule que
+                                dans la colonne de 200 px (`sm:souris:`) ; sous 640 px, elles
+                                restent sous le nom, qu'elles couvraient au survol. Sans souris
                                 (une tablette, un téléphone), elles restent visibles, sous le
-                                nom : posées sur lui à demeure, elles le couvriraient dans la
-                                colonne de 200 px (#2082).
+                                nom à toute largeur : posées sur lui à demeure, elles le
+                                couvriraient (#2082).
                             -->
                             <div
-                                class="souris:absolute souris:top-2 souris:right-2 souris:mt-0 souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 mt-2 flex gap-1 transition"
+                                class="sm:souris:absolute sm:souris:top-2 sm:souris:right-2 sm:souris:mt-0 souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 mt-2 flex gap-1 transition"
                             >
                                 <GlassIconButton icon="edit" label="Modifier l'habitude" @click="editHabit(habit)" />
                                 <GlassIconButton
