@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Support\EcheanceDuCookie;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Cookie\CookieValuePrefix;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -63,6 +66,7 @@ final class Appareil
         $reponse = call($methode, $chemin, $donnees, $this->cookiesChiffres(), [], self::variablesDuServeur($entetes));
 
         $this->garderLesCookiesDe($reponse);
+        $this->rendreLaGardeParDefaut();
 
         return $reponse;
     }
@@ -100,36 +104,64 @@ final class Appareil
     private function oublierLaRequetePrecedente(): void
     {
         app('auth')->forgetGuards();
-        app('auth')->shouldUse($this->gardeParDefaut);
-        app()->forgetInstance('auth.driver');
+        $this->rendreLaGardeParDefaut();
         app('cookie')->flushQueuedCookies();
         app('session.store')->flush();
     }
 
     /**
+     * Rend au conteneur la garde par défaut de la configuration, que la
+     * requête a pu changer : `auth:sanctum` fait de `sanctum` la garde par
+     * défaut, et un appareil créé ensuite dans le même test l'aurait prise
+     * pour la sienne. Sous Octane, chaque requête repart de la configuration.
+     */
+    private function rendreLaGardeParDefaut(): void
+    {
+        app('auth')->shouldUse($this->gardeParDefaut);
+        app()->forgetInstance('auth.driver');
+    }
+
+    /**
+     * Les cookies de l'appareil, chiffrés comme le navigateur les renvoie : un
+     * cookie qu'`EncryptCookies` ne chiffre pas, comme le témoin des copies
+     * hors ligne, repart tel que la réponse l'a posé.
+     *
      * @return array<string, string>
      */
     private function cookiesChiffres(): array
     {
         $chiffres = [];
+        $chiffrement = app(EncryptCookies::class);
 
         foreach ($this->cookies as $nom => $valeur) {
-            $chiffres[$nom] = Crypt::encryptString(CookieValuePrefix::create($nom, Crypt::getKey()).$valeur);
+            $chiffres[$nom] = $chiffrement->isDisabled($nom)
+                ? $valeur
+                : Crypt::encryptString(CookieValuePrefix::create($nom, Crypt::getKey()).$valeur);
         }
 
         return $chiffres;
     }
 
     /**
+     * Garde les cookies que la réponse pose, et jette ceux qu'elle efface.
+     *
+     * L'échéance se juge à l'horloge du test, celle que l'application a lue
+     * pour la calculer, comme un navigateur réglé sur elle
+     * (`EcheanceDuCookie`) : `Cookie::isCleared()` la compare à la vraie heure,
+     * et un test qui arrête l'horloge plus d'une durée de session dans le
+     * passé verrait l'appareil jeter chaque cookie que la réponse pose.
+     *
      * @param  TestResponse<Response>  $reponse
      */
     private function garderLesCookiesDe(TestResponse $reponse): void
     {
+        $maintenant = Carbon::now();
+
         foreach ($reponse->baseResponse->headers->getCookies() as $cookie) {
             $nom = $cookie->getName();
             $valeur = (string) $cookie->getValue();
 
-            if ($cookie->isCleared() || $valeur === '') {
+            if (EcheanceDuCookie::estPassee($cookie, $maintenant) || $valeur === '') {
                 unset($this->cookies[$nom]);
 
                 continue;

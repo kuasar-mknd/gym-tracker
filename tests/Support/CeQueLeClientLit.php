@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Support\CleDesCopiesEnSession;
 use Illuminate\Contracts\Support\MessageBag;
 use Illuminate\Support\Arr;
 use Illuminate\Support\ViewErrorBag;
@@ -18,9 +19,10 @@ use function Pest\Laravel\flushHeaders;
  * corps, session, puis la page qu'il retrouve après la redirection (#1951).
  *
  * Deux réponses qui ne doivent pas dire si une adresse a un compte se
- * comparent par ce relevé, en entier. Seuls les jetons tirés au hasard à
- * chaque requête en sont ôtés : la valeur des cookies, le jeton CSRF de la
- * session, l'adresse de la boîte aux notifications de Filament
+ * comparent par ce relevé, en entier. Seuls les jetons tirés au hasard en
+ * sont ôtés : la valeur des cookies, le jeton CSRF de la session, la clé des
+ * copies hors ligne que chaque session tire pour son compte (#2048),
+ * l'adresse de la boîte aux notifications de Filament
  * (`filament.notifications.mailbox`, que Filament 5.10.2 tire dans chaque
  * session de son identifiant et de ce jeton, et retire au hasard à chaque
  * connexion et à chaque déconnexion ; elle reste dans la session, côté
@@ -54,6 +56,7 @@ final class CeQueLeClientLit
 
         $session = session()->all();
         unset($session['_token']);
+        Arr::forget($session, CleDesCopiesEnSession::CLE);
         Arr::forget($session, 'filament.notifications.mailbox');
 
         if (($session['errors'] ?? null) instanceof ViewErrorBag) {

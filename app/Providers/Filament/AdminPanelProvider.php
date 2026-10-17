@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers\Filament;
 
 use App\Filament\Sauvegardes\PageDesSauvegardes;
+use App\Http\Middleware\CleDesCopiesHorsLigne;
 use App\Http\Middleware\ConditionalCspHeaders;
 use App\Support\AvatarDesInitiales;
 use App\Support\ComptesVusParPulse;
@@ -242,6 +243,15 @@ final class AdminPanelProvider extends PanelProvider
      * nonce de ses scripts ne protégeait rien (#1920). Le nonce est tiré plus
      * haut, par `NonceCspParRequete`, en tête de la pile globale.
      *
+     * Le témoin des copies hors ligne y est repris aussi (#2048) : la session
+     * du panneau est celle de l'application, et la déconnexion du panneau la
+     * vide, compte de l'application et clé des copies compris. Sa réponse doit
+     * donc effacer le témoin, comme celle de l'application. Ailleurs dans le
+     * panneau, la session tient un compte que personne n'y lit, et le témoin
+     * reste tel quel. Juste après l'ouverture de la session, il passe devant
+     * la vérification CSRF et voit son 419 ; l'ordre de priorité le garde
+     * devant le `Authenticate` du panneau.
+     *
      * @return array<int, class-string>
      */
     private function getMiddleware(): array
@@ -251,6 +261,7 @@ final class AdminPanelProvider extends PanelProvider
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
+            CleDesCopiesHorsLigne::class,
             AuthenticateSession::class,
             ShareErrorsFromSession::class,
             PreventRequestForgery::class,
