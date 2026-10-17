@@ -163,7 +163,11 @@ afterAll(() => {
     vi.restoreAllMocks()
 })
 
-const dialogue = () => document.querySelector('dialog')
+/**
+ * La fenêtre du badge, par son titre : le layout monte aussi la question d'avant
+ * la déconnexion (#2050), un autre `<dialog>`, fermé.
+ */
+const dialogue = () => document.querySelector('dialog[aria-labelledby="achievement-title"]')
 /** Ce que la modale montre, quelle qu'en soit la mise en page : l'ancienne n'avait que le message, qui nomme le badge. */
 const texteDuDialogue = () => dialogue()?.textContent.replace(/\s+/g, ' ').trim() ?? ''
 const nomDuBadge = () => document.getElementById('achievement-name')?.textContent.trim() ?? null

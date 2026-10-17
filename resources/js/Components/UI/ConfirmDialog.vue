@@ -64,6 +64,16 @@ const props = defineProps({
         default: 'Supprimer',
     },
 
+    /**
+     * Le libellé du bouton qui renonce. « Annuler » ne dit pas toujours ce
+     * qu'on garde : avant une déconnexion qui perdrait des écritures, c'est
+     * « Rester connecté » (#2050).
+     */
+    libelleAnnulation: {
+        type: String,
+        default: 'Annuler',
+    },
+
     /** Vrai tant que la requête est en vol : le bouton se verrouille. */
     enCours: {
         type: Boolean,
@@ -92,7 +102,12 @@ const decrit = computed(() => props.description !== '')
 
             <p v-if="decrit" class="text-text-muted mt-2 text-sm">{{ description }}</p>
 
-            <div class="mt-6 flex justify-end gap-3">
+            <!--
+                `flex-wrap` : « Rester connecté » et « Se déconnecter quand
+                même » ne tiennent pas côte à côte sur un téléphone (#2050) ;
+                le second passe dessous plutôt que de déborder de la fenêtre.
+            -->
+            <div class="mt-6 flex flex-wrap justify-end gap-3">
                 <!--
                     « Annuler » en `secondary` et l'action en `danger` : un cran
                     d'écart franc. Deux formulaires de l'application mettaient la
@@ -100,7 +115,7 @@ const decrit = computed(() => props.description !== '')
                     l'utilisateur choisir au hasard.
                 -->
                 <GlassButton variant="secondary" dusk="confirm-dialog-cancel" @click="emit('annuler')">
-                    Annuler
+                    {{ libelleAnnulation }}
                 </GlassButton>
                 <GlassButton
                     variant="danger"

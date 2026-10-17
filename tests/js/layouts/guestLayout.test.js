@@ -47,6 +47,24 @@ describe('GuestLayout', () => {
         expect(marquerLAbonnementARetransmettre).toHaveBeenCalledTimes(1)
     })
 
+    /*
+     * Une session que le serveur ferme (expirée, mot de passe changé ailleurs)
+     * ne passe pas par la déconnexion, qui efface la dernière recherche
+     * d'exercice : le compte suivant la retrouvait dans « Ajouter un
+     * exercice » (#2050). La page d'invité qui suit l'efface.
+     */
+    it('efface la dernière recherche d’exercice sur une page d’invité, pas sous une session ouverte', () => {
+        localStorage.setItem('gymtracker_add_exercise_search', JSON.stringify({ compte: '42', texte: 'Hip thrust' }))
+
+        monter({ user: { id: 42 } })
+
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).not.toBeNull()
+
+        monter({ user: null })
+
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBeNull()
+    })
+
     /**
      * Le logo de l'application, seul au-dessus de la carte. Le lien vers
      * l'accueil se lit « GymTracker » : le dessin est muet, et le nom, caché,

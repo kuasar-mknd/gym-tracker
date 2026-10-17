@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
+import { attendreAuPlus } from '@/Utils/attendreAuPlus'
 import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import SyncService from '@/Utils/SyncService'
 import { triggerHaptic } from '@/composables/useHaptics'
@@ -12,18 +13,6 @@ import { direSansReseau } from '@/Utils/visitesHorsLigne'
  * le vidage, lui, continue (#1961).
  */
 export const ATTENTE_MAX_DE_LA_FILE_MS = 8000
-
-/** Attend `promesse`, mais pas plus de `delai` millisecondes. */
-const attendreAuPlus = (promesse, delai) =>
-    new Promise((resoudre) => {
-        const echeance = setTimeout(resoudre, delai)
-        const fin = () => {
-            clearTimeout(echeance)
-            resoudre()
-        }
-
-        promesse.then(fin, fin)
-    })
 
 /**
  * Les reglages de la seance, sa fin et son enregistrement comme modele :

@@ -1139,6 +1139,10 @@ describe('DeleteUserForm', () => {
         expect(promesse).toContain(
             'Une seconde copie des journaux, bornée par sa taille, peut aussi en garder des traces sans durée garantie, le temps que de nouvelles lignes les remplacent.',
         )
+        // Ce qu'un autre appareil garde hors ligne ne part qu'à son ouverture, passé trente jours, et la recherche à la page de connexion (#2050).
+        expect(promesse).toContain(
+            "Sur un autre appareil, les modifications faites hors ligne et jamais envoyées s'effacent à la première ouverture de l'application passé trente jours, et la dernière recherche d'exercice dès qu'une page de connexion s'y affiche.",
+        )
         expect(promesse).not.toContain('Les journaux du serveur peuvent aussi en garder des traces')
         expect(promesse).not.toContain('définitivement')
         expect(promesse).not.toMatch(/seules?\b/i)
