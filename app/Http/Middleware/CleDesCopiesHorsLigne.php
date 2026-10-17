@@ -172,14 +172,17 @@ final readonly class CleDesCopiesHorsLigne
     /**
      * Celle du cookie de session : `session.lifetime` minutes, ou la fin de la
      * session du navigateur quand `session.expire_on_close` est vrai, sans
-     * `Expires` ; douze heures quand l'appareil se souvient du compte.
+     * `Expires` ; douze heures quand l'appareil se souvient du compte. Une
+     * seule lecture de l'horloge juge le cookie de rappel et fixe l'échéance.
      */
     private function echeance(Request $request, SessionGuard $garde, User $compte): DateTimeInterface|int
     {
+        $maintenant = now();
+
         return match (true) {
-            RappelDeLAppareil::resteApresLaReponse($request, $garde, $compte, $this->cookies) => now()->addMinutes(self::MINUTES_AVEC_LE_RAPPEL),
+            RappelDeLAppareil::resteApresLaReponse($request, $garde, $compte, $this->cookies, $maintenant) => $maintenant->copy()->addMinutes(self::MINUTES_AVEC_LE_RAPPEL),
             (bool) config('session.expire_on_close') => 0,
-            default => now()->addMinutes(config()->integer('session.lifetime')),
+            default => $maintenant->copy()->addMinutes(config()->integer('session.lifetime')),
         };
     }
 

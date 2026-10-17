@@ -47,10 +47,18 @@ use function Pest\Laravel\withUnencryptedCookie;
 
 /**
  * L'instant où chaque test arrête l'horloge : les échéances s'y comparent.
+ *
+ * Loin dans le passé, à dessein : plus loin que la durée du cookie « se
+ * souvenir de moi » (400 jours). Chaque échéance que l'application pose,
+ * celle du rappel comprise, tombe alors avant la vraie heure, et le fichier
+ * échoue dès qu'un maillon la juge par `Cookie::isCleared()`, qui lit
+ * `time()`, et non à l'horloge du test : l'appareil des tests, ou la lecture
+ * du rappel en file (`RappelDeLAppareil`). Proche de la vraie heure, une telle
+ * erreur ne se verrait qu'à partir du lendemain de l'écriture du test.
  */
 function temoinInstant(): Carbon
 {
-    return Carbon::parse('2026-10-17 18:04:00');
+    return Carbon::parse('2025-06-14 18:04:00');
 }
 
 /**

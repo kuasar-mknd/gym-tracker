@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Auth\Recaller;
 use Illuminate\Auth\SessionGuard;
 use Illuminate\Cookie\CookieJar;
@@ -50,11 +51,19 @@ final class RappelDeLAppareil
      * que la réponse pose ou efface quand elle en met un en file (à la
      * connexion, au changement du mot de passe, à la déconnexion), sinon celui
      * que la requête apporte, s'il vaut pour ce compte.
+     *
+     * Le cookie en file se juge à l'horloge de l'application (`$maintenant`),
+     * celle qui a calculé son échéance (`EcheanceDuCookie`), et non par
+     * `Cookie::isCleared()`, qui la compare à la vraie heure : sous une
+     * horloge arrêtée (`setTestNow()`) plus loin dans le passé que la durée du
+     * rappel, le rappel qu'une connexion pose passerait pour effacé.
      */
-    public static function resteApresLaReponse(Request $request, SessionGuard $garde, User $compte, CookieJar $cookies): bool
+    public static function resteApresLaReponse(Request $request, SessionGuard $garde, User $compte, CookieJar $cookies, CarbonInterface $maintenant): bool
     {
         $enFile = $cookies->queued($garde->getRecallerName());
 
-        return $enFile instanceof Cookie ? ! $enFile->isCleared() : self::vautPour($request, $garde, $compte);
+        return $enFile instanceof Cookie
+            ? ! EcheanceDuCookie::estPassee($enFile, $maintenant)
+            : self::vautPour($request, $garde, $compte);
     }
 }

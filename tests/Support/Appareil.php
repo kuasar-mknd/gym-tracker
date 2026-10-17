@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Support\EcheanceDuCookie;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Cookie\CookieValuePrefix;
 use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -141,15 +143,25 @@ final class Appareil
     }
 
     /**
+     * Garde les cookies que la réponse pose, et jette ceux qu'elle efface.
+     *
+     * L'échéance se juge à l'horloge du test, celle que l'application a lue
+     * pour la calculer, comme un navigateur réglé sur elle
+     * (`EcheanceDuCookie`) : `Cookie::isCleared()` la compare à la vraie heure,
+     * et un test qui arrête l'horloge plus d'une durée de session dans le
+     * passé verrait l'appareil jeter chaque cookie que la réponse pose.
+     *
      * @param  TestResponse<Response>  $reponse
      */
     private function garderLesCookiesDe(TestResponse $reponse): void
     {
+        $maintenant = Carbon::now();
+
         foreach ($reponse->baseResponse->headers->getCookies() as $cookie) {
             $nom = $cookie->getName();
             $valeur = (string) $cookie->getValue();
 
-            if ($cookie->isCleared() || $valeur === '') {
+            if (EcheanceDuCookie::estPassee($cookie, $maintenant) || $valeur === '') {
                 unset($this->cookies[$nom]);
 
                 continue;
