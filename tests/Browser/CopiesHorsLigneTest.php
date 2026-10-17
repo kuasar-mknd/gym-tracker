@@ -24,7 +24,10 @@ use Tests\Support\PagesGardees;
  * l'appareil les lirait. Il prouve dans un vrai Chrome ce que les tests de
  * Vitest jouent sur une base en mémoire : l'accueil ouvert par un chargement
  * complet (la page initiale du document, pour laquelle Inertia n'émet rien)
- * et la séance en cours ouverte depuis lui sont gardés ; rien de ce qu'ils
+ * et la séance en cours ouverte depuis lui sont gardés. La connexion arrive
+ * déjà sur l'accueil par une visite d'Inertia, que l'écriture garde aussi :
+ * seule compte une copie de l'accueil tirée d'une réponse complète arrivée
+ * après le chargement (`copieDu`), celle de la page initiale. Rien de ce qu'ils
  * montrent ne se lit en clair dans la base ; la clé du témoin, et elle seule,
  * déchiffre la séance ; et la déconnexion par le menu « Plus » vide le
  * magasin et ferme son état AVANT de partir (décision 6 du propriétaire) :
@@ -69,6 +72,7 @@ class CopiesHorsLigneTest extends DuskTestCase
                     copies: pages.result.map((copie) => ({
                         chemin: copie.chemin,
                         composant: copie.composant,
+                        copieDu: copie.copieDu,
                         champs: Object.keys(copie).sort(),
                         texte: JSON.stringify(
                             Object.fromEntries(Object.entries(copie).map(([cle, valeur]) => [cle, enTexte(valeur)])),
@@ -169,6 +173,15 @@ class CopiesHorsLigneTest extends DuskTestCase
                 $this->markTestSkipped('Origine en http hors boucle locale : l’historique n’y est pas chiffré, et rien n’est gardé.');
             }
 
+            /*
+             * La connexion arrive sur l'accueil par une visite d'Inertia, dont la
+             * réponse se garde aussi : sa copie écrite, l'instant noté, seule une
+             * copie de l'accueil écrite après lui vient du chargement complet.
+             */
+            $this->attendreLesCopies($browser, ['/dashboard']);
+            $avantLeChargement = $browser->script('return Date.now();')[0];
+            $this->assertIsNumeric($avantLeChargement);
+
             // L'accueil par un chargement complet, sans rien toucher, puis la séance en cours depuis lui.
             $browser->visit('/dashboard')
                 ->disableAnimations()
@@ -177,7 +190,7 @@ class CopiesHorsLigneTest extends DuskTestCase
                 ->waitForLocation($cheminDeLaSeance, 15)
                 ->waitForText($jetons['exercice'], 15, true);
 
-            $magasin = $this->attendreLesCopies($browser, ['/dashboard', $cheminDeLaSeance]);
+            $magasin = $this->attendreLesCopies($browser, ['/dashboard', $cheminDeLaSeance], ['/dashboard' => (float) $avantLeChargement]);
             $parChemin = array_column($magasin['copies'], null, 'chemin');
 
             $this->assertSame('Dashboard', $parChemin['/dashboard']['composant']);
@@ -274,11 +287,11 @@ class CopiesHorsLigneTest extends DuskTestCase
     }
 
     /**
-     * @return array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string}
+     * @return array{base: bool, copies: list<array{chemin: string, composant: string, copieDu: int|float, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string}
      */
     private function lireLeMagasin(Browser $browser): array
     {
-        /** @var array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string} $magasin */
+        /** @var array{base: bool, copies: list<array{chemin: string, composant: string, copieDu: int|float, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string} $magasin */
         $magasin = $browser->driver->executeAsyncScript(self::LIRE_LE_MAGASIN);
 
         return $magasin;
@@ -286,18 +299,26 @@ class CopiesHorsLigneTest extends DuskTestCase
 
     /**
      * Attend que le magasin garde une copie de chaque chemin : elles s'écrivent
-     * au repos, après la page qu'elles gardent.
+     * au repos, après la page qu'elles gardent. Une copie d'un chemin que
+     * `$apres` nomme ne compte que tirée d'une réponse complète arrivée après
+     * l'instant qu'il donne (`copieDu`, en millisecondes de l'horloge de la
+     * page) : une réponse partielle ne change pas cette date.
      *
      * @param  list<string>  $chemins
-     * @return array{base: bool, copies: list<array{chemin: string, composant: string, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string}
+     * @param  array<string, float>  $apres
+     * @return array{base: bool, copies: list<array{chemin: string, composant: string, copieDu: int|float, champs: list<string>, texte: string}>, etat: array{ouvert: bool, compte: string|null, empreinte: string|null, contrat: int, empreintesFermees: list<string>, dernierRejeu: int|float|null}|null, etatEnTexte: string}
      */
-    private function attendreLesCopies(Browser $browser, array $chemins, int $secondes = 30): array
+    private function attendreLesCopies(Browser $browser, array $chemins, array $apres = [], int $secondes = 30): array
     {
         $limite = microtime(true) + $secondes;
 
         do {
             $magasin = $this->lireLeMagasin($browser);
-            $manquants = array_values(array_diff($chemins, array_column($magasin['copies'], 'chemin')));
+            $gardees = array_column(array_filter(
+                $magasin['copies'],
+                static fn (array $copie): bool => $copie['copieDu'] > ($apres[$copie['chemin']] ?? -INF),
+            ), 'chemin');
+            $manquants = array_values(array_diff($chemins, $gardees));
 
             if ($manquants === []) {
                 return $magasin;
