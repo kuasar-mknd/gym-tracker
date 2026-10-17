@@ -150,8 +150,10 @@ jobs:
     # sur la LTS visée, à sa version exacte : la même liste dans
     # laravel-tests-mysql, browser-shard et demarrage, que
     # LesJobsAvecUneBaseTournentSurChaqueMySqlTest tient
-    # (.ai/rules/dependencies.md). Le verdict passe par `laravel-tests`
-    # ci-dessous, qui garde le nom du contrôle exigé.
+    # (.ai/rules/dependencies.md). Chaque version de la liste tourne et fait
+    # tomber le job : ni include ni exclude qui nomme mysql, ni
+    # continue-on-error, ni étape sautée selon la version. Le verdict passe
+    # par `laravel-tests` ci-dessous, qui garde le nom du contrôle exigé.
     laravel-tests-mysql:
         name: laravel-tests (MySQL ${{ matrix.mysql }})
         runs-on: ubuntu-latest
