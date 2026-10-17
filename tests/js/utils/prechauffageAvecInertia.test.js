@@ -473,29 +473,85 @@ describe('le préchauffage', () => {
     it.each([
         ['une redirection', redirectionOpaque],
         ['un 401', () => reponseVide(401)],
-    ])('oublie les copies et ferme la clé du témoin sur %s, la fin de la session', async (_cas, reponse) => {
-        let empreinte = null
-        serveur.regles.set('/workouts', () => {
-            empreinte = etatRange().empreinte
+    ])(
+        'oublie les copies et ferme la clé du témoin sur %s qui l’efface, la fin de la session',
+        async (_cas, reponse) => {
+            let empreinte = null
+            serveur.regles.set('/workouts', () => {
+                empreinte = etatRange().empreinte
+                // Comme le serveur (`CleDesCopiesHorsLigne`) : la réponse qui dit la fin de la session efface le témoin.
+                document.cookie = `${TEMOIN}=; path=/; max-age=0`
 
-            return reponse()
+                return reponse()
+            })
+
+            await recevoir(pageDe('/tools'))
+
+            // Les copies écrites avant aussi, la page d'où il est parti comprise : le magasin entier.
+            expect(empreinte).not.toBeNull()
+            expect(cheminsDemandes()).toEqual(['/dashboard', '/dashboard', '/workouts'])
+            expect(copiesRangees().size).toBe(0)
+            expect(etatRange()).toMatchObject({ ouvert: false })
+            expect(etatRange().empreintesFermees).toContain(empreinte)
+
+            // La clé fermée, plus rien ne part ni ne s'écrit sous elle.
+            maintenant += INTERVALLE_DU_PRECHAUFFAGE_MS
+            await recevoir(pageDe('/profile'))
+
+            expect(cheminsDemandes()).toHaveLength(3)
+            expect(copiesRangees().size).toBe(0)
+        },
+    )
+
+    it('sur une redirection qui garde le témoin, celle d’une adresse à vérifier, ne ferme rien et continue', async () => {
+        const cle = document.cookie
+        // L'accueil exige une adresse vérifiée : la session vit, et le serveur repose le même témoin.
+        serveur.regles.set('/dashboard', () => redirectionOpaque())
+        serveur.regles.set('/exercises', () => reponseVide(401))
+
+        await recevoir({ ...pageDe('/tools'), component: 'Auth/VerifyEmail', url: '/verify-email' })
+
+        expect(document.cookie).toBe(cle)
+        expect(cheminsDemandes().slice(0, 3)).toEqual(['/dashboard', '/workouts', '/exercises'])
+        expect(serveur.appels).toHaveLength(GET_AU_PLUS)
+        expect(etatRange()).toMatchObject({ ouvert: true, empreintesFermees: [] })
+        expect(cheminsRanges()).toEqual(expect.arrayContaining(['/workouts', '/profile', '/tools']))
+        expect(cheminsRanges()).not.toContain('/dashboard')
+
+        // L'adresse vérifiée, sous la même session : l'accueil se garde à la réponse suivante.
+        serveur.regles = new Map()
+        maintenant += INTERVALLE_DU_PRECHAUFFAGE_MS
+        await recevoir(pageDe('/workouts'))
+
+        expect(cheminsRanges()).toContain('/dashboard')
+        expect(relais.rejets).toEqual([])
+    })
+
+    it('sur une redirection sous un autre témoin, ne ferme que la clé de l’inventaire, jamais la nouvelle', async () => {
+        let ancienne = null
+        serveur.regles.set('/workouts', () => {
+            ancienne = etatRange().empreinte
+            // Une connexion dans un autre onglet a remplacé la session : un nouveau témoin.
+            document.cookie = `${TEMOIN}=${cleAuHasard()}; path=/`
+
+            return redirectionOpaque()
         })
 
         await recevoir(pageDe('/tools'))
+        const nouvelle = await magasin.empreinteDuTemoin()
 
-        // Les copies écrites avant aussi, la page d'où il est parti comprise : le magasin entier.
-        expect(empreinte).not.toBeNull()
         expect(cheminsDemandes()).toEqual(['/dashboard', '/dashboard', '/workouts'])
         expect(copiesRangees().size).toBe(0)
-        expect(etatRange()).toMatchObject({ ouvert: false })
-        expect(etatRange().empreintesFermees).toContain(empreinte)
+        expect(etatRange().empreintesFermees).toEqual([ancienne])
+        expect(nouvelle).not.toBe(ancienne)
 
-        // La clé fermée, plus rien ne part ni ne s'écrit sous elle.
-        maintenant += INTERVALLE_DU_PRECHAUFFAGE_MS
+        // La nouvelle session écrit ses copies.
+        serveur.regles = new Map()
+        maintenant += 1000
         await recevoir(pageDe('/profile'))
 
-        expect(cheminsDemandes()).toHaveLength(3)
-        expect(copiesRangees().size).toBe(0)
+        expect(cheminsRanges()).toEqual(expect.arrayContaining(['/dashboard', '/profile', '/workouts']))
+        expect(etatRange()).toMatchObject({ ouvert: true, empreinte: nouvelle, empreintesFermees: [ancienne] })
     })
 
     it('ne garde pas une réponse qui n’est pas la page demandée, ni une erreur du serveur, et continue', async () => {

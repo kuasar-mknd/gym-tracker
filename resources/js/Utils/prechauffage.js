@@ -42,10 +42,16 @@ import {
  * **Comment.** Au plus huit GET (`GET_AU_PLUS`), l'un après l'autre, par
  * `fetch`, avec `X-Inertia`, la `X-Inertia-Version` de la page,
  * `X-Requested-With` et `redirect: 'manual'`, chacun sous un délai de quinze
- * secondes. Un 409 (une nouvelle version) arrête tout ; une redirection
- * (`opaqueredirect`) ou un 401 disent la fin de la session : les copies
- * s'oublient, la clé du témoin fermée. Sans réseau, ou au délai, il s'arrête
- * aussi. Une réponse qui n'est pas la page demandée ne se garde pas.
+ * secondes. Un 409 (une nouvelle version) arrête tout. Une redirection
+ * (`opaqueredirect`) ou un 401 ne disent la fin de la session que si le
+ * témoin a disparu ou changé, ce que le serveur fait sur toute réponse qui la
+ * dit (`CleDesCopiesHorsLigne`) : les copies s'oublient alors, la clé de
+ * l'inventaire fermée, et il s'arrête. Un témoin inchangé dit une session
+ * vivante, que la page demandée renvoie ailleurs (l'accueil exige une adresse
+ * vérifiée, et renvoie un compte qui ne l'a pas encore fait vers la page qui
+ * le lui demande) : cette page ne se garde pas, et il continue. Sans réseau,
+ * ou au délai, il s'arrête aussi. Une réponse qui n'est pas la page demandée
+ * ne se garde pas.
  *
  * **Les props différées.** Celle de l'accueil se demande en partiel, et se
  * verse dans sa copie ; celle de la liste des séances, jamais. Celles qu'une
@@ -219,7 +225,7 @@ export const installerLePrechauffage = ({
      *
      * @param {string} chemin
      * @param {{ version: unknown, signal: AbortSignal, partielle?: { composant: string, props: string[] } }} demande
-     * @returns {Promise<{ issue: 'page', page: object } | { issue: 'ignoree' | 'arret' | 'fin-de-session' }>}
+     * @returns {Promise<{ issue: 'page', page: object } | { issue: 'ignoree' | 'arret' | 'renvoyee' }>}
      */
     const demanderLaPage = async (chemin, { version, signal, partielle }) => {
         const controleur = new AbortController()
@@ -250,7 +256,7 @@ export const installerLePrechauffage = ({
             })
 
             if (reponse.type === 'opaqueredirect' || reponse.status === 401) {
-                return { issue: 'fin-de-session' }
+                return { issue: 'renvoyee' }
             }
 
             if (reponse.status === 409) {
@@ -317,16 +323,29 @@ export const installerLePrechauffage = ({
         let restantes = GET_AU_PLUS
 
         /**
-         * @param {Awaited<ReturnType<typeof demanderLaPage>>} reponse
-         * @returns {boolean} vrai quand le préchauffage doit s'arrêter
+         * Une redirection ou un 401 : la fin de la session, si le témoin a
+         * disparu ou porte une autre clé que celle de l'inventaire. Les copies
+         * s'oublient alors, cette clé-là fermée, et jamais celle d'un nouveau
+         * témoin, qu'une connexion dans un autre onglet a pu poser.
+         *
+         * @returns {Promise<boolean>} vrai quand la session a pris fin
          */
-        const doitSArreter = (reponse) => {
-            if (reponse.issue === 'fin-de-session') {
-                magasin.oublierLesCopies({ fermerLeTemoin: true })
+        const laSessionAPrisFin = async () => {
+            if ((await magasin.empreinteDuTemoin()) === inventaire.empreinte) {
+                return false
             }
 
-            return reponse.issue === 'fin-de-session' || reponse.issue === 'arret' || signal.aborted
+            magasin.oublierLesCopies({ fermerLEtat: false, fermerAussi: inventaire.empreinte })
+
+            return true
         }
+
+        /**
+         * @param {Awaited<ReturnType<typeof demanderLaPage>>} reponse
+         * @returns {Promise<boolean>} vrai quand le préchauffage doit s'arrêter
+         */
+        const doitSArreter = async (reponse) =>
+            reponse.issue === 'arret' || signal.aborted || (reponse.issue === 'renvoyee' && (await laSessionAPrisFin()))
 
         for (const chemin of chemins) {
             if (restantes === 0 || signal.aborted) {
@@ -337,7 +356,7 @@ export const installerLePrechauffage = ({
 
             const complete = await demanderLaPage(chemin, { version: page.version, signal })
 
-            if (doitSArreter(complete)) {
+            if (await doitSArreter(complete)) {
                 return
             }
 
@@ -361,7 +380,7 @@ export const installerLePrechauffage = ({
                 partielle: { composant: complete.page.component, props: differees },
             })
 
-            if (doitSArreter(partielle)) {
+            if (await doitSArreter(partielle)) {
                 return
             }
 

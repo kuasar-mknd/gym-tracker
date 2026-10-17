@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\CleDesCopiesHorsLigne;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Admin;
 use App\Models\DailyJournal;
 use App\Models\Set;
@@ -433,6 +434,37 @@ it('efface le témoin sur le renvoi même qui suit une fin de session faite aill
         $appareil->oublierLeCookie(config()->string('session.cookie'));
     }],
 ]);
+
+/*
+ * Un renvoi ne dit pas toujours la fin de la session : l'accueil exige une
+ * adresse vérifiée, et renvoie un compte qui ne l'a pas encore fait vers la
+ * page qui le lui demande. Le préchauffage des copies demande l'accueil le
+ * premier (partie D de #2048) : il ne prend un renvoi pour une fin de
+ * session que si le témoin a disparu ou changé, et ce renvoi-ci le repose
+ * tel quel.
+ */
+it('reconduit le témoin sur le renvoi d’une page qui exige une adresse vérifiée : la session vit', function (): void {
+    $compte = User::factory()->unverified()->create();
+    $appareil = new Appareil();
+    $appareil->envoyer('POST', '/login', ['email' => $compte->email, 'password' => 'password'])->assertRedirect(route('dashboard'));
+    $cle = $appareil->cookie(CleDesCopiesHorsLigne::TEMOIN);
+
+    $renvoi = $appareil->envoyer('GET', '/dashboard', entetes: [
+        'X-Inertia' => 'true',
+        'X-Inertia-Version' => (string) app(HandleInertiaRequests::class)->version(request()),
+        'X-Requested-With' => 'XMLHttpRequest',
+    ]);
+
+    $renvoi->assertRedirect(route('verification.notice'));
+
+    expect($cle)->toBeString()
+        ->and(temoinDe($renvoi)?->getValue())->toBe($cle)
+        ->and($appareil->cookie(CleDesCopiesHorsLigne::TEMOIN))->toBe($cle);
+
+    $appareil->envoyer('GET', '/workouts')->assertOk();
+
+    expect($appareil->cookie(CleDesCopiesHorsLigne::TEMOIN))->toBe($cle);
+});
 
 it('efface le témoin à la déconnexion, par le formulaire comme par /_dusk/logout, et la connexion suivante en tire un neuf', function (string $methode, string $chemin): void {
     $compte = User::factory()->create();
