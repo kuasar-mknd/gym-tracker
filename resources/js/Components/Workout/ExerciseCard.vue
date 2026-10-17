@@ -129,8 +129,10 @@ const emit = defineEmits([
                         </div>
                     </div>
                 </Link>
+                <!-- Cachés jusqu'au survol ou au focus sous une souris seulement :
+                     une tablette ne survole pas (`souris:`, app.css, #2082). -->
                 <div
-                    class="flex shrink-0 items-center gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"
+                    class="souris:opacity-0 souris:group-hover:opacity-100 souris:focus-within:opacity-100 flex shrink-0 items-center gap-2 transition-opacity"
                 >
                     <GlassIconButton
                         icon="edit"

@@ -51,6 +51,26 @@
 @custom-variant bureau (@media (width >= 64rem));
 
 /*
+ * Ce qui attend le survol ne se cache que sous une souris (#2082).
+ *
+ * `souris:` vaut quand le pointeur principal de l'appareil survole et vise
+ * fin : une souris, un pavé tactile. Un doigt ne survole pas (`hover: none`,
+ * `pointer: coarse`), et Chrome sans tête n'a pas de pointeur du tout
+ * (`pointer: none`, relevé dans Chromium 141) : la variante y est fausse.
+ *
+ * Une liste qui cache ses boutons « Modifier » et « Supprimer » jusqu'au
+ * survol l'écrit donc `souris:opacity-0 souris:group-hover:opacity-100
+ * souris:focus-within:opacity-100` (`focus-visible:` sur le bouton lui-même) :
+ * sans souris, ils restent visibles ; au clavier, le focus les montre. Ils
+ * s'écrivaient `sm:opacity-0` : la largeur tenait lieu de souris, et sur une
+ * tablette, qui ne survole pas, les boutons restaient transparents à partir
+ * de 640 px mais prenaient les appuis. Tailwind ne pose `hover:` et
+ * `group-hover:` que sous `(hover: hover)` : sans souris, rien ne les
+ * montrait. `tests/js/conventions/touchAffordances.test.js` le tient.
+ */
+@custom-variant souris (@media (hover: hover) and (pointer: fine));
+
+/*
  * `static` : Tailwind emet TOUTES les variables, pas seulement celles qu'une
  * classe utilise.
  *
