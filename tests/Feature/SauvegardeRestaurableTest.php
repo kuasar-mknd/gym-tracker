@@ -55,10 +55,14 @@ it('produit une archive chiffrée dont le dump est complet et relisible', functi
         $zip->close();
 
         // Le dump est produit sans commentaires : sa complétude se lit à ses tables.
+        // Il ne touche ni aux GTID ni au journal binaire du serveur, que le
+        // compte de l'application ne pourrait pas rejouer en restaurant.
         expect($dump)->toBeString()
             ->and($dump)->toContain('CREATE TABLE `users`')
             ->and($dump)->toContain('CREATE TABLE `sets`')
-            ->and($dump)->toContain('CREATE TABLE `notification_preferences`');
+            ->and($dump)->toContain('CREATE TABLE `notification_preferences`')
+            ->and($dump)->not->toContain('GTID_PURGED')
+            ->and($dump)->not->toContain('SQL_LOG_BIN');
     } finally {
         File::deleteDirectory($dossier);
     }
@@ -102,4 +106,24 @@ it('dumpe sans vérifier le certificat du serveur ni lire les tablespaces', func
     expect($commande)->toContain('--loose-skip-ssl')
         ->and($commande)->toContain('--no-tablespaces')
         ->and($commande)->toContain('--single-transaction');
+});
+
+/*
+ * Un serveur MySQL 9.7 a ses GTID par défaut, journal binaire ou non. Le
+ * client `mysqldump` de MySQL (8.0.33 et suivants, 8.0.46 sur les runners de
+ * la CI) fait alors précéder l'instantané de `--single-transaction` d'un
+ * verrou global tant que `--set-gtid-purged` n'est pas OFF : il faut RELOAD
+ * ou FLUSH_TABLES, que le compte de l'application n'a pas, et la sauvegarde
+ * tombait sur 9.7.2. Le client MariaDB de l'image ne connaît pas l'option :
+ * `loose-` la lui fait ignorer, alors que la clé `mysql_gtid_purged` du
+ * paquet l'écrit nue, et il refuserait le dump.
+ */
+it('dumpe sans verrou global ni GTID, que le client soit celui de MySQL ou de MariaDB', function (): void {
+    $dumper = \Spatie\Backup\Tasks\Backup\DbDumperFactory::createFromConnection('mysql');
+    assert($dumper instanceof \Spatie\DbDumper\Databases\MySql);
+
+    $commande = $dumper->getDumpCommand('/tmp/dump.sql', '/tmp/identifiants.cnf');
+
+    expect($commande)->toContain(' --loose-set-gtid-purged=OFF ')
+        ->and($commande)->not->toContain(' --set-gtid-purged');
 });
