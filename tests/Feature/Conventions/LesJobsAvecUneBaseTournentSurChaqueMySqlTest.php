@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Symfony\Component\Yaml\Yaml;
 
 /*
- * La montée vers MySQL 9.7 commence par la CI : chaque job de `ci.yml` qui a
+ * La montée vers MySQL 9.7 commence par la CI : chaque job des workflows qui a
  * une base tourne sur la version de la production et sur la LTS visée, avant
  * que la pile ne bascule dans une release à elle (`.ai/rules/dependencies.md`).
  * La version de la production se lit dans `docker-compose.prod.yml` ; la LTS
@@ -16,9 +16,18 @@ use Symfony\Component\Yaml\Yaml;
  * production a rejoint la LTS visée et la matrice se réduit à elle : 8.4 en
  * sort, puisqu'aucun serveur 8.4 ne relit un volume mis à niveau.
  *
+ * Une base se reconnaît à son image (`mysql`, quel que soit le nom du service
+ * ou s'il s'agit du conteneur du job), dans chaque fichier de
+ * `.github/workflows` ; la passe nocturne seule reste sur la version de la
+ * production. Une base lancée par `docker run` dans un script n'est pas lue :
+ * elle se prend en service.
+ *
  * Une version écrite dans la liste doit aussi tourner et faire tomber son job :
- * ni `exclude` ni `include` ne la nomment, ni le job ni une étape ne se
- * tolèrent ou ne se sautent selon elle.
+ * ni `exclude` ni `include` ne la nomment, le job ne se tolère pas en échec, la
+ * version ne se lit que dans le nom du job, de ses étapes et de ses artefacts
+ * et dans l'image de sa base (une variable d'environnement, une condition ou
+ * un script qui la lisent pourraient la sauter), et l'étape qui teste ne porte
+ * ni condition ni `continue-on-error`.
  *
  * Une matrice renomme le contrôle de son job (`laravel-tests (MySQL 8.4)`) :
  * le contrôle `laravel-tests` qu'attendent la protection de branche et le job
@@ -51,23 +60,161 @@ function mysqlMatriceVersionDeLaProduction(): string
 }
 
 /**
- * Les jobs d'un workflow qui ont un service MySQL, par identifiant.
+ * Chaque fichier de `.github/workflows`, en `.yml` comme en `.yaml`, lu, par
+ * nom de fichier.
  *
- * @return array<string, array<string, mixed>>
+ * @return array<string, array<mixed>>
  */
-function mysqlMatriceJobsAvecUneBase(string $workflow): array
+function mysqlMatriceWorkflows(): array
 {
-    $jobs = data_get(Yaml::parseFile(base_path(".github/workflows/{$workflow}")), 'jobs', []);
+    $workflows = [];
+
+    foreach (['yml', 'yaml'] as $extension) {
+        $chemins = glob(base_path(".github/workflows/*.{$extension}"));
+
+        foreach ($chemins === false ? [] : $chemins as $chemin) {
+            $workflows[basename($chemin)] = mysqlMatriceTableau(Yaml::parseFile($chemin));
+        }
+    }
+
+    ksort($workflows);
+
+    return $workflows;
+}
+
+/**
+ * Les workflows dont les bases suivent la seule version de la production : la
+ * passe nocturne. Chaque autre workflow porte la matrice.
+ *
+ * @return list<string>
+ */
+function mysqlMatriceWorkflowsSurLaProduction(): array
+{
+    return ['mutation.yml'];
+}
+
+/**
+ * Vrai quand cette expression de GitHub lit la version de MySQL de la matrice
+ * (`matrix.mysql`, `matrix['mysql']`, la matrice entière) ou le rang du job
+ * dans la matrice (`strategy.job-index`), qui la désigne aussi. Une autre clé
+ * de la matrice (`matrix.shard`), `strategy.fail-fast` et le contenu d'une
+ * chaîne ne comptent pas.
+ */
+function mysqlMatriceExpressionLitLaVersion(string $expression): bool
+{
+    $sansCeQuiNeLaLitPas = preg_replace(
+        [
+            '/\bmatrix\s*(?:\.\s*(?!mysql\b)[a-z_][\w-]*|\[\s*\'(?!mysql\')[\w-]+\'\s*\])/i',
+            '/\bstrategy\s*\.\s*(?:fail-fast|max-parallel)\b/i',
+            "/'(?:[^']|'')*'/",
+        ],
+        '',
+        $expression,
+    );
+
+    return preg_match('/\b(?:matrix|strategy)\b/i', (string) $sansCeQuiNeLaLitPas) === 1;
+}
+
+/**
+ * Vrai quand cette valeur d'un workflow lit la version de MySQL : dans ses
+ * expressions `${{ … }}`, ou dans tout son texte pour une condition (`if:`),
+ * qui est une expression même sans `${{ }}`.
+ */
+function mysqlMatriceTexteLitLaVersion(mixed $valeur, bool $condition = false): bool
+{
+    if (! is_string($valeur)) {
+        return false;
+    }
+
+    if ($condition) {
+        return mysqlMatriceExpressionLitLaVersion($valeur);
+    }
+
+    preg_match_all('/\$\{\{(.*?)\}\}/s', $valeur, $expressions);
+
+    return array_filter($expressions[1], mysqlMatriceExpressionLitLaVersion(...)) !== [];
+}
+
+/**
+ * Vrai quand cette image est celle d'un serveur MySQL, qualifiée ou non
+ * (`docker.io/library/mysql`), à une étiquette ou à un digest, ou qu'elle lit
+ * la version de la matrice.
+ */
+function mysqlMatriceEstUneImageDeMysql(mixed $image): bool
+{
+    return is_string($image)
+        && (preg_match('#^(?:(?:docker\.io/)?library/)?mysql(?:[:@]|$)#i', $image) === 1 || mysqlMatriceTexteLitLaVersion($image));
+}
+
+/**
+ * Les bases d'un job, l'image par chemin : chaque service dont l'image est
+ * celle de MySQL, quel que soit son nom, et le conteneur du job s'il l'est.
+ *
+ * @param  array<mixed>  $job
+ * @return array<string, string>
+ */
+function mysqlMatriceBasesDuJob(array $job): array
+{
+    $bases = [];
+
+    foreach (mysqlMatriceTableau($job['services'] ?? null) as $identifiant => $service) {
+        $image = is_array($service) ? ($service['image'] ?? null) : null;
+
+        if (is_string($image) && mysqlMatriceEstUneImageDeMysql($image)) {
+            $bases["services.{$identifiant}.image"] = $image;
+        }
+    }
+
+    $conteneur = $job['container'] ?? null;
+    $image = is_array($conteneur) ? ($conteneur['image'] ?? null) : $conteneur;
+
+    if (is_string($image) && mysqlMatriceEstUneImageDeMysql($image)) {
+        $bases[is_array($conteneur) ? 'container.image' : 'container'] = $image;
+    }
+
+    return $bases;
+}
+
+/**
+ * Les jobs d'un workflow qui ont une base, par identifiant.
+ *
+ * @param  array<mixed>  $workflow
+ * @return array<string, array<mixed>>
+ */
+function mysqlMatriceJobsAvecUneBase(array $workflow): array
+{
     $avecUneBase = [];
 
-    foreach (is_array($jobs) ? $jobs : [] as $identifiant => $job) {
-        if (is_string($identifiant) && is_array($job) && data_get($job, 'services.mysql') !== null) {
-            /** @var array<string, mixed> $job */
+    foreach (mysqlMatriceTableau($workflow['jobs'] ?? null) as $identifiant => $job) {
+        if (is_string($identifiant) && is_array($job) && mysqlMatriceBasesDuJob($job) !== []) {
             $avecUneBase[$identifiant] = $job;
         }
     }
 
     return $avecUneBase;
+}
+
+/**
+ * Les jobs qui ont une base dans les workflows qui portent la matrice, par
+ * « fichier : job ».
+ *
+ * @return array<string, array<mixed>>
+ */
+function mysqlMatriceJobsAvecUneBaseSurLaMatrice(): array
+{
+    $jobs = [];
+
+    foreach (mysqlMatriceWorkflows() as $fichier => $workflow) {
+        if (in_array($fichier, mysqlMatriceWorkflowsSurLaProduction(), true)) {
+            continue;
+        }
+
+        foreach (mysqlMatriceJobsAvecUneBase($workflow) as $identifiant => $job) {
+            $jobs["{$fichier} : {$identifiant}"] = $job;
+        }
+    }
+
+    return $jobs;
 }
 
 /**
@@ -121,21 +268,76 @@ function mysqlMatriceEcarts(string $production, array $versions, string $ltsVise
 }
 
 /**
- * Vrai quand cette expression lit la version de MySQL de la matrice
- * (`matrix.mysql`, `matrix['mysql']`) ou la matrice entière (`toJSON(matrix)`).
+ * Chaque valeur d'un tableau imbriqué, par chemin pointé (`steps.3.if`).
+ *
+ * @param  array<mixed>  $tableau
+ * @return array<string, mixed>
  */
-function mysqlMatriceLitLaVersion(mixed $expression): bool
+function mysqlMatriceFeuilles(array $tableau, string $prefixe = ''): array
 {
-    return is_string($expression)
-        && preg_match('/\bmatrix\s*(?:\.\s*mysql\b|\[\s*[\'"]mysql[\'"]\s*\])|\(\s*matrix\s*\)/', $expression) === 1;
+    $feuilles = [];
+
+    foreach ($tableau as $cle => $valeur) {
+        $chemin = $prefixe.$cle;
+
+        if (is_array($valeur)) {
+            $feuilles = [...$feuilles, ...mysqlMatriceFeuilles($valeur, "{$chemin}.")];
+        } else {
+            $feuilles[$chemin] = $valeur;
+        }
+    }
+
+    return $feuilles;
+}
+
+/**
+ * Les chemins d'un job où lire la version de MySQL ne change rien à ce qui
+ * tourne : le nom du job et de ses étapes, l'image de ses bases et le nom de
+ * ses artefacts.
+ *
+ * @param  array<mixed>  $job
+ * @return list<string>
+ */
+function mysqlMatriceLecturesPermises(array $job): array
+{
+    $permises = ['name', ...array_keys(mysqlMatriceBasesDuJob($job))];
+
+    foreach (mysqlMatriceTableau($job['steps'] ?? null) as $rang => $etape) {
+        $permises[] = "steps.{$rang}.name";
+        $action = is_array($etape) ? ($etape['uses'] ?? null) : null;
+
+        if (is_string($action) && str_starts_with($action, 'actions/upload-artifact@')) {
+            $permises[] = "steps.{$rang}.with.name";
+        }
+    }
+
+    return $permises;
+}
+
+/**
+ * Vrai quand cette étape lance ce qui éprouve la base : la suite (`artisan
+ * test`, Pest, PHPUnit), les parcours (`artisan dusk`) ou l'image (`docker
+ * run`). Les commentaires du script ne comptent pas.
+ */
+function mysqlMatriceEtapeQuiTeste(mixed $etape): bool
+{
+    $script = is_array($etape) ? ($etape['run'] ?? null) : null;
+
+    if (! is_string($script)) {
+        return false;
+    }
+
+    $commandes = (string) preg_replace('/^\s*#.*$/m', '', $script);
+
+    return preg_match('/\bartisan\s+(?:test|dusk)(?![\w:-])|\bvendor\/bin\/(?:pest|phpunit)\b|\bdocker\s+run\b/', $commandes) === 1;
 }
 
 /**
  * Ce qu'un job qui a une base a de faux, par motif : vide quand chaque version
  * de sa matrice y tourne et le fait tomber en échouant. Une version que
  * `exclude` retire, qu'`include` ajoute, dont l'échec ne fait pas tomber le
- * job (`continue-on-error`) ou dont une étape se saute selon la version
- * resterait écrite dans la liste sans être testée.
+ * job (`continue-on-error`), ou que lit une variable d'environnement, une
+ * condition ou un script, resterait écrite dans la liste sans être testée.
  *
  * @param  array<mixed>  $job
  * @return array<string, string>
@@ -143,8 +345,9 @@ function mysqlMatriceLitLaVersion(mixed $expression): bool
 function mysqlMatriceDefautsDuJob(array $job): array
 {
     $defauts = [];
+    $bases = mysqlMatriceBasesDuJob($job);
 
-    if (data_get($job, 'services.mysql.image') !== 'mysql:${{ matrix.mysql }}') {
+    if ($bases === [] || array_filter($bases, static fn (string $image): bool => $image !== 'mysql:${{ matrix.mysql }}') !== []) {
         $defauts['image'] = 'Le job ne prend pas sa base dans la matrice des versions de MySQL.';
     }
 
@@ -177,9 +380,26 @@ function mysqlMatriceDefautsDuJob(array $job): array
         $defauts['continue-on-error'] = 'Le job porte continue-on-error : une version qui échoue ne le ferait pas tomber.';
     }
 
-    foreach ((array) data_get($job, 'steps', []) as $etape) {
-        if (mysqlMatriceLitLaVersion(data_get($etape, 'if')) || mysqlMatriceLitLaVersion(data_get($etape, 'continue-on-error'))) {
-            $defauts['etape-selon-la-version'] = 'Une étape se saute ou se tolère selon la version de MySQL : cette version tournerait sans être testée.';
+    $permises = mysqlMatriceLecturesPermises($job);
+    $lectures = [];
+
+    foreach (mysqlMatriceFeuilles($job) as $chemin => $valeur) {
+        $condition = $chemin === 'if' || str_ends_with($chemin, '.if');
+
+        if (! in_array($chemin, $permises, true) && mysqlMatriceTexteLitLaVersion($valeur, $condition)) {
+            $lectures[] = $chemin;
+        }
+    }
+
+    if ($lectures !== []) {
+        $defauts['version-lue'] = 'La version de MySQL se lit hors du nom du job, de ses étapes et de ses artefacts et de l’image de sa base ('.implode(', ', $lectures).') : une étape pourrait se sauter, se tolérer ou changer selon elle, et cette version tourner sans être testée.';
+    }
+
+    foreach (mysqlMatriceTableau($job['steps'] ?? null) as $etape) {
+        $tolere = is_array($etape) && ! in_array($etape['continue-on-error'] ?? null, [null, false], true);
+
+        if (mysqlMatriceEtapeQuiTeste($etape) && (data_get($etape, 'if') !== null || $tolere)) {
+            $defauts['etape-des-tests'] = 'L’étape qui teste porte une condition ou continue-on-error : elle pourrait se sauter ou échouer sans faire tomber le job.';
         }
     }
 
@@ -189,8 +409,9 @@ function mysqlMatriceDefautsDuJob(array $job): array
 /**
  * Ce job, ou ce verdict, une fois la variante appliquée : `job` remplace des
  * clés du job, `strategie` et `matrice` des clés de `strategy` et de
- * `strategy.matrix`, `image` l'image de la base, `etapes` des clés de chaque
- * étape qui lance un script, et `script` le script de la première étape, où
+ * `strategy.matrix`, `image` l'image de chaque base, `etapes` des clés de
+ * chaque étape qui lance un script sans tester, `etapes-des-tests` des clés de
+ * chaque étape qui teste, et `script` le script de la première étape, où
  * `{attendu}` devient le job qu'un verdict attend.
  *
  * @param  array<mixed>  $job
@@ -212,10 +433,15 @@ function mysqlMatriceVariante(array $job, array $variante, string $attendu = '')
     }
 
     if (array_key_exists('image', $variante)) {
+        $bases = mysqlMatriceBasesDuJob($job);
         $services = mysqlMatriceTableau($job['services'] ?? null);
-        $base = mysqlMatriceTableau($services['mysql'] ?? null);
-        $base['image'] = $variante['image'];
-        $services['mysql'] = $base;
+
+        foreach ($services as $identifiant => $service) {
+            if (is_array($service) && array_key_exists("services.{$identifiant}.image", $bases)) {
+                $services[$identifiant] = array_replace($service, ['image' => $variante['image']]);
+            }
+        }
+
         $job['services'] = $services;
     }
 
@@ -224,7 +450,8 @@ function mysqlMatriceVariante(array $job, array $variante, string $attendu = '')
 
     foreach (array_values(mysqlMatriceTableau($job['steps'] ?? null)) as $rang => $etape) {
         if (is_array($etape) && array_key_exists('run', $etape)) {
-            $etape = array_replace($etape, mysqlMatriceTableau($variante['etapes'] ?? null));
+            $cles = mysqlMatriceEtapeQuiTeste($etape) ? 'etapes-des-tests' : 'etapes';
+            $etape = array_replace($etape, mysqlMatriceTableau($variante[$cles] ?? null));
 
             if ($rang === 0 && is_string($script)) {
                 $etape['run'] = str_replace('{attendu}', $attendu, $script);
@@ -249,11 +476,11 @@ function mysqlMatriceTableau(mixed $valeur): array
     return is_array($valeur) ? $valeur : [];
 }
 
-it('fait tourner chaque job de la CI qui a une base sur la version de la production et sur la LTS visée', function (): void {
-    $jobs = mysqlMatriceJobsAvecUneBase('ci.yml');
+it('fait tourner chaque job des workflows qui a une base sur la version de la production et sur la LTS visée', function (): void {
+    $jobs = mysqlMatriceJobsAvecUneBaseSurLaMatrice();
     $production = mysqlMatriceVersionDeLaProduction();
 
-    expect(array_keys($jobs))->toContain('laravel-tests-mysql', 'browser-shard', 'demarrage');
+    expect(array_keys($jobs))->toContain('ci.yml : laravel-tests-mysql', 'ci.yml : browser-shard', 'ci.yml : demarrage');
 
     $listes = [];
 
@@ -263,19 +490,68 @@ it('fait tourner chaque job de la CI qui a une base sur la version de la product
         $listes[$identifiant] = (array) data_get($job, 'strategy.matrix.mysql');
     }
 
+    foreach (['ci.yml : laravel-tests-mysql', 'ci.yml : browser-shard', 'ci.yml : demarrage'] as $identifiant) {
+        expect(array_filter(mysqlMatriceTableau($jobs[$identifiant]['steps'] ?? null), mysqlMatriceEtapeQuiTeste(...)))
+            ->not->toBe([], "La garde ne reconnaît plus l’étape qui teste dans `{$identifiant}` : la décrire dans mysqlMatriceEtapeQuiTeste().");
+    }
+
     $versions = array_values(array_unique(array_map(serialize(...), $listes)));
     expect($versions)->toHaveCount(1, 'Les jobs qui ont une base ne tournent pas sur les mêmes versions de MySQL : '.json_encode($listes));
 
     expect(mysqlMatriceEcarts($production, (array) reset($listes), mysqlMatriceLtsVisee()))->toBe([]);
 });
 
+it('reconnaît une base à l’image de son service ou du conteneur du job, quel que soit son nom', function (array $job, bool $aUneBase): void {
+    expect(mysqlMatriceBasesDuJob($job) !== [])->toBe($aUneBase);
+})->with([
+    'un service db' => [['services' => ['db' => ['image' => 'mysql:8.4']]], true],
+    'un service database, l’image qualifiée' => [['services' => ['database' => ['image' => 'docker.io/library/mysql:9.7.2']]], true],
+    'une image par digest' => [['services' => ['db' => ['image' => 'mysql@sha256:'.str_repeat('a', 64)]]], true],
+    'une image qui lit la version' => [['services' => ['db' => ['image' => "\${{ format('mysql:{0}', matrix.mysql) }}"]]], true],
+    'le conteneur du job' => [['container' => 'mysql:8.4'], true],
+    'le conteneur du job, avec ses clés' => [['container' => ['image' => 'mysql:8.4']], true],
+    'redis seul' => [['services' => ['redis' => ['image' => 'redis:8-alpine']]], false],
+    'mariadb' => [['services' => ['db' => ['image' => 'mariadb:11.8']]], false],
+    'un conteneur node' => [['container' => 'node:24'], false],
+    'sans service' => [['runs-on' => 'ubuntu-latest'], false],
+]);
+
+it('suit une base dont le service change de nom, et un job ajouté qui en prend une hors de la matrice', function (): void {
+    $ci = mysqlMatriceWorkflows()['ci.yml'] ?? [];
+    $jobsDeLaCi = mysqlMatriceTableau($ci['jobs'] ?? null);
+    $suite = mysqlMatriceTableau($jobsDeLaCi['laravel-tests-mysql'] ?? null);
+
+    $identifiant = explode('.', (string) array_key_first(mysqlMatriceBasesDuJob($suite)))[1] ?? '';
+    $services = mysqlMatriceTableau($suite['services'] ?? null);
+    $services['base-renommee'] = $services[$identifiant] ?? null;
+    unset($services[$identifiant]);
+    $suite['services'] = $services;
+    $jobsDeLaCi['laravel-tests-mysql'] = $suite;
+
+    expect(mysqlMatriceJobsAvecUneBase(['jobs' => $jobsDeLaCi]))->toHaveKey('laravel-tests-mysql')
+        ->and(mysqlMatriceDefautsDuJob($suite))->toBe([]);
+
+    $jobsDeLaCi['migrations-a-blanc'] = [
+        'runs-on' => 'ubuntu-latest',
+        'services' => ['db' => ['image' => 'mysql:8.4', 'env' => ['MYSQL_ROOT_PASSWORD' => 'password'], 'ports' => ['3306:3306']]],
+        'steps' => [['uses' => 'actions/checkout@v7'], ['run' => 'php artisan migrate --force']],
+    ];
+    $jobs = mysqlMatriceJobsAvecUneBase(['jobs' => $jobsDeLaCi]);
+
+    expect($jobs)->toHaveKey('migrations-a-blanc')
+        ->and(array_keys(mysqlMatriceDefautsDuJob(mysqlMatriceTableau($jobs['migrations-a-blanc'] ?? null))))->toEqualCanonicalizing(['image', 'fail-fast', 'versions']);
+});
+
 /*
  * Chaque variante s'applique aux trois jobs de `ci.yml` qui ont une base. Les
- * trois premières vident la LTS visée en gardant la liste intacte, de la
- * façon que GitHub documente pour une version « expérimentale ».
+ * premières vident la LTS visée en gardant la liste intacte : de la façon que
+ * GitHub documente pour une version « expérimentale », par une variable
+ * d'environnement qui recopie la version, par le rang du job dans la matrice,
+ * ou par un script qui sort en succès.
  */
 it('refuse une version que la matrice écrit sans la tester', function (array $variante, array $motifs): void {
-    $jobs = mysqlMatriceJobsAvecUneBase('ci.yml');
+    $ci = mysqlMatriceWorkflows()['ci.yml'] ?? [];
+    $jobs = mysqlMatriceJobsAvecUneBase($ci);
 
     expect($jobs)->not->toBe([]);
 
@@ -284,20 +560,30 @@ it('refuse une version que la matrice écrit sans la tester', function (array $v
     }
 })->with([
     'la LTS visée retirée par exclude' => [['matrice' => ['exclude' => [['mysql' => '9.7.2']]]], ['include-exclude']],
-    'le job toléré en échec sur la LTS visée' => [['job' => ['continue-on-error' => "\${{ matrix.mysql == '9.7.2' }}"]], ['continue-on-error']],
-    'une étape sautée sur la LTS visée' => [['etapes' => ['if' => "matrix.mysql == '8.4'"]], ['etape-selon-la-version']],
+    'le job toléré en échec sur la LTS visée' => [['job' => ['continue-on-error' => "\${{ matrix.mysql == '9.7.2' }}"]], ['continue-on-error', 'version-lue']],
+    'l’étape des tests sautée sur la LTS visée' => [['etapes-des-tests' => ['if' => "matrix.mysql == '8.4'"]], ['version-lue', 'etape-des-tests']],
+    'la version recopiée dans l’environnement du job, que lit une condition' => [['job' => ['env' => ['VERSION_MYSQL' => '${{ matrix.mysql }}']], 'etapes' => ['if' => "env.VERSION_MYSQL != '9.7.2'"]], ['version-lue']],
+    'la version recopiée dans l’environnement d’une étape' => [['etapes' => ['env' => ['VERSION_MYSQL' => '${{ matrix.mysql }}']]], ['version-lue']],
+    'une étape sautée selon le rang du job dans la matrice' => [['etapes' => ['if' => 'strategy.job-index == 0']], ['version-lue']],
+    'un script qui sort en succès sur la LTS visée' => [['etapes-des-tests' => ['run' => "[ \"\${{ matrix.mysql }}\" != \"9.7.2\" ] || exit 0\nphp artisan test -p"]], ['version-lue']],
+    'la version écrite dans GITHUB_ENV par un script' => [['etapes' => ['run' => 'echo "VERSION_MYSQL=${{ matrix.mysql }}" >> "$GITHUB_ENV"']], ['version-lue']],
+    'l’étape des tests tolérée en échec sur chaque version' => [['etapes-des-tests' => ['continue-on-error' => true]], ['etape-des-tests']],
+    'l’étape des tests sous condition' => [['etapes-des-tests' => ['if' => 'success()']], ['etape-des-tests']],
     'une version ajoutée par include' => [['matrice' => ['include' => [['mysql' => '9.6.0']]]], ['include-exclude']],
     'un exclude écrit par une expression' => [['matrice' => ['exclude' => '${{ fromJSON(vars.EXCLUS) }}']], ['include-exclude']],
     'le job toléré en échec sur chaque version' => [['job' => ['continue-on-error' => true]], ['continue-on-error']],
-    'une étape sautée, la version lue entre crochets' => [['etapes' => ['if' => "\${{ matrix['mysql'] != '9.7.2' }}"]], ['etape-selon-la-version']],
-    'une étape sautée, la matrice lue en entier' => [['etapes' => ['if' => "\${{ !contains(toJSON(matrix), '9.7') }}"]], ['etape-selon-la-version']],
-    'une étape tolérée en échec sur la LTS visée' => [['etapes' => ['continue-on-error' => "\${{ matrix.mysql == '9.7.2' }}"]], ['etape-selon-la-version']],
+    'une étape sautée, la version lue entre crochets' => [['etapes' => ['if' => "\${{ matrix['mysql'] != '9.7.2' }}"]], ['version-lue']],
+    'une étape sautée, la matrice lue en entier' => [['etapes' => ['if' => "\${{ !contains(toJSON(matrix), '9.7') }}"]], ['version-lue']],
+    'une étape tolérée en échec sur la LTS visée' => [['etapes' => ['continue-on-error' => "\${{ matrix.mysql == '9.7.2' }}"]], ['version-lue']],
     'la base figée sur la production' => [['image' => 'mysql:8.4'], ['image']],
     'fail-fast à vrai' => [['strategie' => ['fail-fast' => true]], ['fail-fast']],
     'les versions écrites par une expression' => [['matrice' => ['mysql' => '${{ fromJSON(vars.VERSIONS) }}']], ['versions']],
     'accepté : un exclude qui ne nomme pas de version' => [['matrice' => ['exclude' => [['shard' => 3]]]], []],
-    'accepté : continue-on-error à faux' => [['job' => ['continue-on-error' => false]], []],
+    'accepté : continue-on-error à faux' => [['job' => ['continue-on-error' => false], 'etapes-des-tests' => ['continue-on-error' => false]], []],
     'accepté : une étape qui ne tourne qu’en échec' => [['etapes' => ['if' => 'failure()']], []],
+    'accepté : une autre clé de la matrice lue par un script' => [['etapes' => ['run' => 'echo "éclat ${{ matrix.shard }}"']], []],
+    'accepté : une condition qui cite la matrice dans une chaîne' => [['etapes' => ['if' => "!contains(github.event.head_commit.message, 'matrix.mysql')"]], []],
+    'accepté : la version dans le nom d’une étape' => [['etapes-des-tests' => ['name' => 'Tests (MySQL ${{ matrix.mysql }})']], []],
 ]);
 
 /*
@@ -428,7 +714,7 @@ it('refuse un verdict qui resterait vert sur un échec', function (array $varian
 it('nomme à part les artefacts de chaque version de MySQL', function (): void {
     $artefacts = [];
 
-    foreach (mysqlMatriceJobsAvecUneBase('ci.yml') as $identifiant => $job) {
+    foreach (mysqlMatriceJobsAvecUneBaseSurLaMatrice() as $identifiant => $job) {
         foreach ((array) data_get($job, 'steps', []) as $etape) {
             $action = data_get($etape, 'uses');
             $nom = data_get($etape, 'with.name');
@@ -450,11 +736,19 @@ it('nomme à part les artefacts de chaque version de MySQL', function (): void {
  * suit la production, et la suivra à la bascule.
  */
 it('fait tourner la passe nocturne sur la version de MySQL de la production', function (): void {
-    $jobs = mysqlMatriceJobsAvecUneBase('mutation.yml');
+    $workflows = mysqlMatriceWorkflows();
+    $bases = [];
 
-    expect($jobs)->not->toBe([]);
+    foreach (mysqlMatriceWorkflowsSurLaProduction() as $fichier) {
+        expect($workflows)->toHaveKey($fichier);
 
-    foreach ($jobs as $identifiant => $job) {
-        expect(data_get($job, 'services.mysql.image'))->toBe('mysql:'.mysqlMatriceVersionDeLaProduction(), "`{$identifiant}` ne tourne pas sur la version de la production.");
+        foreach (mysqlMatriceJobsAvecUneBase($workflows[$fichier] ?? []) as $identifiant => $job) {
+            foreach (mysqlMatriceBasesDuJob($job) as $chemin => $image) {
+                $bases["{$fichier} : {$identifiant} : {$chemin}"] = $image;
+            }
+        }
     }
+
+    expect($bases)->not->toBe([])
+        ->and(array_unique(array_values($bases)))->toBe(['mysql:'.mysqlMatriceVersionDeLaProduction()], 'Une base de la passe nocturne ne tourne pas sur la version de la production : '.json_encode($bases));
 });

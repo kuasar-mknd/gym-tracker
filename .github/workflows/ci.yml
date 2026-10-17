@@ -145,15 +145,19 @@ jobs:
                   echo "actifs : ${{ needs.frontend-assets.result }}, tests : ${{ needs.frontend-tests.result }}"
                   [ "${{ needs.frontend-assets.result }}" = "success" ] && [ "${{ needs.frontend-tests.result }}" = "success" ]
 
-    # Chaque job qui a une base tourne sur la version de MySQL de la production
-    # (celle de docker-compose.prod.yml) et, tant que la pile n'a pas basculé,
-    # sur la LTS visée, à sa version exacte : la même liste dans
-    # laravel-tests-mysql, browser-shard et demarrage, que
-    # LesJobsAvecUneBaseTournentSurChaqueMySqlTest tient
+    # Chaque job qui a une base (un service à l'image mysql, quel que soit son
+    # nom, dans n'importe quel workflow hors de la passe nocturne) tourne sur
+    # la version de MySQL de la production (celle de docker-compose.prod.yml)
+    # et, tant que la pile n'a pas basculé, sur la LTS visée, à sa version
+    # exacte : la même liste dans laravel-tests-mysql, browser-shard et
+    # demarrage, que LesJobsAvecUneBaseTournentSurChaqueMySqlTest tient
     # (.ai/rules/dependencies.md). Chaque version de la liste tourne et fait
     # tomber le job : ni include ni exclude qui nomme mysql, ni
-    # continue-on-error, ni étape sautée selon la version. Le verdict passe
-    # par `laravel-tests` ci-dessous, qui garde le nom du contrôle exigé.
+    # continue-on-error sur le job, ni condition ni continue-on-error sur
+    # l'étape qui teste, et la version ne se lit que dans le nom du job, de
+    # ses étapes et de ses artefacts et dans l'image de la base, jamais dans
+    # une variable d'environnement, une condition ou un script. Le verdict
+    # passe par `laravel-tests` ci-dessous, qui garde le nom du contrôle exigé.
     laravel-tests-mysql:
         name: laravel-tests (MySQL ${{ matrix.mysql }})
         runs-on: ubuntu-latest
