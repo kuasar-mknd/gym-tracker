@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Console\Commands\SyncIconFont;
+use Illuminate\Support\Facades\Http;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -229,4 +230,19 @@ it('was built from the icon list it ships with', function (): void {
         'The icon list changed but the font was not regenerated, so the new names '
         .'would draw as words. Run `artisan icons:sync`.'
     );
+});
+
+/**
+ * `--check` compare l'empreinte enregistrée à la liste sans rien télécharger.
+ * L'option se lit `=== true` : depuis Laravel 13.36, Larastan 3.13.0 ne retrouve
+ * plus la signature des commandes du noyau et la type comme n'importe quelle
+ * option, et une comparaison stricte fausse (`=== 'true'`, `=== 1`) enverrait
+ * la commande chez Google au lieu de vérifier.
+ */
+it('vérifie la fonte par --check sans rien demander à Google', function (): void {
+    Http::preventStrayRequests();
+
+    $this->artisan('icons:sync', ['--check' => true])
+        ->expectsOutput('The font matches the icon list.')
+        ->assertSuccessful();
 });
