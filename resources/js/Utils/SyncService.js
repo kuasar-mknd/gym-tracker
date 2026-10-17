@@ -499,7 +499,7 @@ class SyncService {
      * @returns {Promise}
      */
     request(config) {
-        const depart = { compte: this.compte, seance: this.seanceDesEcritures }
+        const depart = { compte: this.compte, seance: this.seanceDesEcritures, oublis: this.oublisDe(this.compte) }
         const ecriture = this.envoyer(config)
 
         if (this.isMutation(config)) {
@@ -535,13 +535,22 @@ class SyncService {
      * #2048) : la copie, prise plus tard quand tout est enregistré, peut ne
      * pas l'avoir. Le compte et la séance sont ceux du départ. Une écriture
      * mise en file, refusée ou abandonnée ne se note pas ; rejouée par le
-     * vidage, elle s'annonce par `sync:replayed`.
+     * vidage, elle s'annonce par `sync:replayed`. Une écriture dont le compte
+     * a quitté l'appareil depuis son départ (`oublis`, #2050) ne se note pas
+     * non plus : sa réponse tardive, après « Se déconnecter quand même » ou
+     * la suppression du compte, recréait en clair la note que la purge et
+     * l'écran de connexion venaient d'effacer.
      *
      * @param {Object} config la requête acceptée
-     * @param {{compte: string|null, seance: string|null}} depart
+     * @param {{compte: string|null, seance: string|null, oublis: number}} depart
      */
-    noterLAcceptation(config, { compte, seance }) {
-        if (compte === null || seance === null || !estUneEcritureDeLaSeance(config)) {
+    noterLAcceptation(config, { compte, seance, oublis }) {
+        if (
+            compte === null ||
+            seance === null ||
+            this.oublisDe(compte) !== oublis ||
+            !estUneEcritureDeLaSeance(config)
+        ) {
             return
         }
 

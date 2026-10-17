@@ -8,6 +8,7 @@ import {
     restaurerDepuisLHistorique,
     retirerLesEcouteursDuService,
 } from './fileHorsLigne'
+import { oublierLesEcrituresAcceptees } from '@/Utils/ecrituresAcceptees'
 import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
 
 const request = vi.fn()
@@ -2474,6 +2475,24 @@ describe('SyncService la note des écritures de séance acceptées', () => {
         await service.delete('/api/v1/sets/3')
 
         expect(noteDuCompte()).toBeNull()
+    })
+
+    it('ne note pas la réponse tardive d’une écriture dont le compte a quitté l’appareil depuis son départ', async () => {
+        const service = await chargé()
+        let repondre
+        request.mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+
+        service.suivreLesEcrituresDeLaSeance(5)
+        const ecriture = service.patch('/api/v1/sets/3', { weight: 85 })
+
+        // « Se déconnecter quand même » : la purge, la déconnexion acceptée, puis l'écran de connexion.
+        oublierLesEcrituresAcceptees(localStorage)
+        service.oublierLeCompte(COMPTE)
+        oublierLesEcrituresAcceptees(localStorage, { saufDuCompte: null })
+        repondre({ data: { data: {} } })
+        await ecriture
+
+        expect(localStorage.getItem('gym-tracker:ecritures-acceptees')).toBeNull()
     })
 
     it('ne note pas le rejeu d’une écriture par la file : il s’annonce par sync:replayed', async () => {
