@@ -18,15 +18,15 @@ afterEach(function (): void {
     Carbon::setTestNow();
 });
 
-it('suit la règle de isCleared() à l’instant donné : passée une seconde après, pas à l’instant même', function (int $decalage, bool $passee): void {
+it('suit la règle de isCleared() à l’instant donné : passée dès la seconde qui suit l’échéance, pas à l’échéance même', function (int $decalage, bool $passee): void {
     $maintenant = Carbon::parse('2026-10-17 18:04:00');
     $cookie = Cookie::create('gt_copies', 'cle', $maintenant->getTimestamp() + $decalage);
 
     expect(EcheanceDuCookie::estPassee($cookie, $maintenant))->toBe($passee);
 })->with([
-    'une seconde avant' => [-1, true],
-    'à l’instant même' => [0, false],
-    'une seconde après' => [1, false],
+    'échéance une seconde plus tôt' => [-1, true],
+    'échéance à l’instant même' => [0, false],
+    'échéance une seconde plus tard' => [1, false],
 ]);
 
 it('ne dit jamais passé un cookie sans échéance, qui finit avec le navigateur', function (): void {
@@ -45,7 +45,8 @@ it('garde un cookie posé sous une horloge arrêtée loin dans le passé, que is
 });
 
 it('jette un cookie effacé sous une horloge arrêtée loin dans l’avenir, que isCleared() dit vivant', function (): void {
-    Carbon::setTestNow('2099-01-01 00:00:00');
+    // Dix ans après la vraie heure : l'effacement, cinq ans avant l'horloge, tombe encore après elle.
+    Carbon::setTestNow(Carbon::createFromTimestamp(time())->addYears(10));
     $cookie = new CookieJar()->forget('laravel-session');
 
     expect(EcheanceDuCookie::estPassee($cookie, Carbon::now()))->toBeTrue()
