@@ -58,9 +58,10 @@ import { estUneAdresseDEcritureDeLaSeance } from '@/Utils/seanceEtFile'
  * première page compte aussi, puisqu'une séance a pu se clore ailleurs, sur
  * un autre appareil ou application fermée. Un rejeu d'écriture de séance par la file
  * hors ligne (`sync:replayed`) date le dernier rejeu dans l'état du magasin :
- * la copie de la séance, écrite avant, ne l'a pas, et le préchauffage la
- * redemande (`prechauffage.js`). Sur la page de séance, l'instantané qui suit
- * le rechargement d'après le vidage la rafraîchit avant lui.
+ * la copie de la séance, écrite avant, ne l'a pas. Hors de la page de la
+ * séance en cours, le préchauffage la redemande aussitôt, et sinon à son
+ * prochain départ (`prechauffage.js`) ; sur la page de séance, l'instantané
+ * qui suit le rechargement d'après le vidage la rafraîchit.
  *
  * **Pour les autres.** L'écriture installée se lit par
  * `ecritureDesCopiesInstallee()` : la page de séance y verse son instantané

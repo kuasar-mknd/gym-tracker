@@ -168,6 +168,19 @@ const demander = (chemin, options) =>
         serveur.enVol -= 1
     })
 
+/** L'attente avant la redemande de la séance après un rejeu, raccourcie pour les tests. */
+const ATTENTE_DE_LA_REDEMANDE_MS = 5
+
+/** Assez pour qu'une redemande attendue soit partie, et finie si rien ne la retient. */
+const apresLaRedemande = async () => {
+    await new Promise((fini) => setTimeout(fini, ATTENTE_DE_LA_REDEMANDE_MS * 4))
+    await prechauffageFini()
+}
+
+/** Le rejeu d'une écriture par la file, tel que SyncService l'annonce. */
+const rejouer = (url = '/api/v1/sets/3') =>
+    window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: `q-${url}`, url } }))
+
 let maintenant = Date.parse('2026-10-12T18:04:00Z')
 let routeur
 let fabrique
@@ -240,6 +253,7 @@ beforeAll(async () => {
         pageInitiale: null,
         demander,
         horloge: () => maintenant,
+        delaiDeLaRedemande: ATTENTE_DE_LA_REDEMANDE_MS,
     })
 
     await inertia.createInertiaApp({
@@ -447,9 +461,16 @@ describe('le préchauffage', () => {
         await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
         const avant = cheminsDemandes().length
 
+        // Rejouée page cachée : la redemande ne part pas, le préchauffage suivant s'en charge.
         maintenant += INTERVALLE_DU_PRECHAUFFAGE_MS
-        window.dispatchEvent(new CustomEvent('sync:replayed', { detail: { queueId: 'q1', url: '/api/v1/sets/3' } }))
+        const visibilite = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+        rejouer()
         await vi.waitUntil(() => etatRange().dernierRejeu === maintenant)
+        await apresLaRedemande()
+        visibilite.mockRestore()
+
+        expect(cheminsDemandes()).toHaveLength(avant)
+
         maintenant += 1
         await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
 
@@ -663,6 +684,115 @@ const recevoirSansAttendre = async (page) => {
     routeur.visit(page.url, { onFinish: () => (finie = true) })
     await vi.waitUntil(() => finie)
 }
+
+describe('la redemande de la séance après un rejeu', () => {
+    it('redemande la séance en cours dès le rejeu, sous la demi-heure, sans attendre une visite ni toucher à sa note', async () => {
+        serveur.seanceEnCours = 5
+        await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
+        const avant = cheminsDemandes().length
+        const note = localStorage.getItem(CLEF_DU_DERNIER_PRECHAUFFAGE)
+
+        // Dix minutes plus tard, le réseau revient et la file rejoue deux séries d'une traite.
+        maintenant += 10 * 60 * 1000
+        rejouer('/api/v1/sets/3')
+        rejouer('/api/v1/sets/4')
+        await vi.waitUntil(() => cheminsDemandes().length > avant)
+        await apresLaRedemande()
+
+        expect(cheminsDemandes().slice(avant)).toEqual(['/workouts/5'])
+        expect(serveur.appels.at(-1).options).toMatchObject({
+            headers: { 'X-Inertia': 'true', 'X-Inertia-Version': 'v1', 'X-Requested-With': 'XMLHttpRequest' },
+            redirect: 'manual',
+            cache: 'no-store',
+        })
+        expect((await magasin.lireUneCopie('/workouts/5')).copieDu).toBe(maintenant)
+        expect(localStorage.getItem(CLEF_DU_DERNIER_PRECHAUFFAGE)).toBe(note)
+        expect(relais.rejets).toEqual([])
+    })
+
+    it('ne redemande rien sur la page de cette séance, sans séance en cours, page cachée ou pour une autre écriture', async () => {
+        serveur.seanceEnCours = 5
+        await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
+        const avant = cheminsDemandes().length
+
+        // La page de la séance tient elle-même sa copie à jour.
+        await new Promise((fini) => routeur.push({ ...pageDe('/workouts/5', { seanceEnCours: 5 }), onFinish: fini }))
+        rejouer()
+        await apresLaRedemande()
+
+        await new Promise((fini) => routeur.push({ ...pageDe('/tools', { seanceEnCours: 5 }), onFinish: fini }))
+        rejouer('/api/v1/notification-preferences')
+        await apresLaRedemande()
+
+        const visibilite = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+        rejouer()
+        await apresLaRedemande()
+        visibilite.mockRestore()
+
+        // Close depuis : la dernière réponse du serveur ne dit plus de séance en cours.
+        serveur.seanceEnCours = null
+        await recevoir(pageDe('/profile'))
+        rejouer()
+        await apresLaRedemande()
+
+        expect(cheminsDemandes()).toHaveLength(avant)
+    })
+
+    it('un rejeu pendant qu’elle vole la refait une fois après elle, jamais deux à la fois', async () => {
+        serveur.seanceEnCours = 5
+        await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
+        const avant = cheminsDemandes().length
+        serveur.regles.set('/workouts/5', () => 'muet')
+
+        maintenant += 60 * 1000
+        rejouer()
+        await vi.waitUntil(() => cheminsDemandes().length === avant + 1)
+        rejouer('/api/v1/sets/4')
+        rejouer('/api/v1/sets/5')
+        await new Promise((fini) => setTimeout(fini, ATTENTE_DE_LA_REDEMANDE_MS * 4))
+
+        expect(cheminsDemandes()).toHaveLength(avant + 1)
+
+        serveur.regles = new Map()
+        serveur.appels.at(-1).repondre(reponseDePage(pageDe('/workouts/5', { seanceEnCours: 5 })))
+        await vi.waitUntil(() => cheminsDemandes().length === avant + 2)
+        await apresLaRedemande()
+
+        expect(cheminsDemandes().slice(avant)).toEqual(['/workouts/5', '/workouts/5'])
+        expect(serveur.enVolAuPlus).toBe(1)
+    })
+
+    it('une purge l’interrompt, et un renvoi qui efface le témoin oublie les copies', async () => {
+        serveur.seanceEnCours = 5
+        await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
+        serveur.regles.set('/workouts/5', () => 'muet')
+
+        rejouer()
+        await vi.waitUntil(() => serveur.appels.at(-1).chemin === '/workouts/5' && serveur.enVol === 1)
+        const demande = serveur.appels.at(-1)
+        await magasin.oublierLesCopies({ fermerLEtat: false })
+
+        expect(demande.options.signal.aborted).toBe(true)
+
+        await apresLaRedemande()
+        expect(copiesRangees().has('/workouts/5')).toBe(false)
+
+        // Les copies refaites, la redemande suivante tombe sur un renvoi qui dit la fin de la session.
+        serveur.regles = new Map()
+        await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
+        const empreinte = etatRange().empreinte
+        serveur.regles.set('/workouts/5', () => {
+            document.cookie = `${TEMOIN}=; path=/; max-age=0`
+
+            return redirectionOpaque()
+        })
+
+        rejouer()
+        await vi.waitUntil(() => etatRange().empreintesFermees.includes(empreinte))
+
+        expect(copiesRangees().size).toBe(0)
+    })
+})
 
 describe('le branchement', () => {
     const source = (fichier) => readFileSync(resolve(jsRoot, fichier), 'utf-8')

@@ -2,6 +2,7 @@ import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
 import { lireLeDernierPrechauffage, noterLeDernierPrechauffage } from '@/Utils/dernierPrechauffage'
 import { documentVenuDuReseau, ecritureDesCopiesInstallee } from '@/Utils/ecritureDesCopies'
 import { pageInitialeDuDocument } from '@/Utils/historiqueDuCompte'
+import { estUneAdresseDEcritureDeLaSeance } from '@/Utils/seanceEtFile'
 import {
     COMPOSANT_DE_LA_SEANCE,
     PAGES_GARDEES,
@@ -53,6 +54,18 @@ import {
  * ou au délai, il s'arrête aussi. Une réponse qui n'est pas la page demandée
  * ne se garde pas.
  *
+ * **Après un rejeu.** Un rejeu d'écriture de séance par la file
+ * (`sync:replayed`) reçu hors de la page de la séance en cours redemande la
+ * copie de cette séance, une seconde après le dernier rejeu de la salve
+ * (`DELAI_DE_LA_REDEMANDE_DE_LA_SEANCE_MS`) : une seule demande, comme le
+ * préchauffage la ferait, sans attendre de visite ni la fin de la
+ * demi-heure, dont elle ne lit ni n'écrit la note. Elle part après le
+ * préchauffage en cours, une à la fois ; un rejeu pendant qu'elle vole la
+ * refait une fois après elle. Sur la page de la séance, son instantané tient
+ * la copie à jour (`useCopieDeLaSeance`). Page cachée, rien ne part : le
+ * préchauffage suivant redemande la séance dont la copie est plus ancienne
+ * que le dernier rejeu.
+ *
  * **Les props différées.** Celle de l'accueil se demande en partiel, et se
  * verse dans sa copie ; celle de la liste des séances, jamais. Celles qu'une
  * copie avait déjà restent, avec leur date (`ecrireUneCopie`).
@@ -78,6 +91,13 @@ export const AGE_D_UNE_COPIE_A_REFAIRE_MS = 2 * 60 * 60 * 1000
 
 /** Le délai d'une demande du préchauffage : au-delà, il s'arrête. */
 export const DELAI_D_UNE_DEMANDE_MS = 15_000
+
+/**
+ * L'attente après le dernier rejeu d'une écriture de séance avant de
+ * redemander la séance en cours : le vidage rejoue la file d'une traite, et
+ * une salve ne fait qu'une demande.
+ */
+export const DELAI_DE_LA_REDEMANDE_DE_LA_SEANCE_MS = 1000
 
 export { CLEF_DU_DERNIER_PRECHAUFFAGE } from '@/Utils/dernierPrechauffage'
 
@@ -134,8 +154,11 @@ export const interrompreLePrechauffage = () => {
  *   pageInitiale?: object | null,
  *   demander?: typeof fetch,
  *   horloge?: () => number,
- * }} options
+ *   delaiDeLaRedemande?: number,
+ * }} options `delaiDeLaRedemande` : l'attente, après le dernier rejeu d'une
+ *   salve, avant de redemander la séance en cours
  * @returns {{ desinstaller: () => void, interrompre: () => void, fini: () => Promise<void> }}
+ *   `fini` se règle quand le préchauffage et la redemande en cours sont finis
  */
 export const installerLePrechauffage = ({
     routeur,
@@ -145,12 +168,19 @@ export const installerLePrechauffage = ({
     pageInitiale = pageInitialeDuDocument(fenetre.document),
     demander = (...arguments_) => fenetre.fetch(...arguments_),
     horloge = () => Date.now(),
+    delaiDeLaRedemande = DELAI_DE_LA_REDEMANDE_DE_LA_SEANCE_MS,
 }) => {
     /** @type {{ controleur: AbortController } | null} */
     let enCours = null
     /** La fin du dernier préchauffage parti, interrompu ou non. */
     let derniereFin = Promise.resolve()
     let branche = true
+    /** La dernière page reçue du serveur, qui dit la séance en cours : `success`, ou la page initiale venue du réseau. */
+    let pageDuServeur = null
+    /** L'adresse de la page affichée, suivie sur `navigate`. */
+    let adresseAffichee = pageInitiale?.url ?? null
+    /** La redemande de la séance en cours après un rejeu : attendue, en vol, à refaire. */
+    const redemande = { minuterie: null, controleur: null, aRefaire: false, fin: Promise.resolve() }
 
     /** @returns {Storage | null} */
     const stockage = () => {
@@ -290,6 +320,25 @@ export const installerLePrechauffage = ({
     }
 
     /**
+     * Une redirection ou un 401 : la fin de la session, si le témoin a disparu
+     * ou porte une autre clé que celle de l'inventaire. Les copies s'oublient
+     * alors, cette clé-là fermée, et jamais celle d'un nouveau témoin, qu'une
+     * connexion dans un autre onglet a pu poser.
+     *
+     * @param {{ empreinte: string | null }} inventaire
+     * @returns {Promise<boolean>} vrai quand la session a pris fin
+     */
+    const laSessionAPrisFin = async (inventaire) => {
+        if ((await magasin.empreinteDuTemoin()) === inventaire.empreinte) {
+            return false
+        }
+
+        magasin.oublierLesCopies({ fermerLEtat: false, fermerAussi: inventaire.empreinte })
+
+        return true
+    }
+
+    /**
      * Un préchauffage, d'après la page qui l'a fait partir.
      *
      * @param {object} page
@@ -323,29 +372,13 @@ export const installerLePrechauffage = ({
         let restantes = GET_AU_PLUS
 
         /**
-         * Une redirection ou un 401 : la fin de la session, si le témoin a
-         * disparu ou porte une autre clé que celle de l'inventaire. Les copies
-         * s'oublient alors, cette clé-là fermée, et jamais celle d'un nouveau
-         * témoin, qu'une connexion dans un autre onglet a pu poser.
-         *
-         * @returns {Promise<boolean>} vrai quand la session a pris fin
-         */
-        const laSessionAPrisFin = async () => {
-            if ((await magasin.empreinteDuTemoin()) === inventaire.empreinte) {
-                return false
-            }
-
-            magasin.oublierLesCopies({ fermerLEtat: false, fermerAussi: inventaire.empreinte })
-
-            return true
-        }
-
-        /**
          * @param {Awaited<ReturnType<typeof demanderLaPage>>} reponse
          * @returns {Promise<boolean>} vrai quand le préchauffage doit s'arrêter
          */
         const doitSArreter = async (reponse) =>
-            reponse.issue === 'arret' || signal.aborted || (reponse.issue === 'renvoyee' && (await laSessionAPrisFin()))
+            reponse.issue === 'arret' ||
+            signal.aborted ||
+            (reponse.issue === 'renvoyee' && (await laSessionAPrisFin(inventaire)))
 
         for (const chemin of chemins) {
             if (restantes === 0 || signal.aborted) {
@@ -417,17 +450,113 @@ export const installerLePrechauffage = ({
             })
     }
 
+    /**
+     * Redemande la copie de la séance en cours après le rejeu d'une de ses
+     * écritures par la file : une seule demande, hors du préchauffage, sans
+     * sa note de la demi-heure ni la borne de ses huit GET, après lui s'il est
+     * en cours (une demande à la fois), et seulement hors de la page de cette
+     * séance, que son instantané tient à jour. Un rejeu qui arrive pendant
+     * qu'elle vole la refait une fois de plus, après elle.
+     */
+    const redemanderLaSeance = async () => {
+        redemande.minuterie = null
+
+        const page = pageDuServeur
+        const seance = cleDeLaSeanceEnCours(page)
+
+        if (seance === null || ecriture === null || !peutPartir(page) || cleDeLaCopie(adresseAffichee) === seance) {
+            return
+        }
+
+        if (redemande.controleur !== null) {
+            redemande.aRefaire = true
+
+            return
+        }
+
+        const controleur = new AbortController()
+
+        redemande.controleur = controleur
+
+        try {
+            await derniereFin
+            await ecriture.ecrituresFinies()
+
+            const inventaire = controleur.signal.aborted ? null : await magasin.inventaire(page)
+
+            if (inventaire === null || !inventaire.possible || controleur.signal.aborted) {
+                return
+            }
+
+            const reponse = await demanderLaPage(seance, { version: page.version, signal: controleur.signal })
+
+            if (reponse.issue === 'page' && !controleur.signal.aborted) {
+                ecriture.garder(reponse.page)
+            } else if (reponse.issue === 'renvoyee') {
+                await laSessionAPrisFin(inventaire)
+            }
+        } finally {
+            redemande.controleur = null
+
+            if (redemande.aRefaire && !controleur.signal.aborted) {
+                redemande.aRefaire = false
+                planifierLaRedemande()
+            }
+        }
+    }
+
+    /** Une redemande dans `delaiDeLaRedemande`, sauf rejeu d'ici là : une salve de rejeux n'en fait qu'une. */
+    const planifierLaRedemande = () => {
+        clearTimeout(redemande.minuterie)
+        redemande.minuterie = setTimeout(() => {
+            redemande.fin = redemanderLaSeance().catch(() => {
+                // Comme le préchauffage : rien ne lève vers la page.
+            })
+        }, delaiDeLaRedemande)
+    }
+
     const interrompre = () => {
         enCours?.controleur.abort()
         enCours = null
+        clearTimeout(redemande.minuterie)
+        redemande.minuterie = null
+        redemande.aRefaire = false
+        redemande.controleur?.abort()
     }
 
     /** @param {CustomEvent} evenement */
-    const surUneReponse = (evenement) => partir(evenement.detail?.page)
+    const surUneReponse = (evenement) => {
+        pageDuServeur = evenement.detail?.page ?? pageDuServeur
+        partir(evenement.detail?.page)
+    }
 
-    const arrets = [routeur.on('success', surUneReponse), magasin.surUnePurge(interrompre)]
+    /** @param {CustomEvent} evenement */
+    const suivreLaPageAffichee = (evenement) => {
+        adresseAffichee = evenement.detail?.page?.url ?? adresseAffichee
+    }
+
+    /**
+     * Une écriture de la séance rejouée par la file : la copie de la séance
+     * en cours, écrite avant, ne l'a pas.
+     *
+     * @param {CustomEvent} evenement
+     */
+    const surUnRejeu = (evenement) => {
+        if (branche && estUneAdresseDEcritureDeLaSeance(evenement.detail?.url)) {
+            planifierLaRedemande()
+        }
+    }
+
+    const arrets = [
+        routeur.on('success', surUneReponse),
+        routeur.on('navigate', suivreLaPageAffichee),
+        magasin.surUnePurge(interrompre),
+    ]
+
+    fenetre.addEventListener?.('sync:replayed', surUnRejeu)
 
     if (pageInitiale !== null && pageInitiale !== undefined && documentVenuDuReseau(fenetre)) {
+        pageDuServeur = pageInitiale
         partir(pageInitiale)
     }
 
@@ -436,13 +565,17 @@ export const installerLePrechauffage = ({
             branche = false
             interrompre()
             arrets.forEach((arreter) => (typeof arreter === 'function' ? arreter() : undefined))
+            fenetre.removeEventListener?.('sync:replayed', surUnRejeu)
 
             if (prechauffagesInstalles.includes(installe)) {
                 prechauffagesInstalles.splice(prechauffagesInstalles.indexOf(installe), 1)
             }
         },
         interrompre,
-        fini: () => derniereFin,
+        fini: async () => {
+            await derniereFin
+            await redemande.fin
+        },
     }
 
     prechauffagesInstalles.push(installe)
