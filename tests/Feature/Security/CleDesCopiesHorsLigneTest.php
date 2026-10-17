@@ -119,21 +119,29 @@ function temoinCleDeLaSession(): mixed
 }
 
 /**
+ * Une série d'une séance ouverte du compte, avec sa ligne en mémoire : la
+ * requête qui la supprime se forme encore après la suppression du compte.
+ */
+function temoinSerieDe(User $compte): Set
+{
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id]);
+
+    return Set::factory()->create(['workout_line_id' => $ligne->id])->setRelation('workoutLine', $ligne);
+}
+
+/**
  * Une écriture de la page de séance par l'API, comme `SyncService` l'envoie :
- * en JSON, depuis une page de l'application, que Sanctum authentifie par la
+ * en JSON, depuis la page de la séance, que Sanctum authentifie par la
  * session.
  *
  * @return TestResponse<Response>
  */
-function temoinSupprimerUneSerieParLApi(Appareil $appareil, User $compte): TestResponse
+function temoinSupprimerLaSerieParLApi(Appareil $appareil, Set $serie): TestResponse
 {
-    $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id]);
-    $serie = Set::factory()->create(['workout_line_id' => $ligne->id]);
-
     return $appareil->envoyer('DELETE', route('api.v1.sets.destroy', $serie, absolute: false), [], [
         'Accept' => 'application/json',
-        'Referer' => url('/workouts/'.$seance->id),
+        'Referer' => url('/workouts/'.$serie->workoutLine->workout_id),
     ]);
 }
 
@@ -408,18 +416,26 @@ it('efface le témoin à la déconnexion, par le formulaire comme par /_dusk/log
     '/_dusk/logout, qui déconnecte sans vider la session' => ['GET', '/_dusk/logout'],
 ]);
 
+/*
+ * Les trois fins de session de HistoriqueDuCompteApresDeconnexionTest, sous
+ * l'API, que la séance saisie en ligne emprunte presque seule. Un compte
+ * supprimé laisse son identifiant dans la session : seul le statut du refus
+ * dit alors la fin de la session, la garde `web` n'ayant lu aucun compte.
+ */
 it('efface le témoin sur le 401 de /api/v1/sets', function (Closure $finirLaSession): void {
     $compte = User::factory()->create();
     $appareil = temoinAppareilConnecte($compte);
+    $serie = temoinSerieDe($compte);
 
     $finirLaSession($compte, $appareil);
 
-    $refus = temoinSupprimerUneSerieParLApi($appareil, $compte);
+    $refus = temoinSupprimerLaSerieParLApi($appareil, $serie);
 
     $refus->assertUnauthorized();
     $refus->assertCookieExpired(CleDesCopiesHorsLigne::TEMOIN);
 
-    expect($appareil->cookie(CleDesCopiesHorsLigne::TEMOIN))->toBeNull();
+    expect($appareil->cookie(CleDesCopiesHorsLigne::TEMOIN))->toBeNull()
+        ->and(temoinCleDeLaSession())->toBeNull();
 })->with([
     'une session expirée' => [function (User $compte, Appareil $appareil): void {
         $appareil->oublierLeCookie(config()->string('session.cookie'));
@@ -427,6 +443,9 @@ it('efface le témoin sur le 401 de /api/v1/sets', function (Closure $finirLaSes
     // Le refus vient du `AuthenticateSession` de Sanctum, que le groupe `api` pose après `auth:sanctum`.
     'un mot de passe changé depuis un autre appareil' => [function (User $compte): void {
         $compte->forceFill(['password' => Hash::make('un-autre-mot-de-passe')])->save();
+    }],
+    'un compte supprimé depuis le panneau' => [function (User $compte): void {
+        $compte->delete();
     }],
 ]);
 
@@ -437,7 +456,7 @@ it('reconduit le témoin sur une réponse de /api/v1, avec la même clé et une 
     $cle = $appareil->cookie(CleDesCopiesHorsLigne::TEMOIN);
 
     Carbon::setTestNow(temoinInstant()->addMinutes(90));
-    $ecriture = temoinSupprimerUneSerieParLApi($appareil, $compte);
+    $ecriture = temoinSupprimerLaSerieParLApi($appareil, temoinSerieDe($compte));
 
     $ecriture->assertNoContent();
 
