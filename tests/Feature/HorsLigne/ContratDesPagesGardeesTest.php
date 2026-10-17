@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Achievement;
 use App\Models\BodyMeasurement;
 use App\Models\Exercise;
 use App\Models\Goal;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Models\WarmupPreference;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Notifications\AchievementUnlocked;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -39,11 +41,13 @@ use function Pest\Laravel\actingAs;
  * `contrat-des-pages-gardees.json` pour la version courante. Il la relève
  * telle qu'une copie la garde : sans les props que `PROPS_JAMAIS_GARDEES`
  * nomme (le dernier poids et les objectifs de l'accueil), qu'aucune copie ne
- * porte. Une liste vide s'y lit `liste vide` : ce qu'elle contiendrait n'est
- * pas couvert, et les données du compte de référence doivent la remplir. Les
- * clés faites
- * d'identifiants ou de dates se lisent comme une table (`{}`), une clé absente
- * d'une partie des éléments d'une liste comme `absent`.
+ * porte. Une liste vide s'y lit `liste vide`, et un champ toujours nul
+ * `null` : ce qu'ils contiendraient n'est pas couvert, et les données du
+ * compte de référence doivent les remplir ; un champ que le compte ne peut
+ * pas remplir se nomme, avec sa raison, dans `contratDesPagesToujoursNuls()`.
+ * Les clés faites d'identifiants ou de dates se lisent comme une table
+ * (`{}`), une clé absente d'une partie des éléments d'une liste comme
+ * `absent`.
  *
  * Quand la forme change, à dessein : monter `VERSION_DU_CONTRAT`, puis
  * réécrire le fichier par
@@ -63,9 +67,12 @@ function contratDesPagesFichier(): string
  * Le compte de référence et ses séances : la séance en cours et la séance
  * close qui porte ses records, chacune avec des exercices et des séries, une
  * faite et une non faite dans la séance en cours, une ligne et une série
- * créées par l'API (clé d'idempotence), plus un objectif et une pesée (que
- * l'accueil rend, et qu'aucune copie ne garde), et ce que lisent les outils :
- * de quoi remplir chaque liste des pages gardées.
+ * créées par l'API (clé d'idempotence) dans chacune, une note de séance et de
+ * ligne, une série de cardio (distance et durée), un record dans la séance en
+ * cours, un exercice au repos réglé, un avatar et un badge à célébrer, plus
+ * un objectif et une pesée (que l'accueil rend, et qu'aucune copie ne garde),
+ * et ce que lisent les outils : de quoi remplir chaque liste et chaque champ
+ * des pages gardées.
  *
  * @return array{compte: User, enCours: Workout, close: Workout}
  */
@@ -73,9 +80,10 @@ function contratDesPagesCompte(): array
 {
     fake()->seed(2048);
 
-    $compte = User::factory()->create(['name' => 'Camille Contrat', 'default_rest_time' => 90]);
-    $developpe = Exercise::factory()->create(['user_id' => $compte->id, 'name' => 'Développé couché', 'type' => 'strength', 'category' => 'Pectoraux']);
-    $traction = Exercise::factory()->create(['user_id' => $compte->id, 'name' => 'Traction', 'type' => 'strength', 'category' => 'Dos']);
+    $compte = User::factory()->create(['name' => 'Camille Contrat', 'default_rest_time' => 90, 'avatar' => 'https://avatars.example.org/camille.png']);
+    $developpe = Exercise::factory()->create(['user_id' => $compte->id, 'name' => 'Développé couché', 'type' => 'strength', 'category' => 'Pectoraux', 'default_rest_time' => 150]);
+    $traction = Exercise::factory()->create(['user_id' => $compte->id, 'name' => 'Traction', 'type' => 'strength', 'category' => 'Dos', 'default_rest_time' => 120]);
+    $rameur = Exercise::factory()->create(['user_id' => $compte->id, 'name' => 'Rameur', 'type' => 'cardio', 'category' => 'Cardio']);
     $closes = [];
 
     foreach ([9, 5, 2] as $rangDeLaSeance => $joursAvant) {
@@ -88,18 +96,38 @@ function contratDesPagesCompte(): array
 
         foreach ([$developpe, $traction] as $rang => $exercice) {
             $cle = $rangDeLaSeance === 0 && $rang === 0 ? '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0001' : null;
-            $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id, 'order' => $rang, 'idempotency_key' => $cle]);
+            $ligne = WorkoutLine::factory()->create([
+                'workout_id' => $seance->id,
+                'exercise_id' => $exercice->id,
+                'order' => $rang,
+                'idempotency_key' => $cle,
+                'notes' => $rang === 0 ? 'Prise serrée' : null,
+            ]);
             Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 80 + $joursAvant, 'reps' => 8, 'idempotency_key' => $cle]);
             Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 82.5, 'reps' => 6]);
+        }
+
+        if ($rangDeLaSeance === 0) {
+            $ligneDeCardio = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $rameur->id, 'order' => 2]);
+            Set::factory()->create(['workout_line_id' => $ligneDeCardio->id, 'weight' => null, 'reps' => null, 'distance_km' => 5, 'duration_seconds' => 1260]);
         }
 
         $closes[] = $seance;
     }
 
-    $enCours = Workout::factory()->for($compte)->create(['name' => 'Séance du jour', 'started_at' => now()->subMinutes(30)]);
-    $ligne = WorkoutLine::factory()->create(['workout_id' => $enCours->id, 'exercise_id' => $developpe->id, 'order' => 0]);
-    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 85, 'reps' => 5]);
+    $enCours = Workout::factory()->for($compte)->create(['name' => 'Séance du jour', 'started_at' => now()->subMinutes(30), 'notes' => 'Épaule à ménager']);
+    $ligne = WorkoutLine::factory()->create([
+        'workout_id' => $enCours->id,
+        'exercise_id' => $developpe->id,
+        'order' => 0,
+        'idempotency_key' => '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0002',
+        'notes' => 'Prise large',
+    ]);
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 95, 'reps' => 5, 'idempotency_key' => '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0002']);
     Set::factory()->naPasEteFaite()->create(['workout_line_id' => $ligne->id, 'weight' => 85, 'reps' => 5]);
+    $ligneDeCardio = WorkoutLine::factory()->create(['workout_id' => $enCours->id, 'exercise_id' => $rameur->id, 'order' => 1]);
+    Set::factory()->create(['workout_line_id' => $ligneDeCardio->id, 'weight' => null, 'reps' => null, 'distance_km' => 2.5, 'duration_seconds' => 600]);
+    $compte->notify(new AchievementUnlocked(Achievement::factory()->create(['name' => 'Premier pas', 'icon' => '👣', 'description' => 'Ta première séance.'])));
 
     IntervalTimer::factory()->create(['user_id' => $compte->id, 'name' => 'Tabata']);
     Plate::factory()->create(['user_id' => $compte->id, 'weight' => 20, 'quantity' => 4]);
@@ -347,6 +375,49 @@ function contratDesPagesFormes(): array
 }
 
 /**
+ * Les champs que le compte de référence ne peut pas remplir, et pourquoi. Un
+ * champ relevé `null` seulement n'a pas de forme : la garde ne verrait pas
+ * qu'elle change. Un chemin seul vaut pour toutes les pages ; `page › chemin`
+ * pour une seule.
+ *
+ * @return array<string, string>
+ */
+function contratDesPagesToujoursNuls(): array
+{
+    return [
+        'flash.error' => 'aucun message sur une page qu’aucune écriture n’a précédée',
+        'flash.success' => 'aucun message sur une page qu’aucune écriture n’a précédée',
+        'pending_migrations' => 'nul hors de l’environnement local (`HandleInertiaRequests::pendingMigrationCount`)',
+        'workouts.prev_page_url' => 'seule la première page de la liste des séances se garde',
+        'workouts.next_page_url' => 'le paginateur de Laravel, sans page suivante pour le compte de référence (vingt séances par page)',
+        'Workouts/Show (séance en cours) › workout.ended_at' => 'une séance en cours n’a pas de fin',
+    ];
+}
+
+/**
+ * Les chemins d'une forme relevés `null` seulement, sans les champs que
+ * `contratDesPagesToujoursNuls()` nomme : `page › chemin`.
+ *
+ * @param  array<string, array{props: array<string, string>, differees: array<string, list<string>>}>  $formes
+ * @return list<string>
+ */
+function contratDesPagesChampsSansForme(array $formes): array
+{
+    $admis = contratDesPagesToujoursNuls();
+    $sansForme = [];
+
+    foreach ($formes as $page => $forme) {
+        foreach ($forme['props'] as $chemin => $types) {
+            if ($types === 'null' && ! array_key_exists($chemin, $admis) && ! array_key_exists("{$page} › {$chemin}", $admis)) {
+                $sansForme[] = "{$page} › {$chemin}";
+            }
+        }
+    }
+
+    return $sansForme;
+}
+
+/**
  * Les écarts entre deux formes, une ligne par chemin qui diffère.
  *
  * @param  array<string, mixed>  $figee
@@ -426,4 +497,31 @@ it('garde la forme des props des pages gardées tant que la version du contrat n
             'tests/Feature/HorsLigne/ContratDesPagesGardeesTest.php',
             implode("\n", $ecarts),
         ));
+});
+
+it('ne relève aucun champ nul seulement, hors de ceux que le compte de référence ne peut pas remplir', function (): void {
+    $sansForme = contratDesPagesChampsSansForme(contratDesPagesFormes());
+
+    expect($sansForme)->toBe([], sprintf(
+        "Ces champs valent `null` pour le compte de référence : leur forme n’est pas couverte, et un changement de type passerait sans que `VERSION_DU_CONTRAT` monte. Remplis-les dans `contratDesPagesCompte()`, ou nomme-les, avec leur raison, dans `contratDesPagesToujoursNuls()`.\n%s",
+        implode("\n", $sansForme),
+    ));
+});
+
+it('ne nomme parmi les champs toujours nuls que des champs que les pages gardées rendent nuls', function (): void {
+    $formes = contratDesPagesFormes();
+    $inconnus = [];
+
+    foreach (array_keys(contratDesPagesToujoursNuls()) as $admis) {
+        [$page, $chemin] = str_contains($admis, ' › ') ? explode(' › ', $admis, 2) : [null, $admis];
+        $types = $page === null
+            ? array_filter(array_map(static fn (array $forme): ?string => $forme['props'][$chemin] ?? null, $formes))
+            : array_filter([$formes[$page]['props'][$chemin] ?? null]);
+
+        if (! in_array('null', $types, true)) {
+            $inconnus[] = $admis;
+        }
+    }
+
+    expect($inconnus)->toBe([], 'Ces champs ne sont plus nuls seulement, ou n’existent plus : retire-les de `contratDesPagesToujoursNuls()`.');
 });
