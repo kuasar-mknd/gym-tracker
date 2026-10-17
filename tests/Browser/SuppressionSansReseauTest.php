@@ -32,14 +32,13 @@ use Tests\DuskTestCase;
  * retrouve donc ses trois cartes parmi les autres, et compare l'écran entier
  * avant et après.
  *
- * À partir de 640 px, la carte ne montre ses boutons qu'au survol ou au focus
- * (`sm:opacity-0 sm:group-hover:opacity-100`). Chrome sans tête n'a pas de
- * pointeur qui survole (`(hover: hover)` y est faux, et Tailwind ne pose
- * `group-hover` que sous cette requête) : le bouton y reste transparent, carte
- * survolée comprise, et WebDriver tient un élément transparent pour caché.
- * `waitFor` sur le bouton ne venait donc jamais. Le parcours attend la carte,
- * visible, puis clique le bouton, que la transparence n'empêche pas de
- * recevoir le clic, comme `ExerciseListLiveUpdateTest`.
+ * Sous une souris, la carte ne montre ses boutons qu'au survol ou au focus
+ * (`souris:opacity-0 souris:group-hover:opacity-100`, #2082). Chrome sans tête
+ * n'a pas de pointeur (`pointer: none`) : la variante y est fausse, et le
+ * bouton visible. Le parcours attend pourtant la carte, visible, puis clique
+ * le bouton, comme `ExerciseListLiveUpdateTest` : il tient aussi sous un
+ * Chrome à souris, où le bouton reste transparent jusqu'au survol et où
+ * WebDriver le tiendrait pour caché (`BoutonsAuSurvolTest`).
  */
 class SuppressionSansReseauTest extends DuskTestCase
 {
