@@ -10,7 +10,7 @@ use Monolog\LogRecord;
 
 /**
  * Le formateur d'un canal du journal, dont chaque ligne sort sans adresse en
- * clair (#PR) : `JournalSansAdresse` le pose devant celui de Laravel.
+ * clair (#2076) : `JournalSansAdresse` le pose devant celui de Laravel.
  *
  * Il passe le texte que rend le formateur d'origine, message, contexte et
  * pile d'une exception compris, par `TexteSansAdresse`. C'est une défense :

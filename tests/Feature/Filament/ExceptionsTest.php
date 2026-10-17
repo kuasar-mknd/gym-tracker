@@ -121,7 +121,7 @@ it('masque les champs sensibles et ne garde aucun cookie', function (): void {
  * paramètres de route se masquent comme le corps, et l'en-tête `Referer`,
  * qui recopie la page d'où part l'envoi, comme les autres en-têtes sensibles.
  * L'adresse qu'une personne tape (`email`, `E-Mail`…) en est, comme le mot
- * de passe (#PR).
+ * de passe (#2076).
  */
 it('masque chaque écriture d’une clef sensible, les paramètres de route et la page d’origine', function (): void {
     Route::post('/_boum/{token}', function (): never {
@@ -184,7 +184,7 @@ it('masque l’état d’un formulaire Livewire que porte son instantané, et ne
 
 /*
  * Le message et le texte Markdown n'ont pas de clef : toute adresse de
- * courriel y devient « [adresse masquée] » (#PR). Les erreurs d'envoi n'en
+ * courriel y devient « [adresse masquée] » (#2076). Les erreurs d'envoi n'en
  * citent plus (`CourrielsSansAdresseDansLeursErreursTest`) ; c'est une
  * défense contre l'erreur d'un paquet qui en citerait une. Le Markdown, que
  * le paquet n'écrit qu'en mode debug, est écrit directement.

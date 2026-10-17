@@ -22,7 +22,7 @@ use function Pest\Laravel\get;
 /*
  * L'adresse qu'une personne tape pour se connecter ou pour réinitialiser son
  * mot de passe ne s'écrit en clair dans aucune trace d'une exception levée
- * pendant l'envoi, comme le mot de passe (#PR) : ni dans le journal, ni dans
+ * pendant l'envoi, comme le mot de passe (#2076) : ni dans le journal, ni dans
  * ce que le gestionnaire d'exceptions rapporte, ni dans l'exception que le
  * panneau garde trente jours (`ExceptionEnregistree`). Le paquet de cette
  * dernière recopie le corps entier de la requête, où l'adresse restait en
@@ -403,7 +403,7 @@ it('ne garde en clair ni le mot de passe ni l’adresse d’une connexion au pan
  * tire d'autres, que la requête range parmi ses en-têtes : `php-auth-user` et
  * `php-auth-pw` pour Basic, l'identifiant et le mot de passe en clair,
  * `php-auth-digest` pour Digest, l'en-tête recopié. Ils se masquent comme
- * lui (#PR). Le Markdown, que Laravel ne remplit qu'en mode debug, recopie
+ * lui (#2076). Le Markdown, que Laravel ne remplit qu'en mode debug, recopie
  * les en-têtes bruts, à dessein (`.ai/rules/models.md`) : il n'est pas lu.
  */
 it('masque les en-têtes qu’une authentification HTTP tire de l’en-tête Authorization', function (string $entete, array $masques): void {

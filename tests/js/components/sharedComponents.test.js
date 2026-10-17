@@ -1186,7 +1186,7 @@ describe('DeleteUserForm', () => {
      * Le champ demande le mot de passe actuel du compte : il le dit
      * (`autocomplete="current-password"`), comme la page de confirmation du
      * mot de passe, pour qu'un gestionnaire de mots de passe le remplisse
-     * au lieu d'y voir un mot de passe à enregistrer (#PR). C'est aussi l'un
+     * au lieu d'y voir un mot de passe à enregistrer (#2076). C'est aussi l'un
      * des buts de saisie que les WCAG demandent de déclarer (1.3.5). Il ne
      * porte pas d'identifiant : il ne change ni le mot de passe ni l'adresse
      * du compte, et un gestionnaire n'y a rien à ranger (`.ai/rules/js.md`).

@@ -133,7 +133,7 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Les erreurs d'un envoi de courriel ne citent pas d'adresse (#PR) :
+     * Les erreurs d'un envoi de courriel ne citent pas d'adresse (#2076) :
      * chaque courrielleur est un `CourrielleurQuiTaitLesAdresses`, que crée
      * `GestionnaireDesCourriels`, posé ici à la place du gestionnaire de
      * Laravel. Par `extend()` : le fournisseur des courriels de Laravel est

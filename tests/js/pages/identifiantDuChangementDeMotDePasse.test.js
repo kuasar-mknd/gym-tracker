@@ -4,7 +4,7 @@ import { RequeteSimulee, requetes, reseau } from '../utils/reseauSimule'
 
 /*
  * Le formulaire du profil qui change le mot de passe, avec le vrai client
- * d'Inertia (#PR). Il porte l'adresse du compte connecté dans un champ
+ * d'Inertia (#2076). Il porte l'adresse du compte connecté dans un champ
  * caché `autocomplete="username"`, pour qu'un gestionnaire de mots de passe
  * range le nouveau mot de passe sous ce compte ; ce champ ne part pas avec le
  * formulaire. Ce fichier lit la requête que le client envoie vraiment : un

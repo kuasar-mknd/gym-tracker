@@ -12,6 +12,7 @@ use App\Models\Traits\HasToolsData;
 use App\Models\Traits\OublieLaPreuveDeSaLiaison;
 use App\Models\Traits\SurveilleSonAdresse;
 use App\Notifications\LienDOuvertureDuCompte;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -202,10 +203,24 @@ final class User extends Authenticatable implements MustVerifyEmail
      * Un compte en attente reçoit le lien qui l'ouvre, mené à la connexion
      * (`LienDOuvertureDuCompte`) ; tout autre compte non vérifié, celui de
      * Laravel, qui vérifie l'adresse depuis une session ouverte.
+     *
+     * Rien ne part à une adresse que la messagerie n'écrit pas telle quelle,
+     * qu'un compte d'avant #2075 peut porter
+     * (`AdresseQueLaMessagerieSaitEcrire`) : le lien n'y parviendrait pas, et
+     * partirait même à une autre adresse si elle porte un chevron entre
+     * guillemets. Celui de Laravel, qui n'est pas mis en
+     * file, faisait répondre 500 à la demande d'un nouveau lien ; celui d'un
+     * compte en attente laissait un job en échec à chaque bon mot de passe.
+     * Le contrôleur du renvoi le dit et renvoie au profil, où changer
+     * d'adresse (`EmailVerificationNotificationController`).
      */
     #[\Override]
     public function sendEmailVerificationNotification(): void
     {
+        if (! $this->laMessagerieSaitEcrireSonAdresse()) {
+            return;
+        }
+
         if ($this->estEnAttente()) {
             $this->notify(new LienDOuvertureDuCompte());
 
@@ -213,6 +228,44 @@ final class User extends Authenticatable implements MustVerifyEmail
         }
 
         parent::sendEmailVerificationNotification();
+    }
+
+    /**
+     * La messagerie écrit-elle l'adresse du compte comme destinataire, telle
+     * quelle ?
+     *
+     * Non pour certaines adresses d'avant #2075 : un commentaire dans la
+     * partie locale, un chevron dans une partie locale entre guillemets, ou,
+     * pour un compte créé par la connexion sociale, des points consécutifs ou
+     * un point final. Aucun courriel ne leur parvient.
+     */
+    public function laMessagerieSaitEcrireSonAdresse(): bool
+    {
+        return AdresseQueLaMessagerieSaitEcrire::laMessagerieSaitLEcrire($this->getEmailForVerification());
+    }
+
+    /**
+     * L'adresse à laquelle part un courriel du compte, ou null quand la
+     * messagerie ne l'écrit pas telle quelle (décision du propriétaire,
+     * #2075).
+     *
+     * Le canal `mail` des notifications n'envoie rien, sans erreur, à un
+     * destinataire null (`MailChannel::send()`) : un courriel mis en file
+     * termine son job sans échec. Aucun courriel ne part donc plus à une telle
+     * adresse, qu'un compte d'avant la règle peut porter : ni le lien « mot de
+     * passe oublié », ni l'avis d'une tentative sur l'adresse
+     * (`TentativeSurTonAdresse`), ni aucun autre. Il échouait sinon, erreur
+     * masquée (`CourrielleurQuiTaitLesAdresses`), ou partait à une autre
+     * adresse quand la messagerie en lisait une entre les chevrons d'une
+     * partie locale entre guillemets. Toute autre adresse se rend seule, sans
+     * nom, comme Laravel la rendait (`$this->email`). Une notification à la
+     * demande (`Notification::route()`) ne passe pas par ici : chaque envoi
+     * de ce genre juge lui-même son adresse (`SurveilleSonAdresse`) ou ne part
+     * qu'à une adresse que la validation a jugée.
+     */
+    public function routeNotificationForMail(): ?string
+    {
+        return $this->laMessagerieSaitEcrireSonAdresse() ? $this->email : null;
     }
 
     /**

@@ -340,7 +340,9 @@ it('dit à un compte relié à un fournisseur comment obtenir un mot de passe', 
     changementDAdresseRienNAChange($compte, 'sociale@example.org');
 
     $this->get('/profile/edit')->assertInertia(
-        fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page->where('fournisseurDeConnexion', 'Google'),
+        fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page
+            ->where('fournisseurDeConnexion', 'Google')
+            ->where('laMessagerieSaitEcrireSonAdresse', true),
     );
 });
 

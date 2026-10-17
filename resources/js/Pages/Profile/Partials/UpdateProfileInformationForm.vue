@@ -16,6 +16,16 @@ const props = defineProps({
         default: null,
     },
     /**
+     * La messagerie écrit-elle l'adresse actuelle telle quelle ? Non pour
+     * certaines adresses d'avant #2075 (`User::laMessagerieSaitEcrireSonAdresse()`) :
+     * aucun lien ne leur parvient, « Mot de passe oublié ? » compris, et
+     * l'aide à un compte relié à un fournisseur ne le promet pas.
+     */
+    laMessagerieSaitEcrireSonAdresse: {
+        type: Boolean,
+        default: true,
+    },
+    /**
      * L'adresse actuelle est-elle vérifiée ? Donné par la page
      * (`ProfileController::edit`) : `auth.user` ne le partage pas. Après un
      * changement d'adresse, la page revient avec `false`.
@@ -69,6 +79,8 @@ const messagesDAdresse = {
     'lien-de-changement-d-adresse-perime':
         'Ce lien ne vaut plus : l’adresse du compte a changé depuis. Refais la demande si besoin.',
     'adresse-deja-prise': 'Cette adresse est devenue celle d’un autre compte entre-temps : la tienne n’a pas changé.',
+    'adresse-que-la-messagerie-n-ecrit-pas':
+        'Notre messagerie ne sait pas écrire à ton adresse actuelle : aucun lien ne peut lui parvenir. Change-la ci-dessus, le lien partira à la nouvelle.',
 }
 
 const messageDAdresse = computed(() => messagesDAdresse[props.status] ?? null)
@@ -95,7 +107,14 @@ const submit = () => {
             <p class="text-text-muted mt-1 text-sm">Modifie tes informations de compte et ton adresse email.</p>
         </header>
 
-        <form @submit.prevent="submit" class="mt-6 space-y-4">
+        <!--
+            `novalidate` : le navigateur juge un champ `type="email"` selon la
+            spécification HTML, qui refuse une adresse qu'un compte ancien peut
+            porter (commentaire, tiret bas dans le domaine, point final), et
+            n'enverrait pas le seul nom. Le serveur ne juge la forme que d'une
+            adresse qui change, et ses refus s'affichent sous chaque champ (#2075).
+        -->
+        <form novalidate @submit.prevent="submit" class="mt-6 space-y-4">
             <GlassInput
                 dusk="profile-name-input"
                 v-model="form.name"
@@ -112,7 +131,7 @@ const submit = () => {
                 Le formulaire change l'identifiant : celui sous lequel un
                 gestionnaire de mots de passe tient le compte, et le mot de passe
                 actuel demandé ci-dessous, reste l'adresse actuelle, cachée et
-                jamais envoyée (`IdentifiantDuCompte`, #PR).
+                jamais envoyée (`IdentifiantDuCompte`, #2076).
             -->
             <GlassInput
                 v-model="form.email"
@@ -150,10 +169,15 @@ const submit = () => {
                     class="bg-accent-info/10 rounded-xl p-3"
                     data-testid="profile-social-password-help"
                 >
-                    <p class="text-accent-info-deep text-sm">
+                    <p v-if="props.laMessagerieSaitEcrireSonAdresse" class="text-accent-info-deep text-sm">
                         Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de
                         passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de
                         connexion. Le lien part à ton adresse actuelle, {{ user.email }}.
+                    </p>
+                    <p v-else class="text-accent-info-deep text-sm">
+                        Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de
+                        passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse
+                        actuelle, {{ user.email }}. Demande à un administrateur de l’application de la changer.
                     </p>
                 </div>
             </template>

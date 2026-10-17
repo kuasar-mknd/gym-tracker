@@ -171,7 +171,7 @@ it('rend le détail sans arguments de pile, et sans texte hors de TexteBrut', fu
 });
 
 /*
- * La ligne est écrite sans les rappels du modèle, comme avant #PR, qui masque
+ * La ligne est écrite sans les rappels du modèle, comme avant #2076, qui masque
  * désormais les adresses du message à l'écriture : une ligne de cet âge vit
  * trente jours, et la projection en rend le texte brut, à expurger.
  */

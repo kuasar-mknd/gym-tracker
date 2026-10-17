@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  * les paramètres de route sensibles sont masqués avant l'écriture
  * (`CLEFS_MASQUEES`).
  *
- * Sensibles : les mots de passe et les jetons, et (#PR) l'identifiant
+ * Sensibles : les mots de passe et les jetons, et (#2076) l'identifiant
  * qu'une personne tape pour se connecter ou réinitialiser son mot de passe
  * (`email`, et `adresse`, la valeur chiffrée du lien de réinitialisation),
  * comme le mot de passe : le paquet garde le corps entier de la requête

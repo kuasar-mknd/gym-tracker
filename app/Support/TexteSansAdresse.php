@@ -7,7 +7,7 @@ namespace App\Support;
 use Illuminate\Support\Str;
 
 /**
- * Un texte sans adresse de courriel en clair (#PR) : le message d'une
+ * Un texte sans adresse de courriel en clair (#2076) : le message d'une
  * exception, une ligne du journal.
  *
  * Le serveur de courriel cite souvent le destinataire qu'il refuse

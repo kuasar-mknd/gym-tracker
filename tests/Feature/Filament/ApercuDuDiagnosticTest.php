@@ -44,7 +44,7 @@ function apercuDuDiagnosticSuperAdministrateur(): Admin
 
 /**
  * Une exception récente, dont le message porte un caractère invisible et une
- * adresse. Écrite sans les rappels du modèle, comme avant #PR, qui masque
+ * adresse. Écrite sans les rappels du modèle, comme avant #2076, qui masque
  * désormais les adresses du message à l'écriture : une ligne de cet âge vit
  * trente jours, et l'expurgation du diagnostic la couvre encore.
  */

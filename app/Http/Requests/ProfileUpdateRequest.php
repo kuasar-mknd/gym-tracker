@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
+use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
@@ -21,11 +22,14 @@ use Illuminate\Validation\ValidationException;
  * se l'approprier. Le nom seul reste libre ; le champ `current_password` est
  * alors écarté, quoi qu'il porte.
  *
- * Les minuscules ne sont exigées, elles aussi, que d'une adresse qui change.
- * GitHub rend l'adresse avec sa casse à l'inscription, et le panneau ne
- * l'impose pas : exigées d'une adresse inchangée, elles bloqueraient le seul
- * nom, et ramener l'adresse en minuscules, c'est la changer, donc donner le
- * mot de passe, qu'un compte relié à un fournisseur peut n'avoir jamais choisi.
+ * Les minuscules ne sont exigées, elles aussi, que d'une adresse qui change,
+ * comme la forme de l'adresse (règle `email`, #2075). GitHub rend l'adresse
+ * avec sa casse à l'inscription, et le panneau ne l'impose pas ; la connexion
+ * sociale, avant #2075, créait le compte de toute adresse en ASCII
+ * imprimable, points consécutifs ou tiret bas dans le domaine compris. Jugée
+ * sur une adresse inchangée, l'une ou l'autre règle bloquerait le seul nom, et
+ * corriger l'adresse, c'est la changer, donc donner le mot de passe, qu'un
+ * compte relié à un fournisseur peut n'avoir jamais choisi.
  *
  * Les essais manqués avancent le compteur du changement de mot de passe
  * (`UpdatePasswordRequest::throttleKey()`), que seul un mot de passe accepté
@@ -50,11 +54,17 @@ class ProfileUpdateRequest extends FormRequest
      * Get the validation rules that apply to the request.
      *
      * Une nouvelle adresse s'écrit en ASCII imprimable, comme à l'inscription
-     * (`AdresseEnAsciiImprimable`) ; l'adresse actuelle du compte reste admise
-     * telle quelle. Aucune règle ne regarde si la nouvelle adresse a déjà un
-     * compte : la réponse le dirait. Le changement attend le lien envoyé à
-     * cette adresse (`TraiterUnChangementDAdresse`), qui prévient au contraire
-     * son titulaire quand elle est prise. `bail` tient `current_password`
+     * (`AdresseEnAsciiImprimable`), et sous une forme que la messagerie écrit
+     * telle quelle, sans quoi le lien de confirmation ne lui parviendrait pas
+     * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; l'adresse actuelle du
+     * compte reste admise telle quelle par l'une et l'autre, et la règle
+     * `email` ne juge qu'une adresse qui change, pour qu'un compte plus ancien
+     * enregistre son nom. Aucune règle ne regarde si la nouvelle adresse a
+     * déjà un compte : la réponse le dirait, et le refus d'une adresse que la
+     * messagerie n'écrit pas est le message de toute adresse mal formée. Le
+     * changement attend le lien envoyé à cette adresse
+     * (`TraiterUnChangementDAdresse`), qui prévient au contraire son titulaire
+     * quand elle est prise. `bail` tient `current_password`
      * derrière `string` : la règle passe la valeur telle quelle à
      * `password_verify()`, et un tableau y levait une erreur 500 (#2071).
      *
@@ -67,10 +77,10 @@ class ProfileUpdateRequest extends FormRequest
             'email' => [
                 'required',
                 'string',
-                Rule::when($this->changeLAdresse(), ['lowercase']),
-                'email',
+                Rule::when($this->changeLAdresse(), ['lowercase', 'email']),
                 'max:255',
                 new AdresseEnAsciiImprimable($this->compte()?->email),
+                new AdresseQueLaMessagerieSaitEcrire($this->compte()?->email),
             ],
             'current_password' => $this->changeLAdresse()
                 ? ['bail', 'required', 'string', 'current_password:web', 'max:255']
@@ -82,7 +92,8 @@ class ProfileUpdateRequest extends FormRequest
      * Un compte relié à un fournisseur de connexion peut ne connaître aucun
      * mot de passe : le message lui donne le chemin plutôt qu'un refus sec.
      * « Mot de passe oublié ? » n'est ouvert qu'aux invités, d'où la
-     * déconnexion d'abord ; le lien part à l'adresse actuelle du compte.
+     * déconnexion d'abord ; le lien part à l'adresse actuelle du compte, quand
+     * la messagerie l'écrit (`cheminVersUnMotDePasse()`).
      *
      * @return array<string, string>
      */
@@ -98,7 +109,7 @@ class ProfileUpdateRequest extends FormRequest
             ];
         }
 
-        $chemin = "Ton compte est relié à {$fournisseur}. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.";
+        $chemin = "Ton compte est relié à {$fournisseur}. Si tu n’as jamais choisi de mot de passe, ".$this->cheminVersUnMotDePasse();
 
         return [
             'current_password.required' => $chemin,
@@ -164,6 +175,25 @@ class ProfileUpdateRequest extends FormRequest
         if ($this->changeLAdresse()) {
             RateLimiter::clear($this->throttleKey());
         }
+    }
+
+    /**
+     * Comment un compte relié à un fournisseur obtient un mot de passe.
+     *
+     * Le lien « mot de passe oublié » ne part pas à une adresse que la
+     * messagerie n'écrit pas telle quelle, qu'un compte d'avant #2075 peut
+     * porter (`User::routeNotificationForMail()`), et la demande refuse même
+     * des points consécutifs ou un point final (règle `email`) : le message ne
+     * le promet pas, et renvoie à un administrateur, qui change l'adresse au
+     * panneau.
+     */
+    private function cheminVersUnMotDePasse(): string
+    {
+        if ($this->compte()?->laMessagerieSaitEcrireSonAdresse() === false) {
+            return 'aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
+        }
+
+        return 'choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.';
     }
 
     private function compte(): ?User
