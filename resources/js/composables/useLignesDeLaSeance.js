@@ -2,6 +2,7 @@ import { computed, onUnmounted } from 'vue'
 import SyncService from '@/Utils/SyncService'
 import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
 import { entreeDeLaRangee } from '@/Utils/seanceEtFile'
+import { retirerDeLaListe } from '@/Utils/miseAJourOptimiste'
 import { useConfirmation } from '@/composables/useConfirmation'
 
 /**
@@ -182,8 +183,13 @@ export const useLignesDeLaSeance = ({
 
         oublierLesEcrituresDeLaLigne(line)
 
-        const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === lineId)
-        const removedLine = idx !== -1 ? localWorkout.value.workout_lines.splice(idx, 1)[0] : null
+        /*
+         * Refusé, le retrait remet la ligne à sa place exacte : devant la
+         * première de ses suivantes encore là, jamais deux fois (#2077).
+         * Remise à son indice de départ, une ligne passait devant une autre
+         * retirée avant elle et refusée d'abord.
+         */
+        const remettre = retirerDeLaListe(() => localWorkout.value.workout_lines, lineId)
 
         /*
          * Une ligne dont la création attend encore en file sort de la file avec
@@ -229,8 +235,8 @@ export const useLignesDeLaSeance = ({
                 return SyncService.delete(route('api.v1.workout-lines.destroy', { workout_line: realLineId }))
             })
             .catch((err) => {
-                if (!err.isOffline && removedLine) {
-                    localWorkout.value.workout_lines.splice(idx, 0, removedLine)
+                if (!err.isOffline && remettre !== null) {
+                    remettre()
                     reportSyncFailure('L’exercice n’a pas pu être retiré de la séance. Réessaie.')
                 }
             })

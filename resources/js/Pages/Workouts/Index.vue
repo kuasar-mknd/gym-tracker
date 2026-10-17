@@ -17,6 +17,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import GlassStat from '@/Components/UI/GlassStat.vue'
 import { entier } from '@/Utils/nombre'
 import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
+import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
 const WorkoutHistoryTimelineChart = defineAsyncComponent(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
@@ -84,29 +85,31 @@ const {
 } = useConfirmation((workout, termine) => {
     /*
      * La ligne part de l'écran avant la réponse du serveur, et revient à sa
-     * place exacte si elle échoue. L'ordre compte : on referme le dialogue
-     * AVANT de retirer la ligne, sinon la modale reste ouverte sur une liste
-     * qui a déjà bougé sous elle.
+     * place exacte sur tout échec : refus, réseau absent, réponse en erreur,
+     * visite annulée ou interrompue (#2077). L'ordre compte : on referme le
+     * dialogue AVANT de retirer la ligne, sinon la modale reste ouverte sur
+     * une liste qui a déjà bougé sous elle.
      */
     termine()
 
-    const index = workoutList.value.findIndex((w) => w.id === workout.id)
+    const remettre = retirerDeLaListe(() => workoutList.value, workout.id)
 
-    if (index === -1) {
+    if (remettre === null) {
         return
     }
 
-    const removedWorkout = workoutList.value[index]
-    workoutList.value.splice(index, 1)
     triggerHaptic('warning')
 
-    deleteForm.delete(route('workouts.destroy', { workout: workout.id }), {
-        preserveScroll: true,
-        onError: () => {
-            workoutList.value.splice(index, 0, removedWorkout)
-            triggerHaptic('error')
-        },
-    })
+    deleteForm.delete(
+        route('workouts.destroy', { workout: workout.id }),
+        revenirSiLaVisiteEchoue(
+            () => {
+                remettre()
+                triggerHaptic('error')
+            },
+            { preserveScroll: true },
+        ),
+    )
 })
 const { isRefreshing, pullDistance } = usePullToRefresh()
 </script>

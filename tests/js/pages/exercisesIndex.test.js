@@ -342,8 +342,10 @@ describe('Exercises/Index — suppression optimiste', () => {
         const wrapper = mountPage([PECS, PECS_2, BACK])
         await deleteFirstCard(wrapper)
 
+        // Comme Inertia : le refus (sans rappel `onError`, rien), puis la fin de la visite.
         const [, options] = hoisted.routerDelete.mock.calls[0]
-        options.onError()
+        options.onError?.()
+        options.onFinish()
         await wrapper.vm.$nextTick()
 
         expect(renderedCards(wrapper).map((card) => card.name)).toEqual([
@@ -351,6 +353,41 @@ describe('Exercises/Index — suppression optimiste', () => {
             'Écarté couché',
             'Tractions',
         ])
+
+        wrapper.unmount()
+    })
+
+    /*
+     * Sans réseau, sur un 403, un 419 ou un 500, sur une visite annulée,
+     * Inertia n'appelle pas `onError` : la visite finit sans succès (#2077).
+     * Le vrai client joue chaque cas dans `misesAJourOptimistesAvecInertia.test.js`.
+     */
+    it('remet la ligne quand la visite finit sans succès, refus ou non', async () => {
+        const wrapper = mountPage([PECS, PECS_2, BACK])
+        await deleteFirstCard(wrapper)
+
+        hoisted.routerDelete.mock.calls[0][1].onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(renderedCards(wrapper).map((card) => card.name)).toEqual([
+            'Développé couché',
+            'Écarté couché',
+            'Tractions',
+        ])
+
+        wrapper.unmount()
+    })
+
+    it('laisse la ligne partie quand le serveur l’a supprimée', async () => {
+        const wrapper = mountPage([PECS, PECS_2, BACK])
+        await deleteFirstCard(wrapper)
+
+        const [, options] = hoisted.routerDelete.mock.calls[0]
+        options.onSuccess()
+        options.onFinish()
+        await wrapper.vm.$nextTick()
+
+        expect(renderedCards(wrapper).map((card) => card.name)).toEqual(['Écarté couché', 'Tractions'])
 
         wrapper.unmount()
     })

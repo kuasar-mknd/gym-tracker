@@ -133,6 +133,48 @@ export const reponseInertia = (page) => ({
 })
 
 /**
+ * Joue `action` sous une `window.location` simulée, qui compte les chargements
+ * complets de la page qu'Inertia demande (`reload()`, ou une adresse affectée
+ * à `href`) : jsdom n'en fait aucun. L'adresse reste celle de la page. La
+ * vraie `window.location` revient ensuite, et la note qu'Inertia laisse au
+ * chargement suivant (`inertiaLocationVisit`) s'efface (#2077).
+ *
+ * @param {() => Promise<void>} action
+ * @returns {Promise<string[]>} les chargements demandés, dans l'ordre
+ */
+export const chargementsCompletsPendant = async (action) => {
+    const adresse = window.location.href
+    const chargements = []
+    const lieuDOrigine = Object.getOwnPropertyDescriptor(window, 'location')
+
+    Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: {
+            get href() {
+                return adresse
+            },
+            set href(valeur) {
+                chargements.push(String(valeur))
+            },
+            hash: new URL(adresse).hash,
+            toString: () => adresse,
+            assign: (valeur) => chargements.push(String(valeur)),
+            replace: (valeur) => chargements.push(String(valeur)),
+            reload: () => chargements.push(adresse),
+        },
+    })
+
+    try {
+        await action()
+    } finally {
+        Object.defineProperty(window, 'location', lieuDOrigine)
+        window.sessionStorage.removeItem('inertiaLocationVisit')
+    }
+
+    return chargements
+}
+
+/**
  * Relaie à la fenêtre chaque rejet que personne n'attend, et les garde.
  *
  * @returns {{ rejets: unknown[], retirer: () => void }}

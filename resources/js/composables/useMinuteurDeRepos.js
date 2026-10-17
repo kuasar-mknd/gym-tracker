@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
+import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
 /**
  * Ce que dit un réglage du repos automatique resté sans réponse (#2048). Pas
@@ -43,25 +44,36 @@ export const useMinuteurDeRepos = () => {
         demarrerLeRepos(exerciseRestTime)
     }
 
+    /** Le numéro du dernier réglage envoyé : seul son échec ramène l'interrupteur. */
+    let dernierEnvoi = 0
+
     /**
-     * Sans réseau, l'interrupteur revient où il était, et un message le dit
-     * (#2048) : il ne changeait qu'à l'écran, et la séance suivante repartait
-     * sur l'ancien réglage sans que rien ne l'ait dit.
+     * L'interrupteur revient au réglage que le serveur tient (celui de la page)
+     * sur tout échec du dernier envoi : refus, réseau absent, réponse en
+     * erreur, visite annulée ou interrompue (#2077). Il ne revenait que sans
+     * réseau (#2048) : un 419 ou un 500 le laissaient changé à l'écran, et la
+     * séance suivante repartait sur l'ancien réglage sans que rien ne l'ait dit.
+     * Sans réseau, un message le dit, comme avant.
      */
     const setAutoRestTimer = (valeur) => {
-        const precedent = autoRestTimer.value
+        const envoi = ++dernierEnvoi
         autoRestTimer.value = valeur
 
         router.patch(
             route('profile.rest-timer.update'),
             { auto_rest_timer: valeur },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onNetworkError: direSansReseau(REPOS_AUTOMATIQUE_SANS_RESEAU, () => {
-                    autoRestTimer.value = precedent
-                }),
-            },
+            revenirSiLaVisiteEchoue(
+                () => {
+                    if (envoi === dernierEnvoi) {
+                        autoRestTimer.value = usePage().props.auth.user.auto_rest_timer !== false
+                    }
+                },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onNetworkError: direSansReseau(REPOS_AUTOMATIQUE_SANS_RESEAU),
+                },
+            ),
         )
     }
 

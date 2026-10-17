@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } 
 import { createApp, h } from 'vue'
 import {
     RequeteSimulee,
+    chargementsCompletsPendant,
     relayerLesRejetsNonGeres,
     reponseInertia,
     requetes,
@@ -26,6 +27,9 @@ import {
  * Le réseau est celui de `reseauSimule.js` : Inertia attend que le test serve
  * la déconnexion, et `fetch`, par où passe la file, ne joint jamais le
  * serveur : ce qui est mis en file y reste.
+ *
+ * La suppression du compte, qui efface de même ce que l'appareil gardait
+ * (#1964, #2050), se joue ici aussi, sur la vraie fenêtre du profil.
  */
 
 // Le détachement de l'appareil a ses propres tests (useDeconnexion.test.js) : ici, seulement l'appel.
@@ -99,6 +103,19 @@ const route = (nom) => {
 const fileStockee = () => JSON.parse(localStorage.getItem('offline_sync_queue') ?? '[]')
 const comptesDeLaFile = () => fileStockee().map((entree) => entree.compte)
 const logouts = () => requetes.filter((requete) => requete.url.endsWith('/logout'))
+const suppressions = () => requetes.filter((requete) => requete.url.endsWith('/profile.destroy'))
+
+/**
+ * La réponse que reçoit une visite quand l'application a été mise à jour depuis
+ * l'ouverture de la page : la redirection qui suit la déconnexion ou la
+ * suppression du compte répond 409 `X-Inertia-Location`, la version des actifs
+ * ayant changé, et Inertia recharge toute la page, sans `onSuccess` (#2077).
+ */
+const ACCUEIL = new URL('/', 'http://localhost').href
+const rechargementComplet = () => ({
+    statut: 409,
+    entetes: { 'x-inertia-location': ACCUEIL, 'x-inertia-version': 'v2' },
+})
 const question = () => document.querySelector('dialog[open]')
 const texteDeLaQuestion = () => question()?.textContent.replace(/\s+/g, ' ').trim() ?? ''
 const bouton = (dusk) => document.querySelector(`[dusk="${dusk}"]`)
@@ -153,6 +170,7 @@ beforeAll(async () => {
     const { default: AuthenticatedLayout } = await import('@/Layouts/AuthenticatedLayout.vue')
     const { default: GuestLayout } = await import('@/Layouts/GuestLayout.vue')
     const { default: VerifyEmail } = await import('@/Pages/Auth/VerifyEmail.vue')
+    const { default: DeleteUserForm } = await import('@/Pages/Profile/Partials/DeleteUserForm.vue')
 
     installerLesVisitesHorsLigne({ routeur })
 
@@ -169,6 +187,8 @@ beforeAll(async () => {
                     ),
                 ]),
         },
+        // La carte du profil qui supprime le compte, telle que `Pages/Profile/Index.vue` la pose.
+        Suppression: { render: () => h(AuthenticatedLayout, null, () => h(DeleteUserForm)) },
         Connexion: { render: () => h(GuestLayout, null, () => h('p', { id: 'contenu' }, 'Connexion')) },
         // La vraie page, et son bouton « Se déconnecter ».
         VerificationDeLAdresse: VerifyEmail,
@@ -289,6 +309,42 @@ describe('se déconnecter avec des écritures en attente', () => {
         // Le contenu des écritures n'est écrit nulle part ailleurs.
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
         expect(JSON.stringify({ ...sessionStorage })).not.toContain('Note privée')
+        expect(relais.rejets).toEqual([])
+    })
+
+    /*
+     * La déconnexion faite juste après une mise en production : la session est
+     * fermée, mais la réponse recharge toute la page, sans `onSuccess`. Elle
+     * passait pour un échec : la file du compte, ses brouillons et sa recherche
+     * restaient en clair sur l'appareil, et l'écran rechargé n'en disait rien.
+     */
+    it('« Se déconnecter quand même » efface la file même quand la réponse recharge toute la page', async () => {
+        await modifierHorsLigne(1)
+        await modifierHorsLigne(2)
+        SyncService.addToQueue({ method: 'patch', url: '/api/v1/sets/9', data: { reps: 3 } }, '2')
+        localStorage.setItem('gymtracker_add_exercise_search', 'Squat')
+        localStorage.setItem('draft_set_12', JSON.stringify({ weight: 82.5 }))
+
+        const chargements = await chargementsCompletsPendant(() =>
+            jusquALaFinDeLaVisite(async () => {
+                await cliquerDeconnexion()
+                bouton('confirm-dialog-confirm').click()
+                await vi.waitUntil(() => logouts().length === 1)
+                logouts()[0].repondre(rechargementComplet())
+            }),
+        )
+
+        expect(chargements).toEqual([ACCUEIL])
+        expect(appareil.detacher).toHaveBeenCalledTimes(1)
+        expect(comptesDeLaFile()).toEqual(['2'])
+        expect(SyncService.queue.map((entree) => entree.compte)).toEqual(['2'])
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBeNull()
+        expect(localStorage.getItem('draft_set_12')).toBeNull()
+        // L'écran rechargé dit ce que la déconnexion a effacé.
+        expect(JSON.parse(sessionStorage.getItem('gym-tracker:ecritures-effacees-a-la-deconnexion'))).toMatchObject({
+            nombre: 2,
+        })
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
         expect(relais.rejets).toEqual([])
     })
 
@@ -509,6 +565,69 @@ describe('depuis la vérification de l’adresse, sous le layout invité', () =>
             "Une modification faite hors ligne le 15/09/2026 n'a pas pu être enregistrée : gardée 30 jours sur cet appareil sans pouvoir partir, elle a été abandonnée et effacée. Vérifie tes séances.",
         )
         expect(localStorage.getItem('gym-tracker:ecritures-abandonnees')).toBeNull()
+        expect(relais.rejets).toEqual([])
+    })
+})
+
+describe('la suppression du compte', () => {
+    const allerALaSuppression = () =>
+        new Promise((fini) => routeur.replace({ ...pageDuProfil(), component: 'Suppression', onFinish: fini }))
+
+    const supprimerLeCompte = async () => {
+        document.querySelector('[data-testid="delete-account-button"]').click()
+        await uneTache()
+        document.querySelector('[data-testid="confirm-delete-button"]').click()
+        await vi.waitUntil(() => suppressions().length === 1)
+    }
+
+    /*
+     * La suppression faite juste après une mise en production : le compte est
+     * supprimé, mais la réponse recharge toute la page, sans `onSuccess`. Ce
+     * que l'appareil gardait pour lui y restait : ses écritures en file, ses
+     * brouillons, sa recherche, et l'abonnement de l'appareil.
+     */
+    it('efface ce que l’appareil gardait pour le compte, même quand la réponse recharge toute la page', async () => {
+        await allerALaSuppression()
+        await modifierHorsLigne(1)
+        SyncService.addToQueue({ method: 'patch', url: '/api/v1/sets/9', data: { reps: 3 } }, '2')
+        localStorage.setItem('gymtracker_add_exercise_search', 'Squat')
+        localStorage.setItem('draft_set_12', JSON.stringify({ weight: 82.5 }))
+
+        const chargements = await chargementsCompletsPendant(() =>
+            jusquALaFinDeLaVisite(async () => {
+                await supprimerLeCompte()
+                suppressions()[0].repondre(rechargementComplet())
+            }),
+        )
+
+        expect(chargements).toEqual([ACCUEIL])
+        expect(appareil.detacher).toHaveBeenCalledWith({ prevenirLeServeur: false })
+        expect(comptesDeLaFile()).toEqual(['2'])
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBeNull()
+        expect(localStorage.getItem('draft_set_12')).toBeNull()
+        expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
+        expect(relais.rejets).toEqual([])
+    })
+
+    it('garde tout quand le serveur refuse la suppression', async () => {
+        await allerALaSuppression()
+        await modifierHorsLigne(1)
+        localStorage.setItem('gymtracker_add_exercise_search', 'Squat')
+
+        await jusquALaFinDeLaVisite(async () => {
+            await supprimerLeCompte()
+            suppressions()[0].repondre(
+                reponseInertia({
+                    ...pageDuProfil(),
+                    component: 'Suppression',
+                    props: { ...pageDuProfil().props, errors: { password: 'Mot de passe incorrect.' } },
+                }),
+            )
+        })
+
+        expect(appareil.detacher).not.toHaveBeenCalled()
+        expect(comptesDeLaFile()).toEqual(['1'])
+        expect(localStorage.getItem('gymtracker_add_exercise_search')).toBe('Squat')
         expect(relais.rejets).toEqual([])
     })
 })

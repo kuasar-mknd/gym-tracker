@@ -1,5 +1,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import SyncService from '@/Utils/SyncService'
+import { ordreRetabli } from '@/Utils/miseAJourOptimiste'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { useListeReordonnable, useSousListesReordonnables } from '@/composables/useListeReordonnable'
 
@@ -210,11 +211,15 @@ export const useOrdreDeLaSeance = ({
                         return
                     }
 
-                    const parId = new Map(localWorkout.value.workout_lines.map((ligne) => [ligne.id, ligne]))
-
-                    localWorkout.value.workout_lines = ordreConfirme.value
-                        .map((id) => parId.get(id))
-                        .filter((ligne) => ligne !== undefined)
+                    /*
+                     * Une ligne que l'ordre confirmé ne connaît pas (ajoutée
+                     * depuis par l'API) reste à l'écran, à la fin : elle en
+                     * disparaissait (#2077).
+                     */
+                    localWorkout.value.workout_lines = ordreRetabli(
+                        localWorkout.value.workout_lines,
+                        ordreConfirme.value,
+                    )
 
                     reportSyncFailure('L’ordre des exercices n’a pas pu être enregistré. Réessaie.')
                 })
@@ -285,9 +290,7 @@ export const useOrdreDeLaSeance = ({
                         return
                     }
 
-                    const parId = new Map(ligne.sets.map((serie) => [serie.id, serie]))
-
-                    ligne.sets = avantEcriture.map((id) => parId.get(id)).filter((serie) => serie !== undefined)
+                    ligne.sets = ordreRetabli(ligne.sets, avantEcriture)
 
                     reportSyncFailure('L’ordre des séries n’a pas pu être enregistré. Réessaie.')
                 })

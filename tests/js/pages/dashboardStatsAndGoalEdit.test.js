@@ -397,6 +397,36 @@ describe('Stats/Index', () => {
         expect(wrapper.findComponent({ name: 'VolumeTrendCard' }).props('currentPeriod')).toBe('7j')
     })
 
+    /*
+     * Sans réseau, sur une réponse en erreur ou une visite annulée, la
+     * sélection restait sur la période demandée, au-dessus des données de
+     * l'ancienne (#2077). Le vrai client joue chaque cas dans
+     * `misesAJourOptimistesAvecInertia.test.js`.
+     */
+    it('revient à la période de la page quand la visite finit sans succès', async () => {
+        const wrapper = mountStats({ selectedPeriod: '30j' })
+
+        await periodButton(wrapper, '7 JOURS').trigger('click')
+        routerVisit.mock.calls[0][1].onFinish()
+        await nextTick()
+
+        expect(pressedPeriod(wrapper)).toEqual(['30 JOURS'])
+    })
+
+    it('garde la période demandée quand la visite réussit, même après une demande interrompue', async () => {
+        const wrapper = mountStats({ selectedPeriod: '30j' })
+
+        await periodButton(wrapper, '7 JOURS').trigger('click')
+        await periodButton(wrapper, '1 AN').trigger('click')
+        // La première, interrompue par la seconde, finit sans succès.
+        routerVisit.mock.calls[0][1].onFinish()
+        routerVisit.mock.calls[1][1].onSuccess()
+        routerVisit.mock.calls[1][1].onFinish()
+        await nextTick()
+
+        expect(pressedPeriod(wrapper)).toEqual(['1 AN'])
+    })
+
     it('survit à des données différées encore absentes', () => {
         const wrapper = mountStats({ latestWeight: '75.50', weightChange: -1.2 })
 

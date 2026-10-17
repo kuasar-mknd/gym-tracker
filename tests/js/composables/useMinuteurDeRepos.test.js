@@ -55,14 +55,45 @@ describe('le minuteur de repos', () => {
         const minuteur = useMinuteurDeRepos()
 
         minuteur.setAutoRestTimer(false)
-        const { rendu, annonces } = annoncesPendant(() =>
-            inertia.patch.mock.calls[0][2].onNetworkError({ code: 'ERR_NETWORK' }),
-        )
+        const options = inertia.patch.mock.calls[0][2]
+        // Comme Inertia : l'échec du réseau, puis la fin de la visite.
+        const { rendu, annonces } = annoncesPendant(() => options.onNetworkError({ code: 'ERR_NETWORK' }))
+        options.onFinish()
 
         expect(rendu).toBe(false)
         expect(minuteur.autoRestTimer.value).toBe(true)
         expect(annonces).toEqual([REPOS_AUTOMATIQUE_SANS_RESEAU])
         expect(useEtatDuReseau().joignable.value).toBe(false)
+    })
+
+    /*
+     * Un 419, un 500, un refus ou une visite annulée laissaient l'interrupteur
+     * changé à l'écran (#2077). Le vrai client joue chaque cas dans
+     * `tests/js/pages/misesAJourOptimistesAvecInertia.test.js`.
+     */
+    it('revient au réglage de la page quand la visite finit sans succès, quelle qu’en soit la raison', () => {
+        const minuteur = useMinuteurDeRepos()
+
+        minuteur.setAutoRestTimer(false)
+        inertia.patch.mock.calls[0][2].onFinish()
+
+        expect(minuteur.autoRestTimer.value).toBe(true)
+    })
+
+    it('garde le réglage accepté, et ne laisse pas un envoi dépassé défaire le suivant', () => {
+        const minuteur = useMinuteurDeRepos()
+
+        minuteur.setAutoRestTimer(false)
+        minuteur.setAutoRestTimer(true)
+        minuteur.setAutoRestTimer(false)
+        // Les deux premiers envois, interrompus par le suivant, finissent sans succès.
+        inertia.patch.mock.calls[0][2].onFinish()
+        inertia.patch.mock.calls[1][2].onFinish()
+        expect(minuteur.autoRestTimer.value).toBe(false)
+
+        inertia.patch.mock.calls[2][2].onSuccess()
+        inertia.patch.mock.calls[2][2].onFinish()
+        expect(minuteur.autoRestTimer.value).toBe(false)
     })
 
     it('lit le réglage du profil au départ', () => {

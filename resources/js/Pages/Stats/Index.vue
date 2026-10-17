@@ -11,6 +11,7 @@ import MuscleDistributionCard from '@/Components/Stats/MuscleDistributionCard.vu
 import ExerciseProgressCard from '@/Components/Stats/ExerciseProgressCard.vue'
 import SummaryStatsGrid from '@/Components/Stats/SummaryStatsGrid.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
+import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
 const props = defineProps({
     // ⚡ Bolt: Consolidated deferred data
@@ -32,13 +33,34 @@ const periods = [
     { value: '1a', label: '1 AN' },
 ]
 
+/** Le numéro de la dernière période demandée : seul son échec ramène la sélection. */
+let derniereDemande = 0
+
+/**
+ * La sélection bouge tout de suite, et revient à la période que la page montre
+ * sur tout échec de la dernière demande : refus, réseau absent, réponse en
+ * erreur, visite annulée ou interrompue (#2077). Elle restait sur la période
+ * demandée, au-dessus des données de l'ancienne.
+ */
 const handlePeriodChange = (period) => {
+    const demande = ++derniereDemande
+
     currentPeriod.value = period
-    router.visit(route('stats.index'), {
-        data: { period },
-        preserveScroll: true,
-        preserveState: true,
-    })
+    router.visit(
+        route('stats.index'),
+        revenirSiLaVisiteEchoue(
+            () => {
+                if (demande === derniereDemande) {
+                    currentPeriod.value = props.selectedPeriod || '30j'
+                }
+            },
+            {
+                data: { period },
+                preserveScroll: true,
+                preserveState: true,
+            },
+        ),
+    )
 }
 </script>
 

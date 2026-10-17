@@ -23,6 +23,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import { useFiltreDansLUrl } from '@/composables/useFiltreDansLUrl'
 import { EXERCISE_CATEGORIES, EXERCISE_TYPES, CATEGORY_BORDER_COLORS, TYPE_ICONS } from '@/Utils/constants'
 import { compte } from '@/Utils/nombre'
+import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
@@ -89,27 +90,30 @@ const {
     /*
      * On referme le dialogue AVANT de retirer la ligne : la mise à jour est
      * optimiste, et la modale resterait sinon ouverte sur une liste qui a déjà
-     * bougé sous elle. La ligne revient à sa place exacte si le serveur refuse.
+     * bougé sous elle. La ligne revient à sa place exacte sur tout échec :
+     * refus, réseau absent, réponse en erreur, visite annulée ou interrompue
+     * (#2077).
      */
     termine()
 
-    const index = localExercises.value.findIndex((e) => e.id === exercice.id)
+    const remettre = retirerDeLaListe(() => localExercises.value, exercice.id)
 
-    if (index === -1) {
+    if (remettre === null) {
         return
     }
 
-    const removed = localExercises.value[index]
-    localExercises.value.splice(index, 1)
     triggerHaptic('warning')
 
-    router.delete(route('exercises.destroy', { exercise: exercice.id }), {
-        preserveScroll: true,
-        onError: () => {
-            localExercises.value.splice(index, 0, removed)
-            triggerHaptic('error')
-        },
-    })
+    router.delete(
+        route('exercises.destroy', { exercise: exercice.id }),
+        revenirSiLaVisiteEchoue(
+            () => {
+                remettre()
+                triggerHaptic('error')
+            },
+            { preserveScroll: true },
+        ),
+    )
 })
 
 /*
