@@ -51,7 +51,7 @@ class SyncIconFont extends Command
 
         $expected = self::checksum($names);
 
-        if ($this->option('check')) {
+        if ($this->option('check') === true) {
             return $this->verify($expected);
         }
 

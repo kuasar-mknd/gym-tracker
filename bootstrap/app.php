@@ -56,20 +56,25 @@ return Application::configure(basePath: dirname(__DIR__))
          * Le nonce CSP se tire ici, en tête de la pile globale, et non dans le
          * groupe `web` : le panneau Filament, Pulse, Horizon et les mises à jour
          * de Livewire ont leur propre pile, et tous lisent le nonce. Ajouté
-         * après `SecurityHeaders`, ce `prepend` passe devant lui ; seul le
-         * maillon qu'Inertia ajoute depuis son fournisseur reste devant, et il
-         * ne lit pas le nonce. Le docbloc du middleware dit pourquoi pas dans
-         * `boot()` (#1904).
+         * après `SecurityHeaders`, ce `prepend` passe devant lui ; seuls les
+         * maillons qu'Inertia et les notifications de Filament ajoutent depuis
+         * leur fournisseur restent devant, et ils ne lisent pas le nonce. Le
+         * docbloc du middleware dit pourquoi pas dans `boot()` (#1904).
          */
         $middleware->prepend(\App\Http\Middleware\NonceCspParRequete::class);
 
         /*
          * L'en-tête `Server-Timing` (#1315) se mesure de plus haut encore,
          * devant le nonce, pour chronométrer toute la pile : ce `prepend`, le
-         * dernier, passe devant les deux autres. Seul le maillon d'Inertia,
-         * ajouté depuis son fournisseur, reste devant. Il ne lit aucun nonce et
-         * ne rend rien : il note une heure en entrant, ajoute l'en-tête au
-         * retour, et coupé, ne fait que passer la main.
+         * dernier, passe devant les deux autres. Seuls les maillons d'Inertia
+         * et des notifications de Filament, ajoutés depuis leur fournisseur,
+         * restent devant : ce que le second fait au retour, ranger dans le
+         * cache les notifications du panneau et, sur chaque mise à jour
+         * Livewire (panneau, Pulse), y regarder sous verrou s'il en reste,
+         * échappe à la mesure. Ce
+         * middleware ne lit aucun nonce et ne rend rien : il note une heure en
+         * entrant, ajoute l'en-tête au retour, et coupé, ne fait que passer la
+         * main.
          */
         $middleware->prepend(\App\Http\Middleware\TempsDuServeur::class);
 

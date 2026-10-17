@@ -51,7 +51,9 @@ use Symfony\Component\HttpFoundation\Response;
  *   pas » indiscernables, en-têtes compris ; la ligne d'autrui coûte la
  *   vérification d'accès que l'absente ne coûte pas, et l'en-tête le dirait.
  *
- * En tête de la pile globale, pour mesurer tout ce qui suit, nonce compris.
+ * En tête de la pile globale, derrière les seuls maillons qu'Inertia et les
+ * notifications de Filament y ajoutent depuis leur fournisseur, pour mesurer
+ * tout ce qui suit, nonce compris.
  * L'utilisateur se lit au retour, par `hasUser()` : la garde dit ce que la
  * requête a déjà établi, sans rien aller chercher — `user()` irait lire le
  * cookie « se souvenir de moi », et connecterait.

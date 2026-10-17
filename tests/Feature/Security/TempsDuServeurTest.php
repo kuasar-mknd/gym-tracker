@@ -351,9 +351,14 @@ it('ne dit pas par l’en-tête ce que le 404 tait', function (): void {
 });
 
 /**
- * En tête de pile pour tout mesurer, nonce compris. Seul le maillon qu'Inertia
- * ajoute depuis son fournisseur, au démarrage, passe devant : il ne fait que
- * marquer les rappels différés d'une réponse 409.
+ * En tête de pile pour tout mesurer, nonce compris. Seuls passent devant les
+ * deux maillons que des paquets ajoutent depuis leur fournisseur, au
+ * démarrage : celui d'Inertia, qui ne fait que marquer les rappels différés
+ * d'une réponse 409, et celui des notifications de Filament (depuis 5.10.2),
+ * qui au retour range dans le cache les notifications du panneau restées en
+ * attente et, sur une mise à jour de Livewire, demande au cache s'il en garde.
+ * Ce passage au cache échappe à la mesure. La liste reste exacte : tout autre
+ * maillon placé devant fait tomber ce test.
  */
 it('ouvre la pile globale pour mesurer tout ce qui suit', function (): void {
     $noyau = app(\Illuminate\Contracts\Http\Kernel::class);
@@ -364,7 +369,10 @@ it('ouvre la pile globale pour mesurer tout ce qui suit', function (): void {
     $rang = array_search(TempsDuServeur::class, $pileGlobale, true);
 
     expect($rang)->toBeInt()
-        ->and(array_slice($pileGlobale, 0, (int) $rang))->toBe([\Inertia\Middleware\EnsureDeferredCallbacksRun::class]);
+        ->and(array_slice($pileGlobale, 0, (int) $rang))->toBe([
+            \Inertia\Middleware\EnsureDeferredCallbacksRun::class,
+            \Filament\Notifications\Http\Middleware\PublishNotifications::class,
+        ]);
 });
 
 /**
