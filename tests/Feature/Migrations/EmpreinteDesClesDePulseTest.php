@@ -20,9 +20,10 @@ use Laravel\Pulse\Value;
  * (`database/migrations/2026_10_17_145842_hacher_les_cles_de_pulse_sans_md5.php`).
  * Ces tests tournent sur le serveur de la suite : 8.4 et 9.7.2 en CI.
  *
- * Deux d'entre eux passent par un ordre DDL, qui valide la transaction de
- * `RefreshDatabase` : ce fichier fait lui-même ce que le `migrate:fresh` qui
- * suivrait referait (`.ai/rules/tests.md`).
+ * L'un d'eux (le remplacement de l'empreinte md5, sous 8.4 seulement) passe
+ * par un ordre DDL, qui valide la transaction de `RefreshDatabase` : ce
+ * fichier fait lui-même ce que le `migrate:fresh` qui suivrait referait
+ * (`.ai/rules/tests.md`).
  */
 
 /**
