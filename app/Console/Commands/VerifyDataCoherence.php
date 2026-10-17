@@ -56,7 +56,7 @@ class VerifyDataCoherence extends Command
             'propriétaire recopié sur les séries' => $this->proprietaireDesSeries(...),
         ];
 
-        if ($this->option('repair')) {
+        if ($this->option('repair') === true) {
             $this->reconstruireLesRecords();
             $this->recalculerLesVolumes();
             $this->recalculerLesSeries();
