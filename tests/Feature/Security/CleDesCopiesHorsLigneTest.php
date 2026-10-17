@@ -94,9 +94,44 @@ function temoinLigneSetCookie(TestResponse $reponse): string
 }
 
 /**
+ * La ligne `Set-Cookie` qui efface le témoin doit être une que le navigateur
+ * accepte sous le nom `__Host-gt_copies` : `Secure`, posée sur `/`, sans
+ * domaine. Il ignore sinon la ligne entière, et le témoin survit à la fin de
+ * la session jusqu'à son échéance.
+ *
+ * @param  TestResponse<Response>  $reponse
+ */
+function temoinEffaceSousSonNomDeProduction(TestResponse $reponse): void
+{
+    $ligne = temoinLigneSetCookie($reponse);
+    $attributs = strtolower($ligne);
+
+    expect($ligne)->toStartWith(CleDesCopiesHorsLigne::TEMOIN_EN_HTTPS.'=deleted;')
+        ->and($attributs)->toContain('; max-age=0')
+        ->and($attributs)->toContain('; secure')
+        ->and($attributs)->toMatch('#; path=/(;|$)#')
+        ->and($attributs)->not->toContain('domain=');
+}
+
+/**
+ * Les réglages de production : le cookie de session réservé à HTTPS, et
+ * l'adresse de l'application, d'où Sanctum ouvre la session de l'API. Rend
+ * l'origine sous laquelle l'appareil s'adresse à l'application.
+ */
+function temoinReglagesDeProduction(): string
+{
+    config([
+        'session.secure' => true,
+        'sanctum.stateful' => ['gym.example.org'],
+    ]);
+
+    return 'https://gym.example.org';
+}
+
+/**
  * Un appareil connecté au compte par le formulaire de connexion.
  */
-function temoinAppareilConnecte(User $compte, bool $seSouvenirDeMoi = false): Appareil
+function temoinAppareilConnecte(User $compte, bool $seSouvenirDeMoi = false, string $origine = ''): Appareil
 {
     $appareil = new Appareil();
     $formulaire = ['email' => $compte->email, 'password' => 'password'];
@@ -105,7 +140,7 @@ function temoinAppareilConnecte(User $compte, bool $seSouvenirDeMoi = false): Ap
         $formulaire['remember'] = '1';
     }
 
-    $appareil->envoyer('POST', '/login', $formulaire)->assertRedirect(route('dashboard'));
+    $appareil->envoyer('POST', $origine.'/login', $formulaire)->assertRedirect(route('dashboard'));
 
     return $appareil;
 }
@@ -137,11 +172,13 @@ function temoinSerieDe(User $compte): Set
  *
  * @return TestResponse<Response>
  */
-function temoinSupprimerLaSerieParLApi(Appareil $appareil, Set $serie): TestResponse
+function temoinSupprimerLaSerieParLApi(Appareil $appareil, Set $serie, string $origine = ''): TestResponse
 {
-    return $appareil->envoyer('DELETE', route('api.v1.sets.destroy', $serie, absolute: false), [], [
+    $page = '/workouts/'.$serie->workoutLine->workout_id;
+
+    return $appareil->envoyer('DELETE', $origine.route('api.v1.sets.destroy', $serie, absolute: false), [], [
         'Accept' => 'application/json',
-        'Referer' => url('/workouts/'.$serie->workoutLine->workout_id),
+        'Referer' => $origine === '' ? url($page) : $origine.$page,
     ]);
 }
 
@@ -516,6 +553,47 @@ it('efface le témoin sur un 419, et la page suivante en pose un neuf', function
     expect(temoinDe($accueil)?->getValue())->toBeString()
         ->and(temoinDe($accueil)?->getValue())->not->toBe($cleDAvant);
 });
+
+/*
+ * En production, le témoin s'appelle `__Host-gt_copies`, et le navigateur
+ * refuse toute ligne `Set-Cookie` de ce nom qui n'est pas `Secure`, posée sur
+ * `/`, sans domaine : un effacement qui les oublierait n'effacerait rien, et
+ * la clé survivrait à la session. Chaque fin de session se lit donc sur la
+ * ligne même, sous ces réglages.
+ */
+it('efface le témoin __Host- par une ligne que le navigateur accepte, sous les réglages de production', function (Closure $finirLaSession): void {
+    $origine = temoinReglagesDeProduction();
+    $compte = User::factory()->create();
+    $appareil = temoinAppareilConnecte($compte, origine: $origine);
+
+    expect($appareil->cookie(CleDesCopiesHorsLigne::TEMOIN_EN_HTTPS))->toBeString();
+
+    /** @var TestResponse<Response> $reponse */
+    $reponse = $finirLaSession($compte, $appareil, $origine);
+
+    temoinEffaceSousSonNomDeProduction($reponse);
+
+    expect($appareil->cookie(CleDesCopiesHorsLigne::TEMOIN_EN_HTTPS))->toBeNull()
+        ->and(temoinCleDeLaSession())->toBeNull();
+})->with([
+    'la déconnexion' => [fn (User $compte, Appareil $appareil, string $origine): TestResponse => $appareil->envoyer('POST', $origine.'/logout')->assertRedirect()],
+    'le renvoi qui suit la suppression du compte' => [function (User $compte, Appareil $appareil, string $origine): TestResponse {
+        $compte->delete();
+
+        return $appareil->envoyer('GET', $origine.'/dashboard')->assertRedirect($origine.'/login');
+    }],
+    'le 401 de /api/v1/sets qui suit la suppression du compte' => [function (User $compte, Appareil $appareil, string $origine): TestResponse {
+        $serie = temoinSerieDe($compte);
+        $compte->delete();
+
+        return temoinSupprimerLaSerieParLApi($appareil, $serie, $origine)->assertUnauthorized();
+    }],
+    'un 419' => [function (User $compte, Appareil $appareil, string $origine): TestResponse {
+        temoinProtegerCommeEnProduction();
+
+        return $appareil->envoyer('POST', $origine.'/logout')->assertStatus(419);
+    }],
+]);
 
 it('pose le témoin sur une réponse de fichier comme sur une page', function (Closure $reponseDeFichier, string $contenu): void {
     Route::middleware(['web', 'auth'])->get('/_temoin-fichier', $reponseDeFichier);
