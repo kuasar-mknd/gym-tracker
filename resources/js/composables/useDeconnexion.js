@@ -4,6 +4,7 @@ import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import { attendreAuPlus } from '@/Utils/attendreAuPlus'
 import { oublierLesCopies } from '@/Utils/copiesHorsLigne'
+import { interrompreLePrechauffage } from '@/Utils/prechauffage'
 import SyncService from '@/Utils/SyncService'
 import { lireLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
 import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
@@ -245,9 +246,11 @@ const demanderOuPartir = () => {
  * détachement : une garde de tests/js/conventions/deconnexion.test.js refuse
  * qu'on en écrive un.
  *
- * Les copies hors ligne des pages s'oublient au départ, avant l'envoi
- * (#2048, `partir`). Une déconnexion acceptée efface ce que la file hors
- * ligne garde pour le compte (#2050). Quand des écritures du compte
+ * Le préchauffage des copies hors ligne s'interrompt avant toute autre chose,
+ * question comprise : rien de ce qu'il demandait ne revient pour le compte
+ * qui part. Les copies hors ligne des pages s'oublient au départ, avant
+ * l'envoi (#2048, `partir`). Une déconnexion acceptée efface ce que la file
+ * hors ligne garde pour le compte (#2050). Quand des écritures du compte
  * attendent encore, sur cet onglet ou un autre, rien ne part : la question
  * est posée d'abord (combien, et qu'elles seront perdues), et seul « Se
  * déconnecter quand même » (`seDeconnecterQuandMeme`) détache l'appareil et
@@ -268,6 +271,8 @@ const demanderOuPartir = () => {
  *   ou quand la question est posée.
  */
 export const seDeconnecter = () => {
+    interrompreLePrechauffage()
+
     if (deconnexionEnCours !== null) {
         return deconnexionEnCours
     }

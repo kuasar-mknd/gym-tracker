@@ -12,6 +12,7 @@ import { installerLaRouteGlobale } from '@/Utils/routeGlobale'
 import { installerLesVisitesHorsLigne } from '@/Utils/visitesHorsLigne'
 import { installerLaSondeDuServeur } from '@/Utils/sondeDuServeur'
 import { installerLEcritureDesCopies } from '@/Utils/ecritureDesCopies'
+import { installerLePrechauffage } from '@/Utils/prechauffage'
 import { oublierLesCopiesDUnAutreTitulaire } from '@/Utils/copiesHorsLigne'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
@@ -51,7 +52,14 @@ if (typeof window !== 'undefined') {
      * réseau, page initiale comprise, pour un seul compte (#2048). Avant
      * `createInertiaApp`, qui ne dit rien de la page initiale.
      */
-    installerLEcritureDesCopies({ routeur: router })
+    const ecritureDesCopies = installerLEcritureDesCopies({ routeur: router })
+
+    /*
+     * Après une vraie réponse, la page demande au serveur, huit pages au plus
+     * et l'une après l'autre, les pages du noyau de salle qui n'ont pas de
+     * copie ou dont la copie a vieilli, une fois par demi-heure (#2048).
+     */
+    installerLePrechauffage({ routeur: router, ecriture: ecritureDesCopies })
 }
 
 // Expose router for testing (Dusk)
