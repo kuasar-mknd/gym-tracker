@@ -77,13 +77,15 @@ use Symfony\Component\HttpFoundation\Response;
 final readonly class CleDesCopiesHorsLigne
 {
     /**
-     * Le nom du témoin hors HTTPS, là où le cookie de session n'est pas
-     * réservé à HTTPS (`session.secure` faux).
+     * Le nom du témoin quand le cookie de session n'est pas réservé à HTTPS
+     * (`session.secure` faux), même pour une requête arrivée en HTTPS : le
+     * nom suit le réglage, pas le protocole.
      */
     public const string TEMOIN = 'gt_copies';
 
     /**
-     * Le nom du témoin en HTTPS : le préfixe `__Host-` fait refuser par le
+     * Le nom du témoin quand le cookie de session est réservé à HTTPS
+     * (`session.secure` vrai) : le préfixe `__Host-` fait refuser par le
      * navigateur un cookie qui ne serait pas `Secure`, posé sur `/`, sans
      * domaine.
      */
