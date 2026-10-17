@@ -1,0 +1,465 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createApp, h } from 'vue'
+
+import { creerUneFabriqueEnMemoire } from './baseIndexeeEnMemoire'
+import { RequeteSimulee, relayerLesRejetsNonGeres, reponseInertia, requetes, reseau, uneTache } from './reseauSimule'
+import { jsRoot } from '../conventions/sourceFiles'
+import { ECHEANCE_AU_REPOS_MS } from '@/Utils/auRepos'
+import {
+    MAGASIN_DES_PAGES,
+    MAGASIN_DE_L_ETAT,
+    NOM_DE_LA_BASE,
+    TEMOIN,
+    creerLeMagasinDesCopies,
+    ouvrirLaBaseDuNavigateur,
+} from '@/Utils/copiesHorsLigne'
+import { installerLEcritureDesCopies } from '@/Utils/ecritureDesCopies'
+import { CLEF_DU_TITULAIRE_DE_L_APPAREIL, installerLaGardeDeLHistorique } from '@/Utils/historiqueDuCompte'
+
+/*
+ * La page écrit la copie des pages gardées qu'elle reçoit du réseau (#2048,
+ * partie D), avec le vrai client d'Inertia : `success`, les visites
+ * partielles et les props différées sont les siens, et la garde de
+ * l'historique pose le titulaire de l'appareil comme dans `main.js`.
+ *
+ * Le client se monte une fois pour le fichier ; chaque cas repart d'un
+ * magasin vide et d'une page remise par une visite du client seul (#2044).
+ * La page initiale du document a ses fichiers à elle : elle ne se lit qu'au
+ * démarrage.
+ */
+
+const COMPTE = 7
+
+/** Une clé de 32 octets tirés au hasard, en base64url, comme le serveur la tire. */
+const cleAuHasard = () =>
+    btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '')
+
+/** @param {string} cle */
+const poserLeTemoin = (cle) => {
+    document.cookie = `${TEMOIN}=${cle}; path=/`
+}
+
+/**
+ * Une page d'un compte, telle que le serveur la rend en entier.
+ *
+ * @param {{ compte?: number, url?: string, component?: string, props?: object, encryptHistory?: boolean, deferredProps?: object }} [options]
+ */
+const pageDe = ({
+    compte = COMPTE,
+    url = '/dashboard',
+    component = 'Dashboard',
+    props = {},
+    encryptHistory = true,
+    deferredProps,
+} = {}) => ({
+    component,
+    url,
+    version: 'v1',
+    encryptHistory,
+    clearHistory: false,
+    props: {
+        errors: {},
+        auth: {
+            user: {
+                id: compte,
+                name: compte === COMPTE ? 'Camille Horsligne' : 'Dominique Autrecompte',
+                email: 'camille.horsligne@example.org',
+                active_workout: null,
+            },
+        },
+        ...props,
+    },
+    ...(deferredProps === undefined ? {} : { deferredProps }),
+})
+
+/** La table des routes que `@routes` déclare dans le document. */
+const ZIGGY = { url: 'http://localhost', port: null, defaults: {}, routes: { dashboard: { uri: 'dashboard' } } }
+
+let routeur
+let fabrique
+let magasin
+let ecriture
+let application
+let relais
+
+const copiesRangees = () => fabrique.enregistrements(NOM_DE_LA_BASE, MAGASIN_DES_PAGES)
+const etatRange = () => fabrique.enregistrements(NOM_DE_LA_BASE, MAGASIN_DE_L_ETAT).get('etat')
+
+/** Lance la visite, attend sa fin, puis que toutes les copies décidées soient écrites. */
+const visiter = async (adresse, options = {}) => {
+    let finie = false
+
+    routeur.visit(adresse, { ...options, onFinish: () => (finie = true) })
+    await vi.waitUntil(() => finie)
+    await uneTache()
+    await ecriture.ecrituresFinies()
+}
+
+/** Une visite que le serveur rend par `page`. */
+const recevoir = (page, options = {}) => {
+    reseau.mode = 'repond'
+    reseau.reponse = reponseInertia(page)
+
+    return visiter(page.url, options)
+}
+
+/**
+ * La réponse partielle du serveur : les seules props que la visite a
+ * demandées, et la forme de la page, que Laravel rend toujours.
+ *
+ * @param {object} props
+ */
+const reponsePartielle = (props) =>
+    reponseInertia({ component: 'Dashboard', url: '/dashboard', version: 'v1', encryptHistory: true, props })
+
+/** Une réponse partielle à un rechargement de l'accueil. */
+const recevoirEnPartie = async (props, options) => {
+    reseau.mode = 'repond'
+    reseau.reponse = reponsePartielle(props)
+
+    let fini = false
+
+    routeur.reload({ ...options, onFinish: () => (fini = true) })
+    await vi.waitUntil(() => fini)
+    await uneTache()
+    await ecriture.ecrituresFinies()
+}
+
+beforeAll(async () => {
+    vi.stubGlobal('XMLHttpRequest', RequeteSimulee)
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    globalThis.Ziggy = ZIGGY
+    document.body.innerHTML = '<div id="app"></div>'
+    window.history.replaceState(null, '', '/dashboard')
+
+    fabrique = creerUneFabriqueEnMemoire()
+    magasin = creerLeMagasinDesCopies({ ouvrirLaBase: () => ouvrirLaBaseDuNavigateur(fabrique) })
+
+    const inertia = await import('@inertiajs/vue3')
+    routeur = inertia.router
+
+    // Comme main.js : la garde de l'historique, puis l'écriture des copies, avant le démarrage d'Inertia.
+    installerLaGardeDeLHistorique({ routeur, pageInitiale: null })
+    ecriture = installerLEcritureDesCopies({ routeur, magasin, pageInitiale: null })
+
+    await inertia.createInertiaApp({
+        page: pageDe({ component: 'Tools/Index', url: '/tools' }),
+        resolve: () => ({ render: () => h('p', { id: 'contenu' }, 'Page') }),
+        setup: ({ el, App, props, plugin }) => {
+            application = createApp({ render: () => h(App, props) }).use(plugin)
+            application.mount(el)
+        },
+    })
+})
+
+beforeEach(async () => {
+    // Une visite du client seul, sans requête et sans `success` : aucune copie n'en vient.
+    await new Promise((fini) =>
+        routeur.replace({ ...pageDe({ component: 'Tools/Index', url: '/tools' }), onFinish: fini }),
+    )
+    await ecriture.ecrituresFinies()
+
+    copiesRangees().clear()
+    fabrique.enregistrements(NOM_DE_LA_BASE, MAGASIN_DE_L_ETAT).clear()
+    localStorage.clear()
+    requetes.length = 0
+    reseau.mode = 'coupe'
+    reseau.prochains = []
+    reseau.reponse = null
+    poserLeTemoin(cleAuHasard())
+    relais = relayerLesRejetsNonGeres()
+})
+
+afterEach(() => {
+    relais.retirer()
+    delete globalThis.requestIdleCallback
+})
+
+afterAll(() => {
+    application.unmount()
+    delete globalThis.Ziggy
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+})
+
+describe('une réponse complète du réseau', () => {
+    it('garde la page entière, avec la table des routes, chiffrée', async () => {
+        const page = pageDe({ props: { recentWorkouts: [{ name: 'Jambes du mardi' }] } })
+
+        await recevoir(page)
+
+        const lue = await magasin.lireUneCopie('/dashboard')
+
+        expect(lue.page).toMatchObject({ component: 'Dashboard', url: '/dashboard', encryptHistory: true })
+        expect(lue.page.props).toEqual(page.props)
+        expect(lue.ziggy).toEqual(ZIGGY)
+        expect(etatRange()).toMatchObject({ ouvert: true, compte: String(COMPTE) })
+        expect(JSON.stringify([...copiesRangees().values()].map((copie) => ({ ...copie, chiffre: null })))).not.toMatch(
+            /Camille|Jambes/,
+        )
+        expect(relais.rejets).toEqual([])
+    })
+
+    it('ne garde pas une page hors de la liste blanche, ni un autre composant à une adresse gardée', async () => {
+        await recevoir(pageDe({ component: 'Stats/Index', url: '/stats' }))
+        await recevoir(pageDe({ component: 'Journal/Index', url: '/dashboard' }))
+
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toBeUndefined()
+    })
+
+    it('ne garde rien quand l’historique n’est pas chiffré : un contexte qui n’est pas sûr', async () => {
+        await recevoir(pageDe({ encryptHistory: false }))
+
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toBeUndefined()
+    })
+
+    it('d’un autre compte, vide d’abord le magasin du précédent, puis garde la sienne', async () => {
+        await recevoir(pageDe())
+        await recevoir(pageDe({ component: 'Workouts/Index', url: '/workouts' }))
+        const empreinteDuPremier = etatRange().empreinte
+
+        expect([...copiesRangees().keys()].sort()).toEqual(['/dashboard', '/workouts'])
+
+        // Une autre session, une autre clé, un autre compte.
+        poserLeTemoin(cleAuHasard())
+        await recevoir(pageDe({ compte: 8 }))
+
+        expect([...copiesRangees().keys()]).toEqual(['/dashboard'])
+        expect(etatRange()).toMatchObject({ ouvert: true, compte: '8', empreintesFermees: [empreinteDuPremier] })
+        expect((await magasin.lireUneCopie('/dashboard')).page.props.auth.user.name).toBe('Dominique Autrecompte')
+        expect(await magasin.lireUneCopie('/workouts')).toBeNull()
+    })
+})
+
+describe('une réponse partielle', () => {
+    it('ne crée jamais de copie', async () => {
+        // La page est là, mais aucune copie : elle n'est pas venue du réseau.
+        await new Promise((fini) => routeur.replace({ ...pageDe(), onFinish: fini }))
+
+        await recevoirEnPartie({ statistiques: { seances: 3 } }, { only: ['statistiques'] })
+
+        expect(requetes.at(-1).entetes['X-Inertia-Partial-Data']).toBe('statistiques')
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toBeUndefined()
+    })
+
+    it('ne verse que ses props dans la copie, et ne remplace jamais auth', async () => {
+        await recevoir(pageDe({ props: { statistiques: { seances: 2 }, recentWorkouts: ['Jambes'] } }))
+
+        await recevoirEnPartie(
+            {
+                statistiques: { seances: 3 },
+                auth: { user: { id: COMPTE, name: 'Nom venu d’une réponse partielle', active_workout: null } },
+            },
+            { only: ['statistiques', 'auth'] },
+        )
+
+        const lue = await magasin.lireUneCopie('/dashboard')
+
+        expect(lue.page.props.statistiques).toEqual({ seances: 3 })
+        expect(lue.page.props.recentWorkouts).toEqual(['Jambes'])
+        expect(lue.page.props.auth.user.name).toBe('Camille Horsligne')
+        expect(lue.datesDesProps.statistiques).toBeGreaterThanOrEqual(lue.copieDu)
+    })
+
+    it('qui rend un autre composant est une réponse complète : le serveur a tout rendu', async () => {
+        await new Promise((fini) => routeur.replace({ ...pageDe(), onFinish: fini }))
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDe({ component: 'Workouts/Index', url: '/workouts' }))
+
+        let fini = false
+        routeur.reload({ only: ['statistiques'], onFinish: () => (fini = true) })
+        await vi.waitUntil(() => fini)
+        await ecriture.ecrituresFinies()
+
+        expect([...copiesRangees().keys()]).toEqual(['/workouts'])
+    })
+
+    /*
+     * Les props différées partent dès que la page est posée, et leur réponse
+     * peut revenir avant que la page soit au repos : leur écriture est alors
+     * décidée avant que la copie de la page soit écrite, et ne doit pas passer
+     * devant elle, qu'elle ne trouverait pas.
+     */
+    it('des props différées trouvent la copie de leur page, même décidées avant qu’elle soit écrite', async () => {
+        const auRepos = []
+        globalThis.requestIdleCallback = (rappel) => {
+            auRepos.push(rappel)
+        }
+        const fins = []
+        const arreter = routeur.on('finish', () => fins.push(true))
+
+        reseau.mode = 'muet'
+        routeur.visit('/dashboard')
+        await vi.waitUntil(() => requetes.length === 1)
+        requetes[0].repondre(reponseInertia(pageDe({ deferredProps: { default: ['graphique'] } })))
+
+        // Inertia demande aussitôt les props différées, en partiel.
+        await vi.waitUntil(() => requetes.length === 2)
+        expect(requetes[1].entetes['X-Inertia-Partial-Data']).toBe('graphique')
+        requetes[1].repondre(reponsePartielle({ graphique: [1, 2] }))
+        await vi.waitUntil(() => fins.length === 2)
+        arreter()
+
+        // Les deux écritures sont décidées, aucune n'est faite : la page arrive au repos.
+        expect(auRepos).toHaveLength(2)
+        expect(copiesRangees().size).toBe(0)
+        auRepos.forEach((rappel) => rappel())
+        await ecriture.ecrituresFinies()
+
+        const lue = await magasin.lireUneCopie('/dashboard')
+
+        expect(lue.page.props.graphique).toEqual([1, 2])
+        expect(lue.page.props.auth.user.id).toBe(COMPTE)
+    })
+})
+
+describe('l’écriture au repos', () => {
+    it('sans requestIdleCallback (Safari, Safari iOS), écrit quand même, sans ReferenceError', async () => {
+        expect('requestIdleCallback' in globalThis).toBe(false)
+        const erreurs = []
+        const surErreur = (evenement) => erreurs.push(evenement.error ?? evenement.message)
+        window.addEventListener('error', surErreur)
+
+        await recevoir(pageDe())
+
+        window.removeEventListener('error', surErreur)
+        expect(erreurs).toEqual([])
+        expect(relais.rejets).toEqual([])
+        expect((await magasin.lireUneCopie('/dashboard')).page.component).toBe('Dashboard')
+    })
+
+    it('passe par requestIdleCallback quand le navigateur l’a, avec une échéance', async () => {
+        globalThis.requestIdleCallback = vi.fn((rappel) => setTimeout(rappel, 0))
+
+        await recevoir(pageDe())
+
+        expect(globalThis.requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), {
+            timeout: ECHEANCE_AU_REPOS_MS,
+        })
+        expect(copiesRangees().has('/dashboard')).toBe(true)
+    })
+
+    it('attend que la page soit au repos pour écrire', async () => {
+        const enAttente = []
+        globalThis.requestIdleCallback = (rappel) => {
+            enAttente.push(rappel)
+        }
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDe())
+
+        let finie = false
+        routeur.visit('/dashboard', { onFinish: () => (finie = true) })
+        await vi.waitUntil(() => finie)
+        await fabrique.auRepos()
+
+        expect(enAttente).toHaveLength(1)
+        expect(copiesRangees().size).toBe(0)
+
+        enAttente.forEach((rappel) => rappel())
+        await ecriture.ecrituresFinies()
+
+        expect(copiesRangees().has('/dashboard')).toBe(true)
+    })
+    it('garde la page telle que le réseau l’a rendue, même modifiée avant le repos', async () => {
+        const auRepos = []
+        globalThis.requestIdleCallback = (rappel) => {
+            auRepos.push(rappel)
+        }
+        let recue = null
+        const arreter = routeur.on('success', (evenement) => {
+            recue = evenement.detail.page
+        })
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDe({ props: { recentWorkouts: [{ name: 'Jambes du mardi' }] } }))
+
+        let finie = false
+        routeur.visit('/dashboard', { onFinish: () => (finie = true) })
+        await vi.waitUntil(() => finie)
+        arreter()
+
+        // Un composant qui modifierait les props de la page après la réponse.
+        recue.props.recentWorkouts[0].name = 'Modifiée à l’écran'
+        auRepos.forEach((rappel) => rappel())
+        await ecriture.ecrituresFinies()
+
+        expect((await magasin.lireUneCopie('/dashboard')).page.props.recentWorkouts).toEqual([
+            { name: 'Jambes du mardi' },
+        ])
+    })
+})
+
+/*
+ * La page initiale d'un document qui ne vient pas du réseau : la coquille
+ * hors ligne (partie F) la tire d'une copie, et une copie montrée porte sa
+ * marque (`props.horsLigne`, partie E). La réécrire la daterait d'aujourd'hui.
+ * Le document rouvert par l'historique, et celui qui vient du réseau, ont
+ * leurs fichiers, avec le démarrage d'Inertia.
+ */
+describe('la page initiale d’un document qui ne vient pas du réseau', () => {
+    /**
+     * Une seconde écriture, branchée sur un document à part le temps du cas.
+     *
+     * @param {{ coquille?: boolean, page?: object }} options
+     */
+    const ecrireLaPageInitiale = async ({ coquille = false, page = pageDe() }) => {
+        const documentServi = document.implementation.createHTMLDocument('')
+        const evenements = new EventTarget()
+
+        if (coquille) {
+            documentServi.documentElement.dataset.coquille = ''
+        }
+
+        localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, `compte:${COMPTE}`)
+
+        const seconde = installerLEcritureDesCopies({
+            routeur,
+            magasin,
+            pageInitiale: page,
+            fenetre: {
+                document: documentServi,
+                performance: { getEntriesByType: () => [{ type: 'navigate' }] },
+                addEventListener: (...arguments_) => evenements.addEventListener(...arguments_),
+                removeEventListener: (...arguments_) => evenements.removeEventListener(...arguments_),
+            },
+        })
+
+        await seconde.ecrituresFinies()
+        seconde.desinstaller()
+    }
+
+    it('venue du réseau, est gardée', async () => {
+        await ecrireLaPageInitiale({})
+
+        expect([...copiesRangees().keys()]).toEqual(['/dashboard'])
+    })
+
+    it('la coquille hors ligne ne garde rien', async () => {
+        await ecrireLaPageInitiale({ coquille: true })
+
+        expect(copiesRangees().size).toBe(0)
+    })
+
+    it('une page qui porte la marque d’une copie ne se garde pas de nouveau', async () => {
+        await ecrireLaPageInitiale({ page: pageDe({ props: { horsLigne: { copieDu: 1, raison: 'reseau' } } }) })
+
+        expect(copiesRangees().size).toBe(0)
+    })
+})
+
+describe('le branchement', () => {
+    it('est posé par main.js après la garde de l’historique, avant le montage de l’application', () => {
+        const main = readFileSync(resolve(jsRoot, 'main.js'), 'utf-8')
+        const pose = main.indexOf('installerLEcritureDesCopies({ routeur: router })')
+
+        expect(pose).toBeGreaterThan(main.indexOf('installerLaGardeDeLHistorique('))
+        expect(pose).toBeLessThan(main.indexOf('createInertiaApp({'))
+    })
+})

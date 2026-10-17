@@ -11,6 +11,7 @@ import { inscrireLeWorker } from '@/Utils/miseAJourDuWorker'
 import { installerLaRouteGlobale } from '@/Utils/routeGlobale'
 import { installerLesVisitesHorsLigne } from '@/Utils/visitesHorsLigne'
 import { installerLaSondeDuServeur } from '@/Utils/sondeDuServeur'
+import { installerLEcritureDesCopies } from '@/Utils/ecritureDesCopies'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -41,6 +42,13 @@ if (typeof window !== 'undefined') {
      * réactive sans un geste (#2048).
      */
     installerLaSondeDuServeur()
+
+    /*
+     * La page garde une copie chiffrée des pages de salle qu'elle reçoit du
+     * réseau, page initiale comprise, pour un seul compte (#2048). Avant
+     * `createInertiaApp`, qui ne dit rien de la page initiale.
+     */
+    installerLEcritureDesCopies({ routeur: router })
 }
 
 // Expose router for testing (Dusk)
