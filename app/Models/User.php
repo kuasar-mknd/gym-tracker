@@ -245,6 +245,30 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * L'adresse à laquelle part un courriel du compte, ou null quand la
+     * messagerie ne l'écrit pas telle quelle (décision du propriétaire,
+     * #2075).
+     *
+     * Le canal `mail` des notifications n'envoie rien, sans erreur, à un
+     * destinataire null (`MailChannel::send()`) : un courriel mis en file
+     * termine son job sans échec. Aucun courriel ne part donc plus à une telle
+     * adresse, qu'un compte d'avant la règle peut porter : ni le lien « mot de
+     * passe oublié », ni l'avis d'une tentative sur l'adresse
+     * (`TentativeSurTonAdresse`), ni aucun autre. Il échouait sinon, erreur
+     * masquée (`CourrielleurQuiTaitLesAdresses`), ou partait à une autre
+     * adresse quand la messagerie en lisait une entre les chevrons d'une
+     * partie locale entre guillemets. Toute autre adresse se rend seule, sans
+     * nom, comme Laravel la rendait (`$this->email`). Une notification à la
+     * demande (`Notification::route()`) ne passe pas par ici : chaque envoi
+     * de ce genre juge lui-même son adresse (`SurveilleSonAdresse`) ou ne part
+     * qu'à une adresse que la validation a jugée.
+     */
+    public function routeNotificationForMail(): ?string
+    {
+        return $this->laMessagerieSaitEcrireSonAdresse() ? $this->email : null;
+    }
+
+    /**
      * Le fournisseur de connexion relié au compte, nommé pour l'écran, ou null.
      *
      * Un compte ouvert par un fournisseur a reçu un mot de passe aléatoire que

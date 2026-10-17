@@ -126,6 +126,53 @@ it('répond à l’identique pour une adresse inconnue, connue, puis limitée pa
     Notification::assertSentToTimes($compte, ResetPassword::class, 1);
 });
 
+/*
+ * Un compte d'avant #2075 peut porter une adresse que la messagerie n'écrit
+ * pas telle quelle (`AdresseQueLaMessagerieSaitEcrire`) : aucun courriel ne
+ * lui part (`User::routeNotificationForMail()`), et la demande lui répond
+ * comme à toute autre adresse. Les courriels partent ici pour de bon, et le
+ * job tourne dans la requête, la file des tests étant synchrone : l'envoi que
+ * Mime refusait faisait répondre 500, quand un worker n'en gardait qu'un job
+ * en échec. Le jeton de chaque compte dit que le courtier l'a trouvé.
+ */
+it('répond à l’identique pour un compte dont la messagerie n’écrit pas l’adresse, et ne lui envoie rien', function (): void {
+    $this->freezeSecond();
+
+    $inconnue = motDePasseOublieCeQueLeClientLit(motDePasseOublieDemander('personne@example.org'));
+
+    User::factory()->create(['email' => motDePasseOublieAdresse()]);
+    $connue = motDePasseOublieCeQueLeClientLit(motDePasseOublieDemander(motDePasseOublieAdresse()));
+
+    $nonEcrites = [];
+
+    foreach (['camille(salle)@example.org', '"camille<autre@example.net>"@example.org'] as $adresse) {
+        User::factory()->create(['email' => $adresse]);
+        $nonEcrites[$adresse] = motDePasseOublieCeQueLeClientLit(motDePasseOublieDemander($adresse));
+    }
+
+    $transport = Mail::mailer()->getSymfonyTransport();
+    assert($transport instanceof ArrayTransport);
+    $destinataires = [];
+
+    foreach ($transport->messages() as $envoi) {
+        assert($envoi instanceof SentMessage);
+
+        foreach ($envoi->getEnvelope()->getRecipients() as $destinataire) {
+            $destinataires[] = $destinataire->getAddress();
+        }
+    }
+
+    expect($inconnue['statut'])->toBe(302)
+        ->and($inconnue['session']['status'] ?? null)->toBe(__('passwords.sent'))
+        ->and($connue)->toBe($inconnue)
+        ->and($nonEcrites)->toBe([
+            'camille(salle)@example.org' => $inconnue,
+            '"camille<autre@example.net>"@example.org' => $inconnue,
+        ])
+        ->and(DB::table('password_reset_tokens')->count())->toBe(3)
+        ->and($destinataires)->toBe([motDePasseOublieAdresse()]);
+});
+
 it('met la demande en file sans lire le compte ni ses jetons pendant la requête', function (): void {
     Queue::fake();
     Notification::fake();

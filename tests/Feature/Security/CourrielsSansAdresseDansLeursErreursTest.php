@@ -11,6 +11,7 @@ use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Exceptions\Handler;
 use Illuminate\Mail\Mailer;
 use Illuminate\Mail\MailManager;
+use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
@@ -268,10 +269,12 @@ it('ne cite pas l’adresse tapée à l’inscription quand le serveur la refuse
  * conforme à la RFC 5322), que la règle `email` admet : son erreur citait
  * l'adresse. L'inscription la refuse désormais à la validation
  * (`AdresseQueLaMessagerieSaitEcrire`, #2075), sans rien envoyer ; un compte
- * plus ancien peut encore la porter, et le lien « mot de passe oublié » qui lui
- * part échoue sans la citer.
+ * plus ancien peut encore la porter, et aucun courriel ne lui part plus
+ * (`User::routeNotificationForMail()`) : le lien « mot de passe oublié »
+ * n'échoue plus, il ne part pas. L'envoi échouait auparavant, sans citer
+ * l'adresse.
  */
-it('refuse à l’inscription l’adresse que Symfony Mime refuse d’écrire, et ne cite pas celle d’un compte plus ancien quand l’envoi échoue', function (): void {
+it('refuse à l’inscription l’adresse que Symfony Mime refuse d’écrire, et n’envoie rien au compte plus ancien qui la porte, sans erreur', function (): void {
     test()->from(route('register'))->post(route('register'), [
         'name' => 'Saisie',
         'email' => 'saisie.commentee(x)@example.org',
@@ -287,12 +290,46 @@ it('refuse à l’inscription l’adresse que Symfony Mime refuse d’écrire, e
     $traces = courrielsSansAdresseTracesDe(static function (): void {
         test()->from(route('password.request'))
             ->post(route('password.email'), ['email' => 'saisie.commentee(x)@example.org'])
-            ->assertInternalServerError();
+            ->assertRedirect(route('password.request'));
+    });
+
+    $transport = Mail::mailer()->getSymfonyTransport();
+    assert($transport instanceof ArrayTransport);
+
+    expect(ExceptionEnregistree::query()->count())->toBe(0)
+        ->and(DB::table('password_reset_tokens')->count())->toBe(1)
+        ->and($transport->messages())->toHaveCount(0)
+        ->and(courrielsSansAdresseTracesQuiCitent('saisie.commentee', [
+            'le journal' => $traces['journal'],
+            'le rapport' => $traces['rapport'],
+        ]))->toBe([]);
+});
+
+/*
+ * Le courrielleur relève toujours sans l'adresse l'erreur de Mime qui refuse
+ * de l'écrire : aucun courriel de l'application ne part plus à une telle
+ * adresse, mais un envoi qui en nommerait une, en défense, ne la citerait pas.
+ */
+it('relève sans l’adresse l’erreur de Symfony Mime qui refuse de l’écrire', function (): void {
+    $erreur = null;
+
+    $traces = courrielsSansAdresseTracesDe(static function () use (&$erreur): void {
+        try {
+            Mail::raw('Bonjour', static function (Illuminate\Mail\Message $message): void {
+                $message->to('saisie.commentee(x)@example.org')->subject('Essai');
+            });
+        } catch (RfcComplianceException $exception) {
+            $erreur = $exception;
+            report($exception);
+        }
     });
 
     $exception = ExceptionEnregistree::query()->sole();
 
-    expect($exception->type)->toBe(RfcComplianceException::class)
+    expect($erreur)->toBeInstanceOf(RfcComplianceException::class)
+        ->and($erreur?->getMessage())->toBe('Email "'.TexteSansAdresse::MASQUE.'" does not comply with addr-spec of RFC 2822.')
+        ->and($erreur?->getPrevious())->toBeNull()
+        ->and($exception->type)->toBe(RfcComplianceException::class)
         ->and($exception->message)->toBe('Email "'.TexteSansAdresse::MASQUE.'" does not comply with addr-spec of RFC 2822.')
         ->and(courrielsSansAdresseTracesQuiCitent('saisie.commentee', [
             'le journal' => $traces['journal'],

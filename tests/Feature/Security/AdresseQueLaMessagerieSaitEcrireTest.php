@@ -2,20 +2,26 @@
 
 declare(strict_types=1);
 
+use App\Enums\MotifDeLaTentative;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Jobs\EnvoyerLeLienDeReinitialisation;
+use App\Models\ExceptionEnregistree;
 use App\Models\User;
 use App\Notifications\AdresseDuCompteChangee;
+use App\Notifications\LienDeChangementDAdresse;
+use App\Notifications\TentativeSurTonAdresse;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Filament\Actions\Testing\TestAction;
 use Filament\Forms\Components\TextInput;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Mail\Transport\ArrayTransport;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Contracts\Provider;
@@ -24,7 +30,9 @@ use Laravel\Socialite\Two\User as SocialiteUser;
 use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Mailer\SentMessage;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Exception\RfcComplianceException;
 use Tests\Support\CeQueLeClientLit;
 use Tests\Support\FilamentAdminPanel;
 
@@ -203,6 +211,42 @@ function adresseMessagerieDestinataires(): array
     }
 
     return $destinataires;
+}
+
+/**
+ * Le destinataire de chaque courriel parti jusqu'ici, tel que l'écrit son
+ * en-tête `To` : l'adresse et le nom qui l'accompagne.
+ *
+ * @return list<list<array{adresse: string, nom: string}>>
+ */
+function adresseMessagerieEnTetesDesDestinataires(): array
+{
+    $transport = Mail::mailer()->getSymfonyTransport();
+    assert($transport instanceof ArrayTransport);
+
+    $enTetes = [];
+
+    foreach ($transport->messages() as $envoi) {
+        assert($envoi instanceof SentMessage);
+        $message = $envoi->getOriginalMessage();
+        assert($message instanceof Email);
+
+        $enTetes[] = array_map(
+            static fn (Address $destinataire): array => ['adresse' => $destinataire->getAddress(), 'nom' => $destinataire->getName()],
+            $message->getTo(),
+        );
+    }
+
+    return $enTetes;
+}
+
+/**
+ * Fait tourner le worker de la file `database` jusqu'à la vider, un essai par
+ * job, comme Horizon en production.
+ */
+function adresseMessagerieViderLaFile(): void
+{
+    Artisan::call('queue:work', ['connection' => 'database', '--stop-when-empty' => true, '--tries' => 1, '--sleep' => 0]);
 }
 
 /**
@@ -515,11 +559,12 @@ it('refuse au profil, à l’identique, une nouvelle adresse que Mime refuse d�
 /*
  * « Mot de passe oublié » répond la même chose pour toute adresse bien formée
  * (#1951) : la règle ne s'y ajoute pas, et un compte dont l'adresse est
- * antérieure à la règle n'y change rien. Le job, qui échouerait à l'envoi, est
- * retenu ici : la réponse n'en dépend pas.
+ * antérieure à la règle n'y change rien. Le job tourne ici dans la requête,
+ * la file des tests étant synchrone : il trouve le compte, crée son jeton, et
+ * n'envoie rien (`User::routeNotificationForMail()`). L'envoi refusé faisait
+ * auparavant répondre 500 à la seconde demande.
  */
 it('ne change pas la réponse de « mot de passe oublié » pour une adresse que Mime refuse d’écrire', function (): void {
-    Queue::fake([EnvoyerLeLienDeReinitialisation::class]);
     $this->freezeSecond();
 
     $demander = static function (): array {
@@ -537,9 +582,9 @@ it('ne change pas la réponse de « mot de passe oublié » pour une adresse que
     User::factory()->create(['email' => 'camille(salle)@example.org']);
 
     expect($sansCompte['session']['status'] ?? null)->toBe(__('passwords.sent'))
-        ->and($demander())->toBe($sansCompte);
-
-    Queue::assertPushed(EnvoyerLeLienDeReinitialisation::class, 2);
+        ->and($demander())->toBe($sansCompte)
+        ->and(DB::table('password_reset_tokens')->count())->toBe(1)
+        ->and(adresseMessagerieDestinataires())->toBe([]);
 });
 
 /*
@@ -719,6 +764,103 @@ it('n’envoie aucun lien de vérification à une adresse que Mime refuse d’é
     ...$admisesParLaRegleEmailRefuseesParMime,
     ...$coupeesParLaMessagerie,
 ]);
+
+/*
+ * Aucun courriel ne part à un compte dont la messagerie n'écrit pas l'adresse
+ * telle quelle (décision du propriétaire) : sa route est vide
+ * (`User::routeNotificationForMail()`), et le canal `mail` n'envoie rien, sans
+ * erreur, à une route vide. Le lien « mot de passe oublié », mis en file par
+ * la demande, termine son job sans échec, comme l'avis d'une tentative sur
+ * l'adresse ; un avis envoyé aussitôt ne lève rien. Avant, Mime refusait
+ * l'adresse à commentaire (job en échec, erreur masquée), Laravel refusait un
+ * saut de ligne, Mime coupait une espace ou une tabulation, et lisait
+ * l'adresse entre les chevrons d'une partie locale entre guillemets : le
+ * courriel partait alors à une autre adresse.
+ */
+it('n’envoie aucun courriel à un compte dont la messagerie n’écrit pas l’adresse telle quelle, sans erreur ni job en échec', function (string $adresse): void {
+    config(['queue.default' => 'database']);
+    $compte = User::factory()->create(['email' => $adresse]);
+
+    EnvoyerLeLienDeReinitialisation::dispatch($adresse, 'fr');
+    $compte->notify(new TentativeSurTonAdresse(MotifDeLaTentative::Inscription));
+
+    expect(DB::table('jobs')->count())->toBe(2);
+
+    adresseMessagerieViderLaFile();
+    $compte->notifyNow(new TentativeSurTonAdresse(MotifDeLaTentative::ChangementDAdresse));
+    $compte->notify(new ResetPassword('un-jeton-quelconque'));
+
+    expect($compte->routeNotificationFor('mail'))->toBeNull()
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and(DB::table('failed_jobs')->count())->toBe(0)
+        ->and(DB::table('password_reset_tokens')->count())->toBe(1)
+        ->and(ExceptionEnregistree::query()->count())->toBe(0)
+        ->and(adresseMessagerieDestinataires())->toBe([]);
+})->with([
+    ...$admisesParLaRegleEmailRefuseesParMime,
+    ...$coupeesParLaMessagerie,
+]);
+
+/*
+ * Un compte dont la messagerie écrit l'adresse reçoit ses courriels comme
+ * avant, en file comme aussitôt : à son adresse seule, sans nom, comme la
+ * route de Laravel la rendait (`$this->email`), quelle que soit la forme de
+ * l'adresse que Mime écrit.
+ */
+it('envoie toujours ses courriels à un compte dont la messagerie écrit l’adresse, à l’adresse seule, comme Laravel', function (string $adresse): void {
+    config(['queue.default' => 'database']);
+    $compte = User::factory()->create(['name' => 'Camille Martin', 'email' => $adresse]);
+
+    EnvoyerLeLienDeReinitialisation::dispatch($adresse, 'fr');
+    $compte->notify(new TentativeSurTonAdresse(MotifDeLaTentative::Inscription));
+    adresseMessagerieViderLaFile();
+    $compte->notifyNow(new TentativeSurTonAdresse(MotifDeLaTentative::ChangementDAdresse));
+
+    expect($compte->routeNotificationFor('mail'))->toBe($adresse)
+        ->and(DB::table('failed_jobs')->count())->toBe(0)
+        ->and(adresseMessagerieEnTetesDesDestinataires())->toBe(array_fill(0, 3, [['adresse' => $adresse, 'nom' => '']]));
+})->with('adresses que Mime écrit');
+
+/*
+ * Une notification envoyée à plusieurs comptes d'un coup, par la façade, part
+ * à chacun dont la messagerie écrit l'adresse, et à lui seul : la route vide
+ * d'un compte ne retient pas les autres.
+ */
+it('n’envoie une notification adressée à plusieurs comptes qu’à ceux dont la messagerie écrit l’adresse', function (): void {
+    $comptes = collect([
+        User::factory()->create(['email' => 'camille(salle)@example.org']),
+        User::factory()->create(['email' => 'camille.martin@example.org']),
+        User::factory()->create(['email' => '"camille<autre@example.net>"@example.org']),
+        User::factory()->create(['email' => 'camille.durand@example.org']),
+    ]);
+
+    Notification::sendNow($comptes, new TentativeSurTonAdresse(MotifDeLaTentative::Inscription));
+
+    expect(adresseMessagerieDestinataires())->toBe(['camille.martin@example.org', 'camille.durand@example.org']);
+});
+
+/*
+ * Une notification à la demande (`Notification::route()`) part à l'adresse
+ * qu'elle nomme, sans passer par la route d'un compte : un compte qui porte la
+ * même adresse n'y change rien, ni pour une adresse que la messagerie écrit,
+ * ni pour une autre, que Mime refuse comme avant. Chaque envoi de ce genre
+ * juge donc lui-même son adresse : l'avis d'un changement d'adresse ne part
+ * pas à une ancienne adresse que la messagerie n'écrit pas
+ * (`SurveilleSonAdresse`, plus haut), et le lien de changement ne part qu'à
+ * une adresse que le profil a jugée.
+ */
+it('laisse une notification à la demande partir à l’adresse qu’elle nomme, comme avant', function (): void {
+    User::factory()->create(['email' => 'camille.martin@example.org']);
+    User::factory()->create(['email' => 'camille(salle)@example.org']);
+
+    Notification::route('mail', 'camille.martin@example.org')
+        ->notifyNow(new LienDeChangementDAdresse('https://gym.example.org/adresse/confirmer'));
+
+    expect(adresseMessagerieEnTetesDesDestinataires())->toBe([[['adresse' => 'camille.martin@example.org', 'nom' => '']]])
+        ->and(static fn (): mixed => Notification::route('mail', 'camille(salle)@example.org')
+            ->notifyNow(new LienDeChangementDAdresse('https://gym.example.org/adresse/confirmer')))
+        ->toThrow(RfcComplianceException::class);
+});
 
 /*
  * La connexion sociale ne refuse que le compte qu'elle créerait : un compte
