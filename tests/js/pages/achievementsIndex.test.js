@@ -13,6 +13,9 @@ import AchievementsIndex from '@/Pages/Achievements/Index.vue'
 /**
  * The three categories the seeder actually assigns. The page's filter bar has
  * to cover them or a badge becomes unreachable from anything but "Tous".
+ *
+ * `unlocked_at` takes the form the server sends, ISO 8601 in UTC
+ * (AchievementControllerTest, #2082).
  */
 const badges = [
     {
@@ -140,6 +143,22 @@ describe('Achievements/Index', () => {
 
         // 23/05, not 05/23: the day comes first everywhere this app is read.
         expect(wrapper.text()).toContain('Débloqué le 23/05/2026')
+    })
+
+    /**
+     * La date passe par `dateCourte()`, qui rend une chaîne vide pour une date
+     * illisible : `toLocaleDateString` y écrivait « Invalid Date », dans la
+     * carte comme dans l'infobulle (#2082).
+     */
+    it('tait une date de déblocage illisible plutôt que d’écrire « Invalid Date »', () => {
+        const wrapper = mountPage({
+            achievements: [{ ...badges[0], unlocked_at: 'pas une date' }],
+            summary: { unlocked: 1, total: 1 },
+        })
+
+        expect(wrapper.text()).not.toContain('Invalid Date')
+        expect(wrapper.text()).not.toContain('Débloqué le')
+        expect(wrapper.text()).toContain('Régulier')
     })
 
     /**

@@ -6,6 +6,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Achievement;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,8 +52,25 @@ class AchievementController extends Controller
             'icon' => $achievement->icon,
             'category' => $achievement->category,
             'is_unlocked' => (bool) $userAchievement,
-            // @phpstan-ignore-next-line
-            'unlocked_at' => $userAchievement ? $userAchievement->pivot->achieved_at : null,
+            'unlocked_at' => $this->instantDuDeblocage($userAchievement),
         ];
+    }
+
+    /**
+     * L'instant du déblocage, écrit comme toute date qu'un modèle sert : en
+     * ISO 8601, en UTC (#2082).
+     *
+     * Le pivot rend `achieved_at` tel que la base le garde : « 2026-10-14
+     * 13:59:37 », une heure du fuseau de l'application, sans fuseau écrit. Le
+     * navigateur lisait cette forme, qu'ECMAScript ne garantit pas, comme une
+     * heure de l'appareil : ailleurs qu'en Europe/Paris, le jour du déblocage
+     * pouvait changer.
+     */
+    private function instantDuDeblocage(?Achievement $userAchievement): ?string
+    {
+        $pivot = $userAchievement?->getRelationValue('pivot');
+        $obtenuLe = $pivot instanceof Pivot ? $pivot->getAttribute('achieved_at') : null;
+
+        return is_string($obtenuLe) ? Date::parse($obtenuLe, config()->string('app.timezone'))->toJSON() : null;
     }
 }

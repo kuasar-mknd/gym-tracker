@@ -5,6 +5,7 @@ import { Head } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import GlassChip from '@/Components/UI/GlassChip.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { dateCourte } from '@/Utils/date'
 
 const props = defineProps({
     achievements: Array,
@@ -26,6 +27,16 @@ const filteredAchievements = computed(() => {
     }
     return props.achievements.filter((a) => a.category === currentCategory.value)
 })
+
+/**
+ * Le jour du déblocage, dans le fuseau de l'appareil : le serveur envoie
+ * l'instant en ISO 8601 (#2082). Vide pour une date illisible, que la carte
+ * tait plutôt que d'écrire « Invalid Date ».
+ *
+ * @param {{unlocked_at: string|null}} achievement
+ * @returns {string}
+ */
+const jourDuDeblocage = (achievement) => (achievement.unlocked_at ? dateCourte(new Date(achievement.unlocked_at)) : '')
 </script>
 
 <template>
@@ -96,8 +107,11 @@ const filteredAchievements = computed(() => {
                             {{ achievement.description }}
                         </p>
 
-                        <p v-if="achievement.is_unlocked" class="text-text-muted text-2xs mt-2 italic">
-                            Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
+                        <p
+                            v-if="achievement.is_unlocked && jourDuDeblocage(achievement)"
+                            class="text-text-muted text-2xs mt-2 italic"
+                        >
+                            Débloqué le {{ jourDuDeblocage(achievement) }}
                         </p>
 
                         <!--
@@ -121,10 +135,10 @@ const filteredAchievements = computed(() => {
                                 achievement.description
                             }}</span>
                             <div
-                                v-if="achievement.is_unlocked"
+                                v-if="achievement.is_unlocked && jourDuDeblocage(achievement)"
                                 class="text-text-on-dark-accent/30 text-2xs mt-2 italic"
                             >
-                                Débloqué le {{ new Date(achievement.unlocked_at).toLocaleDateString('fr-FR') }}
+                                Débloqué le {{ jourDuDeblocage(achievement) }}
                             </div>
                         </div>
 
