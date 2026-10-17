@@ -34,6 +34,17 @@ final class PagesGardees
     private const string FORME_D_UNE_ENTREE = "/^\\s*\\{ composant: '([^']+)', route: '([^']+)', chemin: '([^']+)' \\},?\\s*$/";
 
     /**
+     * Le début des props qu'aucune copie ne garde.
+     */
+    private const string DEBUT_DES_PROPS_JAMAIS_GARDEES = 'export const PROPS_JAMAIS_GARDEES = Object.freeze({';
+
+    /**
+     * La forme d'une entrée des props qu'aucune copie ne garde : le composant,
+     * nu ou entre apostrophes, puis la liste gelée de ses props.
+     */
+    private const string FORME_DES_PROPS_JAMAIS_GARDEES = "/^\\s*(?:'([A-Za-z][A-Za-z0-9\\/]*)'|([A-Za-z][A-Za-z0-9]*)): Object\\.freeze\\(\\[((?:'[A-Za-z_][A-Za-z0-9_]*'(?:, )?)+)\\]\\),?\\s*$/";
+
+    /**
      * Les entrées de la liste blanche, dans l'ordre du module.
      *
      * @return list<array{composant: string, route: string, chemin: string}>
@@ -68,6 +79,44 @@ final class PagesGardees
         }
 
         return $entrees;
+    }
+
+    /**
+     * Les props qu'aucune copie ne garde, par composant (`PROPS_JAMAIS_GARDEES`) :
+     * une entrée par ligne, `Composant: Object.freeze(['prop', …]),`, le
+     * composant entre apostrophes quand il porte une barre oblique. Toute autre
+     * forme fait échouer la lecture.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function propsJamaisGardees(): array
+    {
+        $source = self::source();
+        $debut = strpos($source, self::DEBUT_DES_PROPS_JAMAIS_GARDEES);
+        $fin = $debut === false ? false : strpos($source, "\n})", $debut);
+
+        if ($debut === false || $fin === false) {
+            throw new RuntimeException(sprintf('`PROPS_JAMAIS_GARDEES` est introuvable dans %s : si sa forme a changé, Tests\Support\PagesGardees doit suivre.', self::MODULE));
+        }
+
+        $corps = substr($source, $debut + strlen(self::DEBUT_DES_PROPS_JAMAIS_GARDEES), $fin - $debut - strlen(self::DEBUT_DES_PROPS_JAMAIS_GARDEES));
+        $props = [];
+
+        foreach (explode("\n", $corps) as $ligne) {
+            if (trim($ligne) === '') {
+                continue;
+            }
+
+            if (preg_match(self::FORME_DES_PROPS_JAMAIS_GARDEES, $ligne, $champs) !== 1) {
+                throw new RuntimeException(sprintf("Une ligne de `PROPS_JAMAIS_GARDEES` (%s) ne suit pas la forme `Composant: Object.freeze(['prop', …]),` : %s", self::MODULE, trim($ligne)));
+            }
+
+            $composant = $champs[1] !== '' ? $champs[1] : $champs[2];
+            preg_match_all("/'([A-Za-z_][A-Za-z0-9_]*)'/", $champs[3], $noms);
+            $props[$composant] = $noms[1];
+        }
+
+        return $props;
     }
 
     /**

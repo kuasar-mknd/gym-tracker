@@ -9,6 +9,8 @@ import {
     cleDeLaCopie,
     cleDeLaSeanceEnCours,
     pageGardee,
+    propJamaisGardee,
+    propsGardables,
 } from '@/Utils/pagesGardees'
 
 /**
@@ -30,6 +32,10 @@ import {
  * l'empreinte de la clé (SHA-256 tronqué), qui ne permet pas de la
  * retrouver. Quand la session finit, le cookie part, et les copies restent
  * illisibles sans qu'aucun code ait besoin de tourner.
+ *
+ * **Ce qui n'y entre jamais**, même chiffré : les props d'une page gardée que
+ * nomme `PROPS_JAMAIS_GARDEES` (le dernier poids et les objectifs de
+ * l'accueil), retirées avant le chiffrement de toute écriture.
  *
  * **L'état** (`etat`) dit à quelle clé le magasin est ouvert : le compte,
  * l'empreinte de la clé, la version du contrat, `ouvert`, les empreintes des
@@ -716,7 +722,8 @@ export const creerLeMagasinDesCopies = ({
      * contrat vident d'abord le magasin, et l'ancienne clé, si elle n'est pas
      * celle-ci, rejoint les fermées. Les props différées que la
      * page n'a pas encore reçues et que la copie précédente avait sont
-     * gardées, avec leur date.
+     * gardées, avec leur date. Les props qu'aucune copie ne garde
+     * (`PROPS_JAMAIS_GARDEES`) sont retirées avant le chiffrement.
      *
      * La génération se note à l'appel : une écriture différée passe celle
      * qu'elle a notée quand elle a été décidée.
@@ -742,11 +749,16 @@ export const creerLeMagasinDesCopies = ({
                     ? await dechiffrer(cle, authentifiees, precedente).catch(() => null)
                     : null
             const maintenant = horloge()
-            const props = { ...page.props }
+            const props = propsGardables(page.component, page.props)
             const datesDesProps = Object.fromEntries(Object.keys(props).map((nom) => [nom, maintenant]))
 
             for (const nom of Object.values(page.deferredProps ?? {}).flat()) {
-                if (!(nom in props) && ancienne !== null && nom in (ancienne.page?.props ?? {})) {
+                if (
+                    !(nom in props) &&
+                    !propJamaisGardee(page.component, nom) &&
+                    ancienne !== null &&
+                    Object.hasOwn(ancienne.page?.props ?? {}, nom)
+                ) {
                     props[nom] = ancienne.page.props[nom]
                     datesDesProps[nom] = ancienne.datesDesProps?.[nom] ?? precedente.copieDu
                 }
@@ -788,7 +800,8 @@ export const creerLeMagasinDesCopies = ({
      * reçues (un rechargement partiel, des props différées), chacune avec sa
      * date. Une réponse partielle ne crée jamais de copie, n'ouvre jamais
      * l'état, et ne remplace jamais `auth`, que seule une réponse complète
-     * renouvelle.
+     * renouvelle. Une prop qu'aucune copie ne garde (`PROPS_JAMAIS_GARDEES`)
+     * ne s'y verse pas, et sort de la copie qui la porterait encore.
      *
      * @param {object} page l'objet de page d'Inertia après la réponse
      * @param {string[]} noms les props que la réponse a reçues
@@ -803,7 +816,9 @@ export const creerLeMagasinDesCopies = ({
         }
 
         const { chemin, compte, temoin, empreinte, cle, ouverte } = preparee
-        const recues = noms.filter((nom) => nom !== 'auth' && nom in (page.props ?? {}))
+        const recues = noms.filter(
+            (nom) => nom !== 'auth' && !propJamaisGardee(page.component, nom) && Object.hasOwn(page.props ?? {}, nom),
+        )
 
         if (recues.length === 0) {
             return 'sans-props'
@@ -825,6 +840,7 @@ export const creerLeMagasinDesCopies = ({
             const maintenant = horloge()
 
             ancienne.datesDesProps ??= {}
+            ancienne.page.props = propsGardables(ancienne.page.component, ancienne.page.props)
 
             for (const nom of recues) {
                 ancienne.page.props[nom] = page.props[nom]

@@ -22,6 +22,17 @@ use Tests\Support\PagesGardees;
  * leur forme, pour ceux qui viendront : une route qui finit par `.create` ou
  * `.edit`, un composant qui finit par `Create` ou `Edit` ou qui vit sous
  * `Auth`, une route sans `auth` ou sous `guest`.
+ *
+ * Une page gardée peut aussi montrer ce que ces pages-là gardent : l'accueil
+ * rend le dernier poids, tiré des mesures, et les objectifs en cours. Ces
+ * props ne vont dans aucune copie (`PROPS_JAMAIS_GARDEES`, que le magasin
+ * retire avant de chiffrer). La garde lit le contrat des pages gardées
+ * (`tests/Feature/HorsLigne/contrat-des-pages-gardees.json`, relevé sur les
+ * vraies réponses par `ContratDesPagesGardeesTest`, sans ces props), et y
+ * refuse toute prop dont un nom dit la santé, le corps, le journal, les
+ * objectifs ou les notifications, ou, au premier niveau, un poids : une
+ * charge d'entraînement (le poids d'une série, d'un disque, de la barre) se
+ * nomme aussi `weight`, plus bas.
  */
 
 /**
@@ -89,3 +100,69 @@ it('ne garde ni un formulaire ni une page d’invité', function (string $compos
         ->and($middleware)->toContain('auth')
         ->and($middleware)->not->toContain('guest');
 })->with(fn (): array => pagesPriveesGardees());
+
+/**
+ * Ce qu'un nom de prop d'une page gardée ne dit jamais, à tout niveau.
+ */
+const PROPS_PRIVEES_PARTOUT = '/(body|bodies|mesure|measur|goal|objecti|fat|graisse|bmi|imc|health|sant[eé]|sleep|sommeil|journal|habit|supplement|compl[eé]ment|water|hydrat|fasting|je[uû]ne|macro|calori|wilks|notification|mood|humeur)/iu';
+
+/**
+ * Ce qu'un nom de prop de premier niveau ne dit pas non plus : un poids, qui
+ * plus bas est une charge d'entraînement.
+ */
+const PROPS_PRIVEES_AU_PREMIER_NIVEAU = '/(weight|poids)/i';
+
+/**
+ * Les chemins admis malgré leur nom, et pourquoi.
+ *
+ * @return array<string, string>
+ */
+function propsPriveesAdmises(): array
+{
+    return [
+        'auth.user.unread_notifications_count' => 'un nombre, que la barre de navigation montre sur chaque page',
+    ];
+}
+
+it('ne met dans les copies aucune prop de santé, de mesure ou d’objectif d’une page gardée', function (): void {
+    $contrat = json_decode((string) file_get_contents(dirname(__DIR__).'/HorsLigne/contrat-des-pages-gardees.json'), true, flags: JSON_THROW_ON_ERROR);
+    expect($contrat)->toBeArray()->toHaveKey('pages');
+    assert(is_array($contrat) && is_array($contrat['pages']));
+
+    $jamaisGardees = PagesGardees::propsJamaisGardees();
+    $refusees = [];
+
+    foreach ($contrat['pages'] as $page => $forme) {
+        assert(is_string($page) && is_array($forme) && is_array($forme['props'] ?? null));
+        $composant = explode(' (', $page, 2)[0];
+
+        foreach (array_keys($forme['props']) as $chemin) {
+            $chemin = (string) $chemin;
+            $segments = array_map(static fn (string $segment): string => (string) preg_replace('/(\[\]|\{\})+$/', '', $segment), explode('.', $chemin));
+
+            if (in_array($segments[0], $jamaisGardees[$composant] ?? [], true)) {
+                $refusees[] = "{$page} › {$chemin} : nommée par `PROPS_JAMAIS_GARDEES`, elle n’a rien à faire dans le contrat";
+
+                continue;
+            }
+
+            if (array_key_exists($chemin, propsPriveesAdmises())) {
+                continue;
+            }
+
+            foreach ($segments as $rang => $segment) {
+                if (preg_match(PROPS_PRIVEES_PARTOUT, $segment) === 1 || ($rang === 0 && preg_match(PROPS_PRIVEES_AU_PREMIER_NIVEAU, $segment) === 1)) {
+                    $refusees[] = "{$page} › {$chemin}";
+
+                    break;
+                }
+            }
+        }
+    }
+
+    expect($refusees)->toBe([], "Une page gardée porte ces props, qu’une copie garderait : nomme leur prop de premier niveau dans `PROPS_JAMAIS_GARDEES` (resources/js/Utils/pagesGardees.js), ou, si elles ne disent rien de la santé, admets le chemin, avec sa raison, dans `propsPriveesAdmises()`.\n".implode("\n", $refusees));
+});
+
+it('lit, dans le module, les props qu’aucune copie ne garde', function (): void {
+    expect(PagesGardees::propsJamaisGardees())->toBe(['Dashboard' => ['latestWeight', 'activeGoals']]);
+});

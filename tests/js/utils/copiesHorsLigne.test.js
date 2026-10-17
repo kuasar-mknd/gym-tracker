@@ -895,6 +895,131 @@ describe('les réponses partielles et les props différées', () => {
     })
 })
 
+describe('les props qu’aucune copie ne garde', () => {
+    /** L'accueil tel que le serveur le rend : le dernier poids et les objectifs en cours y sont. */
+    const accueilAvecMesuresEtObjectifs = () =>
+        pageDe({
+            deferredProps: { default: ['analyticalStats'] },
+            props: {
+                latestWeight: '78.40',
+                activeGoals: [{ id: 3, title: 'Tour de taille à 80 cm', type: 'measurement', unit: 'cm' }],
+                recentWorkouts: [{ name: 'Jambes du mardi' }],
+            },
+        })
+
+    /**
+     * Réécrit une copie rangée, chiffrée sous la même clé et les mêmes
+     * données authentifiées : une copie qu'une version précédente aurait
+     * rangée avec ce qu'elle ne garde plus.
+     *
+     * @param {string} cle la clé du témoin
+     * @param {string} chemin
+     * @param {(contenu: object) => void} transformer
+     */
+    const reecrireLaCopie = async (cle, chemin, transformer) => {
+        const octets = Uint8Array.from(atob(`${cle.replace(/-/g, '+').replace(/_/g, '/')}=`), (lettre) =>
+            lettre.charCodeAt(0),
+        )
+        const cleAes = await crypto.subtle.importKey('raw', octets, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+        const rangee = copiesRangees().get(chemin)
+        const authentifiees = new TextEncoder().encode(`${etatRange().compte}|${chemin}|${VERSION_DU_CONTRAT}`)
+        const contenu = JSON.parse(
+            new TextDecoder().decode(
+                await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: rangee.iv, additionalData: authentifiees },
+                    cleAes,
+                    rangee.chiffre,
+                ),
+            ),
+        )
+
+        transformer(contenu)
+
+        const iv = crypto.getRandomValues(new Uint8Array(12))
+
+        rangee.iv = iv
+        rangee.chiffre = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv, additionalData: authentifiees },
+            cleAes,
+            new TextEncoder().encode(JSON.stringify(contenu)),
+        )
+    }
+
+    it('ne range ni le dernier poids ni les objectifs de l’accueil, même chiffrés', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+
+        expect(await onglet.ecrireUneCopie(accueilAvecMesuresEtObjectifs())).toBe('ecrite')
+
+        const lue = await onglet.lireUneCopie('/dashboard')
+
+        expect(Object.keys(lue.page.props).sort()).toEqual(['auth', 'errors', 'recentWorkouts'])
+        expect(Object.keys(lue.datesDesProps).sort()).toEqual(['auth', 'errors', 'recentWorkouts'])
+        expect(lue.page.props.recentWorkouts).toEqual([{ name: 'Jambes du mardi' }])
+        expect(JSON.stringify(lue)).not.toMatch(/78\.40|Tour de taille|latestWeight|activeGoals/)
+    })
+
+    it('ne les verse pas d’une réponse partielle, qui garde le reste', async () => {
+        const onglet = ouvrirUnOnglet()
+        const accueil = accueilAvecMesuresEtObjectifs()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(accueil)
+
+        const partielle = { ...accueil, props: { ...accueil.props, analyticalStats: { weeklyVolume: 1200 } } }
+
+        expect(await onglet.completerUneCopie(partielle, ['latestWeight', 'activeGoals'])).toBe('sans-props')
+        expect(await onglet.completerUneCopie(partielle, ['activeGoals', 'analyticalStats'])).toBe('ecrite')
+
+        const lue = await onglet.lireUneCopie('/dashboard')
+
+        expect(lue.page.props.analyticalStats).toEqual({ weeklyVolume: 1200 })
+        expect(lue.page.props).not.toHaveProperty('latestWeight')
+        expect(lue.page.props).not.toHaveProperty('activeGoals')
+    })
+
+    it('ne les reprend jamais d’une copie qui les portait encore, ni comme props différées', async () => {
+        const cle = cleAuHasard()
+        const onglet = ouvrirUnOnglet()
+        const accueil = pageDe({ deferredProps: { default: ['analyticalStats', 'activeGoals'] } })
+
+        poserLeTemoin(cle)
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(accueil)
+        await reecrireLaCopie(cle, '/dashboard', (contenu) => {
+            contenu.page.props.activeGoals = [{ title: 'Tour de taille à 80 cm' }]
+            contenu.page.props.latestWeight = '78.40'
+            contenu.page.props.analyticalStats = { weeklyVolume: 900 }
+        })
+
+        expect((await onglet.lireUneCopie('/dashboard')).page.props).toHaveProperty('activeGoals')
+
+        instant += 60_000
+        expect(await onglet.ecrireUneCopie(accueil)).toBe('ecrite')
+
+        const recrite = await onglet.lireUneCopie('/dashboard')
+
+        expect(recrite.page.props.analyticalStats).toEqual({ weeklyVolume: 900 })
+        expect(recrite.page.props).not.toHaveProperty('activeGoals')
+
+        await reecrireLaCopie(cle, '/dashboard', (contenu) => {
+            contenu.page.props.latestWeight = '78.40'
+        })
+        instant += 60_000
+
+        expect(
+            await onglet.completerUneCopie(
+                { ...accueil, props: { ...accueil.props, analyticalStats: { weeklyVolume: 1200 } } },
+                ['analyticalStats'],
+            ),
+        ).toBe('ecrite')
+        expect((await onglet.lireUneCopie('/dashboard')).page.props).not.toHaveProperty('latestWeight')
+    })
+})
+
 describe('le contrat', () => {
     it('d’une autre version fait oublier les copies, sans fermer la clé', async () => {
         const onglet = ouvrirUnOnglet()

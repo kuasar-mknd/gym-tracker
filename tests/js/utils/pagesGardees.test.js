@@ -2,7 +2,16 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { PAGES_GARDEES, VERSION_DU_CONTRAT, cleDeLaCopie, cleDeLaSeanceEnCours, pageGardee } from '@/Utils/pagesGardees'
+import {
+    PAGES_GARDEES,
+    PROPS_JAMAIS_GARDEES,
+    VERSION_DU_CONTRAT,
+    cleDeLaCopie,
+    cleDeLaSeanceEnCours,
+    pageGardee,
+    propJamaisGardee,
+    propsGardables,
+} from '@/Utils/pagesGardees'
 
 /**
  * La liste blanche des pages gardées pour la salle (#2048) et la clé d'une
@@ -101,10 +110,38 @@ describe('la séance en cours', () => {
     })
 })
 
+describe('les props qu’aucune copie ne garde', () => {
+    it('écartent le dernier poids et les objectifs de l’accueil, et rien d’autre', () => {
+        expect(propJamaisGardee('Dashboard', 'latestWeight')).toBe(true)
+        expect(propJamaisGardee('Dashboard', 'activeGoals')).toBe(true)
+        expect(propJamaisGardee('Dashboard', 'recentWorkouts')).toBe(false)
+        expect(propJamaisGardee('Workouts/Show', 'latestWeight')).toBe(false)
+        expect(
+            propsGardables('Dashboard', {
+                auth: { user: { id: 7 } },
+                latestWeight: '78.40',
+                activeGoals: [],
+                recentPRs: [],
+            }),
+        ).toEqual({ auth: { user: { id: 7 } }, recentPRs: [] })
+        expect(propsGardables('Tools/Index', { latestWeight: '78.40' })).toEqual({ latestWeight: '78.40' })
+        expect(propsGardables('Dashboard', undefined)).toEqual({})
+    })
+
+    it('ne lisent pas un composant comme une clé héritée', () => {
+        for (const composant of ['__proto__', 'constructor', 'toString', 'hasOwnProperty', null, 42]) {
+            expect(propJamaisGardee(composant, 'includes')).toBe(false)
+            expect(propsGardables(composant, { includes: 1 })).toEqual({ includes: 1 })
+        }
+    })
+})
+
 describe('le module', () => {
     it('ne change pas une fois chargé', () => {
         expect(Object.isFrozen(PAGES_GARDEES)).toBe(true)
         expect(PAGES_GARDEES.every((page) => Object.isFrozen(page))).toBe(true)
+        expect(Object.isFrozen(PROPS_JAMAIS_GARDEES)).toBe(true)
+        expect(Object.values(PROPS_JAMAIS_GARDEES).every((noms) => Object.isFrozen(noms))).toBe(true)
         expect(Number.isInteger(VERSION_DU_CONTRAT) && VERSION_DU_CONTRAT > 0).toBe(true)
     })
 

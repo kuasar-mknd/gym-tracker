@@ -36,9 +36,12 @@ use function Pest\Laravel\actingAs;
  * Ce test relève la forme par de vraies requêtes d'Inertia, faites pour un
  * compte aux données tirées des factories (Faker à graine fixe, horloge
  * arrêtée), props différées comprises, et la compare à celle que fige
- * `contrat-des-pages-gardees.json` pour la version courante. Une liste vide
- * s'y lit `liste vide` : ce qu'elle contiendrait n'est pas couvert, et les
- * données du compte de référence doivent la remplir. Les clés faites
+ * `contrat-des-pages-gardees.json` pour la version courante. Il la relève
+ * telle qu'une copie la garde : sans les props que `PROPS_JAMAIS_GARDEES`
+ * nomme (le dernier poids et les objectifs de l'accueil), qu'aucune copie ne
+ * porte. Une liste vide s'y lit `liste vide` : ce qu'elle contiendrait n'est
+ * pas couvert, et les données du compte de référence doivent la remplir. Les
+ * clés faites
  * d'identifiants ou de dates se lisent comme une table (`{}`), une clé absente
  * d'une partie des éléments d'une liste comme `absent`.
  *
@@ -60,8 +63,9 @@ function contratDesPagesFichier(): string
  * Le compte de référence et ses séances : la séance en cours et la séance
  * close qui porte ses records, chacune avec des exercices et des séries, une
  * faite et une non faite dans la séance en cours, une ligne et une série
- * créées par l'API (clé d'idempotence), plus un objectif, une pesée, et ce
- * que lisent les outils : de quoi remplir chaque liste des pages gardées.
+ * créées par l'API (clé d'idempotence), plus un objectif et une pesée (que
+ * l'accueil rend, et qu'aucune copie ne garde), et ce que lisent les outils :
+ * de quoi remplir chaque liste des pages gardées.
  *
  * @return array{compte: User, enCours: Workout, close: Workout}
  */
@@ -166,7 +170,10 @@ function contratDesPagesGroupesDifferes(stdClass $page): array
 
 /**
  * La page complète, puis chaque groupe de props différées, demandé comme la
- * page le demande (`X-Inertia-Partial-Data`), et versé dans ses props.
+ * page le demande (`X-Inertia-Partial-Data`), et versé dans ses props ; puis
+ * telle qu'une copie la garde, sans les props que `PROPS_JAMAIS_GARDEES`
+ * nomme pour son composant. Chacune doit être dans la réponse : une prop
+ * renommée laisserait sinon passer la nouvelle dans les copies.
  */
 function contratDesPagesPageEntiere(User $compte, string $chemin, string $composant): stdClass
 {
@@ -185,6 +192,11 @@ function contratDesPagesPageEntiere(User $compte, string $chemin, string $compos
             expect(property_exists($partielle, $prop))->toBeTrue("La prop différée `{$prop}` de `{$composant}` n’arrive pas.");
             $props->{$prop} = $partielle->{$prop};
         }
+    }
+
+    foreach (PagesGardees::propsJamaisGardees()[$composant] ?? [] as $prop) {
+        expect(property_exists($props, $prop))->toBeTrue("`PROPS_JAMAIS_GARDEES` nomme `{$prop}`, que `{$composant}` ne rend plus : nomme la prop qui l’a remplacée.");
+        unset($props->{$prop});
     }
 
     return $page;

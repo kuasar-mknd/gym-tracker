@@ -19,6 +19,9 @@
  * formulaire de création ou d'édition, ni une page d'invité :
  * `LesPagesPriveesNeSontJamaisGardeesTest` (tests/Feature/Conventions) le
  * tient, et `PagesGardeesTest` compare chaque chemin à la route qu'il nomme.
+ * Ce qu'une page gardée montre de ces pages-là (le dernier poids et les
+ * objectifs de l'accueil) ne va pas non plus dans sa copie
+ * (`PROPS_JAMAIS_GARDEES`).
  *
  * Chaque entrée tient sur une ligne, sous la forme
  * `{ composant: '…', route: '…', chemin: '…' }` : les tests PHP la lisent
@@ -82,6 +85,48 @@ export const PAGES_GARDEES = geler([
     { composant: 'Tools/OneRepMax', route: 'tools.1rm', chemin: '/tools/1rm' },
     { composant: 'Tools/WarmupCalculator', route: 'tools.warmup', chemin: '/tools/warmup' },
 ])
+
+/**
+ * Les props qu'une page gardée porte et qu'aucune copie ne garde : la liste
+ * « Jamais gardées » de l'issue écarte les mesures et les objectifs, que
+ * l'accueil montre aussi (le dernier poids, tiré des mesures, et les objectifs
+ * en cours, objectifs de mesure compris). Le magasin les retire avant de
+ * chiffrer (`copiesHorsLigne.js`), à l'écriture d'une réponse complète comme
+ * d'une réponse partielle, et ne les reprend jamais d'une copie précédente ;
+ * une copie servie (partie E) les montrera indisponibles hors ligne.
+ *
+ * Le contrat des pages gardées (`ContratDesPagesGardeesTest`) les relève sans
+ * elles, et `LesPagesPriveesNeSontJamaisGardeesTest` y refuse une prop de
+ * mesure, de santé ou d'objectif qui n'est pas ici. Une entrée par ligne, sous
+ * la forme `Composant: Object.freeze(['prop', …]),`, que
+ * `Tests\Support\PagesGardees` lit et refuse sous toute autre.
+ */
+export const PROPS_JAMAIS_GARDEES = Object.freeze({
+    Dashboard: Object.freeze(['latestWeight', 'activeGoals']),
+})
+
+/**
+ * Si une prop d'un composant ne va jamais dans une copie.
+ *
+ * @param {unknown} composant
+ * @param {unknown} nom
+ * @returns {boolean}
+ */
+export const propJamaisGardee = (composant, nom) =>
+    typeof composant === 'string' &&
+    Object.hasOwn(PROPS_JAMAIS_GARDEES, composant) &&
+    PROPS_JAMAIS_GARDEES[composant].includes(nom)
+
+/**
+ * Les props d'une page, sans celles qu'aucune copie ne garde : un nouvel
+ * objet, les props gardées telles quelles.
+ *
+ * @param {unknown} composant
+ * @param {Record<string, unknown> | null | undefined} props
+ * @returns {Record<string, unknown>}
+ */
+export const propsGardables = (composant, props) =>
+    Object.fromEntries(Object.entries(props ?? {}).filter(([nom]) => !propJamaisGardee(composant, nom)))
 
 /**
  * Le motif qu'un chemin de la liste reconnaît : un identifiant de modèle, un
