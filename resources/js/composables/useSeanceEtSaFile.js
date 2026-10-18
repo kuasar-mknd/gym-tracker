@@ -8,6 +8,7 @@ import {
     titulaireDeLaPage,
 } from '@/Utils/historiqueDuCompte'
 import { effacerLesBrouillonsOrphelins } from '@/composables/useBrouillonsDeSeries'
+import { EVENEMENT_AVANT_UNE_COPIE } from '@/Utils/visitesHorsLigne'
 
 /**
  * La clé sous laquelle l'entrée d'historique de la page garde la séance
@@ -97,7 +98,10 @@ const seanceGardee = (page, seance) => {
  * s'écrit donc dès `beforeUpdate` vers une autre page, qu'Inertia émet avant de
  * la pousser, ni dès un `popstate` vers une autre entrée. Une visite côté
  * client (`router.push`, `router.replace`) n'émet pas `beforeUpdate` : en
- * ajouter une qui quitte cette page demande de figer ce souvenir avant. Et la
+ * ajouter une qui quitte cette page demande de figer ce souvenir avant. Celle
+ * qui sert une copie hors ligne émet donc d'abord `EVENEMENT_AVANT_UNE_COPIE`
+ * avec la page qui arrive (`Utils/visitesHorsLigne.js`, #2048), qui fige le
+ * souvenir comme `beforeUpdate`. Et la
  * clé de l'historique part avec le compte (`historiqueDuCompte`, #1965), sur
  * ce même `beforeUpdate` quand la page qui arrive est celle d'un autre compte :
  * rien ne s'écrit donc au départ, pas même une dernière fois, ni quand un
@@ -150,12 +154,14 @@ const garderDansLHistorique = ({ page, localWorkout, valeursDeRepli }) => {
 
     onMounted(() => {
         document.addEventListener('inertia:beforeUpdate', avantLaPageSuivante)
+        window.addEventListener(EVENEMENT_AVANT_UNE_COPIE, avantLaPageSuivante)
         window.addEventListener('popstate', auRetourOuALAvance)
     })
 
     onUnmounted(() => {
         figee = true
         document.removeEventListener('inertia:beforeUpdate', avantLaPageSuivante)
+        window.removeEventListener(EVENEMENT_AVANT_UNE_COPIE, avantLaPageSuivante)
         window.removeEventListener('popstate', auRetourOuALAvance)
     })
 }

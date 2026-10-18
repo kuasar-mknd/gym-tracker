@@ -1,4 +1,7 @@
+import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
+import { RAISON_RESEAU_LENT, RAISON_SANS_RESEAU, adressePeutAvoirUneCopie, pageServie } from '@/Utils/copiesServies'
 import { visiteQuiQuitteLaPage } from '@/Utils/miseAJourDuWorker'
+import { cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
 import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
 
 /**
@@ -38,6 +41,25 @@ import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composa
  * l'adresse de la requête : chaque visite est suivie de `start` à `finish`,
  * qu'Inertia émet avec le même objet, et l'échec est rapproché d'une visite en
  * vol par cette adresse.
+ *
+ * **Les copies hors ligne** (#2048, partie E, décisions 8 et 9 du
+ * propriétaire du 2026-10-12). Une visite qui quitte la page vers une page de
+ * la liste blanche (`pagesGardees.js`) reçoit sa copie, quand le magasin
+ * chiffré en a une lisible pour le compte (`copiesHorsLigne.js` vérifie la
+ * clé du témoin, le titulaire de l'appareil et le contrat), dans deux cas :
+ * sans réponse (`networkError`), et au bout de cinq secondes sans réponse,
+ * la visite annulée alors (`router.cancelAll({ async: false, prefetch: false
+ * })`). Le réseau d'abord, toujours : un rechargement partiel, une prop
+ * différée, un préchargement ou une écriture ne reçoivent jamais de copie.
+ * Le morceau du composant s'importe d'abord : s'il manque (une mise à jour
+ * pas encore précachée), « Mise à jour à terminer avec le réseau », et la
+ * page reste. La copie se pousse ensuite par `router.push`, une visite côté
+ * client, champ par champ (`copiesServies.js`) : elle n'émet ni `success`
+ * ni `beforeUpdate`, et ni la file hors ligne ni la garde de l'historique ne
+ * la prennent pour une réponse du serveur. La séance ouverte fige d'abord ce
+ * qu'elle garde dans l'historique (`EVENEMENT_AVANT_UNE_COPIE`), qu'un
+ * `router.remember` n'écrive pas dans l'entrée de la copie. Une copie montrée
+ * rend `joignable` faux : la sonde demande au serveur s'il répond.
  */
 
 /** L'évènement de fenêtre que les toasts des layouts écoutent (`ToastsDuLayout.vue`). */
@@ -45,6 +67,28 @@ export const EVENEMENT_SANS_RESEAU = 'gym:sans-reseau'
 
 /** Ce qu'une visite qui quitte la page attend avant de dire que le réseau ne répond pas. */
 export const DELAI_DU_RESEAU_LENT_MS = 8000
+
+/**
+ * Ce qu'une visite qui quitte la page vers une page gardée attend avant que sa
+ * copie soit servie (décision 8 du propriétaire) : plus tôt que le toast de la
+ * lenteur, qui ne sert plus qu'aux pages sans copie.
+ */
+export const DELAI_AVANT_UNE_COPIE_MS = 5000
+
+/**
+ * L'évènement de fenêtre émis juste avant qu'une copie soit poussée, avec la
+ * page qui arrive (`detail.page`) : une visite côté client n'émet pas
+ * `beforeUpdate`, sur lequel la séance fige ce qu'elle garde dans
+ * l'historique (`useSeanceEtSaFile`).
+ */
+export const EVENEMENT_AVANT_UNE_COPIE = 'gym:avant-une-copie'
+
+/**
+ * Ce que dit une visite sans réseau dont la copie existe, mais pas le morceau
+ * de son composant : une mise à jour de l'application l'a remplacé, et le
+ * nouveau ne s'obtient qu'avec le réseau.
+ */
+export const MISE_A_JOUR_A_TERMINER = 'Mise à jour à terminer avec le réseau.'
 
 export const PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau."
 export const ECRITURE_NON_CONFIRMEE = "Pas de réponse du serveur : l'enregistrement n'est pas confirmé."
@@ -179,24 +223,80 @@ export const messageDeLEchec = (visite) => {
 }
 
 /**
+ * L'adresse d'une visite telle que sa copie se cherche : chemin et requête,
+ * sans origine ni fragment.
+ *
+ * @param {{ url: URL | string }} visite
+ * @param {Window} fenetre
+ */
+const adresseDeLaVisite = (visite, fenetre) => {
+    const url = new URL(String(visite.url), fenetre.location.href)
+
+    return url.origin === fenetre.location.origin ? `${url.pathname}${url.search}` : null
+}
+
+/**
+ * L'identifiant du compte qu'une page déclare, ou `null`.
+ *
+ * @param {{ props?: { auth?: { user?: { id?: unknown } | null } } } | null | undefined} page
+ */
+const compteDe = (page) => {
+    const identifiant = page?.props?.auth?.user?.id
+
+    return identifiant === undefined || identifiant === null ? null : String(identifiant)
+}
+
+/**
  * Branche le filet sur le routeur d'Inertia. Une fois par page.
  *
  * @param {{
  *   routeur: {
  *     on: (evenement: string, rappel: (evenement: CustomEvent) => unknown) => unknown,
  *     cancelAll: (options?: { async?: boolean, prefetch?: boolean, sync?: boolean }) => void,
+ *     push?: (page: object) => void,
+ *     resolveComponent?: (composant: string) => Promise<unknown>,
  *   },
  *   fenetre?: Window,
  *   delaiDuReseauLent?: number,
- * }} options
+ *   delaiAvantUneCopie?: number,
+ *   lireUneCopie?: (adresse: string) => Promise<{ page: object, copieDu: number } | null>,
+ *   importerLeComposant?: (composant: string) => Promise<unknown>,
+ *   horloge?: () => number,
+ * }} options `lireUneCopie` : le magasin de la page par défaut ;
+ *   `importerLeComposant` : le résolveur des pages d'Inertia par défaut.
  */
 export const installerLesVisitesHorsLigne = ({
     routeur,
     fenetre = window,
     delaiDuReseauLent = DELAI_DU_RESEAU_LENT_MS,
+    delaiAvantUneCopie = DELAI_AVANT_UNE_COPIE_MS,
+    lireUneCopie = (adresse) => magasinDesCopies().lireUneCopie(adresse),
+    importerLeComposant = (composant) => routeur.resolveComponent(composant),
+    horloge = () => Date.now(),
 }) => {
-    /** Les visites parties et pas encore finies, chacune avec son minuteur de lenteur. */
+    /** Les visites parties et pas encore finies, chacune avec ses minuteurs. */
     const enVol = new Map()
+
+    /** Si la visite de chaque identifiant demandait une partie des props : sa réponse ne dit pas tout `auth`. */
+    const partielles = new Map()
+
+    /** La page qu'Inertia montre, suivie sur ses évènements. */
+    let pageCourante = null
+
+    /**
+     * Le `auth` de la dernière réponse complète du serveur, et l'instant où
+     * elle est arrivée : une copie plus récente porte le sien.
+     *
+     * @type {{ auth: unknown, compte: string | null, recuLe: number } | null}
+     */
+    let dernierAuth = null
+
+    /**
+     * Monte à chaque visite au premier plan et à chaque retour dans
+     * l'historique : une copie décidée avant un geste plus récent ne passe
+     * plus devant lui.
+     */
+    let gestes = 0
 
     /** L'adresse d'une requête telle que le client d'Inertia la demande : sans fragment. */
     const adresseSansFragment = (adresse) => {
@@ -219,7 +319,7 @@ export const installerLesVisitesHorsLigne = ({
         return candidates.find((visite) => !visite.async && !visite.prefetch) ?? deLAdresse[0] ?? null
     }
 
-    const arreterLeMinuteur = (visite) => {
+    const arreterLesMinuteurs = (visite) => {
         const suivi = enVol.get(visite)
 
         if (!suivi) {
@@ -227,6 +327,7 @@ export const installerLesVisitesHorsLigne = ({
         }
 
         clearTimeout(suivi.minuteur)
+        clearTimeout(suivi.minuteurDeLaCopie)
 
         if (suivi.lenteurAnnoncee) {
             suivi.lenteurAnnoncee = false
@@ -234,9 +335,123 @@ export const installerLesVisitesHorsLigne = ({
         }
     }
 
+    /**
+     * Le `auth` le plus récent du compte de la copie : celui de la dernière
+     * réponse complète du serveur, sauf quand la copie est plus récente
+     * qu'elle. `null` quand la page affichée n'est pas celle de ce compte :
+     * aucune copie ne se sert alors.
+     *
+     * @param {{ page: { props?: { auth?: unknown } }, copieDu: number }} copie
+     */
+    const authLePlusRecent = (copie) => {
+        const compte = compteDe(copie.page)
+
+        if (compte === null || compteDe(pageCourante) !== compte) {
+            return null
+        }
+
+        if (dernierAuth !== null && dernierAuth.compte === compte && dernierAuth.recuLe >= copie.copieDu) {
+            return dernierAuth.auth
+        }
+
+        return copie.page.props.auth
+    }
+
+    /**
+     * Sert la copie d'une adresse, si le magasin en a une lisible et si
+     * `toujoursVoulue()` le permet encore au moment de la pousser.
+     *
+     * @param {{ adresse: string, raison: string, toujoursVoulue: () => boolean, avantDePousser?: () => void }} demande
+     * @returns {Promise<'servie' | 'sans-copie' | 'morceau-manquant' | 'abandonnee'>}
+     */
+    const servirUneCopie = async ({ adresse, raison, toujoursVoulue, avantDePousser = () => {} }) => {
+        const cle = cleDeLaCopie(adresse)
+
+        if (!adressePeutAvoirUneCopie(adresse) || cle === cleDeLaCopie(pageCourante?.url)) {
+            return 'sans-copie'
+        }
+
+        let copie
+
+        try {
+            copie = await lireUneCopie(cle)
+        } catch {
+            copie = null
+        }
+
+        // Le magasin vérifie déjà clé, titulaire, contrat et liste : la page lue doit encore être celle de sa clé.
+        if (
+            copie?.page === undefined ||
+            copie.page === null ||
+            cleDeLaCopie(copie.page.url) !== cle ||
+            pageGardee(cle, copie.page.component) === null
+        ) {
+            return 'sans-copie'
+        }
+
+        const auth = authLePlusRecent(copie)
+
+        if (auth === null) {
+            return 'sans-copie'
+        }
+
+        if (!toujoursVoulue()) {
+            return 'abandonnee'
+        }
+
+        try {
+            await importerLeComposant(copie.page.component)
+        } catch {
+            return 'morceau-manquant'
+        }
+
+        if (!toujoursVoulue()) {
+            return 'abandonnee'
+        }
+
+        const page = pageServie({ copie, pageCourante, auth, raison })
+
+        fenetre.dispatchEvent(new CustomEvent(EVENEMENT_AVANT_UNE_COPIE, { detail: { page } }))
+        noterQueLeServeurNeRepondPas()
+        avantDePousser()
+        routeur.push(page)
+
+        return 'servie'
+    }
+
+    /** @param {CustomEvent} evenement */
+    const suivreLaPage = (evenement) => {
+        pageCourante = evenement.detail?.page ?? pageCourante
+    }
+
+    /**
+     * Une réponse du serveur posée : la page, et son `auth` quand la visite
+     * demandait toutes les props.
+     *
+     * @param {CustomEvent} evenement
+     */
+    const suivreUneReponse = (evenement) => {
+        suivreLaPage(evenement)
+
+        const page = evenement.detail?.page
+
+        if (partielles.get(evenement.detail?.visitId) === false && page?.props?.auth !== undefined) {
+            dernierAuth = { auth: page.props.auth, compte: compteDe(page), recuLe: horloge() }
+        }
+    }
+
     routeur.on('start', (evenement) => {
         const visite = evenement.detail.visit
-        const suivi = { minuteur: null, lenteurAnnoncee: false }
+        const suivi = { minuteur: null, minuteurDeLaCopie: null, lenteurAnnoncee: false }
+
+        partielles.set(
+            visite.id,
+            (visite.only ?? []).length > 0 || (visite.except ?? []).length > 0 || (visite.reset ?? []).length > 0,
+        )
+
+        if (!visite.async && !visite.prefetch) {
+            gestes += 1
+        }
 
         if (visiteQuiQuitteLaPage(visite)) {
             suivi.minuteur = setTimeout(() => {
@@ -247,14 +462,31 @@ export const installerLesVisitesHorsLigne = ({
                     fenetre,
                 })
             }, delaiDuReseauLent)
+
+            const adresse = adresseDeLaVisite(visite, fenetre)
+
+            if (adresse !== null && adressePeutAvoirUneCopie(adresse)) {
+                const gesteDeLaVisite = gestes
+
+                suivi.minuteurDeLaCopie = setTimeout(() => {
+                    servirUneCopie({
+                        adresse,
+                        raison: RAISON_RESEAU_LENT,
+                        toujoursVoulue: () => enVol.has(visite) && gestes === gesteDeLaVisite,
+                        // La visite au premier plan seulement, comme « Annuler ».
+                        avantDePousser: () => routeur.cancelAll({ async: false, prefetch: false }),
+                    })
+                }, delaiAvantUneCopie)
+            }
         }
 
         enVol.set(visite, suivi)
     })
 
     routeur.on('finish', (evenement) => {
-        arreterLeMinuteur(evenement.detail.visit)
+        arreterLesMinuteurs(evenement.detail.visit)
         enVol.delete(evenement.detail.visit)
+        partielles.delete(evenement.detail.visit?.id)
     })
 
     routeur.on('networkError', (evenement) => {
@@ -269,10 +501,31 @@ export const installerLesVisitesHorsLigne = ({
         const visite = visiteEnEchec(erreur)
 
         if (visite !== null) {
-            // Le message de l'échec prend la place de celui de la lenteur.
+            // Le message de l'échec, ou la copie, prend la place de la lenteur.
             const suivi = enVol.get(visite)
             clearTimeout(suivi.minuteur)
+            clearTimeout(suivi.minuteurDeLaCopie)
             suivi.lenteurAnnoncee = false
+        }
+
+        const adresse = visite === null ? null : adresseDeLaVisite(visite, fenetre)
+
+        if (visite !== null && visiteQuiQuitteLaPage(visite) && adresse !== null && adressePeutAvoirUneCopie(adresse)) {
+            const gesteDeLEchec = gestes
+
+            servirUneCopie({
+                adresse,
+                raison: RAISON_SANS_RESEAU,
+                toujoursVoulue: () => gestes === gesteDeLEchec,
+            }).then((issue) => {
+                if (issue === 'sans-copie') {
+                    annoncerSansReseau(PAGE_INDISPONIBLE, { fenetre })
+                } else if (issue === 'morceau-manquant') {
+                    annoncerSansReseau(MISE_A_JOUR_A_TERMINER, { fenetre })
+                }
+            })
+
+            return false
         }
 
         const message = messageDeLEchec(visite)
@@ -285,8 +538,31 @@ export const installerLesVisitesHorsLigne = ({
     })
 
     // `success` comme `error` : une page qui porte des erreurs de validation est une réponse du serveur.
-    routeur.on('success', noterQueLeServeurRepond)
-    routeur.on('error', noterQueLeServeurRepond)
+    routeur.on('success', (evenement) => {
+        suivreUneReponse(evenement)
+        noterQueLeServeurRepond()
+    })
+    routeur.on('error', (evenement) => {
+        suivreUneReponse(evenement)
+        noterQueLeServeurRepond()
+    })
+
+    routeur.on('navigate', (evenement) => {
+        suivreLaPage(evenement)
+
+        if (evenement.detail?.type === 'history') {
+            gestes += 1
+        }
+
+        if (evenement.detail?.type === 'initial' && evenement.detail?.page?.props?.auth !== undefined) {
+            dernierAuth = {
+                auth: evenement.detail.page.props.auth,
+                compte: compteDe(evenement.detail.page),
+                recuLe: horloge(),
+            }
+        }
+    })
+    routeur.on('clientVisit', suivreLaPage)
 
     fenetre.addEventListener('offline', noterQueLeServeurNeRepondPas)
 }
