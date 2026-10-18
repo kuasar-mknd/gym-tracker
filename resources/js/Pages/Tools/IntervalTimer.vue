@@ -55,8 +55,12 @@ const {
 const isEditing = computed(() => !!form.id)
 
 /**
- * Sur une copie hors ligne, un préréglage ne s'enregistre ni ne se supprime
- * (#2048) : ces boutons le disent d'avance. Le minuteur, lui, tourne.
+ * Sur une copie hors ligne, un préréglage ne s'enregistre, ne se modifie ni ne
+ * se supprime (#2048) : ces boutons le disent d'avance. Le minuteur, lui,
+ * tourne, et un préréglage s'y charge. « Modifier le minuteur » remplirait le
+ * formulaire des valeurs de la copie, que la page garde quand elle se recharge
+ * au retour du réseau (elle n'est pas remontée) : « Mettre à jour » les aurait
+ * renvoyées par-dessus le préréglage du serveur, que la liste montre alors.
  */
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
@@ -322,6 +326,8 @@ const previewFromForm = () => {
                                 icon="edit"
                                 label="Modifier le minuteur"
                                 ton="info"
+                                :disabled="surUneCopie"
+                                :aria-describedby="raisonDUneEcriture"
                                 @click="editTimer(timer)"
                             />
                             <GlassIconButton
