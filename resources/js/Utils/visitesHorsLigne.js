@@ -9,11 +9,12 @@ import {
     propsDiffereesAnnoncees,
 } from '@/Utils/copiesServies'
 import { visiteQuiQuitteLaPage } from '@/Utils/miseAJourDuWorker'
-import { cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
+import { COMPOSANT_DE_LA_SEANCE, cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
 import {
     noterQueLeServeurNeRepondPas,
     noterQueLeServeurRepond,
     surUneReponseDuServeur,
+    useEtatDuReseau,
 } from '@/composables/useEtatDuReseau'
 
 /**
@@ -84,6 +85,25 @@ import {
  * groupe, pas une de plus. Au retour du réseau, à la première réponse
  * réussie du serveur (`surUneReponseDuServeur`), la page les redemande une
  * fois (`router.reload({ only })`), sans un mot si cela échoue.
+ *
+ * **Le retour du réseau sur une copie.** Une copie montrée se recharge en
+ * entier (`router.reload()`, sans `only`) à la première réponse réussie du
+ * serveur, visite d'Inertia, `http()`, rejeu de la file ou sonde, et quand
+ * l'historique ramène à une copie alors que le serveur répond (`navigate`) :
+ * une réponse complète remplace ses props, marque comprise. La séance attend
+ * d'abord que la file soit vide et qu'aucune écriture ne vole, comme
+ * `useRechargementApresLeVidage` : rechargée plus tôt, elle reprendrait au
+ * serveur une séance d'avant les écritures qui partent. Un rechargement qui
+ * échoue ne dit rien, et le suivant attend la réponse d'après.
+ *
+ * **Aucune écriture depuis une copie.** Une visite qui n'est pas un GET,
+ * partie d'une page marquée, est arrêtée avant son départ (`before`), le
+ * dit (`ECRITURE_DEPUIS_UNE_COPIE`) et fait recharger la page : la personne
+ * refait son geste sur des valeurs fraîches, et une valeur tirée d'une copie
+ * ne repart jamais au serveur. La déconnexion en est exemptée
+ * (`exempterDeLaGardeDesCopies`, que `useDeconnexion` appelle) : arrêtée sur
+ * une copie montrée pour lenteur, elle laissait la session ouverte à la
+ * personne suivante.
  */
 
 /** L'évènement de fenêtre que les toasts des layouts écoutent (`ToastsDuLayout.vue`). */
@@ -113,6 +133,30 @@ export const EVENEMENT_AVANT_UNE_COPIE = 'gym:avant-une-copie'
  * nouveau ne s'obtient qu'avec le réseau.
  */
 export const MISE_A_JOUR_A_TERMINER = 'Mise à jour à terminer avec le réseau.'
+
+/**
+ * Ce que dit une écriture tentée depuis une copie hors ligne : arrêtée avant
+ * son départ, elle n'a rien envoyé, et la page se recharge dès que le serveur
+ * répond.
+ */
+export const ECRITURE_DEPUIS_UNE_COPIE =
+    "Cette page est une copie hors ligne : rien n'a été envoyé. Elle se recharge dès que le serveur répond ; refais ton geste ensuite."
+
+/** Les visites que la garde des écritures laisse partir d'une copie : la déconnexion. */
+const visitesExemptees = new WeakSet()
+
+/**
+ * Laisse partir cette visite d'une copie hors ligne : le `onBefore` de la
+ * déconnexion (`useDeconnexion`), qu'Inertia appelle avec la visite avant
+ * l'évènement `before`.
+ *
+ * @param {object} visite
+ */
+export const exempterDeLaGardeDesCopies = (visite) => {
+    if (visite !== null && typeof visite === 'object') {
+        visitesExemptees.add(visite)
+    }
+}
 
 export const PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau."
 export const ECRITURE_NON_CONFIRMEE = "Pas de réponse du serveur : l'enregistrement n'est pas confirmé."
@@ -271,6 +315,23 @@ const compteDe = (page) => {
 }
 
 /**
+ * Si la séance n'a plus rien qui parte : la file hors ligne vidée, ou
+ * arrêtée, puis relue vide, et aucune écriture directe en vol. Ce que la
+ * copie de la séance attend avant de se recharger. `SyncService` se charge à
+ * la demande : la page de séance, seule à en avoir besoin ici, l'a déjà
+ * chargé.
+ *
+ * @returns {Promise<boolean>}
+ */
+export const seanceEnregistreeDansLaFile = async () => {
+    const { default: file } = await import('@/Utils/SyncService')
+
+    await file.attendreLesEcritures()
+
+    return file.enAttente() === 0 && file.ecrituresEnCours() === 0
+}
+
+/**
  * Branche le filet sur le routeur d'Inertia. Une fois par page.
  *
  * @param {{
@@ -285,9 +346,12 @@ const compteDe = (page) => {
  *   delaiAvantUneCopie?: number,
  *   lireUneCopie?: (adresse: string) => Promise<{ page: object, copieDu: number } | null>,
  *   importerLeComposant?: (composant: string) => Promise<unknown>,
+ *   laSeanceEstEnregistree?: () => Promise<boolean>,
  *   horloge?: () => number,
  * }} options `lireUneCopie` : le magasin de la page par défaut ;
- *   `importerLeComposant` : le résolveur des pages d'Inertia par défaut.
+ *   `importerLeComposant` : le résolveur des pages d'Inertia par défaut ;
+ *   `laSeanceEstEnregistree` : la file hors ligne vidée, rien en vol
+ *   (`seanceEnregistreeDansLaFile`, par défaut).
  */
 export const installerLesVisitesHorsLigne = ({
     routeur,
@@ -296,8 +360,11 @@ export const installerLesVisitesHorsLigne = ({
     delaiAvantUneCopie = DELAI_AVANT_UNE_COPIE_MS,
     lireUneCopie = (adresse) => magasinDesCopies().lireUneCopie(adresse),
     importerLeComposant = (composant) => routeur.resolveComponent(composant),
+    laSeanceEstEnregistree = seanceEnregistreeDansLaFile,
     horloge = () => Date.now(),
 }) => {
+    const { joignable } = useEtatDuReseau()
+
     /** Les visites parties et pas encore finies, chacune avec ses minuteurs. */
     const enVol = new Map()
 
@@ -480,6 +547,45 @@ export const installerLesVisitesHorsLigne = ({
     /** Un rechargement que la page a lancé seule, au retour du réseau, et qui n'a pas fini. */
     let rechargementEnVol = false
 
+    /** La copie de la séance attend que sa file soit vide avant de se recharger. */
+    let attenteDeLaSeance = false
+
+    /**
+     * Recharge en entier la copie affichée : une réponse complète remplace ses
+     * props, marque comprise. La séance attend d'abord que la file soit vide
+     * et qu'aucune écriture ne vole ; sinon, rien, et la réponse suivante, ou
+     * l'annonce suivante de la file, redemande. Un échec ne dit rien : c'est
+     * un rechargement en arrière-plan.
+     */
+    const rechargerLaCopie = async () => {
+        const page = pageCourante
+
+        if (rechargementEnVol || attenteDeLaSeance || !estUneCopie(page)) {
+            return
+        }
+
+        if (page.component === COMPOSANT_DE_LA_SEANCE) {
+            attenteDeLaSeance = true
+
+            const enregistree = await laSeanceEstEnregistree()
+                .catch(() => false)
+                .finally(() => {
+                    attenteDeLaSeance = false
+                })
+
+            if (!enregistree || !estUneCopie(pageCourante) || pageCourante.url !== page.url || rechargementEnVol) {
+                return
+            }
+        }
+
+        rechargementEnVol = true
+        routeur.reload({
+            onFinish: () => {
+                rechargementEnVol = false
+            },
+        })
+    }
+
     /**
      * Les props secourues, si ce sont celles de la page affichée.
      *
@@ -542,6 +648,13 @@ export const installerLesVisitesHorsLigne = ({
      */
     const rechargerCeQuiAttend = (reponse) => {
         const page = pageCourante
+
+        if (estUneCopie(page)) {
+            rechargerLaCopie()
+
+            return
+        }
+
         const aRedemander = secouruesDe(page)
 
         if (rechargementEnVol || aRedemander === null || reponse <= aRedemander.apres) {
@@ -729,6 +842,11 @@ export const installerLesVisitesHorsLigne = ({
             gestes += 1
         }
 
+        // Une copie qui revient quand le serveur répond (Retour, Avance, ou une réponse arrivée avant elle).
+        if (estUneCopie(pageCourante) && joignable.value) {
+            setTimeout(rechargerLaCopie, 0)
+        }
+
         if (evenement.detail?.type === 'initial' && evenement.detail?.page?.props?.auth !== undefined) {
             dernierAuth = {
                 auth: evenement.detail.page.props.auth,
@@ -739,5 +857,36 @@ export const installerLesVisitesHorsLigne = ({
     })
     routeur.on('clientVisit', suivreLaPage)
 
+    // Aucune écriture ne part d'une copie, sauf la déconnexion : la page se recharge d'abord.
+    routeur.on('before', (evenement) => {
+        const visite = evenement.detail.visit
+
+        if (
+            String(visite.method).toLowerCase() === 'get' ||
+            !estUneCopie(pageCourante) ||
+            visitesExemptees.has(visite)
+        ) {
+            return undefined
+        }
+
+        annoncerSansReseau(ECRITURE_DEPUIS_UNE_COPIE, { fenetre })
+        setTimeout(rechargerLaCopie, 0)
+
+        return false
+    })
+
+    /*
+     * La file qui avance sans réponse réussie (un refus, une écriture retirée)
+     * peut laisser la séance enregistrée : sa copie attendait ce moment.
+     */
+    const surLaFile = () => {
+        if (joignable.value) {
+            setTimeout(rechargerLaCopie, 0)
+        }
+    }
+
+    fenetre.addEventListener('sync:replayed', surLaFile)
+    fenetre.addEventListener('sync:failed', surLaFile)
+    fenetre.addEventListener('sync:retired', surLaFile)
     fenetre.addEventListener('offline', noterQueLeServeurNeRepondPas)
 }
