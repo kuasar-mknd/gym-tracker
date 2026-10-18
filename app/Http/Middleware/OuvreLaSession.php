@@ -25,7 +25,7 @@ use Symfony\Component\HttpFoundation\Response;
  * (`resources/js/Utils/prechauffage.js`) demande jusqu'à huit pages en
  * arrière-plan, l'une après l'autre, et redemande la séance en cours après un
  * rejeu : ces GET, que la personne ne voit pas, ne doivent ni prolonger la
- * session, ce que l'issue exclut, ni réécrire une session qui a changé
+ * session, ce que l'issue exclut, ni toucher à une session qui a changé
  * pendant qu'ils tournaient (une déconnexion, une connexion dans un autre
  * onglet), ni rendre au navigateur un cookie qu'une autre réponse a remplacé
  * depuis. Ils portent `X-Copies-Hors-Ligne: prechauffage`.
@@ -43,8 +43,8 @@ use Symfony\Component\HttpFoundation\Response;
  *   apprend qu'elle a pris fin, et le cookie de rappel que cette fin efface.
  *
  * Toute autre requête suit `StartSession` tel quel. La marque ne sert qu'à
- * qui la pose : elle ne change que la session de la requête qui la porte, et
- * un GET n'écrit rien d'autre.
+ * qui la pose : elle ne change que le sort de la session de la requête qui
+ * la porte.
  *
  * Branché à la place de `StartSession` dans le groupe `web`
  * (bootstrap/app.php, `web(replace:)`) : l'ordre de priorité de Laravel le
