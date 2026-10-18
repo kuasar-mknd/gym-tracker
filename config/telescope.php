@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\Sessions\PierresTombales;
 use Laravel\Telescope\Http\Middleware\Authorize;
 use Laravel\Telescope\Watchers;
 
@@ -143,7 +144,10 @@ return [
         Watchers\CacheWatcher::class => [
             'enabled' => env('TELESCOPE_CACHE_WATCHER', true),
             'hidden' => [],
-            'ignore' => [],
+            'ignore' => [
+                // Pierres tombales des sessions : une clé neuve par session.
+                PierresTombales::PREFIXE.'*',
+            ],
         ],
 
         Watchers\ClientRequestWatcher::class => [

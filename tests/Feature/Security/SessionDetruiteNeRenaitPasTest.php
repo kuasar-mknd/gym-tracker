@@ -16,6 +16,8 @@ use App\Support\Sessions\SessionChiffreeGardee;
 use App\Support\Sessions\SessionGardee;
 use Filament\Facades\Filament;
 use Illuminate\Auth\SessionGuard;
+use Illuminate\Cache\Events\CacheHit;
+use Illuminate\Cache\Events\CacheMissed;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\CacheBasedSessionHandler;
 use Illuminate\Session\DatabaseSessionHandler;
@@ -23,8 +25,11 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Laravel\Pulse\Recorders\CacheInteractions;
+use Laravel\Telescope\Watchers\CacheWatcher;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
@@ -41,14 +46,19 @@ use Tests\Support\UneAutreRequete;
  * dans un magasin de cache, connexion comprise, et rendait au navigateur
  * l'ancien cookie, par-dessus celui du compte connecté entre-temps.
  *
- * Chaque cas fait détruire la session par une autre requête au milieu de
- * celle du test (`UneAutreRequete`, juste après que la garde y a lu le
- * compte), sous trois pilotes : le magasin en mémoire des tests, un cache
- * (le gestionnaire du pilote Redis de production, dont l'écriture n'a pas de
- * condition) et la base, dont la ligne effacée ne renaît pas mais dont le
- * cookie revenait. Sans le correctif, chaque cas échoue : session renée ou
- * cookies reposés, et le cookie de la session finie rouvert sous le même
- * identifiant.
+ * Chaque cas de destruction fait détruire la session par une autre requête
+ * pendant celle du test (`UneAutreRequete`) : juste après que la garde y a lu
+ * le compte (évènement `Authenticated`), depuis la route, ou juste avant
+ * l'écriture de fin. Ils se jouent sous trois pilotes : le magasin en mémoire
+ * des tests, un cache (le gestionnaire du pilote Redis de production, dont
+ * l'écriture n'a pas de condition) et la base, dont la ligne effacée ne
+ * renaît pas mais dont le cookie revenait. Sans le correctif, ces cas
+ * échouent : session renée ou cookies reposés, et le cookie de la session
+ * finie rouvert sous le même identifiant. Les autres tiennent ce que le
+ * correctif ne doit pas changer (la requête ordinaire, la connexion, « se
+ * souvenir de moi ») et passent avec ou sans lui, ou la façon dont il est
+ * branché : classes, pierre tombale, ordre de la destruction, lectures du
+ * cache, outils qui les notent.
  */
 
 /**
@@ -181,6 +191,61 @@ function detruiteGarde(string $nom): SessionGuard
     return $garde;
 }
 
+/**
+ * Connecte un appareil, puis le déconnecte, et rend l'identifiant de la
+ * session que la déconnexion détruit (`invalidate()`).
+ */
+function detruiteParUneDeconnexion(): string
+{
+    $appareil = detruiteAppareilConnecte(User::factory()->create());
+    $connectee = detruiteIdentifiant($appareil);
+
+    $appareil->envoyer('POST', '/logout')->assertRedirect('/');
+
+    return $connectee;
+}
+
+/**
+ * Ouvre la page de connexion sur un appareil, puis s'y connecte, et rend
+ * l'identifiant de la session d'invité que la connexion détruit
+ * (`SessionGuard::updateSession()`, `migrate(true)`).
+ */
+function detruiteParUneConnexion(): string
+{
+    $compte = User::factory()->create();
+    $appareil = new Appareil();
+    $appareil->envoyer('GET', '/login', [], detruiteEntetesInertia())->assertOk();
+    $invitee = detruiteIdentifiant($appareil);
+
+    $appareil->envoyer('POST', '/login', ['email' => $compte->email, 'password' => 'password'])
+        ->assertRedirect(route('dashboard'));
+
+    return $invitee;
+}
+
+/**
+ * Le nombre de pierres tombales que lisent les requêtes de cette fonction, à
+ * leurs évènements de lecture du cache (ceux que Pulse et Telescope notent).
+ * Chaque appel compte dans son propre compteur : l'écouteur d'un appel
+ * précédent n'y ajoute rien.
+ *
+ * @param  Closure(): mixed  $requetes
+ */
+function detruiteLecturesDesPierresTombales(Closure $requetes): int
+{
+    $lectures = 0;
+
+    Event::listen([CacheHit::class, CacheMissed::class], static function (CacheHit|CacheMissed $lecture) use (&$lectures): void {
+        if (str_starts_with($lecture->key, PierresTombales::PREFIXE)) {
+            $lectures++;
+        }
+    });
+
+    $requetes();
+
+    return $lectures;
+}
+
 it('ne fait pas renaître une session qu’une autre requête détruit pendant une page, et la réponse n’en pose aucun cookie', function (string $pilote, bool $parUneConnexion): void {
     detruitePoserLePilote($pilote);
     $appareil = detruiteAppareilConnecte(User::factory()->create());
@@ -279,6 +344,29 @@ it('retire l’écriture de fin quand la session est détruite juste avant elle'
         ->and(UneAutreRequete::litLaSession($ancienne))->toBe('')
         ->and(detruiteCookiesPoses($reponse))->toBe([]);
 });
+
+/*
+ * L'autre moitié de cet ordre : la destruction pose la pierre tombale, puis
+ * efface la session, si bien que le gestionnaire du pilote la trouve déjà
+ * posée quand il efface. Posée après, une requête qui écrirait la session
+ * entre l'effacement et la pierre, puis lirait la pierre pas encore posée, la
+ * ferait renaître et en reposerait les cookies.
+ */
+it('pose la pierre tombale avant d’effacer la session détruite', function (bool $parUneConnexion): void {
+    $espion = detruiteEspionner();
+    $pierreDejaPosee = [];
+    $espion->avantChaqueDestruction = static function (string $identifiant) use (&$pierreDejaPosee): void {
+        $pierreDejaPosee[$identifiant] = Cache::store()->has(PierresTombales::PREFIXE.$identifiant);
+    };
+
+    $detruite = $parUneConnexion ? detruiteParUneConnexion() : detruiteParUneDeconnexion();
+
+    expect($pierreDejaPosee)->toHaveKey($detruite)
+        ->and($pierreDejaPosee)->each->toBeTrue();
+})->with([
+    'par une déconnexion' => [false],
+    'par une connexion' => [true],
+]);
 
 it('ne rend pas son cookie à une page d’invité qui croise une connexion', function (string $pilote): void {
     detruitePoserLePilote($pilote);
@@ -440,4 +528,43 @@ it('ouvre la session par OuvreLaSession dans le groupe web, la pile de Sanctum e
         ->and(app('router')->getMiddlewareGroups()['web'])->not->toContain(StartSession::class)
         ->and(Filament::getPanel('admin')->getMiddleware())->toContain(OuvreLaSession::class)
         ->and(Filament::getPanel('admin')->getMiddleware())->not->toContain(StartSession::class);
+});
+
+/*
+ * Seul un identifiant reçu du cookie peut avoir été détruit par une autre
+ * requête : une page qui porte le cookie de sa session lit deux pierres
+ * tombales (à l'ouverture, après l'écriture), le cookie d'une session finie
+ * une seule (celle qui la fait remplacer par une neuve), et une première
+ * visite aucune, puisque le magasin tire son identifiant, que personne
+ * d'autre ne connaît.
+ */
+it('ne lit de pierre tombale que pour un identifiant reçu du cookie', function (string $pilote): void {
+    detruitePoserLePilote($pilote);
+    $appareil = detruiteAppareilConnecte(User::factory()->create());
+    $copie = $appareil->copie();
+
+    expect(detruiteLecturesDesPierresTombales(static fn (): TestResponse => new Appareil()->envoyer('GET', '/login', [], detruiteEntetesInertia())->assertOk()))->toBe(0)
+        ->and(detruiteLecturesDesPierresTombales(static fn (): TestResponse => $appareil->envoyer('GET', '/dashboard', [], detruiteEntetesInertia())->assertOk()))->toBe(2);
+
+    $appareil->envoyer('POST', '/logout')->assertRedirect('/');
+
+    expect(detruiteLecturesDesPierresTombales(static fn (): TestResponse => $copie->envoyer('GET', '/dashboard', [], detruiteEntetesInertia())->assertRedirect(route('login'))))->toBe(1);
+})->with(detruitePilotes());
+
+/*
+ * Pulse et Telescope notent chaque lecture du cache, sous sa clé. Celle d'une
+ * pierre tombale change avec chaque session, comme l'identifiant de session
+ * que Pulse ignore déjà : ils l'ignorent aussi, et rien d'autre.
+ */
+it('fait ignorer les pierres tombales par Pulse et Telescope, et rien d’autre', function (): void {
+    $cle = PierresTombales::PREFIXE.app('session.store')->getId();
+    $pulse = app(CacheInteractions::class);
+    $telescope = new CacheWatcher(config()->array('telescope.watchers.'.CacheWatcher::class));
+    $pulseIgnore = static fn (string $cle): mixed => new ReflectionMethod($pulse, 'shouldIgnore')->invoke($pulse, $cle);
+    $telescopeIgnore = static fn (string $cle): mixed => new ReflectionMethod($telescope, 'shouldIgnore')->invoke($telescope, new CacheMissed('array', $cle));
+
+    expect($pulseIgnore($cle))->toBeTrue()
+        ->and($telescopeIgnore($cle))->toBeTrue()
+        ->and($pulseIgnore('achievements_all'))->toBeFalse()
+        ->and($telescopeIgnore('achievements_all'))->toBeFalse();
 });

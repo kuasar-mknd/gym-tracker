@@ -38,6 +38,9 @@ final readonly class PierresTombales
     /**
      * Le préfixe de la clé d'une pierre tombale. Un identifiant de session
      * n'a que des lettres et des chiffres : aucune session ne la porte.
+     * Pulse et Telescope, qui notent chaque lecture du cache, ignorent les
+     * clés qu'il ouvre (config/pulse.php, config/telescope.php) : une clé
+     * neuve par session.
      */
     public const string PREFIXE = 'session-detruite:';
 

@@ -29,18 +29,23 @@ namespace App\Support\Sessions;
  * Une requête qui détruit elle-même l'identifiant qu'elle a lu (une
  * déconnexion, une connexion) enregistre sa nouvelle session comme Laravel.
  * Une requête qui n'a croisé aucune destruction aussi, et prolonge sa session
- * comme avant : une lecture du cache en entrant, une après l'écriture.
+ * comme avant : une lecture du cache en entrant, une après l'écriture. Une
+ * requête sans identifiant reçu (pas de cookie, ou un cookie illisible), dont
+ * le magasin tire l'identifiant, n'en lit aucune : personne d'autre ne connaît
+ * cet identifiant, que seule sa réponse donnera au navigateur.
  *
  * L'état de la requête (l'identifiant lu, et s'il a été détruit par elle) se
  * remet à zéro à chaque ouverture : sous Octane, la session sert le worker
- * d'une requête à l'autre.
+ * d'une requête à l'autre. `StartSession` donne à la session l'identifiant du
+ * cookie (`setId()`) avant de l'ouvrir, à chaque requête.
  *
  * @phpstan-require-extends \Illuminate\Session\Store
  */
 trait NeRenaitPasDeSaDestruction
 {
     /**
-     * L'identifiant sous lequel la requête a lu la session en entrant.
+     * L'identifiant reçu sous lequel la requête a lu la session en entrant ;
+     * nul quand le magasin l'a tiré.
      */
     private ?string $identifiantLu = null;
 
@@ -50,16 +55,40 @@ trait NeRenaitPasDeSaDestruction
     private bool $detruiteParLaRequete = false;
 
     /**
-     * Ouvre la session ; sous un identifiant détruit, en tire un neuf.
+     * Le dernier identifiant donné à `setId()` était valide : à l'ouverture,
+     * celui du cookie de la requête, que `StartSession` donne avant d'ouvrir.
+     * Faux quand le magasin l'a tiré, faute d'identifiant valide : personne
+     * d'autre ne le connaît.
+     */
+    private bool $identifiantRecu = false;
+
+    /**
+     * Pose l'identifiant de la session, ou en tire un s'il n'est pas valide,
+     * et retient lequel des deux.
+     *
+     * @param  string|null  $id
+     */
+    #[\Override]
+    public function setId($id): void
+    {
+        $this->identifiantRecu = $this->isValidId($id);
+
+        parent::setId($id);
+    }
+
+    /**
+     * Ouvre la session ; sous un identifiant reçu et détruit, en tire un
+     * neuf. Un identifiant tiré par le magasin n'a pas de pierre tombale à
+     * lire, ni à l'ouverture ni à l'enregistrement.
      */
     #[\Override]
     public function start(): bool
     {
-        if ($this->pierresTombales->estPoseeSur($this->getId())) {
+        if ($this->identifiantRecu && $this->pierresTombales->estPoseeSur($this->getId())) {
             $this->setId(null);
         }
 
-        $this->identifiantLu = $this->getId();
+        $this->identifiantLu = $this->identifiantRecu ? $this->getId() : null;
         $this->detruiteParLaRequete = false;
 
         return parent::start();
