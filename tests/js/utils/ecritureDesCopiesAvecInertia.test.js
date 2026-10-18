@@ -233,6 +233,31 @@ describe('une réponse complète du réseau', () => {
         expect(etatRange()).toBeUndefined()
     })
 
+    it('garde la page qui suit une écriture sans son message d’un instant, ni le flash de la page', async () => {
+        // La bibliothèque où l'on vient de créer un exercice : le serveur y rend le message de la redirection.
+        const page = {
+            ...pageDe({
+                component: 'Exercises/Index',
+                url: '/exercises',
+                props: {
+                    flash: { success: 'Exercice créé avec succès', error: null },
+                    exercises: [{ id: 1, name: 'Développé couché' }],
+                },
+            }),
+            flash: { proposerLesNotifications: true },
+        }
+
+        await recevoir(page)
+
+        const lue = await magasin.lireUneCopie('/exercises')
+
+        expect(lue.page.props.flash).toEqual({ success: null, error: null })
+        expect(lue.page.flash).toEqual({})
+        expect(lue.page.props.exercises).toEqual([{ id: 1, name: 'Développé couché' }])
+        expect(JSON.stringify(lue)).not.toContain('Exercice créé')
+        expect(relais.rejets).toEqual([])
+    })
+
     it('d’un autre compte, vide d’abord le magasin du précédent, puis garde la sienne', async () => {
         await recevoir(pageDe())
         await recevoir(pageDe({ component: 'Workouts/Index', url: '/workouts' }))
@@ -294,6 +319,21 @@ describe('une réponse partielle', () => {
         expect(lue.page.props.statistiques).toEqual({ seances: 4 })
         expect(lue.page.props.recentWorkouts).toEqual(['Jambes'])
         expect(lue.page.props.auth.user.name).toBe('Camille Horsligne')
+    })
+
+    it('qui porte un message d’un instant le verse ramené à nul', async () => {
+        await recevoir(pageDe({ props: { flash: { success: null, error: null }, statistiques: { seances: 2 } } }))
+
+        await recevoirEnPartie(
+            { flash: { success: 'Habitude créée.', error: 'Rien de grave' }, statistiques: { seances: 3 } },
+            { except: ['recentWorkouts'] },
+        )
+
+        const lue = await magasin.lireUneCopie('/dashboard')
+
+        expect(lue.page.props.statistiques).toEqual({ seances: 3 })
+        expect(lue.page.props.flash).toEqual({ success: null, error: null })
+        expect(JSON.stringify(lue)).not.toMatch(/Habitude créée|Rien de grave/)
     })
 
     it('nomme les props reçues comme Inertia les fusionne : une prop imbriquée l’est dans sa racine', () => {

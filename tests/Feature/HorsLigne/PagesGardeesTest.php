@@ -77,3 +77,7 @@ it('ne nomme chaque composant et chaque route qu’une fois', function (): void 
     expect(array_column($liste, 'composant'))->toBe(array_values(array_unique(array_column($liste, 'composant'))))
         ->and(array_column($liste, 'route'))->toBe(array_values(array_unique(array_column($liste, 'route'))));
 });
+
+it('lit, dans le module, les messages d’un instant qu’une copie ramène à nul', function (): void {
+    expect(PagesGardees::champsDUnInstant())->toBe(['flash' => ['success', 'error']]);
+});

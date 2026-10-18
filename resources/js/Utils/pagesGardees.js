@@ -106,6 +106,52 @@ export const PROPS_JAMAIS_GARDEES = Object.freeze({
 })
 
 /**
+ * Les champs des props partagées qui ne valent que pour la page qui suit une
+ * écriture : le message de réussite ou d'échec qu'une redirection laisse en
+ * session (`flash.success`, `flash.error`, `HandleInertiaRequests::share()`).
+ * Une copie s'écrit justement sur cette page-là (une bibliothèque où l'on
+ * vient de créer un exercice) : servie plus tard (partie E), elle remontrerait
+ * un message d'un instant. Le magasin les ramène donc à nul avant de chiffrer
+ * (`propsGardables`), à l'écriture d'une réponse complète comme d'une réponse
+ * partielle, et ne garde pas non plus le `flash` de la page (`Inertia::flash`).
+ *
+ * Le contrat des pages gardées (`ContratDesPagesGardeesTest`) les relève
+ * ramenés à nul, et exige qu'ils soient bien dans la réponse. Une entrée par
+ * ligne, sous la forme `prop: Object.freeze(['champ', …]),`, que
+ * `Tests\Support\PagesGardees` lit et refuse sous toute autre.
+ */
+export const CHAMPS_D_UN_INSTANT = Object.freeze({
+    flash: Object.freeze(['success', 'error']),
+})
+
+/**
+ * Une prop telle qu'une copie la garde : ses champs d'un instant ramenés à
+ * nul quand elle en a (`CHAMPS_D_UN_INSTANT`), telle quelle sinon. Un champ
+ * absent n'est pas ajouté.
+ *
+ * @param {string} nom
+ * @param {unknown} valeur
+ * @returns {unknown}
+ */
+const sansSesChampsDUnInstant = (nom, valeur) => {
+    if (
+        !Object.hasOwn(CHAMPS_D_UN_INSTANT, nom) ||
+        valeur === null ||
+        typeof valeur !== 'object' ||
+        Array.isArray(valeur)
+    ) {
+        return valeur
+    }
+
+    return {
+        ...valeur,
+        ...Object.fromEntries(
+            CHAMPS_D_UN_INSTANT[nom].filter((champ) => Object.hasOwn(valeur, champ)).map((champ) => [champ, null]),
+        ),
+    }
+}
+
+/**
  * Si une prop d'un composant ne va jamais dans une copie.
  *
  * @param {unknown} composant
@@ -118,15 +164,21 @@ export const propJamaisGardee = (composant, nom) =>
     PROPS_JAMAIS_GARDEES[composant].includes(nom)
 
 /**
- * Les props d'une page, sans celles qu'aucune copie ne garde : un nouvel
- * objet, les props gardées telles quelles.
+ * Les props d'une page telles qu'une copie les garde, sans celles qu'aucune
+ * copie ne garde (`PROPS_JAMAIS_GARDEES`), les champs d'un instant ramenés à
+ * nul (`CHAMPS_D_UN_INSTANT`) : un nouvel objet, les autres props telles
+ * quelles.
  *
  * @param {unknown} composant
  * @param {Record<string, unknown> | null | undefined} props
  * @returns {Record<string, unknown>}
  */
 export const propsGardables = (composant, props) =>
-    Object.fromEntries(Object.entries(props ?? {}).filter(([nom]) => !propJamaisGardee(composant, nom)))
+    Object.fromEntries(
+        Object.entries(props ?? {})
+            .filter(([nom]) => !propJamaisGardee(composant, nom))
+            .map(([nom, valeur]) => [nom, sansSesChampsDUnInstant(nom, valeur)]),
+    )
 
 /**
  * Le motif qu'un chemin de la liste reconnaît : un identifiant de modèle, un

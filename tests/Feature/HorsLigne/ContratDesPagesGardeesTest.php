@@ -41,7 +41,8 @@ use function Pest\Laravel\actingAs;
  * `contrat-des-pages-gardees.json` pour la version courante. Il la relève
  * telle qu'une copie la garde : sans les props que `PROPS_JAMAIS_GARDEES`
  * nomme (le dernier poids et les objectifs de l'accueil), qu'aucune copie ne
- * porte. Une liste vide s'y lit `liste vide`, et un champ toujours nul
+ * porte, et les messages d'un instant que `CHAMPS_D_UN_INSTANT` nomme
+ * (`flash.success`, `flash.error`) ramenés à nul. Une liste vide s'y lit `liste vide`, et un champ toujours nul
  * `null` : ce qu'ils contiendraient n'est pas couvert, et les données du
  * compte de référence doivent les remplir ; un champ que le compte ne peut
  * pas remplir se nomme, avec sa raison, dans `contratDesPagesToujoursNuls()`.
@@ -74,7 +75,9 @@ function contratDesPagesFichier(): string
 /**
  * Le compte de référence et ses séances : la séance en cours et la séance
  * close qui porte ses records, chacune avec des exercices et des séries, une
- * faite et une non faite dans la séance en cours, une ligne et une série
+ * faite et une non faite dans la séance en cours, dix-sept séances plus
+ * anciennes, de quoi remplir une seconde page de la liste des séances
+ * (l'adresse de la page suivante), une ligne et une série
  * créées par l'API (clé d'idempotence) dans chacune, une note de séance et de
  * ligne, une série de cardio (distance et durée), un record dans la séance en
  * cours, un exercice au repos réglé, un avatar et un badge à célébrer, plus
@@ -121,6 +124,20 @@ function contratDesPagesCompte(): array
         }
 
         $closes[] = $seance;
+    }
+
+    // De quoi remplir une seconde page de la liste des séances, vingt par page : une copie de
+    // `/workouts` porte alors l'adresse de la suivante (`workouts.next_page_url`). Plus anciennes
+    // que les trois autres, chacune avec un exercice et une série.
+    foreach (range(12, 28) as $joursAvant) {
+        $seance = Workout::factory()->for($compte)->create([
+            'name' => "Séance d’il y a {$joursAvant} jours",
+            'started_at' => now()->subDays($joursAvant),
+            'ended_at' => now()->subDays($joursAvant)->addHour(),
+            'notes' => 'Séance de fond',
+        ]);
+        $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $developpe->id, 'order' => 0]);
+        Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 70, 'reps' => 10]);
     }
 
     $enCours = Workout::factory()->for($compte)->create(['name' => 'Séance du jour', 'started_at' => now()->subMinutes(30), 'notes' => 'Épaule à ménager']);
@@ -278,8 +295,9 @@ function contratDesPagesGroupesDifferes(stdClass $page): array
  * La page complète, puis chaque groupe de props différées, demandé comme la
  * page le demande (`X-Inertia-Partial-Data`), et versé dans ses props ; puis
  * telle qu'une copie la garde, sans les props que `PROPS_JAMAIS_GARDEES`
- * nomme pour son composant. Chacune doit être dans la réponse : une prop
- * renommée laisserait sinon passer la nouvelle dans les copies.
+ * nomme pour son composant, et les champs que `CHAMPS_D_UN_INSTANT` nomme
+ * ramenés à nul. Chacun doit être dans la réponse : une prop ou un champ
+ * renommés laisseraient sinon passer le nouveau dans les copies.
  */
 function contratDesPagesPageEntiere(User $compte, string $chemin, string $composant): stdClass
 {
@@ -303,6 +321,17 @@ function contratDesPagesPageEntiere(User $compte, string $chemin, string $compos
     foreach (PagesGardees::propsJamaisGardees()[$composant] ?? [] as $prop) {
         expect(property_exists($props, $prop))->toBeTrue("`PROPS_JAMAIS_GARDEES` nomme `{$prop}`, que `{$composant}` ne rend plus : nomme la prop qui l’a remplacée.");
         unset($props->{$prop});
+    }
+
+    foreach (PagesGardees::champsDUnInstant() as $prop => $champs) {
+        $valeur = $props->{$prop} ?? null;
+        expect($valeur)->toBeInstanceOf(stdClass::class, "`CHAMPS_D_UN_INSTANT` nomme `{$prop}`, que `{$composant}` ne rend plus en objet.");
+        assert($valeur instanceof stdClass);
+
+        foreach ($champs as $champ) {
+            expect(property_exists($valeur, $champ))->toBeTrue("`CHAMPS_D_UN_INSTANT` nomme `{$prop}.{$champ}`, que `{$composant}` ne rend plus : nomme le champ qui l’a remplacé.");
+            $valeur->{$champ} = null;
+        }
     }
 
     return $page;
@@ -466,11 +495,10 @@ function contratDesPagesFormes(): array
 function contratDesPagesToujoursNuls(): array
 {
     return [
-        'flash.error' => 'aucun message sur une page qu’aucune écriture n’a précédée',
-        'flash.success' => 'aucun message sur une page qu’aucune écriture n’a précédée',
+        'flash.error' => 'un message d’un instant, ramené à nul avant le chiffrement (`CHAMPS_D_UN_INSTANT`)',
+        'flash.success' => 'un message d’un instant, ramené à nul avant le chiffrement (`CHAMPS_D_UN_INSTANT`)',
         'pending_migrations' => 'nul hors de l’environnement local (`HandleInertiaRequests::pendingMigrationCount`)',
         'workouts.prev_page_url' => 'seule la première page de la liste des séances se garde',
-        'workouts.next_page_url' => 'le paginateur de Laravel, sans page suivante pour le compte de référence (vingt séances par page)',
         'Workouts/Show (séance en cours) › workout.ended_at' => 'une séance en cours n’a pas de fin',
     ];
 }

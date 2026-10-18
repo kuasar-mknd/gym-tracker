@@ -581,7 +581,7 @@
                 "workouts.links[].label": "texte",
                 "workouts.links[].page": "nombre|null",
                 "workouts.links[].url": "null|texte",
-                "workouts.next_page_url": "null",
+                "workouts.next_page_url": "texte",
                 "workouts.path": "texte",
                 "workouts.per_page": "nombre",
                 "workouts.prev_page_url": "null",

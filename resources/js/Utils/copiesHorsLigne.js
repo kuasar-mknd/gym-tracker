@@ -36,7 +36,10 @@ import {
  *
  * **Ce qui n'y entre jamais**, même chiffré : les props d'une page gardée que
  * nomme `PROPS_JAMAIS_GARDEES` (le dernier poids et les objectifs de
- * l'accueil), retirées avant le chiffrement de toute écriture.
+ * l'accueil), retirées avant le chiffrement de toute écriture ; ni un message
+ * d'un instant, que la page ne montre qu'après une écriture : les champs que
+ * nomme `CHAMPS_D_UN_INSTANT` (`flash.success`, `flash.error`) sont ramenés à
+ * nul, et le `flash` de la page vidé.
  *
  * **L'état** (`etat`) dit à quelle clé le magasin est ouvert : le compte,
  * l'empreinte de la clé, la version du contrat, `ouvert`, les empreintes des
@@ -788,7 +791,7 @@ export const creerLeMagasinDesCopies = ({
             }
 
             const { iv, chiffre } = await chiffrer(cle, authentifiees, {
-                page: { ...page, props },
+                page: { ...page, props, flash: {} },
                 ziggy,
                 datesDesProps,
             })
@@ -879,10 +882,14 @@ export const creerLeMagasinDesCopies = ({
                 return 'plus-recente'
             }
 
+            const gardables = propsGardables(page.component, page.props)
+
             for (const nom of versees) {
-                ancienne.page.props[nom] = page.props[nom]
+                ancienne.page.props[nom] = gardables[nom]
                 ancienne.datesDesProps[nom] = maintenant
             }
+
+            ancienne.page.flash = {}
 
             const { iv, chiffre } = await chiffrer(cle, authentifiees, ancienne)
             const copie = { ...precedente, ecriteLe: maintenant, iv, chiffre }

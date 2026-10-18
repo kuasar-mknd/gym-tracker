@@ -200,7 +200,8 @@ describe('le chiffrement', () => {
 
         const lue = await onglet.lireUneCopie('/dashboard')
 
-        expect(lue.page).toEqual(page)
+        // Le flash de la page, un message d'un instant, ne se garde pas.
+        expect(lue.page).toEqual({ ...page, flash: {} })
         expect(lue.ziggy).toEqual(ziggy)
         expect(lue.copieDu).toBe(instant)
 

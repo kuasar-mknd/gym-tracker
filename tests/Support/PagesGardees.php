@@ -45,6 +45,17 @@ final class PagesGardees
     private const string FORME_DES_PROPS_JAMAIS_GARDEES = "/^\\s*(?:'([A-Za-z][A-Za-z0-9\\/]*)'|([A-Za-z][A-Za-z0-9]*)): Object\\.freeze\\(\\[((?:'[A-Za-z_][A-Za-z0-9_]*'(?:, )?)+)\\]\\),?\\s*$/";
 
     /**
+     * Le début des champs d'un instant.
+     */
+    private const string DEBUT_DES_CHAMPS_D_UN_INSTANT = 'export const CHAMPS_D_UN_INSTANT = Object.freeze({';
+
+    /**
+     * La forme d'une entrée des champs d'un instant : la prop, puis la liste
+     * gelée de ses champs.
+     */
+    private const string FORME_DES_CHAMPS_D_UN_INSTANT = "/^\\s*([A-Za-z_][A-Za-z0-9_]*): Object\\.freeze\\(\\[((?:'[A-Za-z_][A-Za-z0-9_]*'(?:, )?)+)\\]\\),?\\s*$/";
+
+    /**
      * Les entrées de la liste blanche, dans l'ordre du module.
      *
      * @return list<array{composant: string, route: string, chemin: string}>
@@ -117,6 +128,47 @@ final class PagesGardees
         }
 
         return $props;
+    }
+
+    /**
+     * Les champs des props partagées qu'une copie ramène à nul, par prop
+     * (`CHAMPS_D_UN_INSTANT`) : une entrée par ligne,
+     * `prop: Object.freeze(['champ', …]),`. Toute autre forme fait échouer la
+     * lecture.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function champsDUnInstant(): array
+    {
+        $source = self::source();
+        $debut = strpos($source, self::DEBUT_DES_CHAMPS_D_UN_INSTANT);
+        $fin = $debut === false ? false : strpos($source, "\n})", $debut);
+
+        if ($debut === false || $fin === false) {
+            throw new RuntimeException(sprintf('`CHAMPS_D_UN_INSTANT` est introuvable dans %s : si sa forme a changé, Tests\Support\PagesGardees doit suivre.', self::MODULE));
+        }
+
+        $corps = substr($source, $debut + strlen(self::DEBUT_DES_CHAMPS_D_UN_INSTANT), $fin - $debut - strlen(self::DEBUT_DES_CHAMPS_D_UN_INSTANT));
+        $champs = [];
+
+        foreach (explode("\n", $corps) as $ligne) {
+            if (trim($ligne) === '') {
+                continue;
+            }
+
+            if (preg_match(self::FORME_DES_CHAMPS_D_UN_INSTANT, $ligne, $morceaux) !== 1) {
+                throw new RuntimeException(sprintf("Une ligne de `CHAMPS_D_UN_INSTANT` (%s) ne suit pas la forme `prop: Object.freeze(['champ', …]),` : %s", self::MODULE, trim($ligne)));
+            }
+
+            preg_match_all("/'([A-Za-z_][A-Za-z0-9_]*)'/", $morceaux[2], $noms);
+            $champs[$morceaux[1]] = $noms[1];
+        }
+
+        if ($champs === []) {
+            throw new RuntimeException(sprintf('`CHAMPS_D_UN_INSTANT` de %s est vide.', self::MODULE));
+        }
+
+        return $champs;
     }
 
     /**
