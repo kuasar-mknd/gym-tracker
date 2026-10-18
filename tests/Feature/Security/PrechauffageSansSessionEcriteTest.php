@@ -8,7 +8,6 @@ use App\Http\Middleware\OuvreLaSession;
 use App\Models\User;
 use App\Support\EcheanceDuCookie;
 use Illuminate\Auth\Events\Authenticated;
-use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Event;
@@ -17,6 +16,7 @@ use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
+use Tests\Support\SessionsEspionnees;
 
 /*
  * Les GET du préchauffage des copies hors ligne (#2048, partie D) lisent la
@@ -31,35 +31,14 @@ use Tests\Support\Appareil;
  */
 
 /**
- * Le magasin des sessions des tests, qui compte ses enregistrements.
- */
-final class PrechauffageEspionDesSessions extends ArraySessionHandler
-{
-    /**
-     * Les identifiants des sessions enregistrées, dans l'ordre.
-     *
-     * @var list<string>
-     */
-    public array $ecritures = [];
-
-    #[\Override]
-    public function write($sessionId, $data): bool
-    {
-        $this->ecritures[] = $sessionId;
-
-        return parent::write($sessionId, $data);
-    }
-}
-
-/**
  * Branche l'espion comme magasin des sessions de l'application, pour tout le
  * test.
  */
-function prechauffageEspionner(): PrechauffageEspionDesSessions
+function prechauffageEspionner(): SessionsEspionnees
 {
-    $espion = new PrechauffageEspionDesSessions(config()->integer('session.lifetime'));
+    $espion = new SessionsEspionnees(config()->integer('session.lifetime'));
 
-    app('session')->extend('espion-du-prechauffage', fn (): PrechauffageEspionDesSessions => $espion);
+    app('session')->extend('espion-du-prechauffage', fn (): SessionsEspionnees => $espion);
     config(['session.driver' => 'espion-du-prechauffage']);
     app('session')->forgetDrivers();
     app()->forgetInstance('session.store');
@@ -110,7 +89,7 @@ function prechauffageCookiesPoses(TestResponse $reponse): array
  * Un appareil connecté au compte par le formulaire de connexion, l'espion
  * remis à zéro ensuite.
  */
-function prechauffageAppareilConnecte(User $compte, PrechauffageEspionDesSessions $espion): Appareil
+function prechauffageAppareilConnecte(User $compte, SessionsEspionnees $espion): Appareil
 {
     $appareil = new Appareil();
 
@@ -128,7 +107,7 @@ function prechauffageAppareilConnecte(User $compte, PrechauffageEspionDesSession
  * détruit, pendant la prochaine requête : juste après que celle-ci a lu le
  * compte dans la session.
  */
-function prechauffageDetruireLaSessionPendantLaRequete(PrechauffageEspionDesSessions $espion, string $identifiant): void
+function prechauffageDetruireLaSessionPendantLaRequete(SessionsEspionnees $espion, string $identifiant): void
 {
     $detruite = false;
 
