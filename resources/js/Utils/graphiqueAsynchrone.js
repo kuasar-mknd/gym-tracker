@@ -1,6 +1,6 @@
 import { defineAsyncComponent, defineComponent, h, onBeforeUnmount, provide, ref } from 'vue'
 import GraphiqueIndisponible, { ECHEC_DU_GRAPHIQUE } from '@/Components/UI/GraphiqueIndisponible.vue'
-import { surUneReponseDuServeur } from '@/composables/useEtatDuReseau'
+import { surUneReponseDuServeur, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 /**
  * Un graphique chargé à la demande, avec le composant d'erreur commun (#2048,
@@ -14,27 +14,51 @@ import { surUneReponseDuServeur } from '@/composables/useEtatDuReseau'
  * passe par ici, jamais par `defineAsyncComponent` seul
  * (`tests/js/conventions/chartChunks.test.js`).
  *
- * Un graphique en échec se redemande à la réponse suivante du serveur
- * (`surUneReponseDuServeur` : une visite, `http()`, le rejeu de la file, la
- * sonde). Le rechargement complet d'une copie au retour du réseau garde la
- * page montée (`router.reload` impose `preserveState`), et le composant
- * asynchrone garde son échec tant qu'il n'est pas remonté : le graphique
- * disait encore « indisponible hors ligne » sur une page qui ne l'était plus.
- * Une enveloppe le remonte donc, par sa clé, une fois par réponse et
- * seulement après un échec ; un graphique dessiné ne se remonte jamais. Elle
- * passe au graphique ses props, attributs et créneaux, telle quelle.
+ * **Pas d'import quand le serveur ne répond pas.** Le navigateur garde l'échec
+ * d'un `import()` pour toute la vie du document, sans plus rien demander au
+ * réseau : Chrome 141 rejette chaque nouvel essai de la même adresse, réseau
+ * revenu compris (`NavigationHorsLigneTest`). Un graphique essayé sans réseau
+ * sur une copie restait donc « indisponible hors ligne » jusqu'au
+ * rechargement de toute l'application. Tant que `joignable` est faux (une
+ * copie montrée, un échec du réseau), un graphique que la page n'a pas encore
+ * chargé n'est pas demandé : il dit d'emblée qu'il est indisponible, et se
+ * demande à la réponse suivante du serveur (`surUneReponseDuServeur` : une
+ * visite, `http()`, le rejeu de la file, la sonde). Un graphique déjà chargé
+ * dans le document se dessine, réseau ou non.
+ *
+ * **Un graphique en échec se redemande à la réponse suivante du serveur**,
+ * une fois par réponse et seulement après un échec : le rechargement complet
+ * d'une copie garde la page montée (`router.reload` impose `preserveState`),
+ * et le composant asynchrone garde son échec tant qu'il n'est pas remonté.
+ * L'enveloppe le remonte par sa clé quand `GraphiqueIndisponible` l'a
+ * prévenue (`ECHEC_DU_GRAPHIQUE`) ; un graphique dessiné ne se remonte
+ * jamais. Elle passe au graphique ses props, attributs et créneaux, telle
+ * quelle.
  *
  * @param {() => Promise<unknown>} chargeur l'import du composant du graphique
  */
 export const graphiqueAsynchrone = (chargeur) => {
-    const Graphique = defineAsyncComponent({ loader: chargeur, errorComponent: GraphiqueIndisponible })
+    /** Le morceau s'est chargé une fois dans ce document : le reprendre ne demande plus rien au réseau. */
+    let charge = false
+
+    const Graphique = defineAsyncComponent({
+        loader: () =>
+            chargeur().then((module) => {
+                charge = true
+
+                return module
+            }),
+        errorComponent: GraphiqueIndisponible,
+    })
 
     return defineComponent({
         // Un nom à elle : une recherche par le nom du graphique trouve le graphique, pas son enveloppe.
         name: 'GraphiqueAsynchrone',
         inheritAttrs: false,
         setup(_props, { attrs, slots }) {
+            const { joignable } = useEtatDuReseau()
             const montage = ref(0)
+            const attendreLeServeur = ref(!charge && !joignable.value)
             let enEchec = false
 
             provide(ECHEC_DU_GRAPHIQUE, () => {
@@ -42,7 +66,10 @@ export const graphiqueAsynchrone = (chargeur) => {
             })
 
             const arreter = surUneReponseDuServeur(() => {
-                if (enEchec) {
+                if (attendreLeServeur.value) {
+                    attendreLeServeur.value = false
+                    enEchec = false
+                } else if (enEchec) {
                     enEchec = false
                     montage.value += 1
                 }
@@ -50,7 +77,10 @@ export const graphiqueAsynchrone = (chargeur) => {
 
             onBeforeUnmount(arreter)
 
-            return () => h(Graphique, { ...attrs, key: montage.value }, slots)
+            return () =>
+                attendreLeServeur.value
+                    ? h(GraphiqueIndisponible)
+                    : h(Graphique, { ...attrs, key: montage.value }, slots)
         },
     })
 }

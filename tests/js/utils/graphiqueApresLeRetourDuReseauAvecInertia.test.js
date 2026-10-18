@@ -17,7 +17,9 @@ import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
  * rechargement complet du retour du réseau garde la page montée
  * (`router.reload` impose `preserveState`) : le composant asynchrone gardait
  * son échec, et la page, qui n'était plus une copie, disait encore
- * « Graphique indisponible hors ligne ».
+ * « Graphique indisponible hors ligne ». Dans Chrome, l'échec d'un `import()`
+ * vaut en plus pour tout le document : un graphique n'est donc plus demandé
+ * tant que le serveur ne répond pas, et se demande à sa réponse suivante.
  *
  * Le client se monte une fois pour le fichier ; chaque cas repart des outils,
  * d'un magasin vide et d'un graphique neuf, dont aucun chargement n'a encore
@@ -51,15 +53,15 @@ const pageDe = ({ url = '/workouts', component = 'Workouts/Index', texte = 'Séa
     },
 })
 
-/** Ce que le cas compte du graphique : ses chargements demandés et ses dessins. */
-const graphique = { chargements: 0, dessins: 0, composant: null }
+/** Ce que le cas compte du graphique : ses chargements demandés et ses dessins, et si son morceau manque au serveur. */
+const graphique = { chargements: 0, dessins: 0, composant: null, morceauAbsent: false }
 
 /** Un graphique neuf, dont le morceau ne se charge que si le réseau répond. */
 const unGraphiqueNeuf = () =>
     graphiqueAsynchrone(() => {
         graphique.chargements += 1
 
-        return reseau.mode === 'repond'
+        return reseau.mode === 'repond' && !graphique.morceauAbsent
             ? Promise.resolve({
                   setup: (props, { attrs }) => {
                       onMounted(() => (graphique.dessins += 1))
@@ -96,12 +98,16 @@ const montre = () => ({
     dessine: document.querySelectorAll('.graphique-dessine').length,
 })
 
-/** Sert, sans réseau, la copie des séances, son graphique indisponible. */
-const servirLaCopieDesSeances = async () => {
+/**
+ * Sert, sans réseau, la copie des séances.
+ *
+ * @param {'indisponible' | 'dessine'} graphiqueAttendu ce que la copie montre du graphique
+ */
+const servirLaCopieDesSeances = async (graphiqueAttendu = 'indisponible') => {
     expect(await magasin.ecrireUneCopie(pageDe())).toBe('ecrite')
     reseau.mode = 'coupe'
     routeur.visit('/workouts')
-    await vi.waitUntil(() => pageInertia?.props?.horsLigne !== undefined && montre().indisponible === 1, {
+    await vi.waitUntil(() => pageInertia?.props?.horsLigne !== undefined && montre()[graphiqueAttendu] === 1, {
         timeout: 3000,
     })
 }
@@ -162,8 +168,9 @@ beforeEach(async () => {
     localStorage.clear()
     localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, `compte:${COMPTE}`)
     document.cookie = `gt_copies=${cleAuHasard()}; path=/`
-    Object.assign(graphique, { chargements: 0, dessins: 0, composant: unGraphiqueNeuf() })
+    Object.assign(graphique, { chargements: 0, dessins: 0, composant: unGraphiqueNeuf(), morceauAbsent: false })
     erreurs.length = 0
+    etatDuReseau.noterQueLeServeurRepond()
     relais = relayerLesRejetsNonGeres()
 })
 
@@ -181,10 +188,12 @@ afterAll(async () => {
 })
 
 describe('un graphique en échec sur une copie, au retour du réseau', () => {
-    it('se dessine quand la copie se recharge en entier, sans être redemandé ensuite', async () => {
+    it('n’est pas demandé sans réseau, se dessine quand la copie se recharge en entier, puis sur la copie suivante', async () => {
         await servirLaCopieDesSeances()
 
-        expect(erreurs).toEqual(['Failed to fetch dynamically imported module'])
+        // Le serveur ne répond pas : aucun import, que le navigateur garderait en échec pour tout le document.
+        expect(graphique.chargements).toBe(0)
+        expect(erreurs).toEqual([])
 
         // Le serveur répond à la sonde : la copie se recharge en entier, sans être remontée.
         rendreLeReseau()
@@ -201,9 +210,41 @@ describe('un graphique en échec sur une copie, au retour du réseau', () => {
         etatDuReseau.noterQueLeServeurRepond()
         await uneTache()
 
+        expect(chargements).toBe(1)
         expect(graphique.chargements).toBe(chargements)
         expect(graphique.dessins).toBe(1)
+
+        // Sans réseau de nouveau, la copie le montre : chargé dans le document, il se dessine sans rien demander.
+        await new Promise((fini) =>
+            routeur.replace({
+                ...pageDe({ url: '/tools', component: 'Tools/Index', texte: 'Outils' }),
+                onFinish: fini,
+            }),
+        )
+        await servirLaCopieDesSeances('dessine')
+
+        expect(montre()).toEqual({ indisponible: 0, dessine: 1 })
+        expect(graphique.chargements).toBe(1)
         expect(relais.rejets).toEqual([])
+    })
+
+    it('en échec alors que le serveur répondait, se redemande à la réponse suivante, une fois', async () => {
+        // Le serveur répond, mais pas le morceau : il manque, le temps d'un déploiement.
+        rendreLeReseau()
+        graphique.morceauAbsent = true
+        let finie = false
+        routeur.visit('/workouts', { onFinish: () => (finie = true) })
+        await vi.waitUntil(() => finie && montre().indisponible === 1, { timeout: 3000 })
+
+        expect(graphique.chargements).toBe(1)
+        expect(erreurs).toEqual(['Failed to fetch dynamically imported module'])
+
+        graphique.morceauAbsent = false
+        etatDuReseau.noterQueLeServeurRepond()
+        await vi.waitUntil(() => montre().dessine === 1, { timeout: 3000 })
+
+        expect(montre()).toEqual({ indisponible: 0, dessine: 1 })
+        expect(graphique.chargements).toBe(2)
     })
 
     it('se dessine quand « Réessayer » recharge la copie', async () => {
