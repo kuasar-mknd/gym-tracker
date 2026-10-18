@@ -333,6 +333,8 @@ describe('le préchauffage', () => {
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-Inertia': 'true',
                     'X-Inertia-Version': 'v1',
+                    // Le serveur lit alors la session sans l'enregistrer, et sa réponse ne pose aucun cookie.
+                    'X-Copies-Hors-Ligne': 'prechauffage',
                 },
                 credentials: 'same-origin',
                 cache: 'no-store',
@@ -340,6 +342,7 @@ describe('le préchauffage', () => {
             })
             expect(Object.keys(options.headers).sort()).toEqual([
                 'Accept',
+                'X-Copies-Hors-Ligne',
                 'X-Inertia',
                 'X-Inertia-Version',
                 'X-Requested-With',
@@ -370,6 +373,7 @@ describe('le préchauffage', () => {
         expect(serveur.appels[1].options.headers).toMatchObject({
             'X-Inertia-Partial-Component': 'Dashboard',
             'X-Inertia-Partial-Data': 'analyticalStats',
+            'X-Copies-Hors-Ligne': 'prechauffage',
         })
         expect(serveur.appels.filter((appel) => appel.chemin === '/workouts')).toHaveLength(1)
         expect(serveur.appels.some((appel) => appel.options.headers['X-Inertia-Partial-Data'] === 'deferredData')).toBe(
@@ -701,7 +705,12 @@ describe('la redemande de la séance après un rejeu', () => {
 
         expect(cheminsDemandes().slice(avant)).toEqual(['/workouts/5'])
         expect(serveur.appels.at(-1).options).toMatchObject({
-            headers: { 'X-Inertia': 'true', 'X-Inertia-Version': 'v1', 'X-Requested-With': 'XMLHttpRequest' },
+            headers: {
+                'X-Inertia': 'true',
+                'X-Inertia-Version': 'v1',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-Copies-Hors-Ligne': 'prechauffage',
+            },
             redirect: 'manual',
             cache: 'no-store',
         })

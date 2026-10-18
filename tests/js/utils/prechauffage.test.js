@@ -148,7 +148,6 @@ describe('le préchauffage, seul', () => {
         ['une page sans compte', pageDe('/tools', { compte: null })],
         ['un historique en clair', pageDe('/tools', { encryptHistory: false })],
         ['une copie montrée hors ligne', pageDe('/tools', { props: { horsLigne: { copieDu: 1, raison: 'reseau' } } })],
-        ['une page des parcours navigateur', pageDe('/tools', { props: { is_testing: true } })],
         ['une réponse sans page', null],
     ])('ne part pas pour %s', async (_cas, page) => {
         installer()
@@ -158,6 +157,17 @@ describe('le préchauffage, seul', () => {
 
         expect(magasin.inventaire).not.toHaveBeenCalled()
         expect(appels).toEqual([])
+    })
+
+    it('part aussi sous les parcours navigateur, ses demandes marquées ne touchant pas à la session', async () => {
+        installer()
+
+        succes(pageDe('/tools', { props: { is_testing: true } }))
+        await unTour()
+
+        expect(magasin.inventaire).toHaveBeenCalledOnce()
+        expect(appels.map((appel) => appel.chemin)).toEqual(['/dashboard'])
+        expect(appels[0].options.headers['X-Copies-Hors-Ligne']).toBe('prechauffage')
     })
 
     it('ne part pas quand la page est cachée', async () => {

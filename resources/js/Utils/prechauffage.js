@@ -21,9 +21,9 @@ import {
  * demanderait, et les passe à l'écriture des copies, dans sa file.
  *
  * **Quand il part.** Après une vraie réponse du serveur, `success` d'une
- * visite ou page initiale venue du réseau, la page visible : il ne prolonge
- * donc aucune session par lui-même, et ne part jamais d'une page rendue par
- * l'historique, d'une visite côté client ou d'une copie. Seulement s'il
+ * visite ou page initiale venue du réseau, la page visible, et jamais d'une
+ * page rendue par l'historique, d'une visite côté client ou d'une copie.
+ * Seulement s'il
  * manque une copie du noyau, si l'une a plus de deux heures, ou si la copie
  * de la séance en cours est plus ancienne que le dernier rejeu d'une de ses
  * écritures par la file (`dernierRejeu`). Au plus une fois par trente
@@ -32,18 +32,22 @@ import {
  * purge du magasin efface : des copies oubliées sous une clé restée ouverte
  * se refont à la réponse suivante.
  *
- * **Jamais sous les parcours navigateur** (`is_testing`, que le serveur ne
- * pose vrai que sous Dusk ou en test, jamais en production). Ses GET partent
- * en arrière-plan et croisaient la connexion du parcours suivant
- * (`loginAs`, qui remplace la session) : la page suivante tombait une fois
- * sur deux sur la page de connexion (`WorkoutSyncRaceTest`). Le préchauffage
- * se joue avec le vrai client d'Inertia sous Vitest
- * (`prechauffageAvecInertia.test.js`).
+ * **Sans toucher à la session.** Chaque demande, redemande de la séance
+ * comprise, porte `X-Copies-Hors-Ligne: prechauffage`
+ * (`ENTETE_DU_PRECHAUFFAGE`) : le serveur lit alors la session sans
+ * l'enregistrer, et sa réponse ne pose aucun cookie, seuls passent les
+ * effacements (`OuvreLaSession`). Partie en arrière-plan, elle ne prolonge
+ * donc aucune session, et ne réécrit pas celle qu'une déconnexion, ou une
+ * connexion dans un autre onglet, a remplacée pendant qu'elle volait ; elle
+ * ne rend pas non plus au navigateur un cookie qu'une autre réponse a
+ * remplacé. Sans cette marque, ses GET croisaient sous Dusk la connexion du
+ * parcours suivant (`loginAs`), et la page suivante tombait une fois sur deux
+ * sur la page de connexion (`WorkoutSyncRaceTest`).
  *
  * **Comment.** Au plus huit GET (`GET_AU_PLUS`), l'un après l'autre, par
  * `fetch`, avec `X-Inertia`, la `X-Inertia-Version` de la page,
- * `X-Requested-With` et `redirect: 'manual'`, chacun sous un délai de quinze
- * secondes. Un 409 (une nouvelle version) arrête tout. Une redirection
+ * `X-Requested-With`, la marque et `redirect: 'manual'`, chacun sous un délai
+ * de quinze secondes. Un 409 (une nouvelle version) arrête tout. Une redirection
  * (`opaqueredirect`) ou un 401 ne disent la fin de la session que si le
  * témoin a disparu ou changé, ce que le serveur fait sur toute réponse qui la
  * dit (`CleDesCopiesHorsLigne`) : les copies s'oublient alors, la clé de
@@ -98,6 +102,17 @@ export const DELAI_D_UNE_DEMANDE_MS = 15_000
  * une salve ne fait qu'une demande.
  */
 export const DELAI_DE_LA_REDEMANDE_DE_LA_SEANCE_MS = 1000
+
+/**
+ * L'en-tête qui marque chaque demande du préchauffage, redemande de la séance
+ * comprise : le serveur lit alors la session sans l'enregistrer, et sa
+ * réponse ne pose aucun cookie (`OuvreLaSession::ENTETE`, que
+ * `PrechauffageSansSessionEcriteTest` compare à celui-ci).
+ */
+export const ENTETE_DU_PRECHAUFFAGE = 'X-Copies-Hors-Ligne'
+
+/** Sa valeur (`OuvreLaSession::PRECHAUFFAGE`). */
+export const MARQUE_DU_PRECHAUFFAGE = 'prechauffage'
 
 export { CLEF_DU_DERNIER_PRECHAUFFAGE } from '@/Utils/dernierPrechauffage'
 
@@ -203,7 +218,7 @@ export const installerLePrechauffage = ({
     /**
      * Si une page peut faire partir un préchauffage : une page d'un compte,
      * dans un historique chiffré (rien ne se garde ailleurs), qui n'est pas
-     * une copie, hors des parcours navigateur, la page visible.
+     * une copie, la page visible.
      *
      * @param {object | null | undefined} page
      */
@@ -213,7 +228,6 @@ export const installerLePrechauffage = ({
         typeof page === 'object' &&
         page.encryptHistory === true &&
         page.props?.horsLigne === undefined &&
-        page.props?.is_testing !== true &&
         (page.props?.auth?.user?.id ?? null) !== null &&
         fenetre.document?.visibilityState === 'visible'
 
@@ -271,6 +285,7 @@ export const installerLePrechauffage = ({
                     Accept: 'text/html, application/xhtml+xml',
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-Inertia': 'true',
+                    [ENTETE_DU_PRECHAUFFAGE]: MARQUE_DU_PRECHAUFFAGE,
                     ...(typeof version === 'string' && version !== '' ? { 'X-Inertia-Version': version } : {}),
                     ...(partielle === undefined
                         ? {}
