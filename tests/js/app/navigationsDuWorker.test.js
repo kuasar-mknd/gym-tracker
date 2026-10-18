@@ -10,6 +10,7 @@ import {
     MESSAGE_REPONSE_TARDIVE_RENVOYEE,
 } from '@/sw/navigationsHorsLigne'
 import { pageHorsLigne } from '@/sw/pageHorsLigne'
+import { attendreLaReponse } from '@/Utils/messagesDuWorker'
 
 /*
  * L'ouverture à froid, côté worker (#2048, partie F, décision 8 du
@@ -428,6 +429,42 @@ describe('« Attendre la réponse »', () => {
     it('ne répond pas à un autre message', () => {
         expect(envoyerAuWorker({ type: 'autre chose' }).postMessage).not.toHaveBeenCalled()
         expect(envoyerAuWorker(null).postMessage).not.toHaveBeenCalled()
+    })
+
+    it('se demande depuis la page, qui recharge une fois le délai levé', async () => {
+        vi.useRealTimers()
+        const navigations = []
+        const conteneur = {
+            controller: {
+                postMessage: (donnees, ports) => {
+                    const evenement = new EvenementProlongeable('message')
+                    evenement.data = donnees
+                    evenement.ports = ports
+
+                    for (const ecouteur of ecouteurs.message ?? []) {
+                        ecouteur(evenement)
+                    }
+                },
+            },
+        }
+
+        await attendreLaReponse({
+            conteneur,
+            adresse: `${ORIGINE}/exercises`,
+            recharger: () => navigations.push('/exercises'),
+        })
+
+        expect(navigations).toEqual(['/exercises'])
+
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+        const lent = reseauEnAttente()
+        const rechargee = naviguer('/exercises', { preloadResponse: lent.promesse })
+        await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS * 2)
+        expect(rechargee.reglee.reponse).toBeUndefined()
+        lent.repondre(new Response('la bibliothèque'))
+        await vi.advanceTimersByTimeAsync(0)
+        await expect(rechargee.reglee.reponse.text()).resolves.toBe('la bibliothèque')
+        await vi.advanceTimersByTimeAsync(DUREE_SANS_DELAI_MS)
     })
 })
 

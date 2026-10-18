@@ -14,6 +14,7 @@ import { installerLaSondeDuServeur } from '@/Utils/sondeDuServeur'
 import { installerLEcritureDesCopies } from '@/Utils/ecritureDesCopies'
 import { installerLePrechauffage } from '@/Utils/prechauffage'
 import { oublierLesCopiesDUnAutreTitulaire } from '@/Utils/copiesHorsLigne'
+import { installerLesMessagesDuWorker } from '@/Utils/messagesDuWorker'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -23,6 +24,14 @@ import { registerSW } from 'virtual:pwa-register'
  * (#1967). Voir le module.
  */
 if (typeof window !== 'undefined') {
+    /*
+     * Une page « hors ligne » servie au délai apprend du worker la redirection
+     * arrivée ensuite, et oublie les copies si la session a pris fin (#2048).
+     * D'emblée : le navigateur délivre les messages du worker dès la fin de
+     * l'analyse du document, à qui écoute déjà.
+     */
+    installerLesMessagesDuWorker()
+
     inscrireLeWorker({ registerSW, routeur: router, http })
 
     /*
