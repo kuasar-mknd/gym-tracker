@@ -233,7 +233,9 @@ class NavigationHorsLigneTest extends DuskTestCase
     /**
      * Attend la copie d'une page de salle, ouverte depuis la page précédente :
      * son adresse, son bandeau daté et le titre de son en-tête, lus dans le
-     * DOM (`titre-carte` passe le texte en majuscules, que WebDriver rend).
+     * DOM (`titre-carte` passe le texte en majuscules, que WebDriver rend), et
+     * son entrée d'historique, chiffrée (`encryptHistory`, écrit en dur dans
+     * la page servie).
      */
     private function attendreLaCopie(Browser $browser, string $chemin, string $titre): void
     {
@@ -245,7 +247,9 @@ class NavigationHorsLigneTest extends DuskTestCase
 
         $browser->waitFor('[dusk="bandeau-hors-ligne"]', 15)
             ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
-            ->assertScript($this->texteDe('header h1'), $titre);
+            ->assertScript($this->texteDe('header h1'), $titre)
+            // L'entrée d'historique de la copie est chiffrée, comme celles des pages du serveur.
+            ->waitUntil('history.state?.page instanceof ArrayBuffer', 15, "l’entrée d’historique de la copie de {$chemin} n’est pas chiffrée");
     }
 
     /**
