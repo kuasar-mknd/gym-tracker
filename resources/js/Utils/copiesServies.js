@@ -90,8 +90,9 @@ export const adressePeutAvoirUneCopie = (adresse) => {
  *
  * @param {Record<string, unknown>} props
  * @param {string} nom
+ * @returns {boolean}
  */
-const estAbsente = (props, nom) => {
+export const propAbsente = (props, nom) => {
     let valeur = props
 
     for (const morceau of String(nom).split('.')) {
@@ -106,20 +107,30 @@ const estAbsente = (props, nom) => {
 }
 
 /**
+ * Les props différées qu'une page annonce, d'après ses annonces d'origine
+ * (`initialDeferredProps`, que la page garde après le chargement), sinon
+ * celles qu'elle porte encore.
+ *
+ * @param {{ deferredProps?: Record<string, string[]>, initialDeferredProps?: Record<string, string[]> } | null | undefined} page
+ * @returns {string[]}
+ */
+export const propsDiffereesAnnoncees = (page) => [
+    ...new Set(
+        Object.values(page?.initialDeferredProps ?? page?.deferredProps ?? {})
+            .flat()
+            .filter((nom) => typeof nom === 'string'),
+    ),
+]
+
+/**
  * Les props différées qu'une page annonce et que ses props n'ont pas : ce
  * qu'une copie montre « Indisponible hors ligne » (`rescuedProps`).
  *
  * @param {{ props?: Record<string, unknown>, deferredProps?: Record<string, string[]>, initialDeferredProps?: Record<string, string[]> }} page
  * @returns {string[]}
  */
-export const propsDiffereesAbsentes = (page) => {
-    const groupes = page?.initialDeferredProps ?? page?.deferredProps ?? {}
-    const noms = Object.values(groupes)
-        .flat()
-        .filter((nom) => typeof nom === 'string')
-
-    return [...new Set(noms)].filter((nom) => estAbsente(page?.props ?? {}, nom))
-}
+export const propsDiffereesAbsentes = (page) =>
+    propsDiffereesAnnoncees(page).filter((nom) => propAbsente(page?.props ?? {}, nom))
 
 /**
  * `auth` tel qu'une copie servie le montre : le badge à célébrer retiré

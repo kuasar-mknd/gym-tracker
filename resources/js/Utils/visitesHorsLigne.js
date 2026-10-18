@@ -1,8 +1,20 @@
 import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
-import { RAISON_RESEAU_LENT, RAISON_SANS_RESEAU, adressePeutAvoirUneCopie, pageServie } from '@/Utils/copiesServies'
+import {
+    RAISON_RESEAU_LENT,
+    RAISON_SANS_RESEAU,
+    adressePeutAvoirUneCopie,
+    estUneCopie,
+    pageServie,
+    propAbsente,
+    propsDiffereesAnnoncees,
+} from '@/Utils/copiesServies'
 import { visiteQuiQuitteLaPage } from '@/Utils/miseAJourDuWorker'
 import { cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
-import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
+import {
+    noterQueLeServeurNeRepondPas,
+    noterQueLeServeurRepond,
+    surUneReponseDuServeur,
+} from '@/composables/useEtatDuReseau'
 
 /**
  * Sans réseau, l'application le dit (#2048).
@@ -60,6 +72,18 @@ import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composa
  * qu'elle garde dans l'historique (`EVENEMENT_AVANT_UNE_COPIE`), qu'un
  * `router.remember` n'écrive pas dans l'entrée de la copie. Une copie montrée
  * rend `joignable` faux : la sonde demande au serveur s'il répond.
+ *
+ * **Les props différées en échec.** Une page du réseau demande ses props
+ * différées juste après son affichage, un groupe par requête. Sans réseau,
+ * chaque groupe échoue, et `<Deferred>` montrait son squelette sans fin. Le
+ * groupe en échec passe donc dans `rescuedProps` par `router.replace`, avec
+ * `deferredProps: undefined` (sans quoi `page.set` relancerait leur
+ * chargement, et chaque échec une nouvelle requête), `initialDeferredProps`
+ * et le `flash` gardés : `<Deferred>` montre son créneau `#rescue`,
+ * « Indisponible hors ligne » (`IndisponibleHorsLigne.vue`). Une requête par
+ * groupe, pas une de plus. Au retour du réseau, à la première réponse
+ * réussie du serveur (`surUneReponseDuServeur`), la page les redemande une
+ * fois (`router.reload({ only })`), sans un mot si cela échoue.
  */
 
 /** L'évènement de fenêtre que les toasts des layouts écoutent (`ToastsDuLayout.vue`). */
@@ -311,7 +335,7 @@ export const installerLesVisitesHorsLigne = ({
      * la visite au premier plan, s'il y en a une.
      */
     const visiteEnEchec = (erreur) => {
-        const visites = [...enVol.keys()]
+        const visites = [...enVol.keys()].filter((visite) => !enVol.get(visite).repondue)
         const adresse = erreur?.url ? adresseSansFragment(erreur.url) : null
         const deLAdresse = visites.filter((visite) => adresseSansFragment(visite.url) === adresse)
         const candidates = deLAdresse.length > 0 ? deLAdresse : visites
@@ -440,9 +464,144 @@ export const installerLesVisitesHorsLigne = ({
         }
     }
 
+    /**
+     * Les props différées que la page affichée a secourues faute de réseau, à
+     * redemander au retour du réseau : celles de cette page seulement, et
+     * le nombre de réponses du serveur vues à ce moment (`apres`) : seule une
+     * réponse arrivée ensuite dit que le réseau est revenu.
+     *
+     * @type {{ url: string, component: string, noms: Set<string>, apres: number } | null}
+     */
+    let secourues = null
+
+    /** Les réponses réussies du serveur vues jusqu'ici (`surUneReponseDuServeur`). */
+    let reponsesDuServeur = 0
+
+    /** Un rechargement que la page a lancé seule, au retour du réseau, et qui n'a pas fini. */
+    let rechargementEnVol = false
+
+    /**
+     * Les props secourues, si ce sont celles de la page affichée.
+     *
+     * @param {object | null} page
+     */
+    const secouruesDe = (page) =>
+        secourues !== null && page !== null && secourues.url === page.url && secourues.component === page.component
+            ? secourues
+            : null
+
+    /**
+     * Une visite de props différées finie sans ses props, après un échec du
+     * réseau : ses props passent dans `rescuedProps`, et leur chargement ne
+     * se relance pas.
+     *
+     * @param {{ url: URL | string, only?: string[] }} visite
+     */
+    const secourirLesPropsDifferees = (visite) => {
+        const page = pageCourante
+
+        if (
+            page === null ||
+            estUneCopie(page) ||
+            adresseDeLaVisite(visite, fenetre) !== adresseDeLaVisite(page, fenetre)
+        ) {
+            return
+        }
+
+        const annoncees = new Set(propsDiffereesAnnoncees(page))
+        const absentes = (visite.only ?? []).filter((nom) => annoncees.has(nom) && propAbsente(page.props ?? {}, nom))
+
+        if (absentes.length === 0) {
+            return
+        }
+
+        const dejaSecourues = secouruesDe(page)?.noms ?? new Set()
+
+        secourues = {
+            url: page.url,
+            component: page.component,
+            noms: new Set([...dejaSecourues, ...absentes]),
+            apres: reponsesDuServeur,
+        }
+        routeur.replace({
+            preserveScroll: true,
+            preserveState: true,
+            rescuedProps: [...new Set([...(page.rescuedProps ?? []), ...secourues.noms])],
+            deferredProps: undefined,
+            flash: (actuel) => actuel,
+        })
+    }
+
+    /**
+     * Ce qui attendait le retour du réseau, à la première réponse réussie
+     * arrivée après le secours : les props différées secourues de la page
+     * affichée et toujours absentes, redemandées une fois. Un échec ne dit
+     * rien : c'est un rechargement en arrière-plan.
+     *
+     * @param {number} reponse le rang de la réponse qui l'appelle
+     */
+    const rechargerCeQuiAttend = (reponse) => {
+        const page = pageCourante
+        const aRedemander = secouruesDe(page)
+
+        if (rechargementEnVol || aRedemander === null || reponse <= aRedemander.apres) {
+            return
+        }
+
+        const noms = [...aRedemander.noms].filter((nom) => propAbsente(page.props ?? {}, nom))
+
+        if (noms.length === 0) {
+            secourues = null
+
+            return
+        }
+
+        rechargementEnVol = true
+        routeur.reload({
+            only: noms,
+            onSuccess: () => {
+                // Une seule fois : un serveur qui ne sait pas les rendre ne fait pas boucler la page.
+                secourues = null
+            },
+            onFinish: () => {
+                rechargementEnVol = false
+            },
+        })
+    }
+
+    surUneReponseDuServeur(() => {
+        reponsesDuServeur += 1
+
+        const reponse = reponsesDuServeur
+
+        // Après la réponse, pas pendant : Inertia finit d'abord de la poser.
+        setTimeout(() => rechargerCeQuiAttend(reponse), 0)
+    })
+
     routeur.on('start', (evenement) => {
         const visite = evenement.detail.visit
-        const suivi = { minuteur: null, minuteurDeLaCopie: null, lenteurAnnoncee: false }
+        const suivi = {
+            minuteur: null,
+            minuteurDeLaCopie: null,
+            lenteurAnnoncee: false,
+            echecDuReseau: false,
+            repondue: false,
+        }
+
+        /*
+         * Les props différées d'une page ne partent qu'une fois la page posée :
+         * une visite au premier plan vers la même adresse, encore en vol, a
+         * donc reçu sa réponse. Leur échec n'est pas le sien.
+         */
+        if (visite.deferredProps === true) {
+            const adresse = adresseSansFragment(visite.url)
+
+            for (const [enCours, suiviEnCours] of enVol) {
+                if (!enCours.async && !enCours.prefetch && adresseSansFragment(enCours.url) === adresse) {
+                    suiviEnCours.repondue = true
+                }
+            }
+        }
 
         partielles.set(
             visite.id,
@@ -484,9 +643,16 @@ export const installerLesVisitesHorsLigne = ({
     })
 
     routeur.on('finish', (evenement) => {
-        arreterLesMinuteurs(evenement.detail.visit)
-        enVol.delete(evenement.detail.visit)
-        partielles.delete(evenement.detail.visit?.id)
+        const visite = evenement.detail.visit
+        const suivi = enVol.get(visite)
+
+        arreterLesMinuteurs(visite)
+        enVol.delete(visite)
+        partielles.delete(visite?.id)
+
+        if (suivi?.echecDuReseau && visite.deferredProps === true && !visite.cancelled && !visite.interrupted) {
+            secourirLesPropsDifferees(visite)
+        }
     })
 
     routeur.on('networkError', (evenement) => {
@@ -497,6 +663,15 @@ export const installerLesVisitesHorsLigne = ({
         }
 
         noterQueLeServeurNeRepondPas()
+
+        // L'erreur ne dit que l'adresse : chaque visite en vol vers elle a pu échouer, sa fin le dira.
+        const adresseEnEchec = erreur?.url ? adresseSansFragment(erreur.url) : null
+
+        for (const [enCours, suivi] of enVol) {
+            if (!suivi.repondue && adresseSansFragment(enCours.url) === adresseEnEchec) {
+                suivi.echecDuReseau = true
+            }
+        }
 
         const visite = visiteEnEchec(erreur)
 

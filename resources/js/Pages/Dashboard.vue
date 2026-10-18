@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, useForm, Deferred } from '@inertiajs/vue3'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import QuickActions from '@/Components/Dashboard/QuickActions.vue'
 import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
@@ -75,6 +76,10 @@ const installationProposee = ref(false)
             />
 
             <Deferred data="analyticalStats">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
+
                 <template #fallback>
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <GlassSkeleton class="h-64 w-full" />

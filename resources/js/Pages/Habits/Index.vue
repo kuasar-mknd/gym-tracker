@@ -5,6 +5,7 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import FormulaireDHabitude from '@/Components/Habits/FormulaireDHabitude.vue'
 import { Head, router, Deferred } from '@inertiajs/vue3'
 import { ref, defineAsyncComponent } from 'vue'
@@ -131,6 +132,10 @@ const getProgressPercent = (habit) => {
         <div class="space-y-6">
             <!-- Deferred Analytical Stats -->
             <Deferred data="stats">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
+
                 <template #fallback>
                     <div class="space-y-6">
                         <GlassCard class="animate-pulse">

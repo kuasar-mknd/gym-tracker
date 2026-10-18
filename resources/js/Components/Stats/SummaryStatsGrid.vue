@@ -13,6 +13,7 @@
 
 import { computed } from 'vue'
 import { Deferred } from '@inertiajs/vue3'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { entier, variation } from '@/Utils/nombre'
 
@@ -66,6 +67,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
         >
             <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Séances</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
@@ -81,6 +85,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
         >
             <div class="text-text-muted text-2xs font-black tracking-wider uppercase">Muscles</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="2rem" class="mx-auto mt-1" />
                 </template>
@@ -106,6 +113,9 @@ const monthlyChange = computed(() => props.monthlyComparison?.percentage ?? null
         >
             <div class="text-text-muted text-2xs font-black tracking-wider uppercase">vs Mois -1</div>
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <GlassSkeleton height="2rem" width="3rem" class="mx-auto mt-1" />
                 </template>

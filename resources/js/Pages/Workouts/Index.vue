@@ -9,6 +9,7 @@ import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichis
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
 import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
@@ -162,6 +163,10 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
                 <!-- ⚡ Bolt: Consolidated Deferred Loading -->
                 <Deferred data="deferredData">
+                    <template #rescue>
+                        <IndisponibleHorsLigne />
+                    </template>
+
                     <template #fallback>
                         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             <GlassCard v-for="i in 4" :key="i">
@@ -194,6 +199,10 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 <h3 class="titre-carte mb-3">Exercices disponibles</h3>
 
                 <Deferred data="deferredData">
+                    <template #rescue>
+                        <IndisponibleHorsLigne />
+                    </template>
+
                     <template #fallback>
                         <!-- Loading State -->
                         <div class="flex gap-2 overflow-x-hidden pb-2">

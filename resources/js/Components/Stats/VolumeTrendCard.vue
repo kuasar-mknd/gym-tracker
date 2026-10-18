@@ -1,5 +1,6 @@
 <script setup>
 import { Deferred } from '@inertiajs/vue3'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import { defineAsyncComponent, computed } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
@@ -48,6 +49,9 @@ const totalVolume = computed(() => {
         </div>
         <div class="h-48">
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                 </template>

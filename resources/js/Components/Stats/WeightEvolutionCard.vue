@@ -1,5 +1,6 @@
 <script setup>
 import { Deferred, Link } from '@inertiajs/vue3'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import { defineAsyncComponent } from 'vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -43,6 +44,9 @@ defineProps({
         <!-- Real Weight Chart (Deferred) -->
         <div class="relative -mx-2 h-40 w-full">
             <Deferred :data="deferredData ? 'deferredData' : 'bodyStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <div class="flex h-full items-center justify-center px-4">
                         <GlassSkeleton height="8rem" width="100%" class="rounded-xl" />
