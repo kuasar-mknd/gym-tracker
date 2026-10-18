@@ -119,14 +119,14 @@ const ecrire = async (page, { quand = instant, routes = routesDe(page.url) } = {
  * démarrage depuis le magasin du test.
  *
  * @param {string} adresse
- * @param {string} [raison]
+ * @param {string | null} [raison] `null` : le fichier précaché ouvert à sa propre adresse, hors du worker
  */
 const demarrer = async (adresse, raison = 'reseau') => {
     const precachee = new Response(
         pageHorsLigne({ feuilles: ['/build/assets/main-Cd34.css'], moduleDeLEntree: '/build/assets/main-Ab12.js' }),
     )
     const document = new DOMParser().parseFromString(
-        await (await envelopperLaCoquille(precachee, raison)).text(),
+        raison === null ? await precachee.text() : await (await envelopperLaCoquille(precachee, raison)).text(),
         'text/html',
     )
     const fenetre = Object.assign(new EventTarget(), { document, location: new URL(adresse, 'http://localhost:3000') })
@@ -448,6 +448,22 @@ describe('chaque vérification qui échoue purge, et laisse le contenu statique'
         attendreUneCoquilleStatique(demarrage)
         expect(copiesRangees().size).toBe(0)
         expect(etatRange().empreintesFermees).not.toContain(empreinte)
+    })
+
+    /*
+     * Le fichier précaché, ouvert à sa propre adresse, vient du serveur de
+     * fichiers sans la raison ni les en-têtes que le worker pose : ni
+     * politique de contenu, ni refus d'être encadré. Rien d'un compte ne s'y
+     * monte, et rien ne se purge.
+     */
+    it('le fichier de la coquille ouvert hors du worker ne monte rien', async () => {
+        await ecrire(pageDe())
+
+        const demarrage = await demarrer('/build/hors-ligne.html', null)
+
+        expect(demarrage.resultat.raison).toBe('hors-du-worker')
+        attendreUneCoquilleStatique(demarrage)
+        expect(copiesRangees().size).toBe(1)
     })
 
     it('un magasin fermé, après une déconnexion : rien ne se monte', async () => {

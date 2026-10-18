@@ -18,7 +18,8 @@ import { noterQueLeServeurNeRepondPas } from '@/composables/useEtatDuReseau'
  * sauf l'écoute des messages du worker, posée d'emblée.
  *
  * **Le démarrage** (`demarrerHorsLigne`). Le worker ne lit, ne déchiffre et ne
- * sert rien d'un compte : c'est ici, dans la page, que se lit la copie.
+ * sert rien d'un compte : c'est ici, dans la page, que se lit la copie, et
+ * seulement dans la coquille que le worker a servie (`servieParLeWorker`).
  * 1. Le magasin vérifie la clé du témoin (présente, non fermée, de
  *    l'empreinte de son état), puis le titulaire de l'appareil (le compte de
  *    l'état) et le contrat, et purge à la première qui échoue
@@ -81,6 +82,18 @@ export const estLaCoquille = (document = globalThis.document) => {
         return false
     }
 }
+
+/**
+ * Si le worker a servi la coquille : il pose `data-raison` sur `<html>` en
+ * l'enveloppant des en-têtes de l'application (`envelopperLaCoquille`). Le
+ * fichier précaché, ouvert à sa propre adresse (`/build/hors-ligne.html`),
+ * vient du serveur de fichiers sans eux, ni politique de contenu ni refus
+ * d'être encadré : rien d'un compte ne s'y monte.
+ *
+ * @param {Document} document
+ * @returns {boolean}
+ */
+export const servieParLeWorker = (document) => document?.documentElement?.hasAttribute('data-raison') === true
 
 /**
  * Pourquoi le worker a servi la coquille : `delai` ou `reseau`.
@@ -257,6 +270,11 @@ export const demarrerHorsLigne = async (options = {}) => {
         laisserLaCoquille(options)
 
         return { montee: false, raison }
+    }
+
+    // Ouverte à son adresse de fichier, hors du worker, elle n'a ni sa raison ni les en-têtes de l'application.
+    if (!servieParLeWorker(document)) {
+        return laisser('hors-du-worker')
     }
 
     let lecture
