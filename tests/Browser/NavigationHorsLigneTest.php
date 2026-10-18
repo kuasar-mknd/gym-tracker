@@ -35,9 +35,11 @@ use Tests\DuskTestCase;
  * precache, « Graphique indisponible hors ligne » ; le bouton Retour du
  * navigateur rend la séance ;
  * Séances, Plus (où démarrer une séance se désactive), Outils et le minuteur
- * d'intervalles s'ouvrent ensuite avec le bandeau. Rien d'autre n'est dit.
- * Le réseau rendu, la copie affichée se recharge en entier et perd son
- * bandeau.
+ * d'intervalles s'ouvrent ensuite avec le bandeau, puis de nouveau Séances.
+ * Rien d'autre n'est dit. Le réseau rendu, la copie des séances se recharge
+ * en entier sans être remontée (`router.reload` garde l'état), perd son
+ * bandeau, et son graphique, que le composant asynchrone gardait en échec, se
+ * dessine.
  *
  * Couper le réseau par les outils de Chrome (`Network.emulateNetworkConditions`)
  * ne coupe que la page : un `import()` que le worker relaie atteint encore le
@@ -109,6 +111,19 @@ class NavigationHorsLigneTest extends DuskTestCase
     SCRIPT;
 
     private const string PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau.";
+
+    /**
+     * Si la carte « Aperçu Historique » de la liste des séances porte son
+     * canevas, et plus le composant d'erreur des graphiques.
+     */
+    private const string LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE = <<<'SCRIPT'
+        (() => {
+            const titre = [...document.querySelectorAll('h3')].find((h3) => h3.textContent.trim() === 'Aperçu Historique');
+            const carte = titre?.parentElement?.parentElement ?? null;
+
+            return carte !== null && carte.querySelector('canvas') !== null && carte.querySelector('[data-graphique-indisponible]') === null;
+        })()
+    SCRIPT;
 
     public function test_sans_reseau_la_seance_mene_aux_pages_de_salle_par_leurs_copies(): void
     {
@@ -219,6 +234,11 @@ class NavigationHorsLigneTest extends DuskTestCase
                 $browser->clickWhenSettled('main a[href$="/tools/interval-timer"]');
                 $this->attendreLaCopie($browser, '/tools/interval-timer', 'Minuteur');
 
+                // Puis les séances de nouveau, leur graphique indisponible : c'est la copie que le réseau retrouvera.
+                $browser->clickWhenSettled('[dusk="nav-workouts"]');
+                $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
+                $browser->waitFor('[data-graphique-indisponible]', 15);
+
                 // Rien d'autre n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
                 $this->assertSame([self::PAGE_INDISPONIBLE], $this->messagesSansReseau($browser));
             } finally {
@@ -229,10 +249,15 @@ class NavigationHorsLigneTest extends DuskTestCase
                 $this->couperLeReseau($outils, false);
             }
 
-            // Le réseau revenu, la copie affichée se recharge en entier, et le bandeau part avec sa marque.
+            /*
+             * Le réseau revenu, la copie affichée se recharge en entier, et le bandeau part avec sa marque.
+             * La page n'est pas remontée : le graphique de l'historique, en échec sur la copie, se dessine
+             * quand même, son morceau de nouveau servi.
+             */
             $browser->waitUntilMissing('[dusk="bandeau-hors-ligne"]', 90)
-                ->assertPathIs('/tools/interval-timer')
-                ->assertScript($this->texteDe('header h1'), 'Minuteur');
+                ->assertPathIs('/workouts')
+                ->assertScript($this->texteDe('header h1'), 'Mes Séances')
+                ->waitUntil(self::LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE, 30, 'le graphique de l’historique dit encore qu’il est indisponible hors ligne');
         });
     }
 
