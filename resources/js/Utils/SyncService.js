@@ -6,6 +6,8 @@ import {
     oublierLesEcrituresAbandonnees,
 } from '@/Utils/ecrituresAbandonnees'
 import { noterLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
+import { noterUneEcritureAcceptee } from '@/Utils/ecrituresAcceptees'
+import { estUneEcritureDeLaSeance } from '@/Utils/seanceEtFile'
 import { classifySyncError, estPourUnAutreCompte, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
@@ -386,6 +388,16 @@ class SyncService {
          */
         this.rejeuxDepuisLaDerniereVisite = 0
 
+        /**
+         * La séance que montre la page de séance, ou la dernière qu'elle a
+         * montrée (`suivreLesEcrituresDeLaSeance`, #2048). Une écriture de la
+         * séance la prend à son départ : celle qui part au démontage de la
+         * page, une saisie vidée en partant, revient souvent après lui.
+         *
+         * @type {string|null}
+         */
+        this.seanceDesEcritures = null
+
         /*
          * Ce qui attend depuis plus de trente jours ne partira plus : abandonné
          * dès le chargement, avant que la page ne superpose la file à la
@@ -487,6 +499,7 @@ class SyncService {
      * @returns {Promise}
      */
     request(config) {
+        const depart = { compte: this.compte, seance: this.seanceDesEcritures, oublis: this.oublisDe(this.compte) }
         const ecriture = this.envoyer(config)
 
         if (this.isMutation(config)) {
@@ -494,9 +507,54 @@ class SyncService {
 
             this.ecrituresDirectes.add(ecriture)
             ecriture.then(oublier, oublier)
+            ecriture.then(
+                () => this.noterLAcceptation(config, depart),
+                () => {},
+            )
         }
 
         return ecriture
+    }
+
+    /**
+     * La page de séance dit quelle séance elle montre (#2048) : ses écritures
+     * acceptées se notent sous elle (`noterLAcceptation`). Rien ne l'efface au
+     * départ de la page, puisque l'écriture qui part au démontage, une saisie
+     * vidée en partant, revient souvent après lui ; la page de séance suivante
+     * la remplace, et seules les sept écritures de la séance se notent.
+     *
+     * @param {number|string|null|undefined} seance
+     */
+    suivreLesEcrituresDeLaSeance(seance) {
+        this.seanceDesEcritures = seance === null || seance === undefined || seance === '' ? null : String(seance)
+    }
+
+    /**
+     * Note aussitôt, pour la copie hors ligne de la séance, qu'une écriture
+     * directe de la séance a été acceptée (`Utils/ecrituresAcceptees.js`,
+     * #2048) : la copie, prise plus tard quand tout est enregistré, peut ne
+     * pas l'avoir. Le compte et la séance sont ceux du départ. Une écriture
+     * mise en file, refusée ou abandonnée ne se note pas ; rejouée par le
+     * vidage, elle s'annonce par `sync:replayed`. Une écriture dont le compte
+     * a quitté l'appareil depuis son départ (`oublis`, #2050) ne se note pas
+     * non plus : sa réponse tardive, après « Se déconnecter quand même » ou
+     * la suppression du compte, recréait en clair la note que la purge et
+     * l'écran de connexion venaient d'effacer.
+     *
+     * @param {Object} config la requête acceptée
+     * @param {{compte: string|null, seance: string|null, oublis: number}} depart
+     */
+    noterLAcceptation(config, { compte, seance, oublis }) {
+        if (
+            compte === null ||
+            seance === null ||
+            this.oublisDe(compte) !== oublis ||
+            !estUneEcritureDeLaSeance(config)
+        ) {
+            return
+        }
+
+        noterUneEcritureAcceptee({ compte, seance, instant: Date.now() })
     }
 
     /**

@@ -8,6 +8,7 @@ import {
     restaurerDepuisLHistorique,
     retirerLesEcouteursDuService,
 } from './fileHorsLigne'
+import { oublierLesEcrituresAcceptees } from '@/Utils/ecrituresAcceptees'
 import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
 
 const request = vi.fn()
@@ -2401,5 +2402,112 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         expect(request.mock.calls.map(([config]) => config.url)).not.toContain('/api/v1/sets/5')
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
         expect(service.queue.map((e) => e.compte)).toEqual(['2'])
+    })
+})
+
+/*
+ * La note des écritures de séance acceptées (#2048, partie D) : la copie hors
+ * ligne de la séance n'est prise que quand tout est enregistré, une seconde
+ * après le dernier changement ; une écriture acceptée juste avant le départ
+ * de la page peut y manquer. Chaque écriture directe de la séance que le
+ * serveur accepte note donc aussitôt sa séance et l'heure, sous le compte et
+ * la séance de son départ.
+ */
+describe('SyncService la note des écritures de séance acceptées', () => {
+    const noteDuCompte = () => JSON.parse(localStorage.getItem('gym-tracker:ecritures-acceptees') ?? 'null')
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('note aussitôt la séance et l’heure d’une écriture directe acceptée', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-12T18:20:00Z'))
+        const service = await chargé()
+        request.mockResolvedValue({ data: { data: {} } })
+
+        service.suivreLesEcrituresDeLaSeance(5)
+        await service.patch('/api/v1/sets/3', { weight: 85 })
+
+        expect(noteDuCompte()).toEqual({ compte: COMPTE, seances: { 5: Date.parse('2026-10-12T18:20:00Z') } })
+    })
+
+    it('prend la séance au départ de l’écriture, pas à sa réponse', async () => {
+        const service = await chargé()
+        let repondre
+        request.mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+
+        service.suivreLesEcrituresDeLaSeance(5)
+        const ecriture = service.patch('/api/v1/sets/3', { weight: 85 })
+        // La page de séance part, une autre séance s'ouvre avant la réponse.
+        service.suivreLesEcrituresDeLaSeance(6)
+        repondre({ data: { data: {} } })
+        await ecriture
+
+        expect(Object.keys(noteDuCompte().seances)).toEqual(['5'])
+    })
+
+    it('ne note ni une écriture mise en file, ni une refusée, ni une lecture, ni une autre écriture que la séance', async () => {
+        const service = await chargé()
+        service.suivreLesEcrituresDeLaSeance(5)
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        await expect(service.patch('/api/v1/sets/3', { weight: 85 })).rejects.toMatchObject({ isOffline: true })
+        service.queue = []
+        service.saveQueue()
+
+        request.mockRejectedValueOnce({ response: { status: 422, data: {} } })
+        await expect(service.patch('/api/v1/sets/3', { weight: 9999 })).rejects.toBeTruthy()
+
+        request.mockResolvedValue({ data: {} })
+        await service.get('/api/v1/sets')
+        await service.patch('/profile/preferences', { notify: true })
+
+        expect(noteDuCompte()).toBeNull()
+    })
+
+    it('ne note rien tant que la page de séance n’a pas dit quelle séance elle montre', async () => {
+        const service = await chargé()
+        request.mockResolvedValue({ data: { data: {} } })
+
+        await service.post('/api/v1/sets', { workout_line_id: 1 })
+        service.suivreLesEcrituresDeLaSeance(null)
+        await service.delete('/api/v1/sets/3')
+
+        expect(noteDuCompte()).toBeNull()
+    })
+
+    it('ne note pas la réponse tardive d’une écriture dont le compte a quitté l’appareil depuis son départ', async () => {
+        const service = await chargé()
+        let repondre
+        request.mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+
+        service.suivreLesEcrituresDeLaSeance(5)
+        const ecriture = service.patch('/api/v1/sets/3', { weight: 85 })
+
+        // « Se déconnecter quand même » : la purge, la déconnexion acceptée, puis l'écran de connexion.
+        oublierLesEcrituresAcceptees(localStorage)
+        service.oublierLeCompte(COMPTE)
+        oublierLesEcrituresAcceptees(localStorage, { saufDuCompte: null })
+        repondre({ data: { data: {} } })
+        await ecriture
+
+        expect(localStorage.getItem('gym-tracker:ecritures-acceptees')).toBeNull()
+    })
+
+    it('ne note pas le rejeu d’une écriture par la file : il s’annonce par sync:replayed', async () => {
+        const service = await chargé()
+        const rejeux = vi.fn()
+        window.addEventListener('sync:replayed', rejeux)
+        service.suivreLesEcrituresDeLaSeance(5)
+        service.addToQueue({ method: 'patch', url: '/api/v1/sets/3', data: { weight: 85 } })
+        request.mockResolvedValue({ data: { data: {} } })
+
+        await service.processQueue()
+        window.removeEventListener('sync:replayed', rejeux)
+
+        expect(service.queue).toEqual([])
+        expect(rejeux).toHaveBeenCalledTimes(1)
+        expect(noteDuCompte()).toBeNull()
     })
 })

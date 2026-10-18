@@ -254,6 +254,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         /*
+         * Les GET du préchauffage des copies (#2048) lisent la session sans
+         * l'enregistrer, et leur réponse ne pose aucun cookie : le docbloc du
+         * middleware dit pourquoi. Il remplace `StartSession` dans le groupe
+         * `web`, à la même place dans l'ordre de priorité, que Laravel lit par
+         * la classe parente.
+         */
+        $middleware->web(replace: [
+            \Illuminate\Session\Middleware\StartSession::class => \App\Http\Middleware\OuvreLaSession::class,
+        ]);
+
+        /*
          * Le rappel d'Apple est un formulaire posté depuis son site (#1911) :
          * il ne peut porter ni notre jeton ni `Sec-Fetch-Site: same-origin`,
          * et refusé, il répondait 419. Exclu seul, chemin exact : sa

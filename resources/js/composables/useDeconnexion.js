@@ -3,6 +3,8 @@ import { router } from '@inertiajs/vue3'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
 import { effacerLesBrouillons } from '@/composables/useBrouillonsDeSeries'
 import { attendreAuPlus } from '@/Utils/attendreAuPlus'
+import { oublierLesCopies } from '@/Utils/copiesHorsLigne'
+import { interrompreLePrechauffage } from '@/Utils/prechauffage'
 import SyncService from '@/Utils/SyncService'
 import { lireLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
 import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
@@ -37,6 +39,15 @@ export const questionDeDeconnexion = ref(null)
  * Rien n'est attendu quand aucune écriture ne vole.
  */
 export const ATTENTE_MAX_DES_ECRITURES_MS = 3000
+
+/**
+ * Ce que la déconnexion attend, au plus, que les copies hors ligne soient
+ * oubliées avant de partir (#2048) : une transaction locale, que rien ne
+ * devrait retenir, mais qu'un IndexedDB bloqué ne doit pas changer en
+ * déconnexion qui ne part jamais. Le détachement de l'appareil, attendu en
+ * même temps, a la même borne.
+ */
+export const ATTENTE_MAX_DE_L_OUBLI_DES_COPIES_MS = 600
 
 /** La déconnexion en cours, pour qu'un double clic ne la fasse pas deux fois. */
 let deconnexionEnCours = null
@@ -114,7 +125,17 @@ const laisserLAppareil = (compte) => {
 }
 
 /**
- * Détache l'appareil, puis poste la déconnexion. Voir `seDeconnecter`.
+ * Oublie les copies hors ligne et détache l'appareil, puis poste la
+ * déconnexion. Voir `seDeconnecter`.
+ *
+ * Les copies s'oublient avant l'envoi, et même s'il échoue faute de réseau
+ * (décision 6 du propriétaire, #2048) : une réponse perdue ne laisse rien de
+ * lisible au suivant. La clé du témoin est fermée avec elles : une réponse en
+ * vol d'un autre onglet, partie avant la déconnexion, ne rouvre rien. Une
+ * déconnexion qui n'aboutit pas coûte donc les copies de la session, que la
+ * suivante refera. Jamais avant que la personne ait choisi de partir : la
+ * question de #2050 passe d'abord, et « Rester connecté » n'oublie rien. La
+ * file hors ligne, elle, reste au compte jusqu'à la réponse (#1964).
  *
  * @returns {Promise<void>}
  */
@@ -125,7 +146,10 @@ const partir = () => {
         deconnexionEnCours = null
     }
 
-    deconnexionEnCours ??= detacherLAppareil()
+    deconnexionEnCours ??= Promise.all([
+        attendreAuPlus(oublierLesCopies({ fermerLeTemoin: true }), ATTENTE_MAX_DE_L_OUBLI_DES_COPIES_MS),
+        detacherLAppareil(),
+    ])
         .then(() => {
             /*
              * Lu avant l'envoi : la réponse mène à une page sans compte, que le
@@ -222,14 +246,18 @@ const demanderOuPartir = () => {
  * détachement : une garde de tests/js/conventions/deconnexion.test.js refuse
  * qu'on en écrive un.
  *
- * Une déconnexion acceptée efface ce que la file hors ligne garde pour le
- * compte (#2050). Quand des écritures du compte attendent encore, sur cet
- * onglet ou un autre, rien ne part : la question est posée d'abord (combien,
- * et qu'elles seront perdues), et seul « Se déconnecter quand même »
- * (`seDeconnecterQuandMeme`) détache l'appareil et déconnecte. Avant le
- * détachement, et non après : « Rester connecté » laisse l'appareil abonné.
- * File vide, la déconnexion part sans question. Les gestes l'appellent par
- * `@click` : un premier argument, l'évènement du clic, n'y change rien.
+ * Le préchauffage des copies hors ligne s'interrompt avant toute autre chose,
+ * question comprise : rien de ce qu'il demandait ne revient pour le compte
+ * qui part. Les copies hors ligne des pages s'oublient au départ, avant
+ * l'envoi (#2048, `partir`). Une déconnexion acceptée efface ce que la file
+ * hors ligne garde pour le compte (#2050). Quand des écritures du compte
+ * attendent encore, sur cet onglet ou un autre, rien ne part : la question
+ * est posée d'abord (combien, et qu'elles seront perdues), et seul « Se
+ * déconnecter quand même » (`seDeconnecterQuandMeme`) détache l'appareil et
+ * déconnecte. Avant le détachement, et non après : « Rester connecté »
+ * laisse l'appareil abonné. File vide, la déconnexion part sans question.
+ * Les gestes l'appellent par `@click` : un premier argument, l'évènement du
+ * clic, n'y change rien.
  *
  * Une écriture partie juste avant le clic et encore sans réponse n'est pas
  * encore en file : la question ne la voyait pas, et la déconnexion partait
@@ -243,6 +271,8 @@ const demanderOuPartir = () => {
  *   ou quand la question est posée.
  */
 export const seDeconnecter = () => {
+    interrompreLePrechauffage()
+
     if (deconnexionEnCours !== null) {
         return deconnexionEnCours
     }

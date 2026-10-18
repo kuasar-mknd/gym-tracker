@@ -19,6 +19,7 @@ import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
+import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -165,6 +166,17 @@ const {
 
 useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })
 useRechargementApresLeVidage()
+
+// La copie hors ligne de la séance, quand tout est enregistré (#2048).
+useCopieDeLaSeance({
+    localWorkout,
+    seanceDeDepart,
+    seance: () => props.workout,
+    page,
+    valeursDeRepli,
+    unsyncedSetIds,
+    ordreEnVol,
+})
 
 const {
     savingTemplate,
