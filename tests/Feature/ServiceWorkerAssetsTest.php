@@ -347,7 +347,9 @@ function prefixesSansCoquilleDuWorker(): array
             return $prefixes;
         }
 
-        expect(preg_match("#^\\s*'(/[a-z_-]+/?)',?\\s*$#", $ligne, $trouve))->toBe(1, "Ligne inattendue dans PREFIXES_SANS_COQUILLE : {$ligne}");
+        if (preg_match("#^\\s*'(/[a-z_-]+/?)',?\\s*$#", $ligne, $trouve) !== 1) {
+            throw new RuntimeException("Ligne inattendue dans PREFIXES_SANS_COQUILLE : {$ligne}");
+        }
 
         $prefixes[] = $trouve[1];
     }
@@ -366,11 +368,13 @@ function prefixesSansCoquilleDuWorker(): array
  * que la coquille ne le porte pas ; le worker construit les porte tels quels.
  */
 it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la politique de production, sans nonce', function (): void {
-    $this->app['env'] = 'production';
+    app()->detectEnvironment(static fn (): string => 'production');
     config(['app.env' => 'production', 'csp.nonce_enabled' => false]);
-    $this->app->instance('request', Request::create('/dashboard'));
+    app()->instance('request', Request::create('/dashboard'));
 
-    $politique = Policy::create(presets: config('csp.presets'), directives: config('csp.directives'))->getContents();
+    /** @var list<class-string<Spatie\Csp\Preset>> $preReglages */
+    $preReglages = config()->array('csp.presets');
+    $politique = Policy::create(presets: $preReglages, directives: config()->array('csp.directives'))->getContents();
     $reponse = new SecurityHeaders()->handle(Request::create('/dashboard'), static fn (): Response => new Response());
     $attendus = ['content-security-policy' => $politique.";frame-ancestors 'self'"];
 
