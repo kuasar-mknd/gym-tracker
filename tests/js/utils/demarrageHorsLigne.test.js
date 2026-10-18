@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync, statSync } from 'node:fs'
+import { dirname, relative, resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import { jsRoot } from '../conventions/sourceFiles'
@@ -118,8 +118,69 @@ describe('le contenu statique', () => {
     })
 })
 
+/**
+ * Les modules que `main.js` importe statiquement, de proche en proche : ceux
+ * qui s'évaluent avant son corps, donc avant le démarrage dans la coquille.
+ *
+ * @returns {string[]} leurs chemins sous resources/js
+ */
+const grapheStatiqueDeLEntree = () => {
+    const resoudre = (depuis, specificateur) => {
+        const base = specificateur.startsWith('@/')
+            ? resolve(jsRoot, specificateur.slice(2))
+            : specificateur.startsWith('.')
+              ? resolve(dirname(depuis), specificateur)
+              : null
+
+        return (
+            [base, `${base}.js`, `${base}.vue`].find(
+                (candidat) => candidat !== null && existsSync(candidat) && statSync(candidat).isFile(),
+            ) ?? null
+        )
+    }
+    const vus = new Set()
+    const aSuivre = [resolve(jsRoot, 'main.js')]
+
+    while (aSuivre.length > 0) {
+        const fichier = aSuivre.pop()
+
+        if (vus.has(fichier)) {
+            continue
+        }
+
+        vus.add(fichier)
+
+        for (const [, specificateur] of readFileSync(fichier, 'utf-8').matchAll(
+            /^\s*import\s+(?:[^'"]*?from\s+)?['"]([^'"]+)['"]/gm,
+        )) {
+            const resolu = resoudre(fichier, specificateur)
+
+            if (resolu !== null) {
+                aSuivre.push(resolu)
+            }
+        }
+    }
+
+    return [...vus].map((fichier) => relative(jsRoot, fichier))
+}
+
 describe('le branchement', () => {
     const main = () => readFileSync(resolve(jsRoot, 'main.js'), 'utf-8')
+
+    /*
+     * La file hors ligne lit le compte connecté dans la page du document à la
+     * construction de son module (`lireLeCompteDeLaPage`). Importée par
+     * l'entrée, elle s'évaluerait avant le démarrage dans la coquille, qui
+     * n'a pas encore écrit la page : aucune écriture faite sans réseau ne
+     * partirait en file. Elle vient avec les pages, chargées après lui.
+     */
+    it('ne charge pas la file hors ligne avant le démarrage dans la coquille', () => {
+        const graphe = grapheStatiqueDeLEntree()
+
+        expect(graphe).toContain('Utils/demarrageHorsLigne.js')
+        expect(graphe).toContain('Utils/copiesHorsLigne.js')
+        expect(graphe).not.toContain('Utils/SyncService.js')
+    })
 
     /*
      * Un import à la demande ne se chargerait qu'en mode coquille, sans réseau :

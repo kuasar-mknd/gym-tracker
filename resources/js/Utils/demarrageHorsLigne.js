@@ -295,7 +295,7 @@ export const demarrerHorsLigne = async (options = {}) => {
 
     const ziggy = lecture.copie?.ziggy ?? lecture.plusRecente.ziggy
 
-    if (ziggy === null || typeof ziggy !== 'object' || document.querySelector('main') === null) {
+    if (ziggy === null || typeof ziggy !== 'object') {
         return laisser('sans-routes')
     }
 
