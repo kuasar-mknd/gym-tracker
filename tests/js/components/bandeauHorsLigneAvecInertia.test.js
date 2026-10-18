@@ -235,6 +235,18 @@ describe('le bandeau d’une copie', () => {
         expect(relais.rejets).toEqual([])
     })
 
+    it('depuis la copie, un lien vers une page qui n’est pas gardée laisse la copie et son bandeau, et le dit', async () => {
+        await servirLaCopieDe(pageDe())
+
+        await visiter('/stats')
+
+        expect(annonces).toEqual([{ message: visites.PAGE_INDISPONIBLE, annuler: null }])
+        expect(window.location.pathname).toBe('/workouts')
+        expect(contenu()).toBe('Séances')
+        expect(titreDuBandeau()).toBe('Hors ligne · copie du lun. 12 oct. 2026 à 18:04')
+        expect(relais.rejets).toEqual([])
+    })
+
     it('servie pour lenteur, la copie dit que le réseau ne répond pas', async () => {
         expect(await magasin.ecrireUneCopie(pageDe())).toBe('ecrite')
         reseau.mode = 'muet'
