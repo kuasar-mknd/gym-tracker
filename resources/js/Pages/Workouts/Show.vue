@@ -86,6 +86,20 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 const { nouvelIdTemporaire, newRowKey, rowKey, pendingIds, queuedLineIds } = useIdentiteDesRangees()
 const showAddExercise = ref(false)
 const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
+
+/*
+ * La bibliothèque suit celle du serveur : une séance servie depuis sa copie
+ * hors ligne se recharge au retour du réseau sans être remontée (#2048), et
+ * gardait sinon la bibliothèque de la copie, sans un exercice créé ailleurs
+ * depuis, avec un exercice supprimé que le serveur refusait ensuite. Un
+ * exercice créé depuis la séance revient avec la réponse complète suivante.
+ */
+watch(
+    () => props.exercises,
+    (exercices) => {
+        localExercises.value = [...(exercices || [])].filter((e) => e && e.id)
+    },
+)
 const { unsyncedSetIds, clearUnsynced, markUnsynced, editError, reportEditFailure, reportSyncFailure } =
     useRapportDeSynchronisation({
         page,

@@ -77,9 +77,12 @@ const seanceDuServeur = (serveur) => ({
 })
 
 /**
- * Les pages de chaque adresse, comme le serveur les rend maintenant.
+ * Les pages de chaque adresse, comme le serveur les rend maintenant. La
+ * bibliothèque de la séance est celle que le test a posée sur le faux serveur
+ * (`bibliotheque`), comme si elle avait changé ailleurs, et sinon le squat et
+ * le développé couché.
  *
- * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>} serveur
+ * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { bibliotheque?: Array<object> }} serveur
  * @returns {Record<string, () => object>}
  */
 export const pagesDuServeur = (serveur) => ({
@@ -99,7 +102,7 @@ export const pagesDuServeur = (serveur) => ({
             flash: {},
             auth: { user: { id: 1 } },
             workout: seanceDuServeur(serveur),
-            exercises: EXERCICES,
+            exercises: serveur.bibliotheque ?? EXERCICES,
             bornesDUneSerie: null,
         },
         encryptHistory: true,
