@@ -70,10 +70,12 @@ import {
  * différée, un préchargement ou une écriture ne reçoivent jamais de copie.
  * Le morceau du composant s'importe d'abord : s'il manque (une mise à jour
  * pas encore précachée), « Mise à jour à terminer avec le réseau », et la
- * page reste. La copie se pousse ensuite par `router.push`, une visite côté
- * client, champ par champ (`copiesServies.js`) : elle n'émet ni `success`
- * ni `beforeUpdate`, et ni la file hors ligne ni la garde de l'historique ne
- * la prennent pour une réponse du serveur. La séance ouverte fige d'abord ce
+ * page reste. La copie se relit alors au magasin, et le compte de la page
+ * affichée se revérifie : une purge, ou la page d'un autre compte, arrivées
+ * pendant l'import la retirent. Elle se pousse ensuite par `router.push`,
+ * une visite côté client, champ par champ (`copiesServies.js`) : elle
+ * n'émet ni `success` ni `beforeUpdate`, et ni la file hors ligne ni la
+ * garde de l'historique ne la prennent pour une réponse du serveur. La séance ouverte fige d'abord ce
  * qu'elle garde dans l'historique (`EVENEMENT_AVANT_UNE_COPIE`), qu'un
  * `router.remember` n'écrive pas dans l'entrée de la copie. Une copie montrée
  * rend `joignable` faux : la sonde demande au serveur s'il répond.
@@ -488,17 +490,15 @@ export const installerLesVisitesHorsLigne = ({
     }
 
     /**
-     * Sert la copie d'une adresse, si le magasin en a une lisible et si
-     * `toujoursVoulue()` le permet encore au moment de la pousser.
+     * La copie d'une clé, telle que le magasin la lit maintenant, si elle est
+     * encore celle de sa clé, d'une page gardée, et ni la page affichée.
      *
-     * @param {{ adresse: string, raison: string, toujoursVoulue: () => boolean, avantDePousser?: () => void }} demande
-     * @returns {Promise<'servie' | 'sans-copie' | 'morceau-manquant' | 'abandonnee'>}
+     * @param {string} cle
+     * @returns {Promise<{ page: object, copieDu: number } | null>}
      */
-    const servirUneCopie = async ({ adresse, raison, toujoursVoulue, avantDePousser = () => {} }) => {
-        const cle = cleDeLaCopie(adresse)
-
-        if (!adressePeutAvoirUneCopie(adresse) || cle === cleDeLaCopie(pageCourante?.url)) {
-            return 'sans-copie'
+    const lireUneCopieServable = async (cle) => {
+        if (cle === cleDeLaCopie(pageCourante?.url)) {
+            return null
         }
 
         let copie
@@ -506,7 +506,7 @@ export const installerLesVisitesHorsLigne = ({
         try {
             copie = await lireUneCopie(cle)
         } catch {
-            copie = null
+            return null
         }
 
         // Le magasin vérifie déjà clé, titulaire, contrat et liste : la page lue doit encore être celle de sa clé.
@@ -514,14 +514,39 @@ export const installerLesVisitesHorsLigne = ({
             copie?.page === undefined ||
             copie.page === null ||
             cleDeLaCopie(copie.page.url) !== cle ||
-            pageGardee(cle, copie.page.component) === null
+            pageGardee(cle, copie.page.component) === null ||
+            cle === cleDeLaCopie(pageCourante?.url)
         ) {
+            return null
+        }
+
+        return copie
+    }
+
+    /**
+     * Sert la copie d'une adresse, si le magasin en a une lisible et si
+     * `toujoursVoulue()` le permet encore au moment de la pousser.
+     *
+     * Le morceau du composant s'importe entre la lecture et la poussée, du
+     * cache du worker le plus souvent, du réseau parfois. Sans aucun geste
+     * dans l'onglet, une purge peut fermer la clé pendant ce temps (un 401 du
+     * rejeu, une déconnexion dans un autre onglet), ou une réponse en
+     * arrière-plan poser la page d'un autre compte : la copie se relit donc
+     * au magasin après l'import, et le compte de la page affichée se
+     * revérifie, juste avant de la pousser, sans rien attendre entre les deux.
+     *
+     * @param {{ adresse: string, raison: string, toujoursVoulue: () => boolean, avantDePousser?: () => void }} demande
+     * @returns {Promise<'servie' | 'sans-copie' | 'morceau-manquant' | 'abandonnee'>}
+     */
+    const servirUneCopie = async ({ adresse, raison, toujoursVoulue, avantDePousser = () => {} }) => {
+        if (!adressePeutAvoirUneCopie(adresse)) {
             return 'sans-copie'
         }
 
-        const auth = authLePlusRecent(copie)
+        const cle = cleDeLaCopie(adresse)
+        const lue = await lireUneCopieServable(cle)
 
-        if (auth === null) {
+        if (lue === null || authLePlusRecent(lue) === null) {
             return 'sans-copie'
         }
 
@@ -530,9 +555,26 @@ export const installerLesVisitesHorsLigne = ({
         }
 
         try {
-            await importerLeComposant(copie.page.component)
+            await importerLeComposant(lue.page.component)
         } catch {
             return 'morceau-manquant'
+        }
+
+        if (!toujoursVoulue()) {
+            return 'abandonnee'
+        }
+
+        // Ce que l'import a laissé passer : une purge, une clé fermée, une copie remplacée, une autre page.
+        const copie = await lireUneCopieServable(cle)
+
+        if (copie === null || copie.page.component !== lue.page.component) {
+            return 'sans-copie'
+        }
+
+        const auth = authLePlusRecent(copie)
+
+        if (auth === null) {
+            return 'sans-copie'
         }
 
         if (!toujoursVoulue()) {

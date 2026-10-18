@@ -101,6 +101,32 @@ const importsEnCours = new Map()
 const DUREE_D_UN_MORCEAU_LENT = 150
 
 /**
+ * Les morceaux retenus jusqu'à ce que le cas les libère (`retenirLeMorceau`) :
+ * ce qui arrive pendant l'import d'un morceau, une purge ou une autre page, se
+ * joue sans délai à deviner.
+ *
+ * @type {Map<string, { promesse: Promise<object>, demande: boolean }>}
+ */
+const morceauxRetenus = new Map()
+
+/**
+ * Retient l'import d'un morceau, et rend de quoi le libérer.
+ *
+ * @param {string} nom
+ * @returns {() => void}
+ */
+const retenirLeMorceau = (nom) => {
+    let liberer
+    const promesse = new Promise((resoudre) => {
+        liberer = () => resoudre(Page)
+    })
+
+    morceauxRetenus.set(nom, { promesse, demande: false })
+
+    return liberer
+}
+
+/**
  * Le composant d'une page, tel que le résolveur le rend.
  *
  * @param {string} nom
@@ -108,6 +134,12 @@ const DUREE_D_UN_MORCEAU_LENT = 150
 const resoudreLeComposant = (nom) => {
     if (morceauxAbsents.has(nom)) {
         return Promise.reject(new TypeError('Failed to fetch dynamically imported module'))
+    }
+
+    if (morceauxRetenus.has(nom)) {
+        morceauxRetenus.get(nom).demande = true
+
+        return morceauxRetenus.get(nom).promesse
     }
 
     if (!morceauxLents.has(nom)) {
@@ -239,6 +271,7 @@ beforeEach(async () => {
     lectures.length = 0
     morceauxAbsents.clear()
     morceauxLents.clear()
+    morceauxRetenus.clear()
     importsEnCours.clear()
     reseau.mode = 'coupe'
     reseau.prochains.length = 0
@@ -599,6 +632,66 @@ describe('ce qui ne reçoit jamais de copie', () => {
         expect(navigations).toEqual([])
         expect(annonces).toEqual([])
         expect(contenu()).toBe('Séance en cours')
+    })
+
+    /*
+     * La copie se lit, puis son morceau s'importe : du cache du worker le plus
+     * souvent, du réseau parfois. Ce qui arrive pendant ce temps, sans aucun
+     * geste dans l'onglet, la retire (seconde relecture de la partie E,
+     * 2026-10-18).
+     */
+    it('une purge pendant que son morceau se charge retire la copie déjà lue', async () => {
+        await garderUneCopie(pageDe())
+        const liberer = retenirLeMorceau('Workouts/Index')
+
+        routeur.visit('/workouts')
+        await vi.waitUntil(() => morceauxRetenus.get('Workouts/Index').demande)
+
+        // Une fin de session (un 401 du rejeu, une déconnexion dans un autre onglet) purge le magasin et ferme la clé.
+        await magasin.oublierLesCopies()
+        expect(fabrique.enregistrements('gym-tracker-copies', 'pages').size).toBe(0)
+
+        liberer()
+        await vi.waitUntil(() => annonces.length > 0 || pageMontree()?.props?.horsLigne !== undefined, {
+            timeout: 3000,
+        })
+
+        expect(navigations.filter((page) => page?.props?.horsLigne !== undefined)).toEqual([])
+        expect(annonces).toEqual([{ message: visites.PAGE_INDISPONIBLE, annuler: null }])
+        expect(contenu()).toBe('Séance en cours')
+    })
+
+    it('la page d’un autre compte posée pendant que son morceau se charge ne reçoit pas la copie', async () => {
+        await garderUneCopie(pageDe())
+        const liberer = retenirLeMorceau('Workouts/Index')
+
+        routeur.visit('/workouts')
+        await vi.waitUntil(() => morceauxRetenus.get('Workouts/Index').demande)
+
+        // Un rechargement en arrière-plan rend la page d'un autre compte, connecté entre-temps dans un autre onglet.
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(
+            pageDe({
+                url: '/workouts/12',
+                component: 'Workouts/Show',
+                texte: 'Séance de Dominique',
+                auth: {
+                    user: { id: 8, name: 'Dominique Autrecompte', active_workout: null, latest_achievement: null },
+                },
+            }),
+        )
+        let fini = false
+        routeur.reload({ onFinish: () => (fini = true) })
+        await vi.waitUntil(() => fini)
+        expect(contenu()).toBe('Séance de Dominique')
+
+        liberer()
+        await vi.waitUntil(() => annonces.length > 0 || pageMontree()?.props?.horsLigne !== undefined, {
+            timeout: 3000,
+        })
+
+        expect(navigations.filter((page) => page?.props?.horsLigne !== undefined)).toEqual([])
+        expect(contenu()).toBe('Séance de Dominique')
     })
 })
 
