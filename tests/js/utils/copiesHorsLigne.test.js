@@ -1069,6 +1069,33 @@ describe('les réponses partielles et les props différées', () => {
         expect(lue.datesDesProps.analyticalStats).toBe(depart + 60_000)
     })
 
+    /*
+     * L'instantané de la séance se décide quand tout est enregistré, puis
+     * s'écrit au repos : une écriture acceptée entre les deux n'y est pas. La
+     * séance servie le dit en comparant la note des écritures acceptées à la
+     * date de sa prop (#2048, partie E) : datée de son écriture, l'instantané
+     * aurait paru avoir ce qu'il n'a pas.
+     */
+    it('date une prop versée de l’instant où elle était vraie, jamais d’après son écriture', async () => {
+        const onglet = ouvrirUnOnglet()
+        const complete = pageDe({ props: { recentPRs: [] } })
+        const partielle = { ...complete, props: { ...complete.props, recentPRs: [1] } }
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(complete)
+
+        const decide = instant + 1000
+
+        instant += 3000
+        expect(await onglet.completerUneCopie(partielle, ['recentPRs'], { valableAu: decide })).toBe('ecrite')
+        expect((await onglet.lireUneCopie('/dashboard')).datesDesProps.recentPRs).toBe(decide)
+
+        // Un instant à venir ne la date pas après son écriture.
+        expect(await onglet.completerUneCopie(partielle, ['recentPRs'], { valableAu: instant + 60_000 })).toBe('ecrite')
+        expect((await onglet.lireUneCopie('/dashboard')).datesDesProps.recentPRs).toBe(instant)
+    })
+
     it('ne rouvrent pas un magasin fermé', async () => {
         const onglet = ouvrirUnOnglet()
         const page = pageDe({ props: { recentPRs: [] } })

@@ -65,3 +65,28 @@ describe('GoalsSummary', () => {
         expect(new Set(targets)).toEqual(new Set(['/goals.index']))
     })
 })
+
+/*
+ * Une copie hors ligne de l'accueil ne garde jamais les objectifs (#2048,
+ * partie E) : la carte le dit, sans lien vers des objectifs qu'aucune copie
+ * ne garde non plus.
+ */
+describe('GoalsSummary sur une copie hors ligne', () => {
+    const monter = (props) =>
+        mount(GoalsSummary, {
+            props: { activeGoals: [], ...props },
+            global: { mocks: { route: globalThis.route }, stubs: { GlassCard: { template: '<div><slot /></div>' } } },
+        })
+
+    it('dit les objectifs indisponibles hors ligne, sans lien', () => {
+        const carte = monter({ indisponible: true })
+
+        expect(carte.get('[dusk="objectifs-indisponibles"]').text()).toContain('Objectifs en cours')
+        expect(carte.get('[data-indisponible-hors-ligne]').text()).toContain('Objectifs indisponibles hors ligne')
+        expect(carte.find('a').exists()).toBe(false)
+    })
+
+    it('ne dit rien de tel pour un compte sans objectif', () => {
+        expect(monter().text()).toBe('')
+    })
+})

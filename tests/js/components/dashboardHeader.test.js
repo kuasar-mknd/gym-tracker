@@ -89,3 +89,35 @@ describe('DashboardHeader streak badge', () => {
         expect(streakOf(0).attributes('aria-label')).toBe('Série de 0 jours, voir les statistiques')
     })
 })
+
+/*
+ * Une copie hors ligne de l'accueil ne garde jamais le dernier poids (#2048,
+ * partie E) : l'en-tête le dit, plutôt que de laisser croire qu'aucun poids
+ * n'a été noté.
+ */
+describe('DashboardHeader sur une copie hors ligne', () => {
+    const monter = (props) =>
+        mount(DashboardHeader, {
+            props: { user: { name: 'Samuel Dulex', current_streak: 4 }, ...props },
+            global: {
+                mocks: { route: globalThis.route },
+                stubs: { Link: { template: '<a :href="href"><slot /></a>', props: ['href'] } },
+            },
+        })
+
+    it('dit le dernier poids indisponible hors ligne', () => {
+        const entete = monter({ latestWeight: null, poidsIndisponible: true })
+
+        expect(entete.get('[dusk="dashboard-latest-weight-indisponible"]').text()).toContain(
+            'Dernier poids indisponible hors ligne',
+        )
+        expect(entete.find('[dusk="dashboard-latest-weight"]').exists()).toBe(false)
+    })
+
+    it('montre le poids qu’on lui donne, même marqué indisponible', () => {
+        const entete = monter({ latestWeight: '75.50', poidsIndisponible: true })
+
+        expect(entete.text()).toContain('75,5 kg')
+        expect(entete.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
+    })
+})

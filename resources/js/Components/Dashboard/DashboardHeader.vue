@@ -11,6 +11,12 @@ const props = defineProps({
      * so the query ran on every page load to fill a prop nothing read.
      */
     latestWeight: { type: [Number, String], default: null },
+    /**
+     * Le dernier poids manque parce que la page est une copie hors ligne,
+     * qui ne garde jamais rien des mesures (#2048) : le dire, plutôt que de
+     * laisser croire qu'aucun poids n'a été noté.
+     */
+    poidsIndisponible: { type: Boolean, default: false },
 })
 
 /**
@@ -78,6 +84,14 @@ const streakLabel = computed(() => {
                     <GlassIcon name="monitor_weight" size="xs" />
                     {{ formattedWeight }} kg
                 </Link>
+                <p
+                    v-else-if="poidsIndisponible"
+                    dusk="dashboard-latest-weight-indisponible"
+                    class="text-text-muted mt-1 inline-flex items-center gap-1 text-xs font-bold"
+                >
+                    <GlassIcon name="cloud_off" size="xs" />
+                    Dernier poids indisponible hors ligne
+                </p>
             </div>
         </div>
 

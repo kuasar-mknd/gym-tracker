@@ -206,6 +206,8 @@ export const useCopieDeLaSeance = ({
                     props: { auth: { user: { id: modele.compte } }, workout: instantane },
                 },
                 ['workout'],
+                // Daté de maintenant, où tout est enregistré, et non de son écriture au repos (#2048, partie E).
+                { valableAu: Date.now() },
             )
         }
 

@@ -20,6 +20,7 @@ import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
 import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 const ActiveGoalsChart = graphiqueAsynchrone(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
@@ -48,6 +49,13 @@ defineProps({
 
 const form = useForm({})
 
+/**
+ * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
+ * objectifs, tirés des mesures et des objectifs qu'aucune copie ne garde
+ * (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent.
+ */
+const { indisponibleSurLaCopie } = useCopieHorsLigne()
+
 const startWorkout = () => {
     form.post(route('workouts.store'), { onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU) })
 }
@@ -64,7 +72,11 @@ const installationProposee = ref(false)
 
     <AuthenticatedLayout page-title="Accueil">
         <div class="space-y-6">
-            <DashboardHeader :user="$page.props.auth.user" :latest-weight="latestWeight" />
+            <DashboardHeader
+                :user="$page.props.auth.user"
+                :latest-weight="latestWeight"
+                :poids-indisponible="indisponibleSurLaCopie('latestWeight')"
+            />
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
 
@@ -113,7 +125,7 @@ const installationProposee = ref(false)
                 @start-workout="startWorkout"
             />
 
-            <GoalsSummary :active-goals="activeGoals" />
+            <GoalsSummary :active-goals="activeGoals" :indisponible="indisponibleSurLaCopie('activeGoals')" />
 
             <GlassCard
                 v-if="activeGoals && activeGoals.length > 0"

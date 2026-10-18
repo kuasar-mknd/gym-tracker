@@ -29,6 +29,7 @@ import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
+import SeriesHorsDeLaCopie from '@/Components/Workout/SeriesHorsDeLaCopie.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
@@ -291,6 +292,7 @@ onUnmounted(() => {
         </template>
 
         <div class="pb-main-safe">
+            <SeriesHorsDeLaCopie :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
                 <GlassCard
                     v-if="localWorkout.workout_lines.length === 0"

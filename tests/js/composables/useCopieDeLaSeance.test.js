@@ -122,8 +122,10 @@ describe('la copie de la séance, seule', () => {
         await vi.advanceTimersByTimeAsync(1)
         expect(ecriture.completer).toHaveBeenCalledTimes(1)
 
-        const [pageVersee, noms] = ecriture.completer.mock.calls[0]
+        const [pageVersee, noms, options] = ecriture.completer.mock.calls[0]
         expect(noms).toEqual(['workout'])
+        // Datée de la décision, où tout est enregistré, et non de son écriture au repos (#2048, partie E).
+        expect(options).toEqual({ valableAu: Date.now() })
         expect(pageVersee).toMatchObject({ component: 'Workouts/Show', url: '/workouts/5', encryptHistory: true })
         expect(pageVersee.props.auth).toEqual({ user: { id: 7 } })
         expect(pageVersee.props.workout.workout_lines[0].sets[0].weight).toBe(85)
