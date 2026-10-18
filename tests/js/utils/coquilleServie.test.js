@@ -14,7 +14,7 @@ import { jsRoot } from '../conventions/sourceFiles'
  * `SecurityHeaders` et `CustomPolicy`.
  */
 
-const PAGE = pageHorsLigne({ feuilles: ['/build/assets/main-Un.css'] })
+const PAGE = pageHorsLigne({ feuilles: ['/build/assets/main-Un.css'], moduleDeLEntree: '/build/assets/main-Un.js' })
 
 /** La page telle que le precache la rend : les en-têtes du fichier statique, pas ceux de l'application. */
 const precachee = () =>
@@ -27,6 +27,7 @@ describe('envelopperLaCoquille', () => {
 
         expect(document.documentElement.dataset.raison).toBe(raison)
         expect(document.documentElement.lang).toBe('fr')
+        expect(document.documentElement.hasAttribute('data-coquille')).toBe(true)
         expect(document.querySelector('[dusk="page-hors-ligne"]')).not.toBeNull()
     })
 
@@ -34,7 +35,7 @@ describe('envelopperLaCoquille', () => {
         const servie = await envelopperLaCoquille(precachee(), '"><script>alert(1)</script>')
         const texte = await servie.text()
 
-        expect(texte).toContain('<html data-raison="reseau" lang="fr">')
+        expect(texte).toContain('<html data-raison="reseau" lang="fr" data-coquille>')
         expect(texte).not.toContain('alert(1)')
     })
 
@@ -42,7 +43,7 @@ describe('envelopperLaCoquille', () => {
         const servie = await envelopperLaCoquille(precachee(), 'delai')
 
         await expect(servie.text()).resolves.toBe(
-            PAGE.replace('<html lang="fr">', '<html data-raison="delai" lang="fr">'),
+            PAGE.replace('<html lang="fr" data-coquille>', '<html data-raison="delai" lang="fr" data-coquille>'),
         )
     })
 

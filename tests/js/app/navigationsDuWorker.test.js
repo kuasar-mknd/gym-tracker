@@ -30,7 +30,10 @@ import { attendreLaReponse } from '@/Utils/messagesDuWorker'
 const ORIGINE = self.location.origin
 
 /** La page « hors ligne » de la construction. */
-const PAGE_HORS_LIGNE = pageHorsLigne({ feuilles: ['/build/assets/main-Un.css'] })
+const PAGE_HORS_LIGNE = pageHorsLigne({
+    feuilles: ['/build/assets/main-Un.css'],
+    moduleDeLEntree: '/build/assets/main-Un.js',
+})
 
 /** Le serveur, pour l'installation : il ne sert que la page « hors ligne ». */
 const fetchDeLInstallation = async (requete) =>

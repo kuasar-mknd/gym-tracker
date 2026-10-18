@@ -173,6 +173,30 @@ it('ne précache aucune page de l’application, et rien d’un compte dans la p
 });
 
 /*
+ * La page « hors ligne » est la coquille de l'application (#2048, partie F) :
+ * marquée `data-coquille`, elle charge le module de l'entrée construite, au
+ * precache, qui démarre l'application sur une copie ou laisse son contenu.
+ * Le worker la sert sous `script-src 'self'` : aucun script en ligne n'y
+ * tournerait, ni gestionnaire d'évènement en attribut.
+ */
+it('fait de la page « hors ligne » la coquille : la marque, le module de l’entrée, aucun script en ligne', function (): void {
+    $manifeste = manifesteDeLaConstructionDuWorker();
+    $page = (string) file_get_contents(public_path('build/hors-ligne.html'));
+    $entree = adresseDansLaConstructionDuWorker($manifeste, FermetureDuPrecache::ENTREE);
+
+    preg_match_all('/<script\b([^>]*)>/i', $page, $scripts);
+
+    expect($scripts[1])->toBe([' type="module" src="'.$entree.'"'])
+        ->and($page)->toContain('<script type="module" src="'.$entree.'"></script>')
+        ->and(preg_match('/<html\b[^>]*\sdata-coquille[\s>]/', $page))->toBe(1)
+        ->and(preg_match('/\son[a-z]+\s*=/i', $page))->toBe(0)
+        ->and(entreesDuPrecacheDuWorker())->toHaveKey($entree);
+
+    // La politique que le worker pose sur elle n'admet que les scripts servis par l'application.
+    expect(preg_match("/(?:^|;)script-src 'self'(?:;|$)/", enTetesDeLaCoquilleDuWorker()['Content-Security-Policy']))->toBe(1);
+});
+
+/*
  * Material Symbols, dont l'icône `cloud_off` qui marque une écriture en
  * attente, n'entrait au cache qu'à sa première utilisation (#2048) : la police
  * que la feuille de l'application demande est au precache.
