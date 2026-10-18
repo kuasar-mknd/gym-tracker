@@ -3,6 +3,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 
 import { jsRoot } from './sourceFiles'
+import { sansCommentairesHtml } from './gabarits'
 import { PAGES_GARDEES } from '@/Utils/pagesGardees'
 
 /**
@@ -105,12 +106,13 @@ const fichiersDesPagesGardees = () => {
     return [...vus]
 }
 
-/** Le source sans ses commentaires : un `useForm(` cité en commentaire n'en est pas un. */
+/**
+ * Le source sans ses commentaires : un `useForm(` cité en commentaire n'en est pas un.
+ * Les commentaires HTML partent par `sansCommentairesHtml` (gabarits.js), que CodeQL
+ * ne prend pas pour une désinfection incomplète.
+ */
 const sansCommentaires = (source) =>
-    source
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/<!--[\s\S]*?-->/g, '')
-        .replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1')
+    sansCommentairesHtml(source.replace(/\/\*[\s\S]*?\*\//g, '')).replace(/(^|[^:'"`\\])\/\/.*$/gm, '$1')
 
 /** Le texte entre la parenthèse ouvrante à `debut` et celle qui la ferme, chaînes comprises. */
 const argumentsDeLAppel = (source, debut) => {
