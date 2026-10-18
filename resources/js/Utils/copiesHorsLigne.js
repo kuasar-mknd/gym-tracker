@@ -581,14 +581,16 @@ export const creerLeMagasinDesCopies = ({
      *   generationDeDepart: number,
      *   ouvrir: boolean,
      *   ecriteLeAttendue?: number,
+     *   pasApres?: number,
      *   protegee: string | null,
-     * }} conditions
+     * }} conditions `pasApres` : la copie du magasin, écrite après cet
+     *   instant, est plus récente que celle-ci, qui ne la remplace pas
      * @returns {Promise<string>} `ecrite`, ou la raison du refus
      */
     const ranger = async (
         ouverte,
         copie,
-        { compte, temoin, generationDeDepart, ouvrir, ecriteLeAttendue, protegee },
+        { compte, temoin, generationDeDepart, ouvrir, ecriteLeAttendue, pasApres, protegee },
     ) => {
         const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
         const fin = finDe(transaction)
@@ -622,6 +624,15 @@ export const creerLeMagasinDesCopies = ({
 
             if (etat?.empreintesFermees?.includes(copie.empreinte)) {
                 return refuser('cle-fermee')
+            }
+
+            if (
+                pasApres !== undefined &&
+                ouvertPour(etat, compte, copie.empreinte) &&
+                demandeDeLaCopie.result?.empreinte === copie.empreinte &&
+                demandeDeLaCopie.result.ecriteLe > pasApres
+            ) {
+                return refuser('plus-recente')
             }
 
             if (!ouvertPour(etat, compte, copie.empreinte)) {
@@ -732,13 +743,19 @@ export const creerLeMagasinDesCopies = ({
      * (`PROPS_JAMAIS_GARDEES`) sont retirées avant le chiffrement.
      *
      * La génération se note à l'appel : une écriture différée passe celle
-     * qu'elle a notée quand elle a été décidée.
+     * qu'elle a notée quand elle a été décidée. Une page qu'une demande partie
+     * à `pasApres` a reçue (le préchauffage) ne remplace pas une copie écrite
+     * après cet instant (`plus-recente`), vérifié dans la transaction même :
+     * sa réponse, revenue dans le désordre, est plus ancienne qu'elle.
      *
      * @param {object} page l'objet de page d'Inertia
-     * @param {{ ziggy?: object | null, generation?: number }} [options]
+     * @param {{ ziggy?: object | null, generation?: number, pasApres?: number }} [options]
      * @returns {Promise<string>} `ecrite`, ou la raison du refus
      */
-    const ecrireUneCopie = async (page, { ziggy = null, generation: generationDeDepart = generation } = {}) => {
+    const ecrireUneCopie = async (
+        page,
+        { ziggy = null, generation: generationDeDepart = generation, pasApres } = {},
+    ) => {
         const preparee = await preparer(page)
 
         if (preparee.refus !== undefined) {
@@ -794,6 +811,7 @@ export const creerLeMagasinDesCopies = ({
                 temoin,
                 generationDeDepart,
                 ouvrir: true,
+                pasApres,
                 protegee: cleDeLaSeanceEnCours(page),
             })
         } catch {
@@ -807,14 +825,17 @@ export const creerLeMagasinDesCopies = ({
      * date. Une réponse partielle ne crée jamais de copie, n'ouvre jamais
      * l'état, et ne remplace jamais `auth`, que seule une réponse complète
      * renouvelle. Une prop qu'aucune copie ne garde (`PROPS_JAMAIS_GARDEES`)
-     * ne s'y verse pas, et sort de la copie qui la porterait encore.
+     * ne s'y verse pas, et sort de la copie qui la porterait encore. Une
+     * réponse qu'une demande partie à `pasApres` a reçue ne remplace pas une
+     * prop que la copie date d'après cet instant : celle-ci reste, et sans
+     * aucune autre prop à verser, rien ne s'écrit (`plus-recente`).
      *
      * @param {object} page l'objet de page d'Inertia après la réponse
      * @param {string[]} noms les props que la réponse a reçues
-     * @param {{ generation?: number }} [options]
+     * @param {{ generation?: number, pasApres?: number }} [options]
      * @returns {Promise<string>} `ecrite`, ou la raison du refus
      */
-    const completerUneCopie = async (page, noms, { generation: generationDeDepart = generation } = {}) => {
+    const completerUneCopie = async (page, noms, { generation: generationDeDepart = generation, pasApres } = {}) => {
         const preparee = await preparer(page)
 
         if (preparee.refus !== undefined) {
@@ -848,7 +869,17 @@ export const creerLeMagasinDesCopies = ({
             ancienne.datesDesProps ??= {}
             ancienne.page.props = propsGardables(ancienne.page.component, ancienne.page.props)
 
-            for (const nom of recues) {
+            const plusRecente = (nom) =>
+                pasApres !== undefined &&
+                Object.hasOwn(ancienne.page.props, nom) &&
+                (ancienne.datesDesProps[nom] ?? precedente.copieDu) > pasApres
+            const versees = recues.filter((nom) => !plusRecente(nom))
+
+            if (versees.length === 0) {
+                return 'plus-recente'
+            }
+
+            for (const nom of versees) {
                 ancienne.page.props[nom] = page.props[nom]
                 ancienne.datesDesProps[nom] = maintenant
             }

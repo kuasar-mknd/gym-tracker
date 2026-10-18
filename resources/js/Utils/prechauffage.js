@@ -74,6 +74,13 @@ import {
  * verse dans sa copie ; celle de la liste des séances, jamais. Celles qu'une
  * copie avait déjà restent, avec leur date (`ecrireUneCopie`).
  *
+ * **Jamais par-dessus plus récent.** Une réponse peut revenir après que la
+ * page a reçu la même page du serveur, et l'a gardée (une visite, ou
+ * l'instantané de la séance), par un réseau de salle qui rend les réponses
+ * dans le désordre. Chaque page reçue passe donc l'instant du départ de sa
+ * demande (`pasApres`) : le magasin refuse de remplacer une copie écrite
+ * après lui, ou une prop datée après lui (`plus-recente`).
+ *
  * **L'arrêt.** Une purge, de cet onglet ou d'un autre, l'interrompt
  * (`surUnePurge`), et `seDeconnecter` l'interrompt avant toute autre chose
  * (`interrompreLePrechauffage`), par un `AbortController`. Ce qui revient
@@ -265,16 +272,18 @@ export const installerLePrechauffage = ({
 
     /**
      * Une demande, comme Inertia la ferait, sous son délai et sous le signal
-     * du préchauffage.
+     * du préchauffage. Une page reçue porte l'instant du départ de sa demande
+     * (`depart`) : sa copie ne remplace pas une copie écrite après lui.
      *
      * @param {string} chemin
      * @param {{ version: unknown, signal: AbortSignal, partielle?: { composant: string, props: string[] } }} demande
-     * @returns {Promise<{ issue: 'page', page: object } | { issue: 'ignoree' | 'arret' | 'renvoyee' }>}
+     * @returns {Promise<{ issue: 'page', page: object, depart: number } | { issue: 'ignoree' | 'arret' | 'renvoyee' }>}
      */
     const demanderLaPage = async (chemin, { version, signal, partielle }) => {
         const controleur = new AbortController()
         const arreter = () => controleur.abort()
         const delai = setTimeout(arreter, DELAI_D_UNE_DEMANDE_MS)
+        const depart = horloge()
 
         signal.addEventListener('abort', arreter, { once: true })
 
@@ -325,7 +334,7 @@ export const installerLePrechauffage = ({
                 return { issue: 'ignoree' }
             }
 
-            return { issue: 'page', page }
+            return { issue: 'page', page, depart }
         } catch {
             return { issue: 'arret' }
         } finally {
@@ -412,7 +421,7 @@ export const installerLePrechauffage = ({
                 continue
             }
 
-            ecriture.garder(complete.page)
+            ecriture.garder(complete.page, { pasApres: complete.depart })
 
             const differees = propsDiffereesDemandees(complete.page)
 
@@ -436,6 +445,7 @@ export const installerLePrechauffage = ({
                 ecriture.completer(
                     { ...complete.page, props: { ...partielle.page.props, auth: complete.page.props?.auth } },
                     differees,
+                    { pasApres: partielle.depart },
                 )
             }
         }
@@ -506,7 +516,7 @@ export const installerLePrechauffage = ({
             const reponse = await demanderLaPage(seance, { version: page.version, signal: controleur.signal })
 
             if (reponse.issue === 'page' && !controleur.signal.aborted) {
-                ecriture.garder(reponse.page)
+                ecriture.garder(reponse.page, { pasApres: reponse.depart })
             } else if (reponse.issue === 'renvoyee') {
                 await laSessionAPrisFin(inventaire)
             }

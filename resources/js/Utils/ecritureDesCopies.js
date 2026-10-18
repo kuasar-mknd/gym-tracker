@@ -213,16 +213,17 @@ const meriteUneCopie = (page) =>
  * @returns {{
  *   desinstaller: () => void,
  *   ecrituresFinies: () => Promise<void>,
- *   garder: (page: object) => void,
- *   completer: (page: object, noms: string[]) => void,
+ *   garder: (page: object, options?: { pasApres?: number }) => void,
+ *   completer: (page: object, noms: string[], options?: { pasApres?: number }) => void,
  *   presser: () => void,
  *   origineDeLaPage: () => OrigineDeLaPage,
  *   lireLaCopie: (adresse: string) => Promise<object | null>,
  * }} `ecrituresFinies` se règle quand tout ce qui a été décidé est écrit ou
  *   refusé ; `garder` et `completer` décident la copie d'une page complète
  *   ou partielle reçue d'ailleurs que d'une visite (le préchauffage, la page
- *   de séance) ; `presser` fait passer sans attendre le repos ce qui est
- *   décidé ; `origineDeLaPage` dit d'où vient la page affichée ;
+ *   de séance), sans remplacer ce qui a été écrit après `pasApres` ;
+ *   `presser` fait passer sans attendre le repos ce qui est décidé ;
+ *   `origineDeLaPage` dit d'où vient la page affichée ;
  *   `lireLaCopie` déchiffre une copie pour la comparer, jamais pour la
  *   servir (partie E).
  */
@@ -317,11 +318,14 @@ export const installerLEcritureDesCopies = ({
     }
 
     /**
-     * La copie d'une page reçue en entier.
+     * La copie d'une page reçue en entier. `pasApres`, l'instant où partait
+     * la demande qui l'a reçue (le préchauffage) : une copie écrite après lui
+     * n'est pas remplacée.
      *
      * @param {object} page
+     * @param {{ pasApres?: number }} [options]
      */
-    const garder = (page) => {
+    const garder = (page, { pasApres } = {}) => {
         if (page?.props?.horsLigne !== undefined) {
             return
         }
@@ -336,19 +340,21 @@ export const installerLEcritureDesCopies = ({
         const ziggy = instantaneDe(tableDesRoutes())
 
         if (instantane !== null) {
-            decider((generation) => magasin.ecrireUneCopie(instantane, { ziggy, generation }))
+            decider((generation) => magasin.ecrireUneCopie(instantane, { ziggy, generation, pasApres }))
         }
     }
 
     /**
      * Les props qu'une réponse partielle a reçues, versées dans la copie de
      * sa page. `auth` reste celui de la dernière réponse complète : il dit le
-     * compte, et la copie garde le sien.
+     * compte, et la copie garde le sien. `pasApres`, comme pour `garder` :
+     * une prop datée après lui reste.
      *
      * @param {object} page
      * @param {string[]} noms
+     * @param {{ pasApres?: number }} [options]
      */
-    const completer = (page, noms) => {
+    const completer = (page, noms, { pasApres } = {}) => {
         if (!meriteUneCopie(page)) {
             return
         }
@@ -365,7 +371,7 @@ export const installerLEcritureDesCopies = ({
         })
 
         if (instantane !== null) {
-            decider((generation) => magasin.completerUneCopie(instantane, recues, { generation }))
+            decider((generation) => magasin.completerUneCopie(instantane, recues, { generation, pasApres }))
         }
     }
 
@@ -496,14 +502,14 @@ export const installerLEcritureDesCopies = ({
                 await attendue
             } while (attendue !== file)
         },
-        garder: (page) => {
+        garder: (page, options) => {
             if (branchee) {
-                garder(page)
+                garder(page, options)
             }
         },
-        completer: (page, noms) => {
+        completer: (page, noms, options) => {
             if (branchee) {
-                completer(page, noms)
+                completer(page, noms, options)
             }
         },
         presser: () => {

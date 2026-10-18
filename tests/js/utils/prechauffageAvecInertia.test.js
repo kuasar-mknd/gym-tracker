@@ -679,6 +679,70 @@ describe('le préchauffage', () => {
     })
 })
 
+/**
+ * Une page de la séance en cours avec les séries données, sous une seule
+ * ligne : ce que le serveur en rend à un instant.
+ *
+ * @param {number[]} series
+ */
+const seanceAvecLesSeries = (series) => {
+    const page = pageDe('/workouts/5', { seanceEnCours: 5 })
+
+    page.props.workout = { id: 5, ended_at: null, workout_lines: [{ id: 1, sets: series.map((id) => ({ id })) }] }
+
+    return page
+}
+
+/** Les séries de la copie de la séance en cours. */
+const seriesDeLaCopie = async () =>
+    (await magasin.lireUneCopie('/workouts/5')).page.props.workout.workout_lines[0].sets.map((serie) => serie.id)
+
+describe('une réponse revenue dans le désordre', () => {
+    it('ne remplace pas une copie de la séance écrite après le départ de sa demande', async () => {
+        serveur.seanceEnCours = 5
+        let retenue = null
+        serveur.regles.set('/workouts/5', (appel) => {
+            retenue = appel
+
+            return 'muet'
+        })
+
+        // Une page reçue : le préchauffage part, et sa demande de la séance en cours reste en vol.
+        await recevoirSansAttendre(pageDe('/dashboard', { seanceEnCours: 5 }))
+        await uneTache()
+        await vi.waitUntil(() => retenue !== null)
+
+        // Une seconde plus tard, la page reçoit la séance du serveur, une série de plus enregistrée.
+        maintenant += 1000
+        ecriture.garder(seanceAvecLesSeries([3, 4]))
+        await ecriture.ecrituresFinies()
+        expect(await seriesDeLaCopie()).toEqual([3, 4])
+
+        // La réponse du préchauffage arrive enfin : rendue avant la série 4.
+        serveur.regles.delete('/workouts/5')
+        retenue.repondre(reponseDePage(seanceAvecLesSeries([3])))
+        await prechauffageFini()
+
+        expect(await seriesDeLaCopie()).toEqual([3, 4])
+        // Le reste du noyau s'écrit comme avant.
+        expect(cheminsRanges()).toContain('/workouts')
+        expect(relais.rejets).toEqual([])
+    })
+
+    it('garde une copie de la séance écrite avant le départ de sa demande', async () => {
+        serveur.seanceEnCours = 5
+        ecriture.garder(seanceAvecLesSeries([3]))
+        await ecriture.ecrituresFinies()
+        serveur.regles.set('/workouts/5', () => reponseDePage(seanceAvecLesSeries([3, 4])))
+
+        maintenant += 3 * 60 * 60 * 1000
+        await recevoir(pageDe('/dashboard', { seanceEnCours: 5 }))
+
+        expect(cheminsDemandes()[0]).toBe('/workouts/5')
+        expect(await seriesDeLaCopie()).toEqual([3, 4])
+    })
+})
+
 /** Une visite à laquelle le serveur répond par `page`, sans attendre le préchauffage qu'elle fait partir. */
 const recevoirSansAttendre = async (page) => {
     let finie = false
@@ -769,6 +833,32 @@ describe('la redemande de la séance après un rejeu', () => {
 
         expect(cheminsDemandes().slice(avant)).toEqual(['/workouts/5', '/workouts/5'])
         expect(serveur.enVolAuPlus).toBe(1)
+    })
+
+    it('ne remplace pas une copie de la séance écrite après le départ de la redemande', async () => {
+        serveur.seanceEnCours = 5
+        await recevoir(pageDe('/dashboard', { seanceEnCours: 5 }))
+        serveur.appels = []
+
+        let retenue = null
+        serveur.regles.set('/workouts/5', (appel) => {
+            retenue = appel
+
+            return 'muet'
+        })
+        rejouer()
+        await vi.waitUntil(() => retenue !== null)
+
+        maintenant += 1000
+        ecriture.garder(seanceAvecLesSeries([3, 4]))
+        await ecriture.ecrituresFinies()
+
+        serveur.regles.delete('/workouts/5')
+        retenue.repondre(reponseDePage(seanceAvecLesSeries([3])))
+        await apresLaRedemande()
+
+        expect(cheminsDemandes()).toEqual(['/workouts/5'])
+        expect(await seriesDeLaCopie()).toEqual([3, 4])
     })
 
     it('une purge l’interrompt, et un renvoi qui efface le témoin oublie les copies', async () => {

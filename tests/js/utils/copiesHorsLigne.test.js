@@ -1009,6 +1009,65 @@ describe('les réponses partielles et les props différées', () => {
         expect(relue.copieDu).toBe(ecriteA + 120_000)
     })
 
+    it('partie avant une copie plus récente, une réponse complète ne la remplace pas ; partie après, si', async () => {
+        const onglet = ouvrirUnOnglet()
+        const avecLesSeries = (series) =>
+            pageDeLaSeance(5, { seanceEnCours: 5, props: { workout: { id: 5, ended_at: null, sets: series } } })
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+
+        const depart = instant
+
+        instant += 1000
+        expect(await onglet.ecrireUneCopie(avecLesSeries([3, 4]))).toBe('ecrite')
+        instant += 1000
+        expect(await onglet.ecrireUneCopie(avecLesSeries([3]), { pasApres: depart })).toBe('plus-recente')
+        expect((await onglet.lireUneCopie('/workouts/5')).page.props.workout.sets).toEqual([3, 4])
+
+        expect(await onglet.ecrireUneCopie(avecLesSeries([3, 4, 5]), { pasApres: instant })).toBe('ecrite')
+        expect((await onglet.lireUneCopie('/workouts/5')).page.props.workout.sets).toEqual([3, 4, 5])
+    })
+
+    it('partie avant une prop plus récente, une réponse partielle ne la remplace pas, et verse les autres', async () => {
+        const onglet = ouvrirUnOnglet()
+        const complete = pageDe({ deferredProps: { default: ['analyticalStats'] }, props: { recentPRs: [] } })
+        const partielle = (valeur) => ({
+            ...complete,
+            props: { ...complete.props, analyticalStats: { weeklyVolume: valeur }, recentPRs: [valeur] },
+        })
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(complete)
+
+        // Une prop que la copie n'a pas encore s'y verse, même d'une demande partie avant la copie.
+        expect(await onglet.completerUneCopie(partielle(600), ['analyticalStats'], { pasApres: instant - 1000 })).toBe(
+            'ecrite',
+        )
+
+        // Une demande part ; une minute plus tard, la page reçoit la prop différée, plus récente.
+        const depart = instant
+
+        instant += 60_000
+        expect(await onglet.completerUneCopie(partielle(1500), ['analyticalStats'])).toBe('ecrite')
+
+        // La réponse de la demande revient ensuite, rendue avant.
+        instant += 60_000
+        expect(await onglet.completerUneCopie(partielle(900), ['analyticalStats'], { pasApres: depart })).toBe(
+            'plus-recente',
+        )
+        expect(
+            await onglet.completerUneCopie(partielle(900), ['analyticalStats', 'recentPRs'], { pasApres: depart }),
+        ).toBe('ecrite')
+
+        const lue = await onglet.lireUneCopie('/dashboard')
+
+        expect(lue.page.props.analyticalStats).toEqual({ weeklyVolume: 1500 })
+        expect(lue.page.props.recentPRs).toEqual([900])
+        expect(lue.datesDesProps.analyticalStats).toBe(depart + 60_000)
+    })
+
     it('ne rouvrent pas un magasin fermé', async () => {
         const onglet = ouvrirUnOnglet()
         const page = pageDe({ props: { recentPRs: [] } })
