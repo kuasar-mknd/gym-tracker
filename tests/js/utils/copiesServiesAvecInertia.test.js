@@ -89,6 +89,38 @@ const navigations = []
 const lectures = []
 const morceauxAbsents = new Set()
 
+/**
+ * Les morceaux qui se chargent lentement, comme celui d'une page pas encore
+ * chargée : un seul import par morceau, partagé par la réponse et la copie,
+ * comme `import.meta.glob` le partage.
+ */
+const morceauxLents = new Set()
+const importsEnCours = new Map()
+
+/** Ce que prend l'import d'un morceau lent. */
+const DUREE_D_UN_MORCEAU_LENT = 150
+
+/**
+ * Le composant d'une page, tel que le résolveur le rend.
+ *
+ * @param {string} nom
+ */
+const resoudreLeComposant = (nom) => {
+    if (morceauxAbsents.has(nom)) {
+        return Promise.reject(new TypeError('Failed to fetch dynamically imported module'))
+    }
+
+    if (!morceauxLents.has(nom)) {
+        return Page
+    }
+
+    if (!importsEnCours.has(nom)) {
+        importsEnCours.set(nom, new Promise((resoudre) => setTimeout(() => resoudre(Page), DUREE_D_UN_MORCEAU_LENT)))
+    }
+
+    return importsEnCours.get(nom)
+}
+
 /** Ferme la lecture du magasin jusqu'à `ouvrir()`, pour jouer un geste pendant qu'elle attend. */
 let porte = { attendre: Promise.resolve(), ouvrir: () => {} }
 
@@ -180,10 +212,7 @@ beforeAll(async () => {
 
     await inertia.createInertiaApp({
         page: seanceOuverte(),
-        resolve: (nom) =>
-            morceauxAbsents.has(nom)
-                ? Promise.reject(new TypeError('Failed to fetch dynamically imported module'))
-                : Page,
+        resolve: resoudreLeComposant,
         setup: ({ el, App, props, plugin }) => {
             application = createApp({ render: () => h(App, props) }).use(plugin)
             application.mount(el)
@@ -209,6 +238,8 @@ beforeEach(async () => {
     navigations.length = 0
     lectures.length = 0
     morceauxAbsents.clear()
+    morceauxLents.clear()
+    importsEnCours.clear()
     reseau.mode = 'coupe'
     reseau.prochains.length = 0
     reseau.reponse = null
@@ -623,6 +654,91 @@ describe('un réseau qui ne répond pas', () => {
 
         expect(contenu()).toBe('Accueil du serveur')
         expect(navigations.filter((page) => page.props.horsLigne !== undefined)).toEqual([])
+    })
+
+    /**
+     * Visite les séances sur un réseau lent : le serveur répond par `page`
+     * avant le délai de la copie, mais le morceau de cette page se charge
+     * encore quand le délai échoit (`finish` n'arrive qu'une fois la page
+     * posée). Rend les pages poussées par `success`.
+     *
+     * @param {object} page la réponse du serveur
+     */
+    const repondreAvantLeDelaiPendantLeMorceau = async (page) => {
+        const succes = []
+        const noterLeSucces = (evenement) => succes.push(evenement.detail.page.props.texte)
+        let finie = false
+
+        morceauxLents.add(page.component)
+        reseau.mode = 'muet'
+        document.addEventListener('inertia:success', noterLeSucces)
+
+        try {
+            routeur.visit('/workouts', { onFinish: () => (finie = true) })
+            await vi.waitUntil(() => requetes.length === 1, { interval: 1 })
+            await new Promise((resoudre) => setTimeout(resoudre, DELAI_AVANT_UNE_COPIE / 4))
+            requetes[0].repondre(reponseInertia(page))
+            await vi.waitUntil(() => finie, { timeout: 3000 })
+            // Au-delà du morceau et du délai : une copie décidée trop tard aurait eu le temps de passer.
+            await new Promise((resoudre) => setTimeout(resoudre, DUREE_D_UN_MORCEAU_LENT * 3))
+        } finally {
+            document.removeEventListener('inertia:success', noterLeSucces)
+        }
+
+        return succes
+    }
+
+    it('une réponse arrivée avant le délai gagne sur la copie, même quand sa page se charge encore à l’échéance', async () => {
+        await garderUneCopie(pageDe())
+
+        const succes = await repondreAvantLeDelaiPendantLeMorceau(pageDe({ texte: 'Séances du serveur' }))
+
+        expect(contenu()).toBe('Séances du serveur')
+        expect(succes).toEqual(['Séances du serveur'])
+        expect(navigations.filter((page) => page.props.horsLigne !== undefined)).toEqual([])
+        expect(requetes).toHaveLength(1)
+        expect(requetes[0].annulee).toBe(false)
+        expect(etatDuReseau.useEtatDuReseau().joignable.value).toBe(true)
+        expect(annonces).toEqual([])
+    })
+
+    it('une redirection arrivée avant le délai gagne de même ; la réponse d’un rechargement de la page affichée, non', async () => {
+        await garderUneCopie(pageDe())
+
+        // Le serveur renvoie ailleurs, et la page d'arrivée se charge encore à l'échéance.
+        const succes = await repondreAvantLeDelaiPendantLeMorceau(
+            pageDe({ url: '/dashboard', component: 'Dashboard', texte: 'Accueil du serveur' }),
+        )
+
+        expect(contenu()).toBe('Accueil du serveur')
+        expect(succes).toEqual(['Accueil du serveur'])
+        expect(navigations.filter((page) => page.props.horsLigne !== undefined)).toEqual([])
+        expect(requetes[0].annulee).toBe(false)
+
+        // De retour sur la séance : la réponse d'un rechargement en arrière-plan n'est pas celle de la visite.
+        await new Promise((fini) => routeur.replace({ ...seanceOuverte(), onFinish: fini }))
+        requetes.length = 0
+        navigations.length = 0
+
+        routeur.visit('/workouts')
+        await vi.waitUntil(() => requetes.length === 1, { interval: 1 })
+        let rechargee = false
+        routeur.reload({ only: ['texte'], onFinish: () => (rechargee = true) })
+        await vi.waitUntil(() => requetes.length === 2, { interval: 1 })
+        requetes[1].repondre(
+            reponseInertia(pageDe({ url: '/workouts/12', component: 'Workouts/Show', texte: 'Séance rafraîchie' })),
+        )
+        await vi.waitUntil(() => rechargee, { interval: 1 })
+
+        // Posée avant le délai, sur la page affichée : la visite des séances attend toujours.
+        expect(contenu()).toBe('Séance rafraîchie')
+        expect(navigations.filter((page) => page.props.horsLigne !== undefined)).toEqual([])
+
+        await attendreUneCopie()
+
+        expect(pageMontree().props.horsLigne.raison).toBe('lent')
+        expect(contenu()).toBe('Séances')
+        expect(requetes[0].annulee).toBe(true)
     })
 })
 

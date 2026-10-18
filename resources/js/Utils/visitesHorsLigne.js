@@ -63,7 +63,10 @@ import {
  * clé du témoin, le titulaire de l'appareil et le contrat), dans deux cas :
  * sans réponse (`networkError`), et au bout de cinq secondes sans réponse,
  * la visite annulée alors (`router.cancelAll({ async: false, prefetch: false
- * })`). Le réseau d'abord, toujours : un rechargement partiel, une prop
+ * })`). Une réponse arrivée avant, dont la page se pose encore (son morceau,
+ * l'historique chiffré), passe devant la copie : Inertia émet `beforeUpdate`
+ * avant de la poser, et `finish` seulement après. Le réseau d'abord,
+ * toujours : un rechargement partiel, une prop
  * différée, un préchargement ou une écriture ne reçoivent jamais de copie.
  * Le morceau du composant s'importe d'abord : s'il manque (une mise à jour
  * pas encore précachée), « Mise à jour à terminer avec le réseau », et la
@@ -829,7 +832,8 @@ export const installerLesVisitesHorsLigne = ({
                     servirUneCopie({
                         adresse,
                         raison: RAISON_RESEAU_LENT,
-                        toujoursVoulue: () => enVol.has(visite) && gestes === gesteDeLaVisite,
+                        // Une réponse arrivée se pose encore (morceau, historique) : elle passe avant la copie.
+                        toujoursVoulue: () => enVol.has(visite) && !suivi.repondue && gestes === gesteDeLaVisite,
                         // La visite au premier plan seulement, comme « Annuler ».
                         avantDePousser: () => routeur.cancelAll({ async: false, prefetch: false }),
                     })
@@ -941,6 +945,36 @@ export const installerLesVisitesHorsLigne = ({
         }
     })
     routeur.on('clientVisit', suivreLaPage)
+
+    /*
+     * Une réponse posée : Inertia émet `beforeUpdate` avant d'importer le
+     * morceau de sa page et de l'écrire dans l'historique, et `finish` après.
+     * La visite au premier plan qui la reçoit est répondue dès maintenant :
+     * sa copie pour lenteur ne passe plus. C'est la sienne quand elle va à son
+     * adresse, ou quitte la page affichée (une redirection) : une réponse
+     * asynchrone ne pose que la page qu'elle rafraîchit.
+     */
+    routeur.on('beforeUpdate', (evenement) => {
+        const arrivee = evenement.detail?.page?.url
+
+        if (arrivee === undefined) {
+            return
+        }
+
+        const adresse = adresseSansFragment(arrivee)
+        const quitteLaPage = pageCourante === null || adresse !== adresseSansFragment(pageCourante.url)
+
+        for (const [enCours, suivi] of enVol) {
+            if (
+                !enCours.async &&
+                !enCours.prefetch &&
+                (quitteLaPage || adresseSansFragment(enCours.url) === adresse)
+            ) {
+                suivi.repondue = true
+                clearTimeout(suivi.minuteurDeLaCopie)
+            }
+        }
+    })
 
     // Aucune écriture ne part d'une copie, sauf la déconnexion : la page se recharge d'abord.
     routeur.on('before', (evenement) => {
