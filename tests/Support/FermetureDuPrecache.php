@@ -115,7 +115,7 @@ final class FermetureDuPrecache
         $aSuivre = $departs;
 
         while ($aSuivre !== []) {
-            $nom = (string) array_pop($aSuivre);
+            $nom = array_pop($aSuivre);
 
             if (isset($vus[$nom])) {
                 continue;
