@@ -462,6 +462,30 @@ describe('AuthenticatedLayout — the session in progress', () => {
     })
 })
 
+/*
+ * Une page servie depuis sa copie hors ligne le dit sur toute page du compte
+ * (#2048, partie E). Ce que dit le bandeau se teste dans
+ * `bandeauHorsLigne.test.js`, son « Réessayer » avec le vrai client
+ * d'Inertia dans `bandeauHorsLigneAvecInertia.test.js`.
+ */
+describe('AuthenticatedLayout — une copie hors ligne', () => {
+    it('montre le bandeau de la copie en tête du contenu, avant la page', async () => {
+        const wrapper = mountLayout()
+
+        expect(wrapper.find('[dusk="bandeau-hors-ligne"]').exists()).toBe(false)
+
+        page.props.horsLigne = { copieDu: new Date(2026, 9, 12, 18, 4).getTime(), raison: 'reseau', datesDesProps: {} }
+        await wrapper.vm.$nextTick()
+
+        const main = wrapper.get('main')
+        const bandeau = main.get('[dusk="bandeau-hors-ligne"]')
+        const contenu = main.get('[data-testid="page-content"]')
+
+        expect(bandeau.text()).toContain('Hors ligne · copie du lun. 12 oct. 2026 à 18:04')
+        expect(bandeau.element.compareDocumentPosition(contenu.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+})
+
 describe('AuthenticatedLayout — l’abonnement push', () => {
     beforeEach(() => {
         rapprocherLAbonnementPush.mockClear()

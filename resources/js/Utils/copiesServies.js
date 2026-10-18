@@ -14,14 +14,17 @@ import { PAGES_GARDEES, cleDeLaCopie, pageGardee } from '@/Utils/pagesGardees'
  * ne fait que des données, sans Inertia ni magasin : la page servie se vérifie
  * seule.
  *
- * **La marque d'une copie** est `props.horsLigne`, `{ copieDu, raison }` :
- * l'instant de la dernière réponse complète que la copie garde, et pourquoi
- * elle est montrée, `reseau` (aucune réponse) ou `lent` (pas de réponse au
- * bout de cinq secondes). Une réponse complète du serveur l'efface d'elle-même,
- * ses props remplaçant celles de la copie ; une réponse partielle la garde,
- * Inertia fusionnant les props. Aucune prop partagée du serveur ne la porte :
- * un `Inertia::always(null)` l'effacerait sur une réponse partielle, alors que
- * le reste de la page serait encore celui de la copie.
+ * **La marque d'une copie** est `props.horsLigne`, `{ copieDu, raison,
+ * datesDesProps }` : l'instant de la dernière réponse complète que la copie
+ * garde, pourquoi elle est montrée, `reseau` (aucune réponse) ou `lent` (pas de
+ * réponse au bout de cinq secondes), et l'instant où chaque prop a été reçue
+ * ou versée (une réponse partielle, l'instantané de la séance), que le bandeau
+ * et la séance lisent (`dateDeLaCopie`, `dateDeLaProp`). Une réponse complète
+ * du serveur l'efface d'elle-même, ses props remplaçant celles de la copie ;
+ * une réponse partielle la garde, Inertia fusionnant les props. Aucune prop
+ * partagée du serveur ne la porte : un `Inertia::always(null)` l'effacerait
+ * sur une réponse partielle, alors que le reste de la page serait encore
+ * celui de la copie.
  */
 
 /** La prop qui marque une page servie depuis une copie. */
@@ -68,6 +71,42 @@ export const estUneCopie = (page) => {
     const marque = page?.props?.[MARQUE_D_UNE_COPIE]
 
     return marque !== undefined && marque !== null
+}
+
+/** @param {unknown} instant */
+const estUnInstant = (instant) => typeof instant === 'number' && Number.isFinite(instant)
+
+/**
+ * L'instant qu'une page servie montre : le plus récent de la dernière réponse
+ * complète et des props versées depuis. La séance en cours se verse dans sa
+ * copie à chaque instantané, bien après la réponse qui l'a ouverte : datée de
+ * cette réponse, elle aurait paru plus ancienne que ce qu'elle montre.
+ *
+ * @param {{ copieDu?: unknown, datesDesProps?: Record<string, unknown> } | null | undefined} marque
+ * @returns {number | null}
+ */
+export const dateDeLaCopie = (marque) => {
+    const instants = [marque?.copieDu, ...Object.values(marque?.datesDesProps ?? {})].filter(estUnInstant)
+
+    return instants.length === 0 ? null : Math.max(...instants)
+}
+
+/**
+ * L'instant où une prop de la page servie a été reçue ou versée, sinon celui
+ * de la dernière réponse complète.
+ *
+ * @param {{ copieDu?: unknown, datesDesProps?: Record<string, unknown> } | null | undefined} marque
+ * @param {string} nom
+ * @returns {number | null}
+ */
+export const dateDeLaProp = (marque, nom) => {
+    const date = marque?.datesDesProps?.[nom]
+
+    if (estUnInstant(date)) {
+        return date
+    }
+
+    return estUnInstant(marque?.copieDu) ? marque.copieDu : null
 }
 
 /**
@@ -154,7 +193,8 @@ const authSansBadge = (auth) =>
  *   autre version ne fait ni redemander l'entrée d'historique au bouton
  *   Retour, ni recharger tout le document à la première requête ;
  * - `props` : celles de la copie, avec le `auth` le plus récent du compte,
- *   sans badge à célébrer, la marque `horsLigne` et aucune erreur ;
+ *   sans badge à célébrer, la marque `horsLigne` (datée par la copie, prop par
+ *   prop) et aucune erreur ;
  * - `flash` vide ; ni props différées à charger (`deferredProps`,
  *   `initialDeferredProps` : `page.set` les demanderait, et le bouton Retour
  *   les redemanderait), mais `rescuedProps` qui nomme celles que la copie n'a
@@ -165,7 +205,7 @@ const authSansBadge = (auth) =>
  *   une entrée en clair se relirait au bouton Retour, même sans clé.
  *
  * @param {{
- *   copie: { page: Record<string, any>, copieDu: number },
+ *   copie: { page: Record<string, any>, copieDu: number, datesDesProps?: Record<string, number> },
  *   pageCourante: Record<string, unknown> | null,
  *   auth: unknown,
  *   raison: string,
@@ -189,7 +229,13 @@ export const pageServie = ({ copie, pageCourante, auth, raison }) => {
         props: {
             ...page.props,
             auth: authSansBadge(auth),
-            [MARQUE_D_UNE_COPIE]: { copieDu: copie.copieDu, raison },
+            [MARQUE_D_UNE_COPIE]: {
+                copieDu: copie.copieDu,
+                raison,
+                datesDesProps: Object.fromEntries(
+                    Object.entries(copie.datesDesProps ?? {}).filter(([, date]) => estUnInstant(date)),
+                ),
+            },
             errors: {},
         },
         flash: {},

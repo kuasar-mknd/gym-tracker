@@ -531,7 +531,11 @@ describe('un réseau qui ne répond pas', () => {
 
         await attendreUneCopie()
 
-        expect(pageMontree().props.horsLigne).toEqual({ copieDu: maintenant, raison: 'lent' })
+        expect(pageMontree().props.horsLigne).toEqual({
+            copieDu: maintenant,
+            raison: 'lent',
+            datesDesProps: { auth: maintenant, errors: maintenant, texte: maintenant },
+        })
         expect(requetes).toHaveLength(1)
         expect(requetes[0].annulee).toBe(true)
         expect(etatDuReseau.useEtatDuReseau().joignable.value).toBe(false)

@@ -1,3 +1,4 @@
+import { readonly, ref } from 'vue'
 import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
 import {
     RAISON_RESEAU_LENT,
@@ -94,7 +95,12 @@ import {
  * d'abord que la file soit vide et qu'aucune écriture ne vole, comme
  * `useRechargementApresLeVidage` : rechargée plus tôt, elle reprendrait au
  * serveur une séance d'avant les écritures qui partent. Un rechargement qui
- * échoue ne dit rien, et le suivant attend la réponse d'après.
+ * échoue ne dit rien, et le suivant attend la réponse d'après. « Réessayer »,
+ * dans le bandeau d'une copie (`BandeauHorsLigne.vue`), lance le même
+ * rechargement à la demande (`reessayerLaCopie`), et lui le dit : sans réseau,
+ * la page n'a pas été rafraîchie ; sur la séance, ses écritures attendent
+ * encore ; sans réponse au bout de huit secondes, le réseau ne répond pas,
+ * avec « Annuler ».
  *
  * **Aucune écriture depuis une copie.** Une visite qui n'est pas un GET,
  * partie d'une page marquée, est arrêtée avant son départ (`before`), le
@@ -179,6 +185,32 @@ export const DEMARRAGE_SANS_RESEAU = 'Il faut le réseau pour démarrer une séa
 
 /** Ce que dit un rafraîchissement tiré du doigt quand le serveur ne répond pas. */
 export const RAFRAICHISSEMENT_SANS_RESEAU = "Pas de réseau : la page n'a pas été rafraîchie."
+
+/**
+ * Ce que dit « Réessayer » sur la copie d'une séance dont des écritures
+ * attendent encore le serveur : la séance ne se recharge qu'une fois sa file
+ * vide, sans quoi elle reprendrait au serveur une séance d'avant elles.
+ */
+export const SEANCE_APRES_SES_ECRITURES = 'La séance se recharge dès que ses écritures sont enregistrées.'
+
+/** Si la copie affichée se recharge, ou attend de le faire : « Réessayer » le montre. */
+const copieEnRechargement = ref(false)
+
+/** Si la copie affichée se recharge, ou attend de le faire (lecture seule). */
+export const rechargementDeLaCopie = readonly(copieEnRechargement)
+
+/** Ce que « Réessayer » appelle : `installerLesVisitesHorsLigne` le branche. */
+let reessayer = () => Promise.resolve()
+
+/**
+ * « Réessayer », du bandeau d'une copie hors ligne : recharge la page affichée
+ * en entier, comme au retour du réseau, et dit ce qui l'en empêche. Sans
+ * effet quand la page n'est pas une copie, ou qu'un rechargement est déjà en
+ * cours.
+ *
+ * @returns {Promise<void>}
+ */
+export const reessayerLaCopie = () => reessayer()
 
 /*
  * Les formulaires d'invité et la suppression du compte n'enregistrent rien :
@@ -551,13 +583,27 @@ export const installerLesVisitesHorsLigne = ({
     let attenteDeLaSeance = false
 
     /**
+     * Le rechargement que « Réessayer » a demandé reste sans réponse : le
+     * toast de la lenteur, avec « Annuler », qui l'arrête lui seul.
+     *
+     * @param {{ cancel: () => void } | null} jeton
+     */
+    const annoncerUnRechargementLent = (jeton) => {
+        annoncerSansReseau(RESEAU_LENT, { annuler: () => jeton?.cancel(), fenetre })
+    }
+
+    /**
      * Recharge en entier la copie affichée : une réponse complète remplace ses
      * props, marque comprise. La séance attend d'abord que la file soit vide
      * et qu'aucune écriture ne vole ; sinon, rien, et la réponse suivante, ou
      * l'annonce suivante de la file, redemande. Un échec ne dit rien : c'est
-     * un rechargement en arrière-plan.
+     * un rechargement en arrière-plan, sauf quand « Réessayer » le demande
+     * (`demande`) : il dit alors ce qui l'arrête, et la lenteur au bout de son
+     * délai.
+     *
+     * @param {{ demande?: boolean }} [options]
      */
-    const rechargerLaCopie = async () => {
+    const rechargerLaCopie = async ({ demande = false } = {}) => {
         const page = pageCourante
 
         if (rechargementEnVol || attenteDeLaSeance || !estUneCopie(page)) {
@@ -566,25 +612,64 @@ export const installerLesVisitesHorsLigne = ({
 
         if (page.component === COMPOSANT_DE_LA_SEANCE) {
             attenteDeLaSeance = true
+            copieEnRechargement.value = true
 
             const enregistree = await laSeanceEstEnregistree()
                 .catch(() => false)
                 .finally(() => {
                     attenteDeLaSeance = false
+                    copieEnRechargement.value = rechargementEnVol
                 })
 
-            if (!enregistree || !estUneCopie(pageCourante) || pageCourante.url !== page.url || rechargementEnVol) {
+            const toujoursLaMeme = estUneCopie(pageCourante) && pageCourante.url === page.url
+
+            if (!enregistree && demande && toujoursLaMeme) {
+                annoncerSansReseau(joignable.value ? SEANCE_APRES_SES_ECRITURES : RAFRAICHISSEMENT_SANS_RESEAU, {
+                    fenetre,
+                })
+            }
+
+            if (!enregistree || !toujoursLaMeme || rechargementEnVol) {
                 return
             }
         }
 
+        let jeton = null
+        let lenteur = null
+        let lenteurAnnoncee = false
+
+        if (demande) {
+            lenteur = setTimeout(() => {
+                lenteurAnnoncee = true
+                annoncerUnRechargementLent(jeton)
+            }, delaiDuReseauLent)
+        }
+
         rechargementEnVol = true
+        copieEnRechargement.value = true
         routeur.reload({
+            ...(demande
+                ? {
+                      onCancelToken: (annulation) => {
+                          jeton = annulation
+                      },
+                      onNetworkError: direSansReseau(RAFRAICHISSEMENT_SANS_RESEAU),
+                  }
+                : {}),
             onFinish: () => {
+                clearTimeout(lenteur)
+
+                if (lenteurAnnoncee) {
+                    retirerLAnnonce(RESEAU_LENT, fenetre)
+                }
+
                 rechargementEnVol = false
+                copieEnRechargement.value = false
             },
         })
     }
+
+    reessayer = () => rechargerLaCopie({ demande: true })
 
     /**
      * Les props secourues, si ce sont celles de la page affichée.

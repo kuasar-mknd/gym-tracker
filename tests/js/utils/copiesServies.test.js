@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import {
     CHAMPS_DE_LA_PAGE_SERVIE,
     adressePeutAvoirUneCopie,
+    dateDeLaCopie,
+    dateDeLaProp,
     estUneCopie,
     pageServie,
     propsDiffereesAbsentes,
@@ -75,7 +77,7 @@ describe('la page servie', () => {
                 auth: { user: { id: 7, active_workout: { id: 12 }, latest_achievement: null } },
                 flash: { success: null, error: null },
                 recentWorkouts: [{ id: 1 }],
-                horsLigne: { copieDu: Date.parse('2026-10-12T18:04:00Z'), raison: 'reseau' },
+                horsLigne: { copieDu: Date.parse('2026-10-12T18:04:00Z'), raison: 'reseau', datesDesProps: {} },
             },
             flash: {},
             deferredProps: undefined,
@@ -157,5 +159,44 @@ describe('la marque et les adresses', () => {
                 null,
             ].map(adressePeutAvoirUneCopie),
         ).toEqual([false, false, false, false, false, false, false])
+    })
+})
+
+describe('les dates de la copie', () => {
+    const copieDu = Date.parse('2026-10-12T18:04:00Z')
+
+    it('passe à la marque l’instant de chaque prop, sans ce qui ne se lit pas', () => {
+        const copie = { ...copieDeLAccueil(), datesDesProps: { recentWorkouts: copieDu, auth: copieDu, faux: 'hier' } }
+        const servie = pageServie({ copie, pageCourante: null, auth, raison: 'lent' })
+
+        expect(servie.props.horsLigne).toEqual({
+            copieDu,
+            raison: 'lent',
+            datesDesProps: { recentWorkouts: copieDu, auth: copieDu },
+        })
+    })
+
+    /*
+     * La séance se verse dans sa copie à chaque instantané, bien après la
+     * réponse complète qui l'a ouverte.
+     */
+    it('date la copie de sa prop la plus récente, sinon de sa dernière réponse complète', () => {
+        const plusTard = copieDu + 36 * 60_000
+
+        expect(dateDeLaCopie({ copieDu, datesDesProps: { workout: plusTard, exercises: copieDu } })).toBe(plusTard)
+        expect(dateDeLaCopie({ copieDu, datesDesProps: {} })).toBe(copieDu)
+        expect(dateDeLaCopie({ copieDu })).toBe(copieDu)
+        expect(dateDeLaCopie({ copieDu: 'hier', datesDesProps: { workout: Number.NaN } })).toBeNull()
+        expect(dateDeLaCopie(null)).toBeNull()
+    })
+
+    it('date une prop de son propre instant, sinon de la dernière réponse complète', () => {
+        const plusTard = copieDu + 60_000
+
+        expect(dateDeLaProp({ copieDu, datesDesProps: { workout: plusTard } }, 'workout')).toBe(plusTard)
+        expect(dateDeLaProp({ copieDu, datesDesProps: { workout: plusTard } }, 'exercises')).toBe(copieDu)
+        expect(dateDeLaProp({ copieDu, datesDesProps: { workout: 'hier' } }, 'workout')).toBe(copieDu)
+        expect(dateDeLaProp({ copieDu: undefined }, 'workout')).toBeNull()
+        expect(dateDeLaProp(null, 'workout')).toBeNull()
     })
 })
