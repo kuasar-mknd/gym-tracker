@@ -347,7 +347,8 @@ export const installerLePrechauffage = ({
      * Une redirection ou un 401 : la fin de la session, si le témoin a disparu
      * ou porte une autre clé que celle de l'inventaire. Les copies s'oublient
      * alors, cette clé-là fermée, et jamais celle d'un nouveau témoin, qu'une
-     * connexion dans un autre onglet a pu poser.
+     * connexion dans un autre onglet a pu poser. L'oubli est attendu : le
+     * préchauffage n'est fini (`fini()`) qu'une fois le magasin vidé.
      *
      * @param {{ empreinte: string | null }} inventaire
      * @returns {Promise<boolean>} vrai quand la session a pris fin
@@ -357,7 +358,7 @@ export const installerLePrechauffage = ({
             return false
         }
 
-        magasin.oublierLesCopies({ fermerLEtat: false, fermerAussi: inventaire.empreinte })
+        await magasin.oublierLesCopies({ fermerLEtat: false, fermerAussi: inventaire.empreinte })
 
         return true
     }
