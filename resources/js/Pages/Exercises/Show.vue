@@ -3,24 +3,25 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { Head, Link } from '@inertiajs/vue3'
-import { computed, defineAsyncComponent } from 'vue'
+import { computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { peutEtablirUnRecord, seriesValidees, volumeDesSeriesValidees } from '@/Utils/seriesValidees'
 
-const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
-const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
-const WeightDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/WeightDistributionChart.vue'))
-const MaxRepsChart = defineAsyncComponent(() => import('@/Components/Stats/MaxRepsChart.vue'))
-const MaxWeightChart = defineAsyncComponent(() => import('@/Components/Stats/MaxWeightChart.vue'))
-const AverageWeightChart = defineAsyncComponent(() => import('@/Components/Stats/AverageWeightChart.vue'))
-const TotalRepsChart = defineAsyncComponent(() => import('@/Components/Stats/TotalRepsChart.vue'))
-const SetsPerSessionChart = defineAsyncComponent(() => import('@/Components/Stats/SetsPerSessionChart.vue'))
-const WeightRepsScatterChart = defineAsyncComponent(() => import('@/Components/Stats/WeightRepsScatterChart.vue'))
-const SetWeightProgressionChart = defineAsyncComponent(() => import('@/Components/Stats/SetWeightProgressionChart.vue'))
-const Estimated1RMHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/Estimated1RMHistoryChart.vue'))
-const SessionPerformanceChart = defineAsyncComponent(() => import('@/Components/Stats/SessionPerformanceChart.vue'))
-const SessionVolumeLineChart = defineAsyncComponent(() => import('@/Components/Stats/SessionVolumeLineChart.vue'))
-const HistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HistoryChart.vue'))
+const OneRepMaxChart = graphiqueAsynchrone(() => import('@/Components/Stats/OneRepMaxChart.vue'))
+const VolumeTrendChart = graphiqueAsynchrone(() => import('@/Components/Stats/VolumeTrendChart.vue'))
+const WeightDistributionChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeightDistributionChart.vue'))
+const MaxRepsChart = graphiqueAsynchrone(() => import('@/Components/Stats/MaxRepsChart.vue'))
+const MaxWeightChart = graphiqueAsynchrone(() => import('@/Components/Stats/MaxWeightChart.vue'))
+const AverageWeightChart = graphiqueAsynchrone(() => import('@/Components/Stats/AverageWeightChart.vue'))
+const TotalRepsChart = graphiqueAsynchrone(() => import('@/Components/Stats/TotalRepsChart.vue'))
+const SetsPerSessionChart = graphiqueAsynchrone(() => import('@/Components/Stats/SetsPerSessionChart.vue'))
+const WeightRepsScatterChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeightRepsScatterChart.vue'))
+const SetWeightProgressionChart = graphiqueAsynchrone(() => import('@/Components/Stats/SetWeightProgressionChart.vue'))
+const Estimated1RMHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/Estimated1RMHistoryChart.vue'))
+const SessionPerformanceChart = graphiqueAsynchrone(() => import('@/Components/Stats/SessionPerformanceChart.vue'))
+const SessionVolumeLineChart = graphiqueAsynchrone(() => import('@/Components/Stats/SessionVolumeLineChart.vue'))
+const HistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/HistoryChart.vue'))
 
 /**
  * Component Props

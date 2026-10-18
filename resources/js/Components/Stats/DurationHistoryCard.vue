@@ -1,12 +1,12 @@
 <script setup>
 import { Deferred } from '@inertiajs/vue3'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const DurationHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/DurationHistoryChart.vue'))
+const DurationHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/DurationHistoryChart.vue'))
 
 defineProps({
     durationHistory: Array,

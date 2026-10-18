@@ -17,12 +17,13 @@ import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import JournalForm from '@/Components/Journal/JournalForm.vue'
 import JournalList from '@/Components/Journal/JournalList.vue'
 import { Head, useForm } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 
-const JournalChart = defineAsyncComponent(() => import('@/Components/Stats/JournalChart.vue'))
+const JournalChart = graphiqueAsynchrone(() => import('@/Components/Stats/JournalChart.vue'))
 
 /**
  * Component Props

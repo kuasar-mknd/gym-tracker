@@ -4,14 +4,14 @@
  * dont la série porte des points : un axe sans rien dessus se lit comme un
  * graphique cassé, pas comme une absence de données.
  */
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 
-const WorkoutFrequencyChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutFrequencyChart.vue'))
-const WorkoutsPerMonthChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
-const MonthlyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
-const WorkoutDurationChart = defineAsyncComponent(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
-const VolumePerWorkoutChart = defineAsyncComponent(() => import('@/Components/Stats/VolumePerWorkoutChart.vue'))
+const WorkoutFrequencyChart = graphiqueAsynchrone(() => import('@/Components/Stats/WorkoutFrequencyChart.vue'))
+const WorkoutsPerMonthChart = graphiqueAsynchrone(() => import('@/Components/Stats/WorkoutsPerMonthChart.vue'))
+const MonthlyVolumeChart = graphiqueAsynchrone(() => import('@/Components/Stats/MonthlyVolumeChart.vue'))
+const WorkoutDurationChart = graphiqueAsynchrone(() => import('@/Components/Stats/WorkoutDurationChart.vue'))
+const VolumePerWorkoutChart = graphiqueAsynchrone(() => import('@/Components/Stats/VolumePerWorkoutChart.vue'))
 
 defineProps({
     charts: { type: Object, default: () => ({}) },

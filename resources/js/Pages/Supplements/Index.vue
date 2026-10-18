@@ -6,13 +6,14 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, defineAsyncComponent } from 'vue'
+import { ref } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { accord, compte } from '@/Utils/nombre'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
-const SupplementUsageChart = defineAsyncComponent(() => import('@/Components/Stats/SupplementUsageChart.vue'))
+const SupplementUsageChart = graphiqueAsynchrone(() => import('@/Components/Stats/SupplementUsageChart.vue'))
 
 defineProps({
     supplements: Array,

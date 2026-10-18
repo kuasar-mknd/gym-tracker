@@ -120,7 +120,8 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -128,7 +129,7 @@ import GlassBigNumber from '@/Components/UI/GlassBigNumber.vue'
 import { oneRepMax as epley } from '@/Utils/formulas'
 import { entier, nombre, poids, pourcentage } from '@/Utils/nombre'
 
-const OneRepMaxPercentagesChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
+const OneRepMaxPercentagesChart = graphiqueAsynchrone(() => import('@/Components/Stats/OneRepMaxPercentagesChart.vue'))
 
 const weight = ref('')
 const reps = ref('')

@@ -192,7 +192,8 @@
 </template>
 
 <script setup>
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import { triggerHaptic } from '@/composables/useHaptics'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
@@ -208,7 +209,7 @@ import { entier, pourcentage } from '@/Utils/nombre'
 import { heureCourte } from '@/Utils/date'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const WaterHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WaterHistoryChart.vue'))
+const WaterHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/WaterHistoryChart.vue'))
 
 const props = defineProps({
     logs: {

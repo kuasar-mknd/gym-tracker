@@ -34,6 +34,23 @@ describe('les graphiques restent dans leur propre morceau', () => {
     it('ne tire un graphique que par defineAsyncComponent', () => {
         expect(filesMatching(/^import\s+[^\n]*\bfrom '@\/Components\/Stats\/\w*Chart\.vue'/m)).toEqual([])
     })
+
+    /*
+     * Sans réseau, le morceau d'un graphique ne se charge pas : les graphiques
+     * restent hors du precache (#2048, décision 9 du propriétaire). Chacun
+     * passe donc par `graphiqueAsynchrone`, dont le composant d'erreur dit
+     * « Graphique indisponible hors ligne », jamais par `defineAsyncComponent`
+     * seul, qui laissait un trou dans la page.
+     */
+    it('ne charge un graphique que par graphiqueAsynchrone, avec le composant d’erreur commun', () => {
+        expect(
+            filesMatching(/\bdefineAsyncComponent\b/, {
+                extensions: ['.vue', '.js'],
+                skip: ['Utils/graphiqueAsynchrone.js', 'Components/UI/GraphiqueIndisponible.vue'],
+            }),
+        ).toEqual([])
+        expect(filesMatching(/graphiqueAsynchrone\(\s*\(\) => import\(/).length).toBeGreaterThan(20)
+    })
 })
 
 /**

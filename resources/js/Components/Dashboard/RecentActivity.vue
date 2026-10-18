@@ -2,11 +2,11 @@
 import { Link } from '@inertiajs/vue3'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const RecentWorkoutsTimelineChart = defineAsyncComponent(
+const RecentWorkoutsTimelineChart = graphiqueAsynchrone(
     () => import('@/Components/Stats/RecentWorkoutsTimelineChart.vue'),
 )
 

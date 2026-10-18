@@ -12,8 +12,7 @@
  *                             Expected shape: { id, type, start_time, target_duration_minutes, ... }
  * @prop {Object} history - Paginated object containing historical fasting records.
  *
- * Emits:
- * None directly. Uses Inertia forms for POST/PATCH/DELETE requests.
+ * Emits: none directly; uses Inertia forms for POST/PATCH/DELETE requests.
  */
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
@@ -23,11 +22,12 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
-import { ref, computed, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 
-const FastingHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/FastingHistoryChart.vue'))
+const FastingHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/FastingHistoryChart.vue'))
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import duration from 'dayjs/plugin/duration'

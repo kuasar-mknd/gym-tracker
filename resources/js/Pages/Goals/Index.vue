@@ -7,10 +7,11 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import Modal from '@/Components/UI/Modal.vue'
-import { ref, computed, defineAsyncComponent } from 'vue'
+import { ref, computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const GoalTypeChart = defineAsyncComponent(() => import('@/Components/Stats/GoalTypeChart.vue'))
+const GoalTypeChart = graphiqueAsynchrone(() => import('@/Components/Stats/GoalTypeChart.vue'))
 
 const props = defineProps({
     goals: Array,

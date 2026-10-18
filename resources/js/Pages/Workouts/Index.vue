@@ -4,7 +4,8 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, Link, Deferred, router } from '@inertiajs/vue3'
-import { defineAsyncComponent, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
 import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
@@ -20,7 +21,7 @@ import { entier } from '@/Utils/nombre'
 import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 
-const WorkoutHistoryTimelineChart = defineAsyncComponent(
+const WorkoutHistoryTimelineChart = graphiqueAsynchrone(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
 )
 

@@ -1,10 +1,10 @@
 <script setup>
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { poids, volume } from '@/Utils/nombre'
 
-const RecentPRsChart = defineAsyncComponent(() => import('@/Components/Stats/RecentPRsChart.vue'))
+const RecentPRsChart = graphiqueAsynchrone(() => import('@/Components/Stats/RecentPRsChart.vue'))
 
 defineProps({
     recentPRs: { type: Array, required: true },

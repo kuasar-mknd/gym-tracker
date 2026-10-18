@@ -222,7 +222,8 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent } from 'vue'
+import { computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -239,7 +240,7 @@ import { entier } from '@/Utils/nombre'
 import { dateCourte } from '@/Utils/date'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const MacroHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/MacroHistoryChart.vue'))
+const MacroHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/MacroHistoryChart.vue'))
 
 defineProps({
     history: {

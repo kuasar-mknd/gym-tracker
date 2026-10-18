@@ -4,7 +4,8 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
-import { computed, ref, defineAsyncComponent } from 'vue'
+import { computed, ref } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { dateAvecJour, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
@@ -15,7 +16,7 @@ import { nombre } from '@/Utils/nombre'
 // ⚡ PERFORMANCE OPTIMIZATION:
 // Lazy-load the heavy chart component (which pulls in Chart.js) to reduce the initial JavaScript
 // payload and speed up the page render time when the chart is not immediately interacted with.
-const BodyPartHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartHistoryChart.vue'))
+const BodyPartHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/BodyPartHistoryChart.vue'))
 
 const props = defineProps({
     /** La clef de la partie, telle qu'elle est rangée et qu'on la renvoie. */

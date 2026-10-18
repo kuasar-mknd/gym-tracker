@@ -1,5 +1,6 @@
 <script setup>
-import { ref, watch, defineAsyncComponent } from 'vue'
+import { ref, watch } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { http } from '@/Utils/http'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -7,7 +8,7 @@ import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const OneRepMaxChart = defineAsyncComponent(() => import('@/Components/Stats/OneRepMaxChart.vue'))
+const OneRepMaxChart = graphiqueAsynchrone(() => import('@/Components/Stats/OneRepMaxChart.vue'))
 
 defineProps({
     exercises: Array,

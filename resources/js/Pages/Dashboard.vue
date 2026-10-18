@@ -15,12 +15,13 @@ import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDu
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
-import { defineAsyncComponent, ref } from 'vue'
+import { ref } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
 import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 
-const ActiveGoalsChart = defineAsyncComponent(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
+const ActiveGoalsChart = graphiqueAsynchrone(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
 /**
  * Dashboard - Command Center

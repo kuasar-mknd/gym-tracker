@@ -9,7 +9,8 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
@@ -27,7 +28,7 @@ import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOpti
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
-const ExerciseCategoryChart = defineAsyncComponent(() => import('@/Components/Stats/ExerciseCategoryChart.vue'))
+const ExerciseCategoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/ExerciseCategoryChart.vue'))
 
 const props = defineProps({
     /** Array of all exercises belonging to the user. */

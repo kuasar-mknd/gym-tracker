@@ -7,12 +7,13 @@ import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import { Head, useForm, Link } from '@inertiajs/vue3'
-import { ref, defineAsyncComponent } from 'vue'
+import { ref } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { dateCourte, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassChip from '@/Components/UI/GlassChip.vue'
 import { nombre, variation } from '@/Utils/nombre'
 
-const BodyPartDiffChart = defineAsyncComponent(() => import('@/Components/Stats/BodyPartDiffChart.vue'))
+const BodyPartDiffChart = graphiqueAsynchrone(() => import('@/Components/Stats/BodyPartDiffChart.vue'))
 
 defineProps({
     latestMeasurements: Array,

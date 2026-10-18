@@ -1,14 +1,14 @@
 <script setup>
 import { Deferred, Link } from '@inertiajs/vue3'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre, variation } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
+const WeightHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 
 defineProps({
     latestWeight: [Number, String],

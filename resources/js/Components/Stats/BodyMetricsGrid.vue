@@ -1,14 +1,14 @@
 <script setup>
 import { Deferred } from '@inertiajs/vue3'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre, variation } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
+const BodyFatChart = graphiqueAsynchrone(() => import('@/Components/Stats/BodyFatChart.vue'))
 
 defineProps({
     bodyFat: Number,

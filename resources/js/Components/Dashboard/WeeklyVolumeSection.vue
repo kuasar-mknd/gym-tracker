@@ -1,11 +1,12 @@
 <script setup>
-import { computed, defineAsyncComponent } from 'vue'
+import { computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { nombre } from '@/Utils/nombre'
 import { variation } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const WeeklyVolumeChart = defineAsyncComponent(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
+const WeeklyVolumeChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeeklyVolumeChart.vue'))
 
 const props = defineProps({
     weeklyVolumeStats: { type: Object, required: true },
