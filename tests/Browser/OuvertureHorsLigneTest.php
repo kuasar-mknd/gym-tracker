@@ -115,8 +115,9 @@ class OuvertureHorsLigneTest extends DuskTestCase
      * Le logo est tracé dans la page (#2056) et ne demande rien. L'icône vient
      * de la police Material Symbols, qui n'entrait au cache qu'à sa première
      * utilisation. Le parcours n'en laisse que le precache de l'installation :
-     * le cache des actifs mis de côté à la demande est vidé, comme le cache
-     * HTTP du navigateur. Couper le réseau par les outils de Chrome ne coupe
+     * le cache des actifs mis de côté à la demande et celui de la construction
+     * précédente (#2048, partie E) sont vidés, comme le cache HTTP du
+     * navigateur. Couper le réseau par les outils de Chrome ne coupe
      * que la page, pas le worker : la police est donc aussi retirée du serveur
      * pendant la coupure, pour qu'il ne puisse rien servir que le precache n'a
      * pas.
@@ -143,9 +144,9 @@ class OuvertureHorsLigneTest extends DuskTestCase
                 'le service worker n’a jamais pris la page en charge',
             );
 
-            // Ce que les pages vues en ligne ont mis au cache à la demande ne compte pas.
-            $browser->script("window.cacheALaDemandeVide = false; caches.delete('actifs-a-la-demande').then(() => { window.cacheALaDemandeVide = true; });");
-            $browser->waitUntil('window.cacheALaDemandeVide === true', 15, 'le cache des actifs à la demande ne s’est pas vidé');
+            // Ce que les pages vues en ligne ont mis au cache à la demande, ou que la construction précédente a laissé, ne compte pas.
+            $browser->script("window.cacheALaDemandeVide = false; Promise.all(['actifs-a-la-demande', 'construction-precedente'].map((nom) => caches.delete(nom))).then(() => { window.cacheALaDemandeVide = true; });");
+            $browser->waitUntil('window.cacheALaDemandeVide === true', 15, 'les caches des actifs du worker ne se sont pas vidés');
 
             $outils = new ChromeDevToolsDriver($browser->driver);
             $outils->execute('Network.enable');
