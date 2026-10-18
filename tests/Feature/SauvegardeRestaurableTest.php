@@ -4,7 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
+use Spatie\Backup\Events\DumpingDatabase;
+use Spatie\DbDumper\Databases\MySql;
 
 /*
  * Une sauvegarde ne vaut que si l'on peut la rouvrir : l'archive doit être
@@ -64,6 +69,118 @@ it('produit une archive chiffrée dont le dump est complet et relisible', functi
             ->and($dump)->not->toContain('GTID_PURGED')
             ->and($dump)->not->toContain('SQL_LOG_BIN');
     } finally {
+        File::deleteDirectory($dossier);
+    }
+});
+
+/*
+ * Une archive ne vaut que si son dump se restaure : le test le rejoue, par le
+ * client `mysql` qui accompagne le `mysqldump` de la sauvegarde et avec le
+ * compte de l'application, dans une base neuve qu'il peut créer (le suffixe
+ * `_test_` des éclats de Paratest, que Sail et la CI lui ouvrent), après avoir
+ * validé une ligne dans chacune des trois tables de Pulse : la transaction du
+ * test, que le dump ne voit pas, n'y suffirait pas.
+ *
+ * Le client de l'image, celui de MariaDB, ne reconnaît pas les colonnes
+ * générées d'un serveur MySQL : il recopiait l'empreinte `key_hash` de Pulse
+ * dans ses INSERT, que MySQL refuse, en 8.4 comme en 9.7 (« The value
+ * specified for generated column 'key_hash' in table 'pulse_aggregates' is not
+ * allowed ») ; la restauration s'arrêtait là, sans les tables qui suivent,
+ * `sets` et `users` comprises. Le dump laisse donc de côté les lignes de
+ * Pulse, des métriques, et garde ses tables (AppServiceProvider). Le client
+ * MySQL des runners de la CI nomme les colonnes de ses INSERT, sans
+ * l'empreinte, et ignore l'option grâce à `loose-` : il ne voit pas le défaut.
+ * La commande que le paquet a lancée doit donc porter l'option pour la base
+ * dumpée, et aucune autre table n'a de colonne générée.
+ */
+it('produit un dump qui se restaure dans une base neuve, même quand Pulse a des lignes', function (): void {
+    $base = DB::connection()->getDatabaseName();
+    $baseRestauree = $base.'_test_restauration';
+    $tablesDePulse = ['pulse_aggregates', 'pulse_entries', 'pulse_values'];
+
+    // Une seconde connexion, hors de la transaction du test : le dump ne voit que
+    // des lignes validées, et cette transaction ne voit pas les tables créées
+    // après elle (information_schema vide, puis « Table definition has changed »).
+    Config::set('database.connections.sauvegarde_temoin', config('database.connections.'.DB::getDefaultConnection()));
+    $temoin = DB::connection('sauvegarde_temoin');
+    $tablesDe = static fn (string $schema): array => array_column($temoin->select(
+        'select table_name as nom from information_schema.tables where table_schema = ? order by nom',
+        [$schema],
+    ), 'nom');
+
+    expect(array_column($temoin->select(
+        "select distinct table_name as nom from information_schema.columns where table_schema = ? and generation_expression <> '' order by nom",
+        [$base],
+    ), 'nom'))->toBe($tablesDePulse, 'une table hors de Pulse a une colonne générée : le dump du client MariaDB ne la restaurerait pas');
+
+    $dossier = storage_path('framework/testing/sauvegardes-'.uniqid());
+    File::ensureDirectoryExists($dossier);
+    Config::set('filesystems.disks.sauvegardes.root', $dossier);
+    Config::set('backup.backup.temporary_directory', $dossier.'/.temp');
+    Config::set('backup.backup.password', 'mot-de-passe-de-test');
+    Config::set('backup.notifications.notifications', []);
+    // Le paquet fige sa configuration dans un singleton au démarrage : on la refait lire.
+    app()->forgetInstance(\Spatie\Backup\Config\Config::class);
+
+    $dumperLance = null;
+    Event::listen(DumpingDatabase::class, function (DumpingDatabase $evenement) use (&$dumperLance): void {
+        $dumperLance = $evenement->dbDumper;
+    });
+
+    $cle = 'GET /témoin-'.uniqid();
+    $instant = now()->getTimestamp();
+
+    try {
+        $temoin->table('pulse_aggregates')->insert(['bucket' => $instant, 'period' => 60, 'type' => 'slow_request', 'key' => $cle, 'aggregate' => 'count', 'value' => 1]);
+        $temoin->table('pulse_entries')->insert(['timestamp' => $instant, 'type' => 'slow_request', 'key' => $cle, 'value' => 123]);
+        $temoin->table('pulse_values')->insert(['timestamp' => $instant, 'type' => 'temoin', 'key' => $cle, 'value' => '{}']);
+
+        expect(Artisan::call('backup:run', ['--only-db' => true, '--disable-notifications' => true]))->toBe(0, Artisan::output())
+            ->and($dumperLance)->toBeInstanceOf(MySql::class);
+        assert($dumperLance instanceof MySql);
+
+        $nom = config('backup.backup.name');
+        assert(is_string($nom));
+        $archives = glob($dossier.'/'.$nom.'/*.zip');
+        assert(is_array($archives));
+        expect($archives)->toHaveCount(1);
+        $zip = new ZipArchive();
+        expect($zip->open($archives[0]))->toBeTrue();
+        $zip->setPassword('mot-de-passe-de-test');
+        $entree = collect(range(0, $zip->numFiles - 1))
+            ->map(fn (int $i): string => (string) $zip->getNameIndex($i))
+            ->first(fn (string $nom): bool => str_ends_with($nom, '.sql'));
+        expect($entree)->toBeString();
+        assert(is_string($entree));
+        $dump = $zip->getFromName($entree);
+        $zip->close();
+        expect($dump)->toBeString();
+        assert(is_string($dump));
+
+        $temoin->statement("drop database if exists `{$baseRestauree}`");
+        $temoin->statement("create database `{$baseRestauree}`");
+        $identifiants = $dossier.'/identifiants.cnf';
+        File::put($identifiants, $dumperLance->getContentsOfCredentialsFile());
+
+        $restauration = Process::input($dump)->timeout(120)
+            ->run(['mysql', '--defaults-extra-file='.$identifiants, '--loose-skip-ssl', $baseRestauree]);
+
+        expect($restauration->exitCode())->toBe(0, $restauration->errorOutput())
+            ->and($tablesDe($baseRestauree))->toBe($tablesDe($base))
+            ->and($tablesDe($baseRestauree))->toContain('users', 'sets', ...$tablesDePulse)
+            ->and($temoin->table($baseRestauree.'.migrations')->count())->toBe($temoin->table('migrations')->count());
+
+        $commande = $dumperLance->getDumpCommand('/tmp/dump.sql', '/tmp/identifiants.cnf');
+        foreach ($tablesDePulse as $table) {
+            expect($commande)->toContain(" --loose-ignore-table-data={$base}.{$table} ");
+        }
+        expect($commande)->not->toContain(' --ignore-table-data=');
+    } finally {
+        $temoin->statement("drop database if exists `{$baseRestauree}`");
+        foreach ($tablesDePulse as $table) {
+            $temoin->table($table)->where('key', $cle)->delete();
+        }
+        DB::purge('sauvegarde_temoin');
         File::deleteDirectory($dossier);
     }
 });

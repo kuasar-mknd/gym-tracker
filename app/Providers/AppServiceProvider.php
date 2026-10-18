@@ -33,9 +33,18 @@ use PDO;
 use RuntimeException;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use Spatie\Backup\Events\BackupManifestWasCreated;
+use Spatie\Backup\Events\DumpingDatabase;
+use Spatie\DbDumper\Databases\MySql;
 
 final class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Les tables de Pulse, dont la colonne `key_hash` est générée par le serveur.
+     *
+     * @var list<string>
+     */
+    private const array TABLES_DE_PULSE = ['pulse_aggregates', 'pulse_entries', 'pulse_values'];
+
     #[\Override]
     public function register(): void
     {
@@ -61,6 +70,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->registerAppleSocialiteDriver();
         $this->batirLesLiensDesCourrielsSurAppUrl();
         $this->refuserLesArchivesEnClair();
+        $this->sauvegarderSansLesLignesDePulse();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
         $this->ouvrirLeLecteurDeJournaux();
@@ -396,6 +406,36 @@ final class AppServiceProvider extends ServiceProvider
         Event::listen(BackupManifestWasCreated::class, function (): void {
             if (blank(config('backup.backup.password'))) {
                 throw new RuntimeException('BACKUP_ARCHIVE_PASSWORD est vide : aucune archive en clair ne sera écrite.');
+            }
+        });
+    }
+
+    /**
+     * Le dump des sauvegardes garde les tables de Pulse, mais pas leurs lignes.
+     *
+     * Le `mysqldump` de l'image, celui de MariaDB, ne reconnaît pas les colonnes
+     * générées d'un serveur MySQL : il écrit la valeur de `key_hash` dans ses
+     * INSERT, que MySQL refuse en restaurant (erreur 3105), et la restauration
+     * s'arrêtait à `pulse_aggregates`, sans les tables qui suivent. Ces lignes
+     * ne sont que des métriques, et Pulse coupé ne les purge plus.
+     *
+     * L'option nomme la base dumpée, connue au moment du dump seulement : une
+     * suite parallèle en change le nom après la lecture de la configuration.
+     * `loose-` la fait ignorer, avec un avertissement, au client MySQL, qui ne
+     * la connaît pas et nomme les colonnes de ses INSERT, sans `key_hash` ; la
+     * clé `excludeTablesData` du paquet l'écrirait nue, et il refuserait le dump.
+     */
+    private function sauvegarderSansLesLignesDePulse(): void
+    {
+        Event::listen(DumpingDatabase::class, static function (DumpingDatabase $evenement): void {
+            $dumper = $evenement->dbDumper;
+
+            if (! $dumper instanceof MySql) {
+                return;
+            }
+
+            foreach (self::TABLES_DE_PULSE as $table) {
+                $dumper->addExtraOption("--loose-ignore-table-data={$dumper->getDbName()}.{$table}");
             }
         });
     }

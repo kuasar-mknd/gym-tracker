@@ -74,7 +74,10 @@ return [
             ], fn ($value): bool => ! is_null($value)) : [],
             // Le dump de sauvegarde lit un instantané cohérent au lieu de
             // verrouiller les tables : rien ne bloque l'application pendant
-            // la nocturne, ni le test qui tient une transaction ouverte.
+            // la nocturne, ni le test qui tient une transaction ouverte. Les
+            // lignes de Pulse n'y entrent pas : l'option nomme la base dumpée,
+            // et AppServiceProvider::sauvegarderSansLesLignesDePulse() la pose
+            // au moment du dump.
             'dump' => [
                 'useSingleTransaction' => true,
                 'timeout' => 300,
