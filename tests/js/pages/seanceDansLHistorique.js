@@ -47,16 +47,18 @@ const EXERCICES = [SQUAT, DEVELOPPE_COUCHE]
 
 /**
  * La séance telle que le serveur la rend maintenant : les lignes de la séance 5
- * qu'il a en base, et leurs séries.
+ * qu'il a en base, et leurs séries. Son nom et ses notes sont ceux que le test
+ * a posés sur le faux serveur (`reglagesDeLaSeance`), comme s'ils avaient
+ * changé ailleurs.
  *
- * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>} serveur
+ * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { reglagesDeLaSeance?: { name?: string, notes?: string | null } }} serveur
  */
 const seanceDuServeur = (serveur) => ({
     id: 5,
-    name: 'Séance du soir',
+    name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
     started_at: '2026-10-12T17:00:00.000000Z',
     ended_at: null,
-    notes: null,
+    notes: serveur.reglagesDeLaSeance?.notes ?? null,
     workout_lines: [...serveur.lignes.values()]
         .filter((ligne) => ligne.workout_id === 5)
         .sort((a, b) => a.id - b.id)

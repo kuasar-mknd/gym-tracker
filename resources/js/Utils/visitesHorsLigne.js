@@ -109,10 +109,14 @@ import {
  * partie d'une page marquée, est arrêtée avant son départ (`before`), le
  * dit (`ECRITURE_DEPUIS_UNE_COPIE`) et fait recharger la page : la personne
  * refait son geste sur des valeurs fraîches, et une valeur tirée d'une copie
- * ne repart jamais au serveur. La déconnexion en est exemptée
- * (`exempterDeLaGardeDesCopies`, que `useDeconnexion` appelle) : arrêtée sur
- * une copie montrée pour lenteur, elle laissait la session ouverte à la
- * personne suivante.
+ * ne repart jamais au serveur. Le rechargement garde l'état de la page
+ * (`router.reload` impose `preserveState`) : un formulaire qu'une page gardée
+ * remplit depuis ses props se recale donc quand la marque part
+ * (`recalerApresLaCopie`, `composables/useCopieHorsLigne.js`), et la séance
+ * reprend ses instantanés (`useCopieDeLaSeance`). La déconnexion en est
+ * exemptée (`exempterDeLaGardeDesCopies`, que `useDeconnexion` appelle) :
+ * arrêtée sur une copie montrée pour lenteur, elle laissait la session
+ * ouverte à la personne suivante.
  */
 
 /** L'évènement de fenêtre que les toasts des layouts écoutent (`ToastsDuLayout.vue`). */

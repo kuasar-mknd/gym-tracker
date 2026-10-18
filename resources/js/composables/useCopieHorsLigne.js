@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { MARQUE_D_UNE_COPIE, estUneCopie, propAbsente } from '@/Utils/copiesServies'
 
@@ -21,6 +21,11 @@ import { MARQUE_D_UNE_COPIE, estUneCopie, propAbsente } from '@/Utils/copiesServ
  *
  * Les écritures de la séance passent par la file hors ligne, qui les garde sans
  * réseau : elles restent ouvertes sur une copie.
+ *
+ * Une copie qui se recharge au retour du réseau n'est pas remontée :
+ * `router.reload` garde l'état de la page, et un minuteur lancé sur la copie
+ * continue. Un formulaire qu'une page gardée remplit depuis ses props se
+ * recale donc lui-même quand la marque part (`recalerApresLaCopie`).
  */
 
 /** L'identifiant du texte qui dit pourquoi un bouton d'écriture est désactivé sur une copie. */
@@ -53,4 +58,66 @@ export const useCopieHorsLigne = () => {
     const indisponibleSurLaCopie = (nom) => surUneCopie.value && propAbsente(page.props ?? {}, nom)
 
     return { marque, surUneCopie, raisonDUneEcriture, indisponibleSurLaCopie }
+}
+
+/**
+ * L'empreinte de chaque champ : deux valeurs égales, tableaux et objets
+ * compris, s'y écrivent pareil.
+ *
+ * @param {Record<string, unknown>} valeurs
+ * @returns {Record<string, string>}
+ */
+const empreintesDesChamps = (valeurs) =>
+    Object.fromEntries(Object.entries(valeurs).map(([champ, valeur]) => [champ, JSON.stringify(valeur)]))
+
+/**
+ * Recale, quand la page cesse d'être une copie hors ligne, un formulaire
+ * qu'une page gardée remplit depuis ses props (#2048, partie E).
+ *
+ * Au retour du réseau, une copie se recharge en entier par `router.reload`,
+ * qui garde l'état de la page (`preserveState`, qu'Inertia impose) : les
+ * props deviennent celles du serveur et la marque part, mais un formulaire
+ * rempli au montage gardait les valeurs de la copie, et les renvoyait au
+ * serveur au geste suivant, celui que la garde des écritures demande de
+ * refaire. Quand la marque part, chaque champ que la personne n'a pas changé
+ * depuis son remplissage reprend la valeur que la page tire maintenant de ses
+ * props ; un champ qu'elle a changé reste tel qu'elle le voit, et part ainsi.
+ * Les valeurs par défaut du formulaire deviennent celles du serveur.
+ *
+ * Appelée juste après `useForm(valeursDesProps())`, pendant le `setup` du
+ * composant, par toute page gardée qui remplit un formulaire depuis ses
+ * props (`tests/js/conventions/formulairesDesCopies.test.js`).
+ *
+ * @param {{ defaults: (valeurs: Record<string, unknown>) => unknown, reset: (...champs: string[]) => unknown }} formulaire
+ *   le formulaire d'Inertia (`useForm`)
+ * @param {() => Record<string, unknown>} valeursDesProps ce que la page tire
+ *   de ses props, relu à chaque recalage
+ */
+export const recalerApresLaCopie = (formulaire, valeursDesProps) => {
+    const { surUneCopie } = useCopieHorsLigne()
+    let rempliAvec = empreintesDesChamps(valeursDesProps())
+
+    // Après le rendu : les props, et ce que la page en déduit, sont celles de la réponse.
+    watch(
+        surUneCopie,
+        (copie, etaitUneCopie) => {
+            if (copie || !etaitUneCopie) {
+                return
+            }
+
+            const fraiches = valeursDesProps()
+            const inchanges = Object.keys(fraiches).filter(
+                (champ) => JSON.stringify(formulaire[champ]) === rempliAvec[champ],
+            )
+
+            formulaire.defaults(fraiches)
+
+            if (inchanges.length > 0) {
+                formulaire.reset(...inchanges)
+            }
+
+            rempliAvec = empreintesDesChamps(fraiches)
+        },
+        { flush: 'post' },
+    )
 }

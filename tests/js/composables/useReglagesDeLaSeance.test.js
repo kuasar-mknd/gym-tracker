@@ -11,6 +11,8 @@ vi.mock('@inertiajs/vue3', () => ({
 
         return inertia.formulaire
     },
+    // Les réglages se recalent à la sortie d'une copie hors ligne : la page du serveur ici (#2048).
+    usePage: () => ({ props: {} }),
 }))
 vi.mock('@/composables/useHaptics', () => haptics)
 
