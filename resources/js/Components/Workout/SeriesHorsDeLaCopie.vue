@@ -48,7 +48,7 @@ const copieDepassee = computed(() => {
         class="info-fill mb-4 flex items-start gap-2 rounded-xl p-3 text-sm font-medium"
         dusk="series-hors-de-la-copie"
     >
-        <GlassIcon name="cloud_done" size="sm" class="shrink-0" />
+        <GlassIcon name="task_alt" size="sm" class="shrink-0" />
         <span>
             Des séries enregistrées après {{ heureCourte(new Date(copieDepassee)) }} n'apparaissent pas ici : elles sont
             bien enregistrées.
