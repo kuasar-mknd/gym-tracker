@@ -462,6 +462,56 @@ describe('ce qui ne reçoit jamais de copie', () => {
         expect(navigations).toEqual([])
     })
 
+    it('la copie d’un autre compte que celui de la page affichée n’y est jamais servie', async () => {
+        /*
+         * Un onglet resté sur une page du compte 7 ; dans un autre onglet, 7
+         * s'est déconnecté et 8 s'est connecté : titulaire, témoin et magasin
+         * sont ceux de 8, qui garde la copie de ses séances, lisible. Sans
+         * réseau, un lien de l'onglet de 7 ne montre pas les séances de 8.
+         */
+        localStorage.setItem(CLEF_DU_TITULAIRE_DE_L_APPAREIL, 'compte:8')
+        await garderUneCopie(
+            pageDe({
+                texte: 'Séances de Dominique',
+                auth: { user: { id: 8, name: 'Dominique Autrecompte', active_workout: null, latest_achievement: null } },
+            }),
+        )
+
+        await visiter('/workouts')
+        await attendreUneAnnonce()
+
+        expect(lectures).toEqual(['/workouts'])
+        expect(annonces).toEqual([{ message: visites.PAGE_INDISPONIBLE, annuler: null }])
+        expect(contenu()).toBe('Séance en cours')
+        expect(window.location.pathname).toBe('/workouts/12')
+        expect(navigations).toEqual([])
+    })
+
+    it('le `auth` d’une réponse d’un autre compte ne passe jamais dans la copie de celui de la page', async () => {
+        // La dernière réponse complète du serveur vient du compte 8, plus récente que la copie…
+        const autreCompte = {
+            user: { id: 8, name: 'Dominique Autrecompte', active_workout: null, latest_achievement: null },
+        }
+        await garderUneCopie(pageDe(), { le: maintenant - 60 * 1000 })
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(
+            pageDe({ url: '/tools', component: 'Tools/Index', texte: 'Outils de Dominique', auth: autreCompte }),
+        )
+        await visiter('/tools')
+        expect(contenu()).toBe('Outils de Dominique')
+
+        // … puis l'onglet revient, sans le serveur, à une page du compte 7.
+        await new Promise((fini) => routeur.replace({ ...seanceOuverte(), onFinish: fini }))
+        navigations.length = 0
+        reseau.mode = 'coupe'
+
+        await visiter('/workouts')
+        await attendreUneCopie()
+
+        expect(pageMontree().props.auth.user).toMatchObject({ id: COMPTE, name: 'Camille Horsligne' })
+        expect(contenu()).toBe('Séances')
+    })
+
     it('une écriture, un rechargement partiel, un préchargement ou une visite qui garde l’état n’en reçoivent pas', async () => {
         await garderUneCopie(pageDe())
 
