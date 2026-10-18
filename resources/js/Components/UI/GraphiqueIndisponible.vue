@@ -1,4 +1,14 @@
+<script>
+/**
+ * Ce que l'enveloppe d'un graphique (`Utils/graphiqueAsynchrone.js`) donne à
+ * ce composant : la prévenir qu'il a pris la place du graphique, qu'elle
+ * remontera à la réponse suivante du serveur.
+ */
+export const ECHEC_DU_GRAPHIQUE = Symbol('échec du graphique')
+</script>
+
 <script setup>
+import { inject } from 'vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 
 /**
@@ -15,6 +25,8 @@ defineProps({
         default: null,
     },
 })
+
+inject(ECHEC_DU_GRAPHIQUE, null)?.()
 </script>
 
 <template>

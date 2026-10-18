@@ -1,26 +1,6 @@
-import { defineAsyncComponent, defineComponent, h, inject, onBeforeUnmount, provide, ref } from 'vue'
-import GraphiqueIndisponible from '@/Components/UI/GraphiqueIndisponible.vue'
+import { defineAsyncComponent, defineComponent, h, onBeforeUnmount, provide, ref } from 'vue'
+import GraphiqueIndisponible, { ECHEC_DU_GRAPHIQUE } from '@/Components/UI/GraphiqueIndisponible.vue'
 import { surUneReponseDuServeur } from '@/composables/useEtatDuReseau'
-
-/** Ce que l'enveloppe d'un graphique donne à son composant d'erreur : le prévenir qu'il a pris la place du graphique. */
-const ECHEC_DU_GRAPHIQUE = Symbol('échec du graphique')
-
-/**
- * Le composant d'erreur commun, qui prévient l'enveloppe du graphique qu'il
- * est montré.
- */
-const GraphiqueEnEchec = defineComponent({
-    name: 'GraphiqueEnEchec',
-    props: {
-        /** L'erreur que `defineAsyncComponent` passe à son composant d'erreur : lue nulle part. */
-        error: { type: [Error, Object], default: null },
-    },
-    setup() {
-        inject(ECHEC_DU_GRAPHIQUE, null)?.()
-
-        return () => h(GraphiqueIndisponible)
-    },
-})
 
 /**
  * Un graphique chargé à la demande, avec le composant d'erreur commun (#2048,
@@ -47,7 +27,7 @@ const GraphiqueEnEchec = defineComponent({
  * @param {() => Promise<unknown>} chargeur l'import du composant du graphique
  */
 export const graphiqueAsynchrone = (chargeur) => {
-    const Graphique = defineAsyncComponent({ loader: chargeur, errorComponent: GraphiqueEnEchec })
+    const Graphique = defineAsyncComponent({ loader: chargeur, errorComponent: GraphiqueIndisponible })
 
     return defineComponent({
         // Un nom à elle : une recherche par le nom du graphique trouve le graphique, pas son enveloppe.
