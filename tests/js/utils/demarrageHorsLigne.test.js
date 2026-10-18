@@ -101,10 +101,15 @@ describe('le contenu statique', () => {
     })
 
     it('reste tel quel quand rien n’est à monter', async () => {
-        const fenetre = await fenetreDeLaCoquille('reseau')
+        const fenetre = Object.assign(await fenetreDeLaCoquille('reseau'), {
+            location: new URL('http://localhost:3000/dashboard'),
+        })
         const avant = fenetre.document.body.innerHTML
+        const magasin = () => ({
+            lireAuDemarrage: async () => ({ compte: '7', copie: null, plusRecente: null, copies: [] }),
+        })
 
-        expect(await demarrerHorsLigne({ fenetre, recharger: () => {} })).toEqual({
+        expect(await demarrerHorsLigne({ fenetre, magasin, recharger: () => {} })).toEqual({
             montee: false,
             raison: 'sans-copie',
         })

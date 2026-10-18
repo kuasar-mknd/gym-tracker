@@ -290,6 +290,78 @@ it('précache le morceau et les feuilles de chaque page gardée', function (stri
     }
 })->with(fn (): array => array_column(PagesGardees::liste(), 'composant', 'composant'));
 
+/**
+ * Les fichiers que l'entrée charge d'emblée, sous leur adresse : le sien et
+ * ceux qu'il importe statiquement, de proche en proche, sans rien de ce
+ * qu'il charge à la demande.
+ *
+ * @param  array<string, mixed>  $manifeste
+ * @return list<string>
+ */
+function fichiersStatiquesDeLEntreeDuWorker(array $manifeste): array
+{
+    $fichiers = [];
+    $vus = [];
+    $aSuivre = [FermetureDuPrecache::ENTREE];
+
+    while ($aSuivre !== []) {
+        $nom = (string) array_pop($aSuivre);
+
+        if (isset($vus[$nom])) {
+            continue;
+        }
+
+        $vus[$nom] = true;
+        $fichiers[] = adresseDansLaConstructionDuWorker($manifeste, $nom);
+
+        /** @var array{imports?: list<string>} $entree */
+        $entree = $manifeste[$nom];
+
+        foreach ($entree['imports'] ?? [] as $importe) {
+            $aSuivre[] = $importe;
+        }
+    }
+
+    return $fichiers;
+}
+
+/*
+ * La coquille monte la page `HorsLigne` à une adresse sans copie, et son
+ * démarrage (`Utils/demarrageHorsLigne.js`) vient de l'entrée même (#2048,
+ * partie F) : chargé à la demande, il ne le serait qu'en mode coquille, donc
+ * sans réseau, et ne serait jamais au precache. Le module n'a pas de morceau à
+ * lui dans le manifeste : il se reconnaît dans le code que l'entrée charge
+ * d'emblée, aux noms qu'il écrit (`pagesSansReseau`, la prop de la page
+ * `HorsLigne`) et qu'il appelle au magasin (`lireAuDemarrage`), que la
+ * minification garde.
+ */
+it('précache la page HorsLigne, et le démarrage de la coquille dans ce que l’entrée charge d’emblée', function (): void {
+    $manifeste = manifesteDeLaConstructionDuWorker();
+    $precache = entreesDuPrecacheDuWorker();
+    $nom = FermetureDuPrecache::DOSSIER_DES_PAGES.'HorsLigne.vue';
+
+    expect(FermetureDuPrecache::pagesPrecacheesSansCopie())->toBe(['HorsLigne'])
+        ->and($precache)->toHaveKey(adresseDansLaConstructionDuWorker($manifeste, $nom));
+
+    /** @var array{css?: list<string>} $entree */
+    $entree = $manifeste[$nom];
+
+    foreach ($entree['css'] ?? [] as $feuille) {
+        expect($precache)->toHaveKey('/build/'.$feuille);
+    }
+
+    $statiques = fichiersStatiquesDeLEntreeDuWorker($manifeste);
+    $code = '';
+
+    foreach ($statiques as $fichier) {
+        expect($precache)->toHaveKey($fichier);
+        $code .= (string) file_get_contents(public_path(ltrim($fichier, '/')));
+    }
+
+    expect($code)->toContain('pagesSansReseau')
+        ->and($code)->toContain('lireAuDemarrage');
+});
+
 /*
  * Les graphiques restent dehors (décision 9 du propriétaire) : sans réseau,
  * chacun dit « Graphique indisponible hors ligne ». La liste qui les nomme est

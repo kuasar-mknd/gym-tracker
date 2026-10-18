@@ -80,13 +80,17 @@ export const GRAPHIQUES_INDISPONIBLES_HORS_LIGNE = Object.freeze([
 
 /**
  * Les pages qui s'ouvrent sans réseau sans être gardées, par leur composant :
- * aucune encore. La page `HorsLigne` de la partie F (#2048), que la coquille
- * montre à une adresse sans copie, s'y ajoute. `demarrageHorsLigne`, que
- * `main.js` importera statiquement, est déjà dans la fermeture de l'entrée.
+ * la page `HorsLigne` (#2048, partie F), que la coquille monte à une adresse
+ * sans copie (`Utils/demarrageHorsLigne.js`). Le démarrage lui-même, que
+ * `main.js` importe statiquement, est dans la fermeture de l'entrée.
  *
- * Une entrée par ligne, sous la forme `'Composant',`.
+ * Une entrée par ligne, sous la forme `'Composant',` : Prettier ne la replie
+ * pas sur une seule.
  */
-export const PAGES_PRECACHEES_SANS_COPIE = Object.freeze([])
+// prettier-ignore
+export const PAGES_PRECACHEES_SANS_COPIE = Object.freeze([
+    'HorsLigne',
+])
 
 /**
  * Les points de départ, sous leur nom dans le manifeste : l'entrée, chaque
