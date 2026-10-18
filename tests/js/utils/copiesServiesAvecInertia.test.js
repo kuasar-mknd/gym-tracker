@@ -504,7 +504,9 @@ describe('ce qui ne reçoit jamais de copie', () => {
         await garderUneCopie(
             pageDe({
                 texte: 'Séances de Dominique',
-                auth: { user: { id: 8, name: 'Dominique Autrecompte', active_workout: null, latest_achievement: null } },
+                auth: {
+                    user: { id: 8, name: 'Dominique Autrecompte', active_workout: null, latest_achievement: null },
+                },
             }),
         )
 

@@ -965,11 +965,7 @@ export const installerLesVisitesHorsLigne = ({
         const quitteLaPage = pageCourante === null || adresse !== adresseSansFragment(pageCourante.url)
 
         for (const [enCours, suivi] of enVol) {
-            if (
-                !enCours.async &&
-                !enCours.prefetch &&
-                (quitteLaPage || adresseSansFragment(enCours.url) === adresse)
-            ) {
+            if (!enCours.async && !enCours.prefetch && (quitteLaPage || adresseSansFragment(enCours.url) === adresse)) {
                 suivi.repondue = true
                 clearTimeout(suivi.minuteurDeLaCopie)
             }
