@@ -31,7 +31,9 @@ use Tests\DuskTestCase;
  * n'ouvre pas) ; puis la coupure. Depuis la séance, Stats, qui n'a pas de
  * copie, le dit et laisse la séance ; la flèche de l'en-tête ouvre la copie
  * des séances, où la prop différée que le préchauffage ne demande jamais dit
- * « Indisponible hors ligne » ; le bouton Retour du navigateur rend la séance ;
+ * « Indisponible hors ligne », et le graphique de l'historique, hors du
+ * precache, « Graphique indisponible hors ligne » ; le bouton Retour du
+ * navigateur rend la séance ;
  * Séances, Plus (où démarrer une séance se désactive), Outils et le minuteur
  * d'intervalles s'ouvrent ensuite avec le bandeau. Rien d'autre n'est dit.
  * Le réseau rendu, la copie affichée se recharge en entier et perd son
@@ -188,9 +190,13 @@ class NavigationHorsLigneTest extends DuskTestCase
                 // La flèche de l'en-tête, un lien d'Inertia vers les séances, ouvre leur copie.
                 $browser->clickWhenSettled('header a[aria-label="Retour"]');
                 $this->attendreLaCopie($browser, '/workouts', 'Mes Séances');
-                // La séance en cours est dans la copie ; le préchauffage ne demande jamais la prop différée de la liste, qui le dit.
+                /*
+                 * La séance en cours est dans la copie. Le préchauffage ne demande jamais la prop différée
+                 * de la liste, qui le dit ; le graphique de l'historique, hors du precache, aussi.
+                 */
                 $browser->waitForText($jetons['seance'], 15, true)
-                    ->waitFor('[data-indisponible-hors-ligne]', 15);
+                    ->waitFor('[data-indisponible-hors-ligne]', 15)
+                    ->waitFor('[data-graphique-indisponible]', 15);
 
                 // Le bouton Retour du navigateur rend la séance telle que l'historique l'a gardée, sans le serveur.
                 $browser->back()
