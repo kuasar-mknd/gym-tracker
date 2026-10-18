@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { FICHIER_DE_LA_PAGE_HORS_LIGNE, greffonDeLaPageHorsLigne } from './resources/js/sw/pageHorsLigne.js'
 import { iconesDuPrecache } from './resources/js/sw/iconesDuPrecache.js'
+import { greffonDeLaFermetureDuPrecache } from './resources/js/sw/fermetureDuPrecache.js'
 
 export default defineConfig({
     plugins: [
@@ -24,6 +25,8 @@ export default defineConfig({
         }),
         // Écrite avant que le worker ne se construise, pour que le precache la prenne (#1966).
         greffonDeLaPageHorsLigne(),
+        // Ce que l'entrée et les pages de la salle demandent, lu dans le manifeste construit (#2048).
+        greffonDeLaFermetureDuPrecache(),
         VitePWA({
             strategies: 'injectManifest',
             srcDir: 'resources/js',
@@ -48,27 +51,28 @@ export default defineConfig({
                  * Le glob prenait tout : 142 fichiers, 1 249 Kio, dont les 200
                  * Kio du graphique et le morceau de chaque page jamais visitée
                  * (#1814). Les actifs portent leur hachage et un an de cache
-                 * immuable — le navigateur les garde déjà. Restent ici la
-                 * coquille commune, les polices latines, celle des icônes
-                 * (Material Symbols, dont `cloud_off`, qui n'entrait au cache
-                 * qu'à sa première utilisation, #2048), les morceaux des deux
-                 * écrans qu'on ouvre le plus, l'accueil et la séance, et la
-                 * page « hors ligne ». Le reste se met en cache à la première
-                 * visite, dans le worker. Les icônes de public/ viennent à
-                 * part, par `additionalManifestEntries` : ce glob ne lit que
-                 * public/build.
+                 * immuable — le navigateur les garde déjà.
                  *
-                 * Aucun document de l'application n'est précaché : une page
-                 * s'ouvre par le réseau, et sans lui, toute navigation reçoit
-                 * la page « hors ligne », qui ne porte rien d'un compte
-                 * (resources/js/sw/navigationsHorsLigne.js, #1966).
+                 * Les motifs ne prennent plus que la page « hors ligne », les
+                 * polices latines et celle des icônes (Material Symbols, dont
+                 * `cloud_off`, #2048). Le code vient de la fermeture de
+                 * l'entrée et des pages de la salle (`pagesGardees.js`), que
+                 * `greffonDeLaFermetureDuPrecache` lit dans le manifeste
+                 * construit : chacune s'ouvre sans réseau depuis sa copie,
+                 * sauf ses graphiques, nommés « indisponibles hors ligne »
+                 * (resources/js/sw/fermetureDuPrecache.js). Des motifs par nom
+                 * (`assets/Show-*.js`…) laissaient à la séance une partie de
+                 * ses morceaux, et sa feuille. Le reste se met en cache à la
+                 * première visite, dans le worker. Les icônes de public/
+                 * viennent à part, par `additionalManifestEntries` : ce glob
+                 * ne lit que public/build.
+                 *
+                 * Le seul document précaché est la page « hors ligne », qui ne
+                 * porte rien d'un compte (resources/js/sw/navigationsHorsLigne.js,
+                 * #1966) ; les copies des pages sont l'affaire de la page.
                  */
                 globPatterns: [
                     FICHIER_DE_LA_PAGE_HORS_LIGNE,
-                    'assets/main-*.{js,css}',
-                    'assets/vue-*.js',
-                    'assets/Dashboard-*.js',
-                    'assets/Show-*.js',
                     'assets/*latin-*.woff2',
                     'assets/material-symbols-outlined-*.woff2',
                 ],

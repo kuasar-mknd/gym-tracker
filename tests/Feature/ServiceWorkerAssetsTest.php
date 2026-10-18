@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use Tests\Support\FermetureDuPrecache;
+use Tests\Support\PagesGardees;
+
 /**
  * Les entrées du precache que la construction a injectées dans public/sw.js,
  * de leur adresse à leur révision (nulle pour un actif dont le nom porte déjà
@@ -19,6 +22,39 @@ function entreesDuPrecacheDuWorker(): array
     $entrees = json_decode($manifeste[0], true, 512, JSON_THROW_ON_ERROR);
 
     return array_column($entrees, 'revision', 'url');
+}
+
+/**
+ * Le manifeste de la construction, `public/build/manifest.json`, ou un saut
+ * du test quand rien n'est construit.
+ *
+ * @return array<string, mixed>
+ */
+function manifesteDeLaConstructionDuWorker(): array
+{
+    if (! is_file(public_path('build/manifest.json')) || ! is_file(public_path('sw.js'))) {
+        test()->markTestSkipped('public/build absent : lancer npm run build.');
+    }
+
+    /** @var array<string, mixed> $manifeste */
+    $manifeste = json_decode((string) file_get_contents(public_path('build/manifest.json')), true, 512, JSON_THROW_ON_ERROR);
+
+    return $manifeste;
+}
+
+/**
+ * Le fichier, sous son adresse, d'une entrée du manifeste.
+ *
+ * @param  array<string, mixed>  $manifeste
+ */
+function adresseDansLaConstructionDuWorker(array $manifeste, string $nom): string
+{
+    $entree = $manifeste[$nom] ?? null;
+
+    expect($entree)->toBeArray("{$nom} est absent du manifeste de la construction.");
+
+    /** @var array{file: string} $entree */
+    return '/build/'.$entree['file'];
 }
 
 /**
@@ -180,4 +216,89 @@ it('précache chaque icône de public/ avec l’empreinte de son contenu', funct
         expect($precache)->toHaveKey('/'.$icone)
             ->and($precache['/'.$icone])->toBe(hash_file('sha256', public_path($icone)));
     }
+});
+
+/*
+ * Une copie servie sans réseau monte le morceau de sa page, puis tout ce qu'il
+ * importe (#2048, partie E). Des motifs par nom n'en prenaient qu'une partie :
+ * la séance demande 23 fichiers JS et 3 feuilles, et sa feuille n'y était pas.
+ * Le precache prend désormais la fermeture de l'entrée et de chaque page
+ * gardée, que `greffonDeLaFermetureDuPrecache` lit dans le manifeste ; elle se
+ * refait ici sans lui, et le code précaché doit être exactement elle : ni un
+ * morceau de moins, ni la fermeture de toutes les pages, que l'entrée charge à
+ * la demande.
+ */
+it('précache la fermeture de l’entrée et des pages gardées, et rien d’autre du code', function (): void {
+    $manifeste = manifesteDeLaConstructionDuWorker();
+    $attendus = array_map(
+        static fn (string $fichier): string => '/build/'.$fichier,
+        FermetureDuPrecache::fichiers($manifeste),
+    );
+    $code = array_values(array_filter(
+        array_keys(entreesDuPrecacheDuWorker()),
+        static fn (string $url): bool => preg_match('#^/build/.+\.(js|css)$#', $url) === 1,
+    ));
+    sort($code);
+
+    expect($attendus)->toContain(adresseDansLaConstructionDuWorker($manifeste, FermetureDuPrecache::ENTREE))
+        ->and($code)->toBe($attendus);
+});
+
+it('précache le morceau et les feuilles de chaque page gardée', function (string $composant): void {
+    $manifeste = manifesteDeLaConstructionDuWorker();
+    $nom = FermetureDuPrecache::DOSSIER_DES_PAGES.$composant.'.vue';
+    $precache = entreesDuPrecacheDuWorker();
+
+    expect($precache)->toHaveKey(adresseDansLaConstructionDuWorker($manifeste, $nom));
+
+    /** @var array{css?: list<string>} $entree */
+    $entree = $manifeste[$nom];
+
+    foreach ($entree['css'] ?? [] as $feuille) {
+        expect($precache)->toHaveKey('/build/'.$feuille);
+    }
+})->with(fn (): array => array_column(PagesGardees::liste(), 'composant', 'composant'));
+
+/*
+ * Les graphiques restent dehors (décision 9 du propriétaire) : sans réseau,
+ * chacun dit « Graphique indisponible hors ligne ». La liste qui les nomme est
+ * exacte (la construction s'arrête sur un graphique d'une page gardée qu'elle
+ * ne nomme pas), et Chart.js, que seul `BaseChart` importe, reste dehors avec
+ * eux.
+ */
+it('laisse hors du precache les graphiques nommés, et Chart.js avec eux', function (): void {
+    $manifeste = manifesteDeLaConstructionDuWorker();
+    $precache = entreesDuPrecacheDuWorker();
+    $graphiques = FermetureDuPrecache::graphiquesIndisponiblesHorsLigne();
+
+    expect($graphiques)->not->toBeEmpty();
+
+    foreach ($graphiques as $graphique) {
+        expect(base_path($graphique))->toBeReadableFile()
+            ->and($precache)->not->toHaveKey(adresseDansLaConstructionDuWorker($manifeste, $graphique));
+    }
+
+    $chartJs = array_values(array_filter(array_keys($manifeste), static fn (string $nom): bool => str_starts_with($nom, '_BaseChart-')));
+
+    expect($chartJs)->not->toBeEmpty();
+
+    foreach ($chartJs as $nom) {
+        expect($precache)->not->toHaveKey(adresseDansLaConstructionDuWorker($manifeste, $nom));
+    }
+});
+
+/*
+ * Workbox refuse, à l'installation du worker, deux entrées de même adresse et
+ * de révisions différentes : un motif qui reprendrait un fichier de la
+ * fermeture laisserait l'appareil sans worker neuf.
+ */
+it('ne précache aucune adresse deux fois', function (): void {
+    if (! is_file(public_path('sw.js'))) {
+        $this->markTestSkipped('public/sw.js absent : lancer npm run build.');
+    }
+
+    preg_match_all('/"url":"([^"]+)"/', (string) file_get_contents(public_path('sw.js')), $trouvees);
+
+    expect($trouvees[1])->not->toBe([])
+        ->and($trouvees[1])->toBe(array_values(array_unique($trouvees[1])));
 });
