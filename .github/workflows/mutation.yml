@@ -271,6 +271,10 @@ jobs:
                     - scope: 'App\Policies'
                       timeout: 30
                       min: 99
+        # La version de MySQL de la production, seule : la passe juge les
+        # tests, que la CI fait déjà tourner sur chaque version, et la doubler
+        # doublerait des parts de trente à soixante minutes
+        # (.ai/rules/dependencies.md).
         services:
             mysql:
                 image: mysql:8.4

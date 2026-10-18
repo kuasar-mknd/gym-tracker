@@ -59,9 +59,9 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 4 362 tests, couverture ≥ **94 %** | bloquant par PR |
+| **Tests backend** | 4 462 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
 | **Tests frontend** | 3 185 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
-| **Tests navigateur** | 167 parcours Dusk sous Chrome headless | bloquant par PR |
+| **Tests navigateur** | 167 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
 | **Mutation testing** | ≥ 82 % `App\Services\PersonalRecordService`, 89 % le reste d'`App\Services`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
@@ -79,7 +79,7 @@ La production suit l'image `ghcr.io/kuasar-mknd/gym-tracker:v1`, publiée quand 
 **Ce tag ne publie rien tant que tout n'est pas vert.** Sur le commit exact du tag, l'image n'est poussée que si :
 
 1. les tests backend, frontend et navigateur, le lint, l'audit et la construction multi-architecture sont verts ;
-2. l'image démarre sur une base MySQL vide et répond sur `/up` (job `demarrage`) ;
+2. l'image démarre sur une base MySQL vide, en 8.4 comme en 9.7.2, et répond sur `/up` (job `demarrage`) ;
 3. la **passe nocturne** est verte, chacune de ses parts, seuils de mutation compris (job `promotion`).
 
 La release GitHub exige en plus la CI entière, `semgrep`, `secrets` et `workflows` compris.
@@ -105,7 +105,7 @@ La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul 
 
 La sonde de santé de `app` (le `HEALTHCHECK` de l'image et celui de la composition, toutes les trente secondes) demande `/up` avec `curl -f` : `{"status":"up"}` et 200, ou `{"status":"down"}` et 500 quand un écouteur de `DiagnosingHealth` lève, l'exception partant dans les journaux (#2072). La même réponse JSON pour tout client, sans session ni cookie, que ni le navigateur ni le service worker de la PWA ne gardent (`Cache-Control: no-store`), et `/up` répond aussi pendant une maintenance. Le sondage ne lit pas la base : il réécrit seulement l'annonce de version de `app` dans le cache, comme avant. Un outil de surveillance qui cherchait un mot dans l'ancienne page HTML de Laravel cherche désormais `"status":"up"`.
 
-Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668).
+Le service `db` tourne avec `--innodb-flush-log-at-trx-commit=2` et `--skip-log-bin` : sur le disque de production, chaque écriture coûtait 250 à 500 ms de synchronisation ; le journal est désormais synchronisé une fois par seconde, et une coupure brutale (pas un redémarrage propre) peut perdre jusqu'à une seconde d'écritures validées. `--innodb-redo-log-capacity=256M` et `--innodb-io-capacity=200` (`-max=1000`) remplacent les défauts de MySQL : ce sont les réglages appliqués et mesurés sur la pile déployée (#1668). `stop_grace_period: 5m` laisse au serveur cinq minutes pour s'arrêter proprement, au lieu des dix secondes après lesquelles Docker le coupe net ; il rend la main dès qu'il a fini.
 
 Les journaux des trois conteneurs de l'application vont dans `docker logs` et, un fichier par conteneur (`app`, `worker`, `scheduler`), dans le volume `journaux` que lit la page « Journaux » du panneau. Le fichier est indispensable au planificateur, qui envoie la sortie de chaque tâche dans /dev/null. Le volume garde quatorze jours de chaque conteneur : chaque nuit à 00:10, la tâche planifiée `journaux:purger` y efface les fichiers du jour de quatorze jours et plus, de tous les conteneurs, durée lue dans `days` du canal `daily` (#2053). Seuls ces fichiers partent (`nom-AAAA-MM-JJ.log`), jamais celui du jour, que le canal tient ouvert : une ligne y reste quatorze jours de calendrier au plus, plus les dix minutes qui séparent minuit de la purge, et une heure de plus quand ces quatorze jours couvrent le passage à l'heure d'hiver. Le canal seul n'y suffisait pas : il garde les quatorze fichiers les plus récents de chaque conteneur, quel que soit leur âge, et n'efface le plus ancien qu'en ouvrant le fichier d'un nouveau jour ; un conteneur qui écrit peu y gardait des fichiers bien plus vieux, et le volume survit à la recréation des conteneurs (#1938). La copie de `docker logs` tourne par taille, pas par durée (#1938) : la composition pose à `app`, `worker` et `scheduler` le pilote `json-file` avec `max-size: 10m` et `max-file: 3`, soit trois fichiers de 10 Mo et environ 30 Mo au plus par conteneur, dont les plus anciennes lignes partent à mesure que d'autres s'écrivent, au bout d'un temps qui dépend du trafic. Posé dans le service, ce réglage prend le pas sur le pilote de journaux réglé pour tout le démon (`log-driver` et `log-opts` de `daemon.json`) : le pilote et ses deux limites valent quel que soit le réglage du serveur. `db` et `redis` gardent celui du démon.
 
@@ -214,7 +214,7 @@ Apple renvoie l'utilisateur par un POST depuis son site, sans cookie de session 
 | `ADMIN_INITIAL_PASSWORD` | pour créer le premier administrateur | vide : le seeder échoue | Mot de passe du compte `admin@gymtracker.app`, créé par `php artisan db:seed --class=AdminSeeder --force` dans le conteneur `app` (`docker exec`). Le seeder ne réécrit jamais un mot de passe existant : à retirer de la pile une fois le compte créé. Transmise à `app` seul. |
 | `HEALTH_TO_ADDRESS` | non | vide : aucun courriel | Adresse qui reçoit un courriel, une fois par heure au plus, quand un contrôle de santé passe au rouge ; le courriel et la page « Santé » nomment chacun par son libellé : « Connexion à la base », « Réglages de la base », « Connexion à Redis », « Cache de l'application », « File d'attente », « Planificateur », « Tâches planifiées », « Travailleurs Horizon », « Versions des conteneurs », « Espace disque utilisé », « Dossier des sauvegardes », « Archives des sauvegardes », « Mode debug », « Environnement », « Application optimisée ». L'objet, le titre et l'introduction du courriel sont en français, comme les messages fixes des contrôles du paquet (« Horizon ne tourne pas. ») ; un message qui porte une valeur (pourcentage du disque, erreur de connexion, minutes de retard) reste celui du paquet, en anglais. Les contrôles tournent dans le planificateur toutes les cinq minutes : `scheduler` arrêté, aucun courriel ne part. Vide, la page « Santé » du panneau reste seule. |
 | `LOG_LEVEL` | non | `info` | Niveau minimal des journaux : `debug` pour un dépannage, `warning` pour n'écrire que les incidents. |
-| `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; en production, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable par le super administrateur, depuis une adresse de `ADMIN_ALLOWED_IPS`, sans nouvelles données tant qu'il est coupé : ses cartes disent « No results ». |
+| `PULSE_ENABLED` | non | `false` | Laravel Pulse. Il écrit ses agrégats en base à chaque requête et chaque job ; en production, cela provoquait un convoi de verrous (145 attentes en 205 s, aucune une fois coupé, #1668). `/backoffice/pulse` reste consultable par le super administrateur, depuis une adresse de `ADMIN_ALLOWED_IPS`, sans nouvelles données tant qu'il est coupé : ses cartes disent « No results ». Les sauvegardes gardent ses tables, pas leurs lignes. |
 | `SERVER_TIMING_ENABLED` | non | `false` | En-tête `Server-Timing` sur les réponses d'un utilisateur connecté ou d'un administrateur du panneau : durée de l'application, découpée en `routage`, `controleur` et `rendu`, puis nombre et durée cumulée des requêtes SQL (`sql;dur=12.4;desc="7 requetes"`), lisibles dans l'onglet réseau du navigateur. Jamais pour un invité, ni sur une réponse d'authentification ou un 404 : la durée dirait si un compte ou une ressource existe. Seule une valeur vraie (`true`, `1`) l'allume, vide ou absente le coupe. À allumer le temps d'une mesure (#1315), puis à couper. |
 
 ### Fixées par la composition
@@ -314,7 +314,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 
 | Catégorie | Technologies |
 | --- | --- |
-| **Backend** | Laravel 13, PHP 8.5 (Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4, Redis et Laravel Horizon |
+| **Backend** | Laravel 13, PHP 8.5 (Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.2, la LTS suivante), Redis et Laravel Horizon |
 | **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4, Vite 8 |
 | **Backoffice** | Filament 5 |
 | **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |

@@ -21,6 +21,9 @@ it('désactive la vérification du certificat pour le client MySQL de l’image'
  * pile : il les lançait en Redis 7 quand la production était passée en
  * Redis 8. Ses services suivent désormais les images de la composition de
  * production, et une montée de l'une sans l'autre fait tomber cette garde.
+ * Sa base tourne en matrice, sur la version de la production et sur la LTS
+ * suivante (`LesJobsAvecUneBaseTournentSurChaqueMySqlTest`) : celle de la
+ * production doit en être.
  */
 it('lance l’image contre la base et le cache de la production', function (): void {
     $ci = Yaml::parseFile(base_path('.github/workflows/ci.yml'));
@@ -29,8 +32,11 @@ it('lance l’image contre la base et le cache de la production', function (): v
     $base = data_get($production, 'services.db.image');
     $cache = data_get($production, 'services.redis.image');
 
-    expect($base)->toBeString()
-        ->and($cache)->toBeString()
-        ->and(data_get($ci, 'jobs.demarrage.services.mysql.image'))->toBe($base)
+    expect($base)->toBeString()->toStartWith('mysql:')
+        ->and($cache)->toBeString();
+    assert(is_string($base));
+
+    expect(data_get($ci, 'jobs.demarrage.services.mysql.image'))->toBe('mysql:${{ matrix.mysql }}')
+        ->and((array) data_get($ci, 'jobs.demarrage.strategy.matrix.mysql'))->toContain(substr($base, strlen('mysql:')))
         ->and(data_get($ci, 'jobs.demarrage.services.redis.image'))->toBe($cache);
 });

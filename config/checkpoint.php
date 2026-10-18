@@ -185,6 +185,15 @@ return [
         '36900666b825',
         '05404b984556',
         '56a903076fc3',
+        // Les tests de la montée vers MySQL 9.7 (#2086) : la garde du SQL
+        // range en jeu de données le texte PHP d'une requête interpolée, sans
+        // l'exécuter ; le retour de l'empreinte md5 parcourt les trois noms de
+        // table de Pulse écrits dans le test ; le nettoyage de la vérification
+        // d'avant la bascule ne supprime que ses propres objets `avant97_`,
+        // relus d'information_schema. Aucune valeur ne vient d'une entrée.
+        '63fa42ecd50e',
+        '4c6c81f2c01f',
+        'be97aac0fb84',
     ],
 
     /*

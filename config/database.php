@@ -74,14 +74,24 @@ return [
             ], fn ($value): bool => ! is_null($value)) : [],
             // Le dump de sauvegarde lit un instantané cohérent au lieu de
             // verrouiller les tables : rien ne bloque l'application pendant
-            // la nocturne, ni le test qui tient une transaction ouverte.
+            // la nocturne, ni le test qui tient une transaction ouverte. Les
+            // lignes de Pulse n'y entrent pas : l'option nomme la base dumpée,
+            // et AppServiceProvider::sauvegarderSansLesLignesDePulse() la pose
+            // au moment du dump.
             'dump' => [
                 'useSingleTransaction' => true,
                 'timeout' => 300,
                 // Le client MariaDB de l'image vérifie le certificat du serveur,
                 // que MySQL signe lui-même ; le client MySQL local ignore l'option
                 // grâce à `loose-`. Les tablespaces demandent PROCESS, inutilement.
-                'addExtraOption' => '--loose-skip-ssl --no-tablespaces',
+                // Sur un serveur qui a ses GTID, le défaut de 9.7, le client MySQL
+                // (8.0.33 et suivants, celui des runners de la CI) prend un verrou
+                // global avant l'instantané tant que le dump recopie les GTID :
+                // il faut RELOAD ou FLUSH_TABLES, que le compte de l'application
+                // n'a pas. Aucune réplication ne les lit : le dump ne les recopie
+                // plus. Le client MariaDB ignore l'option grâce à `loose-`, et
+                // refuserait l'option nue qu'écrit la clé `mysql_gtid_purged`.
+                'addExtraOption' => '--loose-skip-ssl --no-tablespaces --loose-set-gtid-purged=OFF',
             ],
         ],
 
