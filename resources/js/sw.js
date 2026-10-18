@@ -1,6 +1,7 @@
-import { clientsClaim } from 'workbox-core'
-import { cleanupOutdatedCaches, matchPrecache, precacheAndRoute } from 'workbox-precaching'
+import { cacheNames, clientsClaim } from 'workbox-core'
+import { cleanupOutdatedCaches, getCacheKeyForURL, matchPrecache, precacheAndRoute } from 'workbox-precaching'
 import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
+import { basculerLaConstructionPrecedente, mettreDeCoteLaConstructionPrecedente } from '@/sw/constructionPrecedente'
 import {
     activerLePrechargementDesNavigations,
     estUneNavigation,
@@ -32,8 +33,33 @@ clientsClaim()
 // Drops precaches left by previous versions instead of growing without bound.
 cleanupOutdatedCaches()
 
+/*
+ * Le manifeste que la construction injecte. Workbox refuse un worker où son
+ * point d'injection apparaît deux fois : il se lit donc une fois, ici, pour le
+ * precache et pour la construction précédente.
+ */
+const MANIFESTE_DU_PRECACHE = self.__WB_MANIFEST
+
 // Precache assets
-precacheAndRoute(self.__WB_MANIFEST)
+precacheAndRoute(MANIFESTE_DU_PRECACHE)
+
+/**
+ * Un déploiement pendant une séance : la page ouverte reste sur l'ancienne
+ * construction, que l'activation retire du precache. L'installation met de
+ * côté ce que le nouveau manifeste n'a plus, l'activation le range dans
+ * `construction-precedente`, que la route des actifs lit (#2048). Le détail, et
+ * pourquoi pas à l'activation seule, vivent dans le module.
+ */
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        mettreDeCoteLaConstructionPrecedente({
+            magasin: caches,
+            nomDuPrecache: cacheNames.precache,
+            manifeste: MANIFESTE_DU_PRECACHE,
+            origine: self.location.origin,
+        }),
+    )
+})
 
 /**
  * Le navigateur lance lui-même la requête d'une navigation pendant que le
@@ -41,6 +67,7 @@ precacheAndRoute(self.__WB_MANIFEST)
  */
 self.addEventListener('activate', (event) => {
     event.waitUntil(activerLePrechargementDesNavigations(self.registration))
+    event.waitUntil(basculerLaConstructionPrecedente(caches))
 })
 
 /**
@@ -72,7 +99,12 @@ self.addEventListener('fetch', (event) => {
         return
     }
 
-    if (!estUnActif(event.request, self.location.origin)) {
+    /*
+     * Un fichier du precache a déjà sa réponse : la route de Workbox, posée
+     * par `precacheAndRoute` avant cet écouteur, l'a donnée, et un second
+     * `respondWith` lèverait (`InvalidStateError`).
+     */
+    if (!estUnActif(event.request, self.location.origin) || getCacheKeyForURL(event.request.url) !== undefined) {
         return
     }
 

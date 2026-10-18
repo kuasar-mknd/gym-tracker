@@ -8,6 +8,13 @@
 export const NOM_DU_CACHE = 'actifs-a-la-demande'
 export const ENTREES_MAX = 100
 
+/**
+ * Les actifs du precache de la construction précédente, gardés le temps d'une
+ * mise à jour (#2048) : la page restée sur elle les demande encore, et le
+ * nouveau precache ne les a plus (`constructionPrecedente.js`).
+ */
+export const CACHE_DE_LA_CONSTRUCTION_PRECEDENTE = 'construction-precedente'
+
 /** Une requête que ce cache doit servir : un actif construit, lu, de chez nous. */
 export const estUnActif = (requete, origine) => {
     if (requete.method !== 'GET') {
@@ -30,7 +37,10 @@ const garder = async (cache, requete, reponse) => {
 }
 
 /**
- * Le cache d'abord : un actif haché ne change pas sous son URL.
+ * Le cache d'abord : un actif haché ne change pas sous son URL. Celui des
+ * actifs à la demande, puis celui de la construction précédente, qu'une page
+ * restée sur elle demande après une mise à jour, réseau coupé compris ; ce
+ * dernier ne se lit qu'au nom de son cache, qu'une lecture ne crée pas.
  *
  * @param {{request: Request, waitUntil: (p: Promise<unknown>) => void}} event
  * @param {CacheStorage} magasin
@@ -38,7 +48,9 @@ const garder = async (cache, requete, reponse) => {
  */
 export const servirDepuisLeCache = async (event, magasin, allerChercher) => {
     const cache = await magasin.open(NOM_DU_CACHE)
-    const connu = await cache.match(event.request)
+    const connu =
+        (await cache.match(event.request)) ??
+        (await magasin.match(event.request, { cacheName: CACHE_DE_LA_CONSTRUCTION_PRECEDENTE }))
 
     if (connu) {
         return connu
