@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\Sessions\PierresTombales;
 use Laravel\Pulse\Pulse;
 use Laravel\Pulse\Recorders;
 
@@ -155,6 +156,8 @@ return [
             'sample_rate' => env('PULSE_CACHE_INTERACTIONS_SAMPLE_RATE', 1),
             'ignore' => [
                 ...Pulse::defaultVendorCacheKeys(),
+                // Pierres tombales des sessions : une clé neuve par session.
+                '/^'.preg_quote(PierresTombales::PREFIXE, '/').'/',
             ],
             'groups' => [
                 '/^job-exceptions:.*/' => 'job-exceptions:*',
