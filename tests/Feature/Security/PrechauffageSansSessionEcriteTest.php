@@ -59,7 +59,7 @@ function prechauffageEspionner(): PrechauffageEspionDesSessions
 {
     $espion = new PrechauffageEspionDesSessions(config()->integer('session.lifetime'));
 
-    app('session')->extend('espion-du-prechauffage', static fn (): PrechauffageEspionDesSessions => $espion);
+    app('session')->extend('espion-du-prechauffage', fn (): PrechauffageEspionDesSessions => $espion);
     config(['session.driver' => 'espion-du-prechauffage']);
     app('session')->forgetDrivers();
     app()->forgetInstance('session.store');
@@ -237,8 +237,8 @@ it('ne laisse partir d’un GET marqué aucun cookie mis en file, sauf un efface
         return 'ok';
     });
 
-    $marquee = (new Appareil())->envoyer('GET', '/_prechauffage-cookies-en-file', [], [OuvreLaSession::ENTETE => OuvreLaSession::PRECHAUFFAGE]);
-    $nonMarquee = (new Appareil())->envoyer('GET', '/_prechauffage-cookies-en-file');
+    $marquee = new Appareil()->envoyer('GET', '/_prechauffage-cookies-en-file', [], [OuvreLaSession::ENTETE => OuvreLaSession::PRECHAUFFAGE]);
+    $nonMarquee = new Appareil()->envoyer('GET', '/_prechauffage-cookies-en-file');
     $noms = static fn (TestResponse $reponse): array => array_map(
         static fn (SymfonyCookie $cookie): string => $cookie->getName(),
         $reponse->baseResponse->headers->getCookies(),
