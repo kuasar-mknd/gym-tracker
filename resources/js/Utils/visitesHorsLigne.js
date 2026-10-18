@@ -114,8 +114,10 @@ import {
  * ne repart jamais au serveur. Le rechargement garde l'état de la page
  * (`router.reload` impose `preserveState`) : un formulaire qu'une page gardée
  * remplit depuis ses props se recale donc quand la marque part
- * (`recalerApresLaCopie`, `composables/useCopieHorsLigne.js`), et la séance
- * reprend ses instantanés (`useCopieDeLaSeance`). La déconnexion en est
+ * (`recalerApresLaCopie`, `composables/useCopieHorsLigne.js`), ou ne se
+ * remplit pas sur une copie (« Modifier le minuteur »), ce qu'elle recopie de
+ * ses props suit la prop, et la séance reprend ses instantanés
+ * (`useCopieDeLaSeance`). La déconnexion en est
  * exemptée (`exempterDeLaGardeDesCopies`, que `useDeconnexion` appelle) :
  * arrêtée sur une copie montrée pour lenteur, elle laissait la session
  * ouverte à la personne suivante.

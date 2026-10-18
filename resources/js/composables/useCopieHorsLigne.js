@@ -25,7 +25,8 @@ import { MARQUE_D_UNE_COPIE, estUneCopie, propAbsente } from '@/Utils/copiesServ
  * Une copie qui se recharge au retour du réseau n'est pas remontée :
  * `router.reload` garde l'état de la page, et un minuteur lancé sur la copie
  * continue. Un formulaire qu'une page gardée remplit depuis ses props se
- * recale donc lui-même quand la marque part (`recalerApresLaCopie`).
+ * recale donc lui-même quand la marque part (`recalerApresLaCopie`), ou ne se
+ * remplit pas sur une copie : « Modifier le minuteur » s'y désactive.
  */
 
 /** L'identifiant du texte qui dit pourquoi un bouton d'écriture est désactivé sur une copie. */
