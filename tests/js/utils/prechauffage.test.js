@@ -235,6 +235,41 @@ describe('le préchauffage, seul', () => {
         expect(appels).toHaveLength(1)
     })
 
+    it('sur la fin de la session, ne se dit fini qu’une fois les copies oubliées', async () => {
+        let oublier = () => {}
+        magasin.empreinteDuTemoin = vi.fn(async () => null)
+        magasin.oublierLesCopies = vi.fn(
+            () =>
+                new Promise((resoudre) => {
+                    oublier = () => resoudre(true)
+                }),
+        )
+        const installe = installer({
+            demander: (chemin, options) => {
+                appels.push({ chemin, options })
+
+                // Le serveur dit la fin de la session, et efface le témoin.
+                return Promise.resolve(new Response(null, { status: 401 }))
+            },
+        })
+
+        succes(pageDe())
+        await vi.waitUntil(() => magasin.oublierLesCopies.mock.calls.length === 1)
+
+        let fini = false
+        installe.fini().then(() => (fini = true))
+        await unTour()
+
+        // Le magasin oublie encore : qui attend le préchauffage attend aussi l'oubli.
+        expect(fini).toBe(false)
+
+        oublier()
+        await vi.waitUntil(() => fini)
+
+        expect(magasin.oublierLesCopies).toHaveBeenCalledWith({ fermerLEtat: false, fermerAussi: 'e1' })
+        expect(appels.map((appel) => appel.chemin)).toEqual(['/dashboard'])
+    })
+
     it('ne lève jamais vers la page, même quand l’inventaire ou le stockage se refusent', async () => {
         const rejets = []
         const relais = (raison) => rejets.push(raison)

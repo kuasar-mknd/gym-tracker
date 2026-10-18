@@ -1,16 +1,28 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import { pourcentage } from '@/Utils/nombre'
 
 defineProps({
     activeGoals: { type: Array, required: true },
+    /**
+     * Les objectifs manquent parce que la page est une copie hors ligne, qui
+     * ne garde jamais rien d'eux (#2048) : la carte le dit, plutôt que de
+     * disparaître comme pour un compte sans objectif. Sans lien vers les
+     * objectifs, qu'aucune copie ne garde non plus.
+     */
+    indisponible: { type: Boolean, default: false },
 })
 </script>
 
 <template>
     <!-- Goals Summary (Compact) -->
-    <section v-if="activeGoals.length > 0" class="stagger-5 animate-slide-up">
+    <section v-if="indisponible" class="stagger-5 animate-slide-up" dusk="objectifs-indisponibles">
+        <h3 class="text-text-muted sur-titre mb-4 px-1">Objectifs en cours</h3>
+        <IndisponibleHorsLigne texte="Objectifs indisponibles hors ligne" />
+    </section>
+    <section v-else-if="activeGoals.length > 0" class="stagger-5 animate-slide-up">
         <div class="mb-4 flex items-center justify-between px-1">
             <h3 class="text-text-muted sur-titre">Objectifs en cours</h3>
             <Link

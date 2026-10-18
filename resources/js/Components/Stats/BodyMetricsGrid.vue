@@ -1,13 +1,14 @@
 <script setup>
 import { Deferred } from '@inertiajs/vue3'
-import { defineAsyncComponent } from 'vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre, variation } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const BodyFatChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatChart.vue'))
+const BodyFatChart = graphiqueAsynchrone(() => import('@/Components/Stats/BodyFatChart.vue'))
 
 defineProps({
     bodyFat: Number,
@@ -38,6 +39,9 @@ defineProps({
             <!-- Real Body Fat Chart (Deferred) -->
             <div class="mt-4 h-32 w-full">
                 <Deferred :data="deferredData ? 'deferredData' : 'bodyStats'">
+                    <template #rescue>
+                        <IndisponibleHorsLigne />
+                    </template>
                     <template #fallback>
                         <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                     </template>
@@ -50,6 +54,9 @@ defineProps({
         <!-- This Month Volume -->
         <GlassCard padding="p-5">
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <div class="space-y-4">
                         <GlassSkeleton height="1rem" width="6rem" />

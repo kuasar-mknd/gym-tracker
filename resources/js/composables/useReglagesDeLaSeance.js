@@ -5,6 +5,7 @@ import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 import SyncService from '@/Utils/SyncService'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
+import { recalerApresLaCopie } from '@/composables/useCopieHorsLigne'
 
 /**
  * Ce que « Terminer » attend la file hors ligne, au plus. Un vidage n'a pas de
@@ -172,11 +173,17 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
 
     const showSettingsModal = ref(false)
 
-    const settingsForm = useForm({
+    /** Les réglages de la séance, tels que le formulaire les reprend de la copie locale. */
+    const reglagesDeLaSeance = () => ({
         name: localWorkout.value.name,
         started_at: formatToLocalISO(localWorkout.value.started_at),
         notes: localWorkout.value.notes || '',
     })
+
+    const settingsForm = useForm(reglagesDeLaSeance())
+
+    // Servie d'une copie hors ligne puis rechargée au retour du réseau, la séance reprend les réglages du serveur (#2048).
+    recalerApresLaCopie(settingsForm, reglagesDeLaSeance)
 
     /**
      * Le début ne part que si l'utilisateur l'a changé.

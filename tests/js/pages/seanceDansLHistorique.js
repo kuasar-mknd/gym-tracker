@@ -47,16 +47,18 @@ const EXERCICES = [SQUAT, DEVELOPPE_COUCHE]
 
 /**
  * La séance telle que le serveur la rend maintenant : les lignes de la séance 5
- * qu'il a en base, et leurs séries.
+ * qu'il a en base, et leurs séries. Son nom et ses notes sont ceux que le test
+ * a posés sur le faux serveur (`reglagesDeLaSeance`), comme s'ils avaient
+ * changé ailleurs.
  *
- * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>} serveur
+ * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { reglagesDeLaSeance?: { name?: string, notes?: string | null } }} serveur
  */
 const seanceDuServeur = (serveur) => ({
     id: 5,
-    name: 'Séance du soir',
+    name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
     started_at: '2026-10-12T17:00:00.000000Z',
     ended_at: null,
-    notes: null,
+    notes: serveur.reglagesDeLaSeance?.notes ?? null,
     workout_lines: [...serveur.lignes.values()]
         .filter((ligne) => ligne.workout_id === 5)
         .sort((a, b) => a.id - b.id)
@@ -75,9 +77,12 @@ const seanceDuServeur = (serveur) => ({
 })
 
 /**
- * Les pages de chaque adresse, comme le serveur les rend maintenant.
+ * Les pages de chaque adresse, comme le serveur les rend maintenant. La
+ * bibliothèque de la séance est celle que le test a posée sur le faux serveur
+ * (`bibliotheque`), comme si elle avait changé ailleurs, et sinon le squat et
+ * le développé couché.
  *
- * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur>} serveur
+ * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { bibliotheque?: Array<object> }} serveur
  * @returns {Record<string, () => object>}
  */
 export const pagesDuServeur = (serveur) => ({
@@ -97,7 +102,7 @@ export const pagesDuServeur = (serveur) => ({
             flash: {},
             auth: { user: { id: 1 } },
             workout: seanceDuServeur(serveur),
-            exercises: EXERCICES,
+            exercises: serveur.bibliotheque ?? EXERCICES,
             bornesDUneSerie: null,
         },
         encryptHistory: true,

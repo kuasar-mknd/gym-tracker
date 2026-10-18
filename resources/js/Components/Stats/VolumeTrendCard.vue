@@ -1,12 +1,14 @@
 <script setup>
 import { Deferred } from '@inertiajs/vue3'
-import { defineAsyncComponent, computed } from 'vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
+import { computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const VolumeTrendChart = defineAsyncComponent(() => import('@/Components/Stats/VolumeTrendChart.vue'))
+const VolumeTrendChart = graphiqueAsynchrone(() => import('@/Components/Stats/VolumeTrendChart.vue'))
 
 const props = defineProps({
     volumeTrend: Array,
@@ -48,6 +50,9 @@ const totalVolume = computed(() => {
         </div>
         <div class="h-48">
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                 </template>

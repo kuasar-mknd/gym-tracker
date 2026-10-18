@@ -136,6 +136,7 @@ import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
 const modale = (wrapper) => wrapper.findComponent(AjoutDExerciceModal).vm
@@ -219,7 +220,11 @@ const IconButtonStub = {
 }
 const SettingsModalStub = { name: 'SettingsModalStub', template: '<div />' }
 const FinishModalStub = { name: 'FinishModalStub', template: '<div />' }
-const RestTimerStub = { name: 'RestTimerStub', props: ['duration', 'autoRestTimer'], template: '<div />' }
+const RestTimerStub = {
+    name: 'RestTimerStub',
+    props: ['duration', 'autoRestTimer', 'reglageDesactive', 'raisonDuReglage'],
+    template: '<div />',
+}
 
 /**
  * Chaque page montée ici est démontée à la fin de son test. Une valeur tapée
@@ -457,6 +462,37 @@ describe('Workouts/Show — a background write the server refuses says so', () =
         } finally {
             pageStub.props.auth.user.auto_rest_timer = true
         }
+    })
+
+    /*
+     * Sur une copie hors ligne, le réglage du repos ne partirait pas (#2048,
+     * partie E) : la page le dit au minuteur, qui désactive son interrupteur ;
+     * le minuteur, lui, tourne, et « Terminer » attend le réseau.
+     */
+    it('sur une copie hors ligne, ouvre le minuteur sans laisser changer son réglage', async () => {
+        pageStub.props.horsLigne = { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }
+
+        try {
+            const wrapper = await mountPage()
+
+            await click(wrapper, 'open-rest-timer')
+
+            const timer = wrapper.findComponent(RestTimerStub)
+
+            expect(timer.exists()).toBe(true)
+            expect(timer.props('reglageDesactive')).toBe(true)
+            expect(timer.props('raisonDuReglage')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+            expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeDefined()
+        } finally {
+            delete pageStub.props.horsLigne
+        }
+
+        const servie = await mountPage()
+
+        await click(servie, 'open-rest-timer')
+
+        expect(servie.findComponent(RestTimerStub).props('reglageDesactive')).toBe(false)
+        expect(servie.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
     })
 
     /**

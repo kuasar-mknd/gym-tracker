@@ -83,11 +83,35 @@ describe('la vérification du precache', () => {
     })
 
     it('refuse un precache qui dépasse la coquille', () => {
-        const urls = Array.from({ length: 26 }, (_, i) => `/build/assets/morceau-${i}.js`)
+        const urls = Array.from({ length: 65 }, (_, i) => `/build/assets/morceau-${i}.js`)
         const resultat = verifier(urls, Object.fromEntries(urls.map((url) => [url.slice(1), 'x'])))
 
         expect(resultat.status).toBe(1)
         expect(resultat.stderr).toContain('dépasse la coquille')
+    })
+
+    it('accepte la coquille et la fermeture des pages de la salle, jusqu’à soixante-quatre entrées', () => {
+        const urls = Array.from({ length: 64 }, (_, i) => `/build/assets/morceau-${i}.js`)
+        const resultat = verifier(urls, Object.fromEntries(urls.map((url) => [url.slice(1), 'x'])))
+
+        expect(resultat.stderr).toBe('')
+        expect(resultat.status).toBe(0)
+    })
+
+    /** Workbox refuse, à l'installation, deux entrées de même adresse : l'appareil garderait l'ancien worker. */
+    it('refuse une adresse précachée deux fois', () => {
+        const resultat = verifier(
+            ['/build/assets/main-Ab12.js', '/build/hors-ligne.html', '/build/assets/main-Ab12.js'],
+            {
+                'build/assets/main-Ab12.js': 'x',
+                'build/hors-ligne.html': '<!DOCTYPE html>',
+            },
+        )
+
+        expect(resultat.status).toBe(1)
+        expect(resultat.stderr).toContain('deux fois au precache')
+        expect(resultat.stderr.split('\n')).toContain('/build/assets/main-Ab12.js')
+        expect(resultat.stderr.split('\n')).not.toContain('/build/hors-ligne.html')
     })
 
     it('est le script que lancent le job des actifs et celui des tests PHP', () => {

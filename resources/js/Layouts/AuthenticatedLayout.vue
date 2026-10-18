@@ -8,6 +8,7 @@ import DropdownLink from '@/Components/UI/DropdownLink.vue'
 import NavLink from '@/Components/Navigation/NavLink.vue'
 import ActiveWorkoutBanner from '@/Components/Dashboard/ActiveWorkoutBanner.vue'
 import BandeauDeMiseAJour from '@/Components/UI/BandeauDeMiseAJour.vue'
+import BandeauHorsLigne from '@/Components/UI/BandeauHorsLigne.vue'
 import ToastsDuLayout from '@/Components/UI/ToastsDuLayout.vue'
 import QuestionDeDeconnexion from '@/Components/UI/QuestionDeDeconnexion.vue'
 import MarqueDeLApplication from '@/Components/UI/MarqueDeLApplication.vue'
@@ -338,6 +339,16 @@ onUnmounted(() => {
             class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6"
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
         >
+            <!--
+                Sous le bandeau de mise à jour, et dans le flux plutôt que
+                par-dessus : une page servie depuis sa copie hors ligne le
+                reste tant qu'elle est affichée, et un bandeau posé sur la
+                page en cacherait le haut (#2048).
+            -->
+            <div class="mx-auto" :class="LARGEURS[largeur]">
+                <BandeauHorsLigne />
+            </div>
+
             <div v-if="activeWorkout && !isWorkoutShow" class="mx-auto mb-6" :class="LARGEURS[largeur]">
                 <ActiveWorkoutBanner :workout="activeWorkout" :compact="banniereCompacte" />
             </div>

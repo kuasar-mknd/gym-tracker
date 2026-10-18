@@ -214,7 +214,7 @@ const meriteUneCopie = (page) =>
  *   desinstaller: () => void,
  *   ecrituresFinies: () => Promise<void>,
  *   garder: (page: object, options?: { pasApres?: number }) => void,
- *   completer: (page: object, noms: string[], options?: { pasApres?: number }) => void,
+ *   completer: (page: object, noms: string[], options?: { pasApres?: number, valableAu?: number }) => void,
  *   presser: () => void,
  *   origineDeLaPage: () => OrigineDeLaPage,
  *   lireLaCopie: (adresse: string) => Promise<object | null>,
@@ -348,13 +348,15 @@ export const installerLEcritureDesCopies = ({
      * Les props qu'une réponse partielle a reçues, versées dans la copie de
      * sa page. `auth` reste celui de la dernière réponse complète : il dit le
      * compte, et la copie garde le sien. `pasApres`, comme pour `garder` :
-     * une prop datée après lui reste.
+     * une prop datée après lui reste. `valableAu` : l'instant où ce qu'on
+     * verse était vrai, dont la copie date les props versées (l'instantané de
+     * la séance, décidé avant d'être écrit au repos).
      *
      * @param {object} page
      * @param {string[]} noms
-     * @param {{ pasApres?: number }} [options]
+     * @param {{ pasApres?: number, valableAu?: number }} [options]
      */
-    const completer = (page, noms, { pasApres } = {}) => {
+    const completer = (page, noms, { pasApres, valableAu } = {}) => {
         if (!meriteUneCopie(page)) {
             return
         }
@@ -371,7 +373,7 @@ export const installerLEcritureDesCopies = ({
         })
 
         if (instantane !== null) {
-            decider((generation) => magasin.completerUneCopie(instantane, recues, { generation, pasApres }))
+            decider((generation) => magasin.completerUneCopie(instantane, recues, { generation, pasApres, valableAu }))
         }
     }
 

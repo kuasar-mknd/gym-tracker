@@ -23,6 +23,19 @@ defineProps({
         type: String,
         default: 'empty-state-action',
     },
+    /**
+     * L'action ne peut pas partir, et l'identifiant du texte qui dit pourquoi
+     * (`aria-describedby`) : sur une copie hors ligne, une création attend le
+     * réseau (#2048, `useCopieHorsLigne`).
+     */
+    actionDesactivee: {
+        type: Boolean,
+        default: false,
+    },
+    raisonDeLAction: {
+        type: String,
+        default: undefined,
+    },
     color: {
         type: String,
         default: 'orange', // orange, violet, pink, cyan
@@ -145,7 +158,13 @@ const isLigatureName = (icon) => /^[a-z0-9_]+$/.test(icon)
             <!-- Action -->
             <div v-if="actionLabel || $slots.action">
                 <slot name="action">
-                    <GlassButton variant="primary" @click="$emit('action')" :data-testid="actionId">
+                    <GlassButton
+                        variant="primary"
+                        :data-testid="actionId"
+                        :disabled="actionDesactivee"
+                        :aria-describedby="actionDesactivee ? raisonDeLAction : undefined"
+                        @click="$emit('action')"
+                    >
                         {{ actionLabel }}
                     </GlassButton>
                 </slot>

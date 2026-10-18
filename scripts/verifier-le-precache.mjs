@@ -6,19 +6,23 @@ import { readFileSync, statSync } from 'node:fs'
  * Le glob prenait tout ce que Vite écrit : 142 fichiers, 1 249 Kio, dont le
  * graphique et le morceau de chaque page jamais visitée (#1814). La coquille
  * — l'entrée, la CSS, Vue, les polices latines, l'accueil et la séance — en
- * pèse 572. Un glob élargi par mégarde referait grossir l'installation sans
- * que rien ne le dise. Depuis #2048, la police des icônes et les dix icônes
- * de public/ y entrent aussi : 23 entrées, 624 Kio.
+ * pesait 572. Depuis #2048, la police des icônes et les dix icônes de public/
+ * y entrent aussi (23 entrées, 662 Kio), puis la fermeture de l'entrée et des
+ * pages de la salle, sans leurs graphiques (`resources/js/sw/fermetureDuPrecache.js`) :
+ * 60 entrées, 836 Kio. Un motif élargi, ou une fermeture qui suivrait l'entrée
+ * jusqu'à chaque page, referait grossir l'installation sans que rien ne le
+ * dise.
  *
  * Chaque entrée doit aussi être un fichier de public/ que le serveur sert tel
  * quel, jamais un script que PHP exécuterait : une seule en 404 et Workbox
  * annule toute l'installation, ce qui a laissé la production sans worker de la
  * 1.5.0 à la 1.5.8 (#1683). `ServiceWorkerAssetsTest` tient la même règle côté
- * PHP. La CI lance ce script deux fois : sur la construction, puis sur les
- * actifs que les tests PHP téléchargent.
+ * PHP. Deux entrées de même adresse, que Workbox refuse à l'installation du
+ * worker, le font échouer aussi. La CI lance ce script deux fois : sur la
+ * construction, puis sur les actifs que les tests PHP téléchargent.
  */
-const MAX_ENTREES = 25
-const MAX_KIO = 700
+const MAX_ENTREES = 64
+const MAX_KIO = 870
 
 /**
  * La taille du fichier de public/ qu'une entrée désigne, ou `null` quand le
@@ -48,6 +52,14 @@ const urls = [...worker.matchAll(/"url":"([^"]+)"/g)].map((trouve) => trouve[1])
 
 if (urls.length === 0) {
     console.error('Aucune entrée de precache trouvée dans public/sw.js : le worker a-t-il été construit ?')
+    process.exit(1)
+}
+
+const doubles = [...new Set(urls.filter((url, rang) => urls.indexOf(url) !== rang))]
+
+if (doubles.length > 0) {
+    console.error("Des adresses sont deux fois au precache : Workbox refuserait d'installer le worker.")
+    console.error(doubles.join('\n'))
     process.exit(1)
 }
 

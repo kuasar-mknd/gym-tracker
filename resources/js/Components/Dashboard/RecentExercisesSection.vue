@@ -1,8 +1,8 @@
 <script setup>
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const RecentWorkoutsExercisesChart = defineAsyncComponent(
+const RecentWorkoutsExercisesChart = graphiqueAsynchrone(
     () => import('@/Components/Stats/RecentWorkoutsExercisesChart.vue'),
 )
 

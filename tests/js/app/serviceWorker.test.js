@@ -1,17 +1,43 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { ADRESSE_DE_LA_SONDE } from '@/Utils/sondeDuServeur'
+import { jsRoot } from '../conventions/sourceFiles'
 
 const clientsClaim = vi.fn()
 const cleanupOutdatedCaches = vi.fn()
 const precacheAndRoute = vi.fn()
 const pageHorsLigne = { page: 'hors ligne, précachée' }
 const matchPrecache = vi.fn(async () => pageHorsLigne)
+/** La clé du precache d'une adresse : aucune, sauf pour les adresses que le cas y met. */
+const getCacheKeyForURL = vi.fn(() => undefined)
+const NOM_DU_PRECACHE = 'workbox-precache-v2-http://localhost/'
 
-vi.mock('workbox-core', () => ({ clientsClaim: (...args) => clientsClaim(...args) }))
+vi.mock('workbox-core', () => ({
+    clientsClaim: (...args) => clientsClaim(...args),
+    cacheNames: { precache: NOM_DU_PRECACHE },
+}))
 vi.mock('workbox-precaching', () => ({
     cleanupOutdatedCaches: (...args) => cleanupOutdatedCaches(...args),
+    getCacheKeyForURL: (...args) => getCacheKeyForURL(...args),
     matchPrecache: (...args) => matchPrecache(...args),
     precacheAndRoute: (...args) => precacheAndRoute(...args),
+}))
+
+/**
+ * La construction précédente se teste dans constructionPrecedente.test.js,
+ * et sur deux constructions dans deuxConstructions.test.js ; ici, seulement le
+ * branchement : l'installation, l'activation, et la promesse remise à
+ * `waitUntil`.
+ */
+const constructionMiseDeCote = Promise.resolve('construction mise de côté')
+const constructionBasculee = Promise.resolve('construction basculée')
+const mettreDeCoteLaConstructionPrecedente = vi.fn(() => constructionMiseDeCote)
+const basculerLaConstructionPrecedente = vi.fn(() => constructionBasculee)
+
+vi.mock('@/sw/constructionPrecedente', () => ({
+    mettreDeCoteLaConstructionPrecedente: (...args) => mettreDeCoteLaConstructionPrecedente(...args),
+    basculerLaConstructionPrecedente: (...args) => basculerLaConstructionPrecedente(...args),
 }))
 
 /**
@@ -168,6 +194,53 @@ describe('mise en service du worker', () => {
         // Precaching a literal list instead would freeze the worker on whatever
         // asset names existed the day it was written.
         expect(auDemarrage.precache).toEqual([manifest])
+    })
+
+    /*
+     * Workbox refuse un worker où son point d'injection apparaît deux fois :
+     * le precache et la construction précédente lisent le même manifeste.
+     */
+    it('ne lit qu’une fois le manifeste injecté', () => {
+        const source = readFileSync(join(jsRoot, 'sw.js'), 'utf8')
+
+        expect(source.match(/self\.__WB_MANIFEST/g)).toHaveLength(1)
+    })
+})
+
+describe('un déploiement pendant qu’une page est ouverte', () => {
+    const magasinDuWorker = { magasin: 'du worker' }
+
+    beforeEach(() => {
+        vi.stubGlobal('caches', magasinDuWorker)
+        mettreDeCoteLaConstructionPrecedente.mockClear()
+        basculerLaConstructionPrecedente.mockClear()
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('met de côté, à l’installation, ce que le nouveau manifeste n’a plus', () => {
+        const attendu = []
+        listeners.install({ waitUntil: (promesse) => attendu.push(promesse) })
+
+        expect(mettreDeCoteLaConstructionPrecedente).toHaveBeenCalledExactlyOnceWith({
+            magasin: magasinDuWorker,
+            nomDuPrecache: NOM_DU_PRECACHE,
+            manifeste: manifest,
+            origine: self.location.origin,
+        })
+        expect(attendu).toEqual([constructionMiseDeCote])
+    })
+
+    it('range à l’activation ce que l’installation a mis de côté, en plus du préchargement', async () => {
+        const attendu = []
+        listeners.activate({ waitUntil: (promesse) => attendu.push(promesse) })
+        await Promise.all(attendu)
+
+        expect(basculerLaConstructionPrecedente).toHaveBeenCalledExactlyOnceWith(magasinDuWorker)
+        expect(attendu).toContain(constructionBasculee)
+        expect(attendu).toHaveLength(2)
     })
 })
 
@@ -469,11 +542,66 @@ describe('ouverture d’une page', () => {
     })
 
     it('active le préchargement des navigations à l’activation', async () => {
+        navigationPreload.enable.mockClear()
+        vi.stubGlobal('caches', {})
         const attendu = []
         listeners.activate({ waitUntil: (promesse) => attendu.push(promesse) })
         await Promise.all(attendu)
+        vi.unstubAllGlobals()
 
         expect(navigationPreload.enable).toHaveBeenCalledTimes(1)
-        expect(attendu).toHaveLength(1)
+        expect(attendu).toHaveLength(2)
+    })
+})
+
+describe('un actif construit', () => {
+    /** Un magasin de caches qui ne connaît que `connus`, par adresse. */
+    const magasinAvec = (connus = {}) => {
+        const cache = {
+            match: vi.fn(async (requete) => connus[requete.url]),
+            put: vi.fn(async () => undefined),
+            keys: vi.fn(async () => []),
+            delete: vi.fn(async () => true),
+        }
+
+        return { open: vi.fn(async () => cache), match: vi.fn(async () => undefined) }
+    }
+
+    const demanderUnActif = (adresse) => {
+        const respondWith = vi.fn()
+        listeners.fetch({ request: new Request(adresse), respondWith, waitUntil: vi.fn() })
+
+        return respondWith
+    }
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+        getCacheKeyForURL.mockReset()
+        getCacheKeyForURL.mockReturnValue(undefined)
+    })
+
+    /*
+     * La route du precache, posée par `precacheAndRoute` avant l'écouteur du
+     * worker, a déjà répondu : un second `respondWith` levait
+     * `InvalidStateError` à chaque actif précaché.
+     */
+    it('laisse à la route du precache un actif qu’il a, sans second respondWith', () => {
+        const adresse = `${self.location.origin}/build/assets/main-Ab12.js`
+        vi.stubGlobal('caches', magasinAvec())
+        getCacheKeyForURL.mockImplementation((url) => (url === adresse ? adresse : undefined))
+
+        expect(demanderUnActif(adresse)).not.toHaveBeenCalled()
+        expect(getCacheKeyForURL).toHaveBeenCalledWith(adresse)
+    })
+
+    it('sert par le cache des actifs un morceau que le precache n’a pas', async () => {
+        const adresse = `${self.location.origin}/build/assets/Stats-Cd34.js`
+        const morceau = { morceau: 'des statistiques' }
+        vi.stubGlobal('caches', magasinAvec({ [adresse]: morceau }))
+
+        const respondWith = demanderUnActif(adresse)
+
+        expect(respondWith).toHaveBeenCalledTimes(1)
+        await expect(respondWith.mock.calls[0][0]).resolves.toBe(morceau)
     })
 })

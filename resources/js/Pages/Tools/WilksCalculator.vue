@@ -203,7 +203,8 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent } from 'vue'
+import { computed } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { Head, useForm, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
@@ -220,8 +221,8 @@ import { nombre } from '@/Utils/nombre'
 import { dateCourte } from '@/Utils/date'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const WilksScoreChart = defineAsyncComponent(() => import('@/Components/Stats/WilksScoreChart.vue'))
-const WilksHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WilksHistoryChart.vue'))
+const WilksScoreChart = graphiqueAsynchrone(() => import('@/Components/Stats/WilksScoreChart.vue'))
+const WilksHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/WilksHistoryChart.vue'))
 
 defineProps({
     history: {

@@ -29,6 +29,8 @@ vi.mock('@inertiajs/vue3', async () => {
 
             return form
         },
+        // Une page que le serveur a rendue, sans marque de copie hors ligne (#2048).
+        usePage: () => ({ props: {} }),
     }
 })
 

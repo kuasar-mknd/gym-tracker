@@ -20,6 +20,7 @@ import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -28,6 +29,7 @@ import WorkoutSettingsModal from '@/Components/Workout/WorkoutSettingsModal.vue'
 import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
+import SeriesHorsDeLaCopie from '@/Components/Workout/SeriesHorsDeLaCopie.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
@@ -78,10 +80,18 @@ const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
     useMinuteurDeRepos()
+// Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 const { nouvelIdTemporaire, newRowKey, rowKey, pendingIds, queuedLineIds } = useIdentiteDesRangees()
 const showAddExercise = ref(false)
-const localExercises = ref([...(props.exercises || [])].filter((e) => e && e.id))
+const bibliotheque = (exercices) => [...(exercices || [])].filter((e) => e && e.id)
+const localExercises = ref(bibliotheque(props.exercises))
+// Suit le serveur : rechargée depuis sa copie sans remontage (#2048), la séance gardait la bibliothèque de la copie.
+watch(
+    () => props.exercises,
+    (exercices) => (localExercises.value = bibliotheque(exercices)),
+)
 const { unsyncedSetIds, clearUnsynced, markUnsynced, editError, reportEditFailure, reportSyncFailure } =
     useRapportDeSynchronisation({
         page,
@@ -209,9 +219,7 @@ const { addExercise, removeLine, retraitDemande, titreDuRetrait, annulerLeRetrai
 // Les tests vident le debounce d'une serie par ici.
 defineExpose({ flushPendingUpdates })
 
-const handleFabAddExercise = () => {
-    showAddExercise.value = true
-}
+const handleFabAddExercise = () => (showAddExercise.value = true)
 
 onMounted(() => {
     // Le premier relevé : la séance telle qu'elle est arrivée, du serveur ou de
@@ -288,6 +296,7 @@ onUnmounted(() => {
         </template>
 
         <div class="pb-main-safe">
+            <SeriesHorsDeLaCopie :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
                 <GlassCard
                     v-if="localWorkout.workout_lines.length === 0"
@@ -379,6 +388,8 @@ onUnmounted(() => {
             :key="timerRun"
             :duration="timerDuration"
             :auto-rest-timer="autoRestTimer"
+            :reglage-desactive="surUneCopie"
+            :raison-du-reglage="raisonDUneEcriture"
             @finished="showTimer = false"
             @close="showTimer = false"
             @update:auto-rest-timer="setAutoRestTimer"

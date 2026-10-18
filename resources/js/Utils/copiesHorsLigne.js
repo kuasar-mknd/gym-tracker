@@ -887,12 +887,23 @@ export const creerLeMagasinDesCopies = ({
      * prop que la copie date d'après cet instant : celle-ci reste, et sans
      * aucune autre prop à verser, rien ne s'écrit (`plus-recente`).
      *
+     * Chaque prop versée se date de l'écriture, ou de `valableAu` quand il
+     * est plus ancien : l'instant où ce qu'on verse était vrai. L'instantané
+     * de la séance se décide quand tout est enregistré, puis s'écrit au
+     * repos ; une écriture acceptée entre les deux n'y est pas, et la séance
+     * servie (partie E) ne le dirait pas si l'instantané se datait de son
+     * écriture.
+     *
      * @param {object} page l'objet de page d'Inertia après la réponse
      * @param {string[]} noms les props que la réponse a reçues
-     * @param {{ generation?: number, pasApres?: number }} [options]
+     * @param {{ generation?: number, pasApres?: number, valableAu?: number }} [options]
      * @returns {Promise<string>} `ecrite`, ou la raison du refus
      */
-    const completerUneCopie = async (page, noms, { generation: generationDeDepart = generation, pasApres } = {}) => {
+    const completerUneCopie = async (
+        page,
+        noms,
+        { generation: generationDeDepart = generation, pasApres, valableAu } = {},
+    ) => {
         const preparee = await preparer(page)
 
         if (preparee.refus !== undefined) {
@@ -922,6 +933,7 @@ export const creerLeMagasinDesCopies = ({
 
             const ancienne = await dechiffrer(cle, authentifiees, precedente)
             const maintenant = horloge()
+            const dateDesVersees = Number.isFinite(valableAu) ? Math.min(valableAu, maintenant) : maintenant
 
             ancienne.datesDesProps ??= {}
             ancienne.page.props = propsGardables(ancienne.page.component, ancienne.page.props)
@@ -940,7 +952,7 @@ export const creerLeMagasinDesCopies = ({
 
             for (const nom of versees) {
                 ancienne.page.props[nom] = gardables[nom]
-                ancienne.datesDesProps[nom] = maintenant
+                ancienne.datesDesProps[nom] = dateDesVersees
             }
 
             ancienne.page.flash = {}

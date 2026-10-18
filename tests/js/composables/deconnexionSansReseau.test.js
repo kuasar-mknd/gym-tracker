@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import { createApp, h } from 'vue'
-import { EVENEMENT_SANS_RESEAU, installerLesVisitesHorsLigne } from '@/Utils/visitesHorsLigne'
+import {
+    ECRITURE_DEPUIS_UNE_COPIE,
+    EVENEMENT_SANS_RESEAU,
+    installerLesVisitesHorsLigne,
+} from '@/Utils/visitesHorsLigne'
 import {
     RequeteSimulee,
     relayerLesRejetsNonGeres,
@@ -185,5 +189,48 @@ describe('se déconnecter sans réseau', () => {
 
         expect(logouts()).toHaveLength(2)
         expect(annonces).toEqual([])
+    })
+
+    /*
+     * Une copie hors ligne arrête toute écriture partie d'elle (#2048, partie
+     * E), sauf la déconnexion : montrée pour lenteur, une déconnexion arrêtée
+     * laissait la session ouverte à la personne suivante.
+     */
+    it('part d’une copie hors ligne, que la garde des écritures arrête pour le reste', async () => {
+        await new Promise((fini) =>
+            routeur.replace({
+                component: 'Dashboard',
+                url: '/dashboard',
+                version: 'v',
+                props: { errors: {}, texte: 'Accueil', horsLigne: { copieDu: Date.now(), raison: 'lent' } },
+                onFinish: fini,
+            }),
+        )
+        const ecritures = () => requetes.filter((requete) => requete.methode.toUpperCase() !== 'GET')
+
+        // Une écriture ordinaire ne part pas, et la copie se recharge, sans réponse ici.
+        reseau.mode = 'muet'
+        routeur.post('/workouts', { nom: 'Jambes' })
+        await vi.waitUntil(() => requetes.length === 1)
+
+        expect(ecritures()).toEqual([])
+        expect(annonces).toEqual([ECRITURE_DEPUIS_UNE_COPIE])
+
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia({
+            component: 'Auth/Login',
+            url: '/login',
+            version: 'v',
+            props: { texte: 'Connexion' },
+        })
+        const fin = await attendreLaFinDeLaVisite()
+        await seDeconnecter()
+        await fin()
+
+        expect(ecritures().map((requete) => new URL(requete.url, window.location.href).pathname)).toEqual(['/logout'])
+        expect(document.getElementById('contenu').textContent).toBe('Connexion')
+        expect(laisse.comptesOublies).toEqual(['1'])
+        expect(annonces).toEqual([ECRITURE_DEPUIS_UNE_COPIE])
+        routeur.cancelAll()
     })
 })

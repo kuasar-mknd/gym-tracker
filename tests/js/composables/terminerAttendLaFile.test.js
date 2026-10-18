@@ -18,6 +18,8 @@ vi.mock('@/Utils/http', () => ({ http: (config) => reseau.serveur.repondre(confi
 vi.mock('@inertiajs/vue3', () => ({
     router: { post: vi.fn(), patch: (...args) => inertia.patch(...args) },
     useForm: (champs) => ({ ...champs, transform: vi.fn(), patch: vi.fn() }),
+    // Les réglages se recalent à la sortie d'une copie hors ligne : la page du serveur ici (#2048).
+    usePage: () => ({ props: {} }),
 }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))
 vi.mock('@formkit/drag-and-drop/vue', () => ({ dragAndDrop: () => {} }))

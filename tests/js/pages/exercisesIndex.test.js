@@ -10,6 +10,8 @@ import { mount } from '@vue/test-utils'
 const hoisted = vi.hoisted(() => ({
     routerDelete: vi.fn(),
     haptics: vi.fn(),
+    /** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+    page: { props: {} },
 }))
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -28,6 +30,7 @@ vi.mock('@inertiajs/vue3', () => ({
         put: vi.fn(),
         reset: vi.fn(),
     }),
+    usePage: () => hoisted.page,
 }))
 
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => hoisted.haptics(...args) }))
@@ -37,6 +40,7 @@ vi.mock('@/Components/Stats/ExerciseCategoryChart.vue', () => ({
 }))
 
 import ExercisesIndex from '@/Pages/Exercises/Index.vue'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** La question passe par un dialogue de l'application, plus par `confirm()`. */
 const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
@@ -61,6 +65,7 @@ beforeAll(() => {
 beforeEach(() => {
     hoisted.routerDelete.mockReset()
     hoisted.haptics.mockReset()
+    hoisted.page.props = {}
     window.history.replaceState({}, '', '/exercises')
 })
 
@@ -512,6 +517,59 @@ describe('Exercises/Index — divers', () => {
         })
 
         expect(wrapper.text()).toContain('Exercice déjà utilisé')
+
+        wrapper.unmount()
+    })
+})
+
+/*
+ * Sur une copie hors ligne, une création ne partirait pas (#2048, partie E) :
+ * ses trois boutons, celui de la barre de bureau, le « + » de l'en-tête et
+ * l'invitation d'une bibliothèque vide, le disent d'avance.
+ */
+describe('Exercises/Index — sur une copie hors ligne', () => {
+    const monterAvecLEnTete = (exercises) =>
+        mount(ExercisesIndex, {
+            props: { exercises },
+            global: {
+                directives: { press: {} },
+                mocks: { $page: { props: { errors: {} } } },
+                stubs: {
+                    AuthenticatedLayout: { template: '<div><slot name="header-actions" /><slot /></div>' },
+                    ExerciseCategoryChart: true,
+                    ExerciseCard: ExerciseCardStub,
+                },
+            },
+        })
+
+    const boutonsDeCreation = (wrapper) =>
+        [
+            '[data-testid="create-exercise-desktop"]',
+            '[data-testid="create-exercise-mobile-header"]',
+            '[data-testid="create-exercise-button"]',
+        ].map((selecteur) => wrapper.get(selecteur))
+
+    it('ne propose aucune création, et dit pourquoi', async () => {
+        hoisted.page.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = monterAvecLEnTete([])
+
+        for (const bouton of boutonsDeCreation(wrapper)) {
+            expect(bouton.attributes('disabled')).toBeDefined()
+            expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+            await bouton.trigger('click')
+        }
+
+        expect(wrapper.findComponent({ name: 'NouvelExerciceModal' }).props('show')).toBe(false)
+        wrapper.unmount()
+    })
+
+    it('les propose sur une page que le serveur a rendue', () => {
+        const wrapper = monterAvecLEnTete([])
+
+        for (const bouton of boutonsDeCreation(wrapper)) {
+            expect(bouton.attributes('disabled')).toBeUndefined()
+            expect(bouton.attributes('aria-describedby')).toBeUndefined()
+        }
 
         wrapper.unmount()
     })

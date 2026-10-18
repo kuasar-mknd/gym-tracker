@@ -9,6 +9,7 @@ vi.mock('@/Utils/SyncService', () => ({ default: { entreesDuCompte: () => [] } }
 
 import { useBrouillonsDeSeries } from '@/composables/useBrouillonsDeSeries'
 import { SOUVENIR_DE_LA_SEANCE, useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
+import { EVENEMENT_AVANT_UNE_COPIE } from '@/Utils/visitesHorsLigne'
 
 /*
  * L'entrée d'historique de la séance, tenue à jour de ce que la page a fait
@@ -176,6 +177,31 @@ describe('l’entrée d’historique de la séance', () => {
          */
         serie.reps = 7
         avantLaPage({ component: 'Workouts/Index', url: '/workouts' })
+        await nextTick()
+
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+        expect(derniereGardee().workout_lines[0].sets[0].reps).toBe(6)
+    })
+
+    /*
+     * Une copie hors ligne arrive par `router.push`, une visite côté client,
+     * qui n'émet pas `beforeUpdate` (#2048, partie E) : sans son annonce, une
+     * saisie gardée juste après rangerait la séance dans l'entrée de la copie.
+     */
+    it('ne s’écrit plus dès qu’une copie hors ligne va être poussée', async () => {
+        const { localWorkout } = ouvrir(pageDeLaSeance())
+        const [serie] = localWorkout.value.workout_lines[0].sets
+
+        serie.reps = 6
+        await nextTick()
+        expect(inertia.remember).toHaveBeenCalledTimes(1)
+
+        serie.reps = 7
+        window.dispatchEvent(
+            new CustomEvent(EVENEMENT_AVANT_UNE_COPIE, {
+                detail: { page: { component: 'Workouts/Index', url: '/workouts' } },
+            }),
+        )
         await nextTick()
 
         expect(inertia.remember).toHaveBeenCalledTimes(1)

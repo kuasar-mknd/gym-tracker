@@ -674,6 +674,20 @@ describe('pour la page de séance et le préchauffage', () => {
         expect(lue.page.props.statistiques).toEqual({ seances: 5 })
         expect(lue.page.props.auth.user.name).toBe('Camille Horsligne')
     })
+
+    // L'instantané de la séance se date de sa décision, pas de son écriture au repos (#2048, partie E).
+    it('date la réponse partielle de l’instant où elle était vraie, quand on le lui dit', async () => {
+        await recevoir(pageDe({ props: { statistiques: { seances: 2 } } }))
+        const decide = maintenant
+
+        maintenant += 2000
+        ecriture.completer(pageDe({ props: { statistiques: { seances: 5 } } }), ['statistiques'], {
+            valableAu: decide,
+        })
+        await ecriture.ecrituresFinies()
+
+        expect((await ecriture.lireLaCopie('/dashboard')).datesDesProps.statistiques).toBe(decide)
+    })
 })
 
 /*

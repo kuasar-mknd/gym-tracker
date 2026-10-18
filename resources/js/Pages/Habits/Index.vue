@@ -5,15 +5,17 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import FormulaireDHabitude from '@/Components/Habits/FormulaireDHabitude.vue'
 import { Head, router, Deferred } from '@inertiajs/vue3'
-import { ref, defineAsyncComponent } from 'vue'
+import { ref } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 
-const HabitHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/HabitHistoryChart.vue'))
-const HabitConsistencyChart = defineAsyncComponent(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
+const HabitHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/HabitHistoryChart.vue'))
+const HabitConsistencyChart = graphiqueAsynchrone(() => import('@/Components/Stats/HabitConsistencyChart.vue'))
 
 /**
  * Les habitudes de la semaine : une ligne par habitude, une case par jour, et
@@ -131,6 +133,10 @@ const getProgressPercent = (habit) => {
         <div class="space-y-6">
             <!-- Deferred Analytical Stats -->
             <Deferred data="stats">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
+
                 <template #fallback>
                     <div class="space-y-6">
                         <GlassCard class="animate-pulse">

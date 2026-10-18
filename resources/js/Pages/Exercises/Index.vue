@@ -9,7 +9,8 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed, defineAsyncComponent, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import ExerciseCard from '@/Components/Workout/ExerciseCard.vue'
@@ -24,10 +25,11 @@ import { useFiltreDansLUrl } from '@/composables/useFiltreDansLUrl'
 import { EXERCISE_CATEGORIES, EXERCISE_TYPES, CATEGORY_BORDER_COLORS, TYPE_ICONS } from '@/Utils/constants'
 import { compte } from '@/Utils/nombre'
 import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 const { isRefreshing, pullDistance } = usePullToRefresh()
 
-const ExerciseCategoryChart = defineAsyncComponent(() => import('@/Components/Stats/ExerciseCategoryChart.vue'))
+const ExerciseCategoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/ExerciseCategoryChart.vue'))
 
 const props = defineProps({
     /** Array of all exercises belonging to the user. */
@@ -35,6 +37,9 @@ const props = defineProps({
 })
 
 const showAddForm = ref(false)
+
+/** Sur une copie hors ligne, une création ne partirait pas (#2048) : ses boutons le disent d'avance. */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 const editingExercise = ref(null)
 const searchQuery = ref('')
 const activeCategory = useFiltreDansLUrl('category')
@@ -197,6 +202,8 @@ const typeLabel = (type) => {
                     @click="showAddForm = true"
                     variant="primary"
                     class="bureau:flex hidden"
+                    :disabled="surUneCopie"
+                    :aria-describedby="raisonDUneEcriture"
                     data-testid="create-exercise-desktop"
                     dusk="create-exercise-btn-desktop"
                 >
@@ -235,6 +242,8 @@ const typeLabel = (type) => {
                     description="Ta bibliothèque est vide. Commence par créer ton premier exercice pour sculpter ton corps !"
                     icon="🏋️"
                     action-label="Créer le premier exercice"
+                    :action-desactivee="surUneCopie"
+                    :raison-de-l-action="raisonDUneEcriture"
                     @action="showAddForm = true"
                     color="green"
                     action-id="create-exercise-button"
@@ -338,6 +347,8 @@ const typeLabel = (type) => {
                 @click="showAddForm = true"
                 variant="primary"
                 class="min-h-touch! flex h-11! w-11! items-center justify-center p-0!"
+                :disabled="surUneCopie"
+                :aria-describedby="raisonDUneEcriture"
                 data-testid="create-exercise-mobile-header"
                 dusk="create-exercise-btn"
                 aria-label="Nouvel exercice"

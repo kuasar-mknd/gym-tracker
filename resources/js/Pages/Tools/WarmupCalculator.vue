@@ -84,7 +84,14 @@
                                 Personnaliser les paliers
                             </p>
                         </div>
-                        <GlassButton @click="savePreferences" variant="primary" size="sm" :loading="form.processing">
+                        <GlassButton
+                            variant="primary"
+                            size="sm"
+                            :loading="form.processing"
+                            :disabled="surUneCopie"
+                            :aria-describedby="raisonDUneEcriture"
+                            @click="savePreferences"
+                        >
                             Enregistrer
                         </GlassButton>
                     </div>
@@ -190,6 +197,7 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import { compte, nombre, pourcentage } from '@/Utils/nombre'
+import { recalerApresLaCopie, useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 const props = defineProps({
     preference: {
@@ -200,11 +208,17 @@ const props = defineProps({
 
 const targetWeight = ref(100)
 
-const form = useForm({
+/** Les préférences du compte, telles que le formulaire les reprend de la page. */
+const valeursDesPreferences = () => ({
     bar_weight: props.preference.bar_weight,
     rounding_increment: props.preference.rounding_increment,
     steps: props.preference.steps || [],
 })
+
+const form = useForm(valeursDesPreferences())
+
+// Servie d'une copie hors ligne puis rechargée au retour du réseau, la page reprend les préférences du serveur (#2048).
+recalerApresLaCopie(form, valeursDesPreferences)
 
 const addStep = () => {
     form.steps.push({ percent: 50, reps: 5, label: '' })
@@ -217,6 +231,9 @@ const removeStep = (index) => {
 }
 
 const saveError = ref(null)
+
+/** Sur une copie hors ligne, les paliers ne s'enregistrent pas (#2048) : le calcul, lui, se fait. */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 /**
  * The server validates every step — steps.*.percent max:100, steps.*.reps

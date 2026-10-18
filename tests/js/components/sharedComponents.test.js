@@ -14,6 +14,8 @@ const hoisted = vi.hoisted(() => ({
     forms: [],
     formDelete: vi.fn(),
     detacherLAppareil: vi.fn(),
+    /** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+    page: { props: {} },
 }))
 
 /** Le détachement se teste dans useDeconnexion.test.js ; ici, seulement l'appel. */
@@ -52,6 +54,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
             return form
         },
+        usePage: () => hoisted.page,
     }
 })
 
@@ -63,6 +66,7 @@ import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import { ECRITURE_NON_CONFIRMEE, SUPPRESSION_DU_COMPTE_NON_CONFIRMEE } from '@/Utils/visitesHorsLigne'
 import { annoncesPendant } from '../utils/annoncesSansReseau'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 beforeAll(() => {
     globalThis.route = (name, params) => ['', name, ...Object.values(params ?? {})].join('/')
@@ -1059,6 +1063,55 @@ describe('ExerciseCard', () => {
         const idle = mountCard()
         expect(idle.getComponent(SwipeableRow).props('disabled')).toBe(false)
         idle.unmount()
+    })
+
+    /*
+     * Sur une copie hors ligne, ni la modification ni la suppression ne
+     * partiraient (#2048, partie E) : le glissement ne les propose plus, et
+     * chaque bouton dit pourquoi.
+     */
+    describe('sur une copie hors ligne', () => {
+        beforeEach(() => {
+            hoisted.page.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        })
+
+        afterEach(() => {
+            hoisted.page.props = {}
+        })
+
+        it('ne propose ni de modifier ni de supprimer, et dit pourquoi', async () => {
+            const wrapper = mountCard()
+            const boutons = [
+                `[dusk="edit-exercise-btn-${EXERCISE.id}"]`,
+                '[data-testid="edit-exercise-button"]',
+                '[data-testid="delete-exercise-button"]',
+            ].map((selecteur) => wrapper.get(selecteur))
+
+            // La rangée coupée retire ses actions : ni le doigt ni le clavier n'atteignent les siennes.
+            expect(wrapper.getComponent(SwipeableRow).props('disabled')).toBe(true)
+            expect(wrapper.find('[data-testid="delete-exercise-button-mobile"]').exists()).toBe(false)
+
+            for (const bouton of boutons) {
+                expect(bouton.attributes('disabled')).toBeDefined()
+                expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+                await bouton.trigger('click')
+            }
+
+            expect(wrapper.emitted('start-edit')).toBeUndefined()
+            expect(wrapper.emitted('delete')).toBeUndefined()
+
+            wrapper.unmount()
+        })
+
+        it('les propose de nouveau sur une page que le serveur a rendue', () => {
+            hoisted.page.props = {}
+            const wrapper = mountCard()
+
+            expect(wrapper.get('[data-testid="delete-exercise-button"]').attributes('disabled')).toBeUndefined()
+            expect(wrapper.get('[data-testid="delete-exercise-button"]').attributes('aria-describedby')).toBeUndefined()
+
+            wrapper.unmount()
+        })
     })
 })
 

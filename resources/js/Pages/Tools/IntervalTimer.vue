@@ -17,6 +17,7 @@ import { useMinuteurDIntervalles } from '@/composables/useMinuteurDIntervalles'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     timers: {
@@ -52,6 +53,16 @@ const {
 } = useMinuteurDIntervalles()
 
 const isEditing = computed(() => !!form.id)
+
+/**
+ * Sur une copie hors ligne, un préréglage ne s'enregistre, ne se modifie ni ne
+ * se supprime (#2048) : ces boutons le disent d'avance. Le minuteur, lui,
+ * tourne, et un préréglage s'y charge. « Modifier le minuteur » remplirait le
+ * formulaire des valeurs de la copie, que la page garde quand elle se recharge
+ * au retour du réseau (elle n'est pas remontée) : « Mettre à jour » les aurait
+ * renvoyées par-dessus le préréglage du serveur, que la liste montre alors.
+ */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 // --- Actions ---
 
@@ -266,7 +277,13 @@ const previewFromForm = () => {
                             <GlassButton v-if="isEditing" type="button" variant="secondary" @click="resetForm">
                                 Annuler
                             </GlassButton>
-                            <GlassButton variant="primary" type="submit" :loading="form.processing">
+                            <GlassButton
+                                variant="primary"
+                                type="submit"
+                                :loading="form.processing"
+                                :disabled="surUneCopie"
+                                :aria-describedby="raisonDUneEcriture"
+                            >
                                 {{ isEditing ? 'Mettre à jour' : 'Enregistrer' }}
                             </GlassButton>
                         </div>
@@ -309,12 +326,16 @@ const previewFromForm = () => {
                                 icon="edit"
                                 label="Modifier le minuteur"
                                 ton="info"
+                                :disabled="surUneCopie"
+                                :aria-describedby="raisonDUneEcriture"
                                 @click="editTimer(timer)"
                             />
                             <GlassIconButton
                                 icon="delete"
                                 label="Supprimer le minuteur"
                                 ton="danger"
+                                :disabled="surUneCopie"
+                                :aria-describedby="raisonDUneEcriture"
                                 @click="demanderSuppression(timer)"
                             />
                         </div>

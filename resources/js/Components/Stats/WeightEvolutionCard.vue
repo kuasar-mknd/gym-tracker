@@ -1,13 +1,14 @@
 <script setup>
 import { Deferred, Link } from '@inertiajs/vue3'
-import { defineAsyncComponent } from 'vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import { nombre, variation } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
+const WeightHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeightHistoryChart.vue'))
 
 defineProps({
     latestWeight: [Number, String],
@@ -43,6 +44,9 @@ defineProps({
         <!-- Real Weight Chart (Deferred) -->
         <div class="relative -mx-2 h-40 w-full">
             <Deferred :data="deferredData ? 'deferredData' : 'bodyStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <div class="flex h-full items-center justify-center px-4">
                         <GlassSkeleton height="8rem" width="100%" class="rounded-xl" />

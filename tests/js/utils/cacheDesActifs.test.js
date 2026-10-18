@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import { ENTREES_MAX, NOM_DU_CACHE, estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
+import {
+    CACHE_DE_LA_CONSTRUCTION_PRECEDENTE,
+    ENTREES_MAX,
+    NOM_DU_CACHE,
+    estUnActif,
+    servirDepuisLeCache,
+} from '@/sw/cacheDesActifs'
+import { creerDesCachesEnMemoire } from './cachesEnMemoire'
 
 const requete = (url, method = 'GET') => ({ url, method })
 
@@ -14,7 +21,7 @@ const cacheFactice = (contenu = new Map()) => ({
     delete: vi.fn(async (r) => contenu.delete(r.url)),
 })
 
-const magasin = (cache) => ({ open: vi.fn(async () => cache) })
+const magasin = (cache) => ({ open: vi.fn(async () => cache), match: vi.fn(async () => undefined) })
 
 /** `waitUntil` garde la promesse : le worker vit après la réponse, le test doit l'attendre. */
 const evenement = (r) => {
@@ -99,6 +106,54 @@ describe('servirDepuisLeCache', () => {
         expect(cache.contenu.size).toBe(ENTREES_MAX)
         expect(cache.contenu.has('https://fit.test/build/assets/0.js')).toBe(false)
         expect(cache.contenu.has('https://fit.test/build/assets/neuf.js')).toBe(true)
+    })
+
+    /*
+     * Un déploiement pendant une séance : la page reste sur l'ancienne
+     * construction, que le nouveau precache n'a plus. Ses morceaux viennent de
+     * la construction précédente, réseau coupé compris (#2048).
+     */
+    it('sert, sans réseau, un actif de la construction précédente', async () => {
+        const caches = creerDesCachesEnMemoire('https://fit.test/sw.js')
+        const precedente = await caches.open(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
+        await precedente.put('https://fit.test/build/assets/Show-Ancien.js', new Response('séance ancienne'))
+        const reseau = vi.fn(async () => {
+            throw new TypeError('Failed to fetch')
+        })
+
+        const reponse = await servir(
+            evenement(new Request('https://fit.test/build/assets/Show-Ancien.js')),
+            caches,
+            reseau,
+        )
+
+        await expect(reponse.text()).resolves.toBe('séance ancienne')
+        expect(reseau).not.toHaveBeenCalled()
+    })
+
+    it('lit d’abord le cache des actifs à la demande', async () => {
+        const caches = creerDesCachesEnMemoire('https://fit.test/sw.js')
+        await (await caches.open(NOM_DU_CACHE)).put('https://fit.test/build/assets/a.js', new Response('à la demande'))
+        await (
+            await caches.open(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
+        ).put('https://fit.test/build/assets/a.js', new Response('précédente'))
+
+        const reponse = await servir(evenement(new Request('https://fit.test/build/assets/a.js')), caches, vi.fn())
+
+        await expect(reponse.text()).resolves.toBe('à la demande')
+    })
+
+    it('ne crée pas le cache de la construction précédente en le lisant', async () => {
+        const caches = creerDesCachesEnMemoire('https://fit.test/sw.js')
+
+        await servir(
+            evenement(new Request('https://fit.test/build/assets/b.js')),
+            caches,
+            vi.fn(async () => new Response('du réseau')),
+        )
+
+        expect(caches.adresses(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)).toBeNull()
+        expect(caches.adresses(NOM_DU_CACHE)).toEqual(['https://fit.test/build/assets/b.js'])
     })
 
     it('ouvre toujours le même cache', async () => {

@@ -1,11 +1,12 @@
 <script setup>
 import { Deferred } from '@inertiajs/vue3'
-import { defineAsyncComponent } from 'vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 
-const MuscleDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/MuscleDistributionChart.vue'))
+const MuscleDistributionChart = graphiqueAsynchrone(() => import('@/Components/Stats/MuscleDistributionChart.vue'))
 
 defineProps({
     muscleDistribution: Array,
@@ -22,6 +23,9 @@ defineProps({
         </div>
         <div class="min-h-52">
             <Deferred :data="deferredData ? 'deferredData' : 'performanceStats'">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
                 <template #fallback>
                     <GlassSkeleton height="100%" width="100%" class="rounded-xl" />
                 </template>

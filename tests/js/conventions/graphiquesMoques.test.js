@@ -24,8 +24,9 @@ const fichiers = (racine, extension) => {
 const graphiquesDe = new Map()
 for (const chemin of fichiers('resources/js', '.vue')) {
     const source = readFileSync(chemin, 'utf8')
+    // `graphiqueAsynchrone`, par où passe chaque graphique (#2048, `chartChunks.test.js`), sur une ligne ou plusieurs.
     const graphiques = [
-        ...source.matchAll(/defineAsyncComponent\(\(\) => import\('(@\/Components\/Stats\/[^']+)'\)\)/g),
+        ...source.matchAll(/graphiqueAsynchrone\(\s*\(\) => import\('(@\/Components\/Stats\/[^']+)'\),?\s*\)/g),
     ].map((correspondance) => correspondance[1])
     if (graphiques.length > 0) {
         graphiquesDe.set('@/' + chemin.replace('resources/js/', ''), graphiques)
@@ -33,6 +34,9 @@ for (const chemin of fichiers('resources/js', '.vue')) {
 }
 
 it('moque les graphiques chargés à la demande dans chaque test qui monte leur page', () => {
+    // Une forme d'appel que l'expression ne lirait plus ferait passer la garde sans rien vérifier.
+    expect([...graphiquesDe.values()].flat().length).toBeGreaterThan(40)
+
     const manquants = []
 
     for (const chemin of fichiers('tests/js', '.test.js')) {

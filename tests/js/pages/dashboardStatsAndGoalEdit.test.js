@@ -64,6 +64,9 @@ const routerVisit = vi.fn()
 let openRequest = null
 let deferredHasLanded = false
 
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
 vi.mock('@inertiajs/vue3', async () => {
     const { reactive } = await vi.importActual('vue')
 
@@ -84,6 +87,7 @@ vi.mock('@inertiajs/vue3', async () => {
             get: (...args) => routerGet(...args),
             visit: (...args) => routerVisit(...args),
         },
+        usePage: () => pageDInertia,
         useForm: (data) => {
             const form = reactive({
                 ...data,
@@ -124,6 +128,7 @@ beforeEach(() => {
     vi.clearAllMocks()
     openRequest = null
     deferredHasLanded = false
+    pageDInertia.props = {}
 })
 
 /**
@@ -143,7 +148,7 @@ const settleRequest = async () => {
 describe('Dashboard', () => {
     const quickActions = recording('QuickActions', ['processing'])
     const recentActivity = recording('RecentActivity', ['recentWorkouts', 'processing'])
-    const goalsSummary = recording('GoalsSummary', ['activeGoals'])
+    const goalsSummary = recording('GoalsSummary', ['activeGoals', 'indisponible'])
     const activeGoalsChart = recording('ActiveGoalsChart', ['data'])
 
     const mountDashboard = (props = {}) =>
@@ -242,6 +247,30 @@ describe('Dashboard', () => {
         expect(wrapper.findComponent({ name: 'TimeOfDaySection' }).props('timeOfDayDistribution')).toEqual([
             { hour: 18 },
         ])
+    })
+
+    /*
+     * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
+     * objectifs (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent,
+     * plutôt que de disparaître comme pour un compte qui n'a rien noté.
+     */
+    it('sur une copie hors ligne, dit le dernier poids et les objectifs indisponibles', () => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }, errors: {} }
+        const wrapper = mountDashboard()
+
+        expect(wrapper.get('[dusk="dashboard-latest-weight-indisponible"]').text()).toContain(
+            'Dernier poids indisponible hors ligne',
+        )
+        expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('indisponible')).toBe(true)
+    })
+
+    // Sans la marque d'une copie, une prop absente ne dit rien d'un réseau absent.
+    it('sur une page que le serveur a rendue, un compte qui n’a rien noté ne voit rien d’indisponible', () => {
+        pageDInertia.props = { errors: {} }
+        const wrapper = mountDashboard({ latestWeight: null, activeGoals: [] })
+
+        expect(wrapper.find('[dusk="dashboard-latest-weight-indisponible"]').exists()).toBe(false)
+        expect(wrapper.findComponent({ name: 'GoalsSummary' }).props('indisponible')).toBe(false)
     })
 
     it('ne dessine la progression des objectifs que s’il y en a', () => {

@@ -13,7 +13,7 @@ import {
     noterLesEcrituresEffaceesALaDeconnexion,
 } from '@/Utils/ecrituresEffaceesALaDeconnexion'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
-import { direSansReseau } from '@/Utils/visitesHorsLigne'
+import { direSansReseau, exempterDeLaGardeDesCopies } from '@/Utils/visitesHorsLigne'
 
 /**
  * Ce que dit une déconnexion restée sans réponse (#2048). La réponse a pu se
@@ -172,6 +172,12 @@ const partir = () => {
                         laisserLAppareil(compte)
                     },
                     {
+                        /*
+                         * Partie d'une copie hors ligne, une écriture est arrêtée
+                         * (#2048) : pas la déconnexion, qui laisserait sinon la
+                         * session ouverte à la personne suivante.
+                         */
+                        onBefore: exempterDeLaGardeDesCopies,
                         onStart: () => {
                             partie = true
                         },

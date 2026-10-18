@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { defineComponent, h, ref } from 'vue'
+import { defineComponent, h, nextTick, reactive, ref } from 'vue'
 
 import { DELAI_DE_L_INSTANTANE_MS, useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
 
@@ -122,8 +122,10 @@ describe('la copie de la séance, seule', () => {
         await vi.advanceTimersByTimeAsync(1)
         expect(ecriture.completer).toHaveBeenCalledTimes(1)
 
-        const [pageVersee, noms] = ecriture.completer.mock.calls[0]
+        const [pageVersee, noms, options] = ecriture.completer.mock.calls[0]
         expect(noms).toEqual(['workout'])
+        // Datée de la décision, où tout est enregistré, et non de son écriture au repos (#2048, partie E).
+        expect(options).toEqual({ valableAu: Date.now() })
         expect(pageVersee).toMatchObject({ component: 'Workouts/Show', url: '/workouts/5', encryptHistory: true })
         expect(pageVersee.props.auth).toEqual({ user: { id: 7 } })
         expect(pageVersee.props.workout.workout_lines[0].sets[0].weight).toBe(85)
@@ -277,6 +279,55 @@ describe('la copie de la séance, seule', () => {
 
         expect(ecriture.completer).toHaveBeenCalledTimes(1)
         expect(ecriture.completer.mock.calls[0][0].props.workout.workout_lines.map((ligne) => ligne.id)).toEqual([1, 2])
+    })
+
+    it('montée depuis sa copie, ne verse rien tant que la marque reste, réponse partielle comprise, puis verse une fois la marque partie', async () => {
+        // Comme `usePage()` : la page d'Inertia, qu'une réponse partielle complète sans remonter la séance.
+        const page = reactive(pageDeLaSeance({ horsLigne: { copieDu: 1, raison: 'reseau' } }))
+        const seanceDesProps = ref(seance())
+        const locale = monter({ page, origine: 'client', seanceDesProps })
+
+        locale.value.workout_lines[0].sets[0].weight = 85
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+        window.dispatchEvent(new Event('pagehide'))
+
+        // La séance redemandée seule (`only: ['workout']`) : la réponse garde la marque, la page reste une copie.
+        ecriture.origineDeLaPage.mockReturnValue('reseau')
+        seanceDesProps.value = seance()
+        await nextTick()
+        locale.value.workout_lines[0].sets[0].weight = 86
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+        window.dispatchEvent(new Event('pagehide'))
+
+        expect(ecriture.completer).not.toHaveBeenCalled()
+        expect(ecriture.lireLaCopie).not.toHaveBeenCalled()
+
+        // La réponse complète qui suit emporte la marque : la séance est de nouveau celle du serveur.
+        delete page.props.horsLigne
+        await nextTick()
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS)
+
+        expect(ecriture.completer).toHaveBeenCalledTimes(1)
+        expect(ecriture.completer.mock.calls[0][0].props.workout.workout_lines[0].sets[0].weight).toBe(86)
+    })
+
+    it('montée depuis sa copie, verse dès qu’une réponse complète emporte la marque, sa séance restée égale', async () => {
+        const page = reactive(pageDeLaSeance({ horsLigne: { copieDu: 1, raison: 'reseau' } }))
+        const locale = monter({ page, origine: 'client' })
+
+        locale.value.workout_lines[0].sets[0].weight = 85
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS * 3)
+
+        expect(ecriture.completer).not.toHaveBeenCalled()
+
+        // Inertia garde telle quelle une prop égale à celle qu'il tient : la marque seule change.
+        ecriture.origineDeLaPage.mockReturnValue('reseau')
+        delete page.props.horsLigne
+        await nextTick()
+        await vi.advanceTimersByTimeAsync(DELAI_DE_L_INSTANTANE_MS)
+
+        expect(ecriture.completer).toHaveBeenCalledTimes(1)
+        expect(ecriture.completer.mock.calls[0][0].props.workout.workout_lines[0].sets[0].weight).toBe(85)
     })
 
     it('ne reverse pas une séance qui n’a pas changé', async () => {

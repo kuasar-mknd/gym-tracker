@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, useForm, Deferred } from '@inertiajs/vue3'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import QuickActions from '@/Components/Dashboard/QuickActions.vue'
 import WeeklyVolumeSection from '@/Components/Dashboard/WeeklyVolumeSection.vue'
@@ -14,12 +15,14 @@ import RecentWorkoutDurationSection from '@/Components/Dashboard/RecentWorkoutDu
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
 import GoalsSummary from '@/Components/Dashboard/GoalsSummary.vue'
 import RecentPRs from '@/Components/Dashboard/RecentPRs.vue'
-import { defineAsyncComponent, ref } from 'vue'
+import { ref } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
 import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
-const ActiveGoalsChart = defineAsyncComponent(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
+const ActiveGoalsChart = graphiqueAsynchrone(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
 /**
  * Dashboard - Command Center
@@ -46,6 +49,13 @@ defineProps({
 
 const form = useForm({})
 
+/**
+ * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
+ * objectifs, tirés des mesures et des objectifs qu'aucune copie ne garde
+ * (#2048, `PROPS_JAMAIS_GARDEES`) : leurs cartes le disent.
+ */
+const { indisponibleSurLaCopie } = useCopieHorsLigne()
+
 const startWorkout = () => {
     form.post(route('workouts.store'), { onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU) })
 }
@@ -62,7 +72,11 @@ const installationProposee = ref(false)
 
     <AuthenticatedLayout page-title="Accueil">
         <div class="space-y-6">
-            <DashboardHeader :user="$page.props.auth.user" :latest-weight="latestWeight" />
+            <DashboardHeader
+                :user="$page.props.auth.user"
+                :latest-weight="latestWeight"
+                :poids-indisponible="indisponibleSurLaCopie('latestWeight')"
+            />
 
             <QuickActions :processing="form.processing" @start-workout="startWorkout" />
 
@@ -75,6 +89,10 @@ const installationProposee = ref(false)
             />
 
             <Deferred data="analyticalStats">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
+
                 <template #fallback>
                     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <GlassSkeleton class="h-64 w-full" />
@@ -107,7 +125,7 @@ const installationProposee = ref(false)
                 @start-workout="startWorkout"
             />
 
-            <GoalsSummary :active-goals="activeGoals" />
+            <GoalsSummary :active-goals="activeGoals" :indisponible="indisponibleSurLaCopie('activeGoals')" />
 
             <GlassCard
                 v-if="activeGoals && activeGoals.length > 0"

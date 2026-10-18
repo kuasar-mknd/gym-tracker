@@ -1,8 +1,8 @@
 <script setup>
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const TimeOfDayChart = defineAsyncComponent(() => import('@/Components/Stats/TimeOfDayChart.vue'))
+const TimeOfDayChart = graphiqueAsynchrone(() => import('@/Components/Stats/TimeOfDayChart.vue'))
 
 defineProps({
     timeOfDayDistribution: { type: Array, required: true },

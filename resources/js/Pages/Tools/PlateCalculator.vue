@@ -133,7 +133,14 @@
                                 Plaques disponibles
                             </p>
                         </div>
-                        <GlassButton @click="addingPlate = true" variant="primary" size="sm" icon="add">
+                        <GlassButton
+                            variant="primary"
+                            size="sm"
+                            icon="add"
+                            :disabled="surUneCopie"
+                            :aria-describedby="raisonDUneEcriture"
+                            @click="addingPlate = true"
+                        >
                             Ajouter
                         </GlassButton>
                     </div>
@@ -186,6 +193,8 @@
                                     ton="danger"
                                     title="Supprimer la plaque"
                                     compact
+                                    :disabled="surUneCopie"
+                                    :aria-describedby="raisonDUneEcriture"
                                     class="bg-surface-card souris:opacity-0 souris:group-hover:opacity-100 souris:focus-visible:opacity-100 absolute -top-2 -right-2 rounded-full shadow-md"
                                     @click="demanderSuppression(plate)"
                                 />
@@ -231,7 +240,12 @@
                     <!-- Was :disabled="form.processing", where `form` was an empty
                          useForm({}) that never submits — so it read false forever
                          and the button stayed live through the request. -->
-                    <GlassButton @click="savePlate" variant="primary" :loading="newPlate.processing"
+                    <GlassButton
+                        variant="primary"
+                        :loading="newPlate.processing"
+                        :disabled="surUneCopie"
+                        :aria-describedby="raisonDUneEcriture"
+                        @click="savePlate"
                         >Enregistrer</GlassButton
                     >
                 </div>
@@ -263,6 +277,7 @@ import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { nombre, poids } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 const props = defineProps({
     plates: {
@@ -274,6 +289,9 @@ const props = defineProps({
 const targetWeight = ref(100)
 const barWeight = ref(20)
 const addingPlate = ref(false)
+
+/** Sur une copie hors ligne, l'inventaire ne s'écrit pas (#2048) : ses boutons le disent d'avance. */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 const newPlate = useForm({
     weight: '',

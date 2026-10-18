@@ -83,7 +83,11 @@ const aDesRangeesProvisoires = (seance) =>
  * remonter la page (`InitialVisit.handleBackForward`) ; comparée à la séance
  * du document, la copie aurait laissé verser celle de l'entrée.
  * Une visite côté client, ou une page qui porte la marque d'une copie
- * (`props.horsLigne`, parties E et F), n'en prend jamais.
+ * (`props.horsLigne`, parties E et F), n'en prend jamais. Une séance montée
+ * depuis sa copie s'arme quand même : au retour du réseau, la copie se
+ * recharge en entier sans remonter la page (`router.reload` garde son état),
+ * et la séance du serveur qui remplace alors ses props verse de nouveau ses
+ * instantanés, comme une séance montée depuis le réseau.
  *
  * Les écritures directes de la séance que le serveur accepte se notent
  * aussitôt (`Utils/ecrituresAcceptees.js`) : la page dit au service de
@@ -121,13 +125,7 @@ export const useCopieDeLaSeance = ({
 }) => {
     SyncService.suivreLesEcrituresDeLaSeance?.(localWorkout.value?.id)
 
-    // Une page qui porte la marque d'une copie (partie E) n'est pas la séance du serveur : rien ne s'en verse.
-    if (
-        ecriture === null ||
-        page?.component !== COMPOSANT ||
-        page.props?.horsLigne !== undefined ||
-        !getCurrentInstance()
-    ) {
+    if (ecriture === null || page?.component !== COMPOSANT || !getCurrentInstance()) {
         return
     }
 
@@ -143,7 +141,13 @@ export const useCopieDeLaSeance = ({
         encryptHistory: page.encryptHistory === true,
         compte: page.props?.auth?.user?.id ?? null,
     }
-    let aJour = ecriture.origineDeLaPage() === 'reseau'
+    /**
+     * La page montrée porte la marque d'une copie (partie E) : ce n'est pas la
+     * séance du serveur, et rien ne s'en verse tant qu'une réponse complète ne
+     * l'a pas remplacée.
+     */
+    let surLaCopie = page.props?.horsLigne !== undefined
+    let aJour = !surLaCopie && ecriture.origineDeLaPage() === 'reseau'
     let derniere = aJour ? enTexteStable(seanceConnueDuServeur(localWorkout.value)) : null
     let minuterie = null
     let enPlace = true
@@ -179,7 +183,7 @@ export const useCopieDeLaSeance = ({
      * @param {{ toutDeSuite?: boolean }} [options] sans attendre le repos
      */
     const prendre = ({ toutDeSuite = false } = {}) => {
-        if (!aJour) {
+        if (!aJour || surLaCopie) {
             return
         }
 
@@ -206,6 +210,8 @@ export const useCopieDeLaSeance = ({
                     props: { auth: { user: { id: modele.compte } }, workout: instantane },
                 },
                 ['workout'],
+                // Daté de maintenant, où tout est enregistré, et non de son écriture au repos (#2048, partie E).
+                { valableAu: Date.now() },
             )
         }
 
@@ -237,7 +243,7 @@ export const useCopieDeLaSeance = ({
      * ses props par l'entrée d'historique, sans remonter la page, souvent
      * avant que la copie soit relue.
      */
-    if (!aJour && ecriture.origineDeLaPage() === 'historique') {
+    if (!aJour && !surLaCopie && ecriture.origineDeLaPage() === 'historique') {
         const depart = enTexteStable(seanceConnueDuServeur(seanceDeDepart))
 
         ecriture
@@ -265,6 +271,32 @@ export const useCopieDeLaSeance = ({
         seanceRemplacee = true
         aJour = ecriture.origineDeLaPage() === 'reseau'
     })
+
+    /*
+     * La marque d'une copie part avec la réponse complète qui la remplace,
+     * sans que la page soit remontée : la séance est de nouveau celle du
+     * serveur. Une séance égale à celle de la copie garde ses props telles
+     * quelles (Inertia ne remplace pas une prop égale) : la marque seule le
+     * dit. Lue sur cette page seulement : celle qui arrive au départ n'est
+     * pas la sienne.
+     */
+    watch(
+        () => page.props?.horsLigne !== undefined,
+        (marquee) => {
+            if (page.component !== modele.component || page.url !== modele.url || marquee === surLaCopie) {
+                return
+            }
+
+            surLaCopie = marquee
+            annulerLAttente()
+
+            if (!marquee) {
+                aJour = ecriture.origineDeLaPage() === 'reseau'
+                derniere = null
+                planifier()
+            }
+        },
+    )
 
     watch(localWorkout, planifier, { deep: true })
     watch(() => [unsyncedSetIds.value.size, ordreEnVol.value, valeursDeRepli().length], planifier)

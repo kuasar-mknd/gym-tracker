@@ -1,8 +1,8 @@
 <script setup>
-import { defineAsyncComponent } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const DurationDistributionChart = defineAsyncComponent(() => import('@/Components/Stats/DurationDistributionChart.vue'))
+const DurationDistributionChart = graphiqueAsynchrone(() => import('@/Components/Stats/DurationDistributionChart.vue'))
 
 defineProps({
     durationDistribution: { type: Array, required: true },

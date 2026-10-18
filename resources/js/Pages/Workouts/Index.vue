@@ -4,11 +4,13 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { Head, useForm, Link, Deferred, router } from '@inertiajs/vue3'
-import { defineAsyncComponent, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
 import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { usePullToRefresh } from '@/composables/usePullToRefresh'
@@ -18,8 +20,9 @@ import GlassStat from '@/Components/UI/GlassStat.vue'
 import { entier } from '@/Utils/nombre'
 import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
-const WorkoutHistoryTimelineChart = defineAsyncComponent(
+const WorkoutHistoryTimelineChart = graphiqueAsynchrone(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
 )
 
@@ -43,6 +46,9 @@ const props = defineProps({
 })
 
 const form = useForm({})
+
+/** Sur une copie hors ligne, ni démarrer ni supprimer ne partirait (#2048) : ces boutons le disent d'avance. */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 const createWorkout = () => {
     form.post(route('workouts.store'), { onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU) })
@@ -138,6 +144,8 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     <GlassButton
                         variant="primary"
                         :loading="form.processing"
+                        :disabled="surUneCopie"
+                        :aria-describedby="raisonDUneEcriture"
                         @click="createWorkout"
                         aria-label="Nouvelle séance"
                     >
@@ -162,6 +170,10 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
 
                 <!-- ⚡ Bolt: Consolidated Deferred Loading -->
                 <Deferred data="deferredData">
+                    <template #rescue>
+                        <IndisponibleHorsLigne />
+                    </template>
+
                     <template #fallback>
                         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             <GlassCard v-for="i in 4" :key="i">
@@ -194,6 +206,10 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                 <h3 class="titre-carte mb-3">Exercices disponibles</h3>
 
                 <Deferred data="deferredData">
+                    <template #rescue>
+                        <IndisponibleHorsLigne />
+                    </template>
+
                     <template #fallback>
                         <!-- Loading State -->
                         <div class="flex gap-2 overflow-x-hidden pb-2">
@@ -247,6 +263,8 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         icon="💪"
                         action-label="Commencer maintenant"
                         action-id="empty-state-start-workout"
+                        :action-desactivee="surUneCopie"
+                        :raison-de-l-action="raisonDUneEcriture"
                         @action="createWorkout"
                         color="orange"
                     />

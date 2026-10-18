@@ -4,15 +4,20 @@ import { mount } from '@vue/test-utils'
 const routerPost = vi.fn()
 const triggerHaptic = vi.fn()
 
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
 vi.mock('@inertiajs/vue3', () => ({
     Link: { props: ['href'], template: '<a :href="href"><slot /></a>' },
     router: { post: (...args) => routerPost(...args) },
+    usePage: () => pageDInertia,
 }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => triggerHaptic(...args) }))
 
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
 import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
 import { annoncesPendant } from '../../utils/annoncesSansReseau'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** Ziggy, reduced to the two forms the bar uses: route(name) and route().current(). */
 let currentRoute = 'dashboard'
@@ -45,6 +50,7 @@ const activeLabels = (wrapper) =>
 beforeEach(() => {
     routerPost.mockReset()
     triggerHaptic.mockReset()
+    pageDInertia.props = {}
 })
 
 describe('BottomNav — which tab is lit', () => {
@@ -192,5 +198,47 @@ describe('BottomNav — the central button', () => {
         await fab(mountNav('dashboard')).trigger('click')
 
         expect(triggerHaptic).toHaveBeenCalledWith('toggle')
+    })
+})
+
+/*
+ * Sur une copie hors ligne, rien ne part vers le serveur (#2048, partie E) :
+ * démarrer une séance serait arrêté avant son départ. Le bouton le dit
+ * d'avance. Sur la séance, il ajoute un exercice, que la file hors ligne garde.
+ */
+describe('BottomNav — sur une copie hors ligne', () => {
+    beforeEach(() => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+    })
+
+    it('ne démarre pas de séance, et dit pourquoi', async () => {
+        const wrapper = mountNav('dashboard')
+
+        expect(fab(wrapper).attributes('disabled')).toBeDefined()
+        expect(fab(wrapper).attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+
+        await fab(wrapper).trigger('click')
+
+        expect(routerPost).not.toHaveBeenCalled()
+    })
+
+    it('sur la séance, ajoute toujours un exercice', async () => {
+        const wrapper = mountNav('workouts.show')
+        const opened = vi.fn()
+        window.addEventListener('open-add-exercise', opened)
+
+        expect(fab(wrapper).attributes('disabled')).toBeUndefined()
+        expect(fab(wrapper).attributes('aria-describedby')).toBeUndefined()
+
+        await fab(wrapper).trigger('click')
+
+        expect(opened).toHaveBeenCalledTimes(1)
+        window.removeEventListener('open-add-exercise', opened)
+    })
+
+    it('redevient le démarrage d’une séance sur une page que le serveur a rendue', () => {
+        pageDInertia.props = {}
+
+        expect(fab(mountNav('dashboard')).attributes('disabled')).toBeUndefined()
     })
 })

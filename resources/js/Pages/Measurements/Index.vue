@@ -4,10 +4,12 @@ import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
+import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
-import { computed, ref, defineAsyncComponent } from 'vue'
+import { computed, ref } from 'vue'
+import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
@@ -15,8 +17,8 @@ import GlassStat from '@/Components/UI/GlassStat.vue'
 import { poids, nombre, variation, pourcentage } from '@/Utils/nombre'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
-const WeightHistoryChart = defineAsyncComponent(() => import('@/Components/Stats/WeightHistoryChart.vue'))
-const BodyFatLineChart = defineAsyncComponent(() => import('@/Components/Stats/BodyFatLineChart.vue'))
+const WeightHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/WeightHistoryChart.vue'))
+const BodyFatLineChart = graphiqueAsynchrone(() => import('@/Components/Stats/BodyFatLineChart.vue'))
 
 const props = defineProps({
     measurements: Array,
@@ -213,6 +215,10 @@ const latestBodyFat = computed(() => {
 
             <!-- Charts -->
             <Deferred data="bodyStats">
+                <template #rescue>
+                    <IndisponibleHorsLigne />
+                </template>
+
                 <template #fallback>
                     <div class="stagger-2 animate-slide-up grid grid-cols-1 gap-6 lg:grid-cols-2">
                         <GlassCard v-for="i in 2" :key="i">
