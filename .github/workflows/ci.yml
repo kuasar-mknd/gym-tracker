@@ -145,13 +145,31 @@ jobs:
                   echo "actifs : ${{ needs.frontend-assets.result }}, tests : ${{ needs.frontend-tests.result }}"
                   [ "${{ needs.frontend-assets.result }}" = "success" ] && [ "${{ needs.frontend-tests.result }}" = "success" ]
 
-    laravel-tests:
+    # Chaque job qui a une base (un service à l'image mysql, quel que soit son
+    # nom, dans n'importe quel workflow hors de la passe nocturne) tourne sur
+    # la version de MySQL de la production (celle de docker-compose.prod.yml)
+    # et, tant que la pile n'a pas basculé, sur la LTS visée, à sa version
+    # exacte : la même liste dans laravel-tests-mysql, browser-shard et
+    # demarrage, que LesJobsAvecUneBaseTournentSurChaqueMySqlTest tient
+    # (.ai/rules/dependencies.md). Chaque version de la liste tourne et fait
+    # tomber le job : ni include ni exclude qui nomme mysql, ni
+    # continue-on-error sur le job, ni condition ni continue-on-error sur
+    # l'étape qui teste, et la version ne se lit que dans le nom du job, de
+    # ses étapes et de ses artefacts et dans l'image de la base, jamais dans
+    # une variable d'environnement, une condition ou un script. Le verdict
+    # passe par `laravel-tests` ci-dessous, qui garde le nom du contrôle exigé.
+    laravel-tests-mysql:
+        name: laravel-tests (MySQL ${{ matrix.mysql }})
         runs-on: ubuntu-latest
         timeout-minutes: 30
         needs: [setup-php, frontend-assets]
+        strategy:
+            fail-fast: false
+            matrix:
+                mysql: ['8.4', '9.7.2']
         services:
             mysql:
-                image: mysql:8.4
+                image: mysql:${{ matrix.mysql }}
                 env:
                     MYSQL_ROOT_PASSWORD: password
                     MYSQL_USER: sail
@@ -239,12 +257,25 @@ jobs:
               # delete tests. Raise it whenever coverage climbs; never lower it.
               run: php artisan test -p --coverage --min=94
 
+    laravel-tests:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        needs: [laravel-tests-mysql]
+        if: always()
+        steps:
+            - name: Verdict des versions de MySQL
+              run: |
+                  echo "suite sur chaque version de MySQL : ${{ needs.laravel-tests-mysql.result }}"
+                  [ "${{ needs.laravel-tests-mysql.result }}" = "success" ]
+
     # Trois éclats de durée comparable (poids mesurés dans
     # .github/scripts/dusk-eclats.json) ; le job « browser-tests » ci-dessous
     # les agrège, pour que la protection de branche et la promotion gardent
-    # le même nom de contrôle.
+    # le même nom de contrôle. Chaque éclat tourne sur les versions de MySQL
+    # de laravel-tests-mysql : un éclat prend deux à trois minutes et demie,
+    # en parallèle de la suite, et la seconde version n'allonge pas le run.
     browser-shard:
-        name: browser-shard (${{ matrix.shard }})
+        name: browser-shard (${{ matrix.shard }}, MySQL ${{ matrix.mysql }})
         runs-on: ubuntu-latest
         timeout-minutes: 20
         needs: [setup-php, frontend-assets]
@@ -252,9 +283,10 @@ jobs:
             fail-fast: false
             matrix:
                 shard: [1, 2, 3]
+                mysql: ['8.4', '9.7.2']
         services:
             mysql:
-                image: mysql:8.4
+                image: mysql:${{ matrix.mysql }}
                 env:
                     MYSQL_ROOT_PASSWORD: password
                     MYSQL_USER: sail
@@ -509,14 +541,14 @@ jobs:
               if: failure()
               uses: actions/upload-artifact@v7
               with:
-                  name: dusk-screenshots-${{ matrix.shard }}
+                  name: dusk-screenshots-${{ matrix.shard }}-mysql-${{ matrix.mysql }}
                   path: tests/Browser/screenshots
 
             - name: Upload Test Logs
               if: failure()
               uses: actions/upload-artifact@v7
               with:
-                  name: dusk-console-${{ matrix.shard }}
+                  name: dusk-console-${{ matrix.shard }}-mysql-${{ matrix.mysql }}
                   path: |
                       tests/Browser/console
                       storage/logs/chromedriver.log
@@ -835,7 +867,7 @@ jobs:
     # Ne s'applique qu'aux tags : sur `main`, `merge` publie `latest` et
     # `sha-*`, que la production ne tire pas.
     demarrage:
-        name: L'image démarre sur une base vide
+        name: L'image démarre sur une base vide (MySQL ${{ matrix.mysql }})
         runs-on: ubuntu-latest
         timeout-minutes: 15
         needs: build
@@ -845,9 +877,15 @@ jobs:
         env:
             REGISTRY: ghcr.io
             IMAGE_NAME: ${{ github.repository }}
+        # Le client mysql de l'image charge le schéma figé sur une base neuve,
+        # sur chaque version de MySQL de laravel-tests-mysql.
+        strategy:
+            fail-fast: false
+            matrix:
+                mysql: ['8.4', '9.7.2']
         services:
             mysql:
-                image: mysql:8.4
+                image: mysql:${{ matrix.mysql }}
                 env:
                     MYSQL_ROOT_PASSWORD: racine
                     MYSQL_DATABASE: gym_tracker
