@@ -47,8 +47,10 @@ precacheAndRoute(MANIFESTE_DU_PRECACHE)
  * Un déploiement pendant une séance : la page ouverte reste sur l'ancienne
  * construction, que l'activation retire du precache. L'installation met de
  * côté ce que le nouveau manifeste n'a plus, l'activation le range dans
- * `construction-precedente`, que la route des actifs lit (#2048). Le détail, et
- * pourquoi pas à l'activation seule, vivent dans le module.
+ * `construction-precedente`, que la route des actifs lit (#2048). Ni l'une ni
+ * l'autre ne rejettent : un stockage à court de place ne doit pas faire
+ * échouer l'installation, qui laisserait la page sur l'ancien worker. Le
+ * détail, et pourquoi pas à l'activation seule, vivent dans le module.
  */
 self.addEventListener('install', (event) => {
     event.waitUntil(

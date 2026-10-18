@@ -9,7 +9,9 @@
  * de Workbox est un paramètre) ; `keys()` rend les entrées dans l'ordre où
  * elles ont été rangées ; `match()` rend une réponse neuve à chaque lecture,
  * dont le corps se lit ; `caches.match(…, { cacheName })` ne crée pas le cache
- * qu'il nomme, quand `caches.open()` le crée.
+ * qu'il nomme, quand `caches.open()` le crée. Un cache peut refuser ce qu'on y
+ * range (`refuserLesEcritures`), comme un navigateur sans place : `put` lève
+ * alors `QuotaExceededError`.
  */
 
 /**
@@ -41,8 +43,9 @@ const comparable = (adresse, options = {}) => {
  * Un cache : des réponses rangées par adresse.
  *
  * @param {string} base
+ * @param {() => boolean} plein si le stockage refuse ce qu'on y range
  */
-const creerUnCache = (base) => {
+const creerUnCache = (base, plein) => {
     /** @type {Map<string, { corps: ArrayBuffer, init: ResponseInit }>} */
     const entrees = new Map()
 
@@ -68,6 +71,10 @@ const creerUnCache = (base) => {
         async put(cle, reponse) {
             const adresse = adresseDe(cle, base)
             const corps = await reponse.arrayBuffer()
+
+            if (plein()) {
+                throw new DOMException('Quota exceeded.', 'QuotaExceededError')
+            }
 
             entrees.delete(adresse)
             entrees.set(adresse, {
@@ -95,10 +102,16 @@ export const creerDesCachesEnMemoire = (base = globalThis.location?.href ?? 'htt
     /** @type {Map<string, ReturnType<typeof creerUnCache>>} */
     const caches = new Map()
 
+    /** Les caches qui refusent ce qu'on y range. */
+    const pleins = new Set()
+
     return {
         async open(nom) {
             if (!caches.has(nom)) {
-                caches.set(nom, creerUnCache(base))
+                caches.set(
+                    nom,
+                    creerUnCache(base, () => pleins.has(nom)),
+                )
             }
 
             return caches.get(nom)
@@ -134,6 +147,15 @@ export const creerDesCachesEnMemoire = (base = globalThis.location?.href ?? 'htt
          */
         adresses(nom) {
             return caches.has(nom) ? [...caches.get(nom).entrees.keys()] : null
+        },
+        /**
+         * Fait refuser au cache `nom` tout ce qu'on y range désormais, comme un
+         * navigateur à court de place.
+         *
+         * @param {string} nom
+         */
+        refuserLesEcritures(nom) {
+            pleins.add(nom)
         },
     }
 }

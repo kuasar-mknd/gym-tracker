@@ -136,6 +136,20 @@ describe('à l’installation', () => {
         expect(caches.adresses(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)).toBeNull()
     })
 
+    /*
+     * Mettre de côté est un confort : un stockage à court de place ne doit
+     * pas faire échouer l'installation, qui laisserait la page sur l'ancien
+     * worker, sans mise à jour possible (seconde relecture de la partie E).
+     */
+    it('ne rejette pas quand le stockage refuse ce qu’elle range', async () => {
+        const caches = creerDesCachesEnMemoire(`${ORIGINE}/sw.js`)
+        await precacheDeLaPremiereConstruction(caches)
+        caches.refuserLesEcritures(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
+
+        await expect(mettreDeCote(caches)).resolves.toBeUndefined()
+        expect(caches.adresses(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)).toEqual([])
+    })
+
     it('ne met de côté aucun actif d’une autre origine', async () => {
         const caches = creerDesCachesEnMemoire(`${ORIGINE}/sw.js`)
         const precache = await caches.open(PRECACHE)
@@ -166,6 +180,16 @@ describe('à l’activation', () => {
             cacheName: CACHE_DE_LA_CONSTRUCTION_PRECEDENTE,
         })
         await expect(reponse.text()).resolves.toBe('entrée ancienne')
+    })
+
+    it('ne rejette pas quand le stockage refuse ce qu’elle range, et jette ce qui était mis de côté', async () => {
+        const caches = creerDesCachesEnMemoire(`${ORIGINE}/sw.js`)
+        await precacheDeLaPremiereConstruction(caches)
+        await mettreDeCote(caches)
+        caches.refuserLesEcritures(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
+
+        await expect(basculerLaConstructionPrecedente(caches)).resolves.toBeUndefined()
+        expect(caches.adresses(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)).toBeNull()
     })
 
     it('vide la construction précédente même quand rien n’a été mis de côté', async () => {

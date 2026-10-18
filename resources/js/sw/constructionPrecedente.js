@@ -22,8 +22,17 @@ import { CACHE_DE_LA_CONSTRUCTION_PRECEDENTE, estUnActif } from './cacheDesActif
  * code ne touche ; à l'activation, il vide `construction-precedente` (la
  * construction d'avant, qu'une page ne demande plus après deux déploiements)
  * et y verse ce qu'il a mis de côté. La route des actifs le lit
- * (`servirDepuisLeCache`). Une installation qui échoue laisse la construction
- * précédente telle quelle : la suivante jette ce qu'elle avait mis de côté.
+ * (`servirDepuisLeCache`). Une installation que Workbox fait échouer laisse la
+ * construction précédente telle quelle : la suivante jette ce qu'elle avait
+ * mis de côté.
+ *
+ * Ce n'est qu'un confort, jamais une condition : ni la mise de côté ni la
+ * bascule ne rejettent. Une promesse d'installation rejetée rend le nouveau
+ * worker redondant, et un seul `put` refusé (le stockage à court de place,
+ * sur iOS surtout) laissait la page sur l'ancien worker et l'ancien precache,
+ * chaque déploiement rejouant la même copie (seconde relecture de la partie
+ * E, 2026-10-18). Ce qui a pu être mis de côté avant le refus passe à
+ * l'activation ; une bascule refusée jette ce qui restait de côté.
  *
  * Aucun de ces noms ne contient `-precache-` : `cleanupOutdatedCaches` efface
  * les caches qui le portent.
@@ -62,28 +71,32 @@ const adresseSansRevision = (cle) => {
  * }} moyens
  */
 export const mettreDeCoteLaConstructionPrecedente = async ({ magasin, nomDuPrecache, manifeste, origine }) => {
-    await magasin.delete(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
+    try {
+        await magasin.delete(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
 
-    if (!(await magasin.has(nomDuPrecache))) {
-        return
-    }
-
-    const precache = await magasin.open(nomDuPrecache)
-    const nouvelles = new Set(manifeste.map((entree) => new URL(entree.url, origine).href))
-    const miseDeCote = await magasin.open(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
-
-    for (const cle of await precache.keys()) {
-        const adresse = adresseSansRevision(cle.url)
-
-        if (nouvelles.has(adresse) || !estUnActif({ method: 'GET', url: adresse }, origine)) {
-            continue
+        if (!(await magasin.has(nomDuPrecache))) {
+            return
         }
 
-        const reponse = await precache.match(cle)
+        const precache = await magasin.open(nomDuPrecache)
+        const nouvelles = new Set(manifeste.map((entree) => new URL(entree.url, origine).href))
+        const miseDeCote = await magasin.open(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
 
-        if (reponse !== undefined) {
-            await miseDeCote.put(adresse, reponse)
+        for (const cle of await precache.keys()) {
+            const adresse = adresseSansRevision(cle.url)
+
+            if (nouvelles.has(adresse) || !estUnActif({ method: 'GET', url: adresse }, origine)) {
+                continue
+            }
+
+            const reponse = await precache.match(cle)
+
+            if (reponse !== undefined) {
+                await miseDeCote.put(adresse, reponse)
+            }
         }
+    } catch {
+        // Un confort : l'installation continue, avec ce qui a pu être mis de côté.
     }
 }
 
@@ -94,22 +107,27 @@ export const mettreDeCoteLaConstructionPrecedente = async ({ magasin, nomDuPreca
  * @param {CacheStorage} magasin
  */
 export const basculerLaConstructionPrecedente = async (magasin) => {
-    await magasin.delete(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
+    try {
+        await magasin.delete(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
 
-    if (!(await magasin.has(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE))) {
-        return
-    }
-
-    const miseDeCote = await magasin.open(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
-    const precedente = await magasin.open(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
-
-    for (const cle of await miseDeCote.keys()) {
-        const reponse = await miseDeCote.match(cle)
-
-        if (reponse !== undefined) {
-            await precedente.put(cle, reponse)
+        if (!(await magasin.has(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE))) {
+            return
         }
+
+        const miseDeCote = await magasin.open(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
+        const precedente = await magasin.open(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
+
+        for (const cle of await miseDeCote.keys()) {
+            const reponse = await miseDeCote.match(cle)
+
+            if (reponse !== undefined) {
+                await precedente.put(cle, reponse)
+            }
+        }
+    } catch {
+        // Un confort : l'activation continue, avec ce qui a pu passer.
     }
 
-    await magasin.delete(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
+    // Ce qui reste de côté, aucune route ne le lit : il ne garderait que de la place.
+    await magasin.delete(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE).catch(() => false)
 }

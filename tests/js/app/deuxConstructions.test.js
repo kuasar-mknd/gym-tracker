@@ -3,6 +3,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { creerDesCachesEnMemoire } from '../utils/cachesEnMemoire'
 import { creerUneFabriqueEnMemoire } from '../utils/baseIndexeeEnMemoire'
 import { CACHE_DE_LA_CONSTRUCTION_PRECEDENTE } from '@/sw/cacheDesActifs'
+import { CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE } from '@/sw/constructionPrecedente'
 import {
     ENTREE_DE_L_APPLICATION,
     DOSSIER_DES_PAGES,
@@ -318,6 +319,41 @@ describe('une page restée sur la construction précédente', () => {
         expect(misDeCote).not.toContain(premiere.fichier('assets/BaseChart-Un.js'))
         expect(misDeCote).not.toContain(premiere.page('Stats/Index'))
         expect(misDeCote).not.toContain(`${ORIGINE}/build/hors-ligne.html`)
+    })
+})
+
+describe('un stockage à court de place', () => {
+    /*
+     * Une promesse d'installation rejetée rend le nouveau worker redondant :
+     * la page resterait sur l'ancien, et chaque déploiement suivant rejouerait
+     * la même mise de côté. Celle-ci est un confort, jamais une condition
+     * (seconde relecture de la partie E, 2026-10-18).
+     */
+    it('n’empêche ni l’installation ni l’activation quand la mise de côté est refusée', async () => {
+        const premiere = construction('Un')
+        const seconde = construction('Deux')
+
+        await deployer(premiere)
+        caches.refuserLesEcritures(CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE)
+        const worker = await deployer(seconde)
+        serveur.coupe = true
+
+        expect(caches.adresses(PRECACHE)).toContain(seconde.page('Workouts/Show'))
+        await expect(texte(await demander(worker, seconde.page('Workouts/Show')))).resolves.toBe(
+            'assets/Workouts-Show-Deux.js de la construction Deux',
+        )
+    })
+
+    it('n’empêche pas l’activation quand la construction précédente refuse ce qu’on y range', async () => {
+        await deployer(construction('Un'))
+        caches.refuserLesEcritures(CACHE_DE_LA_CONSTRUCTION_PRECEDENTE)
+        const seconde = construction('Deux')
+        const worker = await deployer(seconde)
+        serveur.coupe = true
+
+        await expect(texte(await demander(worker, seconde.page('Dashboard')))).resolves.toBe(
+            'assets/Dashboard-Deux.js de la construction Deux',
+        )
     })
 })
 
