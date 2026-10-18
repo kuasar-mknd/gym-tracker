@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Middleware\OuvreLaSession;
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
 use App\Models\BodyPartMeasurement;
@@ -16,6 +17,7 @@ use App\Support\BaseDeDonnees\ConnexionMySql;
 use App\Support\ConnexionSociale\FournisseurApple;
 use App\Support\Courriels\GestionnaireDesCourriels;
 use App\Support\LiensDesCourriels;
+use App\Support\Sessions\GestionnaireDesSessions;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
@@ -25,6 +27,8 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
 use Illuminate\Mail\MailManager;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Session\SessionManager;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -54,6 +58,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\PersonalRecordService::class);
         $this->taireLesValeursCiteesParLeServeurDeBase();
         $this->taireLesAdressesDansLesErreursDEnvoi();
+        $this->neJamaisFaireRenaitreUneSessionDetruite();
 
         if (config('app.env') === 'testing') {
             config(['telescope.enabled' => false]);
@@ -140,6 +145,29 @@ final class AppServiceProvider extends ServiceProvider
             /** @param  array<string, mixed>  $configuration */
             static fn (PDO|Closure $pdo, string $base, string $prefixe, array $configuration): ConnexionMariaDb => new ConnexionMariaDb($pdo, $base, $prefixe, $configuration),
         );
+    }
+
+    /**
+     * Une session détruite ne renaît pas de l'enregistrement de fin d'une
+     * requête qui l'avait lue avant, et la réponse de cette requête ne pose
+     * aucun cookie (#2088). Le magasin de chaque pilote est une
+     * `SessionGardee`, que bâtit `GestionnaireDesSessions`, posé ici à la
+     * place du gestionnaire de Laravel, par `extend()` comme celui des
+     * courriels : le gestionnaire de Laravel, créé puis remplacé, n'a encore
+     * servi à rien. Et toute pile qui demande `StartSession` au conteneur
+     * reçoit `OuvreLaSession`, qui ne renvoie pas les cookies d'une session
+     * détruite : la pile que Sanctum ouvre pour une requête de la page
+     * l'écrit en dur. Une liaison simple, jamais un singleton : sous Octane,
+     * chaque requête prend la sienne, avec son bocal à cookies.
+     */
+    private function neJamaisFaireRenaitreUneSessionDetruite(): void
+    {
+        $this->app->extend(
+            'session',
+            static fn (SessionManager $_gestionnaire, Application $application): GestionnaireDesSessions => new GestionnaireDesSessions($application),
+        );
+
+        $this->app->bind(StartSession::class, OuvreLaSession::class);
     }
 
     /**

@@ -7,6 +7,7 @@ namespace App\Providers\Filament;
 use App\Filament\Sauvegardes\PageDesSauvegardes;
 use App\Http\Middleware\CleDesCopiesHorsLigne;
 use App\Http\Middleware\ConditionalCspHeaders;
+use App\Http\Middleware\OuvreLaSession;
 use App\Support\AvatarDesInitiales;
 use App\Support\ComptesVusParPulse;
 use App\Support\Csp\Nonce\SigneLesScriptsEnLigneDesPaquets;
@@ -27,7 +28,6 @@ use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
-use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -252,6 +252,11 @@ final class AdminPanelProvider extends PanelProvider
      * la vérification CSRF et voit son 419 ; l'ordre de priorité le garde
      * devant le `Authenticate` du panneau.
      *
+     * La session s'y ouvre par `OuvreLaSession`, comme dans le groupe `web`
+     * (#2088) : une requête du panneau qui a lu la session avant qu'une autre la
+     * détruise (une déconnexion, de l'application ou du panneau) ne la fait
+     * pas renaître, et ne rend pas au navigateur l'ancien cookie.
+     *
      * @return array<int, class-string>
      */
     private function getMiddleware(): array
@@ -260,7 +265,7 @@ final class AdminPanelProvider extends PanelProvider
             ConditionalCspHeaders::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
-            StartSession::class,
+            OuvreLaSession::class,
             CleDesCopiesHorsLigne::class,
             AuthenticateSession::class,
             ShareErrorsFromSession::class,

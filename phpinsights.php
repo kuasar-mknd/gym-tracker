@@ -37,5 +37,11 @@ return [
                 'app/Models/User.php',
             ],
         ],
+        // Une surcharge de `Store::setId()`, que Laravel nomme ainsi.
+        \NunoMaduro\PhpInsights\Domain\Sniffs\ForbiddenSetterSniff::class => [
+            'exclude' => [
+                'app/Support/Sessions/NeRenaitPasDeSaDestruction.php',
+            ],
+        ],
     ],
 ];
