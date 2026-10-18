@@ -15,6 +15,10 @@
  * - Edit Mode: Provides an inline form to update the exercise's name, type, and category.
  *
  * It relies on parent state to determine if it is currently being edited.
+ *
+ * Sur une copie hors ligne, ni la modification ni la suppression ne
+ * partiraient (#2048) : le glissement ne les propose plus (la rangée retire
+ * alors ses actions), et chaque bouton de la carte dit pourquoi.
  */
 
 import { Link } from '@inertiajs/vue3'
@@ -25,6 +29,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     /** The exercise object to display. */
@@ -57,10 +62,12 @@ const emit = defineEmits([
     /** Fired when the user clicks the delete button or swipes to delete. Passes the exercise ID. */
     'delete',
 ])
+
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 </script>
 
 <template>
-    <SwipeableRow :disabled="isEditing" :action-threshold="80" class="mb-3 block">
+    <SwipeableRow :disabled="isEditing || surUneCopie" :action-threshold="80" class="mb-3 block">
         <template #action-left>
             <button
                 @click="emit('start-edit', exercise)"
@@ -140,6 +147,8 @@ const emit = defineEmits([
                         ton="accent"
                         class="sm:hidden"
                         :dusk="`edit-exercise-btn-${exercise.id}`"
+                        :disabled="surUneCopie"
+                        :aria-describedby="raisonDUneEcriture"
                         @click.stop="emit('start-edit', exercise)"
                     />
 
@@ -150,6 +159,8 @@ const emit = defineEmits([
                         ton="accent"
                         class="hidden sm:inline-flex"
                         :dusk="`edit-exercise-btn-desktop-${exercise.id}`"
+                        :disabled="surUneCopie"
+                        :aria-describedby="raisonDUneEcriture"
                         data-testid="edit-exercise-button"
                         @click.stop="emit('start-edit', exercise)"
                     />
@@ -159,6 +170,8 @@ const emit = defineEmits([
                         ton="danger"
                         class="hidden sm:inline-flex"
                         :dusk="`delete-exercise-btn-${exercise.id}`"
+                        :disabled="surUneCopie"
+                        :aria-describedby="raisonDUneEcriture"
                         data-testid="delete-exercise-button"
                         @click.stop="emit('delete', exercise.id)"
                     />

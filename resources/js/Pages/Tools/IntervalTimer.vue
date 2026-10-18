@@ -17,6 +17,7 @@ import { useMinuteurDIntervalles } from '@/composables/useMinuteurDIntervalles'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     timers: {
@@ -52,6 +53,12 @@ const {
 } = useMinuteurDIntervalles()
 
 const isEditing = computed(() => !!form.id)
+
+/**
+ * Sur une copie hors ligne, un préréglage ne s'enregistre ni ne se supprime
+ * (#2048) : ces boutons le disent d'avance. Le minuteur, lui, tourne.
+ */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 // --- Actions ---
 
@@ -266,7 +273,13 @@ const previewFromForm = () => {
                             <GlassButton v-if="isEditing" type="button" variant="secondary" @click="resetForm">
                                 Annuler
                             </GlassButton>
-                            <GlassButton variant="primary" type="submit" :loading="form.processing">
+                            <GlassButton
+                                variant="primary"
+                                type="submit"
+                                :loading="form.processing"
+                                :disabled="surUneCopie"
+                                :aria-describedby="raisonDUneEcriture"
+                            >
                                 {{ isEditing ? 'Mettre à jour' : 'Enregistrer' }}
                             </GlassButton>
                         </div>
@@ -315,6 +328,8 @@ const previewFromForm = () => {
                                 icon="delete"
                                 label="Supprimer le minuteur"
                                 ton="danger"
+                                :disabled="surUneCopie"
+                                :aria-describedby="raisonDUneEcriture"
                                 @click="demanderSuppression(timer)"
                             />
                         </div>

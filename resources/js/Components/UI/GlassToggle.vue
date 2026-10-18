@@ -27,6 +27,15 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * L'identifiant du texte qui dit pourquoi l'interrupteur est désactivé :
+     * posé sur l'interrupteur lui-même, que le lecteur d'écran annonce, et non
+     * sur le conteneur où un attribut retomberait.
+     */
+    ariaDescribedby: {
+        type: String,
+        default: undefined,
+    },
     size: {
         type: String,
         default: 'md', // sm | md
@@ -91,6 +100,7 @@ const thumbClasses = computed(() => {
             role="switch"
             :aria-checked="modelValue"
             :aria-label="label || undefined"
+            :aria-describedby="ariaDescribedby"
             :disabled="disabled"
             :class="trackClasses"
             @click="toggle"

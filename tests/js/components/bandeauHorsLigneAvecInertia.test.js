@@ -128,12 +128,13 @@ const reessayer = async () => {
 }
 
 let BandeauHorsLigne
+let QuickActions
 
-/** Une page de l'application : le bandeau du layout, puis son texte. */
+/** Une page de l'application : le bandeau du layout, son texte, et un bouton qui écrirait. */
 const Page = {
     props: ['texte'],
     render() {
-        return h('div', [h(BandeauHorsLigne), h('p', { id: 'contenu' }, this.texte)])
+        return h('div', [h(BandeauHorsLigne), h('p', { id: 'contenu' }, this.texte), h(QuickActions)])
     },
 }
 
@@ -154,6 +155,7 @@ beforeAll(async () => {
     etatDuReseau = await import('@/composables/useEtatDuReseau')
     visites = await import('@/Utils/visitesHorsLigne')
     BandeauHorsLigne = (await import('@/Components/UI/BandeauHorsLigne.vue')).default
+    QuickActions = (await import('@/Components/Dashboard/QuickActions.vue')).default
 
     const inertia = await import('@inertiajs/vue3')
     routeur = inertia.router
@@ -177,6 +179,7 @@ beforeAll(async () => {
         setup: ({ el, App, props, plugin }) => {
             application = createApp({ render: () => h(App, props) })
             application.directive('press', {})
+            application.config.globalProperties.route = globalThis.route
             application.use(plugin).mount(el)
         },
     })
@@ -245,8 +248,17 @@ describe('le bandeau d’une copie', () => {
 
 describe('« Réessayer »', () => {
     it('le réseau revenu, recharge la page en entier : le bandeau part avec la marque', async () => {
+        const demarrer = () => document.querySelector('[dusk="start-workout-button"]')
+
+        expect(demarrer().disabled).toBe(false)
+
         await servirLaCopieDe(pageDe())
         const depuis = requetes.length
+
+        // Sur la copie, un bouton qui écrirait le dit d'avance (`useCopieHorsLigne`).
+        expect(demarrer().disabled).toBe(true)
+        expect(demarrer().getAttribute('aria-describedby')).toBe('ecritures-sur-une-copie')
+        expect(document.getElementById('ecritures-sur-une-copie')).not.toBeNull()
 
         reseau.mode = 'repond'
         reseau.reponse = reponseInertia(pageDe({ texte: 'Séances du serveur' }))
@@ -258,6 +270,8 @@ describe('« Réessayer »', () => {
         expect(bandeau()).toBeNull()
         expect(pageInertia.props.horsLigne).toBeUndefined()
         expect(annonces).toEqual([])
+        expect(demarrer().disabled).toBe(false)
+        expect(demarrer().hasAttribute('aria-describedby')).toBe(false)
     })
 
     it('sans réseau, le dit, et la copie reste', async () => {

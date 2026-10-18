@@ -1,15 +1,20 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 const routerDelete = vi.fn()
+
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<div />' },
     router: { delete: (...args) => routerDelete(...args) },
     useForm: (data) => ({ ...data, processing: false, errors: {}, post: vi.fn(), reset: vi.fn() }),
+    usePage: () => pageDInertia,
 }))
 
 import PlateCalculator from '@/Pages/Tools/PlateCalculator.vue'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /**
  * La question passe par un dialogue de l'application, plus par `confirm()`.
@@ -186,5 +191,43 @@ describe('PlateCalculator inventory', () => {
         // que de la cle, et lui passer le disque complet faisait voyager son
         // poids et sa quantite dans l'URL.
         expect(routerDelete.mock.calls[0][0]).toContain('"plate":7')
+    })
+})
+
+/*
+ * Sur une copie hors ligne, l'inventaire ne s'écrit pas (#2048, partie E) :
+ * ajouter, enregistrer et supprimer un disque le disent d'avance. Le calcul de
+ * la barre, lui, se fait.
+ */
+describe('PlateCalculator — sur une copie hors ligne', () => {
+    afterEach(() => {
+        pageDInertia.props = {}
+    })
+
+    const plaques = [{ id: 1, weight: 20, quantity: 2 }]
+    const boutonDisant = (wrapper, texte) => wrapper.findAll('button').find((bouton) => bouton.text().includes(texte))
+    const boutonsDEcriture = (wrapper) => [
+        boutonDisant(wrapper, 'Ajouter'),
+        boutonDisant(wrapper, 'Enregistrer'),
+        wrapper.get('[aria-label="Supprimer la plaque"]'),
+    ]
+
+    it('ne touche pas à l’inventaire, et dit pourquoi', () => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = mountCalculator(plaques)
+
+        for (const bouton of boutonsDEcriture(wrapper)) {
+            expect(bouton.attributes('disabled')).toBeDefined()
+            expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+        }
+    })
+
+    it('le laisse s’écrire depuis une page que le serveur a rendue', () => {
+        const wrapper = mountCalculator(plaques)
+
+        for (const bouton of boutonsDEcriture(wrapper)) {
+            expect(bouton.attributes('disabled')).toBeUndefined()
+            expect(bouton.attributes('aria-describedby')).toBeUndefined()
+        }
     })
 })

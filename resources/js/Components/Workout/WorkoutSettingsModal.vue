@@ -12,6 +12,7 @@ import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassTextarea from '@/Components/UI/GlassTextarea.vue'
 import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     show: { type: Boolean, required: true },
@@ -23,12 +24,15 @@ const emit = defineEmits(['close', 'submit'])
 /**
  * Les réglages ne s'enregistrent pas sans le serveur (#2048) : sans réseau,
  * l'envoi échouait sans un mot. « Enregistrer » se désactive et dit pourquoi ;
- * ce qui est saisi reste dans les champs.
+ * ce qui est saisi reste dans les champs. Sur une copie hors ligne aussi, même
+ * le serveur revenu : rien ne part d'une copie, et la raison est celle de son
+ * bandeau.
  */
 const { joignable } = useEtatDuReseau()
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 const envoyer = () => {
-    if (joignable.value) {
+    if (joignable.value && !surUneCopie.value) {
         emit('submit')
     }
 }
@@ -66,8 +70,8 @@ const envoyer = () => {
                     type="submit"
                     variant="primary"
                     :loading="form.processing"
-                    :disabled="!joignable"
-                    :aria-describedby="joignable ? undefined : 'reglages-sans-reseau'"
+                    :disabled="!joignable || surUneCopie"
+                    :aria-describedby="joignable ? raisonDUneEcriture : 'reglages-sans-reseau'"
                     class="w-full"
                     dusk="save-settings-button"
                 >

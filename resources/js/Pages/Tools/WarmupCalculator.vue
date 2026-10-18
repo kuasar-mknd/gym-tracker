@@ -84,7 +84,14 @@
                                 Personnaliser les paliers
                             </p>
                         </div>
-                        <GlassButton @click="savePreferences" variant="primary" size="sm" :loading="form.processing">
+                        <GlassButton
+                            variant="primary"
+                            size="sm"
+                            :loading="form.processing"
+                            :disabled="surUneCopie"
+                            :aria-describedby="raisonDUneEcriture"
+                            @click="savePreferences"
+                        >
                             Enregistrer
                         </GlassButton>
                     </div>
@@ -190,6 +197,7 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassSegmented from '@/Components/UI/GlassSegmented.vue'
 import { compte, nombre, pourcentage } from '@/Utils/nombre'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 const props = defineProps({
     preference: {
@@ -217,6 +225,9 @@ const removeStep = (index) => {
 }
 
 const saveError = ref(null)
+
+/** Sur une copie hors ligne, les paliers ne s'enregistrent pas (#2048) : le calcul, lui, se fait. */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 /**
  * The server validates every step — steps.*.percent max:100, steps.*.reps

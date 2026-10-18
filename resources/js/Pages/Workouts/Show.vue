@@ -20,6 +20,7 @@ import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -78,6 +79,8 @@ const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
 const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
     useMinuteurDeRepos()
+// Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 const { nouvelIdTemporaire, newRowKey, rowKey, pendingIds, queuedLineIds } = useIdentiteDesRangees()
 const showAddExercise = ref(false)
@@ -379,6 +382,8 @@ onUnmounted(() => {
             :key="timerRun"
             :duration="timerDuration"
             :auto-rest-timer="autoRestTimer"
+            :reglage-desactive="surUneCopie"
+            :raison-du-reglage="raisonDUneEcriture"
             @finished="showTimer = false"
             @close="showTimer = false"
             @update:auto-rest-timer="setAutoRestTimer"

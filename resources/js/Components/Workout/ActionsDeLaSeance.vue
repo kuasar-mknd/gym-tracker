@@ -5,10 +5,16 @@
  *
  * « Modèle » est désactivé quand le serveur ne répond pas (#2048) : sans
  * réseau, l'enregistrement échouait sans un mot. La raison s'affiche sous les
- * boutons, et le bouton la porte pour un lecteur d'écran.
+ * boutons, et le bouton la porte pour un lecteur d'écran. Sur une copie hors
+ * ligne, « Terminer » et « Modèle » ne partiraient pas, même le serveur revenu
+ * (la copie attend que la file se vide pour se recharger) : ils se
+ * désactivent aussi, avec la raison du bandeau de la copie. Ajouter un
+ * exercice et le repos restent : ils passent par la file, ou ne quittent pas
+ * l'appareil.
  */
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     /** L'enregistrement comme modèle attend la réponse du serveur. */
@@ -18,6 +24,7 @@ defineProps({
 const emit = defineEmits(['ajouter-un-exercice', 'demarrer-un-repos', 'enregistrer-comme-modele', 'terminer'])
 
 const { joignable } = useEtatDuReseau()
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 </script>
 
 <template>
@@ -40,8 +47,8 @@ const { joignable } = useEtatDuReseau()
                 variant="secondary"
                 @click="emit('enregistrer-comme-modele')"
                 :loading="enregistrementDuModele"
-                :disabled="!joignable"
-                :aria-describedby="joignable ? undefined : 'modele-sans-reseau'"
+                :disabled="!joignable || surUneCopie"
+                :aria-describedby="joignable ? raisonDUneEcriture : 'modele-sans-reseau'"
                 class="w-full"
                 dusk="enregistrer-comme-modele"
                 >Modèle</GlassButton
@@ -49,6 +56,8 @@ const { joignable } = useEtatDuReseau()
             <GlassButton
                 variant="primary"
                 @click="emit('terminer')"
+                :disabled="surUneCopie"
+                :aria-describedby="raisonDUneEcriture"
                 class="w-full"
                 id="finish-workout-mobile"
                 dusk="finish-workout-mobile"

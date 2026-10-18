@@ -3,13 +3,18 @@ import { mount } from '@vue/test-utils'
 
 const routerDelete = vi.fn()
 
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
 vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<div />' },
     router: { delete: (...args) => routerDelete(...args) },
     useForm: (data) => ({ ...data, processing: false, errors: {}, post: vi.fn(), patch: vi.fn(), reset: vi.fn() }),
+    usePage: () => pageDInertia,
 }))
 
 import IntervalTimer from '@/Pages/Tools/IntervalTimer.vue'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /**
  * La question est posée par un dialogue de l'application, plus par `confirm()`.
@@ -300,5 +305,41 @@ describe('IntervalTimer presets', () => {
 
         expect(dialogue(wrapper).props('ouvert')).toBe(false)
         expect(routerDelete).not.toHaveBeenCalled()
+    })
+})
+
+/*
+ * Sur une copie hors ligne, un préréglage ne s'enregistre ni ne se supprime
+ * (#2048, partie E) : ces boutons le disent d'avance. Le minuteur, lui, tourne,
+ * et un préréglage se charge ou se modifie à l'écran.
+ */
+describe('IntervalTimer — sur une copie hors ligne', () => {
+    afterEach(() => {
+        pageDInertia.props = {}
+    })
+
+    const enregistrer = (wrapper) => wrapper.findAll('button').find((bouton) => bouton.text() === 'Enregistrer')
+
+    it('n’enregistre ni ne supprime un préréglage, et dit pourquoi', async () => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = mountTimer([shortPreset])
+        await openPresets(wrapper)
+
+        for (const bouton of [enregistrer(wrapper), byLabel(wrapper, 'Supprimer le minuteur')]) {
+            expect(bouton.attributes('disabled')).toBeDefined()
+            expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+        }
+
+        expect(byLabel(wrapper, 'Modifier le minuteur').attributes('disabled')).toBeUndefined()
+    })
+
+    it('les laisse partir d’une page que le serveur a rendue', async () => {
+        const wrapper = mountTimer([shortPreset])
+        await openPresets(wrapper)
+
+        for (const bouton of [enregistrer(wrapper), byLabel(wrapper, 'Supprimer le minuteur')]) {
+            expect(bouton.attributes('disabled')).toBeUndefined()
+            expect(bouton.attributes('aria-describedby')).toBeUndefined()
+        }
     })
 })

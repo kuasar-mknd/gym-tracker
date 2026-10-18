@@ -6,6 +6,9 @@ const post = vi.fn()
 const destroy = vi.fn()
 const haptic = vi.fn()
 
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
 /*
  * The six charts are pulled in by defineAsyncComponent, so their import chain
  * keeps resolving after the test file is done — `workoutDuration.js` was still
@@ -57,7 +60,7 @@ vi.mock('@inertiajs/vue3', async () => {
         // Both slots, so the skeletons the page shows while the payload is in
         // flight and the content it shows afterwards are each rendered once.
         Deferred: { name: 'Deferred', props: ['data'], template: '<div><slot name="fallback" /><slot /></div>' },
-        usePage: () => ({ props: { auth: { user: { id: 1 } } } }),
+        usePage: () => pageDInertia,
         router: { visit: (...args) => visit(...args), reload: vi.fn(), post: vi.fn() },
         useForm: (data) => {
             const form = reactive({
@@ -82,6 +85,7 @@ import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
 import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
 import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
 import { annoncesPendant } from '../utils/annoncesSansReseau'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** La valeur que la carte de chiffre reçoit pour ce libellé. */
 const statistique = (wrapper, libelle) =>
@@ -92,6 +96,10 @@ const statistique = (wrapper, libelle) =>
 
 /** La question passe par un dialogue de l'application, plus par `confirm()`. */
 const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
+
+beforeEach(() => {
+    pageDInertia.props = { auth: { user: { id: 1 } } }
+})
 
 beforeAll(() => {
     globalThis.route = (name, params) => {
@@ -609,5 +617,49 @@ describe('Workouts/Index — the deferred charts and exercises', () => {
         const wrapper = mountPage({ workouts: { ...structuredClone(paginator), data: [], total: 0 } })
 
         expect(wrapper.findAll('h3').map((heading) => heading.text())).not.toContain('Fréquence Mensuelle')
+    })
+})
+
+/*
+ * Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048,
+ * partie E) : « Nouvelle séance » et l'invitation d'un historique vide le
+ * disent d'avance.
+ */
+describe('Workouts/Index — sur une copie hors ligne', () => {
+    const marquer = () => {
+        pageDInertia.props = {
+            auth: { user: { id: 1 } },
+            horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} },
+        }
+    }
+
+    it('ne démarre pas de séance depuis l’en-tête, et dit pourquoi', async () => {
+        marquer()
+        const wrapper = mountPage()
+        const bouton = wrapper.get('[aria-label="Nouvelle séance"]')
+
+        expect(bouton.attributes('disabled')).toBeDefined()
+        expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+
+        await bouton.trigger('click')
+
+        expect(post).not.toHaveBeenCalled()
+    })
+
+    it('ne propose pas de démarrer depuis un historique vide', () => {
+        marquer()
+        const invitation = mountPage({ workouts: { ...structuredClone(paginator), data: [], total: 0 } }).get(
+            '[dusk="empty-state"]',
+        )
+
+        expect(invitation.attributes('action-desactivee')).toBe('true')
+        expect(invitation.attributes('raison-de-l-action')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+    })
+
+    it('démarre depuis une page que le serveur a rendue', () => {
+        const wrapper = mountPage()
+
+        expect(wrapper.get('[aria-label="Nouvelle séance"]').attributes('disabled')).toBeUndefined()
+        expect(wrapper.get('[aria-label="Nouvelle séance"]').attributes('aria-describedby')).toBeUndefined()
     })
 })

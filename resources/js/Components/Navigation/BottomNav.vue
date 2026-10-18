@@ -4,6 +4,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { computed, ref } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 const navItems = [
     { name: 'Accueil', icon: 'grid_view', route: 'dashboard' },
@@ -14,6 +15,14 @@ const navItems = [
 ]
 
 const isWorkoutShow = computed(() => route().current('workouts.show'))
+
+/*
+ * Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048) :
+ * le bouton se désactive et dit pourquoi. Sur la séance, il ajoute un
+ * exercice, qui passe par la file hors ligne : il reste ouvert.
+ */
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
+const demarrageImpossible = computed(() => !isWorkoutShow.value && surUneCopie.value)
 
 const fabConfig = computed(() => {
     if (isWorkoutShow.value) {
@@ -86,8 +95,9 @@ const isActiveRoute = (itemRoute) => {
                     @click="handleFabClick"
                     class="glass-nav-fab"
                     :aria-label="fabConfig.name"
-                    :disabled="creationEnCours"
+                    :disabled="creationEnCours || demarrageImpossible"
                     :aria-busy="creationEnCours"
+                    :aria-describedby="demarrageImpossible ? raisonDUneEcriture : undefined"
                 >
                     <GlassIcon :name="fabConfig.icon" size="xl" class="font-black" />
                 </button>

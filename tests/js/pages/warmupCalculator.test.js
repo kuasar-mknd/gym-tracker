@@ -4,6 +4,9 @@ import { mount } from '@vue/test-utils'
 const post = vi.fn()
 let form
 
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
 vi.mock('@inertiajs/vue3', () => ({
     Head: { template: '<div />' },
     router: { delete: vi.fn() },
@@ -12,10 +15,12 @@ vi.mock('@inertiajs/vue3', () => ({
 
         return form
     },
+    usePage: () => pageDInertia,
 }))
 
 import WarmupCalculator from '@/Pages/Tools/WarmupCalculator.vue'
 import { passesSlot } from './pageStubs'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 beforeAll(() => {
     globalThis.route = (name) => `/${name}`
@@ -23,6 +28,7 @@ beforeAll(() => {
 
 beforeEach(() => {
     vi.clearAllMocks()
+    pageDInertia.props = {}
 })
 
 const preference = {
@@ -132,5 +138,32 @@ describe('saving the preferences', () => {
 
         // Leaving the old error under a fresh attempt reads as a new refusal.
         expect(wrapper.find('[dusk="warmup-save-error"]').exists()).toBe(false)
+    })
+})
+
+/*
+ * Sur une copie hors ligne, les paliers ne s'enregistrent pas (#2048, partie
+ * E) : « Enregistrer » le dit d'avance. Le calcul, lui, se fait.
+ */
+describe('sur une copie hors ligne', () => {
+    it('n’enregistre pas les paliers, et dit pourquoi', async () => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = mountPage()
+        const bouton = buttonSaying(wrapper, 'Enregistrer')
+
+        expect(bouton.attributes('disabled')).toBeDefined()
+        expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+
+        await bouton.trigger('click')
+
+        expect(post).not.toHaveBeenCalled()
+        expect(buttonSaying(wrapper, 'Ajouter').attributes('disabled')).toBeUndefined()
+    })
+
+    it('les enregistre depuis une page que le serveur a rendue', () => {
+        const bouton = buttonSaying(mountPage(), 'Enregistrer')
+
+        expect(bouton.attributes('disabled')).toBeUndefined()
+        expect(bouton.attributes('aria-describedby')).toBeUndefined()
     })
 })

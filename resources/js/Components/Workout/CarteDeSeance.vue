@@ -2,18 +2,24 @@
 /**
  * Une séance de l'historique : son titre, sa date, un aperçu de ses exercices,
  * et le glissement qui propose de la supprimer. La décision reste à la page.
+ * Sur une copie hors ligne, la suppression ne partirait pas (#2048) : le
+ * glissement ne la propose plus, et la rangée retire son bouton, que ni le
+ * doigt ni le clavier n'atteignent alors.
  */
 import { Link } from '@inertiajs/vue3'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import SwipeableRow from '@/Components/UI/SwipeableRow.vue'
 import { compte } from '@/Utils/nombre'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     seance: { type: Object, required: true },
 })
 
 defineEmits(['supprimer'])
+
+const { surUneCopie } = useCopieHorsLigne()
 
 const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -24,7 +30,7 @@ const formatDate = (dateStr) =>
 </script>
 
 <template>
-    <SwipeableRow class="mb-3 block" :action-threshold="80">
+    <SwipeableRow class="mb-3 block" :action-threshold="80" :disabled="surUneCopie">
         <template #action-right>
             <button
                 type="button"

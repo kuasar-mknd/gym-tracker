@@ -42,6 +42,20 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+
+    /**
+     * Le réglage ne peut pas partir, et l'identifiant du texte qui dit
+     * pourquoi : sur une copie hors ligne, rien ne part vers le serveur
+     * (#2048). La page le décide, comme le réglage lui-même.
+     */
+    reglageDesactive: {
+        type: Boolean,
+        default: false,
+    },
+    raisonDuReglage: {
+        type: String,
+        default: undefined,
+    },
 })
 
 /**
@@ -297,6 +311,8 @@ watch(
                         label="Démarrage automatique"
                         size="sm"
                         dusk="auto-rest-timer"
+                        :disabled="reglageDesactive"
+                        :aria-describedby="reglageDesactive ? raisonDuReglage : undefined"
                         @update:model-value="emit('update:autoRestTimer', $event)"
                     />
                 </div>

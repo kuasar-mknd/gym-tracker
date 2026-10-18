@@ -1,11 +1,19 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
 
 vi.mock('@inertiajs/vue3', () => ({
     Link: { name: 'Link', props: ['href'], template: '<a :href="href"><slot /></a>' },
+    usePage: () => pageDInertia,
 }))
 
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
+
+beforeEach(() => {
+    pageDInertia.props = {}
+})
 
 const ligne = (id, name, setsCount) => ({ id, exercise: { id, name }, sets_count: setsCount })
 
@@ -22,7 +30,12 @@ const monter = (props = {}) =>
         global: {
             mocks: { route: (nom, params) => `/${nom}/${params.workout}` },
             stubs: {
-                SwipeableRow: { template: '<div><slot name="action-right" /><slot /></div>' },
+                // Comme la vraie rangée : coupée, elle retire ses actions.
+                SwipeableRow: {
+                    props: ['disabled'],
+                    template:
+                        '<div :data-glissement-coupe="String(disabled)"><slot v-if="!disabled" name="action-right" /><slot /></div>',
+                },
                 GlassCard: { template: '<div><slot /></div>' },
             },
         },
@@ -89,5 +102,26 @@ describe('CarteDeSeance', () => {
         await wrapper.get('[dusk="delete-workout-7"]').trigger('click')
 
         expect(wrapper.emitted('supprimer')).toEqual([[seance]])
+    })
+})
+
+/*
+ * Sur une copie hors ligne, la suppression ne partirait pas (#2048, partie E) :
+ * le glissement ne la propose plus, et son bouton dit pourquoi.
+ */
+describe('CarteDeSeance sur une copie hors ligne', () => {
+    it('ne propose pas la suppression : le glissement est coupé', () => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = monter()
+
+        expect(wrapper.get('[data-glissement-coupe]').attributes('data-glissement-coupe')).toBe('true')
+        expect(wrapper.find('button').exists()).toBe(false)
+    })
+
+    it('la propose sur une page que le serveur a rendue', () => {
+        const wrapper = monter()
+
+        expect(wrapper.get('[data-glissement-coupe]').attributes('data-glissement-coupe')).toBe('false')
+        expect(wrapper.find('button').exists()).toBe(true)
     })
 })

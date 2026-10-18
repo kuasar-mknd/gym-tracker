@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
 /**
@@ -23,11 +23,15 @@ afterAll(() => {
     }
 })
 
+/** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
 vi.mock('@inertiajs/vue3', () => ({
     Link: {
         props: { href: { type: String, default: '' } },
         template: '<a :href="href"><slot /></a>',
     },
+    usePage: () => pageDInertia,
 }))
 
 /**
@@ -44,6 +48,11 @@ vi.mock('@/Components/Stats/RecentWorkoutsTimelineChart.vue', () => ({
 }))
 
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
+
+beforeEach(() => {
+    pageDInertia.props = {}
+})
 
 beforeAll(() => {
     globalThis.route = (name, params) => (params === undefined ? `/${name}` : `/${name}/${JSON.stringify(params)}`)
@@ -90,6 +99,21 @@ describe('quand rien n’a encore été fait', () => {
         await wrapper.find('button').trigger('click')
 
         expect(wrapper.emitted('startWorkout')).toHaveLength(1)
+        expect(wrapper.get('button').attributes('aria-describedby')).toBeUndefined()
+    })
+
+    // Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048) : le bouton le dit d'avance.
+    it('sur une copie hors ligne, ne propose pas de démarrer, et dit pourquoi', async () => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = await mountActivity({ recentWorkouts: [] })
+        const bouton = wrapper.get('button')
+
+        expect(bouton.attributes('disabled')).toBeDefined()
+        expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+
+        await bouton.trigger('click')
+
+        expect(wrapper.emitted('startWorkout')).toBeUndefined()
     })
 
     it('occupe le bouton pendant que la séance se crée', async () => {
