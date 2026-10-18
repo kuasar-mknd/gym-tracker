@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Cookie as SymfonyCookie;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\Appareil;
 use Tests\Support\SessionsEspionnees;
+use Tests\Support\UneAutreRequete;
 
 /*
  * Les GET du préchauffage des copies hors ligne (#2048, partie D) lisent la
@@ -28,6 +29,13 @@ use Tests\Support\SessionsEspionnees;
  * Le magasin des sessions est un espion, sur celui des tests (en mémoire) :
  * chaque enregistrement s'y compte. Chaque cas a sa contre-épreuve, la même
  * requête sans la marque, qui enregistre la session et pose ses cookies.
+ *
+ * Depuis #PR, aucune requête, marquée ou non, ne réécrit une session qu'une
+ * autre requête a détruite pendant qu'elle tournait (`SessionDetruiteNeRenaitPasTest`).
+ * La marque garde ce qui lui est propre : ni enregistrement, ni cookie, même
+ * pour une session qui n'a croisé aucune destruction, ou qui a seulement
+ * disparu du magasin, sans destruction ni pierre tombale (son expiration),
+ * que la même requête sans la marque réécrit, comme Laravel.
  */
 
 /**
@@ -103,17 +111,17 @@ function prechauffageAppareilConnecte(User $compte, SessionsEspionnees $espion):
 }
 
 /**
- * Fait détruire la session, comme une déconnexion dans un autre onglet la
- * détruit, pendant la prochaine requête : juste après que celle-ci a lu le
- * compte dans la session.
+ * Fait disparaître la session du magasin pendant la prochaine requête, juste
+ * après que celle-ci a lu le compte dans la session : sans destruction ni
+ * pierre tombale, comme une session qui expire.
  */
-function prechauffageDetruireLaSessionPendantLaRequete(SessionsEspionnees $espion, string $identifiant): void
+function prechauffageFaireDisparaitreLaSessionPendantLaRequete(SessionsEspionnees $espion, string $identifiant): void
 {
-    $detruite = false;
+    $disparue = false;
 
-    Event::listen(Authenticated::class, static function () use ($espion, $identifiant, &$detruite): void {
-        if (! $detruite) {
-            $detruite = true;
+    Event::listen(Authenticated::class, static function () use ($espion, $identifiant, &$disparue): void {
+        if (! $disparue) {
+            $disparue = true;
             $espion->destroy($identifiant);
         }
     });
@@ -145,14 +153,14 @@ it('enregistre la session et pose ses cookies sur le même GET sans la marque (c
         ->and(prechauffageCookiesPoses($reponse))->toEqualCanonicalizing(['XSRF-TOKEN', CleDesCopiesHorsLigne::nom(), config()->string('session.cookie')]);
 });
 
-it('ne réécrit pas une session détruite pendant un GET marqué', function (): void {
+it('ne réécrit pas une session disparue pendant un GET marqué', function (): void {
     $espion = prechauffageEspionner();
     $compte = User::factory()->create();
     $appareil = prechauffageAppareilConnecte($compte, $espion);
     $identifiant = (string) $appareil->cookie(config()->string('session.cookie'));
 
     expect($espion->read($identifiant))->not->toBe('');
-    prechauffageDetruireLaSessionPendantLaRequete($espion, $identifiant);
+    prechauffageFaireDisparaitreLaSessionPendantLaRequete($espion, $identifiant);
 
     $reponse = $appareil->envoyer('GET', '/dashboard', [], prechauffageEntetes());
 
@@ -162,13 +170,13 @@ it('ne réécrit pas une session détruite pendant un GET marqué', function ():
         ->and(prechauffageCookiesPoses($reponse))->toBe([]);
 });
 
-it('réécrit la session détruite pendant le même GET sans la marque, comme Laravel le fait (contre-épreuve)', function (): void {
+it('réécrit la session disparue pendant le même GET sans la marque, comme Laravel le fait (contre-épreuve)', function (): void {
     $espion = prechauffageEspionner();
     $compte = User::factory()->create();
     $appareil = prechauffageAppareilConnecte($compte, $espion);
     $identifiant = (string) $appareil->cookie(config()->string('session.cookie'));
 
-    prechauffageDetruireLaSessionPendantLaRequete($espion, $identifiant);
+    prechauffageFaireDisparaitreLaSessionPendantLaRequete($espion, $identifiant);
 
     $appareil->envoyer('GET', '/dashboard', [], prechauffageEntetes(marque: false))->assertOk();
 
@@ -232,4 +240,20 @@ it('écrit la marque comme la page l’envoie', function (): void {
 
     expect($module)->toContain(sprintf("export const ENTETE_DU_PRECHAUFFAGE = '%s'", OuvreLaSession::ENTETE))
         ->toContain(sprintf("export const MARQUE_DU_PRECHAUFFAGE = '%s'", OuvreLaSession::PRECHAUFFAGE));
+});
+
+it('ne réécrit pas une session qu’une autre requête détruit pendant un GET marqué, et sa réponse ne pose aucun cookie', function (): void {
+    $espion = prechauffageEspionner();
+    $compte = User::factory()->create();
+    $appareil = prechauffageAppareilConnecte($compte, $espion);
+    $identifiant = (string) $appareil->cookie(config()->string('session.cookie'));
+
+    UneAutreRequete::detruiraLaSessionPendantLaProchaine($identifiant);
+
+    $reponse = $appareil->envoyer('GET', '/dashboard', [], prechauffageEntetes());
+
+    $reponse->assertOk();
+    expect($espion->read($identifiant))->toBe('')
+        ->and($espion->ecritures)->not->toContain($identifiant)
+        ->and(prechauffageCookiesPoses($reponse))->toBe([]);
 });

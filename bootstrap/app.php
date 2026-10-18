@@ -254,11 +254,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         /*
-         * Les GET du préchauffage des copies (#2048) lisent la session sans
-         * l'enregistrer, et leur réponse ne pose aucun cookie : le docbloc du
-         * middleware dit pourquoi. Il remplace `StartSession` dans le groupe
-         * `web`, à la même place dans l'ordre de priorité, que Laravel lit par
-         * la classe parente.
+         * L'ouverture de la session ne réécrit pas une session détruite
+         * pendant la requête, et sa réponse ne rend alors aucun cookie (#PR) ;
+         * les GET du préchauffage des copies (#2048) la lisent sans
+         * l'enregistrer. Le docbloc du middleware dit pourquoi. Il remplace
+         * `StartSession` dans le groupe `web`, à la même place dans l'ordre de
+         * priorité, que Laravel lit par la classe parente ; le panneau le nomme
+         * dans sa pile, et `AppServiceProvider` le lie à `StartSession` pour la
+         * pile de Sanctum.
          */
         $middleware->web(replace: [
             \Illuminate\Session\Middleware\StartSession::class => \App\Http\Middleware\OuvreLaSession::class,
