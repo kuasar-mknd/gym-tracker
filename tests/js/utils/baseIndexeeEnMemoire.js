@@ -7,9 +7,10 @@
  * dont `resources/js/Utils/copiesHorsLigne.js` se sert : `open` et sa mise à
  * niveau, `objectStoreNames.contains`, `createObjectStore` (clé dans
  * l'enregistrement ou à part), `transaction`, et sur un magasin `get`, `put`,
- * `delete`, `clear` et `getAll`. Elle tient les trois règles d'IndexedDB dont
- * la barrière de la purge dépend, pour qu'un test tombe là où un navigateur
- * tomberait :
+ * `delete`, `clear` et `getAll`, plus une connexion que le navigateur ferme
+ * de lui-même (`close`, puis `InvalidStateError` à chaque transaction).
+ * Elle tient les trois règles d'IndexedDB dont la barrière de la purge
+ * dépend, pour qu'un test tombe là où un navigateur tomberait :
  *
  * - une transaction est tout ou rien : annulée, rien de ce qu'elle a écrit ne
  *   reste ;
@@ -267,6 +268,8 @@ class ConnexionSimulee {
         this.fermee = false
         this.enMiseANiveau = false
         this.onversionchange = null
+        this.onclose = null
+        this.transactionsRefusees = 0
     }
 
     get objectStoreNames() {
@@ -285,6 +288,8 @@ class ConnexionSimulee {
 
     transaction(noms, mode = 'readonly') {
         if (this.fermee) {
+            this.transactionsRefusees += 1
+
             throw new DOMException('Connexion fermée', 'InvalidStateError')
         }
 
@@ -302,22 +307,46 @@ class ConnexionSimulee {
     close() {
         this.fermee = true
     }
+
+    /**
+     * Ce que fait le navigateur quand il ferme lui-même la connexion : le
+     * stockage de l'origine effacé ou évincé, le serveur d'IndexedDB perdu.
+     * `close` est émis, sauf quand on le dit muet : une perte que la page
+     * n'apprend qu'à sa transaction suivante.
+     *
+     * @param {{ muette?: boolean }} [options]
+     */
+    perdre({ muette = false } = {}) {
+        this.fermee = true
+
+        if (!muette) {
+            this.onclose?.({ type: 'close', target: this })
+        }
+    }
 }
 
 /**
  * Une fabrique neuve, sans aucune base : un appareil sur lequel rien n'a
  * encore été rangé. Les onglets d'un même appareil partagent la même.
  *
+ * `perdreLesConnexions` ferme chaque connexion ouverte comme le navigateur
+ * la ferme de lui-même (`close`), ou sans rien dire (`{ muette: true }`) ;
+ * `connexions` les rend toutes, chacune avec le nombre de transactions
+ * qu'elle a refusées une fois fermée.
+ *
  * @returns {{
  *   open: (nom: string, version?: number) => DemandeSimulee,
  *   bases: Map<string, { version: number, magasins: Map<string, { cheminDeLaCle: string | null, enregistrements: Map<unknown, unknown> }> }>,
  *   ouvertures: () => number,
+ *   connexions: () => ConnexionSimulee[],
+ *   perdreLesConnexions: (options?: { muette?: boolean }) => void,
  *   enregistrements: (base: string, magasin: string) => Map<unknown, unknown>,
  *   auRepos: () => Promise<void>,
  * }}
  */
 export const creerUneFabriqueEnMemoire = () => {
     const bases = new Map()
+    const connexions = []
     let ouvertures = 0
 
     return {
@@ -341,6 +370,7 @@ export const creerUneFabriqueEnMemoire = () => {
 
                 const connexion = new ConnexionSimulee(base)
 
+                connexions.push(connexion)
                 demande.result = connexion
 
                 if (version > base.version) {
@@ -359,6 +389,9 @@ export const creerUneFabriqueEnMemoire = () => {
         },
         bases,
         ouvertures: () => ouvertures,
+        connexions: () => [...connexions],
+        perdreLesConnexions: (options) =>
+            connexions.filter((connexion) => !connexion.fermee).forEach((connexion) => connexion.perdre(options)),
         enregistrements: (base, magasin) => bases.get(base)?.magasins.get(magasin)?.enregistrements ?? new Map(),
         auRepos: async () => {
             await Promise.all([...bases.values()].map((base) => base.file))

@@ -1709,6 +1709,89 @@ describe('sans les moyens du chiffrement ou de la base', () => {
     })
 })
 
+describe('une connexion que le navigateur ferme de lui-même', () => {
+    it('s’oublie à son évènement close : l’écriture suivante et l’oubli rouvrent la base, et aboutissent', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('ecrite')
+        expect(fabrique.ouvertures()).toBe(1)
+
+        fabrique.perdreLesConnexions()
+
+        expect(await onglet.ecrireUneCopie(pageDe({ url: '/tools', component: 'Tools/Index' }))).toBe('ecrite')
+        expect(fabrique.ouvertures()).toBe(2)
+        // Aucune transaction n'est demandée à la connexion fermée : elle s'est oubliée dès `close`.
+        expect(fabrique.connexions()[0].transactionsRefusees).toBe(0)
+        expect(cheminsRanges()).toEqual(['/dashboard', '/tools'])
+
+        expect(await onglet.oublierLesCopies({ fermerLeTemoin: true })).toBe(true)
+        expect(copiesRangees().size).toBe(0)
+    })
+
+    it('perdue sans évènement, se rouvre une fois quand sa transaction est refusée, et l’oubli ferme encore la clé', async () => {
+        const onglet = ouvrirUnOnglet()
+        const cle = cleAuHasard()
+
+        poserLeTemoin(cle)
+        poserLeTitulaire(7)
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('ecrite')
+
+        fabrique.perdreLesConnexions({ muette: true })
+
+        expect(await onglet.oublierLesCopies({ fermerLeTemoin: true })).toBe(true)
+        expect(fabrique.ouvertures()).toBe(2)
+        expect(fabrique.connexions()[0].transactionsRefusees).toBe(1)
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange()).toMatchObject({ ouvert: false })
+        expect(etatRange().empreintesFermees).toHaveLength(1)
+
+        // La clé fermée ne fait plus rien écrire, même après une autre perte.
+        fabrique.perdreLesConnexions({ muette: true })
+
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('cle-fermee')
+        expect(fabrique.ouvertures()).toBe(3)
+    })
+
+    it('ne fait pas oublier, par un close tardif, la connexion qui l’a déjà remplacée', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+        fabrique.perdreLesConnexions({ muette: true })
+        await onglet.ecrireUneCopie(pageDe())
+        expect(fabrique.ouvertures()).toBe(2)
+
+        // L'évènement de la première connexion arrive après la réouverture.
+        const [premiere] = fabrique.connexions()
+
+        premiere.onclose?.({ type: 'close', target: premiere })
+
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('ecrite')
+        expect(fabrique.ouvertures()).toBe(2)
+    })
+
+    it('rend sa lecture et son inventaire après une perte, sans rien ouvrir de plus que la base', async () => {
+        const onglet = ouvrirUnOnglet()
+
+        poserLeTemoin(cleAuHasard())
+        poserLeTitulaire(7)
+        await onglet.ecrireUneCopie(pageDe())
+
+        fabrique.perdreLesConnexions({ muette: true })
+        expect((await onglet.inventaire(pageDe())).copies.map((copie) => copie.chemin)).toEqual(['/dashboard'])
+
+        fabrique.perdreLesConnexions({ muette: true })
+        expect((await onglet.lireUneCopie('/dashboard')).page.component).toBe('Dashboard')
+
+        fabrique.perdreLesConnexions()
+        expect(await onglet.noterUnRejeu()).toBe(true)
+        expect(fabrique.ouvertures()).toBe(4)
+    })
+})
+
 describe('la base en mémoire des tests', () => {
     it('refuse une requête faite après avoir attendu autre chose, comme un navigateur', async () => {
         const base = await ouvrirLaBaseDuNavigateur(fabrique)

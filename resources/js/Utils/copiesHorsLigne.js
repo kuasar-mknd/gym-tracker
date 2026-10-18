@@ -83,7 +83,11 @@ import {
  *
  * Sans `crypto.subtle` (un contexte qui n'est pas sûr) ou sans IndexedDB
  * (jsdom, une navigation privée qui le refuse), aucune copie, et aucune
- * erreur. Ce module est le seul à ouvrir IndexedDB, par une fonction injectée
+ * erreur. Une connexion que le navigateur ferme de lui-même (stockage effacé
+ * ou évincé, serveur d'IndexedDB perdu après une suspension, comme on le
+ * rapporte d'iOS) se rouvre à la demande suivante (`base`, `transactionSur`) :
+ * une PWA reste ouverte des jours, et la purge d'avant la déconnexion doit
+ * encore agir. Ce module est le seul à ouvrir IndexedDB, par une fonction injectée
  * (`ouvrirLaBase`), qu'une base en mémoire remplace sous Vitest
  * (`tests/js/utils/baseIndexeeEnMemoire.js`).
  */
@@ -469,25 +473,77 @@ export const creerLeMagasinDesCopies = ({
         }
     }
 
-    /** @returns {Promise<IDBDatabase>} */
+    /**
+     * La connexion à la base, ouverte à la première demande et gardée pour
+     * les suivantes. Le navigateur peut la fermer lui-même (`close` : le
+     * stockage de l'origine effacé ou évincé, le serveur d'IndexedDB perdu
+     * après une suspension) : elle s'oublie alors, et la demande suivante en
+     * rouvre une. Seule la promesse de cette connexion s'oublie, jamais celle
+     * qui l'a déjà remplacée.
+     *
+     * @returns {Promise<IDBDatabase>}
+     */
     const base = () => {
-        baseOuverte ??= Promise.resolve()
+        if (baseOuverte !== null) {
+            return baseOuverte
+        }
+
+        const promesse = Promise.resolve()
             .then(ouvrirLaBase)
             .then((ouverte) => {
                 ouverte.onversionchange = () => {
                     ouverte.close()
-                    baseOuverte = null
+                    oublierLaConnexion(promesse)
                 }
+                ouverte.onclose = () => oublierLaConnexion(promesse)
 
                 return ouverte
             })
             .catch((erreur) => {
-                baseOuverte = null
+                oublierLaConnexion(promesse)
 
                 throw erreur
             })
 
-        return baseOuverte
+        baseOuverte = promesse
+
+        return promesse
+    }
+
+    /** @param {Promise<IDBDatabase>} promesse la connexion à oublier, si c'est encore celle du magasin */
+    const oublierLaConnexion = (promesse) => {
+        if (baseOuverte === promesse) {
+            baseOuverte = null
+        }
+    }
+
+    /**
+     * Une transaction sur la base. Une connexion fermée sans que le magasin
+     * l'ait su (`InvalidStateError` à la création de la transaction, sans
+     * `close` reçu) s'oublie, et la transaction se demande une seconde fois,
+     * à une connexion rouverte : sans cela, chaque écriture, chaque oubli et
+     * chaque lecture échouaient en silence jusqu'au rechargement de la page,
+     * une purge d'avant la déconnexion comprise.
+     *
+     * @param {string[]} magasins
+     * @param {IDBTransactionMode} mode
+     * @returns {Promise<IDBTransaction>}
+     */
+    const transactionSur = async (magasins, mode) => {
+        const promesse = base()
+        const ouverte = await promesse
+
+        try {
+            return ouverte.transaction(magasins, mode)
+        } catch (erreur) {
+            if (erreur?.name !== 'InvalidStateError') {
+                throw erreur
+            }
+
+            oublierLaConnexion(promesse)
+
+            return (await base()).transaction(magasins, mode)
+        }
     }
 
     /** @param {Uint8Array} octets */
@@ -545,12 +601,11 @@ export const creerLeMagasinDesCopies = ({
     /**
      * L'état et la copie d'un chemin, lus ensemble.
      *
-     * @param {IDBDatabase} ouverte
      * @param {string} chemin
      * @returns {Promise<{ etat: EtatDuMagasin | undefined, copie: EnregistrementDUneCopie | undefined }>}
      */
-    const lireLEtatEtLaCopie = async (ouverte, chemin) => {
-        const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
+    const lireLEtatEtLaCopie = async (chemin) => {
+        const transaction = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
         const [etat, copie] = await Promise.all([
             resultatDe(transaction.objectStore(MAGASIN_DE_L_ETAT).get(CLE_DE_L_ETAT)),
             resultatDe(transaction.objectStore(MAGASIN_DES_PAGES).get(chemin)),
@@ -576,7 +631,6 @@ export const creerLeMagasinDesCopies = ({
      * Range une copie chiffrée, dans une transaction qui revérifie tout ce dont
      * l'écriture dépend, sans rien attendre d'autre qu'IndexedDB.
      *
-     * @param {IDBDatabase} ouverte
      * @param {EnregistrementDUneCopie} copie
      * @param {{
      *   compte: string,
@@ -591,11 +645,10 @@ export const creerLeMagasinDesCopies = ({
      * @returns {Promise<string>} `ecrite`, ou la raison du refus
      */
     const ranger = async (
-        ouverte,
         copie,
         { compte, temoin, generationDeDepart, ouvrir, ecriteLeAttendue, pasApres, protegee },
     ) => {
-        const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
+        const transaction = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
         const fin = finDe(transaction)
         const pages = transaction.objectStore(MAGASIN_DES_PAGES)
         const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
@@ -727,10 +780,11 @@ export const creerLeMagasinDesCopies = ({
         }
 
         try {
-            const ouverte = await base()
+            await base()
+
             const [empreinte, cle] = await Promise.all([empreinteDe(octets), importer(octets)])
 
-            return { chemin, compte, temoin, empreinte, cle, ouverte }
+            return { chemin, compte, temoin, empreinte, cle }
         } catch {
             return { refus: 'indisponible' }
         }
@@ -765,11 +819,11 @@ export const creerLeMagasinDesCopies = ({
             return preparee.refus
         }
 
-        const { chemin, compte, temoin, empreinte, cle, ouverte } = preparee
+        const { chemin, compte, temoin, empreinte, cle } = preparee
 
         try {
             const authentifiees = donneesAuthentifiees(compte, chemin)
-            const { etat, copie: precedente } = await lireLEtatEtLaCopie(ouverte, chemin)
+            const { etat, copie: precedente } = await lireLEtatEtLaCopie(chemin)
             const ancienne =
                 precedente !== undefined && ouvertPour(etat, compte, empreinte) && precedente.empreinte === empreinte
                     ? await dechiffrer(cle, authentifiees, precedente).catch(() => null)
@@ -809,7 +863,7 @@ export const creerLeMagasinDesCopies = ({
                 return 'trop-grande'
             }
 
-            return await ranger(ouverte, copie, {
+            return await ranger(copie, {
                 compte,
                 temoin,
                 generationDeDepart,
@@ -845,7 +899,7 @@ export const creerLeMagasinDesCopies = ({
             return preparee.refus
         }
 
-        const { chemin, compte, temoin, empreinte, cle, ouverte } = preparee
+        const { chemin, compte, temoin, empreinte, cle } = preparee
         const recues = noms.filter(
             (nom) => nom !== 'auth' && !propJamaisGardee(page.component, nom) && Object.hasOwn(page.props ?? {}, nom),
         )
@@ -856,7 +910,7 @@ export const creerLeMagasinDesCopies = ({
 
         try {
             const authentifiees = donneesAuthentifiees(compte, chemin)
-            const { etat, copie: precedente } = await lireLEtatEtLaCopie(ouverte, chemin)
+            const { etat, copie: precedente } = await lireLEtatEtLaCopie(chemin)
 
             if (
                 precedente === undefined ||
@@ -898,7 +952,7 @@ export const creerLeMagasinDesCopies = ({
                 return 'trop-grande'
             }
 
-            return await ranger(ouverte, copie, {
+            return await ranger(copie, {
                 compte,
                 temoin,
                 generationDeDepart,
@@ -950,8 +1004,7 @@ export const creerLeMagasinDesCopies = ({
             const octets = fermerLeTemoin && subtle ? octetsDeLaCle(lireLeTemoin()) : null
             const empreinteDuTemoin = octets === null ? null : await empreinteDe(octets)
             const empreinteRelevee = await releveeAvant
-            const ouverte = await base()
-            const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
+            const transaction = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
             const fin = finDe(transaction)
             const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
             const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
@@ -1019,8 +1072,7 @@ export const creerLeMagasinDesCopies = ({
                 return false
             }
 
-            const ouverte = await base()
-            const transaction = ouverte.transaction([MAGASIN_DE_L_ETAT], 'readwrite')
+            const transaction = await transactionSur([MAGASIN_DE_L_ETAT], 'readwrite')
             const fin = finDe(transaction)
             const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
             const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
@@ -1102,8 +1154,7 @@ export const creerLeMagasinDesCopies = ({
         }
 
         try {
-            const ouverte = await base()
-            const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
+            const transaction = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
             const fin = finDe(transaction)
             const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
             const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
@@ -1160,8 +1211,7 @@ export const creerLeMagasinDesCopies = ({
         }
 
         try {
-            const ouverte = await base()
-            const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
+            const transaction = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readwrite')
             const fin = finDe(transaction)
             const pages = transaction.objectStore(MAGASIN_DES_PAGES)
             const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
@@ -1242,7 +1292,7 @@ export const creerLeMagasinDesCopies = ({
         }
 
         try {
-            const { etat, copie } = await lireLEtatEtLaCopie(await base(), chemin)
+            const { etat, copie } = await lireLEtatEtLaCopie(chemin)
 
             if (etat?.ouvert !== true) {
                 return null
@@ -1357,9 +1407,8 @@ export const creerLeMagasinDesCopies = ({
         }
 
         try {
-            const ouverte = await base()
             const empreinte = await empreinteDe(octets)
-            const transaction = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
+            const transaction = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
             const [etat, copies] = await Promise.all([
                 resultatDe(transaction.objectStore(MAGASIN_DE_L_ETAT).get(CLE_DE_L_ETAT)),
                 resultatDe(transaction.objectStore(MAGASIN_DES_PAGES).getAll()),
@@ -1402,8 +1451,7 @@ export const creerLeMagasinDesCopies = ({
         const instant = horloge()
 
         try {
-            const ouverte = await base()
-            const transaction = ouverte.transaction([MAGASIN_DE_L_ETAT], 'readwrite')
+            const transaction = await transactionSur([MAGASIN_DE_L_ETAT], 'readwrite')
             const fin = finDe(transaction)
             const magasinDeLEtat = transaction.objectStore(MAGASIN_DE_L_ETAT)
             const demandeDeLEtat = magasinDeLEtat.get(CLE_DE_L_ETAT)
@@ -1453,8 +1501,7 @@ export const creerLeMagasinDesCopies = ({
         }
 
         try {
-            const ouverte = await base()
-            const lecture = ouverte.transaction([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
+            const lecture = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
             const [etat, copies] = await Promise.all([
                 resultatDe(lecture.objectStore(MAGASIN_DE_L_ETAT).get(CLE_DE_L_ETAT)),
                 resultatDe(lecture.objectStore(MAGASIN_DES_PAGES).getAll()),
@@ -1496,7 +1543,7 @@ export const creerLeMagasinDesCopies = ({
                 return []
             }
 
-            const transaction = ouverte.transaction([MAGASIN_DES_PAGES], 'readwrite')
+            const transaction = await transactionSur([MAGASIN_DES_PAGES], 'readwrite')
             const fin = finDe(transaction)
             const pages = transaction.objectStore(MAGASIN_DES_PAGES)
             const retirees = []
