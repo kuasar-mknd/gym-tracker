@@ -37,7 +37,7 @@ use SessionHandlerInterface;
  * sessions.
  *
  * `SessionDetruiteNeRenaitPasTest` et `PrechauffageSansSessionEcriteTest` s'en
- * servent (#PR).
+ * servent (#2088).
  */
 final class UneAutreRequete
 {

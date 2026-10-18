@@ -15,7 +15,7 @@ use Illuminate\Session\ArraySessionHandler;
  * session sans l'enregistrer (`OuvreLaSession`), et que la même requête sans la
  * marque l'enregistre. `SessionDetruiteNeRenaitPasTest` y fait détruire la
  * session par une autre requête juste avant une écriture, et regarde ce que
- * chaque destruction trouve déjà posé (#PR).
+ * chaque destruction trouve déjà posé (#2088).
  */
 final class SessionsEspionnees extends ArraySessionHandler
 {

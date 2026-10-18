@@ -39,7 +39,7 @@ use Tests\Support\UneAutreRequete;
 /*
  * Une session détruite pendant une requête ne renaît pas de l'enregistrement
  * de fin de celle-ci, et la réponse de cette requête ne pose aucun cookie
- * (#PR). Laravel enregistre la session à la fin de chaque requête, telle
+ * (#2088). Laravel enregistre la session à la fin de chaque requête, telle
  * qu'il l'a lue en entrant, et en renvoie le cookie : une requête
  * d'arrière-plan (props différées, écritures de la file hors ligne,
  * abonnement push) qui l'avait lue avant une déconnexion la faisait renaître

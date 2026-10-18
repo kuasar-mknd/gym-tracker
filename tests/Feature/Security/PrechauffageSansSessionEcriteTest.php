@@ -30,7 +30,7 @@ use Tests\Support\UneAutreRequete;
  * chaque enregistrement s'y compte. Chaque cas a sa contre-épreuve, la même
  * requête sans la marque, qui enregistre la session et pose ses cookies.
  *
- * Depuis #PR, aucune requête, marquée ou non, ne réécrit une session qu'une
+ * Depuis #2088, aucune requête, marquée ou non, ne réécrit une session qu'une
  * autre requête a détruite pendant qu'elle tournait (`SessionDetruiteNeRenaitPasTest`).
  * La marque garde ce qui lui est propre : ni enregistrement, ni cookie, même
  * pour une session qui n'a croisé aucune destruction, ou qui a seulement

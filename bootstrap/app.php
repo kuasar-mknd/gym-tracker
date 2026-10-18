@@ -255,7 +255,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         /*
          * L'ouverture de la session ne réécrit pas une session détruite
-         * pendant la requête, et sa réponse ne rend alors aucun cookie (#PR) ;
+         * pendant la requête, et sa réponse ne rend alors aucun cookie (#2088) ;
          * les GET du préchauffage des copies (#2048) la lisent sans
          * l'enregistrer. Le docbloc du middleware dit pourquoi. Il remplace
          * `StartSession` dans le groupe `web`, à la même place dans l'ordre de

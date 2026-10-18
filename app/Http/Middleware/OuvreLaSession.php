@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
  * `web`, la pile de Sanctum du groupe `api` et le panneau. Elle suit
  * `StartSession`, à deux exceptions près.
  *
- * Une session détruite pendant la requête (#PR). Laravel enregistre la
+ * Une session détruite pendant la requête (#2088). Laravel enregistre la
  * session à la fin de chaque requête, telle qu'il l'a lue en entrant, et en
  * renvoie le cookie. Une requête d'arrière-plan qui l'a lue AVANT qu'une
  * autre la détruise (une déconnexion, une connexion, la suppression du

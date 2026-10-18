@@ -7,7 +7,7 @@ namespace App\Support\Sessions;
 /**
  * Ce que `SessionGardee` et `SessionChiffreeGardee` ajoutent au magasin de
  * sessions de Laravel : une session détruite ne renaît pas de
- * l'enregistrement de fin d'une requête qui l'avait lue avant (#PR).
+ * l'enregistrement de fin d'une requête qui l'avait lue avant (#2088).
  *
  * - Détruire un identifiant (`invalidate()`, `regenerate(true)`,
  *   `migrate(true)`, ce que font la déconnexion, la connexion, la suppression

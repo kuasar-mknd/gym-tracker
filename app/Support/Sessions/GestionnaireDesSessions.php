@@ -14,7 +14,7 @@ use SessionHandlerInterface;
 
 /**
  * Le gestionnaire des sessions de Laravel, dont chaque magasin, quel que soit
- * le pilote, ne renaît pas de sa destruction (#PR) : `SessionGardee`, ou
+ * le pilote, ne renaît pas de sa destruction (#2088) : `SessionGardee`, ou
  * `SessionChiffreeGardee` quand `session.encrypt` est vrai.
  * `AppServiceProvider` le pose à la place de celui de Laravel.
  *

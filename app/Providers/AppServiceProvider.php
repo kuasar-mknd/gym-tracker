@@ -150,7 +150,7 @@ final class AppServiceProvider extends ServiceProvider
     /**
      * Une session détruite ne renaît pas de l'enregistrement de fin d'une
      * requête qui l'avait lue avant, et la réponse de cette requête ne pose
-     * aucun cookie (#PR). Le magasin de chaque pilote est une
+     * aucun cookie (#2088). Le magasin de chaque pilote est une
      * `SessionGardee`, que bâtit `GestionnaireDesSessions`, posé ici à la
      * place du gestionnaire de Laravel, par `extend()` comme celui des
      * courriels : le gestionnaire de Laravel, créé puis remplacé, n'a encore

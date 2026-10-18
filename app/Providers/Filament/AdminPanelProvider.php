@@ -253,7 +253,7 @@ final class AdminPanelProvider extends PanelProvider
      * devant le `Authenticate` du panneau.
      *
      * La session s'y ouvre par `OuvreLaSession`, comme dans le groupe `web`
-     * (#PR) : une requête du panneau qui a lu la session avant qu'une autre la
+     * (#2088) : une requête du panneau qui a lu la session avant qu'une autre la
      * détruise (une déconnexion, de l'application ou du panneau) ne la fait
      * pas renaître, et ne rend pas au navigateur l'ancien cookie.
      *
