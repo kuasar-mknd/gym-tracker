@@ -7,9 +7,9 @@ import { readFileSync, statSync } from 'node:fs'
  * graphique et le morceau de chaque page jamais visitée (#1814). La coquille
  * — l'entrée, la CSS, Vue, les polices latines, l'accueil et la séance — en
  * pesait 572. Depuis #2048, la police des icônes et les dix icônes de public/
- * y entrent aussi (23 entrées, 671 Kio), puis la fermeture de l'entrée et des
+ * y entrent aussi (23 entrées, 662 Kio), puis la fermeture de l'entrée et des
  * pages de la salle, sans leurs graphiques (`resources/js/sw/fermetureDuPrecache.js`) :
- * 60 entrées, 835 Kio. Un motif élargi, ou une fermeture qui suivrait l'entrée
+ * 60 entrées, 836 Kio. Un motif élargi, ou une fermeture qui suivrait l'entrée
  * jusqu'à chaque page, referait grossir l'installation sans que rien ne le
  * dise.
  *
