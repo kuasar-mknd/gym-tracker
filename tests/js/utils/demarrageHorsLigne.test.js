@@ -5,7 +5,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { jsRoot } from '../conventions/sourceFiles'
 import { RAISONS_DE_LA_COQUILLE, envelopperLaCoquille } from '@/sw/coquilleServie'
 import { ATTRIBUT_DU_MOTIF, ATTRIBUT_D_ATTENTE, MOTIF_DU_DELAI, pageHorsLigne } from '@/sw/pageHorsLigne'
-import { demarrerHorsLigne, estLaCoquille, laisserLaCoquille, raisonDeLaCoquille } from '@/Utils/demarrageHorsLigne'
+import { PAGES_PRECACHEES_SANS_COPIE } from '@/sw/fermetureDuPrecache'
+import {
+    COMPOSANT_HORS_LIGNE,
+    demarrerHorsLigne,
+    estLaCoquille,
+    laisserLaCoquille,
+    raisonDeLaCoquille,
+} from '@/Utils/demarrageHorsLigne'
 
 /*
  * Le démarrage dans la coquille hors ligne (#2048, partie F) : la page que le
@@ -174,6 +181,15 @@ describe('le branchement', () => {
      * n'a pas encore écrit la page : aucune écriture faite sans réseau ne
      * partirait en file. Elle vient avec les pages, chargées après lui.
      */
+    /*
+     * La page que la coquille monte à une adresse sans copie s'ouvre sans
+     * réseau : son morceau est au precache, avec ce qu'il importe.
+     */
+    it('monte une page HorsLigne qui existe, et qui est au precache', () => {
+        expect(existsSync(resolve(jsRoot, `Pages/${COMPOSANT_HORS_LIGNE}.vue`))).toBe(true)
+        expect(PAGES_PRECACHEES_SANS_COPIE).toContain(COMPOSANT_HORS_LIGNE)
+    })
+
     it('ne charge pas la file hors ligne avant le démarrage dans la coquille', () => {
         const graphe = grapheStatiqueDeLEntree()
 

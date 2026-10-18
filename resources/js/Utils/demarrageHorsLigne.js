@@ -70,7 +70,9 @@ export const COMPOSANT_HORS_LIGNE = 'HorsLigne'
 const RAISON_DE_LA_MARQUE = Object.freeze({ delai: RAISON_RESEAU_LENT, reseau: RAISON_SANS_RESEAU })
 
 /**
- * Si le document est la coquille hors ligne servie par le worker.
+ * Si le document est la coquille hors ligne : la page précachée, que le
+ * worker l'ait servie ou qu'elle soit ouverte à sa propre adresse
+ * (`servieParLeWorker` les distingue).
  *
  * @param {Document | undefined} document
  * @returns {boolean}
