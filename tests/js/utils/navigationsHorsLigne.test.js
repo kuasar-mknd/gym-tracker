@@ -1,10 +1,16 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import {
+    DELAI_DE_LA_NAVIGATION_MS,
+    PREFIXES_SANS_COQUILLE,
     URL_DE_LA_PAGE_HORS_LIGNE,
     activerLePrechargementDesNavigations,
     estUneNavigation,
     garderLePrechargement,
+    naviguerAvecUnDelai,
     naviguerOuRetomber,
+    naviguerSansCoquille,
+    peutDireLaFinDeLaSession,
+    sorteDeNavigation,
 } from '@/sw/navigationsHorsLigne'
 
 const requete = (mode, method = 'GET') => ({ url: 'https://fit.test/dashboard', mode, method })
@@ -149,5 +155,186 @@ describe('garderLePrechargement', () => {
         garderLePrechargement({ waitUntil })
 
         expect(waitUntil).not.toHaveBeenCalled()
+    })
+})
+
+/*
+ * Trois sortes de navigations (#2048, partie F) : les pages de la salle
+ * attendent huit secondes avant la page « hors ligne » ; le rappel de la
+ * connexion sociale, le panneau, les tableaux de bord, les liens des
+ * courriels et Dusk ne la reçoivent jamais ; les autres la reçoivent sans
+ * délai, faute de réseau. Le vrai worker les joue dans navigationsDuWorker.test.js.
+ */
+describe('sorteDeNavigation', () => {
+    const origine = 'https://fit.test'
+
+    it.each(['/', '/dashboard', '/workouts/12', '/workouts?page=1', '/tools/warmup', '/dashboard#haut'])(
+        'attend %s huit secondes',
+        (chemin) => {
+            expect(sorteDeNavigation(`${origine}${chemin}`, origine)).toBe('salle')
+        },
+    )
+
+    it.each([
+        '/auth/google/callback?code=abc',
+        '/auth/apple/redirect',
+        '/%61uth/google/callback',
+        '/backoffice',
+        '/backoffice/pulse',
+        '/horizon/dashboard',
+        '/telescope',
+        '/verify-email/7/empreinte',
+        '/reset-password/jeton',
+        '/_dusk/login/7',
+    ])('ne donne jamais la page « hors ligne » à %s', (chemin) => {
+        expect(sorteDeNavigation(`${origine}${chemin}`, origine)).toBe('sans-coquille')
+    })
+
+    it.each(['/stats', '/journal', '/workouts?page=2', '/workouts/12/edit', '/login', '/verify-email', '/%E0%A4%A'])(
+        'laisse %s au réseau, puis à la page « hors ligne »',
+        (chemin) => {
+            expect(sorteDeNavigation(`${origine}${chemin}`, origine)).toBe('ordinaire')
+        },
+    )
+
+    it('ne prend rien d’une autre origine', () => {
+        expect(sorteDeNavigation('https://ailleurs.test/dashboard', origine)).toBe('sans-coquille')
+        expect(sorteDeNavigation(undefined, origine)).toBe('sans-coquille')
+    })
+
+    it('écrit chaque début de chemin sur une ligne, comme le test PHP le lit', () => {
+        expect(PREFIXES_SANS_COQUILLE.every((prefixe) => /^\/[a-z_-]+\/?$/.test(prefixe))).toBe(true)
+        expect(Object.isFrozen(PREFIXES_SANS_COQUILLE)).toBe(true)
+    })
+})
+
+describe('naviguerSansCoquille', () => {
+    it('rend la réponse préchargée, ou celle du réseau', async () => {
+        const prechargee = { page: 'rappel' }
+        const servie = { page: 'panneau' }
+
+        await expect(
+            naviguerSansCoquille(
+                { request: requete('navigate'), preloadResponse: Promise.resolve(prechargee) },
+                vi.fn(),
+            ),
+        ).resolves.toBe(prechargee)
+        await expect(naviguerSansCoquille({ request: requete('navigate') }, async () => servie)).resolves.toBe(servie)
+    })
+
+    it('laisse l’erreur du navigateur sans réseau', async () => {
+        const reponse = await naviguerSansCoquille({ request: requete('navigate') }, reseauCoupe)
+
+        expect(reponse.type).toBe('error')
+    })
+})
+
+describe('peutDireLaFinDeLaSession', () => {
+    it.each([
+        ['une redirection opaque', { type: 'opaqueredirect', status: 0 }],
+        ['une redirection', { type: 'basic', status: 302 }],
+        ['un 401', { type: 'basic', status: 401 }],
+    ])('retient %s', (_, reponse) => {
+        expect(peutDireLaFinDeLaSession(reponse)).toBe(true)
+    })
+
+    it.each([
+        ['une page', { type: 'basic', status: 200 }],
+        ['une erreur du serveur', { type: 'basic', status: 503 }],
+        ['un 403', { type: 'basic', status: 403 }],
+        ['rien', undefined],
+    ])('écarte %s', (_, reponse) => {
+        expect(peutDireLaFinDeLaSession(reponse)).toBe(false)
+    })
+})
+
+describe('naviguerAvecUnDelai', () => {
+    beforeEach(() => {
+        vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    /** Un évènement de navigation, ses attentes relevées. */
+    const evenement = (preloadResponse) => {
+        const attentes = []
+
+        return {
+            request: requete('navigate'),
+            preloadResponse,
+            resultingClientId: 'page-ouverte',
+            attentes,
+            waitUntil: (promesse) => attentes.push(promesse),
+        }
+    }
+
+    it('attend huit secondes par défaut', async () => {
+        let repondre
+        const e = evenement(new Promise((resoudre) => (repondre = resoudre)))
+        const trouverLaPageHorsLigne = vi.fn(async (raison) => ({ raison }))
+        const servie = naviguerAvecUnDelai(e, {
+            trouverLaPageHorsLigne,
+            allerChercher: vi.fn(),
+            prevenirLaPage: vi.fn(),
+        })
+
+        await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS - 1)
+        expect(trouverLaPageHorsLigne).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(1)
+
+        await expect(servie).resolves.toEqual({ raison: 'delai' })
+        repondre(undefined)
+    })
+
+    it('prévient la page ouverte d’une redirection arrivée après le délai, une fois', async () => {
+        let repondre
+        const e = evenement(new Promise((resoudre) => (repondre = resoudre)))
+        const prevenirLaPage = vi.fn()
+        const servie = naviguerAvecUnDelai(e, {
+            trouverLaPageHorsLigne: async (raison) => ({ raison }),
+            allerChercher: vi.fn(),
+            prevenirLaPage,
+            delai: 10,
+        })
+
+        await vi.advanceTimersByTimeAsync(10)
+        await expect(servie).resolves.toEqual({ raison: 'delai' })
+        expect(prevenirLaPage).not.toHaveBeenCalled()
+
+        repondre(new Response(null, { status: 302, headers: { Location: '/login' } }))
+        await Promise.all(e.attentes)
+
+        expect(prevenirLaPage).toHaveBeenCalledExactlyOnceWith('page-ouverte')
+    })
+
+    it('ne prévient de rien quand le réseau tombe après le délai', async () => {
+        let couper
+        const e = evenement(new Promise((_, rejeter) => (couper = rejeter)))
+        const prevenirLaPage = vi.fn()
+        naviguerAvecUnDelai(e, {
+            trouverLaPageHorsLigne: async (raison) => ({ raison }),
+            allerChercher: vi.fn(),
+            prevenirLaPage,
+            delai: 10,
+        })
+
+        await vi.advanceTimersByTimeAsync(10)
+        couper(new TypeError('Failed to fetch'))
+
+        await expect(Promise.all(e.attentes)).resolves.toBeDefined()
+        expect(prevenirLaPage).not.toHaveBeenCalled()
+    })
+
+    it('rend l’erreur du navigateur si la page « hors ligne » manque au precache', async () => {
+        const e = evenement(reseauCoupe())
+        const reponse = await naviguerAvecUnDelai(e, {
+            trouverLaPageHorsLigne: async () => undefined,
+            allerChercher: vi.fn(),
+            prevenirLaPage: vi.fn(),
+        })
+
+        expect(reponse.type).toBe('error')
     })
 })

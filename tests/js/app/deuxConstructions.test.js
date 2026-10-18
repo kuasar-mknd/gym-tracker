@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { creerDesCachesEnMemoire } from '../utils/cachesEnMemoire'
+import { EvenementDeRequete, EvenementProlongeable } from '../utils/evenementsDuWorker'
 import { creerUneFabriqueEnMemoire } from '../utils/baseIndexeeEnMemoire'
 import { CACHE_DE_LA_CONSTRUCTION_PRECEDENTE } from '@/sw/cacheDesActifs'
 import { CACHE_DE_LA_CONSTRUCTION_MISE_DE_COTE } from '@/sw/constructionPrecedente'
@@ -31,41 +32,6 @@ const ORIGINE = self.location.origin
 
 /** Le precache de Workbox, sous la portée du worker. */
 const PRECACHE = `workbox-precache-v2-${ORIGINE}/`
-
-/**
- * Un évènement prolongeable, comme le worker en reçoit : `waitUntil` garde
- * chaque promesse, que l'envoi attend.
- */
-class EvenementProlongeable extends Event {
-    constructor(type) {
-        super(type)
-        /** @type {Promise<unknown>[]} */
-        this.attentes = []
-    }
-
-    waitUntil(promesse) {
-        this.attentes.push(Promise.resolve(promesse))
-    }
-}
-
-/** Une requête que le worker reçoit : un second `respondWith` lève, comme dans un navigateur. */
-class EvenementDeRequete extends EvenementProlongeable {
-    constructor(requete) {
-        super('fetch')
-        this.request = requete
-        this.preloadResponse = Promise.resolve(undefined)
-        /** @type {Promise<Response>[]} */
-        this.reponses = []
-    }
-
-    respondWith(reponse) {
-        if (this.reponses.length > 0) {
-            throw new DOMException('The event has already been responded to.', 'InvalidStateError')
-        }
-
-        this.reponses.push(Promise.resolve(reponse))
-    }
-}
 
 /** Le serveur : il ne sert que la construction déployée, et rien quand le réseau est coupé. */
 const serveur = { fichiers: new Map(), coupe: false }

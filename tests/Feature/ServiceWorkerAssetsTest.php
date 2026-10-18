@@ -2,6 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\SecurityHeaders;
+use Filament\Facades\Filament;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Route as RouteEnregistree;
+use Illuminate\Support\Facades\Route;
+use Spatie\Csp\Policy;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\FermetureDuPrecache;
 use Tests\Support\PagesGardees;
 
@@ -301,4 +308,140 @@ it('ne précache aucune adresse deux fois', function (): void {
 
     expect($trouvees[1])->not->toBe([])
         ->and($trouvees[1])->toBe(array_values(array_unique($trouvees[1])));
+});
+
+/**
+ * Les en-têtes que le worker pose sur la page « hors ligne » qu'il sert
+ * (`resources/js/sw/enTetesDeLaCoquille.json`, #2048, partie F), du nom à la
+ * valeur.
+ *
+ * @return array<string, string>
+ */
+function enTetesDeLaCoquilleDuWorker(): array
+{
+    /** @var array<string, string> $enTetes */
+    $enTetes = json_decode((string) file_get_contents(resource_path('js/sw/enTetesDeLaCoquille.json')), true, 512, JSON_THROW_ON_ERROR);
+
+    return $enTetes;
+}
+
+/**
+ * Les débuts de chemin des navigations qui ne reçoivent jamais la page
+ * « hors ligne » ni le délai (`PREFIXES_SANS_COQUILLE`), lus comme un texte,
+ * une entrée par ligne : une ligne d'une autre forme fait échouer la lecture
+ * au lieu d'être sautée.
+ *
+ * @return list<string>
+ */
+function prefixesSansCoquilleDuWorker(): array
+{
+    $source = (string) file_get_contents(resource_path('js/sw/navigationsHorsLigne.js'));
+    $debut = strpos($source, 'export const PREFIXES_SANS_COQUILLE = Object.freeze([');
+
+    expect($debut)->not->toBeFalse('PREFIXES_SANS_COQUILLE est introuvable dans navigationsHorsLigne.js.');
+
+    $prefixes = [];
+
+    foreach (array_slice(explode("\n", substr($source, (int) $debut)), 1) as $ligne) {
+        if (trim($ligne) === '])') {
+            return $prefixes;
+        }
+
+        expect(preg_match("#^\\s*'(/[a-z_-]+/?)',?\\s*$#", $ligne, $trouve))->toBe(1, "Ligne inattendue dans PREFIXES_SANS_COQUILLE : {$ligne}");
+
+        $prefixes[] = $trouve[1];
+    }
+
+    throw new RuntimeException('PREFIXES_SANS_COQUILLE ne se ferme pas.');
+}
+
+/*
+ * Le precache garde la page « hors ligne » telle qu'un fichier statique de
+ * public/build : sans la politique de sécurité du contenu ni les autres
+ * en-têtes que Laravel pose sur une page. Le worker l'enveloppe donc des
+ * siens (#2048, partie F), qui doivent être exactement ceux du serveur :
+ * chaque en-tête de `SecurityHeaders`, et la politique de `CustomPolicy` en
+ * production, sans nonce, plus `frame-ancestors 'self'`. Un en-tête ajouté au
+ * middleware, ou une source ajoutée à la politique, fait échouer ce test tant
+ * que la coquille ne le porte pas ; le worker construit les porte tels quels.
+ */
+it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la politique de production, sans nonce', function (): void {
+    $this->app['env'] = 'production';
+    config(['app.env' => 'production', 'csp.nonce_enabled' => false]);
+    $this->app->instance('request', Request::create('/dashboard'));
+
+    $politique = Policy::create(presets: config('csp.presets'), directives: config('csp.directives'))->getContents();
+    $reponse = new SecurityHeaders()->handle(Request::create('/dashboard'), static fn (): Response => new Response());
+    $attendus = ['content-security-policy' => $politique.";frame-ancestors 'self'"];
+
+    foreach ($reponse->headers->all() as $nom => $valeurs) {
+        if (! in_array($nom, ['cache-control', 'date'], true)) {
+            $attendus[$nom] = (string) $valeurs[0];
+        }
+    }
+
+    $coquille = array_change_key_case(enTetesDeLaCoquilleDuWorker());
+    ksort($attendus);
+    ksort($coquille);
+
+    expect($coquille)->toBe($attendus)
+        ->and($coquille['content-security-policy'])->not->toContain('nonce-')
+        ->and($coquille['content-security-policy'])->not->toContain('unsafe-eval')
+        ->and($coquille)->toHaveKeys(['x-frame-options', 'x-content-type-options', 'referrer-policy', 'cross-origin-opener-policy', 'permissions-policy']);
+
+    if (is_file(public_path('sw.js'))) {
+        $worker = (string) file_get_contents(public_path('sw.js'));
+
+        foreach (enTetesDeLaCoquilleDuWorker() as $nom => $valeur) {
+            expect(str_contains($worker, $valeur))->toBeTrue("public/sw.js ne porte pas l'en-tête {$nom} de la coquille : relancer npm run build.");
+        }
+    }
+});
+
+/*
+ * Ni délai ni page « hors ligne » pour le rappel d'un fournisseur de
+ * connexion, le panneau et ses tableaux de bord, Horizon et Telescope, les
+ * liens des courriels et les routes de Dusk (#2048, partie F) : coupé à huit
+ * secondes, le rappel poserait la session sur une réponse que personne ne lit.
+ * Le worker ne lit pas la configuration : chaque début de chemin qu'il écrit
+ * en dur se rapproche ici de la route ou du chemin configuré qu'il couvre,
+ * et aucun ne touche une page de la salle.
+ */
+it('ne donne jamais la page « hors ligne » ni le délai au rappel de connexion, au panneau et à Horizon', function (): void {
+    $prefixes = prefixesSansCoquilleDuWorker();
+    $couvert = static fn (string $chemin): bool => array_filter(
+        $prefixes,
+        static fn (string $prefixe): bool => str_starts_with($chemin, $prefixe),
+    ) !== [];
+    $chemins = [
+        'rappel de la connexion sociale' => route('social.callback', ['provider' => 'google'], false),
+        'redirection vers un fournisseur' => route('social.redirect', ['provider' => 'google'], false),
+        'panneau' => '/'.Filament::getPanel('admin')->getPath(),
+        'Pulse' => '/'.config()->string('pulse.path'),
+        'journaux' => '/'.config()->string('log-viewer.route_path'),
+        'Horizon' => '/'.config()->string('horizon.path'),
+        'Telescope' => '/'.config()->string('telescope.path'),
+        'lien de vérification' => route('verification.verify', ['id' => 7, 'hash' => 'empreinte'], false),
+        'lien de réinitialisation' => route('password.reset', ['token' => 'jeton'], false),
+        'connexion de Dusk' => '/_dusk/login/7',
+    ];
+
+    foreach ($chemins as $quoi => $chemin) {
+        expect($couvert($chemin))->toBeTrue("{$quoi} ({$chemin}) recevrait la page « hors ligne ».");
+    }
+
+    foreach (PagesGardees::liste() as $page) {
+        expect($couvert($page['chemin']))->toBeFalse("{$page['chemin']} perdrait son délai.");
+    }
+
+    foreach ($prefixes as $prefixe) {
+        expect(array_filter($chemins, static fn (string $chemin): bool => str_starts_with($chemin, $prefixe)))
+            ->not->toBe([], "{$prefixe} ne couvre plus aucune route.");
+    }
+
+    expect(collect(Route::getRoutes()->getRoutes())
+        ->map(static fn (RouteEnregistree $route): string => '/'.ltrim($route->uri(), '/'))
+        ->filter(static fn (string $uri): bool => str_starts_with($uri, '/_dusk/'))
+        ->values()
+        ->all())->not->toBe([]);
 });

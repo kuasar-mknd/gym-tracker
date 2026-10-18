@@ -1,12 +1,13 @@
 import { cacheNames, clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, getCacheKeyForURL, matchPrecache, precacheAndRoute } from 'workbox-precaching'
 import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
+import { envelopperLaCoquille } from '@/sw/coquilleServie'
 import { basculerLaConstructionPrecedente, mettreDeCoteLaConstructionPrecedente } from '@/sw/constructionPrecedente'
 import {
     activerLePrechargementDesNavigations,
+    creerLesNavigations,
     estUneNavigation,
     garderLePrechargement,
-    naviguerOuRetomber,
     URL_DE_LA_PAGE_HORS_LIGNE,
 } from '@/sw/navigationsHorsLigne'
 import { renouvelerLAbonnement } from '@/sw/renouvellementDAbonnement'
@@ -73,11 +74,34 @@ self.addEventListener('activate', (event) => {
 })
 
 /**
- * Une navigation va au réseau, et retombe sur la page « hors ligne » quand il
- * ne répond pas (#1966) : l'application installée s'ouvre sans réseau sur une
- * page qui le dit, et non sur l'erreur du navigateur. Aucune page de
- * l'application n'est gardée, donc aucune ne peut être servie à un autre
- * compte. Le détail vit dans le module.
+ * Les navigations : le réseau d'abord ; la page « hors ligne », enveloppée des
+ * en-têtes de sécurité de l'application et marquée de sa raison, quand il ne
+ * répond pas (#1966), et au bout de huit secondes pour les pages de la salle
+ * (#2048, partie F). Le worker ne garde ni ne sert rien d'un compte : la page
+ * « hors ligne » est la même pour tous. Le rappel de la connexion sociale, le
+ * panneau et les tableaux de bord n'ont ni délai ni page « hors ligne ». Les
+ * clients se lisent à l'appel : le worker n'en garde aucun. Le détail vit dans
+ * les modules.
+ */
+const navigations = creerLesNavigations({
+    trouverLaPageHorsLigne: async (raison) =>
+        envelopperLaCoquille(await matchPrecache(URL_DE_LA_PAGE_HORS_LIGNE).catch(() => undefined), raison),
+    allerChercher: (requete) => fetch(requete),
+    trouverLeClient: (identifiant) => clients.get(identifiant),
+    origine: self.location.origin,
+})
+
+/**
+ * « Attendre la réponse », depuis la page « hors ligne » servie au délai :
+ * l'adresse attend le réseau sans délai pendant une minute.
+ */
+self.addEventListener('message', (event) => {
+    navigations.recevoirUnMessage(event)
+})
+
+/**
+ * Chaque navigation passe par le worker, même celles qu'il laisse au réseau :
+ * la réponse préchargée n'est rendue qu'ainsi, sans seconde requête.
  *
  * Ce que l'installation n'a pas pris, la première visite le garde.
  *
@@ -90,13 +114,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     if (estUneNavigation(event.request)) {
         garderLePrechargement(event)
-        event.respondWith(
-            naviguerOuRetomber(
-                event,
-                () => matchPrecache(URL_DE_LA_PAGE_HORS_LIGNE),
-                (requete) => fetch(requete),
-            ),
-        )
+        event.respondWith(navigations.repondre(event))
 
         return
     }

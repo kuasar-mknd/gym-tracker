@@ -8,6 +8,7 @@ import {
     VERSION_DU_CONTRAT,
     cleDeLaCopie,
     cleDeLaSeanceEnCours,
+    cleGardee,
     pageGardee,
     propJamaisGardee,
     propsGardables,
@@ -94,6 +95,43 @@ describe('une page gardée', () => {
     it('ne lit pas un chemin comme une expression', () => {
         expect(pageGardee('/toolsX1rm', 'Tools/OneRepMax')).toBeNull()
         expect(pageGardee('/tools/1rmm', 'Tools/OneRepMax')).toBeNull()
+    })
+})
+
+/*
+ * Ce que le worker lit d'une navigation, avant toute réponse : le chemin seul
+ * (#2048, partie F). Il n'attend huit secondes que ces pages-là.
+ */
+describe('une clé de la liste, sans composant', () => {
+    it.each([
+        '/dashboard',
+        '/workouts/12',
+        '/workouts',
+        '/exercises',
+        '/profile',
+        '/tools',
+        '/tools/interval-timer',
+        '/plates',
+        '/tools/1rm',
+        '/tools/warmup',
+    ])('reconnaît %s', (cle) => {
+        expect(cleGardee(cle)).toBe(true)
+    })
+
+    it('reconnaît la racine et la première page de la liste, par leur clé', () => {
+        expect(cleGardee(cleDeLaCopie('/'))).toBe(true)
+        expect(cleGardee(cleDeLaCopie('/workouts?page=1'))).toBe(true)
+    })
+
+    it.each([
+        ['une autre page', '/stats'],
+        ['une page de modification', '/workouts/12/edit'],
+        ['un identifiant qui n’en est pas un', '/workouts/0'],
+        ['une autre page de la liste', '/workouts?page=2'],
+        ['un filtre', '/exercises?category=jambes'],
+        ['rien', null],
+    ])('écarte %s', (_, cle) => {
+        expect(cleGardee(cle)).toBe(false)
     })
 })
 
