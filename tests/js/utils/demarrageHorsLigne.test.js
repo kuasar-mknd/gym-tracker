@@ -199,9 +199,10 @@ describe('le branchement', () => {
     })
 
     /*
-     * Un import à la demande ne se chargerait qu'en mode coquille, sans réseau :
-     * il ne serait jamais au precache. L'import est statique, et main.js attend
-     * le démarrage avant tout ce qu'il installe, sauf l'écoute des messages du
+     * L'import est statique : le démarrage vit dans le morceau de l'entrée,
+     * sans requête ni attente de plus avant le montage (la fermeture du
+     * precache prendrait aussi un import à la demande). main.js attend le
+     * démarrage avant tout ce qu'il installe, sauf l'écoute des messages du
      * worker, que le navigateur délivre à la fin de l'analyse du document.
      */
     it('est importé statiquement par main.js, et attendu avant tout le reste dans la coquille', () => {

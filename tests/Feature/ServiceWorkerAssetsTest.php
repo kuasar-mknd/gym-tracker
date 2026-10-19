@@ -329,8 +329,8 @@ function fichiersStatiquesDeLEntreeDuWorker(array $manifeste): array
 /*
  * La coquille monte la page `HorsLigne` à une adresse sans copie, et son
  * démarrage (`Utils/demarrageHorsLigne.js`) vient de l'entrée même (#2048,
- * partie F) : chargé à la demande, il ne le serait qu'en mode coquille, donc
- * sans réseau, et ne serait jamais au precache. Le module n'a pas de morceau à
+ * partie F) : importé statiquement, il est dans le morceau de l'entrée, sans
+ * requête ni attente de plus avant le montage. Le module n'a pas de morceau à
  * lui dans le manifeste : il se reconnaît dans le code que l'entrée charge
  * d'emblée, aux noms qu'il écrit (`pagesSansReseau`, la prop de la page
  * `HorsLigne`) et qu'il appelle au magasin (`lireAuDemarrage`), que la

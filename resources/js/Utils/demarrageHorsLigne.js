@@ -12,10 +12,12 @@ import { noterQueLeServeurNeRepondPas } from '@/composables/useEtatDuReseau'
  * sert la page « hors ligne » précachée, marquée `data-coquille` et
  * `data-raison` sur `<html>` (`resources/js/sw/pageHorsLigne.js`,
  * `coquilleServie.js`). Elle charge le module de l'entrée, qui importe ce
- * module statiquement : un import à la demande ne se chargerait qu'en mode
- * coquille, donc sans réseau, et ne serait jamais au precache. `main.js` voit
- * la marque (`estLaCoquille`) et attend ce démarrage avant tout le reste,
- * sauf l'écoute des messages du worker, posée d'emblée.
+ * module statiquement : le démarrage vit dans le morceau de l'entrée même,
+ * sans requête ni attente de plus avant le montage, et ne manque jamais quand
+ * l'entrée est là. La fermeture du precache prendrait aussi un import à la
+ * demande, qu'elle suit (`dynamicImports`) : ce n'est pas elle qui l'exige.
+ * `main.js` voit la marque (`estLaCoquille`) et attend ce démarrage avant tout
+ * le reste, sauf l'écoute des messages du worker, posée d'emblée.
  *
  * **Le démarrage** (`demarrerHorsLigne`). Le worker ne lit, ne déchiffre et ne
  * sert rien d'un compte : c'est ici, dans la page, que se lit la copie, et
