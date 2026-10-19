@@ -6,9 +6,10 @@
  * liste de pages utiles en salle, pour un seul compte (`copiesHorsLigne.js`).
  * Ce module ne dit que lesquelles, sous quelle clé, et dans quelles limites :
  * de pures données et des fonctions sans état, sans import, que la page lit,
- * et que le worker et `vite.config.js` pourront lire sans charger ni Vue ni
- * Inertia. Le worker ne lit jamais rien d'un compte : il n'aura besoin que des
- * chemins.
+ * et que le worker et `vite.config.js` lisent sans charger ni Vue ni
+ * Inertia. Le worker ne lit jamais rien d'un compte : il n'en lit que les
+ * chemins (`cleGardee`), pour savoir quelle navigation attend le réseau huit
+ * secondes au plus avant la coquille.
  *
  * Le noyau de salle, sans `Exercises/Show` au départ (décision 2) : l'accueil,
  * le `start_url` ; la séance en cours et les trois dernières séances closes
@@ -298,6 +299,19 @@ export const pageGardee = (cle, composant) => {
 
     return PAGES_GARDEES.find((page) => page.composant === composant && motifDuChemin(page.chemin).test(cle)) ?? null
 }
+
+/**
+ * Si une clé est celle d'une page de la liste, quel que soit le composant que
+ * le serveur rendra : ce que le worker lit d'une navigation, avant toute
+ * réponse (`resources/js/sw/navigationsHorsLigne.js`). Comme pour
+ * `pageGardee`, une clé qui porte encore des paramètres n'en est pas une : le
+ * motif de chaque chemin s'arrête à sa fin.
+ *
+ * @param {string | null} cle une clé rendue par `cleDeLaCopie`
+ * @returns {boolean}
+ */
+export const cleGardee = (cle) =>
+    typeof cle === 'string' && PAGES_GARDEES.some((page) => motifDuChemin(page.chemin).test(cle))
 
 /**
  * La clé de la séance en cours d'après le compte qu'une page déclare

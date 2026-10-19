@@ -2,13 +2,18 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ADRESSE_DE_LA_SONDE } from '@/Utils/sondeDuServeur'
+import { EN_TETES_DE_LA_COQUILLE } from '@/sw/coquilleServie'
+import { MESSAGE_ATTENDRE_LA_REPONSE } from '@/sw/navigationsHorsLigne'
 import { jsRoot } from '../conventions/sourceFiles'
 
 const clientsClaim = vi.fn()
 const cleanupOutdatedCaches = vi.fn()
 const precacheAndRoute = vi.fn()
-const pageHorsLigne = { page: 'hors ligne, précachée' }
-const matchPrecache = vi.fn(async () => pageHorsLigne)
+/** La page « hors ligne » telle que le precache la rend : sans aucun en-tête de sécurité. */
+const PAGE_HORS_LIGNE = '<!DOCTYPE html><html lang="fr"><body>Pas de réseau</body></html>'
+const matchPrecache = vi.fn(
+    async () => new Response(PAGE_HORS_LIGNE, { headers: { 'Content-Type': 'text/html', ETag: '"precache"' } }),
+)
 /** La clé du precache d'une adresse : aucune, sauf pour les adresses que le cas y met. */
 const getCacheKeyForURL = vi.fn(() => undefined)
 const NOM_DU_PRECACHE = 'workbox-precache-v2-http://localhost/'
@@ -193,7 +198,19 @@ describe('mise en service du worker', () => {
     it('précache le manifeste que le build lui injecte', () => {
         // Precaching a literal list instead would freeze the worker on whatever
         // asset names existed the day it was written.
-        expect(auDemarrage.precache).toEqual([manifest])
+        expect(auDemarrage.precache[0]).toEqual(manifest)
+    })
+
+    /*
+     * La route du precache ne répond qu'à l'adresse exacte de ses fichiers :
+     * l'écouteur du worker le sait par `getCacheKeyForURL`, qui ne lit
+     * qu'elle (#2048, partie F).
+     */
+    it('ne laisse la route du precache répondre qu’à l’adresse exacte de ses fichiers', () => {
+        expect(auDemarrage.precache).toEqual([
+            manifest,
+            { cleanURLs: false, directoryIndex: null, ignoreURLParametersMatching: [] },
+        ])
     })
 
     /*
@@ -465,8 +482,16 @@ describe('ouverture d’une page', () => {
         return { respondWith, waitUntil, reponse: () => respondWith.mock.calls[0][0] }
     }
 
-    /** Une navigation, telle que le worker la reçoit : `new Request` refuse le mode `navigate`. */
-    const navigation = (chemin, method = 'GET') => ({ url: `http://localhost${chemin}`, method, mode: 'navigate' })
+    /**
+     * Une navigation, telle que le worker la reçoit : `new Request` refuse le
+     * mode `navigate`. De l'origine du worker, la seule dont il voit les
+     * navigations.
+     */
+    const navigation = (chemin, method = 'GET') => ({
+        url: `${self.location.origin}${chemin}`,
+        method,
+        mode: 'navigate',
+    })
 
     beforeEach(() => {
         matchPrecache.mockClear()
@@ -479,11 +504,53 @@ describe('ouverture d’une page', () => {
         expect(demander(navigation(chemin)).respondWith).toHaveBeenCalledTimes(1)
     })
 
-    it('sert la page « hors ligne » du precache quand le réseau ne répond pas', async () => {
+    /*
+     * La page du precache n'est plus rendue telle quelle (#2048, partie F) :
+     * un fichier statique, sans les en-têtes que Laravel pose sur une page. Le
+     * worker la marque de sa raison et l'enveloppe de ceux de l'application,
+     * et de rien d'autre.
+     */
+    it('sert la page « hors ligne » du precache, marquée et enveloppée, quand le réseau ne répond pas', async () => {
+        const { reponse } = demander(navigation('/dashboard'), Promise.reject(new TypeError('Failed to fetch')))
+        const servie = await reponse()
+
+        expect(matchPrecache).toHaveBeenCalledWith('/build/hors-ligne.html')
+        await expect(servie.text()).resolves.toBe(
+            '<!DOCTYPE html><html data-raison="reseau" lang="fr"><body>Pas de réseau</body></html>',
+        )
+        expect(servie.headers.get('content-security-policy')).toBe(EN_TETES_DE_LA_COQUILLE['Content-Security-Policy'])
+        expect(servie.headers.get('x-frame-options')).toBe('SAMEORIGIN')
+        expect(servie.headers.get('etag')).toBeNull()
+    })
+
+    it('rend l’erreur du navigateur quand la page « hors ligne » ne se lit pas au precache', async () => {
+        matchPrecache.mockRejectedValueOnce(new DOMException('Lecture refusée.', 'UnknownError'))
         const { reponse } = demander(navigation('/dashboard'), Promise.reject(new TypeError('Failed to fetch')))
 
-        await expect(reponse()).resolves.toBe(pageHorsLigne)
-        expect(matchPrecache).toHaveBeenCalledWith('/build/hors-ligne.html')
+        await expect(reponse()).resolves.toHaveProperty('type', 'error')
+    })
+
+    /*
+     * Le rappel d'un fournisseur de connexion, le panneau et Horizon n'ont ni
+     * délai ni page « hors ligne » : le détail, sur le vrai worker, vit dans
+     * navigationsDuWorker.test.js.
+     */
+    it.each(['/auth/google/callback?code=abc', '/backoffice', '/horizon'])(
+        'laisse %s au réseau, sans la page « hors ligne »',
+        async (chemin) => {
+            const { reponse } = demander(navigation(chemin), Promise.reject(new TypeError('Failed to fetch')))
+
+            await expect(reponse()).resolves.toHaveProperty('type', 'error')
+            expect(matchPrecache).not.toHaveBeenCalled()
+        },
+    )
+
+    // Une adresse qu'aucun autre cas ne visite : le délai levé dure une minute.
+    it('écoute les messages des pages : « Attendre la réponse »', () => {
+        const port = { postMessage: vi.fn() }
+        listeners.message({ data: { type: MESSAGE_ATTENDRE_LA_REPONSE, adresse: '/tools/1rm' }, ports: [port] })
+
+        expect(port.postMessage).toHaveBeenCalledExactlyOnceWith({ type: MESSAGE_ATTENDRE_LA_REPONSE, levee: true })
     })
 
     it('laisse au réseau la page qu’il sert', async () => {
@@ -505,13 +572,21 @@ describe('ouverture d’une page', () => {
             Promise.reject(new TypeError('Failed to fetch')),
         )
 
-        expect(waitUntil).toHaveBeenCalledTimes(1)
+        expect(waitUntil).toHaveBeenCalledTimes(2)
         await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined()
-        await expect(reponse()).resolves.toBe(pageHorsLigne)
+        await expect(reponse().then((servie) => servie.text())).resolves.toContain('data-raison="reseau"')
     })
 
     it('ne remet rien à waitUntil quand le navigateur n’a rien préchargé', () => {
-        expect(demander(navigation('/dashboard')).waitUntil).not.toHaveBeenCalled()
+        expect(demander(navigation('/stats')).waitUntil).not.toHaveBeenCalled()
+    })
+
+    /*
+     * Une page de la salle, elle, tient toujours sa réponse : arrivée après
+     * le délai, une redirection se dit à la page (#2048, partie F).
+     */
+    it('tient la réponse d’une page de la salle même sans préchargement, pour la réponse tardive', () => {
+        expect(demander(navigation('/dashboard')).waitUntil).toHaveBeenCalledTimes(1)
     })
 
     /*

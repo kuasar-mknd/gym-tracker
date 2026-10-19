@@ -70,7 +70,7 @@ jobs:
 
             # Le precache est ce que l'installation télécharge d'un coup. Il a
             # valu 142 fichiers et 1 249 Kio avant #1814 ; la coquille et la
-            # fermeture des pages de la salle en pèsent 836 (#2048). Un motif
+            # fermeture des pages de la salle en pèsent 845 (#2048). Un motif
             # élargi par mégarde le referait grossir sans bruit.
             - name: Le precache reste une coquille
               run: node scripts/verifier-le-precache.mjs

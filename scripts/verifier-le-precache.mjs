@@ -9,9 +9,10 @@ import { readFileSync, statSync } from 'node:fs'
  * pesait 572. Depuis #2048, la police des icônes et les dix icônes de public/
  * y entrent aussi (23 entrées, 662 Kio), puis la fermeture de l'entrée et des
  * pages de la salle, sans leurs graphiques (`resources/js/sw/fermetureDuPrecache.js`) :
- * 60 entrées, 836 Kio. Un motif élargi, ou une fermeture qui suivrait l'entrée
- * jusqu'à chaque page, referait grossir l'installation sans que rien ne le
- * dise.
+ * 60 entrées, 836 Kio ; la coquille qui démarre l'application sans réseau et
+ * sa page `HorsLigne` en font 61 et 845 Kio. Un motif élargi, ou une
+ * fermeture qui suivrait l'entrée jusqu'à chaque page, referait grossir
+ * l'installation sans que rien ne le dise.
  *
  * Chaque entrée doit aussi être un fichier de public/ que le serveur sert tel
  * quel, jamais un script que PHP exécuterait : une seule en 404 et Workbox

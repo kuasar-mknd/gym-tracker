@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\SecurityHeaders;
+use Filament\Facades\Filament;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Route as RouteEnregistree;
+use Illuminate\Support\Facades\Route;
+use Spatie\Csp\Policy;
+use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\FermetureDuPrecache;
 use Tests\Support\PagesGardees;
 
@@ -166,6 +174,30 @@ it('ne précache aucune page de l’application, et rien d’un compte dans la p
 });
 
 /*
+ * La page « hors ligne » est la coquille de l'application (#2048, partie F) :
+ * marquée `data-coquille`, elle charge le module de l'entrée construite, au
+ * precache, qui démarre l'application sur une copie ou laisse son contenu.
+ * Le worker la sert sous `script-src 'self'` : aucun script en ligne n'y
+ * tournerait, ni gestionnaire d'évènement en attribut.
+ */
+it('fait de la page « hors ligne » la coquille : la marque, le module de l’entrée, aucun script en ligne', function (): void {
+    $manifeste = manifesteDeLaConstructionDuWorker();
+    $page = (string) file_get_contents(public_path('build/hors-ligne.html'));
+    $entree = adresseDansLaConstructionDuWorker($manifeste, FermetureDuPrecache::ENTREE);
+
+    preg_match_all('/<script\b([^>]*)>/i', $page, $scripts);
+
+    expect($scripts[1])->toBe([' type="module" src="'.$entree.'"'])
+        ->and($page)->toContain('<script type="module" src="'.$entree.'"></script>')
+        ->and(preg_match('/<html\b[^>]*\sdata-coquille[\s>]/', $page))->toBe(1)
+        ->and(preg_match('/\son[a-z]+\s*=/i', $page))->toBe(0)
+        ->and(entreesDuPrecacheDuWorker())->toHaveKey($entree);
+
+    // La politique que le worker pose sur elle n'admet que les scripts servis par l'application.
+    expect(preg_match("/(?:^|;)script-src 'self'(?:;|$)/", enTetesDeLaCoquilleDuWorker()['Content-Security-Policy']))->toBe(1);
+});
+
+/*
  * Material Symbols, dont l'icône `cloud_off` qui marque une écriture en
  * attente, n'entrait au cache qu'à sa première utilisation (#2048) : la police
  * que la feuille de l'application demande est au precache.
@@ -259,6 +291,93 @@ it('précache le morceau et les feuilles de chaque page gardée', function (stri
     }
 })->with(fn (): array => array_column(PagesGardees::liste(), 'composant', 'composant'));
 
+/**
+ * Les fichiers que l'entrée charge d'emblée, sous leur adresse : le sien et
+ * ceux qu'il importe statiquement, de proche en proche, sans rien de ce
+ * qu'il charge à la demande.
+ *
+ * @param  array<string, mixed>  $manifeste
+ * @return list<string>
+ */
+function fichiersStatiquesDeLEntreeDuWorker(array $manifeste): array
+{
+    $fichiers = [];
+    $vus = [];
+    $aSuivre = [FermetureDuPrecache::ENTREE];
+
+    while ($aSuivre !== []) {
+        $nom = array_pop($aSuivre);
+
+        if (isset($vus[$nom])) {
+            continue;
+        }
+
+        $vus[$nom] = true;
+        $fichiers[] = adresseDansLaConstructionDuWorker($manifeste, $nom);
+
+        /** @var array{imports?: list<string>} $entree */
+        $entree = $manifeste[$nom];
+
+        foreach ($entree['imports'] ?? [] as $importe) {
+            $aSuivre[] = $importe;
+        }
+    }
+
+    return $fichiers;
+}
+
+/*
+ * La coquille monte la page `HorsLigne` à une adresse sans copie, et son
+ * démarrage (`Utils/demarrageHorsLigne.js`) vient de l'entrée même (#2048,
+ * partie F) : importé statiquement, il est dans le morceau de l'entrée, sans
+ * requête ni attente de plus avant le montage. Le module n'a pas de morceau à
+ * lui dans le manifeste : il se reconnaît dans le code que l'entrée charge
+ * d'emblée, aux noms qu'il écrit (`pagesSansReseau`, la prop de la page
+ * `HorsLigne`) et qu'il appelle au magasin (`lireAuDemarrage`), que la
+ * minification garde.
+ */
+it('précache la page HorsLigne, et le démarrage de la coquille dans ce que l’entrée charge d’emblée', function (): void {
+    $manifeste = manifesteDeLaConstructionDuWorker();
+    $precache = entreesDuPrecacheDuWorker();
+    $nom = FermetureDuPrecache::DOSSIER_DES_PAGES.'HorsLigne.vue';
+
+    expect(FermetureDuPrecache::pagesPrecacheesSansCopie())->toBe(['HorsLigne'])
+        ->and($precache)->toHaveKey(adresseDansLaConstructionDuWorker($manifeste, $nom));
+
+    /** @var array{css?: list<string>} $entree */
+    $entree = $manifeste[$nom];
+
+    foreach ($entree['css'] ?? [] as $feuille) {
+        expect($precache)->toHaveKey('/build/'.$feuille);
+    }
+
+    $statiques = fichiersStatiquesDeLEntreeDuWorker($manifeste);
+    $code = '';
+
+    foreach ($statiques as $fichier) {
+        expect($precache)->toHaveKey($fichier);
+        $code .= (string) file_get_contents(public_path(ltrim($fichier, '/')));
+    }
+
+    expect($code)->toContain('pagesSansReseau')
+        ->and($code)->toContain('lireAuDemarrage');
+});
+
+/*
+ * Une séance rouverte sans réseau continue dans la coquille, même après le
+ * retour du réseau (#2048, partie F) : la page construite prend la fenêtre
+ * des pages du serveur, clavier virtuel compris.
+ */
+it('donne à la page « hors ligne » construite la fenêtre des pages du serveur', function (): void {
+    $motif = '/<meta\s+name="viewport"\s+content="([^"]+)"/';
+
+    preg_match($motif, (string) file_get_contents(resource_path('views/app.blade.php')), $duServeur);
+    preg_match($motif, (string) file_get_contents(public_path('build/hors-ligne.html')), $deLaCoquille);
+
+    expect($duServeur[1] ?? null)->toContain('interactive-widget=resizes-content')
+        ->and($deLaCoquille[1] ?? null)->toBe($duServeur[1] ?? null);
+});
+
 /*
  * Les graphiques restent dehors (décision 9 du propriétaire) : sans réseau,
  * chacun dit « Graphique indisponible hors ligne ». La liste qui les nomme est
@@ -301,4 +420,161 @@ it('ne précache aucune adresse deux fois', function (): void {
 
     expect($trouvees[1])->not->toBe([])
         ->and($trouvees[1])->toBe(array_values(array_unique($trouvees[1])));
+});
+
+/**
+ * Les en-têtes que le worker pose sur la page « hors ligne » qu'il sert
+ * (`resources/js/sw/enTetesDeLaCoquille.json`, #2048, partie F), du nom à la
+ * valeur.
+ *
+ * @return array<string, string>
+ */
+function enTetesDeLaCoquilleDuWorker(): array
+{
+    /** @var array<string, string> $enTetes */
+    $enTetes = json_decode((string) file_get_contents(resource_path('js/sw/enTetesDeLaCoquille.json')), true, 512, JSON_THROW_ON_ERROR);
+
+    return $enTetes;
+}
+
+/**
+ * Les débuts de chemin des navigations qui ne reçoivent jamais la page
+ * « hors ligne » ni le délai (`PREFIXES_SANS_COQUILLE`), lus comme un texte,
+ * une entrée par ligne : une ligne d'une autre forme fait échouer la lecture
+ * au lieu d'être sautée.
+ *
+ * @return list<string>
+ */
+function prefixesSansCoquilleDuWorker(): array
+{
+    $source = (string) file_get_contents(resource_path('js/sw/navigationsHorsLigne.js'));
+    $debut = strpos($source, 'export const PREFIXES_SANS_COQUILLE = Object.freeze([');
+
+    expect($debut)->not->toBeFalse('PREFIXES_SANS_COQUILLE est introuvable dans navigationsHorsLigne.js.');
+
+    $prefixes = [];
+
+    foreach (array_slice(explode("\n", substr($source, (int) $debut)), 1) as $ligne) {
+        if (trim($ligne) === '])') {
+            return $prefixes;
+        }
+
+        if (preg_match("#^\\s*'(/[a-z_/-]+)',?\\s*$#", $ligne, $trouve) !== 1) {
+            throw new RuntimeException("Ligne inattendue dans PREFIXES_SANS_COQUILLE : {$ligne}");
+        }
+
+        $prefixes[] = $trouve[1];
+    }
+
+    throw new RuntimeException('PREFIXES_SANS_COQUILLE ne se ferme pas.');
+}
+
+/*
+ * Le precache garde la page « hors ligne » telle qu'un fichier statique de
+ * public/build : sans la politique de sécurité du contenu ni les autres
+ * en-têtes que Laravel pose sur une page. Le worker l'enveloppe donc des
+ * siens (#2048, partie F), qui doivent être exactement ceux du serveur :
+ * chaque en-tête de `SecurityHeaders`, et la politique de `CustomPolicy` en
+ * production, sans nonce, plus `frame-ancestors 'self'`. Et le `Cache-Control`
+ * d'une page de compte (`HandleInertiaRequests`) : la coquille y monte une
+ * copie, et sans `no-store` le cache de retour arrière la rendrait au bouton
+ * Retour après la fin de la session, témoin expiré, ce qu'il refuse à une page
+ * `no-store` dont un cookie a changé. Un en-tête ajouté au middleware, ou une
+ * source ajoutée à la politique, fait échouer ce test tant que la coquille ne
+ * le porte pas ; le worker construit les porte tels quels.
+ */
+it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la politique de production, sans nonce', function (): void {
+    app()->detectEnvironment(static fn (): string => 'production');
+    config(['app.env' => 'production', 'csp.nonce_enabled' => false]);
+    app()->instance('request', Request::create('/dashboard'));
+
+    /** @var list<class-string<Spatie\Csp\Preset>> $preReglages */
+    $preReglages = config()->array('csp.presets');
+    $politique = Policy::create(presets: $preReglages, directives: config()->array('csp.directives'))->getContents();
+    $reponse = new SecurityHeaders()->handle(Request::create('/dashboard'), static fn (): Response => new Response());
+    $attendus = ['content-security-policy' => $politique.";frame-ancestors 'self'"];
+
+    foreach ($reponse->headers->all() as $nom => $valeurs) {
+        if ($nom !== 'date') {
+            $attendus[$nom] = (string) $valeurs[0];
+        }
+    }
+
+    /*
+     * La réponse nue de Symfony porte `no-cache, private` par défaut : celui
+     * d'une page de compte le remplace, comme `HandleInertiaRequests` le fait.
+     */
+    $attendus['cache-control'] = HandleInertiaRequests::CACHE_D_UNE_PAGE_DE_COMPTE;
+
+    $coquille = array_change_key_case(enTetesDeLaCoquilleDuWorker());
+    ksort($attendus);
+    ksort($coquille);
+
+    expect($coquille)->toBe($attendus)
+        ->and($coquille['content-security-policy'])->not->toContain('nonce-')
+        ->and($coquille['content-security-policy'])->not->toContain('unsafe-eval')
+        ->and($coquille)->toHaveKeys(['x-frame-options', 'x-content-type-options', 'referrer-policy', 'cross-origin-opener-policy', 'permissions-policy'])
+        ->and($coquille['cache-control'])->toBe('no-store, private');
+
+    if (is_file(public_path('sw.js'))) {
+        $worker = (string) file_get_contents(public_path('sw.js'));
+
+        foreach (enTetesDeLaCoquilleDuWorker() as $nom => $valeur) {
+            expect(str_contains($worker, $valeur))->toBeTrue("public/sw.js ne porte pas l'en-tête {$nom} de la coquille : relancer npm run build.");
+        }
+    }
+});
+
+/*
+ * Ni délai ni page « hors ligne » pour le rappel d'un fournisseur de
+ * connexion, le panneau et ses tableaux de bord, Horizon et Telescope, les
+ * quatre liens des courriels (trois signés : vérification, ouverture du
+ * compte, confirmation d'une nouvelle adresse ; et celui de réinitialisation,
+ * porteur d'un jeton) et les routes de Dusk (#2048, partie F) : coupé à huit
+ * secondes, le rappel poserait la session sur une réponse que personne ne
+ * lit, et la page « hors ligne », rechargée au retour du réseau,
+ * redemanderait le lien en arrière-plan.
+ * Le worker ne lit pas la configuration : chaque début de chemin qu'il écrit
+ * en dur se rapproche ici de la route ou du chemin configuré qu'il couvre,
+ * et aucun ne touche une page de la salle.
+ */
+it('ne donne jamais la page « hors ligne » ni le délai au rappel de connexion, au panneau et à Horizon', function (): void {
+    $prefixes = prefixesSansCoquilleDuWorker();
+    $couvert = static fn (string $chemin): bool => array_filter(
+        $prefixes,
+        static fn (string $prefixe): bool => str_starts_with($chemin, $prefixe),
+    ) !== [];
+    $chemins = [
+        'rappel de la connexion sociale' => route('social.callback', ['provider' => 'google'], false),
+        'redirection vers un fournisseur' => route('social.redirect', ['provider' => 'google'], false),
+        'panneau' => '/'.Filament::getPanel('admin')->getPath(),
+        'Pulse' => '/'.config()->string('pulse.path'),
+        'journaux' => '/'.config()->string('log-viewer.route_path'),
+        'Horizon' => '/'.config()->string('horizon.path'),
+        'Telescope' => '/'.config()->string('telescope.path'),
+        'lien de vérification' => route('verification.verify', ['id' => 7, 'hash' => 'empreinte'], false),
+        'lien de réinitialisation' => route('password.reset', ['token' => 'jeton'], false),
+        'lien d’ouverture du compte' => route('inscription.ouvrir', ['id' => 7, 'hash' => 'empreinte'], false),
+        'lien de confirmation d’une nouvelle adresse' => route('adresse.confirmer', [], false),
+        'connexion de Dusk' => '/_dusk/login/7',
+    ];
+
+    foreach ($chemins as $quoi => $chemin) {
+        expect($couvert($chemin))->toBeTrue("{$quoi} ({$chemin}) recevrait la page « hors ligne ».");
+    }
+
+    foreach (PagesGardees::liste() as $page) {
+        expect($couvert($page['chemin']))->toBeFalse("{$page['chemin']} perdrait son délai.");
+    }
+
+    foreach ($prefixes as $prefixe) {
+        expect(array_filter($chemins, static fn (string $chemin): bool => str_starts_with($chemin, $prefixe)))
+            ->not->toBe([], "{$prefixe} ne couvre plus aucune route.");
+    }
+
+    expect(collect(Route::getRoutes()->getRoutes())
+        ->map(static fn (RouteEnregistree $route): string => '/'.ltrim($route->uri(), '/'))
+        ->filter(static fn (string $uri): bool => str_starts_with($uri, '/_dusk/'))
+        ->values()
+        ->all())->not->toBe([]);
 });

@@ -1375,6 +1375,195 @@ export const creerLeMagasinDesCopies = ({
     }
 
     /**
+     * Ce que la coquille hors ligne lit pour démarrer l'application sans
+     * réseau (#2048, partie F, `demarrageHorsLigne.js`) : la copie de
+     * l'adresse, la plus récente de toutes (elle porte le `auth` le plus
+     * récent du compte, et sa table des routes), et ce qui s'ouvre sans
+     * réseau. La coquille n'a pas de page d'où lire le compte : il vient de
+     * l'état, et tout ce dont la lecture d'une copie dépend se vérifie avant
+     * de rien déchiffrer.
+     *
+     * Les vérifications, dans l'ordre, chacune purgeant le magasin quand elle
+     * échoue, comme `lireUneCopie` : un état ouvert (`ferme` : rien à purger,
+     * toute fermeture vide le magasin dans sa transaction), sous ce contrat
+     * (`autre-contrat`, la clé gardée) ; la clé du témoin présente
+     * (`sans-cle`, la clé de l'état fermée), non fermée (`cle-fermee`), de
+     * l'empreinte de l'état (`autre-cle`, la clé de l'état gardée : celle
+     * d'une autre session) ; le titulaire de l'appareil égal au compte de
+     * l'état (`autre-titulaire`, la clé fermée). Une copie qui ne se
+     * déchiffre pas, ou dont la page n'est pas du composant qu'elle nomme en
+     * clair (`illisible`), purge aussi, sans fermer la clé : ses données
+     * authentifiées nomment le compte de l'état, son chemin et le contrat, et
+     * une copie rangée pour un autre compte ou déplacée sous un autre chemin
+     * ne se déchiffre pas. Une purge annoncée pendant la
+     * lecture, ou un témoin ou un titulaire qui ont changé, ne laissent rien
+     * servir (`perimee`), sans nouvelle purge. Sans `crypto.subtle` ou sans
+     * IndexedDB : `indisponible`, sans purge.
+     *
+     * Seules comptent les copies de la clé de l'état, de moins de sept jours,
+     * d'une page gardée : la liste blanche se rejuge ici, sur le composant en
+     * clair, comme dans `lireUneCopie`. Les autres sont écartées sans refus ni
+     * purge : une copie d'une autre clé, plus récente, ferait sinon refuser
+     * toute la lecture. Sans aucune, la lecture aboutit sans copie : rien à
+     * montrer, et rien à purger.
+     *
+     * @param {string} adresse l'adresse du document, sans origine
+     * @returns {Promise<{ refus: string } | {
+     *   compte: string,
+     *   copie: CopieLue | null,
+     *   plusRecente: CopieLue | null,
+     *   copies: Array<{ chemin: string, composant: string, copieDu: number }>,
+     * }>}
+     */
+    const lireAuDemarrage = async (adresse) => {
+        const generationDeDepart = generation
+
+        if (subtle === undefined || subtle === null) {
+            return { refus: 'indisponible' }
+        }
+
+        /**
+         * @param {string} raison
+         * @param {{ fermerLEtat?: boolean }} [options]
+         */
+        const refuser = async (raison, options) => {
+            await oublierLesCopies(options)
+
+            return { refus: raison }
+        }
+
+        let etat
+        let enregistrements
+
+        try {
+            const transaction = await transactionSur([MAGASIN_DES_PAGES, MAGASIN_DE_L_ETAT], 'readonly')
+
+            ;[etat, enregistrements] = await Promise.all([
+                resultatDe(transaction.objectStore(MAGASIN_DE_L_ETAT).get(CLE_DE_L_ETAT)),
+                resultatDe(transaction.objectStore(MAGASIN_DES_PAGES).getAll()),
+            ])
+        } catch {
+            return { refus: 'indisponible' }
+        }
+
+        if (etat?.ouvert !== true) {
+            return { refus: 'ferme' }
+        }
+
+        if (etat.contrat !== VERSION_DU_CONTRAT) {
+            return refuser('autre-contrat', { fermerLEtat: false })
+        }
+
+        const temoin = lireLeTemoin()
+        const octets = octetsDeLaCle(temoin)
+
+        if (octets === null) {
+            return refuser('sans-cle')
+        }
+
+        let empreinte
+        let cle
+
+        try {
+            ;[empreinte, cle] = await Promise.all([empreinteDe(octets), importer(octets)])
+        } catch {
+            return { refus: 'indisponible' }
+        }
+
+        if (etat.empreintesFermees?.includes(empreinte)) {
+            return refuser('cle-fermee', { fermerLEtat: false })
+        }
+
+        if (empreinte !== etat.empreinte) {
+            return refuser('autre-cle', { fermerLEtat: false })
+        }
+
+        if (lireLeTitulaire() !== `compte:${etat.compte}`) {
+            return refuser('autre-titulaire')
+        }
+
+        const maintenant = horloge()
+        /** @type {EnregistrementDUneCopie[]} */
+        const valables = (enregistrements ?? []).filter(
+            (copie) =>
+                copie.empreinte === etat.empreinte &&
+                maintenant - copie.copieDu <= AGE_MAXIMAL_D_UNE_COPIE_MS &&
+                pageGardee(copie.chemin, copie.composant) !== null,
+        )
+        const chemin = cleDeLaCopie(adresse)
+        const deLAdresse = valables.find((copie) => copie.chemin === chemin) ?? null
+        const laPlusRecente = valables.reduce(
+            (retenue, copie) => (retenue === null || copie.copieDu > retenue.copieDu ? copie : retenue),
+            null,
+        )
+
+        /**
+         * Déchiffre un enregistrement : ses données authentifiées sont le
+         * compte de l'état, son chemin et le contrat. La page déchiffrée doit
+         * être du composant que l'enregistrement nomme en clair, celui que la
+         * liste blanche a jugé, comme dans `lireUneCopie` : sinon, elle est
+         * illisible.
+         *
+         * @param {EnregistrementDUneCopie} enregistrement
+         * @returns {Promise<CopieLue>}
+         */
+        const dechiffrerLaCopie = async (enregistrement) => {
+            const contenu = await dechiffrer(
+                cle,
+                donneesAuthentifiees(etat.compte, enregistrement.chemin),
+                enregistrement,
+            )
+
+            if (contenu?.page?.component !== enregistrement.composant) {
+                throw new TypeError('La page déchiffrée n’est pas celle que nomme sa copie.')
+            }
+
+            return {
+                page: contenu.page,
+                ziggy: contenu.ziggy ?? null,
+                copieDu: enregistrement.copieDu,
+                ecriteLe: enregistrement.ecriteLe,
+                datesDesProps: contenu.datesDesProps ?? {},
+            }
+        }
+
+        /** @type {{ copie: CopieLue | null, plusRecente: CopieLue | null }} */
+        let lues
+
+        try {
+            const copie = deLAdresse === null ? null : await dechiffrerLaCopie(deLAdresse)
+            const plusRecente =
+                laPlusRecente === null
+                    ? null
+                    : laPlusRecente === deLAdresse
+                      ? copie
+                      : await dechiffrerLaCopie(laPlusRecente)
+
+            lues = { copie, plusRecente }
+        } catch {
+            return refuser('illisible', { fermerLEtat: false })
+        }
+
+        if (
+            generation !== generationDeDepart ||
+            lireLeTemoin() !== temoin ||
+            lireLeTitulaire() !== `compte:${etat.compte}`
+        ) {
+            return { refus: 'perimee' }
+        }
+
+        return {
+            compte: etat.compte,
+            ...lues,
+            copies: valables.map(({ chemin: cheminDeLaCopie, composant, copieDu }) => ({
+                chemin: cheminDeLaCopie,
+                composant,
+                copieDu,
+            })),
+        }
+    }
+
+    /**
      * Ce que le magasin garde pour le compte d'une page, sans rien déchiffrer :
      * le chemin, le composant et les dates de chaque copie, et le dernier
      * rejeu d'une écriture de séance. Ce que le préchauffage lit pour savoir
@@ -1617,6 +1806,7 @@ export const creerLeMagasinDesCopies = ({
         ecrireUneCopie,
         completerUneCopie,
         lireUneCopie,
+        lireAuDemarrage,
         inventaire,
         noterUnRejeu,
         retirerLesSeancesQuiNeSontPlusEnCours,

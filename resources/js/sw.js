@@ -1,12 +1,13 @@
 import { cacheNames, clientsClaim } from 'workbox-core'
 import { cleanupOutdatedCaches, getCacheKeyForURL, matchPrecache, precacheAndRoute } from 'workbox-precaching'
 import { estUnActif, servirDepuisLeCache } from '@/sw/cacheDesActifs'
+import { envelopperLaCoquille } from '@/sw/coquilleServie'
 import { basculerLaConstructionPrecedente, mettreDeCoteLaConstructionPrecedente } from '@/sw/constructionPrecedente'
 import {
     activerLePrechargementDesNavigations,
+    creerLesNavigations,
     estUneNavigation,
     garderLePrechargement,
-    naviguerOuRetomber,
     URL_DE_LA_PAGE_HORS_LIGNE,
 } from '@/sw/navigationsHorsLigne'
 import { renouvelerLAbonnement } from '@/sw/renouvellementDAbonnement'
@@ -40,8 +41,31 @@ cleanupOutdatedCaches()
  */
 const MANIFESTE_DU_PRECACHE = self.__WB_MANIFEST
 
-// Precache assets
-precacheAndRoute(MANIFESTE_DU_PRECACHE)
+/*
+ * La route du precache ne répond qu'à l'adresse exacte de l'un de ses
+ * fichiers, fragment ôté (#2048, partie F) : ni adresse « propre » sans
+ * `.html`, ni index d'un dossier, ni paramètres de suivi retirés, que Workbox
+ * essaie par défaut. L'écouteur des requêtes, posé après elle, sait donc par
+ * `getCacheKeyForURL` qu'elle a déjà répondu (`dejaServieParLePrecache`), et
+ * la page « hors ligne » ne s'ouvre pas, nue, à une autre adresse que la
+ * sienne.
+ */
+precacheAndRoute(MANIFESTE_DU_PRECACHE, { cleanURLs: false, directoryIndex: null, ignoreURLParametersMatching: [] })
+
+/**
+ * Si la route du precache a déjà répondu à cette requête : l'adresse exacte
+ * d'un fichier du precache, sans son fragment, que la route ôte aussi. Un
+ * second `respondWith` lèverait (`InvalidStateError`).
+ *
+ * @param {Request} requete
+ */
+const dejaServieParLePrecache = (requete) => {
+    const adresse = new URL(requete.url)
+
+    adresse.hash = ''
+
+    return getCacheKeyForURL(adresse.href) !== undefined
+}
 
 /**
  * Un déploiement pendant une séance : la page ouverte reste sur l'ancienne
@@ -73,11 +97,34 @@ self.addEventListener('activate', (event) => {
 })
 
 /**
- * Une navigation va au réseau, et retombe sur la page « hors ligne » quand il
- * ne répond pas (#1966) : l'application installée s'ouvre sans réseau sur une
- * page qui le dit, et non sur l'erreur du navigateur. Aucune page de
- * l'application n'est gardée, donc aucune ne peut être servie à un autre
- * compte. Le détail vit dans le module.
+ * Les navigations : le réseau d'abord ; la page « hors ligne », enveloppée des
+ * en-têtes de sécurité de l'application et marquée de sa raison, quand il ne
+ * répond pas (#1966), et au bout de huit secondes pour les pages de la salle
+ * (#2048, partie F). Le worker ne garde ni ne sert rien d'un compte : la page
+ * « hors ligne » est la même pour tous. Le rappel de la connexion sociale, le
+ * panneau et les tableaux de bord n'ont ni délai ni page « hors ligne ». Les
+ * clients se lisent à l'appel : le worker n'en garde aucun. Le détail vit dans
+ * les modules.
+ */
+const navigations = creerLesNavigations({
+    trouverLaPageHorsLigne: async (raison) =>
+        envelopperLaCoquille(await matchPrecache(URL_DE_LA_PAGE_HORS_LIGNE).catch(() => undefined), raison),
+    allerChercher: (requete) => fetch(requete),
+    trouverLeClient: (identifiant) => clients.get(identifiant),
+    origine: self.location.origin,
+})
+
+/**
+ * « Attendre la réponse », depuis la page « hors ligne » servie au délai :
+ * l'adresse attend le réseau sans délai pendant une minute.
+ */
+self.addEventListener('message', (event) => {
+    navigations.recevoirUnMessage(event)
+})
+
+/**
+ * Chaque navigation passe par le worker, même celles qu'il laisse au réseau :
+ * la réponse préchargée n'est rendue qu'ainsi, sans seconde requête.
  *
  * Ce que l'installation n'a pas pris, la première visite le garde.
  *
@@ -88,25 +135,28 @@ self.addEventListener('activate', (event) => {
  * qu'un fichier de worker ne se teste pas.
  */
 self.addEventListener('fetch', (event) => {
-    if (estUneNavigation(event.request)) {
-        garderLePrechargement(event)
-        event.respondWith(
-            naviguerOuRetomber(
-                event,
-                () => matchPrecache(URL_DE_LA_PAGE_HORS_LIGNE),
-                (requete) => fetch(requete),
-            ),
-        )
+    const navigation = estUneNavigation(event.request)
 
-        return
+    if (navigation) {
+        garderLePrechargement(event)
     }
 
     /*
      * Un fichier du precache a déjà sa réponse : la route de Workbox, posée
-     * par `precacheAndRoute` avant cet écouteur, l'a donnée, et un second
-     * `respondWith` lèverait (`InvalidStateError`).
+     * par `precacheAndRoute` avant cet écouteur, l'a donnée, à un actif comme
+     * à une navigation vers la page « hors ligne » ou une icône.
      */
-    if (!estUnActif(event.request, self.location.origin) || getCacheKeyForURL(event.request.url) !== undefined) {
+    if (dejaServieParLePrecache(event.request)) {
+        return
+    }
+
+    if (navigation) {
+        event.respondWith(navigations.repondre(event))
+
+        return
+    }
+
+    if (!estUnActif(event.request, self.location.origin)) {
         return
     }
 

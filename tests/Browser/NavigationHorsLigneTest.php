@@ -9,11 +9,11 @@ use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
-use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
 use Facebook\WebDriver\Exception\TimeoutException;
 use Illuminate\Support\Str;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
+use Tests\Support\ParcoursHorsLigne;
 
 /**
  * Sans réseau, depuis la séance ouverte, les pages de salle s'ouvrent depuis
@@ -52,63 +52,18 @@ use Tests\DuskTestCase;
  * precache, ou la page ne s'ouvre pas (« Mise à jour à terminer avec le
  * réseau »).
  *
- * L'ouverture à froid sans réseau (`visit()` pendant la coupure, que le
- * worker sert par la coquille) est la partie F. Comme `CopiesHorsLigneTest`,
- * le parcours exige un contexte sûr : la CI sert 127.0.0.1 ; sous Sail, servi
- * en http sur `laravel.test`, il se déclare sauté.
+ * L'ouverture à froid sans réseau (partie F) est le second parcours : un
+ * `visit()` pendant la coupure, que le worker sert par la coquille, ouvre
+ * l'accueil puis la séance en cours depuis leurs copies, et la séance se
+ * recharge au retour du réseau. Comme `CopiesHorsLigneTest`, les deux exigent
+ * un contexte sûr : la CI sert 127.0.0.1 ; sous Sail, servi en http sur
+ * `laravel.test`, ils se déclarent sautés. Ce qu'ils partagent avec les
+ * autres parcours hors ligne (lire le magasin, couper le réseau et retirer la
+ * construction) vit dans `Tests\Support\ParcoursHorsLigne`.
  */
 class NavigationHorsLigneTest extends DuskTestCase
 {
-    /**
-     * Les copies que le magasin garde, lues par script : leur chemin, leur
-     * composant et la date de leur dernière réponse complète, rien de chiffré.
-     * Une base absente ne se crée pas ici.
-     */
-    private const string LIRE_LES_COPIES = <<<'SCRIPT'
-        const fini = arguments[arguments.length - 1];
-        const ouverture = indexedDB.open('gym-tracker-copies');
-        ouverture.onupgradeneeded = () => ouverture.transaction.abort();
-        ouverture.onerror = () => fini([]);
-        ouverture.onsuccess = () => {
-            const base = ouverture.result;
-            const demande = base.transaction('pages', 'readonly').objectStore('pages').getAll();
-            demande.onsuccess = () => {
-                base.close();
-                fini(demande.result.map((copie) => ({ chemin: copie.chemin, composant: copie.composant })));
-            };
-            demande.onerror = () => {
-                base.close();
-                fini([]);
-            };
-        };
-    SCRIPT;
-
-    /**
-     * Vide les caches du worker que la route des actifs lit après le precache :
-     * il ne reste au navigateur que ce que le worker a précaché à l'installation.
-     */
-    private const string VIDER_LES_CACHES_DES_ACTIFS = <<<'SCRIPT'
-        const fini = arguments[arguments.length - 1];
-        Promise.all(['actifs-a-la-demande', 'construction-precedente'].map((nom) => caches.delete(nom))).then(
-            () => fini(true),
-            (erreur) => fini(String(erreur)),
-        );
-    SCRIPT;
-
-    /**
-     * Note chaque message que l'application annonce faute de réseau : les
-     * toasts des layouts les montrent (`gym:sans-reseau`), puis s'effacent
-     * d'eux-mêmes. Un échec dit ainsi ce que la page a répondu, et la fin du
-     * parcours, qu'elle n'a rien dit d'autre.
-     */
-    private const string NOTER_LES_MESSAGES = <<<'SCRIPT'
-        window.messagesSansReseau = [];
-        window.addEventListener('gym:sans-reseau', (evenement) => {
-            if (typeof evenement.detail?.message === 'string') {
-                window.messagesSansReseau.push(evenement.detail.message);
-            }
-        });
-    SCRIPT;
+    use ParcoursHorsLigne;
 
     private const string PAGE_INDISPONIBLE = "Cette page n'est pas disponible sans réseau.";
 
@@ -152,16 +107,10 @@ class NavigationHorsLigneTest extends DuskTestCase
                 ->visit('/dashboard')
                 ->waitFor('#main-content', 30);
 
-            if ($browser->script("return window.isSecureContext === true && 'serviceWorker' in navigator && 'indexedDB' in window && !!window.crypto?.subtle;")[0] !== true) {
-                $this->markTestSkipped('Origine en http hors boucle locale : ni worker ni historique chiffré, et rien n’est gardé.');
-            }
+            $this->exigerUnContexteSur($browser);
 
             // Installé, precache compris, et maître de la page.
-            $browser->waitUntil(
-                "navigator.serviceWorker.controller !== null && navigator.serviceWorker.controller.state === 'activated'",
-                30,
-                'le service worker n’a jamais pris la page en charge',
-            );
+            $this->attendreLeWorker($browser);
 
             // Puis la séance en cours, depuis lui.
             $browser->disableAnimations()
@@ -173,29 +122,11 @@ class NavigationHorsLigneTest extends DuskTestCase
             // Les copies de l'accueil et de la séance, que la page a reçues, et celles du préchauffage.
             $this->attendreLesCopies($browser, ['/dashboard', $cheminDeLaSeance, '/workouts', '/profile', '/tools', '/tools/interval-timer']);
 
-            $this->assertTrue(
-                $browser->driver->executeAsyncScript(self::VIDER_LES_CACHES_DES_ACTIFS),
-                'les caches des actifs du worker ne se sont pas vidés',
-            );
+            $this->noterLesMessages($browser);
 
-            $browser->script(self::NOTER_LES_MESSAGES);
+            $outils = $this->outilsDuNavigateur($browser);
 
-            $outils = new ChromeDevToolsDriver($browser->driver);
-            $outils->execute('Network.enable');
-            $outils->execute('Network.clearBrowserCache');
-
-            $construction = public_path('build');
-            $constructionRetiree = $construction.'.retiree';
-            $this->assertDirectoryExists($construction, 'la construction doit exister');
-            $this->assertDirectoryDoesNotExist($constructionRetiree, 'une construction retirée d’une passe précédente reste');
-
-            $retiree = false;
-
-            try {
-                $this->couperLeReseau($outils, true);
-                $retiree = rename($construction, $constructionRetiree);
-                $this->assertTrue($retiree, 'la construction ne s’est pas retirée');
-
+            $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $jetons, $cheminDeLaSeance): void {
                 // Stats n'a pas de copie : la séance reste, et le dit.
                 $browser->clickWhenSettled('[dusk="nav-stats"]')
                     ->waitUntil($this->laPageDit(self::PAGE_INDISPONIBLE), 15, 'Stats n’a rien dit sans réseau')
@@ -241,13 +172,7 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 // Rien d'autre n'a été dit : ni page indisponible, ni « Mise à jour à terminer avec le réseau ».
                 $this->assertSame([self::PAGE_INDISPONIBLE], $this->messagesSansReseau($browser));
-            } finally {
-                if ($retiree) {
-                    rename($constructionRetiree, $construction);
-                }
-
-                $this->couperLeReseau($outils, false);
-            }
+            });
 
             /*
              * Le réseau revenu, la copie affichée se recharge en entier, et le bandeau part avec sa marque.
@@ -259,6 +184,99 @@ class NavigationHorsLigneTest extends DuskTestCase
                 ->assertScript($this->texteDe('header h1'), 'Mes Séances')
                 ->waitUntil(self::LE_GRAPHIQUE_DE_L_HISTORIQUE_EST_DESSINE, 30, 'le graphique de l’historique dit encore qu’il est indisponible hors ligne');
         });
+    }
+
+    /**
+     * À froid, réseau coupé, l'accueil puis la séance en cours s'ouvrent
+     * depuis leurs copies, sur la coquille (#2048, partie F).
+     *
+     * Le critère de l'issue : `visit('/dashboard')` puis
+     * `visit('/workouts/{en cours}')`, deux navigations complètes pendant la
+     * coupure. Le worker ne les sert pas : la requête préchargée échoue, et il
+     * rend la page « hors ligne » précachée, marquée `data-raison="reseau"`.
+     * C'est la coquille qui démarre l'application, sur la copie chiffrée de
+     * l'adresse (`resources/js/Utils/demarrageHorsLigne.js`) : le bandeau la
+     * date, l'entrée d'historique est chiffrée, et rien du contenu statique
+     * (« Pas de réseau ») ne reste. public/build est introuvable pendant la
+     * coupure : le module de l'entrée, le démarrage, les morceaux des deux
+     * pages et leurs feuilles viennent du precache. Le réseau rendu, la séance
+     * se recharge en entier (sa file est vide) et perd son bandeau.
+     */
+    public function test_sans_reseau_l_accueil_puis_la_seance_en_cours_s_ouvrent_a_froid_depuis_leurs_copies(): void
+    {
+        $jetons = [
+            'seance' => Str::random(12),
+            'exercice' => Str::random(12),
+        ];
+        $compte = User::factory()->create([
+            'email' => 'ouverture-a-froid-'.Str::lower(Str::random(10)).'@example.org',
+            'email_verified_at' => now(),
+        ]);
+        $seance = Workout::factory()->for($compte)->create([
+            'name' => 'Seance '.$jetons['seance'],
+            'started_at' => now()->subMinutes(20),
+            'ended_at' => null,
+        ]);
+        $exercice = Exercise::factory()->create(['user_id' => $compte->id, 'name' => 'Exercice '.$jetons['exercice'], 'type' => 'strength']);
+        $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id, 'order' => 0]);
+        Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 82.5, 'reps' => 7]);
+
+        $cheminDeLaSeance = '/workouts/'.$seance->id;
+
+        $this->browse(function (Browser $browser) use ($compte, $jetons, $cheminDeLaSeance): void {
+            $browser->loginAs($compte)
+                ->visit('/dashboard')
+                ->waitFor('#main-content', 30);
+
+            $this->exigerUnContexteSur($browser);
+            $this->attendreLeWorker($browser);
+
+            $browser->disableAnimations()
+                ->waitFor('[dusk="active-workout-banner"]', 30)
+                ->clickWhenSettled('[dusk="active-workout-banner"]')
+                ->waitForLocation($cheminDeLaSeance, 15)
+                ->waitForText($jetons['exercice'], 15, true);
+
+            $this->attendreLesCopies($browser, ['/dashboard', $cheminDeLaSeance]);
+
+            $outils = $this->outilsDuNavigateur($browser);
+
+            $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $jetons, $cheminDeLaSeance): void {
+                $browser->visit('/dashboard');
+                $this->attendreLaCopieAFroid($browser, '/dashboard', 'Accueil');
+                // La séance en cours, que l'accueil annonce, vient de la copie.
+                $browser->waitFor('[dusk="active-workout-banner"]', 15)
+                    ->assertScript($this->laPageDit($jetons['seance']));
+
+                $browser->visit($cheminDeLaSeance);
+                $this->attendreLaCopieAFroid($browser, $cheminDeLaSeance, 'Seance '.$jetons['seance']);
+                $browser->waitForText($jetons['exercice'], 15, true)
+                    ->assertValue('[dusk="weight-input-0-0"]', '82.5')
+                    ->assertValue('[dusk="reps-input-0-0"]', '7');
+            });
+
+            // Le réseau rendu, la séance, dont la file est vide, se recharge en entier, et le bandeau part avec sa marque.
+            $browser->waitUntilMissing('[dusk="bandeau-hors-ligne"]', 90)
+                ->assertPathIs($cheminDeLaSeance)
+                ->waitForText($jetons['exercice'], 15, true);
+        });
+    }
+
+    /**
+     * Attend la copie qu'une navigation complète a ouverte sur la coquille :
+     * la page « hors ligne » servie sans réseau, l'application démarrée sur
+     * la copie (son bandeau daté, son titre), rien du contenu statique, et
+     * l'entrée d'historique chiffrée.
+     */
+    private function attendreLaCopieAFroid(Browser $browser, string $chemin, string $titre): void
+    {
+        $browser->waitUntil($this->laCoquilleServiePour('reseau'), 15, "la coquille n’a pas été servie à {$chemin}")
+            ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
+            ->assertPathIs($chemin)
+            ->assertMissing('[dusk="page-hors-ligne"]')
+            ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
+            ->assertScript($this->texteDe('header h1'), $titre)
+            ->waitUntil('history.state?.page instanceof ArrayBuffer', 15, "l’entrée d’historique de la copie de {$chemin} n’est pas chiffrée");
     }
 
     /**
@@ -281,73 +299,5 @@ class NavigationHorsLigneTest extends DuskTestCase
             ->assertScript($this->texteDe('header h1'), $titre)
             // L'entrée d'historique de la copie est chiffrée, comme celles des pages du serveur.
             ->waitUntil('history.state?.page instanceof ArrayBuffer', 15, "l’entrée d’historique de la copie de {$chemin} n’est pas chiffrée");
-    }
-
-    /**
-     * Les messages annoncés faute de réseau depuis la coupure, dans l'ordre.
-     *
-     * @return list<string>
-     */
-    private function messagesSansReseau(Browser $browser): array
-    {
-        /** @var list<string> $messages */
-        $messages = $browser->script('return window.messagesSansReseau ?? [];')[0];
-
-        return $messages;
-    }
-
-    /**
-     * Le texte d'un élément, tel que le DOM le porte.
-     */
-    private function texteDe(string $selecteur): string
-    {
-        return 'document.querySelector('.json_encode($selecteur, JSON_THROW_ON_ERROR).').textContent.trim()';
-    }
-
-    /**
-     * Si la page porte ce texte quelque part.
-     */
-    private function laPageDit(string $texte): string
-    {
-        return 'document.body.textContent.includes('.json_encode($texte, JSON_THROW_ON_ERROR).')';
-    }
-
-    /**
-     * Coupe ou rend le réseau de la page, par les outils de Chrome.
-     */
-    private function couperLeReseau(ChromeDevToolsDriver $outils, bool $coupe): void
-    {
-        $outils->execute('Network.emulateNetworkConditions', [
-            'offline' => $coupe,
-            'latency' => 0,
-            'downloadThroughput' => -1,
-            'uploadThroughput' => -1,
-        ]);
-    }
-
-    /**
-     * Attend que le magasin garde une copie de chaque chemin : elles s'écrivent
-     * au repos, après la page qu'elles gardent, et le préchauffage les demande
-     * l'une après l'autre.
-     *
-     * @param  list<string>  $chemins
-     */
-    private function attendreLesCopies(Browser $browser, array $chemins, int $secondes = 30): void
-    {
-        $limite = microtime(true) + $secondes;
-
-        do {
-            /** @var list<array{chemin: string, composant: string}> $copies */
-            $copies = $browser->driver->executeAsyncScript(self::LIRE_LES_COPIES);
-            $manquants = array_values(array_diff($chemins, array_column($copies, 'chemin')));
-
-            if ($manquants === []) {
-                return;
-            }
-
-            usleep(250_000);
-        } while (microtime(true) < $limite);
-
-        $this->fail('le magasin n’a pas gardé : '.implode(', ', $manquants));
     }
 }

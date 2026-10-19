@@ -6,7 +6,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | --- | --- |
 | app/Actions/** | .ai/rules/actions.md |
 | routes/api.php, app/Http/Controllers/Api/** | .ai/rules/api.md |
-| tests/Browser/**, tests/DuskTestCase.php, tests/Support/PiloteDesParcours.php, tests/Support/NavigateurDesParcours.php | .ai/rules/browser.md |
+| tests/Browser/**, tests/DuskTestCase.php, tests/Support/PiloteDesParcours.php, tests/Support/NavigateurDesParcours.php, tests/Support/ParcoursHorsLigne.php | .ai/rules/browser.md |
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/**, app/**, config/**, routes/** | .ai/rules/database.md |
 | package.json, package-lock.json, composer.json, composer.lock | .ai/rules/dependencies.md |
@@ -26,5 +26,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Services/Stats/** | .ai/rules/stats.md |
 | tests/js/** | .ai/rules/tests-js.md |
 | tests/** | .ai/rules/tests.md |
-| resources/js/Utils/SyncService.js, resources/js/Utils/syncErrors.js, resources/js/Utils/seanceEtFile.js, resources/js/composables/useSeanceEtSaFile.js, resources/js/Utils/ecrituresAbandonnees.js, resources/js/composables/useDeconnexion.js, resources/js/Utils/copiesHorsLigne.js, resources/js/Utils/ecritureDesCopies.js, resources/js/Utils/prechauffage.js, resources/js/Utils/pagesGardees.js, resources/js/Utils/auRepos.js, resources/js/Utils/ecrituresAcceptees.js, resources/js/Utils/dernierPrechauffage.js, resources/js/composables/useCopieDeLaSeance.js, resources/js/Pages/Profile/Partials/DeleteUserForm.vue, tests/Feature/HorsLigne/** | .ai/rules/utils.md |
+| resources/js/Utils/SyncService.js, resources/js/Utils/syncErrors.js, resources/js/Utils/seanceEtFile.js, resources/js/composables/useSeanceEtSaFile.js, resources/js/Utils/ecrituresAbandonnees.js, resources/js/composables/useDeconnexion.js, resources/js/Utils/copiesHorsLigne.js, resources/js/Utils/ecritureDesCopies.js, resources/js/Utils/prechauffage.js, resources/js/Utils/pagesGardees.js, resources/js/Utils/auRepos.js, resources/js/Utils/ecrituresAcceptees.js, resources/js/Utils/dernierPrechauffage.js, resources/js/composables/useCopieDeLaSeance.js, resources/js/Utils/demarrageHorsLigne.js, resources/js/Pages/Profile/Partials/DeleteUserForm.vue, tests/Feature/HorsLigne/** | .ai/rules/utils.md |
 | .github/workflows/** | .ai/rules/workflows.md |
