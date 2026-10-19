@@ -3,6 +3,13 @@ import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
 import { RAISON_RESEAU_LENT, RAISON_SANS_RESEAU, pageServie } from '@/Utils/copiesServies'
 import { attendreLaReponse } from '@/Utils/messagesDuWorker'
 import { COMPOSANT_DE_LA_SEANCE, PAGES_GARDEES, cleDeLaSeanceEnCours } from '@/Utils/pagesGardees'
+import {
+    bibliothequeHorsLigne,
+    cleDeLAdresseEnAttente,
+    creationDeLaCle,
+    lireLaFileDuStockage,
+    pageDeLaSeanceEnAttente,
+} from '@/Utils/seanceEnAttente'
 import { noterQueLeServeurNeRepondPas } from '@/composables/useEtatDuReseau'
 
 /**
@@ -40,6 +47,18 @@ import { noterQueLeServeurNeRepondPas } from '@/composables/useEtatDuReseau'
  *    U+2028 dans une note de séance restent des données.
  * 5. La table des routes de la copie devient `Ziggy`, et `<main>` cède la
  *    place à `#app`, où Inertia monte.
+ *
+ * **La séance démarrée sans réseau** (#2049). À l'adresse d'une séance en
+ * attente (`/workouts/en-attente/{clé}`), qu'aucune copie ne garde, la page
+ * montée est la séance construite depuis la création de cette clé, que la file
+ * hors ligne attend encore (`pageDeLaSeanceEnAttente`), sans la marque d'une
+ * copie : la file se lit dans le stockage par un module pur
+ * (`lireLaFileDuStockage`), sans charger `SyncService`, et seulement pour le
+ * titulaire vérifié par la lecture du magasin, qui est aussi le compte de la
+ * copie la plus récente et celui de l'entrée. Sinon, la page `HorsLigne`,
+ * comme à toute adresse sans copie. La bibliothèque d'exercices vient des
+ * copies, avant le montage.
+ *
  * `main.js` continue alors comme pour un document du serveur : la garde de
  * l'historique lit la page initiale, `createInertiaApp` la monte et la
  * chiffre dans l'historique, et la file hors ligne lit le compte dans
@@ -234,6 +253,56 @@ const pageAMonter = ({ lecture, adresse, raison }) => {
 }
 
 /**
+ * La création de la séance démarrée sans réseau que nomme l'adresse, pour le
+ * titulaire vérifié seulement, ou `undefined`.
+ *
+ * @param {{
+ *   lecture: { compte?: string, plusRecente: { page: { props?: Record<string, any> } } },
+ *   adresse: string,
+ *   lireLaFile: () => Array<object>,
+ * }} options
+ * @returns {object|undefined}
+ */
+const creationDuTitulaire = ({ lecture, adresse, lireLaFile }) => {
+    const cle = cleDeLAdresseEnAttente(adresse)
+    const titulaire = typeof lecture.compte === 'string' ? lecture.compte : null
+    const compteDeLaCopie = lecture.plusRecente.page.props?.auth?.user?.id
+
+    if (cle === null || titulaire === null || String(compteDeLaCopie ?? '') !== titulaire) {
+        return undefined
+    }
+
+    return creationDeLaCle(
+        lireLaFile().filter((entree) => String(entree?.compte ?? '') === titulaire),
+        cle,
+    )
+}
+
+/**
+ * La page de la séance démarrée sans réseau, construite depuis sa création :
+ * le `auth` de la copie la plus récente, la bibliothèque et les plafonds des
+ * copies.
+ *
+ * @param {{
+ *   entree: object,
+ *   lecture: { plusRecente: { page: { props?: Record<string, any>, version?: string | null } } },
+ *   lireUneCopie: (adresse: string) => Promise<object | null>,
+ * }} options
+ */
+const pageDeLaSeanceDemarreeSansReseau = async ({ entree, lecture, lireUneCopie }) => {
+    const { page } = lecture.plusRecente
+    const { exercices, bornes } = await bibliothequeHorsLigne({ props: page.props ?? null, lireUneCopie })
+
+    return pageDeLaSeanceEnAttente({
+        entree,
+        auth: page.props?.auth,
+        exercices,
+        bornes,
+        pageCourante: { version: page.version ?? null },
+    })
+}
+
+/**
  * Écrit la page dans le document comme le serveur l'écrirait, par
  * `textContent`, pose la table des routes, et remplace `<main>` par `#app`.
  *
@@ -260,14 +329,18 @@ const ecrireLaPage = (document, page) => {
  *
  * @param {{
  *   fenetre?: Window,
- *   magasin?: () => { lireAuDemarrage: (adresse: string) => Promise<object> },
+ *   magasin?: () => {
+ *     lireAuDemarrage: (adresse: string) => Promise<object>,
+ *     lireUneCopie?: (adresse: string) => Promise<object | null>,
+ *   },
+ *   lireLaFile?: () => Array<object>,
  *   attendre?: () => Promise<void>,
  *   recharger?: () => void,
- * }} [options]
+ * }} [options] `lireLaFile` : la file hors ligne du stockage, par défaut
  * @returns {Promise<{ montee: boolean, raison: string, page?: object }>}
  */
 export const demarrerHorsLigne = async (options = {}) => {
-    const { fenetre = window, magasin = magasinDesCopies } = options
+    const { fenetre = window, magasin = magasinDesCopies, lireLaFile = () => lireLaFileDuStockage() } = options
     const document = fenetre.document
     const adresse = `${fenetre.location.pathname}${fenetre.location.search}`
     const laisser = (raison) => {
@@ -304,9 +377,21 @@ export const demarrerHorsLigne = async (options = {}) => {
     }
 
     let page
+    let raison
 
     try {
-        page = pageAMonter({ lecture, adresse, raison: RAISON_DE_LA_MARQUE[raisonDeLaCoquille(document)] })
+        const enAttente = lecture.copie === null ? creationDuTitulaire({ lecture, adresse, lireLaFile }) : undefined
+
+        if (enAttente !== undefined) {
+            const lireUneCopie = (adresseDeLaCopie) => magasin().lireUneCopie?.(adresseDeLaCopie) ?? null
+
+            page = await pageDeLaSeanceDemarreeSansReseau({ entree: enAttente, lecture, lireUneCopie })
+            raison = 'seance-en-attente'
+        } else {
+            page = pageAMonter({ lecture, adresse, raison: RAISON_DE_LA_MARQUE[raisonDeLaCoquille(document)] })
+            raison = lecture.copie === null ? COMPOSANT_HORS_LIGNE : 'copie'
+        }
+
         ecrireLaPage(document, page)
     } catch {
         return laisser('illisible')
@@ -315,5 +400,5 @@ export const demarrerHorsLigne = async (options = {}) => {
     fenetre.Ziggy = ziggy
     noterQueLeServeurNeRepondPas()
 
-    return { montee: true, raison: lecture.copie === null ? COMPOSANT_HORS_LIGNE : 'copie', page }
+    return { montee: true, raison, page }
 }

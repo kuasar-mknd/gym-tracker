@@ -178,8 +178,14 @@ describe('sans réseau, une visite le dit', () => {
         expect(useEtatDuReseau().joignable.value).toBe(false)
     })
 
+    /*
+     * Démarrer une séance ne visite plus `workouts.store` : sans réseau, la
+     * séance s'ouvre depuis la file (#2049). Lancer un modèle passe encore par
+     * une visite qui dit elle-même son échec, jusqu'à ce qu'il passe lui aussi
+     * par la file.
+     */
     it('une visite qui dit elle-même son échec ne reçoit pas le message général', async () => {
-        await visiter('/workouts', {
+        await visiter('/templates/3/execute', {
             method: 'post',
             onNetworkError: direSansReseau('Il faut le réseau pour démarrer une séance.'),
         })

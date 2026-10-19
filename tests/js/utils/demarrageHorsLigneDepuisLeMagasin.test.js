@@ -760,3 +760,94 @@ describe('chaque vérification qui échoue purge, et laisse le contenu statique'
         attendreUneCoquilleStatique(demarrage)
     })
 })
+
+/*
+ * L'adresse d'une séance démarrée sans réseau (#2049), qu'aucune copie ne
+ * garde : la coquille monte la séance construite depuis sa création en file,
+ * pour le titulaire vérifié seulement. La file se lit dans le stockage, sans
+ * `SyncService`.
+ */
+describe('une séance démarrée sans réseau', () => {
+    const CLE_DE_LA_SEANCE = 'cle-de-la-seance-demarree'
+    const SQUAT = { id: 7, name: 'Squat', type: 'strength' }
+
+    /** La création de la séance, telle que « Démarrer » la met en file, au nom de `compte`. */
+    const mettreLaSeanceEnFile = ({ compte = COMPTE, cle = CLE_DE_LA_SEANCE } = {}) =>
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                {
+                    id: 'q-seance',
+                    method: 'post',
+                    url: '/api/v1/workouts',
+                    data: { started_at: '2026-10-19T08:15:00.000Z' },
+                    headers: { 'Idempotency-Key': cle },
+                    timestamp: '2026-10-19T08:15:00.000Z',
+                    compte: String(compte),
+                },
+            ]),
+        )
+
+    it('monte la séance de sa création pour le titulaire vérifié, sans marque de copie, sa bibliothèque prise aux copies', async () => {
+        await ecrire(pageDe({ url: '/exercises', component: 'Exercises/Index', props: { exercises: [SQUAT] } }))
+        await ecrire(pageDe({ nom: 'Le plus récent' }), { quand: instant + 1_000 })
+        mettreLaSeanceEnFile()
+
+        const { resultat, page, fenetre } = await demarrer(`/workouts/en-attente/${CLE_DE_LA_SEANCE}`)
+
+        expect(resultat).toMatchObject({ montee: true, raison: 'seance-en-attente' })
+        expect(page).toMatchObject({
+            component: 'Workouts/Show',
+            url: `/workouts/en-attente/${CLE_DE_LA_SEANCE}`,
+            version: 'version-des-actifs',
+            encryptHistory: true,
+            props: {
+                workout: {
+                    id: 'temp-qq-seance',
+                    idempotency_key: CLE_DE_LA_SEANCE,
+                    started_at: '2026-10-19T08:15:00.000Z',
+                    workout_lines: [],
+                },
+                exercises: [SQUAT],
+            },
+        })
+        expect(page.props.auth.user.name).toBe('Le plus récent')
+        expect(page.props).not.toHaveProperty('horsLigne')
+        expect(fenetre.Ziggy).toEqual(routesDe('/dashboard'))
+    })
+
+    it('monte la page HorsLigne quand la création de cette clé est celle d’un autre compte, ou n’est plus en file', async () => {
+        await ecrire(pageDe())
+        mettreLaSeanceEnFile({ compte: COMPTE + 1 })
+
+        const dUnAutreCompte = await demarrer(`/workouts/en-attente/${CLE_DE_LA_SEANCE}`)
+
+        expect(dUnAutreCompte.resultat).toMatchObject({ montee: true, raison: COMPOSANT_HORS_LIGNE })
+        expect(dUnAutreCompte.page.component).toBe('HorsLigne')
+
+        mettreLaSeanceEnFile({ cle: 'une-autre-cle' })
+
+        const sansCreation = await demarrer(`/workouts/en-attente/${CLE_DE_LA_SEANCE}`)
+
+        expect(sansCreation.page.component).toBe('HorsLigne')
+    })
+
+    it('ne monte rien, même la séance en file, sans le témoin ou sous un autre titulaire', async () => {
+        await ecrire(pageDe())
+        mettreLaSeanceEnFile()
+        poserLeTitulaire(COMPTE + 1)
+
+        const autreTitulaire = await demarrer(`/workouts/en-attente/${CLE_DE_LA_SEANCE}`)
+
+        expect(autreTitulaire.resultat.raison).toBe('autre-titulaire')
+        attendreUneCoquilleStatique(autreTitulaire)
+
+        poserLeTitulaire(COMPTE)
+        retirerLeTemoin()
+
+        const sansTemoin = await demarrer(`/workouts/en-attente/${CLE_DE_LA_SEANCE}`)
+
+        expect(sansTemoin.resultat.montee).toBe(false)
+        attendreUneCoquilleStatique(sansTemoin)
+    })
+})
