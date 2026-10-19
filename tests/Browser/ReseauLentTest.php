@@ -32,7 +32,10 @@ use Tests\Support\ParcoursHorsLigne;
  * toast de la lenteur. Une ouverture de l'accueil attend huit secondes la
  * réponse, puis le worker sert la coquille marquée `data-raison="delai"`,
  * qui démarre l'application sur la copie de l'accueil
- * (`navigationsHorsLigne.js`, `demarrageHorsLigne.js`). Une séance close, que
+ * (`navigationsHorsLigne.js`, `demarrageHorsLigne.js`) ; la réponse arrive
+ * ensuite, le worker le dit à la page, et l'accueil du serveur remplace la
+ * copie sans aucun geste (`messagesDuWorker.js`) : la sonde, qui abandonne à
+ * cinq secondes, n'y suffisait pas sur ce réseau. Une séance close, que
  * le magasin n'a pas, donne au bout de huit secondes la page `HorsLigne` et
  * « Attendre la réponse » : le worker lève alors le délai de cette adresse, la
  * page se recharge, et la séance arrive du serveur, lentement.
@@ -47,7 +50,14 @@ class ReseauLentTest extends DuskTestCase
     /** La latence de chaque requête de la page : au-delà des cinq et des huit secondes. */
     private const int LATENCE_DU_RESEAU_LENT_MS = 10_000;
 
-    public function test_sur_un_reseau_lent_la_copie_arrive_a_cinq_secondes_la_coquille_a_huit_et_attendre_la_reponse_mene_a_la_page(): void
+    /**
+     * Ce qu'attend, au plus, l'accueil du serveur depuis l'ouverture : la
+     * réponse tardive (une latence), puis le rechargement de la copie (une
+     * autre), et de quoi absorber une machine chargée.
+     */
+    private const int SECONDES_JUSQU_A_L_ACCUEIL_DU_SERVEUR = 30;
+
+    public function test_sur_un_reseau_lent_la_copie_arrive_a_cinq_secondes_la_coquille_a_huit_la_reponse_tardive_la_remplace_et_attendre_la_reponse_mene_a_la_page(): void
     {
         $jetons = ['seance' => Str::random(12), 'close' => Str::random(12), 'exercice' => Str::random(12)];
         $compte = User::factory()->create([
@@ -116,6 +126,17 @@ class ReseauLentTest extends DuskTestCase
                     ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Le réseau ne répond pas · copie du ')")
                     ->assertScript($this->texteDe('header h1'), 'Accueil');
                 $this->assertGreaterThanOrEqual(8.0, $duree, 'la coquille est arrivée avant les huit secondes');
+
+                // La réponse arrive après le délai : sans aucun geste, l'accueil du serveur remplace la copie.
+                $browser->waitUntilMissing('[dusk="bandeau-hors-ligne"]', self::SECONDES_JUSQU_A_L_ACCUEIL_DU_SERVEUR + 10)
+                    ->assertPathIs('/dashboard')
+                    ->assertScript($this->texteDe('header h1'), 'Accueil');
+                $duree = microtime(true) - $depart;
+                $this->assertLessThan(
+                    (float) self::SECONDES_JUSQU_A_L_ACCUEIL_DU_SERVEUR,
+                    $duree,
+                    'l’accueil du serveur n’a pas remplacé la copie à temps',
+                );
 
                 // Une séance close sans copie : la page qui dit ce qui s'ouvre sans réseau, et « Attendre la réponse ».
                 $browser->visit($cheminDeLaClose)
