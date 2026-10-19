@@ -1391,10 +1391,11 @@ export const creerLeMagasinDesCopies = ({
      * l'empreinte de l'état (`autre-cle`, la clé de l'état gardée : celle
      * d'une autre session) ; le titulaire de l'appareil égal au compte de
      * l'état (`autre-titulaire`, la clé fermée). Une copie qui ne se
-     * déchiffre pas (`illisible`) purge aussi, sans fermer la clé : ses
-     * données authentifiées nomment le compte de l'état, son chemin et le
-     * contrat, et une copie rangée pour un autre compte ou déplacée sous un
-     * autre chemin ne se déchiffre pas. Une purge annoncée pendant la
+     * déchiffre pas, ou dont la page n'est pas du composant qu'elle nomme en
+     * clair (`illisible`), purge aussi, sans fermer la clé : ses données
+     * authentifiées nomment le compte de l'état, son chemin et le contrat, et
+     * une copie rangée pour un autre compte ou déplacée sous un autre chemin
+     * ne se déchiffre pas. Une purge annoncée pendant la
      * lecture, ou un témoin ou un titulaire qui ont changé, ne laissent rien
      * servir (`perimee`), sans nouvelle purge. Sans `crypto.subtle` ou sans
      * IndexedDB : `indisponible`, sans purge.
@@ -1495,7 +1496,10 @@ export const creerLeMagasinDesCopies = ({
 
         /**
          * Déchiffre un enregistrement : ses données authentifiées sont le
-         * compte de l'état, son chemin et le contrat.
+         * compte de l'état, son chemin et le contrat. La page déchiffrée doit
+         * être du composant que l'enregistrement nomme en clair, celui que la
+         * liste blanche a jugé, comme dans `lireUneCopie` : sinon, elle est
+         * illisible.
          *
          * @param {EnregistrementDUneCopie} enregistrement
          * @returns {Promise<CopieLue>}
@@ -1506,6 +1510,10 @@ export const creerLeMagasinDesCopies = ({
                 donneesAuthentifiees(etat.compte, enregistrement.chemin),
                 enregistrement,
             )
+
+            if (contenu?.page?.component !== enregistrement.composant) {
+                throw new TypeError('La page déchiffrée n’est pas celle que nomme sa copie.')
+            }
 
             return {
                 page: contenu.page,

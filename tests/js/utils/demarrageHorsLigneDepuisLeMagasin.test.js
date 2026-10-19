@@ -13,7 +13,7 @@ import {
 } from '@/Utils/copiesHorsLigne'
 import { COMPOSANT_HORS_LIGNE, demarrerHorsLigne, pagesSansReseau } from '@/Utils/demarrageHorsLigne'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL } from '@/Utils/historiqueDuCompte'
-import { AGE_MAXIMAL_D_UNE_COPIE_MS } from '@/Utils/pagesGardees'
+import { AGE_MAXIMAL_D_UNE_COPIE_MS, VERSION_DU_CONTRAT } from '@/Utils/pagesGardees'
 import { noterQueLeServeurRepond, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 /*
@@ -433,6 +433,55 @@ describe('chaque vérification qui échoue purge, et laisse le contenu statique'
         expect(demarrage.resultat.raison).toBe('illisible')
         attendreUneCoquilleStatique(demarrage)
         expect(copiesRangees().size).toBe(0)
+    })
+
+    /*
+     * La liste blanche se juge sur le composant en clair de l'enregistrement :
+     * celui de la page déchiffrée doit être le même, comme dans l'application
+     * ouverte (`lireUneCopie`). Une copie rechiffrée sous la bonne clé et les
+     * bonnes données authentifiées, mais pour une autre page, ne se monte pas.
+     */
+    it('une copie dont la page déchiffrée n’est pas le composant de son enregistrement ne se monte pas', async () => {
+        await ecrire(pageDe())
+
+        const empreinte = etatRange().empreinte
+        const enregistrement = copiesRangees().get('/dashboard')
+        const temoin = document.cookie.match(new RegExp(`(?:^|; )${TEMOIN}=([^;]+)`))[1]
+        const octets = Uint8Array.from(atob(`${temoin.replace(/-/g, '+').replace(/_/g, '/')}=`), (lettre) =>
+            lettre.charCodeAt(0),
+        )
+        const cle = await crypto.subtle.importKey('raw', octets, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+        const additionalData = new TextEncoder().encode(`${COMPTE}|/dashboard|${VERSION_DU_CONTRAT}`)
+        const contenu = JSON.parse(
+            new TextDecoder().decode(
+                await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: enregistrement.iv, additionalData },
+                    cle,
+                    enregistrement.chiffre,
+                ),
+            ),
+        )
+        const iv = crypto.getRandomValues(new Uint8Array(12))
+
+        contenu.page.component = 'Journal/Index'
+        copiesRangees().set('/dashboard', {
+            ...enregistrement,
+            iv,
+            chiffre: await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv, additionalData },
+                cle,
+                new TextEncoder().encode(JSON.stringify(contenu)),
+            ),
+        })
+
+        expect(await magasin.lireUneCopie('/dashboard')).toBeNull()
+
+        const demarrage = await demarrer('/dashboard')
+
+        expect(demarrage.resultat.raison).toBe('illisible')
+        attendreUneCoquilleStatique(demarrage)
+        expect(copiesRangees().size).toBe(0)
+        expect(etatRange().empreintesFermees).not.toContain(empreinte)
     })
 
     it('un autre contrat : l’état se vide sans fermer sa clé', async () => {
