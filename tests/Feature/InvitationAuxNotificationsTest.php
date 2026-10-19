@@ -12,6 +12,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Testing\AssertableInertia;
+use NotificationChannels\WebPush\PushSubscription;
 use NotificationChannels\WebPush\WebPushChannel;
 
 /*
@@ -156,8 +157,8 @@ describe('la fin de séance par l’API', function (): void {
 
         expect($parLApi->json('meta'))->toBe(['proposer_les_notifications' => $attendu]);
     })->with([
-        'aucun abonnement' => [fn (User $utilisateur) => null, true],
-        'un abonnement tenu' => [fn (User $utilisateur) => $utilisateur->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton'), false],
+        'aucun abonnement' => [fn (User $utilisateur): null => null, true],
+        'un abonnement tenu' => [fn (User $utilisateur): PushSubscription => $utilisateur->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton'), false],
         'records coupés' => [fn (User $utilisateur) => NotificationPreference::factory()->create([
             'user_id' => $utilisateur->id,
             'type' => 'personal_record',

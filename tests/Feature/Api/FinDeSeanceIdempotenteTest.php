@@ -9,8 +9,11 @@ use App\Models\WorkoutLine;
 use App\Services\ActiveWorkoutService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Testing\TestResponse;
 use Inertia\Support\SessionKey;
 use Inertia\Testing\AssertableInertia as Assert;
+use NotificationChannels\WebPush\PushSubscription;
+use Symfony\Component\HttpFoundation\Response;
 
 use function Pest\Laravel\actingAs;
 
@@ -41,9 +44,9 @@ function finApiSeance(User $compte): Workout
  * Termine une séance par l'API.
  *
  * @param  array<string, mixed>  $corps
- * @return \Illuminate\Testing\TestResponse<\Symfony\Component\HttpFoundation\Response>
+ * @return TestResponse<Response>
  */
-function finApi(User $compte, array $corps): \Illuminate\Testing\TestResponse
+function finApi(User $compte, array $corps): TestResponse
 {
     return actingAs($compte)->patchJson(route('api.v1.workouts.finish'), $corps);
 }
@@ -150,7 +153,7 @@ it('ne propose pas les notifications au compte abonné ni à celui qui a coupé 
         ->assertOk()
         ->assertJsonPath('meta.proposer_les_notifications', false);
 })->with([
-    'abonné' => [fn (User $compte) => $compte->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton')],
+    'abonné' => [fn (User $compte): PushSubscription => $compte->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton')],
     'records coupés' => [fn (User $compte) => NotificationPreference::factory()->create([
         'user_id' => $compte->id,
         'type' => 'personal_record',

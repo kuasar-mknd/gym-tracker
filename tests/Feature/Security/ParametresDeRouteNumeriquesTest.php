@@ -9,7 +9,6 @@ use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
 use App\Support\IdentifiantsDesRoutes;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Routing\Route as RouteDeLApplication;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
@@ -65,8 +64,6 @@ it('pose le motif numérique sur chaque paramètre de route lié à un modèle',
     $sansMotif = [];
 
     foreach (Route::getRoutes()->getRoutes() as $route) {
-        assert($route instanceof RouteDeLApplication);
-
         if (! str_starts_with($route->getActionName(), 'App\\')) {
             continue;
         }

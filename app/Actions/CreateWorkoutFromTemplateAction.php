@@ -13,9 +13,9 @@ use App\Services\Stats\StatsCacheManager;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
-final class CreateWorkoutFromTemplateAction
+final readonly class CreateWorkoutFromTemplateAction
 {
-    public function __construct(private readonly StatsCacheManager $statsCache)
+    public function __construct(private StatsCacheManager $statsCache)
     {
     }
 
