@@ -18,12 +18,17 @@ use Inertia\Inertia;
 
 class WorkoutTemplateController extends Controller
 {
+    /**
+     * Les modèles, l'aperçu de chacun (`templates`), et de quoi lancer chacun
+     * sans réseau (`lancements`, #2049) : la page est gardée pour la salle.
+     */
     public function index(\App\Actions\FetchWorkoutTemplatesAction $fetchWorkoutTemplatesAction): \Inertia\Response
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
         return Inertia::render('Workouts/Templates/Index', [
             'templates' => $fetchWorkoutTemplatesAction->execute($this->user()),
+            'lancements' => $fetchWorkoutTemplatesAction->lancements($this->user()),
         ]);
     }
 

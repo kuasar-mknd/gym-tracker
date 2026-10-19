@@ -10,7 +10,9 @@ import { readFileSync, statSync } from 'node:fs'
  * y entrent aussi (23 entrées, 662 Kio), puis la fermeture de l'entrée et des
  * pages de la salle, sans leurs graphiques (`resources/js/sw/fermetureDuPrecache.js`) :
  * 60 entrées, 836 Kio ; la coquille qui démarre l'application sans réseau et
- * sa page `HorsLigne` en font 61 et 845 Kio. Un motif élargi, ou une
+ * sa page `HorsLigne` en font 61 et 845 Kio ; la liste des modèles, gardée
+ * pour lancer un modèle sans réseau (#2049), 62 et 853 Kio, mesurés le
+ * 2026-10-19 sous le même plafond. Un motif élargi, ou une
  * fermeture qui suivrait l'entrée jusqu'à chaque page, referait grossir
  * l'installation sans que rien ne le dise.
  *

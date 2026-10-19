@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\FetchWorkoutTemplatesAction;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\User;
@@ -12,6 +13,7 @@ use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
 use App\Services\Stats\ClesDeStats;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 use function Pest\Laravel\actingAs;
 
@@ -194,4 +196,109 @@ it('vide le cache des statistiques des séances au lancement', function (): void
     actingAs($compte)->post(route('templates.execute', $modele))->assertRedirect();
 
     expect(Cache::has(ClesDeStats::seances($compte, 'duration_history.20')))->toBeFalse();
+});
+
+/**
+ * Les lancements que la page des modèles donne à ce compte.
+ *
+ * @return array<int, array{name: string, lignes: list<array{exercise: array{id: int, name: string|null, type: string|null}, order: int, cle: string, series: list<array{reps: int|float|null, weight: int|float|null, is_warmup: bool, cle: string}>}>}>
+ */
+function lancementsDeLaPageDesModeles(User $compte): array
+{
+    /** @var array{props: array{lancements: array<int, array{name: string, lignes: list<array{exercise: array{id: int, name: string|null, type: string|null}, order: int, cle: string, series: list<array{reps: int|float|null, weight: int|float|null, is_warmup: bool, cle: string}>}>}>}} $page */
+    $page = actingAs($compte)->get(route('templates.index'))->assertOk()->viewData('page');
+
+    return $page['props']['lancements'];
+}
+
+/*
+ * La page des modèles donne à la file de quoi lancer chaque modèle sans
+ * réseau : les clés et les valeurs que le serveur pose lui-même au lancement
+ * (une seule source, `CreateWorkoutFromTemplateAction::lignesDuLancement()`).
+ * Rejouées sous ces clés, les écritures retrouvent ce qu'un lancement arrivé
+ * au serveur a créé.
+ */
+it('donne dans la page des modèles les clés et les valeurs que le lancement pose', function (): void {
+    ['compte' => $compte, 'modele' => $modele, 'exercices' => $exercices] = lancementIdempotentScene();
+    // Une série d'avant les plafonds : la page la donne ramenée, comme le lancement la recopie.
+    WorkoutTemplateSet::query()
+        ->where('workout_template_line_id', $modele->workoutTemplateLines()->where('order', 0)->value('id'))
+        ->sole()
+        ->forceFill(['weight' => Set::POIDS_MAX_KG + 50])
+        ->saveQuietly();
+
+    $lancements = lancementsDeLaPageDesModeles($compte);
+    actingAs($compte)->post(route('templates.execute', $modele), [], ['Idempotency-Key' => '7c1d2e3f-2049-4a5b-9c6d-0000000000b5']);
+    $seance = Workout::query()->where('user_id', $compte->id)->sole();
+
+    $creees = array_map(static fn (WorkoutLine $ligne): array => [
+        'exercise' => $ligne->exercise_id,
+        'order' => $ligne->order,
+        'cle' => $ligne->idempotency_key,
+        'series' => array_values($ligne->sets->sortBy('order')->map(static fn (Set $serie): array => [
+            'reps' => $serie->reps,
+            'weight' => $serie->weight,
+            'is_warmup' => $serie->is_warmup,
+            'cle' => $serie->idempotency_key,
+        ])->all()),
+    ], $seance->workoutLines()->with('sets')->get()->all());
+    $donnees = array_map(static fn (array $ligne): array => [
+        'exercise' => $ligne['exercise']['id'],
+        'order' => $ligne['order'],
+        'cle' => $ligne['cle'],
+        'series' => array_map(static fn (array $serie): array => [
+            'reps' => $serie['reps'],
+            'weight' => (float) $serie['weight'],
+            'is_warmup' => $serie['is_warmup'],
+            'cle' => $serie['cle'],
+        ], $ligne['series']),
+    ], $lancements[$modele->id]['lignes']);
+
+    expect($donnees)->toBe($creees)
+        ->and($lancements[$modele->id]['name'])->toBe('Jambes et dos')
+        ->and($lancements[$modele->id]['lignes'][0]['exercise'])->toBe(['id' => $exercices[0]->id, 'name' => 'Squat', 'type' => $exercices[0]->type])
+        ->and($lancements[$modele->id]['lignes'][0]['series'][0]['weight'])->toEqual(Set::POIDS_MAX_KG);
+});
+
+it('ne donne que les modèles du compte', function (): void {
+    ['compte' => $compte, 'modele' => $modele] = lancementIdempotentScene();
+    $autre = lancementIdempotentScene();
+
+    $lancements = lancementsDeLaPageDesModeles($compte);
+
+    expect(array_keys($lancements))->toBe([$modele->id])
+        ->and($lancements)->not->toHaveKey($autre['modele']->id);
+});
+
+/*
+ * Quatre requêtes quel que soit le nombre de modèles : les modèles, leurs
+ * lignes, leurs exercices, leurs séries. Une par modèle ou par ligne ferait
+ * attendre la page autant de fois.
+ */
+it('lit les lancements en quatre requêtes, quel que soit le nombre de modèles', function (): void {
+    ['compte' => $compte] = lancementIdempotentScene();
+    $action = app(FetchWorkoutTemplatesAction::class);
+    $compter = static function () use ($action, $compte): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $action->lancements($compte);
+        $requetes = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $requetes;
+    };
+
+    $avecUn = $compter();
+
+    foreach (range(1, 4) as $rang) {
+        $modele = WorkoutTemplate::factory()->create(['user_id' => $compte->id, 'name' => "Modèle {$rang}"]);
+
+        foreach (range(0, 2) as $ordre) {
+            $ligne = WorkoutTemplateLine::factory()->create(['workout_template_id' => $modele->id, 'exercise_id' => Exercise::factory()->create(['user_id' => $compte->id])->id, 'order' => $ordre]);
+            WorkoutTemplateSet::factory()->count(2)->create(['workout_template_line_id' => $ligne->id]);
+        }
+    }
+
+    expect($avecUn)->toBe(4)
+        ->and($compter())->toBe(4);
 });

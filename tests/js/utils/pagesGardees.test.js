@@ -107,6 +107,7 @@ describe('une clé de la liste, sans composant', () => {
         '/dashboard',
         '/workouts/12',
         '/workouts',
+        '/templates',
         '/exercises',
         '/profile',
         '/tools',
@@ -127,6 +128,10 @@ describe('une clé de la liste, sans composant', () => {
         ['une autre page', '/stats'],
         ['une page de modification', '/workouts/12/edit'],
         ['un identifiant qui n’en est pas un', '/workouts/0'],
+        // Une séance démarrée sans réseau (#2049) : construite depuis la file, jamais copiée.
+        ['une séance en attente de sa création', '/workouts/en-attente/0b6f5d1e-2049-4c11-9d1a-000000000001'],
+        ['un modèle à modifier', '/templates/3/edit'],
+        ['un nouveau modèle', '/templates/create'],
         ['une autre page de la liste', '/workouts?page=2'],
         ['un filtre', '/exercises?category=jambes'],
         ['rien', null],

@@ -13,11 +13,13 @@
  *
  * Le noyau de salle, sans `Exercises/Show` au départ (décision 2) : l'accueil,
  * le `start_url` ; la séance en cours et les trois dernières séances closes
- * visitées ; la liste des séances, page 1 sans filtre ; la bibliothèque ; les
- * menus « Plus » (le profil et les outils) ; le minuteur d'intervalles, les
- * disques, le 1RM et l'échauffement. Jamais une page de santé, de journal, de
- * notifications, d'objectifs, de compléments, le profil à modifier, un
- * formulaire de création ou d'édition, ni une page d'invité :
+ * visitées ; la liste des séances, page 1 sans filtre ; la liste des modèles,
+ * pour en lancer un sans réseau (#2049, extension écrite de la décision 2) ;
+ * la bibliothèque ; les menus « Plus » (le profil et les outils) ; le
+ * minuteur d'intervalles, les disques, le 1RM et l'échauffement. Jamais une
+ * page de santé, de journal, de notifications, d'objectifs, de compléments,
+ * le profil à modifier, un formulaire de création ou d'édition, ni une page
+ * d'invité :
  * `LesPagesPriveesNeSontJamaisGardeesTest` (tests/Feature/Conventions) le
  * tient, et `PagesGardeesTest` compare chaque chemin à la route qu'il nomme.
  * Ce qu'une page gardée montre de ces pages-là (le dernier poids et les
@@ -40,7 +42,7 @@
  * `tests/Feature/HorsLigne/contrat-des-pages-gardees.json` pour cette version :
  * une forme qui change sans que la version monte fait échouer la suite.
  */
-export const VERSION_DU_CONTRAT = 1
+export const VERSION_DU_CONTRAT = 2
 
 /**
  * Le volume que les copies d'un compte occupent au plus, chiffrées : 1,5 Mo.
@@ -78,6 +80,7 @@ export const PAGES_GARDEES = geler([
     { composant: 'Dashboard', route: 'dashboard', chemin: '/dashboard' },
     { composant: 'Workouts/Show', route: 'workouts.show', chemin: '/workouts/{workout}' },
     { composant: 'Workouts/Index', route: 'workouts.index', chemin: '/workouts' },
+    { composant: 'Workouts/Templates/Index', route: 'templates.index', chemin: '/templates' },
     { composant: 'Exercises/Index', route: 'exercises.index', chemin: '/exercises' },
     { composant: 'Profile/Index', route: 'profile.index', chemin: '/profile' },
     { composant: 'Tools/Index', route: 'tools.index', chemin: '/tools' },
