@@ -595,7 +595,9 @@ describe('une navigation vers un fichier du precache', () => {
     it.each(['/build/hors-ligne', '/build/hors-ligne.html?utm_source=courriel'])(
         'ne sert pas le fichier à une autre adresse que la sienne (%s)',
         async (chemin) => {
-            const { reglee } = naviguer(chemin, { preloadResponse: Promise.resolve(new Response('introuvable', { status: 404 })) })
+            const { reglee } = naviguer(chemin, {
+                preloadResponse: Promise.resolve(new Response('introuvable', { status: 404 })),
+            })
 
             await vi.advanceTimersByTimeAsync(0)
 
