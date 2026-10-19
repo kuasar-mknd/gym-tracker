@@ -34,7 +34,7 @@ use Tests\Support\ParcoursHorsLigne;
  * « Indisponible hors ligne », et le graphique de l'historique, hors du
  * precache, « Graphique indisponible hors ligne » ; le bouton Retour du
  * navigateur rend la séance ;
- * Séances, Plus (où démarrer une séance se désactive), Outils et le minuteur
+ * Séances, Plus (où démarrer une séance reste ouvert depuis #2049), Outils et le minuteur
  * d'intervalles s'ouvrent ensuite avec le bandeau, puis de nouveau Séances.
  * Rien d'autre n'est dit. Le réseau rendu, la copie des séances se recharge
  * en entier sans être remontée (`router.reload` garde l'état), perd son
@@ -156,8 +156,8 @@ class NavigationHorsLigneTest extends DuskTestCase
 
                 $browser->clickWhenSettled('[dusk="nav-profile"]');
                 $this->attendreLaCopie($browser, '/profile', 'Plus');
-                // Démarrer une séance ne partirait pas d'une copie : le bouton central se désactive, et dit pourquoi.
-                $browser->assertScript("(() => { const bouton = document.querySelector('button.glass-nav-fab'); const raison = document.getElementById(bouton.getAttribute('aria-describedby') ?? ''); return bouton.disabled && raison !== null && raison.textContent.trim() !== ''; })()");
+                // Démarrer reste ouvert sur une copie (#2049) : rien n'y est tiré d'elle, et sans réseau la séance s'ouvre depuis la file.
+                $browser->assertScript("(() => { const bouton = document.querySelector('button.glass-nav-fab'); return bouton !== null && !bouton.disabled && !bouton.hasAttribute('aria-describedby'); })()");
 
                 $browser->clickWhenSettled('main a[href$="/tools"]');
                 $this->attendreLaCopie($browser, '/tools', 'Outils');
