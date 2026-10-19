@@ -1,5 +1,10 @@
-import { MESSAGE_ATTENDRE_LA_REPONSE, MESSAGE_REPONSE_TARDIVE_RENVOYEE } from '@/sw/navigationsHorsLigne'
+import {
+    MESSAGE_ATTENDRE_LA_REPONSE,
+    MESSAGE_REPONSE_TARDIVE_ARRIVEE,
+    MESSAGE_REPONSE_TARDIVE_RENVOYEE,
+} from '@/sw/navigationsHorsLigne'
 import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
+import { noterQueLeServeurRepond } from '@/composables/useEtatDuReseau'
 
 /**
  * Ce que la page et le worker se disent d'une navigation servie par la page
@@ -21,6 +26,17 @@ import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
  * était lisible, et un rechargement suivi d'un nouveau délai tournerait en
  * boucle.
  *
+ * **La réponse tardive réussie.** Le serveur était lent, pas absent : le
+ * worker a levé le délai de l'adresse, puis prévient la page
+ * (`MESSAGE_REPONSE_TARDIVE_ARRIVEE`). Une page montée dans la coquille (une
+ * copie, ou la page `HorsLigne`) note que le serveur répond : elle se recharge
+ * alors en entier par une visite d'Inertia, qui ne passe pas par le délai du
+ * worker, comme au retour du réseau (`visitesHorsLigne.js`) ; la séance après
+ * sa file. Une coquille restée statique se recharge, et la navigation attend
+ * le serveur sans retomber sur elle, le délai levé : pas de boucle. Sans ce
+ * message, la page restait sur la copie, la sonde abandonnant à cinq secondes
+ * sur le même réseau lent, jusqu'au geste suivant.
+ *
  * L'écoute se pose avant la fin de l'analyse du document : le navigateur garde
  * les messages du worker pour la page jusqu'à `DOMContentLoaded` (ou
  * `startMessages()`), puis les délivre à qui écoute déjà. `main.js` l'installe
@@ -36,12 +52,23 @@ import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
 export const ATTENTE_DE_LA_LEVEE_MS = 1_000
 
 /**
+ * Si une page est montée, ou en train de l'être : la coquille y a écrit la
+ * page d'une copie (`demarrageHorsLigne.js`), comme le serveur l'écrit dans
+ * les siennes.
+ *
+ * @returns {boolean}
+ */
+const unePageEstMontee = () => (globalThis.document?.querySelector('script[data-page="app"]') ?? null) !== null
+
+/**
  * Écoute les messages du worker. Rend de quoi ne plus écouter.
  *
  * @param {{
  *   conteneur?: { addEventListener: Function, removeEventListener: Function } | null,
  *   magasin?: () => { empreinteDuTemoin: () => Promise<string | null>, oublierLesCopies: (options?: object) => Promise<boolean> },
  *   recharger?: () => void,
+ *   serveurRepond?: () => void,
+ *   pageMontee?: () => boolean,
  * }} [options]
  * @returns {() => void}
  */
@@ -49,6 +76,8 @@ export const installerLesMessagesDuWorker = ({
     conteneur = globalThis.navigator?.serviceWorker ?? null,
     magasin = magasinDesCopies,
     recharger = () => globalThis.location.reload(),
+    serveurRepond = noterQueLeServeurRepond,
+    pageMontee = unePageEstMontee,
 } = {}) => {
     if (conteneur === null || conteneur === undefined) {
         return () => {}
@@ -59,6 +88,16 @@ export const installerLesMessagesDuWorker = ({
         .catch(() => null)
 
     const surUnMessage = async (event) => {
+        if (event?.data?.type === MESSAGE_REPONSE_TARDIVE_ARRIVEE) {
+            if (pageMontee()) {
+                serveurRepond()
+            } else {
+                recharger()
+            }
+
+            return
+        }
+
         if (event?.data?.type !== MESSAGE_REPONSE_TARDIVE_RENVOYEE) {
             return
         }

@@ -7,6 +7,7 @@ import {
     DELAI_DE_LA_NAVIGATION_MS,
     DUREE_SANS_DELAI_MS,
     MESSAGE_ATTENDRE_LA_REPONSE,
+    MESSAGE_REPONSE_TARDIVE_ARRIVEE,
     MESSAGE_REPONSE_TARDIVE_RENVOYEE,
 } from '@/sw/navigationsHorsLigne'
 import { pageHorsLigne } from '@/sw/pageHorsLigne'
@@ -320,10 +321,45 @@ describe('la réponse arrivée après le délai', () => {
         expect(autre.postMessage).not.toHaveBeenCalled()
     })
 
-    it('n’annonce pas une page servie', async () => {
-        const fenetre = await unePageServieAuDelaiPuis(new Response('<!DOCTYPE html><title>Accueil</title>'))
+    /*
+     * Le serveur était lent, pas absent : la page servie au délai n'y reste
+     * pas. Le délai de sa page se lève, sous la clé de sa copie (`/` mène à
+     * l'accueil), et la page qui se recharge attend alors le serveur sans
+     * retomber sur la page « hors ligne ».
+     */
+    it.each([
+        ['/dashboard', '/dashboard'],
+        ['/', '/dashboard'],
+        ['/workouts/12', '/workouts/12'],
+    ])('annonce une page arrivée après le délai à %s, et lève le délai de %s', async (chemin, suivante) => {
+        const autre = { postMessage: vi.fn() }
+        fenetres.set('autre-onglet', autre)
+
+        const fenetre = await unePageServieAuDelaiPuis(new Response('<!DOCTYPE html><title>Accueil</title>'), chemin)
+
+        expect(fenetre.postMessage).toHaveBeenCalledExactlyOnceWith({ type: MESSAGE_REPONSE_TARDIVE_ARRIVEE })
+        expect(autre.postMessage).not.toHaveBeenCalled()
+
+        const lent = reseauEnAttente()
+        const rechargee = naviguer(suivante, { preloadResponse: lent.promesse })
+        await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS * 2)
+        expect(rechargee.reglee.reponse).toBeUndefined()
+        lent.repondre(new Response('la page, du serveur'))
+        await vi.advanceTimersByTimeAsync(0)
+        await expect(rechargee.reglee.reponse.text()).resolves.toBe('la page, du serveur')
+        await vi.advanceTimersByTimeAsync(DUREE_SANS_DELAI_MS)
+    })
+
+    it('n’annonce rien et garde le délai d’une erreur du serveur arrivée après lui', async () => {
+        const fenetre = await unePageServieAuDelaiPuis(new Response('passerelle', { status: 502 }))
 
         expect(fenetre.postMessage).not.toHaveBeenCalled()
+
+        const lent = reseauEnAttente()
+        const rechargee = naviguer('/dashboard', { preloadResponse: lent.promesse })
+        await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS)
+        await expect(raisonDeLaCoquille(rechargee.reglee.reponse)).resolves.toBe('delai')
+        lent.couper()
     })
 
     it('n’annonce rien d’une réponse arrivée à temps, même redirigée', async () => {

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import {
     DELAI_DE_LA_NAVIGATION_MS,
+    MESSAGE_REPONSE_TARDIVE_ARRIVEE,
+    MESSAGE_REPONSE_TARDIVE_RENVOYEE,
     PREFIXES_SANS_COQUILLE,
     URL_DE_LA_PAGE_HORS_LIGNE,
     activerLePrechargementDesNavigations,
@@ -308,7 +310,81 @@ describe('naviguerAvecUnDelai', () => {
         repondre(new Response(null, { status: 302, headers: { Location: '/login' } }))
         await Promise.all(e.attentes)
 
-        expect(prevenirLaPage).toHaveBeenCalledExactlyOnceWith('page-ouverte')
+        expect(prevenirLaPage).toHaveBeenCalledExactlyOnceWith('page-ouverte', MESSAGE_REPONSE_TARDIVE_RENVOYEE)
+    })
+
+    /*
+     * Le serveur était lent, pas absent : le délai de l'adresse se lève AVANT
+     * que la page soit prévenue, pour que le rechargement qu'elle lance
+     * attende le serveur au lieu de retomber sur la coquille.
+     */
+    it('lève le délai, puis prévient la page, d’une réponse réussie arrivée après le délai', async () => {
+        let repondre
+        const e = evenement(new Promise((resoudre) => (repondre = resoudre)))
+        const ordre = []
+        const leverLeDelai = vi.fn(() => ordre.push('levee'))
+        const prevenirLaPage = vi.fn((_, type) => ordre.push(type))
+        const servie = naviguerAvecUnDelai(e, {
+            trouverLaPageHorsLigne: async (raison) => ({ raison }),
+            allerChercher: vi.fn(),
+            prevenirLaPage,
+            leverLeDelai,
+            delai: 10,
+        })
+
+        await vi.advanceTimersByTimeAsync(10)
+        await expect(servie).resolves.toEqual({ raison: 'delai' })
+        expect(leverLeDelai).not.toHaveBeenCalled()
+
+        repondre(new Response('<!DOCTYPE html><title>Accueil</title>', { status: 200 }))
+        await Promise.all(e.attentes)
+
+        expect(prevenirLaPage).toHaveBeenCalledExactlyOnceWith('page-ouverte', MESSAGE_REPONSE_TARDIVE_ARRIVEE)
+        expect(ordre).toEqual(['levee', MESSAGE_REPONSE_TARDIVE_ARRIVEE])
+    })
+
+    it.each([
+        ['une erreur du serveur', 502],
+        ['un 403', 403],
+        ['un 404', 404],
+    ])('ne lève rien et ne prévient de rien pour %s arrivée après le délai', async (_, statut) => {
+        let repondre
+        const e = evenement(new Promise((resoudre) => (repondre = resoudre)))
+        const leverLeDelai = vi.fn()
+        const prevenirLaPage = vi.fn()
+        naviguerAvecUnDelai(e, {
+            trouverLaPageHorsLigne: async (raison) => ({ raison }),
+            allerChercher: vi.fn(),
+            prevenirLaPage,
+            leverLeDelai,
+            delai: 10,
+        })
+
+        await vi.advanceTimersByTimeAsync(10)
+        repondre(new Response('', { status: statut }))
+        await Promise.all(e.attentes)
+
+        expect(leverLeDelai).not.toHaveBeenCalled()
+        expect(prevenirLaPage).not.toHaveBeenCalled()
+    })
+
+    it('ne lève rien d’une réponse réussie arrivée à temps', async () => {
+        const e = evenement(Promise.resolve(new Response('à temps', { status: 200 })))
+        const leverLeDelai = vi.fn()
+        const prevenirLaPage = vi.fn()
+        const reponse = await naviguerAvecUnDelai(e, {
+            trouverLaPageHorsLigne: async (raison) => ({ raison }),
+            allerChercher: vi.fn(),
+            prevenirLaPage,
+            leverLeDelai,
+            delai: 10,
+        })
+
+        await Promise.all(e.attentes)
+
+        await expect(reponse.text()).resolves.toBe('à temps')
+        expect(leverLeDelai).not.toHaveBeenCalled()
+        expect(prevenirLaPage).not.toHaveBeenCalled()
     })
 
     it('ne prévient de rien quand le réseau tombe après le délai', async () => {

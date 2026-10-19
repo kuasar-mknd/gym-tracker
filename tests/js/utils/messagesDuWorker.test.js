@@ -7,7 +7,11 @@ import { jsRoot } from '../conventions/sourceFiles'
 import { TEMOIN, creerLeMagasinDesCopies, ouvrirLaBaseDuNavigateur } from '@/Utils/copiesHorsLigne'
 import { CLEF_DU_TITULAIRE_DE_L_APPAREIL } from '@/Utils/historiqueDuCompte'
 import { ATTENTE_DE_LA_LEVEE_MS, attendreLaReponse, installerLesMessagesDuWorker } from '@/Utils/messagesDuWorker'
-import { MESSAGE_ATTENDRE_LA_REPONSE, MESSAGE_REPONSE_TARDIVE_RENVOYEE } from '@/sw/navigationsHorsLigne'
+import {
+    MESSAGE_ATTENDRE_LA_REPONSE,
+    MESSAGE_REPONSE_TARDIVE_ARRIVEE,
+    MESSAGE_REPONSE_TARDIVE_RENVOYEE,
+} from '@/sw/navigationsHorsLigne'
 
 /*
  * Ce que la page fait des messages du worker (#2048, partie F) : une
@@ -185,6 +189,58 @@ describe('une redirection arrivée après le délai', () => {
 
         expect(recharger).not.toHaveBeenCalled()
         expect(installerLesMessagesDuWorker({ conteneur: null })).toBeTypeOf('function')
+    })
+})
+
+/*
+ * Le serveur était lent, pas absent : le worker a levé le délai de l'adresse,
+ * puis prévient la page. Une page montée dans la coquille se recharge par une
+ * visite d'Inertia, une coquille restée statique en entier.
+ */
+describe('une réponse réussie arrivée après le délai', () => {
+    afterEach(() => {
+        document.querySelector('script[data-page="app"]')?.remove()
+    })
+
+    it('note que le serveur répond quand une page est montée, sans recharger le document', async () => {
+        const { noterQueLeServeurNeRepondPas, useEtatDuReseau } = await import('@/composables/useEtatDuReseau')
+        const { conteneur, recharger } = await demarrerLaPage()
+        const donnees = document.createElement('script')
+
+        donnees.setAttribute('data-page', 'app')
+        donnees.setAttribute('type', 'application/json')
+        donnees.textContent = JSON.stringify(accueil)
+        document.body.append(donnees)
+        noterQueLeServeurNeRepondPas()
+
+        conteneur.dispatchEvent(messageDuWorker({ type: MESSAGE_REPONSE_TARDIVE_ARRIVEE }))
+        await laisserPasser()
+
+        expect(useEtatDuReseau().joignable.value).toBe(true)
+        expect(recharger).not.toHaveBeenCalled()
+    })
+
+    it('recharge une coquille restée statique, sans noter que le serveur répond', async () => {
+        const conteneur = conteneurDesWorkers()
+        const recharger = vi.fn()
+        const serveurRepond = vi.fn()
+        desinstaller = installerLesMessagesDuWorker({ conteneur, magasin: () => magasin, recharger, serveurRepond })
+
+        conteneur.dispatchEvent(messageDuWorker({ type: MESSAGE_REPONSE_TARDIVE_ARRIVEE }))
+        await laisserPasser()
+
+        expect(recharger).toHaveBeenCalledTimes(1)
+        expect(serveurRepond).not.toHaveBeenCalled()
+    })
+
+    it('n’oublie aucune copie, même le témoin changé', async () => {
+        const { conteneur } = await demarrerLaPage()
+
+        poserLeTemoin(cleAuHasard())
+        conteneur.dispatchEvent(messageDuWorker({ type: MESSAGE_REPONSE_TARDIVE_ARRIVEE }))
+        await laisserPasser()
+
+        expect([...fabrique.enregistrements('gym-tracker-copies', 'pages').keys()]).toEqual(['/dashboard'])
     })
 })
 

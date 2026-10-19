@@ -31,6 +31,11 @@ import { cleDeLaCopie, cleGardee } from '../Utils/pagesGardees.js'
  * Ni délai ni coquille ne touchent donc le rappel d'un fournisseur de
  * connexion : coupé à huit secondes, il aurait posé la session sur une réponse
  * que personne ne lisait, derrière une page qui disait le contraire.
+ *
+ * Une page de la salle servie au délai n'y reste pas : la réponse qui arrive
+ * ensuite est annoncée à la page que la navigation a ouverte, une redirection
+ * ou un 401 pour qu'elle juge de la fin de la session, une réponse réussie
+ * pour qu'elle se recharge, le délai de son adresse levé (`naviguerAvecUnDelai`).
  */
 
 /** La page « hors ligne », telle que la construction l'écrit et que le precache la range. */
@@ -59,6 +64,14 @@ export const MESSAGE_ATTENDRE_LA_REPONSE = 'gym-tracker:attendre-la-reponse'
  * (`resources/js/Utils/messagesDuWorker.js`).
  */
 export const MESSAGE_REPONSE_TARDIVE_RENVOYEE = 'gym-tracker:reponse-tardive-renvoyee'
+
+/**
+ * Le message du worker à la page qu'une navigation a ouverte sur la coquille,
+ * au délai : la réponse arrivée ensuite est réussie, le serveur était lent et
+ * non absent. Le délai de l'adresse est levé avant l'envoi : la page se
+ * recharge sans retomber sur la coquille (`resources/js/Utils/messagesDuWorker.js`).
+ */
+export const MESSAGE_REPONSE_TARDIVE_ARRIVEE = 'gym-tracker:reponse-tardive-arrivee'
 
 /**
  * Les débuts de chemin des navigations qui ne reçoivent jamais la coquille ni
@@ -266,24 +279,38 @@ const AU_DELAI = Symbol('au délai')
  * Une page de la salle : le réseau, huit secondes au plus, puis la coquille.
  *
  * Au délai, la réponse n'est pas abandonnée : le worker l'attend
- * (`waitUntil`, posé dès l'appel, tant que l'évènement est en cours). Une
- * redirection ou un 401 arrivés ensuite sont annoncés à la page que la
- * navigation a ouverte (`resultingClientId`), seule à les attendre ; la page
- * de la coquille ne s'en sert que si le témoin a changé. Le corps d'une
- * réponse tardive est abandonné.
+ * (`waitUntil`, posé dès l'appel, tant que l'évènement est en cours), et
+ * l'annonce à la page que la navigation a ouverte (`resultingClientId`), seule
+ * à l'attendre. Une redirection ou un 401 : `MESSAGE_REPONSE_TARDIVE_RENVOYEE`,
+ * dont la page ne se sert que si le témoin a changé. Une réponse réussie
+ * (2xx) : le serveur était lent, pas absent ; le délai de l'adresse est levé
+ * (`leverLeDelai`), puis la page prévenue (`MESSAGE_REPONSE_TARDIVE_ARRIVEE`),
+ * qui se recharge sans retomber sur la coquille. Sans cela, une copie montée
+ * pour lenteur restait affichée tant que la sonde, qui abandonne à cinq
+ * secondes, échouait sur le même réseau lent, et la coquille statique
+ * jusqu'au geste suivant. Une erreur du serveur ne dit rien : la page reste
+ * ce qu'elle est, et la sonde redemande. Le corps d'une réponse tardive est
+ * abandonné.
  *
  * @param {{request: Request, preloadResponse?: Promise<Response|undefined>, resultingClientId?: string, waitUntil: (promesse: Promise<unknown>) => void}} event
  * @param {{
  *   trouverLaPageHorsLigne: (raison: 'delai' | 'reseau') => Promise<Response|undefined>,
  *   allerChercher: (requete: Request) => Promise<Response>,
- *   prevenirLaPage: (identifiant: string | undefined) => Promise<void> | void,
+ *   prevenirLaPage: (identifiant: string | undefined, type: string) => Promise<void> | void,
+ *   leverLeDelai?: () => void,
  *   delai?: number,
  * }} outils
  * @returns {Promise<Response>}
  */
 export const naviguerAvecUnDelai = async (
     event,
-    { trouverLaPageHorsLigne, allerChercher, prevenirLaPage, delai = DELAI_DE_LA_NAVIGATION_MS },
+    {
+        trouverLaPageHorsLigne,
+        allerChercher,
+        prevenirLaPage,
+        leverLeDelai = () => {},
+        delai = DELAI_DE_LA_NAVIGATION_MS,
+    },
 ) => {
     const reponse = reponseDuReseau(event, allerChercher)
     /*
@@ -302,7 +329,10 @@ export const naviguerAvecUnDelai = async (
                 tardive?.body?.cancel?.().catch(() => {})
 
                 if (peutDireLaFinDeLaSession(tardive)) {
-                    await prevenirLaPage(event.resultingClientId)
+                    await prevenirLaPage(event.resultingClientId, MESSAGE_REPONSE_TARDIVE_RENVOYEE)
+                } else if (tardive?.ok === true) {
+                    leverLeDelai()
+                    await prevenirLaPage(event.resultingClientId, MESSAGE_REPONSE_TARDIVE_ARRIVEE)
                 }
             })
             .catch(() => {}),
@@ -335,7 +365,8 @@ export const naviguerAvecUnDelai = async (
 }
 
 /**
- * Les navigations du worker, et le délai que « Attendre la réponse » lève.
+ * Les navigations du worker, et le délai que « Attendre la réponse », ou une
+ * réponse réussie arrivée après lui, lève.
  *
  * Le délai levé vit en mémoire : la coquille envoie son message, puis
  * recharge aussitôt, et la navigation qui suit trouve le même worker.
@@ -400,15 +431,18 @@ export const creerLesNavigations = ({
         }
     }
 
-    /** @param {string | undefined} identifiant */
-    const prevenirLaPage = async (identifiant) => {
+    /**
+     * @param {string | undefined} identifiant la page que la navigation a ouverte
+     * @param {string} type le message
+     */
+    const prevenirLaPage = async (identifiant, type) => {
         if (typeof identifiant !== 'string' || identifiant === '') {
             return
         }
 
         const client = await trouverLeClient(identifiant)
 
-        client?.postMessage({ type: MESSAGE_REPONSE_TARDIVE_RENVOYEE })
+        client?.postMessage({ type })
     }
 
     /**
@@ -424,11 +458,19 @@ export const creerLesNavigations = ({
             return naviguerSansCoquille(event, allerChercher)
         }
 
-        if (sorte === 'ordinaire' || leDelaiEstLeve(cleDeLaSalle(adresseDeLOrigine(event.request.url, origine)))) {
+        const cle = cleDeLaSalle(adresseDeLOrigine(event.request.url, origine))
+
+        if (sorte === 'ordinaire' || leDelaiEstLeve(cle)) {
             return naviguerOuRetomber(event, trouverLaPageHorsLigne, allerChercher)
         }
 
-        return naviguerAvecUnDelai(event, { trouverLaPageHorsLigne, allerChercher, prevenirLaPage, delai })
+        return naviguerAvecUnDelai(event, {
+            trouverLaPageHorsLigne,
+            allerChercher,
+            prevenirLaPage,
+            leverLeDelai: () => leverLeDelai(cle),
+            delai,
+        })
     }
 
     /**
