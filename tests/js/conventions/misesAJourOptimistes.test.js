@@ -114,6 +114,11 @@ const EXEMPTIONS = [
         etat: 'ecrituresEnAttente',
         raison: 'le compte des écritures encore en file, relevé avant la clôture : il dit ce qui est, pas ce que le serveur fera',
     },
+    {
+        fichier: 'resources/js/composables/useDemarrageDUneSeance.js',
+        etat: 'demarrageEnCours',
+        raison: 'le verrou d’un démarrage, rendu par `finally` ou à la fin de la visite de la séance créée : il ne montre rien que la visite confirmerait',
+    },
 ]
 
 /** Le nom de l'objet au bout d'une chaîne `a.b.c`, `a[0].b` ou `f().b`. */

@@ -48,7 +48,6 @@ vi.mock('@/Components/Stats/RecentWorkoutsTimelineChart.vue', () => ({
 }))
 
 import RecentActivity from '@/Components/Dashboard/RecentActivity.vue'
-import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 beforeEach(() => {
     pageDInertia.props = {}
@@ -102,18 +101,18 @@ describe('quand rien n’a encore été fait', () => {
         expect(wrapper.get('button').attributes('aria-describedby')).toBeUndefined()
     })
 
-    // Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048) : le bouton le dit d'avance.
-    it('sur une copie hors ligne, ne propose pas de démarrer, et dit pourquoi', async () => {
+    // Sur une copie hors ligne, démarrer une séance passe par la file depuis #2049 : le bouton reste ouvert.
+    it('sur une copie hors ligne, propose de démarrer : la séance démarre par la file', async () => {
         pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
         const wrapper = await mountActivity({ recentWorkouts: [] })
         const bouton = wrapper.get('button')
 
-        expect(bouton.attributes('disabled')).toBeDefined()
-        expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+        expect(bouton.attributes('disabled')).toBeUndefined()
+        expect(bouton.attributes('aria-describedby')).toBeUndefined()
 
         await bouton.trigger('click')
 
-        expect(wrapper.emitted('startWorkout')).toBeUndefined()
+        expect(wrapper.emitted('startWorkout')).toHaveLength(1)
     })
 
     it('occupe le bouton pendant que la séance se crée', async () => {

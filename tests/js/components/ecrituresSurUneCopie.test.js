@@ -65,15 +65,19 @@ beforeEach(() => {
 describe('l’accueil', () => {
     const demarrer = (wrapper) => wrapper.get('[dusk="start-workout-button"]')
 
-    it('ne démarre pas de séance depuis une copie, et dit pourquoi', async () => {
+    /*
+     * Démarrer une séance passe par la file depuis #2049, sans rien tirer de la
+     * copie (ni la clé, ni l'heure, ni la séance) : le bouton reste ouvert.
+     */
+    it('démarre une séance depuis une copie : rien de la copie ne part', async () => {
         servirUneCopie()
         const wrapper = mount(QuickActions, { global })
 
-        attendreDesactive(demarrer(wrapper))
+        attendreOuvert(demarrer(wrapper))
 
         await demarrer(wrapper).trigger('click')
 
-        expect(wrapper.emitted('startWorkout')).toBeUndefined()
+        expect(wrapper.emitted('startWorkout')).toHaveLength(1)
     })
 
     it('en démarre une depuis une page que le serveur a rendue', async () => {

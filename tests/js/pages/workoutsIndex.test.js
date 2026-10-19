@@ -9,6 +9,19 @@ const haptic = vi.fn()
 /** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
 const pageDInertia = vi.hoisted(() => ({ props: {} }))
 
+/**
+ * Le démarrage d'une séance, commun aux boutons qui la démarrent (#2049), que
+ * `seanceDemarreeSansReseauAvecInertia.test.js` joue avec le vrai client : ici,
+ * que la liste l'appelle, d'où qu'on le demande.
+ */
+const demarrer = vi.fn()
+
+vi.mock('@/composables/useDemarrageDUneSeance', async () => {
+    const { ref } = await vi.importActual('vue')
+
+    return { useDemarrageDUneSeance: () => ({ demarrer: (...args) => demarrer(...args), enCours: ref(false) }) }
+})
+
 /*
  * The six charts are pulled in by defineAsyncComponent, so their import chain
  * keeps resolving after the test file is done — `workoutDuration.js` was still
@@ -41,11 +54,10 @@ vi.mock('@/Components/Stats/WorkoutHistoryTimelineChart.vue', () => ({
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => haptic(...args) }))
 
 /**
- * The two `useForm({})` calls on this page — one to create a session, one to
- * delete — have to come back as distinct, *reactive* objects: `form.processing`
- * drives the loading state of the create buttons, and a plain object would
- * freeze it at its initial value and let every assertion about it pass for the
- * wrong reason.
+ * The `useForm({})` call on this page — the delete — has to come back as a
+ * *reactive* object, and a plain object would freeze it at its initial value
+ * and let every assertion about it pass for the wrong reason. Starting a
+ * session no longer goes through a form (#2049).
  */
 const forms = []
 
@@ -83,9 +95,6 @@ import WorkoutsIndex from '@/Pages/Workouts/Index.vue'
 import GlassStat from '@/Components/UI/GlassStat.vue'
 import CarteDeSeance from '@/Components/Workout/CarteDeSeance.vue'
 import GraphiquesDesSeances from '@/Components/Workout/GraphiquesDesSeances.vue'
-import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
-import { annoncesPendant } from '../utils/annoncesSansReseau'
-import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** La valeur que la carte de chiffre reçoit pour ce libellé. */
 const statistique = (wrapper, libelle) =>
@@ -99,6 +108,7 @@ const dialogue = (wrapper) => wrapper.findComponent({ name: 'ConfirmDialog' })
 
 beforeEach(() => {
     pageDInertia.props = { auth: { user: { id: 1 } } }
+    demarrer.mockReset()
 })
 
 beforeAll(() => {
@@ -515,30 +525,34 @@ describe('Workouts/Index — the server sends a different page', () => {
  * time will actually be looking at.
  */
 describe('Workouts/Index — starting a session', () => {
-    it('creates a session from the header button', async () => {
+    it('starts a session from the header button, through the common start', async () => {
         const wrapper = mountPage()
 
         await wrapper.findAll('[aria-label="Nouvelle séance"]')[0].trigger('click')
 
-        expect(post).toHaveBeenCalledWith('/workouts', expect.any(Object))
+        expect(demarrer).toHaveBeenCalledTimes(1)
+        expect(post).not.toHaveBeenCalled()
     })
 
-    it('dit qu’il faut le réseau quand la création part sans lui', async () => {
+    /*
+     * Sans réseau, la liste disait qu'il fallait le réseau (#2048). La séance
+     * démarre désormais par la file (#2049) : aucune visite ne part qui le dirait.
+     */
+    it('ne dit plus qu’il faut le réseau : la séance démarre sans lui, par la file', async () => {
         const wrapper = mountPage()
 
         await wrapper.findAll('[aria-label="Nouvelle séance"]')[0].trigger('click')
-        const { rendu, annonces } = annoncesPendant(() => post.mock.calls[0][1].onNetworkError({ code: 'ERR_NETWORK' }))
 
-        expect(rendu).toBe(false)
-        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
+        expect(post).not.toHaveBeenCalled()
+        expect(demarrer).toHaveBeenCalledTimes(1)
     })
 
-    it('creates a session from the empty state as well', async () => {
+    it('starts a session from the empty state as well', async () => {
         const wrapper = mountPage({ workouts: { ...structuredClone(paginator), data: [], total: 0 } })
 
         await wrapper.find('[dusk="empty-state"]').trigger('click')
 
-        expect(post).toHaveBeenCalledWith('/workouts', expect.any(Object))
+        expect(demarrer).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -621,9 +635,10 @@ describe('Workouts/Index — the deferred charts and exercises', () => {
 })
 
 /*
- * Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048,
- * partie E) : « Nouvelle séance » et l'invitation d'un historique vide le
- * disent d'avance.
+ * Sur une copie hors ligne, rien ne part par une visite (#2048, partie E).
+ * Démarrer une séance passe par la file depuis #2049, sans rien tirer de la
+ * copie : « Nouvelle séance » et l'invitation d'un historique vide restent
+ * ouvertes.
  */
 describe('Workouts/Index — sur une copie hors ligne', () => {
     const marquer = () => {
@@ -633,27 +648,28 @@ describe('Workouts/Index — sur une copie hors ligne', () => {
         }
     }
 
-    it('ne démarre pas de séance depuis l’en-tête, et dit pourquoi', async () => {
+    it('démarre une séance depuis l’en-tête, sans raison de désactivation', async () => {
         marquer()
         const wrapper = mountPage()
         const bouton = wrapper.get('[aria-label="Nouvelle séance"]')
 
-        expect(bouton.attributes('disabled')).toBeDefined()
-        expect(bouton.attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+        expect(bouton.attributes('disabled')).toBeUndefined()
+        expect(bouton.attributes('aria-describedby')).toBeUndefined()
 
         await bouton.trigger('click')
 
+        expect(demarrer).toHaveBeenCalledTimes(1)
         expect(post).not.toHaveBeenCalled()
     })
 
-    it('ne propose pas de démarrer depuis un historique vide', () => {
+    it('propose de démarrer depuis un historique vide', () => {
         marquer()
         const invitation = mountPage({ workouts: { ...structuredClone(paginator), data: [], total: 0 } }).get(
             '[dusk="empty-state"]',
         )
 
-        expect(invitation.attributes('action-desactivee')).toBe('true')
-        expect(invitation.attributes('raison-de-l-action')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+        expect(invitation.attributes('action-desactivee')).toBeUndefined()
+        expect(invitation.attributes('raison-de-l-action')).toBeUndefined()
     })
 
     it('démarre depuis une page que le serveur a rendue', () => {

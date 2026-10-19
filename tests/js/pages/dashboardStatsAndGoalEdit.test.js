@@ -57,15 +57,26 @@ const routerVisit = vi.fn()
  * value reaches which child, which branch of a deferred load is showing, and
  * what a click actually sends to the server.
  *
- * The `useForm` stand-in is reactive: `Dashboard` hands `form.processing` to two
- * different children, and a frozen `false` would let a page that never wires it
- * up at all look identical to one that does.
+ * The stand-ins are reactive: `Dashboard` hands the start in progress
+ * (`useDemarrageDUneSeance`, #2049) to two different children, and a frozen
+ * `false` would let a page that never wires it up at all look identical to one
+ * that does.
  */
-let openRequest = null
 let deferredHasLanded = false
 
 /** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
 const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
+/**
+ * Le démarrage d'une séance, commun aux boutons qui la démarrent (#2049), que
+ * `seanceDemarreeSansReseauAvecInertia.test.js` joue avec le vrai client : ici,
+ * que l'accueil l'appelle, et ce qu'il montre pendant.
+ */
+const demarrage = vi.hoisted(() => ({ demarrer: null, enCours: null }))
+
+vi.mock('@/composables/useDemarrageDUneSeance', () => ({
+    useDemarrageDUneSeance: () => ({ demarrer: demarrage.demarrer, enCours: demarrage.enCours }),
+}))
 
 vi.mock('@inertiajs/vue3', async () => {
     const { reactive } = await vi.importActual('vue')
@@ -95,13 +106,11 @@ vi.mock('@inertiajs/vue3', async () => {
                 processing: false,
                 post: (...args) => {
                     form.processing = true
-                    openRequest = form
 
                     return formPost(...args)
                 },
                 put: (...args) => {
                     form.processing = true
-                    openRequest = form
 
                     return formPut(...args)
                 },
@@ -117,8 +126,7 @@ import Dashboard from '@/Pages/Dashboard.vue'
 import GoalsEdit from '@/Pages/Goals/Edit.vue'
 import StatsIndex from '@/Pages/Stats/Index.vue'
 import { layoutStub, passesSlot } from './pageStubs'
-import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
-import { annoncesPendant } from '../utils/annoncesSansReseau'
+import { ref } from 'vue'
 
 beforeAll(() => {
     globalThis.route = (name, params) => (params === undefined ? `/${name}` : `/${name}/${JSON.stringify(params)}`)
@@ -126,9 +134,12 @@ beforeAll(() => {
 
 beforeEach(() => {
     vi.clearAllMocks()
-    openRequest = null
     deferredHasLanded = false
     pageDInertia.props = {}
+    demarrage.enCours = ref(false)
+    demarrage.demarrer = vi.fn(() => {
+        demarrage.enCours.value = true
+    })
 })
 
 /**
@@ -139,11 +150,6 @@ beforeEach(() => {
  * @returns {Object} A stub component.
  */
 const recording = (name, props) => ({ name, props, template: '<div />' })
-
-const settleRequest = async () => {
-    openRequest.processing = false
-    await nextTick()
-}
 
 describe('Dashboard', () => {
     const quickActions = recording('QuickActions', ['processing'])
@@ -168,24 +174,27 @@ describe('Dashboard', () => {
             },
         })
 
-    it('crée la séance sur la route de création', async () => {
+    it('démarre la séance par le démarrage commun, et non plus par la route de création', async () => {
         const wrapper = mountDashboard()
 
         wrapper.findComponent({ name: 'QuickActions' }).vm.$emit('startWorkout')
 
-        expect(formPost.mock.calls[0][0]).toBe('/workouts.store')
+        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+        expect(formPost).not.toHaveBeenCalled()
     })
 
-    it('dit qu’il faut le réseau quand la séance part sans lui', () => {
+    /*
+     * Sans réseau, l'accueil disait qu'il fallait le réseau (#2048). La séance
+     * démarre désormais par la file (#2049) : aucune visite ne part qui le
+     * dirait, et l'accueil ne dit rien lui-même.
+     */
+    it('ne dit plus qu’il faut le réseau : la séance démarre sans lui, par la file', () => {
         const wrapper = mountDashboard()
 
         wrapper.findComponent({ name: 'QuickActions' }).vm.$emit('startWorkout')
-        const { rendu, annonces } = annoncesPendant(() =>
-            formPost.mock.calls[0][1].onNetworkError({ code: 'ERR_NETWORK' }),
-        )
 
-        expect(rendu).toBe(false)
-        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
+        expect(formPost).not.toHaveBeenCalled()
+        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
     })
 
     it('accepte la demande de démarrage des deux endroits qui la proposent', () => {
@@ -195,10 +204,10 @@ describe('Dashboard', () => {
 
         // The empty state inside RecentActivity offers the same button; wired to
         // nothing it is a button that visibly does not work.
-        expect(formPost.mock.calls[0][0]).toBe('/workouts.store')
+        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
     })
 
-    it('signale aux deux boutons que la séance est en train de se créer', async () => {
+    it('signale aux deux boutons que la séance est en train de démarrer', async () => {
         const wrapper = mountDashboard()
         const processingOf = (name) => wrapper.findComponent({ name }).props('processing')
 
@@ -207,11 +216,12 @@ describe('Dashboard', () => {
         wrapper.findComponent({ name: 'QuickActions' }).vm.$emit('startWorkout')
         await nextTick()
 
-        // Read while the request is still open: checked afterwards, a button
+        // Read while the start is still open: checked afterwards, a button
         // that was never told anything reads exactly like one that was.
         expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([true, true])
 
-        await settleRequest()
+        demarrage.enCours.value = false
+        await nextTick()
 
         expect([processingOf('QuickActions'), processingOf('RecentActivity')]).toEqual([false, false])
     })
