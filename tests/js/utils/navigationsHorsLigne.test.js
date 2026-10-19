@@ -163,8 +163,9 @@ describe('garderLePrechargement', () => {
 /*
  * Trois sortes de navigations (#2048, partie F) : les pages de la salle
  * attendent huit secondes avant la page « hors ligne » ; le rappel de la
- * connexion sociale, le panneau, les tableaux de bord, les liens signés des
- * courriels et Dusk ne la reçoivent jamais ; les autres la reçoivent sans
+ * connexion sociale, le panneau, les tableaux de bord, les quatre liens des
+ * courriels (trois signés, un porteur d'un jeton) et Dusk ne la reçoivent
+ * jamais ; les autres la reçoivent sans
  * délai, faute de réseau. Le vrai worker les joue dans navigationsDuWorker.test.js.
  */
 describe('sorteDeNavigation', () => {

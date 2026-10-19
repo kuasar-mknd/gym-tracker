@@ -528,11 +528,12 @@ it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la
 /*
  * Ni délai ni page « hors ligne » pour le rappel d'un fournisseur de
  * connexion, le panneau et ses tableaux de bord, Horizon et Telescope, les
- * liens signés des courriels (vérification, réinitialisation, ouverture du
- * compte, confirmation d'une nouvelle adresse) et les routes de Dusk (#2048,
- * partie F) : coupé à huit secondes, le rappel poserait la session sur une
- * réponse que personne ne lit, et la page « hors ligne », rechargée au retour
- * du réseau, redemanderait le lien signé en arrière-plan.
+ * quatre liens des courriels (trois signés : vérification, ouverture du
+ * compte, confirmation d'une nouvelle adresse ; et celui de réinitialisation,
+ * porteur d'un jeton) et les routes de Dusk (#2048, partie F) : coupé à huit
+ * secondes, le rappel poserait la session sur une réponse que personne ne
+ * lit, et la page « hors ligne », rechargée au retour du réseau,
+ * redemanderait le lien en arrière-plan.
  * Le worker ne lit pas la configuration : chaque début de chemin qu'il écrit
  * en dur se rapproche ici de la route ou du chemin configuré qu'il couvre,
  * et aucun ne touche une page de la salle.
