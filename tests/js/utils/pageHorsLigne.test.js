@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, vi } from 'vitest'
 import {
     ATTRIBUT_DE_LA_COQUILLE,
@@ -8,6 +10,7 @@ import {
     pageHorsLigne,
 } from '@/sw/pageHorsLigne'
 import { CADRE_DU_LOGO, TRACES_DE_LA_LETTRE, TRACES_DES_BARRES } from '@/Utils/dessinDuLogo'
+import { jsRoot } from '../conventions/sourceFiles'
 
 /** La page lue comme un document, pour la questionner par sélecteurs. */
 const document_ = (html) => new DOMParser().parseFromString(html, 'text/html')
@@ -23,6 +26,21 @@ describe('la page « hors ligne »', () => {
         expect(page.documentElement.lang).toBe('fr')
         expect(page.title).toBe('Hors ligne - GymTracker')
         expect(page.querySelector('h1').textContent).toBe('Pas de réseau')
+    })
+
+    /*
+     * Une séance rouverte sans réseau continue dans ce document, même après
+     * le retour du réseau (#2048, partie F) : il prend la fenêtre des pages du
+     * serveur, clavier virtuel compris (`interactive-widget=resizes-content`),
+     * sans quoi le clavier recouvrirait ce qui est fixé en bas, la saisie des
+     * séries comprise.
+     */
+    it('prend la fenêtre des pages du serveur, clavier virtuel compris', () => {
+        const gabarit = readFileSync(resolve(jsRoot, '../views/app.blade.php'), 'utf8')
+        const duServeur = gabarit.match(/<meta\s+name="viewport"\s+content="([^"]+)"/)?.[1]
+
+        expect(duServeur).toContain('interactive-widget=resizes-content')
+        expect(page.querySelector('meta[name="viewport"]').getAttribute('content')).toBe(duServeur)
     })
 
     it('prend la feuille de style de l’application, et rien d’autre de l’extérieur', () => {

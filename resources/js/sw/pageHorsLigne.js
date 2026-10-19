@@ -58,7 +58,9 @@ const echapper = (texte) => texte.replace(/[&<>"']/g, (caractere) => `&#${caract
 
 /**
  * Le document, avec les feuilles de style et le module de l'entrée de
- * l'application.
+ * l'application. Sa fenêtre est celle de `resources/views/app.blade.php`,
+ * clavier virtuel compris : une séance rouverte sans réseau continue dans ce
+ * document, même après le retour du réseau.
  *
  * @param {{ feuilles: string[], moduleDeLEntree: string }} options Les URL
  *   des feuilles et du module de l'entrée, absolues.
@@ -68,7 +70,7 @@ export const pageHorsLigne = ({ feuilles, moduleDeLEntree }) => `<!DOCTYPE html>
 <html lang="fr" ${ATTRIBUT_DE_LA_COQUILLE}>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="robots" content="noindex">
     <title>Hors ligne - GymTracker</title>
 ${feuilles.map((feuille) => `    <link rel="stylesheet" href="${echapper(feuille)}">`).join('\n')}

@@ -364,6 +364,21 @@ it('précache la page HorsLigne, et le démarrage de la coquille dans ce que l�
 });
 
 /*
+ * Une séance rouverte sans réseau continue dans la coquille, même après le
+ * retour du réseau (#2048, partie F) : la page construite prend la fenêtre
+ * des pages du serveur, clavier virtuel compris.
+ */
+it('donne à la page « hors ligne » construite la fenêtre des pages du serveur', function (): void {
+    $motif = '/<meta\s+name="viewport"\s+content="([^"]+)"/';
+
+    preg_match($motif, (string) file_get_contents(resource_path('views/app.blade.php')), $duServeur);
+    preg_match($motif, (string) file_get_contents(public_path('build/hors-ligne.html')), $deLaCoquille);
+
+    expect($duServeur[1] ?? null)->toContain('interactive-widget=resizes-content')
+        ->and($deLaCoquille[1] ?? null)->toBe($duServeur[1] ?? null);
+});
+
+/*
  * Les graphiques restent dehors (décision 9 du propriétaire) : sans réseau,
  * chacun dit « Graphique indisponible hors ligne ». La liste qui les nomme est
  * exacte (la construction s'arrête sur un graphique d'une page gardée qu'elle
