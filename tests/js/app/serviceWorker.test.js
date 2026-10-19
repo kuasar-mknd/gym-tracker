@@ -198,7 +198,19 @@ describe('mise en service du worker', () => {
     it('précache le manifeste que le build lui injecte', () => {
         // Precaching a literal list instead would freeze the worker on whatever
         // asset names existed the day it was written.
-        expect(auDemarrage.precache).toEqual([manifest])
+        expect(auDemarrage.precache[0]).toEqual(manifest)
+    })
+
+    /*
+     * La route du precache ne répond qu'à l'adresse exacte de ses fichiers :
+     * l'écouteur du worker le sait par `getCacheKeyForURL`, qui ne lit
+     * qu'elle (#2048, partie F).
+     */
+    it('ne laisse la route du precache répondre qu’à l’adresse exacte de ses fichiers', () => {
+        expect(auDemarrage.precache).toEqual([
+            manifest,
+            { cleanURLs: false, directoryIndex: null, ignoreURLParametersMatching: [] },
+        ])
     })
 
     /*

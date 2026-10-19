@@ -573,6 +573,37 @@ describe('une navigation qui ne reçoit jamais la page « hors ligne »', () => 
     })
 })
 
+/*
+ * La route du precache, posée par `precacheAndRoute` avant l'écouteur du
+ * worker, répond elle-même à une navigation vers l'un de ses fichiers : un
+ * second `respondWith` lèverait (`InvalidStateError`). Elle ne répond qu'à
+ * l'adresse exacte du fichier, fragment ôté, que l'écouteur sait reconnaître.
+ */
+describe('une navigation vers un fichier du precache', () => {
+    it.each(['/build/hors-ligne.html', '/build/hors-ligne.html#haut'])(
+        'laisse %s à la route du precache, sans second respondWith ni requête',
+        async (chemin) => {
+            const { reglee } = naviguer(chemin, { preloadResponse: Promise.reject(new TypeError('Failed to fetch')) })
+
+            await vi.advanceTimersByTimeAsync(0)
+
+            await expect(reglee.reponse.text()).resolves.toBe(PAGE_HORS_LIGNE)
+            expect(fetchDuWorker).not.toHaveBeenCalled()
+        },
+    )
+
+    it.each(['/build/hors-ligne', '/build/hors-ligne.html?utm_source=courriel'])(
+        'ne sert pas le fichier à une autre adresse que la sienne (%s)',
+        async (chemin) => {
+            const { reglee } = naviguer(chemin, { preloadResponse: Promise.resolve(new Response('introuvable', { status: 404 })) })
+
+            await vi.advanceTimersByTimeAsync(0)
+
+            expect(reglee.reponse.status).toBe(404)
+        },
+    )
+})
+
 describe('une autre page de l’application', () => {
     it('attend le réseau sans délai', async () => {
         const reseau = reseauEnAttente()

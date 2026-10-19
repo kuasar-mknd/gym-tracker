@@ -41,8 +41,31 @@ cleanupOutdatedCaches()
  */
 const MANIFESTE_DU_PRECACHE = self.__WB_MANIFEST
 
-// Precache assets
-precacheAndRoute(MANIFESTE_DU_PRECACHE)
+/*
+ * La route du precache ne répond qu'à l'adresse exacte de l'un de ses
+ * fichiers, fragment ôté (#2048, partie F) : ni adresse « propre » sans
+ * `.html`, ni index d'un dossier, ni paramètres de suivi retirés, que Workbox
+ * essaie par défaut. L'écouteur des requêtes, posé après elle, sait donc par
+ * `getCacheKeyForURL` qu'elle a déjà répondu (`dejaServieParLePrecache`), et
+ * la page « hors ligne » ne s'ouvre pas, nue, à une autre adresse que la
+ * sienne.
+ */
+precacheAndRoute(MANIFESTE_DU_PRECACHE, { cleanURLs: false, directoryIndex: null, ignoreURLParametersMatching: [] })
+
+/**
+ * Si la route du precache a déjà répondu à cette requête : l'adresse exacte
+ * d'un fichier du precache, sans son fragment, que la route ôte aussi. Un
+ * second `respondWith` lèverait (`InvalidStateError`).
+ *
+ * @param {Request} requete
+ */
+const dejaServieParLePrecache = (requete) => {
+    const adresse = new URL(requete.url)
+
+    adresse.hash = ''
+
+    return getCacheKeyForURL(adresse.href) !== undefined
+}
 
 /**
  * Un déploiement pendant une séance : la page ouverte reste sur l'ancienne
@@ -112,19 +135,28 @@ self.addEventListener('message', (event) => {
  * qu'un fichier de worker ne se teste pas.
  */
 self.addEventListener('fetch', (event) => {
-    if (estUneNavigation(event.request)) {
+    const navigation = estUneNavigation(event.request)
+
+    if (navigation) {
         garderLePrechargement(event)
+    }
+
+    /*
+     * Un fichier du precache a déjà sa réponse : la route de Workbox, posée
+     * par `precacheAndRoute` avant cet écouteur, l'a donnée, à un actif comme
+     * à une navigation vers la page « hors ligne » ou une icône.
+     */
+    if (dejaServieParLePrecache(event.request)) {
+        return
+    }
+
+    if (navigation) {
         event.respondWith(navigations.repondre(event))
 
         return
     }
 
-    /*
-     * Un fichier du precache a déjà sa réponse : la route de Workbox, posée
-     * par `precacheAndRoute` avant cet écouteur, l'a donnée, et un second
-     * `respondWith` lèverait (`InvalidStateError`).
-     */
-    if (!estUnActif(event.request, self.location.origin) || getCacheKeyForURL(event.request.url) !== undefined) {
+    if (!estUnActif(event.request, self.location.origin)) {
         return
     }
 
