@@ -58,16 +58,25 @@ const ECRITURES = [
 ]
 
 /**
+ * La création d'une séance (#2049) : `POST /api/v1/workouts`, celle que la file
+ * rejoue pour une séance démarrée sans réseau. Elle n'est pas l'une des sept :
+ * elle ne nomme aucune séance, elle en fait naître une, et ne se note pas comme
+ * une écriture acceptée de la séance que la page suivait avant.
+ */
+const CREATION_DE_SEANCE = { sorte: 'creerUneSeance', methodes: ['post'], motif: /\/api\/v1\/workouts$/ }
+
+/**
  * Ce qu'est cette entrée pour la séance, et l'identifiant que son adresse nomme.
  *
  * @param {object} entree
+ * @param {Array<{sorte: string, methodes: string[], motif: RegExp}>} sortes
  * @returns {{sorte: string, cible: string|undefined}|null}
  */
-const lireLEcriture = (entree) => {
+const lireLEcriture = (entree, sortes = [...ECRITURES, CREATION_DE_SEANCE]) => {
     const methode = String(entree?.method ?? '').toLowerCase()
     const chemin = String(entree?.url ?? '').split(/[?#]/, 1)[0]
 
-    for (const { sorte, methodes, motif } of ECRITURES) {
+    for (const { sorte, methodes, motif } of sortes) {
         const trouve = methodes.includes(methode) ? motif.exec(chemin) : null
 
         if (trouve !== null) {
@@ -86,7 +95,15 @@ const lireLEcriture = (entree) => {
  * @param {{ method?: string, url?: string } | null | undefined} ecriture
  * @returns {boolean}
  */
-export const estUneEcritureDeLaSeance = (ecriture) => lireLEcriture(ecriture) !== null
+export const estUneEcritureDeLaSeance = (ecriture) => lireLEcriture(ecriture, ECRITURES) !== null
+
+/**
+ * Si une écriture est la création d'une séance (#2049) : `POST /api/v1/workouts`.
+ *
+ * @param {{ method?: string, url?: string } | null | undefined} ecriture
+ * @returns {boolean}
+ */
+export const estUneCreationDeSeance = (ecriture) => lireLEcriture(ecriture, [CREATION_DE_SEANCE]) !== null
 
 /**
  * Si une adresse est celle d'une des sept écritures de la séance, quelle que
@@ -143,11 +160,47 @@ const ligneNommee = (valeur, produites) =>
 /**
  * La clé d'idempotence d'une création, celle que le serveur garde sur ce
  * qu'elle a produit (`idempotency_key`), ou null.
+ *
+ * @param {object|null|undefined} entree
+ * @returns {string|null}
  */
-const cleDeLaCreation = (entree) => {
+export const cleDeLaCreation = (entree) => {
     const cle = entree?.headers?.['Idempotency-Key']
 
     return typeof cle === 'string' && cle !== '' ? cle : null
+}
+
+/**
+ * Si une valeur de charge nomme cette séance : son identifiant, ou, pour une
+ * séance démarrée sans réseau dont la création attend encore en file
+ * (`{ enAttenteDe: queueId }`, #2049), la séance qui en tient lieu.
+ *
+ * Deux séances la portent. Celle que la page construit depuis l'entrée de sa
+ * création, sous `temp-q<queueId>` (`Utils/seanceEnAttente.js`). Et celle du
+ * serveur dont la clé d'idempotence est celle de cette création : partie sans
+ * réponse, elle l'a créée là-bas, et le rejeu la rendra telle quelle.
+ *
+ * @param {unknown} valeur `workout_id` d'une charge, ou d'un contexte
+ * @param {object} seance
+ * @param {Map<string, string|null>} seancesEnFile la clé de chaque création de séance en file
+ * @returns {boolean}
+ */
+const nommeLaSeance = (valeur, seance, seancesEnFile) => {
+    if (valeur === null || typeof valeur !== 'object') {
+        return memeIdentifiant(valeur, seance.id)
+    }
+
+    if (typeof valeur.enAttenteDe !== 'string') {
+        return false
+    }
+
+    if (memeIdentifiant(identifiantEnFile(valeur.enAttenteDe), seance.id)) {
+        return true
+    }
+
+    const cle = seancesEnFile.get(valeur.enAttenteDe)
+
+    return typeof cle === 'string' && cle === seance.idempotency_key
 }
 
 /**
@@ -191,15 +244,16 @@ const ligneMontree = (id, exerciseId, ordre, exercices) => {
  * @param {object} entree
  * @param {unknown} ligneId l'identifiant que nomme la série
  * @param {Array<object>} exercices
+ * @param {Map<string, string|null>} seancesEnFile la clé de chaque création de séance en file
  * @returns {object|undefined}
  */
-const ligneReconstruite = (seance, entree, ligneId, exercices) => {
+const ligneReconstruite = (seance, entree, ligneId, exercices, seancesEnFile) => {
     const contexte = entree?.contexte
 
     if (
         contexte === null ||
         typeof contexte !== 'object' ||
-        !memeIdentifiant(contexte.workout_id, seance.id) ||
+        !nommeLaSeance(contexte.workout_id, seance, seancesEnFile) ||
         contexte.exercise_id === undefined ||
         ligneId === undefined ||
         ligneId === null ||
@@ -235,14 +289,16 @@ const ordonner = (rangees, ordre) => {
  *
  * @param {object} seance la copie en cours de construction
  * @param {object} entree
- * @param {{ exercices: Array<object>, produites: Map<string, number|string> }} contexte
- *   les exercices du compte, et les lignes que des créations encore en file ont
- *   déjà produites sur le serveur, par entrée
+ * @param {{ exercices: Array<object>, produites: Map<string, number|string>, seancesEnFile: Map<string, string|null> }} contexte
+ *   les exercices du compte, les lignes que des créations encore en file ont
+ *   déjà produites sur le serveur, par entrée, et la clé de chaque création
+ *   de séance en file
  */
-const appliquer = (seance, entree, { exercices, produites }) => {
+const appliquer = (seance, entree, { exercices, produites, seancesEnFile }) => {
     const ecriture = lireLEcriture(entree)
 
-    if (ecriture === null) {
+    // La création d'une séance ne change rien à la séance : c'est elle que la page montre, ou une autre.
+    if (ecriture === null || ecriture.sorte === 'creerUneSeance') {
         return
     }
 
@@ -283,7 +339,7 @@ const appliquer = (seance, entree, { exercices, produites }) => {
                 return
             }
 
-            if (retireeDeLEcran || !memeIdentifiant(charge.workout_id, seance.id)) {
+            if (retireeDeLEcran || !nommeLaSeance(charge.workout_id, seance, seancesEnFile)) {
                 return
             }
 
@@ -321,7 +377,7 @@ const appliquer = (seance, entree, { exercices, produites }) => {
             }
 
             const ligneId = ligneNommee(charge.workout_line_id, produites)
-            const ligne = ligneDe(ligneId) ?? ligneReconstruite(seance, entree, ligneId, exercices)
+            const ligne = ligneDe(ligneId) ?? ligneReconstruite(seance, entree, ligneId, exercices, seancesEnFile)
 
             if (ligne === undefined) {
                 return
@@ -402,6 +458,11 @@ const appliquer = (seance, entree, { exercices, produites }) => {
  * - les créations retirées de l'écran (`aAnnuler`), qui ne reviennent pas ;
  * - l'ordre des lignes et celui des séries de chaque ligne.
  *
+ * Une séance démarrée sans réseau attend elle-même en file (#2049) : ses lignes
+ * la nomment par `{ enAttenteDe }`, et se superposent à la séance que la page
+ * construit depuis l'entrée de sa création (`temp-q<queueId>`), ou à celle du
+ * serveur qui porte la clé de cette création, une seule fois.
+ *
  * Une entrée qui ne concerne pas cette séance (une autre séance, les préférences
  * de notification) est ignorée. Les lignes sortent toujours en tableau.
  *
@@ -418,9 +479,19 @@ export const superposerLaFile = (seance, entrees, { exercices = [] } = {}) => {
         copie.workout_lines = Object.values(copie.workout_lines ?? {})
     }
 
-    const contexte = { exercices: Array.isArray(exercices) ? exercices : [], produites: new Map() }
+    const lues = Array.isArray(entrees) ? entrees : []
+    const contexte = {
+        exercices: Array.isArray(exercices) ? exercices : [],
+        produites: new Map(),
+        // Une séance démarrée sans réseau : ses écritures la nomment par l'entrée de sa création (#2049).
+        seancesEnFile: new Map(
+            lues
+                .filter((entree) => estUneCreationDeSeance(entree) && entree.aAnnuler === undefined)
+                .map((entree) => [entree.id, cleDeLaCreation(entree)]),
+        ),
+    }
 
-    for (const entree of Array.isArray(entrees) ? entrees : []) {
+    for (const entree of lues) {
         appliquer(copie, entree, contexte)
     }
 

@@ -174,14 +174,34 @@ export const propsDiffereesAbsentes = (page) =>
 /**
  * `auth` tel qu'une copie servie le montre : le badge à célébrer retiré
  * (`latest_achievement`), qu'une page qui ne vient pas du serveur ne doit pas
- * faire célébrer une seconde fois.
+ * faire célébrer une seconde fois. La séance démarrée sans réseau, une page
+ * que l'appareil construit lui-même, le montre pareil (#2049,
+ * `Utils/seanceEnAttente.js`).
  *
  * @param {{ user?: Record<string, unknown> | null } | null | undefined} auth
  */
-const authSansBadge = (auth) =>
+export const authSansBadge = (auth) =>
     auth?.user !== null && typeof auth?.user === 'object'
         ? { ...auth, user: { ...auth.user, latest_achievement: null } }
         : auth
+
+/**
+ * Chaque champ de la page courante qu'une page poussée n'écrit pas, remis à
+ * `undefined` : `router.push` recopie la page courante avant d'y verser ce
+ * qu'on lui passe, et rien de la page quittée ne doit passer dans la suivante.
+ *
+ * @param {Record<string, unknown> | null | undefined} pageCourante
+ * @returns {Record<string, undefined>}
+ */
+export const champsDeLaPageQuittee = (pageCourante) => {
+    const champsEcrits = new Set(CHAMPS_DE_LA_PAGE_SERVIE)
+
+    return Object.fromEntries(
+        Object.keys(pageCourante ?? {})
+            .filter((champ) => !champsEcrits.has(champ))
+            .map((champ) => [champ, undefined]),
+    )
+}
 
 /**
  * La page qu'on pousse pour servir une copie : chaque champ de la page
@@ -214,15 +234,9 @@ const authSansBadge = (auth) =>
  */
 export const pageServie = ({ copie, pageCourante, auth, raison }) => {
     const page = copie.page
-    const champsEcrits = new Set(CHAMPS_DE_LA_PAGE_SERVIE)
-    const effaces = Object.fromEntries(
-        Object.keys(pageCourante ?? {})
-            .filter((champ) => !champsEcrits.has(champ))
-            .map((champ) => [champ, undefined]),
-    )
 
     return {
-        ...effaces,
+        ...champsDeLaPageQuittee(pageCourante),
         component: page.component,
         url: page.url,
         version: pageCourante?.version ?? page.version ?? null,

@@ -9,11 +9,17 @@ import {
 import { noterLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { noterUneEcritureAcceptee } from '@/Utils/ecrituresAcceptees'
 import { creerUneListePartagee } from '@/Utils/listePartagee'
+import { CLE_DE_LA_FILE, CLE_DES_REFUS } from '@/Utils/seanceEnAttente'
 import { estUneEcritureDeLaSeance } from '@/Utils/seanceEtFile'
 import { classifySyncError, estPourUnAutreCompte, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
-const QUEUE_KEY = 'offline_sync_queue'
-const FAILED_KEY = 'offline_sync_failed'
+/*
+ * Les clés du stockage viennent d'un module pur (#2049) : la coquille hors
+ * ligne y lit la file pour monter une séance démarrée sans réseau, sans
+ * charger ce service, qui lirait le compte dans une coquille encore vide.
+ */
+const QUEUE_KEY = CLE_DE_LA_FILE
+const FAILED_KEY = CLE_DES_REFUS
 
 /**
  * Le verrou que tient l'onglet qui vide la file (Web Locks, #2049) : un seul
@@ -31,8 +37,12 @@ const VERROU_DU_VIDAGE = 'gym-tracker:vidage-de-la-file'
  */
 const CANAL_DE_LA_FILE = 'gym-tracker:file-hors-ligne'
 
-/** Les annonces de la file que le canal porte aux autres onglets. */
-const ANNONCES_RELAYEES = new Set(['sync:replayed', 'sync:failed', 'sync:retired'])
+/**
+ * Les annonces de la file que le canal porte aux autres onglets. `sync:queued`
+ * dit qu'une écriture vient d'entrer en file (#2049) : le bandeau de la
+ * séance en cours d'un autre onglet y voit une séance démarrée sans réseau.
+ */
+const ANNONCES_RELAYEES = new Set(['sync:replayed', 'sync:failed', 'sync:retired', 'sync:queued'])
 
 /** Ce que dit le canal quand l'onglet qui tenait le verrou a vidé la file du compte. */
 const FILE_VIDEE = 'file-videe'
@@ -212,29 +222,48 @@ const filesReferencees = (data) =>
         : []
 
 /**
+ * Les champs de premier niveau d'un objet avec, à la place de chaque
+ * référence à une écriture dont le produit est connu, l'identifiant qu'elle a
+ * produit. Le même objet quand il n'en attend aucune.
+ *
+ * @param {Object|undefined} objet
+ * @param {Map<string, number|string>} produits par entrée de file
+ * @returns {Object|undefined}
+ */
+const champsAvecLesProduits = (objet, produits) => {
+    if (!filesReferencees(objet).some((parent) => produits.has(parent))) {
+        return objet
+    }
+
+    return Object.fromEntries(
+        Object.entries(objet).map(([champ, valeur]) => {
+            const parent = fileReferencee(valeur)
+
+            return [champ, parent !== null && produits.has(parent) ? produits.get(parent) : valeur]
+        }),
+    )
+}
+
+/**
  * L'entrée avec, à la place de chaque référence à une écriture dont le
- * produit est connu, l'identifiant qu'elle a produit. La même entrée quand
- * elle n'en attend aucune.
+ * produit est connu, l'identifiant qu'elle a produit : dans sa charge, et dans
+ * le contexte que la page note pour la montrer (#2049) : la séance d'une série
+ * créée sous une séance démarrée sans réseau, que la page reconnaît ensuite à
+ * son identifiant réel. La même entrée quand elle n'en attend aucune.
  *
  * @param {Object} entree
  * @param {Map<string, number|string>} produits par entrée de file
  * @returns {Object}
  */
 const avecLesProduits = (entree, produits) => {
-    if (!filesReferencees(entree?.data).some((parent) => produits.has(parent))) {
+    const data = champsAvecLesProduits(entree?.data, produits)
+    const contexte = champsAvecLesProduits(entree?.contexte, produits)
+
+    if (data === entree?.data && contexte === entree?.contexte) {
         return entree
     }
 
-    return {
-        ...entree,
-        data: Object.fromEntries(
-            Object.entries(entree.data).map(([champ, valeur]) => {
-                const parent = fileReferencee(valeur)
-
-                return [champ, parent !== null && produits.has(parent) ? produits.get(parent) : valeur]
-            }),
-        ),
-    }
+    return { ...entree, data, ...(contexte === undefined ? {} : { contexte }) }
 }
 
 /**
@@ -317,6 +346,16 @@ const attenteAvantLeProchainEssai = (error, tentatives) => {
 const newIdempotencyKey = () =>
     globalThis.crypto?.randomUUID?.() ??
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`
+
+/**
+ * La clé d'une création que l'appelant tire lui-même (#2049) : celle d'une
+ * séance démarrée sans réseau est aussi son nom sur l'appareil, l'adresse de
+ * sa page (`/workouts/en-attente/{clé}`) et ce que le serveur garde
+ * (`workouts.idempotency_key`). Un UUID, sous la forme que la route accepte.
+ *
+ * @returns {string}
+ */
+export const nouvelleCleDIdempotence = () => newIdempotencyKey()
 
 class SyncService {
     constructor() {
@@ -754,7 +793,10 @@ class SyncService {
      * du vidage qu'il attend.
      *
      * @param {Object} config La requête, au format de `Utils/http`. Une
-     *   création peut y joindre `ajusterPar` et `contexte`, voir `notesDeCreation`.
+     *   création peut y joindre `ajusterPar` et `contexte`, voir
+     *   `notesDeCreation`. `delaiDeLaTentative` borne la seule tentative
+     *   directe (#2049) : mise en file, l'écriture se rejoue sous le délai du
+     *   vidage, quand `timeout` la suit dans la file.
      * @returns {Promise}
      */
     request(config) {
@@ -824,9 +866,19 @@ class SyncService {
      * @returns {Promise}
      */
     async envoyer(config) {
-        const { ajusterPar, contexte, ...requete } = config
+        const { ajusterPar, contexte, delaiDeLaTentative, ...requete } = config
         const stamped = this.stampIdempotency(requete)
         const notes = this.notesDeCreation(stamped, { ajusterPar, contexte })
+
+        /*
+         * Le délai de la tentative directe seulement (#2049) : démarrer une
+         * séance n'attend pas sa réponse plus de cinq secondes avant de
+         * l'ouvrir sur l'appareil. Rangé avec l'écriture (`timeout`), il
+         * vaudrait aussi pour son rejeu, qui attend `DELAI_DE_REJEU_MS` : un
+         * serveur lent à répondre, un démarrage qui attend le verrou du
+         * compte, ne se rejoueraient jamais à temps.
+         */
+        const tentative = typeof delaiDeLaTentative === 'number' ? { ...stamped, timeout: delaiDeLaTentative } : stamped
 
         /*
          * Le compte qui fait l'écriture, pris à son départ : une écriture
@@ -870,7 +922,7 @@ class SyncService {
         }
 
         try {
-            return await http(stamped)
+            return await http(tentative)
         } catch (error) {
             // Auto-retry once on 429 Too Many Requests (rate limiting)
             if (error.response?.status === 429) {
@@ -884,7 +936,7 @@ class SyncService {
                      * a 429 means the server was busy, not that it refused, and
                      * the first attempt may well have been written.
                      */
-                    return await http(stamped)
+                    return await http(tentative)
                 } catch (retryError) {
                     return this.queueOrThrow(retryError, stamped, compteParti() ? null : compte, notes)
                 }
@@ -1039,6 +1091,15 @@ class SyncService {
             return [...file, { ...config, ...notes, id, timestamp: new Date().toISOString(), compte }]
         })
 
+        /*
+         * Entrée en file : l'écran qui montre ce qui attend le relit
+         * (#2049), le bandeau d'une séance démarrée sans réseau d'abord, dans
+         * cet onglet et dans les autres.
+         */
+        if (id !== null) {
+            this.annoncer('sync:queued', { queueId: id, method: config.method, url: config.url }, compte)
+        }
+
         return id
     }
 
@@ -1073,9 +1134,26 @@ class SyncService {
         return this.ajouterALaFile(
             this.stampIdempotency(avecLesConnus),
             this.compte,
-            this.notesDeCreation(requete, { ajusterPar, contexte }),
+            this.notesDeCreation(requete, {
+                ajusterPar,
+                // Le contexte aussi : la séance qu'il nomme a pu être rejouée juste avant (#2049).
+                contexte: champsAvecLesProduits(contexte, this.produits),
+            }),
             filesReferencees(avecLesConnus.data),
         )
+    }
+
+    /**
+     * Ce que l'écriture `queueId` a produit, quand cet onglet l'a vue rejouer
+     * ou l'a apprise d'un autre onglet (#2049) ; null sinon. La page d'une
+     * séance démarrée sans réseau y trouve la séance réelle, rouverte depuis
+     * l'historique après le rejeu.
+     *
+     * @param {string} queueId
+     * @returns {number|string|null}
+     */
+    produitDe(queueId) {
+        return this.produits.get(queueId) ?? null
     }
 
     /**
@@ -1593,7 +1671,13 @@ class SyncService {
                 const resolue = avecLesProduits(config, this.produits)
 
                 if (filesReferencees(resolue.data).length > 0) {
-                    this.sortirRefusee(config, null)
+                    /*
+                     * Refusée faute de parent, et dite telle (#2049) : la
+                     * séance démarrée sans réseau que le serveur refuse
+                     * emporte ses séries, et c'est son refus qui s'annonce,
+                     * une fois, pas celui de chacune.
+                     */
+                    this.sortirRefusee(config, null, { parent: filesReferencees(resolue.data)[0] })
 
                     continue
                 }
@@ -1829,18 +1913,21 @@ class SyncService {
      *
      * @param {Object} config l'entrée refusée, en tête de file
      * @param {Object|null} error l'erreur du serveur, ou null quand elle n'est pas partie
+     * @param {{parent?: string}} options `parent` : l'écriture dont elle
+     *   dépendait, sortie de la file sans rien produire
      */
-    sortirRefusee(config, error) {
+    sortirRefusee(config, error, { parent } = {}) {
         const annoncer = this.refusMerite(config, error)
+        const faute = typeof parent === 'string' ? { parentRefuse: true, parent } : {}
 
         if (annoncer) {
-            this.recordFailure(config, error)
+            this.recordFailure({ ...config, ...faute }, error)
         }
 
         this.retirerLEntree(config)
 
         if (annoncer) {
-            this.annoncerLeRefus(config, error)
+            this.annoncerLeRefus({ ...config, ...faute }, error)
         }
     }
 
@@ -2014,10 +2101,12 @@ class SyncService {
      * left the queue.
      */
     recordFailure(config, error) {
+        const raison = error?.response?.data?.raison
         const refus = {
             ...config,
             failedAt: new Date().toISOString(),
             status: error?.response?.status ?? null,
+            ...(typeof raison === 'string' ? { raison } : {}),
         }
 
         /**
@@ -2037,10 +2126,18 @@ class SyncService {
     /**
      * Dit aux écouteurs qu'une écriture a été refusée, et laquelle.
      *
+     * La raison que le serveur donne (`raison`, #2049) passe avec : une séance
+     * démarrée sans réseau refusée parce qu'une autre était déjà en cours
+     * (`seance-deja-en-cours`) le dit ainsi. Une écriture refusée faute de
+     * parent (`parentRefuse`) nomme celui-ci (`parent`) : l'écran qui annonce
+     * le refus du parent ne dit rien d'elle.
+     *
      * @param {Object} config l'entrée refusée
      * @param {Object|null} error l'erreur du serveur, ou null quand elle n'est pas partie
      */
     annoncerLeRefus(config, error) {
+        const raison = error?.response?.data?.raison
+
         // The payload travels with the event so a listener can say WHAT
         // was refused. A URL alone can only ever produce "an item of the
         // session" — true, and of no use to someone who now has to work
@@ -2049,9 +2146,12 @@ class SyncService {
             'sync:failed',
             {
                 queueId: config.id,
+                method: config.method,
                 url: config.url,
                 status: error?.response?.status ?? null,
+                raison: typeof raison === 'string' ? raison : null,
                 data: config.data,
+                ...(config.parentRefuse === true ? { parentRefuse: true, parent: config.parent } : {}),
             },
             config.compte,
         )
@@ -2077,6 +2177,52 @@ class SyncService {
         const oublie = normaliserLeCompte(compte)
 
         this.changerLesRefus((refus) => refus.filter((entree) => entree?.compte !== oublie))
+    }
+
+    /**
+     * Oublie ces refus du compte connecté, et eux seuls (#2049) : ceux que
+     * l'écran a dits. La page de séance effaçait tous les refus du compte en
+     * décrivant les siens, et le refus d'une séance démarrée sans réseau, que
+     * le layout annonce, disparaissait sans un mot.
+     *
+     * @param {Array<string>} queueIds
+     */
+    oublierDesRefus(queueIds) {
+        const oublies = new Set(queueIds)
+
+        if (oublies.size === 0 || this.compte === null) {
+            return
+        }
+
+        this.changerLesRefus((refus) => {
+            const gardes = refus.filter((entree) => !(entree?.compte === this.compte && oublies.has(entree?.id)))
+
+            return gardes.length === refus.length ? refus : gardes
+        })
+    }
+
+    /**
+     * Note que ces refus du compte connecté ont été dits (`annonce`, #2049) :
+     * le refus d'une séance démarrée sans réseau s'annonce une fois, et reste
+     * parmi les refus, avec ce qu'il emporte, jusqu'à la déconnexion ou
+     * trente jours.
+     *
+     * @param {Array<string>} queueIds
+     */
+    noterLesRefusAnnonces(queueIds) {
+        const dits = new Set(queueIds)
+
+        if (dits.size === 0 || this.compte === null) {
+            return
+        }
+
+        this.changerLesRefus((refus) =>
+            refus.some((entree) => entree?.compte === this.compte && dits.has(entree?.id) && entree.annonce !== true)
+                ? refus.map((entree) =>
+                      entree?.compte === this.compte && dits.has(entree?.id) ? { ...entree, annonce: true } : entree,
+                  )
+                : refus,
+        )
     }
 
     /** Helper for GET requests */
