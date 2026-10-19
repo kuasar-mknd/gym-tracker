@@ -493,6 +493,8 @@ describe('une navigation qui ne reçoit jamais la page « hors ligne »', () => 
         '/telescope/requests',
         '/verify-email/7/empreinte',
         '/reset-password/jeton',
+        '/inscription/ouvrir/7/empreinte?expires=1&signature=abc',
+        '/adresse/confirmer?compte=7&adresse=x&expires=1&signature=abc',
         '/_dusk/login/7',
     ]
 

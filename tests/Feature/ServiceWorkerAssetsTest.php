@@ -444,7 +444,7 @@ function prefixesSansCoquilleDuWorker(): array
             return $prefixes;
         }
 
-        if (preg_match("#^\\s*'(/[a-z_-]+/?)',?\\s*$#", $ligne, $trouve) !== 1) {
+        if (preg_match("#^\\s*'(/[a-z_/-]+)',?\\s*$#", $ligne, $trouve) !== 1) {
             throw new RuntimeException("Ligne inattendue dans PREFIXES_SANS_COQUILLE : {$ligne}");
         }
 
@@ -513,8 +513,11 @@ it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la
 /*
  * Ni délai ni page « hors ligne » pour le rappel d'un fournisseur de
  * connexion, le panneau et ses tableaux de bord, Horizon et Telescope, les
- * liens des courriels et les routes de Dusk (#2048, partie F) : coupé à huit
- * secondes, le rappel poserait la session sur une réponse que personne ne lit.
+ * liens signés des courriels (vérification, réinitialisation, ouverture du
+ * compte, confirmation d'une nouvelle adresse) et les routes de Dusk (#2048,
+ * partie F) : coupé à huit secondes, le rappel poserait la session sur une
+ * réponse que personne ne lit, et la page « hors ligne », rechargée au retour
+ * du réseau, redemanderait le lien signé en arrière-plan.
  * Le worker ne lit pas la configuration : chaque début de chemin qu'il écrit
  * en dur se rapproche ici de la route ou du chemin configuré qu'il couvre,
  * et aucun ne touche une page de la salle.
@@ -535,6 +538,8 @@ it('ne donne jamais la page « hors ligne » ni le délai au rappel de connexion
         'Telescope' => '/'.config()->string('telescope.path'),
         'lien de vérification' => route('verification.verify', ['id' => 7, 'hash' => 'empreinte'], false),
         'lien de réinitialisation' => route('password.reset', ['token' => 'jeton'], false),
+        'lien d’ouverture du compte' => route('inscription.ouvrir', ['id' => 7, 'hash' => 'empreinte'], false),
+        'lien de confirmation d’une nouvelle adresse' => route('adresse.confirmer', [], false),
         'connexion de Dusk' => '/_dusk/login/7',
     ];
 

@@ -161,7 +161,7 @@ describe('garderLePrechargement', () => {
 /*
  * Trois sortes de navigations (#2048, partie F) : les pages de la salle
  * attendent huit secondes avant la page « hors ligne » ; le rappel de la
- * connexion sociale, le panneau, les tableaux de bord, les liens des
+ * connexion sociale, le panneau, les tableaux de bord, les liens signés des
  * courriels et Dusk ne la reçoivent jamais ; les autres la reçoivent sans
  * délai, faute de réseau. Le vrai worker les joue dans navigationsDuWorker.test.js.
  */
@@ -185,6 +185,8 @@ describe('sorteDeNavigation', () => {
         '/telescope',
         '/verify-email/7/empreinte',
         '/reset-password/jeton',
+        '/inscription/ouvrir/7/empreinte?expires=1&signature=abc',
+        '/adresse/confirmer?compte=7&expires=1&signature=abc',
         '/_dusk/login/7',
     ])('ne donne jamais la page « hors ligne » à %s', (chemin) => {
         expect(sorteDeNavigation(`${origine}${chemin}`, origine)).toBe('sans-coquille')
@@ -203,7 +205,7 @@ describe('sorteDeNavigation', () => {
     })
 
     it('écrit chaque début de chemin sur une ligne, comme le test PHP le lit', () => {
-        expect(PREFIXES_SANS_COQUILLE.every((prefixe) => /^\/[a-z_-]+\/?$/.test(prefixe))).toBe(true)
+        expect(PREFIXES_SANS_COQUILLE.every((prefixe) => /^\/[a-z_/-]+$/.test(prefixe))).toBe(true)
         expect(Object.isFrozen(PREFIXES_SANS_COQUILLE)).toBe(true)
     })
 })

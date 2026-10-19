@@ -24,8 +24,8 @@ import { cleDeLaCopie, cleGardee } from '../Utils/pagesGardees.js'
  *   délai, ou sans réseau, la coquille ;
  * - **les navigations qui ne reçoivent jamais la coquille**
  *   (`PREFIXES_SANS_COQUILLE`) : le rappel de la connexion sociale, le
- *   panneau, les tableaux de bord, les liens des courriels, les routes de
- *   Dusk. Le réseau, sans délai ; sans lui, l'erreur du navigateur ;
+ *   panneau, les tableaux de bord, les liens signés des courriels, les routes
+ *   de Dusk. Le réseau, sans délai ; sans lui, l'erreur du navigateur ;
  * - **les autres** : le réseau, sans délai ; sans lui, la coquille.
  *
  * Ni délai ni coquille ne touchent donc le rappel d'un fournisseur de
@@ -63,12 +63,15 @@ export const MESSAGE_REPONSE_TARDIVE_RENVOYEE = 'gym-tracker:reponse-tardive-ren
 /**
  * Les débuts de chemin des navigations qui ne reçoivent jamais la coquille ni
  * le délai : les rappels et redirections de la connexion sociale, le panneau
- * (et Pulse et les journaux, sous lui), Horizon, Telescope, les liens de
- * vérification et de réinitialisation qu'un courriel ouvre, les routes de
- * Dusk. Écrits en dur, comme l'adresse de la sonde : le worker ne lit pas la
- * configuration, et `ServiceWorkerAssetsTest` compare chacun aux routes et
- * aux chemins configurés. Un chemin changé par l'environnement
- * (`HORIZON_PATH`, `TELESCOPE_PATH`) se change ici aussi.
+ * (et Pulse et les journaux, sous lui), Horizon, Telescope, les liens signés
+ * qu'un courriel ouvre (vérification de l'adresse, réinitialisation du mot
+ * de passe, ouverture du compte, confirmation d'une nouvelle adresse), les
+ * routes de Dusk. Un lien signé ne doit pas partir une seconde fois : la
+ * coquille, rechargée au retour du réseau par une visite d'Inertia, le
+ * redemanderait en arrière-plan. Écrits en dur, comme l'adresse de la sonde :
+ * le worker ne lit pas la configuration, et `ServiceWorkerAssetsTest` compare
+ * chacun aux routes et aux chemins configurés. Un chemin changé par
+ * l'environnement (`HORIZON_PATH`, `TELESCOPE_PATH`) se change ici aussi.
  *
  * Une entrée par ligne, que le test lit ainsi.
  */
@@ -79,6 +82,8 @@ export const PREFIXES_SANS_COQUILLE = Object.freeze([
     '/telescope',
     '/verify-email/',
     '/reset-password/',
+    '/inscription/ouvrir/',
+    '/adresse/confirmer',
     '/_dusk/',
 ])
 
