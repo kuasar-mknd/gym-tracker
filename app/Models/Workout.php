@@ -7,6 +7,7 @@ namespace App\Models;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -52,21 +53,17 @@ class Workout extends Model
      *
      * Les deux bornes viennent de `$maintenant`, la lecture unique de
      * l'horloge de l'opération (`.ai/rules/horloge.md`) ; la valeur rendue
-     * est une copie, jamais l'un des deux instants reçus.
+     * est une copie (`Carbon::instance()`), jamais l'un des deux instants
+     * reçus.
      */
-    public static function debutBorne(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): CarbonInterface
+    public static function debutBorne(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): Carbon
     {
-        if (! $surLAppareil instanceof CarbonInterface) {
-            return $maintenant->copy();
-        }
-
         $auPlusTot = $maintenant->copy()->subDays(self::JOURS_EN_FILE_AU_PLUS);
+        $dansLesBornes = $surLAppareil instanceof CarbonInterface
+            && ! $surLAppareil->greaterThan($maintenant)
+            && ! $surLAppareil->lessThan($auPlusTot);
 
-        if ($surLAppareil->greaterThan($maintenant) || $surLAppareil->lessThan($auPlusTot)) {
-            return $maintenant->copy();
-        }
-
-        return $surLAppareil->copy();
+        return Carbon::instance($dansLesBornes ? $surLAppareil : $maintenant);
     }
 
     /**
@@ -79,13 +76,13 @@ class Workout extends Model
      * qu'une fin web laissait faire après un début déplacé dans le futur par
      * les réglages. Une fin rejouée longtemps après garde l'heure du geste.
      */
-    public function finBornee(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): CarbonInterface
+    public function finBornee(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): Carbon
     {
         $fin = $surLAppareil instanceof CarbonInterface && $surLAppareil->lessThan($maintenant)
-            ? $surLAppareil->copy()
-            : $maintenant->copy();
+            ? $surLAppareil
+            : $maintenant;
 
-        return $fin->lessThan($this->started_at) ? $this->started_at->copy() : $fin;
+        return Carbon::instance($fin->lessThan($this->started_at) ? $this->started_at : $fin);
     }
 
     /**

@@ -244,3 +244,84 @@ it('recopie les séries d’un exercice dans l’ordre de leur rang, pas de leur
     expect($series->pluck('reps')->all())->toBe([12, 10, 8])
         ->and($series->pluck('order')->all())->toBe([0, 1, 2]);
 });
+
+/*
+ * Lancer un modèle ouvre une séance comme « Démarrer » : la fréquence et
+ * l'historique des séances en cache doivent la compter. L'action ne vidait
+ * pas ce cache, et la page Statistiques montrait l'ancien compte jusqu'à
+ * l'expiration (#2049).
+ */
+it('vide le cache des statistiques des séances quand il lance un modèle', function (): void {
+    [$user, $template] = modeleAHorlogeArretee();
+    // Les clés portent la version des statistiques du compte : vider, c'est
+    // la faire monter, et la clé relue après ne trouve plus l'entrée.
+    $suffixes = ['weekly_volume', 'duration_history.20'];
+
+    foreach ($suffixes as $suffixe) {
+        \Illuminate\Support\Facades\Cache::put(\App\Services\Stats\ClesDeStats::seances($user, $suffixe), ['périmé'], 600);
+    }
+
+    app(CreateWorkoutFromTemplateAction::class)->execute($user, $template);
+
+    foreach ($suffixes as $suffixe) {
+        expect(\Illuminate\Support\Facades\Cache::has(\App\Services\Stats\ClesDeStats::seances($user, $suffixe)))->toBeFalse("`{$suffixe}` est resté en cache.");
+    }
+});
+
+/*
+ * Un seul instant pour le début de la séance et les horodatages des séries :
+ * l'action lisait l'horloge deux fois, et la séance lancée quand minuit
+ * passait commençait la veille, ses séries datées du lendemain. Un début
+ * venu de l'appareil (#2049) date aussi les séries qu'il recopie.
+ */
+it('date les séries recopiées de l’instant où la séance commence', function (int $lectures): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+    $ligne = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id, 'order' => 0]);
+    WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $ligne->id, 'order' => 0]);
+    $action = app(CreateWorkoutFromTemplateAction::class);
+    \Tests\Support\HorlogeQuiPasseMinuit::apres($lectures, '2026-09-30 23:59:59.999999', '2026-10-01 00:00:00.000001');
+
+    $workout = $action->execute($user, $template);
+    $serie = \App\Models\Set::query()->whereIn('workout_line_id', $workout->workoutLines()->pluck('id'))->sole();
+
+    expect($serie->created_at?->toDateString())->toBe($workout->refresh()->started_at->toDateString());
+})->with([1, 2]);
+
+it('date la séance et ses séries de l’instant que l’appareil a donné', function (): void {
+    [$user, $template] = modeleAHorlogeArretee();
+
+    $workout = app(CreateWorkoutFromTemplateAction::class)->execute($user, $template, Carbon::parse('2026-06-15 10:30:00'));
+
+    $series = \App\Models\Set::query()->whereIn('workout_line_id', $workout->workoutLines()->pluck('id'))->get();
+
+    expect($workout->refresh()->started_at->toDateTimeString())->toBe('2026-06-15 10:30:00')
+        ->and($series->map(fn (\App\Models\Set $serie): ?string => $serie->created_at?->toDateTimeString())->unique()->values()->all())
+        ->toBe(['2026-06-15 10:30:00']);
+});
+
+/*
+ * Chaque ligne et chaque série recopiées portent la clé que leur rang dans le
+ * modèle dérive : un lancement parti sans réponse, que la file rejoue écriture
+ * par écriture, les retrouve au lieu de les doubler (#2049). La séance porte
+ * la clé du démarrage.
+ */
+it('pose sur la séance, ses lignes et ses séries les clés du lancement', function (): void {
+    [$user, $template] = modeleAHorlogeArretee();
+    $template->load('workoutTemplateLines');
+    [$premiere, $seconde] = $template->workoutTemplateLines->all();
+
+    $workout = app(CreateWorkoutFromTemplateAction::class)->execute($user, $template, null, 'cle-du-demarrage');
+    $lignes = $workout->workoutLines()->with('sets')->get();
+
+    expect($workout->refresh()->idempotency_key)->toBe('cle-du-demarrage')
+        ->and($lignes->pluck('idempotency_key')->all())->toBe([
+            "modele-ligne:0:{$premiere->exercise_id}",
+            "modele-ligne:1:{$seconde->exercise_id}",
+        ])
+        ->and($lignes->map(fn (\App\Models\WorkoutLine $ligne): array => $ligne->sets->sortBy('order')->pluck('idempotency_key')->values()->all())->all())
+        ->toBe([
+            ['modele-serie:0:0', 'modele-serie:0:1'],
+            ['modele-serie:1:0'],
+        ]);
+});
