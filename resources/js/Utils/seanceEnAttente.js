@@ -1,9 +1,9 @@
 import { authSansBadge, champsDeLaPageQuittee } from '@/Utils/copiesServies'
-import { dateCourte } from '@/Utils/date'
 import { lireLaListe, normaliserLesIdentifiants } from '@/Utils/listePartagee'
 import { compte } from '@/Utils/nombre'
 import { COMPOSANT_DE_LA_SEANCE, PAGES_GARDEES, cleDeLaSeanceEnCours } from '@/Utils/pagesGardees'
-import { cleDeLaCreation, estUneCreationDeSeance, identifiantEnFile } from '@/Utils/seanceEtFile'
+import { dateCourte, heureCourte } from '@/Utils/date'
+import { cleDeLaCreation, estUneCreationDeSeance, finDeLaSeanceEnFile, identifiantEnFile } from '@/Utils/seanceEtFile'
 
 /**
  * Une séance démarrée sans réseau (#2049) : une création en file, que la page
@@ -61,6 +61,23 @@ export const SEANCE_NON_ENREGISTREE = "La séance démarrée sans réseau n'a pa
  */
 export const SEANCE_A_RETROUVER =
     "Cette séance n'attend plus sur cet appareil : elle se retrouvera au retour du réseau."
+
+/**
+ * Ce que dit une séance terminée sur l'appareil, dont la fin attend la file
+ * (#2049) : l'heure du geste, celle que le serveur enregistrera.
+ *
+ * @param {string|null|undefined} fin `ended_at`, l'heure du geste
+ * @returns {string}
+ */
+export const messageDeLaFinEnAttente = (fin) => {
+    const heure = heureCourte(new Date(fin ?? Number.NaN))
+    const quand = heure === '' ? '' : ` à ${heure}`
+
+    return `Séance terminée sur cet appareil${quand} : elle sera enregistrée au retour du réseau.`
+}
+
+/** Ce que dit une fin de séance que le serveur a refusée, en direct ou au rejeu de la file (#2049). */
+export const FIN_NON_ENREGISTREE = "La fin de la séance n'a pas été enregistrée : elle reste ouverte."
 
 /** La raison du refus d'une séance démarrée quand une autre est en cours (`UneSeanceEstDejaEnCours`). */
 export const RAISON_SEANCE_DEJA_EN_COURS = 'seance-deja-en-cours'
@@ -152,6 +169,16 @@ export const cleDeLAdresseEnAttente = (adresse) => {
 /** Une entrée qui crée une séance et que l'écran n'a pas retirée. */
 const estUneSeanceEnFile = (entree) => estUneCreationDeSeance(entree) && entree?.aAnnuler === undefined
 
+/**
+ * Si une fin en file clôt cette séance (#2049) : « Terminer » sans réponse du
+ * serveur, le serveur ne le sait pas encore.
+ *
+ * @param {{ id: unknown, idempotency_key?: string|null }} seance
+ * @param {Array<object>} entrees les écritures du compte en file
+ * @returns {boolean}
+ */
+export const estCloseParLaFile = (seance, entrees) => finDeLaSeanceEnFile(seance, entrees) !== undefined
+
 /** Si une valeur de charge nomme la création `queueId` encore en file. */
 const nommeLaCreation = (valeur, queueId) =>
     valeur !== null && typeof valeur === 'object' && valeur.enAttenteDe === queueId
@@ -215,14 +242,20 @@ export const creationDeLaCle = (entrees, cle) =>
  * n'apparaît qu'une fois, celle du serveur. La plus ancienne création compte
  * quand il y en a plusieurs : c'est elle que le serveur acceptera.
  *
+ * Une séance qu'une fin en file nomme est close (#2049), celle du serveur
+ * comme celle d'une création : le bandeau ne propose plus de la reprendre, et
+ * « Démarrer » en crée une nouvelle, derrière cette fin.
+ *
  * @param {object|null|undefined} activeWorkout
  * @param {Array<object>} entrees les écritures du compte en file
  * @returns {object|null}
  */
 export const seanceEnCoursAvecLaFile = (activeWorkout, entrees) => {
     const lues = Array.isArray(entrees) ? entrees : []
-    const creation = lues.find(estUneSeanceEnFile)
-    const duServeur = activeWorkout ?? null
+    const creation = lues.find(
+        (entree) => estUneSeanceEnFile(entree) && !estCloseParLaFile(seanceDeLEntree(entree), lues),
+    )
+    const duServeur = activeWorkout && !estCloseParLaFile(activeWorkout, lues) ? activeWorkout : null
 
     if (creation === undefined) {
         return duServeur

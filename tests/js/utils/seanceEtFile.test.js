@@ -4,8 +4,11 @@ import {
     entreeDeLaRangee,
     estUneCreationDeSeance,
     estUneEcritureDeLaSeance,
+    estUneFinDeSeance,
+    finDeLaSeanceEnFile,
     identifiantEnFile,
     seanceConnueDuServeur,
+    seanceDeLEcriture,
     superposerLaFile,
 } from '@/Utils/seanceEtFile'
 
@@ -555,5 +558,93 @@ describe('la séance que garde l’entrée d’historique', () => {
 
         expect(JSON.stringify(aLEcran)).toBe(avant)
         expect(gardee.workout_lines).toEqual([{ id: 1, exercise: SQUAT, sets: [{ id: 11 }] }])
+    })
+})
+
+/*
+ * « Terminer » sans réseau (#2049) : la fin est une entrée à part, la dernière
+ * de sa séance, que la page montre close à l'heure du geste tant qu'elle
+ * attend, et que l'entrée d'historique ne garde pas.
+ */
+describe('la fin d’une séance en file', () => {
+    const fin = (workoutId, endedAt = '2026-10-19T18:42:00.000Z') =>
+        entree('patch', '/api/v1/workouts/finish', { workout_id: workoutId, ended_at: endedAt })
+
+    it('clôt la séance qu’elle nomme, à l’heure du geste, et dit quelle entrée l’attend', () => {
+        const laFin = fin(5)
+
+        const copie = superposerLaFile(seance(), [creationDeSerie({ workout_line_id: 1, reps: 4 }), laFin])
+
+        expect(copie.ended_at).toBe('2026-10-19T18:42:00.000Z')
+        expect(copie._finEnAttente).toBe(laFin.id)
+        // Les écritures qui la précèdent se superposent toujours.
+        expect(ecran(copie)[0][1]).toHaveLength(3)
+    })
+
+    it('ne clôt ni une autre séance, ni une séance que le serveur dit close, qui garde sa première fin', () => {
+        expect(superposerLaFile(seance(), [fin(9)])).not.toHaveProperty('_finEnAttente')
+
+        const close = { ...seance(), ended_at: '2026-10-19T17:00:00.000Z' }
+        const copie = superposerLaFile(close, [fin(5)])
+
+        expect(copie.ended_at).toBe('2026-10-19T17:00:00.000Z')
+        expect(copie).not.toHaveProperty('_finEnAttente')
+    })
+
+    it('garde la première de deux fins de la même séance, comme le serveur', () => {
+        const premiere = fin(5, '2026-10-19T18:42:00.000Z')
+
+        const copie = superposerLaFile(seance(), [premiere, fin(5, '2026-10-19T18:50:00.000Z')])
+
+        expect(copie).toMatchObject({ ended_at: '2026-10-19T18:42:00.000Z', _finEnAttente: premiere.id })
+    })
+
+    it('clôt une séance démarrée sans réseau, nommée par sa création, ou par la clé de celle-ci', () => {
+        const creation = entree('post', '/api/v1/workouts', {}, { headers: { 'Idempotency-Key': 'cle-s' } })
+        const laFin = fin({ enAttenteDe: creation.id })
+        const enAttente = { id: identifiantEnFile(creation.id), idempotency_key: 'cle-s', workout_lines: [] }
+        const arriveeAuServeur = { id: 42, idempotency_key: 'cle-s', workout_lines: [] }
+
+        expect(superposerLaFile(enAttente, [creation, laFin])._finEnAttente).toBe(laFin.id)
+        expect(superposerLaFile(arriveeAuServeur, [creation, laFin])._finEnAttente).toBe(laFin.id)
+        expect(finDeLaSeanceEnFile(arriveeAuServeur, [creation, laFin])).toBe(laFin)
+        expect(finDeLaSeanceEnFile({ id: 42, idempotency_key: 'autre' }, [creation, laFin])).toBeUndefined()
+    })
+
+    it('n’est ni la création d’une séance, ni l’une des sept écritures de la séance', () => {
+        expect(estUneFinDeSeance(fin(5))).toBe(true)
+        expect(estUneFinDeSeance(entree('post', '/api/v1/workouts/finish', {}))).toBe(false)
+        expect(estUneEcritureDeLaSeance(fin(5))).toBe(false)
+        expect(estUneCreationDeSeance(fin(5))).toBe(false)
+    })
+
+    it('sort de la séance que garde l’entrée d’historique : le serveur la connaît ouverte', () => {
+        const aLEcran = { ...seance(), ended_at: '2026-10-19T18:42:00.000Z', _finEnAttente: 'q9' }
+        const close = { ...seance(), ended_at: '2026-10-19T17:00:00.000Z' }
+
+        expect(seanceConnueDuServeur(aLEcran)).toEqual({ ...seance(), ended_at: null })
+        expect(seanceConnueDuServeur(close).ended_at).toBe('2026-10-19T17:00:00.000Z')
+    })
+})
+
+describe('la séance que vise une écriture', () => {
+    it('se lit dans la charge, le contexte ou l’adresse, sinon dans la séance que la page suivait', () => {
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/workouts/finish', { workout_id: 5 }))).toBe('id:5')
+        expect(seanceDeLEcriture(entree('post', '/api/v1/workout-lines', { workout_id: '5' }), '9')).toBe('id:5')
+        expect(
+            seanceDeLEcriture(
+                creationDeSerie({ workout_line_id: 1 }, { contexte: { workout_id: { enAttenteDe: 'qS' } } }),
+            ),
+        ).toBe('q:qS')
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/workouts/5/line-order', { lines: [] }))).toBe('id:5')
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }), '5')).toBe('id:5')
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }), 'temp-qqS')).toBe('q:qS')
+    })
+
+    it('ne se lit pas pour une écriture d’ailleurs, une création de séance ou un identifiant provisoire', () => {
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }))).toBeNull()
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }), 'temp-3')).toBeNull()
+        expect(seanceDeLEcriture(entree('post', '/api/v1/workouts', {}), '5')).toBeNull()
+        expect(seanceDeLEcriture(entree('patch', '/profile/push-preferences', {}), '5')).toBeNull()
     })
 })

@@ -2680,3 +2680,105 @@ describe('SyncService une séance démarrée sans réseau', () => {
         expect(service.failedRequests().map(({ id, annonce }) => [id, annonce])).toEqual([['qS', true]])
     })
 })
+
+/*
+ * « Terminer » sans réseau (#2049) : la fin entre en file, la dernière des
+ * écritures de sa séance. Une écriture de la séance partie avant elle, et qui y
+ * tombe après (sa réponse perdue), arriverait sur une séance close, que le
+ * serveur refuse : elle se range devant la fin.
+ */
+describe('SyncService la fin d’une séance en file', () => {
+    const fin = (workoutId = 5) => ({
+        method: 'patch',
+        url: '/api/v1/workouts/finish',
+        data: { workout_id: workoutId, ended_at: '2026-10-19T18:42:00.000Z' },
+    })
+    const resume = (service) => service.queue.map((entree) => `${entree.method} ${entree.url}`)
+
+    /** Une écriture directe qui vole jusqu'à ce que le réseau la refuse. */
+    const enVolPuisSansReseau = (service, ecrire) => {
+        let couper
+        request.mockImplementationOnce(() => new Promise((_resolve, reject) => (couper = reject)))
+        const ecriture = ecrire(service).catch((erreur) => erreur)
+
+        return async () => {
+            couper({ code: 'ERR_NETWORK', request: {} })
+
+            return ecriture
+        }
+    }
+
+    it('range devant la fin une écriture de la séance tombée en file après elle', async () => {
+        const service = await chargé()
+        service.suivreLesEcrituresDeLaSeance(5)
+        const tomber = enVolPuisSansReseau(service, (s) => s.patch('/api/v1/sets/11', { reps: 6 }))
+
+        service.mettreEnFile(fin(5))
+        const tombee = await tomber()
+
+        expect(tombee).toMatchObject({ isOffline: true })
+        expect(resume(service)).toEqual(['patch /api/v1/sets/11', 'patch /api/v1/workouts/finish'])
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.url)).toEqual([
+            '/api/v1/sets/11',
+            '/api/v1/workouts/finish',
+        ])
+    })
+
+    it('range devant elle la création d’une ligne qui nomme la séance, et derrière, ce qui est d’une autre séance', async () => {
+        const service = await chargé()
+        service.suivreLesEcrituresDeLaSeance(9)
+        const ligne = enVolPuisSansReseau(service, (s) =>
+            s.post('/api/v1/workout-lines', { workout_id: 5, exercise_id: 7 }),
+        )
+        const autre = enVolPuisSansReseau(service, (s) => s.patch('/api/v1/sets/90', { reps: 1 }))
+
+        service.mettreEnFile(fin(5))
+        await ligne()
+        await autre()
+
+        expect(resume(service)).toEqual([
+            'post /api/v1/workout-lines',
+            'patch /api/v1/workouts/finish',
+            'patch /api/v1/sets/90',
+        ])
+    })
+
+    it('range devant la fin d’une séance démarrée sans réseau ce qui la nomme par sa création', async () => {
+        const service = await chargé()
+        const creation = service.mettreEnFile({ method: 'post', url: '/api/v1/workouts', data: {} })
+        service.mettreEnFile(fin({ enAttenteDe: creation }))
+
+        // La série d'un exercice de cette séance, mise en file après la fin : son contexte la nomme.
+        service.mettreEnFile({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: { workout_line_id: 70, reps: 5 },
+            contexte: { workout_id: { enAttenteDe: creation }, exercise_id: 7 },
+        })
+
+        expect(resume(service)).toEqual(['post /api/v1/workouts', 'post /api/v1/sets', 'patch /api/v1/workouts/finish'])
+    })
+
+    it('attend les écritures directes en vol sans vider la file', async () => {
+        const service = await chargé()
+        let repondre
+        request.mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+        const ecriture = service.patch('/api/v1/sets/11', { reps: 6 })
+        service.mettreEnFile(fin(5))
+
+        let reglee = false
+        const attente = service.attendreLesEcrituresDirectes().then(() => (reglee = true))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(reglee).toBe(false)
+
+        repondre({ data: {} })
+        await ecriture
+        await attente
+
+        // La fin attend toujours : rien n'a vidé la file.
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(resume(service)).toEqual(['patch /api/v1/workouts/finish'])
+        expect(service.ecrituresEnCours()).toBe(0)
+    })
+})

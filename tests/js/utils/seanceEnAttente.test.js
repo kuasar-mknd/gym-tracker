@@ -6,10 +6,13 @@ import {
     adresseDUneSeanceEnAttente,
     bibliothequeHorsLigne,
     cleDeLAdresseEnAttente,
+    FIN_NON_ENREGISTREE,
     creationDeLaCle,
     emporteesParLeRefus,
+    estCloseParLaFile,
     estUneCreationDeSeance,
     lireLaFileDuStockage,
+    messageDeLaFinEnAttente,
     messageDuRefusDeLaSeance,
     pageDeLaSeanceEnAttente,
     seanceDeLEntree,
@@ -310,5 +313,63 @@ describe('le refus d’une séance démarrée sans réseau', () => {
         expect(messageDuRefusDeLaSeance('seance-deja-en-cours', 3)).toBe(
             "La séance démarrée sans réseau n'a pas été enregistrée : une autre séance était déjà en cours. 3 modifications de cette séance ne partiront pas.",
         )
+    })
+})
+
+/*
+ * « Terminer » sans réseau (#2049) : la fin attend la file, et la séance
+ * qu'elle nomme n'est plus en cours, ni pour le bandeau, ni pour « Démarrer ».
+ */
+describe('une séance terminée sur l’appareil', () => {
+    const finDe = (workoutId, extra = {}) => ({
+        method: 'patch',
+        url: '/api/v1/workouts/finish',
+        data: { workout_id: workoutId, ended_at: '2026-10-19T18:42:00.000Z' },
+        id: `fin-${JSON.stringify(workoutId)}`,
+        timestamp: '2026-10-19T18:42:00.100Z',
+        compte: '1',
+        ...extra,
+    })
+
+    it('n’est plus la séance en cours, celle du serveur comme celle d’une création', () => {
+        const duServeur = { id: 42, idempotency_key: 'autre-cle' }
+        const enFile = creation()
+
+        expect(seanceEnCoursAvecLaFile(duServeur, [finDe(42)])).toBeNull()
+        expect(seanceEnCoursAvecLaFile(null, [enFile, finDe({ enAttenteDe: enFile.id })])).toBeNull()
+        // Arrivée au serveur sans réponse, la séance de la clé est la même : close aussi.
+        expect(
+            seanceEnCoursAvecLaFile({ id: 43, idempotency_key: CLE }, [enFile, finDe({ enAttenteDe: enFile.id })]),
+        ).toBeNull()
+        expect(estCloseParLaFile(duServeur, [finDe(9)])).toBe(false)
+    })
+
+    it('laisse en cours la séance démarrée après elle, derrière sa fin', () => {
+        const premiere = creation()
+        const seconde = creation({ id: 'seconde', headers: { 'Idempotency-Key': 'cle-2' } })
+
+        expect(
+            seanceEnCoursAvecLaFile({ id: 42, idempotency_key: 'autre' }, [
+                finDe(42),
+                premiere,
+                finDe({ enAttenteDe: premiere.id }),
+                seconde,
+            ]),
+        ).toMatchObject({ enAttenteDe: 'seconde', idempotency_key: 'cle-2' })
+    })
+
+    it('dit l’heure du geste, et que le serveur l’enregistrera au retour du réseau', () => {
+        const heure = new Date('2026-10-19T18:42:00.000Z').toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit',
+        })
+
+        expect(messageDeLaFinEnAttente('2026-10-19T18:42:00.000Z')).toBe(
+            `Séance terminée sur cet appareil à ${heure} : elle sera enregistrée au retour du réseau.`,
+        )
+        expect(messageDeLaFinEnAttente(null)).toBe(
+            'Séance terminée sur cet appareil : elle sera enregistrée au retour du réseau.',
+        )
+        expect(FIN_NON_ENREGISTREE).toBe("La fin de la séance n'a pas été enregistrée : elle reste ouverte.")
     })
 })

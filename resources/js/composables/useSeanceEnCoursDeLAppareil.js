@@ -10,6 +10,7 @@ import {
     messageDuRefusDeLaSeance,
     seanceEnCoursAvecLaFile,
 } from '@/Utils/seanceEnAttente'
+import { estUneFinDeSeance } from '@/Utils/seanceEtFile'
 import { ouvrirLaSeanceEnAttente } from '@/composables/useDemarrageDUneSeance'
 import { triggerHaptic } from '@/composables/useHaptics'
 
@@ -33,6 +34,9 @@ const ANNONCES_DE_LA_FILE = ['sync:queued', 'sync:replayed', 'sync:failed', 'syn
  *   elle-même, qui passe d'elle-même à la séance réelle
  *   (`useSeanceEnAttente`) : un rechargement mènerait ailleurs, pendant un
  *   repos peut-être.
+ * - **Fin rejouée.** De même : le serveur a clos la séance que « Terminer »
+ *   avait mise en file, et `auth` ne la porte plus. Tant qu'elle attend, la
+ *   fin clôt déjà la séance qu'elle nomme (`seanceEnCoursAvecLaFile`).
  * - **Création refusée.** Le refus s'annonce une fois, par le toast d'erreur
  *   du layout, avec le nombre d'écritures de la séance qu'il emporte (les
  *   refus `parentRefuse` qui la nomment) ; au montage aussi, quand il est
@@ -95,7 +99,11 @@ export const useSeanceEnCoursDeLAppareil = ({ page = usePage() } = {}) => {
 
         relire()
 
-        if (event.type === 'sync:replayed' && estUneCreationDeSeance({ method: 'post', url: detail.url })) {
+        if (
+            event.type === 'sync:replayed' &&
+            (estUneCreationDeSeance({ method: 'post', url: detail.url }) ||
+                estUneFinDeSeance({ method: 'patch', url: detail.url }))
+        ) {
             rechargerLeCompte()
         }
 

@@ -163,6 +163,47 @@ describe('la création rejouée', () => {
     })
 })
 
+/*
+ * « Terminer » sans réseau (#2049) : la fin attend la file, le serveur croit
+ * encore la séance en cours. Le bandeau ne la propose plus, et le compte se
+ * redemande quand la fin est rejouée.
+ */
+describe('la séance terminée sur l’appareil', () => {
+    const mettreLaFinEnFile = (workoutId) =>
+        sync.mettreEnFile({
+            method: 'patch',
+            url: '/api/v1/workouts/finish',
+            data: { workout_id: workoutId, ended_at: '2026-10-19T18:42:00.000Z' },
+        })
+
+    it('n’est plus en cours dès que sa fin entre en file, et le compte se redemande à son rejeu', async () => {
+        inertia.page.props.auth.user.active_workout = { id: 9, name: 'Push A' }
+        const { seanceEnCours } = await monter()
+
+        mettreLaFinEnFile(9)
+        await flushPromises()
+
+        expect(seanceEnCours.value).toBeNull()
+
+        serveur.reponses.push(async () => ({ status: 200, data: { data: { id: 9, ended_at: 'x' } } }))
+        await sync.processQueue()
+
+        expect(inertia.router.reload).toHaveBeenCalledWith({ only: ['auth'] })
+    })
+
+    it('clôt aussi la séance démarrée sans réseau qu’elle nomme', async () => {
+        const queueId = mettreLaSeanceEnFile()
+        const { seanceEnCours } = await monter()
+
+        expect(seanceEnCours.value).toMatchObject({ enAttenteDe: queueId })
+
+        mettreLaFinEnFile({ enAttenteDe: queueId })
+        await flushPromises()
+
+        expect(seanceEnCours.value).toBeNull()
+    })
+})
+
 describe('la création refusée', () => {
     it('se dit une fois, avec ce qu’elle emporte', async () => {
         const queueId = mettreLaSeanceEnFile()

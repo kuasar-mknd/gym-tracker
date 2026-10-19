@@ -6,8 +6,10 @@ import { estUneCopie } from '@/Utils/copiesServies'
 import {
     RAISON_SEANCE_DEJA_EN_COURS,
     bibliothequeHorsLigne,
+    estCloseParLaFile,
     estUneCreationDeSeance,
     pageDeLaSeanceEnAttente,
+    seanceDeLEntree,
 } from '@/Utils/seanceEnAttente'
 import {
     DELAI_AVANT_UNE_COPIE_MS,
@@ -34,6 +36,10 @@ import { triggerHaptic } from '@/composables/useHaptics'
  * 2. Sur une copie hors ligne, ou le serveur injoignable, la séance en cours
  *    que la page connaît s'ouvre (`auth.user.active_workout`), comme le
  *    serveur y renverrait.
+ *
+ *    Une séance terminée sur l'appareil, dont la fin attend la file, n'est
+ *    plus en cours : ni l'une ni l'autre ne s'ouvre, et une nouvelle
+ *    se crée, derrière cette fin.
  * 3. Sinon, la clé de la séance se tire sur l'appareil, l'heure du début au
  *    geste (`started_at`), et :
  *    - sur une copie ou le serveur injoignable, la création entre en file sans
@@ -115,13 +121,20 @@ export const ouvrirLaSeanceEnAttente = async ({
 }
 
 /**
- * La création d'une séance encore en file, ni retirée ni refusée : celle que
- * démarrer ouvre au lieu d'en créer une autre.
+ * La création d'une séance encore en file, ni retirée ni refusée, ni close par
+ * une fin en file (#2049) : celle que démarrer ouvre au lieu d'en
+ * créer une autre.
  *
+ * @param {Array<object>} entrees les écritures du compte en file
  * @returns {object|undefined}
  */
-const creationEnFile = () =>
-    SyncService.entreesDuCompte().find((entree) => estUneCreationDeSeance(entree) && entree.aAnnuler === undefined)
+const creationEnFile = (entrees) =>
+    entrees.find(
+        (entree) =>
+            estUneCreationDeSeance(entree) &&
+            entree.aAnnuler === undefined &&
+            !estCloseParLaFile(seanceDeLEntree(entree), entrees),
+    )
 
 /**
  * Le message d'erreur du layout, comme une écriture refusée de la séance
@@ -202,7 +215,8 @@ export const useDemarrageDUneSeance = () => {
         let rendreLeVerrou = true
 
         try {
-            const enFile = creationEnFile()
+            const entrees = SyncService.entreesDuCompte()
+            const enFile = creationEnFile(entrees)
 
             if (enFile !== undefined) {
                 await ouvrirLaSeanceEnAttente({ entree: enFile, page })
@@ -211,7 +225,9 @@ export const useDemarrageDUneSeance = () => {
             }
 
             const sansServeur = estUneCopie(page) || !joignable.value
-            const seanceEnCours = page.props.auth?.user?.active_workout
+            const duServeur = page.props.auth?.user?.active_workout
+            // Terminée sur l'appareil, sa fin en file : une nouvelle séance se crée derrière elle.
+            const seanceEnCours = duServeur && !estCloseParLaFile(duServeur, entrees) ? duServeur : null
 
             if (sansServeur && seanceEnCours?.id) {
                 router.visit(route('workouts.show', seanceEnCours.id))

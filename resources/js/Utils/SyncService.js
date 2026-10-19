@@ -10,7 +10,7 @@ import { noterLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { noterUneEcritureAcceptee } from '@/Utils/ecrituresAcceptees'
 import { creerUneListePartagee } from '@/Utils/listePartagee'
 import { CLE_DE_LA_FILE, CLE_DES_REFUS } from '@/Utils/seanceEnAttente'
-import { estUneEcritureDeLaSeance } from '@/Utils/seanceEtFile'
+import { estUneEcritureDeLaSeance, estUneFinDeSeance, seanceDeLEcriture } from '@/Utils/seanceEtFile'
 import { classifySyncError, estPourUnAutreCompte, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 /*
@@ -801,7 +801,7 @@ class SyncService {
      */
     request(config) {
         const depart = { compte: this.compte, seance: this.seanceDesEcritures, oublis: this.oublisDe(this.compte) }
-        const ecriture = this.envoyer(config)
+        const ecriture = this.envoyer(config, depart.seance)
 
         if (this.isMutation(config)) {
             const oublier = () => this.ecrituresDirectes.delete(ecriture)
@@ -863,9 +863,12 @@ class SyncService {
      * réseau la refuse. Voir `request`.
      *
      * @param {Object} config
+     * @param {string|null} seanceDuDepart la séance que la page suivait à son
+     *   départ : mise en file, une écriture de cette séance se range devant sa
+     *   fin (`ajouterALaFile`, #2049)
      * @returns {Promise}
      */
-    async envoyer(config) {
+    async envoyer(config, seanceDuDepart = null) {
         const { ajusterPar, contexte, delaiDeLaTentative, ...requete } = config
         const stamped = this.stampIdempotency(requete)
         const notes = this.notesDeCreation(stamped, { ajusterPar, contexte })
@@ -915,7 +918,7 @@ class SyncService {
             }
 
             if (this.enAttente() > 0) {
-                const queueId = this.addToQueue(stamped, compte, notes)
+                const queueId = this.addToQueue(stamped, compte, notes, seanceDuDepart)
 
                 return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
             }
@@ -938,11 +941,11 @@ class SyncService {
                      */
                     return await http(tentative)
                 } catch (retryError) {
-                    return this.queueOrThrow(retryError, stamped, compteParti() ? null : compte, notes)
+                    return this.queueOrThrow(retryError, stamped, compteParti() ? null : compte, notes, seanceDuDepart)
                 }
             }
 
-            return this.queueOrThrow(error, stamped, compteParti() ? null : compte, notes)
+            return this.queueOrThrow(error, stamped, compteParti() ? null : compte, notes, seanceDuDepart)
         }
     }
 
@@ -985,8 +988,10 @@ class SyncService {
      * of the catch. classifySyncError then read the bare rejection as "offline",
      * which the draft replay acts on by deleting the local draft as a duplicate
      * of a queued write that never existed.
+     *
+     * `seanceDuDepart` : voir `envoyer`.
      */
-    queueOrThrow(error, config, compte, notes = {}) {
+    queueOrThrow(error, config, compte, notes = {}, seanceDuDepart = null) {
         // A response means the server answered, so this is its verdict, not a
         // connectivity problem — queueing it would hide a real refusal.
         if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
@@ -995,7 +1000,7 @@ class SyncService {
              * serveur. Une création retirée ensuite devra être annulée là-bas,
              * pas seulement oubliée ici (#1960).
              */
-            const queueId = this.addToQueue(config, compte, { ...notes, tentee: true })
+            const queueId = this.addToQueue(config, compte, { ...notes, tentee: true }, seanceDuDepart)
 
             // queueId lets a caller waiting on what this create produces pick its
             // own write out of the drain later — see the `sync:replayed` event.
@@ -1048,16 +1053,29 @@ class SyncService {
      *   que la file sait déjà de l'écriture : `tentee` quand elle est partie une
      *   fois sans réponse, `ajusterPar` pour rattraper ce que le serveur en
      *   ignorera, `contexte` pour que la page la montre sans le serveur.
+     * @param {string|null} seanceDuDepart la séance que la page suivait au
+     *   départ de l'écriture (voir `ajouterALaFile`)
      * @returns {string|null} the queue entry's id, so a caller that depends on
      *   what this write eventually creates can recognise it when it goes out.
      */
-    addToQueue(config, compte = this.compte, notes = {}) {
-        return this.ajouterALaFile(config, compte, notes)
+    addToQueue(config, compte = this.compte, notes = {}, seanceDuDepart = null) {
+        return this.ajouterALaFile(config, compte, notes, [], seanceDuDepart)
     }
 
     /**
      * Ajoute l'écriture au bout de la file que garde le stockage, après celles
      * que les autres onglets y ont mises (#2049).
+     *
+     * Sauf devant la fin de sa séance (#2049) : « Terminer » met la fin en
+     * file derrière les écritures de la séance qui y attendent, mais une
+     * écriture de la séance partie avant la fin peut y tomber après elle (sa
+     * réponse perdue, ou la file encore pleine). Rangée au bout, elle
+     * arriverait sur une séance close, que le serveur refuse (403), et la
+     * série serait perdue. Une écriture de la séance (`estUneEcritureDeLaSeance`)
+     * se range donc juste devant la première fin de la même séance qui attend
+     * sans voler (`seanceDeLEcriture`, la séance du départ pour celle que sa
+     * charge ne nomme pas). La fin reste la dernière écriture de sa séance ;
+     * celle qui vole déjà est partie, rien ne passe plus devant elle.
      *
      * @param {Object} config
      * @param {string|null} compte
@@ -1065,15 +1083,21 @@ class SyncService {
      * @param {Array<string>} attendues les écritures dont elle dépend et dont
      *   le produit n'est pas connu : chacune doit attendre encore dans la file,
      *   relue, sans quoi rien n'entre
+     * @param {string|null} seanceDuDepart la séance que la page suivait au
+     *   départ de l'écriture
      * @returns {string|null}
      */
-    ajouterALaFile(config, compte, notes, attendues = []) {
+    ajouterALaFile(config, compte, notes, attendues = [], seanceDuDepart = null) {
         // Only queue mutations (POST, PATCH, PUT, DELETE)
         if (!this.isMutation(config) || compte === null) {
             return null
         }
 
         let id = null
+        // Le contexte d'une série, qui nomme sa séance, vit dans les notes.
+        const seance = estUneEcritureDeLaSeance(config)
+            ? seanceDeLEcriture({ ...config, ...notes }, seanceDuDepart)
+            : null
 
         this.changerLaFile((file) => {
             const attendentEncore = attendues.every((parent) =>
@@ -1088,7 +1112,19 @@ class SyncService {
 
             id = this.nouvelIdentifiantDEntree()
 
-            return [...file, { ...config, ...notes, id, timestamp: new Date().toISOString(), compte }]
+            const entree = { ...config, ...notes, id, timestamp: new Date().toISOString(), compte }
+            const fin =
+                seance === null
+                    ? -1
+                    : file.findIndex(
+                          (attente) =>
+                              attente?.compte === compte &&
+                              attente.id !== this.enVol &&
+                              estUneFinDeSeance(attente) &&
+                              seanceDeLEcriture(attente) === seance,
+                      )
+
+            return fin === -1 ? [...file, entree] : [...file.slice(0, fin), entree, ...file.slice(fin)]
         })
 
         /*
@@ -1140,6 +1176,7 @@ class SyncService {
                 contexte: champsAvecLesProduits(contexte, this.produits),
             }),
             filesReferencees(avecLesConnus.data),
+            this.seanceDesEcritures,
         )
     }
 
@@ -1462,6 +1499,35 @@ class SyncService {
              * quelques étapes de promesses avant de partir : on concluait que
              * tout était parti juste avant qu'elle parte.
              */
+            await new Promise((resolve) => setTimeout(resolve, 0))
+
+            if (this.ecrituresDirectes.size === 0) {
+                return
+            }
+        }
+    }
+
+    /**
+     * Se règle quand les écritures directes en vol sont revenues, sans vider
+     * la file (#2049) : ce que « Terminer » attend quand le serveur ne répond
+     * pas. La fin entre alors en file derrière ce qui y attend, et l'ordre de
+     * la file la fait partir après ; seule une écriture encore en vol peut
+     * arriver après elle. Une écriture que sa réponse remet en file se range
+     * devant la fin (`ajouterALaFile`). Une tâche plus tard, comme
+     * `attendreLesEcritures` : une écriture débloquée par une autre part
+     * quelques promesses après elle. Sans délai maximum : l'appelant borne
+     * l'attente, puis lit `ecrituresEnCours()`.
+     *
+     * @returns {Promise<void>}
+     */
+    async attendreLesEcrituresDirectes() {
+        for (;;) {
+            if (this.ecrituresDirectes.size > 0) {
+                await Promise.allSettled([...this.ecrituresDirectes])
+
+                continue
+            }
+
             await new Promise((resolve) => setTimeout(resolve, 0))
 
             if (this.ecrituresDirectes.size === 0) {
