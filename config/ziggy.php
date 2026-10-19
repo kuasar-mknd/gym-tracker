@@ -48,6 +48,8 @@ return [
         'api.v1.workout-lines.store',
         'api.v1.workout-lines.destroy',
         'api.v1.workout-lines.set-order',
+        'api.v1.workouts.store',
+        'api.v1.workouts.finish',
         'api.v1.workouts.line-order',
     ],
 ];

@@ -108,6 +108,50 @@ it('mène le lancement rejoué à sa séance, sans message ni ligne en double', 
         ->and(Set::query()->where('user_id', $compte->id)->count())->toBe(4);
 });
 
+dataset('lancements arrivés au serveur', [
+    'par la page' => [fn (User $compte, WorkoutTemplate $modele, string $cle) => actingAs($compte)->post(route('templates.execute', $modele), [], ['Idempotency-Key' => $cle])->assertRedirect()],
+    'par l’API' => [fn (User $compte, WorkoutTemplate $modele, string $cle) => actingAs($compte)->postJson(route('api.v1.workouts.store'), ['template_id' => $modele->id], ['Idempotency-Key' => $cle])->assertCreated()],
+]);
+
+/*
+ * Le lancement est arrivé au serveur, la réponse perdue : la file le rejoue
+ * décomposé, comme elle l'a mis en file sans réseau. La séance sous sa clé,
+ * sans modèle, puis chaque ligne et chaque série sous les clés de leur rang.
+ * Chaque écriture rend ce qui existe : rien ne double.
+ */
+it('reprend par la file un lancement déjà arrivé au serveur, sans rien doubler', function (Closure $lancer): void {
+    ['compte' => $compte, 'modele' => $modele] = lancementIdempotentScene();
+    $cle = '7c1d2e3f-2049-4a5b-9c6d-0000000000b4';
+    $lancer($compte, $modele, $cle);
+    $seance = Workout::query()->where('user_id', $compte->id)->sole();
+    $avant = lancementIdempotentLignes($seance);
+
+    $rejeu = actingAs($compte)->postJson(route('api.v1.workouts.store'), ['name' => 'Jambes et dos'], ['Idempotency-Key' => $cle])->assertOk();
+    expect($rejeu->json('data.id'))->toBe($seance->id);
+
+    $modele->load('workoutTemplateLines.workoutTemplateSets');
+
+    foreach ($modele->workoutTemplateLines->values() as $rangLigne => $ligneDuModele) {
+        $ligne = actingAs($compte)->postJson(
+            route('api.v1.workout-lines.store'),
+            ['workout_id' => $seance->id, 'exercise_id' => $ligneDuModele->exercise_id, 'order' => $ligneDuModele->order],
+            ['Idempotency-Key' => WorkoutTemplate::cleDUneLigneLancee($rangLigne, $ligneDuModele->exercise_id)],
+        )->assertOk();
+
+        foreach ($ligneDuModele->workoutTemplateSets->values() as $rangSerie => $serieDuModele) {
+            actingAs($compte)->postJson(
+                route('api.v1.sets.store'),
+                ['workout_line_id' => $ligne->json('data.id'), 'reps' => $serieDuModele->reps, 'weight' => $serieDuModele->weight, 'is_completed' => false],
+                ['Idempotency-Key' => WorkoutTemplate::cleDUneSerieLancee($rangLigne, $rangSerie)],
+            )->assertOk();
+        }
+    }
+
+    expect(lancementIdempotentLignes($seance))->toBe($avant)
+        ->and(Workout::query()->where('user_id', $compte->id)->count())->toBe(1)
+        ->and(Set::query()->where('user_id', $compte->id)->count())->toBe(4);
+})->with('lancements arrivés au serveur');
+
 /*
  * Le modèle a changé entre le lancement et le rejeu : au rang 0, un autre
  * exercice. L'écriture rejouée, sous la clé du nouvel exercice, crée une

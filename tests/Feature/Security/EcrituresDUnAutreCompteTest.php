@@ -170,3 +170,32 @@ it('laisse une session expirée répondre 401, pour que la page invite à se rec
     assertDatabaseMissing('sets', ['workout_line_id' => $ligne->id]);
     assertDatabaseMissing('notification_preferences', ['user_id' => $compte->id]);
 });
+
+/*
+ * Démarrer et terminer une séance passent aussi par la file (#2049) : rejoués
+ * pour un autre compte que celui de la session, ils sont refusés avant de rien
+ * exécuter. Ni séance ouverte au compte de la session sous la clé d'un autre,
+ * ni séance de la session terminée par l'écriture d'un autre.
+ */
+it('refuse le démarrage et la fin d’une séance rejoués pour un autre compte', function (): void {
+    $compteA = User::factory()->create();
+    $compteB = User::factory()->create();
+    $seanceDeB = Workout::factory()->create(['user_id' => $compteB->id, 'ended_at' => null]);
+
+    actingAs($compteB);
+
+    assertRefusPourUnAutreCompte(postJson(
+        route('api.v1.workouts.store'),
+        ['started_at' => now()->subMinute()->toIso8601String()],
+        [...enteteDuCompteDeLEcriture($compteA), 'Idempotency-Key' => '3e9a1f20-2049-4b7c-8d6e-0000000000c1'],
+    ));
+
+    assertRefusPourUnAutreCompte(patchJson(
+        route('api.v1.workouts.finish'),
+        ['workout_id' => $seanceDeB->id, 'ended_at' => now()->toIso8601String()],
+        enteteDuCompteDeLEcriture($compteA),
+    ));
+
+    expect(Workout::query()->whereIn('user_id', [$compteA->id, $compteB->id])->count())->toBe(1)
+        ->and($seanceDeB->refresh()->ended_at)->toBeNull();
+});

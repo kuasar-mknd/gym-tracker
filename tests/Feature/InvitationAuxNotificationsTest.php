@@ -129,6 +129,45 @@ describe('la fin de séance', function (): void {
     });
 });
 
+/*
+ * La fin par la file hors ligne passe par l'API (#2049) : l'invitation y part
+ * dans `meta.proposer_les_notifications`, jamais en donnée flash, et répond
+ * comme la fin par la page, pour chacun des cas de celle-ci.
+ */
+describe('la fin de séance par l’API', function (): void {
+    it('dit dans meta ce que la page pose en donnée flash', function (Closure $preparer, bool $attendu): void {
+        $utilisateur = User::factory()->create();
+        $preparer($utilisateur);
+
+        // L'API d'abord : la donnée flash de la page survivrait à la requête suivante.
+        $parLApi = $this->actingAs($utilisateur)
+            ->patchJson(route('api.v1.workouts.finish'), ['workout_id' => seanceEnCoursPourLInvitation($utilisateur)->id])
+            ->assertOk()
+            ->assertJsonPath('meta.proposer_les_notifications', $attendu)
+            ->assertInertiaFlashMissing('proposerLesNotifications');
+        $parLaPage = $this->actingAs($utilisateur)
+            ->patch(route('workouts.update', seanceEnCoursPourLInvitation($utilisateur)), ['is_finished' => true]);
+
+        if ($attendu) {
+            $parLaPage->assertInertiaFlash('proposerLesNotifications', true);
+        } else {
+            $parLaPage->assertInertiaFlashMissing('proposerLesNotifications');
+        }
+
+        expect($parLApi->json('meta'))->toBe(['proposer_les_notifications' => $attendu]);
+    })->with([
+        'aucun abonnement' => [fn (User $utilisateur) => null, true],
+        'un abonnement tenu' => [fn (User $utilisateur) => $utilisateur->updatePushSubscription('https://push.example.com/telephone', 'cle', 'jeton'), false],
+        'records coupés' => [fn (User $utilisateur) => NotificationPreference::factory()->create([
+            'user_id' => $utilisateur->id,
+            'type' => 'personal_record',
+            'is_enabled' => false,
+            'is_push_enabled' => false,
+        ]), false],
+        'l’abonnement d’un autre compte' => [fn (User $utilisateur) => User::factory()->create()->updatePushSubscription('https://push.example.com/autre', 'cle', 'jeton'), true],
+    ]);
+});
+
 describe('l’activation des envois push des records', function (): void {
     it('allume le seul envoi push des records, sans toucher aux autres préférences', function (): void {
         $utilisateur = User::factory()->create();

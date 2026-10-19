@@ -48,6 +48,24 @@ it('nomme la séance du jour où elle commence quand minuit passe pendant sa cr�
     expect($seance->name)->toBe($seance->started_at->format('d/m/Y'));
 });
 
+/*
+ * Le démarrage sous le verrou du compte (#2049) lit l'horloge en tête, avant
+ * d'attendre le verrou : le début et le nom viennent de cette lecture, quand
+ * minuit passe pendant l'attente, pendant la création ou après. Le verrou
+ * lit lui aussi l'horloge, et Eloquent pour ses horodatages : chacune de ces
+ * lectures passe minuit tour à tour.
+ */
+it('démarre la séance sous le verrou du jour de sa première lecture, nom compris', function (int $lectures): void {
+    $user = User::factory()->create();
+    $demarrer = app(\App\Actions\Workouts\DemarrerUneSeanceAction::class);
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-09-30 23:59:59.999999', '2026-10-01 00:00:00.000001');
+
+    $seance = Workout::query()->findOrFail($demarrer->execute($user, 'b2c3d4e5-2049-4f60-8a1b-0000000000e1')->id);
+
+    expect($seance->started_at->format('Y-m-d H:i:s'))->toBe('2026-09-30 23:59:59')
+        ->and($seance->name)->toBe('30/09/2026');
+})->with(range(1, 6));
+
 /**
  * Les cartes de la page des séances regardent les mêmes six mois quand le mois
  * change pendant le calcul.
