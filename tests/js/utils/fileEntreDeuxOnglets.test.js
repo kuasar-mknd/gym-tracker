@@ -146,6 +146,35 @@ describe('deux onglets sur la même file', () => {
         ])
     })
 
+    it('n’attend pas derrière une file que l’autre onglet a déjà vidée, avant d’en avoir reçu l’évènement', async () => {
+        const verrous = verrousDeLAppareil()
+        Object.defineProperty(navigator, 'locks', { value: verrous, configurable: true })
+        const a = await appareil.ouvrir()
+        // Sans canal, B n'apprend le vidage que par l'évènement `storage`, que le test retient.
+        const b = await appareil.ouvrir({ sansCanal: true })
+        await Promise.all([a.pending, b.pending])
+        localStorage.setItem('offline_sync_queue', JSON.stringify([enFile(1)]))
+        request.mockResolvedValue({ data: {} })
+
+        // A vide la file et tient encore le verrou ; B n'en a pas encore reçu l'évènement.
+        const liberer = verrous.retenir()
+        let vidage
+
+        await appareil.sansRelais(async () => {
+            vidage = a.processQueue()
+            await vi.waitUntil(() => seriesEnFile().length === 0)
+        })
+
+        expect(b.enAttente()).toBe(1)
+        await expect(b.patch('/api/v1/sets/2', { weight: 82 })).resolves.toEqual({ data: {} })
+
+        liberer()
+        await vidage
+
+        expect(envoyees()).toEqual(['patch /api/v1/sets/1', 'patch /api/v1/sets/2'])
+        expect(seriesEnFile()).toEqual([])
+    })
+
     it('fait repartir l’onglet écarté par le verrou quand l’autre a vidé la file', async () => {
         const verrous = verrousDeLAppareil()
         Object.defineProperty(navigator, 'locks', { value: verrous, configurable: true })

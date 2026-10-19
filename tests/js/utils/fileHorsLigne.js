@@ -74,9 +74,9 @@ export const retirerLesEcouteursDuService = () => {
  * @param {{
  *   surUnEcouteur: (cible: EventTarget, type: string, ecouteur: Function, options: unknown) => void,
  *   surUnCanal: (canal: BroadcastChannel) => void,
- *   Canal?: typeof BroadcastChannel,
+ *   Canal?: typeof BroadcastChannel|null,
  * }} options `surUnEcouteur` pose lui-même l'écouteur ; `Canal` remplace
- *   `BroadcastChannel` pendant l'import
+ *   `BroadcastChannel` pendant l'import, null l'en retire
  * @returns {Promise<Object>}
  */
 const importerLeService = async ({ surUnEcouteur, surUnCanal, Canal = globalThis.BroadcastChannel }) => {
@@ -87,7 +87,9 @@ const importerLeService = async ({ surUnEcouteur, surUnCanal, Canal = globalThis
     )
     const CanalDOrigine = globalThis.BroadcastChannel
 
-    if (typeof Canal === 'function') {
+    if (Canal === null) {
+        globalThis.BroadcastChannel = undefined
+    } else if (typeof Canal === 'function') {
         globalThis.BroadcastChannel = class extends Canal {
             constructor(...parametres) {
                 super(...parametres)
@@ -148,7 +150,7 @@ export const chargerSyncService = async ({ compte = Number(COMPTE), page = null 
  * ferment avec lui (`fermer`).
  *
  * @returns {{
- *   ouvrir: (options?: {compte?: number|string|null}) => Promise<Object>,
+ *   ouvrir: (options?: {compte?: number|string|null, sansCanal?: boolean}) => Promise<Object>,
  *   refuserLesEcritures: (cle: string|null) => void,
  *   fermer: () => void,
  * }}
@@ -166,8 +168,11 @@ export const ouvrirUnAppareil = () => {
     /** La clé dont le stockage refuse l'écriture, comme un quota atteint. */
     let cleRefusee = null
 
+    /** Vrai pendant `sansRelais` : les autres onglets n'ont pas encore reçu l'évènement. */
+    let relaisRetenu = false
+
     const relayer = (stockage, cle, ancienne, nouvelle) => {
-        if (stockage !== localStorage || ancienne === nouvelle) {
+        if (stockage !== localStorage || ancienne === nouvelle || relaisRetenu) {
             return
         }
 
@@ -214,9 +219,11 @@ export const ouvrirUnAppareil = () => {
          * Ouvre un onglet de plus : la page posée sous ce compte, un graphe de
          * modules neuf, et son `SyncService`, construit dans le contexte de
          * l'onglet. Rend le service, dont chaque méthode s'exécute dans ce
-         * contexte.
+         * contexte. `sansCanal` l'ouvre sans `BroadcastChannel`, comme un
+         * navigateur qui ne l'a pas : rien de ce que les autres annoncent ne
+         * l'atteint.
          */
-        ouvrir: async ({ compte = Number(COMPTE) } = {}) => {
+        ouvrir: async ({ compte = Number(COMPTE), sansCanal = false } = {}) => {
             const onglet = { ecouteursDuStockage: [], ecouteurs: [], canaux: [] }
             const dansLOnglet = (rappel) =>
                 function (...parametres) {
@@ -242,14 +249,15 @@ export const ouvrirUnAppareil = () => {
                         ajouter[cible === window ? 'window' : 'document'].call(cible, type, enveloppe, options)
                     },
                     surUnCanal: (canal) => onglet.canaux.push(canal),
-                    Canal:
-                        typeof CanalDOrigine === 'function'
-                            ? class extends CanalDOrigine {
-                                  addEventListener(type, ecouteur, options) {
-                                      super.addEventListener(type, dansLOnglet(ecouteur), options)
-                                  }
-                              }
-                            : undefined,
+                    Canal: sansCanal
+                        ? null
+                        : typeof CanalDOrigine === 'function'
+                          ? class extends CanalDOrigine {
+                                addEventListener(type, ecouteur, options) {
+                                    super.addEventListener(type, dansLOnglet(ecouteur), options)
+                                }
+                            }
+                          : undefined,
                 }),
             )
 
@@ -279,6 +287,25 @@ export const ouvrirUnAppareil = () => {
          * @returns {T}
          */
         dans: (service, rappel) => contexte.run(ongletsDesServices.get(service), rappel),
+
+        /**
+         * Joue `rappel` sans relayer ses écritures : le navigateur livre
+         * l'évènement `storage` en tâche, et un autre onglet peut agir avant
+         * de l'avoir reçu, sur sa copie d'avant.
+         *
+         * @template T
+         * @param {() => Promise<T>|T} rappel
+         * @returns {Promise<T>}
+         */
+        sansRelais: async (rappel) => {
+            relaisRetenu = true
+
+            try {
+                return await rappel()
+            } finally {
+                relaisRetenu = false
+            }
+        },
 
         /** Fait refuser au stockage toute écriture de cette clé (null : plus aucune), comme un quota atteint. */
         refuserLesEcritures: (cle) => {

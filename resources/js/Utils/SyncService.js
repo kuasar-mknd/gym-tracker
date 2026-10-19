@@ -1069,7 +1069,7 @@ class SyncService {
         const { ajusterPar, contexte, ...requete } = config
         const avecLesConnus = avecLesProduits(requete, this.produits)
 
-        // Retirée, ou à annuler : elle ne produira rien dont une autre puisse dépendre.
+        // Une dépendance retirée, ou à annuler, ne produira rien : rien n'entre (`ajouterALaFile`).
         return this.ajouterALaFile(
             this.stampIdempotency(avecLesConnus),
             this.compte,
@@ -1508,6 +1508,13 @@ class SyncService {
         try {
             await verrous.request(VERROU_DU_VIDAGE, { ifAvailable: true }, async (verrou) => {
                 if (verrou === null) {
+                    /*
+                     * L'autre onglet vide la file : celui-ci relit la sienne,
+                     * pour qu'une écriture directe ne se range pas derrière
+                     * des entrées déjà envoyées.
+                     */
+                    this.relireLaFile()
+
                     return
                 }
 
