@@ -91,8 +91,9 @@ it('ne termine jamais une séance avant son début, même déplacé dans le futu
 it('borne le début à la vie d’une écriture dans la file du client', function (): void {
     $source = (string) file_get_contents(resource_path('js/Utils/ecrituresAbandonnees.js'));
 
-    expect(preg_match('/^export const JOURS_EN_FILE_AU_PLUS = (\d+)$/m', $source, $trouve))->toBe(1)
-        ->and((int) $trouve[1])->toBe(Workout::JOURS_EN_FILE_AU_PLUS);
+    preg_match('/^export const JOURS_EN_FILE_AU_PLUS = (\d+)$/m', $source, $trouve);
+
+    expect($trouve[1] ?? null)->toBe((string) Workout::JOURS_EN_FILE_AU_PLUS);
 });
 
 it('nomme les lignes et les séries lancées d’un modèle par leur rang, l’exercice dans la clé de ligne', function (): void {

@@ -167,3 +167,19 @@ it('garde les statistiques en cache quand seules les notes changent', function (
     expect($workout->refresh()->notes)->toBe('Genou sensible')
         ->and(Cache::get(\App\Services\Stats\ClesDeStats::seances($user, 'volume_trend.30')))->toBe(['some_data']);
 });
+
+/*
+ * Les réglages acceptent un début dans le futur : terminer la séance juste
+ * après lui donnait une fin d'avant son début, une durée négative. La fin
+ * de la page se borne comme celle de l'appareil (#2049) : au plus tôt le
+ * début.
+ */
+it('ne termine jamais la séance avant son début, même déplacé dans le futur', function (): void {
+    \Illuminate\Support\Carbon::setTestNow('2026-10-19 12:00:00');
+    $user = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subHour(), 'ended_at' => null]);
+
+    app(UpdateWorkoutAction::class)->execute($workout, ['started_at' => '2026-10-19 13:30:00', 'is_finished' => true]);
+
+    expect($workout->refresh()->ended_at?->toDateTimeString())->toBe('2026-10-19 13:30:00');
+});

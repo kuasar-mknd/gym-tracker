@@ -33,8 +33,10 @@ final class UpdateWorkoutAction
         $needsFullClear = $workout->isDirty(['started_at', 'ended_at']);
         $needsMetaClear = $workout->isDirty(['name']);
 
+        // Maintenant, sans passer le début : un début que les réglages ont
+        // déplacé dans le futur donnait une fin d'avant le début (#2049).
         if ($data['is_finished'] ?? false) {
-            $workout->ended_at = now();
+            $workout->ended_at = $workout->finBornee(null, now());
             $needsFullClear = true;
         }
 

@@ -87,6 +87,25 @@ describe('WorkoutController', function (): void {
             // Should not create a new one
             $this->assertDatabaseCount('workouts', 1);
         });
+
+        /*
+         * La séance en cours se lit en base, pas dans le cache de deux heures
+         * d'`ActiveWorkoutService` : une séance ouverte sans passer par les
+         * évènements (un autre processus, un import) n'y paraît pas encore, et
+         * le démarrage en ouvrait une deuxième (#2049).
+         */
+        it('renvoie vers la séance en cours que le cache ne connaît pas encore', function (): void {
+            $user = User::factory()->create();
+            app(\App\Services\ActiveWorkoutService::class)->for($user);
+            $ouverteAilleurs = Workout::factory()->for($user)->make(['started_at' => now()->subMinutes(5), 'ended_at' => null]);
+            $ouverteAilleurs->saveQuietly();
+
+            $this->actingAs($user)
+                ->post(route('workouts.store'))
+                ->assertRedirect(route('workouts.show', $ouverteAilleurs));
+
+            expect(Workout::query()->where('user_id', $user->id)->count())->toBe(1);
+        });
     });
 
     describe('update', function (): void {
