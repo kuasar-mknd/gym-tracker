@@ -406,13 +406,11 @@ describe('Workouts/Show — leaving the page mid-edit', () => {
 describe('Workouts/Show — finishing the session', () => {
     it('sends the pending edit before it closes the workout', async () => {
         const order = []
+        // La fin part par l'API, comme la saisie (#2049) : l'ordre des envois se lit sur le même service.
         patch.mockImplementation((...args) => {
-            order.push('patch:' + args[0])
+            order.push((args[0] === '/api.v1.workouts.finish' ? 'finish:' : 'patch:') + args[0])
 
             return Promise.resolve({ data: {} })
-        })
-        routerPatch.mockImplementation((url) => {
-            order.push('finish:' + url)
         })
 
         const wrapper = await mountPage(workoutWithSet)
@@ -425,7 +423,8 @@ describe('Workouts/Show — finishing the session', () => {
         await wrapper.vm.confirmFinishWorkout()
         await flushPromises()
 
-        expect(order).toEqual(['patch:/api/v1/sets/42', 'finish:/workouts.update'])
+        expect(order).toEqual(['patch:/api/v1/sets/42', 'finish:/api.v1.workouts.finish'])
+        expect(routerPatch).not.toHaveBeenCalled()
     })
 })
 

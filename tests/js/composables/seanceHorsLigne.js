@@ -40,6 +40,7 @@ export const routeDeTest = (nom, parametres = {}) => {
         dashboard: '/dashboard',
         'workouts.show': `/workouts/${valeur}`,
         'api.v1.workouts.store': '/api/v1/workouts',
+        'api.v1.workouts.finish': '/api/v1/workouts/finish',
         'api.v1.sets.store': '/api/v1/sets',
         'api.v1.sets.update': `/api/v1/sets/${valeur}`,
         'api.v1.sets.destroy': `/api/v1/sets/${valeur}`,
@@ -71,6 +72,10 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
         lignes: new Map(),
         /** Les séances créées par l'API (#2049), par identifiant. */
         seances: new Map(),
+        /** La fin de chaque séance close par l'API (#2049), la première gardée. */
+        fins: new Map(),
+        /** Ce que dit la réponse d'une fin : l'invitation aux notifications. */
+        proposerLesNotifications: false,
         prochaineSerie: 100,
         prochaineLigne: 70,
         prochaineSeance: 42,
@@ -100,6 +105,45 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
             const serie = /^\/api\/v1\/sets\/(\d+)$/.exec(url)
             const ligneVisee = /^\/api\/v1\/workout-lines\/(\d+)$/.exec(url)
             const cle = config.headers?.['Idempotency-Key']
+
+            /*
+             * Une séance close n'accepte plus rien (la policy `update`) : la
+             * ligne ou la série qui y arrive est refusée, 403.
+             */
+            const seanceDeLaLigne = (ligneId) => serveur.lignes.get(Number(ligneId))?.workout_id
+            const close = (workoutId) => workoutId !== undefined && serveur.fins.has(Number(workoutId))
+            const viseeSurUneSeanceClose =
+                (method === 'post' && url === '/api/v1/workout-lines' && close(data?.workout_id)) ||
+                (method === 'post' && url === '/api/v1/sets' && close(seanceDeLaLigne(data?.workout_line_id))) ||
+                (serie && close(seanceDeLaLigne(serveur.series.get(Number(serie[1]))?.workout_line_id)))
+
+            if (viseeSurUneSeanceClose) {
+                throw { response: { status: 403, data: { message: 'This action is unauthorized.' } } }
+            }
+
+            // Terminer (#2049) : la séance nommée dans la charge, la première fin gardée, comme le serveur.
+            if (method === 'patch' && url === '/api/v1/workouts/finish') {
+                if (typeof data?.workout_id !== 'number') {
+                    throw { response: { status: 422, data: { message: 'workout_id' } } }
+                }
+
+                const fin = serveur.fins.get(data.workout_id) ?? data.ended_at ?? 'maintenant'
+                serveur.fins.set(data.workout_id, fin)
+
+                const creee = serveur.seances.get(data.workout_id)
+
+                if (creee) {
+                    creee.ended_at = fin
+                }
+
+                return {
+                    status: 200,
+                    data: {
+                        data: { id: data.workout_id, ended_at: fin },
+                        meta: { proposer_les_notifications: serveur.proposerLesNotifications },
+                    },
+                }
+            }
             const dejaCreee = method === 'post' && cle ? serveur.creees.get(`${url} ${cle}`) : undefined
 
             if (dejaCreee !== undefined) {
@@ -300,6 +344,7 @@ export const monterLaSeance = async (
 
             const reglages = useReglagesDeLaSeance({
                 localWorkout,
+                pendingIds: identite.pendingIds,
                 viderLesEcritures: () => series.flushAllPendingUpdates(),
             })
 

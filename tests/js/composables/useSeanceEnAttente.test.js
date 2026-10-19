@@ -169,6 +169,33 @@ describe('une séance dont la création attend la file', () => {
         expect(routeur.visit).toHaveBeenCalledTimes(1)
     })
 
+    /*
+     * « Terminer » s'ouvre aussi sur une séance en attente (#2049) : la visite
+     * de l'adoption remontait la page et fermait la question sous le doigt.
+     */
+    it('ne passe pas à la séance réelle tant qu’une fenêtre est ouverte, puis y passe à l’annonce suivante', async () => {
+        const queueId = mettreLaSeanceEnFile()
+        await monter({ id: `temp-q${queueId}`, idempotency_key: CLE })
+        const fenetre = document.createElement('dialog')
+        fenetre.setAttribute('open', '')
+        document.body.append(fenetre)
+
+        try {
+            serveur.reponses.push(async () => ({ status: 201, data: { data: { id: 42 } } }))
+            await sync.processQueue()
+            await uneTache()
+
+            expect(routeur.visit).not.toHaveBeenCalled()
+        } finally {
+            fenetre.remove()
+        }
+
+        window.dispatchEvent(new CustomEvent('sync:queued', { detail: {} }))
+        await uneTache()
+
+        expect(routeur.visit).toHaveBeenCalledTimes(1)
+    })
+
     it('passe en lecture seule quand le serveur la refuse, et dit pourquoi', async () => {
         const queueId = mettreLaSeanceEnFile()
         const { etatDeLaSeance, seanceEnLectureSeule, pendingIds } = await monter({

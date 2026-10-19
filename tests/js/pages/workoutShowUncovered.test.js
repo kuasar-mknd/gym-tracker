@@ -137,6 +137,10 @@ import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
+
+/** Les fins de séance parties par l'API (#2049) : la charge et les options de chaque envoi. */
+const finsEnvoyees = () =>
+    patch.mock.calls.filter(([url]) => url === '/api.v1.workouts.finish').map(([, ...reste]) => reste)
 import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** La modale d'ajout est un vrai composant sous le montage superficiel : c'est elle qu'on manipule. */
@@ -470,7 +474,8 @@ describe('Workouts/Show — a background write the server refuses says so', () =
     /*
      * Sur une copie hors ligne, le réglage du repos ne partirait pas (#2048,
      * partie E) : la page le dit au minuteur, qui désactive son interrupteur ;
-     * le minuteur, lui, tourne, et « Terminer » attend le réseau.
+     * le minuteur, lui, tourne, et « Terminer » reste : la fin passe par la
+     * file hors ligne (#2049).
      */
     it('sur une copie hors ligne, ouvre le minuteur sans laisser changer son réglage', async () => {
         pageStub.props.horsLigne = { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} }
@@ -485,7 +490,7 @@ describe('Workouts/Show — a background write the server refuses says so', () =
             expect(timer.exists()).toBe(true)
             expect(timer.props('reglageDesactive')).toBe(true)
             expect(timer.props('raisonDuReglage')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
-            expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeDefined()
+            expect(wrapper.get('[dusk="finish-workout-mobile"]').attributes('disabled')).toBeUndefined()
         } finally {
             delete pageStub.props.horsLigne
         }
@@ -893,29 +898,30 @@ describe('Workouts/Show — the session’s own settings', () => {
         expect(formPatch).not.toHaveBeenCalled()
     })
 
+    /*
+     * « Terminer » passe par l'API et la file hors ligne (#2049) : la séance
+     * nommée dans la charge, l'heure du geste, puis l'accueil.
+     */
     it('asks before finishing, and only then closes the session', async () => {
+        const { router } = await import('@inertiajs/vue3')
+        router.visit.mockClear()
+        patch.mockResolvedValue({ data: { data: { id: 1, ended_at: 'fin' }, meta: {} } })
         const wrapper = await mountPage()
 
         await buttonLabelled(wrapper, 'Terminer').trigger('click')
         await flushPromises()
 
         expect(wrapper.vm.showFinishModal).toBe(true)
-        expect(routerPatch).not.toHaveBeenCalled()
+        expect(finsEnvoyees()).toEqual([])
 
         await emitOn(wrapper, FinishModalStub, 'confirm')
+        await flushPromises()
 
-        const [url, payload, options] = routerPatch.mock.calls[0]
-
-        expect(url).toBe('/workouts/1')
-        expect(payload).toEqual({ is_finished: true })
-
-        // La question reste ouverte pendant la visite (#2048) : sans réseau, elle le dirait.
-        expect(wrapper.vm.showFinishModal).toBe(true)
-
-        options.onSuccess()
-        await wrapper.vm.$nextTick()
+        expect(finsEnvoyees()).toEqual([[{ workout_id: 1, ended_at: expect.any(String) }, expect.any(Object)]])
+        expect(routerPatch).not.toHaveBeenCalled()
         expect(wrapper.vm.showFinishModal).toBe(false)
         expect(haptics.triggerHaptic).toHaveBeenCalledWith('success')
+        expect(router.visit).toHaveBeenCalledWith('/dashboard', expect.any(Object))
     })
 
     it('changes its mind about finishing', async () => {
@@ -925,7 +931,7 @@ describe('Workouts/Show — the session’s own settings', () => {
         await emitOn(wrapper, FinishModalStub, 'close')
 
         expect(wrapper.vm.showFinishModal).toBe(false)
-        expect(routerPatch).not.toHaveBeenCalled()
+        expect(finsEnvoyees()).toEqual([])
     })
 
     /*
@@ -945,7 +951,8 @@ describe('Workouts/Show — the session’s own settings', () => {
         await flushPromises()
 
         expect(wrapper.vm.showFinishModal).toBe(false)
-        expect(routerPatch).not.toHaveBeenCalled()
+        expect(finsEnvoyees()).toEqual([])
+        expect(mettreEnFile).not.toHaveBeenCalled()
     })
 
     it('keeps the button busy until saving the session as a template comes back', async () => {

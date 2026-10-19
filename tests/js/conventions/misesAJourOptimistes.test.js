@@ -106,13 +106,13 @@ const EXEMPTIONS = [
     },
     {
         fichier: 'resources/js/composables/useReglagesDeLaSeance.js',
-        etat: 'clotureSansReseau',
-        raison: 'le message d’une clôture précédente, effacé au départ de la suivante : la visite pose le sien',
+        etat: 'localWorkout',
+        raison: 'la fin que le serveur vient d’accepter, posée avant la visite de l’accueil : sa réponse la confirme, et l’échec de la visite ne la défait pas',
     },
     {
         fichier: 'resources/js/composables/useReglagesDeLaSeance.js',
-        etat: 'ecrituresEnAttente',
-        raison: 'le compte des écritures encore en file, relevé avant la clôture : il dit ce qui est, pas ce que le serveur fera',
+        etat: 'showFinishModal',
+        raison: 'la question de fin, fermée une fois la fin acceptée par le serveur : la visite de l’accueil qui suit ne décide rien',
     },
     {
         fichier: 'resources/js/composables/useDemarrageDUneSeance.js',

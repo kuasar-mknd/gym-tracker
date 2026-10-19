@@ -206,14 +206,13 @@ const {
     showFinishModal,
     ecrituresEnAttente,
     clotureEnCours,
-    clotureSansReseau,
     finishWorkout,
     annulerLaCloture,
     confirmFinishWorkout,
     showSettingsModal,
     settingsForm,
     updateSettings,
-} = useReglagesDeLaSeance({ localWorkout, viderLesEcritures: () => flushAllPendingUpdates() })
+} = useReglagesDeLaSeance({ localWorkout, pendingIds, viderLesEcritures: () => flushAllPendingUpdates() })
 
 const { addExercise, removeLine, retraitDemande, titreDuRetrait, annulerLeRetrait, confirmerLeRetrait } =
     useLignesDeLaSeance({
@@ -293,7 +292,7 @@ onUnmounted(() => {
         </template>
 
         <div class="pb-main-safe">
-            <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" />
+            <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" :seance="localWorkout" />
             <SeriesHorsDeLaCopie :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
                 <GlassCard
@@ -370,7 +369,6 @@ onUnmounted(() => {
             :show="showFinishModal"
             :en-attente="ecrituresEnAttente"
             :en-cours="clotureEnCours"
-            :sans-reseau="clotureSansReseau"
             @close="annulerLaCloture"
             @confirm="confirmFinishWorkout"
         />

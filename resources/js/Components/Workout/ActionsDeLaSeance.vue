@@ -6,13 +6,16 @@
  * « Modèle » est désactivé quand le serveur ne répond pas (#2048) : sans
  * réseau, l'enregistrement échouait sans un mot. La raison s'affiche sous les
  * boutons, et le bouton la porte pour un lecteur d'écran. Sur une copie hors
- * ligne, « Terminer » et « Modèle » ne partiraient pas, même le serveur revenu
- * (la copie attend que la file se vide pour se recharger) : ils se
- * désactivent aussi, avec la raison du bandeau de la copie. Sur une séance
- * démarrée sans réseau (#2049), que le serveur ne connaît pas encore, ils se
- * désactivent de même, avec ce que dit l'état de la séance
- * (`EtatDeLaSeanceEnAttente.vue`). Ajouter un exercice et le repos restent :
- * ils passent par la file, ou ne quittent pas l'appareil.
+ * ligne, « Modèle » ne partirait pas, même le serveur revenu (la copie attend
+ * que la file se vide pour se recharger) : il se désactive aussi, avec la
+ * raison du bandeau de la copie. Sur une séance démarrée sans réseau (#2049),
+ * que le serveur ne connaît pas encore, il se désactive de même, avec ce que
+ * dit l'état de la séance (`EtatDeLaSeanceEnAttente.vue`).
+ *
+ * « Terminer » reste toujours ouvert (#2049) : la fin passe par la file hors
+ * ligne, à l'heure du geste, et n'envoie rien que la page tire d'une copie
+ * (la séance, l'heure). Ajouter un exercice et le repos restent aussi : ils
+ * passent par la file, ou ne quittent pas l'appareil.
  */
 import { computed } from 'vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
@@ -71,8 +74,6 @@ const raisonDuModele = computed(() => {
             <GlassButton
                 variant="primary"
                 @click="emit('terminer')"
-                :disabled="surUneCopie || seanceEnAttente"
-                :aria-describedby="seanceEnAttente ? ID_DE_L_ETAT_DE_LA_SEANCE : raisonDUneEcriture"
                 class="w-full"
                 id="finish-workout-mobile"
                 dusk="finish-workout-mobile"

@@ -39,6 +39,13 @@ const champEnSaisie = () => {
 }
 
 /**
+ * Si une fenêtre est ouverte (`Modal.vue`, un `<dialog>`) : la question de
+ * « Terminer » surtout, que la séance en attente propose aussi (#2049). La
+ * visite remonterait la page et fermerait la question sous le doigt.
+ */
+const fenetreOuverte = () => globalThis.document?.querySelector?.('dialog[open]') != null
+
+/**
  * La séance démarrée sans réseau, sur sa page (#2049).
  *
  * La page `Workouts/Show` d'une séance en attente vient de la file
@@ -51,8 +58,9 @@ const champEnSaisie = () => {
  *
  * - **Adoption.** Le serveur a créé la séance, la file du compte est vide,
  *   rien ne vole, et la personne ne fait rien qu'une visite interromprait (un
- *   repos, une saisie, une modale ouverte : `occupee`, et un champ qui a le
- *   focus) : la page passe à la séance réelle, par une visite qui remplace
+ *   repos, une saisie, une modale ouverte : `occupee`, une fenêtre ouverte,
+ *   et un champ qui a le focus) : la page passe à la séance réelle, par une
+ *   visite qui remplace
  *   l'entrée d'historique. Elle se réessaie à chaque annonce de la file, et
  *   quand la personne cesse d'être occupée.
  * - **Refus.** Le serveur refuse sa création : la page passe en lecture
@@ -155,7 +163,13 @@ export const useSeanceEnAttente = ({
 
         const realWorkoutId = SyncService.produitDe(queueId)
 
-        if (realWorkoutId === null || SyncService.enAttente() > 0 || occupeeOuEnSaisie() || champEnSaisie()) {
+        if (
+            realWorkoutId === null ||
+            SyncService.enAttente() > 0 ||
+            occupeeOuEnSaisie() ||
+            champEnSaisie() ||
+            fenetreOuverte()
+        ) {
             return
         }
 

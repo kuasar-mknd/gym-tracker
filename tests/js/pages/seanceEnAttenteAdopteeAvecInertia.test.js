@@ -137,7 +137,7 @@ it('ajoute exercice et série à la séance en attente sans identifiant provisoi
     expect(document.querySelector('[dusk="etat-de-la-seance-en-attente"]').textContent).toContain(
         'Séance démarrée sans réseau : elle sera enregistrée au retour du réseau.',
     )
-    // Ce que le serveur ne connaît pas encore ne part pas : ni réglages, ni modèle, ni fin.
+    // Ce que le serveur ne connaît pas encore ne part pas : ni réglages, ni modèle.
     expect(document.querySelector('[dusk="workout-settings-button"]').disabled).toBe(true)
 
     // Un exercice, puis une série : elles attendent derrière la séance, qu'elles nomment par son entrée.
@@ -147,7 +147,8 @@ it('ajoute exercice et série à la séance en attente sans identifiant provisoi
     await vi.waitUntil(() => fileDurable().length === 3)
 
     expect(document.querySelector('[dusk="enregistrer-comme-modele"]').disabled).toBe(true)
-    expect(document.querySelector('[dusk="finish-workout-mobile"]').disabled).toBe(true)
+    // « Terminer », lui, reste ouvert : la fin passe par la file, derrière la séance (#2049).
+    expect(document.querySelector('[dusk="finish-workout-mobile"]').disabled).toBe(false)
 
     const [seance, ligne, serie] = fileDurable()
 

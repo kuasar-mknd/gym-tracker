@@ -95,17 +95,22 @@ describe('les actions sous les exercices de la séance', () => {
     const monter = () => mount(ActionsDeLaSeance, { global })
     const bouton = (wrapper, dusk) => wrapper.get(`[dusk="${dusk}"]`)
 
-    it('ni « Terminer » ni « Modèle » ne partent d’une copie, même le serveur revenu', async () => {
+    /*
+     * « Terminer » part d'une copie (#2049) : la fin passe par la file hors
+     * ligne, et n'envoie rien que la page tire de la copie. « Modèle », une
+     * visite d'Inertia, ne partirait pas, même le serveur revenu.
+     */
+    it('« Terminer » part d’une copie par la file ; « Modèle » ne part pas, même le serveur revenu', async () => {
         servirUneCopie()
         const wrapper = monter()
 
-        attendreDesactive(bouton(wrapper, 'finish-workout-mobile'))
+        attendreOuvert(bouton(wrapper, 'finish-workout-mobile'))
         attendreDesactive(bouton(wrapper, 'enregistrer-comme-modele'))
 
         await bouton(wrapper, 'finish-workout-mobile').trigger('click')
         await bouton(wrapper, 'enregistrer-comme-modele').trigger('click')
 
-        expect(wrapper.emitted('terminer')).toBeUndefined()
+        expect(wrapper.emitted('terminer')).toHaveLength(1)
         expect(wrapper.emitted('enregistrer-comme-modele')).toBeUndefined()
     })
 
