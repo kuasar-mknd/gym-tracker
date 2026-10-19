@@ -190,6 +190,15 @@ afterAll(() => {
 })
 
 describe('une page de la salle', () => {
+    /*
+     * Les durées elles-mêmes : les cas qui suivent les lisent dans le module,
+     * et passeraient avec n'importe lesquelles.
+     */
+    it('attend huit secondes, et « Attendre la réponse » lève ce délai une minute (décision 8 du propriétaire)', () => {
+        expect(DELAI_DE_LA_NAVIGATION_MS).toBe(8_000)
+        expect(DUREE_SANS_DELAI_MS).toBe(60_000)
+    })
+
     it.each(['/', '/dashboard', '/workouts/12', '/workouts', '/exercises', '/profile', '/tools', '/plates'])(
         'attend le réseau huit secondes, puis sert la page « hors ligne » marquée « delai » (%s)',
         async (chemin) => {
@@ -359,6 +368,7 @@ describe('la réponse arrivée après le délai', () => {
 
 describe('« Attendre la réponse »', () => {
     it('lève le délai de l’adresse pendant une minute, puis le remet', async () => {
+        const levee = Date.now()
         const port = envoyerAuWorker({ type: MESSAGE_ATTENDRE_LA_REPONSE, adresse: `${ORIGINE}/dashboard` })
 
         expect(port.postMessage).toHaveBeenCalledExactlyOnceWith({ type: MESSAGE_ATTENDRE_LA_REPONSE, levee: true })
@@ -378,12 +388,45 @@ describe('« Attendre la réponse »', () => {
         await expect(raisonDeLaCoquille(seance.reglee.reponse)).resolves.toBe('delai')
         ailleurs.couper()
 
-        await vi.advanceTimersByTimeAsync(DUREE_SANS_DELAI_MS)
+        // À 59 secondes, l'adresse attend encore sans délai ; à 60, le délai revient.
+        await vi.advanceTimersByTimeAsync(levee + 59_000 - Date.now())
+        const avantLaFin = reseauEnAttente()
+        const encoreLevee = naviguer('/dashboard', { preloadResponse: avantLaFin.promesse })
+        await vi.advanceTimersByTimeAsync(1_000)
         const plusTard = reseauEnAttente()
         const denouveau = naviguer('/dashboard', { preloadResponse: plusTard.promesse })
         await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS)
         await expect(raisonDeLaCoquille(denouveau.reglee.reponse)).resolves.toBe('delai')
+        expect(encoreLevee.reglee.reponse).toBeUndefined()
         plusTard.couper()
+        avantLaFin.repondre(new Response('l’accueil, à la fin de la minute'))
+        await vi.advanceTimersByTimeAsync(0)
+        await expect(encoreLevee.reglee.reponse.text()).resolves.toBe('l’accueil, à la fin de la minute')
+    })
+
+    /*
+     * `/` répond toujours par une redirection vers l'accueil, page de la salle
+     * elle aussi : la levée vaut pour la page, sous la clé de sa copie, et non
+     * pour l'adresse exacte, sans quoi la personne attendrait de nouveau huit
+     * secondes, et retrouverait le bouton, à l'adresse où `/` la mène.
+     */
+    it.each([
+        ['/', '/dashboard'],
+        ['/dashboard/', '/dashboard'],
+        ['/workouts', '/workouts?page=1'],
+    ])('lève, avec %s, le délai de %s, la même page de la salle', async (levee, suivante) => {
+        const port = envoyerAuWorker({ type: MESSAGE_ATTENDRE_LA_REPONSE, adresse: `${ORIGINE}${levee}` })
+
+        expect(port.postMessage).toHaveBeenCalledExactlyOnceWith({ type: MESSAGE_ATTENDRE_LA_REPONSE, levee: true })
+
+        const lent = reseauEnAttente()
+        const navigation = naviguer(suivante, { preloadResponse: lent.promesse })
+        await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS * 2)
+        expect(navigation.reglee.reponse).toBeUndefined()
+        lent.repondre(new Response('la page, enfin'))
+        await vi.advanceTimersByTimeAsync(0)
+        await expect(navigation.reglee.reponse.text()).resolves.toBe('la page, enfin')
+        await vi.advanceTimersByTimeAsync(DUREE_SANS_DELAI_MS)
     })
 
     it('sert encore la page « hors ligne », marquée « reseau », si le réseau tombe pendant l’attente', async () => {

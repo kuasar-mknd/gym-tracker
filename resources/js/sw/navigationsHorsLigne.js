@@ -39,7 +39,7 @@ export const URL_DE_LA_PAGE_HORS_LIGNE = '/build/hors-ligne.html'
 /** Le délai d'une page de la salle avant la coquille (décision 8 du propriétaire). */
 export const DELAI_DE_LA_NAVIGATION_MS = 8_000
 
-/** La durée pendant laquelle « Attendre la réponse » lève le délai d'une adresse. */
+/** La durée pendant laquelle « Attendre la réponse » lève le délai d'une page de la salle. */
 export const DUREE_SANS_DELAI_MS = 60_000
 
 /** Les adresses dont le délai est levé en même temps, au plus. */
@@ -132,6 +132,16 @@ const cheminDecode = (url) => {
 }
 
 /**
+ * La clé de la salle d'une adresse de l'origine, celle de sa copie
+ * (`cleDeLaCopie`) : `/`, `/dashboard` et `/dashboard/` en ont une seule, comme
+ * `/workouts` et `/workouts?page=1`.
+ *
+ * @param {URL} url
+ * @returns {string | null}
+ */
+const cleDeLaSalle = (url) => cleDeLaCopie(`${url.pathname}${url.search}`)
+
+/**
  * La sorte d'une navigation : `salle` (le délai, puis la coquille),
  * `sans-coquille` (le réseau seul) ou `ordinaire` (le réseau, puis la
  * coquille).
@@ -153,7 +163,7 @@ export const sorteDeNavigation = (adresse, origine) => {
         return 'sans-coquille'
     }
 
-    return cleGardee(cleDeLaCopie(`${url.pathname}${url.search}`)) ? 'salle' : 'ordinaire'
+    return cleGardee(cleDeLaSalle(url)) ? 'salle' : 'ordinaire'
 }
 
 /**
@@ -331,7 +341,10 @@ export const naviguerAvecUnDelai = async (
  * recharge aussitôt, et la navigation qui suit trouve le même worker.
  * Arrêté entre-temps, il l'aurait oublié, et la coquille revient au délai,
  * avec de nouveau le bouton. Seule une adresse de la salle de l'origine du
- * worker se lève, seize au plus à la fois.
+ * worker se lève, seize au plus à la fois, sous la clé de sa copie
+ * (`cleDeLaSalle`) : `/` renvoie toujours vers l'accueil, et la levée de `/`
+ * doit valoir pour `/dashboard`, où la redirection mène, sans quoi la
+ * personne attendrait encore huit secondes et retrouverait le bouton.
  *
  * @param {{
  *   trouverLaPageHorsLigne: (raison: 'delai' | 'reseau') => Promise<Response|undefined>,
@@ -350,7 +363,7 @@ export const creerLesNavigations = ({
     maintenant = () => Date.now(),
     delai = DELAI_DE_LA_NAVIGATION_MS,
 }) => {
-    /** @type {Map<string, number>} l'adresse, et la fin de la levée */
+    /** @type {Map<string, number>} la clé de la salle, et la fin de la levée */
     const sansDelai = new Map()
 
     const oublierLesLeveesPassees = () => {
@@ -363,11 +376,11 @@ export const creerLesNavigations = ({
         }
     }
 
-    /** @param {string} adresse */
-    const leDelaiEstLeve = (adresse) => {
+    /** @param {string | null} cle la clé de la salle */
+    const leDelaiEstLeve = (cle) => {
         oublierLesLeveesPassees()
 
-        return sansDelai.has(adresse)
+        return sansDelai.has(cle)
     }
 
     /** @param {string | undefined} identifiant */
@@ -394,9 +407,7 @@ export const creerLesNavigations = ({
             return naviguerSansCoquille(event, allerChercher)
         }
 
-        const adresse = adresseDeLOrigine(event.request.url, origine)?.href
-
-        if (sorte === 'ordinaire' || leDelaiEstLeve(adresse)) {
+        if (sorte === 'ordinaire' || leDelaiEstLeve(cleDeLaSalle(adresseDeLOrigine(event.request.url, origine)))) {
             return naviguerOuRetomber(event, trouverLaPageHorsLigne, allerChercher)
         }
 
@@ -404,9 +415,10 @@ export const creerLesNavigations = ({
     }
 
     /**
-     * Un message d'une page. « Attendre la réponse » lève le délai de
-     * l'adresse pendant une minute, puis le dit sur le port joint ; tout
-     * autre message est laissé. Rend vrai quand le message était le sien.
+     * Un message d'une page. « Attendre la réponse » lève le délai de la page
+     * de la salle que nomme l'adresse pendant une minute, puis le dit sur le
+     * port joint ; tout autre message est laissé. Rend vrai quand le message
+     * était le sien.
      *
      * @param {{ data?: unknown, ports?: ReadonlyArray<MessagePort> }} event
      * @returns {boolean}
@@ -423,7 +435,7 @@ export const creerLesNavigations = ({
 
         if (levee) {
             oublierLesLeveesPassees()
-            sansDelai.set(url.href, maintenant() + DUREE_SANS_DELAI_MS)
+            sansDelai.set(cleDeLaSalle(url), maintenant() + DUREE_SANS_DELAI_MS)
 
             while (sansDelai.size > ADRESSES_SANS_DELAI_AU_PLUS) {
                 sansDelai.delete(sansDelai.keys().next().value)
