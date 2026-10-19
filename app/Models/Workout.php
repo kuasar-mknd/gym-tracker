@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\DB;
  * @property \Illuminate\Support\Carbon $started_at
  * @property \Illuminate\Support\Carbon|null $ended_at
  * @property string|null $notes
+ * @property string|null $idempotency_key nomme le démarrage que l'appareil a tiré (#2049), pour qu'un
+ *                                        démarrage rejoué par la file rende la même séance. Unique par
+ *                                        compte, posée à la main, hors de $fillable comme sur les lignes
+ *                                        et les séries : elle nomme la tentative, jamais un champ du corps.
  * @property-read \App\Models\User $user
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\WorkoutLine> $workoutLines
  */
@@ -23,6 +28,65 @@ class Workout extends Model
 {
     /** @use HasFactory<\Database\Factories\WorkoutFactory> */
     use HasFactory;
+
+    /**
+     * Combien de jours un instant venu de l'appareil peut précéder le moment
+     * où le serveur le reçoit : la vie d'une écriture dans la file hors ligne
+     * (`JOURS_EN_FILE_AU_PLUS`, resources/js/Utils/ecrituresAbandonnees.js).
+     * Au-delà, la file l'a abandonnée, et un instant plus ancien ne vient pas
+     * d'elle.
+     */
+    public const int JOURS_EN_FILE_AU_PLUS = 30;
+
+    /**
+     * Le début d'une séance que l'appareil a démarrée : l'instant du geste,
+     * pris sur l'appareil, s'il tombe entre `JOURS_EN_FILE_AU_PLUS` jours
+     * avant maintenant et maintenant ; sinon maintenant (#2049).
+     *
+     * La file rejoue un démarrage des heures après le geste : l'heure du
+     * rejeu ferait commencer la séance après ses propres séries. L'horloge
+     * de l'appareil peut aussi être fausse : un début dans le futur, que rien
+     * ne terminerait avant lui, ou plus ancien que tout ce que la file garde,
+     * revient à maintenant, comme un démarrage sans heure. Refuser la séance
+     * la perdrait, et ses séries avec elle.
+     *
+     * Les deux bornes viennent de `$maintenant`, la lecture unique de
+     * l'horloge de l'opération (`.ai/rules/horloge.md`) ; la valeur rendue
+     * est une copie, jamais l'un des deux instants reçus.
+     */
+    public static function debutBorne(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): CarbonInterface
+    {
+        if (! $surLAppareil instanceof CarbonInterface) {
+            return $maintenant->copy();
+        }
+
+        $auPlusTot = $maintenant->copy()->subDays(self::JOURS_EN_FILE_AU_PLUS);
+
+        if ($surLAppareil->greaterThan($maintenant) || $surLAppareil->lessThan($auPlusTot)) {
+            return $maintenant->copy();
+        }
+
+        return $surLAppareil->copy();
+    }
+
+    /**
+     * La fin de cette séance : l'instant du geste, pris sur l'appareil, ou
+     * maintenant sans lui ; jamais après maintenant, jamais avant le début
+     * (#2049).
+     *
+     * Une fin dans le futur fermerait la séance à une heure qui n'est pas
+     * venue ; une fin d'avant le début donnerait une durée négative, ce
+     * qu'une fin web laissait faire après un début déplacé dans le futur par
+     * les réglages. Une fin rejouée longtemps après garde l'heure du geste.
+     */
+    public function finBornee(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): CarbonInterface
+    {
+        $fin = $surLAppareil instanceof CarbonInterface && $surLAppareil->lessThan($maintenant)
+            ? $surLAppareil->copy()
+            : $maintenant->copy();
+
+        return $fin->lessThan($this->started_at) ? $this->started_at->copy() : $fin;
+    }
 
     /**
      * Les exercices dont les records devront etre recalcules apres la cascade.

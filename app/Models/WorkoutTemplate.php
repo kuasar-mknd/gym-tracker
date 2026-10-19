@@ -49,6 +49,43 @@ class WorkoutTemplate extends Model
         ];
     }
 
+    /**
+     * La clé d'idempotence de la ligne qu'un lancement du modèle crée à ce
+     * rang (#2049) : `modele-ligne:{rang}:{exercice}`.
+     *
+     * Un modèle lancé sans réponse du serveur, la file le rejoue écriture par
+     * écriture (la séance, puis chaque ligne et chaque série), et le serveur
+     * a pu l'exécuter déjà. Les lignes et les séries qu'il a créées portent
+     * ces clés, et la page des modèles donne les mêmes à la file
+     * (`FetchWorkoutTemplatesAction::lancements()`) : chaque écriture rejouée
+     * rend alors celle qui existe, au lieu de la doubler. Une seule source
+     * pour les deux, ici, plutôt qu'un calcul recopié en JavaScript.
+     *
+     * Le rang part de zéro, dans l'ordre du modèle (`order`, puis `id`).
+     * L'exercice entre dans la clé : un modèle modifié entre le lancement et
+     * le rejeu, dont le rang a changé d'exercice, crée une ligne de plus,
+     * jamais une série rattachée à un autre exercice. La clé ne dépend pas de
+     * celle de la séance : elle n'est cherchée que dans cette séance
+     * (`CreateWorkoutLineAction`), et garde ainsi une longueur fixe, sous les
+     * 64 caractères ASCII sans espace qu'admet `CreateSetAction::idempotencyKey()`.
+     */
+    public static function cleDUneLigneLancee(int $rang, int $exerciceId): string
+    {
+        return "modele-ligne:{$rang}:{$exerciceId}";
+    }
+
+    /**
+     * La clé d'idempotence de la série qu'un lancement du modèle crée à ce
+     * rang de cette ligne (#2049) : `modele-serie:{ligne}:{série}`, rangs
+     * partis de zéro dans l'ordre du modèle. Elle n'est cherchée que dans sa
+     * ligne (`CreateSetAction`), dont la clé porte déjà l'exercice ; voir
+     * `cleDUneLigneLancee()`.
+     */
+    public static function cleDUneSerieLancee(int $rangLigne, int $rangSerie): string
+    {
+        return "modele-serie:{$rangLigne}:{$rangSerie}";
+    }
+
     #[\Override]
     protected $fillable = [
         'name',

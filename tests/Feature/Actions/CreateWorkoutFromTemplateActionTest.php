@@ -206,3 +206,41 @@ it('donne à chaque série recopiée le rang qu’elle a dans son exercice de mo
     expect($series->pluck('order')->all())->toBe([0, 1, 2])
         ->and($series->pluck('reps')->all())->toBe([12, 10, 8]);
 });
+
+/*
+ * Les séries d'un exercice du modèle se recopient dans l'ordre de leur rang
+ * (#2049). La relation n'en demandait aucun : la base les rendait dans celui
+ * qui l'arrangeait, aujourd'hui l'index `(workout_template_line_id, order)`
+ * par accident de plan, comme les lignes avant `OrdreDesExercicesDuModeleTest`.
+ * Le rang d'une série fait aussi sa clé d'idempotence au lancement
+ * (`WorkoutTemplate::cleDUneSerieLancee()`) : il doit être le même à chaque
+ * lecture. Le premier témoin porte donc sur la forme de la requête, que le
+ * plan ne décide pas ; le second sur les séries recopiées, rangs à rebours des
+ * identifiants.
+ */
+it('demande à la base les séries d’un exercice du modèle par rang, puis par identifiant', function (): void {
+    $ligne = WorkoutTemplateLine::factory()->create();
+
+    expect($ligne->workoutTemplateSets()->toSql())->toContain('order by `order` asc, `id` asc');
+});
+
+it('recopie les séries d’un exercice dans l’ordre de leur rang, pas de leur identifiant', function (): void {
+    $user = User::factory()->create();
+    $template = WorkoutTemplate::factory()->create(['user_id' => $user->id]);
+    $ligne = WorkoutTemplateLine::factory()->create(['workout_template_id' => $template->id, 'order' => 0]);
+
+    // Créées du dernier rang au premier : l'identifiant va à rebours du rang.
+    foreach ([2 => 8, 1 => 10, 0 => 12] as $rang => $repetitions) {
+        WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $ligne->id, 'reps' => $repetitions, 'order' => $rang]);
+    }
+
+    $workout = app(CreateWorkoutFromTemplateAction::class)->execute($user, $template);
+
+    $series = \App\Models\Set::query()
+        ->whereIn('workout_line_id', $workout->workoutLines()->pluck('id'))
+        ->orderBy('order')
+        ->get();
+
+    expect($series->pluck('reps')->all())->toBe([12, 10, 8])
+        ->and($series->pluck('order')->all())->toBe([0, 1, 2]);
+});

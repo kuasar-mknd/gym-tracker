@@ -54,11 +54,21 @@ class WorkoutTemplateLine extends Model
     }
 
     /**
+     * Les séries de cet exercice du modèle, dans leur ordre : `order`, puis
+     * `id` pour départager deux rangs égaux.
+     *
+     * Sans ordre, la base les rendait dans celui qui l'arrangeait, et le
+     * lancement du modèle recopiait les séries dans cet ordre-là, que rien ne
+     * garantit (#2049) : un échauffement pouvait passer après la série de
+     * travail, et le rang d'une série, qui fait sa clé d'idempotence
+     * (`WorkoutTemplate::cleDUneSerieLancee()`), changer d'une lecture à
+     * l'autre.
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\WorkoutTemplateSet, $this>
      */
     public function workoutTemplateSets(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->hasMany(WorkoutTemplateSet::class);
+        return $this->hasMany(WorkoutTemplateSet::class)->orderBy('order')->orderBy('id');
     }
 
     #[\Override]
