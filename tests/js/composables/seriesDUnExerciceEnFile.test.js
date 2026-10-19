@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
-import { chargerSyncService, retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
+import { A_VENIR, chargerSyncService, retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
 import {
     creerUnFauxServeur,
     fileDurable,
@@ -173,7 +173,7 @@ describe('les séries d’un exercice encore en file', () => {
         await flushPromises()
 
         expect(fileDurable()).toEqual([
-            expect.objectContaining({ url: '/api/v1/workout-lines', aAnnuler: '/api/v1/workout-lines/__produit__' }),
+            expect.objectContaining({ url: '/api/v1/workout-lines', aAnnuler: `/api/v1/workout-lines/${A_VENIR}` }),
         ])
 
         reseau.serveur.enLigne = true
@@ -203,7 +203,7 @@ describe('les séries d’un exercice encore en file', () => {
         await couper()
 
         expect(fileDurable()).toEqual([expect.objectContaining({ url: '/api/v1/workout-lines', tentee: true })])
-        expect(fileDurable()[0].aAnnuler).toBe('/api/v1/workout-lines/__produit__')
+        expect(fileDurable()[0].aAnnuler).toBe(`/api/v1/workout-lines/${A_VENIR}`)
 
         const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
 

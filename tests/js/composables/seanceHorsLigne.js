@@ -1,5 +1,6 @@
 import { computed, defineComponent, h, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
+import { route as routeDeZiggy } from 'ziggy-js'
 
 import { chargerSyncService } from '../utils/fileHorsLigne'
 import { suivreLesPagesMontees } from '../pages/pagesMontees'
@@ -32,26 +33,64 @@ import { suivreLesPagesMontees } from '../pages/pagesMontees'
  */
 export const seances = suivreLesPagesMontees()
 
-/** Les adresses de Ziggy dont la séance se sert. */
-export const routeDeTest = (nom, parametres = {}) => {
-    const valeur = parametres !== null && typeof parametres === 'object' ? Object.values(parametres)[0] : parametres
+/**
+ * La forme d'un identifiant dans une adresse : celle que le serveur pose sur
+ * chaque paramètre de modèle (`App\Support\IdentifiantsDesRoutes::MOTIF`), que
+ * Ziggy reçoit avec la table des routes et exige avant de rendre l'adresse
+ * (#2049). `tests/js/conventions/identifiantAVenir.test.js` la compare à
+ * celle du serveur.
+ */
+export const MOTIF_D_UN_IDENTIFIANT = '[1-9][0-9]*'
 
-    return {
-        dashboard: '/dashboard',
-        'workouts.show': `/workouts/${valeur}`,
-        'api.v1.workouts.store': '/api/v1/workouts',
-        'api.v1.workouts.finish': '/api/v1/workouts/finish',
-        'api.v1.sets.store': '/api/v1/sets',
-        'api.v1.sets.update': `/api/v1/sets/${valeur}`,
-        'api.v1.sets.destroy': `/api/v1/sets/${valeur}`,
-        'api.v1.workout-lines.store': '/api/v1/workout-lines',
-        'api.v1.workout-lines.destroy': `/api/v1/workout-lines/${valeur}`,
-        'api.v1.workout-lines.set-order': `/api/v1/workout-lines/${valeur}/set-order`,
-        'api.v1.workouts.line-order': `/api/v1/workouts/${valeur}/line-order`,
-        'workouts.update': `/workouts/${valeur}`,
-        'templates.save-from-workout': `/templates/${valeur}`,
-    }[nom]
+/** Les adresses de Ziggy dont la séance se sert, telles que le serveur les déclare. */
+const ADRESSES_DE_LA_SEANCE = {
+    dashboard: 'dashboard',
+    'workouts.show': 'workouts/{workout}',
+    'api.v1.workouts.store': 'api/v1/workouts',
+    'api.v1.workouts.finish': 'api/v1/workouts/finish',
+    'api.v1.sets.store': 'api/v1/sets',
+    'api.v1.sets.update': 'api/v1/sets/{set}',
+    'api.v1.sets.destroy': 'api/v1/sets/{set}',
+    'api.v1.workout-lines.store': 'api/v1/workout-lines',
+    'api.v1.workout-lines.destroy': 'api/v1/workout-lines/{workout_line}',
+    'api.v1.workout-lines.set-order': 'api/v1/workout-lines/{workoutLine}/set-order',
+    'api.v1.workouts.line-order': 'api/v1/workouts/{workout}/line-order',
+    'workouts.update': 'workouts/{workout}',
+    'templates.save-from-workout': 'workouts/{workout}/save-as-template',
 }
+
+/**
+ * La table que Ziggy lit dans la page : chaque paramètre de ces adresses
+ * désigne un modèle, et porte le motif d'un identifiant.
+ */
+const TABLE_DE_ZIGGY = {
+    url: 'http://localhost',
+    port: null,
+    defaults: {},
+    routes: Object.fromEntries(
+        Object.entries(ADRESSES_DE_LA_SEANCE).map(([nom, uri]) => [
+            nom,
+            {
+                uri,
+                methods: ['GET', 'HEAD'],
+                wheres: Object.fromEntries(
+                    [...uri.matchAll(/{(\w+)}/g)].map(([, parametre]) => [parametre, MOTIF_D_UN_IDENTIFIANT]),
+                ),
+            },
+        ]),
+    ),
+}
+
+/**
+ * Les adresses de Ziggy dont la séance se sert, rendues par le vrai Ziggy :
+ * comme dans l'application, un paramètre qui n'a pas la forme d'un
+ * identifiant lève une erreur au lieu de rendre une adresse. Le stub laissait
+ * passer `/api/v1/sets/__produit__`, que Ziggy refusait dans le navigateur, et
+ * aucune série ne s'ajoutait plus (#2049). Un nom qu'elle ne connaît pas ne
+ * rend rien, comme avant.
+ */
+export const routeDeTest = (nom, parametres = {}) =>
+    Object.hasOwn(ADRESSES_DE_LA_SEANCE, nom) ? routeDeZiggy(nom, parametres, false, TABLE_DE_ZIGGY) : undefined
 
 /**
  * Un serveur qui retient ce qu'il a créé, et un réseau qu'on coupe.

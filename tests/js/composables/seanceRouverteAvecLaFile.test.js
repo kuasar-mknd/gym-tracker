@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
-import { retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
+import { A_VENIR, retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
 import {
     creerUnFauxServeur,
     fileDurable,
@@ -185,7 +185,7 @@ describe('une série ajoutée et cochée sans réseau, puis la séance rechargé
         await flushPromises()
 
         expect(ecran(page)).toEqual([[1, [3, 4]]])
-        expect(fileDurable()).toEqual([expect.objectContaining({ aAnnuler: '/api/v1/sets/__produit__' })])
+        expect(fileDurable()).toEqual([expect.objectContaining({ aAnnuler: `/api/v1/sets/${A_VENIR}` })])
 
         const encore = await recharger(page)
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
+    A_VENIR,
     COMPTE,
     chargerSyncService,
     horodatageRecent,
@@ -10,6 +11,7 @@ import {
 } from './fileHorsLigne'
 import { oublierLesEcrituresAcceptees } from '@/Utils/ecrituresAcceptees'
 import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
+import { route as routeDeZiggy } from 'ziggy-js'
 
 const request = vi.fn()
 
@@ -1588,6 +1590,21 @@ describe('SyncService une création tentée sans réponse', () => {
 
     const annulerPar = (id) => `/api/v1/sets/${id}`
 
+    /**
+     * Un serveur qui crée chaque série sous l'identifiant suivant de la liste,
+     * sans la coche, et accepte le reste.
+     *
+     * @param {number[]} identifiants
+     */
+    const creerSousDesIdentifiants = (identifiants) => {
+        const suivants = [...identifiants]
+
+        return async (config) =>
+            config.method === 'post'
+                ? { data: { data: { ...config.data, id: suivants.shift(), is_completed: false } } }
+                : { data: { data: {} } }
+    }
+
     it('note qu’elle a été tentée avant de partir, pour qu’une page qui meurt pendant le vol le sache encore', async () => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([creation('q1')]))
         request.mockImplementation(() => new Promise(() => {}))
@@ -1638,7 +1655,7 @@ describe('SyncService une création tentée sans réponse', () => {
         expect(
             JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => [entree.id, entree.aAnnuler]),
         ).toEqual([
-            ['q1', '/api/v1/sets/__produit__'],
+            ['q1', `/api/v1/sets/${A_VENIR}`],
             ['queued-1', undefined],
         ])
 
@@ -1677,7 +1694,7 @@ describe('SyncService une création tentée sans réponse', () => {
     it('garde son annulation en file quand le réseau retombe entre les deux', async () => {
         localStorage.setItem(
             'offline_sync_queue',
-            JSON.stringify([creation('q1', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' })]),
+            JSON.stringify([creation('q1', { tentee: true, aAnnuler: `/api/v1/sets/${A_VENIR}` })]),
         )
         request
             .mockResolvedValueOnce({ data: { data: { id: 100 } } })
@@ -1694,8 +1711,8 @@ describe('SyncService une création tentée sans réponse', () => {
         localStorage.setItem(
             'offline_sync_queue',
             JSON.stringify([
-                creation('q1', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
-                creation('q2', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+                creation('q1', { tentee: true, aAnnuler: `/api/v1/sets/${A_VENIR}` }),
+                creation('q2', { tentee: true, aAnnuler: `/api/v1/sets/${A_VENIR}` }),
             ]),
         )
         request
@@ -1732,7 +1749,7 @@ describe('SyncService une création tentée sans réponse', () => {
             JSON.stringify([
                 creation('q1', {
                     tentee: true,
-                    ajusterPar: '/api/v1/sets/__produit__',
+                    ajusterPar: `/api/v1/sets/${A_VENIR}`,
                     data: { workout_line_id: 1, is_completed: true, weight: 80, reps: 3 },
                 }),
                 aQueuedPatch('/api/v1/sets/3'),
@@ -1779,7 +1796,7 @@ describe('SyncService une création tentée sans réponse', () => {
         localStorage.setItem(
             'offline_sync_queue',
             JSON.stringify([
-                creation('q1', { ajusterPar: '/api/v1/sets/__produit__' }),
+                creation('q1', { ajusterPar: `/api/v1/sets/${A_VENIR}` }),
                 creation('q2', { tentee: true }),
             ]),
         )
@@ -1809,10 +1826,99 @@ describe('SyncService une création tentée sans réponse', () => {
 
         expect(request.mock.calls[0][0]).not.toHaveProperty('ajusterPar')
         expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.ajusterPar)).toEqual([
-            '/api/v1/sets/__produit__',
-            '/api/v1/sets/__produit__',
+            `/api/v1/sets/${A_VENIR}`,
+            `/api/v1/sets/${A_VENIR}`,
             undefined,
         ])
+    })
+
+    /*
+     * Les adresses passent par Ziggy, qui exige depuis #2049 qu'un paramètre
+     * de modèle ait la forme d'un identifiant : la table des routes du serveur
+     * le lui dit (`IdentifiantsDesRoutes::MOTIF`). `__produit__` y levait une
+     * erreur avant même le premier envoi : aucune série ne s'ajoutait plus, en
+     * ligne comme sans réseau, et le stub des tests, qui ne vérifiait rien, ne
+     * l'a pas vu.
+     */
+    it('donne au vrai Ziggy un identifiant à venir qu’il accepte, puis le remplace par celui que le serveur a produit', async () => {
+        const table = {
+            url: 'http://localhost',
+            port: null,
+            defaults: {},
+            routes: {
+                'api.v1.sets.update': { uri: 'api/v1/sets/{set}', methods: ['PATCH'], wheres: { set: '[1-9][0-9]*' } },
+                'api.v1.sets.destroy': {
+                    uri: 'api/v1/sets/{set}',
+                    methods: ['DELETE'],
+                    wheres: { set: '[1-9][0-9]*' },
+                },
+            },
+        }
+        const ajusterPar = (id) => routeDeZiggy('api.v1.sets.update', { set: id }, true, table)
+        const annulerPar = (id) => routeDeZiggy('api.v1.sets.destroy', { set: id }, true, table)
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+
+        // La première tentée sans réponse, la seconde rangée derrière elle : la première est retirée.
+        const retiree = await service
+            .post('/api/v1/sets', { workout_line_id: 1, is_completed: false, reps: 8 }, { ajusterPar })
+            .catch((erreur) => erreur.queueId)
+        service.mettreEnFile({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: { workout_line_id: 1, is_completed: true, reps: 5 },
+            ajusterPar,
+        })
+
+        expect(service.retirerDeLaFile(retiree, { annulerPar })).toBe(true)
+        expect(
+            JSON.parse(localStorage.getItem('offline_sync_queue')).map(({ ajusterPar: rattrapage, aAnnuler }) => [
+                rattrapage,
+                aAnnuler,
+            ]),
+        ).toEqual([
+            [`http://localhost/api/v1/sets/${A_VENIR}`, `http://localhost/api/v1/sets/${A_VENIR}`],
+            [`http://localhost/api/v1/sets/${A_VENIR}`, undefined],
+        ])
+
+        // Le réseau revient : la retirée est supprimée, l'autre revient sans sa coche et se rattrape.
+        request.mockReset()
+        request.mockImplementation(creerSousDesIdentifiants([100, 101]))
+        await service.processQueue()
+
+        expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
+            'post /api/v1/sets',
+            'delete http://localhost/api/v1/sets/100',
+            'post /api/v1/sets',
+            'patch http://localhost/api/v1/sets/101',
+        ])
+        expect(service.queue).toEqual([])
+    })
+
+    it('rattrape et annule encore une création écrite avant #2049, `__produit__` à la place de l’identifiant', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                creation('q1', {
+                    tentee: true,
+                    ajusterPar: '/api/v1/sets/__produit__',
+                    data: { workout_line_id: 1, is_completed: true, reps: 3 },
+                }),
+                creation('q2', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+            ]),
+        )
+        request.mockImplementation(creerSousDesIdentifiants([100, 101]))
+
+        const service = await chargé()
+        await service.processQueue()
+
+        expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
+            'post /api/v1/sets',
+            'patch /api/v1/sets/100',
+            'post /api/v1/sets',
+            'delete /api/v1/sets/101',
+        ])
+        expect(service.queue).toEqual([])
     })
 
     /*
@@ -2956,7 +3062,7 @@ describe('SyncService le lancement d’un modèle', () => {
             ],
         ])
         expect(d2).toMatchObject({
-            ajusterPar: '/api/v1/sets/__produit__',
+            ajusterPar: `/api/v1/sets/${A_VENIR}`,
             contexte: { workout_id: { enAttenteDe: queueId }, exercise_id: 8 },
         })
         // Rien n'est tenté : rien ne le dit.

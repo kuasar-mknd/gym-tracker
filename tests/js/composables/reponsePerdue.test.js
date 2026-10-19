@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
-import { retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
+import { A_VENIR, retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
 import {
     creerUnFauxServeur,
     fileDurable,
@@ -232,7 +232,7 @@ describe('une création dont la réponse s’est perdue', () => {
         await flushPromises()
 
         expect(fileDurable()).toEqual([
-            expect.objectContaining({ url: '/api/v1/workout-lines', aAnnuler: '/api/v1/workout-lines/__produit__' }),
+            expect.objectContaining({ url: '/api/v1/workout-lines', aAnnuler: `/api/v1/workout-lines/${A_VENIR}` }),
         ])
 
         const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)

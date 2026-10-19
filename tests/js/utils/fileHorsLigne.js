@@ -11,6 +11,15 @@ import { vi } from 'vitest'
 export const COMPTE = '1'
 
 /**
+ * Ce que l'adresse de rattrapage ou d'annulation d'une création porte à la
+ * place de l'identifiant qu'elle produira (`ID_A_VENIR` de `Utils/SyncService`).
+ * Le module ne s'importe qu'une fois le stockage rangé (`chargerSyncService`) :
+ * sa valeur est recopiée ici, et `tests/js/conventions/identifiantAVenir.test.js`
+ * vérifie que c'est la sienne.
+ */
+export const A_VENIR = '99999999999999999999'
+
+/**
  * Le moment d'une écriture mise en file il y a une heure, pour une entrée posée
  * à la main dans le stockage.
  *

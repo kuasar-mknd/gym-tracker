@@ -146,10 +146,44 @@ const MUTATIONS = ['post', 'patch', 'put', 'delete']
 const ENTETE_DU_COMPTE = 'X-Compte-De-L-Ecriture'
 
 /**
- * Ce que l'adresse d'annulation d'une création porte à la place de
- * l'identifiant qu'elle produira, et que le vidage remplace (#1960).
+ * Ce que l'adresse de rattrapage (`ajusterPar`) ou d'annulation (`aAnnuler`)
+ * d'une création porte à la place de l'identifiant qu'elle produira, et que
+ * le vidage remplace (#1960).
+ *
+ * Des chiffres, au-delà du plus grand identifiant qu'une colonne entière de
+ * MySQL range : l'adresse passe par Ziggy, qui exige depuis #2049 qu'un
+ * paramètre de modèle ait la forme d'un identifiant
+ * (`App\Support\IdentifiantsDesRoutes::MOTIF`, que la table des routes lui
+ * donne). `__produit__` y levait une erreur avant le premier envoi, et plus
+ * aucune série ne s'ajoutait, en ligne comme sans réseau. Jamais un
+ * identifiant réel : laissé tel quel par erreur, il répondrait 404.
+ * `tests/js/conventions/identifiantAVenir.test.js` le confronte au motif du
+ * serveur.
  */
-const ID_A_VENIR = '__produit__'
+export const ID_A_VENIR = '99999999999999999999'
+
+/**
+ * Ce que portaient les adresses écrites avant #2049 : une entrée gardée sur
+ * l'appareil (trente jours au plus) se rejoue encore.
+ */
+const ANCIEN_ID_A_VENIR = '__produit__'
+
+/**
+ * L'adresse de rattrapage ou d'annulation d'une création, l'identifiant
+ * qu'elle a produit à la place de celui à venir : le segment entier, jamais
+ * des chiffres pris au milieu d'un autre.
+ *
+ * @param {string} adresse
+ * @param {number|string} produit
+ * @returns {string}
+ */
+const avecLeProduit = (adresse, produit) => {
+    const identifiant = encodeURIComponent(String(produit))
+
+    return adresse.includes(ANCIEN_ID_A_VENIR)
+        ? adresse.replace(ANCIEN_ID_A_VENIR, identifiant)
+        : adresse.replace(new RegExp(`/${ID_A_VENIR}(?=[/?#]|$)`), `/${identifiant}`)
+}
 
 /** Une création, la seule écriture que rejouer peut doubler et qu'il faut savoir annuler. */
 const estUneCreation = (config) => String(config?.method ?? '').toLowerCase() === 'post'
@@ -999,7 +1033,7 @@ class SyncService {
      * la charge rejouée, saisies et coches fondues pendant l'attente comprises.
      * `ajusterPar` donne l'adresse qui modifie ce que la création aura produit,
      * d'après son identifiant : le vidage y renvoie ce que le serveur a ignoré
-     * (#1960). La file la garde sous forme d'adresse, `__produit__` à la place
+     * (#1960). La file la garde sous forme d'adresse, `ID_A_VENIR` à la place
      * de l'identifiant, pour qu'elle survive à un rechargement.
      *
      * `contexte` est ce que la page note pour montrer la création sans le
@@ -1787,7 +1821,7 @@ class SyncService {
 
         return {
             method: 'patch',
-            url: config.ajusterPar.replace(ID_A_VENIR, encodeURIComponent(String(produit.id))),
+            url: avecLeProduit(config.ajusterPar, produit.id),
             data: ecart,
             id: this.nouvelIdentifiantDEntree(),
             timestamp: new Date().toISOString(),
@@ -2220,7 +2254,7 @@ class SyncService {
                 : [
                       {
                           method: 'delete',
-                          url: config.aAnnuler.replace(ID_A_VENIR, encodeURIComponent(String(produit))),
+                          url: avecLeProduit(config.aAnnuler, produit),
                           id: this.nouvelIdentifiantDEntree(),
                           timestamp: new Date().toISOString(),
                           compte: config.compte,
