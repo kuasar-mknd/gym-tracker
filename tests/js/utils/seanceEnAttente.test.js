@@ -7,8 +7,10 @@ import {
     bibliothequeHorsLigne,
     cleDeLAdresseEnAttente,
     creationDeLaCle,
+    emporteesParLeRefus,
     estUneCreationDeSeance,
     lireLaFileDuStockage,
+    messageDuRefusDeLaSeance,
     pageDeLaSeanceEnAttente,
     seanceDeLEntree,
     seanceEnCoursAvecLaFile,
@@ -279,5 +281,34 @@ describe('ce que la coquille lit, sans la file', () => {
                 },
             }),
         ).toEqual({ exercices: [], bornes: null })
+    })
+})
+
+describe('le refus d’une séance démarrée sans réseau', () => {
+    it('compte ce qu’il emporte : ce qui la nomme, et ce qui nomme ce qu’elle emporte', () => {
+        const refus = [
+            { id: 'qS' },
+            { id: 'qL', parentRefuse: true, parent: 'qS' },
+            { id: 'qSerie', parentRefuse: true, parent: 'qL' },
+            // Un refus d'une autre séance, et un refus qui n'emporte rien.
+            { id: 'qAutre', parentRefuse: true, parent: 'qX' },
+            { id: 'qSeul' },
+        ]
+
+        expect(emporteesParLeRefus(refus, 'qS')).toBe(2)
+        expect(emporteesParLeRefus(refus, 'qSeul')).toBe(0)
+        expect(emporteesParLeRefus(null, 'qS')).toBe(0)
+    })
+
+    it('dit pourquoi, et accorde ce qu’il emporte', () => {
+        expect(messageDuRefusDeLaSeance('seance-deja-en-cours')).toBe(
+            "La séance démarrée sans réseau n'a pas été enregistrée : une autre séance était déjà en cours.",
+        )
+        expect(messageDuRefusDeLaSeance(null, 1)).toBe(
+            "La séance démarrée sans réseau n'a pas été enregistrée. 1 modification de cette séance ne partira pas.",
+        )
+        expect(messageDuRefusDeLaSeance('seance-deja-en-cours', 3)).toBe(
+            "La séance démarrée sans réseau n'a pas été enregistrée : une autre séance était déjà en cours. 3 modifications de cette séance ne partiront pas.",
+        )
     })
 })

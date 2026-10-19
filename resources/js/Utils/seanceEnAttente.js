@@ -1,6 +1,7 @@
 import { authSansBadge, champsDeLaPageQuittee } from '@/Utils/copiesServies'
 import { dateCourte } from '@/Utils/date'
 import { lireLaListe, normaliserLesIdentifiants } from '@/Utils/listePartagee'
+import { compte } from '@/Utils/nombre'
 import { COMPOSANT_DE_LA_SEANCE, PAGES_GARDEES, cleDeLaSeanceEnCours } from '@/Utils/pagesGardees'
 import { cleDeLaCreation, estUneCreationDeSeance, identifiantEnFile } from '@/Utils/seanceEtFile'
 
@@ -63,6 +64,52 @@ export const SEANCE_A_RETROUVER =
 
 /** La raison du refus d'une séance démarrée quand une autre est en cours (`UneSeanceEstDejaEnCours`). */
 export const RAISON_SEANCE_DEJA_EN_COURS = 'seance-deja-en-cours'
+
+/**
+ * Combien d'écritures le refus de la création `queueId` emporte : celles que
+ * la file a refusées faute de parent (`parentRefuse`), qui la nomment, ou
+ * nomment une écriture qu'elle a emportée (la série d'un exercice ajouté à la
+ * séance refusée).
+ *
+ * @param {Array<object>} refus les refus du compte (`SyncService.failedRequests()`)
+ * @param {string} queueId
+ * @returns {number}
+ */
+export const emporteesParLeRefus = (refus, queueId) => {
+    const emportees = new Set([queueId])
+    let trouvee = true
+
+    while (trouvee) {
+        trouvee = false
+
+        for (const refusee of Array.isArray(refus) ? refus : []) {
+            if (refusee?.parentRefuse === true && emportees.has(refusee.parent) && !emportees.has(refusee.id)) {
+                emportees.add(refusee.id)
+                trouvee = true
+            }
+        }
+    }
+
+    return emportees.size - 1
+}
+
+/**
+ * Ce que dit, une fois, le refus d'une séance démarrée sans réseau : pourquoi,
+ * et combien de ses écritures ne partiront pas avec elle.
+ *
+ * @param {string|null|undefined} raison celle que le serveur a donnée
+ * @param {number} emportees `emporteesParLeRefus`
+ * @returns {string}
+ */
+export const messageDuRefusDeLaSeance = (raison, emportees = 0) => {
+    const refus = raison === RAISON_SEANCE_DEJA_EN_COURS ? SEANCE_REFUSEE : SEANCE_NON_ENREGISTREE
+
+    if (!(emportees > 0)) {
+        return refus
+    }
+
+    return `${refus} ${compte(emportees, 'modification', 'modifications')} de cette séance ne ${emportees > 1 ? 'partiront' : 'partira'} pas.`
+}
 
 /** Le chemin de la bibliothèque d'exercices, celle que la liste blanche garde. */
 const CHEMIN_DE_LA_BIBLIOTHEQUE = PAGES_GARDEES.find((page) => page.composant === 'Exercises/Index')?.chemin ?? null

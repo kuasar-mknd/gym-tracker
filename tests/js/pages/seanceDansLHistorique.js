@@ -386,7 +386,18 @@ export const ouvrirLaListeDesSeances = async ({
     await inertia.createInertiaApp({
         resolve: (nom) => (nom === 'Workouts/Show' ? Seance : ListeDesSeances),
         setup: ({ el, App, props, plugin }) => {
-            retenir(mount(App, { props, attachTo: el, global: { plugins: [plugin], directives: { press: {} } } }))
+            retenir(
+                mount(App, {
+                    props,
+                    attachTo: el,
+                    global: {
+                        plugins: [plugin],
+                        directives: { press: {} },
+                        // Ziggy dans les gabarits, comme `ZiggyVue` le pose : celui que le test a mis en place.
+                        mocks: { route: (...parametres) => globalThis.route(...parametres) },
+                    },
+                }),
+            )
         },
     })
 

@@ -18,6 +18,7 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { useRaccourciClavier } from '@/composables/useRaccourciClavier'
 import { rapprocherLAbonnementPush } from '@/composables/useAbonnementPush'
 import { seDeconnecter } from '@/composables/useDeconnexion'
+import { useSeanceEnCoursDeLAppareil } from '@/composables/useSeanceEnCoursDeLAppareil'
 import { messageDesEcrituresEffacees, reprendreLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { messageDesEcrituresAbandonnees, reprendreLesEcrituresAbandonnees } from '@/Utils/ecrituresAbandonnees'
 import { SESSION_FINIE_DANS_UN_AUTRE_ONGLET } from '@/Utils/ecrituresEffaceesALaDeconnexion'
@@ -65,8 +66,14 @@ useRaccourciClavier(
 
 const page = usePage()
 
-const activeWorkout = computed(() => page.props.auth?.user?.active_workout)
-const isWorkoutShow = computed(() => route().current('workouts.show'))
+/*
+ * La séance en cours sur l'appareil : celle du serveur, ou celle qu'une
+ * création en file fait naître (#2049). La page de séance se reconnaît à son
+ * composant : une séance démarrée sans réseau s'ouvre à l'adresse de sa clé,
+ * que `route().current('workouts.show')` ne nomme pas.
+ */
+const { seanceEnCours: activeWorkout, ouvrir: ouvrirLaSeanceEnCours } = useSeanceEnCoursDeLAppareil({ page })
+const isWorkoutShow = computed(() => page.component === 'Workouts/Show')
 // La grande bannière n'a sa place que là où la séance est le sujet ; ailleurs, une ligne.
 const banniereCompacte = computed(() => !route().current('dashboard') && !route().current('workouts.index'))
 
@@ -350,7 +357,11 @@ onUnmounted(() => {
             </div>
 
             <div v-if="activeWorkout && !isWorkoutShow" class="mx-auto mb-6" :class="LARGEURS[largeur]">
-                <ActiveWorkoutBanner :workout="activeWorkout" :compact="banniereCompacte" />
+                <ActiveWorkoutBanner
+                    :workout="activeWorkout"
+                    :compact="banniereCompacte"
+                    @ouvrir="ouvrirLaSeanceEnCours"
+                />
             </div>
 
             <Transition

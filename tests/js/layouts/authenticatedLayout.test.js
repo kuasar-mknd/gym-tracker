@@ -71,10 +71,22 @@ const user = (overrides = {}) => ({ name: 'Samuel', unread_notifications_count: 
  */
 const mountedLayouts = []
 
-const mountLayout = ({ props = {}, slots = {}, flash = {}, auth = { user: user() }, onPage = 'dashboard' } = {}) => {
+/** Le composant qu'Inertia montre sur chaque route des tests : la page de séance se reconnaît à lui (#2049). */
+const COMPOSANTS = { 'workouts.show': 'Workouts/Show' }
+
+const mountLayout = ({
+    props = {},
+    slots = {},
+    flash = {},
+    auth = { user: user() },
+    onPage = 'dashboard',
+    url = `/${onPage}`,
+    component = COMPOSANTS[onPage] ?? 'Dashboard',
+} = {}) => {
     currentRoute = onPage
     page.props = { flash, auth }
-    page.url = `/${onPage}`
+    page.url = url
+    page.component = component
 
     const wrapper = mount(AuthenticatedLayout, {
         props,
@@ -451,6 +463,22 @@ describe('AuthenticatedLayout — the session in progress', () => {
     /** On the session's own page the banner links to where the user already is. */
     it('stays quiet on the session’s own page', () => {
         const wrapper = mountLayout({ auth: { user: user({ active_workout: active }) }, onPage: 'workouts.show' })
+
+        expect(wrapper.findComponent({ name: 'ActiveWorkoutBanner' }).exists()).toBe(false)
+    })
+
+    /**
+     * Une séance démarrée sans réseau s'ouvre à l'adresse de sa clé (#2049),
+     * que la route `workouts.show` ne nomme pas : la page se reconnaît à son
+     * composant, et le bandeau n'y mène pas là où l'on est déjà.
+     */
+    it('stays quiet on a session started without a network, at the address of its key', () => {
+        const wrapper = mountLayout({
+            auth: { user: user({ active_workout: active }) },
+            onPage: null,
+            url: '/workouts/en-attente/cle-de-la-seance',
+            component: 'Workouts/Show',
+        })
 
         expect(wrapper.findComponent({ name: 'ActiveWorkoutBanner' }).exists()).toBe(false)
     })

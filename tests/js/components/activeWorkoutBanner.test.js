@@ -158,3 +158,43 @@ describe('ActiveWorkoutBanner — horloge décalée et forme compacte', () => {
         wrapper.unmount()
     })
 })
+
+/*
+ * Une séance démarrée sans réseau, dont la création attend la file (#2049) :
+ * le serveur ne connaît pas encore son adresse. Le bandeau la nomme par celle
+ * de sa clé, et l'ouvre côté client : une visite d'Inertia vers
+ * `/workouts/temp-q…` partirait vers un serveur qui ne la servirait pas.
+ */
+describe('ActiveWorkoutBanner — une séance démarrée sans réseau', () => {
+    const enAttente = {
+        id: 'temp-q1',
+        enAttenteDe: '1',
+        idempotency_key: 'cle-de-la-seance',
+        started_at: startedSecondsAgo(60),
+    }
+
+    it.each([false, true])('mène à l’adresse de sa clé et l’ouvre côté client (compact : %s)', async (compact) => {
+        const wrapper = mount(ActiveWorkoutBanner, {
+            props: { workout: { name: 'Séance', ...enAttente }, compact },
+            global: { directives: { press: {} }, mocks: { route: globalThis.route } },
+        })
+        const lien = wrapper.get('[dusk="active-workout-banner"]')
+        const clic = new MouseEvent('click', { bubbles: true, cancelable: true })
+
+        expect(lien.element.tagName).toBe('A')
+        expect(lien.attributes('href')).toBe('/workouts/en-attente/cle-de-la-seance')
+
+        lien.element.dispatchEvent(clic)
+
+        expect(clic.defaultPrevented).toBe(true)
+        expect(wrapper.emitted('ouvrir')).toEqual([[expect.objectContaining({ enAttenteDe: '1' })]])
+    })
+
+    it('laisse une séance du serveur à son lien', () => {
+        const wrapper = mountBanner({ id: 42, started_at: startedSecondsAgo(60) })
+
+        wrapper.get('a').trigger('click')
+
+        expect(wrapper.emitted('ouvrir')).toBeUndefined()
+    })
+})

@@ -1,5 +1,6 @@
 import { getCurrentInstance, onMounted, onUnmounted, ref } from 'vue'
 import SyncService from '@/Utils/SyncService'
+import { estUneCreationDeSeance } from '@/Utils/seanceEtFile'
 import { triggerHaptic } from '@/composables/useHaptics'
 
 /**
@@ -119,8 +120,18 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
      * Une écriture refusée par le serveur : une série existante se marque, une
      * création (série ou ligne) n'a pas de rangée à marquer, alors le message
      * porte l'identification à sa place.
+     *
+     * Une écriture refusée faute de parent (`parentRefuse`) ne dit rien
+     * d'elle-même (#2049) : la séance démarrée sans réseau que le serveur a
+     * refusée l'emporte, et le layout annonce ce refus une fois, avec le
+     * nombre d'écritures emportées (`useSeanceEnCoursDeLAppareil`). Un message
+     * par série disait le contraire de ce qui s'était passé.
      */
     const handleSyncFailure = (event) => {
+        if (event.detail?.parentRefuse === true) {
+            return
+        }
+
         const url = event.detail?.url ?? ''
         const setId = /\/sets\/(\d+)/.exec(url)?.[1]
 
@@ -135,9 +146,22 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
         }
     }
 
-    /** Annonce une fois ce qui a été refusé pendant que la page était absente. */
+    /**
+     * Ce que la page dit elle-même des refus : pas celui d'une séance démarrée
+     * sans réseau, ni ce qu'il emporte, que le layout annonce (#2049).
+     *
+     * @param {object} refus
+     */
+    const estPourLaPage = (refus) => refus?.parentRefuse !== true && !estUneCreationDeSeance(refus)
+
+    /**
+     * Annonce une fois ce qui a été refusé pendant que la page était absente,
+     * puis l'oublie, et cela seulement : la page effaçait tous les refus du
+     * compte, et celui d'une séance démarrée sans réseau disparaissait avant
+     * que le layout l'ait dit (#2049).
+     */
     const markQueuedFailuresOnMount = () => {
-        const failures = SyncService.failedRequests()
+        const failures = SyncService.failedRequests().filter(estPourLaPage)
 
         if (failures.length === 0) {
             return
@@ -145,7 +169,7 @@ export const useRapportDeSynchronisation = ({ page, exercices, lignes }) => {
 
         failures.forEach((failure) => handleSyncFailure({ detail: { url: failure.url, data: failure.data } }))
 
-        SyncService.clearFailedRequests()
+        SyncService.oublierDesRefus(failures.map((failure) => failure.id))
     }
 
     /*

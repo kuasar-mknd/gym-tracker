@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const sync = vi.hoisted(() => ({ failedRequests: vi.fn(() => []), clearFailedRequests: vi.fn() }))
+const sync = vi.hoisted(() => ({
+    failedRequests: vi.fn(() => []),
+    clearFailedRequests: vi.fn(),
+    oublierDesRefus: vi.fn(),
+}))
 const haptics = vi.hoisted(() => ({ triggerHaptic: vi.fn() }))
 
 vi.mock('@/Utils/SyncService', () => ({ default: sync }))
@@ -142,6 +146,23 @@ describe('un refus du serveur', () => {
         expect(editError.value).toBeNull()
         expect(unsyncedSetIds.value.size).toBe(0)
     })
+
+    /**
+     * La séance démarrée sans réseau que le serveur a refusée emporte ses
+     * écritures (#2049) : le layout dit ce refus, une fois ; la série refusée
+     * faute de parent ne dit rien d'elle-même.
+     */
+    it('ne dit rien d’une écriture refusée avec la séance qui l’emporte', () => {
+        const { editError, unsyncedSetIds, handleSyncFailure } = monter()
+
+        handleSyncFailure({
+            detail: { url: '/api/v1/sets', data: { workout_line_id: 7 }, parentRefuse: true, parent: 'q1' },
+        })
+        handleSyncFailure({ detail: { url: '/api/v1/sets/9', parentRefuse: true, parent: 'q1' } })
+
+        expect(editError.value).toBeNull()
+        expect(unsyncedSetIds.value.size).toBe(0)
+    })
 })
 
 describe('les refus survenus pendant l’absence de la page', () => {
@@ -151,12 +172,27 @@ describe('les refus survenus pendant l’absence de la page', () => {
         markQueuedFailuresOnMount()
 
         expect(sync.clearFailedRequests).not.toHaveBeenCalled()
+        expect(sync.oublierDesRefus).not.toHaveBeenCalled()
     })
 
-    it('les annonce une fois, puis vide le seau', () => {
+    /**
+     * Elle vidait tout le seau du compte (#2049) : le refus d'une séance
+     * démarrée sans réseau, que le layout annonce, disparaissait avec. Elle
+     * n'oublie plus que ce qu'elle a dit.
+     */
+    it('les annonce une fois, puis oublie ceux-là seulement', () => {
         sync.failedRequests.mockReturnValue([
-            { url: '/api/v1/sets/9', data: null },
-            { url: '/api/v1/workout-lines', data: { exercise_id: 3 } },
+            { id: 'q9', method: 'patch', url: '/api/v1/sets/9', data: null },
+            { id: 'q3', method: 'post', url: '/api/v1/workout-lines', data: { exercise_id: 3 } },
+            { id: 'qS', method: 'post', url: '/api/v1/workouts', data: { started_at: '2026-10-19T08:15:00.000Z' } },
+            {
+                id: 'qL',
+                method: 'post',
+                url: '/api/v1/workout-lines',
+                data: { exercise_id: 3, workout_id: { enAttenteDe: 'qS' } },
+                parentRefuse: true,
+                parent: 'qS',
+            },
         ])
         const { unsyncedSetIds, editError, markQueuedFailuresOnMount } = monter()
 
@@ -164,6 +200,8 @@ describe('les refus survenus pendant l’absence de la page', () => {
 
         expect(unsyncedSetIds.value.has('9')).toBe(true)
         expect(editError.value).toContain('Développé couché')
-        expect(sync.clearFailedRequests).toHaveBeenCalledTimes(1)
+        expect(sync.oublierDesRefus).toHaveBeenCalledTimes(1)
+        expect(sync.oublierDesRefus).toHaveBeenCalledWith(['q9', 'q3'])
+        expect(sync.clearFailedRequests).not.toHaveBeenCalled()
     })
 })

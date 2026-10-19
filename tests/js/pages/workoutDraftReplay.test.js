@@ -5,6 +5,7 @@ const patch = vi.fn()
 
 const failedRequests = vi.fn(() => [])
 const clearFailedRequests = vi.fn()
+const oublierDesRefus = vi.fn()
 
 vi.mock('@/Utils/SyncService', () => ({
     default: {
@@ -17,6 +18,7 @@ vi.mock('@/Utils/SyncService', () => ({
         rejeuxDepuisLaDerniereVisite: 0,
         failedRequests: () => failedRequests(),
         clearFailedRequests: () => clearFailedRequests(),
+        oublierDesRefus: (...queueIds) => oublierDesRefus(...queueIds),
     },
 }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))
@@ -103,6 +105,7 @@ beforeEach(() => {
     localStorage.clear()
     patch.mockReset()
     clearFailedRequests.mockReset()
+    oublierDesRefus.mockReset()
     failedRequests.mockReturnValue([])
 })
 
@@ -195,13 +198,21 @@ describe('Workouts/Show — offline draft replay', () => {
      * server turned down therefore announced itself on every visit to the
      * session, for ever, with no way to acknowledge it — which is what it was
      * reported as, a banner that "appears by default when you open a session".
+     *
+     * Ceux-là seulement (#2049) : vider tout le seau effaçait le refus d'une
+     * séance démarrée sans réseau, que le layout n'avait pas encore dit.
      */
     it('acknowledges the stored refusals it has just shown', async () => {
-        failedRequests.mockReturnValue([{ url: '/api/v1/sets', data: { workout_line_id: 10 } }])
+        failedRequests.mockReturnValue([
+            { id: 'q1', method: 'post', url: '/api/v1/sets', data: { workout_line_id: 10 } },
+            { id: 'qS', method: 'post', url: '/api/v1/workouts', data: {} },
+        ])
 
         const wrapper = await mountPage()
 
-        expect(clearFailedRequests).toHaveBeenCalledTimes(1)
+        expect(oublierDesRefus).toHaveBeenCalledTimes(1)
+        expect(oublierDesRefus).toHaveBeenCalledWith(['q1'])
+        expect(clearFailedRequests).not.toHaveBeenCalled()
 
         wrapper.unmount()
     })
@@ -212,6 +223,7 @@ describe('Workouts/Show — offline draft replay', () => {
         const wrapper = await mountPage()
 
         expect(clearFailedRequests).not.toHaveBeenCalled()
+        expect(oublierDesRefus).not.toHaveBeenCalled()
         expect(wrapper.find('[dusk="set-edit-error"]').exists()).toBe(false)
 
         wrapper.unmount()
