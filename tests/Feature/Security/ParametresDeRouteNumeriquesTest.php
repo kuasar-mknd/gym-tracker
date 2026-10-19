@@ -11,6 +11,7 @@ use App\Support\IdentifiantsDesRoutes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Routing\Route as RouteDeLApplication;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 
@@ -40,7 +41,9 @@ it('répond 404 à une adresse dont l’identifiant n’est pas un nombre', func
     $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
     $serie = Set::factory()->create(['workout_line_id' => WorkoutLine::factory()->create(['workout_id' => $seance->id])->id, 'reps' => 5]);
     $modele = WorkoutTemplate::factory()->create(['user_id' => $compte->id]);
-    [$methode, $chemin] = $adresse($seance, $serie, $modele);
+    /** @var array{0: 'get'|'patchJson', 1: string} $requete */
+    $requete = $adresse($seance, $serie, $modele);
+    [$methode, $chemin] = $requete;
 
     $reponse = $methode === 'get'
         ? actingAs($compte)->get($chemin)
@@ -69,15 +72,15 @@ it('pose le motif numérique sur chaque paramètre de route lié à un modèle',
         }
 
         foreach ($route->signatureParameters() as $parametre) {
+            assert($parametre instanceof ReflectionParameter);
             $type = $parametre->getType();
 
             if (! $type instanceof ReflectionNamedType || $type->isBuiltin() || ! is_a($type->getName(), Model::class, true)) {
                 continue;
             }
 
-            $nom = collect($route->parameterNames())->first(
-                fn (string $nomDansLAdresse): bool => in_array($nomDansLAdresse, [$parametre->getName(), \Illuminate\Support\Str::snake($parametre->getName())], true),
-            );
+            $noms = array_values(array_filter($route->parameterNames(), is_string(...)));
+            $nom = array_find($noms, fn (string $nomDansLAdresse): bool => in_array($nomDansLAdresse, [$parametre->getName(), Str::snake($parametre->getName())], true));
 
             if ($nom === null) {
                 continue;

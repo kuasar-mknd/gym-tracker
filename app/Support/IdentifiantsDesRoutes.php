@@ -66,8 +66,10 @@ final class IdentifiantsDesRoutes
     public static function poserSur(iterable $routes): void
     {
         foreach ($routes as $route) {
-            foreach (array_intersect($route->parameterNames(), self::PARAMETRES_DE_MODELE) as $parametre) {
-                $route->where($parametre, self::MOTIF);
+            foreach ($route->parameterNames() as $parametre) {
+                if (is_string($parametre) && in_array($parametre, self::PARAMETRES_DE_MODELE, true)) {
+                    $route->where($parametre, self::MOTIF);
+                }
             }
         }
     }
