@@ -2180,8 +2180,10 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         expect(lAutreOnglet.queue).toEqual([])
         expect(lAutreOnglet.compte).toBeNull()
 
-        // Sa prochaine écriture de la file ne remet rien du compte parti dans le stockage.
-        lAutreOnglet.saveQueue()
+        // Sa prochaine écriture de la file, pour un autre compte, ne remet rien du compte parti dans le stockage.
+        lAutreOnglet.addToQueue({ method: 'patch', url: '/api/v1/sets/6', data: { reps: 9 } }, '2')
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((e) => e.compte)).toEqual(['2'])
 
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
     })
@@ -2453,8 +2455,7 @@ describe('SyncService la note des écritures de séance acceptées', () => {
 
         request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
         await expect(service.patch('/api/v1/sets/3', { weight: 85 })).rejects.toMatchObject({ isOffline: true })
-        service.queue = []
-        service.saveQueue()
+        service.changerLaFile(() => [])
 
         request.mockRejectedValueOnce({ response: { status: 422, data: {} } })
         await expect(service.patch('/api/v1/sets/3', { weight: 9999 })).rejects.toBeTruthy()

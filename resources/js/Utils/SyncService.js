@@ -1,3 +1,4 @@
+import { surUneReponseDuServeur } from '@/composables/useEtatDuReseau'
 import { http } from '@/Utils/http'
 import {
     DUREE_EN_FILE_AU_PLUS_MS,
@@ -7,11 +8,34 @@ import {
 } from '@/Utils/ecrituresAbandonnees'
 import { noterLesEcrituresEffacees } from '@/Utils/ecrituresEffacees'
 import { noterUneEcritureAcceptee } from '@/Utils/ecrituresAcceptees'
+import { creerUneListePartagee } from '@/Utils/listePartagee'
 import { estUneEcritureDeLaSeance } from '@/Utils/seanceEtFile'
 import { classifySyncError, estPourUnAutreCompte, SYNC_AUTH, SYNC_OFFLINE, SYNC_TRANSIENT } from '@/Utils/syncErrors'
 
 const QUEUE_KEY = 'offline_sync_queue'
 const FAILED_KEY = 'offline_sync_failed'
+
+/**
+ * Le verrou que tient l'onglet qui vide la file (Web Locks, #2049) : un seul
+ * vidage à la fois sur l'appareil. Deux onglets qui vidaient la même file
+ * envoyaient deux fois chaque écriture, et la suppression rejouée en second
+ * revenait en 404, annoncée comme refusée.
+ */
+const VERROU_DU_VIDAGE = 'gym-tracker:vidage-de-la-file'
+
+/**
+ * Le canal par lequel l'onglet qui vide la file dit aux autres ce que sont
+ * devenues leurs écritures (#2049) : rejouée, refusée ou retirée. Un autre
+ * onglet attend peut-être ce que l'une d'elles produit, une ligne dont ses
+ * séries dépendent.
+ */
+const CANAL_DE_LA_FILE = 'gym-tracker:file-hors-ligne'
+
+/** Les annonces de la file que le canal porte aux autres onglets. */
+const ANNONCES_RELAYEES = new Set(['sync:replayed', 'sync:failed', 'sync:retired'])
+
+/** Ce que dit le canal quand l'onglet qui tenait le verrou a vidé la file du compte. */
+const FILE_VIDEE = 'file-videe'
 
 /**
  * La clé par laquelle un onglet dit aux autres qu'un compte a quitté
@@ -128,66 +152,10 @@ const ecartAvec = (envoye, garde) =>
           )
 
 /**
- * Un stockage corrompu — une écriture coupée par une suspension iOS, un quota
- * atteint à mi-chemin — faisait lever JSON.parse au chargement du module, et
- * c'est toute la page qui ne démarrait plus. Une liste illisible vaut une
- * liste vide : on perd au pire ce qui était déjà perdu.
- */
-const lireLaListe = (cle) => {
-    try {
-        const valeur = JSON.parse(localStorage.getItem(cle) || '[]')
-
-        return Array.isArray(valeur) ? valeur : []
-    } catch {
-        return []
-    }
-}
-
-/**
- * Les identifiants des entrées que le stockage garde encore, file et refus
- * ensemble, ou null quand il ne se lit pas.
- *
- * @returns {Set<string>|null}
- */
-const identifiantsStockes = () => {
-    try {
-        const listes = [QUEUE_KEY, FAILED_KEY].map((cle) => JSON.parse(localStorage.getItem(cle) || '[]'))
-
-        return new Set(listes.flatMap((liste) => (Array.isArray(liste) ? liste.map((entree) => entree?.id) : [])))
-    } catch {
-        return null
-    }
-}
-
-/**
  * L'identifiant d'un compte tel que la file le note : une chaîne, ou null quand
  * personne n'est connecté. `42` et `'42'` désignent le même compte.
  */
 const normaliserLeCompte = (id) => (id === undefined || id === null || id === '' ? null : String(id))
-
-/**
- * Réécrit une liste du stockage sans les entrées d'un compte. La liste du
- * stockage, et non la copie en mémoire : un autre onglet a pu y mettre des
- * écritures de ce compte que cet onglet n'a jamais vues (#2050).
- *
- * @param {string} cle
- * @param {string} compte
- */
-const oublierDansLeStockage = (cle, compte) => {
-    const restantes = lireLaListe(cle).filter((entree) => normaliserLeCompte(entree?.compte) !== compte)
-
-    try {
-        if (restantes.length === 0) {
-            localStorage.removeItem(cle)
-
-            return
-        }
-
-        localStorage.setItem(cle, JSON.stringify(restantes))
-    } catch {
-        // Stockage refusé : la mémoire est déjà oubliée, la prochaine écriture de la file réessaie.
-    }
-}
 
 /**
  * Depuis quand une entrée attend, d'après le moment où elle a été faite.
@@ -242,6 +210,64 @@ const filesReferencees = (data) =>
               .map(fileReferencee)
               .filter((id) => id !== null)
         : []
+
+/**
+ * L'entrée avec, à la place de chaque référence à une écriture dont le
+ * produit est connu, l'identifiant qu'elle a produit. La même entrée quand
+ * elle n'en attend aucune.
+ *
+ * @param {Object} entree
+ * @param {Map<string, number|string>} produits par entrée de file
+ * @returns {Object}
+ */
+const avecLesProduits = (entree, produits) => {
+    if (!filesReferencees(entree?.data).some((parent) => produits.has(parent))) {
+        return entree
+    }
+
+    return {
+        ...entree,
+        data: Object.fromEntries(
+            Object.entries(entree.data).map(([champ, valeur]) => {
+                const parent = fileReferencee(valeur)
+
+                return [champ, parent !== null && produits.has(parent) ? produits.get(parent) : valeur]
+            }),
+        ),
+    }
+}
+
+/**
+ * Les entrées, celles qui ne disent pas lisiblement quand elles ont été faites
+ * datées de maintenant. La même liste quand toutes le disent.
+ *
+ * @param {Array<Object>} entrees
+ * @returns {Array<Object>}
+ */
+const dateesDeMaintenant = (entrees) => {
+    if (!entrees.some((entree) => Number.isNaN(Date.parse(entree.timestamp)))) {
+        return entrees
+    }
+
+    const maintenant = new Date().toISOString()
+
+    return entrees.map((entree) =>
+        Number.isNaN(Date.parse(entree.timestamp)) ? { ...entree, timestamp: maintenant } : entree,
+    )
+}
+
+/** Ouvre le canal de la file, ou null sans `BroadcastChannel` (ou s'il refuse de s'ouvrir). */
+const ouvrirLeCanal = () => {
+    if (typeof globalThis.BroadcastChannel !== 'function') {
+        return null
+    }
+
+    try {
+        return new globalThis.BroadcastChannel(CANAL_DE_LA_FILE)
+    } catch {
+        return null
+    }
+}
 
 /**
  * Ce que le serveur demande d'attendre, d'après `Retry-After` : un nombre de
@@ -306,41 +332,68 @@ class SyncService {
          */
         this.compte = lireLeCompteDeLaPage()
 
-        const file = lireLaListe(QUEUE_KEY)
-        const refusees = lireLaListe(FAILED_KEY)
-
-        this.queue = file.filter(aUnCompte)
-        this.failed = refusees.filter(aUnCompte)
-
-        /*
-         * Une entrée qui ne dit pas quand elle a été faite (un stockage abîmé)
-         * prend la date de ce chargement : la durée de trente jours compte
-         * alors à partir d'aujourd'hui, au lieu de ne jamais la borner ou de
-         * l'abandonner sans qu'elle ait attendu (#2050).
+        /**
+         * La file et les refus, que les onglets de l'appareil se partagent
+         * (#2049) : le stockage fait foi, chaque changement le relit et s'y
+         * applique par entrée (`Utils/listePartagee`). `queue` et `failed`
+         * n'en sont que la copie de cet onglet, pour la lire : chaque
+         * changement la remplace, et l'évènement `storage` la relit quand un
+         * autre onglet écrit. L'onglet gardait sa copie lue au chargement, et
+         * la réécrivait entière : deux onglets ouverts s'effaçaient leurs
+         * écritures en attente.
          */
-        const fileDatee = this.daterLesEntreesSansDate(this.queue)
-        const refusDates = this.daterLesEntreesSansDate(this.failed)
+        this.fileDuStockage = creerUneListePartagee(QUEUE_KEY)
+        this.refusDuStockage = creerUneListePartagee(FAILED_KEY, { retirerSiVide: true })
+        this.queue = []
+        this.failed = []
 
-        if (this.queue.length !== file.length || fileDatee) {
-            this.saveQueue()
-        }
-
-        if (this.failed.length !== refusees.length || refusDates) {
-            this.saveFailed()
-        }
-
-        /*
-         * Effacées sans être envoyées : l'écran le dit, une fois, et seulement
-         * combien (`Utils/ecrituresEffacees`). Elles disparaissaient sans un
-         * mot, alors que la version précédente les aurait rejouées.
+        /**
+         * Ce que l'onglet qui vide la file annonce aux autres (#2049) : ce
+         * que sont devenues leurs écritures, et la file vidée.
+         *
+         * @type {BroadcastChannel|null}
          */
-        noterLesEcrituresEffacees(file.length - this.queue.length + (refusees.length - this.failed.length))
+        this.canal = ouvrirLeCanal()
+        this.canal?.addEventListener('message', (message) => this.recevoir(message.data))
 
         /** La relance programmée après un échec passager, s'il y en a une. */
         this.relance = null
 
         /** L'entrée que le vidage est en train d'envoyer, s'il y en a une. */
         this.enVol = null
+
+        /** Combien de vidages sont demandés et pas encore finis, celui qui tourne compris. */
+        this.vidagesEnCours = 0
+
+        /** La relance qu'une réponse du serveur a demandée, pas encore partie (`relancerLaFile`). */
+        this.relanceSurReponse = null
+
+        /*
+         * Une entrée qui ne dit pas à qui elle appartient (écrite avant #1964)
+         * s'efface ; une entrée qui ne dit pas quand elle a été faite (un
+         * stockage abîmé) prend la date de ce chargement : la durée de trente
+         * jours compte alors à partir d'aujourd'hui, au lieu de ne jamais la
+         * borner ou de l'abandonner sans qu'elle ait attendu (#2050).
+         */
+        let effacees = 0
+        const gardees = (entrees) => {
+            const avecUnCompte = entrees.filter(aUnCompte)
+            const datees = dateesDeMaintenant(avecUnCompte)
+
+            effacees += entrees.length - avecUnCompte.length
+
+            return datees === avecUnCompte && avecUnCompte.length === entrees.length ? entrees : datees
+        }
+
+        this.changerLaFile(gardees)
+        this.changerLesRefus(gardees)
+
+        /*
+         * Effacées sans être envoyées : l'écran le dit, une fois, et seulement
+         * combien (`Utils/ecrituresEffacees`). Elles disparaissaient sans un
+         * mot, alors que la version précédente les aurait rejouées.
+         */
+        noterLesEcrituresEffacees(effacees)
 
         /**
          * Ce que chaque écriture rejouée a produit, pour la durée de la page :
@@ -419,6 +472,19 @@ class SyncService {
          * `sync:compte-parti` le dit à l'écran.
          */
         window.addEventListener('storage', (evenement) => {
+            /*
+             * Un autre onglet a changé la file ou les refus (#2049) : la copie
+             * de cet onglet se relit. Une clé nulle dit que le stockage a été
+             * vidé d'un coup.
+             */
+            if (evenement.key === QUEUE_KEY || evenement.key === null) {
+                this.relireLaFile()
+            }
+
+            if (evenement.key === FAILED_KEY || evenement.key === null) {
+                this.relireLesRefus()
+            }
+
             if (evenement.key !== CLEF_DU_COMPTE_OUBLIE || evenement.newValue === null) {
                 return
             }
@@ -470,7 +536,200 @@ class SyncService {
             }
         })
 
+        /**
+         * Toute réponse réussie du serveur relance la file (#2049) : une
+         * visite d'Inertia, une requête de `http()`, la sonde que la page
+         * demande tant que le serveur ne répondait pas (`useEtatDuReseau`).
+         * La file ne repartait qu'avec `online`, le retour au premier plan et
+         * une visite : le réseau revenu sans un geste, la sonde le voyait, et
+         * les écritures en attente restaient en file.
+         */
+        surUneReponseDuServeur(() => this.relancerLaFile())
+
         this.processQueue()
+    }
+
+    /**
+     * Relit la copie de la file que garde cet onglet : le stockage, et ce que
+     * l'onglet n'a pas pu y écrire.
+     */
+    relireLaFile() {
+        this.queue = this.fileDuStockage.lire().filter(aUnCompte)
+    }
+
+    /** Relit la copie des refus que garde cet onglet. */
+    relireLesRefus() {
+        this.failed = this.refusDuStockage.lire().filter(aUnCompte)
+    }
+
+    /**
+     * Change la file d'après le stockage, qui fait foi (#2049) : la
+     * transformation reçoit la liste relue et rend celle à écrire, la même
+     * quand elle ne change rien. Le stockage refuse (quota atteint) : l'onglet
+     * garde ce qu'il voulait, que ses lectures suivantes superposent au
+     * stockage, et `sync:storage-full` le dit, pour que la page prévienne que
+     * ce qui n'est pas encore parti ne survivra pas à un rechargement.
+     *
+     * @param {(file: Array<Object>) => Array<Object>} transformation
+     * @param {{retirerSiVide?: boolean}} options
+     * @returns {Array<Object>} la copie de l'onglet, changée
+     */
+    changerLaFile(transformation, options) {
+        const { liste, ecrite } = this.fileDuStockage.changer(transformation, options)
+
+        this.queue = liste.filter(aUnCompte)
+
+        if (!ecrite) {
+            window.dispatchEvent(new CustomEvent('sync:storage-full', { detail: { pending: this.enAttente() } }))
+        }
+
+        return this.queue
+    }
+
+    /**
+     * Change les refus d'après le stockage, comme `changerLaFile`. Perdre la
+     * trace d'un refus est grave ; laisser un stockage plein arrêter le
+     * vidage, et le reste de la file avec lui, l'est plus : un refus que le
+     * stockage n'a pas pris reste à l'onglet, sans rien lever.
+     *
+     * @param {(refus: Array<Object>) => Array<Object>} transformation
+     */
+    changerLesRefus(transformation) {
+        this.failed = this.refusDuStockage.changer(transformation).liste.filter(aUnCompte)
+    }
+
+    /**
+     * Change une entrée de la file, par son identifiant, telle que le stockage
+     * la garde : un autre onglet a pu la changer depuis que cet onglet l'a lue.
+     *
+     * @param {string} queueId
+     * @param {(entree: Object) => Object} changement
+     * @returns {Object|undefined} l'entrée changée, ou undefined quand la file ne l'a plus
+     */
+    changerLEntree(queueId, changement) {
+        let changee
+
+        this.changerLaFile((file) =>
+            file.map((entree) => {
+                if (entree?.id !== queueId) {
+                    return entree
+                }
+
+                changee = changement(entree)
+
+                return changee
+            }),
+        )
+
+        return changee
+    }
+
+    /** L'entrée de la file que le stockage garde sous cet identifiant, ou undefined. */
+    entreeStockee(queueId) {
+        return this.fileDuStockage.lire().find((entree) => entree?.id === queueId)
+    }
+
+    /**
+     * Dit à l'écran de cet onglet, et aux autres onglets par le canal (#2049),
+     * ce qu'est devenue une écriture de la file : rejouée, refusée ou retirée.
+     *
+     * @param {string} evenement `sync:replayed`, `sync:failed` ou `sync:retired`
+     * @param {Object} detail
+     * @param {string|null} compte le compte de l'écriture
+     */
+    annoncer(evenement, detail, compte) {
+        window.dispatchEvent(new CustomEvent(evenement, { detail }))
+        this.publier({ type: 'annonce', evenement, detail, compte: normaliserLeCompte(compte) })
+    }
+
+    /** Poste un message aux autres onglets ; un canal fermé ou absent ne dit rien. */
+    publier(message) {
+        try {
+            this.canal?.postMessage(message)
+        } catch {
+            // Le canal fermé : les autres onglets relisent la file à l'évènement `storage`.
+        }
+    }
+
+    /**
+     * Ce qu'un autre onglet annonce par le canal (#2049).
+     *
+     * Une annonce d'une écriture de SON compte : l'onglet relit sa copie,
+     * note ce que l'écriture a produit (une écriture qu'il met ensuite en
+     * file sous `{ enAttenteDe }` y trouve l'identifiant réel, voir
+     * `mettreEnFile`), compte le rejeu pour recharger la séance
+     * (`rejeuxDepuisLaDerniereVisite`), puis la réémet à son écran, marquée
+     * `relaye` : l'écran qui attend cette écriture (`Utils/attentesDeRejeu`)
+     * l'apprend comme si cet onglet l'avait rejouée. La file vidée : l'onglet
+     * repart s'il lui reste des écritures, que le verrou l'avait empêché de
+     * vider.
+     *
+     * @param {unknown} message
+     */
+    recevoir(message) {
+        if (message?.type === FILE_VIDEE) {
+            this.relancerLaFile()
+
+            return
+        }
+
+        if (message?.type !== 'annonce' || !ANNONCES_RELAYEES.has(message.evenement)) {
+            return
+        }
+
+        this.relireLaFile()
+        this.relireLesRefus()
+
+        const compte = normaliserLeCompte(message.compte)
+
+        if (compte === null || compte !== this.compte) {
+            return
+        }
+
+        const detail = message.detail !== null && typeof message.detail === 'object' ? message.detail : {}
+
+        if (message.evenement === 'sync:replayed') {
+            if (typeof detail.queueId === 'string' && detail.data?.id !== undefined && detail.data?.id !== null) {
+                this.produits.set(detail.queueId, detail.data.id)
+            }
+
+            this.rejeuxDepuisLaDerniereVisite += 1
+        }
+
+        window.dispatchEvent(new CustomEvent(message.evenement, { detail: { ...detail, relaye: true } }))
+    }
+
+    /**
+     * Relance la file une tâche plus tard (#2049), après une réponse du
+     * serveur ou l'annonce d'un autre onglet qui a vidé la file : seulement
+     * s'il reste une écriture du compte en attente, qu'aucun vidage ne tourne
+     * ni n'attend son tour (les réponses du vidage lui-même ne relancent rien)
+     * et que la tête de la file n'attend pas l'heure de son prochain essai,
+     * qu'une erreur passagère a fixée et dont la relance est déjà programmée
+     * (#1963). Une seule relance attend à la fois.
+     */
+    relancerLaFile() {
+        if (this.relanceSurReponse !== null) {
+            return
+        }
+
+        this.relanceSurReponse = setTimeout(() => {
+            this.relanceSurReponse = null
+
+            if (this.vidagesEnCours > 0 || this.enVol !== null) {
+                return
+            }
+
+            this.relireLaFile()
+
+            const tete = this.compte === null ? undefined : this.queue.find((entree) => entree.compte === this.compte)
+
+            if (tete === undefined || (tete.prochainEssai ?? 0) > Date.now()) {
+                return
+            }
+
+            this.processQueue()
+        }, 0)
     }
 
     /**
@@ -741,15 +1000,44 @@ class SyncService {
      *   what this write eventually creates can recognise it when it goes out.
      */
     addToQueue(config, compte = this.compte, notes = {}) {
+        return this.ajouterALaFile(config, compte, notes)
+    }
+
+    /**
+     * Ajoute l'écriture au bout de la file que garde le stockage, après celles
+     * que les autres onglets y ont mises (#2049).
+     *
+     * @param {Object} config
+     * @param {string|null} compte
+     * @param {Object} notes voir `addToQueue`
+     * @param {Array<string>} attendues les écritures dont elle dépend et dont
+     *   le produit n'est pas connu : chacune doit attendre encore dans la file,
+     *   relue, sans quoi rien n'entre
+     * @returns {string|null}
+     */
+    ajouterALaFile(config, compte, notes, attendues = []) {
         // Only queue mutations (POST, PATCH, PUT, DELETE)
         if (!this.isMutation(config) || compte === null) {
             return null
         }
 
-        const id = this.nouvelIdentifiantDEntree()
+        let id = null
 
-        this.queue.push({ ...config, ...notes, id, timestamp: new Date().toISOString(), compte })
-        this.saveQueue()
+        this.changerLaFile((file) => {
+            const attendentEncore = attendues.every((parent) =>
+                file.some(
+                    (entree) => entree.id === parent && entree.compte === compte && entree.aAnnuler === undefined,
+                ),
+            )
+
+            if (!attendentEncore) {
+                return file
+            }
+
+            id = this.nouvelIdentifiantDEntree()
+
+            return [...file, { ...config, ...notes, id, timestamp: new Date().toISOString(), compte }]
+        })
 
         return id
     }
@@ -768,64 +1056,39 @@ class SyncService {
      *
      * @param {Object} config la requête, au format de `Utils/http`, avec
      *   `ajusterPar` et `contexte` pour une création (voir `notesDeCreation`)
+     * Ce que la dépendance a produit vient de ce que cet onglet a vu rejouer,
+     * ou de l'annonce d'un autre onglet qui l'a rejouée (#2049, `recevoir`) ;
+     * sinon, elle doit attendre encore dans la file telle que le stockage la
+     * garde.
+     *
      * @returns {string|null} l'entrée créée, ou null quand rien n'entre : pas de
      *   compte connecté, ou une écriture dont elle dépend est sortie de la file
      *   sans rien produire (refusée, retirée).
      */
     mettreEnFile(config) {
         const { ajusterPar, contexte, ...requete } = config
-        let data = requete.data
+        const avecLesConnus = avecLesProduits(requete, this.produits)
 
-        for (const [champ, valeur] of Object.entries(data ?? {})) {
-            const parent = fileReferencee(valeur)
-
-            if (parent === null) {
-                continue
-            }
-
-            if (this.produits.has(parent)) {
-                data = { ...data, [champ]: this.produits.get(parent) }
-
-                continue
-            }
-
-            // Retirée, ou à annuler : elle ne produira rien dont une autre puisse dépendre.
-            if (
-                !this.queue.some(
-                    (entree) => entree.id === parent && entree.compte === this.compte && entree.aAnnuler === undefined,
-                )
-            ) {
-                return null
-            }
-        }
-
-        return this.addToQueue(
-            this.stampIdempotency({ ...requete, data }),
+        // Retirée, ou à annuler : elle ne produira rien dont une autre puisse dépendre.
+        return this.ajouterALaFile(
+            this.stampIdempotency(avecLesConnus),
             this.compte,
             this.notesDeCreation(requete, { ajusterPar, contexte }),
+            filesReferencees(avecLesConnus.data),
         )
     }
 
     /**
-     * Retient ce qu'une écriture a produit, et le substitue dans les écritures
-     * en file qui l'attendaient. La file est réécrite juste après, d'un seul
-     * coup avec le retrait de l'écriture rejouée.
+     * Retient ce qu'une écriture a produit : une écriture qui en dépend, mise
+     * en file plus tard, y trouve l'identifiant réel (`mettreEnFile`). Celles
+     * qui l'attendent déjà dans la file le reçoivent dans la même écriture de
+     * la file que son retrait (`remplacerLEntree`).
+     *
+     * @param {string} queueId
+     * @param {number|string} id
      */
     noterLeProduit(queueId, id) {
         this.produits.set(queueId, id)
-
-        this.queue.forEach((entree) => {
-            if (!filesReferencees(entree.data).includes(queueId)) {
-                return
-            }
-
-            entree.data = Object.fromEntries(
-                Object.entries(entree.data).map(([champ, valeur]) => [
-                    champ,
-                    fileReferencee(valeur) === queueId ? id : valeur,
-                ]),
-            )
-        })
     }
 
     /**
@@ -869,9 +1132,19 @@ class SyncService {
             return
         }
 
+        const dUnAutreCompte = (entree) => normaliserLeCompte(entree?.compte) !== compte
+
         this.oublierEnMemoire(compte)
-        oublierDansLeStockage(QUEUE_KEY, compte)
-        oublierDansLeStockage(FAILED_KEY, compte)
+
+        /*
+         * Un stockage qui refuse l'écriture ne rend rien de ce compte à cet
+         * onglet : le retrait reste sa vérité (`Utils/listePartagee`), et la
+         * prochaine écriture de la file réessaie.
+         */
+        this.queue = this.fileDuStockage
+            .changer((file) => file.filter(dUnAutreCompte), { retirerSiVide: true })
+            .liste.filter(aUnCompte)
+        this.changerLesRefus((refus) => refus.filter(dUnAutreCompte))
         oublierLesEcrituresAbandonnees(compte)
 
         try {
@@ -894,9 +1167,15 @@ class SyncService {
             return
         }
 
+        const duCompte = (entree) => normaliserLeCompte(entree?.compte) === compte
+
         this.oublis.set(compte, this.oublisDe(compte) + 1)
-        this.queue = this.queue.filter((entree) => normaliserLeCompte(entree.compte) !== compte)
-        this.failed = this.failed.filter((entree) => normaliserLeCompte(entree.compte) !== compte)
+
+        // Ce que le stockage n'avait pas pris ne revient pas à la lecture suivante.
+        this.fileDuStockage.oublierCeQuiNAPasEteEcrit(duCompte)
+        this.refusDuStockage.oublierCeQuiNAPasEteEcrit(duCompte)
+        this.queue = this.queue.filter((entree) => !duCompte(entree))
+        this.failed = this.failed.filter((entree) => !duCompte(entree))
 
         if (deconnecte && this.compte === compte) {
             this.compte = null
@@ -936,32 +1215,12 @@ class SyncService {
         }
 
         const identifiants = new Set(
-            [...lireLaListe(QUEUE_KEY), ...this.queue]
+            [...this.fileDuStockage.lire(), ...this.queue]
                 .filter((entree) => normaliserLeCompte(entree?.compte) === compte)
                 .map((entree) => entree.id),
         )
 
         return identifiants.size
-    }
-
-    /**
-     * Donne la date de maintenant aux entrées qui n'en ont pas de lisible.
-     *
-     * @param {Array<Object>} entrees
-     * @returns {boolean} vrai quand une entrée a été datée
-     */
-    daterLesEntreesSansDate(entrees) {
-        const maintenant = new Date().toISOString()
-        let datee = false
-
-        entrees.forEach((entree) => {
-            if (Number.isNaN(Date.parse(entree.timestamp))) {
-                entree.timestamp = maintenant
-                datee = true
-            }
-        })
-
-        return datee
     }
 
     /**
@@ -979,8 +1238,8 @@ class SyncService {
      * avec elle, puisqu'elle ne pourrait plus aboutir. L'entrée qui vole n'est
      * pas touchée : sa réponse dira ce qu'elle est devenue.
      *
-     * Seul ce que le stockage garde encore est compté : un autre onglet, qui
-     * garde sa propre copie, a pu abandonner les mêmes avant, ou les envoyer.
+     * Seul ce que le stockage garde encore est compté : la file relue, un
+     * autre onglet a pu abandonner les mêmes avant, ou les envoyer (#2049).
      * Les entrées du compte connecté sortent aussi de l'écran
      * (`sync:retired`), et `sync:abandoned` prévient l'écran déjà monté. Les
      * avis qui ont attendu leur compte plus de trente jours s'effacent aussi.
@@ -990,40 +1249,41 @@ class SyncService {
     abandonnerLesEntreesPerimees(maintenant = Date.now()) {
         oublierLesAvisPerimes(maintenant)
 
-        const abandonnees = new Set()
+        let sorties = []
+        let refusPerimes = []
 
-        this.queue.forEach((entree) => {
-            if (entree.id === this.enVol) {
-                return
-            }
+        this.changerLaFile((file) => {
+            const abandonnees = new Set()
 
-            if (
-                estPerimee(entree, maintenant) ||
-                filesReferencees(entree.data).some((parent) => abandonnees.has(parent))
-            ) {
-                abandonnees.add(entree.id)
-            }
+            file.forEach((entree) => {
+                if (!aUnCompte(entree) || entree.id === this.enVol) {
+                    return
+                }
+
+                if (
+                    estPerimee(entree, maintenant) ||
+                    filesReferencees(entree.data).some((parent) => abandonnees.has(parent))
+                ) {
+                    abandonnees.add(entree.id)
+                }
+            })
+
+            sorties = file.filter((entree) => abandonnees.has(entree?.id))
+
+            return sorties.length === 0 ? file : file.filter((entree) => !abandonnees.has(entree?.id))
         })
 
-        const refusPerimes = this.failed.filter((entree) => estPerimee(entree, maintenant))
+        this.changerLesRefus((refus) => {
+            refusPerimes = refus.filter((entree) => aUnCompte(entree) && estPerimee(entree, maintenant))
 
-        if (abandonnees.size === 0 && refusPerimes.length === 0) {
+            return refusPerimes.length === 0 ? refus : refus.filter((entree) => !refusPerimes.includes(entree))
+        })
+
+        if (sorties.length === 0 && refusPerimes.length === 0) {
             return
         }
 
-        const sorties = this.queue.filter((entree) => abandonnees.has(entree.id))
-        const stockees = identifiantsStockes()
-        const aDire = [...sorties, ...refusPerimes].filter((entree) => stockees === null || stockees.has(entree.id))
-
-        if (abandonnees.size > 0) {
-            this.queue = this.queue.filter((entree) => !abandonnees.has(entree.id))
-            this.saveQueue()
-        }
-
-        if (refusPerimes.length > 0) {
-            this.failed = this.failed.filter((entree) => !refusPerimes.includes(entree))
-            this.saveFailed()
-        }
+        const aDire = [...sorties, ...refusPerimes]
 
         /** @type {Map<string, {nombre: number, depuis: number|null}>} */
         const parCompte = new Map()
@@ -1044,7 +1304,7 @@ class SyncService {
         const duCompte = sorties.filter((entree) => entree.compte === this.compte).map((entree) => entree.id)
 
         if (duCompte.length > 0) {
-            window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: duCompte } }))
+            this.annoncer('sync:retired', { queueIds: duCompte }, this.compte)
         }
 
         if (parCompte.size > 0) {
@@ -1068,11 +1328,14 @@ class SyncService {
      * le vidage, et une série ajoutée sans réseau disparaissait de l'écran au
      * rechargement ou au bouton Retour (#2048). La copie ne laisse personne
      * modifier la file sans passer par `modifierEnFile` ou `retirerDeLaFile`,
-     * qui écrivent le stockage durable.
+     * qui écrivent le stockage durable. La file est relue : un autre onglet a
+     * pu y mettre des écritures de la séance (#2049).
      *
      * @returns {Array<Object>}
      */
     entreesDuCompte() {
+        this.relireLaFile()
+
         return this.compte === null
             ? []
             : JSON.parse(JSON.stringify(this.queue.filter((entree) => entree.compte === this.compte)))
@@ -1118,8 +1381,15 @@ class SyncService {
         }
     }
 
-    /** La première écriture du compte connecté encore en file, ou undefined. */
+    /**
+     * La première écriture du compte connecté encore en file, ou undefined,
+     * d'après la file relue : le vidage relit la tête à chaque tour, pour
+     * envoyer ce qu'un autre onglet a mis en file pendant qu'il tournait, et
+     * jamais ce qu'un autre a déjà envoyé (#2049).
+     */
     teteDeFile() {
+        this.relireLaFile()
+
         return this.compte === null ? undefined : this.queue.find((entree) => entree.compte === this.compte)
     }
 
@@ -1136,14 +1406,25 @@ class SyncService {
     /**
      * Remplace une entrée réglée, à sa place, par les écritures qui doivent la
      * suivre, et écrit la file d'un seul coup : un rechargement entre les deux
-     * ne perd ni ne double rien.
+     * ne perd ni ne double rien. L'entrée se retrouve par son identifiant,
+     * dans la file relue (#2049). Ce qu'elle a produit, quand elle a produit
+     * quelque chose, passe dans la même écriture aux entrées qui l'attendaient
+     * (`{ enAttenteDe }`, #1962).
      *
      * @param {Object} config
      * @param {Array<Object>} remplacantes
+     * @param {number|string|undefined} produit l'identifiant que le serveur a émis
      */
-    remplacerLEntree(config, remplacantes) {
-        this.queue = this.queue.flatMap((entree) => (entree === config ? remplacantes : [entree]))
-        this.saveQueue()
+    remplacerLEntree(config, remplacantes, produit = undefined) {
+        const produits = new Map(produit === undefined ? [] : [[config.id, produit]])
+
+        if (produit !== undefined) {
+            this.noterLeProduit(config.id, produit)
+        }
+
+        this.changerLaFile((file) =>
+            file.flatMap((entree) => (entree?.id === config.id ? remplacantes : [avecLesProduits(entree, produits)])),
+        )
     }
 
     /**
@@ -1177,20 +1458,6 @@ class SyncService {
         }
     }
 
-    saveQueue() {
-        try {
-            localStorage.setItem(QUEUE_KEY, JSON.stringify(this.queue))
-        } catch {
-            /*
-             * Quota atteint ou stockage indisponible. La file reste en mémoire
-             * et continue de se vider ; on le dit, pour que la page puisse
-             * prévenir que ce qui n'est pas encore parti ne survivra pas à un
-             * rechargement.
-             */
-            window.dispatchEvent(new CustomEvent('sync:storage-full', { detail: { pending: this.enAttente() } }))
-        }
-    }
-
     /**
      * Flushes the queue, one drain at a time.
      *
@@ -1200,9 +1467,67 @@ class SyncService {
      * a half-emptied queue and sending the same mutation twice.
      */
     async processQueue() {
-        this.pending = (this.pending ?? Promise.resolve()).catch(() => {}).then(() => this.drainQueue())
+        const vidage = (this.pending ?? Promise.resolve()).catch(() => {}).then(() => this.drainQueue())
+        const fini = () => {
+            this.vidagesEnCours -= 1
+        }
 
-        return this.pending
+        this.vidagesEnCours += 1
+        this.pending = vidage
+        vidage.then(fini, fini)
+
+        return vidage
+    }
+
+    /**
+     * Vide la file, un seul onglet à la fois sur l'appareil (#2049) : sous le
+     * verrou `VERROU_DU_VIDAGE` des Web Locks, demandé sans attendre
+     * (`ifAvailable`). Un autre onglet le tient : celui-ci ne vide rien,
+     * l'autre envoie ce qu'il y met, puisqu'il relit la tête de la file à
+     * chaque tour, et annonce la file vidée quand il rend le verrou
+     * (`FILE_VIDEE`) : cet onglet repart alors s'il lui reste une écriture
+     * mise en file après le dernier tour de l'autre. Deux onglets qui
+     * vidaient la file envoyaient deux fois chaque écriture. Sans Web Locks
+     * (jsdom, Safari avant 15.4), ou si le navigateur refuse le verrou, la
+     * file se vide comme avant.
+     *
+     * @returns {Promise<void>}
+     */
+    async drainQueue() {
+        const verrous = globalThis.navigator?.locks
+
+        if (typeof verrous?.request !== 'function') {
+            await this.viderLaFile()
+
+            return
+        }
+
+        let videe = null
+        let tenu = false
+
+        try {
+            await verrous.request(VERROU_DU_VIDAGE, { ifAvailable: true }, async (verrou) => {
+                if (verrou === null) {
+                    return
+                }
+
+                tenu = true
+                videe = await this.viderLaFile()
+            })
+        } catch (erreur) {
+            if (tenu) {
+                throw erreur
+            }
+
+            // Le verrou refusé par le navigateur lui-même (un document sans origine) : comme sans Web Locks.
+            await this.viderLaFile()
+
+            return
+        }
+
+        if (videe === true) {
+            this.publier({ type: FILE_VIDEE })
+        }
     }
 
     /**
@@ -1220,7 +1545,11 @@ class SyncService {
      * later, so on the next drain an older value could land after a newer one
      * and overwrite it.
      */
-    async drainQueue() {
+    /**
+     * @returns {Promise<boolean>} vrai quand la file du compte est vide, faux
+     *   quand le vidage s'arrête devant une écriture qui reste en tête
+     */
+    async viderLaFile() {
         /*
          * Une page ouverte des semaines (la PWA suspendue, puis reprise) ne
          * se recharge pas : chaque vidage commence par abandonner ce qui a
@@ -1239,7 +1568,7 @@ class SyncService {
             if ((config.prochainEssai ?? 0) > Date.now()) {
                 this.programmerLaRelance(config.prochainEssai - Date.now())
 
-                return
+                return false
             }
 
             /*
@@ -1248,9 +1577,21 @@ class SyncService {
              * est classée refusée sans partir, et annoncée.
              */
             if (filesReferencees(config.data).length > 0) {
-                this.sortirRefusee(config, null)
+                /*
+                 * Ce qu'elle attend a pu être rejoué juste avant qu'elle entre
+                 * en file, par un autre onglet qui ne la voyait pas encore
+                 * (#2049) : le produit connu passe dans sa charge, et elle
+                 * part.
+                 */
+                const resolue = avecLesProduits(config, this.produits)
 
-                continue
+                if (filesReferencees(resolue.data).length > 0) {
+                    this.sortirRefusee(config, null)
+
+                    continue
+                }
+
+                config = this.changerLEntree(config.id, (entree) => avecLesProduits(entree, this.produits)) ?? resolue
             }
 
             /*
@@ -1276,8 +1617,10 @@ class SyncService {
              * sur le serveur, pas seulement oubliée ici (#1960).
              */
             if (estUneCreation(config) && config.tentee !== true) {
-                config.tentee = true
-                this.saveQueue()
+                config = this.changerLEntree(config.id, (entree) => ({ ...entree, tentee: true })) ?? {
+                    ...config,
+                    tentee: true,
+                }
             }
 
             let reponse
@@ -1307,7 +1650,7 @@ class SyncService {
                  * consommé, et rien de ce compte ne passe devant elle.
                  */
                 if (estPourUnAutreCompte(error)) {
-                    return
+                    return false
                 }
 
                 // Anything that was not a network failure used to fall off the end
@@ -1320,7 +1663,7 @@ class SyncService {
                 if (verdict === SYNC_OFFLINE) {
                     // Still nothing out there. Leave this entry, and everything
                     // behind it, exactly where they are.
-                    return
+                    return false
                 }
 
                 if (verdict === SYNC_AUTH) {
@@ -1331,8 +1674,12 @@ class SyncService {
                      * réessaiera après la prochaine reconnexion. Cette écriture
                      * était classée refusée et la file vidée derrière elle.
                      */
-                    config.authAttempts = (config.authAttempts ?? 0) + 1
-                    this.saveQueue()
+                    const essais = (config.authAttempts ?? 0) + 1
+
+                    config = this.changerLEntree(config.id, (entree) => ({
+                        ...entree,
+                        authAttempts: (entree.authAttempts ?? 0) + 1,
+                    })) ?? { ...config, authAttempts: essais }
 
                     window.dispatchEvent(
                         new CustomEvent('sync:auth-required', {
@@ -1345,7 +1692,7 @@ class SyncService {
                     )
 
                     if (config.authAttempts < MAX_AUTH_ATTEMPTS) {
-                        return
+                        return false
                     }
                 }
 
@@ -1359,17 +1706,24 @@ class SyncService {
                      * aux refusées au premier 502, et toute la file d'une
                      * séance avec elle en un seul passage (#1963).
                      */
-                    config.transientAttempts = (config.transientAttempts ?? 0) + 1
+                    const essais =
+                        (this.entreeStockee(config.id)?.transientAttempts ?? config.transientAttempts ?? 0) + 1
 
-                    if (config.transientAttempts < MAX_TRANSIENT_ATTEMPTS) {
-                        const attente = attenteAvantLeProchainEssai(error, config.transientAttempts)
+                    if (essais < MAX_TRANSIENT_ATTEMPTS) {
+                        const attente = attenteAvantLeProchainEssai(error, essais)
+                        const prochainEssai = Date.now() + attente
 
-                        config.prochainEssai = Date.now() + attente
-                        this.saveQueue()
+                        this.changerLEntree(config.id, (entree) => ({
+                            ...entree,
+                            transientAttempts: essais,
+                            prochainEssai,
+                        }))
                         this.programmerLaRelance(attente)
 
-                        return
+                        return false
                     }
+
+                    config = { ...config, transientAttempts: essais }
                 }
 
                 this.sortirRefusee(config, error)
@@ -1388,8 +1742,15 @@ class SyncService {
              */
             const produit = reponse?.data?.data
 
-            if (config.aAnnuler !== undefined) {
-                this.remplacerParSonAnnulation(config, produit?.id)
+            /*
+             * L'entrée telle que la file la garde maintenant : un autre onglet,
+             * qui ne savait pas qu'elle volait, a pu la retirer de son écran
+             * (elle est alors à annuler) ou y fondre une saisie (#2049).
+             */
+            const actuelle = this.entreeStockee(config.id) ?? config
+
+            if (actuelle.aAnnuler !== undefined) {
+                this.remplacerParSonAnnulation(actuelle, produit?.id)
 
                 continue
             }
@@ -1403,15 +1764,11 @@ class SyncService {
              * renvoyait en adoptant la série : sans lui, après un
              * rechargement, rien ne partait (#1960).
              */
-            const ajustement = this.ajustementDe(config, requete.data, produit)
-
-            if (produit?.id !== undefined) {
-                this.noterLeProduit(config.id, produit.id)
-            }
+            const ajustement = this.ajustementDe(actuelle, actuelle.data ?? requete.data, produit)
 
             // Settled. Only now may it leave, and the queue that survives a
             // reload is written before we move on — with what follows it.
-            this.remplacerLEntree(config, ajustement === null ? [] : [ajustement])
+            this.remplacerLEntree(config, ajustement === null ? [] : [ajustement], produit?.id)
 
             /**
              * Says what this write finally produced, and what it carried.
@@ -1436,18 +1793,20 @@ class SyncService {
                 continue
             }
 
-            window.dispatchEvent(
-                new CustomEvent('sync:replayed', {
-                    detail: {
-                        queueId: config.id,
-                        url: config.url,
-                        data: ajustement === null ? (produit ?? null) : { ...produit, ...ajustement.data },
-                        envoye: requete.data,
-                        ajustement: ajustement?.id ?? null,
-                    },
-                }),
+            this.annoncer(
+                'sync:replayed',
+                {
+                    queueId: config.id,
+                    url: config.url,
+                    data: ajustement === null ? (produit ?? null) : { ...produit, ...ajustement.data },
+                    envoye: requete.data,
+                    ajustement: ajustement?.id ?? null,
+                },
+                config.compte,
             )
         }
+
+        return true
     }
 
     /**
@@ -1535,21 +1894,35 @@ class SyncService {
      *
      * @param {string} queueId
      * @param {Object} valeurs
+     * L'entrée se lit dans la file relue : un autre onglet a pu la rejouer ou
+     * la retirer depuis que celui-ci l'a vue (#2049).
+     *
      * @returns {boolean} false quand l'entrée n'attend plus — partie, en vol ou
      *   retirée — : l'appelant passe alors par l'identifiant que le serveur a émis.
      */
     modifierEnFile(queueId, valeurs) {
-        const entree = this.queue.find((candidate) => candidate.id === queueId && candidate.compte === this.compte)
-
-        // Une création à annuler ne porte plus rien : la série a quitté l'écran.
-        if (entree === undefined || this.enVol === queueId || entree.aAnnuler !== undefined) {
+        if (this.enVol === queueId) {
             return false
         }
 
-        entree.data = { ...entree.data, ...valeurs }
-        this.saveQueue()
+        let modifiee = false
 
-        return true
+        this.changerLaFile((file) => {
+            const entree = file.find((candidate) => candidate?.id === queueId && candidate.compte === this.compte)
+
+            // Une création à annuler ne porte plus rien : la série a quitté l'écran.
+            if (entree === undefined || entree.aAnnuler !== undefined) {
+                return file
+            }
+
+            modifiee = true
+
+            return file.map((candidate) =>
+                candidate === entree ? { ...entree, data: { ...entree.data, ...valeurs } } : candidate,
+            )
+        })
+
+        return modifiee
     }
 
     /**
@@ -1572,37 +1945,47 @@ class SyncService {
      * @returns {boolean} false quand l'entrée est déjà partie ou en vol.
      */
     retirerDeLaFile(queueId, { annulerPar } = {}) {
-        const entree = this.queue.find((candidate) => candidate.id === queueId && candidate.compte === this.compte)
-
-        if (entree === undefined || this.enVol === queueId) {
+        if (this.enVol === queueId) {
             return false
         }
 
-        if (entree.aAnnuler !== undefined) {
-            return true
-        }
+        let trouvee = false
+        let retirees = null
 
-        const retirees = new Set([queueId])
+        this.changerLaFile((file) => {
+            const entree = file.find((candidate) => candidate?.id === queueId && candidate.compte === this.compte)
 
-        // La file est dans l'ordre : une dépendante vient toujours après ce dont elle dépend.
-        this.queue.forEach((candidate) => {
-            if (filesReferencees(candidate.data).some((parent) => retirees.has(parent))) {
-                retirees.add(candidate.id)
+            trouvee = entree !== undefined
+
+            if (entree === undefined || entree.aAnnuler !== undefined) {
+                return file
             }
+
+            retirees = new Set([queueId])
+
+            // La file est dans l'ordre : une dépendante vient toujours après ce dont elle dépend.
+            file.forEach((candidate) => {
+                if (filesReferencees(candidate?.data).some((parent) => retirees.has(parent))) {
+                    retirees.add(candidate.id)
+                }
+            })
+
+            const aAnnuler = entree.tentee === true && typeof annulerPar === 'function'
+
+            return file.flatMap((candidate) => {
+                if (aAnnuler && candidate === entree) {
+                    return [{ ...entree, aAnnuler: annulerPar(ID_A_VENIR) }]
+                }
+
+                return retirees.has(candidate?.id) ? [] : [candidate]
+            })
         })
 
-        const aAnnuler = entree.tentee === true && typeof annulerPar === 'function'
-
-        if (aAnnuler) {
-            entree.aAnnuler = annulerPar(ID_A_VENIR)
+        if (retirees !== null) {
+            this.annoncer('sync:retired', { queueIds: [...retirees] }, this.compte)
         }
 
-        this.queue = this.queue.filter((candidate) => (aAnnuler && candidate === entree) || !retirees.has(candidate.id))
-        this.saveQueue()
-
-        window.dispatchEvent(new CustomEvent('sync:retired', { detail: { queueIds: [...retirees] } }))
-
-        return true
+        return trouvee
     }
 
     /**
@@ -1624,11 +2007,11 @@ class SyncService {
      * left the queue.
      */
     recordFailure(config, error) {
-        this.failed.push({
+        const refus = {
             ...config,
             failedAt: new Date().toISOString(),
             status: error?.response?.status ?? null,
-        })
+        }
 
         /**
          * Bounded, and nothing in the app has ever emptied it —
@@ -1637,12 +2020,11 @@ class SyncService {
          * write below throws QuotaExceededError in the middle of a drain,
          * taking the queue down with it. The newest failures are the ones worth
          * showing; the oldest are long past being actionable.
+         *
+         * Ajouté au bout des refus que le stockage garde, ceux des autres
+         * onglets compris (#2049).
          */
-        if (this.failed.length > MAX_FAILED) {
-            this.failed = this.failed.slice(-MAX_FAILED)
-        }
-
-        this.saveFailed()
+        this.changerLesRefus((refusees) => [...refusees, refus].slice(-MAX_FAILED))
     }
 
     /**
@@ -1652,41 +2034,29 @@ class SyncService {
      * @param {Object|null} error l'erreur du serveur, ou null quand elle n'est pas partie
      */
     annoncerLeRefus(config, error) {
-        window.dispatchEvent(
-            new CustomEvent('sync:failed', {
-                // The payload travels with the event so a listener can say WHAT
-                // was refused. A URL alone can only ever produce "an item of the
-                // session" — true, and of no use to someone who now has to work
-                // out which of their sets is missing.
-                detail: {
-                    queueId: config.id,
-                    url: config.url,
-                    status: error?.response?.status ?? null,
-                    data: config.data,
-                },
-            }),
+        // The payload travels with the event so a listener can say WHAT
+        // was refused. A URL alone can only ever produce "an item of the
+        // session" — true, and of no use to someone who now has to work
+        // out which of their sets is missing.
+        this.annoncer(
+            'sync:failed',
+            {
+                queueId: config.id,
+                url: config.url,
+                status: error?.response?.status ?? null,
+                data: config.data,
+            },
+            config.compte,
         )
     }
 
-    saveFailed() {
-        try {
-            if (this.failed.length === 0) {
-                localStorage.removeItem(FAILED_KEY)
-
-                return
-            }
-
-            localStorage.setItem(FAILED_KEY, JSON.stringify(this.failed))
-        } catch {
-            // Storage is full or unavailable. Losing the record of a refusal is
-            // bad; letting it abort the drain and strand the rest of the queue
-            // is worse.
-            this.failed = this.failed.slice(-1)
-        }
-    }
-
-    /** Mutations the server refused, still on disk — those of the account signed in. */
+    /**
+     * Mutations the server refused, still on disk — those of the account
+     * signed in, those another tab recorded included (#2049).
+     */
     failedRequests() {
+        this.relireLesRefus()
+
         return this.failed.filter((entree) => entree.compte === this.compte)
     }
 
@@ -1699,8 +2069,7 @@ class SyncService {
     clearFailedRequests(compte = this.compte) {
         const oublie = normaliserLeCompte(compte)
 
-        this.failed = this.failed.filter((entree) => entree.compte !== oublie)
-        this.saveFailed()
+        this.changerLesRefus((refus) => refus.filter((entree) => entree?.compte !== oublie))
     }
 
     /** Helper for GET requests */
