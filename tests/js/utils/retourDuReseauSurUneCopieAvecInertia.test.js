@@ -253,6 +253,79 @@ describe('au retour du réseau, une copie se recharge en entier', () => {
     })
 })
 
+describe('le rechargement d’une copie ne passe pas devant une visite au premier plan', () => {
+    /*
+     * Inertia n'a qu'une visite au premier plan à la fois : une nouvelle
+     * interrompt celle qui vole (`interruptInFlight`). Le rechargement d'une
+     * copie au retour du réseau est asynchrone (`router.reload`) : il part à
+     * côté d'elle, et sa réponse ne pose sa page que si la page affichée est
+     * encore celle d'où il est parti.
+     */
+    it('la déconnexion partie d’une copie va jusqu’au bout, même quand la copie se recharge pendant qu’elle vole', async () => {
+        await servirLaCopieDe(pageDe())
+        const depuis = requetes.length
+        let finie = false
+        let interrompue = false
+
+        reseau.mode = 'muet'
+        routeur.post(
+            '/deconnexion-exemptee',
+            {},
+            {
+                onBefore: visites.exempterDeLaGardeDesCopies,
+                onCancel: () => (interrompue = true),
+                onFinish: () => (finie = true),
+            },
+        )
+        await vi.waitUntil(() => requetes.length === depuis + 1)
+
+        // La sonde répond pendant que la déconnexion attend la sienne : la copie se redemande.
+        etatDuReseau.noterQueLeServeurRepond()
+        await vi.waitUntil(() => requetes.length === depuis + 2)
+        const [deconnexion, rechargement] = requetes.slice(depuis)
+
+        expect(requetesDepuis(depuis)).toEqual([
+            { methode: 'POST', chemin: '/deconnexion-exemptee', partielle: false },
+            { methode: 'GET', chemin: '/workouts', partielle: false },
+        ])
+
+        deconnexion.repondre(reponseInertia(pageDe({ url: '/login', component: 'Auth/Login', texte: 'Connexion' })))
+        await vi.waitUntil(() => finie)
+        // Le rechargement répond ensuite, avec la page du compte : la page de connexion reste.
+        rechargement.repondre(reponseInertia(pageDe({ texte: 'Séances du serveur' })))
+        await unMoment()
+
+        expect(interrompue).toBe(false)
+        expect(deconnexion.annulee).toBe(false)
+        expect(contenu()).toBe('Connexion')
+        expect(relais.rejets).toEqual([])
+    })
+
+    it('une visite vers une autre page arrive, et la réponse du rechargement, venue après elle, ne la remplace pas', async () => {
+        await servirLaCopieDe(pageDe())
+        const depuis = requetes.length
+        let interrompue = false
+
+        reseau.mode = 'muet'
+        routeur.visit('/tools', { onCancel: () => (interrompue = true) })
+        await vi.waitUntil(() => requetes.length === depuis + 1)
+
+        etatDuReseau.noterQueLeServeurRepond()
+        await vi.waitUntil(() => requetes.length === depuis + 2)
+        const [visite, rechargement] = requetes.slice(depuis)
+
+        visite.repondre(reponseInertia(pageDeDepart()))
+        await vi.waitUntil(() => contenu() === 'Outils')
+        rechargement.repondre(reponseInertia(pageDe({ texte: 'Séances du serveur' })))
+        await unMoment()
+
+        expect(interrompue).toBe(false)
+        expect(contenu()).toBe('Outils')
+        expect(pageInertia.props.horsLigne).toBeUndefined()
+        expect(annonces).toEqual([])
+    })
+})
+
 describe('la séance attend sa file', () => {
     const seance = () => pageDe({ url: '/workouts/15', component: 'Workouts/Show', texte: 'Séance' })
 
