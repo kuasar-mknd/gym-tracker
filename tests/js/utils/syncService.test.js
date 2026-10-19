@@ -2782,3 +2782,244 @@ describe('SyncService la fin d’une séance en file', () => {
         expect(service.ecrituresEnCours()).toBe(0)
     })
 })
+
+/*
+ * Lancer un modèle (#2049). En ligne, c'est une seule requête
+ * (`POST /api/v1/workouts` avec `template_id`) : sans réponse, elle n'entre
+ * pas en file (`garderEnFile: false`), et l'appelant met en file, d'un seul
+ * coup, la séance, ses lignes et ses séries, sous les clés que le serveur
+ * aurait posées (`mettreEnFileLaSeanceDUnModele`). Rangée en file, la requête
+ * avec `template_id` aurait recréé tout le modèle au rejeu, même ce que la
+ * personne avait retiré de la séance entre-temps.
+ */
+describe('SyncService le lancement d’un modèle', () => {
+    const ROUTES = {
+        'api.v1.workouts.store': '/api/v1/workouts',
+        'api.v1.workout-lines.store': '/api/v1/workout-lines',
+        'api.v1.sets.store': '/api/v1/sets',
+    }
+    const route = (nom, parametres) => (nom === 'api.v1.sets.update' ? `/api/v1/sets/${parametres.set}` : ROUTES[nom])
+
+    /** Deux exercices, deux séries chacun, tels que la prop `lancements` les donne. */
+    const lignes = [
+        {
+            exercise: { id: 7, name: 'Squat', type: 'strength' },
+            order: 0,
+            cle: 'modele-ligne:0:7',
+            series: [
+                { reps: 5, weight: 100, is_warmup: true, cle: 'modele-serie:0:0' },
+                { reps: 5, weight: 120, is_warmup: false, cle: 'modele-serie:0:1' },
+            ],
+        },
+        {
+            exercise: { id: 8, name: 'Développé couché', type: 'strength' },
+            order: 1,
+            cle: 'modele-ligne:1:8',
+            series: [
+                { reps: 8, weight: 80, is_warmup: false, cle: 'modele-serie:1:0' },
+                { reps: 8, weight: 82.5, is_warmup: false, cle: 'modele-serie:1:1' },
+            ],
+        },
+    ]
+
+    const fileStockee = () => JSON.parse(localStorage.getItem('offline_sync_queue') ?? '[]')
+
+    beforeEach(() => {
+        vi.stubGlobal('route', route)
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('rejette sans rien mettre en file une écriture partie sans réponse, qu’on ne veut pas garder', async () => {
+        const service = await chargé()
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const echec = await service
+            .post('/api/v1/workouts', { template_id: 3 }, { garderEnFile: false, delaiDeLaTentative: 5000 })
+            .catch((erreur) => erreur)
+
+        expect(echec).toMatchObject({ sansReponse: true, tentee: true })
+        expect(echec).not.toHaveProperty('isOffline')
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(fileStockee()).toEqual([])
+        expect(service.ecrituresEnCours()).toBe(0)
+    })
+
+    it('rejette sans la tenter, ni la mettre en file, une écriture rangée derrière une file qui ne se vide pas', async () => {
+        const service = await chargé()
+        service.mettreEnFile({ method: 'patch', url: '/api/v1/sets/3', data: { reps: 4 } })
+
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const echec = await service
+            .post('/api/v1/workouts', { template_id: 3 }, { garderEnFile: false })
+            .catch((erreur) => erreur)
+
+        expect(echec).toMatchObject({ sansReponse: true, tentee: false })
+        // Le vidage seul a tenté : la séance du modèle n'est jamais partie.
+        expect(request.mock.calls.map(([config]) => config.url)).toEqual(['/api/v1/sets/3'])
+        expect(fileStockee().map((entree) => entree.url)).toEqual(['/api/v1/sets/3'])
+    })
+
+    it('ne promet rien à mettre en file quand aucun compte ne la garderait', async () => {
+        const service = await freshService({ compte: null })
+        await service.pending
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+
+        await echoueSansEtreGardee(service.post('/api/v1/workouts', { template_id: 3 }, { garderEnFile: false }))
+        expect(service.mettreEnFileLaSeanceDUnModele({ cle: 'k', started_at: 'x', lignes })).toBeNull()
+        expect(fileStockee()).toEqual([])
+    })
+
+    it('met en file, en une seule écriture du stockage, la séance, ses lignes et ses séries sous les clés du modèle', async () => {
+        const service = await chargé()
+        const annonces = []
+        const noter = (evenement) => annonces.push(evenement.detail)
+        window.addEventListener('sync:queued', noter)
+        const ecriture = vi.spyOn(Storage.prototype, 'setItem')
+
+        const queueId = service.mettreEnFileLaSeanceDUnModele({
+            cle: 'cle-du-lancement',
+            nom: 'Jambes',
+            started_at: '2026-10-19T08:00:00.000Z',
+            lignes,
+        })
+
+        const ecrituresDeLaFile = ecriture.mock.calls.filter(([cle]) => cle === 'offline_sync_queue')
+        ecriture.mockRestore()
+        window.removeEventListener('sync:queued', noter)
+
+        const file = fileStockee()
+        const [seance, squat, s1, s2, developpe, d1, d2] = file
+
+        expect(ecrituresDeLaFile).toHaveLength(1)
+        expect(file).toHaveLength(7)
+        expect(seance).toMatchObject({
+            id: queueId,
+            method: 'post',
+            url: '/api/v1/workouts',
+            data: { started_at: '2026-10-19T08:00:00.000Z', name: 'Jambes' },
+            headers: { 'Idempotency-Key': 'cle-du-lancement' },
+            compte: COMPTE,
+        })
+        // Seul ce qui est en file se crée : jamais tout le modèle au rejeu.
+        expect(seance.data).not.toHaveProperty('template_id')
+        expect(squat).toMatchObject({
+            url: '/api/v1/workout-lines',
+            data: { workout_id: { enAttenteDe: queueId }, exercise_id: 7, order: 0 },
+            headers: { 'Idempotency-Key': 'modele-ligne:0:7' },
+            contexte: { exercice: { id: 7, name: 'Squat', type: 'strength' } },
+        })
+        expect(developpe.data).toEqual({ workout_id: { enAttenteDe: queueId }, exercise_id: 8, order: 1 })
+        expect([s1, s2, d1, d2].map((serie) => [serie.headers['Idempotency-Key'], serie.data])).toEqual([
+            [
+                'modele-serie:0:0',
+                {
+                    workout_line_id: { enAttenteDe: squat.id },
+                    reps: 5,
+                    weight: 100,
+                    is_warmup: true,
+                    is_completed: false,
+                },
+            ],
+            [
+                'modele-serie:0:1',
+                {
+                    workout_line_id: { enAttenteDe: squat.id },
+                    reps: 5,
+                    weight: 120,
+                    is_warmup: false,
+                    is_completed: false,
+                },
+            ],
+            [
+                'modele-serie:1:0',
+                {
+                    workout_line_id: { enAttenteDe: developpe.id },
+                    reps: 8,
+                    weight: 80,
+                    is_warmup: false,
+                    is_completed: false,
+                },
+            ],
+            [
+                'modele-serie:1:1',
+                {
+                    workout_line_id: { enAttenteDe: developpe.id },
+                    reps: 8,
+                    weight: 82.5,
+                    is_warmup: false,
+                    is_completed: false,
+                },
+            ],
+        ])
+        expect(d2).toMatchObject({
+            ajusterPar: '/api/v1/sets/__produit__',
+            contexte: { workout_id: { enAttenteDe: queueId }, exercise_id: 8 },
+        })
+        // Rien n'est tenté : rien ne le dit.
+        expect(file.some((entree) => 'tentee' in entree)).toBe(false)
+        expect(annonces).toEqual([
+            {
+                queueId,
+                method: 'post',
+                url: '/api/v1/workouts',
+                queueIds: file.map(({ id }) => id),
+            },
+        ])
+    })
+
+    it('note tentées toutes les entrées quand le lancement est parti sans réponse', async () => {
+        const service = await chargé()
+
+        service.mettreEnFileLaSeanceDUnModele({ cle: 'k', started_at: 'x', lignes, tentee: true })
+
+        expect(fileStockee().map((entree) => entree.tentee)).toEqual(Array(7).fill(true))
+    })
+
+    it('rejoue la séance, puis chaque ligne et chaque série sous les identifiants réels, et rattrape ce que le serveur avait ignoré', async () => {
+        const service = await chargé()
+        const queueId = service.mettreEnFileLaSeanceDUnModele({
+            cle: 'k',
+            nom: 'Jambes',
+            started_at: '2026-10-19T08:00:00.000Z',
+            lignes: lignes.slice(0, 1),
+            tentee: true,
+        })
+        const [, ligne, premiere] = fileStockee()
+        // Une saisie sur la première série, fondue dans son entrée.
+        service.modifierEnFile(premiere.id, { weight: 105 })
+
+        // Le serveur avait exécuté le modèle : il rend ce qu'il a, sous chaque clé.
+        request
+            .mockResolvedValueOnce({ data: { data: { id: 42 } } })
+            .mockResolvedValueOnce({ data: { data: { id: 70, workout_id: 42, exercise_id: 7, order: 0 } } })
+            .mockResolvedValueOnce({
+                data: {
+                    data: { id: 100, workout_line_id: 70, reps: 5, weight: 100, is_warmup: true, is_completed: false },
+                },
+            })
+            .mockResolvedValueOnce({ data: { data: { id: 100, weight: 105 } } })
+            .mockResolvedValueOnce({
+                data: {
+                    data: { id: 101, workout_line_id: 70, reps: 5, weight: 120, is_warmup: false, is_completed: false },
+                },
+            })
+        await service.processQueue()
+
+        expect(
+            request.mock.calls.map(([config]) => `${config.method} ${config.url} ${JSON.stringify(config.data)}`),
+        ).toEqual([
+            'post /api/v1/workouts {"started_at":"2026-10-19T08:00:00.000Z","name":"Jambes"}',
+            'post /api/v1/workout-lines {"workout_id":42,"exercise_id":7,"order":0}',
+            'post /api/v1/sets {"workout_line_id":70,"reps":5,"weight":105,"is_warmup":true,"is_completed":false}',
+            'patch /api/v1/sets/100 {"weight":105}',
+            'post /api/v1/sets {"workout_line_id":70,"reps":5,"weight":120,"is_warmup":false,"is_completed":false}',
+        ])
+        expect(service.produitDe(queueId)).toBe(42)
+        expect(service.produitDe(ligne.id)).toBe(70)
+        expect(fileStockee()).toEqual([])
+    })
+})

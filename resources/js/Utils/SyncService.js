@@ -72,6 +72,29 @@ const CLEF_DU_COMPTE_OUBLIE = 'gym-tracker:compte-oublie-de-la-file'
  */
 const nonGardee = (message) => ({ nonGardee: true, message })
 
+/**
+ * L'échec d'une écriture que son appelant ne veut pas voir en file
+ * (`garderEnFile: false`, #2049) : sans réponse, elle n'y entre pas, et
+ * l'appelant met lui-même en file ce qu'elle devait faire. Lancer un modèle
+ * en ligne est une seule requête ; sans réponse, la file reçoit la séance, ses
+ * lignes et ses séries (`mettreEnFileLaSeanceDUnModele`).
+ *
+ * `tentee` dit si elle est partie : sans réponse, rien ne dit qu'elle n'a pas
+ * atteint le serveur, et ce que l'appelant met en file sera noté tenté, pour
+ * qu'un retrait fasse annuler là-bas ce qu'elle aurait créé. Rangée derrière
+ * une file qui ne se vide pas, elle n'est jamais partie.
+ *
+ * Ni `isOffline`, ni `queueId` : rien n'est en file.
+ *
+ * @param {boolean} tentee
+ * @returns {{sansReponse: true, tentee: boolean, message: string}}
+ */
+const sansReponse = (tentee) => ({
+    sansReponse: true,
+    tentee,
+    message: tentee ? 'Network error: request sent without an answer' : 'Request not sent: the queue is not empty',
+})
+
 /** How many refused mutations are worth keeping. See recordFailure. */
 const MAX_FAILED = 50
 
@@ -796,7 +819,10 @@ class SyncService {
      *   création peut y joindre `ajusterPar` et `contexte`, voir
      *   `notesDeCreation`. `delaiDeLaTentative` borne la seule tentative
      *   directe (#2049) : mise en file, l'écriture se rejoue sous le délai du
-     *   vidage, quand `timeout` la suit dans la file.
+     *   vidage, quand `timeout` la suit dans la file. `garderEnFile: false`
+     *   (#2049) : sans réponse, ou rangée derrière une file qui ne se vide
+     *   pas, l'écriture n'entre pas en file et rejette `{ sansReponse, tentee }`
+     *   (voir `sansReponse`) ; sans compte à qui la garder, `nonGardee`.
      * @returns {Promise}
      */
     request(config) {
@@ -869,7 +895,7 @@ class SyncService {
      * @returns {Promise}
      */
     async envoyer(config, seanceDuDepart = null) {
-        const { ajusterPar, contexte, delaiDeLaTentative, ...requete } = config
+        const { ajusterPar, contexte, delaiDeLaTentative, garderEnFile = true, ...requete } = config
         const stamped = this.stampIdempotency(requete)
         const notes = this.notesDeCreation(stamped, { ajusterPar, contexte })
 
@@ -918,6 +944,11 @@ class SyncService {
             }
 
             if (this.enAttente() > 0) {
+                // L'appelant met lui-même en file ce qu'elle devait faire (#2049) : elle n'est pas partie.
+                if (!garderEnFile) {
+                    return Promise.reject(sansReponse(false))
+                }
+
                 const queueId = this.addToQueue(stamped, compte, notes, seanceDuDepart)
 
                 return Promise.reject({ isOffline: true, queueId, message: 'Network error: Request queued' })
@@ -941,11 +972,22 @@ class SyncService {
                      */
                     return await http(tentative)
                 } catch (retryError) {
-                    return this.queueOrThrow(retryError, stamped, compteParti() ? null : compte, notes, seanceDuDepart)
+                    return this.queueOrThrow(
+                        retryError,
+                        stamped,
+                        compteParti() ? null : compte,
+                        notes,
+                        seanceDuDepart,
+                        {
+                            garderEnFile,
+                        },
+                    )
                 }
             }
 
-            return this.queueOrThrow(error, stamped, compteParti() ? null : compte, notes, seanceDuDepart)
+            return this.queueOrThrow(error, stamped, compteParti() ? null : compte, notes, seanceDuDepart, {
+                garderEnFile,
+            })
         }
     }
 
@@ -989,12 +1031,21 @@ class SyncService {
      * which the draft replay acts on by deleting the local draft as a duplicate
      * of a queued write that never existed.
      *
-     * `seanceDuDepart` : voir `envoyer`.
+     * `seanceDuDepart` : voir `envoyer`. `garderEnFile` faux (#2049) : sans
+     * réponse, rien n'entre en file ; l'écriture rejette `sansReponse(true)`,
+     * ou `nonGardee` quand aucun compte ne la garderait (l'appelant ne
+     * mettrait alors rien en file à sa place).
      */
-    queueOrThrow(error, config, compte, notes = {}, seanceDuDepart = null) {
+    queueOrThrow(error, config, compte, notes = {}, seanceDuDepart = null, { garderEnFile = true } = {}) {
         // A response means the server answered, so this is its verdict, not a
         // connectivity problem — queueing it would hide a real refusal.
         if (error.code === 'ERR_NETWORK' || (!error.response && error.request)) {
+            if (!garderEnFile && this.isMutation(config)) {
+                return Promise.reject(
+                    compte === null ? nonGardee('Network error: no account to queue for') : sansReponse(true),
+                )
+            }
+
             /*
              * Tentée : sans réponse, rien ne dit qu'elle n'a pas atteint le
              * serveur. Une création retirée ensuite devra être annulée là-bas,
@@ -1178,6 +1229,135 @@ class SyncService {
             filesReferencees(avecLesConnus.data),
             this.seanceDesEcritures,
         )
+    }
+
+    /**
+     * Met en file, d'un seul coup, la séance d'un modèle lancé sans réponse du
+     * serveur (#2049) : sa création, chaque ligne du modèle et chaque série,
+     * dans l'ordre du modèle, en une seule écriture du stockage. Un
+     * rechargement, ou un autre onglet, ne voit jamais la séance sans ses
+     * lignes, ni une ligne sans ses séries.
+     *
+     * - La création : `POST /api/v1/workouts`, `{ started_at, name }`, sous la
+     *   clé `cle`, SANS `template_id` : seul ce qui est en file se crée, et ce
+     *   que la personne retire de la séance avant le rejeu ne revient pas.
+     * - Chaque ligne : `POST /api/v1/workout-lines`, la séance nommée par son
+     *   entrée (`{ enAttenteDe }`), l'exercice et le rang du modèle, sous la
+     *   clé que le serveur dérive du rang et de l'exercice. Son exercice, nom
+     *   et type, reste sur l'entrée (`contexte.exercice`), jamais dans la
+     *   charge : la séance montée sans réseau le nomme même quand la
+     *   bibliothèque de l'appareil ne l'a pas.
+     * - Chaque série : `POST /api/v1/sets`, la ligne nommée par son entrée, ses
+     *   répétitions, son poids, l'échauffement et `is_completed: false` (une
+     *   série postée sans lui est une série faite, `SetStoreRequest`), sous la
+     *   clé dérivée ; `ajusterPar` pour le rattrapage, et le contexte d'une
+     *   série (la séance, l'exercice), comme `useAjoutEtRetraitDeSerie`.
+     *
+     * Les clés sont celles que le serveur pose lui-même quand il lance le
+     * modèle (la prop `lancements`) : un lancement parti sans réponse, que le
+     * serveur a exécuté, est retrouvé écriture par écriture au rejeu, rien
+     * n'est doublé, et ce que la personne a changé depuis part en rattrapage.
+     * Toutes les entrées sont alors notées `tentee` : un retrait fera annuler
+     * sur le serveur ce que ce lancement y aurait créé.
+     *
+     * Une seule annonce, `sync:queued` sous l'entrée de la création : ce qui
+     * l'écoute relit la file entière, et un modèle de cinquante exercices ne la
+     * ferait pas relire deux mille fois.
+     *
+     * @param {{
+     *   cle: string,
+     *   nom?: string|null,
+     *   started_at: string,
+     *   lignes?: Array<{
+     *     exercise: { id: number, name?: string|null, type?: string|null },
+     *     order?: number|null,
+     *     cle: string,
+     *     series?: Array<{ reps?: number|null, weight?: number|null, is_warmup?: boolean, cle: string }>,
+     *   }>,
+     *   tentee?: boolean,
+     * }} lancement les lignes et les séries telles que `lancements` les donne
+     * @returns {string|null} l'entrée de la création, ou null quand aucun compte
+     *   n'est connecté : rien n'entre
+     */
+    mettreEnFileLaSeanceDUnModele({ cle, nom = null, started_at: debut, lignes = [], tentee = false }) {
+        const compte = this.compte
+
+        if (compte === null) {
+            return null
+        }
+
+        const timestamp = new Date().toISOString()
+        const entree = (requete, notes = {}) => ({
+            ...requete,
+            ...notes,
+            ...(tentee ? { tentee: true } : {}),
+            id: this.nouvelIdentifiantDEntree(),
+            timestamp,
+            compte,
+        })
+
+        const seance = entree({
+            method: 'post',
+            url: route('api.v1.workouts.store'),
+            data: { started_at: debut, ...(typeof nom === 'string' && nom !== '' ? { name: nom } : {}) },
+            headers: { 'Idempotency-Key': cle },
+        })
+        const entrees = [seance]
+
+        for (const ligne of Array.isArray(lignes) ? lignes : []) {
+            const exercice = ligne?.exercise ?? {}
+            const creationDeLaLigne = entree(
+                {
+                    method: 'post',
+                    url: route('api.v1.workout-lines.store'),
+                    data: {
+                        workout_id: { enAttenteDe: seance.id },
+                        exercise_id: exercice.id,
+                        ...(Number.isInteger(ligne.order) ? { order: ligne.order } : {}),
+                    },
+                    headers: { 'Idempotency-Key': ligne.cle },
+                },
+                {
+                    contexte: {
+                        exercice: { id: exercice.id, name: exercice.name ?? null, type: exercice.type ?? null },
+                    },
+                },
+            )
+
+            entrees.push(creationDeLaLigne)
+
+            for (const serie of Array.isArray(ligne.series) ? ligne.series : []) {
+                entrees.push(
+                    entree(
+                        {
+                            method: 'post',
+                            url: route('api.v1.sets.store'),
+                            data: {
+                                workout_line_id: { enAttenteDe: creationDeLaLigne.id },
+                                reps: serie.reps ?? null,
+                                weight: serie.weight ?? null,
+                                is_warmup: serie.is_warmup === true,
+                                is_completed: false,
+                            },
+                            headers: { 'Idempotency-Key': serie.cle },
+                        },
+                        {
+                            ajusterPar: route('api.v1.sets.update', { set: ID_A_VENIR }),
+                            contexte: { workout_id: { enAttenteDe: seance.id }, exercise_id: exercice.id },
+                        },
+                    ),
+                )
+            }
+        }
+
+        this.changerLaFile((file) => [...file, ...entrees])
+        this.annoncer(
+            'sync:queued',
+            { queueId: seance.id, method: seance.method, url: seance.url, queueIds: entrees.map(({ id }) => id) },
+            compte,
+        )
+
+        return seance.id
     }
 
     /**

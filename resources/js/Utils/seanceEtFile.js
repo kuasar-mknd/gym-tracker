@@ -340,6 +340,28 @@ const ligneMontree = (id, exerciseId, ordre, exercices) => {
 }
 
 /**
+ * Les exercices du compte, et après eux celui que la création d'une ligne
+ * porte sur son entrée (`contexte.exercice`), quand elle en porte un : la ligne
+ * d'un modèle lancé sans réseau (#2049, `mettreEnFileLaSeanceDUnModele`). La
+ * bibliothèque l'emporte, plus complète ; sans elle (une séance remontée à froid
+ * par la coquille, sans copie de la bibliothèque), la ligne garde le nom que le
+ * modèle lui donnait, au lieu de « Exercice ».
+ *
+ * @param {Array<object>} exercices
+ * @param {object} entree
+ * @returns {Array<object>}
+ */
+const avecLExerciceDeLEntree = (exercices, entree) => {
+    const exercice = entree?.contexte?.exercice
+
+    if (exercice === null || typeof exercice !== 'object' || typeof exercice.name !== 'string') {
+        return exercices
+    }
+
+    return [...exercices, { ...exercice, type: exercice.type ?? 'strength' }]
+}
+
+/**
  * La ligne qu'une création de série en file nomme sans que la séance la porte,
  * reconstruite d'après ce que la page a noté sur l'entrée (`contexte`), quand
  * c'est une ligne réelle de cette séance-ci ; sinon undefined.
@@ -473,7 +495,10 @@ const appliquer = (seance, entree, { exercices, produites, seancesEnFile }) => {
 
             const id = identifiantEnFile(entree.id)
 
-            lignes.push({ ...ligneMontree(id, charge.exercise_id, lignes.length, exercices), _rowKey: id })
+            lignes.push({
+                ...ligneMontree(id, charge.exercise_id, lignes.length, avecLExerciceDeLEntree(exercices, entree)),
+                _rowKey: id,
+            })
 
             return
         }

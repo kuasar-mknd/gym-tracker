@@ -468,6 +468,39 @@ describe('superposer la file à une séance démarrée sans réseau', () => {
         ])
     })
 
+    /*
+     * La ligne d'un modèle lancé sans réseau porte son exercice sur son entrée
+     * (`contexte.exercice`, `mettreEnFileLaSeanceDUnModele`) : une séance
+     * remontée à froid sans la copie de la bibliothèque ne disait que
+     * « Exercice ».
+     */
+    it('nomme la ligne d’un modèle d’après son entrée quand la bibliothèque ne la connaît pas, la bibliothèque d’abord', () => {
+        const seanceEnFile = creationDeSeance()
+        const ligne = entree(
+            'post',
+            '/api/v1/workout-lines',
+            { workout_id: { enAttenteDe: seanceEnFile.id }, exercise_id: 9, order: 0 },
+            { contexte: { exercice: { id: 9, name: 'Soulevé de terre', type: null } } },
+        )
+        const enAttente = {
+            id: identifiantEnFile(seanceEnFile.id),
+            idempotency_key: 'cle-de-la-seance',
+            workout_lines: [],
+        }
+
+        expect(superposerLaFile(enAttente, [seanceEnFile, ligne]).workout_lines[0].exercise).toEqual({
+            id: 9,
+            name: 'Soulevé de terre',
+            type: 'strength',
+        })
+
+        const bibliotheque = [{ id: 9, name: 'Soulevé de terre roumain', type: 'strength', category: 'Dos' }]
+
+        expect(
+            superposerLaFile(enAttente, [seanceEnFile, ligne], { exercices: bibliotheque }).workout_lines[0].exercise,
+        ).toEqual(bibliotheque[0])
+    })
+
     it('ne compte pas la création d’une séance parmi les sept écritures de la séance', () => {
         const creation = creationDeSeance()
 
