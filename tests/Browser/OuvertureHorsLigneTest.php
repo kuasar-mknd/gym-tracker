@@ -6,10 +6,10 @@ namespace Tests\Browser;
 
 use App\Models\User;
 use App\Models\Workout;
-use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
 use Illuminate\Support\Str;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
+use Tests\Support\ParcoursHorsLigne;
 
 /**
  * Sans réseau, l'application s'ouvre sur la page « hors ligne », pas sur
@@ -26,12 +26,21 @@ use Tests\DuskTestCase;
  * la requête d'une navigation, que le navigateur précharge pour le worker, y
  * échoue comme sur un téléphone sans réseau. Le compte se déconnecte avant :
  * la page servie ne doit rien porter de lui, puisque le worker ne garde ni ne
- * sert aucune page de compte. Les copies que la page garde depuis #2048
- * (`CopiesHorsLigneTest`) ne seront servies que par elle, jamais par le
- * worker.
+ * sert aucune page de compte.
+ *
+ * Depuis #2048 (partie F), la page « hors ligne » est la coquille : elle
+ * démarre l'application sur la copie chiffrée de l'adresse quand le magasin en
+ * a une lisible pour le compte (`resources/js/Utils/demarrageHorsLigne.js`).
+ * Le premier parcours part donc avec au moins une copie, que la déconnexion
+ * par `/_dusk/logout` ne vide pas (aucune page de l'application n'y tourne) :
+ * elle efface le témoin, porteur de la clé, et la coquille, qui ne trouve plus
+ * de clé, purge le magasin et garde son contenu statique. Le second démarre à
+ * froid sur la copie de l'accueil, et y trouve le logo et `cloud_off`.
  */
 class OuvertureHorsLigneTest extends DuskTestCase
 {
+    use ParcoursHorsLigne;
+
     public function test_sans_reseau_une_navigation_ouvre_la_page_hors_ligne_sans_rien_du_compte_parti(): void
     {
         $compte = User::factory()->create([
@@ -51,35 +60,31 @@ class OuvertureHorsLigneTest extends DuskTestCase
              * boucle locale. La CI sert 127.0.0.1 ; sous Sail, les parcours
              * visent http://laravel.test, où il n'y a pas de worker du tout.
              */
-            if ($browser->script("return window.isSecureContext === true && 'serviceWorker' in navigator;")[0] !== true) {
-                $this->markTestSkipped('Origine en http hors boucle locale : aucun service worker n’y est inscrit.');
-            }
+            $this->exigerUnContexteSur($browser);
 
             // Installé, precache compris, et maître de la page.
-            $browser->waitUntil(
-                "navigator.serviceWorker.controller !== null && navigator.serviceWorker.controller.state === 'activated'",
-                30,
-                'le service worker n’a jamais pris la page en charge',
-            );
+            $this->attendreLeWorker($browser);
+
+            // Au moins une copie avant la déconnexion : celle de l'accueil, que le chargement complet a gardée.
+            $avant = $this->attendreLesCopies($browser, ['/dashboard']);
+            $this->assertIsArray($avant['etat']);
+            $this->assertTrue($avant['etat']['ouvert']);
 
             $browser->logout();
 
-            $outils = new ChromeDevToolsDriver($browser->driver);
-            $outils->execute('Network.enable');
-            $outils->execute('Network.emulateNetworkConditions', [
-                'offline' => true,
-                'latency' => 0,
-                'downloadThroughput' => -1,
-                'uploadThroughput' => -1,
-            ]);
+            // `/_dusk/logout` efface le témoin, porteur de la clé, sans qu'aucune page de l'application ne tourne.
+            $this->assertNull($this->temoinDesCopies($browser), 'le témoin reste après /_dusk/logout');
+
+            $outils = $this->outilsDuNavigateur($browser);
+            $this->reglerLeReseau($outils, true);
 
             /*
              * Les textes se lisent dans le DOM : `titre-carte` et `glass-button`
              * les passent en majuscules, et WebDriver rend le texte transformé,
              * contre lequel une absence se vérifierait aussi à tort.
              */
-            $texteDe = static fn (string $selecteur): string => 'document.querySelector('.json_encode($selecteur, JSON_THROW_ON_ERROR).').textContent.trim()';
-            $absentDeLaPage = static fn (string $texte): string => '!document.body.textContent.includes('.json_encode($texte, JSON_THROW_ON_ERROR).')';
+            $texteDe = $this->texteDe(...);
+            $absentDeLaPage = fn (string $texte): string => '!'.$this->laPageDit($texte);
 
             try {
                 foreach (['/dashboard', '/workouts/'.$seance->id, '/'] as $chemin) {
@@ -88,16 +93,17 @@ class OuvertureHorsLigneTest extends DuskTestCase
                         ->assertTitle('Hors ligne - GymTracker')
                         ->assertScript($texteDe('[dusk="page-hors-ligne"] h1'), 'Pas de réseau')
                         ->assertScript($texteDe('[dusk="page-hors-ligne"] a'), 'Réessayer')
+                        // Le logo tracé dans la page, au-dessus de la carte.
+                        ->assertScript("(() => { const logo = document.querySelector('main > div > svg'); return logo !== null && logo.querySelectorAll('path').length > 0; })()")
                         ->assertScript($absentDeLaPage($compte->name))
                         ->assertScript($absentDeLaPage($compte->email));
                 }
+
+                // La coquille, sans clé, a purgé le magasin : plus aucune copie, et un état fermé.
+                $apres = $this->attendreUnMagasinVide($browser, 'des copies restent sans clé');
+                $this->assertTrue($apres['etat'] === null || $apres['etat']['ouvert'] === false, 'le magasin reste ouvert sans clé');
             } finally {
-                $outils->execute('Network.emulateNetworkConditions', [
-                    'offline' => false,
-                    'latency' => 0,
-                    'downloadThroughput' => -1,
-                    'uploadThroughput' => -1,
-                ]);
+                $this->reglerLeReseau($outils, false);
             }
 
             // Le réseau revenu, la navigation repart au serveur, qui renvoie
@@ -110,17 +116,18 @@ class OuvertureHorsLigneTest extends DuskTestCase
 
     /**
      * Un démarrage à froid sans réseau montre le logo et l'icône `cloud_off`
-     * de la page « hors ligne » (#2048).
+     * (#2048).
      *
-     * Le logo est tracé dans la page (#2056) et ne demande rien. L'icône vient
-     * de la police Material Symbols, qui n'entrait au cache qu'à sa première
-     * utilisation. Le parcours n'en laisse que le precache de l'installation :
-     * le cache des actifs mis de côté à la demande et celui de la construction
-     * précédente (#2048, partie E) sont vidés, comme le cache HTTP du
-     * navigateur. Couper le réseau par les outils de Chrome ne coupe
-     * que la page, pas le worker : la police est donc aussi retirée du serveur
-     * pendant la coupure, pour qu'il ne puisse rien servir que le precache n'a
-     * pas.
+     * Le compte a ouvert l'accueil en ligne : la coquille démarre donc
+     * l'application sur sa copie (partie F), sous le bandeau « Hors ligne »,
+     * et non sur son contenu statique, que le parcours précédent vérifie. Le
+     * logo est tracé dans la barre de l'application (#2056), visible à partir
+     * de 1 024 px : le parcours s'ouvre à cette largeur. L'icône du bandeau
+     * vient de la police Material Symbols, qui n'entrait au cache qu'à sa
+     * première utilisation. Couper le réseau par les outils de Chrome ne coupe
+     * que la page, pas le worker : public/build est retiré du serveur pendant
+     * la coupure, après les caches du worker et du navigateur, et tout ce que
+     * la page montre vient du precache et de la copie.
      */
     public function test_un_demarrage_a_froid_sans_reseau_montre_le_logo_et_l_icone_cloud_off(): void
     {
@@ -131,66 +138,34 @@ class OuvertureHorsLigneTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($compte): void {
             $browser->loginAs($compte)
+                ->resize(1280, 900)
                 ->visit('/dashboard')
                 ->waitFor('#main-content', 30);
 
-            if ($browser->script("return window.isSecureContext === true && 'serviceWorker' in navigator;")[0] !== true) {
-                $this->markTestSkipped('Origine en http hors boucle locale : aucun service worker n’y est inscrit.');
-            }
+            $this->exigerUnContexteSur($browser);
+            $this->attendreLeWorker($browser);
+            $this->attendreLesCopies($browser, ['/dashboard']);
 
-            $browser->waitUntil(
-                "navigator.serviceWorker.controller !== null && navigator.serviceWorker.controller.state === 'activated'",
-                30,
-                'le service worker n’a jamais pris la page en charge',
-            );
-
-            // Ce que les pages vues en ligne ont mis au cache à la demande, ou que la construction précédente a laissé, ne compte pas.
-            $browser->script("window.cacheALaDemandeVide = false; Promise.all(['actifs-a-la-demande', 'construction-precedente'].map((nom) => caches.delete(nom))).then(() => { window.cacheALaDemandeVide = true; });");
-            $browser->waitUntil('window.cacheALaDemandeVide === true', 15, 'les caches des actifs du worker ne se sont pas vidés');
-
-            $outils = new ChromeDevToolsDriver($browser->driver);
-            $outils->execute('Network.enable');
-            $outils->execute('Network.clearBrowserCache');
-            $outils->execute('Network.emulateNetworkConditions', [
-                'offline' => true,
-                'latency' => 0,
-                'downloadThroughput' => -1,
-                'uploadThroughput' => -1,
-            ]);
-
-            $retires = [];
+            $outils = $this->outilsDuNavigateur($browser);
 
             try {
-                foreach ((array) glob(public_path('build/assets/material-symbols-outlined-*.woff2')) as $fichier) {
-                    $fichier = (string) $fichier;
-                    rename($fichier, $fichier.'.retire');
-                    $retires[] = $fichier;
-                }
-
-                $this->assertCount(1, $retires, 'la police des icônes doit exister dans la construction');
-
-                $browser->visit('/dashboard')
-                    ->waitFor('[dusk="page-hors-ligne"]', 15)
-                    // Le logo tracé, à sa taille, au-dessus de la carte.
-                    ->assertScript("(() => { const logo = document.querySelector('main > div > svg'); return logo !== null && logo.getBoundingClientRect().width > 0 && logo.querySelectorAll('path').length > 0; })()")
-                    ->waitUntil(
-                        "[...document.fonts].some((police) => police.family.includes('Material Symbols') && police.status === 'loaded')",
-                        15,
-                        'la police des icônes ne se charge pas sans réseau',
-                    )
-                    // Dessinée par sa police, l'icône tient dans son carré ; sans elle, on lirait le mot « cloud_off ».
-                    ->assertScript("(() => { const icone = document.querySelector('[dusk=\"icone-hors-ligne\"]'); return icone.textContent === 'cloud_off' && icone.getBoundingClientRect().width < parseFloat(getComputedStyle(icone).fontSize) * 1.5; })()");
+                $this->sansReseauNiConstruction($browser, $outils, function () use ($browser): void {
+                    $browser->visit('/dashboard')
+                        ->waitUntil($this->laCoquilleServiePour('reseau'), 15, 'la coquille n’a pas été servie sans réseau')
+                        ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
+                        ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
+                        // Le logo tracé dans la barre, à sa taille.
+                        ->assertScript("(() => { const logo = document.querySelector('nav a svg'); return logo !== null && logo.getBoundingClientRect().width > 0 && logo.querySelectorAll('path').length > 0; })()")
+                        ->waitUntil(
+                            "[...document.fonts].some((police) => police.family.includes('Material Symbols') && police.status === 'loaded')",
+                            15,
+                            'la police des icônes ne se charge pas sans réseau',
+                        )
+                        // Dessinée par sa police, l'icône tient dans son carré ; sans elle, on lirait le mot « cloud_off ».
+                        ->assertScript("(() => { const icone = document.querySelector('[dusk=\"bandeau-hors-ligne\"] .material-symbols-outlined'); return icone !== null && icone.textContent.trim() === 'cloud_off' && icone.getBoundingClientRect().width < parseFloat(getComputedStyle(icone).fontSize) * 1.5; })()");
+                });
             } finally {
-                foreach ($retires as $fichier) {
-                    rename($fichier.'.retire', $fichier);
-                }
-
-                $outils->execute('Network.emulateNetworkConditions', [
-                    'offline' => false,
-                    'latency' => 0,
-                    'downloadThroughput' => -1,
-                    'uploadThroughput' => -1,
-                ]);
+                $browser->resize(393, 852);
             }
         });
     }
