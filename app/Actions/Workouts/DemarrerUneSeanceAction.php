@@ -82,9 +82,11 @@ final readonly class DemarrerUneSeanceAction
         $maintenant = now();
         $debut = Workout::debutBorne($debutSurLAppareil, $maintenant);
 
-        /** @var Workout */
-        return Cache::lock("demarrage-de-seance:{$user->id}", self::VIE_DU_VERROU)
+        /** @var Workout $seance */
+        $seance = Cache::lock("demarrage-de-seance:{$user->id}", self::VIE_DU_VERROU)
             ->block(self::ATTENTE_DU_VERROU, fn (): Workout => $this->sousLeVerrou($user, $cle, $modele, $debut, $nom));
+
+        return $seance;
     }
 
     /**

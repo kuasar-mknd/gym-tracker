@@ -35,8 +35,6 @@ final class IdentifiantsDesRoutes
 
     /**
      * Les paramètres de route qui désignent un modèle par son identifiant.
-     *
-     * @var list<string>
      */
     public const array PARAMETRES_DE_MODELE = [
         'bodyPartMeasurement',
@@ -67,10 +65,10 @@ final class IdentifiantsDesRoutes
     public static function poserSur(iterable $routes): void
     {
         foreach ($routes as $route) {
-            foreach ($route->parameterNames() as $parametre) {
-                if (is_string($parametre) && in_array($parametre, self::PARAMETRES_DE_MODELE, true)) {
-                    $route->where($parametre, self::MOTIF);
-                }
+            $parametres = array_filter($route->parameterNames(), is_string(...));
+
+            foreach (array_intersect($parametres, self::PARAMETRES_DE_MODELE) as $parametre) {
+                $route->where($parametre, self::MOTIF);
             }
         }
     }
