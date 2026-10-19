@@ -17,7 +17,11 @@ import enTetes from './enTetesDeLaCoquille.json'
  * production, sans nonce (la page n'a aucun script en ligne à signer, et un
  * nonce écrit une fois pour toutes ne serait plus un nonce), plus
  * `frame-ancestors 'self'`, que `X-Frame-Options` dit déjà pour les
- * navigateurs plus anciens. Ni le worker ni la construction ne lisent le PHP :
+ * navigateurs plus anciens. Et `Cache-Control: no-store, private`, celui de
+ * toute page de compte (`HandleInertiaRequests`) : la coquille y monte une
+ * copie, et le cache de retour arrière, qui garde un document `no-store`
+ * tant qu'aucun cookie ne change, le refuse quand la session a pris fin
+ * entre-temps. Ni le worker ni la construction ne lisent le PHP :
  * `ServiceWorkerAssetsTest` refait ces en-têtes depuis le middleware et la
  * politique, et exige qu'ils soient exactement ceux du fichier, et ceux du
  * worker construit. Un en-tête ajouté côté serveur fait donc échouer la

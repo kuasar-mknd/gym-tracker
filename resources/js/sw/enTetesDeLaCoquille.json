@@ -1,4 +1,5 @@
 {
+    "Cache-Control": "no-store, private",
     "Content-Security-Policy": "base-uri 'self';connect-src 'self' https://fcm.googleapis.com https://updates.push.apple.com https://*.notify.windows.com;default-src 'self';font-src 'self' data:;form-action 'self';frame-src 'self';img-src 'self' data:;media-src 'self';object-src 'none';script-src 'self';style-src 'self' 'unsafe-inline';style-src-attr 'unsafe-inline';frame-ancestors 'self'",
     "X-Frame-Options": "SAMEORIGIN",
     "X-XSS-Protection": "0",

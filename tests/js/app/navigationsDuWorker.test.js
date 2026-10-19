@@ -221,6 +221,8 @@ describe('une page de la salle', () => {
         )
         expect(reglee.reponse.status).toBe(200)
         expect(EN_TETES_DE_LA_COQUILLE['Content-Security-Policy']).not.toMatch(/nonce-/)
+        // Comme une page de compte : le cache de retour arrière ne la rend pas après la fin de la session.
+        expect(reglee.reponse.headers.get('cache-control')).toBe('no-store, private')
         reseau.couper()
     })
 

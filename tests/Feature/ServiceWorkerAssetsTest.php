@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
@@ -459,9 +460,13 @@ function prefixesSansCoquilleDuWorker(): array
  * en-têtes que Laravel pose sur une page. Le worker l'enveloppe donc des
  * siens (#2048, partie F), qui doivent être exactement ceux du serveur :
  * chaque en-tête de `SecurityHeaders`, et la politique de `CustomPolicy` en
- * production, sans nonce, plus `frame-ancestors 'self'`. Un en-tête ajouté au
- * middleware, ou une source ajoutée à la politique, fait échouer ce test tant
- * que la coquille ne le porte pas ; le worker construit les porte tels quels.
+ * production, sans nonce, plus `frame-ancestors 'self'`. Et le `Cache-Control`
+ * d'une page de compte (`HandleInertiaRequests`) : la coquille y monte une
+ * copie, et sans `no-store` le cache de retour arrière la rendrait au bouton
+ * Retour après la fin de la session, témoin expiré, ce qu'il refuse à une page
+ * `no-store` dont un cookie a changé. Un en-tête ajouté au middleware, ou une
+ * source ajoutée à la politique, fait échouer ce test tant que la coquille ne
+ * le porte pas ; le worker construit les porte tels quels.
  */
 it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la politique de production, sans nonce', function (): void {
     app()->detectEnvironment(static fn (): string => 'production');
@@ -475,10 +480,16 @@ it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la
     $attendus = ['content-security-policy' => $politique.";frame-ancestors 'self'"];
 
     foreach ($reponse->headers->all() as $nom => $valeurs) {
-        if (! in_array($nom, ['cache-control', 'date'], true)) {
+        if ($nom !== 'date') {
             $attendus[$nom] = (string) $valeurs[0];
         }
     }
+
+    /*
+     * La réponse nue de Symfony porte `no-cache, private` par défaut : celui
+     * d'une page de compte le remplace, comme `HandleInertiaRequests` le fait.
+     */
+    $attendus['cache-control'] = HandleInertiaRequests::CACHE_D_UNE_PAGE_DE_COMPTE;
 
     $coquille = array_change_key_case(enTetesDeLaCoquilleDuWorker());
     ksort($attendus);
@@ -487,7 +498,8 @@ it('enveloppe la page « hors ligne » des en-têtes de SecurityHeaders et de la
     expect($coquille)->toBe($attendus)
         ->and($coquille['content-security-policy'])->not->toContain('nonce-')
         ->and($coquille['content-security-policy'])->not->toContain('unsafe-eval')
-        ->and($coquille)->toHaveKeys(['x-frame-options', 'x-content-type-options', 'referrer-policy', 'cross-origin-opener-policy', 'permissions-policy']);
+        ->and($coquille)->toHaveKeys(['x-frame-options', 'x-content-type-options', 'referrer-policy', 'cross-origin-opener-policy', 'permissions-policy'])
+        ->and($coquille['cache-control'])->toBe('no-store, private');
 
     if (is_file(public_path('sw.js'))) {
         $worker = (string) file_get_contents(public_path('sw.js'));
