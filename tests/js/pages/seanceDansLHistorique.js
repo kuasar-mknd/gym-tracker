@@ -110,10 +110,14 @@ const pageDeLaSeance = (serveur, id) => ({
  * (`workouts.en-attente`), à la séance de sa clé, sinon à la liste des
  * séances : le client d'Inertia suit la redirection sans la voir.
  *
- * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { bibliotheque?: Array<object> }} serveur
+ * Un test y ajoute les pages d'autres adresses (`serveur.pages`, chemin →
+ * page) : la page des modèles d'où l'on lance un modèle (#2049).
+ *
+ * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { bibliotheque?: Array<object>, pages?: Record<string, () => object> }} serveur
  * @returns {Record<string, () => object>}
  */
 export const pagesDuServeur = (serveur) => ({
+    ...(serveur.pages ?? {}),
     ...Object.fromEntries(
         [...(serveur.seances?.values() ?? [])].flatMap((seance) => [
             [`/workouts/${seance.id}`, () => pageDeLaSeance(serveur, seance.id)],
