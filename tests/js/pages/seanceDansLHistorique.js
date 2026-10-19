@@ -61,7 +61,8 @@ const seanceDuServeur = (serveur, id = 5) => ({
               id: 5,
               name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
               started_at: '2026-10-12T17:00:00.000000Z',
-              ended_at: null,
+              // Close par l'API (#2049) : la fin que le faux serveur a gardée.
+              ended_at: serveur.fins?.get(5) ?? null,
               notes: serveur.reglagesDeLaSeance?.notes ?? null,
           }
         : serveur.seances.get(id)),
@@ -127,6 +128,15 @@ export const pagesDuServeur = (serveur) => ({
         encryptHistory: true,
     }),
     '/workouts/5': () => pageDeLaSeance(serveur, 5),
+    // L'accueil, où mène une séance terminée (#2049) : sans donnée flash, que l'API ne pose jamais.
+    '/dashboard': () => ({
+        component: 'Dashboard',
+        url: '/dashboard',
+        version: 'v1',
+        props: { errors: {}, auth: { user: { id: 1 } } },
+        flash: {},
+        encryptHistory: true,
+    }),
 })
 
 /**
@@ -262,11 +272,13 @@ export const uneReponseRetenue = (serveur) => {
  *   retenir: (application: import('@vue/test-utils').VueWrapper) => void,
  *   avantInertia?: (inertia: typeof import('@inertiajs/vue3')) => Promise<void> | void,
  *   ouverture?: { adresse: string, selecteur: string, etatDeLHistorique?: object | null },
+ *   composants?: Record<string, object>,
  * }} chargement le faux serveur, l'import de la vraie page de séance, ce
  *   qui retient le montage pour le démonter après le test, ce que le test
  *   branche après la garde de l'historique et avant le démarrage d'Inertia,
- *   comme `main.js` (l'écriture des copies hors ligne, #2048), et le document
- *   ouvert, la liste des séances sans lui
+ *   comme `main.js` (l'écriture des copies hors ligne, #2048), le document
+ *   ouvert, la liste des séances sans lui, et le composant d'une autre page
+ *   que le test regarde (l'accueil, #2049), la liste des séances sinon
  * @returns {Promise<{
  *   sync: object,
  *   visites: Array<string>,
@@ -280,6 +292,7 @@ export const ouvrirLaListeDesSeances = async ({
     retenir,
     avantInertia = () => {},
     ouverture = { adresse: '/workouts', selecteur: '#liste-des-seances', etatDeLHistorique: null },
+    composants = {},
 }) => {
     const visites = []
 
@@ -384,7 +397,7 @@ export const ouvrirLaListeDesSeances = async ({
     await avantInertia(inertia)
 
     await inertia.createInertiaApp({
-        resolve: (nom) => (nom === 'Workouts/Show' ? Seance : ListeDesSeances),
+        resolve: (nom) => (nom === 'Workouts/Show' ? Seance : (composants[nom] ?? ListeDesSeances)),
         setup: ({ el, App, props, plugin }) => {
             retenir(
                 mount(App, {
