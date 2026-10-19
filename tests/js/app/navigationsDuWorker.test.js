@@ -474,6 +474,36 @@ describe('« Attendre la réponse »', () => {
         await vi.advanceTimersByTimeAsync(0)
     })
 
+    /*
+     * Relevée, une adresse repart en fin de file : la levée qui part au-delà
+     * de seize est la plus ancienne, pas celle que la personne vient de
+     * refaire.
+     */
+    it('remet en fin de file une adresse levée de nouveau', async () => {
+        const [relevee, ...autres] = Array.from({ length: 17 }, (_, rang) => `/workouts/${rang + 200}`)
+
+        envoyerAuWorker({ type: MESSAGE_ATTENDRE_LA_REPONSE, adresse: `${ORIGINE}${relevee}` })
+
+        for (const seance of autres.slice(0, 15)) {
+            envoyerAuWorker({ type: MESSAGE_ATTENDRE_LA_REPONSE, adresse: `${ORIGINE}${seance}` })
+        }
+
+        envoyerAuWorker({ type: MESSAGE_ATTENDRE_LA_REPONSE, adresse: `${ORIGINE}${relevee}` })
+        envoyerAuWorker({ type: MESSAGE_ATTENDRE_LA_REPONSE, adresse: `${ORIGINE}${autres[15]}` })
+
+        const reseauDeLaRelevee = reseauEnAttente()
+        const gardee = naviguer(relevee, { preloadResponse: reseauDeLaRelevee.promesse })
+        const reseauDeLaPlusAncienne = reseauEnAttente()
+        const oubliee = naviguer(autres[0], { preloadResponse: reseauDeLaPlusAncienne.promesse })
+        await vi.advanceTimersByTimeAsync(DELAI_DE_LA_NAVIGATION_MS)
+
+        expect(gardee.reglee.reponse).toBeUndefined()
+        await expect(raisonDeLaCoquille(oubliee.reglee.reponse)).resolves.toBe('delai')
+        reseauDeLaRelevee.couper()
+        reseauDeLaPlusAncienne.couper()
+        await vi.advanceTimersByTimeAsync(0)
+    })
+
     it('ne répond pas à un autre message', () => {
         expect(envoyerAuWorker({ type: 'autre chose' }).postMessage).not.toHaveBeenCalled()
         expect(envoyerAuWorker(null).postMessage).not.toHaveBeenCalled()

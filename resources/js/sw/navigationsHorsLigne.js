@@ -383,6 +383,23 @@ export const creerLesNavigations = ({
         return sansDelai.has(cle)
     }
 
+    /**
+     * Lève le délai d'une page de la salle pendant une minute. Une clé déjà
+     * levée repart en fin de file, comme une neuve : au-delà de seize, c'est la
+     * levée la plus ancienne qui part, jamais celle qu'on vient de refaire.
+     *
+     * @param {string} cle la clé de la salle
+     */
+    const leverLeDelai = (cle) => {
+        oublierLesLeveesPassees()
+        sansDelai.delete(cle)
+        sansDelai.set(cle, maintenant() + DUREE_SANS_DELAI_MS)
+
+        while (sansDelai.size > ADRESSES_SANS_DELAI_AU_PLUS) {
+            sansDelai.delete(sansDelai.keys().next().value)
+        }
+    }
+
     /** @param {string | undefined} identifiant */
     const prevenirLaPage = async (identifiant) => {
         if (typeof identifiant !== 'string' || identifiant === '') {
@@ -434,12 +451,7 @@ export const creerLesNavigations = ({
         const levee = url !== null && sorteDeNavigation(url.href, origine) === 'salle'
 
         if (levee) {
-            oublierLesLeveesPassees()
-            sansDelai.set(cleDeLaSalle(url), maintenant() + DUREE_SANS_DELAI_MS)
-
-            while (sansDelai.size > ADRESSES_SANS_DELAI_AU_PLUS) {
-                sansDelai.delete(sansDelai.keys().next().value)
-            }
+            leverLeDelai(cleDeLaSalle(url))
         }
 
         event.ports?.[0]?.postMessage({ type: MESSAGE_ATTENDRE_LA_REPONSE, levee })
