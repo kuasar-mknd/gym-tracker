@@ -21,6 +21,7 @@ import { useRechargementApresLeVidage } from '@/composables/useRechargementApres
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+import { ID_DE_L_ETAT_DE_LA_SEANCE, useSeanceEnAttente } from '@/composables/useSeanceEnAttente'
 import RestTimer from '@/Components/Workout/RestTimer.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import { fusionnerLaSeance } from '@/Utils/fusionDeSeance'
@@ -30,6 +31,8 @@ import WorkoutFinishModal from '@/Components/Workout/WorkoutFinishModal.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import SeriesHorsDeLaCopie from '@/Components/Workout/SeriesHorsDeLaCopie.vue'
+import EtatDeLaSeanceEnAttente from '@/Components/Workout/EtatDeLaSeanceEnAttente.vue'
+import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRaccourcisDeLaSeance } from '@/composables/useRaccourcisDeLaSeance'
@@ -85,6 +88,15 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
 const { nouvelIdTemporaire, newRowKey, rowKey, pendingIds, queuedLineIds } = useIdentiteDesRangees()
 const showAddExercise = ref(false)
+// Démarrée sans réseau (#2049) : suivie jusqu'au rejeu de sa création, sans rechargement après le vidage, puis adoptée.
+const { seanceProvisoire, etatDeLaSeance, seanceEnLectureSeule } = useSeanceEnAttente({
+    seance: props.workout,
+    pendingIds,
+    occupee: () => showTimer.value || showAddExercise.value || retraitDemande.value || ordreEnVol.value > 0,
+    valeursDeRepli,
+})
+/** Close, ou démarrée sans réseau puis refusée : rien ne s'y écrit plus. */
+const lectureSeule = computed(() => isFinished.value || seanceEnLectureSeule.value)
 const bibliotheque = (exercices) => [...(exercices || [])].filter((e) => e && e.id)
 const localExercises = ref(bibliotheque(props.exercises))
 // Suit le serveur : rechargée depuis sa copie sans remontage (#2048), la séance gardait la bibliothèque de la copie.
@@ -135,7 +147,7 @@ const {
     peutReordonner,
 } = useOrdreDeLaSeance({
     localWorkout,
-    isFinished,
+    isFinished: lectureSeule,
     pendingIds,
     nextWrite,
     isLatestWrite,
@@ -174,8 +186,8 @@ const {
     bornesDUneSerie: props.bornesDUneSerie,
 })
 
-useRaccourcisDeLaSeance({ localWorkout, isFinished, addSet })
-useRechargementApresLeVidage()
+useRaccourcisDeLaSeance({ localWorkout, isFinished: lectureSeule, addSet })
+useRechargementApresLeVidage({ actif: !seanceProvisoire })
 
 // La copie hors ligne de la séance, quand tout est enregistré (#2048).
 useCopieDeLaSeance({
@@ -219,7 +231,7 @@ const { addExercise, removeLine, retraitDemande, titreDuRetrait, annulerLeRetrai
 // Les tests vident le debounce d'une serie par ici.
 defineExpose({ flushPendingUpdates })
 
-const handleFabAddExercise = () => (showAddExercise.value = true)
+const handleFabAddExercise = () => (showAddExercise.value = !seanceEnLectureSeule.value)
 
 onMounted(() => {
     // Le premier relevé : la séance telle qu'elle est arrivée, du serveur ou de
@@ -260,29 +272,14 @@ onUnmounted(() => {
         back-route="workouts.index"
         largeur="moyenne"
     >
-        <!-- Fixed rather than in the flow: the set being edited can be anywhere
-             down a long session, and a message that scrolls out of view is the
-             same as no message. -->
-        <Transition
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="-translate-y-2 opacity-0"
-            leave-active-class="transition duration-150 ease-in"
-            leave-to-class="-translate-y-2 opacity-0"
-        >
-            <div
-                v-if="editError"
-                role="alert"
-                dusk="set-edit-error"
-                class="border-accent-danger/30 bg-accent-danger/95 text-text-on-accent z-toast left-sure-3 right-sure-3 top-sure-20 fixed rounded-2xl border px-4 py-3 text-sm font-bold shadow-lg backdrop-blur-md"
-            >
-                {{ editError }}
-            </div>
-        </Transition>
+        <ErreurDeSaisie :message="editError" />
 
         <template #header-actions>
             <button
                 v-press
                 @click="showSettingsModal = true"
+                :disabled="seanceProvisoire"
+                :aria-describedby="seanceProvisoire ? ID_DE_L_ETAT_DE_LA_SEANCE : undefined"
                 dusk="workout-settings-button"
                 :class="[
                     'text-text-muted flex size-11 shrink-0 items-center justify-center rounded-xl',
@@ -296,6 +293,7 @@ onUnmounted(() => {
         </template>
 
         <div class="pb-main-safe">
+            <EtatDeLaSeanceEnAttente :etat="etatDeLaSeance" />
             <SeriesHorsDeLaCopie :seance="localWorkout.id" />
             <div ref="listeDesExercices" class="space-y-4" dusk="exercise-list">
                 <GlassCard
@@ -304,13 +302,13 @@ onUnmounted(() => {
                 >
                     <h3 class="titre-section mb-4">Séance vide</h3>
                     <GlassButton
-                        v-if="!isFinished"
+                        v-if="!lectureSeule"
                         variant="primary"
                         @click="showAddExercise = true"
                         dusk="add-first-exercise"
                         >Ajouter un exercice</GlassButton
                     >
-                    <p v-else class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
+                    <p v-else-if="isFinished" class="text-text-muted text-sm font-bold">Cette séance est terminée.</p>
                 </GlassCard>
 
                 <CarteDExercice
@@ -318,7 +316,7 @@ onUnmounted(() => {
                     :key="rowKey(line)"
                     :line="line"
                     :line-index="lineIndex"
-                    :is-finished="isFinished"
+                    :is-finished="lectureSeule"
                     :deplacable="localWorkout.workout_lines.length > 1"
                     :reordonnable="peutReordonner(line)"
                     :serie-en-vol="serieEnDeplacement === line.id"
@@ -342,8 +340,9 @@ onUnmounted(() => {
             <p class="sr-only" aria-live="polite">{{ annonceReorganisation }}</p>
 
             <ActionsDeLaSeance
-                v-if="localWorkout.workout_lines.length > 0 && !isFinished"
+                v-if="localWorkout.workout_lines.length > 0 && !lectureSeule"
                 :enregistrement-du-modele="savingTemplate"
+                :seance-en-attente="seanceProvisoire"
                 @ajouter-un-exercice="showAddExercise = true"
                 @demarrer-un-repos="openRestTimer"
                 @enregistrer-comme-modele="saveAsTemplate"

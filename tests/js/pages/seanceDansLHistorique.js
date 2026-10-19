@@ -46,21 +46,27 @@ export const DEVELOPPE_COUCHE = {
 const EXERCICES = [SQUAT, DEVELOPPE_COUCHE]
 
 /**
- * La séance telle que le serveur la rend maintenant : les lignes de la séance 5
- * qu'il a en base, et leurs séries. Son nom et ses notes sont ceux que le test
- * a posés sur le faux serveur (`reglagesDeLaSeance`), comme s'ils avaient
- * changé ailleurs.
+ * La séance telle que le serveur la rend maintenant : les lignes de la séance
+ * qu'il a en base, et leurs séries. La séance 5 est celle du décor : son nom et
+ * ses notes sont ceux que le test a posés sur le faux serveur
+ * (`reglagesDeLaSeance`), comme s'ils avaient changé ailleurs. Les autres sont
+ * celles que l'API a créées (`serveur.seances`, #2049).
  *
  * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { reglagesDeLaSeance?: { name?: string, notes?: string | null } }} serveur
+ * @param {number} id
  */
-const seanceDuServeur = (serveur) => ({
-    id: 5,
-    name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
-    started_at: '2026-10-12T17:00:00.000000Z',
-    ended_at: null,
-    notes: serveur.reglagesDeLaSeance?.notes ?? null,
+const seanceDuServeur = (serveur, id = 5) => ({
+    ...(id === 5
+        ? {
+              id: 5,
+              name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
+              started_at: '2026-10-12T17:00:00.000000Z',
+              ended_at: null,
+              notes: serveur.reglagesDeLaSeance?.notes ?? null,
+          }
+        : serveur.seances.get(id)),
     workout_lines: [...serveur.lignes.values()]
-        .filter((ligne) => ligne.workout_id === 5)
+        .filter((ligne) => ligne.workout_id === id)
         .sort((a, b) => a.id - b.id)
         .map((ligne, rang) => ({
             id: ligne.id,
@@ -76,16 +82,43 @@ const seanceDuServeur = (serveur) => ({
         })),
 })
 
+/** La page d'une séance, comme le serveur la rend. */
+const pageDeLaSeance = (serveur, id) => ({
+    component: 'Workouts/Show',
+    url: `/workouts/${id}`,
+    version: 'v1',
+    props: {
+        errors: {},
+        flash: {},
+        auth: { user: { id: 1 } },
+        workout: seanceDuServeur(serveur, id),
+        exercises: serveur.bibliotheque ?? EXERCICES,
+        bornesDUneSerie: null,
+    },
+    encryptHistory: true,
+})
+
 /**
  * Les pages de chaque adresse, comme le serveur les rend maintenant. La
  * bibliothèque de la séance est celle que le test a posée sur le faux serveur
  * (`bibliotheque`), comme si elle avait changé ailleurs, et sinon le squat et
  * le développé couché.
  *
+ * Chaque séance que l'API a créée a sa page (#2049), et l'adresse d'une séance
+ * démarrée sans réseau mène, comme la redirection du serveur
+ * (`workouts.en-attente`), à la séance de sa clé, sinon à la liste des
+ * séances : le client d'Inertia suit la redirection sans la voir.
+ *
  * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { bibliotheque?: Array<object> }} serveur
  * @returns {Record<string, () => object>}
  */
 export const pagesDuServeur = (serveur) => ({
+    ...Object.fromEntries(
+        [...(serveur.seances?.values() ?? [])].flatMap((seance) => [
+            [`/workouts/${seance.id}`, () => pageDeLaSeance(serveur, seance.id)],
+            [`/workouts/en-attente/${seance.idempotency_key}`, () => pageDeLaSeance(serveur, seance.id)],
+        ]),
+    ),
     '/workouts': () => ({
         component: 'Workouts/Index',
         url: '/workouts',
@@ -93,21 +126,16 @@ export const pagesDuServeur = (serveur) => ({
         props: { errors: {}, flash: {}, auth: { user: { id: 1 } } },
         encryptHistory: true,
     }),
-    '/workouts/5': () => ({
-        component: 'Workouts/Show',
-        url: '/workouts/5',
-        version: 'v1',
-        props: {
-            errors: {},
-            flash: {},
-            auth: { user: { id: 1 } },
-            workout: seanceDuServeur(serveur),
-            exercises: serveur.bibliotheque ?? EXERCICES,
-            bornesDUneSerie: null,
-        },
-        encryptHistory: true,
-    }),
+    '/workouts/5': () => pageDeLaSeance(serveur, 5),
 })
+
+/**
+ * La page que le serveur rend à ce chemin : la sienne, ou la liste des séances
+ * pour une séance démarrée sans réseau qu'il ne connaît pas.
+ */
+const pageDuChemin = (serveur, chemin) =>
+    pagesDuServeur(serveur)[chemin]?.() ??
+    (chemin.startsWith('/workouts/en-attente/') ? pagesDuServeur(serveur)['/workouts']() : undefined)
 
 const ListeDesSeances = { name: 'ListeDesSeances', render: () => h('p', { id: 'liste-des-seances' }, 'Séances') }
 
@@ -253,7 +281,6 @@ export const ouvrirLaListeDesSeances = async ({
     avantInertia = () => {},
     ouverture = { adresse: '/workouts', selecteur: '#liste-des-seances', etatDeLHistorique: null },
 }) => {
-    const pagesDeLAdresse = pagesDuServeur(serveur)
     const visites = []
 
     class RequeteSimulee {
@@ -284,7 +311,7 @@ export const ouvrirLaListeDesSeances = async ({
             queueMicrotask(() => {
                 try {
                     this.status = 200
-                    this.responseText = JSON.stringify(pagesDeLAdresse[chemin]())
+                    this.responseText = JSON.stringify(pageDuChemin(serveur, chemin))
                     this.onload?.()
                 } finally {
                     requetesEnVol--
@@ -345,7 +372,7 @@ export const ouvrirLaListeDesSeances = async ({
     const initiale = document.createElement('script')
     initiale.dataset.page = 'app'
     initiale.type = 'application/json'
-    initiale.textContent = JSON.stringify(pagesDeLAdresse[ouverture.adresse]())
+    initiale.textContent = JSON.stringify(pageDuChemin(serveur, ouverture.adresse))
     document.body.replaceChildren(initiale, Object.assign(document.createElement('div'), { id: 'app' }))
 
     const inertia = await import('@inertiajs/vue3')

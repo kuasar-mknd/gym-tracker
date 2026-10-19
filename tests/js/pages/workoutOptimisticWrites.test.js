@@ -44,6 +44,7 @@ import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
+import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 
 const EXERCISE = { id: 5, name: 'Développé couché', type: 'strength', category: 'Pectoraux', default_rest_time: 90 }
@@ -101,6 +102,8 @@ const mountPage = async (workout = emptyWorkout, autresProps = {}) => {
                 RangeeDeSerie,
                 CarteDExercice,
                 ActionsDeLaSeance,
+                // Le message d'une écriture refusée, rendu pour de vrai : le test le lit.
+                ErreurDeSaisie,
                 GlassInput: passesSlot,
                 GlassSelect: passesSlot,
             },

@@ -34,9 +34,12 @@ export const seances = suivreLesPagesMontees()
 
 /** Les adresses de Ziggy dont la séance se sert. */
 export const routeDeTest = (nom, parametres = {}) => {
-    const valeur = Object.values(parametres)[0]
+    const valeur = parametres !== null && typeof parametres === 'object' ? Object.values(parametres)[0] : parametres
 
     return {
+        dashboard: '/dashboard',
+        'workouts.show': `/workouts/${valeur}`,
+        'api.v1.workouts.store': '/api/v1/workouts',
         'api.v1.sets.store': '/api/v1/sets',
         'api.v1.sets.update': `/api/v1/sets/${valeur}`,
         'api.v1.sets.destroy': `/api/v1/sets/${valeur}`,
@@ -66,8 +69,11 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
         /** Les séries en base, par identifiant. */
         series: new Map(series.map((serie) => [serie.id, { ...serie }])),
         lignes: new Map(),
+        /** Les séances créées par l'API (#2049), par identifiant. */
+        seances: new Map(),
         prochaineSerie: 100,
         prochaineLigne: 70,
+        prochaineSeance: 42,
         /** Une réponse imposée à la prochaine requête qui atteint le serveur. */
         imposer: [],
         /** Ce que chaque clé d'idempotence a déjà créé : `${url} ${clé}` → identifiant. */
@@ -97,11 +103,36 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
             const dejaCreee = method === 'post' && cle ? serveur.creees.get(`${url} ${cle}`) : undefined
 
             if (dejaCreee !== undefined) {
-                const existante = (url === '/api/v1/sets' ? serveur.series : serveur.lignes).get(dejaCreee)
+                const creees =
+                    { '/api/v1/sets': serveur.series, '/api/v1/workouts': serveur.seances }[url] ?? serveur.lignes
+                const existante = creees.get(dejaCreee)
 
                 if (existante) {
-                    return { data: { data: { ...existante } } }
+                    const { idempotency_key: _cle, ...rendue } = existante
+
+                    return { status: 200, data: { data: url === '/api/v1/workouts' ? rendue : { ...existante } } }
                 }
+            }
+
+            // Démarrer une séance (#2049) : `POST /api/v1/workouts`, son nom à la date du jour, comme le serveur.
+            if (method === 'post' && url === '/api/v1/workouts') {
+                const seance = {
+                    id: serveur.prochaineSeance++,
+                    name: '19/10/2026',
+                    started_at: data?.started_at ?? null,
+                    ended_at: null,
+                    notes: null,
+                    created_at: 'c',
+                    updated_at: 'u',
+                }
+                // La clé reste en base, et dans les props de sa page ; la ressource de l'API ne la rend pas.
+                serveur.seances.set(seance.id, { ...seance, idempotency_key: cle ?? null })
+
+                if (cle) {
+                    serveur.creees.set(`${url} ${cle}`, seance.id)
+                }
+
+                return { status: 201, data: { data: seance } }
             }
 
             if (method === 'post' && url === '/api/v1/workout-lines') {

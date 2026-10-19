@@ -1144,6 +1144,17 @@ class SyncService {
     }
 
     /**
+     * Une visite part alors que la file du compte est vide et que rien ne vole
+     * (#2049) : sa réponse montrera tout ce que le vidage a fait aboutir, et la
+     * page qu'elle monte n'a pas à se recharger après lui
+     * (`useRechargementApresLeVidage`). La séance démarrée sans réseau, adoptée
+     * par une visite de la séance réelle, la demandait sinon deux fois.
+     */
+    visiteApresLeVidage() {
+        this.rejeuxDepuisLaDerniereVisite = 0
+    }
+
+    /**
      * Ce que l'écriture `queueId` a produit, quand cet onglet l'a vue rejouer
      * ou l'a apprise d'un autre onglet (#2049) ; null sinon. La page d'une
      * séance démarrée sans réseau y trouve la séance réelle, rouverte depuis

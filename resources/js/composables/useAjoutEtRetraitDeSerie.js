@@ -361,8 +361,15 @@ export const useAjoutEtRetraitDeSerie = ({
          * ligne la reconstruit avec, plutôt que d'écarter la série : l'entrée
          * d'historique d'une visite plus ancienne n'a pas l'exercice ajouté en
          * ligne depuis, et la série en file disparaissait avec lui (#2048).
+         * La séance passe par sa référence, comme la ligne : démarrée sans
+         * réseau, elle porte un identifiant provisoire, et c'est son entrée de
+         * file que le contexte nomme (`{ enAttenteDe }`), puis l'identifiant
+         * que le serveur lui a donné (#2049).
          */
-        const contexte = { workout_id: localWorkout.value.id, exercise_id: line.exercise_id ?? line.exercise?.id }
+        const contexteDeLaSerie = (realWorkoutId) => ({
+            workout_id: realWorkoutId,
+            exercise_id: line.exercise_id ?? line.exercise?.id,
+        })
 
         /**
          * Le premier envoi : la série créée, mise en file, ou refusée.
@@ -375,8 +382,8 @@ export const useAjoutEtRetraitDeSerie = ({
          * @type {Promise<{created: object|null, sent: object}|{queueId: string}|null>}
          */
         const tentative = tentativePrecedente
-            .then(() => pendingIds.reference(lineId))
-            .then((realLineId) => {
+            .then(() => Promise.all([pendingIds.reference(lineId), pendingIds.reference(localWorkout.value.id)]))
+            .then(([realLineId, realWorkoutId]) => {
                 if (realLineId === null) {
                     markUnsynced(tempSet.id)
 
@@ -406,6 +413,7 @@ export const useAjoutEtRetraitDeSerie = ({
                 }
 
                 const charge = { workout_line_id: realLineId, ...sent }
+                const contexte = contexteDeLaSerie(realWorkoutId)
 
                 /*
                  * L'exercice attend lui-même dans la file : la série s'y range

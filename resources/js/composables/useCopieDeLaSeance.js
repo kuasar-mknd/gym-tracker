@@ -98,6 +98,11 @@ const aDesRangeesProvisoires = (seance) =>
  * Sans écriture installée (`main.js` l'installe ; un test qui ne l'installe
  * pas), rien d'autre que la séance suivie.
  *
+ * Une séance démarrée sans réseau, sous l'identifiant provisoire de sa
+ * création en file (#2049), ne suit rien et ne prend aucun instantané : sa
+ * page vient de la file, et la séance réelle, une fois adoptée, s'ouvre par
+ * une visite qui remonte la page.
+ *
  * @param {{
  *   localWorkout: import('vue').Ref<object>,
  *   seanceDeDepart: object,
@@ -123,9 +128,18 @@ export const useCopieDeLaSeance = ({
     ecriture = ecritureDesCopiesInstallee(),
     fenetre = window,
 }) => {
-    SyncService.suivreLesEcrituresDeLaSeance?.(localWorkout.value?.id)
+    /*
+     * Une séance démarrée sans réseau (#2049) n'a pas encore d'identifiant du
+     * serveur : aucune écriture ne se note sous elle, et la séance suivie
+     * avant elle non plus ne garde rien de ce qui se fait ici. Elle n'a pas
+     * de copie, puisque sa page se construit depuis la file
+     * (`Utils/seanceEnAttente.js`) : rien ne s'y verse.
+     */
+    const provisoire = isTemporaryId(localWorkout.value?.id)
 
-    if (ecriture === null || page?.component !== COMPOSANT || !getCurrentInstance()) {
+    SyncService.suivreLesEcrituresDeLaSeance?.(provisoire ? null : localWorkout.value?.id)
+
+    if (provisoire || ecriture === null || page?.component !== COMPOSANT || !getCurrentInstance()) {
         return
     }
 

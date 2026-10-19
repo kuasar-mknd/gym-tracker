@@ -134,6 +134,7 @@ import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
 import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
+import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
@@ -256,6 +257,8 @@ const mountPage = async (workout = strengthWorkout, exercises = [STRENGTH, CARDI
                 WorkoutFinishModal: FinishModalStub,
                 RestTimer: RestTimerStub,
                 ActionsDeLaSeance,
+                // Le message d'une écriture refusée, rendu pour de vrai : le test le lit.
+                ErreurDeSaisie,
             },
         },
     })

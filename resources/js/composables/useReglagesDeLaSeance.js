@@ -6,6 +6,7 @@ import SyncService from '@/Utils/SyncService'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
 import { recalerApresLaCopie } from '@/composables/useCopieHorsLigne'
+import { isTemporaryId } from '@/Utils/pendingIds'
 
 /**
  * Ce que « Terminer » attend la file hors ligne, au plus. Un vidage n'a pas de
@@ -22,11 +23,26 @@ export const ATTENTE_MAX_DE_LA_FILE_MS = 8000
  * @param {{ localWorkout: import('vue').Ref<object>, viderLesEcritures: () => Promise<unknown> }} page
  */
 export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
+    /**
+     * L'identifiant que le serveur a donné à la séance, ou null pour une
+     * séance démarrée sans réseau qu'il n'a pas encore adoptée (#2049) : ses
+     * trois boutons sont désactivés, et rien ne part en son nom.
+     *
+     * @returns {number|string|null}
+     */
+    const idReelDeLaSeance = () => (isTemporaryId(localWorkout.value.id) ? null : localWorkout.value.id)
+
     const savingTemplate = ref(false)
     const saveAsTemplate = () => {
+        const realWorkoutId = idReelDeLaSeance()
+
+        if (realWorkoutId === null) {
+            return
+        }
+
         savingTemplate.value = true
         router.post(
-            route('templates.save-from-workout', { workout: localWorkout.value.id }),
+            route('templates.save-from-workout', { workout: realWorkoutId }),
             {},
             {
                 preserveScroll: true,
@@ -86,7 +102,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
     }
 
     const confirmFinishWorkout = async () => {
-        if (clotureEnCours.value) {
+        if (clotureEnCours.value || idReelDeLaSeance() === null) {
             return
         }
 
@@ -135,6 +151,8 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
 
             cloturePartie = true
 
+            const realWorkoutId = idReelDeLaSeance()
+
             /*
              * La modale reste ouverte pendant la visite, « Confirmer » occupé.
              * Acceptée, elle se ferme ; refusée, elle se ferme aussi, et le
@@ -143,7 +161,7 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
              * seule sa réponse se perdre.
              */
             router.patch(
-                route('workouts.update', { workout: localWorkout.value.id }),
+                route('workouts.update', { workout: realWorkoutId }),
                 { is_finished: true },
                 {
                     onSuccess: () => {
@@ -195,13 +213,19 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures }) => {
      * l'application, et le serveur ramène l'instant au sien.
      */
     const updateSettings = () => {
+        const realWorkoutId = idReelDeLaSeance()
+
+        if (realWorkoutId === null) {
+            return
+        }
+
         settingsForm
             .transform(({ started_at, ...reglages }) =>
                 started_at === formatToLocalISO(localWorkout.value.started_at)
                     ? reglages
                     : { ...reglages, started_at: formatToUTC(started_at) },
             )
-            .patch(route('workouts.update', { workout: localWorkout.value.id }), {
+            .patch(route('workouts.update', { workout: realWorkoutId }), {
                 preserveScroll: true,
                 onSuccess: () => {
                     showSettingsModal.value = false

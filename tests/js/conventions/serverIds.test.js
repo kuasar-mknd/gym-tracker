@@ -70,6 +70,49 @@ describe('server ids', () => {
     })
 
     /**
+     * Same rule for the session a line belongs to (#2049). A session started
+     * without a network wears the placeholder of its queued creation
+     * (`temp-q…`) until the server adopts it, and the exercises added
+     * meanwhile name it by reference (`{ enAttenteDe }`), resolved like a
+     * line. The set's queue context names it the same way.
+     */
+    it('never puts an unresolved id in a workout_id payload', () => {
+        const payloadKey = /workout_id\s*:\s*([A-Za-z_$][\w.$]*)/g
+
+        const offenders = collectSourceFiles(exemptions).flatMap((path) => {
+            const source = readFileSync(path, 'utf8')
+
+            return [...source.matchAll(payloadKey)]
+                .filter(([, identifier]) => !RESOLVED.test(identifier))
+                .map(([match]) => `${path.replace(jsRoot, 'resources/js')}: ${match}`)
+        })
+
+        expect(offenders).toEqual([])
+    })
+
+    /**
+     * And for the session's own routes. The session page holds its session
+     * in `localWorkout`, whose id is a placeholder for a session started
+     * without a network: `PATCH /workouts/temp-q4` would be refused, and the
+     * order of the exercises with it. A session route takes the id from
+     * `pendingIds`, or from a check that it is the server's.
+     */
+    it('never puts the session page’s own id in a workouts route unresolved', () => {
+        const routeParameter =
+            /route\(\s*['"]((?:api\.v1\.)?workouts\.[\w.-]+|templates\.save-from-workout)['"]\s*,\s*(?:\{\s*workout\s*:\s*)?([A-Za-z_$][\w.$]*)/g
+
+        const offenders = collectSourceFiles(exemptions).flatMap((path) => {
+            const source = readFileSync(path, 'utf8')
+
+            return [...source.matchAll(routeParameter)]
+                .filter(([, , identifier]) => /^(localWorkout|props\.workout)\b/.test(identifier))
+                .map(([match]) => `${path.replace(jsRoot, 'resources/js')}: ${match}`)
+        })
+
+        expect(offenders).toEqual([])
+    })
+
+    /**
      * Reordering sends every line id at once. A workout whose first exercise is
      * still being created carries a placeholder among them, and the server
      * would refuse the whole list — the reorder silently lost, the exercises

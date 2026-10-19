@@ -31,6 +31,7 @@ vi.mock('@inertiajs/vue3', () => ({
 import WorkoutShow from '@/Pages/Workouts/Show.vue'
 import RangeeDeSerie from '@/Components/Workout/RangeeDeSerie.vue'
 import CarteDExercice from '@/Components/Workout/CarteDExercice.vue'
+import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
 
 const DRAFT_KEY = 'draft_set_42'
@@ -82,6 +83,8 @@ const mountPage = async () => {
                 SwipeableRow: passesSlot,
                 RangeeDeSerie,
                 CarteDExercice,
+                // Le message d'une écriture refusée, rendu pour de vrai : le test le lit.
+                ErreurDeSaisie,
             },
         },
     })
