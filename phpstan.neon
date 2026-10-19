@@ -13,6 +13,10 @@ includes:
 parameters:
     paths:
         - app/
+        # bootstrap/app.php appelle du code de l'application (les motifs des
+        # parametres de route, #2049) : hors de l'analyse, le detecteur de
+        # code mort tenait cet appel pour absent.
+        - bootstrap/app.php
         - database/
         - routes/
         - tests/
