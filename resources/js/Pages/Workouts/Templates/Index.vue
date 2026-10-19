@@ -10,36 +10,51 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
+import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
 defineProps({
     templates: {
         type: Array,
         default: () => [],
     },
+    /**
+     * De quoi lancer chaque modèle sans réseau, sous son identifiant : son
+     * contenu et les clés que le serveur dérive (#2049). La page passe par
+     * `useDemarrageDUneSeance`, qui le lit dans la page.
+     */
+    lancements: {
+        type: Object,
+        default: () => ({}),
+    },
 })
 
-// Tracks the template being launched: without it a double tap posts twice and
+/*
+ * Lancer un modèle passe par la file hors ligne, comme démarrer une séance
+ * (#2049) : sans réseau, la séance, ses exercices et ses séries entrent en
+ * file d'un seul coup et la séance s'ouvre. « Lancer » reste ouvert sur une
+ * copie de la page : rien n'y part qui ne soit le geste de la personne
+ * (`.ai/rules/js.md`). Supprimer un modèle, une visite, s'y désactive.
+ */
+const { demarrer, enCours: demarrageEnCours } = useDemarrageDUneSeance()
+const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
+
+// Tracks the template being launched: without it a double tap launches twice and
 // creates two workouts, which the user then has to delete by hand.
 const executingTemplateId = ref(null)
 
-const executeTemplate = (templateId) => {
-    if (executingTemplateId.value !== null) {
+const executeTemplate = async (template) => {
+    if (executingTemplateId.value !== null || demarrageEnCours.value) {
         return
     }
 
-    executingTemplateId.value = templateId
+    executingTemplateId.value = template.id
 
-    router.post(
-        route('templates.execute', { template: templateId }),
-        {},
-        {
-            onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU),
-            onFinish: () => {
-                executingTemplateId.value = null
-            },
-        },
-    )
+    try {
+        await demarrer(template)
+    } finally {
+        executingTemplateId.value = null
+    }
 }
 
 const {
@@ -127,6 +142,8 @@ const {
                                     :label="`Supprimer ${template.name}`"
                                     ton="danger"
                                     :dusk="`delete-template-${template.id}`"
+                                    :disabled="surUneCopie"
+                                    :aria-describedby="raisonDUneEcriture"
                                     @click="demanderSuppression(template)"
                                 />
                             </div>
@@ -156,10 +173,10 @@ const {
                         <GlassButton
                             variant="primary"
                             class="w-full"
-                            :disabled="executingTemplateId !== null"
+                            :disabled="executingTemplateId !== null || demarrageEnCours"
                             :loading="executingTemplateId === template.id"
                             :dusk="`execute-template-${template.id}`"
-                            @click="executeTemplate(template.id)"
+                            @click="executeTemplate(template)"
                         >
                             {{ executingTemplateId === template.id ? 'Lancement…' : 'Lancer cette séance' }}
                         </GlassButton>

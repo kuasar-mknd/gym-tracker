@@ -14,12 +14,39 @@ import { mount, flushPromises } from '@vue/test-utils'
 
 const forms = []
 
+/** La page d'Inertia que lisent la garde des copies et le démarrage : une copie quand `horsLigne` y est posé. */
+const pageDInertia = vi.hoisted(() => ({ props: {} }))
+
+/**
+ * Lancer un modèle passe par le démarrage commun (#2049), que
+ * `modeleLanceSansReseauAvecInertia.test.js` joue avec le vrai client : ici,
+ * que la liste l'appelle avec le modèle touché, une fois, et rende la main à
+ * sa fin. Chaque appel reste en vol jusqu'à ce que le test le règle.
+ */
+const lancements = vi.hoisted(() => ({ demarrer: [], enCours: null }))
+
+vi.mock('@/composables/useDemarrageDUneSeance', async () => {
+    const { ref } = await vi.importActual('vue')
+    lancements.enCours = ref(false)
+
+    return {
+        useDemarrageDUneSeance: () => ({
+            demarrer: (modele) =>
+                new Promise((regler) => {
+                    lancements.demarrer.push({ modele, regler })
+                }),
+            enCours: lancements.enCours,
+        }),
+    }
+})
+
 vi.mock('@inertiajs/vue3', async () => {
     const { reactive } = await vi.importActual('vue')
 
     return {
         Head: { template: '<div />' },
         Link: { template: '<a><slot /></a>' },
+        usePage: () => pageDInertia,
         router: { get: vi.fn(), post: vi.fn(), delete: vi.fn() },
         useForm: (data) => {
             const form = reactive({
@@ -48,8 +75,7 @@ import TemplateForm from '@/Components/Templates/TemplateForm.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import TemplateIndex from '@/Pages/Workouts/Templates/Index.vue'
 import { passesSlot, layoutStub } from './pageStubs'
-import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
-import { annoncesPendant } from '../utils/annoncesSansReseau'
+import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 // Le formulaire vit dans TemplateForm, sous la page : ses internes se lisent là.
 const interne = (wrapper) => {
@@ -75,6 +101,9 @@ beforeEach(() => {
     localStorage.clear()
     router.post.mockClear()
     router.delete.mockClear()
+    lancements.demarrer.length = 0
+    lancements.enCours.value = false
+    pageDInertia.props = {}
 })
 
 const library = [
@@ -216,20 +245,22 @@ describe('the template listing', () => {
 
         await wrapper.find('[dusk="execute-template-7"]').trigger('click')
 
-        expect(router.post).toHaveBeenCalledTimes(1)
-        expect(router.post.mock.calls[0][0]).toBe('/templates.execute/{"template":7}')
+        expect(lancements.demarrer.map(({ modele }) => modele.id)).toEqual([7])
+        expect(lancements.demarrer[0].modele.name).toBe('Push A')
     })
 
-    it('dit qu’il faut le réseau quand le modèle se lance sans lui', async () => {
+    /*
+     * Sans réseau, le modèle disait qu'il fallait le réseau (#2048) : la visite
+     * de `templates.execute` échouait. Il se lance désormais par le démarrage
+     * commun, qui passe par la file (#2049) : aucune visite ne part qui le dirait.
+     */
+    it('ne dit plus qu’il faut le réseau : le modèle se lance par la file, sans visite', async () => {
         const wrapper = mountIndex([pushA])
 
         await wrapper.find('[dusk="execute-template-7"]').trigger('click')
-        const { rendu, annonces } = annoncesPendant(() =>
-            router.post.mock.calls[0][2].onNetworkError({ code: 'ERR_NETWORK' }),
-        )
 
-        expect(rendu).toBe(false)
-        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
+        expect(router.post).not.toHaveBeenCalled()
+        expect(lancements.demarrer).toHaveLength(1)
     })
 
     it('ignores a second launch fired before the buttons have had time to grey out', () => {
@@ -240,11 +271,43 @@ describe('the template listing', () => {
         // render: `:disabled` only lands on the next tick, so between two taps
         // of an impatient thumb the in-code guard is the only thing standing
         // between the user and two identical workouts to delete by hand.
-        interne(wrapper).executeTemplate(7)
-        interne(wrapper).executeTemplate(8)
+        interne(wrapper).executeTemplate(pushA)
+        interne(wrapper).executeTemplate(other)
 
-        expect(router.post).toHaveBeenCalledTimes(1)
-        expect(router.post.mock.calls[0][0]).toBe('/templates.execute/{"template":7}')
+        expect(lancements.demarrer.map(({ modele }) => modele.id)).toEqual([7])
+    })
+
+    it('ne lance rien quand une séance démarre déjà depuis un autre bouton de l’onglet', async () => {
+        const wrapper = mountIndex([pushA])
+        lancements.enCours.value = true
+        await interne(wrapper).$nextTick()
+
+        expect(wrapper.find('[dusk="execute-template-7"]').attributes('disabled')).toBeDefined()
+
+        interne(wrapper).executeTemplate(pushA)
+
+        expect(lancements.demarrer).toEqual([])
+    })
+
+    /*
+     * La page des modèles est gardée pour la salle (#2049). Lancer reste ouvert
+     * sur sa copie : rien n'y part que le geste de la personne. Supprimer, une
+     * visite que la garde des écritures arrêterait, se désactive et dit
+     * pourquoi.
+     */
+    it('sur une copie, garde « Lancer » ouvert et désactive la suppression', async () => {
+        pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
+        const wrapper = mountIndex([pushA])
+
+        expect(wrapper.find('[dusk="execute-template-7"]').attributes('disabled')).toBeUndefined()
+        expect(wrapper.find('[dusk="delete-template-7"]').attributes('disabled')).toBeDefined()
+        expect(wrapper.find('[dusk="delete-template-7"]').attributes('aria-describedby')).toBe(
+            ID_DE_LA_RAISON_DES_ECRITURES,
+        )
+
+        await wrapper.find('[dusk="execute-template-7"]').trigger('click')
+
+        expect(lancements.demarrer.map(({ modele }) => modele.id)).toEqual([7])
     })
 
     it('marks the one being launched and locks the others until it lands', async () => {
@@ -263,14 +326,14 @@ describe('the template listing', () => {
         const wrapper = mountIndex([pushA])
 
         await wrapper.find('[dusk="execute-template-7"]').trigger('click')
-        router.post.mock.calls[0][2].onFinish()
-        await interne(wrapper).$nextTick()
+        lancements.demarrer[0].regler()
+        await flushPromises()
 
         expect(wrapper.find('[dusk="execute-template-7"]').text()).toBe('Lancer cette séance')
 
         await wrapper.find('[dusk="execute-template-7"]').trigger('click')
 
-        expect(router.post).toHaveBeenCalledTimes(2)
+        expect(lancements.demarrer).toHaveLength(2)
     })
 
     it('supprime le modèle une fois la confirmation donnée', async () => {

@@ -1,8 +1,9 @@
-import { readonly, ref } from 'vue'
+import { readonly, ref, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import SyncService, { nouvelleCleDIdempotence } from '@/Utils/SyncService'
 import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
 import { estUneCopie } from '@/Utils/copiesServies'
+import { COMPOSANT_DE_LA_SEANCE } from '@/Utils/pagesGardees'
 import {
     RAISON_SEANCE_DEJA_EN_COURS,
     bibliothequeHorsLigne,
@@ -15,6 +16,7 @@ import {
     DELAI_AVANT_UNE_COPIE_MS,
     DEMARRAGE_SANS_RESEAU,
     EVENEMENT_AVANT_UNE_COPIE,
+    MODELE_SANS_RESEAU,
     annoncerSansReseau,
     direSansReseau,
 } from '@/Utils/visitesHorsLigne'
@@ -56,10 +58,48 @@ import { triggerHaptic } from '@/composables/useHaptics'
  * copie, ni la clé, ni l'heure, ni la séance (`.ai/rules/js.md`). Un verrou
  * de l'onglet, au niveau du module, tient pour tous les boutons ensemble :
  * deux appuis rapprochés ne démarrent qu'une séance.
+ *
+ * **Lancer un modèle** passe par la même fonction, `demarrer(modele)`, depuis
+ * la page des modèles, qui porte de quoi le recopier sans réseau
+ * (`lancements`, le contenu et les clés que le serveur dérive) :
+ *
+ * - une séance déjà en cours, que la page ou la file connaissent (1 et 2), ou
+ *   que le serveur nomme (409), s'ouvre, et la page dit que le modèle n'a pas
+ *   été démarré, comme le serveur le disait (`messageDuModeleNonDemarre`) ;
+ * - sans réseau et sans le contenu du modèle (une copie qui ne le porte pas),
+ *   rien ne part : `MODELE_SANS_RESEAU` ;
+ * - sur une copie ou le serveur injoignable, la séance, ses lignes et ses
+ *   séries entrent en file d'un seul coup, sous les clés du serveur, sans
+ *   tentative (`mettreEnFileLaSeanceDUnModele`), et la séance s'ouvre ;
+ * - en ligne, une seule requête, `POST /api/v1/workouts` avec `template_id`,
+ *   que la file ne garde pas (`garderEnFile: false`) : la séance créée
+ *   s'ouvre ; sans réponse, la séance du modèle entre en file comme sans
+ *   réseau, notée tentée quand la requête est partie, et s'ouvre. Le serveur
+ *   qui l'aurait exécutée retrouve chaque écriture rejouée sous sa clé.
+ *
+ * Lancer reste permis sur une copie de la page des modèles : ce qui part est
+ * le modèle tel que la copie le montre, et c'est le geste de la personne ; le
+ * serveur borne déjà ses valeurs, et ses clés convergent avec une exécution
+ * qu'il aurait faite (`.ai/rules/js.md`).
  */
 
 /** Ce que dit un démarrage que le serveur a refusé sans nommer de séance en cours. */
 export const DEMARRAGE_REFUSE = "La séance n'a pas pu démarrer. Réessaie."
+
+/**
+ * Ce que dit un modèle qui ne démarre pas parce qu'une séance est déjà en
+ * cours : le message que le serveur donnait à la page des modèles
+ * (`WorkoutTemplateController::execute`), que la page dit désormais elle-même,
+ * l'API ne nommant pas le modèle.
+ *
+ * @param {string} nom
+ * @returns {string}
+ */
+export const messageDuModeleNonDemarre = (nom) =>
+    `Le modèle « ${nom} » n'a pas été démarré : une séance est déjà en cours. Terminez-la avant d'en commencer une autre.`
+
+/** Combien de temps la page de séance qui s'ouvre peut se faire attendre pour recevoir son message. */
+const ATTENTE_DE_LA_SEANCE_MS = 20_000
 
 /** Un démarrage à la fois dans l'onglet, de quelque bouton qu'il parte. */
 const demarrageEnCours = ref(false)
@@ -71,6 +111,10 @@ const lireUneCopieDuMagasin = (adresse) => magasinDesCopies().lireUneCopie(adres
  * Ouvre la séance démarrée sans réseau, construite depuis l'entrée de sa
  * création (`entree`), ou depuis la séance reçue du serveur quand la visite
  * qui devait l'ouvrir échoue (`seance`).
+ *
+ * Les exercices d'un modèle lancé sans réseau (`exercicesEnPlus`, ceux de
+ * `lancements`) s'ajoutent à la bibliothèque quand elle ne les a pas : la
+ * séance les nomme, et on peut en ajouter de nouveau.
  *
  * C'est une visite côté client (`router.push`, ou `replace`) : elle n'émet pas
  * `beforeUpdate`, sur lequel une séance ouverte fige ce qu'elle garde dans
@@ -87,6 +131,7 @@ const lireUneCopieDuMagasin = (adresse) => magasinDesCopies().lireUneCopie(adres
  *   page?: object,
  *   lireUneCopie?: (adresse: string) => Promise<object | null>,
  *   fenetre?: Window,
+ *   exercicesEnPlus?: Array<{ id: number, name: string|null, type: string }>,
  * }} options
  * @returns {Promise<object>} la page poussée
  */
@@ -98,13 +143,19 @@ export const ouvrirLaSeanceEnAttente = async ({
     page = usePage(),
     lireUneCopie = lireUneCopieDuMagasin,
     fenetre = window,
+    exercicesEnPlus = [],
 } = {}) => {
     const { exercices, bornes } = await bibliothequeHorsLigne({ props: page.props, lireUneCopie })
+    const manquants = exercicesEnPlus.filter(
+        (enPlus, rang) =>
+            !exercices.some((exercice) => String(exercice?.id) === String(enPlus.id)) &&
+            exercicesEnPlus.findIndex((autre) => String(autre.id) === String(enPlus.id)) === rang,
+    )
     const aPousser = pageDeLaSeanceEnAttente({
         entree,
         seance,
         auth: page.props?.auth,
-        exercices,
+        exercices: [...exercices, ...manquants],
         bornes,
         pageCourante: page,
     })
@@ -151,7 +202,72 @@ const direLeRefus = (page, message) => {
 }
 
 /**
- * @returns {{ demarrer: () => Promise<void>, enCours: Readonly<import('vue').Ref<boolean>> }}
+ * Dit `message` sur la page qui s'ouvre ensuite, si c'est une séance : la
+ * séance en cours qu'un modèle ouvre au lieu de démarrer. Dit sur la page des
+ * modèles, le message partirait avec elle ; la séance s'ouvre par une visite du
+ * serveur, par une copie servie sans réseau ou par une visite côté client
+ * (une séance démarrée sans réseau), et seule l'adresse de la page dit, dans
+ * les trois cas, qu'elle est arrivée. La première page qui arrive arrête
+ * l'attente, quelle qu'elle soit ; une séance qui ne s'ouvre pas (sans réseau
+ * ni copie) ne la laisse pas traîner au-delà de `ATTENTE_DE_LA_SEANCE_MS`.
+ *
+ * @param {object} page la page d'Inertia (`usePage()`)
+ * @param {string} message
+ */
+const direSurLaSeanceQuiSOuvre = (page, message) => {
+    const depart = page.url
+    let echeance = null
+    const arreter = watch(
+        () => page.url,
+        (url) => {
+            if (url === depart) {
+                return
+            }
+
+            arreter()
+            clearTimeout(echeance)
+
+            if (page.component === COMPOSANT_DE_LA_SEANCE) {
+                direLeRefus(page, message)
+            }
+        },
+    )
+
+    echeance = setTimeout(arreter, ATTENTE_DE_LA_SEANCE_MS)
+}
+
+/**
+ * Si `valeur` est un modèle à lancer : un bouton qui démarre par
+ * `@click="demarrer"` passe son évènement, qui n'en est pas un.
+ *
+ * @param {unknown} valeur
+ * @returns {boolean}
+ */
+const estUnModele = (valeur) =>
+    valeur !== null &&
+    typeof valeur === 'object' &&
+    !(valeur instanceof Event) &&
+    (typeof valeur.id === 'number' || typeof valeur.id === 'string') &&
+    typeof valeur.name === 'string'
+
+/**
+ * Les exercices d'un modèle, tels que `lancements` les donne, pour la
+ * bibliothèque de la séance qui s'ouvre sans réseau.
+ *
+ * @param {{ lignes?: Array<{ exercise?: { id: number, name?: string|null, type?: string|null } }> }} lancement
+ * @returns {Array<{ id: number, name: string|null, type: string }>}
+ */
+const exercicesDuLancement = (lancement) =>
+    (Array.isArray(lancement?.lignes) ? lancement.lignes : [])
+        .map((ligne) => ligne?.exercise)
+        .filter((exercice) => exercice !== null && typeof exercice === 'object' && exercice.id !== undefined)
+        .map((exercice) => ({ id: exercice.id, name: exercice.name ?? null, type: exercice.type ?? 'strength' }))
+
+/**
+ * @returns {{
+ *   demarrer: (modele?: { id: number, name: string } | null) => Promise<void>,
+ *   enCours: Readonly<import('vue').Ref<boolean>>,
+ * }}
  */
 export const useDemarrageDUneSeance = () => {
     const page = usePage()
@@ -161,8 +277,9 @@ export const useDemarrageDUneSeance = () => {
      * Ouvre la séance démarrée sans réseau dont la file tient la création.
      *
      * @param {string|null|undefined} queueId
+     * @param {Array<object>} exercicesEnPlus ceux d'un modèle, pour la bibliothèque
      */
-    const ouvrirLEntree = async (queueId) => {
+    const ouvrirLEntree = async (queueId, exercicesEnPlus = []) => {
         const entree = queueId ? SyncService.entreeStockee(queueId) : undefined
 
         if (entree === undefined) {
@@ -171,15 +288,31 @@ export const useDemarrageDUneSeance = () => {
             return
         }
 
-        await ouvrirLaSeanceEnAttente({ entree, page })
+        await ouvrirLaSeanceEnAttente({ entree, page, exercicesEnPlus })
+    }
+
+    /**
+     * Ouvre la séance déjà en cours, et dit, pour un modèle, qu'il n'a pas
+     * été démarré.
+     *
+     * @param {() => Promise<unknown>|unknown} ouvrir
+     * @param {{ name: string } | null} modele
+     */
+    const ouvrirLaSeanceEnCours = async (ouvrir, modele) => {
+        if (modele !== null) {
+            direSurLaSeanceQuiSOuvre(page, messageDuModeleNonDemarre(modele.name))
+        }
+
+        await ouvrir()
     }
 
     /**
      * Ce que devient un démarrage qui n'a pas reçu la séance.
      *
      * @param {any} erreur
+     * @param {{ name: string } | null} modele
      */
-    const apresUnEchec = async (erreur) => {
+    const apresUnEchec = async (erreur, modele) => {
         if (erreur?.isOffline) {
             await ouvrirLEntree(erreur.queueId)
 
@@ -196,7 +329,7 @@ export const useDemarrageDUneSeance = () => {
         const enCours = refus?.data?.seance?.id
 
         if (refus?.status === 409 && refus.data?.raison === RAISON_SEANCE_DEJA_EN_COURS && enCours) {
-            router.visit(route('workouts.show', enCours))
+            await ouvrirLaSeanceEnCours(() => router.visit(route('workouts.show', enCours)), modele)
 
             return
         }
@@ -204,10 +337,16 @@ export const useDemarrageDUneSeance = () => {
         direLeRefus(page, DEMARRAGE_REFUSE)
     }
 
-    const demarrer = async () => {
+    /**
+     * @param {{ id: number, name: string } | null} modeleDemande le modèle à lancer,
+     *   ou rien pour une séance vide (un évènement de clic n'en est pas un)
+     */
+    const demarrer = async (modeleDemande = null) => {
         if (demarrageEnCours.value) {
             return
         }
+
+        const modele = estUnModele(modeleDemande) ? modeleDemande : null
 
         demarrageEnCours.value = true
 
@@ -219,7 +358,7 @@ export const useDemarrageDUneSeance = () => {
             const enFile = creationEnFile(entrees)
 
             if (enFile !== undefined) {
-                await ouvrirLaSeanceEnAttente({ entree: enFile, page })
+                await ouvrirLaSeanceEnCours(() => ouvrirLaSeanceEnAttente({ entree: enFile, page }), modele)
 
                 return
             }
@@ -230,15 +369,58 @@ export const useDemarrageDUneSeance = () => {
             const seanceEnCours = duServeur && !estCloseParLaFile(duServeur, entrees) ? duServeur : null
 
             if (sansServeur && seanceEnCours?.id) {
-                router.visit(route('workouts.show', seanceEnCours.id))
+                await ouvrirLaSeanceEnCours(() => router.visit(route('workouts.show', seanceEnCours.id)), modele)
 
                 return
             }
 
+            /** Le contenu du modèle et les clés que le serveur dérive, d'après la page des modèles. */
+            const lancement = modele === null ? null : (page.props.lancements?.[modele.id] ?? null)
+
             const ecriture = {
                 url: route('api.v1.workouts.store'),
-                data: { started_at: new Date().toISOString() },
+                data: {
+                    started_at: new Date().toISOString(),
+                    ...(modele === null ? {} : { template_id: modele.id }),
+                },
                 headers: { 'Idempotency-Key': nouvelleCleDIdempotence() },
+            }
+
+            /**
+             * La séance du modèle, ses lignes et ses séries, en file d'un seul
+             * coup sous les clés du serveur, puis ouverte (`tentee` : le
+             * lancement est parti sans réponse).
+             *
+             * @param {boolean} tentee
+             */
+            const ouvrirLaSeanceDuModele = async (tentee) => {
+                if (lancement === null) {
+                    annoncerSansReseau(MODELE_SANS_RESEAU)
+
+                    return
+                }
+
+                const queueId = SyncService.mettreEnFileLaSeanceDUnModele({
+                    cle: ecriture.headers['Idempotency-Key'],
+                    nom: lancement.name ?? modele.name,
+                    started_at: ecriture.data.started_at,
+                    lignes: lancement.lignes,
+                    tentee,
+                })
+
+                if (queueId === null) {
+                    annoncerSansReseau(DEMARRAGE_SANS_RESEAU)
+
+                    return
+                }
+
+                await ouvrirLEntree(queueId, exercicesDuLancement(lancement))
+            }
+
+            if (sansServeur && modele !== null) {
+                await ouvrirLaSeanceDuModele(false)
+
+                return
             }
 
             if (sansServeur) {
@@ -261,9 +443,17 @@ export const useDemarrageDUneSeance = () => {
                 reponse = await SyncService.post(ecriture.url, ecriture.data, {
                     headers: ecriture.headers,
                     delaiDeLaTentative: DELAI_AVANT_UNE_COPIE_MS,
+                    // Un modèle ne se rejoue jamais tel quel : sans réponse, la file reçoit son contenu.
+                    ...(modele === null ? {} : { garderEnFile: false }),
                 })
             } catch (erreur) {
-                await apresUnEchec(erreur)
+                if (modele !== null && erreur?.sansReponse) {
+                    await ouvrirLaSeanceDuModele(erreur.tentee === true)
+
+                    return
+                }
+
+                await apresUnEchec(erreur, modele)
 
                 return
             }

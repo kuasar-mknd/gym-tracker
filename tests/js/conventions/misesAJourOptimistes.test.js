@@ -114,11 +114,6 @@ const EXEMPTIONS = [
         etat: 'showFinishModal',
         raison: 'la question de fin, fermée une fois la fin acceptée par le serveur : la visite de l’accueil qui suit ne décide rien',
     },
-    {
-        fichier: 'resources/js/composables/useDemarrageDUneSeance.js',
-        etat: 'demarrageEnCours',
-        raison: 'le verrou d’un démarrage, rendu par `finally` ou à la fin de la visite de la séance créée : il ne montre rien que la visite confirmerait',
-    },
 ]
 
 /** Le nom de l'objet au bout d'une chaîne `a.b.c`, `a[0].b` ou `f().b`. */

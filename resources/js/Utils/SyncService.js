@@ -1287,6 +1287,8 @@ class SyncService {
         }
 
         const timestamp = new Date().toISOString()
+        /** L'adresse qui modifie la série qu'une création aura produite, comme `useAjoutEtRetraitDeSerie`. */
+        const ajusterLaSerie = (realId) => route('api.v1.sets.update', { set: realId })
         const entree = (requete, notes = {}) => ({
             ...requete,
             ...notes,
@@ -1342,7 +1344,7 @@ class SyncService {
                             headers: { 'Idempotency-Key': serie.cle },
                         },
                         {
-                            ajusterPar: route('api.v1.sets.update', { set: ID_A_VENIR }),
+                            ajusterPar: ajusterLaSerie(ID_A_VENIR),
                             contexte: { workout_id: { enAttenteDe: seance.id }, exercise_id: exercice.id },
                         },
                     ),
