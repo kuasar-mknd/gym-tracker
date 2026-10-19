@@ -692,6 +692,57 @@ describe('la liste blanche', () => {
         expect(fabrique.ouvertures()).toBe(0)
     })
 
+    /*
+     * Aucune écriture ne range une page hors de la liste : la lecture la
+     * rejuge quand même, sur le composant en clair. C'est la seconde barrière,
+     * celle qui tient si une page sort un jour de la liste et que des copies
+     * d'elle restent sur un appareil.
+     */
+    it('ne lit pas une page hors de la liste, même chiffrée sous la bonne clé et les bonnes données authentifiées', async () => {
+        const onglet = ouvrirUnOnglet()
+        const cle = cleAuHasard()
+
+        poserLeTemoin(cle)
+        poserLeTitulaire(7)
+
+        expect(await onglet.ecrireUneCopie(pageDe())).toBe('ecrite')
+
+        const octets = Uint8Array.from(atob(`${cle.replace(/-/g, '+').replace(/_/g, '/')}=`), (lettre) =>
+            lettre.charCodeAt(0),
+        )
+        const cleAes = await crypto.subtle.importKey('raw', octets, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+        const authentifiees = (chemin) => new TextEncoder().encode(`7|${chemin}|${VERSION_DU_CONTRAT}`)
+        const accueil = copiesRangees().get('/dashboard')
+        const contenu = JSON.parse(
+            new TextDecoder().decode(
+                await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: accueil.iv, additionalData: authentifiees('/dashboard') },
+                    cleAes,
+                    accueil.chiffre,
+                ),
+            ),
+        )
+        const iv = crypto.getRandomValues(new Uint8Array(12))
+
+        contenu.page.component = 'BodyMeasurements/Index'
+        contenu.page.url = '/body-measurements'
+        contenu.page.props.measurements = [{ weight: 'MESURE-SECRETE' }]
+        copiesRangees().set('/body-measurements', {
+            ...accueil,
+            chemin: '/body-measurements',
+            composant: 'BodyMeasurements/Index',
+            iv,
+            chiffre: await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv, additionalData: authentifiees('/body-measurements') },
+                cleAes,
+                new TextEncoder().encode(JSON.stringify(contenu)),
+            ),
+        })
+
+        expect(await onglet.lireUneCopie('/body-measurements')).toBeNull()
+        expect((await onglet.lireUneCopie('/dashboard'))?.page.component).toBe('Dashboard')
+    })
+
     it('range l’accueil demandé par la racine sous sa clé normalisée', async () => {
         const onglet = ouvrirUnOnglet()
 

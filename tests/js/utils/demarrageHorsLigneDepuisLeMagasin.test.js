@@ -114,6 +114,86 @@ const ecrire = async (page, { quand = instant, routes = routesDe(page.url) } = {
     expect(await magasin.ecrireUneCopie(page, { ziggy: routes })).toBe('ecrite')
 }
 
+/** Les données authentifiées d'une copie du compte rangée sous `chemin`. */
+const authentifiees = (chemin) => new TextEncoder().encode(`${COMPTE}|${chemin}|${VERSION_DU_CONTRAT}`)
+
+/** La clé AES du témoin posé, comme le magasin l'importe. */
+const cleDuTemoin = () => {
+    const temoin = document.cookie.match(new RegExp(`(?:^|; )${TEMOIN}=([^;]+)`))[1]
+    const octets = Uint8Array.from(atob(`${temoin.replace(/-/g, '+').replace(/_/g, '/')}=`), (lettre) =>
+        lettre.charCodeAt(0),
+    )
+
+    return crypto.subtle.importKey('raw', octets, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
+}
+
+/**
+ * Rechiffre la copie rangée sous `depuis` et la range sous `vers`, avec la clé
+ * du témoin et les données authentifiées de `vers` : une copie que nulle
+ * écriture ne rangerait, mais que le déchiffrement accepte.
+ *
+ * @param {{
+ *   depuis: string,
+ *   vers?: string,
+ *   transformer?: (contenu: { page: object }) => void,
+ *   champs?: object,
+ * }} options `champs` remplace ce que l'enregistrement garde en clair
+ */
+const rechiffrer = async ({ depuis, vers = depuis, transformer = () => {}, champs = {} }) => {
+    const cle = await cleDuTemoin()
+    const enregistrement = copiesRangees().get(depuis)
+    const contenu = JSON.parse(
+        new TextDecoder().decode(
+            await crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv: enregistrement.iv, additionalData: authentifiees(depuis) },
+                cle,
+                enregistrement.chiffre,
+            ),
+        ),
+    )
+    const iv = crypto.getRandomValues(new Uint8Array(12))
+
+    transformer(contenu)
+    copiesRangees().set(vers, {
+        ...enregistrement,
+        chemin: vers,
+        ...champs,
+        iv,
+        chiffre: await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv, additionalData: authentifiees(vers) },
+            cle,
+            new TextEncoder().encode(JSON.stringify(contenu)),
+        ),
+    })
+}
+
+/**
+ * Remplace le magasin du test par un magasin dont chaque déchiffrement fait
+ * `pendant` avant de rendre la main : ce qu'un autre onglet, ou la réponse
+ * tardive d'une navigation, fait pendant la lecture.
+ *
+ * @param {() => void} pendant
+ */
+const dechiffrerEn = async (pendant) => {
+    await magasin.fermer()
+    magasin = creerLeMagasinDesCopies({
+        ouvrirLaBase: () => ouvrirLaBaseDuNavigateur(fabrique),
+        horloge: () => instant,
+        subtle: {
+            digest: (...arguments_) => crypto.subtle.digest(...arguments_),
+            importKey: (...arguments_) => crypto.subtle.importKey(...arguments_),
+            encrypt: (...arguments_) => crypto.subtle.encrypt(...arguments_),
+            decrypt: async (...arguments_) => {
+                const clair = await crypto.subtle.decrypt(...arguments_)
+
+                pendant()
+
+                return clair
+            },
+        },
+    })
+}
+
 /**
  * La coquille que le worker sert à `adresse`, sur une fenêtre à elle, puis son
  * démarrage depuis le magasin du test.
@@ -339,6 +419,91 @@ describe('une adresse sans copie', () => {
     })
 })
 
+/*
+ * Seules comptent les copies de la clé de l'état, de moins de sept jours,
+ * d'une page gardée : les autres ne se montent pas, ne se nomment pas dans ce
+ * qui s'ouvre sans réseau, et ne font pas refuser la lecture.
+ */
+describe('les copies qui ne comptent pas', () => {
+    /*
+     * Aucune écriture ne range une page hors de la liste blanche : la lecture
+     * la rejuge quand même, sur le composant en clair, celui que la page
+     * déchiffrée doit avoir. C'est la seconde barrière, celle qui tient si une
+     * page sort un jour de la liste et que des copies d'elle restent sur un
+     * appareil.
+     */
+    it('une page hors de la liste blanche, sous la bonne clé et les bonnes données authentifiées, ne se monte pas', async () => {
+        const debut = instant
+
+        await ecrire(pageDe({ nom: 'Camille Horsligne' }), { quand: debut })
+        await rechiffrer({
+            depuis: '/dashboard',
+            vers: '/body-measurements',
+            champs: { composant: 'BodyMeasurements/Index', copieDu: debut + 60_000 },
+            transformer: (contenu) => {
+                contenu.page.component = 'BodyMeasurements/Index'
+                contenu.page.url = '/body-measurements'
+                contenu.page.props.auth.user.name = 'Nom tiré des mesures'
+                contenu.page.props.measurements = [{ weight: 'MESURE-SECRETE' }]
+            },
+        })
+
+        const { resultat, page } = await demarrer('/body-measurements')
+
+        expect(resultat).toMatchObject({ montee: true, raison: COMPOSANT_HORS_LIGNE })
+        expect(page.component).toBe('HorsLigne')
+        expect(page.props.auth.user.name).toBe('Camille Horsligne')
+        expect(page.props.pagesSansReseau.map(({ chemin }) => chemin)).toEqual(['/dashboard'])
+        expect(JSON.stringify(page)).not.toMatch(/MESURE-SECRETE|Nom tiré des mesures/)
+    })
+
+    /*
+     * Un enregistrement d'une autre clé, plus récent, ne se déchiffre pas sous
+     * celle de l'état : compté, il ferait refuser toute la lecture, et purger
+     * la copie valable de l'adresse.
+     */
+    it('un enregistrement d’une autre clé, plus récent, n’empêche pas la copie de l’adresse de se monter', async () => {
+        await ecrire(pageDe())
+
+        const autreCle = await crypto.subtle.importKey(
+            'raw',
+            crypto.getRandomValues(new Uint8Array(32)),
+            { name: 'AES-GCM' },
+            false,
+            ['encrypt'],
+        )
+        const iv = crypto.getRandomValues(new Uint8Array(12))
+
+        copiesRangees().set('/tools', {
+            ...copiesRangees().get('/dashboard'),
+            chemin: '/tools',
+            composant: 'Tools/Index',
+            empreinte: 'empreinte-d-une-autre-cle',
+            copieDu: instant + 60_000,
+            iv,
+            chiffre: await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv, additionalData: authentifiees('/tools') },
+                autreCle,
+                new TextEncoder().encode(
+                    JSON.stringify({ page: pageDe({ url: '/tools', component: 'Tools/Index', nom: 'Autre session' }) }),
+                ),
+            ),
+        })
+
+        const deLAdresse = await demarrer('/dashboard')
+
+        expect(deLAdresse.resultat).toMatchObject({ montee: true, raison: 'copie' })
+        expect(deLAdresse.page.props.auth.user.name).toBe('Camille Horsligne')
+
+        const sansCopie = await demarrer('/stats')
+
+        expect(sansCopie.resultat).toMatchObject({ montee: true, raison: COMPOSANT_HORS_LIGNE })
+        expect(sansCopie.page.props.pagesSansReseau.map(({ chemin }) => chemin)).toEqual(['/dashboard'])
+        expect(copiesRangees().size).toBe(2)
+        expect(etatRange().ouvert).toBe(true)
+    })
+})
+
 describe('chaque vérification qui échoue purge, et laisse le contenu statique', () => {
     it('sans témoin : la clé de l’état se ferme', async () => {
         await ecrire(pageDe())
@@ -445,33 +610,12 @@ describe('chaque vérification qui échoue purge, et laisse le contenu statique'
         await ecrire(pageDe())
 
         const empreinte = etatRange().empreinte
-        const enregistrement = copiesRangees().get('/dashboard')
-        const temoin = document.cookie.match(new RegExp(`(?:^|; )${TEMOIN}=([^;]+)`))[1]
-        const octets = Uint8Array.from(atob(`${temoin.replace(/-/g, '+').replace(/_/g, '/')}=`), (lettre) =>
-            lettre.charCodeAt(0),
-        )
-        const cle = await crypto.subtle.importKey('raw', octets, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
-        const additionalData = new TextEncoder().encode(`${COMPTE}|/dashboard|${VERSION_DU_CONTRAT}`)
-        const contenu = JSON.parse(
-            new TextDecoder().decode(
-                await crypto.subtle.decrypt(
-                    { name: 'AES-GCM', iv: enregistrement.iv, additionalData },
-                    cle,
-                    enregistrement.chiffre,
-                ),
-            ),
-        )
-        const iv = crypto.getRandomValues(new Uint8Array(12))
 
-        contenu.page.component = 'Journal/Index'
-        copiesRangees().set('/dashboard', {
-            ...enregistrement,
-            iv,
-            chiffre: await crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv, additionalData },
-                cle,
-                new TextEncoder().encode(JSON.stringify(contenu)),
-            ),
+        await rechiffrer({
+            depuis: '/dashboard',
+            transformer: (contenu) => {
+                contenu.page.component = 'Journal/Index'
+            },
         })
 
         expect(await magasin.lireUneCopie('/dashboard')).toBeNull()
@@ -589,5 +733,30 @@ describe('chaque vérification qui échoue purge, et laisse le contenu statique'
         expect(demarrage.resultat.raison).toBe('perimee')
         attendreUneCoquilleStatique(demarrage)
         expect(copiesRangees().size).toBe(0)
+    })
+
+    /*
+     * La réponse tardive d'une navigation (une déconnexion faite ailleurs) peut
+     * effacer le témoin pendant que la copie se déchiffre : la clé était
+     * encore là quand la lecture a commencé, plus quand elle finit.
+     */
+    it('le témoin effacé pendant le déchiffrement ne laisse rien monter', async () => {
+        await ecrire(pageDe())
+        await dechiffrerEn(retirerLeTemoin)
+
+        const demarrage = await demarrer('/dashboard')
+
+        expect(demarrage.resultat.raison).toBe('perimee')
+        attendreUneCoquilleStatique(demarrage)
+    })
+
+    it('un autre titulaire de l’appareil pendant le déchiffrement ne laisse rien monter', async () => {
+        await ecrire(pageDe())
+        await dechiffrerEn(() => poserLeTitulaire(COMPTE + 1))
+
+        const demarrage = await demarrer('/dashboard')
+
+        expect(demarrage.resultat.raison).toBe('perimee')
+        attendreUneCoquilleStatique(demarrage)
     })
 })

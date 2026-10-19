@@ -1401,7 +1401,10 @@ export const creerLeMagasinDesCopies = ({
      * IndexedDB : `indisponible`, sans purge.
      *
      * Seules comptent les copies de la clé de l'état, de moins de sept jours,
-     * d'une page gardée. Sans aucune, la lecture aboutit sans copie : rien à
+     * d'une page gardée : la liste blanche se rejuge ici, sur le composant en
+     * clair, comme dans `lireUneCopie`. Les autres sont écartées sans refus ni
+     * purge : une copie d'une autre clé, plus récente, ferait sinon refuser
+     * toute la lecture. Sans aucune, la lecture aboutit sans copie : rien à
      * montrer, et rien à purger.
      *
      * @param {string} adresse l'adresse du document, sans origine
