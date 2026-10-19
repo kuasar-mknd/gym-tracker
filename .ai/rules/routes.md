@@ -1,6 +1,7 @@
 ---
 paths:
   - routes/web.php
+  - app/Support/IdentifiantsDesRoutes.php
 ---
 
 # Routes
@@ -10,3 +11,6 @@ Le worker (`public/sw.js`, construit) et le manifeste (`public/manifest.webmanif
 
 ## Le rappel d'Apple arrive en POST inter-sites, sans cookie de session : il se protège par son nonce, pas par la session
 Réglé le 2026-10-04 (#1911). Apple renvoie l'utilisateur par un formulaire posté depuis son site (`response_mode=form_post`) : ni jeton CSRF, ni `Sec-Fetch-Site: same-origin`, ni cookie de session (`SameSite=lax`). D'où trois choses qui vont ensemble. La route `POST /auth/apple/callback` est seule ouverte en POST (Google et GitHub rappellent en GET, un POST chez eux reste un 405) et seule exclue de PreventRequestForgery, par son chemin exact. Le pilote `apple` est `FournisseurApple` (`app/Support/ConnexionSociale/FournisseurApple.php`), le pilote du paquet réglé sans état et avec le nonce par cookie (`cookieNonce()`) au départ comme au retour : ne pas rendre l'état à la session, ni passer `SESSION_SAME_SITE` à `none` pour l'y faire survivre, ce qui relâcherait tous les cookies de l'application. Le cookie du nonce, déjà chiffré par le paquet, est retiré d'`EncryptCookies` : chiffré deux fois, la redirection vers Apple passait le budget d'en-têtes (`.ai/rules/middleware.md`). `tests/Feature/ConnexionAppleTest.php` joue le trajet entier avec `Tests\Support\AppleSimule` (clés tirées pour l'occasion, jamais une vraie) ; entre deux requêtes d'un même test, `nouvelleRequete()` fait oublier à Socialite ses pilotes, qui retiennent la requête qui les a créés, comme Octane le fait.
+
+## Un paramètre de modèle est numérique
+Réglé le 2026-10-19 (#2049). La liaison implicite cherchait `where id = '12abc'`, que MySQL convertit en 12 : `/workouts/12abc` ou `/workouts/012` ouvraient la séance 12, `/api/v1/sets/12x` modifiait la série 12, sous une autre adresse que la leur, que les copies hors ligne ne reconnaissent pas (`[1-9][0-9]*`, `resources/js/Utils/pagesGardees.js`). Chaque paramètre de route qui désigne un modèle n'admet plus qu'un identifiant en chiffres, sans zéro en tête : `IdentifiantsDesRoutes::poserSur()` le pose route par route, sur les seuls paramètres qu'elle porte, une fois les routes chargées (`then` de `withRouting()`, `bootstrap/app.php`), et le motif entre ainsi dans le cache des routes (`route:cache`). Pas par `Route::pattern()` : Laravel recopie chaque motif global sur toutes les routes, qu'elles aient le paramètre ou non, et Ziggy les écrit dans chaque page (63 378 octets au lieu de 11 499 pour dix-huit noms, mesuré le 2026-10-19, au-delà des 12 000 de `ZiggyExpositionTest`). Un nouveau paramètre de modèle entre dans `IdentifiantsDesRoutes::PARAMETRES_DE_MODELE` : `ParametresDeRouteNumeriquesTest` exige le motif sur chaque paramètre de route de l'application lié à un modèle, et tient les adresses qui répondaient avant.

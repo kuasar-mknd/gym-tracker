@@ -19,9 +19,10 @@ use Illuminate\Routing\Route;
  * les routes chargées (`bootstrap/app.php`, `then`), et entre ainsi dans le
  * cache des routes. Pas par `Route::pattern()` : Laravel recopie chaque motif
  * global sur toutes les routes, qu'elles aient le paramètre ou non, et Ziggy
- * écrit ces motifs dans chaque page, 63 Ko au lieu de 10 pour dix-huit noms
- * (`ZiggyExpositionTest`). `ParametresDeRouteNumeriquesTest` exige le motif
- * sur chaque paramètre de route de l'application lié à un modèle.
+ * écrit ces motifs dans chaque page : 63 378 octets au lieu de 11 499 pour
+ * dix-huit noms, mesuré le 2026-10-19 (`ZiggyExpositionTest` en admet
+ * 12 000). `ParametresDeRouteNumeriquesTest` exige le motif sur chaque
+ * paramètre de route de l'application lié à un modèle.
  */
 final class IdentifiantsDesRoutes
 {

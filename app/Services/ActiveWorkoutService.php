@@ -43,9 +43,9 @@ final class ActiveWorkoutService
     }
 
     /**
-     * La séance porte sa clé d'idempotence (#2049) : la page reconnaît ainsi,
+     * La séance porte sa clé d'idempotence (#2049) : de quoi reconnaître,
      * dans le bandeau de la séance en cours, une séance démarrée sans
-     * réponse dont la création attend encore dans sa file.
+     * réponse dont la création attend encore dans la file.
      */
     private static function chercher(User $user): ?Workout
     {
