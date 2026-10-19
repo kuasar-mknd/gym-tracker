@@ -380,6 +380,8 @@ final class RequetesMalFormees
             'hash' => static fn (): string => sha1($compte->email),
             'token' => static fn (): string => 'jeton',
             'provider' => static fn (): string => 'google',
+            // La clé d'une séance démarrée sans réseau (`workouts.en-attente`).
+            'cle' => static fn (): string => Str::uuid()->toString(),
         ];
         $gardees = [];
 

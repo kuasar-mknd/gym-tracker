@@ -56,6 +56,30 @@ class WorkoutController extends Controller
     }
 
     /**
+     * L'adresse d'une séance démarrée sans réseau, nommée par la clé que
+     * l'appareil a tirée (#2049) : une fois la séance créée par la file, elle
+     * mène à la séance ; avant, ou pour la clé d'un autre compte, à l'accueil.
+     *
+     * La page de la séance en attente vit sur l'appareil, construite depuis
+     * la file ; cette route sert quand la page se recharge en ligne, quand
+     * Retour la rouvre depuis l'historique, ou au retour du réseau. Une clé
+     * inconnue et celle d'un autre compte reçoivent la même réponse, entière :
+     * rien ne dit qu'une séance porte cette clé ailleurs. La clé ne se
+     * cherche que parmi les séances du compte, à l'octet près (`ascii_bin`).
+     */
+    public function enAttente(string $cle): \Illuminate\Http\RedirectResponse
+    {
+        $seance = Workout::query()
+            ->where('user_id', $this->user()->id)
+            ->where('idempotency_key', $cle)
+            ->first();
+
+        return $seance instanceof Workout
+            ? redirect()->route('workouts.show', $seance)
+            : redirect()->route('dashboard');
+    }
+
+    /**
      * Démarrer une séance quand une autre est déjà ouverte renvoie vers
      * celle-là, plutôt que d'en ouvrir une deuxième.
      *
