@@ -152,6 +152,60 @@ describe('démarrer après une séance terminée sans réseau', () => {
 })
 
 /*
+ * Le verrou de l'onglet (#2049, relu le 2026-10-21) : il est au niveau du
+ * module, et tient pour tous les boutons ensemble. Certains ne se désactivent
+ * pas pendant le démarrage (l'état vide de la liste des séances) : pour eux,
+ * il est la seule garde contre un second démarrage sous une autre clé, donc
+ * une seconde séance.
+ */
+describe('le verrou de l’onglet', () => {
+    /** Un bouton qui démarre, monté à part, avec son propre appel au composable. */
+    const unBouton = () => {
+        let demarrage
+
+        pages.retenir(
+            mount({
+                setup() {
+                    demarrage = module.useDemarrageDUneSeance()
+
+                    return () => h('div')
+                },
+            }),
+        )
+
+        return demarrage
+    }
+
+    it('ne part qu’une fois quand deux boutons démarrent pendant que la première réponse se fait attendre', async () => {
+        const { noterQueLeServeurRepond } = await import('@/composables/useEtatDuReseau')
+        noterQueLeServeurRepond()
+        let repondre = () => {}
+        serveur.reponses.push(
+            () =>
+                new Promise((resolve) => {
+                    repondre = () => resolve({ status: 201, data: { data: { id: 42 } } })
+                }),
+        )
+        const accueil = unBouton()
+        const barreDuBas = unBouton()
+
+        const premier = accueil.demarrer()
+        await flushPromises()
+
+        expect(barreDuBas.enCours.value).toBe(true)
+
+        await barreDuBas.demarrer()
+        repondre()
+        await premier
+        await flushPromises()
+
+        expect(serveur.requetes.filter((requete) => requete.url === '/api/v1/workouts')).toHaveLength(1)
+        expect(inertia.router.visit).toHaveBeenCalledTimes(1)
+        expect(inertia.router.visit).toHaveBeenCalledWith('/workouts/42', expect.any(Object))
+    })
+})
+
+/*
  * Lancer un modèle (#2049) : `demarrer(modele)`, depuis la page des modèles,
  * qui porte de quoi le recopier sans réseau (`lancements`).
  */

@@ -158,6 +158,12 @@ describe('BottomNav — the central button', () => {
          * quatre chemins vers « démarrer une séance » sans aucun verrou. Deux
          * appuis rapprochés créaient deux séances, et l'écran s'ouvrait sur la
          * mauvaise. Le verrou est désormais celui du démarrage, commun à tous.
+         *
+         * Le démarrage est ici remplacé : ce cas prouve seulement que la barre
+         * se désactive tant que `enCours` est vrai. Le verrou lui-même, qui
+         * tient pour deux boutons appelant chacun le composable, se prouve
+         * avec le vrai composable (`useDemarrageDUneSeance.test.js`, « le
+         * verrou de l'onglet »).
          */
         const wrapper = mountNav('stats.index')
 
