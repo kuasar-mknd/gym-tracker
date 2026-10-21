@@ -3201,4 +3201,64 @@ describe('SyncService l’heure de l’appareil au départ', () => {
         expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T15:00:00.000Z')
         expect(service.queue).toEqual([])
     })
+
+    /*
+     * La tentative directe attend que la file se vide d'abord : son heure se
+     * lit à son départ, après ce vidage, et non à l'appel d'`envoyer`. Lue
+     * avant, l'âge du geste perdait la durée du vidage, et le serveur plaçait
+     * le début d'autant plus tard.
+     */
+    it('part avec la tentative directe qui attend le vidage de la file, à l’heure d’après lui', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/api/v1/sets/1')]))
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+        expect(service.queue).toHaveLength(1)
+
+        request.mockReset()
+        request
+            .mockImplementationOnce(async () => {
+                vi.setSystemTime(new Date('2026-10-21T13:00:20.000Z'))
+
+                return { status: 200, data: {} }
+            })
+            .mockResolvedValueOnce({ status: 201, data: { data: { id: 42 } } })
+
+        await service.post(DEMARRAGE.url, DEMARRAGE.data, { headers: DEMARRAGE.headers })
+
+        expect(request.mock.calls.map((appel) => appel[0].url)).toEqual(['/api/v1/sets/1', '/api/v1/workouts'])
+        expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T13:00:00.000Z')
+        expect(request.mock.calls[1][0].headers).toEqual({
+            'Idempotency-Key': 'cle-de-la-seance',
+            'X-Heure-De-L-Appareil': '2026-10-21T13:00:20.000Z',
+        })
+        expect(service.queue).toEqual([])
+    })
+
+    /*
+     * Un 429 fait attendre la tentative directe avant son nouvel essai (au
+     * plus cinq secondes) : ce nouvel essai porte l'heure de son propre
+     * départ. Sans elle, le serveur prendrait maintenant ; avec celle du
+     * premier essai, il placerait le geste jusqu'à cinq secondes plus tard.
+     */
+    it('repart après un 429 avec l’heure de son nouvel essai', async () => {
+        vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        request
+            .mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '3' } }, request: {} })
+            .mockResolvedValueOnce({ status: 201, data: { data: { id: 42 } } })
+        const service = await freshService()
+
+        const envoi = service.post(DEMARRAGE.url, DEMARRAGE.data, { headers: DEMARRAGE.headers })
+        await vi.advanceTimersByTimeAsync(3000)
+        await envoi
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T13:00:00.000Z')
+        expect(request.mock.calls[1][0].headers).toEqual({
+            'Idempotency-Key': 'cle-de-la-seance',
+            'X-Heure-De-L-Appareil': '2026-10-21T13:00:03.000Z',
+        })
+    })
 })
