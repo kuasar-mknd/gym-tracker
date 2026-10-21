@@ -15,23 +15,33 @@ use Illuminate\Support\Facades\Schema;
  * une colonne nulle dans la ligne écrite, même une colonne hors de la clé :
  * une série s'écrivait ainsi sous une ligne de séance qui n'existe pas, que
  * 8.4 refuse (« 1452 … a foreign key constraint fails »). L'index qui porte
- * la clé, InnoDB le choisit parmi ceux qui commencent par ses colonnes : la
- * garde laisse donc nulle chaque colonne nullable de chacun d'eux, et exige
- * le refus 1452 (`.ai/rules/database.md`).
+ * la clé est le premier de ceux qui commencent par ses colonnes, dans l'ordre
+ * que la table tient de son histoire : mesuré sur 9.7.2, les deux mêmes
+ * index déclarés dans l'ordre inverse, la clé est vérifiée d'un côté, pas de
+ * l'autre (`.ai/rules/database.md`).
  *
- * Les clés se lisent dans `information_schema` : une clé étrangère nouvelle
- * y entre d'elle-même. Les autres clés de la ligne visent un parent écrit
- * pour l'occasion, ou restent nulles : un refus 1452 ne peut venir que de la
- * clé essayée. Une colonne NOT NULL sans défaut reçoit une valeur de son
- * type, neuve à chaque tirage, donc unique dans un index unique. Chaque essai
- * se fait sous un point de sauvegarde, défait aussitôt.
+ * Le premier cas essaie le serveur. Les clés se lisent dans
+ * `information_schema` : une clé étrangère nouvelle y entre d'elle-même. La
+ * ligne orpheline laisse nulle chaque colonne nullable des index qui
+ * commencent par la clé ; les autres clés de la ligne visent un parent écrit
+ * pour l'occasion, ou restent nulles, si bien qu'un refus 1452 ne peut venir
+ * que de la clé essayée ; une colonne NOT NULL sans défaut reçoit une valeur
+ * de son type, neuve à chaque tirage, donc unique dans un index unique.
+ * Chaque essai se fait sous un point de sauvegarde, défait aussitôt.
  *
- * Le second cas montre que la garde voit le défaut là où le serveur l'a : une
- * table taillée comme la reproduction de l'issue lui donne le verdict que le
- * serveur donne à l'insertion directe, et la colonne nulle mise en tête est
- * refusée partout. Ces tables se créent dans la base du test : un ordre DDL
- * valide la transaction de `RefreshDatabase`, et ce fichier retire lui-même
- * ce qu'il a créé, puis en rouvre une (`.ai/rules/tests.md`).
+ * Le deuxième lit le schéma : aucun index qui commence par les colonnes d'une
+ * clé étrangère n'a de colonne nullable derrière elles. La base du test naît
+ * du schéma figé, puis des migrations d'après ; une base plus ancienne a pu
+ * créer ses index dans un autre ordre (par les migrations d'avant le schéma
+ * figé, retirées depuis), et y porter la clé par un autre index. Seul un
+ * schéma dont aucun candidat n'a de colonne nulle ne dépend pas de ce choix.
+ *
+ * Le troisième montre que le premier voit le défaut là où le serveur l'a :
+ * une table taillée comme la reproduction de l'issue lui donne le verdict que
+ * le serveur donne à l'insertion directe, et la colonne nulle mise en tête
+ * est refusée partout. Ces tables se créent dans la base du test : un ordre
+ * DDL valide la transaction de `RefreshDatabase`, et ce fichier retire
+ * lui-même ce qu'il a créé, puis en rouvre une (`.ai/rules/tests.md`).
  */
 
 /**
@@ -253,6 +263,39 @@ function cleEtrangereUneLigneValide(array $schema, string $table, array $aRendre
 }
 
 /**
+ * Pour chaque index qui commence par les colonnes de la clé, les colonnes
+ * nullables qu'il porte derrière elles.
+ *
+ * @param  array{
+ *     cles: list<array{table: string, nom: string, colonnes: list<string>, parent: string, colonnesDuParent: list<string>}>,
+ *     colonnes: array<string, array<string, array{nulle: bool, defaut: bool, auto: bool, generee: bool, type: string, typeComplet: string, longueur: int|null, precision: int|null, echelle: int|null}>>,
+ *     index: array<string, array<string, list<string|null>>>
+ * }  $schema
+ * @param  array{table: string, nom: string, colonnes: list<string>, parent: string, colonnesDuParent: list<string>}  $cle
+ * @return array<string, list<string>>
+ */
+function cleEtrangereLesColonnesNullesDerriere(array $schema, array $cle): array
+{
+    $table = $cle['table'];
+    $parIndex = [];
+
+    foreach ($schema['index'][$table] ?? [] as $nom => $colonnesDeLIndex) {
+        $tete = array_slice($colonnesDeLIndex, 0, count($cle['colonnes']));
+
+        if (count($tete) !== count($cle['colonnes']) || array_diff($cle['colonnes'], $tete) !== []) {
+            continue;
+        }
+
+        $parIndex[$nom] = array_values(array_filter(
+            array_slice($colonnesDeLIndex, count($cle['colonnes'])),
+            static fn (?string $colonne): bool => $colonne !== null && ! in_array($colonne, $cle['colonnes'], true) && ($schema['colonnes'][$table][$colonne]['nulle'] ?? false),
+        ));
+    }
+
+    return $parIndex;
+}
+
+/**
  * Essaie d'écrire, sous la clé, une ligne dont le parent n'existe pas,
  * chaque colonne nullable des index qui commencent par ses colonnes laissée
  * nulle. Rend `null` quand le serveur la refuse en 1452, sinon ce qui s'est
@@ -268,21 +311,7 @@ function cleEtrangereUneLigneValide(array $schema, string $table, array $aRendre
 function cleEtrangereTenterUnOrphelin(array $schema, array $cle): ?string
 {
     $table = $cle['table'];
-    $nulles = [];
-
-    foreach ($schema['index'][$table] ?? [] as $colonnesDeLIndex) {
-        $tete = array_slice($colonnesDeLIndex, 0, count($cle['colonnes']));
-
-        if (array_diff($cle['colonnes'], $tete) !== [] || count($tete) !== count($cle['colonnes'])) {
-            continue;
-        }
-
-        foreach ($colonnesDeLIndex as $colonne) {
-            if ($colonne !== null && ! in_array($colonne, $cle['colonnes'], true) && ($schema['colonnes'][$table][$colonne]['nulle'] ?? false)) {
-                $nulles[$colonne] = null;
-            }
-        }
-    }
+    $nulles = array_fill_keys(array_merge([], ...array_values(cleEtrangereLesColonnesNullesDerriere($schema, $cle))), null);
 
     DB::beginTransaction();
 
@@ -365,6 +394,34 @@ it('refuse, sous chaque clé étrangère, une ligne dont le parent n’existe pa
             is_scalar($version) ? (string) $version : '?',
             implode("\n- ", $laissentPasser),
         ));
+});
+
+it('ne laisse de colonne nullable derrière la clé dans aucun index qui commence par elle', function (): void {
+    $schema = cleEtrangereLeSchema();
+    $index = [];
+
+    foreach ($schema['cles'] as $cle) {
+        foreach (cleEtrangereLesColonnesNullesDerriere($schema, $cle) as $nom => $nulles) {
+            if ($nulles !== []) {
+                $index[] = sprintf(
+                    '%s.%s (%s) : %s, nullable, derrière %s',
+                    $cle['table'],
+                    $nom,
+                    implode(', ', array_map(static fn (?string $colonne): string => $colonne ?? '(expression)', $schema['index'][$cle['table']][$nom] ?? [])),
+                    implode(', ', $nulles),
+                    $cle['nom'],
+                );
+            }
+        }
+    }
+
+    expect($index)->toBe([], sprintf(
+        "Ces index commencent par la colonne d'une clé étrangère et portent une colonne nullable derrière elle :\n- %s\n\n"
+        .'Sous MySQL 9.7.2, la clé n\'est plus vérifiée pour une ligne où cette colonne est nulle, si cet index la porte, '
+        ."et lequel la porte dépend de l'ordre des index de la table. Mettre la colonne nulle en tête, ou ne garder derrière "
+        .'la clé que des colonnes non nulles, par une migration nouvelle (`.ai/rules/database.md`).',
+        implode("\n- ", $index),
+    ));
 });
 
 it('voit une clé étrangère que le serveur ne vérifie pas', function (string $index, bool $refuseeDePartout): void {
