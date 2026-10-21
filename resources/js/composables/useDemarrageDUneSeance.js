@@ -4,6 +4,7 @@ import SyncService, { nouvelleCleDIdempotence } from '@/Utils/SyncService'
 import { magasinDesCopies } from '@/Utils/copiesHorsLigne'
 import { estUneCopie } from '@/Utils/copiesServies'
 import { COMPOSANT_DE_LA_SEANCE } from '@/Utils/pagesGardees'
+import { SYNC_AUTH, classifySyncError } from '@/Utils/syncErrors'
 import {
     RAISON_SEANCE_DEJA_EN_COURS,
     bibliothequeHorsLigne,
@@ -52,7 +53,8 @@ import { triggerHaptic } from '@/composables/useHaptics'
  *      l'application ouverte) : la séance créée s'ouvre par une visite, celle
  *      qui attendait en cours aussi (409 `seance-deja-en-cours`, comme le
  *      serveur y renvoie) ; sans réponse, la création est en file, et la
- *      séance en attente s'ouvre.
+ *      séance en attente s'ouvre ; la session expirée (401, 419), la page se
+ *      redemande au serveur, qui mène à la connexion et y revient ensuite.
  *
  * Démarrer reste permis sur une copie hors ligne : rien n'y est tiré de la
  * copie, ni la clé, ni l'heure, ni la séance (`.ai/rules/js.md`). Un verrou
@@ -321,6 +323,19 @@ export const useDemarrageDUneSeance = () => {
 
         if (erreur?.nonGardee) {
             annoncerSansReseau(DEMARRAGE_SANS_RESEAU)
+
+            return
+        }
+
+        /*
+         * La session a expiré (401), ou son jeton n'est plus le bon (419) : la
+         * porte est fermée, le démarrage n'est pas refusé. La page se
+         * redemande au serveur, qui mène à la connexion et y reviendra
+         * ensuite, comme la visite d'Inertia de la page le faisait avant
+         * #2049. « Réessaie » rendait le même refus à chaque appui.
+         */
+        if (classifySyncError(erreur) === SYNC_AUTH) {
+            router.visit(page.url)
 
             return
         }

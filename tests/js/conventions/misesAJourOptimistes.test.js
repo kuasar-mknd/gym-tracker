@@ -114,6 +114,16 @@ const EXEMPTIONS = [
         etat: 'showFinishModal',
         raison: 'la question de fin, fermée une fois la fin acceptée par le serveur : la visite de l’accueil qui suit ne décide rien',
     },
+    {
+        fichier: 'resources/js/composables/useReglagesDeLaSeance.js',
+        etat: 'clotureEnCours',
+        raison: 'la clôture en cours, qui retient un second « Confirmer » : le `finally` la rend à toute issue, et la visite qui mène à la connexion, la session expirée, ne décide rien (#2049)',
+    },
+    {
+        fichier: 'resources/js/composables/useReglagesDeLaSeance.js',
+        etat: 'ecrituresEnAttente',
+        raison: 'les écritures encore en vol que la question de fin montre, remises à zéro au « Confirmer » : la visite qui mène à la connexion, la session expirée, n’y change rien (#2049)',
+    },
 ]
 
 /** Le nom de l'objet au bout d'une chaîne `a.b.c`, `a[0].b` ou `f().b`. */

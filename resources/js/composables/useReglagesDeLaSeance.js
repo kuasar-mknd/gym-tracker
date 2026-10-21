@@ -7,6 +7,7 @@ import { PendingIds, isTemporaryId } from '@/Utils/pendingIds'
 import { FIN_NON_ENREGISTREE } from '@/Utils/seanceEnAttente'
 import { estUneFinDeSeance } from '@/Utils/seanceEtFile'
 import SyncService from '@/Utils/SyncService'
+import { SYNC_AUTH, classifySyncError } from '@/Utils/syncErrors'
 import { DELAI_AVANT_UNE_COPIE_MS } from '@/Utils/visitesHorsLigne'
 import { recalerApresLaCopie } from '@/composables/useCopieHorsLigne'
 import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
@@ -184,7 +185,9 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
      *    (`DELAI_AVANT_UNE_COPIE_MS`) avant de tomber en file.
      *
      * Acceptée, l'accueil ; en file, la séance close sur place ; refusée, un
-     * toast, et la séance reste ouverte.
+     * toast, et la séance reste ouverte. La session expirée (401, 419), la fin
+     * attend en file, à l'heure du geste, et la page se redemande au serveur,
+     * qui mène à la connexion : la fin repart après elle.
      */
     const confirmFinishWorkout = async () => {
         if (clotureEnCours.value || localWorkout.value.ended_at) {
@@ -268,6 +271,29 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
             } catch (erreur) {
                 if (erreur?.isOffline) {
                     montrerLaFinEnAttente(fin, erreur.queueId)
+
+                    return
+                }
+
+                /*
+                 * La session a expiré (401), ou son jeton n'est plus le bon
+                 * (419) : la porte est fermée, la fin n'est pas refusée. Elle
+                 * attend en file, à l'heure du geste, comme la file garde ce
+                 * qu'elle rejoue sur une porte fermée, et la page se redemande
+                 * au serveur, qui mène à la connexion puis y revient : la fin
+                 * repart alors. Le toast « elle reste ouverte » se répétait à
+                 * chaque essai, sans chemin vers la connexion.
+                 */
+                if (classifySyncError(erreur) === SYNC_AUTH) {
+                    const queueId = SyncService.mettreEnFile({ method: 'patch', ...ecriture })
+
+                    if (queueId === null) {
+                        showFinishModal.value = false
+                    } else {
+                        montrerLaFinEnAttente(fin, queueId)
+                    }
+
+                    router.visit(page.url)
 
                     return
                 }

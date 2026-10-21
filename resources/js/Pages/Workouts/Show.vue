@@ -91,6 +91,7 @@ const showAddExercise = ref(false)
 // Démarrée sans réseau (#2049) : suivie jusqu'au rejeu de sa création, sans rechargement après le vidage, puis adoptée.
 const { seanceProvisoire, etatDeLaSeance, seanceEnLectureSeule } = useSeanceEnAttente({
     seance: props.workout,
+    adresse: page.url,
     pendingIds,
     occupee: () => showTimer.value || showAddExercise.value || retraitDemande.value || ordreEnVol.value > 0,
     valeursDeRepli,

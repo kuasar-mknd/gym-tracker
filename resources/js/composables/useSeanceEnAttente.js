@@ -8,7 +8,7 @@ import {
     adresseDUneSeanceEnAttente,
     cleDeLAdresseEnAttente,
 } from '@/Utils/seanceEnAttente'
-import { useEtatDuReseau } from '@/composables/useEtatDuReseau'
+import { surUneReponseDuServeur, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 
 /** Sa création attend la file. */
 export const ETAT_EN_ATTENTE = 'en-attente'
@@ -73,8 +73,17 @@ const fenetreOuverte = () => globalThis.document?.querySelector?.('dialog[open]'
  *   mène à la séance que sa clé désigne ; sinon, elle le dit, en lecture
  *   seule.
  *
- * Une séance du serveur n'est rien de tout cela : `seanceProvisoire` est faux, et
- * rien ne s'écoute.
+ * - **Séance reçue sous sa clé.** Démarrée en ligne, la séance a été créée,
+ *   mais la visite qui devait l'ouvrir s'est perdue : elle s'ouvre construite
+ *   depuis la séance reçue, sous l'adresse de sa clé (`useDemarrageDUneSeance`),
+ *   avec son identifiant réel et sans ses exercices, que le serveur a (ceux
+ *   d'un modèle lancé). À la première réponse du serveur, ou au montage s'il
+ *   répond déjà, aux mêmes conditions que l'adoption, la page passe à la
+ *   séance réelle et les montre. Elle restait vide jusqu'à un rechargement, et
+ *   un exercice ajouté rejoignait ceux du modèle sans qu'on les voie.
+ *
+ * Une séance du serveur, sous sa propre adresse, n'est rien de tout cela :
+ * `seanceProvisoire` est faux, et rien ne s'écoute.
  *
  * @param {{
  *   seance: object,
@@ -111,15 +120,15 @@ export const useSeanceEnAttente = ({
     /** Une visite vers la séance réelle, ou vers l'adresse de sa clé, est partie. */
     const visiteEnCours = ref(false)
     const lectureSeule = computed(() => ETATS_SANS_SEANCE.has(etat.value) || visiteEnCours.value)
+    /** La séance reçue du serveur, ouverte sous l'adresse de sa clé faute de sa propre page. */
+    const recueSousSaCle =
+        !provisoire && /^\d+$/.test(String(idProvisoire ?? '')) && cleDeLAdresseEnAttente(adresse) !== null
 
-    if (!provisoire) {
+    if (!provisoire && !recueSousSaCle) {
         return { seanceProvisoire: provisoire, etatDeLaSeance: etat, seanceEnLectureSeule: lectureSeule }
     }
 
     const { joignable } = useEtatDuReseau()
-    const attentes = creerLesAttentesDeRejeu()
-    const entree = SyncService.entreeStockee(queueId)
-    const enFile = entree !== undefined && entree.aAnnuler === undefined
     /** Ce qu'une visite interromprait : un repos, une modale, une valeur qui attend son envoi ou sa réponse. */
     const occupeeOuEnSaisie = () => occupee() || valeursDeRepli().length > 0
     let enPlace = true
@@ -154,15 +163,14 @@ export const useSeanceEnAttente = ({
         })
     }
 
-    const essayerLAdoption = () => {
-        essaiPrevu = null
-
-        if (!enPlace || visiteEnCours.value || etat.value !== ETAT_EN_ATTENTE) {
-            return
-        }
-
-        const realWorkoutId = SyncService.produitDe(queueId)
-
+    /**
+     * Passe à la séance réelle quand rien ne retient la visite : la file du
+     * compte vide, rien en vol, et la personne ne fait rien qu'une visite
+     * interromprait.
+     *
+     * @param {number|string|null} realWorkoutId
+     */
+    const passerALaSeanceReelle = (realWorkoutId) => {
         if (
             realWorkoutId === null ||
             SyncService.enAttente() > 0 ||
@@ -183,6 +191,27 @@ export const useSeanceEnAttente = ({
         visiter(route('workouts.show', { workout: realWorkoutId }), () => {})
     }
 
+    const essayerLAdoption = () => {
+        essaiPrevu = null
+
+        if (!enPlace || visiteEnCours.value) {
+            return
+        }
+
+        if (recueSousSaCle) {
+            // Ses exercices sont au serveur : il faut qu'il réponde.
+            if (joignable.value) {
+                passerALaSeanceReelle(idProvisoire)
+            }
+
+            return
+        }
+
+        if (etat.value === ETAT_EN_ATTENTE) {
+            passerALaSeanceReelle(SyncService.produitDe(queueId))
+        }
+    }
+
     /**
      * Une tâche plus tard : la ligne ou la série que le vidage vient de rendre
      * s'adopte d'abord, et ce qu'elle renvoie part avant la visite.
@@ -192,6 +221,45 @@ export const useSeanceEnAttente = ({
             essaiPrevu = setTimeout(essayerLAdoption, 0)
         }
     }
+
+    let arreterLeSuivi = () => {}
+
+    if (recueSousSaCle) {
+        let arreterLesReponses = () => {}
+
+        if (getCurrentInstance()) {
+            onMounted(() => {
+                arreterLeSuivi = watch(
+                    () => occupeeOuEnSaisie(),
+                    (estOccupee) => {
+                        if (!estOccupee) {
+                            planifierLAdoption()
+                        }
+                    },
+                )
+                arreterLesReponses = surUneReponseDuServeur(planifierLAdoption)
+                ANNONCES_DE_LA_FILE.forEach((annonce) => window.addEventListener(annonce, planifierLAdoption))
+                document.addEventListener('focusout', planifierLAdoption)
+                planifierLAdoption()
+            })
+
+            onUnmounted(() => {
+                enPlace = false
+                arreterLeSuivi()
+                arreterLesReponses()
+                clearTimeout(essaiPrevu)
+                essaiPrevu = null
+                ANNONCES_DE_LA_FILE.forEach((annonce) => window.removeEventListener(annonce, planifierLAdoption))
+                document.removeEventListener('focusout', planifierLAdoption)
+            })
+        }
+
+        return { seanceProvisoire: provisoire, etatDeLaSeance: etat, seanceEnLectureSeule: lectureSeule }
+    }
+
+    const attentes = creerLesAttentesDeRejeu()
+    const entree = SyncService.entreeStockee(queueId)
+    const enFile = entree !== undefined && entree.aAnnuler === undefined
 
     const surUneAnnonce = (event) => {
         const detail = event.detail ?? {}
@@ -250,8 +318,6 @@ export const useSeanceEnAttente = ({
         // Plus en file : ses écritures ne nomment ni une entrée qui ne viendra plus, ni un identifiant provisoire.
         pendingIds.track(idProvisoire, Promise.resolve(SyncService.produitDe(queueId)))
     }
-
-    let arreterLeSuivi = () => {}
 
     if (getCurrentInstance()) {
         onMounted(() => {

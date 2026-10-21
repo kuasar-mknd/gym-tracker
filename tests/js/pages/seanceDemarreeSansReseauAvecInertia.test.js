@@ -20,7 +20,9 @@ import {
  * disait sans réseau que « Il faut le réseau pour démarrer une séance. »
  * (#2048). Il passe désormais par la file : sans réseau, la séance s'ouvre
  * aussitôt, construite depuis l'entrée de sa création, à l'adresse de sa clé ;
- * en ligne, un POST JSON puis la visite de la séance créée.
+ * en ligne, un POST JSON puis la visite de la séance créée. La session expirée
+ * (401, 419), la page se redemande au serveur, qui mène à la connexion ; une
+ * réponse sans séance, ou aucun compte pour garder l'écriture, se disent.
  *
  * Le client se monte une fois pour le fichier, après la file, et la page
  * s'importe après elle, dans le même graphe (`.ai/rules/tests-js.md`). La
@@ -132,6 +134,17 @@ const seanceDuServeur = (id) => ({
     encryptHistory: true,
 })
 
+/** La page de connexion, celle que le serveur rend à une session expirée. */
+const pageDeConnexion = () => ({
+    component: 'Auth/Login',
+    url: '/login',
+    version: 'v1',
+    props: { errors: {}, flash: {}, auth: { user: null } },
+    encryptHistory: false,
+})
+
+const Connexion = { name: 'Connexion', render: () => h('p', { id: 'connexion' }, 'Connexion') }
+
 /** La séance poussée, telle que le test la voit : ce qu'elle reçoit, et rien d'autre. */
 const SeanceDuTest = {
     props: ['workout', 'exercises', 'bornesDUneSerie'],
@@ -145,6 +158,8 @@ let file
 let etatDuReseau
 let application
 let relais
+let DEMARRAGE_REFUSE
+let DEMARRAGE_SANS_RESEAU
 
 /** La page qu'Inertia montre, telle que `usePage()` la lit : visites du client comprises. */
 let page = null
@@ -180,7 +195,10 @@ beforeAll(async () => {
 
     const inertia = await import('@inertiajs/vue3')
     const { default: Accueil } = await import('@/Pages/Dashboard.vue')
-    const { installerLesVisitesHorsLigne } = await import('@/Utils/visitesHorsLigne')
+    const visitesHorsLigne = await import('@/Utils/visitesHorsLigne')
+    const { installerLesVisitesHorsLigne } = visitesHorsLigne
+    ;({ DEMARRAGE_SANS_RESEAU } = visitesHorsLigne)
+    ;({ DEMARRAGE_REFUSE } = await import('@/composables/useDemarrageDUneSeance'))
     routeur = inertia.router
     page = inertia.usePage()
 
@@ -190,7 +208,7 @@ beforeAll(async () => {
 
     await inertia.createInertiaApp({
         page: accueil(),
-        resolve: (nom) => (nom === 'Workouts/Show' ? SeanceDuTest : Accueil),
+        resolve: (nom) => ({ 'Workouts/Show': SeanceDuTest, 'Auth/Login': Connexion })[nom] ?? Accueil,
         setup: ({ el, App, props, plugin }) => {
             application = createApp({ render: () => h(App, props) })
             application.config.globalProperties.route = route
@@ -354,5 +372,67 @@ describe('démarrer une séance en ligne', () => {
         expect(entree).toMatchObject({ url: '/api/v1/workouts', tentee: true })
         expect(entree).not.toHaveProperty('timeout')
         expect(page.url).toBe(`/workouts/en-attente/${entree.headers['Idempotency-Key']}`)
+    })
+
+    /*
+     * La porte fermée n'est pas un refus : la page se redemande au serveur,
+     * qui mène à la connexion, comme la visite d'Inertia du bouton le faisait
+     * avant #2049. La page disait « Réessaie », et chaque appui rendait le
+     * même refus.
+     */
+    it.each([
+        ['la session expirée (401)', 401, 'Unauthenticated.'],
+        ['le jeton de la session expirée (419)', 419, 'CSRF token mismatch.'],
+    ])(
+        '%s, redemande la page au serveur, qui mène à la connexion, sans rien mettre en file',
+        async (_cas, statut, message) => {
+            reseau.mode = 'repond'
+            reseau.reponse = reponseInertia(pageDeConnexion())
+            api.reponses.push(async () => {
+                throw { response: { status: statut, data: { message } } }
+            })
+
+            bouton().click()
+            await vi.waitUntil(() => page.url === '/login')
+
+            expect(api.requetes).toHaveLength(1)
+            expect(
+                requetes.map((requete) => `${requete.methode} ${new URL(requete.url, window.location.href).pathname}`),
+            ).toEqual(['GET /dashboard'])
+            expect(document.getElementById('connexion')).not.toBeNull()
+            expect(fileStockee()).toEqual([])
+        },
+    )
+
+    it('dit que la séance n’a pas pu démarrer quand le serveur répond sans séance', async () => {
+        api.reponses.push(async () => ({ data: { data: {} }, status: 200 }))
+
+        bouton().click()
+        await vi.waitUntil(() => toasts().length > 0)
+
+        expect(toasts()).toEqual([expect.stringContaining(DEMARRAGE_REFUSE)])
+        expect(page.url).toBe('/dashboard')
+        expect(requetes).toHaveLength(0)
+        expect(fileStockee()).toEqual([])
+    })
+
+    /*
+     * Aucun compte pour garder l'écriture (`nonGardee`, #2050) : rien ne
+     * repartira, et la page dit qu'il faut le réseau, pas « Réessaie ».
+     */
+    it('sans compte pour garder la création, dit qu’il faut le réseau', async () => {
+        file.definirLeCompte(null)
+
+        try {
+            bouton().click()
+            await vi.waitUntil(() => toasts().length > 0)
+        } finally {
+            file.definirLeCompte(1)
+        }
+
+        expect(toasts()).toEqual([expect.stringContaining(DEMARRAGE_SANS_RESEAU)])
+        expect(api.requetes).toHaveLength(1)
+        expect(page.url).toBe('/dashboard')
+        expect(fileStockee()).toEqual([])
     })
 })

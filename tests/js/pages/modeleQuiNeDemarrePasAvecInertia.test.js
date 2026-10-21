@@ -26,6 +26,8 @@ vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: () => {} }))
  *   modèles : connue de la page sans serveur, ou nommée par le serveur (409).
  * - En ligne, une seule requête, avec le modèle, puis la visite de la séance
  *   créée.
+ * - La session expirée (401), la page se redemande au serveur, qui mène à la
+ *   connexion : la page disait « Réessaie » à chaque appui (#2049).
  *
  * La page des modèles est la vraie, sous le vrai layout, dont les toasts se
  * lisent dans le DOM ; la séance est un composant du test, qui montre ce
@@ -151,6 +153,17 @@ const seanceDuServeur = (id) => ({
     encryptHistory: true,
 })
 
+/** La page de connexion, celle que le serveur rend à une session expirée. */
+const pageDeConnexion = () => ({
+    component: 'Auth/Login',
+    url: '/login',
+    version: 'v1',
+    props: { errors: {}, flash: {}, auth: { user: null } },
+    encryptHistory: false,
+})
+
+const Connexion = { name: 'Connexion', render: () => h('p', { id: 'connexion' }, 'Connexion') }
+
 let page = null
 
 /** La séance, telle que le test la voit : ce qu'elle reçoit, et le message posé sur sa page. */
@@ -210,7 +223,7 @@ beforeAll(async () => {
 
     await inertia.createInertiaApp({
         page: pageDesModeles(),
-        resolve: (nom) => (nom === 'Workouts/Show' ? SeanceDuTest : PageDesModeles),
+        resolve: (nom) => ({ 'Workouts/Show': SeanceDuTest, 'Auth/Login': Connexion })[nom] ?? PageDesModeles,
         setup: ({ el, App, props, plugin }) => {
             application = createApp({ render: () => h(App, props) })
             application.config.globalProperties.route = route
@@ -328,6 +341,24 @@ describe('lancer un modèle en ligne', () => {
             requetes.map((requete) => `${requete.methode} ${new URL(requete.url, window.location.href).pathname}`),
         ).toEqual(['GET /workouts/42'])
         expect(document.getElementById('message-de-la-seance').textContent).toBe('')
+        expect(fileStockee()).toEqual([])
+    })
+
+    it('la session expirée (401), redemande la page au serveur, qui mène à la connexion, sans rien mettre en file', async () => {
+        reseau.mode = 'repond'
+        reseau.reponse = reponseInertia(pageDeConnexion())
+        api.reponses.push(async () => {
+            throw { response: { status: 401, data: { message: 'Unauthenticated.' } } }
+        })
+
+        lancer()
+        await vi.waitUntil(() => page.url === '/login')
+
+        expect(api.requetes).toHaveLength(1)
+        expect(
+            requetes.map((requete) => `${requete.methode} ${new URL(requete.url, window.location.href).pathname}`),
+        ).toEqual(['GET /templates'])
+        expect(document.getElementById('connexion')).not.toBeNull()
         expect(fileStockee()).toEqual([])
     })
 })
