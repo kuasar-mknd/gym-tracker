@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\VerifieLeCompteDeLEcriture;
 use App\Models\User;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Route;
@@ -270,7 +271,7 @@ it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou un
         }
         PHP;
 
-    $classe = 'App\\Http\\Middleware\\VerifieLeCompteDeLEcriture';
+    $classe = VerifieLeCompteDeLEcriture::class;
 
     expect(EntetesLus::lecturesDuCode($code))->toBe([
         ['ligne' => 9, 'entete' => 'idempotency-key', 'classe' => $classe, 'methode' => 'handle'],
