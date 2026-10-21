@@ -30,8 +30,8 @@ use Tests\Support\ParcoursHorsLigne;
  * réseau rendu, la file crée la séance, sa ligne, sa série, puis la clôt, et
  * la page passe à la séance réelle. Le serveur place le geste sur sa propre
  * horloge, par son âge au départ de la requête (`X-Heure-De-L-Appareil`) :
- * la fin se lit à la seconde du geste, ou à la suivante, le temps de la
- * requête et l'arrondi à la seconde s'y ajoutant.
+ * la fin se lit à la seconde du geste, ou jusqu'à deux secondes plus tard,
+ * le temps de la requête et l'arrondi à la seconde s'y ajoutant.
  *
  * Le serveur reste la vérité : une séance ouverte entre-temps depuis un autre
  * appareil fait refuser la création (409 `seance-deja-en-cours`), que le layout
