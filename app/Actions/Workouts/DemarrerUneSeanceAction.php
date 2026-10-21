@@ -39,7 +39,7 @@ use Illuminate\Support\Facades\Cache;
  * des records (`.ai/rules/services.md`) : une transaction ne suffirait pas,
  * avant la séance il n'y a aucune ligne à verrouiller. Le verrou est celui
  * du compte : les autres comptes démarrent sans l'attendre. Quand il manque
- * (expiré, évincé du cache), l'index unique `(user_id, idempotency_key)`
+ * (expiré, évincé du cache), l'index unique `(idempotency_key, user_id)`
  * tranche entre deux rejeux d'une même clé, et l'action rend la gagnante.
  *
  * La création d'une séance vide ne s'enveloppe pas d'une transaction : un

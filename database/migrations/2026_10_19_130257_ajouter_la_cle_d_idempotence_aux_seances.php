@@ -32,6 +32,17 @@ use Illuminate\Support\Facades\Schema;
  * (formulaire, panneau, factories), n'en ont pas, et un index unique admet
  * autant de NULL qu'il en faut.
  *
+ * La clé d'abord, le compte ensuite. MySQL 9.7.2 ne vérifie plus une clé
+ * étrangère quand l'index qui la porte a une colonne nulle dans la ligne
+ * écrite, même hors de la clé : sous `(user_id, idempotency_key)`, qu'InnoDB
+ * prend pour `workouts_user_id_foreign` parce qu'il est unique, une séance
+ * sans clé s'écrivait sous un compte qui n'existe pas (relu le 2026-10-21,
+ * `LesErreursSqlNeRecopientPasLesValeursTest` sur 9.7.2). Rangé
+ * `(idempotency_key, user_id)`, l'index ne commence plus par le compte : la
+ * clé étrangère garde `(user_id, started_at)`, sans colonne nulle, et la
+ * recherche d'une clé parmi les séances d'un compte le lit toujours en entier
+ * (`.ai/rules/database.md`).
+ *
  * En `ascii_bin` : la clé n'admet que l'ASCII imprimable
  * (`CreateSetAction::idempotencyKey()`), et une égalité d'identité ne se
  * confie pas à une collation (`.ai/rules/actions.md`) : sous
@@ -54,8 +65,8 @@ return new class() extends Migration
                 $table->string('idempotency_key', 64)->charset('ascii')->collation('ascii_bin')->nullable();
             }
 
-            if (! Schema::hasIndex('workouts', 'workouts_user_id_idempotency_key_unique')) {
-                $table->unique(['user_id', 'idempotency_key']);
+            if (! Schema::hasIndex('workouts', 'workouts_idempotency_key_user_id_unique')) {
+                $table->unique(['idempotency_key', 'user_id']);
             }
         });
     }
@@ -63,8 +74,8 @@ return new class() extends Migration
     public function down(): void
     {
         Schema::table('workouts', function (Blueprint $table): void {
-            if (Schema::hasIndex('workouts', 'workouts_user_id_idempotency_key_unique')) {
-                $table->dropUnique(['user_id', 'idempotency_key']);
+            if (Schema::hasIndex('workouts', 'workouts_idempotency_key_user_id_unique')) {
+                $table->dropUnique(['idempotency_key', 'user_id']);
             }
 
             if (Schema::hasColumn('workouts', 'idempotency_key')) {
