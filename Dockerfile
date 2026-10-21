@@ -2,6 +2,13 @@
 # 1. Base image for runtime dependencies
 FROM dunglas/frankenphp:1-php8.5 AS base
 
+# Le plancher de PHP. L'étiquette suit la dernière 8.5 publiée, mais une image
+# de base pas encore reconstruite donnerait une version déjà corrigée depuis :
+# la construction s'arrête plutôt que de livrer un PHP sous ce plancher.
+# 8.5.12 corrige CVE-2026-109618 et CVE-2026-109619.
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);' \
+    || { echo "PHP $(php -r 'echo PHP_VERSION;') est sous le plancher 8.5.12." >&2; exit 1; }
+
 RUN install-php-extensions \
     pcntl \
     pdo_mysql \
