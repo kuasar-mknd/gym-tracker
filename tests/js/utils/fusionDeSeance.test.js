@@ -101,4 +101,26 @@ describe('fusionner la séance rendue par le serveur avec celle de l’écran', 
         ).toEqual([2, 1])
         expect(fusionnerLaSeance(server, local, garde()).workout_lines.map((l) => l.id)).toEqual([1, 2])
     })
+
+    /*
+     * « Terminer » sans réseau (#2049) : le serveur ne connaît pas encore la
+     * fin, et rend la séance ouverte. Reprise de lui, elle se rouvrait à
+     * l'écran au premier rechargement de la séance.
+     */
+    it('garde la fin de l’écran tant qu’elle attend la file, et prend celle que le serveur connaît', () => {
+        const local = { id: 5, ended_at: '2026-10-19T18:42:00.000Z', _finEnAttente: 'qF', workout_lines: [] }
+
+        expect(fusionnerLaSeance({ id: 5, ended_at: null }, local, garde())).toMatchObject({
+            ended_at: '2026-10-19T18:42:00.000Z',
+            _finEnAttente: 'qF',
+        })
+
+        const close = fusionnerLaSeance({ id: 5, ended_at: '2026-10-19T18:43:00.000Z' }, local, garde())
+
+        expect(close.ended_at).toBe('2026-10-19T18:43:00.000Z')
+        expect(close).not.toHaveProperty('_finEnAttente')
+        expect(
+            fusionnerLaSeance({ id: 5, ended_at: null }, { ...local, _finEnAttente: undefined }, garde()).ended_at,
+        ).toBeNull()
+    })
 })

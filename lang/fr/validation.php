@@ -219,6 +219,7 @@ return [
         'dosage' => 'dosage',
         'duration_seconds' => 'durée',
         'end_time' => 'fin',
+        'ended_at' => 'heure de fin',
         'endpoint' => 'adresse de l\'abonnement',
         'energy_level' => 'niveau d\'énergie',
         'exercise_id' => 'exercice',
@@ -278,6 +279,7 @@ return [
         'stress_level' => 'stress',
         'target_duration_minutes' => 'durée visée',
         'target_value' => 'valeur cible',
+        'template_id' => 'modèle',
         'token' => 'jeton',
         'training_intensity' => 'intensité de l\'entraînement',
         'type' => 'type',
@@ -312,6 +314,9 @@ return [
         ],
         'measurement_type' => [
             'required_if' => 'Choisis la mensuration suivie.',
+        ],
+        'started_at' => [
+            'before_or_equal' => 'Le début de la séance ne peut pas être dans le futur.',
         ],
     ],
 ];

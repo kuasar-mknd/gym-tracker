@@ -41,6 +41,7 @@ const props = defineProps({
 const NOMS = Object.freeze({
     Dashboard: 'Accueil',
     'Workouts/Index': 'Séances',
+    'Workouts/Templates/Index': 'Modèles',
     'Exercises/Index': 'Exercices',
     'Profile/Index': 'Profil',
     'Tools/Index': 'Outils',

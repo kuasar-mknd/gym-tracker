@@ -58,16 +58,34 @@ const ECRITURES = [
 ]
 
 /**
+ * La création d'une séance (#2049) : `POST /api/v1/workouts`, celle que la file
+ * rejoue pour une séance démarrée sans réseau. Elle n'est pas l'une des sept :
+ * elle ne nomme aucune séance, elle en fait naître une, et ne se note pas comme
+ * une écriture acceptée de la séance que la page suivait avant.
+ */
+const CREATION_DE_SEANCE = { sorte: 'creerUneSeance', methodes: ['post'], motif: /\/api\/v1\/workouts$/ }
+
+/**
+ * La fin d'une séance (#2049) : `PATCH /api/v1/workouts/finish`, la séance
+ * nommée dans la charge (`workout_id`), l'heure du geste sur l'appareil
+ * (`ended_at`). Elle n'est pas l'une des sept non plus : c'est la dernière
+ * écriture de sa séance, celle derrière laquelle aucune ne doit passer
+ * (`SyncService.ajouterALaFile`).
+ */
+const FIN_DE_SEANCE = { sorte: 'terminerLaSeance', methodes: ['patch'], motif: /\/api\/v1\/workouts\/finish$/ }
+
+/**
  * Ce qu'est cette entrée pour la séance, et l'identifiant que son adresse nomme.
  *
  * @param {object} entree
+ * @param {Array<{sorte: string, methodes: string[], motif: RegExp}>} sortes
  * @returns {{sorte: string, cible: string|undefined}|null}
  */
-const lireLEcriture = (entree) => {
+const lireLEcriture = (entree, sortes = [...ECRITURES, CREATION_DE_SEANCE, FIN_DE_SEANCE]) => {
     const methode = String(entree?.method ?? '').toLowerCase()
     const chemin = String(entree?.url ?? '').split(/[?#]/, 1)[0]
 
-    for (const { sorte, methodes, motif } of ECRITURES) {
+    for (const { sorte, methodes, motif } of sortes) {
         const trouve = methodes.includes(methode) ? motif.exec(chemin) : null
 
         if (trouve !== null) {
@@ -86,7 +104,23 @@ const lireLEcriture = (entree) => {
  * @param {{ method?: string, url?: string } | null | undefined} ecriture
  * @returns {boolean}
  */
-export const estUneEcritureDeLaSeance = (ecriture) => lireLEcriture(ecriture) !== null
+export const estUneEcritureDeLaSeance = (ecriture) => lireLEcriture(ecriture, ECRITURES) !== null
+
+/**
+ * Si une écriture est la création d'une séance (#2049) : `POST /api/v1/workouts`.
+ *
+ * @param {{ method?: string, url?: string } | null | undefined} ecriture
+ * @returns {boolean}
+ */
+export const estUneCreationDeSeance = (ecriture) => lireLEcriture(ecriture, [CREATION_DE_SEANCE]) !== null
+
+/**
+ * Si une écriture est la fin d'une séance (#2049) : `PATCH /api/v1/workouts/finish`.
+ *
+ * @param {{ method?: string, url?: string } | null | undefined} ecriture
+ * @returns {boolean}
+ */
+export const estUneFinDeSeance = (ecriture) => lireLEcriture(ecriture, [FIN_DE_SEANCE]) !== null
 
 /**
  * Si une adresse est celle d'une des sept écritures de la séance, quelle que
@@ -143,11 +177,142 @@ const ligneNommee = (valeur, produites) =>
 /**
  * La clé d'idempotence d'une création, celle que le serveur garde sur ce
  * qu'elle a produit (`idempotency_key`), ou null.
+ *
+ * @param {object|null|undefined} entree
+ * @returns {string|null}
  */
-const cleDeLaCreation = (entree) => {
+export const cleDeLaCreation = (entree) => {
     const cle = entree?.headers?.['Idempotency-Key']
 
     return typeof cle === 'string' && cle !== '' ? cle : null
+}
+
+/**
+ * Si une valeur de charge nomme cette séance : son identifiant, ou, pour une
+ * séance démarrée sans réseau dont la création attend encore en file
+ * (`{ enAttenteDe: queueId }`, #2049), la séance qui en tient lieu.
+ *
+ * Deux séances la portent. Celle que la page construit depuis l'entrée de sa
+ * création, sous `temp-q<queueId>` (`Utils/seanceEnAttente.js`). Et celle du
+ * serveur dont la clé d'idempotence est celle de cette création : partie sans
+ * réponse, elle l'a créée là-bas, et le rejeu la rendra telle quelle.
+ *
+ * @param {unknown} valeur `workout_id` d'une charge, ou d'un contexte
+ * @param {object} seance
+ * @param {Map<string, string|null>} seancesEnFile la clé de chaque création de séance en file
+ * @returns {boolean}
+ */
+const nommeLaSeance = (valeur, seance, seancesEnFile) => {
+    if (valeur === null || typeof valeur !== 'object') {
+        return memeIdentifiant(valeur, seance.id)
+    }
+
+    if (typeof valeur.enAttenteDe !== 'string') {
+        return false
+    }
+
+    if (memeIdentifiant(identifiantEnFile(valeur.enAttenteDe), seance.id)) {
+        return true
+    }
+
+    const cle = seancesEnFile.get(valeur.enAttenteDe)
+
+    return typeof cle === 'string' && cle === seance.idempotency_key
+}
+
+/**
+ * La clé de chaque création de séance en file que l'écran n'a pas retirée,
+ * par entrée : ce par quoi une écriture nomme une séance démarrée sans réseau
+ * (#2049).
+ *
+ * @param {Array<object>} entrees
+ * @returns {Map<string, string|null>}
+ */
+const seancesEnFileDe = (entrees) =>
+    new Map(
+        entrees
+            .filter((entree) => estUneCreationDeSeance(entree) && entree.aAnnuler === undefined)
+            .map((entree) => [entree.id, cleDeLaCreation(entree)]),
+    )
+
+/**
+ * La fin de cette séance qui attend en file (#2049), ou undefined : la
+ * première qui la nomme, par son identifiant, par l'entrée de sa création
+ * (`{ enAttenteDe }`), ou par la clé de celle-ci. La première, parce que le
+ * serveur garde la première fin d'une séance et rend les suivantes sans rien
+ * changer.
+ *
+ * @param {{ id: unknown, idempotency_key?: string|null }} seance
+ * @param {Array<object>} entrees les entrées de la file du compte, dans l'ordre
+ * @returns {object|undefined}
+ */
+export const finDeLaSeanceEnFile = (seance, entrees) => {
+    const lues = Array.isArray(entrees) ? entrees : []
+    const seancesEnFile = seancesEnFileDe(lues)
+
+    return lues.find(
+        (entree) => estUneFinDeSeance(entree) && nommeLaSeance(chargeDe(entree).workout_id, seance, seancesEnFile),
+    )
+}
+
+/**
+ * La séance qu'une valeur nomme, sous une forme qui se compare : `id:42` pour
+ * un identifiant du serveur, `q:<queueId>` pour une séance démarrée sans
+ * réseau, qu'elle soit nommée par l'entrée de sa création (`{ enAttenteDe }`)
+ * ou par l'identifiant provisoire qui la montre (`temp-q<queueId>`) ; null
+ * pour rien de cela.
+ *
+ * @param {unknown} valeur
+ * @returns {string|null}
+ */
+const seanceReperee = (valeur) => {
+    if (valeur !== null && typeof valeur === 'object') {
+        return typeof valeur.enAttenteDe === 'string' ? `q:${valeur.enAttenteDe}` : null
+    }
+
+    if (valeur === null || valeur === undefined || valeur === '') {
+        return null
+    }
+
+    const enFile = entreeDeLaRangee(valeur)
+
+    if (enFile !== null) {
+        return `q:${enFile}`
+    }
+
+    return isTemporaryId(valeur) ? null : `id:${String(valeur)}`
+}
+
+/**
+ * La séance que vise une écriture de la séance ou sa fin (#2049), sous la
+ * forme de `seanceReperee`, ou null.
+ *
+ * La charge le dit pour la création d'une ligne et pour la fin
+ * (`workout_id`), le contexte pour la création d'une série, l'adresse pour
+ * l'ordre des lignes. Pour une modification, une suppression ou l'ordre des
+ * séries, seule la séance que la page suivait au départ de l'écriture le dit
+ * (`SyncService.suivreLesEcrituresDeLaSeance`).
+ *
+ * @param {object} ecriture une entrée de file, ou la requête d'une écriture directe
+ * @param {number|string|null} seanceDuDepart la séance que la page suivait au départ
+ * @returns {string|null}
+ */
+export const seanceDeLEcriture = (ecriture, seanceDuDepart = null) => {
+    const lue = lireLEcriture(ecriture)
+
+    if (lue === null || lue.sorte === 'creerUneSeance') {
+        return null
+    }
+
+    const charge = chargeDe(ecriture)
+    const nommee = {
+        ordonnerLesLignes: lue.cible,
+        creerUneLigne: charge.workout_id,
+        creerUneSerie: ecriture?.contexte?.workout_id,
+        terminerLaSeance: charge.workout_id,
+    }[lue.sorte]
+
+    return seanceReperee(nommee ?? seanceDuDepart)
 }
 
 /**
@@ -175,6 +340,28 @@ const ligneMontree = (id, exerciseId, ordre, exercices) => {
 }
 
 /**
+ * Les exercices du compte, et après eux celui que la création d'une ligne
+ * porte sur son entrée (`contexte.exercice`), quand elle en porte un : la ligne
+ * d'un modèle lancé sans réseau (#2049, `mettreEnFileLaSeanceDUnModele`). La
+ * bibliothèque l'emporte, plus complète ; sans elle (une séance remontée à froid
+ * par la coquille, sans copie de la bibliothèque), la ligne garde le nom que le
+ * modèle lui donnait, au lieu de « Exercice ».
+ *
+ * @param {Array<object>} exercices
+ * @param {object} entree
+ * @returns {Array<object>}
+ */
+const avecLExerciceDeLEntree = (exercices, entree) => {
+    const exercice = entree?.contexte?.exercice
+
+    if (exercice === null || typeof exercice !== 'object' || typeof exercice.name !== 'string') {
+        return exercices
+    }
+
+    return [...exercices, { ...exercice, type: exercice.type ?? 'strength' }]
+}
+
+/**
  * La ligne qu'une création de série en file nomme sans que la séance la porte,
  * reconstruite d'après ce que la page a noté sur l'entrée (`contexte`), quand
  * c'est une ligne réelle de cette séance-ci ; sinon undefined.
@@ -191,15 +378,16 @@ const ligneMontree = (id, exerciseId, ordre, exercices) => {
  * @param {object} entree
  * @param {unknown} ligneId l'identifiant que nomme la série
  * @param {Array<object>} exercices
+ * @param {Map<string, string|null>} seancesEnFile la clé de chaque création de séance en file
  * @returns {object|undefined}
  */
-const ligneReconstruite = (seance, entree, ligneId, exercices) => {
+const ligneReconstruite = (seance, entree, ligneId, exercices, seancesEnFile) => {
     const contexte = entree?.contexte
 
     if (
         contexte === null ||
         typeof contexte !== 'object' ||
-        !memeIdentifiant(contexte.workout_id, seance.id) ||
+        !nommeLaSeance(contexte.workout_id, seance, seancesEnFile) ||
         contexte.exercise_id === undefined ||
         ligneId === undefined ||
         ligneId === null ||
@@ -235,18 +423,36 @@ const ordonner = (rangees, ordre) => {
  *
  * @param {object} seance la copie en cours de construction
  * @param {object} entree
- * @param {{ exercices: Array<object>, produites: Map<string, number|string> }} contexte
- *   les exercices du compte, et les lignes que des créations encore en file ont
- *   déjà produites sur le serveur, par entrée
+ * @param {{ exercices: Array<object>, produites: Map<string, number|string>, seancesEnFile: Map<string, string|null> }} contexte
+ *   les exercices du compte, les lignes que des créations encore en file ont
+ *   déjà produites sur le serveur, par entrée, et la clé de chaque création
+ *   de séance en file
  */
-const appliquer = (seance, entree, { exercices, produites }) => {
+const appliquer = (seance, entree, { exercices, produites, seancesEnFile }) => {
     const ecriture = lireLEcriture(entree)
 
-    if (ecriture === null) {
+    // La création d'une séance ne change rien à la séance : c'est elle que la page montre, ou une autre.
+    if (ecriture === null || ecriture.sorte === 'creerUneSeance') {
         return
     }
 
     const charge = chargeDe(entree)
+
+    /*
+     * La fin de la séance (#2049) : close à l'heure du geste, en attente de
+     * la file. Une séance que le serveur dit close, ou qu'une fin plus
+     * ancienne de la file clôt déjà, garde sa fin : le serveur garde la
+     * première, et rend les suivantes sans rien changer.
+     */
+    if (ecriture.sorte === 'terminerLaSeance') {
+        if (!seance.ended_at && nommeLaSeance(charge.workout_id, seance, seancesEnFile)) {
+            seance.ended_at = typeof charge.ended_at === 'string' ? charge.ended_at : entree.timestamp
+            seance._finEnAttente = entree.id
+        }
+
+        return
+    }
+
     const lignes = seance.workout_lines
     const ligneDe = (id) => lignes.find((ligne) => memeIdentifiant(ligne.id, id))
     const ligneDeLaSerie = (id) =>
@@ -283,13 +489,16 @@ const appliquer = (seance, entree, { exercices, produites }) => {
                 return
             }
 
-            if (retireeDeLEcran || !memeIdentifiant(charge.workout_id, seance.id)) {
+            if (retireeDeLEcran || !nommeLaSeance(charge.workout_id, seance, seancesEnFile)) {
                 return
             }
 
             const id = identifiantEnFile(entree.id)
 
-            lignes.push({ ...ligneMontree(id, charge.exercise_id, lignes.length, exercices), _rowKey: id })
+            lignes.push({
+                ...ligneMontree(id, charge.exercise_id, lignes.length, avecLExerciceDeLEntree(exercices, entree)),
+                _rowKey: id,
+            })
 
             return
         }
@@ -321,7 +530,7 @@ const appliquer = (seance, entree, { exercices, produites }) => {
             }
 
             const ligneId = ligneNommee(charge.workout_line_id, produites)
-            const ligne = ligneDe(ligneId) ?? ligneReconstruite(seance, entree, ligneId, exercices)
+            const ligne = ligneDe(ligneId) ?? ligneReconstruite(seance, entree, ligneId, exercices, seancesEnFile)
 
             if (ligne === undefined) {
                 return
@@ -400,7 +609,15 @@ const appliquer = (seance, entree, { exercices, produites }) => {
  *   valeurs se posent sur celle-là ;
  * - les modifications et les suppressions de séries et de lignes ;
  * - les créations retirées de l'écran (`aAnnuler`), qui ne reviennent pas ;
- * - l'ordre des lignes et celui des séries de chaque ligne.
+ * - l'ordre des lignes et celui des séries de chaque ligne ;
+ * - la fin de la séance (#2049) : `ended_at`, l'heure du geste, et
+ *   `_finEnAttente`, l'entrée de file qui la porte, tant que le serveur ne
+ *   la connaît pas.
+ *
+ * Une séance démarrée sans réseau attend elle-même en file (#2049) : ses lignes
+ * la nomment par `{ enAttenteDe }`, et se superposent à la séance que la page
+ * construit depuis l'entrée de sa création (`temp-q<queueId>`), ou à celle du
+ * serveur qui porte la clé de cette création, une seule fois.
  *
  * Une entrée qui ne concerne pas cette séance (une autre séance, les préférences
  * de notification) est ignorée. Les lignes sortent toujours en tableau.
@@ -418,9 +635,15 @@ export const superposerLaFile = (seance, entrees, { exercices = [] } = {}) => {
         copie.workout_lines = Object.values(copie.workout_lines ?? {})
     }
 
-    const contexte = { exercices: Array.isArray(exercices) ? exercices : [], produites: new Map() }
+    const lues = Array.isArray(entrees) ? entrees : []
+    const contexte = {
+        exercices: Array.isArray(exercices) ? exercices : [],
+        produites: new Map(),
+        // Une séance démarrée sans réseau : ses écritures la nomment par l'entrée de sa création (#2049).
+        seancesEnFile: seancesEnFileDe(lues),
+    }
 
-    for (const entree of Array.isArray(entrees) ? entrees : []) {
+    for (const entree of lues) {
         appliquer(copie, entree, contexte)
     }
 
@@ -448,6 +671,10 @@ const sansLesChampsDeLEcran = (rangee) =>
  * la page la relevait comme confirmée. La saisie en cours, elle, revient par
  * son brouillon tant que sa réponse n'est pas arrivée, ou par la file.
  *
+ * Une fin qui attend la file (`_finEnAttente`, #2049) sort aussi : la séance
+ * gardée est ouverte, comme le serveur la connaît, et la superposition la
+ * clôt de nouveau au retour, tant que la fin attend.
+ *
  * @param {object} seance la copie locale de la page
  * @param {Array<{id: unknown, champ: string, valeur: unknown}>} valeursDeRepli
  *   les champs dont une écriture attend encore, et leur valeur de repli
@@ -455,6 +682,12 @@ const sansLesChampsDeLEcran = (rangee) =>
  */
 export const seanceConnueDuServeur = (seance, valeursDeRepli = []) => {
     const copie = JSON.parse(JSON.stringify(seance))
+
+    if (copie._finEnAttente !== undefined) {
+        copie.ended_at = null
+        delete copie._finEnAttente
+    }
+
     const repliDe = (serie) =>
         Object.fromEntries(
             (Array.isArray(valeursDeRepli) ? valeursDeRepli : [])

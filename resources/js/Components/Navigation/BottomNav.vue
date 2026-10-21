@@ -1,10 +1,9 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
-import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
-import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
 const navItems = [
     { name: 'Accueil', icon: 'grid_view', route: 'dashboard' },
@@ -14,15 +13,14 @@ const navItems = [
     { name: 'Plus', icon: 'menu', route: 'profile.index' },
 ]
 
-const isWorkoutShow = computed(() => route().current('workouts.show'))
-
 /*
- * Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048) :
- * le bouton se désactive et dit pourquoi. Sur la séance, il ajoute un
- * exercice, qui passe par la file hors ligne : il reste ouvert.
+ * La séance se reconnaît à la page qu'Inertia montre, pas à la route : une
+ * séance démarrée sans réseau s'ouvre à l'adresse de sa clé
+ * (`/workouts/en-attente/{clé}`, #2049), que `route().current('workouts.show')`
+ * ne nomme pas, et le bouton y aurait démarré une seconde séance.
  */
-const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
-const demarrageImpossible = computed(() => !isWorkoutShow.value && surUneCopie.value)
+const page = usePage()
+const isWorkoutShow = computed(() => page.component === 'Workouts/Show')
 
 const fabConfig = computed(() => {
     if (isWorkoutShow.value) {
@@ -32,19 +30,18 @@ const fabConfig = computed(() => {
 })
 
 /**
- * Un verrou pendant la création, comme les trois autres déclencheurs.
+ * Un verrou pendant le démarrage, comme les autres déclencheurs : le même,
+ * celui de l'onglet (`useDemarrageDUneSeance`).
  *
  * Ce bouton postait `workouts.store` sans rien bloquer : deux appuis rapprochés
- * créaient deux séances, et le second écran s'ouvrait sur la mauvaise. Les trois
- * autres chemins vers la même action se gardaient déjà — `QuickActions` par un
- * `:disabled`, `Workouts/Index` par le `:loading` de GlassButton, et
- * `Templates/Index` par un identifiant en cours dont le commentaire décrit
- * exactement ce symptôme.
+ * créaient deux séances, et le second écran s'ouvrait sur la mauvaise. Il est
+ * au centre de la barre, sous le pouce : c'est le plus facile à double-cliquer.
  *
- * Celui-ci était le seul sans garde, et c'est le plus facile à double-cliquer :
- * il est au centre de la barre, sous le pouce.
+ * Il reste ouvert sur une copie hors ligne (#2049) : démarrer n'envoie rien
+ * de la copie, et sans réseau la séance s'ouvre depuis la file. Sur la séance,
+ * il ajoute un exercice, qui passe aussi par la file.
  */
-const creationEnCours = ref(false)
+const { demarrer, enCours: creationEnCours } = useDemarrageDUneSeance()
 
 const handleFabClick = () => {
     triggerHaptic('toggle')
@@ -55,25 +52,7 @@ const handleFabClick = () => {
         return
     }
 
-    if (creationEnCours.value) {
-        return
-    }
-
-    creationEnCours.value = true
-
-    router.post(
-        route('workouts.store'),
-        {},
-        {
-            // Sans réseau, le dire : l'appui ne faisait rien (#2048).
-            onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU),
-            // `onFinish` et non `onSuccess` : un échec doit rendre le bouton
-            // aussi, sinon un refus du serveur le condamne jusqu'au rechargement.
-            onFinish: () => {
-                creationEnCours.value = false
-            },
-        },
-    )
+    demarrer()
 }
 
 const isActiveRoute = (itemRoute) => {
@@ -95,9 +74,8 @@ const isActiveRoute = (itemRoute) => {
                     @click="handleFabClick"
                     class="glass-nav-fab"
                     :aria-label="fabConfig.name"
-                    :disabled="creationEnCours || demarrageImpossible"
+                    :disabled="creationEnCours"
                     :aria-busy="creationEnCours"
-                    :aria-describedby="demarrageImpossible ? raisonDUneEcriture : undefined"
                 >
                     <GlassIcon :name="fabConfig.icon" size="xl" class="font-black" />
                 </button>

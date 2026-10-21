@@ -56,6 +56,7 @@ const cleAuHasard = () =>
 const COMPOSANTS = {
     '/dashboard': 'Dashboard',
     '/workouts': 'Workouts/Index',
+    '/templates': 'Workouts/Templates/Index',
     '/exercises': 'Exercises/Index',
     '/profile': 'Profile/Index',
     '/tools': 'Tools/Index',
@@ -315,12 +316,12 @@ describe('le préchauffage', () => {
         expect(cheminsDemandes()).toEqual([
             '/workouts/5',
             '/workouts',
+            '/templates',
             '/exercises',
             '/profile',
             '/tools',
             '/tools/interval-timer',
             '/plates',
-            '/tools/1rm',
         ])
         expect(serveur.appels).toHaveLength(GET_AU_PLUS)
         expect(serveur.enVolAuPlus).toBe(1)
@@ -356,8 +357,8 @@ describe('le préchauffage', () => {
             '/exercises',
             '/plates',
             '/profile',
+            '/templates',
             '/tools',
-            '/tools/1rm',
             '/tools/interval-timer',
             '/workouts',
             '/workouts/5',
@@ -392,7 +393,7 @@ describe('le préchauffage', () => {
         await recevoir(pageDe('/tools'))
         const premiers = cheminsDemandes()
 
-        // Il manque encore l'échauffement, mais la demi-heure n'est pas passée.
+        // Il manque encore le 1RM et l'échauffement, mais la demi-heure n'est pas passée.
         maintenant += INTERVALLE_DU_PRECHAUFFAGE_MS - 1
         await recevoir(pageDe('/profile'))
 
@@ -405,7 +406,7 @@ describe('le préchauffage', () => {
         maintenant += 1
         await recevoir(pageDe('/profile'))
 
-        expect(cheminsDemandes().slice(premiers.length)).toEqual(['/tools/warmup'])
+        expect(cheminsDemandes().slice(premiers.length)).toEqual(['/tools/1rm', '/tools/warmup'])
 
         // Une nouvelle session : une autre clé, un magasin qui repart de zéro.
         document.cookie = `${TEMOIN}=${cleAuHasard()}; path=/`
@@ -537,7 +538,7 @@ describe('le préchauffage', () => {
         await recevoir({ ...pageDe('/tools'), component: 'Auth/VerifyEmail', url: '/verify-email' })
 
         expect(document.cookie).toBe(cle)
-        expect(cheminsDemandes().slice(0, 3)).toEqual(['/dashboard', '/workouts', '/exercises'])
+        expect(cheminsDemandes().slice(0, 4)).toEqual(['/dashboard', '/workouts', '/templates', '/exercises'])
         expect(serveur.appels).toHaveLength(GET_AU_PLUS)
         expect(etatRange()).toMatchObject({ ouvert: true, empreintesFermees: [] })
         expect(cheminsRanges()).toEqual(expect.arrayContaining(['/workouts', '/profile', '/tools']))
@@ -590,14 +591,15 @@ describe('le préchauffage', () => {
 
         await recevoir(pageDe('/tools', { seanceEnCours: 5 }))
 
-        expect(cheminsDemandes().slice(0, 5)).toEqual([
+        expect(cheminsDemandes().slice(0, 6)).toEqual([
             '/workouts/5',
             '/dashboard',
             '/workouts',
+            '/templates',
             '/exercises',
             '/profile',
         ])
-        expect(cheminsRanges()).toEqual(['/profile', '/tools', '/tools/1rm', '/tools/interval-timer'])
+        expect(cheminsRanges()).toEqual(['/profile', '/templates', '/tools', '/tools/interval-timer'])
     })
 
     it('ne redemande pas la page qui vient d’arriver, même quand sa copie n’a pas pu s’écrire', async () => {

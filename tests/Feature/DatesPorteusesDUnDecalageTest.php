@@ -76,30 +76,33 @@ describe('un instant', function (): void {
 
     it('laisse le début de séance en place quand les réglages renvoient son heure telle quelle', function (): void {
         $user = User::factory()->create();
+        // Avant maintenant (10 h) : les réglages refusent un début dans le futur (#2049).
         $workout = Workout::factory()->create([
             'user_id' => $user->id,
-            'started_at' => Carbon::parse('2026-10-05 10:30:00'),
+            'started_at' => Carbon::parse('2026-10-05 09:30:00'),
         ]);
 
         // Ce que renvoie le formulaire des réglages pour un simple renommage.
         $this->actingAs($user)
             ->patch(route('workouts.update', $workout), [
                 'name' => 'Jambes',
-                'started_at' => '2026-10-05T08:30:00.000Z',
+                'started_at' => '2026-10-05T07:30:00.000Z',
                 'notes' => '',
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
 
         $this->actingAs($user)
             ->patch(route('workouts.update', $workout), [
                 'name' => 'Jambes lourdes',
-                'started_at' => '2026-10-05T08:30:00.000Z',
+                'started_at' => '2026-10-05T07:30:00.000Z',
                 'notes' => '',
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
 
         expect($workout->refresh()->name)->toBe('Jambes lourdes')
-            ->and($workout->started_at->format('Y-m-d H:i:s'))->toBe('2026-10-05 10:30:00');
+            ->and($workout->started_at->format('Y-m-d H:i:s'))->toBe('2026-10-05 09:30:00');
     });
 
     it('accepte toujours une heure sans décalage comme une heure de Paris', function (): void {

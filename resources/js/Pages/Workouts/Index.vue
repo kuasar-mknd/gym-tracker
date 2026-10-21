@@ -18,9 +18,8 @@ import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
 import GlassStat from '@/Components/UI/GlassStat.vue'
 import { entier } from '@/Utils/nombre'
-import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 import { retirerDeLaListe, revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
-import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
 const WorkoutHistoryTimelineChart = graphiqueAsynchrone(
     () => import('@/Components/Stats/WorkoutHistoryTimelineChart.vue'),
@@ -45,14 +44,12 @@ const props = defineProps({
     },
 })
 
-const form = useForm({})
-
-/** Sur une copie hors ligne, ni démarrer ni supprimer ne partirait (#2048) : ces boutons le disent d'avance. */
-const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
-
-const createWorkout = () => {
-    form.post(route('workouts.store'), { onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU) })
-}
+/**
+ * Démarrer passe par la file hors ligne, et reste ouvert sur une copie (#2049) :
+ * rien n'y est tiré de la copie. Supprimer une séance, lui, s'y désactive dans
+ * sa carte (`CarteDeSeance`).
+ */
+const { demarrer: createWorkout, enCours: demarrageEnCours } = useDemarrageDUneSeance()
 
 /**
  * The optimistic delete used to splice `props.workouts.data` in place. It works,
@@ -143,9 +140,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                     </Link>
                     <GlassButton
                         variant="primary"
-                        :loading="form.processing"
-                        :disabled="surUneCopie"
-                        :aria-describedby="raisonDUneEcriture"
+                        :loading="demarrageEnCours"
                         @click="createWorkout"
                         aria-label="Nouvelle séance"
                     >
@@ -263,8 +258,6 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
                         icon="💪"
                         action-label="Commencer maintenant"
                         action-id="empty-state-start-workout"
-                        :action-desactivee="surUneCopie"
-                        :raison-de-l-action="raisonDUneEcriture"
                         @action="createWorkout"
                         color="orange"
                     />

@@ -4,23 +4,31 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Actions\CreateWorkoutFromTemplateAction;
 use App\Actions\CreateWorkoutTemplateAction;
 use App\Actions\CreateWorkoutTemplateFromWorkoutAction;
+use App\Actions\Workouts\CreateSetAction;
+use App\Actions\Workouts\DemarrerUneSeanceAction;
+use App\Exceptions\UneSeanceEstDejaEnCours;
 use App\Models\Exercise;
 use App\Models\Set;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WorkoutTemplateController extends Controller
 {
+    /**
+     * Les modèles, l'aperçu de chacun (`templates`), et de quoi lancer chacun
+     * sans réseau (`lancements`, #2049) : la page est gardée pour la salle.
+     */
     public function index(\App\Actions\FetchWorkoutTemplatesAction $fetchWorkoutTemplatesAction): \Inertia\Response
     {
         $this->authorize('viewAny', WorkoutTemplate::class);
 
         return Inertia::render('Workouts/Templates/Index', [
             'templates' => $fetchWorkoutTemplatesAction->execute($this->user()),
+            'lancements' => $fetchWorkoutTemplatesAction->lancements($this->user()),
         ]);
     }
 
@@ -54,22 +62,26 @@ class WorkoutTemplateController extends Controller
      * est renvoyé vers elle, comme par « Démarrer », avec un message qui dit
      * pourquoi. Sans cette garde, il se retrouvait avec deux séances ouvertes,
      * dont le bandeau ne montrait que la plus récente, et l'autre restait « en
-     * cours » indéfiniment (#1958).
+     * cours » indéfiniment (#1958). La garde tient sous le verrou du compte
+     * (`DemarrerUneSeanceAction`), y compris entre deux onglets ou deux
+     * appareils (#2049). Un lancement rejoué sous sa clé `Idempotency-Key`
+     * mène à la séance qu'il a ouverte, sans message : ce n'est pas un second
+     * lancement.
      */
-    public function execute(WorkoutTemplate $template, CreateWorkoutFromTemplateAction $createWorkout): \Illuminate\Http\RedirectResponse
+    public function execute(Request $request, WorkoutTemplate $template, DemarrerUneSeanceAction $demarrer): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('view', $template);
 
-        $activeWorkout = app(\App\Services\ActiveWorkoutService::class)->for($this->user());
+        $cle = CreateSetAction::idempotencyKey(['idempotency_key' => $request->header('Idempotency-Key')]);
 
-        if ($activeWorkout instanceof Workout) {
-            return redirect()->route('workouts.show', $activeWorkout)->with(
+        try {
+            $workout = $demarrer->execute($this->user(), $cle, $template);
+        } catch (UneSeanceEstDejaEnCours $refus) {
+            return redirect()->route('workouts.show', $refus->seanceEnCours)->with(
                 'error',
                 "Le modèle « {$template->name} » n'a pas été démarré : une séance est déjà en cours. Terminez-la avant d'en commencer une autre.",
             );
         }
-
-        $workout = $createWorkout->execute($this->user(), $template);
 
         return redirect()->route('workouts.show', $workout);
     }

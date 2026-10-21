@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head, useForm, Deferred } from '@inertiajs/vue3'
+import { Head, Deferred } from '@inertiajs/vue3'
 import DashboardHeader from '@/Components/Dashboard/DashboardHeader.vue'
 import GlassSkeleton from '@/Components/UI/GlassSkeleton.vue'
 import IndisponibleHorsLigne from '@/Components/UI/IndisponibleHorsLigne.vue'
@@ -19,8 +19,8 @@ import { ref } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
 import InvitationAuxNotifications from '@/Components/UI/InvitationAuxNotifications.vue'
-import { DEMARRAGE_SANS_RESEAU, direSansReseau } from '@/Utils/visitesHorsLigne'
 import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
+import { useDemarrageDUneSeance } from '@/composables/useDemarrageDUneSeance'
 
 const ActiveGoalsChart = graphiqueAsynchrone(() => import('@/Components/Stats/ActiveGoalsChart.vue'))
 
@@ -47,8 +47,6 @@ defineProps({
     },
 })
 
-const form = useForm({})
-
 /**
  * Une copie hors ligne de l'accueil ne garde ni le dernier poids ni les
  * objectifs, tirés des mesures et des objectifs qu'aucune copie ne garde
@@ -56,9 +54,8 @@ const form = useForm({})
  */
 const { indisponibleSurLaCopie } = useCopieHorsLigne()
 
-const startWorkout = () => {
-    form.post(route('workouts.store'), { onNetworkError: direSansReseau(DEMARRAGE_SANS_RESEAU) })
-}
+/** Démarrer, avec ou sans réseau : par la file hors ligne (#2049). */
+const { demarrer: startWorkout, enCours: demarrageEnCours } = useDemarrageDUneSeance()
 
 /**
  * Une seule invitation à la fois : celle d'installation passe d'abord, celle
@@ -78,7 +75,7 @@ const installationProposee = ref(false)
                 :poids-indisponible="indisponibleSurLaCopie('latestWeight')"
             />
 
-            <QuickActions :processing="form.processing" @start-workout="startWorkout" />
+            <QuickActions :processing="demarrageEnCours" @start-workout="startWorkout" />
 
             <InvitationDInstallation @visibilite="installationProposee = $event" />
 
@@ -121,7 +118,7 @@ const installationProposee = ref(false)
 
             <RecentActivity
                 :recent-workouts="recentWorkouts"
-                :processing="form.processing"
+                :processing="demarrageEnCours"
                 @start-workout="startWorkout"
             />
 

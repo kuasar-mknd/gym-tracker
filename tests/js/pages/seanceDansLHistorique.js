@@ -46,21 +46,28 @@ export const DEVELOPPE_COUCHE = {
 const EXERCICES = [SQUAT, DEVELOPPE_COUCHE]
 
 /**
- * La séance telle que le serveur la rend maintenant : les lignes de la séance 5
- * qu'il a en base, et leurs séries. Son nom et ses notes sont ceux que le test
- * a posés sur le faux serveur (`reglagesDeLaSeance`), comme s'ils avaient
- * changé ailleurs.
+ * La séance telle que le serveur la rend maintenant : les lignes de la séance
+ * qu'il a en base, et leurs séries. La séance 5 est celle du décor : son nom et
+ * ses notes sont ceux que le test a posés sur le faux serveur
+ * (`reglagesDeLaSeance`), comme s'ils avaient changé ailleurs. Les autres sont
+ * celles que l'API a créées (`serveur.seances`, #2049).
  *
  * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { reglagesDeLaSeance?: { name?: string, notes?: string | null } }} serveur
+ * @param {number} id
  */
-const seanceDuServeur = (serveur) => ({
-    id: 5,
-    name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
-    started_at: '2026-10-12T17:00:00.000000Z',
-    ended_at: null,
-    notes: serveur.reglagesDeLaSeance?.notes ?? null,
+const seanceDuServeur = (serveur, id = 5) => ({
+    ...(id === 5
+        ? {
+              id: 5,
+              name: serveur.reglagesDeLaSeance?.name ?? 'Séance du soir',
+              started_at: '2026-10-12T17:00:00.000000Z',
+              // Close par l'API (#2049) : la fin que le faux serveur a gardée.
+              ended_at: serveur.fins?.get(5) ?? null,
+              notes: serveur.reglagesDeLaSeance?.notes ?? null,
+          }
+        : serveur.seances.get(id)),
     workout_lines: [...serveur.lignes.values()]
-        .filter((ligne) => ligne.workout_id === 5)
+        .filter((ligne) => ligne.workout_id === id)
         .sort((a, b) => a.id - b.id)
         .map((ligne, rang) => ({
             id: ligne.id,
@@ -76,16 +83,48 @@ const seanceDuServeur = (serveur) => ({
         })),
 })
 
+/** La page d'une séance, comme le serveur la rend. */
+const pageDeLaSeance = (serveur, id) => ({
+    component: 'Workouts/Show',
+    url: `/workouts/${id}`,
+    version: 'v1',
+    props: {
+        errors: {},
+        flash: {},
+        auth: { user: { id: 1 } },
+        workout: seanceDuServeur(serveur, id),
+        exercises: serveur.bibliotheque ?? EXERCICES,
+        bornesDUneSerie: null,
+    },
+    encryptHistory: true,
+})
+
 /**
  * Les pages de chaque adresse, comme le serveur les rend maintenant. La
  * bibliothèque de la séance est celle que le test a posée sur le faux serveur
  * (`bibliotheque`), comme si elle avait changé ailleurs, et sinon le squat et
  * le développé couché.
  *
- * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { bibliotheque?: Array<object> }} serveur
+ * Chaque séance que l'API a créée a sa page (#2049), et l'adresse d'une séance
+ * démarrée sans réseau mène, comme la redirection du serveur
+ * (`workouts.en-attente`), à la séance de sa clé, sinon à la liste des
+ * séances : le client d'Inertia suit la redirection sans la voir.
+ *
+ * Un test y ajoute les pages d'autres adresses, ou remplace celles du décor
+ * (`serveur.pages`, chemin → page) : la page des modèles d'où l'on lance un
+ * modèle, ou la page de connexion où mène la séance dont la session a expiré
+ * (#2049), le serveur redirigeant sans que le client d'Inertia le voie.
+ *
+ * @param {ReturnType<import('../composables/seanceHorsLigne').creerUnFauxServeur> & { bibliotheque?: Array<object>, pages?: Record<string, () => object> }} serveur
  * @returns {Record<string, () => object>}
  */
 export const pagesDuServeur = (serveur) => ({
+    ...Object.fromEntries(
+        [...(serveur.seances?.values() ?? [])].flatMap((seance) => [
+            [`/workouts/${seance.id}`, () => pageDeLaSeance(serveur, seance.id)],
+            [`/workouts/en-attente/${seance.idempotency_key}`, () => pageDeLaSeance(serveur, seance.id)],
+        ]),
+    ),
     '/workouts': () => ({
         component: 'Workouts/Index',
         url: '/workouts',
@@ -93,21 +132,26 @@ export const pagesDuServeur = (serveur) => ({
         props: { errors: {}, flash: {}, auth: { user: { id: 1 } } },
         encryptHistory: true,
     }),
-    '/workouts/5': () => ({
-        component: 'Workouts/Show',
-        url: '/workouts/5',
+    '/workouts/5': () => pageDeLaSeance(serveur, 5),
+    // L'accueil, où mène une séance terminée (#2049) : sans donnée flash, que l'API ne pose jamais.
+    '/dashboard': () => ({
+        component: 'Dashboard',
+        url: '/dashboard',
         version: 'v1',
-        props: {
-            errors: {},
-            flash: {},
-            auth: { user: { id: 1 } },
-            workout: seanceDuServeur(serveur),
-            exercises: serveur.bibliotheque ?? EXERCICES,
-            bornesDUneSerie: null,
-        },
+        props: { errors: {}, auth: { user: { id: 1 } } },
+        flash: {},
         encryptHistory: true,
     }),
+    ...(serveur.pages ?? {}),
 })
+
+/**
+ * La page que le serveur rend à ce chemin : la sienne, ou la liste des séances
+ * pour une séance démarrée sans réseau qu'il ne connaît pas.
+ */
+const pageDuChemin = (serveur, chemin) =>
+    pagesDuServeur(serveur)[chemin]?.() ??
+    (chemin.startsWith('/workouts/en-attente/') ? pagesDuServeur(serveur)['/workouts']() : undefined)
 
 const ListeDesSeances = { name: 'ListeDesSeances', render: () => h('p', { id: 'liste-des-seances' }, 'Séances') }
 
@@ -234,11 +278,13 @@ export const uneReponseRetenue = (serveur) => {
  *   retenir: (application: import('@vue/test-utils').VueWrapper) => void,
  *   avantInertia?: (inertia: typeof import('@inertiajs/vue3')) => Promise<void> | void,
  *   ouverture?: { adresse: string, selecteur: string, etatDeLHistorique?: object | null },
+ *   composants?: Record<string, object>,
  * }} chargement le faux serveur, l'import de la vraie page de séance, ce
  *   qui retient le montage pour le démonter après le test, ce que le test
  *   branche après la garde de l'historique et avant le démarrage d'Inertia,
- *   comme `main.js` (l'écriture des copies hors ligne, #2048), et le document
- *   ouvert, la liste des séances sans lui
+ *   comme `main.js` (l'écriture des copies hors ligne, #2048), le document
+ *   ouvert, la liste des séances sans lui, et le composant d'une autre page
+ *   que le test regarde (l'accueil, #2049), la liste des séances sinon
  * @returns {Promise<{
  *   sync: object,
  *   visites: Array<string>,
@@ -252,8 +298,8 @@ export const ouvrirLaListeDesSeances = async ({
     retenir,
     avantInertia = () => {},
     ouverture = { adresse: '/workouts', selecteur: '#liste-des-seances', etatDeLHistorique: null },
+    composants = {},
 }) => {
-    const pagesDeLAdresse = pagesDuServeur(serveur)
     const visites = []
 
     class RequeteSimulee {
@@ -284,7 +330,7 @@ export const ouvrirLaListeDesSeances = async ({
             queueMicrotask(() => {
                 try {
                     this.status = 200
-                    this.responseText = JSON.stringify(pagesDeLAdresse[chemin]())
+                    this.responseText = JSON.stringify(pageDuChemin(serveur, chemin))
                     this.onload?.()
                 } finally {
                     requetesEnVol--
@@ -345,7 +391,7 @@ export const ouvrirLaListeDesSeances = async ({
     const initiale = document.createElement('script')
     initiale.dataset.page = 'app'
     initiale.type = 'application/json'
-    initiale.textContent = JSON.stringify(pagesDeLAdresse[ouverture.adresse]())
+    initiale.textContent = JSON.stringify(pageDuChemin(serveur, ouverture.adresse))
     document.body.replaceChildren(initiale, Object.assign(document.createElement('div'), { id: 'app' }))
 
     const inertia = await import('@inertiajs/vue3')
@@ -357,9 +403,20 @@ export const ouvrirLaListeDesSeances = async ({
     await avantInertia(inertia)
 
     await inertia.createInertiaApp({
-        resolve: (nom) => (nom === 'Workouts/Show' ? Seance : ListeDesSeances),
+        resolve: (nom) => (nom === 'Workouts/Show' ? Seance : (composants[nom] ?? ListeDesSeances)),
         setup: ({ el, App, props, plugin }) => {
-            retenir(mount(App, { props, attachTo: el, global: { plugins: [plugin], directives: { press: {} } } }))
+            retenir(
+                mount(App, {
+                    props,
+                    attachTo: el,
+                    global: {
+                        plugins: [plugin],
+                        directives: { press: {} },
+                        // Ziggy dans les gabarits, comme `ZiggyVue` le pose : celui que le test a mis en place.
+                        mocks: { route: (...parametres) => globalThis.route(...parametres) },
+                    },
+                }),
+            )
         },
     })
 

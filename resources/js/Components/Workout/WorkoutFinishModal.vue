@@ -3,28 +3,31 @@ import { computed } from 'vue'
 import Modal from '@/Components/UI/Modal.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 
+/**
+ * La question « Terminer la séance ? » (#1961, #2049).
+ *
+ * Sans réseau, la fin entre en file à l'heure du geste, et la séance se montre
+ * close sur sa page : la modale n'a rien à dire d'une fin non confirmée. Elle
+ * ne dit que ce qui empêche de terminer : une modification encore en route
+ * vers le serveur, qui arriverait sinon après la fin et serait refusée.
+ */
 const props = defineProps({
     show: { type: Boolean, required: true },
-    /** Les modifications restées en file à la dernière tentative : la séance ne se ferme pas sans elles (#1961). */
+    /** Les modifications encore en route vers le serveur à la dernière tentative : la séance ne se ferme pas sans elles (#1961). */
     enAttente: { type: Number, default: 0 },
     /**
      * La clôture attend que les modifications partent : « Confirmer » le montre, et n'est pas rappuyable.
      * « Annuler », le fond ou Échap l'abandonnent (`close`) : la séance reste ouverte.
      */
     enCours: { type: Boolean, default: false },
-    /**
-     * La dernière clôture n'a reçu aucune réponse du serveur (#2048) : la séance reste ouverte à l'écran, et
-     * rien ne dit si la requête est arrivée. Jamais « la séance n'est pas terminée » : seule la réponse a pu se perdre.
-     */
-    sansReseau: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['close', 'confirm'])
 
 const avisDAttente = computed(() =>
     props.enAttente > 1
-        ? `${props.enAttente} modifications attendent encore d’être envoyées. La séance reste ouverte : réessaie quand le réseau sera revenu.`
-        : 'Une modification attend encore d’être envoyée. La séance reste ouverte : réessaie quand le réseau sera revenu.',
+        ? `${props.enAttente} modifications sont encore en route vers le serveur. La séance reste ouverte : réessaie dans un instant.`
+        : 'Une modification est encore en route vers le serveur. La séance reste ouverte : réessaie dans un instant.',
 )
 </script>
 
@@ -41,15 +44,6 @@ const avisDAttente = computed(() =>
                 dusk="finish-workout-sending"
             >
                 Envoi des modifications en attente…
-            </p>
-            <p
-                v-else-if="sansReseau"
-                role="status"
-                class="bg-accent-danger/10 text-accent-danger-deep mb-6 rounded-xl p-3 text-sm font-bold"
-                dusk="finish-workout-offline"
-            >
-                Pas de réponse du serveur : la fin de la séance n’est pas confirmée. Réessaie quand le réseau sera
-                revenu.
             </p>
             <p
                 v-else-if="enAttente > 0"

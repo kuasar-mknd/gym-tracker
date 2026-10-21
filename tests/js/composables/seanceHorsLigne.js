@@ -1,5 +1,6 @@
 import { computed, defineComponent, h, ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
+import { route as routeDeZiggy } from 'ziggy-js'
 
 import { chargerSyncService } from '../utils/fileHorsLigne'
 import { suivreLesPagesMontees } from '../pages/pagesMontees'
@@ -32,22 +33,64 @@ import { suivreLesPagesMontees } from '../pages/pagesMontees'
  */
 export const seances = suivreLesPagesMontees()
 
-/** Les adresses de Ziggy dont la séance se sert. */
-export const routeDeTest = (nom, parametres = {}) => {
-    const valeur = Object.values(parametres)[0]
+/**
+ * La forme d'un identifiant dans une adresse : celle que le serveur pose sur
+ * chaque paramètre de modèle (`App\Support\IdentifiantsDesRoutes::MOTIF`), que
+ * Ziggy reçoit avec la table des routes et exige avant de rendre l'adresse
+ * (#2049). `tests/js/conventions/identifiantAVenir.test.js` la compare à
+ * celle du serveur.
+ */
+export const MOTIF_D_UN_IDENTIFIANT = '[1-9][0-9]*'
 
-    return {
-        'api.v1.sets.store': '/api/v1/sets',
-        'api.v1.sets.update': `/api/v1/sets/${valeur}`,
-        'api.v1.sets.destroy': `/api/v1/sets/${valeur}`,
-        'api.v1.workout-lines.store': '/api/v1/workout-lines',
-        'api.v1.workout-lines.destroy': `/api/v1/workout-lines/${valeur}`,
-        'api.v1.workout-lines.set-order': `/api/v1/workout-lines/${valeur}/set-order`,
-        'api.v1.workouts.line-order': `/api/v1/workouts/${valeur}/line-order`,
-        'workouts.update': `/workouts/${valeur}`,
-        'templates.save-from-workout': `/templates/${valeur}`,
-    }[nom]
+/** Les adresses de Ziggy dont la séance se sert, telles que le serveur les déclare. */
+const ADRESSES_DE_LA_SEANCE = {
+    dashboard: 'dashboard',
+    'workouts.show': 'workouts/{workout}',
+    'api.v1.workouts.store': 'api/v1/workouts',
+    'api.v1.workouts.finish': 'api/v1/workouts/finish',
+    'api.v1.sets.store': 'api/v1/sets',
+    'api.v1.sets.update': 'api/v1/sets/{set}',
+    'api.v1.sets.destroy': 'api/v1/sets/{set}',
+    'api.v1.workout-lines.store': 'api/v1/workout-lines',
+    'api.v1.workout-lines.destroy': 'api/v1/workout-lines/{workout_line}',
+    'api.v1.workout-lines.set-order': 'api/v1/workout-lines/{workoutLine}/set-order',
+    'api.v1.workouts.line-order': 'api/v1/workouts/{workout}/line-order',
+    'workouts.update': 'workouts/{workout}',
+    'templates.save-from-workout': 'workouts/{workout}/save-as-template',
 }
+
+/**
+ * La table que Ziggy lit dans la page : chaque paramètre de ces adresses
+ * désigne un modèle, et porte le motif d'un identifiant.
+ */
+const TABLE_DE_ZIGGY = {
+    url: 'http://localhost',
+    port: null,
+    defaults: {},
+    routes: Object.fromEntries(
+        Object.entries(ADRESSES_DE_LA_SEANCE).map(([nom, uri]) => [
+            nom,
+            {
+                uri,
+                methods: ['GET', 'HEAD'],
+                wheres: Object.fromEntries(
+                    [...uri.matchAll(/{(\w+)}/g)].map(([, parametre]) => [parametre, MOTIF_D_UN_IDENTIFIANT]),
+                ),
+            },
+        ]),
+    ),
+}
+
+/**
+ * Les adresses de Ziggy dont la séance se sert, rendues par le vrai Ziggy :
+ * comme dans l'application, un paramètre qui n'a pas la forme d'un
+ * identifiant lève une erreur au lieu de rendre une adresse. Le stub laissait
+ * passer `/api/v1/sets/__produit__`, que Ziggy refusait dans le navigateur, et
+ * aucune série ne s'ajoutait plus (#2049). Un nom qu'elle ne connaît pas ne
+ * rend rien, comme avant.
+ */
+export const routeDeTest = (nom, parametres = {}) =>
+    Object.hasOwn(ADRESSES_DE_LA_SEANCE, nom) ? routeDeZiggy(nom, parametres, false, TABLE_DE_ZIGGY) : undefined
 
 /**
  * Un serveur qui retient ce qu'il a créé, et un réseau qu'on coupe.
@@ -61,13 +104,20 @@ export const routeDeTest = (nom, parametres = {}) => {
 export const creerUnFauxServeur = ({ series = [] } = {}) => {
     const serveur = {
         enLigne: true,
-        /** Les requêtes qui ont atteint le serveur, dans l'ordre. */
+        /** Les requêtes qui ont atteint le serveur, dans l'ordre, avec leurs en-têtes (`entetes`). */
         requetes: [],
         /** Les séries en base, par identifiant. */
         series: new Map(series.map((serie) => [serie.id, { ...serie }])),
         lignes: new Map(),
+        /** Les séances créées par l'API (#2049), par identifiant. */
+        seances: new Map(),
+        /** La fin de chaque séance close par l'API (#2049), la première gardée. */
+        fins: new Map(),
+        /** Ce que dit la réponse d'une fin : l'invitation aux notifications. */
+        proposerLesNotifications: false,
         prochaineSerie: 100,
         prochaineLigne: 70,
+        prochaineSeance: 42,
         /** Une réponse imposée à la prochaine requête qui atteint le serveur. */
         imposer: [],
         /** Ce que chaque clé d'idempotence a déjà créé : `${url} ${clé}` → identifiant. */
@@ -83,6 +133,7 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
                 method,
                 url,
                 data: data === undefined ? undefined : JSON.parse(JSON.stringify(data)),
+                entetes: { ...config.headers },
             })
 
             const imposee = serveur.imposer.shift()
@@ -94,14 +145,78 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
             const serie = /^\/api\/v1\/sets\/(\d+)$/.exec(url)
             const ligneVisee = /^\/api\/v1\/workout-lines\/(\d+)$/.exec(url)
             const cle = config.headers?.['Idempotency-Key']
+
+            /*
+             * Une séance close n'accepte plus rien (la policy `update`) : la
+             * ligne ou la série qui y arrive est refusée, 403.
+             */
+            const seanceDeLaLigne = (ligneId) => serveur.lignes.get(Number(ligneId))?.workout_id
+            const close = (workoutId) => workoutId !== undefined && serveur.fins.has(Number(workoutId))
+            const viseeSurUneSeanceClose =
+                (method === 'post' && url === '/api/v1/workout-lines' && close(data?.workout_id)) ||
+                (method === 'post' && url === '/api/v1/sets' && close(seanceDeLaLigne(data?.workout_line_id))) ||
+                (serie && close(seanceDeLaLigne(serveur.series.get(Number(serie[1]))?.workout_line_id)))
+
+            if (viseeSurUneSeanceClose) {
+                throw { response: { status: 403, data: { message: 'This action is unauthorized.' } } }
+            }
+
+            // Terminer (#2049) : la séance nommée dans la charge, la première fin gardée, comme le serveur.
+            if (method === 'patch' && url === '/api/v1/workouts/finish') {
+                if (typeof data?.workout_id !== 'number') {
+                    throw { response: { status: 422, data: { message: 'workout_id' } } }
+                }
+
+                const fin = serveur.fins.get(data.workout_id) ?? data.ended_at ?? 'maintenant'
+                serveur.fins.set(data.workout_id, fin)
+
+                const creee = serveur.seances.get(data.workout_id)
+
+                if (creee) {
+                    creee.ended_at = fin
+                }
+
+                return {
+                    status: 200,
+                    data: {
+                        data: { id: data.workout_id, ended_at: fin },
+                        meta: { proposer_les_notifications: serveur.proposerLesNotifications },
+                    },
+                }
+            }
             const dejaCreee = method === 'post' && cle ? serveur.creees.get(`${url} ${cle}`) : undefined
 
             if (dejaCreee !== undefined) {
-                const existante = (url === '/api/v1/sets' ? serveur.series : serveur.lignes).get(dejaCreee)
+                const creees =
+                    { '/api/v1/sets': serveur.series, '/api/v1/workouts': serveur.seances }[url] ?? serveur.lignes
+                const existante = creees.get(dejaCreee)
 
                 if (existante) {
-                    return { data: { data: { ...existante } } }
+                    const { idempotency_key: _cle, ...rendue } = existante
+
+                    return { status: 200, data: { data: url === '/api/v1/workouts' ? rendue : { ...existante } } }
                 }
+            }
+
+            // Démarrer une séance (#2049) : `POST /api/v1/workouts`, son nom à la date du jour, comme le serveur.
+            if (method === 'post' && url === '/api/v1/workouts') {
+                const seance = {
+                    id: serveur.prochaineSeance++,
+                    name: '19/10/2026',
+                    started_at: data?.started_at ?? null,
+                    ended_at: null,
+                    notes: null,
+                    created_at: 'c',
+                    updated_at: 'u',
+                }
+                // La clé reste en base, et dans les props de sa page ; la ressource de l'API ne la rend pas.
+                serveur.seances.set(seance.id, { ...seance, idempotency_key: cle ?? null })
+
+                if (cle) {
+                    serveur.creees.set(`${url} ${cle}`, seance.id)
+                }
+
+                return { status: 201, data: { data: seance } }
             }
 
             if (method === 'post' && url === '/api/v1/workout-lines') {
@@ -269,6 +384,7 @@ export const monterLaSeance = async (
 
             const reglages = useReglagesDeLaSeance({
                 localWorkout,
+                pendingIds: identite.pendingIds,
                 viderLesEcritures: () => series.flushAllPendingUpdates(),
             })
 

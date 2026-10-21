@@ -37,6 +37,8 @@ const PAGES = [
     { chemin: '/workouts/12', composant: 'Workouts/Show', copieDu: COPIE_DU, enCours: true },
     { chemin: '/workouts/9', composant: 'Workouts/Show', copieDu: COPIE_DU, enCours: false },
     { chemin: '/tools/interval-timer', composant: 'Tools/IntervalTimer', copieDu: COPIE_DU, enCours: false },
+    // Gardée depuis #2049, pour lancer un modèle sans réseau.
+    { chemin: '/templates', composant: 'Workouts/Templates/Index', copieDu: COPIE_DU, enCours: false },
 ]
 
 /**
@@ -64,12 +66,14 @@ describe('la page HorsLigne', () => {
             '/workouts/12',
             '/workouts/9',
             '/tools/interval-timer',
+            '/templates',
         ])
         expect(wrapper.findAll('[dusk="page-sans-reseau"] span:first-child').map((nom) => nom.text())).toEqual([
             'Accueil',
             'Séance en cours',
             'Séance terminée',
             "Minuteur d'intervalles",
+            'Modèles',
         ])
         expect(wrapper.find('[dusk="page-sans-reseau"] span:last-child').text()).toBe(
             `copie du ${dateAvecJour(date)} à ${heureCourte(date)}`,

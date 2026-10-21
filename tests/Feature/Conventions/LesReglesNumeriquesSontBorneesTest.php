@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Http\Requests\Api\SetOrderRequest;
 use App\Http\Requests\Api\SetStoreRequest;
+use App\Http\Requests\Api\WorkoutFinishRequest;
 use App\Http\Requests\Api\WorkoutLineOrderRequest;
 use App\Http\Requests\Api\WorkoutLineStoreRequest;
+use App\Http\Requests\Api\WorkoutStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Requests\GoalStoreRequest;
 use App\Http\Requests\StoreWorkoutTemplateRequest;
@@ -50,6 +52,8 @@ function reglesNumeriquesExceptions(): array
         SetStoreRequest::class => ['workout_line_id' => $identifiantCherche],
         WorkoutLineStoreRequest::class => ['workout_id' => $identifiantCherche, 'exercise_id' => $identifiantCherche],
         GoalStoreRequest::class => ['exercise_id' => $identifiantCherche],
+        WorkoutStoreRequest::class => ['template_id' => $identifiantCherche],
+        WorkoutFinishRequest::class => ['workout_id' => $identifiantCherche],
     ];
 }
 

@@ -22,7 +22,7 @@ function nomsDesRoutesServiesParZiggy(): array
     return is_array($routes) ? array_map(strval(...), array_keys($routes)) : [];
 }
 
-test('la table Ziggy ne contient aucune route d administration ni d API hors des sept servies', function (): void {
+test('la table Ziggy ne contient aucune route d administration ni d API hors des neuf servies', function (): void {
     $noms = nomsDesRoutesServiesParZiggy();
 
     $sensibles = array_values(array_filter(
@@ -31,7 +31,7 @@ test('la table Ziggy ne contient aucune route d administration ni d API hors des
             && ! in_array($nom, [
                 'api.v1.sets.store', 'api.v1.sets.update', 'api.v1.sets.destroy',
                 'api.v1.workout-lines.store', 'api.v1.workout-lines.destroy', 'api.v1.workout-lines.set-order',
-                'api.v1.workouts.line-order',
+                'api.v1.workouts.store', 'api.v1.workouts.finish', 'api.v1.workouts.line-order',
             ], true),
     ));
 

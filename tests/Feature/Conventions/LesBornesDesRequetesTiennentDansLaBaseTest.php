@@ -6,6 +6,8 @@ use App\Http\Requests\Api\SetStoreRequest;
 use App\Http\Requests\Api\SetUpdateRequest;
 use App\Http\Requests\Api\StoreFastRequest;
 use App\Http\Requests\Api\UpdateFastRequest;
+use App\Http\Requests\Api\WorkoutFinishRequest;
+use App\Http\Requests\Api\WorkoutStoreRequest;
 use App\Http\Requests\Api\WorkoutTemplateUpdateRequest;
 use App\Http\Requests\BodyMeasurementStoreRequest;
 use App\Http\Requests\BodyPartMeasurementStoreRequest;
@@ -77,6 +79,9 @@ function bornesBaseInventaire(): array
     foreach (['message', 'source', 'pile', 'url', 'agent'] as $champ) {
         $champs[] = [ErreurNavigateurStoreRequest::class, $champ, 'erreurs_navigateur.'.$champ];
     }
+
+    // Le nom d'une séance démarrée par la file hors ligne (#2049).
+    $champs[] = [WorkoutStoreRequest::class, 'name', 'workouts.name'];
 
     // Les clés d'un abonnement push vont aux colonnes du paquet WebPush.
     $champs[] = [UpdatePushSubscriptionRequest::class, 'keys.auth', 'push_subscriptions.auth_token'];
@@ -204,6 +209,11 @@ function bornesBaseDates(): array
         [UpdateFastRequest::class, 'end_time', ['fasts.end_time']],
         // Le début d'une séance devient la dernière séance du compte.
         [UpdateWorkoutRequest::class, 'started_at', ['workouts.started_at', 'users.last_workout_at']],
+        // L'heure du geste sur l'appareil ne s'écrit nulle part : seul son
+        // âge compte (`Workout::debutBorne()`), et l'instant prend la plage
+        // de la colonne du début, comme la fin (#2049).
+        [WorkoutStoreRequest::class, 'started_at', ['workouts.started_at']],
+        [WorkoutFinishRequest::class, 'ended_at', ['workouts.ended_at']],
         [DailyJournalStoreRequest::class, 'date', ['daily_journals.date']],
         [ToggleHabitRequest::class, 'date', ['habit_logs.date']],
         [BodyMeasurementStoreRequest::class, 'measured_at', ['body_measurements.measured_at']],

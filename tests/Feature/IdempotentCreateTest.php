@@ -181,6 +181,47 @@ describe('idempotent creates', function (): void {
     });
 });
 
+/*
+ * Un démarrage par la page rejoué sous sa clé (un double appui, un rejeu de la
+ * file hors ligne, #2049) mène à la même séance : une seule ligne, la même
+ * redirection. Sans clé, le démarrage suivant renvoie vers la séance en cours,
+ * comme avant.
+ */
+it('ne démarre qu’une séance quand la page rejoue le démarrage sous sa clé', function (): void {
+    $compte = User::factory()->create();
+    $cle = '5f1e7a2c-2049-4d3b-8c1a-0000000000a1';
+
+    $premier = actingAs($compte)->post(route('workouts.store'), [], ['Idempotency-Key' => $cle]);
+    $seance = Workout::query()->where('user_id', $compte->id)->sole();
+    $rejeu = actingAs($compte)->post(route('workouts.store'), [], ['Idempotency-Key' => $cle]);
+
+    $premier->assertRedirect(route('workouts.show', $seance));
+    $rejeu->assertRedirect(route('workouts.show', $seance));
+
+    expect($seance->idempotency_key)->toBe($cle)
+        ->and(Workout::query()->where('user_id', $compte->id)->count())->toBe(1);
+});
+
+/*
+ * La page de séance porte la clé de la séance : elle reconnaît ainsi une
+ * séance démarrée sans réponse, qui attend encore dans sa file (#2049). Elle
+ * ne montre que la séance du compte.
+ */
+it('rend à la page de séance la clé de son démarrage', function (): void {
+    $compte = User::factory()->create();
+    $cle = '5f1e7a2c-2049-4d3b-8c1a-0000000000a2';
+
+    actingAs($compte)->post(route('workouts.store'), [], ['Idempotency-Key' => $cle]);
+    $seance = Workout::query()->where('user_id', $compte->id)->sole();
+
+    actingAs($compte)
+        ->get(route('workouts.show', $seance))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->component('Workouts/Show')
+            ->where('workout.idempotency_key', $cle));
+});
+
 /**
  * La clé arrive dans un en-tête que rien ne valide : un octet hors UTF-8 (un
  * « é » qu'un navigateur envoie en latin-1) allait jusqu'à la colonne, que

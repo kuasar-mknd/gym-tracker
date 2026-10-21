@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { entreeDeLaRangee, identifiantEnFile, seanceConnueDuServeur, superposerLaFile } from '@/Utils/seanceEtFile'
+import {
+    cleDeLaCreation,
+    entreeDeLaRangee,
+    estUneCreationDeSeance,
+    estUneEcritureDeLaSeance,
+    estUneFinDeSeance,
+    finDeLaSeanceEnFile,
+    identifiantEnFile,
+    seanceConnueDuServeur,
+    seanceDeLEcriture,
+    superposerLaFile,
+} from '@/Utils/seanceEtFile'
 
 /*
  * La séance rendue par le serveur, avec par-dessus ce qui attend encore dans la
@@ -361,6 +372,146 @@ describe('superposer la file à la séance du serveur', () => {
     })
 })
 
+/*
+ * Une séance démarrée sans réseau attend elle-même en file (#2049) : ses
+ * lignes la nomment par l'entrée de sa création, `{ enAttenteDe: qS }`, et
+ * ses séries la gardent dans leur contexte.
+ */
+describe('superposer la file à une séance démarrée sans réseau', () => {
+    const creationDeSeance = () =>
+        entree(
+            'post',
+            '/api/v1/workouts',
+            { started_at: '2026-10-19T08:00:00.000Z' },
+            {
+                headers: { 'Idempotency-Key': 'cle-de-la-seance' },
+            },
+        )
+
+    /** Une séance démarrée sans réseau, une ligne, une série : dans l'ordre de la file. */
+    const fileDeLaSeance = () => {
+        const seanceEnFile = creationDeSeance()
+        const ligne = entree('post', '/api/v1/workout-lines', {
+            workout_id: { enAttenteDe: seanceEnFile.id },
+            exercise_id: 7,
+        })
+        const serie = creationDeSerie(
+            { workout_line_id: { enAttenteDe: ligne.id }, is_completed: true, weight: 60, reps: 8 },
+            { contexte: { workout_id: { enAttenteDe: seanceEnFile.id }, exercise_id: 7 } },
+        )
+
+        return { seanceEnFile, ligne, serie, entrees: [seanceEnFile, ligne, serie] }
+    }
+
+    it('montre la ligne et sa série sur la séance que la page construit de l’entrée', () => {
+        const { seanceEnFile, ligne, serie, entrees } = fileDeLaSeance()
+        const enAttente = {
+            id: identifiantEnFile(seanceEnFile.id),
+            idempotency_key: 'cle-de-la-seance',
+            workout_lines: [],
+        }
+
+        const copie = superposerLaFile(enAttente, entrees, { exercices: [SQUAT] })
+
+        expect(ecran(copie)).toEqual([[`temp-q${ligne.id}`, [`temp-q${serie.id}`]]])
+        expect(copie.workout_lines[0].exercise.name).toBe('Squat')
+    })
+
+    it('reconnaît la séance de l’entrée à son identifiant, même quand la clé ne se lit pas', () => {
+        const { seanceEnFile, ligne, entrees } = fileDeLaSeance()
+        const sansCle = [{ ...seanceEnFile, headers: {} }, ...entrees.slice(1)]
+        const enAttente = { id: identifiantEnFile(seanceEnFile.id), idempotency_key: null, workout_lines: [] }
+
+        expect(superposerLaFile(enAttente, sansCle).workout_lines.map((rangee) => rangee.id)).toEqual([
+            `temp-q${ligne.id}`,
+        ])
+    })
+
+    it('montre la même ligne, une seule fois, sur la séance du serveur qui porte la clé de la création', () => {
+        const { ligne, serie, entrees } = fileDeLaSeance()
+        const duServeur = { id: 42, idempotency_key: 'cle-de-la-seance', workout_lines: [] }
+
+        const copie = superposerLaFile(duServeur, entrees, { exercices: [SQUAT] })
+
+        expect(ecran(copie)).toEqual([[`temp-q${ligne.id}`, [`temp-q${serie.id}`]]])
+    })
+
+    it('ne la montre ni sur une autre séance, ni sous une autre clé, ni pour une création retirée', () => {
+        const { seanceEnFile, entrees } = fileDeLaSeance()
+
+        expect(superposerLaFile(seance(), entrees).workout_lines.map((ligne) => ligne.id)).toEqual([1, 2])
+        expect(
+            superposerLaFile({ id: 42, idempotency_key: 'une-autre-cle', workout_lines: [] }, entrees).workout_lines,
+        ).toEqual([])
+        expect(
+            superposerLaFile({ id: 42, idempotency_key: 'cle-de-la-seance', workout_lines: [] }, [
+                { ...seanceEnFile, aAnnuler: '/api/v1/workouts/__produit__' },
+                ...entrees.slice(1),
+            ]).workout_lines,
+        ).toEqual([])
+    })
+
+    it('reconstruit la ligne réelle d’une série dont le contexte nomme la séance en file', () => {
+        const seanceEnFile = creationDeSeance()
+        const serie = creationDeSerie(
+            { workout_line_id: 70, reps: 5 },
+            { contexte: { workout_id: { enAttenteDe: seanceEnFile.id }, exercise_id: 7 } },
+        )
+        const enAttente = {
+            id: identifiantEnFile(seanceEnFile.id),
+            idempotency_key: 'cle-de-la-seance',
+            workout_lines: [],
+        }
+
+        expect(ecran(superposerLaFile(enAttente, [seanceEnFile, serie], { exercices: [SQUAT] }))).toEqual([
+            [70, [`temp-q${serie.id}`]],
+        ])
+    })
+
+    /*
+     * La ligne d'un modèle lancé sans réseau porte son exercice sur son entrée
+     * (`contexte.exercice`, `mettreEnFileLaSeanceDUnModele`) : une séance
+     * remontée à froid sans la copie de la bibliothèque ne disait que
+     * « Exercice ».
+     */
+    it('nomme la ligne d’un modèle d’après son entrée quand la bibliothèque ne la connaît pas, la bibliothèque d’abord', () => {
+        const seanceEnFile = creationDeSeance()
+        const ligne = entree(
+            'post',
+            '/api/v1/workout-lines',
+            { workout_id: { enAttenteDe: seanceEnFile.id }, exercise_id: 9, order: 0 },
+            { contexte: { exercice: { id: 9, name: 'Soulevé de terre', type: null } } },
+        )
+        const enAttente = {
+            id: identifiantEnFile(seanceEnFile.id),
+            idempotency_key: 'cle-de-la-seance',
+            workout_lines: [],
+        }
+
+        expect(superposerLaFile(enAttente, [seanceEnFile, ligne]).workout_lines[0].exercise).toEqual({
+            id: 9,
+            name: 'Soulevé de terre',
+            type: 'strength',
+        })
+
+        const bibliotheque = [{ id: 9, name: 'Soulevé de terre roumain', type: 'strength', category: 'Dos' }]
+
+        expect(
+            superposerLaFile(enAttente, [seanceEnFile, ligne], { exercices: bibliotheque }).workout_lines[0].exercise,
+        ).toEqual(bibliotheque[0])
+    })
+
+    it('ne compte pas la création d’une séance parmi les sept écritures de la séance', () => {
+        const creation = creationDeSeance()
+
+        expect(estUneCreationDeSeance(creation)).toBe(true)
+        expect(estUneEcritureDeLaSeance(creation)).toBe(false)
+        expect(estUneCreationDeSeance(entree('patch', '/api/v1/workouts/finish', {}))).toBe(false)
+        expect(estUneCreationDeSeance(entree('post', '/api/v1/workouts/5/line-order', {}))).toBe(false)
+        expect(cleDeLaCreation(creation)).toBe('cle-de-la-seance')
+    })
+})
+
 describe('l’identifiant d’une rangée superposée', () => {
     it('nomme l’entrée de file qui la crée, et rien d’autre', () => {
         expect(identifiantEnFile('1791833275396f3qnek8gw')).toBe('temp-q1791833275396f3qnek8gw')
@@ -440,5 +591,93 @@ describe('la séance que garde l’entrée d’historique', () => {
 
         expect(JSON.stringify(aLEcran)).toBe(avant)
         expect(gardee.workout_lines).toEqual([{ id: 1, exercise: SQUAT, sets: [{ id: 11 }] }])
+    })
+})
+
+/*
+ * « Terminer » sans réseau (#2049) : la fin est une entrée à part, la dernière
+ * de sa séance, que la page montre close à l'heure du geste tant qu'elle
+ * attend, et que l'entrée d'historique ne garde pas.
+ */
+describe('la fin d’une séance en file', () => {
+    const fin = (workoutId, endedAt = '2026-10-19T18:42:00.000Z') =>
+        entree('patch', '/api/v1/workouts/finish', { workout_id: workoutId, ended_at: endedAt })
+
+    it('clôt la séance qu’elle nomme, à l’heure du geste, et dit quelle entrée l’attend', () => {
+        const laFin = fin(5)
+
+        const copie = superposerLaFile(seance(), [creationDeSerie({ workout_line_id: 1, reps: 4 }), laFin])
+
+        expect(copie.ended_at).toBe('2026-10-19T18:42:00.000Z')
+        expect(copie._finEnAttente).toBe(laFin.id)
+        // Les écritures qui la précèdent se superposent toujours.
+        expect(ecran(copie)[0][1]).toHaveLength(3)
+    })
+
+    it('ne clôt ni une autre séance, ni une séance que le serveur dit close, qui garde sa première fin', () => {
+        expect(superposerLaFile(seance(), [fin(9)])).not.toHaveProperty('_finEnAttente')
+
+        const close = { ...seance(), ended_at: '2026-10-19T17:00:00.000Z' }
+        const copie = superposerLaFile(close, [fin(5)])
+
+        expect(copie.ended_at).toBe('2026-10-19T17:00:00.000Z')
+        expect(copie).not.toHaveProperty('_finEnAttente')
+    })
+
+    it('garde la première de deux fins de la même séance, comme le serveur', () => {
+        const premiere = fin(5, '2026-10-19T18:42:00.000Z')
+
+        const copie = superposerLaFile(seance(), [premiere, fin(5, '2026-10-19T18:50:00.000Z')])
+
+        expect(copie).toMatchObject({ ended_at: '2026-10-19T18:42:00.000Z', _finEnAttente: premiere.id })
+    })
+
+    it('clôt une séance démarrée sans réseau, nommée par sa création, ou par la clé de celle-ci', () => {
+        const creation = entree('post', '/api/v1/workouts', {}, { headers: { 'Idempotency-Key': 'cle-s' } })
+        const laFin = fin({ enAttenteDe: creation.id })
+        const enAttente = { id: identifiantEnFile(creation.id), idempotency_key: 'cle-s', workout_lines: [] }
+        const arriveeAuServeur = { id: 42, idempotency_key: 'cle-s', workout_lines: [] }
+
+        expect(superposerLaFile(enAttente, [creation, laFin])._finEnAttente).toBe(laFin.id)
+        expect(superposerLaFile(arriveeAuServeur, [creation, laFin])._finEnAttente).toBe(laFin.id)
+        expect(finDeLaSeanceEnFile(arriveeAuServeur, [creation, laFin])).toBe(laFin)
+        expect(finDeLaSeanceEnFile({ id: 42, idempotency_key: 'autre' }, [creation, laFin])).toBeUndefined()
+    })
+
+    it('n’est ni la création d’une séance, ni l’une des sept écritures de la séance', () => {
+        expect(estUneFinDeSeance(fin(5))).toBe(true)
+        expect(estUneFinDeSeance(entree('post', '/api/v1/workouts/finish', {}))).toBe(false)
+        expect(estUneEcritureDeLaSeance(fin(5))).toBe(false)
+        expect(estUneCreationDeSeance(fin(5))).toBe(false)
+    })
+
+    it('sort de la séance que garde l’entrée d’historique : le serveur la connaît ouverte', () => {
+        const aLEcran = { ...seance(), ended_at: '2026-10-19T18:42:00.000Z', _finEnAttente: 'q9' }
+        const close = { ...seance(), ended_at: '2026-10-19T17:00:00.000Z' }
+
+        expect(seanceConnueDuServeur(aLEcran)).toEqual({ ...seance(), ended_at: null })
+        expect(seanceConnueDuServeur(close).ended_at).toBe('2026-10-19T17:00:00.000Z')
+    })
+})
+
+describe('la séance que vise une écriture', () => {
+    it('se lit dans la charge, le contexte ou l’adresse, sinon dans la séance que la page suivait', () => {
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/workouts/finish', { workout_id: 5 }))).toBe('id:5')
+        expect(seanceDeLEcriture(entree('post', '/api/v1/workout-lines', { workout_id: '5' }), '9')).toBe('id:5')
+        expect(
+            seanceDeLEcriture(
+                creationDeSerie({ workout_line_id: 1 }, { contexte: { workout_id: { enAttenteDe: 'qS' } } }),
+            ),
+        ).toBe('q:qS')
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/workouts/5/line-order', { lines: [] }))).toBe('id:5')
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }), '5')).toBe('id:5')
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }), 'temp-qqS')).toBe('q:qS')
+    })
+
+    it('ne se lit pas pour une écriture d’ailleurs, une création de séance ou un identifiant provisoire', () => {
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }))).toBeNull()
+        expect(seanceDeLEcriture(entree('patch', '/api/v1/sets/11', { reps: 2 }), 'temp-3')).toBeNull()
+        expect(seanceDeLEcriture(entree('post', '/api/v1/workouts', {}), '5')).toBeNull()
+        expect(seanceDeLEcriture(entree('patch', '/profile/push-preferences', {}), '5')).toBeNull()
     })
 })

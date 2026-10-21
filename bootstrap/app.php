@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         then: static function (): void {
             \Illuminate\Support\Facades\Route::get('/up', \App\Http\Controllers\SanteController::class);
             \Illuminate\Support\Facades\Route::get('/sonde', \App\Http\Controllers\SondeController::class)->name('sonde');
+
+            // Les routes chargées, un identifiant de modèle n'y admet que des
+            // chiffres (#2049) ; le docbloc de la classe dit pourquoi ici.
+            \App\Support\IdentifiantsDesRoutes::poserSur(\Illuminate\Support\Facades\Route::getRoutes()->getRoutes());
         },
     )
     /*

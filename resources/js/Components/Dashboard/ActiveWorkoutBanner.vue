@@ -1,14 +1,50 @@
 <script setup>
+/**
+ * Le bandeau de la séance en cours.
+ *
+ * Une séance démarrée sans réseau, dont la création attend la file (#2049,
+ * `workout.enAttenteDe`), n'a pas d'adresse que le serveur connaisse encore :
+ * le bandeau la nomme par l'adresse de sa clé, et l'ouvre côté client
+ * (`ouvrir`, que le layout tient de `useSeanceEnCoursDeLAppareil`), au lieu
+ * d'une visite que le serveur, injoignable, ne servirait pas.
+ */
 import { Link } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { compte } from '@/Utils/nombre'
+import { adresseDUneSeanceEnAttente } from '@/Utils/seanceEnAttente'
 
 const props = defineProps({
     workout: { type: Object, required: true },
     /** Une ligne au lieu d'une carte : partout où la séance n'est pas le sujet. */
     compact: { type: Boolean, default: false },
 })
+
+const emit = defineEmits(['ouvrir'])
+
+/** La séance attend la file : elle s'ouvre côté client. */
+const enAttente = computed(() => typeof props.workout.enAttenteDe === 'string')
+
+const lien = computed(() => (enAttente.value ? 'a' : Link))
+
+/** L'identifiant que le serveur a donné à la séance ; une séance en attente n'en a pas encore. */
+const realWorkoutId = computed(() => (enAttente.value ? null : props.workout.id))
+
+const adresse = computed(() =>
+    enAttente.value
+        ? (adresseDUneSeanceEnAttente(props.workout.idempotency_key) ?? '#')
+        : route('workouts.show', { workout: realWorkoutId.value }),
+)
+
+/** @param {MouseEvent} evenement */
+const ouvrir = (evenement) => {
+    if (!enAttente.value) {
+        return
+    }
+
+    evenement.preventDefault()
+    emit('ouvrir', props.workout)
+}
 
 const elapsed = ref('')
 let intervalId = null
@@ -55,10 +91,12 @@ onUnmounted(() => {
     meritait ses propres noms plutot que d'emprunter ceux d'a cote.
 -->
 <template>
-    <Link
+    <component
+        :is="lien"
         v-if="compact"
         v-press
-        :href="route('workouts.show', { workout: workout.id })"
+        :href="adresse"
+        @click="ouvrir"
         class="from-session-from via-session-via to-session-to border-session-from/40 text-text-on-dark-accent focus-visible:ring-session-from focus-visible:ring-offset-surface-page flex min-h-12 items-center gap-3 rounded-2xl border bg-linear-to-r px-4 py-2 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
@@ -69,11 +107,13 @@ onUnmounted(() => {
             {{ elapsed }}
         </span>
         <GlassIcon name="chevron_right" size="sm" class="opacity-70" />
-    </Link>
-    <Link
+    </component>
+    <component
+        :is="lien"
         v-else
         v-press
-        :href="route('workouts.show', { workout: workout.id })"
+        :href="adresse"
+        @click="ouvrir"
         class="animate-fade-in group border-session-from/40 focus-visible:ring-session-from focus-visible:ring-offset-surface-page relative block overflow-hidden rounded-3xl border-2 transition duration-300 hover:-translate-y-1 hover:shadow-2xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98]"
         dusk="active-workout-banner"
     >
@@ -131,5 +171,5 @@ onUnmounted(() => {
                 />
             </div>
         </div>
-    </Link>
+    </component>
 </template>

@@ -14,6 +14,9 @@ use App\Models\User;
 use App\Models\WarmupPreference;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Models\WorkoutTemplate;
+use App\Models\WorkoutTemplateLine;
+use App\Models\WorkoutTemplateSet;
 use App\Notifications\AchievementUnlocked;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
@@ -74,7 +77,8 @@ function contratDesPagesFichier(): string
 
 /**
  * Le compte de référence et ses séances : la séance en cours et la séance
- * close qui porte ses records, chacune avec des exercices et des séries, une
+ * close qui porte ses records, chacune sous une clé d'idempotence de séance
+ * (#2049), chacune avec des exercices et des séries, une
  * faite et une non faite dans la séance en cours, dix-sept séances plus
  * anciennes, de quoi remplir une seconde page de la liste des séances
  * (l'adresse de la page suivante), une ligne et une série
@@ -82,8 +86,9 @@ function contratDesPagesFichier(): string
  * ligne, une série de cardio (distance et durée), un record dans la séance en
  * cours, un exercice au repos réglé, un avatar et un badge à célébrer, plus
  * un objectif et une pesée (que l'accueil rend, et qu'aucune copie ne garde),
- * et ce que lisent les outils : de quoi remplir chaque liste et chaque champ
- * des pages gardées.
+ * un modèle de deux exercices avec leurs séries (la page des modèles), et ce
+ * que lisent les outils : de quoi remplir chaque liste et chaque champ des
+ * pages gardées.
  *
  * @return array{compte: User, enCours: Workout, close: Workout}
  */
@@ -103,6 +108,8 @@ function contratDesPagesCompte(): array
             'started_at' => now()->subDays($joursAvant),
             'ended_at' => now()->subDays($joursAvant)->addHour(),
             'notes' => 'Bonne séance',
+            // Démarrée par la file hors ligne, sous la clé de l'appareil (#2049).
+            'idempotency_key' => $rangDeLaSeance === 0 ? '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0010' : null,
         ]);
 
         foreach ([$developpe, $traction] as $rang => $exercice) {
@@ -140,7 +147,12 @@ function contratDesPagesCompte(): array
         Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 70, 'reps' => 10]);
     }
 
-    $enCours = Workout::factory()->for($compte)->create(['name' => 'Séance du jour', 'started_at' => now()->subMinutes(30), 'notes' => 'Épaule à ménager']);
+    $enCours = Workout::factory()->for($compte)->create([
+        'name' => 'Séance du jour',
+        'started_at' => now()->subMinutes(30),
+        'notes' => 'Épaule à ménager',
+        'idempotency_key' => '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0011',
+    ]);
     $ligne = WorkoutLine::factory()->create([
         'workout_id' => $enCours->id,
         'exercise_id' => $developpe->id,
@@ -153,6 +165,17 @@ function contratDesPagesCompte(): array
     $ligneDeCardio = WorkoutLine::factory()->create(['workout_id' => $enCours->id, 'exercise_id' => $rameur->id, 'order' => 1]);
     Set::factory()->create(['workout_line_id' => $ligneDeCardio->id, 'weight' => null, 'reps' => null, 'distance_km' => 2.5, 'duration_seconds' => 600]);
     $compte->notify(new AchievementUnlocked(Achievement::factory()->create(['name' => 'Premier pas', 'icon' => '👣', 'description' => 'Ta première séance.'])));
+
+    // Un modèle de deux exercices, avec leurs séries : l'aperçu de la page des
+    // modèles et de quoi le lancer sans réseau (`lancements`, #2049).
+    $modele = WorkoutTemplate::factory()->create(['user_id' => $compte->id, 'name' => 'Haut du corps', 'description' => 'Pectoraux et dos']);
+    $lignesDuModele = [
+        WorkoutTemplateLine::factory()->create(['workout_template_id' => $modele->id, 'exercise_id' => $developpe->id, 'order' => 0]),
+        WorkoutTemplateLine::factory()->create(['workout_template_id' => $modele->id, 'exercise_id' => $traction->id, 'order' => 1]),
+    ];
+    WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $lignesDuModele[0]->id, 'reps' => 10, 'weight' => 60, 'is_warmup' => true, 'order' => 0]);
+    WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $lignesDuModele[0]->id, 'reps' => 5, 'weight' => 90, 'is_warmup' => false, 'order' => 1]);
+    WorkoutTemplateSet::factory()->create(['workout_template_line_id' => $lignesDuModele[1]->id, 'reps' => 8, 'weight' => 0, 'is_warmup' => false, 'order' => 0]);
 
     IntervalTimer::factory()->create(['user_id' => $compte->id, 'name' => 'Tabata']);
     Plate::factory()->create(['user_id' => $compte->id, 'weight' => 20, 'quantity' => 4]);
@@ -223,8 +246,11 @@ function contratDesPagesEcriture(User $compte, string $methode, string $chemin, 
  * `useValidationDeSerie`), l'exercice ajouté (`adopterLaLigne`, son exercice
  * et sa recommandation compris), et la création rejouée d'un exercice, que le
  * serveur reconnaît à sa clé d'idempotence et rend avec ses séries. Le vidage
- * de la file rend les mêmes (`rejeu.data`). Une ressource de l'API qui change
- * change donc la forme des copies de séance, comme une prop de la page.
+ * de la file rend les mêmes (`rejeu.data`). Démarrer et terminer la séance
+ * aussi (#2049) : le démarrage rejoué sous sa clé rend la séance, que la page
+ * démarrée en ligne reçoit, et la fin rend la séance close. Une ressource de
+ * l'API qui change change donc la forme des copies de séance, comme une prop
+ * de la page.
  *
  * Après les pages : ces écritures changent la séance en cours du compte.
  */
@@ -248,7 +274,12 @@ function contratDesPagesReponsesDeLaSeance(User $compte, Workout $enCours): stdC
         $creerUneSerie(['workout_line_id' => $lignesAjoutees[1]->id, 'distance_km' => 3, 'duration_seconds' => 900, 'is_completed' => false], '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0006'),
     ];
 
-    return (object) ['props' => (object) [
+    // Le démarrage rejoué sous la clé de la séance en cours, que la file
+    // envoie, ou que la page démarrée en ligne reçoit (#2049) : 200 et la
+    // séance. La fin en dernier : elle clôt la séance en cours.
+    $demarrageRejoue = contratDesPagesEcriture($compte, 'POST', route('api.v1.workouts.store', absolute: false), ['started_at' => now()->subMinutes(30)->toIso8601String()], (string) $enCours->idempotency_key);
+    $ecritures = [
+        'POST /api/v1/workouts' => [$demarrageRejoue],
         'POST /api/v1/sets' => $seriesCreees,
         'PATCH /api/v1/sets/{set}' => [
             $modifierUneSerie($nonFaite->id, ['weight' => 105]),
@@ -261,7 +292,12 @@ function contratDesPagesReponsesDeLaSeance(User $compte, Workout $enCours): stdC
             $creerUneLigne($force->exercise_id, (string) $force->idempotency_key),
             $creerUneLigne($cardio->exercise_id, '6d2f1c5e-8a4b-4f0e-9b7d-2048c0de0004'),
         ],
-    ]];
+    ];
+    $ecritures['PATCH /api/v1/workouts/finish'] = [
+        contratDesPagesEcriture($compte, 'PATCH', route('api.v1.workouts.finish', absolute: false), ['workout_id' => $enCours->id, 'ended_at' => now()->toIso8601String()]),
+    ];
+
+    return (object) ['props' => (object) $ecritures];
 }
 
 /**
@@ -500,6 +536,7 @@ function contratDesPagesToujoursNuls(): array
         'pending_migrations' => 'nul hors de l’environnement local (`HandleInertiaRequests::pendingMigrationCount`)',
         'workouts.prev_page_url' => 'seule la première page de la liste des séances se garde',
         'Workouts/Show (séance en cours) › workout.ended_at' => 'une séance en cours n’a pas de fin',
+        'Workouts/Show (écritures de la séance en cours) › POST /api/v1/workouts[].ended_at' => 'une séance que l’on démarre n’a pas de fin',
     ];
 }
 

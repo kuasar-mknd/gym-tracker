@@ -1,16 +1,16 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
-import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 defineProps({
     processing: { type: Boolean, default: false },
 })
 
+/*
+ * Démarrer reste ouvert sur une copie hors ligne (#2049) : la séance démarre
+ * par la file, sans rien tirer de la copie (`useDemarrageDUneSeance`).
+ */
 const emit = defineEmits(['startWorkout'])
-
-/** Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048). */
-const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 </script>
 
 <template>
@@ -19,9 +19,8 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
         <button
             v-press
             @click="emit('startWorkout')"
-            :disabled="processing || surUneCopie"
+            :disabled="processing"
             :aria-busy="processing"
-            :aria-describedby="raisonDUneEcriture"
             aria-label="Démarrer une nouvelle séance d'entraînement"
             id="start-workout-button"
             dusk="start-workout-button"

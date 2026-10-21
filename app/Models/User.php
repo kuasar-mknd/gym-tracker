@@ -162,6 +162,30 @@ final class User extends Authenticatable implements MustVerifyEmail
             ->exists();
     }
 
+    /**
+     * Faut-il proposer les notifications à la fin d'une séance (#1848) ?
+     *
+     * Rien ne les proposait hors du profil. La fin d'une séance est le moment
+     * où elles ont un sens : un record à annoncer, plutôt qu'une demande à
+     * froid au premier écran.
+     *
+     * Le serveur ne répond que pour le COMPTE : aucun abonnement tenu, et les
+     * records pas coupés dans le profil — l'activation les ferait partir en
+     * push sans y toucher, donc n'enverrait rien. Ce que tient l'appareil
+     * (permission, abonnement, refus mémorisé), seul le navigateur le sait :
+     * `useInvitationAuxNotifications` le juge à son tour. Une seule réponse
+     * pour la fin par la page (donnée flash) et pour la fin par l'API
+     * (`meta.proposer_les_notifications`, #2049).
+     */
+    public function doitRecevoirLInvitationAuxNotifications(): bool
+    {
+        return ! $this->pushSubscriptions()->exists()
+            && ! $this->notificationPreferences()
+                ->where('type', 'personal_record')
+                ->where('is_enabled', false)
+                ->exists();
+    }
+
     public function notificationsPoussesActivees(string $type): bool
     {
         if ($this->relationLoaded('notificationPreferences')) {

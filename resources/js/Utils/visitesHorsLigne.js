@@ -187,12 +187,20 @@ export const SUPPRESSION_NON_CONFIRMEE = "Pas de réponse du serveur : la suppre
 export const RESEAU_LENT = 'Le réseau ne répond pas.'
 
 /**
- * Démarrer une séance, à vide ou depuis un modèle, crée la séance sur le
- * serveur : sans lui, rien ne démarre, et ces gestes le disent. Les faire
- * sans réseau demanderait un identifiant tiré par l'appareil, hors du périmètre
- * de #2048.
+ * Ce que dit un démarrage que la file ne peut pas garder : aucun compte
+ * connecté à qui l'attribuer (`nonGardee`). Sans réseau, une séance démarrée
+ * entre en file sous la clé que l'appareil tire, et s'ouvre aussitôt (#2049,
+ * `composables/useDemarrageDUneSeance.js`), comme la séance d'un modèle lancé
+ * sans réseau.
  */
 export const DEMARRAGE_SANS_RESEAU = 'Il faut le réseau pour démarrer une séance.'
+
+/**
+ * Ce que dit un modèle lancé sans réseau quand l'appareil n'a pas de quoi le
+ * recopier dans la séance : la page des modèles servie d'une copie qui ne
+ * porte pas son contenu (`lancements`, #2049).
+ */
+export const MODELE_SANS_RESEAU = "Ce modèle n'est pas disponible sans réseau."
 
 /** Ce que dit un rafraîchissement tiré du doigt quand le serveur ne répond pas. */
 export const RAFRAICHISSEMENT_SANS_RESEAU = "Pas de réseau : la page n'a pas été rafraîchie."

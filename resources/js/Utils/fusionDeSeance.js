@@ -99,5 +99,16 @@ export const fusionnerLaSeance = (server, local, { estNonSynchronisee, validatio
         merged.workout_lines.sort((a, b) => (rang.get(String(a.id)) ?? Infinity) - (rang.get(String(b.id)) ?? Infinity))
     }
 
+    /*
+     * La fin de la séance attend la file (#2049) : le serveur, qui ne la
+     * connaît pas encore, rend la séance ouverte. Reprise de lui, elle se
+     * rouvrait à l'écran, « Terminer » de nouveau proposé, au premier
+     * rechargement de la séance. Une fin que le serveur connaît l'emporte.
+     */
+    if (local?._finEnAttente !== undefined && !merged.ended_at) {
+        merged.ended_at = local.ended_at
+        merged._finEnAttente = local._finEnAttente
+    }
+
     return merged
 }

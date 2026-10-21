@@ -42,10 +42,15 @@ final class ActiveWorkoutService
         return $seance instanceof Workout ? $seance : null;
     }
 
+    /**
+     * La séance porte sa clé d'idempotence (#2049) : de quoi reconnaître,
+     * dans le bandeau de la séance en cours, une séance démarrée sans
+     * réponse dont la création attend encore dans la file.
+     */
     private static function chercher(User $user): ?Workout
     {
         return $user->workouts()
-            ->select('id', 'name', 'started_at')
+            ->select('id', 'name', 'started_at', 'idempotency_key')
             ->whereNull('ended_at')
             ->withCount('workoutLines')
             ->latest('started_at')
@@ -57,8 +62,13 @@ final class ActiveWorkoutService
         Cache::forget(self::cle($idUtilisateur));
     }
 
+    /**
+     * Versionnée par la forme de ce qu'elle garde : une entrée de deux heures
+     * écrite avant que la séance porte sa clé (#2049) servirait sinon
+     * l'ancienne forme, sans `idempotency_key`, jusqu'à son expiration.
+     */
     private static function cle(int $idUtilisateur): string
     {
-        return "user_active_workout_{$idUtilisateur}";
+        return "user_active_workout_v2_{$idUtilisateur}";
     }
 }

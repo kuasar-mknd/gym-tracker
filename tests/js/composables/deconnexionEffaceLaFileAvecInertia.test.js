@@ -29,7 +29,9 @@ import {
  * serveur : ce qui est mis en file y reste.
  *
  * La suppression du compte, qui efface de même ce que l'appareil gardait
- * (#1964, #2050), se joue ici aussi, sur la vraie fenêtre du profil.
+ * (#1964, #2050), se joue ici aussi, sur la vraie fenêtre du profil. Une
+ * séance démarrée sans réseau (#2049), dont la création attend la file avec ce
+ * qui la suit, se compte et s'efface comme le reste.
  */
 
 // Le détachement de l'appareil a ses propres tests (useDeconnexion.test.js) : ici, seulement l'appel.
@@ -92,12 +94,18 @@ const pageDeConnexion = () => ({
     props: { flash: {}, auth: { user: null } },
 })
 
+/** Les adresses de l'API que la file reconnaît à leur chemin : la création d'une séance (#2049). */
+const ROUTES_DE_L_API = {
+    'api.v1.workouts.store': '/api/v1/workouts',
+    'api.v1.workout-lines.store': '/api/v1/workout-lines',
+}
+
 const route = (nom) => {
     if (nom === undefined) {
         return { current: () => false }
     }
 
-    return `/${nom}`
+    return ROUTES_DE_L_API[nom] ?? `/${nom}`
 }
 
 const fileStockee = () => JSON.parse(localStorage.getItem('offline_sync_queue') ?? '[]')
@@ -189,6 +197,24 @@ beforeAll(async () => {
         },
         // La carte du profil qui supprime le compte, telle que `Pages/Profile/Index.vue` la pose.
         Suppression: { render: () => h(AuthenticatedLayout, null, () => h(DeleteUserForm)) },
+        /*
+         * La séance que « Démarrer » ouvre sans réseau (#2049), construite
+         * depuis la file : ce qu'elle reçoit, et le bouton du profil, pour se
+         * déconnecter depuis elle.
+         */
+        'Workouts/Show': {
+            props: ['workout', 'exercises', 'bornesDUneSerie', 'errors'],
+            render() {
+                return h(AuthenticatedLayout, null, () => [
+                    h('p', { id: 'contenu' }, `Séance ${this.workout.id}`),
+                    h(
+                        'button',
+                        { type: 'button', 'data-testid': 'logout-button', onClick: seDeconnecter },
+                        'Déconnexion',
+                    ),
+                ])
+            },
+        },
         Connexion: { render: () => h(GuestLayout, null, () => h('p', { id: 'contenu' }, 'Connexion')) },
         // La vraie page, et son bouton « Se déconnecter ».
         VerificationDeLAdresse: VerifyEmail,
@@ -378,6 +404,59 @@ describe('se déconnecter avec des écritures en attente', () => {
         })
 
         expect(fileStockee()).toEqual([])
+    })
+
+    /*
+     * Une séance démarrée sans réseau vit entière dans la file (#2049) : sa
+     * création, sous la clé que l'appareil a tirée, et ce qui l'attend. La
+     * question la compte comme toute écriture, et « Se déconnecter quand
+     * même » l'efface avec le reste : rien d'elle, ni sa clé, ne reste sur
+     * l'appareil pour le compte suivant.
+     */
+    it('compte la séance démarrée sans réseau et ce qui l’attend, et « Se déconnecter quand même » l’efface', async () => {
+        // Le bouton central de la barre du bas, sans réponse du serveur : la séance s'ouvre depuis la file.
+        document.querySelector('nav[aria-label="Navigation principale"] button').click()
+        await vi.waitUntil(() => contenu()?.startsWith('Séance temp-q'))
+
+        const [creation] = fileStockee()
+        const cle = creation.headers['Idempotency-Key']
+
+        expect(fileStockee()).toHaveLength(1)
+        expect(creation).toMatchObject({ method: 'post', url: '/api/v1/workouts', compte: '1' })
+        expect(window.location.pathname).toBe(`/workouts/en-attente/${cle}`)
+
+        // Un exercice ajouté à la séance en attente, qui la nomme par l'entrée de sa création.
+        expect(
+            SyncService.mettreEnFile({
+                method: 'post',
+                url: '/api/v1/workout-lines',
+                data: { workout_id: { enAttenteDe: creation.id }, exercise_id: 7 },
+            }),
+        ).not.toBeNull()
+
+        await cliquerDeconnexion()
+
+        expect(texteDeLaQuestion()).toContain(MESSAGE_DEUX)
+        expect(logouts()).toEqual([])
+
+        await jusquALaFinDeLaVisite(async () => {
+            bouton('confirm-dialog-confirm').click()
+            await vi.waitUntil(() => logouts().length === 1)
+
+            // Rien n'est effacé avant la réponse : la déconnexion peut encore échouer.
+            expect(fileStockee()).toHaveLength(2)
+
+            logouts()[0].repondre(reponseInertia(pageDeConnexion()))
+        })
+
+        expect(contenu()).toBe('Connexion')
+        expect(fileStockee()).toEqual([])
+        expect(SyncService.enAttente()).toBe(0)
+        expect(JSON.stringify({ ...localStorage })).not.toContain(cle)
+        expect(document.querySelector('[dusk="ecritures-effacees-a-la-deconnexion"]').textContent.trim()).toBe(
+            "2 modifications faites hors ligne n'avaient pas encore été envoyées : elles ont été effacées de cet appareil avec la déconnexion.",
+        )
+        expect(relais.rejets).toEqual([])
     })
 
     /*

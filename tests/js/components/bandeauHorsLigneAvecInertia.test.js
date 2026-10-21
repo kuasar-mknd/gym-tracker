@@ -128,13 +128,27 @@ const reessayer = async () => {
 }
 
 let BandeauHorsLigne
-let QuickActions
+let ExerciseCard
 
 /** Une page de l'application : le bandeau du layout, son texte, et un bouton qui écrirait. */
 const Page = {
     props: ['texte'],
     render() {
-        return h('div', [h(BandeauHorsLigne), h('p', { id: 'contenu' }, this.texte), h(QuickActions)])
+        return h('div', [
+            h(BandeauHorsLigne),
+            h('p', { id: 'contenu' }, this.texte),
+            h(ExerciseCard, {
+                exercise: { id: 3, name: 'Squat', type: 'strength', category: 'Jambes' },
+                isEditing: false,
+                editForm: {},
+                category: 'Jambes',
+                types: [],
+                categories: [],
+                categoryBorderColors: {},
+                typeIcons: {},
+                typeLabel: (type) => type,
+            }),
+        ])
     },
 }
 
@@ -155,7 +169,7 @@ beforeAll(async () => {
     etatDuReseau = await import('@/composables/useEtatDuReseau')
     visites = await import('@/Utils/visitesHorsLigne')
     BandeauHorsLigne = (await import('@/Components/UI/BandeauHorsLigne.vue')).default
-    QuickActions = (await import('@/Components/Dashboard/QuickActions.vue')).default
+    ExerciseCard = (await import('@/Components/Workout/ExerciseCard.vue')).default
 
     const inertia = await import('@inertiajs/vue3')
     routeur = inertia.router
@@ -260,7 +274,12 @@ describe('le bandeau d’une copie', () => {
 
 describe('« Réessayer »', () => {
     it('le réseau revenu, recharge la page en entier : le bandeau part avec la marque', async () => {
-        const demarrer = () => document.querySelector('[dusk="start-workout-button"]')
+        /*
+         * Un bouton qui écrirait par une visite : supprimer un exercice. Démarrer
+         * une séance, l'exemple d'avant, passe par la file depuis #2049, et reste
+         * ouvert sur une copie.
+         */
+        const demarrer = () => document.querySelector('[dusk="delete-exercise-btn-3"]')
 
         expect(demarrer().disabled).toBe(false)
 

@@ -21,12 +21,21 @@ import SyncService from '@/Utils/SyncService'
  * vide, pour n'en faire qu'un par vidage ; la fusion des props garde les rangées
  * que le serveur ne connaît pas encore.
  *
- * @param {{ recharger?: () => void }} options `recharger` redemande la séance
- *   au serveur ; par défaut, ses seules props `workout`.
+ * Une séance démarrée sans réseau (#2049) ne se recharge pas (`actif` faux) :
+ * le serveur ne connaît pas son adresse, et la page passe d'elle-même à la
+ * séance réelle une fois la file vidée (`useSeanceEnAttente`).
+ *
+ * @param {{ recharger?: () => void, actif?: boolean }} options `recharger`
+ *   redemande la séance au serveur ; par défaut, ses seules props `workout`.
  */
 export const useRechargementApresLeVidage = ({
     recharger = () => router.reload({ only: ['workout'], preserveScroll: true }),
+    actif = true,
 } = {}) => {
+    if (!actif) {
+        return
+    }
+
     /** Les écritures en file avant cette page : la page n'en attend aucune. */
     const anterieures = new Set(SyncService.identifiantsEnAttente())
 

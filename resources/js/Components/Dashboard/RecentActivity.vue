@@ -5,7 +5,6 @@ import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { workoutDurationMinutes } from '@/Utils/workoutDuration'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
-import { useCopieHorsLigne } from '@/composables/useCopieHorsLigne'
 
 const RecentWorkoutsTimelineChart = graphiqueAsynchrone(
     () => import('@/Components/Stats/RecentWorkoutsTimelineChart.vue'),
@@ -16,10 +15,8 @@ defineProps({
     processing: { type: Boolean, default: false },
 })
 
+/** Démarrer reste ouvert sur une copie hors ligne : la séance démarre par la file (#2049). */
 const emit = defineEmits(['startWorkout'])
-
-/** Sur une copie hors ligne, démarrer une séance ne partirait pas (#2048). */
-const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 </script>
 
 <template>
@@ -43,14 +40,7 @@ const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
             description="Commence ton parcours fitness !"
         >
             <template #action>
-                <GlassButton
-                    variant="primary"
-                    :loading="processing"
-                    :disabled="surUneCopie"
-                    :aria-describedby="raisonDUneEcriture"
-                    class="mx-auto"
-                    @click="emit('startWorkout')"
-                >
+                <GlassButton variant="primary" :loading="processing" class="mx-auto" @click="emit('startWorkout')">
                     Démarrer une séance
                 </GlassButton>
             </template>

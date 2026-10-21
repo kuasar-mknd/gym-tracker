@@ -9,7 +9,7 @@ import { noterQueLeServeurNeRepondPas, noterQueLeServeurRepond } from '@/composa
 /*
  * Ce que la séance ouverte fait des gestes qui ont besoin du serveur, quand il
  * ne répond pas (#2048) : les réglages et « Modèle » se désactivent et disent
- * pourquoi, et une clôture partie sans réseau garde la question ouverte.
+ * pourquoi. « Terminer » reste : la fin passe par la file (#2049).
  */
 
 const modaleSansFenetre = { Modal: { template: '<div><slot /></div>' } }
@@ -99,27 +99,37 @@ describe('les réglages de la séance', () => {
     })
 })
 
+/*
+ * La question de fin (#2049) : sans réseau, la fin attend la file à l'heure du
+ * geste, et la séance se montre close sur sa page. La modale disait que la
+ * fin n'était pas confirmée, et la séance restait ouverte ; elle ne dit plus
+ * que ce qui empêche de terminer : une modification encore en route.
+ */
 describe('la question de fin', () => {
-    it('dit que la fin de la séance n’est pas confirmée quand la clôture est partie sans réseau', () => {
+    it('ne dit plus que la fin de la séance n’est pas confirmée', () => {
         const wrapper = mount(WorkoutFinishModal, {
             props: { show: true, sansReseau: true },
             global: { stubs: modaleSansFenetre },
         })
 
-        expect(wrapper.find('[dusk="finish-workout-offline"]').text()).toBe(
-            'Pas de réponse du serveur : la fin de la séance n’est pas confirmée. Réessaie quand le réseau sera revenu.',
-        )
-        expect(wrapper.find('[dusk="finish-workout-offline"]').attributes('role')).toBe('status')
+        expect(wrapper.find('[dusk="finish-workout-offline"]').exists()).toBe(false)
+        expect(wrapper.text()).not.toContain('n’est pas confirmée')
+        expect(wrapper.find('[role="status"]').exists()).toBe(false)
     })
 
-    it('n’en dit rien pendant la nouvelle tentative, ni sans échec', () => {
+    it('dit l’envoi en cours, puis ce qui est encore en route vers le serveur', () => {
         const enCours = mount(WorkoutFinishModal, {
-            props: { show: true, sansReseau: true, enCours: true },
+            props: { show: true, enCours: true },
             global: { stubs: modaleSansFenetre },
         })
-        const sansEchec = mount(WorkoutFinishModal, { props: { show: true }, global: { stubs: modaleSansFenetre } })
+        const enRoute = mount(WorkoutFinishModal, {
+            props: { show: true, enAttente: 1 },
+            global: { stubs: modaleSansFenetre },
+        })
 
-        expect(enCours.find('[dusk="finish-workout-offline"]').exists()).toBe(false)
-        expect(sansEchec.find('[dusk="finish-workout-offline"]').exists()).toBe(false)
+        expect(enCours.find('[dusk="finish-workout-sending"]').text()).toBe('Envoi des modifications en attente…')
+        expect(enRoute.find('[dusk="finish-workout-pending"]').text()).toBe(
+            'Une modification est encore en route vers le serveur. La séance reste ouverte : réessaie dans un instant.',
+        )
     })
 })

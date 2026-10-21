@@ -26,6 +26,12 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/achievements', [\App\Http\Controllers\AchievementController::class, 'index'])->name('achievements.index');
     Route::get('/workouts', [\App\Http\Controllers\WorkoutController::class, 'index'])->name('workouts.index');
     Route::get('/workouts/{workout}', [\App\Http\Controllers\WorkoutController::class, 'show'])->name('workouts.show');
+    // L'adresse d'une séance démarrée sans réseau, tant que la file ne l'a pas
+    // créée : la clé que l'appareil a tirée (#2049). Rechargée en ligne, ou
+    // rouverte depuis l'historique, elle mène à la séance une fois connue.
+    Route::get('/workouts/en-attente/{cle}', [\App\Http\Controllers\WorkoutController::class, 'enAttente'])
+        ->where('cle', '[0-9A-Za-z-]{1,64}')
+        ->name('workouts.en-attente');
     Route::get('/calendar', [\App\Http\Controllers\CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/stats', [\App\Http\Controllers\StatsController::class, 'index'])->name('stats.index');
     Route::get('/stats/exercise/{exercise}', [\App\Http\Controllers\StatsController::class, 'exercise'])->name('stats.exercise');

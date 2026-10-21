@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 
-import { retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
+import { A_VENIR, retirerLesEcouteursDuService, poserLaPage } from '../utils/fileHorsLigne'
 import {
     creerUnFauxServeur,
     fileDurable,
@@ -206,7 +206,7 @@ describe('une série créée hors ligne', () => {
         await couper()
 
         expect(fileDurable()).toEqual([
-            expect.objectContaining({ url: '/api/v1/sets', tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+            expect.objectContaining({ url: '/api/v1/sets', tentee: true, aAnnuler: `/api/v1/sets/${A_VENIR}` }),
         ])
 
         const rechargee = await rechargerQuandLeReseauRevient(page, reseau.serveur)
@@ -222,7 +222,7 @@ describe('une série créée hors ligne', () => {
         page.removeSet(serie.id)
         await flushPromises()
 
-        expect(fileDurable()).toEqual([expect.objectContaining({ aAnnuler: '/api/v1/sets/__produit__' })])
+        expect(fileDurable()).toEqual([expect.objectContaining({ aAnnuler: `/api/v1/sets/${A_VENIR}` })])
 
         await leReseauRevient(page)
 
@@ -254,7 +254,7 @@ describe('une série créée hors ligne', () => {
             expect.objectContaining({
                 data: { workout_line_id: 1, is_completed: false, weight: 200, reps: 5 },
                 tentee: true,
-                aAnnuler: '/api/v1/sets/__produit__',
+                aAnnuler: `/api/v1/sets/${A_VENIR}`,
             }),
         ])
 

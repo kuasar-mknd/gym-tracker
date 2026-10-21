@@ -194,13 +194,22 @@ export const useOrdreDeLaSeance = ({
                 return Promise.resolve()
             }
 
-            return Promise.all(lignes.map((ligne) => pendingIds.resolve(ligne.id)))
-                .then((realLineIds) => {
-                    if (realLineIds.some((id) => id === null)) {
+            /*
+             * La séance aussi : démarrée sans réseau, elle porte l'identifiant
+             * provisoire de sa création en file, et l'ordre attend, en mémoire
+             * comme pour une ligne en file, l'identifiant que le serveur lui
+             * donne (#2049).
+             */
+            return Promise.all([
+                pendingIds.resolve(localWorkout.value.id),
+                ...lignes.map((ligne) => pendingIds.resolve(ligne.id)),
+            ])
+                .then(([realWorkoutId, ...realLineIds]) => {
+                    if (realWorkoutId === null || realLineIds.some((id) => id === null)) {
                         throw Object.assign(new Error('exercice sans identifiant serveur'), { isOffline: false })
                     }
 
-                    return SyncService.patch(route('api.v1.workouts.line-order', { workout: localWorkout.value.id }), {
+                    return SyncService.patch(route('api.v1.workouts.line-order', { workout: realWorkoutId }), {
                         lines: realLineIds,
                     }).then(() => {
                         ordreConfirme.value = realLineIds

@@ -65,15 +65,19 @@ beforeEach(() => {
 describe('l’accueil', () => {
     const demarrer = (wrapper) => wrapper.get('[dusk="start-workout-button"]')
 
-    it('ne démarre pas de séance depuis une copie, et dit pourquoi', async () => {
+    /*
+     * Démarrer une séance passe par la file depuis #2049, sans rien tirer de la
+     * copie (ni la clé, ni l'heure, ni la séance) : le bouton reste ouvert.
+     */
+    it('démarre une séance depuis une copie : rien de la copie ne part', async () => {
         servirUneCopie()
         const wrapper = mount(QuickActions, { global })
 
-        attendreDesactive(demarrer(wrapper))
+        attendreOuvert(demarrer(wrapper))
 
         await demarrer(wrapper).trigger('click')
 
-        expect(wrapper.emitted('startWorkout')).toBeUndefined()
+        expect(wrapper.emitted('startWorkout')).toHaveLength(1)
     })
 
     it('en démarre une depuis une page que le serveur a rendue', async () => {
@@ -91,17 +95,22 @@ describe('les actions sous les exercices de la séance', () => {
     const monter = () => mount(ActionsDeLaSeance, { global })
     const bouton = (wrapper, dusk) => wrapper.get(`[dusk="${dusk}"]`)
 
-    it('ni « Terminer » ni « Modèle » ne partent d’une copie, même le serveur revenu', async () => {
+    /*
+     * « Terminer » part d'une copie (#2049) : la fin passe par la file hors
+     * ligne, et n'envoie rien que la page tire de la copie. « Modèle », une
+     * visite d'Inertia, ne partirait pas, même le serveur revenu.
+     */
+    it('« Terminer » part d’une copie par la file ; « Modèle » ne part pas, même le serveur revenu', async () => {
         servirUneCopie()
         const wrapper = monter()
 
-        attendreDesactive(bouton(wrapper, 'finish-workout-mobile'))
+        attendreOuvert(bouton(wrapper, 'finish-workout-mobile'))
         attendreDesactive(bouton(wrapper, 'enregistrer-comme-modele'))
 
         await bouton(wrapper, 'finish-workout-mobile').trigger('click')
         await bouton(wrapper, 'enregistrer-comme-modele').trigger('click')
 
-        expect(wrapper.emitted('terminer')).toBeUndefined()
+        expect(wrapper.emitted('terminer')).toHaveLength(1)
         expect(wrapper.emitted('enregistrer-comme-modele')).toBeUndefined()
     })
 

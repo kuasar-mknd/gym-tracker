@@ -5,7 +5,15 @@ const routerPost = vi.fn()
 const triggerHaptic = vi.fn()
 
 /** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
-const pageDInertia = vi.hoisted(() => ({ props: {} }))
+const pageDInertia = vi.hoisted(() => ({ props: {}, component: 'Dashboard' }))
+
+/**
+ * Le démarrage d'une séance, commun aux boutons qui la démarrent (#2049) : ce
+ * qu'il fait, avec ou sans réseau, se joue avec le vrai client d'Inertia
+ * (`tests/js/pages/seanceDemarreeSansReseauAvecInertia.test.js`). Ici, que la
+ * barre l'appelle, et ce qu'elle montre pendant.
+ */
+const demarrage = vi.hoisted(() => ({ demarrer: null, enCours: null }))
 
 vi.mock('@inertiajs/vue3', () => ({
     Link: { props: ['href'], template: '<a :href="href"><slot /></a>' },
@@ -13,11 +21,12 @@ vi.mock('@inertiajs/vue3', () => ({
     usePage: () => pageDInertia,
 }))
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: (...args) => triggerHaptic(...args) }))
+vi.mock('@/composables/useDemarrageDUneSeance', () => ({
+    useDemarrageDUneSeance: () => ({ demarrer: demarrage.demarrer, enCours: demarrage.enCours }),
+}))
 
+import { ref } from 'vue'
 import BottomNav from '@/Components/Navigation/BottomNav.vue'
-import { DEMARRAGE_SANS_RESEAU } from '@/Utils/visitesHorsLigne'
-import { annoncesPendant } from '../../utils/annoncesSansReseau'
-import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 /** Ziggy, reduced to the two forms the bar uses: route(name) and route().current(). */
 let currentRoute = 'dashboard'
@@ -33,8 +42,12 @@ const route = (name) => {
 // has to be the global Ziggy installs, not only an injected mock.
 globalThis.route = route
 
+/** Le composant que montre chaque page : la séance est `Workouts/Show`, à son adresse ou à celle de sa clé. */
+const COMPOSANTS = { 'workouts.show': 'Workouts/Show', 'workouts.en-attente': 'Workouts/Show' }
+
 const mountNav = (onPage = 'dashboard') => {
     currentRoute = onPage
+    pageDInertia.component = COMPOSANTS[onPage] ?? 'Dashboard'
 
     return mount(BottomNav, { global: { directives: { press: {} }, mocks: { route } } })
 }
@@ -51,6 +64,10 @@ beforeEach(() => {
     routerPost.mockReset()
     triggerHaptic.mockReset()
     pageDInertia.props = {}
+    demarrage.enCours = ref(false)
+    demarrage.demarrer = vi.fn(() => {
+        demarrage.enCours.value = true
+    })
 })
 
 describe('BottomNav — which tab is lit', () => {
@@ -112,31 +129,26 @@ describe('BottomNav — the central button', () => {
 
         await fab(wrapper).trigger('click')
 
-        // On lit le premier argument plutôt que la signature entière : le
-        // bouton passe désormais des options à Inertia pour relâcher son verrou,
-        // et ce test-là parle de la DESTINATION, pas de la façon d'y aller.
-        expect(routerPost).toHaveBeenCalledTimes(1)
-        expect(routerPost.mock.calls[0][0]).toBe('/resolved/workouts.store')
+        // Le démarrage commun, par la file hors ligne (#2049), et plus une visite d'Inertia.
+        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
+        expect(routerPost).not.toHaveBeenCalled()
         expect(opened).not.toHaveBeenCalled()
 
         window.removeEventListener('open-add-exercise', opened)
     })
 
     /*
-     * Sans réseau, l'appui ne faisait rien, et rien ne disait pourquoi (#2048).
+     * Sans réseau, l'appui ne faisait rien, puis disait qu'il fallait le réseau
+     * (#2048). La séance démarre désormais sans lui (#2049) : la barre ne dit
+     * plus rien elle-même, et aucune visite ne part qui le dirait.
      */
-    it('dit qu’il faut le réseau pour démarrer une séance, et rend le bouton', async () => {
+    it('ne dit plus qu’il faut le réseau pour démarrer une séance : la séance démarre par la file', async () => {
         const wrapper = mountNav('stats.index')
 
         await fab(wrapper).trigger('click')
-        const options = routerPost.mock.calls[0][2]
-        const { rendu, annonces } = annoncesPendant(() => options.onNetworkError({ code: 'ERR_NETWORK' }))
-        options.onFinish()
-        await wrapper.vm.$nextTick()
 
-        expect(rendu).toBe(false)
-        expect(annonces).toEqual([DEMARRAGE_SANS_RESEAU])
-        expect(fab(wrapper).attributes('disabled')).toBeUndefined()
+        expect(routerPost).not.toHaveBeenCalled()
+        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
     })
 
     it('ne crée pas deux séances quand on appuie deux fois', async () => {
@@ -145,36 +157,29 @@ describe('BottomNav — the central button', () => {
          * facile à double-cliquer de toute l'application, et c'était le seul des
          * quatre chemins vers « démarrer une séance » sans aucun verrou. Deux
          * appuis rapprochés créaient deux séances, et l'écran s'ouvrait sur la
-         * mauvaise.
+         * mauvaise. Le verrou est désormais celui du démarrage, commun à tous.
          *
-         * Inertia n'appelle `onFinish` qu'à la fin de la requête ; tant qu'elle
-         * dure, le second appui doit être sans effet.
+         * Le démarrage est ici remplacé : ce cas prouve seulement que la barre
+         * se désactive tant que `enCours` est vrai. Le verrou lui-même, qui
+         * tient pour deux boutons appelant chacun le composable, se prouve
+         * avec le vrai composable (`useDemarrageDUneSeance.test.js`, « le
+         * verrou de l'onglet »).
          */
         const wrapper = mountNav('stats.index')
 
         await fab(wrapper).trigger('click')
         await fab(wrapper).trigger('click')
 
-        expect(routerPost).toHaveBeenCalledTimes(1)
+        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
         expect(fab(wrapper).attributes('disabled')).toBeDefined()
         expect(fab(wrapper).attributes('aria-busy')).toBe('true')
     })
 
-    it('rend le bouton même quand la création échoue', async () => {
-        /*
-         * `onFinish` et non `onSuccess` : un refus du serveur doit relâcher le
-         * verrou aussi, sinon une erreur réseau condamne le bouton jusqu'au
-         * rechargement de la page.
-         */
+    it('rend le bouton quand le démarrage a fini, même en échec', async () => {
         const wrapper = mountNav('stats.index')
 
         await fab(wrapper).trigger('click')
-
-        const options = routerPost.mock.calls[0][2]
-
-        expect(options).toHaveProperty('onFinish')
-
-        options.onFinish()
+        demarrage.enCours.value = false
         await wrapper.vm.$nextTick()
 
         expect(fab(wrapper).attributes('disabled')).toBeUndefined()
@@ -189,7 +194,27 @@ describe('BottomNav — the central button', () => {
         await fab(wrapper).trigger('click')
 
         expect(opened).toHaveBeenCalledTimes(1)
-        expect(routerPost).not.toHaveBeenCalled()
+        expect(demarrage.demarrer).not.toHaveBeenCalled()
+
+        window.removeEventListener('open-add-exercise', opened)
+    })
+
+    /*
+     * Une séance démarrée sans réseau s'ouvre à l'adresse de sa clé (#2049),
+     * que `route().current('workouts.show')` ne nomme pas : la barre y
+     * démarrait une seconde séance. Elle reconnaît la séance à sa page.
+     */
+    it('ajoute un exercice sur une séance démarrée sans réseau, à l’adresse de sa clé', async () => {
+        const wrapper = mountNav('workouts.en-attente')
+        const opened = vi.fn()
+        window.addEventListener('open-add-exercise', opened)
+
+        expect(fab(wrapper).attributes('aria-label')).toBe('Exercice')
+
+        await fab(wrapper).trigger('click')
+
+        expect(opened).toHaveBeenCalledTimes(1)
+        expect(demarrage.demarrer).not.toHaveBeenCalled()
 
         window.removeEventListener('open-add-exercise', opened)
     })
@@ -202,23 +227,25 @@ describe('BottomNav — the central button', () => {
 })
 
 /*
- * Sur une copie hors ligne, rien ne part vers le serveur (#2048, partie E) :
- * démarrer une séance serait arrêté avant son départ. Le bouton le dit
- * d'avance. Sur la séance, il ajoute un exercice, que la file hors ligne garde.
+ * Sur une copie hors ligne, rien ne part vers le serveur par une visite (#2048,
+ * partie E). Démarrer une séance passe par la file depuis #2049, sans rien
+ * tirer de la copie : le bouton reste ouvert. Sur la séance, il ajoute un
+ * exercice, que la file hors ligne garde.
  */
 describe('BottomNav — sur une copie hors ligne', () => {
     beforeEach(() => {
         pageDInertia.props = { horsLigne: { copieDu: Date.now(), raison: 'reseau', datesDesProps: {} } }
     })
 
-    it('ne démarre pas de séance, et dit pourquoi', async () => {
+    it('démarre une séance, sans raison de désactivation : la séance passe par la file', async () => {
         const wrapper = mountNav('dashboard')
 
-        expect(fab(wrapper).attributes('disabled')).toBeDefined()
-        expect(fab(wrapper).attributes('aria-describedby')).toBe(ID_DE_LA_RAISON_DES_ECRITURES)
+        expect(fab(wrapper).attributes('disabled')).toBeUndefined()
+        expect(fab(wrapper).attributes('aria-describedby')).toBeUndefined()
 
         await fab(wrapper).trigger('click')
 
+        expect(demarrage.demarrer).toHaveBeenCalledTimes(1)
         expect(routerPost).not.toHaveBeenCalled()
     })
 
@@ -236,7 +263,7 @@ describe('BottomNav — sur une copie hors ligne', () => {
         window.removeEventListener('open-add-exercise', opened)
     })
 
-    it('redevient le démarrage d’une séance sur une page que le serveur a rendue', () => {
+    it('reste le démarrage d’une séance sur une page que le serveur a rendue', () => {
         pageDInertia.props = {}
 
         expect(fab(mountNav('dashboard')).attributes('disabled')).toBeUndefined()

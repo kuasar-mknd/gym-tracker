@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
+    A_VENIR,
     COMPTE,
     chargerSyncService,
     horodatageRecent,
@@ -10,6 +11,7 @@ import {
 } from './fileHorsLigne'
 import { oublierLesEcrituresAcceptees } from '@/Utils/ecrituresAcceptees'
 import { classifySyncError, SYNC_OFFLINE } from '@/Utils/syncErrors'
+import { route as routeDeZiggy } from 'ziggy-js'
 
 const request = vi.fn()
 
@@ -129,8 +131,11 @@ describe('SyncService.processQueue', () => {
         expect(listener).toHaveBeenCalledTimes(1)
         expect(listener.mock.calls[0][0].detail).toEqual({
             queueId: 'queued-1',
+            method: 'patch',
             url: '/api/v1/sets/7',
             status: 422,
+            // La raison que le serveur donne, quand il en donne une (#2049).
+            raison: null,
             data: { weight: 100 },
         })
     })
@@ -1285,7 +1290,11 @@ describe('SyncService une écriture qui attend encore', () => {
             method: 'post',
             url: '/api/v1/sets',
             data: { workout_line_id: 1, is_completed: false, reps: 5 },
-            headers: { 'Idempotency-Key': 'k', 'X-Compte-De-L-Ecriture': COMPTE },
+            headers: {
+                'Idempotency-Key': 'k',
+                'X-Compte-De-L-Ecriture': COMPTE,
+                'X-Heure-De-L-Appareil': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/),
+            },
             timeout: DELAI_DE_REJEU_MS,
         })
     })
@@ -1513,7 +1522,10 @@ describe('SyncService une écriture rejouée sous la session d’un autre compte
         window.removeEventListener('sync:auth-required', annonces)
 
         expect(request).toHaveBeenCalledTimes(1)
-        expect(request.mock.calls[0][0].headers).toEqual({ 'X-Compte-De-L-Ecriture': COMPTE })
+        expect(request.mock.calls[0][0].headers).toEqual({
+            'X-Compte-De-L-Ecriture': COMPTE,
+            'X-Heure-De-L-Appareil': expect.any(String),
+        })
         expect(service.queue.map((entree) => entree.id)).toEqual(['queued-1', 'queued-2'])
         expect(service.queue[0]).not.toHaveProperty('authAttempts')
         expect(service.queue[0]).not.toHaveProperty('transientAttempts')
@@ -1585,6 +1597,21 @@ describe('SyncService une création tentée sans réponse', () => {
 
     const annulerPar = (id) => `/api/v1/sets/${id}`
 
+    /**
+     * Un serveur qui crée chaque série sous l'identifiant suivant de la liste,
+     * sans la coche, et accepte le reste.
+     *
+     * @param {number[]} identifiants
+     */
+    const creerSousDesIdentifiants = (identifiants) => {
+        const suivants = [...identifiants]
+
+        return async (config) =>
+            config.method === 'post'
+                ? { data: { data: { ...config.data, id: suivants.shift(), is_completed: false } } }
+                : { data: { data: {} } }
+    }
+
     it('note qu’elle a été tentée avant de partir, pour qu’une page qui meurt pendant le vol le sache encore', async () => {
         localStorage.setItem('offline_sync_queue', JSON.stringify([creation('q1')]))
         request.mockImplementation(() => new Promise(() => {}))
@@ -1635,7 +1662,7 @@ describe('SyncService une création tentée sans réponse', () => {
         expect(
             JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => [entree.id, entree.aAnnuler]),
         ).toEqual([
-            ['q1', '/api/v1/sets/__produit__'],
+            ['q1', `/api/v1/sets/${A_VENIR}`],
             ['queued-1', undefined],
         ])
 
@@ -1665,7 +1692,10 @@ describe('SyncService une création tentée sans réponse', () => {
             'delete /api/v1/sets/100',
             'patch /api/v1/sets/3',
         ])
-        expect(request.mock.calls[1][0].headers).toEqual({ 'X-Compte-De-L-Ecriture': COMPTE })
+        expect(request.mock.calls[1][0].headers).toEqual({
+            'X-Compte-De-L-Ecriture': COMPTE,
+            'X-Heure-De-L-Appareil': expect.any(String),
+        })
         expect(rejeux.mock.calls.map(([event]) => event.detail.queueId)).toEqual(['queued-1'])
         expect(service.queue).toEqual([])
         expect(service.failedRequests()).toEqual([])
@@ -1674,7 +1704,7 @@ describe('SyncService une création tentée sans réponse', () => {
     it('garde son annulation en file quand le réseau retombe entre les deux', async () => {
         localStorage.setItem(
             'offline_sync_queue',
-            JSON.stringify([creation('q1', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' })]),
+            JSON.stringify([creation('q1', { tentee: true, aAnnuler: `/api/v1/sets/${A_VENIR}` })]),
         )
         request
             .mockResolvedValueOnce({ data: { data: { id: 100 } } })
@@ -1691,8 +1721,8 @@ describe('SyncService une création tentée sans réponse', () => {
         localStorage.setItem(
             'offline_sync_queue',
             JSON.stringify([
-                creation('q1', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
-                creation('q2', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+                creation('q1', { tentee: true, aAnnuler: `/api/v1/sets/${A_VENIR}` }),
+                creation('q2', { tentee: true, aAnnuler: `/api/v1/sets/${A_VENIR}` }),
             ]),
         )
         request
@@ -1729,7 +1759,7 @@ describe('SyncService une création tentée sans réponse', () => {
             JSON.stringify([
                 creation('q1', {
                     tentee: true,
-                    ajusterPar: '/api/v1/sets/__produit__',
+                    ajusterPar: `/api/v1/sets/${A_VENIR}`,
                     data: { workout_line_id: 1, is_completed: true, weight: 80, reps: 3 },
                 }),
                 aQueuedPatch('/api/v1/sets/3'),
@@ -1776,7 +1806,7 @@ describe('SyncService une création tentée sans réponse', () => {
         localStorage.setItem(
             'offline_sync_queue',
             JSON.stringify([
-                creation('q1', { ajusterPar: '/api/v1/sets/__produit__' }),
+                creation('q1', { ajusterPar: `/api/v1/sets/${A_VENIR}` }),
                 creation('q2', { tentee: true }),
             ]),
         )
@@ -1806,10 +1836,99 @@ describe('SyncService une création tentée sans réponse', () => {
 
         expect(request.mock.calls[0][0]).not.toHaveProperty('ajusterPar')
         expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.ajusterPar)).toEqual([
-            '/api/v1/sets/__produit__',
-            '/api/v1/sets/__produit__',
+            `/api/v1/sets/${A_VENIR}`,
+            `/api/v1/sets/${A_VENIR}`,
             undefined,
         ])
+    })
+
+    /*
+     * Les adresses passent par Ziggy, qui exige depuis #2049 qu'un paramètre
+     * de modèle ait la forme d'un identifiant : la table des routes du serveur
+     * le lui dit (`IdentifiantsDesRoutes::MOTIF`). `__produit__` y levait une
+     * erreur avant même le premier envoi : aucune série ne s'ajoutait plus, en
+     * ligne comme sans réseau, et le stub des tests, qui ne vérifiait rien, ne
+     * l'a pas vu.
+     */
+    it('donne au vrai Ziggy un identifiant à venir qu’il accepte, puis le remplace par celui que le serveur a produit', async () => {
+        const table = {
+            url: 'http://localhost',
+            port: null,
+            defaults: {},
+            routes: {
+                'api.v1.sets.update': { uri: 'api/v1/sets/{set}', methods: ['PATCH'], wheres: { set: '[1-9][0-9]*' } },
+                'api.v1.sets.destroy': {
+                    uri: 'api/v1/sets/{set}',
+                    methods: ['DELETE'],
+                    wheres: { set: '[1-9][0-9]*' },
+                },
+            },
+        }
+        const ajusterPar = (id) => routeDeZiggy('api.v1.sets.update', { set: id }, true, table)
+        const annulerPar = (id) => routeDeZiggy('api.v1.sets.destroy', { set: id }, true, table)
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+
+        // La première tentée sans réponse, la seconde rangée derrière elle : la première est retirée.
+        const retiree = await service
+            .post('/api/v1/sets', { workout_line_id: 1, is_completed: false, reps: 8 }, { ajusterPar })
+            .catch((erreur) => erreur.queueId)
+        service.mettreEnFile({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: { workout_line_id: 1, is_completed: true, reps: 5 },
+            ajusterPar,
+        })
+
+        expect(service.retirerDeLaFile(retiree, { annulerPar })).toBe(true)
+        expect(
+            JSON.parse(localStorage.getItem('offline_sync_queue')).map(({ ajusterPar: rattrapage, aAnnuler }) => [
+                rattrapage,
+                aAnnuler,
+            ]),
+        ).toEqual([
+            [`http://localhost/api/v1/sets/${A_VENIR}`, `http://localhost/api/v1/sets/${A_VENIR}`],
+            [`http://localhost/api/v1/sets/${A_VENIR}`, undefined],
+        ])
+
+        // Le réseau revient : la retirée est supprimée, l'autre revient sans sa coche et se rattrape.
+        request.mockReset()
+        request.mockImplementation(creerSousDesIdentifiants([100, 101]))
+        await service.processQueue()
+
+        expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
+            'post /api/v1/sets',
+            'delete http://localhost/api/v1/sets/100',
+            'post /api/v1/sets',
+            'patch http://localhost/api/v1/sets/101',
+        ])
+        expect(service.queue).toEqual([])
+    })
+
+    it('rattrape et annule encore une création écrite avant #2049, `__produit__` à la place de l’identifiant', async () => {
+        localStorage.setItem(
+            'offline_sync_queue',
+            JSON.stringify([
+                creation('q1', {
+                    tentee: true,
+                    ajusterPar: '/api/v1/sets/__produit__',
+                    data: { workout_line_id: 1, is_completed: true, reps: 3 },
+                }),
+                creation('q2', { tentee: true, aAnnuler: '/api/v1/sets/__produit__' }),
+            ]),
+        )
+        request.mockImplementation(creerSousDesIdentifiants([100, 101]))
+
+        const service = await chargé()
+        await service.processQueue()
+
+        expect(request.mock.calls.map(([config]) => `${config.method} ${config.url}`)).toEqual([
+            'post /api/v1/sets',
+            'patch /api/v1/sets/100',
+            'post /api/v1/sets',
+            'delete /api/v1/sets/101',
+        ])
+        expect(service.queue).toEqual([])
     })
 
     /*
@@ -2180,8 +2299,10 @@ describe('SyncService un compte qui quitte l’appareil', () => {
         expect(lAutreOnglet.queue).toEqual([])
         expect(lAutreOnglet.compte).toBeNull()
 
-        // Sa prochaine écriture de la file ne remet rien du compte parti dans le stockage.
-        lAutreOnglet.saveQueue()
+        // Sa prochaine écriture de la file, pour un autre compte, ne remet rien du compte parti dans le stockage.
+        lAutreOnglet.addToQueue({ method: 'patch', url: '/api/v1/sets/6', data: { reps: 9 } }, '2')
+
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((e) => e.compte)).toEqual(['2'])
 
         expect(JSON.stringify({ ...localStorage })).not.toContain('Note privée')
     })
@@ -2453,8 +2574,7 @@ describe('SyncService la note des écritures de séance acceptées', () => {
 
         request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
         await expect(service.patch('/api/v1/sets/3', { weight: 85 })).rejects.toMatchObject({ isOffline: true })
-        service.queue = []
-        service.saveQueue()
+        service.changerLaFile(() => [])
 
         request.mockRejectedValueOnce({ response: { status: 422, data: {} } })
         await expect(service.patch('/api/v1/sets/3', { weight: 9999 })).rejects.toBeTruthy()
@@ -2509,5 +2629,636 @@ describe('SyncService la note des écritures de séance acceptées', () => {
         expect(service.queue).toEqual([])
         expect(rejeux).toHaveBeenCalledTimes(1)
         expect(noteDuCompte()).toBeNull()
+    })
+})
+
+/*
+ * Une séance démarrée sans réseau est une création en file (#2049) : ses
+ * lignes la nomment par son entrée, ses séries la gardent dans leur contexte,
+ * et son refus emporte les siennes, qui le disent.
+ */
+describe('SyncService une séance démarrée sans réseau', () => {
+    const creationDeSeance = {
+        method: 'post',
+        url: '/api/v1/workouts',
+        data: { started_at: '2026-10-19T08:00:00.000Z' },
+        headers: { 'Idempotency-Key': 'cle-de-la-seance' },
+        id: 'qS',
+        timestamp: horodatageRecent(),
+        compte: COMPTE,
+    }
+    const ligneDeLaSeance = {
+        method: 'post',
+        url: '/api/v1/workout-lines',
+        data: { workout_id: { enAttenteDe: 'qS' }, exercise_id: 7 },
+        headers: { 'Idempotency-Key': 'cle-de-la-ligne' },
+        id: 'qL',
+        timestamp: horodatageRecent(),
+        compte: COMPTE,
+    }
+    const serieDeLaLigne = {
+        method: 'post',
+        url: '/api/v1/sets',
+        data: { workout_line_id: { enAttenteDe: 'qL' }, reps: 5 },
+        headers: { 'Idempotency-Key': 'cle-de-la-serie' },
+        contexte: { workout_id: { enAttenteDe: 'qS' }, exercise_id: 7 },
+        id: 'qR',
+        timestamp: horodatageRecent(),
+        compte: COMPTE,
+    }
+
+    const enFile = async (entrees) => {
+        localStorage.setItem('offline_sync_queue', JSON.stringify(entrees))
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+
+        const service = await chargé()
+        request.mockReset()
+
+        return service
+    }
+
+    it('substitue la séance rejouée dans le contexte des séries qui l’attendent', async () => {
+        const service = await enFile([creationDeSeance, ligneDeLaSeance, serieDeLaLigne])
+
+        request.mockResolvedValueOnce({ data: { data: { id: 42 } } }).mockRejectedValue({ code: 'ERR_NETWORK' })
+        await service.processQueue()
+
+        const file = JSON.parse(localStorage.getItem('offline_sync_queue'))
+
+        expect(file.map((entree) => entree.id)).toEqual(['qL', 'qR'])
+        expect(file[0].data.workout_id).toBe(42)
+        expect(file[1].contexte).toEqual({ workout_id: 42, exercise_id: 7 })
+        expect(service.produitDe('qS')).toBe(42)
+        expect(service.produitDe('inconnue')).toBeNull()
+    })
+
+    it('substitue aussi le contexte d’une série mise en file après le rejeu de sa séance', async () => {
+        const service = await enFile([creationDeSeance, ligneDeLaSeance])
+
+        request.mockResolvedValueOnce({ data: { data: { id: 42 } } }).mockRejectedValue({ code: 'ERR_NETWORK' })
+        await service.processQueue()
+
+        service.mettreEnFile({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: { workout_line_id: { enAttenteDe: 'qL' }, reps: 8 },
+            contexte: { workout_id: { enAttenteDe: 'qS' }, exercise_id: 7 },
+        })
+
+        expect(service.queue.at(-1).contexte).toEqual({ workout_id: 42, exercise_id: 7 })
+    })
+
+    it('dit la raison du refus, et nomme le parent de ce qu’il emporte', async () => {
+        const service = await enFile([creationDeSeance, ligneDeLaSeance, serieDeLaLigne])
+        const refus = []
+        const noter = (evenement) => refus.push(evenement.detail)
+        window.addEventListener('sync:failed', noter)
+
+        request.mockRejectedValueOnce({
+            response: { status: 409, data: { raison: 'seance-deja-en-cours', seance: { id: 9 } } },
+        })
+        await service.processQueue()
+        window.removeEventListener('sync:failed', noter)
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(
+            refus.map(({ queueId, raison, parentRefuse, parent }) => ({ queueId, raison, parentRefuse, parent })),
+        ).toEqual([
+            { queueId: 'qS', raison: 'seance-deja-en-cours', parentRefuse: undefined, parent: undefined },
+            { queueId: 'qL', raison: null, parentRefuse: true, parent: 'qS' },
+            { queueId: 'qR', raison: null, parentRefuse: true, parent: 'qL' },
+        ])
+        expect(refus[0]).toMatchObject({ method: 'post', url: '/api/v1/workouts', status: 409 })
+        expect(
+            service
+                .failedRequests()
+                .map(({ id, raison, parentRefuse, parent }) => ({ id, raison, parentRefuse, parent })),
+        ).toEqual([
+            { id: 'qS', raison: 'seance-deja-en-cours', parentRefuse: undefined, parent: undefined },
+            { id: 'qL', raison: undefined, parentRefuse: true, parent: 'qS' },
+            { id: 'qR', raison: undefined, parentRefuse: true, parent: 'qL' },
+        ])
+    })
+
+    it('annonce chaque écriture qui entre en file, mise en file ou tombée sans réseau', async () => {
+        const service = await chargé()
+        const entrees = []
+        const noter = (evenement) => entrees.push(evenement.detail)
+        window.addEventListener('sync:queued', noter)
+
+        const directe = service.mettreEnFile({ method: 'post', url: '/api/v1/workouts', data: {} })
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const tombee = await service.patch('/api/v1/sets/3', { reps: 4 }).catch((erreur) => erreur.queueId)
+        window.removeEventListener('sync:queued', noter)
+
+        expect(entrees).toEqual([
+            { queueId: directe, method: 'post', url: '/api/v1/workouts' },
+            { queueId: tombee, method: 'patch', url: '/api/v1/sets/3' },
+        ])
+    })
+
+    it('borne la seule tentative directe : l’écriture mise en file se rejoue sous le délai du vidage', async () => {
+        const service = await chargé()
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        await expect(
+            service.post('/api/v1/workouts', { started_at: 'x' }, { delaiDeLaTentative: 5000 }),
+        ).rejects.toMatchObject({ isOffline: true })
+
+        expect(request.mock.calls[0][0]).toMatchObject({ url: '/api/v1/workouts', timeout: 5000 })
+        expect(service.queue[0]).not.toHaveProperty('timeout')
+        expect(service.queue[0]).not.toHaveProperty('delaiDeLaTentative')
+
+        const { DELAI_DE_REJEU_MS } = await import('@/Utils/SyncService')
+        request.mockResolvedValue({ data: { data: { id: 42 } } })
+        await service.processQueue()
+
+        expect(request.mock.calls[1][0]).toMatchObject({ url: '/api/v1/workouts', timeout: DELAI_DE_REJEU_MS })
+    })
+
+    it('tire la clé d’une création que l’appelant nomme lui-même, sous la forme que la route accepte', async () => {
+        const { nouvelleCleDIdempotence } = await import('@/Utils/SyncService')
+        const premiere = nouvelleCleDIdempotence()
+
+        expect(premiere).toMatch(/^[0-9A-Za-z-]{1,64}$/)
+        expect(nouvelleCleDIdempotence()).not.toBe(premiere)
+    })
+
+    it('oublie les seuls refus dits, et note ceux qu’un écran a annoncés', async () => {
+        const service = await enFile([creationDeSeance, ligneDeLaSeance])
+
+        request.mockRejectedValueOnce({ response: { status: 409, data: { raison: 'seance-deja-en-cours' } } })
+        await service.processQueue()
+
+        service.noterLesRefusAnnonces(['qS'])
+        service.oublierDesRefus(['qL'])
+
+        expect(service.failedRequests().map(({ id, annonce }) => [id, annonce])).toEqual([['qS', true]])
+    })
+})
+
+/*
+ * « Terminer » sans réseau (#2049) : la fin entre en file, la dernière des
+ * écritures de sa séance. Une écriture de la séance partie avant elle, et qui y
+ * tombe après (sa réponse perdue), arriverait sur une séance close, que le
+ * serveur refuse : elle se range devant la fin.
+ */
+describe('SyncService la fin d’une séance en file', () => {
+    const fin = (workoutId = 5) => ({
+        method: 'patch',
+        url: '/api/v1/workouts/finish',
+        data: { workout_id: workoutId, ended_at: '2026-10-19T18:42:00.000Z' },
+    })
+    const resume = (service) => service.queue.map((entree) => `${entree.method} ${entree.url}`)
+
+    /** Une écriture directe qui vole jusqu'à ce que le réseau la refuse. */
+    const enVolPuisSansReseau = (service, ecrire) => {
+        let couper
+        request.mockImplementationOnce(() => new Promise((_resolve, reject) => (couper = reject)))
+        const ecriture = ecrire(service).catch((erreur) => erreur)
+
+        return async () => {
+            couper({ code: 'ERR_NETWORK', request: {} })
+
+            return ecriture
+        }
+    }
+
+    it('range devant la fin une écriture de la séance tombée en file après elle', async () => {
+        const service = await chargé()
+        service.suivreLesEcrituresDeLaSeance(5)
+        const tomber = enVolPuisSansReseau(service, (s) => s.patch('/api/v1/sets/11', { reps: 6 }))
+
+        service.mettreEnFile(fin(5))
+        const tombee = await tomber()
+
+        expect(tombee).toMatchObject({ isOffline: true })
+        expect(resume(service)).toEqual(['patch /api/v1/sets/11', 'patch /api/v1/workouts/finish'])
+        expect(JSON.parse(localStorage.getItem('offline_sync_queue')).map((entree) => entree.url)).toEqual([
+            '/api/v1/sets/11',
+            '/api/v1/workouts/finish',
+        ])
+    })
+
+    it('range devant elle la création d’une ligne qui nomme la séance, et derrière, ce qui est d’une autre séance', async () => {
+        const service = await chargé()
+        service.suivreLesEcrituresDeLaSeance(9)
+        const ligne = enVolPuisSansReseau(service, (s) =>
+            s.post('/api/v1/workout-lines', { workout_id: 5, exercise_id: 7 }),
+        )
+        const autre = enVolPuisSansReseau(service, (s) => s.patch('/api/v1/sets/90', { reps: 1 }))
+
+        service.mettreEnFile(fin(5))
+        await ligne()
+        await autre()
+
+        expect(resume(service)).toEqual([
+            'post /api/v1/workout-lines',
+            'patch /api/v1/workouts/finish',
+            'patch /api/v1/sets/90',
+        ])
+    })
+
+    it('range devant la fin d’une séance démarrée sans réseau ce qui la nomme par sa création', async () => {
+        const service = await chargé()
+        const creation = service.mettreEnFile({ method: 'post', url: '/api/v1/workouts', data: {} })
+        service.mettreEnFile(fin({ enAttenteDe: creation }))
+
+        // La série d'un exercice de cette séance, mise en file après la fin : son contexte la nomme.
+        service.mettreEnFile({
+            method: 'post',
+            url: '/api/v1/sets',
+            data: { workout_line_id: 70, reps: 5 },
+            contexte: { workout_id: { enAttenteDe: creation }, exercise_id: 7 },
+        })
+
+        expect(resume(service)).toEqual(['post /api/v1/workouts', 'post /api/v1/sets', 'patch /api/v1/workouts/finish'])
+    })
+
+    it('attend les écritures directes en vol sans vider la file', async () => {
+        const service = await chargé()
+        let repondre
+        request.mockImplementationOnce(() => new Promise((resolve) => (repondre = resolve)))
+        const ecriture = service.patch('/api/v1/sets/11', { reps: 6 })
+        service.mettreEnFile(fin(5))
+
+        let reglee = false
+        const attente = service.attendreLesEcrituresDirectes().then(() => (reglee = true))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+
+        expect(reglee).toBe(false)
+
+        repondre({ data: {} })
+        await ecriture
+        await attente
+
+        // La fin attend toujours : rien n'a vidé la file.
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(resume(service)).toEqual(['patch /api/v1/workouts/finish'])
+        expect(service.ecrituresEnCours()).toBe(0)
+    })
+})
+
+/*
+ * Lancer un modèle (#2049). En ligne, c'est une seule requête
+ * (`POST /api/v1/workouts` avec `template_id`) : sans réponse, elle n'entre
+ * pas en file (`garderEnFile: false`), et l'appelant met en file, d'un seul
+ * coup, la séance, ses lignes et ses séries, sous les clés que le serveur
+ * aurait posées (`mettreEnFileLaSeanceDUnModele`). Rangée en file, la requête
+ * avec `template_id` aurait recréé tout le modèle au rejeu, même ce que la
+ * personne avait retiré de la séance entre-temps.
+ */
+describe('SyncService le lancement d’un modèle', () => {
+    const ROUTES = {
+        'api.v1.workouts.store': '/api/v1/workouts',
+        'api.v1.workout-lines.store': '/api/v1/workout-lines',
+        'api.v1.sets.store': '/api/v1/sets',
+    }
+    const route = (nom, parametres) => (nom === 'api.v1.sets.update' ? `/api/v1/sets/${parametres.set}` : ROUTES[nom])
+
+    /** Deux exercices, deux séries chacun, tels que la prop `lancements` les donne. */
+    const lignes = [
+        {
+            exercise: { id: 7, name: 'Squat', type: 'strength' },
+            order: 0,
+            cle: 'modele-ligne:0:7',
+            series: [
+                { reps: 5, weight: 100, is_warmup: true, cle: 'modele-serie:0:0' },
+                { reps: 5, weight: 120, is_warmup: false, cle: 'modele-serie:0:1' },
+            ],
+        },
+        {
+            exercise: { id: 8, name: 'Développé couché', type: 'strength' },
+            order: 1,
+            cle: 'modele-ligne:1:8',
+            series: [
+                { reps: 8, weight: 80, is_warmup: false, cle: 'modele-serie:1:0' },
+                { reps: 8, weight: 82.5, is_warmup: false, cle: 'modele-serie:1:1' },
+            ],
+        },
+    ]
+
+    const fileStockee = () => JSON.parse(localStorage.getItem('offline_sync_queue') ?? '[]')
+
+    beforeEach(() => {
+        vi.stubGlobal('route', route)
+    })
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('rejette sans rien mettre en file une écriture partie sans réponse, qu’on ne veut pas garder', async () => {
+        const service = await chargé()
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const echec = await service
+            .post('/api/v1/workouts', { template_id: 3 }, { garderEnFile: false, delaiDeLaTentative: 5000 })
+            .catch((erreur) => erreur)
+
+        expect(echec).toMatchObject({ sansReponse: true, tentee: true })
+        expect(echec).not.toHaveProperty('isOffline')
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(fileStockee()).toEqual([])
+        expect(service.ecrituresEnCours()).toBe(0)
+    })
+
+    it('rejette sans la tenter, ni la mettre en file, une écriture rangée derrière une file qui ne se vide pas', async () => {
+        const service = await chargé()
+        service.mettreEnFile({ method: 'patch', url: '/api/v1/sets/3', data: { reps: 4 } })
+
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const echec = await service
+            .post('/api/v1/workouts', { template_id: 3 }, { garderEnFile: false })
+            .catch((erreur) => erreur)
+
+        expect(echec).toMatchObject({ sansReponse: true, tentee: false })
+        // Le vidage seul a tenté : la séance du modèle n'est jamais partie.
+        expect(request.mock.calls.map(([config]) => config.url)).toEqual(['/api/v1/sets/3'])
+        expect(fileStockee().map((entree) => entree.url)).toEqual(['/api/v1/sets/3'])
+    })
+
+    it('ne promet rien à mettre en file quand aucun compte ne la garderait', async () => {
+        const service = await freshService({ compte: null })
+        await service.pending
+
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+
+        await echoueSansEtreGardee(service.post('/api/v1/workouts', { template_id: 3 }, { garderEnFile: false }))
+        expect(service.mettreEnFileLaSeanceDUnModele({ cle: 'k', started_at: 'x', lignes })).toBeNull()
+        expect(fileStockee()).toEqual([])
+    })
+
+    it('met en file, en une seule écriture du stockage, la séance, ses lignes et ses séries sous les clés du modèle', async () => {
+        const service = await chargé()
+        const annonces = []
+        const noter = (evenement) => annonces.push(evenement.detail)
+        window.addEventListener('sync:queued', noter)
+        const ecriture = vi.spyOn(Storage.prototype, 'setItem')
+
+        const queueId = service.mettreEnFileLaSeanceDUnModele({
+            cle: 'cle-du-lancement',
+            nom: 'Jambes',
+            started_at: '2026-10-19T08:00:00.000Z',
+            lignes,
+        })
+
+        const ecrituresDeLaFile = ecriture.mock.calls.filter(([cle]) => cle === 'offline_sync_queue')
+        ecriture.mockRestore()
+        window.removeEventListener('sync:queued', noter)
+
+        const file = fileStockee()
+        const [seance, squat, s1, s2, developpe, d1, d2] = file
+
+        expect(ecrituresDeLaFile).toHaveLength(1)
+        expect(file).toHaveLength(7)
+        expect(seance).toMatchObject({
+            id: queueId,
+            method: 'post',
+            url: '/api/v1/workouts',
+            data: { started_at: '2026-10-19T08:00:00.000Z', name: 'Jambes' },
+            headers: { 'Idempotency-Key': 'cle-du-lancement' },
+            compte: COMPTE,
+        })
+        // Seul ce qui est en file se crée : jamais tout le modèle au rejeu.
+        expect(seance.data).not.toHaveProperty('template_id')
+        expect(squat).toMatchObject({
+            url: '/api/v1/workout-lines',
+            data: { workout_id: { enAttenteDe: queueId }, exercise_id: 7, order: 0 },
+            headers: { 'Idempotency-Key': 'modele-ligne:0:7' },
+            contexte: { exercice: { id: 7, name: 'Squat', type: 'strength' } },
+        })
+        expect(developpe.data).toEqual({ workout_id: { enAttenteDe: queueId }, exercise_id: 8, order: 1 })
+        expect([s1, s2, d1, d2].map((serie) => [serie.headers['Idempotency-Key'], serie.data])).toEqual([
+            [
+                'modele-serie:0:0',
+                {
+                    workout_line_id: { enAttenteDe: squat.id },
+                    reps: 5,
+                    weight: 100,
+                    is_warmup: true,
+                    is_completed: false,
+                },
+            ],
+            [
+                'modele-serie:0:1',
+                {
+                    workout_line_id: { enAttenteDe: squat.id },
+                    reps: 5,
+                    weight: 120,
+                    is_warmup: false,
+                    is_completed: false,
+                },
+            ],
+            [
+                'modele-serie:1:0',
+                {
+                    workout_line_id: { enAttenteDe: developpe.id },
+                    reps: 8,
+                    weight: 80,
+                    is_warmup: false,
+                    is_completed: false,
+                },
+            ],
+            [
+                'modele-serie:1:1',
+                {
+                    workout_line_id: { enAttenteDe: developpe.id },
+                    reps: 8,
+                    weight: 82.5,
+                    is_warmup: false,
+                    is_completed: false,
+                },
+            ],
+        ])
+        expect(d2).toMatchObject({
+            ajusterPar: `/api/v1/sets/${A_VENIR}`,
+            contexte: { workout_id: { enAttenteDe: queueId }, exercise_id: 8 },
+        })
+        // Rien n'est tenté : rien ne le dit.
+        expect(file.some((entree) => 'tentee' in entree)).toBe(false)
+        expect(annonces).toEqual([
+            {
+                queueId,
+                method: 'post',
+                url: '/api/v1/workouts',
+                queueIds: file.map(({ id }) => id),
+            },
+        ])
+    })
+
+    it('note tentées toutes les entrées quand le lancement est parti sans réponse', async () => {
+        const service = await chargé()
+
+        service.mettreEnFileLaSeanceDUnModele({ cle: 'k', started_at: 'x', lignes, tentee: true })
+
+        expect(fileStockee().map((entree) => entree.tentee)).toEqual(Array(7).fill(true))
+    })
+
+    it('rejoue la séance, puis chaque ligne et chaque série sous les identifiants réels, et rattrape ce que le serveur avait ignoré', async () => {
+        const service = await chargé()
+        const queueId = service.mettreEnFileLaSeanceDUnModele({
+            cle: 'k',
+            nom: 'Jambes',
+            started_at: '2026-10-19T08:00:00.000Z',
+            lignes: lignes.slice(0, 1),
+            tentee: true,
+        })
+        const [, ligne, premiere] = fileStockee()
+        // Une saisie sur la première série, fondue dans son entrée.
+        service.modifierEnFile(premiere.id, { weight: 105 })
+
+        // Le serveur avait exécuté le modèle : il rend ce qu'il a, sous chaque clé.
+        request
+            .mockResolvedValueOnce({ data: { data: { id: 42 } } })
+            .mockResolvedValueOnce({ data: { data: { id: 70, workout_id: 42, exercise_id: 7, order: 0 } } })
+            .mockResolvedValueOnce({
+                data: {
+                    data: { id: 100, workout_line_id: 70, reps: 5, weight: 100, is_warmup: true, is_completed: false },
+                },
+            })
+            .mockResolvedValueOnce({ data: { data: { id: 100, weight: 105 } } })
+            .mockResolvedValueOnce({
+                data: {
+                    data: { id: 101, workout_line_id: 70, reps: 5, weight: 120, is_warmup: false, is_completed: false },
+                },
+            })
+        await service.processQueue()
+
+        expect(
+            request.mock.calls.map(([config]) => `${config.method} ${config.url} ${JSON.stringify(config.data)}`),
+        ).toEqual([
+            'post /api/v1/workouts {"started_at":"2026-10-19T08:00:00.000Z","name":"Jambes"}',
+            'post /api/v1/workout-lines {"workout_id":42,"exercise_id":7,"order":0}',
+            'post /api/v1/sets {"workout_line_id":70,"reps":5,"weight":105,"is_warmup":true,"is_completed":false}',
+            'patch /api/v1/sets/100 {"weight":105}',
+            'post /api/v1/sets {"workout_line_id":70,"reps":5,"weight":120,"is_warmup":false,"is_completed":false}',
+        ])
+        expect(service.produitDe(queueId)).toBe(42)
+        expect(service.produitDe(ligne.id)).toBe(70)
+        expect(fileStockee()).toEqual([])
+    })
+})
+
+/*
+ * L'heure de l'appareil au départ de chaque écriture (#2049, relu le
+ * 2026-10-21). Le serveur n'en tire que l'âge du geste (`started_at`,
+ * `ended_at`), lu sur la seule horloge de l'appareil, et le place sur la
+ * sienne : un appareil en retard de trois heures faisait commencer la séance
+ * trois heures trop tôt. L'heure se lit à chaque départ, jamais à la mise en
+ * file : rejouée deux heures plus tard, l'écriture porte l'heure de ce départ,
+ * et l'âge du geste est de deux heures. Les heures des cas sont celles d'un
+ * appareil qui retarde de trois heures : seul l'écart compte.
+ */
+describe('SyncService l’heure de l’appareil au départ', () => {
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    const DEMARRAGE = {
+        url: '/api/v1/workouts',
+        data: { started_at: '2026-10-21T12:59:58.000Z' },
+        headers: { 'Idempotency-Key': 'cle-de-la-seance' },
+    }
+
+    it('part avec la tentative directe, lue à son départ', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        request.mockResolvedValue({ status: 201, data: { data: { id: 42 } } })
+        const service = await chargé()
+
+        await service.post(DEMARRAGE.url, DEMARRAGE.data, { headers: DEMARRAGE.headers })
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(request.mock.calls[0][0].data).toEqual({ started_at: '2026-10-21T12:59:58.000Z' })
+        expect(request.mock.calls[0][0].headers).toEqual({
+            'Idempotency-Key': 'cle-de-la-seance',
+            'X-Heure-De-L-Appareil': '2026-10-21T13:00:00.000Z',
+        })
+    })
+
+    it('part au rejeu avec l’heure de ce départ, jamais celle de la mise en file, et ne se range pas avec l’écriture', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+
+        const queueId = service.mettreEnFile({ method: 'post', ...DEMARRAGE })
+        await service.processQueue()
+
+        expect(service.queue.map((entree) => entree.id)).toEqual([queueId])
+        expect(service.queue[0].headers).toEqual({ 'Idempotency-Key': 'cle-de-la-seance' })
+        expect(localStorage.getItem('offline_sync_queue')).not.toContain('X-Heure-De-L-Appareil')
+
+        vi.setSystemTime(new Date('2026-10-21T15:00:00.000Z'))
+        request.mockReset()
+        request.mockResolvedValue({ status: 201, data: { data: { id: 42 } } })
+
+        await service.processQueue()
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(request.mock.calls[0][0].data).toEqual({ started_at: '2026-10-21T12:59:58.000Z' })
+        expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T15:00:00.000Z')
+        expect(service.queue).toEqual([])
+    })
+
+    /*
+     * La tentative directe attend que la file se vide d'abord : son heure se
+     * lit à son départ, après ce vidage, et non à l'appel d'`envoyer`. Lue
+     * avant, l'âge du geste perdait la durée du vidage, et le serveur plaçait
+     * le début d'autant plus tard.
+     */
+    it('part avec la tentative directe qui attend le vidage de la file, à l’heure d’après lui', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        localStorage.setItem('offline_sync_queue', JSON.stringify([aQueuedPatch('/api/v1/sets/1')]))
+        request.mockRejectedValueOnce({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+        expect(service.queue).toHaveLength(1)
+
+        request.mockReset()
+        request
+            .mockImplementationOnce(async () => {
+                vi.setSystemTime(new Date('2026-10-21T13:00:20.000Z'))
+
+                return { status: 200, data: {} }
+            })
+            .mockResolvedValueOnce({ status: 201, data: { data: { id: 42 } } })
+
+        await service.post(DEMARRAGE.url, DEMARRAGE.data, { headers: DEMARRAGE.headers })
+
+        expect(request.mock.calls.map((appel) => appel[0].url)).toEqual(['/api/v1/sets/1', '/api/v1/workouts'])
+        expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T13:00:00.000Z')
+        expect(request.mock.calls[1][0].headers).toEqual({
+            'Idempotency-Key': 'cle-de-la-seance',
+            'X-Heure-De-L-Appareil': '2026-10-21T13:00:20.000Z',
+        })
+        expect(service.queue).toEqual([])
+    })
+
+    /*
+     * Un 429 fait attendre la tentative directe avant son nouvel essai (au
+     * plus cinq secondes) : ce nouvel essai porte l'heure de son propre
+     * départ. Sans elle, le serveur prendrait maintenant ; avec celle du
+     * premier essai, il placerait le geste jusqu'à cinq secondes plus tard.
+     */
+    it('repart après un 429 avec l’heure de son nouvel essai', async () => {
+        vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        request
+            .mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '3' } }, request: {} })
+            .mockResolvedValueOnce({ status: 201, data: { data: { id: 42 } } })
+        const service = await freshService()
+
+        const envoi = service.post(DEMARRAGE.url, DEMARRAGE.data, { headers: DEMARRAGE.headers })
+        await vi.advanceTimersByTimeAsync(3000)
+        await envoi
+
+        expect(request).toHaveBeenCalledTimes(2)
+        expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T13:00:00.000Z')
+        expect(request.mock.calls[1][0].headers).toEqual({
+            'Idempotency-Key': 'cle-de-la-seance',
+            'X-Heure-De-L-Appareil': '2026-10-21T13:00:03.000Z',
+        })
     })
 })

@@ -11,9 +11,11 @@ use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
 
 /**
- * "Lancer cette séance" posts straight to templates.execute with no processing
+ * "Lancer cette séance" posted straight to templates.execute with no processing
  * state, so an impatient double tap — routine on a phone mid-session — used to
- * create two workouts the user then had to delete by hand.
+ * create two workouts the user then had to delete by hand. Since #2049 it
+ * launches through the offline queue (`useDemarrageDUneSeance`, one
+ * `POST /api/v1/workouts` with the template), behind the same guard.
  */
 class TemplateExecutionTest extends DuskTestCase
 {

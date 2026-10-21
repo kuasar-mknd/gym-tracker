@@ -1,6 +1,7 @@
 import { computed, onUnmounted } from 'vue'
 import SyncService from '@/Utils/SyncService'
 import { creerLesAttentesDeRejeu } from '@/Utils/attentesDeRejeu'
+import { isTemporaryId } from '@/Utils/pendingIds'
 import { entreeDeLaRangee } from '@/Utils/seanceEtFile'
 import { retirerDeLaListe } from '@/Utils/miseAJourOptimiste'
 import { useConfirmation } from '@/composables/useConfirmation'
@@ -135,6 +136,67 @@ export const useLignesDeLaSeance = ({
         }
     }
 
+    /** La ligne provisoire sort de l'écran, et la page dit que l'exercice n'a pas été ajouté. */
+    const renoncerALaLigne = (tempLine) => {
+        const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
+        if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
+        reportSyncFailure('L’exercice n’a pas pu être ajouté à la séance. Réessaie.')
+
+        return null
+    }
+
+    /**
+     * Crée la ligne sous la séance que le serveur connaît.
+     *
+     * @param {object} tempLine
+     * @param {number|string} realWorkoutId
+     * @returns {Promise<number|string|null>}
+     */
+    const envoyerLaLigne = (tempLine, realWorkoutId) =>
+        SyncService.post(route('api.v1.workout-lines.store'), {
+            workout_id: realWorkoutId,
+            exercise_id: tempLine.exercise_id,
+        })
+            .then((response) => adopterLaLigne(tempLine.id, response.data?.data))
+            .catch((err) => {
+                if (err.isOffline) {
+                    return suivreUneLigneEnFile(tempLine, err.queueId)
+                }
+
+                return renoncerALaLigne(tempLine)
+            })
+
+    /**
+     * Crée la ligne sous une séance démarrée sans réseau (#2049), qui porte
+     * l'identifiant provisoire de sa création en file : la ligne nomme cette
+     * entrée (`{ enAttenteDe }`) et s'y range derrière elle, sans tentative ;
+     * le vidage met à sa place l'identifiant que le serveur aura donné à la
+     * séance. Rejouée entre-temps, la séance a son identifiant réel, et la
+     * ligne part comme sous toute séance. Refusée, il n'y a plus de séance où
+     * l'ajouter.
+     *
+     * @param {object} tempLine
+     * @returns {Promise<number|string|null>}
+     */
+    const creerSousUneSeanceEnAttente = (tempLine) =>
+        pendingIds.reference(localWorkout.value.id).then((realWorkoutId) => {
+            if (realWorkoutId === null) {
+                return renoncerALaLigne(tempLine)
+            }
+
+            if (typeof realWorkoutId !== 'object') {
+                return envoyerLaLigne(tempLine, realWorkoutId)
+            }
+
+            const queueId = SyncService.mettreEnFile({
+                method: 'post',
+                url: route('api.v1.workout-lines.store'),
+                data: { workout_id: realWorkoutId, exercise_id: tempLine.exercise_id },
+            })
+
+            return queueId === null ? renoncerALaLigne(tempLine) : suivreUneLigneEnFile(tempLine, queueId)
+        })
+
     // ⚡ Perf: addExercise via API call + optimistic UI instead of Inertia redirect
     const addExercise = (exerciseId) => {
         const exercise = localExercises.value.find((e) => e.id === exerciseId)
@@ -154,22 +216,10 @@ export const useLignesDeLaSeance = ({
         localWorkout.value.workout_lines.push(tempLine)
         showAddExercise.value = false
 
-        const creation = SyncService.post(route('api.v1.workout-lines.store'), {
-            workout_id: localWorkout.value.id,
-            exercise_id: exerciseId,
-        })
-            .then((response) => adopterLaLigne(tempLine.id, response.data?.data))
-            .catch((err) => {
-                if (err.isOffline) {
-                    return suivreUneLigneEnFile(tempLine, err.queueId)
-                }
-
-                const idx = localWorkout.value.workout_lines.findIndex((l) => l.id === tempLine.id)
-                if (idx !== -1) localWorkout.value.workout_lines.splice(idx, 1)
-                reportSyncFailure('L’exercice n’a pas pu être ajouté à la séance. Réessaie.')
-
-                return null
-            })
+        // Sous une séance du serveur, la création part tout de suite, sans attendre une référence.
+        const creation = isTemporaryId(localWorkout.value.id)
+            ? creerSousUneSeanceEnAttente(tempLine)
+            : envoyerLaLigne(tempLine, localWorkout.value.id)
 
         pendingIds.track(tempLine.id, creation)
     }
