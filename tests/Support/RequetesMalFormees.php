@@ -93,10 +93,11 @@ final class RequetesMalFormees
 
     /**
      * Les variables de serveur d'une visite : ses en-têtes, et le type d'un
-     * corps JSON quand elle en porte un.
+     * corps JSON quand elle en porte un. Un en-tête en liste arrive répété
+     * (deux lignes), comme Symfony le range.
      *
-     * @param  array<string, string>  $entetes
-     * @return array<string, string>
+     * @param  array<string, string|list<string>>  $entetes
+     * @return array<string, string|list<string>>
      */
     public static function serveur(array $entetes, ?string $corps): array
     {

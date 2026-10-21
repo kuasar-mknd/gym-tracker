@@ -7,6 +7,7 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Testing\TestResponse;
+use Tests\Support\EntetesLus;
 use Tests\Support\RequetesMalFormees;
 
 use function Pest\Laravel\actingAs;
@@ -27,6 +28,14 @@ use function Pest\Laravel\actingAs;
  * l'état lié à l'adresse, page des tables comprise, dans la chaîne de
  * requête seule (`request()->query()`), et l'essai, sans défaut à trouver
  * sur l'ancien maillon, coûtait un quart de la garde.
+ *
+ * Les en-têtes que l'application lit (#2094) : la part du panneau de
+ * `UnEnTeteMalFormeNeRepondPas500Test`, mêmes formes, même recensement.
+ * Chaque page du panneau qu'une lecture atteint (aujourd'hui la marque du
+ * préchauffage, que lit `OuvreLaSession`, dans la pile du panneau) est
+ * demandée sans l'en-tête, puis sous chaque valeur inattendue : aucune 500,
+ * aucune exception rapportée, et la même réponse que sans l'en-tête, ou le
+ * refus que l'en-tête déclare.
  */
 
 it('aucune page du panneau ne répond 500 à une chaîne de requête mal formée', function (): void {
@@ -48,4 +57,54 @@ it('aucune page du panneau ne répond 500 à une chaîne de requête mal formée
     expect($visite['defauts'])->toBe([])
         ->and(count($routes))->toBeGreaterThanOrEqual(20)
         ->and($visite['requetes'])->toBe(count(RequetesMalFormees::formesDeChaine()) * count($routes));
+});
+
+it('aucune page du panneau ne répond 500 à une valeur inattendue d’un en-tête qu’elle lit', function (): void {
+    $lisent = EntetesLus::routesQuiLisent();
+    $routes = array_values(array_filter(RequetesMalFormees::routes(['GET']), RequetesMalFormees::duPanneau(...)));
+    $administrateur = RequetesMalFormees::administrateur($routes);
+    $valeurs = RequetesMalFormees::valeursDeRoute(User::factory()->create());
+    $compte = User::factory()->create();
+    $defauts = [];
+    $essais = 0;
+
+    foreach ($lisent as $entete => $parRoute) {
+        ['attendue' => $attendue, 'refus' => $refus] = EntetesLus::recenses()[$entete];
+
+        foreach ($parRoute as ['route' => $route]) {
+            if (! RequetesMalFormees::duPanneau($route)) {
+                continue;
+            }
+
+            $adresse = RequetesMalFormees::adresse($route, $valeurs);
+            $formes = EntetesLus::formes($attendue($compte));
+            $visiter = static function (?string $forme) use ($administrateur, $adresse, $entete, $formes): TestResponse {
+                Exceptions::fake();
+                RateLimiter::clear('admin-panel:127.0.0.1');
+                $entetes = $forme === null ? [] : [$entete => $formes[$forme]];
+
+                return actingAs($administrateur, 'admin')->call('GET', $adresse, [], [], [], RequetesMalFormees::serveur($entetes, null));
+            };
+            $cas = "GET {$route->uri()}, {$entete}";
+            $temoin = $visiter(null);
+            $defauts = [...$defauts, ...RequetesMalFormees::defauts($temoin, "{$cas} (témoin)")];
+
+            if (! RequetesMalFormees::temoinAtteint($route, $temoin->getStatusCode())) {
+                $defauts[] = "{$cas} (témoin) : {$temoin->getStatusCode()}, la page n'est pas atteinte";
+            }
+
+            foreach (array_keys($formes) as $forme) {
+                $reponse = $visiter($forme);
+                $essais++;
+                $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, "{$cas} ({$forme})")];
+
+                if ($reponse->getStatusCode() !== $temoin->getStatusCode() && $reponse->getStatusCode() !== $refus) {
+                    $defauts[] = "{$cas} ({$forme}) : {$reponse->getStatusCode()}, ni comme sans l'en-tête ({$temoin->getStatusCode()}) ni par son refus";
+                }
+            }
+        }
+    }
+
+    expect($defauts)->toBe([])
+        ->and($essais)->toBeGreaterThanOrEqual(20 * count(EntetesLus::formes('valeur')));
 });
