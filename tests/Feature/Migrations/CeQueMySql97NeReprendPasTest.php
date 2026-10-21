@@ -4,19 +4,71 @@ declare(strict_types=1);
 
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /*
  * `docker/mysql/avant-mysql-9-7.sql` est la vérification de la bascule vers
  * MySQL 9.7 (`.ai/rules/dependencies.md`, étapes 2 et 3) : sous 8.4, elle doit
  * nommer chaque objet qui appelle `md5()`, `sha1()` ou `sha()`, que 9.7 ne
- * fournit plus en fonctions natives, et ne rien rendre pour le schéma de
- * l'application. Chaque forme se crée dans la base du test : un ordre DDL
- * valide la transaction de `RefreshDatabase`, et ce fichier retire lui-même ce
- * qu'il a créé avant d'en rouvrir une (`.ai/rules/tests.md`). Un déclencheur ne
- * se crée pas sans le privilège SUPER quand le journal binaire est actif,
- * comme sur le service de la CI : la requête le lit (`information_schema`
- * `.TRIGGERS`), mais aucun cas ne le crée.
+ * fournit plus en fonctions natives, puis compter, sous chaque clé étrangère,
+ * les lignes dont le parent n'existe pas, qu'un essai sous 9.7 a pu écrire
+ * (#2095), et ne rien rendre pour le schéma de l'application. Chaque forme se
+ * crée dans la base du test : un ordre DDL valide la transaction de
+ * `RefreshDatabase`, et ce fichier retire lui-même ce qu'il a créé avant d'en
+ * rouvrir une (`.ai/rules/tests.md`). Un déclencheur ne se crée pas sans le
+ * privilège SUPER quand le journal binaire est actif, comme sur le service de
+ * la CI : la requête le lit (`information_schema` `.TRIGGERS`), mais aucun cas
+ * ne le crée. La vérification ne lit que la base du test (`@seule_base`) : le
+ * serveur en porte d'autres, dont elle compterait les lignes.
  */
+
+/**
+ * Ce que la vérification rend pour la base du test : chaque objet qui appelle
+ * ces fonctions en « objet : nom », et chaque clé étrangère qui a des lignes
+ * orphelines en « nom : lignes ». Les ordres se lancent un à un, comme le
+ * client `mysql` les lit, et chaque ordre qui rend des lignes en donne un
+ * résultat : les appels d'abord, les orphelines ensuite.
+ *
+ * @return array{appels: list<string>, orphelines: list<string>}
+ */
+function avantMysql97Verifier(): array
+{
+    $ordres = preg_split('/;\s*$/m', (string) file_get_contents(base_path('docker/mysql/avant-mysql-9-7.sql')));
+    $ordres = array_values(array_filter(
+        array_map(trim(...), $ordres === false ? [] : $ordres),
+        static fn (string $ordre): bool => $ordre !== '',
+    ));
+
+    $base = DB::connection()->getDatabaseName();
+    DB::statement('set @seule_base = database()');
+    $resultats = [];
+
+    foreach ($ordres as $ordre) {
+        $requete = DB::getPdo()->query($ordre);
+
+        if ($requete !== false && $requete->columnCount() > 0) {
+            $resultats[] = array_values(array_filter(
+                $requete->fetchAll(PDO::FETCH_ASSOC),
+                static fn (mixed $ligne): bool => is_array($ligne) && ($ligne['base'] ?? null) === $base,
+            ));
+        }
+    }
+
+    expect($resultats)->toHaveCount(2);
+
+    $appels = [];
+    $orphelines = [];
+
+    foreach ($resultats[0] as $ligne) {
+        $appels[] = sprintf('%s : %s', avantMysql97Texte($ligne['objet'] ?? null), avantMysql97Texte($ligne['nom'] ?? null));
+    }
+
+    foreach ($resultats[1] as $ligne) {
+        $orphelines[] = sprintf('%s : %s', avantMysql97Texte($ligne['nom'] ?? null), avantMysql97Texte($ligne['lignes'] ?? null));
+    }
+
+    return ['appels' => $appels, 'orphelines' => $orphelines];
+}
 
 /**
  * Ce que la vérification trouve dans la base du test, chaque objet en
@@ -26,31 +78,15 @@ use Illuminate\Support\Facades\DB;
  */
 function avantMysql97Trouvailles(): array
 {
-    $ordres = preg_split('/;\s*$/m', (string) file_get_contents(base_path('docker/mysql/avant-mysql-9-7.sql')));
-    $ordres = array_values(array_filter(
-        array_map(trim(...), $ordres === false ? [] : $ordres),
-        static fn (string $ordre): bool => $ordre !== '',
-    ));
-    $requete = array_pop($ordres);
-    assert(is_string($requete));
+    return avantMysql97Verifier()['appels'];
+}
 
-    foreach ($ordres as $ordre) {
-        DB::statement($ordre);
-    }
-
-    $base = DB::connection()->getDatabaseName();
-    $trouvailles = [];
-
-    foreach (DB::select($requete) as $ligne) {
-        $objet = data_get($ligne, 'objet');
-        $nom = data_get($ligne, 'nom');
-
-        if (data_get($ligne, 'base') === $base && is_string($objet) && is_string($nom)) {
-            $trouvailles[] = "{$objet} : {$nom}";
-        }
-    }
-
-    return $trouvailles;
+/**
+ * Une valeur rendue par le serveur, en texte.
+ */
+function avantMysql97Texte(mixed $valeur): string
+{
+    return is_scalar($valeur) ? (string) $valeur : '?';
 }
 
 /**
@@ -72,6 +108,15 @@ function avantMysql97LeServeurCalculeMd5(): bool
  * Retire de la base du test chaque objet que ces cas créent (`avant97_…`).
  */
 function avantMysql97Retirer(): void
+{
+    Schema::withoutForeignKeyConstraints(avantMysql97RetirerLesObjets(...));
+}
+
+/**
+ * Retire les objets, les clés étrangères coupées : une table visée par une
+ * autre ne se retire pas d'abord sans cela.
+ */
+function avantMysql97RetirerLesObjets(): void
 {
     DB::statement('drop procedure if exists avant97_p');
     DB::statement('drop event if exists avant97_e');
@@ -100,7 +145,21 @@ afterEach(function (): void {
 });
 
 it('ne trouve rien dans le schéma de l’application', function (): void {
-    expect(avantMysql97Trouvailles())->toBe([]);
+    expect(avantMysql97Verifier())->toBe(['appels' => [], 'orphelines' => []]);
+});
+
+it('compte les lignes orphelines de chaque clé étrangère, et rien sous une clé que la ligne ne vise pas', function (): void {
+    DB::statement('create table avant97_parent (id int primary key, a int not null, b int not null, unique key avant97_ab (a, b))');
+    DB::statement('create table avant97_enfant (id int primary key, parent_id int null, a int null, b int null, constraint avant97_fk foreign key (parent_id) references avant97_parent (id), constraint avant97_fk_ab foreign key (a, b) references avant97_parent (a, b))');
+    DB::statement('create table avant97_sain (id int primary key, parent_id int not null, constraint avant97_fk_sain foreign key (parent_id) references avant97_parent (id))');
+    DB::insert('insert into avant97_parent (id, a, b) values (1, 10, 20)');
+    DB::insert('insert into avant97_sain (id, parent_id) values (1, 1)');
+
+    Schema::withoutForeignKeyConstraints(static function (): void {
+        DB::insert('insert into avant97_enfant (id, parent_id, a, b) values (1, 1, 10, 20), (2, 2, 10, 21), (3, 3, null, 20), (4, null, 11, 20)');
+    });
+
+    expect(avantMysql97Verifier())->toBe(['appels' => [], 'orphelines' => ['avant97_enfant.avant97_fk : 2', 'avant97_enfant.avant97_fk_ab : 2']]);
 });
 
 it('nomme chaque objet que 9.7 ne reprendrait pas, et rien de ce qui appelle SHA2()', function (array $ordres, array $trouvailles): void {
