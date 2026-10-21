@@ -133,6 +133,49 @@ describe('une séance dont la création attend la file', () => {
         )
     })
 
+    /*
+     * La création aboutit, mais la ligne qui la nomme (`{ enAttenteDe }`) vole
+     * encore dans la file : la visite partie avant sa réponse ouvrait la séance
+     * réelle sans l'exercice qu'elle ajoute (#2049, relu le 2026-10-21).
+     */
+    it('ne passe pas à la séance réelle tant qu’une écriture de la séance attend la file, puis y passe après sa réponse', async () => {
+        const queueId = mettreLaSeanceEnFile()
+        sync.mettreEnFile({
+            method: 'post',
+            url: '/api/v1/workout-lines',
+            data: { workout_id: { enAttenteDe: queueId }, exercise_id: 7 },
+            headers: { 'Idempotency-Key': 'cle-de-la-ligne' },
+        })
+        await monter({ id: `temp-q${queueId}`, idempotency_key: CLE })
+
+        let repondreALaLigne = () => {}
+        const ligneEnVol = new Promise((resolve) => {
+            repondreALaLigne = () => resolve({ status: 201, data: { data: { id: 77 } } })
+        })
+        serveur.reponses.push(async () => ({ status: 201, data: { data: { id: 42 } } }))
+        serveur.reponses.push(() => ligneEnVol)
+        // La mise en file a déjà tenté la création, sans réseau.
+        serveur.requetes.length = 0
+
+        const vidage = sync.processQueue()
+        await vi.waitFor(() =>
+            expect(serveur.requetes).toEqual(['post /api/v1/workouts', 'post /api/v1/workout-lines']),
+        )
+        await uneTache()
+        await uneTache()
+
+        expect(sync.enAttente()).toBe(1)
+        expect(routeur.visit).not.toHaveBeenCalled()
+
+        repondreALaLigne()
+        await vidage
+        await uneTache()
+
+        expect(sync.enAttente()).toBe(0)
+        expect(routeur.visit).toHaveBeenCalledTimes(1)
+        expect(routeur.visit).toHaveBeenCalledWith('/workouts/42', expect.objectContaining({ replace: true }))
+    })
+
     it('ne passe pas à la séance réelle tant qu’un champ a le focus, puis y passe à sa sortie', async () => {
         const queueId = mettreLaSeanceEnFile()
         const { wrapper } = await monter({ id: `temp-q${queueId}`, idempotency_key: CLE })
