@@ -38,8 +38,8 @@ class WorkoutStoreRequest extends FormRequest
      * il prend la plage de la colonne du début, un `DATETIME`, comme la fin
      * (`WorkoutFinishRequest`). La plage d'un horodatage refusait en 422 le
      * démarrage d'un appareil dont l'horloge passait 2038 ou restait en
-     * 1970, et la file perdait la séance avec ses séries, quand le début
-     * borné reste dans les trente jours passés (relu le 2026-10-21). Le
+     * 1970, et la file perdait la séance avec ses séries ; le début borné,
+     * lui, reste dans les trente jours passés (relu le 2026-10-21). Le
      * modèle se cherche parmi ceux du compte : celui d'un autre, ou un modèle
      * disparu, reçoit le même refus. Il passe `bail` et `integer` avant
      * `exists` : un tableau imbriqué partait sinon dans `whereIn()`, qui lève

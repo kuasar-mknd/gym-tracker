@@ -57,10 +57,10 @@ final class HeureDeLAppareil
      * (`FORME_D_UN_INSTANT`), ou n'est pas une date du calendrier : sans
      * fuseau, Carbon les lirait dans celui du serveur, et une date en mots
      * (`now`) sur son horloge, celle que l'âge écarte. Le serveur prend alors
-     * maintenant. Les deux se lisent
-     * tels que l'appareil les envoie, avec leur décalage : ramenés à l'heure
-     * murale de l'application, deux instants de l'heure que le passage à
-     * l'heure d'hiver répète se confondraient.
+     * maintenant. Les deux se lisent tels que l'appareil les envoie, avec
+     * leur décalage : ramenés à l'heure murale de l'application, deux
+     * instants de l'heure que le passage à l'heure d'hiver répète se
+     * confondraient.
      */
     public static function ageDe(mixed $instant, mixed $heureAuDepart): ?int
     {
