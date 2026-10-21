@@ -37,14 +37,27 @@ final class HeureDeLAppareil
     public const string ENTETE = 'X-Heure-De-L-Appareil';
 
     /**
+     * La seule forme lue : une date et une heure du calendrier, suivies de
+     * leur fuseau, comme `toISOString()` les écrit (`2026-10-21T16:00:00.000Z`),
+     * ou avec un décalage (`2026-10-21T18:00:00+02:00`), sans rien avant ni
+     * après. Une date suivie de mots (`+1 day`, `next monday`, `noon`) se lit
+     * sans erreur, et Carbon en applique le sens : l'âge suivait les mots, et
+     * deux décalages démesurés faisaient déborder la soustraction, en 500
+     * avant même la validation (relu le 2026-10-21). L'année tient sur quatre
+     * chiffres : l'âge reste loin des bornes d'un entier.
+     */
+    private const string FORME_D_UN_INSTANT = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/D';
+
+    /**
      * L'âge, en secondes, de l'instant `$instant` au départ de la requête
      * (`$heureAuDepart`), tous deux lus sur l'horloge de l'appareil ; négatif
      * si l'instant suit le départ.
      *
-     * Rien (null) quand l'un des deux manque, n'est pas une date du
-     * calendrier, ou ne dit pas son fuseau : sans lui, Carbon les lirait dans
-     * celui du serveur, et une date en mots (`now`) sur son horloge, celle
-     * que l'âge écarte. Le serveur prend alors maintenant. Les deux se lisent
+     * Rien (null) quand l'un des deux manque, n'a pas la forme d'un instant
+     * (`FORME_D_UN_INSTANT`), ou n'est pas une date du calendrier : sans
+     * fuseau, Carbon les lirait dans celui du serveur, et une date en mots
+     * (`now`) sur son horloge, celle que l'âge écarte. Le serveur prend alors
+     * maintenant. Les deux se lisent
      * tels que l'appareil les envoie, avec leur décalage : ramenés à l'heure
      * murale de l'application, deux instants de l'heure que le passage à
      * l'heure d'hiver répète se confondraient.
@@ -63,14 +76,14 @@ final class HeureDeLAppareil
     }
 
     /**
-     * Une date du calendrier qui dit son fuseau (`Z`, `+02:00`), comme
-     * `toISOString()` l'écrit.
+     * Une date du calendrier qui dit son fuseau (`Z`, `+02:00`), dans la
+     * forme que `toISOString()` écrit (`FORME_D_UN_INSTANT`), et rien d'autre.
      *
      * @phpstan-assert-if-true string $valeur
      */
     private static function estUnInstant(mixed $valeur): bool
     {
-        if (! is_string($valeur)) {
+        if (! is_string($valeur) || preg_match(self::FORME_D_UN_INSTANT, $valeur) !== 1) {
             return false;
         }
 

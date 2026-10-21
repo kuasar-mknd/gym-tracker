@@ -7,6 +7,7 @@ use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use App\Support\HeureDeLAppareil;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -168,7 +169,9 @@ it('rejoue une fin faite quarante minutes plus tôt à l’heure du geste, quell
  * Sans l'heure de l'appareil au départ, l'instant du geste ne se compare à
  * rien : le serveur prend maintenant, comme sans instant. Une heure de départ
  * qui ne dit pas son fuseau, ou écrite en mots, se lirait sur l'horloge du
- * serveur : elle ne compte pas davantage.
+ * serveur : elle ne compte pas davantage. Une date suivie de mots relatifs
+ * non plus (relu le 2026-10-21) : Carbon en appliquait le décalage, et la
+ * fin d'une séance retombait sur son début.
  */
 dataset('heures de départ que le serveur ne lit pas', [
     'absente' => [null],
@@ -176,6 +179,8 @@ dataset('heures de départ que le serveur ne lit pas', [
     'en mots' => ['now'],
     'pas une date' => ['quinze heures'],
     'un 30 février' => ['2026-02-30T15:00:00Z'],
+    'suivie d’un décalage relatif' => ['2026-10-21T15:00:00Z +1 day'],
+    'suivie d’un décalage démesuré' => ['2026-10-21T15:00:00Z +290000000000 years'],
 ]);
 
 it('démarre maintenant quand l’heure de l’appareil au départ ne se lit pas', function (?string $heureAuDepart): void {
@@ -264,11 +269,41 @@ dataset('âges lus sur l’appareil', [
     'l’instant en mots' => ['yesterday', '2026-10-21T15:30:00Z', null],
     'l’instant absent' => [null, '2026-10-21T15:30:00Z', null],
     'un tableau en en-tête' => ['2026-10-21T15:00:00Z', ['2026-10-21T15:30:00Z'], null],
+    'l’heure de départ suivie d’un jour en mots' => ['2026-10-21T10:00:00Z', '2026-10-21 10:00:00 UTC next monday', null],
+    'l’heure de départ suivie d’une heure en mots' => ['2026-10-21T10:00:00Z', '2026-10-21T10:00:00Z noon', null],
+    'deux décalages démesurés' => ['2026-10-21T10:00:00Z -290000000000 years', '2026-10-21T10:00:00Z +290000000000 years', null],
 ]);
 
 it('lit l’âge du geste sur la seule horloge de l’appareil', function (mixed $instant, mixed $heureAuDepart, ?int $attendu): void {
     expect(HeureDeLAppareil::ageDe($instant, $heureAuDepart))->toBe($attendu);
 })->with('âges lus sur l’appareil');
+
+/*
+ * Deux heures démesurées, d'un côté et de l'autre, faisaient déborder la
+ * soustraction de leurs horodatages : le démarrage et la fin répondaient 500,
+ * avant même la validation, et l'exception s'enregistrait, là où le même
+ * corps sans l'en-tête reçoit un refus sur son champ (#2071, relu le
+ * 2026-10-21).
+ */
+it('refuse sur son champ, comme sans l’en-tête, un instant et une heure de départ démesurés', function (): void {
+    Exceptions::fake();
+    $compte = User::factory()->create();
+    $geste = '2026-10-21T10:00:00Z -290000000000 years';
+    $depart = '2026-10-21T10:00:00Z +290000000000 years';
+
+    horlogeDecaleeDemarrer($compte, ['started_at' => $geste], $depart)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['started_at']);
+
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'started_at' => '2026-10-21 17:00:00', 'ended_at' => null]);
+
+    horlogeDecaleeTerminer($compte, ['workout_id' => $seance->id, 'ended_at' => $geste], $depart)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['ended_at']);
+
+    Exceptions::assertNothingReported();
+    expect($seance->refresh()->ended_at)->toBeNull();
+});
 
 /*
  * La file écrit l'en-tête, le serveur le lit : leurs deux noms ne doivent pas
