@@ -7,7 +7,7 @@ declare(strict_types=1);
  * donne dépend du jour où son éditeur l'a reconstruite. Une version de PHP qui
  * corrige une faille ne doit donc pas reposer sur ce jour : le Dockerfile pose
  * un plancher, que la construction vérifie avant tout le reste et sous lequel
- * elle s'arrête (#PR). 8.5.12 corrige CVE-2026-109618 et CVE-2026-109619.
+ * elle s'arrête (#2092). 8.5.12 corrige CVE-2026-109618 et CVE-2026-109619.
  */
 
 /** Le plus ancien PHP que l'image accepte de livrer. */
