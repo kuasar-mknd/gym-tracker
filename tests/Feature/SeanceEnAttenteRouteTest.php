@@ -52,6 +52,8 @@ it('ne confond pas une clé avec la même en capitales', function (): void {
 });
 
 it('répond pareil à une clé inconnue et à la clé d’une séance d’un autre compte', function (): void {
+    // L'échéance des cookies suit l'horloge : une seconde qui passait entre les deux relevés les faisait différer.
+    $this->freezeSecond();
     $compte = User::factory()->create();
     seanceEnAttenteDeCle(User::factory()->create(), '1f2e3d4c-2049-4b5a-9c8d-0000000000f2');
 
