@@ -34,19 +34,23 @@ class WorkoutStoreRequest extends FormRequest
      * Le début est l'heure du geste sur l'appareil, dont seul l'âge au départ
      * de la requête compte (`ageDuGeste()`, `HeureDeLAppareil`), que l'action
      * place sur sa lecture de l'horloge et borne aux trente jours passés
-     * (`Workout::debutBorne()`). Sa colonne est un `DATETIME`, mais il
-     * devient la dernière séance du compte (`users.last_workout_at`, un
-     * `TIMESTAMP`) : il prend la plage d'un horodatage. Le modèle se cherche parmi ceux du compte : celui d'un
-     * autre, ou un modèle disparu, reçoit le même refus. Il passe `bail` et
-     * `integer` avant `exists` : un tableau imbriqué partait sinon dans
-     * `whereIn()`, qui lève (#2071).
+     * (`Workout::debutBorne()`). L'instant lui-même ne s'écrit nulle part :
+     * il prend la plage de la colonne du début, un `DATETIME`, comme la fin
+     * (`WorkoutFinishRequest`). La plage d'un horodatage refusait en 422 le
+     * démarrage d'un appareil dont l'horloge passait 2038 ou restait en
+     * 1970, et la file perdait la séance avec ses séries, quand le début
+     * borné reste dans les trente jours passés (relu le 2026-10-21). Le
+     * modèle se cherche parmi ceux du compte : celui d'un autre, ou un modèle
+     * disparu, reçoit le même refus. Il passe `bail` et `integer` avant
+     * `exists` : un tableau imbriqué partait sinon dans `whereIn()`, qui lève
+     * (#2071).
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'started_at' => ['bail', 'sometimes', 'required', 'date', DateQueSaColonneTient::horodatage()],
+            'started_at' => ['bail', 'sometimes', 'required', 'date', DateQueSaColonneTient::date()],
             'name' => ['bail', 'sometimes', 'nullable', 'string', 'max:255'],
             'template_id' => [
                 'bail',

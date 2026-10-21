@@ -209,7 +209,10 @@ function bornesBaseDates(): array
         [UpdateFastRequest::class, 'end_time', ['fasts.end_time']],
         // Le début d'une séance devient la dernière séance du compte.
         [UpdateWorkoutRequest::class, 'started_at', ['workouts.started_at', 'users.last_workout_at']],
-        [WorkoutStoreRequest::class, 'started_at', ['workouts.started_at', 'users.last_workout_at']],
+        // L'heure du geste sur l'appareil ne s'écrit nulle part : seul son
+        // âge compte (`Workout::debutBorne()`), et l'instant prend la plage
+        // de la colonne du début, comme la fin (#2049).
+        [WorkoutStoreRequest::class, 'started_at', ['workouts.started_at']],
         [WorkoutFinishRequest::class, 'ended_at', ['workouts.ended_at']],
         [DailyJournalStoreRequest::class, 'date', ['daily_journals.date']],
         [ToggleHabitRequest::class, 'date', ['habit_logs.date']],

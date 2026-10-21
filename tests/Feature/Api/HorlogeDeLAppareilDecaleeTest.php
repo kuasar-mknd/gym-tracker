@@ -222,6 +222,40 @@ it('mesure l’âge d’un geste fait dans l’heure que le passage à l’heure
     'à 2 h 30 de l’heure d’hiver' => ['2026-10-25T01:30:00.000Z', '2026-10-25T01:35:00.000Z'],
 ]);
 
+/*
+ * L'instant du geste ne s'écrit nulle part : seul son âge compte. Une horloge
+ * d'appareil passée au-delà du 17 janvier 2038, ou restée en 1970, sortait
+ * pourtant de la plage d'un horodatage que la validation lui imposait encore,
+ * et le démarrage recevait un 422 : la file tenait la séance pour refusée, et
+ * ses séries avec elle (relu le 2026-10-21).
+ */
+dataset('horloges d’appareil hors de la plage d’un horodatage', [
+    'au-delà de 2038 au geste, remise à l’heure avant l’envoi' => ['2040-01-01T10:00:00.000Z', '2026-10-21T16:00:00.000Z', '2026-10-21 18:00:00'],
+    'au-delà de 2038 jusqu’à l’envoi' => ['2040-01-01T10:00:00.000Z', '2040-01-01T10:00:02.000Z', '2026-10-21 17:59:58'],
+    'restée en 1970 jusqu’à l’envoi' => ['1970-01-01T00:10:00.000Z', '1970-01-01T00:10:02.000Z', '2026-10-21 17:59:58'],
+]);
+
+it('démarre à l’heure du serveur, moins l’âge du geste, une horloge d’appareil hors de la plage d’un horodatage', function (string $geste, string $depart, string $debut): void {
+    $compte = User::factory()->create();
+
+    horlogeDecaleeDemarrer($compte, ['started_at' => $geste], $depart)->assertCreated();
+
+    expect(horlogeDecaleeDebut($compte))->toBe($debut);
+})->with('horloges d’appareil hors de la plage d’un horodatage');
+
+it('lance un modèle depuis un appareil dont l’horloge passait 2038 au geste, remise à l’heure avant l’envoi', function (): void {
+    $compte = User::factory()->create();
+    $modele = WorkoutTemplate::factory()->create(['user_id' => $compte->id, 'name' => 'Dos']);
+
+    horlogeDecaleeDemarrer(
+        $compte,
+        ['template_id' => $modele->id, 'started_at' => '2040-01-01T10:00:00.000Z'],
+        '2026-10-21T16:00:00.000Z',
+    )->assertCreated();
+
+    expect(horlogeDecaleeDebut($compte))->toBe('2026-10-21 18:00:00');
+});
+
 dataset('âges lus sur l’appareil', [
     'en UTC' => ['2026-10-21T15:00:00.000Z', '2026-10-21T15:30:00.000Z', 1800],
     'avec un décalage' => ['2026-10-21T17:00:00+02:00', '2026-10-21T15:30:00Z', 1800],
