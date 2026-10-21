@@ -62,11 +62,23 @@ use function Pest\Laravel\json;
  * une requête valide sous 400, une autre écriture ni 401, ni 404, ni 405),
  * puis sous chaque valeur inattendue de `EntetesLus::formes()` : vide, très
  * longue, répétée (en deux lignes et en une), hors UTF-8, hors ASCII, la
- * valeur attendue suivie de mots, une date suivie de mots, des nombres
- * démesurés. Aucune réponse n'est une 500, aucune exception n'est rapportée
- * (`RequetesMalFormees::defauts()`, `Exceptions::fake()` avant chaque
- * requête), et chacune répond comme le témoin, ou par le refus que
- * l'en-tête déclare : une valeur ignorée laisse l'écriture se faire.
+ * valeur attendue suivie de mots, une date suivie de mots, les deux bouts
+ * du calendrier, des nombres démesurés. Aucune réponse n'est une 500,
+ * aucune exception n'est rapportée (`RequetesMalFormees::defauts()`,
+ * `Exceptions::fake()` avant chaque requête), et chacune répond comme le
+ * témoin, ou par le refus que l'en-tête déclare : une valeur ignorée laisse
+ * l'écriture se faire.
+ *
+ * Le corps et l'en-tête à la fois. Une requête de validation lit l'heure de
+ * l'appareil avec l'instant du corps, avant de le valider : deux dates
+ * suivies de mots démesurés, l'une au corps, l'autre à l'en-tête, faisaient
+ * déborder leur soustraction (#2093), ce qu'aucune des deux gardes ne voit
+ * seule, l'une n'envoyant que des en-têtes sous un corps valide, l'autre que
+ * des corps sans en-tête. Chaque écriture qui lit un en-tête après ses
+ * middlewares reçoit donc aussi chaque valeur inattendue de l'en-tête sous
+ * chaque corps mal formé de `UneRequeteMalFormeeNeRepondPas500Test`
+ * (`RequetesMalFormees::formesDeCorps()`, dont une date suivie de mots
+ * démesurés) : aucune 500, aucune exception rapportée.
  *
  * Limites. Les pages du panneau ont leur part dans
  * `UnePageDuPanneauNeRepondPas500Test`. Sous `/api/v1`, la requête porte
@@ -90,18 +102,20 @@ beforeEach(function (): void {
  * Envoie à une route qui lit `$entete` sa requête, sans l'en-tête (`$forme`
  * nulle, le témoin) ou sous cette forme de `EntetesLus::formes()`. Une route
  * qui a une requête valide la reçoit pour un compte neuf ; une autre, pour
- * le compte commun, avec des paramètres neufs pour une écriture.
+ * le compte commun, avec des paramètres neufs pour une écriture. Un
+ * `$corpsMalForme` remplace le corps d'une écriture, pour le compte commun.
  *
  * @param  Closure(string): string  $valeursDesPages
+ * @param  array<mixed>|null  $corpsMalForme
  * @return TestResponse<Response>
  */
-function enteteMalFormeEssayer(Route $route, string $entete, ?string $forme, User $compteCommun, Closure $valeursDesPages): TestResponse
+function enteteMalFormeEssayer(Route $route, string $entete, ?string $forme, User $compteCommun, Closure $valeursDesPages, ?array $corpsMalForme = null): TestResponse
 {
     $valide = EntetesLus::requetesValides()[(string) $route->getName()] ?? null;
     $ecriture = $route->methods() !== ['GET', 'HEAD'];
-    $compte = $valide === null ? $compteCommun : User::factory()->create();
+    $compte = $valide === null || $corpsMalForme !== null ? $compteCommun : User::factory()->create();
     $adresse = RequetesMalFormees::adresse($route, $ecriture ? RequetesMalFormees::valeursDeRoute($compte, neuve: true) : $valeursDesPages);
-    $corps = $valide === null ? [] : $valide($compte);
+    $corps = $corpsMalForme ?? ($valide === null ? [] : $valide($compte));
     $entetes = $forme === null ? [] : [$entete => EntetesLus::formes(EntetesLus::recenses()[$entete]['attendue']($compte))[$forme]];
 
     Exceptions::fake();
@@ -168,6 +182,35 @@ it('aucune route de l’application ne répond 500 à une valeur inattendue d’
     expect($defauts)->toBe([])
         ->and(array_keys($essais))->toEqualCanonicalizing(array_keys(EntetesLus::recenses()))
         ->and($essais['X-Compte-De-L-Ecriture'] ?? 0)->toBeGreaterThanOrEqual(100 * count($formes));
+});
+
+it('aucune écriture qui lit un en-tête après ses middlewares ne répond 500 sous un en-tête et un corps mal formés à la fois', function (): void {
+    $compte = User::factory()->create();
+    $valeursDesPages = RequetesMalFormees::valeursDeRoute($compte);
+    $formes = array_keys(EntetesLus::formes('valeur'));
+    $defauts = [];
+    $essais = 0;
+
+    foreach (EntetesLus::routesQuiLisent() as $entete => $lisent) {
+        foreach ($lisent as ['route' => $route, 'apresLesMiddlewares' => $apres]) {
+            if (! $apres || $route->methods() === ['GET', 'HEAD']) {
+                continue;
+            }
+
+            $methode = array_first(array_diff($route->methods(), ['GET', 'HEAD']));
+
+            foreach (RequetesMalFormees::formesDeCorps() as $formeDuCorps => $valeur) {
+                foreach ($formes as $forme) {
+                    $reponse = enteteMalFormeEssayer($route, $entete, $forme, $compte, $valeursDesPages, RequetesMalFormees::corpsMalForme($valeur));
+                    $essais++;
+                    $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, "{$methode} {$route->uri()}, {$entete} ({$forme}), corps ({$formeDuCorps})")];
+                }
+            }
+        }
+    }
+
+    expect($defauts)->toBe([])
+        ->and($essais)->toBeGreaterThanOrEqual(7 * count(RequetesMalFormees::formesDeCorps()) * count($formes));
 });
 
 it('recense chaque en-tête que le code de app/ lit, et en déduit les routes qui le lisent', function (): void {
