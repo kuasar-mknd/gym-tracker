@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Cache;
 
@@ -45,21 +46,37 @@ use Illuminate\Support\Facades\Cache;
  * INSERT est atomique, et `Workout::saved` envoie aussitôt les travaux des
  * succès et des objectifs, qui partiraient avant la validation. Le lancement
  * d'un modèle garde la sienne, qui se valide avant que le verrou se rende.
+ *
+ * La fin d'une séance prend le même verrou (`verrouDuCompte()`,
+ * `TerminerLaSeanceAction`, et `UpdateWorkoutAction` quand la page termine) :
+ * un démarrage qui arrive pendant la fin de la séance en cours l'attend, au
+ * lieu de la lire encore ouverte et de se refuser.
  */
 final readonly class DemarrerUneSeanceAction
 {
     /**
-     * Combien de secondes le verrou d'un démarrage vit au plus. Il se rend à
-     * la fin de la section ; cette durée ne sert que si le processus meurt
-     * sans le rendre, et couvre de loin le lancement du plus grand modèle.
+     * Combien de secondes le verrou d'un démarrage ou d'une fin vit au plus.
+     * Il se rend à la fin de la section ; cette durée ne sert que si le
+     * processus meurt sans le rendre, et couvre de loin le lancement du plus
+     * grand modèle.
      */
     public const int VIE_DU_VERROU = 10;
 
     /**
-     * Combien de secondes un démarrage attend le verrou d'un autre avant
-     * d'abandonner par une `LockTimeoutException`.
+     * Combien de secondes un démarrage ou une fin attend le verrou d'un autre
+     * avant d'abandonner par une `LockTimeoutException`.
      */
     public const int ATTENTE_DU_VERROU = 10;
+
+    /**
+     * Le verrou des séances d'un compte : le démarrage et la fin le prennent,
+     * et passent ainsi l'un après l'autre (#2049). Celui du compte seulement :
+     * les autres comptes démarrent et terminent sans l'attendre.
+     */
+    public static function verrouDuCompte(int $idDuCompte): Lock
+    {
+        return Cache::lock("seances-du-compte:{$idDuCompte}", self::VIE_DU_VERROU);
+    }
 
     public function __construct(
         private CreateWorkoutAction $creerUneSeance,
@@ -83,7 +100,7 @@ final readonly class DemarrerUneSeanceAction
         $debut = Workout::debutBorne($debutSurLAppareil, $maintenant);
 
         /** @var Workout $seance */
-        $seance = Cache::lock("demarrage-de-seance:{$user->id}", self::VIE_DU_VERROU)
+        $seance = self::verrouDuCompte($user->id)
             ->block(self::ATTENTE_DU_VERROU, fn (): Workout => $this->sousLeVerrou($user, $cle, $modele, $debut, $nom));
 
         return $seance;

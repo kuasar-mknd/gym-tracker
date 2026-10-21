@@ -72,9 +72,13 @@ class Workout extends Model
      * (#2049).
      *
      * Une fin dans le futur fermerait la séance à une heure qui n'est pas
-     * venue ; une fin d'avant le début donnerait une durée négative, ce
-     * qu'une fin web laissait faire après un début déplacé dans le futur par
-     * les réglages. Une fin rejouée longtemps après garde l'heure du geste.
+     * venue ; une fin d'avant le début donnerait une durée négative. Quand
+     * les deux bornes se contredisent, le début l'emporte : seul un début
+     * futur les fait se contredire, que ni le démarrage (`debutBorne()`) ni
+     * les réglages (`UpdateWorkoutRequest`) n'écrivent plus, mais que le
+     * panneau peut poser ou qu'une séance plus ancienne peut porter ; elle se
+     * ferme alors à ce début, avec une durée nulle. Une fin rejouée longtemps
+     * après garde l'heure du geste.
      */
     public function finBornee(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): Carbon
     {

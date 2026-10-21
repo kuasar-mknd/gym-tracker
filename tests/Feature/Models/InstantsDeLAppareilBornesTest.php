@@ -73,9 +73,10 @@ it('prend la fin de l’appareil entre le début et maintenant', function (?stri
 })->with('fins venues de l’appareil');
 
 /*
- * Une fin bornée à maintenant sur une séance dont le début a été déplacé dans
- * le futur (les réglages l'acceptent) revient au début : la durée n'est jamais
- * négative.
+ * Une fin bornée à maintenant sur une séance dont le début est dans le futur
+ * revient au début : la durée n'est jamais négative. Les réglages refusent un
+ * tel début depuis #2049 ; le panneau peut encore le poser, et une séance
+ * plus ancienne le porter.
  */
 it('ne termine jamais une séance avant son début, même déplacé dans le futur', function (): void {
     $maintenant = instantsBornesMaintenant();

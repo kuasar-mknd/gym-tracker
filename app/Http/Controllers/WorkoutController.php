@@ -117,7 +117,7 @@ class WorkoutController extends Controller
 
         /** @var array{started_at?: string|null, name?: string|null, notes?: string|null, is_finished?: bool} $data */
         $data = $request->validated();
-        $updateWorkout->execute($workout, $data);
+        $updateWorkout->execute($workout, $data, $request->maintenant());
 
         if ($request->boolean('is_finished')) {
             if ($this->user()->doitRecevoirLInvitationAuxNotifications()) {

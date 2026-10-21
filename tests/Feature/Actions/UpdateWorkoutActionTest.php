@@ -169,17 +169,44 @@ it('garde les statistiques en cache quand seules les notes changent', function (
 });
 
 /*
- * Les réglages acceptent un début dans le futur : terminer la séance juste
- * après lui donnait une fin d'avant son début, une durée négative. La fin
- * de la page se borne comme celle de l'appareil (#2049) : au plus tôt le
- * début.
+ * Un début dans le futur fermait la séance à une heure qui n'était pas venue :
+ * les réglages l'acceptaient, et la fin, bornée au plus tôt au début (#2049),
+ * tombait à ce début futur. Les réglages le refusent désormais, sur leur
+ * champ, et la séance n'est ni déplacée ni close.
  */
-it('ne termine jamais la séance avant son début, même déplacé dans le futur', function (): void {
+it('refuse un début dans le futur, sans déplacer ni clore la séance', function (): void {
     \Illuminate\Support\Carbon::setTestNow('2026-10-19 12:00:00');
     $user = User::factory()->create();
     $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subHour(), 'ended_at' => null]);
 
-    app(UpdateWorkoutAction::class)->execute($workout, ['started_at' => '2026-10-19 13:30:00', 'is_finished' => true]);
+    $this->actingAs($user)
+        ->patchJson(route('workouts.update', $workout), ['started_at' => '2026-10-19T11:30:00Z', 'is_finished' => true])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['started_at' => 'Le début de la séance ne peut pas être dans le futur.']);
 
-    expect($workout->refresh()->ended_at?->toDateTimeString())->toBe('2026-10-19 13:30:00');
+    expect($workout->refresh()->started_at->toDateTimeString())->toBe('2026-10-19 11:00:00')
+        ->and($workout->ended_at)->toBeNull();
+});
+
+/*
+ * Le refus d'un début futur et la fin de la séance lisent le même instant,
+ * celui de la requête (`.ai/rules/horloge.md`) : l'horloge avance après la
+ * validation, au moment où le conteneur résout l'action, et la fin reste à
+ * l'instant qui a jugé le début, égal à lui.
+ */
+it('termine la séance à l’instant qui a jugé son début', function (): void {
+    \Illuminate\Support\Carbon::setTestNow('2026-10-19 12:00:00');
+    $user = User::factory()->create();
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subHour(), 'ended_at' => null]);
+
+    $this->app->resolving(UpdateWorkoutAction::class, function (): void {
+        \Illuminate\Support\Carbon::setTestNow('2026-10-19 13:00:00');
+    });
+
+    $this->actingAs($user)
+        ->patchJson(route('workouts.update', $workout), ['started_at' => '2026-10-19T10:00:00Z', 'is_finished' => true])
+        ->assertRedirect(route('dashboard'));
+
+    expect($workout->refresh()->started_at->toDateTimeString())->toBe('2026-10-19 12:00:00')
+        ->and($workout->ended_at?->toDateTimeString())->toBe('2026-10-19 12:00:00');
 });

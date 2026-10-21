@@ -315,5 +315,8 @@ return [
         'measurement_type' => [
             'required_if' => 'Choisis la mensuration suivie.',
         ],
+        'started_at' => [
+            'before_or_equal' => 'Le début de la séance ne peut pas être dans le futur.',
+        ],
     ],
 ];

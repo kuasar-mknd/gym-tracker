@@ -21,11 +21,12 @@ use Illuminate\Support\Facades\DB;
  *
  * La date d'une séance se change depuis ses réglages, tant qu'elle n'est pas
  * terminée : la séance déplacée est donc toujours ouverte, les autres
- * terminées.
+ * terminées. Elle ne passe pas maintenant (#2049) : l'horloge s'arrête après
+ * le dernier jour où une séance avance.
  */
 
 beforeEach(function (): void {
-    Carbon::setTestNow(Carbon::parse('2026-10-03 18:00:00', 'Europe/Paris'));
+    Carbon::setTestNow(Carbon::parse('2026-10-07 18:00:00', 'Europe/Paris'));
 });
 
 afterEach(function (): void {
