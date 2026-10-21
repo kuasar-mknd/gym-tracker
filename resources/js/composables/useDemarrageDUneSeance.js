@@ -44,7 +44,9 @@ import { triggerHaptic } from '@/composables/useHaptics'
  *    plus en cours : ni l'une ni l'autre ne s'ouvre, et une nouvelle
  *    se crée, derrière cette fin.
  * 3. Sinon, la clé de la séance se tire sur l'appareil, l'heure du début au
- *    geste (`started_at`), et :
+ *    geste (`started_at`), dont le serveur ne garde que l'âge au départ de la
+ *    requête, lu sur l'horloge de l'appareil (la file joint cette heure à
+ *    chaque envoi, `ENTETE_DE_L_HEURE_DE_L_APPAREIL`), et :
  *    - sur une copie ou le serveur injoignable, la création entre en file sans
  *      être tentée, et la séance s'ouvre aussitôt, construite depuis son entrée
  *      (`ouvrirLaSeanceEnAttente`) ;

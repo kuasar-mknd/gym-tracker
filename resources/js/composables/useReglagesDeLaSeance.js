@@ -194,7 +194,12 @@ export const useReglagesDeLaSeance = ({ localWorkout, viderLesEcritures, pending
             return
         }
 
-        // L'heure du geste, celle que la personne a vue en appuyant : les attentes qui suivent n'y changent rien.
+        /*
+         * L'heure du geste, celle que la personne a vue en appuyant : les
+         * attentes qui suivent n'y changent rien. Le serveur n'en garde que
+         * l'âge au départ de la requête (`ENTETE_DE_L_HEURE_DE_L_APPAREIL`) :
+         * une horloge d'appareil décalée ne déplace pas la fin.
+         */
         const fin = new Date().toISOString()
 
         clotureEnCours.value = true
