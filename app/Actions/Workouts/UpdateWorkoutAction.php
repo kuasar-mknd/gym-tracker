@@ -71,10 +71,7 @@ final class UpdateWorkoutAction
         // d'avant le début donnerait une durée négative (#2049). Une séance
         // déjà close garde sa première fin.
         if ($terminer) {
-            if ($workout->ended_at === null) {
-                $workout->ended_at = $workout->finBornee(null, $maintenant);
-            }
-
+            $workout->ended_at ??= $workout->finBornee(null, $maintenant);
             $needsFullClear = true;
         }
 

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Models\WorkoutTemplate;
+use Facebook\WebDriver\Exception\TimeoutException;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -131,11 +132,11 @@ class SessionExpireeSurLaSeanceTest extends DuskTestCase
             $browser->loginAs($compte)->visit('/workouts/'.$seance->id);
 
             $this->waitForDatabase(
-                fn (): bool => $seance->refresh()->ended_at !== null,
+                fn (): bool => Workout::query()->whereKey($seance->id)->whereNotNull('ended_at')->exists(),
                 60,
                 'la fin gardée en file n’est pas partie une fois reconnecté',
             );
-            $this->assertSame(Date::parse($fin)->getTimestamp(), $seance->ended_at?->getTimestamp(), 'la séance n’est pas close à l’heure du geste');
+            $this->assertSame(Date::parse($fin)->getTimestamp(), $seance->refresh()->ended_at?->getTimestamp(), 'la séance n’est pas close à l’heure du geste');
             $browser->waitUntil("JSON.parse(localStorage.getItem('offline_sync_queue') || '[]').length === 0", 15, 'la file garde encore la fin');
         });
     }
@@ -161,15 +162,18 @@ class SessionExpireeSurLaSeanceTest extends DuskTestCase
     }
 
     /**
-     * La page arrive à la connexion, où le serveur mène une session finie.
+     * La page arrive à la connexion, où le serveur mène une session finie ;
+     * sinon, l'échec cite ce que la page dit au bout de l'attente.
      */
     private function attendreLaConnexion(Browser $browser, string $geste): void
     {
-        $browser->waitUntil(
-            "location.pathname === '/login'",
-            20,
-            "la session finie, {$geste} ne mène pas à la connexion : ".(string) ($browser->script(self::CE_QUE_DIT_LA_PAGE)[0] ?? ''),
-        );
+        try {
+            $browser->waitUntil("location.pathname === '/login'", 20);
+        } catch (TimeoutException) {
+            $dit = $browser->script(self::CE_QUE_DIT_LA_PAGE)[0] ?? '';
+
+            $this->fail("la session finie, {$geste} ne mène pas à la connexion : ".(is_string($dit) ? $dit : ''));
+        }
     }
 
     /**
