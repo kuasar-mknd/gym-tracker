@@ -7,6 +7,11 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-10-21
+
+### Sécurité
+- **L'image ne se construit plus sur un PHP antérieur à 8.5.12** (#2092) : 8.5.12 corrige deux failles critiques du cœur de PHP (CVE-2026-109618, CVE-2026-109619). L'étiquette de l'image de base suit la dernière 8.5 publiée, mais ne la donne qu'une fois son éditeur l'a reconstruite : la construction vérifie désormais la version avant tout le reste et s'arrête en dessous de ce plancher, plutôt que de livrer un PHP vulnérable. `LImageExigeUnPhpCorrigeTest` tient le plancher et sa place dans le `Dockerfile`. Cette version ne contient que ce correctif, sur la 1.6.1. **Déploiement** : `docker compose -f docker-compose.prod.yml pull` puis `docker compose -f docker-compose.prod.yml up -d`, sans autre changement.
+
 ## [1.6.1] - 2026-10-08
 
 ### Corrigé
@@ -709,7 +714,8 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 - Statistiques de base.
 - Design PWA axé sur le mobile.
 
-[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.6.1...HEAD
+[Unreleased]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.6.2...HEAD
+[1.6.2]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.19...v1.6.0
 [1.5.19]: https://github.com/kuasar-mknd/gym-tracker/compare/v1.5.18...v1.5.19
