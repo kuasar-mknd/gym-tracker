@@ -12,6 +12,7 @@ use App\Models\WorkoutTemplateLine;
 use App\Models\WorkoutTemplateSet;
 use App\Services\ActiveWorkoutService;
 use App\Services\Stats\ClesDeStats;
+use App\Support\HeureDeLAppareil;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Exceptions;
@@ -22,10 +23,13 @@ use function Pest\Laravel\actingAs;
  * Démarrer une séance par l'API, que la file hors ligne rejoue (#2049).
  *
  * Sans réseau, la séance naît sur l'appareil : sa clé (un UUID) part dans
- * l'en-tête `Idempotency-Key`, l'heure du geste dans `started_at`, et la file
- * rejoue le démarrage tant qu'aucune réponse ne lui est parvenue. Le serveur
- * rend la séance de la clé (200) au lieu d'en ouvrir une seconde, refuse en
- * 409 quand une autre séance est en cours, et borne l'heure de l'appareil.
+ * l'en-tête `Idempotency-Key`, l'heure du geste dans `started_at`, l'heure de
+ * l'appareil au départ dans `X-Heure-De-L-Appareil`, et la file rejoue le
+ * démarrage tant qu'aucune réponse ne lui est parvenue. Le serveur rend la
+ * séance de la clé (200) au lieu d'en ouvrir une seconde, refuse en 409 quand
+ * une autre séance est en cours, et prend l'âge du geste, borné. Les cas
+ * partent d'un appareil à l'heure : à midi à Paris, il est 10 h en UTC.
+ * `HorlogeDeLAppareilDecaleeTest` joue les horloges décalées.
  */
 
 beforeEach(function (): void {
@@ -33,21 +37,36 @@ beforeEach(function (): void {
 });
 
 /**
- * Démarre une séance par l'API pour ce compte.
+ * L'heure d'un appareil à l'heure, au départ de la requête : midi à Paris.
+ */
+function demarrageApiDepart(): string
+{
+    return '2026-10-19T10:00:00.000Z';
+}
+
+/**
+ * Démarre une séance par l'API pour ce compte, l'heure de l'appareil au
+ * départ dans son en-tête quand elle est donnée.
  *
  * @param  array<string, mixed>  $corps
  * @return \Illuminate\Testing\TestResponse<\Symfony\Component\HttpFoundation\Response>
  */
-function demarrageApi(User $compte, ?string $cle, array $corps = []): \Illuminate\Testing\TestResponse
+function demarrageApi(User $compte, ?string $cle, array $corps = [], ?string $heureAuDepart = null): \Illuminate\Testing\TestResponse
 {
-    return actingAs($compte)->postJson(route('api.v1.workouts.store'), $corps, $cle === null ? [] : ['Idempotency-Key' => $cle]);
+    $entetes = $cle === null ? [] : ['Idempotency-Key' => $cle];
+
+    if ($heureAuDepart !== null) {
+        $entetes[HeureDeLAppareil::ENTETE] = $heureAuDepart;
+    }
+
+    return actingAs($compte)->postJson(route('api.v1.workouts.store'), $corps, $entetes);
 }
 
 it('démarre la séance à l’heure du geste sur l’appareil, ramenée au fuseau de l’application', function (): void {
     $compte = User::factory()->create();
     $cle = '9a8b7c6d-2049-4e5f-8a9b-0000000000d1';
 
-    $reponse = demarrageApi($compte, $cle, ['started_at' => '2026-10-19T08:00:00Z'])->assertCreated();
+    $reponse = demarrageApi($compte, $cle, ['started_at' => '2026-10-19T08:00:00Z'], demarrageApiDepart())->assertCreated();
     $seance = Workout::query()->where('user_id', $compte->id)->sole();
 
     expect($reponse->json('data.id'))->toBe($seance->id)
@@ -60,9 +79,9 @@ it('démarre la séance à l’heure du geste sur l’appareil, ramenée au fuse
 it('rend la même séance au rejeu de la clé, sans relire le second envoi', function (): void {
     $compte = User::factory()->create();
     $cle = '9a8b7c6d-2049-4e5f-8a9b-0000000000d2';
-    $premier = demarrageApi($compte, $cle, ['started_at' => '2026-10-19T08:00:00Z', 'name' => 'Jambes'])->assertCreated();
+    $premier = demarrageApi($compte, $cle, ['started_at' => '2026-10-19T08:00:00Z', 'name' => 'Jambes'], demarrageApiDepart())->assertCreated();
 
-    $rejeu = demarrageApi($compte, $cle, ['started_at' => '2026-10-19T09:30:00Z', 'name' => 'Autre chose'])->assertOk();
+    $rejeu = demarrageApi($compte, $cle, ['started_at' => '2026-10-19T09:30:00Z', 'name' => 'Autre chose'], demarrageApiDepart())->assertOk();
     $seance = Workout::query()->where('user_id', $compte->id)->sole();
 
     expect($rejeu->json('data.id'))->toBe($premier->json('data.id'))
@@ -123,14 +142,14 @@ it('démarre une séance du compte sous la clé d’un autre, sans jamais rendre
 });
 
 dataset('débuts que l’appareil ne peut pas avoir donnés', [
-    'dans le futur' => ['2026-10-19T10:00:01Z'],
+    'après le départ de la requête' => ['2026-10-19T10:00:01Z'],
     'de plus de trente jours' => ['2026-09-19T09:59:59Z'],
 ]);
 
 it('démarre maintenant quand l’heure de l’appareil sort des bornes', function (string $debut): void {
     $compte = User::factory()->create();
 
-    demarrageApi($compte, '9a8b7c6d-2049-4e5f-8a9b-0000000000d6', ['started_at' => $debut])->assertCreated();
+    demarrageApi($compte, '9a8b7c6d-2049-4e5f-8a9b-0000000000d6', ['started_at' => $debut], demarrageApiDepart())->assertCreated();
 
     expect(Workout::query()->where('user_id', $compte->id)->sole()->started_at->format('Y-m-d H:i:s'))->toBe('2026-10-19 12:00:00');
 })->with('débuts que l’appareil ne peut pas avoir donnés');
@@ -139,6 +158,19 @@ it('démarre maintenant sans heure de l’appareil', function (): void {
     $compte = User::factory()->create();
 
     demarrageApi($compte, '9a8b7c6d-2049-4e5f-8a9b-0000000000d7')->assertCreated();
+
+    expect(Workout::query()->where('user_id', $compte->id)->sole()->started_at->format('Y-m-d H:i:s'))->toBe('2026-10-19 12:00:00');
+});
+
+/*
+ * L'instant du geste sans l'heure de l'appareil au départ : rien à quoi le
+ * comparer, et l'heure de l'appareil lue telle quelle suivait son décalage.
+ * Le serveur prend maintenant (relu le 2026-10-21 : il prenait l'instant).
+ */
+it('démarre maintenant quand l’heure du geste vient sans l’heure de l’appareil au départ', function (): void {
+    $compte = User::factory()->create();
+
+    demarrageApi($compte, '9a8b7c6d-2049-4e5f-8a9b-0000000000dd', ['started_at' => '2026-10-19T08:00:00Z'])->assertCreated();
 
     expect(Workout::query()->where('user_id', $compte->id)->sole()->started_at->format('Y-m-d H:i:s'))->toBe('2026-10-19 12:00:00');
 });
@@ -202,7 +234,7 @@ it('lance un modèle sous sa clé, lignes et séries sous les clés de leur rang
     $modele = demarrageApiModele($compte);
     $cle = '9a8b7c6d-2049-4e5f-8a9b-0000000000d9';
 
-    $reponse = demarrageApi($compte, $cle, ['template_id' => $modele->id, 'started_at' => '2026-10-19T09:00:00Z'])->assertCreated();
+    $reponse = demarrageApi($compte, $cle, ['template_id' => $modele->id, 'started_at' => '2026-10-19T09:00:00Z'], demarrageApiDepart())->assertCreated();
     $seance = Workout::query()->where('user_id', $compte->id)->sole();
     $ligne = WorkoutLine::query()->where('workout_id', $seance->id)->sole();
 

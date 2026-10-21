@@ -14,7 +14,6 @@ use App\Http\Resources\WorkoutResource;
 use App\Models\Workout;
 use App\Models\WorkoutTemplate;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Date;
 
 /**
  * Les écritures de la séance elle-même que la page fait en direct ou par la
@@ -49,7 +48,6 @@ class WorkoutController extends Controller
             $this->authorize('view', $modele);
         }
 
-        $debut = $request->validated('started_at');
         $nom = $request->validated('name');
         $cle = CreateSetAction::idempotencyKey(['idempotency_key' => $request->header('Idempotency-Key')]);
 
@@ -58,7 +56,7 @@ class WorkoutController extends Controller
                 $this->user(),
                 $cle,
                 $modele,
-                is_string($debut) ? Date::parse($debut) : null,
+                $request->ageDuGeste(),
                 is_string($nom) ? $nom : null,
             );
         } catch (UneSeanceEstDejaEnCours $refus) {
@@ -93,8 +91,7 @@ class WorkoutController extends Controller
         $seance = Workout::query()->findOrFail($request->validated('workout_id'));
         $this->authorize('view', $seance);
 
-        $fin = $request->validated('ended_at');
-        $seance = $terminer->execute($seance, is_string($fin) ? Date::parse($fin) : null);
+        $seance = $terminer->execute($seance, $request->ageDuGeste());
 
         return new WorkoutResource($seance)->additional([
             'meta' => ['proposer_les_notifications' => $this->user()->doitRecevoirLInvitationAuxNotifications()],

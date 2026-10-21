@@ -316,22 +316,39 @@ describe('démarrer une séance sans réseau, depuis l’accueil', () => {
 })
 
 describe('démarrer une séance en ligne', () => {
-    it('crée la séance par un POST JSON, sous sa clé et à l’heure du geste, puis visite la séance créée', async () => {
+    /*
+     * L'heure du geste part avec l'heure de l'appareil au départ (#2049, relu
+     * le 2026-10-21) : le serveur n'en garde que l'écart, et un appareil en
+     * retard de trois heures, comme ici, démarre à l'heure du serveur. Lue
+     * seule, son heure faisait commencer la séance trois heures trop tôt.
+     */
+    it('crée la séance par un POST JSON, sous sa clé, à l’heure du geste et avec l’heure de l’appareil au départ, puis visite la séance créée', async () => {
         reseau.mode = 'repond'
         reseau.reponse = reponseInertia(seanceDuServeur(42))
         api.reponses.push(async () => ({ data: { data: { id: 42, name: '19/10/2026' } }, status: 201 }))
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-19T05:15:00.000Z'))
 
         bouton().click()
+        await vi.waitUntil(() => api.requetes.length > 0)
+        vi.useRealTimers()
         await vi.waitUntil(() => page.url === '/workouts/42')
 
         expect(api.requetes).toEqual([
             {
                 method: 'post',
                 url: '/api/v1/workouts',
-                data: { started_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/) },
-                headers: { 'Idempotency-Key': expect.stringMatching(/^[0-9A-Za-z-]{1,64}$/) },
+                data: { started_at: '2026-10-19T05:15:00.000Z' },
+                headers: {
+                    'Idempotency-Key': expect.stringMatching(/^[0-9A-Za-z-]{1,64}$/),
+                    'X-Heure-De-L-Appareil': expect.stringMatching(/^2026-10-19T05:15:\d{2}\.\d{3}Z$/),
+                },
             },
         ])
+        // Lue au départ, jamais avant le geste : `vi.waitUntil` avance l'horloge figée.
+        expect(Date.parse(api.requetes[0].headers['X-Heure-De-L-Appareil'])).toBeGreaterThanOrEqual(
+            Date.parse('2026-10-19T05:15:00.000Z'),
+        )
         expect(
             requetes.map((requete) => `${requete.methode} ${new URL(requete.url, window.location.href).pathname}`),
         ).toEqual(['GET /workouts/42'])

@@ -13,8 +13,10 @@ use Carbon\CarbonInterface;
  *
  * « Terminer » passe par la file hors ligne : la fin peut arriver des heures
  * après le geste, ou deux fois, quand la réponse de la première s'est perdue.
- * L'heure vient de l'appareil, bornée sur la lecture unique de l'horloge
- * (`Workout::finBornee()`) : jamais après maintenant, jamais avant le début.
+ * L'heure vient de l'appareil, par l'âge du geste lu sur sa seule horloge
+ * (`App\Support\HeureDeLAppareil`), placé sur la lecture unique de
+ * l'horloge du serveur et borné (`Workout::finBornee()`) : jamais après
+ * maintenant, jamais avant le début.
  * Une séance déjà close se rend telle quelle, sa première fin gardée : un
  * rejeu ne déplace pas la fin, même avec une autre heure.
  *
@@ -44,18 +46,18 @@ final readonly class TerminerLaSeanceAction
      *
      * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou du compte reste pris plus de `DemarrerUneSeanceAction::ATTENTE_DU_VERROU` secondes.
      */
-    public function execute(Workout $seance, ?CarbonInterface $finSurLAppareil): Workout
+    public function execute(Workout $seance, ?int $ageDuGeste): Workout
     {
         $maintenant = now();
 
         /** @var Workout $close */
         $close = DemarrerUneSeanceAction::verrouDuCompte($seance->user_id)
-            ->block(DemarrerUneSeanceAction::ATTENTE_DU_VERROU, fn (): Workout => $this->sousLeVerrou($seance, $finSurLAppareil, $maintenant));
+            ->block(DemarrerUneSeanceAction::ATTENTE_DU_VERROU, fn (): Workout => $this->sousLeVerrou($seance, $ageDuGeste, $maintenant));
 
         return $close;
     }
 
-    private function sousLeVerrou(Workout $seance, ?CarbonInterface $finSurLAppareil, CarbonInterface $maintenant): Workout
+    private function sousLeVerrou(Workout $seance, ?int $ageDuGeste, CarbonInterface $maintenant): Workout
     {
         // Relue sous le verrou : la séance a pu être close depuis sa liaison, par une autre requête.
         $seance->refresh();
@@ -64,7 +66,7 @@ final readonly class TerminerLaSeanceAction
             return $seance;
         }
 
-        $seance->ended_at = $seance->finBornee($finSurLAppareil, $maintenant);
+        $seance->ended_at = $seance->finBornee($ageDuGeste, $maintenant);
         // Les évènements de la séance oublient la séance en cours du cache, et
         // envoient les travaux des succès et des objectifs.
         $seance->save();

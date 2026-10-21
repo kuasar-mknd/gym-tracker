@@ -146,6 +146,35 @@ const MUTATIONS = ['post', 'patch', 'put', 'delete']
 const ENTETE_DU_COMPTE = 'X-Compte-De-L-Ecriture'
 
 /**
+ * L'en-tête qui porte l'heure de l'appareil au départ d'une écriture (#2049,
+ * relu le 2026-10-21). « Séance », « Lancer » et « Terminer » envoient l'heure
+ * du geste prise sur l'appareil (`started_at`, `ended_at`) ; lue telle quelle,
+ * une horloge en retard de trois heures faisait commencer la séance trois
+ * heures trop tôt, et terminait à son début, d'une durée nulle, une séance
+ * démarrée ailleurs. Le serveur n'en garde que l'âge au départ, lu sur la
+ * seule horloge de l'appareil, et le place sur la sienne
+ * (`App\Support\HeureDeLAppareil`, qui compare ce nom au sien) : le décalage
+ * s'annule. L'heure se lit à chaque envoi, la tentative directe comme chaque
+ * rejeu (`auDepart`), et ne se range jamais avec l'écriture : rejouée des
+ * heures plus tard, l'écriture porte l'heure de son nouveau départ, et l'âge
+ * du geste reste juste.
+ */
+export const ENTETE_DE_L_HEURE_DE_L_APPAREIL = 'X-Heure-De-L-Appareil'
+
+/**
+ * La requête telle qu'elle part maintenant : avec l'heure de l'appareil à son
+ * départ (`ENTETE_DE_L_HEURE_DE_L_APPAREIL`).
+ *
+ * @template {{ headers?: Record<string, string> }} Requete
+ * @param {Requete} requete
+ * @returns {Requete}
+ */
+const auDepart = (requete) => ({
+    ...requete,
+    headers: { ...requete.headers, [ENTETE_DE_L_HEURE_DE_L_APPAREIL]: new Date().toISOString() },
+})
+
+/**
  * Ce que l'adresse de rattrapage (`ajusterPar`) ou d'annulation (`aAnnuler`)
  * d'une création porte à la place de l'identifiant qu'elle produira, et que
  * le vidage remplace (#1960).
@@ -990,7 +1019,7 @@ class SyncService {
         }
 
         try {
-            return await http(tentative)
+            return await http(auDepart(tentative))
         } catch (error) {
             // Auto-retry once on 429 Too Many Requests (rate limiting)
             if (error.response?.status === 429) {
@@ -1004,7 +1033,7 @@ class SyncService {
                      * a 429 means the server was busy, not that it refused, and
                      * the first attempt may well have been written.
                      */
-                    return await http(tentative)
+                    return await http(auDepart(tentative))
                 } catch (retryError) {
                     return this.queueOrThrow(
                         retryError,
@@ -2016,7 +2045,7 @@ class SyncService {
                 // Celle-ci est partie : plus rien ne se fond dans sa charge.
                 this.enVol = config.id
 
-                reponse = await http(requete)
+                reponse = await http(auDepart(requete))
             } catch (error) {
                 /*
                  * Son compte a quitté l'appareil pendant qu'elle volait

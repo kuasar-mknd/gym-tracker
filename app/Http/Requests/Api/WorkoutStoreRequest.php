@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Concerns\MesureLAgeDuGeste;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Rules\DateQueSaColonneTient;
 use Illuminate\Database\Query\Builder;
@@ -17,6 +18,7 @@ use Illuminate\Validation\Rule;
  */
 class WorkoutStoreRequest extends FormRequest
 {
+    use MesureLAgeDuGeste;
     use RameneLesDatesAuFuseauDeLApplication;
 
     /**
@@ -29,11 +31,12 @@ class WorkoutStoreRequest extends FormRequest
     }
 
     /**
-     * Le début est l'heure du geste sur l'appareil, que l'action borne aux
-     * trente jours passés (`Workout::debutBorne()`). Sa colonne est un
-     * `DATETIME`, mais il devient la dernière séance du compte
-     * (`users.last_workout_at`, un `TIMESTAMP`) : il prend la plage d'un
-     * horodatage. Le modèle se cherche parmi ceux du compte : celui d'un
+     * Le début est l'heure du geste sur l'appareil, dont seul l'âge au départ
+     * de la requête compte (`ageDuGeste()`, `HeureDeLAppareil`), que l'action
+     * place sur sa lecture de l'horloge et borne aux trente jours passés
+     * (`Workout::debutBorne()`). Sa colonne est un `DATETIME`, mais il
+     * devient la dernière séance du compte (`users.last_workout_at`, un
+     * `TIMESTAMP`) : il prend la plage d'un horodatage. Le modèle se cherche parmi ceux du compte : celui d'un
      * autre, ou un modèle disparu, reçoit le même refus. Il passe `bail` et
      * `integer` avant `exists` : un tableau imbriqué partait sinon dans
      * `whereIn()`, qui lève (#2071).
@@ -57,13 +60,14 @@ class WorkoutStoreRequest extends FormRequest
     }
 
     /**
-     * L'appareil envoie l'heure du geste en UTC : sans conversion, la séance
-     * commençait à l'heure murale du décalage, relue comme une heure de Paris
-     * (#1952).
+     * L'âge du geste se mesure d'abord, sur l'instant tel que l'appareil
+     * l'envoie, puis l'instant, en UTC, revient au fuseau de l'application,
+     * comme tout champ `date` (#1952).
      */
     #[\Override]
     protected function prepareForValidation(): void
     {
+        $this->mesurerLAgeDuGeste('started_at');
         $this->ramenerLesInstantsAuFuseauDeLApplication(['started_at']);
     }
 }

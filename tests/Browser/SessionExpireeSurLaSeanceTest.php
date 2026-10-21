@@ -136,7 +136,16 @@ class SessionExpireeSurLaSeanceTest extends DuskTestCase
                 60,
                 'la fin gardée en file n’est pas partie une fois reconnecté',
             );
-            $this->assertSame(Date::parse($fin)->getTimestamp(), $seance->refresh()->ended_at?->getTimestamp(), 'la séance n’est pas close à l’heure du geste');
+            /*
+             * À la seconde du geste, ou une ou deux plus tard : le serveur
+             * retranche l'âge du geste de son horloge (#2049, relu le
+             * 2026-10-21), et le temps de la requête s'y ajoute.
+             */
+            $geste = Date::parse($fin)->getTimestamp();
+            $close = Workout::query()->findOrFail($seance->id)->ended_at?->getTimestamp();
+            $this->assertNotNull($close);
+            $this->assertGreaterThanOrEqual($geste, $close, 'la séance est close avant le geste');
+            $this->assertLessThanOrEqual($geste + 2, $close, 'la séance n’est pas close à l’heure du geste');
             $browser->waitUntil("JSON.parse(localStorage.getItem('offline_sync_queue') || '[]').length === 0", 15, 'la file garde encore la fin');
         });
     }

@@ -104,7 +104,7 @@ export const routeDeTest = (nom, parametres = {}) =>
 export const creerUnFauxServeur = ({ series = [] } = {}) => {
     const serveur = {
         enLigne: true,
-        /** Les requêtes qui ont atteint le serveur, dans l'ordre. */
+        /** Les requêtes qui ont atteint le serveur, dans l'ordre, avec leurs en-têtes (`entetes`). */
         requetes: [],
         /** Les séries en base, par identifiant. */
         series: new Map(series.map((serie) => [serie.id, { ...serie }])),
@@ -133,6 +133,7 @@ export const creerUnFauxServeur = ({ series = [] } = {}) => {
                 method,
                 url,
                 data: data === undefined ? undefined : JSON.parse(JSON.stringify(data)),
+                entetes: { ...config.headers },
             })
 
             const imposee = serveur.imposer.shift()

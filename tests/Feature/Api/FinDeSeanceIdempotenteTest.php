@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\ActiveWorkoutService;
+use App\Support\HeureDeLAppareil;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Testing\TestResponse;
@@ -20,9 +21,10 @@ use function Pest\Laravel\actingAs;
 /*
  * Terminer une séance par l'API, que la file hors ligne rejoue (#2049).
  *
- * « Terminer » met la fin en file, avec l'heure du geste sur l'appareil : la
- * fin arrive des heures plus tard, ou deux fois quand la réponse s'est
- * perdue. La séance se nomme dans le corps (une séance encore en file n'a pas
+ * « Terminer » met la fin en file, avec l'heure du geste sur l'appareil, et
+ * l'heure de l'appareil au départ (`X-Heure-De-L-Appareil`, un appareil à
+ * l'heure dans ces cas : midi à Paris, 10 h en UTC) : la fin arrive des
+ * heures plus tard, ou deux fois quand la réponse s'est perdue. La séance se nomme dans le corps (une séance encore en file n'a pas
  * d'identifiant à mettre dans l'adresse). Le serveur borne l'heure, garde la
  * première fin d'une séance déjà close, et autorise par `view` : la policy
  * refuse de modifier une séance close, et un rejeu recevrait 403.
@@ -41,19 +43,32 @@ function finApiSeance(User $compte): Workout
 }
 
 /**
- * Termine une séance par l'API.
+ * Termine une séance par l'API, l'heure de l'appareil au départ dans son
+ * en-tête quand elle est donnée.
  *
  * @param  array<string, mixed>  $corps
  * @return TestResponse<Response>
  */
-function finApi(User $compte, array $corps): TestResponse
+function finApi(User $compte, array $corps, ?string $heureAuDepart = null): TestResponse
 {
-    return actingAs($compte)->patchJson(route('api.v1.workouts.finish'), $corps);
+    return actingAs($compte)->patchJson(
+        route('api.v1.workouts.finish'),
+        $corps,
+        $heureAuDepart === null ? [] : [HeureDeLAppareil::ENTETE => $heureAuDepart],
+    );
+}
+
+/**
+ * L'heure d'un appareil à l'heure, au départ de la requête : midi à Paris.
+ */
+function finApiDepart(): string
+{
+    return '2026-10-19T10:00:00.000Z';
 }
 
 dataset('fins venues de l’appareil', [
     'à l’heure du geste, en UTC' => ['2026-10-19T09:30:00Z', '2026-10-19 11:30:00'],
-    'dans le futur' => ['2026-10-19T10:00:01Z', '2026-10-19 12:00:00'],
+    'après le départ de la requête' => ['2026-10-19T10:00:01Z', '2026-10-19 12:00:00'],
     'avant le début' => ['2026-10-19T08:59:59Z', '2026-10-19 11:00:00'],
 ]);
 
@@ -61,7 +76,7 @@ it('termine la séance à l’heure du geste, bornée entre le début et mainten
     $compte = User::factory()->create();
     $seance = finApiSeance($compte);
 
-    $reponse = finApi($compte, ['workout_id' => $seance->id, 'ended_at' => $fin])->assertOk();
+    $reponse = finApi($compte, ['workout_id' => $seance->id, 'ended_at' => $fin], finApiDepart())->assertOk();
 
     expect($seance->refresh()->ended_at?->format('Y-m-d H:i:s'))->toBe($attendue)
         ->and($reponse->json('data.id'))->toBe($seance->id)
@@ -78,15 +93,28 @@ it('termine la séance maintenant sans heure de l’appareil', function (): void
 });
 
 /*
+ * L'instant du geste sans l'heure de l'appareil au départ ne se compare à
+ * rien : maintenant (relu le 2026-10-21 : le serveur prenait l'instant).
+ */
+it('termine la séance maintenant quand l’heure du geste vient sans l’heure de l’appareil au départ', function (): void {
+    $compte = User::factory()->create();
+    $seance = finApiSeance($compte);
+
+    finApi($compte, ['workout_id' => $seance->id, 'ended_at' => '2026-10-19T09:30:00Z'])->assertOk();
+
+    expect($seance->refresh()->ended_at?->format('Y-m-d H:i:s'))->toBe('2026-10-19 12:00:00');
+});
+
+/*
  * La fin rejouée sur une séance déjà close : la même réponse, et la première
  * fin reste, même quand le rejeu porte une autre heure.
  */
 it('garde la première fin d’une séance déjà close au rejeu', function (): void {
     $compte = User::factory()->create();
     $seance = finApiSeance($compte);
-    finApi($compte, ['workout_id' => $seance->id, 'ended_at' => '2026-10-19T09:30:00Z'])->assertOk();
+    finApi($compte, ['workout_id' => $seance->id, 'ended_at' => '2026-10-19T09:30:00Z'], finApiDepart())->assertOk();
 
-    finApi($compte, ['workout_id' => $seance->id, 'ended_at' => '2026-10-19T09:45:00Z'])
+    finApi($compte, ['workout_id' => $seance->id, 'ended_at' => '2026-10-19T09:45:00Z'], finApiDepart())
         ->assertOk()
         ->assertJsonPath('data.id', $seance->id);
 

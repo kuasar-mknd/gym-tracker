@@ -31,59 +31,63 @@ class Workout extends Model
     use HasFactory;
 
     /**
-     * Combien de jours un instant venu de l'appareil peut précéder le moment
-     * où le serveur le reçoit : la vie d'une écriture dans la file hors ligne
+     * Combien de jours un geste fait sur l'appareil peut précéder le moment où
+     * le serveur le reçoit : la vie d'une écriture dans la file hors ligne
      * (`JOURS_EN_FILE_AU_PLUS`, resources/js/Utils/ecrituresAbandonnees.js).
-     * Au-delà, la file l'a abandonnée, et un instant plus ancien ne vient pas
+     * Au-delà, la file l'a abandonnée, et un geste plus ancien ne vient pas
      * d'elle.
      */
     public const int JOURS_EN_FILE_AU_PLUS = 30;
 
     /**
-     * Le début d'une séance que l'appareil a démarrée : l'instant du geste,
-     * pris sur l'appareil, s'il tombe entre `JOURS_EN_FILE_AU_PLUS` jours
-     * avant maintenant et maintenant ; sinon maintenant (#2049).
+     * Le début d'une séance que l'appareil a démarrée : maintenant, moins
+     * l'âge du geste, s'il a entre zéro et `JOURS_EN_FILE_AU_PLUS` jours ;
+     * sinon maintenant (#2049).
      *
      * La file rejoue un démarrage des heures après le geste : l'heure du
-     * rejeu ferait commencer la séance après ses propres séries. L'horloge
-     * de l'appareil peut aussi être fausse : un début dans le futur, que rien
-     * ne terminerait avant lui, ou plus ancien que tout ce que la file garde,
-     * revient à maintenant, comme un démarrage sans heure. Refuser la séance
-     * la perdrait, et ses séries avec elle.
+     * rejeu ferait commencer la séance après ses propres séries. L'âge, en
+     * secondes, est celui du geste au départ de la requête, lu sur la seule
+     * horloge de l'appareil (`App\Support\HeureDeLAppareil`) : un décalage de
+     * cette horloge s'y annule, quand l'instant lu tel quel faisait commencer
+     * la séance trois heures trop tôt sur un appareil en retard de trois
+     * heures (relu le 2026-10-21). Un âge négatif (un geste qui suivrait son
+     * envoi), ou plus vieux que tout ce que la file garde, revient à
+     * maintenant, comme un démarrage sans heure. Refuser la séance la
+     * perdrait, et ses séries avec elle.
      *
-     * Les deux bornes viennent de `$maintenant`, la lecture unique de
-     * l'horloge de l'opération (`.ai/rules/horloge.md`) ; la valeur rendue
-     * est une copie (`Carbon::instance()`), jamais l'un des deux instants
-     * reçus.
+     * Le début et la borne viennent de `$maintenant`, la lecture unique de
+     * l'horloge de l'opération (`.ai/rules/horloge.md`) ; la valeur rendue est
+     * une copie (`Carbon::instance()`), jamais l'instant reçu.
      */
-    public static function debutBorne(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): Carbon
+    public static function debutBorne(?int $ageDuGeste, CarbonInterface $maintenant): Carbon
     {
-        $auPlusTot = $maintenant->copy()->subDays(self::JOURS_EN_FILE_AU_PLUS);
-        $dansLesBornes = $surLAppareil instanceof CarbonInterface
-            && ! $surLAppareil->greaterThan($maintenant)
-            && ! $surLAppareil->lessThan($auPlusTot);
+        if ($ageDuGeste === null || $ageDuGeste < 0) {
+            return Carbon::instance($maintenant);
+        }
 
-        return Carbon::instance($dansLesBornes ? $surLAppareil : $maintenant);
+        $debut = $maintenant->copy()->subSeconds($ageDuGeste);
+
+        return Carbon::instance($debut->lessThan($maintenant->copy()->subDays(self::JOURS_EN_FILE_AU_PLUS)) ? $maintenant : $debut);
     }
 
     /**
-     * La fin de cette séance : l'instant du geste, pris sur l'appareil, ou
-     * maintenant sans lui ; jamais après maintenant, jamais avant le début
-     * (#2049).
+     * La fin de cette séance : maintenant, moins l'âge du geste
+     * (`debutBorne()`), ou maintenant sans lui ; jamais après maintenant,
+     * jamais avant le début (#2049).
      *
-     * Une fin dans le futur fermerait la séance à une heure qui n'est pas
-     * venue ; une fin d'avant le début donnerait une durée négative. Quand
-     * les deux bornes se contredisent, le début l'emporte : seul un début
-     * futur les fait se contredire, que ni le démarrage (`debutBorne()`) ni
-     * les réglages (`UpdateWorkoutRequest`) n'écrivent plus, mais que le
-     * panneau peut poser ou qu'une séance plus ancienne peut porter ; elle se
-     * ferme alors à ce début, avec une durée nulle. Une fin rejouée longtemps
-     * après garde l'heure du geste.
+     * Un âge négatif fermerait la séance à une heure qui n'est pas venue :
+     * elle se ferme maintenant. Une fin d'avant le début donnerait une durée
+     * négative. Quand les deux bornes se contredisent, le début l'emporte :
+     * seul un début futur les fait se contredire, que ni le démarrage
+     * (`debutBorne()`) ni les réglages (`UpdateWorkoutRequest`) n'écrivent
+     * plus, mais que le panneau peut poser ou qu'une séance plus ancienne peut
+     * porter ; elle se ferme alors à ce début, avec une durée nulle. Une fin
+     * rejouée longtemps après garde l'heure du geste.
      */
-    public function finBornee(?CarbonInterface $surLAppareil, CarbonInterface $maintenant): Carbon
+    public function finBornee(?int $ageDuGeste, CarbonInterface $maintenant): Carbon
     {
-        $fin = $surLAppareil instanceof CarbonInterface && $surLAppareil->lessThan($maintenant)
-            ? $surLAppareil
+        $fin = $ageDuGeste !== null && $ageDuGeste > 0
+            ? $maintenant->copy()->subSeconds($ageDuGeste)
             : $maintenant;
 
         return Carbon::instance($fin->lessThan($this->started_at) ? $this->started_at : $fin);

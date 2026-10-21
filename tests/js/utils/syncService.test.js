@@ -1290,7 +1290,11 @@ describe('SyncService une écriture qui attend encore', () => {
             method: 'post',
             url: '/api/v1/sets',
             data: { workout_line_id: 1, is_completed: false, reps: 5 },
-            headers: { 'Idempotency-Key': 'k', 'X-Compte-De-L-Ecriture': COMPTE },
+            headers: {
+                'Idempotency-Key': 'k',
+                'X-Compte-De-L-Ecriture': COMPTE,
+                'X-Heure-De-L-Appareil': expect.stringMatching(/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/),
+            },
             timeout: DELAI_DE_REJEU_MS,
         })
     })
@@ -1518,7 +1522,10 @@ describe('SyncService une écriture rejouée sous la session d’un autre compte
         window.removeEventListener('sync:auth-required', annonces)
 
         expect(request).toHaveBeenCalledTimes(1)
-        expect(request.mock.calls[0][0].headers).toEqual({ 'X-Compte-De-L-Ecriture': COMPTE })
+        expect(request.mock.calls[0][0].headers).toEqual({
+            'X-Compte-De-L-Ecriture': COMPTE,
+            'X-Heure-De-L-Appareil': expect.any(String),
+        })
         expect(service.queue.map((entree) => entree.id)).toEqual(['queued-1', 'queued-2'])
         expect(service.queue[0]).not.toHaveProperty('authAttempts')
         expect(service.queue[0]).not.toHaveProperty('transientAttempts')
@@ -1685,7 +1692,10 @@ describe('SyncService une création tentée sans réponse', () => {
             'delete /api/v1/sets/100',
             'patch /api/v1/sets/3',
         ])
-        expect(request.mock.calls[1][0].headers).toEqual({ 'X-Compte-De-L-Ecriture': COMPTE })
+        expect(request.mock.calls[1][0].headers).toEqual({
+            'X-Compte-De-L-Ecriture': COMPTE,
+            'X-Heure-De-L-Appareil': expect.any(String),
+        })
         expect(rejeux.mock.calls.map(([event]) => event.detail.queueId)).toEqual(['queued-1'])
         expect(service.queue).toEqual([])
         expect(service.failedRequests()).toEqual([])
@@ -3127,5 +3137,68 @@ describe('SyncService le lancement d’un modèle', () => {
         expect(service.produitDe(queueId)).toBe(42)
         expect(service.produitDe(ligne.id)).toBe(70)
         expect(fileStockee()).toEqual([])
+    })
+})
+
+/*
+ * L'heure de l'appareil au départ de chaque écriture (#2049, relu le
+ * 2026-10-21). Le serveur n'en tire que l'âge du geste (`started_at`,
+ * `ended_at`), lu sur la seule horloge de l'appareil, et le place sur la
+ * sienne : un appareil en retard de trois heures faisait commencer la séance
+ * trois heures trop tôt. L'heure se lit à chaque départ, jamais à la mise en
+ * file : rejouée deux heures plus tard, l'écriture porte l'heure de ce départ,
+ * et l'âge du geste est de deux heures. Les heures des cas sont celles d'un
+ * appareil qui retarde de trois heures : seul l'écart compte.
+ */
+describe('SyncService l’heure de l’appareil au départ', () => {
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    const DEMARRAGE = {
+        url: '/api/v1/workouts',
+        data: { started_at: '2026-10-21T12:59:58.000Z' },
+        headers: { 'Idempotency-Key': 'cle-de-la-seance' },
+    }
+
+    it('part avec la tentative directe, lue à son départ', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        request.mockResolvedValue({ status: 201, data: { data: { id: 42 } } })
+        const service = await chargé()
+
+        await service.post(DEMARRAGE.url, DEMARRAGE.data, { headers: DEMARRAGE.headers })
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(request.mock.calls[0][0].data).toEqual({ started_at: '2026-10-21T12:59:58.000Z' })
+        expect(request.mock.calls[0][0].headers).toEqual({
+            'Idempotency-Key': 'cle-de-la-seance',
+            'X-Heure-De-L-Appareil': '2026-10-21T13:00:00.000Z',
+        })
+    })
+
+    it('part au rejeu avec l’heure de ce départ, jamais celle de la mise en file, et ne se range pas avec l’écriture', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        vi.setSystemTime(new Date('2026-10-21T13:00:00.000Z'))
+        request.mockRejectedValue({ code: 'ERR_NETWORK', request: {} })
+        const service = await chargé()
+
+        const queueId = service.mettreEnFile({ method: 'post', ...DEMARRAGE })
+        await service.processQueue()
+
+        expect(service.queue.map((entree) => entree.id)).toEqual([queueId])
+        expect(service.queue[0].headers).toEqual({ 'Idempotency-Key': 'cle-de-la-seance' })
+        expect(localStorage.getItem('offline_sync_queue')).not.toContain('X-Heure-De-L-Appareil')
+
+        vi.setSystemTime(new Date('2026-10-21T15:00:00.000Z'))
+        request.mockReset()
+        request.mockResolvedValue({ status: 201, data: { data: { id: 42 } } })
+
+        await service.processQueue()
+
+        expect(request).toHaveBeenCalledTimes(1)
+        expect(request.mock.calls[0][0].data).toEqual({ started_at: '2026-10-21T12:59:58.000Z' })
+        expect(request.mock.calls[0][0].headers['X-Heure-De-L-Appareil']).toBe('2026-10-21T15:00:00.000Z')
+        expect(service.queue).toEqual([])
     })
 })

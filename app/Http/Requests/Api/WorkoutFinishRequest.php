@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Concerns\MesureLAgeDuGeste;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Rules\DateQueSaColonneTient;
 use Illuminate\Database\Query\Builder;
@@ -18,6 +19,7 @@ use Illuminate\Validation\Rule;
  */
 class WorkoutFinishRequest extends FormRequest
 {
+    use MesureLAgeDuGeste;
     use RameneLesDatesAuFuseauDeLApplication;
 
     /**
@@ -34,9 +36,10 @@ class WorkoutFinishRequest extends FormRequest
      * séance absente reçoivent le même refus, sans dire laquelle existe. Elle
      * passe `bail` et `integer` avant `exists` : une référence restée
      * `{ enAttenteDe }`, ou un tableau imbriqué, ne va jamais jusqu'à la base
-     * (#2071). La fin est l'heure du geste sur l'appareil, que l'action borne
-     * entre le début et maintenant (`Workout::finBornee()`) ; sa colonne est
-     * un `DATETIME`.
+     * (#2071). La fin est l'heure du geste sur l'appareil, dont seul l'âge au
+     * départ de la requête compte (`ageDuGeste()`, `HeureDeLAppareil`), que
+     * l'action place sur sa lecture de l'horloge et borne entre le début et
+     * maintenant (`Workout::finBornee()`) ; sa colonne est un `DATETIME`.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -56,11 +59,14 @@ class WorkoutFinishRequest extends FormRequest
     }
 
     /**
-     * L'appareil envoie l'heure du geste en UTC (#1952).
+     * L'âge du geste se mesure d'abord, sur l'instant tel que l'appareil
+     * l'envoie, puis l'instant, en UTC, revient au fuseau de l'application
+     * (#1952).
      */
     #[\Override]
     protected function prepareForValidation(): void
     {
+        $this->mesurerLAgeDuGeste('ended_at');
         $this->ramenerLesInstantsAuFuseauDeLApplication(['ended_at']);
     }
 }

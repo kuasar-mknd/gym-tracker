@@ -66,6 +66,22 @@ it('démarre la séance sous le verrou du jour de sa première lecture, nom comp
         ->and($seance->name)->toBe('30/09/2026');
 })->with(range(1, 6));
 
+/*
+ * L'âge du geste (#2049, relu le 2026-10-21) se retranche de cette même
+ * lecture, jamais d'une suivante : retranché d'une lecture d'après minuit, le
+ * début aurait une seconde de plus.
+ */
+it('retranche l’âge du geste de la première lecture de l’horloge', function (int $lectures): void {
+    $user = User::factory()->create();
+    $demarrer = app(\App\Actions\Workouts\DemarrerUneSeanceAction::class);
+    HorlogeQuiPasseMinuit::apres($lectures, '2026-09-30 23:59:59.999999', '2026-10-01 00:00:00.000001');
+
+    $seance = Workout::query()->findOrFail($demarrer->execute($user, 'b2c3d4e5-2049-4f60-8a1b-0000000000e2', null, 60)->id);
+
+    expect($seance->started_at->format('Y-m-d H:i:s'))->toBe('2026-09-30 23:58:59')
+        ->and($seance->name)->toBe('30/09/2026');
+})->with(range(1, 6));
+
 /**
  * Les cartes de la page des séances regardent les mêmes six mois quand le mois
  * change pendant le calcul.

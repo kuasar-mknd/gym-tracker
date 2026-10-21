@@ -28,7 +28,10 @@ use Tests\Support\ParcoursHorsLigne;
  * elle (`{ enAttenteDe }`) ; rechargée, la coquille la remonte depuis la file ;
  * « Terminer » met la fin en file à part, la dernière, à l'heure du geste. Le
  * réseau rendu, la file crée la séance, sa ligne, sa série, puis la clôt, et
- * la page passe à la séance réelle.
+ * la page passe à la séance réelle. Le serveur place le geste sur sa propre
+ * horloge, par son âge au départ de la requête (`X-Heure-De-L-Appareil`) :
+ * la fin se lit à la seconde du geste, ou à la suivante, le temps de la
+ * requête et l'arrondi à la seconde s'y ajoutant.
  *
  * Le serveur reste la vérité : une séance ouverte entre-temps depuis un autre
  * appareil fait refuser la création (409 `seance-deja-en-cours`), que le layout
@@ -153,11 +156,7 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
 
             $this->assertSame($geste['cle'], $seance->idempotency_key);
             $this->assertNotNull($seance->ended_at);
-            $this->assertSame(
-                Date::parse($geste['fin'])->getTimestamp(),
-                $seance->ended_at->getTimestamp(),
-                'la séance n’est pas close à l’heure du geste',
-            );
+            $this->assertCloseALHeureDuGeste(Date::parse($geste['fin'])->getTimestamp(), $seance->ended_at->getTimestamp());
         });
 
         $seances = Workout::query()->where('user_id', $compte->id)->get();
@@ -231,6 +230,19 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
         $file = $browser->script(self::LA_FILE)[0];
 
         return $file;
+    }
+
+    /**
+     * La séance close à l'heure du geste : à sa seconde, ou une ou deux plus
+     * tard. Le serveur ne lit plus l'heure de l'appareil telle quelle, il
+     * retranche l'âge du geste de son horloge (#2049, relu le 2026-10-21) :
+     * le temps que la requête met à arriver s'y ajoute, et l'âge se compte à
+     * la seconde. Jamais avant le geste.
+     */
+    private function assertCloseALHeureDuGeste(int $geste, int $fin): void
+    {
+        $this->assertGreaterThanOrEqual($geste, $fin, 'la séance est close avant le geste');
+        $this->assertLessThanOrEqual($geste + 2, $fin, 'la séance n’est pas close à l’heure du geste');
     }
 
     /**

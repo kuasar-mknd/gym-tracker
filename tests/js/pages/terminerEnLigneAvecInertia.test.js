@@ -94,6 +94,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
     await pages.demonterToutes()
+    vi.useRealTimers()
     await fermerLaListeDesSeances()
 })
 
@@ -103,14 +104,34 @@ it('termine par une seule requête, mène à l’accueil, et l’invitation aux 
 
     await cliquer('[dusk="finish-workout-mobile"]')
     await vi.waitUntil(() => present('dialog[open] [dusk="confirm-finish-button"]'))
+    // L'heure d'un appareil en retard de trois heures, figée autour du seul geste.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-19T06:42:00.000Z'))
     await cliquer('[dusk="confirm-finish-button"]')
+    await vi.waitUntil(() => reseau.serveur.requetes.length > 0)
+    vi.useRealTimers()
     await vi.waitUntil(() => present('#accueil'))
     await flushPromises()
 
     // Une seule requête, la fin, et aucune visite qui écrive : l'accueil seul.
     expect(reseau.serveur.resume()).toEqual([
-        expect.stringMatching(/^patch \/api\/v1\/workouts\/finish \{"workout_id":5,"ended_at":"[^"]+"\}$/),
+        'patch /api/v1/workouts/finish {"workout_id":5,"ended_at":"2026-10-19T06:42:00.000Z"}',
     ])
+    /*
+     * L'heure de l'appareil au départ de la fin, lue à l'envoi, à côté de
+     * celle du geste (#2049, relu le 2026-10-21) : le serveur n'en garde que
+     * l'écart, ici le temps que la page attende ses saisies (`vi.waitUntil`
+     * avance l'horloge figée), et termine la séance à son heure à lui. Lue
+     * seule, l'heure d'un appareil en retard ramenait la fin au début de la
+     * séance.
+     */
+    const { 'X-Heure-De-L-Appareil': auDepart, ...autresEntetes } = reseau.serveur.requetes[0].entetes
+    const ageDuGeste = Date.parse(auDepart) - Date.parse('2026-10-19T06:42:00.000Z')
+
+    expect(autresEntetes).toEqual({})
+    expect(auDepart).toMatch(/^2026-10-19T06:42:\d{2}\.\d{3}Z$/)
+    expect(ageDuGeste).toBeGreaterThanOrEqual(0)
+    expect(ageDuGeste).toBeLessThan(1000)
     expect(reseau.serveur.fins.has(5)).toBe(true)
     expect(visites).toEqual(['/dashboard'])
     expect(fileDurable()).toEqual([])

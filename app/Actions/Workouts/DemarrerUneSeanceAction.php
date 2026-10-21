@@ -30,7 +30,7 @@ use Illuminate\Support\Facades\Cache;
  *    (`UneSeanceEstDejaEnCours`) : jamais dans le cache de deux heures
  *    d'`ActiveWorkoutService`, qu'une séance démarrée ailleurs n'a pas
  *    encore touché ;
- * 3. sinon la séance se crée, à l'instant du geste borné
+ * 3. sinon la séance se crée, maintenant moins l'âge du geste, borné
  *    (`Workout::debutBorne()`).
  *
  * Sans le verrou, deux onglets ou deux appareils lisaient « aucune séance en
@@ -89,15 +89,18 @@ final readonly class DemarrerUneSeanceAction
      * une, sinon une séance neuve.
      *
      * L'horloge se lit une fois, en tête : le début et le nom par défaut en
-     * viennent, quelle que soit l'attente du verrou.
+     * viennent, quelle que soit l'attente du verrou. L'âge du geste, en
+     * secondes, se lit sur l'horloge de l'appareil
+     * (`App\Support\HeureDeLAppareil`) : seul l'écart compte, jamais l'heure
+     * de l'appareil.
      *
      * @throws UneSeanceEstDejaEnCours Si une autre séance du compte est en cours.
      * @throws \Illuminate\Contracts\Cache\LockTimeoutException Si le verrou du compte reste pris plus de `ATTENTE_DU_VERROU` secondes.
      */
-    public function execute(User $user, ?string $cle, ?WorkoutTemplate $modele = null, ?CarbonInterface $debutSurLAppareil = null, ?string $nom = null): Workout
+    public function execute(User $user, ?string $cle, ?WorkoutTemplate $modele = null, ?int $ageDuGeste = null, ?string $nom = null): Workout
     {
         $maintenant = now();
-        $debut = Workout::debutBorne($debutSurLAppareil, $maintenant);
+        $debut = Workout::debutBorne($ageDuGeste, $maintenant);
 
         /** @var Workout $seance */
         $seance = self::verrouDuCompte($user->id)

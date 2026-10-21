@@ -12,10 +12,12 @@ use Illuminate\Support\Carbon;
  * sans réseau (#2049), et les clés qu'un lancement de modèle pose.
  *
  * La file rejoue un démarrage ou une fin des heures après le geste : le
- * serveur prend l'heure du geste, mais la borne sur sa propre lecture de
- * l'horloge, parce que l'horloge de l'appareil peut être fausse. Un début
- * dans le futur, ou plus ancien que tout ce que la file garde, revient à
- * maintenant ; une fin ne passe jamais maintenant ni ne précède le début.
+ * serveur prend l'heure du geste, par son âge au départ de la requête, lu sur
+ * l'horloge de l'appareil (relu le 2026-10-21 : l'instant lu tel quel suivait
+ * le décalage de cette horloge), et le place sur sa propre lecture de
+ * l'horloge. Un âge négatif, ou plus vieux que tout ce que la file garde,
+ * revient à maintenant ; une fin ne passe jamais maintenant ni ne précède le
+ * début.
  */
 
 /**
@@ -28,47 +30,57 @@ function instantsBornesMaintenant(): Carbon
 }
 
 dataset('débuts venus de l’appareil', [
-    'sans heure' => [null, '2026-10-19 12:00:00'],
-    'l’instant même' => ['2026-10-19 12:00:00', '2026-10-19 12:00:00'],
-    'une heure plus tôt' => ['2026-10-19 11:00:00', '2026-10-19 11:00:00'],
-    'trente jours pile plus tôt' => ['2026-09-19 12:00:00', '2026-09-19 12:00:00'],
-    'trente jours et une seconde plus tôt' => ['2026-09-19 11:59:59', '2026-10-19 12:00:00'],
-    'une seconde dans le futur' => ['2026-10-19 12:00:01', '2026-10-19 12:00:00'],
-    'un an dans le futur' => ['2027-10-19 12:00:00', '2026-10-19 12:00:00'],
+    'sans âge' => [null, '2026-10-19 12:00:00'],
+    'l’instant même' => [0, '2026-10-19 12:00:00'],
+    'une heure plus tôt' => [3600, '2026-10-19 11:00:00'],
+    'trente jours pile plus tôt' => [30 * 86400, '2026-09-19 12:00:00'],
+    'trente jours et une seconde plus tôt' => [30 * 86400 + 1, '2026-10-19 12:00:00'],
+    'une seconde après son envoi' => [-1, '2026-10-19 12:00:00'],
+    'un an après son envoi' => [-365 * 86400, '2026-10-19 12:00:00'],
 ]);
 
-it('prend le début de l’appareil dans les trente jours passés, sinon maintenant', function (?string $surLAppareil, string $attendu): void {
+it('prend le début de l’appareil dans les trente jours passés, sinon maintenant', function (?int $age, string $attendu): void {
     $maintenant = instantsBornesMaintenant();
-    $appareil = $surLAppareil === null ? null : Carbon::parse($surLAppareil);
 
-    $debut = Workout::debutBorne($appareil, $maintenant);
+    $debut = Workout::debutBorne($age, $maintenant);
 
     expect($debut->format('Y-m-d H:i:s'))->toBe($attendu)
-        // Une copie, jamais l'un des instants reçus : le Carbon de Laravel est
+        // Une copie, jamais l'instant reçu : le Carbon de Laravel est
         // mutable, et l'opération réutilise sa lecture de l'horloge.
         ->and($debut)->not->toBe($maintenant)
-        ->and($debut)->not->toBe($appareil)
         ->and($maintenant->format('Y-m-d H:i:s'))->toBe('2026-10-19 12:00:00');
 })->with('débuts venus de l’appareil');
 
+/*
+ * Trente jours du calendrier, comme la borne d'avant l'âge : une file qui
+ * enjambe le passage à l'heure d'hiver garde un geste de trente jours pile,
+ * qui a une heure de plus que trente fois vingt-quatre heures.
+ */
+it('compte les trente jours au calendrier, à travers le passage à l’heure d’hiver', function (): void {
+    $maintenant = Carbon::parse('2026-11-10 12:00:00');
+    $trenteJours = (int) Carbon::parse('2026-10-11 12:00:00')->diffInSeconds($maintenant);
+
+    expect($trenteJours)->toBe(30 * 86400 + 3600)
+        ->and(Workout::debutBorne($trenteJours, $maintenant)->format('Y-m-d H:i:s'))->toBe('2026-10-11 12:00:00')
+        ->and(Workout::debutBorne($trenteJours + 1, $maintenant)->format('Y-m-d H:i:s'))->toBe('2026-11-10 12:00:00');
+});
+
 dataset('fins venues de l’appareil', [
-    'sans heure' => [null, '2026-10-19 12:00:00'],
-    'entre le début et maintenant' => ['2026-10-19 11:30:00', '2026-10-19 11:30:00'],
-    'le début même' => ['2026-10-19 11:00:00', '2026-10-19 11:00:00'],
-    'avant le début' => ['2026-10-19 10:59:59', '2026-10-19 11:00:00'],
-    'dans le futur' => ['2026-10-19 12:00:01', '2026-10-19 12:00:00'],
+    'sans âge' => [null, '2026-10-19 12:00:00'],
+    'entre le début et maintenant' => [1800, '2026-10-19 11:30:00'],
+    'le début même' => [3600, '2026-10-19 11:00:00'],
+    'avant le début' => [3601, '2026-10-19 11:00:00'],
+    'après son envoi' => [-1, '2026-10-19 12:00:00'],
 ]);
 
-it('prend la fin de l’appareil entre le début et maintenant', function (?string $surLAppareil, string $attendu): void {
+it('prend la fin de l’appareil entre le début et maintenant', function (?int $age, string $attendu): void {
     $maintenant = instantsBornesMaintenant();
     $seance = new Workout(['started_at' => '2026-10-19 11:00:00']);
-    $appareil = $surLAppareil === null ? null : Carbon::parse($surLAppareil);
 
-    $fin = $seance->finBornee($appareil, $maintenant);
+    $fin = $seance->finBornee($age, $maintenant);
 
     expect($fin->format('Y-m-d H:i:s'))->toBe($attendu)
         ->and($fin)->not->toBe($maintenant)
-        ->and($fin)->not->toBe($appareil)
         ->and($fin)->not->toBe($seance->started_at);
 })->with('fins venues de l’appareil');
 
