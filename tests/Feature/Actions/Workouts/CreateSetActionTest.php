@@ -148,6 +148,30 @@ it('n enregistre pas une cle vide, qui ferait collisionner deux series distincte
 });
 
 /*
+ * Deux clés qui ne diffèrent que par la casse nomment deux tentatives (#2097).
+ * Sous `utf8mb4_unicode_ci`, la recherche de la seconde trouvait la série de
+ * la première, et la rendait : la colonne se compare en `ascii_bin`, comme
+ * celle des séances (`.ai/rules/actions.md`).
+ */
+it('crée deux séries pour deux clés qui ne diffèrent que par la casse, et rend à chacune la sienne', function (string $cle, string $autreCle): void {
+    [$user, $workoutLine] = ligneNeuvePourSerie();
+    $action = app(CreateSetAction::class);
+
+    $premiere = $action->execute($user, $workoutLine, ['weight' => 50, 'reps' => 5, 'idempotency_key' => $cle]);
+    $seconde = $action->execute($user, $workoutLine, ['weight' => 60, 'reps' => 5, 'idempotency_key' => $autreCle]);
+
+    expect($seconde->id)->not->toBe($premiere->id)
+        ->and($seconde->idempotency_key)->toBe($autreCle)
+        ->and($action->execute($user, $workoutLine, ['weight' => 70, 'reps' => 5, 'idempotency_key' => $cle])->id)->toBe($premiere->id)
+        ->and($action->execute($user, $workoutLine, ['weight' => 70, 'reps' => 5, 'idempotency_key' => $autreCle])->id)->toBe($seconde->id)
+        ->and($workoutLine->sets()->count())->toBe(2);
+})->with([
+    'minuscules puis capitales' => ['tentative-a', 'TENTATIVE-A'],
+    'un UUID puis le même en capitales' => ['5f1e7a2c-2097-4d3b-8c1a-00000000000a', '5F1E7A2C-2097-4D3B-8C1A-00000000000A'],
+    'une lettre' => ['a', 'A'],
+]);
+
+/*
  * Une série naît en dernier : la première prend le rang 0, la suivante le
  * rang max + 1, et un rang fourni explicitement est conservé.
  */
