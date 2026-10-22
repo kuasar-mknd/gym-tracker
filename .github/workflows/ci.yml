@@ -617,7 +617,7 @@ jobs:
             # deterministe et ne depend pas de ce que le runner embarque.
             - name: Semgrep (default + php + owasp-top-ten)
               run: |
-                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.181.0 \
+                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.182.0 \
                     semgrep scan --config p/default --config p/php --config p/owasp-top-ten \
                     --severity ERROR --error .
 
@@ -639,9 +639,9 @@ jobs:
             # choisit l'image, se monte dans la même PR, et
             # LesActionsDeLaCiSontFigeesTest refuse qu'elles s'écartent.
             - name: TruffleHog
-              uses: trufflesecurity/trufflehog@e76dff8a7e57d6df0c60ad8cbf5d5cba505a8fc9 # v3.99.2
+              uses: trufflesecurity/trufflehog@e63326d6545de8f425d93ce24078c6e68d83f70e # v3.99.3
               with:
-                  version: '3.99.2'
+                  version: '3.99.3'
                   path: ./
                   base: ''
                   head: ''
