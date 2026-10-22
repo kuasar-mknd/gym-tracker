@@ -42,7 +42,20 @@ class TemplateExecutionTest extends DuskTestCase
                 .'[0].click();'
             );
 
+            // L'écran ne dit pas que la séance existe : sans réponse du serveur
+            // en cinq secondes, la page ouvre la séance en attente
+            // (/workouts/en-attente/…), construite depuis la file, et ce chemin
+            // remplit aussi cette condition. Compter aussitôt lisait alors la
+            // base avant l'écriture (#2100).
             $browser->waitUntil('window.location.pathname.startsWith("/workouts/")', 15);
+
+            // La séance s'attend donc en base avant d'être comptée.
+            $browser->waitUsing(
+                15,
+                100,
+                fn (): bool => Workout::where('user_id', $user->id)->exists(),
+                'Après %s s, aucune séance n’existe en base pour ce compte : le lancement n’a pas atteint le serveur.',
+            );
 
             $this->assertSame(
                 1,
