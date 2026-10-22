@@ -174,8 +174,11 @@ return new class() extends Migration
     /**
      * Pose un index sur la colonne quand elle porte une clé étrangère et
      * qu'aucun autre index que celui qui part ne commence par elle sans
-     * colonne nullable derrière : la clé garde de quoi être portée, et
-     * vérifiée sous 9.7.
+     * colonne nullable derrière : la clé garde de quoi être portée (MySQL
+     * refuse sinon le retrait, 1553). Sous 9.7.2, un index posé après ne
+     * reprend pas la clé tant qu'un index plus ancien commence par sa
+     * colonne : un tel index, colonne nullable derrière la clé, reste fautif,
+     * et la garde de convention le refuse (mesuré sur 9.7.2).
      */
     private function garderUnIndexPour(string $table, string $colonne, string $partant): void
     {

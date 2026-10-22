@@ -313,12 +313,15 @@ it('trouve par leurs colonnes les index d’une base d’avant nommés autrement
         ->and(clesHorsNullesEtat())->toBe(clesHorsNullesEtatAttendu(apres: true));
 });
 
-it('ne laisse pas la clé au seul index qui a une colonne nullable derrière elle', function (): void {
+it('pose un index simple quand le seul autre index qui commence par la clé a une colonne nullable derrière elle', function (): void {
     clesHorsNullesDescendre();
 
     // Une base où l'autre index qui commence par la clé porte une colonne
-    // nullable derrière elle : il ne peut pas la garder, et la migration en
-    // pose un simple avant de retirer `(user_id, category, name)`.
+    // nullable derrière elle : il ne compte pas, et la migration en pose un
+    // simple avant de retirer `(user_id, category, name)`. Sous 9.7.2, l'index
+    // posé après ne reprend pas la clé tant que `(user_id, category)` existe
+    // (mesuré) : cet index reste fautif, et le cas du schéma de
+    // `ChaqueCleEtrangereRefuseUneLigneOrphelineTest` le refuse.
     Schema::table('exercises', function (Blueprint $blueprint): void {
         $blueprint->index(['user_id', 'category']);
     });
