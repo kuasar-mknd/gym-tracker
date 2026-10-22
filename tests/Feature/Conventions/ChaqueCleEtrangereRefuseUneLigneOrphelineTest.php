@@ -26,8 +26,11 @@ use Illuminate\Support\Facades\Schema;
  * commencent par la clé ; les autres clés de la ligne visent un parent écrit
  * pour l'occasion, ou restent nulles, si bien qu'un refus 1452 ne peut venir
  * que de la clé essayée ; une colonne NOT NULL sans défaut reçoit une valeur
- * de son type, neuve à chaque tirage, donc unique dans un index unique.
- * Chaque essai se fait sous un point de sauvegarde, défait aussitôt.
+ * de son type, neuve à chaque tirage, donc unique dans un index unique. La
+ * valeur de la clé essayée se tire une fois ces parents écrits, et absente de
+ * sa table parente : leur chaîne peut y écrire (une prise de complément vise
+ * un complément, qui vise un compte). Un autre refus que 1452 est rapporté
+ * tel quel. Chaque essai se fait sous un point de sauvegarde, défait aussitôt.
  *
  * Le deuxième lit le schéma : aucun index qui commence par les colonnes d'une
  * clé étrangère n'a de colonne nullable derrière elles. La base du test naît
@@ -36,11 +39,14 @@ use Illuminate\Support\Facades\Schema;
  * figé, retirées depuis), et y porter la clé par un autre index. Seul un
  * schéma dont aucun candidat n'a de colonne nulle ne dépend pas de ce choix.
  *
- * Le troisième montre que le premier voit le défaut là où le serveur l'a :
- * une table taillée comme la reproduction de l'issue lui donne le verdict que
- * le serveur donne à l'insertion directe, et la colonne nulle mise en tête
- * est refusée partout. Ces tables se créent dans la base du test : un ordre
- * DDL valide la transaction de `RefreshDatabase`, et ce fichier retire
+ * Les suivants éprouvent le premier. Une table taillée comme la reproduction
+ * de l'issue lui donne le verdict que le serveur donne à l'insertion directe,
+ * et la colonne nulle mise en tête est refusée partout ; sa colonne nulle a
+ * un défaut non nul, que seule la mise à NULL de la garde écarte. Une ligne
+ * qu'une contrainte CHECK refuse avant la clé est rapportée comme un refus
+ * inattendu. Une ligne dont un autre parent fait écrire la table de la clé
+ * essayée reste orpheline. Ces tables se créent dans la base du test : un
+ * ordre DDL valide la transaction de `RefreshDatabase`, et ce fichier retire
  * lui-même ce qu'il a créé, puis en rouvre une (`.ai/rules/tests.md`).
  */
 
@@ -316,6 +322,10 @@ function cleEtrangereTenterUnOrphelin(array $schema, array $cle): ?string
     DB::beginTransaction();
 
     try {
+        // Les parents que la ligne vise par ses autres clés s'écrivent
+        // d'abord : leur chaîne peut écrire dans la table de la clé essayée,
+        // et la valeur « orpheline », tirée ensuite, n'y a donc pas de parent.
+        $valeurs = cleEtrangereCompleter($schema, $table, array_fill_keys($cle['colonnes'], null) + $nulles, [], 0);
         $orpheline = [];
 
         for ($essai = 0; $essai < 10; $essai++) {
@@ -332,8 +342,7 @@ function cleEtrangereTenterUnOrphelin(array $schema, array $cle): ?string
             }
         }
 
-        $valeurs = cleEtrangereCompleter($schema, $table, $orpheline + $nulles, [], 0);
-        cleEtrangereEcrire($table, $valeurs);
+        cleEtrangereEcrire($table, $orpheline + $valeurs);
 
         return sprintf(
             'ligne orpheline acceptée%s',
@@ -349,16 +358,47 @@ function cleEtrangereTenterUnOrphelin(array $schema, array $cle): ?string
 }
 
 /**
- * Retire de la base du test les tables que le troisième cas crée.
+ * Retire de la base du test les tables que les cas qui éprouvent la garde
+ * créent (`orphelin97_…`), clés étrangères coupées : une table visée par une
+ * autre ne se retire pas d'abord sans cela.
  */
 function cleEtrangereRetirerLesTablesDuCas(): void
 {
-    if (! Schema::hasTable('orphelin97_enfant') && ! Schema::hasTable('orphelin97_parent')) {
+    $tables = array_values(array_filter(
+        array_map(static fn (mixed $ligne): mixed => data_get($ligne, 'nom'), DB::select("select table_name as nom from information_schema.tables where table_schema = database() and table_name like 'orphelin97\\_%'")),
+        is_string(...),
+    ));
+
+    if ($tables === []) {
         return;
     }
 
-    DB::statement('drop table if exists orphelin97_enfant');
-    DB::statement('drop table if exists orphelin97_parent');
+    Schema::withoutForeignKeyConstraints(static function () use ($tables): void {
+        foreach ($tables as $table) {
+            DB::statement('drop table `'.str_replace('`', '``', $table).'`');
+        }
+    });
+}
+
+/**
+ * La clé étrangère de ce nom, lue dans le schéma.
+ *
+ * @param  array{
+ *     cles: list<array{table: string, nom: string, colonnes: list<string>, parent: string, colonnesDuParent: list<string>}>,
+ *     colonnes: array<string, array<string, array{nulle: bool, defaut: bool, auto: bool, generee: bool, type: string, typeComplet: string, longueur: int|null, precision: int|null, echelle: int|null}>>,
+ *     index: array<string, array<string, list<string|null>>>
+ * }  $schema
+ * @return array{table: string, nom: string, colonnes: list<string>, parent: string, colonnesDuParent: list<string>}
+ */
+function cleEtrangereLaCle(array $schema, string $nom): array
+{
+    $cles = array_values(array_filter($schema['cles'], static fn (array $cle): bool => $cle['nom'] === $nom));
+
+    if (count($cles) !== 1) {
+        throw new RuntimeException(sprintf('%d clés étrangères nommées %s dans information_schema, une attendue.', count($cles), $nom));
+    }
+
+    return $cles[0];
 }
 
 afterEach(function (): void {
@@ -425,8 +465,10 @@ it('ne laisse de colonne nullable derrière la clé dans aucun index qui commenc
 });
 
 it('voit une clé étrangère que le serveur ne vérifie pas', function (string $index, bool $refuseeDePartout): void {
+    // `n` a un défaut non nul : omise, elle ne serait pas nulle, et seule la
+    // garde qui la met à NULL d'elle-même rend le verdict du serveur.
     DB::statement('create table orphelin97_parent (id bigint unsigned primary key)');
-    DB::statement("create table orphelin97_enfant (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, n int null, {$index}, constraint orphelin97_fk foreign key (parent_id) references orphelin97_parent (id))");
+    DB::statement("create table orphelin97_enfant (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, n int null default 0, {$index}, constraint orphelin97_fk foreign key (parent_id) references orphelin97_parent (id))");
     DB::getPdo()->beginTransaction();
 
     DB::beginTransaction();
@@ -441,10 +483,8 @@ it('voit une clé étrangère que le serveur ne vérifie pas', function (string 
     }
 
     $schema = cleEtrangereLeSchema();
-    $cles = array_values(array_filter($schema['cles'], static fn (array $cle): bool => $cle['nom'] === 'orphelin97_fk'));
 
-    expect($cles)->toHaveCount(1)
-        ->and(cleEtrangereTenterUnOrphelin($schema, $cles[0]) === null)->toBe($leServeurRefuse);
+    expect(cleEtrangereTenterUnOrphelin($schema, cleEtrangereLaCle($schema, 'orphelin97_fk')) === null)->toBe($leServeurRefuse);
 
     if ($refuseeDePartout) {
         expect($leServeurRefuse)->toBeTrue();
@@ -453,3 +493,36 @@ it('voit une clé étrangère que le serveur ne vérifie pas', function (string 
     'une colonne nulle derrière la clé, comme la reproduction de #2095' => ['key orphelin97_i (parent_id, n)', false],
     'la colonne nulle en tête' => ['key orphelin97_i (n, parent_id)', true],
 ]);
+
+it('ne compte pour la clé qu’un refus 1452', function (): void {
+    // La contrainte CHECK refuse `n` nulle, que la garde met à NULL parce
+    // qu'elle suit la clé dans un index : le serveur refuse la ligne avant
+    // d'en lire la clé (3819), et la garde doit le dire, pas y voir la clé.
+    DB::statement('create table orphelin97_parent (id bigint unsigned primary key)');
+    DB::statement('create table orphelin97_enfant (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, n int null default 0, key orphelin97_i (parent_id, n), constraint orphelin97_n check (n is not null), constraint orphelin97_fk foreign key (parent_id) references orphelin97_parent (id))');
+    DB::getPdo()->beginTransaction();
+
+    $schema = cleEtrangereLeSchema();
+
+    expect(cleEtrangereTenterUnOrphelin($schema, cleEtrangereLaCle($schema, 'orphelin97_fk')))->toBeString()->toStartWith('refus inattendu (3819) : ');
+});
+
+it('tire la valeur orpheline une fois écrits les parents que la ligne fait écrire', function (): void {
+    // La ligne vise un parent par une autre clé, `milieu_id`, dont la ligne
+    // écrite pour l'occasion vise à son tour la table de la clé essayée : la
+    // garde y écrit une ligne. Sa numérotation commence à la valeur que le
+    // prochain tirage rendra ; tirée avant cette écriture, la valeur
+    // « orpheline » aurait un parent, et la ligne serait acceptée.
+    $prochainTirage = cleEtrangereUneValeur('sonde.entier', ['nulle' => false, 'defaut' => false, 'auto' => false, 'generee' => false, 'type' => 'bigint', 'typeComplet' => 'bigint unsigned', 'longueur' => null, 'precision' => 20, 'echelle' => 0]);
+    assert(is_int($prochainTirage));
+    $prochainTirage++;
+
+    DB::statement("create table orphelin97_parent (id bigint unsigned auto_increment primary key) auto_increment = {$prochainTirage}");
+    DB::statement('create table orphelin97_milieu (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, constraint orphelin97_fk_milieu foreign key (parent_id) references orphelin97_parent (id))');
+    DB::statement('create table orphelin97_enfant (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, milieu_id bigint unsigned not null, constraint orphelin97_fk foreign key (parent_id) references orphelin97_parent (id), constraint orphelin97_fk_enfant_milieu foreign key (milieu_id) references orphelin97_milieu (id))');
+    DB::getPdo()->beginTransaction();
+
+    $schema = cleEtrangereLeSchema();
+
+    expect(cleEtrangereTenterUnOrphelin($schema, cleEtrangereLaCle($schema, 'orphelin97_fk')))->toBeNull();
+});
