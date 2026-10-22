@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -464,11 +465,18 @@ it('ne laisse de colonne nullable derrière la clé dans aucun index qui commenc
     ));
 });
 
-it('voit une clé étrangère que le serveur ne vérifie pas', function (string $index, bool $refuseeDePartout): void {
+it('voit une clé étrangère que le serveur ne vérifie pas', function (array $colonnesDeLIndex, bool $refuseeDePartout): void {
     // `n` a un défaut non nul : omise, elle ne serait pas nulle, et seule la
-    // garde qui la met à NULL d'elle-même rend le verdict du serveur.
+    // garde qui la met à NULL d'elle-même rend le verdict du serveur. L'index
+    // est posé avant la clé, qui le prend s'il commence par sa colonne.
     DB::statement('create table orphelin97_parent (id bigint unsigned primary key)');
-    DB::statement("create table orphelin97_enfant (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, n int null default 0, {$index}, constraint orphelin97_fk foreign key (parent_id) references orphelin97_parent (id))");
+    Schema::create('orphelin97_enfant', static function (Blueprint $table) use ($colonnesDeLIndex): void {
+        $table->id();
+        $table->unsignedBigInteger('parent_id');
+        $table->integer('n')->nullable()->default(0);
+        $table->index($colonnesDeLIndex, 'orphelin97_i');
+        $table->foreign('parent_id', 'orphelin97_fk')->references('id')->on('orphelin97_parent');
+    });
     DB::getPdo()->beginTransaction();
 
     DB::beginTransaction();
@@ -490,8 +498,8 @@ it('voit une clé étrangère que le serveur ne vérifie pas', function (string 
         expect($leServeurRefuse)->toBeTrue();
     }
 })->with([
-    'une colonne nulle derrière la clé, comme la reproduction de #2095' => ['key orphelin97_i (parent_id, n)', false],
-    'la colonne nulle en tête' => ['key orphelin97_i (n, parent_id)', true],
+    'une colonne nulle derrière la clé, comme la reproduction de #2095' => [['parent_id', 'n'], false],
+    'la colonne nulle en tête' => [['n', 'parent_id'], true],
 ]);
 
 it('ne compte pour la clé qu’un refus 1452', function (): void {
@@ -517,7 +525,9 @@ it('tire la valeur orpheline une fois écrits les parents que la ligne fait écr
     assert(is_int($prochainTirage));
     $prochainTirage++;
 
-    DB::statement("create table orphelin97_parent (id bigint unsigned auto_increment primary key) auto_increment = {$prochainTirage}");
+    Schema::create('orphelin97_parent', static function (Blueprint $table) use ($prochainTirage): void {
+        $table->id()->startingValue($prochainTirage);
+    });
     DB::statement('create table orphelin97_milieu (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, constraint orphelin97_fk_milieu foreign key (parent_id) references orphelin97_parent (id))');
     DB::statement('create table orphelin97_enfant (id bigint unsigned auto_increment primary key, parent_id bigint unsigned not null, milieu_id bigint unsigned not null, constraint orphelin97_fk foreign key (parent_id) references orphelin97_parent (id), constraint orphelin97_fk_enfant_milieu foreign key (milieu_id) references orphelin97_milieu (id))');
     DB::getPdo()->beginTransaction();

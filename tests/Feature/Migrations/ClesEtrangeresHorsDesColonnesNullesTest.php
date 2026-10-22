@@ -302,7 +302,10 @@ it('trouve par leurs colonnes les index d’une base d’avant nommés autrement
     foreach ($anciens as $table => $formes) {
         foreach (Schema::getIndexes($table) as $index) {
             if (in_array($index['columns'], $formes, true)) {
-                DB::statement(sprintf('alter table `%s` rename index `%s` to `ancien_%d`', $table, $index['name'], ++$renommes));
+                $ancienNom = 'ancien_'.++$renommes;
+                Schema::table($table, static function (Blueprint $blueprint) use ($index, $ancienNom): void {
+                    $blueprint->renameIndex($index['name'], $ancienNom);
+                });
             }
         }
     }
