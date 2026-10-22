@@ -17,6 +17,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * rapportée : la clé de `user_id` est en cascade (#1938), parce que le
  * message et l'URL peuvent porter ce que le compte a saisi.
  *
+ * Une ligne est la première occurrence d'une erreur pour un compte sur une
+ * heure (`SECONDES_DU_REGROUPEMENT`) : la route de collecte ne réécrit pas
+ * une empreinte déjà gardée pour ce compte dans la fenêtre, et se plafonne
+ * par compte (`RAPPORTS_PAR_MINUTE`, `RAPPORTS_PAR_JOUR`).
+ *
  * @property int $id
  * @property int|null $user_id
  * @property string $type
@@ -52,6 +57,32 @@ final class ErreurNavigateur extends Model
      */
     public const int PILE_MAX_CARACTERES = 16_383;
 
+    /**
+     * Le limiteur propre à la route de collecte (`erreurs-navigateur.store`),
+     * défini par `AppServiceProvider::plafonnerLaCollecteDesErreursDuNavigateur()`.
+     */
+    public const string LIMITEUR = 'erreurs-navigateur';
+
+    /**
+     * Les rapports qu'un compte peut envoyer en une minute : dix, autant que
+     * le rapporteur de la page en envoie au plus (`rapporteurDErreurs.js`).
+     * Au-delà, la route répond 204 sans rien écrire.
+     */
+    public const int RAPPORTS_PAR_MINUTE = 10;
+
+    /**
+     * Les rapports qu'un compte peut envoyer en une journée, au-delà desquels
+     * la route répond 204 sans rien écrire.
+     */
+    public const int RAPPORTS_PAR_JOUR = 200;
+
+    /**
+     * La fenêtre, une heure, sur laquelle une même erreur (même empreinte) du
+     * même compte ne s'écrit qu'une fois : la première occurrence est gardée,
+     * les suivantes ne réécrivent rien.
+     */
+    public const int SECONDES_DU_REGROUPEMENT = 3_600;
+
     #[\Override]
     protected $table = 'erreurs_navigateur';
 
@@ -62,6 +93,15 @@ final class ErreurNavigateur extends Model
     public static function empreinteDe(string $type, string $message, ?string $source, ?int $ligne): string
     {
         return md5($type.'|'.$message.'|'.($source ?? '').'|'.($ligne ?? ''));
+    }
+
+    /**
+     * La clé de cache qui retient, le temps de `SECONDES_DU_REGROUPEMENT`,
+     * qu'une erreur de cette empreinte a déjà été gardée pour ce compte.
+     */
+    public static function cleDuRegroupement(int $compte, string $empreinte): string
+    {
+        return "erreurs-navigateur:{$compte}:{$empreinte}";
     }
 
     /** @return BelongsTo<User, $this> */

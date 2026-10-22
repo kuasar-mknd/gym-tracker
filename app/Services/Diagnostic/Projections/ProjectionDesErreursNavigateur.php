@@ -19,7 +19,9 @@ use stdClass;
  *
  * La liste les groupe par empreinte : type, nombre, comptes touchés (un
  * nombre), familles de navigateurs (une liste fermée), fichier du build
- * (seulement s'il est du build en place), ligne, colonne. Les groupes qui
+ * (seulement s'il est du build en place), ligne, colonne. Le nombre compte
+ * les occurrences gardées : une par compte et par heure au plus
+ * (`ErreurNavigateur::SECONDES_DU_REGROUPEMENT`). Les groupes qui
  * touchent le plus de comptes passent devant, puis les plus nombreux, puis
  * les plus récents : un compte seul ne pousse pas son erreur devant celle
  * de plusieurs. Les erreurs d'un compte supprimé ou non vérifié ne sont

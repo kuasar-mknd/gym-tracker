@@ -8,6 +8,7 @@ use App\Http\Middleware\OuvreLaSession;
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
 use App\Models\BodyPartMeasurement;
+use App\Models\ErreurNavigateur;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -21,16 +22,20 @@ use App\Support\Sessions\GestionnaireDesSessions;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Mail\MailManager;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use PDO;
@@ -79,6 +84,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->ouvrirLesOutilsAuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
         $this->ouvrirLeLecteurDeJournaux();
+        $this->plafonnerLaCollecteDesErreursDuNavigateur();
 
         // Le nonce CSP n'est plus tiré ici mais à chaque requête, par
         // NonceCspParRequete : sous Octane, boot() ne tourne qu'une fois par
@@ -490,6 +496,30 @@ final class AppServiceProvider extends ServiceProvider
     {
         Gate::define('viewLogViewer', fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
             && $utilisateur->can('view-logs'));
+    }
+
+    /**
+     * La collecte des erreurs du navigateur a son limiteur, par compte :
+     * `ErreurNavigateur::RAPPORTS_PAR_MINUTE` par minute et
+     * `RAPPORTS_PAR_JOUR` par jour, chacun sous sa clé (deux limites sous une
+     * même clé compteraient chaque envoi deux fois). Au-delà, la route répond
+     * 204 sans rien écrire : le rapporteur de la page ne réessaie pas, et un
+     * rapport refusé ne se distingue pas d'un rapport gardé. Le limiteur vit
+     * dans le singleton de l'application de base, que les requêtes d'Octane
+     * partagent.
+     */
+    private function plafonnerLaCollecteDesErreursDuNavigateur(): void
+    {
+        RateLimiter::for(ErreurNavigateur::LIMITEUR, static function (Request $requete): array {
+            $compte = $requete->user();
+            $cle = $compte instanceof User ? 'compte:'.$compte->id : 'adresse:'.$requete->ip();
+            $sansRienEcrire = static fn (): HttpResponse => response()->noContent();
+
+            return [
+                Limit::perMinute(ErreurNavigateur::RAPPORTS_PAR_MINUTE)->by('minute|'.$cle)->response($sansRienEcrire),
+                Limit::perDay(ErreurNavigateur::RAPPORTS_PAR_JOUR)->by('jour|'.$cle)->response($sansRienEcrire),
+            ];
+        });
     }
 
     /**
