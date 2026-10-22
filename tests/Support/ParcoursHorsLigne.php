@@ -26,7 +26,10 @@ use PHPUnit\Framework\Assert;
  * public/build introuvable (renommé, rétabli dans son `finally`), après avoir
  * vidé le cache HTTP du navigateur et les deux caches du worker que la route
  * des actifs lit après le precache : ce qui s'ouvre pendant la coupure vient du
- * precache et des copies, ou ne s'ouvre pas.
+ * precache et des copies, ou ne s'ouvre pas. Elle attend d'abord que la page
+ * n'ait plus de visite d'Inertia en vol, et une page ouverte sans réseau se
+ * vérifie à l'adresse que sa navigation demandait (#2091,
+ * `attendreLaCoquilleServieA()`).
  *
  * **La lenteur.** `reglerLeReseau()` pose aussi une latence : Chrome la compte
  * de l'envoi de la requête à l'arrivée de ses en-têtes, sur chaque requête de
@@ -139,6 +142,21 @@ trait ParcoursHorsLigne
             () => fini(true),
             (erreur) => fini(String(erreur)),
         );
+    SCRIPT;
+
+    /**
+     * Le nombre de requêtes que le routeur d'Inertia a en vol, dans ses deux
+     * files : `null` sans routeur, `-1` quand ses files n'ont plus la forme
+     * que ce script lit.
+     */
+    private const string VISITES_D_INERTIA_EN_VOL = <<<'SCRIPT'
+        const routeur = window.Inertia;
+        if (routeur === undefined || routeur === null) {
+            return null;
+        }
+        const files = [routeur.syncRequestStream?.requests, routeur.asyncRequestStream?.requests];
+
+        return files.every(Array.isArray) ? files[0].length + files[1].length : -1;
     SCRIPT;
 
     /**
@@ -321,10 +339,19 @@ trait ParcoursHorsLigne
      * d'abord, le réseau ensuite. Une construction retirée restée d'une passe
      * interrompue fait échouer le parcours avant toute coupure.
      *
+     * Rien ne se coupe tant que la page attend une visite d'Inertia
+     * (`attendreAucuneVisiteEnVol()`, #2091) : la coupure n'arrête pas une
+     * requête déjà partie, dont la réponse arrive encore, et le serveur, qui
+     * ne voit plus public/build, y répond 409 sans version d'actifs. Inertia
+     * en fait une visite complète de l'adresse de la page, qui l'emporte sur
+     * celle que le parcours lance.
+     *
      * @param  Closure(): void  $parcours
      */
     private function sansReseauNiConstruction(Browser $browser, ChromeDevToolsDriver $outils, Closure $parcours): void
     {
+        $this->attendreAucuneVisiteEnVol($browser);
+
         Assert::assertTrue(
             $browser->driver->executeAsyncScript(self::VIDER_LES_CACHES_DES_ACTIFS),
             'les caches des actifs du worker ne se sont pas vidés',
@@ -434,5 +461,37 @@ trait ParcoursHorsLigne
         $document = $browser->script(self::CE_QU_EST_LE_DOCUMENT)[0];
 
         return is_string($document) ? $document : 'illisible';
+    }
+
+    /**
+     * Attend que la page n'ait plus de visite d'Inertia en vol (#2091) : ni
+     * visite, ni rechargement partiel, props différées comprises. Ce que
+     * `sansReseauNiConstruction()` fait avant de couper.
+     *
+     * Le routeur est celui que `resources/js/main.js` expose aux parcours
+     * (`window.Inertia`) : ses deux files gardent chacune les requêtes parties
+     * et pas encore traitées. Un document sans routeur (la coquille laissée
+     * telle quelle) n'a rien en vol. Un routeur sans ces deux listes, qu'une
+     * montée d'Inertia aurait renommées, fait échouer l'attente au lieu de la
+     * laisser passer à vide.
+     */
+    private function attendreAucuneVisiteEnVol(Browser $browser, int $secondes = 15): void
+    {
+        $limite = microtime(true) + $secondes;
+
+        do {
+            $compte = $browser->script(self::VISITES_D_INERTIA_EN_VOL)[0];
+            $enVol = $compte === null ? 0 : (is_int($compte) ? $compte : -1);
+
+            Assert::assertNotSame(-1, $enVol, 'le routeur d’Inertia n’a plus les files de requêtes que la coupure lit');
+
+            if ($enVol === 0) {
+                return;
+            }
+
+            usleep(100_000);
+        } while (microtime(true) < $limite);
+
+        Assert::fail("la page a encore {$enVol} visite(s) d’Inertia en vol avant la coupure");
     }
 }

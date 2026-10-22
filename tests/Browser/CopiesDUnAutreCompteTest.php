@@ -35,9 +35,11 @@ use Tests\Support\ParcoursHorsLigne;
  * au hasard, en ASCII. Le parcours exige un contexte sûr : la CI sert
  * 127.0.0.1 ; sous Sail, il se déclare sauté.
  *
- * La coquille attendue est celle que la navigation vers la séance de A a
- * ouverte (#2091) : une coquille servie à une autre adresse, comme l'accueil
- * rechargé, ne passe plus pour elle.
+ * La coupure attend que l'accueil de B ait reçu ses props différées, et la
+ * coquille attendue est celle que la navigation vers la séance de A a ouverte
+ * (#2091) : une réponse en vol au moment de la coupure revenait en 409, et
+ * Inertia rechargeait l'accueil, où la coquille montait la copie de B, à la
+ * place de la visite du parcours.
  */
 class CopiesDUnAutreCompteTest extends DuskTestCase
 {
