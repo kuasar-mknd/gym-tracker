@@ -38,7 +38,8 @@ use Tests\Support\PiloteDesParcours;
 /**
  * Un pilote dont le navigateur ne rend plus rien : la capture d'écran, la
  * source de la page et la lecture de la console expirent, comme sur l'éclat
- * du 08/10.
+ * du 08/10, et la page que le navigateur rendu à la classe visite pour quitter
+ * l'application (#2100) ne vient pas.
  */
 function unParcoursBloquePiloteFige(): RemoteWebDriver
 {
@@ -70,6 +71,20 @@ function unParcoursBloquePiloteFige(): RemoteWebDriver
         public function manage(): WebDriverOptions
         {
             throw new TimeoutException('timeout: la console ne répond plus');
+        }
+
+        /**
+         * @param  string  $command_name
+         * @param  array<mixed>  $params
+         */
+        #[\Override]
+        public function execute($command_name, $params = []): mixed
+        {
+            if ($command_name === DriverCommand::GET) {
+                throw new TimeoutException('timeout: la page ne vient pas');
+            }
+
+            return parent::execute($command_name, $params);
         }
     };
 }
@@ -228,6 +243,7 @@ it('rapporte l’échec du parcours, et non celui de la capture qui le suit', fu
     $navigateur = new Browser(unParcoursBloquePiloteFige());
     $navigateur->disableFitOnFailure();
     $navigateur->madeSourceAssertion = true;
+    $sortieImpossible = "parcoursFictif : sortie de l’application impossible (Facebook\WebDriver\Exception\TimeoutException : timeout: la page ne vient pas) ; le parcours suivant part de sa dernière page, sa file d’écritures et ses brouillons gardés (#2100).\n";
     $dossierDesCaptures = Browser::$storeScreenshotsAt;
     Browser::$storeScreenshotsAt = sys_get_temp_dir();
     $parcours->confierLeNavigateur($navigateur);
@@ -237,18 +253,22 @@ it('rapporte l’échec du parcours, et non celui de la capture qui le suit', fu
             throw new RuntimeException('la première page n’est jamais venue');
         }))->toThrow(new RuntimeException('la première page n’est jamais venue'));
 
-        expect($parcours->signalements)->toHaveCount(3)
+        expect($parcours->signalements)->toHaveCount(4)
             ->and($parcours->signalements[0])
             ->toStartWith('parcoursFictif : capture d’écran impossible (Facebook\WebDriver\Exception\TimeoutException : timeout: Timed out receiving message from renderer: 10.000')
             ->toEndWith("L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n")
             ->and($parcours->signalements[1])
             ->toBe("parcoursFictif : source de la page impossible (Facebook\WebDriver\Exception\TimeoutException : timeout: la source ne vient pas). L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n")
             ->and($parcours->signalements[2])
-            ->toBe("parcoursFictif : console du navigateur impossible (Facebook\WebDriver\Exception\TimeoutException : timeout: la console ne répond plus). L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n");
+            ->toBe("parcoursFictif : console du navigateur impossible (Facebook\WebDriver\Exception\TimeoutException : timeout: la console ne répond plus). L’échec rapporté pour ce parcours est le sien, pas celui-ci (#2029).\n")
+            ->and($parcours->signalements[3])
+            ->toBe($sortieImpossible);
 
         /*
          * Ce pilote a répondu, par des erreurs : son navigateur reste à la
-         * classe, comme Dusk le fait.
+         * classe, comme Dusk le fait, et la sortie de l'application, tentée
+         * après les relevés, se signale à son tour sans prendre la place de
+         * l'échec.
          */
         expect($parcours->navigateursGardes()->all())->toBe([$navigateur]);
 
@@ -259,7 +279,8 @@ it('rapporte l’échec du parcours, et non celui de la capture qui le suit', fu
         expect(fn () => $parcours->browse(function (Browser $navigateur): void {
         }))->toThrow(new TimeoutException('timeout: la console ne répond plus'));
 
-        expect($parcours->signalements)->toHaveCount(3)
+        expect($parcours->signalements)->toHaveCount(5)
+            ->and($parcours->signalements[4])->toBe($sortieImpossible)
             ->and($parcours->navigateursGardes()->all())->toBe([$navigateur]);
     } finally {
         $parcours->oublierLesNavigateurs();

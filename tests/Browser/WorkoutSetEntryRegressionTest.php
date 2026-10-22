@@ -311,9 +311,11 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
             $browser->assertPresent('@swipe-remove-set-0-0');
 
             // La rangee s'affiche avant la reponse du serveur : la creation est
-            // optimiste. Le parcours ne s'arrete pas sur elle en vol : le
-            // suivant vide la base, qui reprend ses identifiants a 1, et une
-            // creation arrivee apres coup se posait dans sa ligne (#2100).
+            // optimiste. Le parcours l'attend en base avant de finir : arrivee
+            // au serveur apres coup, elle se posait dans la ligne du parcours
+            // suivant, dont la base videe reprend les identifiants a 1 (#2100).
+            // Sa reponse peut encore etre en route : `DuskTestCase` arrete la
+            // page et vide sa file avant de rendre le navigateur.
             $this->waitForDatabase(
                 fn (): bool => $line->sets()->exists(),
                 message: 'la serie ajoutee n’a jamais atteint la base',

@@ -73,6 +73,33 @@ abstract class DuskTestCase extends BaseTestCase
      */
     public const int SECONDES_POUR_FERMER_UN_NAVIGATEUR_MUET = 5;
 
+    /**
+     * La page où le navigateur rendu à la classe attend le parcours suivant :
+     * un fichier de public/, que le serveur sert tel quel, sans session ni
+     * code de l'application.
+     */
+    public const string PAGE_HORS_DE_L_APPLICATION = '/robots.txt';
+
+    /**
+     * La clé sous laquelle l'application range sa file d'écritures
+     * (`CLE_DE_LA_FILE`, resources/js/Utils/seanceEnAttente.js).
+     */
+    public const string CLE_DE_LA_FILE_DES_ECRITURES = 'offline_sync_queue';
+
+    /**
+     * Le préfixe des brouillons de séries, une clé par série
+     * (`PREFIXE_DES_BROUILLONS`, resources/js/composables/useBrouillonsDeSeries.js).
+     */
+    public const string PREFIXE_DES_BROUILLONS = 'draft_set_';
+
+    /**
+     * Vide ce qu'une page de l'application rejouerait au parcours suivant :
+     * la file d'écritures et les brouillons de séries.
+     */
+    public const string SCRIPT_QUI_VIDE_LES_ECRITURES = 'localStorage.removeItem("'.self::CLE_DE_LA_FILE_DES_ECRITURES.'");'
+        .' Object.keys(localStorage).filter((cle) => cle.startsWith("'.self::PREFIXE_DES_BROUILLONS.'"))'
+        .'.forEach((cle) => localStorage.removeItem(cle));';
+
     protected function setUp(): void
     {
         static::assertViteIsNotInDevMode();
@@ -566,10 +593,20 @@ abstract class DuskTestCase extends BaseTestCase
      * prend son ordre sans réponse et cinq secondes de fermeture, le suivant
      * passe en moins d'une seconde.
      *
+     * Rendu à la classe, il a d'abord quitté l'application
+     * (`quitterLApplication()`) : un ordre resté sans réponse pendant cette
+     * sortie l'écarte comme un autre.
+     *
      * @param  Collection<array-key, mixed>  $browsers
      */
     private function rendreOuEcarterLesNavigateurs(Collection $browsers): void
     {
+        $premier = $browsers->first();
+
+        if ($premier instanceof Browser && $this->ordresSansReponse($browsers) === []) {
+            $this->quitterLApplication($premier);
+        }
+
         $ordresSansReponse = $this->ordresSansReponse($browsers);
 
         if ($ordresSansReponse === []) {
@@ -600,6 +637,49 @@ abstract class DuskTestCase extends BaseTestCase
                 $navigateur->driver->getCommandExecutor()->setRequestTimeout($millisecondesPourFermer);
                 $navigateur->quit();
             });
+        }
+    }
+
+    /**
+     * Arrête la page de l'application que le navigateur rendu à la classe
+     * garde ouverte, et vide ce qu'elle laisse à rejouer.
+     *
+     * Le navigateur passe au parcours suivant sur la dernière page de
+     * celui-ci, qui tourne encore. Que la base porte une écriture ne la retire
+     * pas de la page : tant que sa réponse n'est pas revenue, la première
+     * visite du parcours suivant la coupait, la file la gardait au nom du
+     * compte, et la première page du compte suivant la rejouait. Sous
+     * `DatabaseTruncation`, la base vidée reprend ses identifiants à 1 : le
+     * compte suivant porte le même, et l'écriture touchait ses données. Une
+     * réponse retenue 1,5 s après l'écriture faisait ainsi tomber
+     * `RestTimerTest` sur un 404 rejoué dans sa console, et une création
+     * retenue 2 s laissait trois séries au lieu de deux au parcours suivant
+     * de `WorkoutSetEntryRegressionTest` (#2100). Dans l'application, c'est la
+     * déconnexion qui efface la file et les brouillons du compte qui part ;
+     * entre deux parcours, personne ne se déconnecte.
+     *
+     * Ici, avant que le parcours suivant ne vide la base : la page s'arrête
+     * sur un fichier que le serveur sert sans l'application, ce qui coupe ses
+     * écritures en vol et ses saisies que le délai d'une seconde n'a pas encore
+     * envoyées ; la file et les brouillons, où elles restent, sont vidés. Une
+     * écriture déjà partie peut encore arriver au serveur : un parcours qui
+     * écrit attend donc la base avant de finir (`.ai/rules/browser.md`).
+     *
+     * Une sortie impossible se signale sans faire tomber le parcours, qui a
+     * fini : le suivant part alors de cette page, comme avant.
+     */
+    private function quitterLApplication(Browser $navigateur): void
+    {
+        try {
+            $navigateur->visit(self::PAGE_HORS_DE_L_APPLICATION);
+            $navigateur->script(self::SCRIPT_QUI_VIDE_LES_ECRITURES);
+        } catch (Throwable $impossible) {
+            $this->signaler(sprintf(
+                "%s : sortie de l’application impossible (%s : %s) ; le parcours suivant part de sa dernière page, sa file d’écritures et ses brouillons gardés (#2100).\n",
+                $this->getCallerName(),
+                $impossible::class,
+                trim($impossible->getMessage()),
+            ));
         }
     }
 

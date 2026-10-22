@@ -47,9 +47,13 @@ class RestTimerTest extends DuskTestCase
      * La bascule est optimiste : le libelle change avant la reponse du serveur,
      * et `waitForToggle()` ne prouve que l'ecran. Chaque coche attend donc la
      * sienne en base avant la suivante : la base porte alors la derniere, et non
-     * une precedente de meme valeur. Le parcours ne s'arrete pas non plus sur
-     * une bascule en vol : le suivant vide la base, qui reprend ses identifiants
-     * a 1, et une ecriture arrivee apres coup pouvait toucher sa serie (#2100).
+     * une precedente de meme valeur. La derniere s'attend aussi avant la fin :
+     * arrivee au serveur apres coup, elle s'ecrirait dans la base que le
+     * parcours suivant vient de vider, qui reprend ses identifiants a 1 (#2100).
+     * La base atteinte ne retire pas l'ecriture de la page : une reponse encore
+     * en route quand la page suivante s'ouvre la laisse en file, au nom du meme
+     * identifiant de compte. `DuskTestCase` arrete la page et vide sa file avant
+     * de rendre le navigateur au parcours suivant.
      */
     private function waitForCompletionInDatabase(Browser $browser, Workout $seance, bool $validee): void
     {
