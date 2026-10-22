@@ -349,7 +349,7 @@ function cleEtrangereTenterUnOrphelin(array $schema, array $cle): ?string
 }
 
 /**
- * Retire de la base du test les tables que le second cas crée.
+ * Retire de la base du test les tables que le troisième cas crée.
  */
 function cleEtrangereRetirerLesTablesDuCas(): void
 {
