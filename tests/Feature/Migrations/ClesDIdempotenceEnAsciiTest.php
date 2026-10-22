@@ -6,6 +6,7 @@ use App\Actions\Workouts\CreateSetAction;
 use App\Models\User;
 use App\Models\WorkoutLine;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -145,7 +146,9 @@ function clesAsciiTablesDe(array $ordres): array
 function clesAsciiPasserSeule(string $table): void
 {
     Schema::withoutForeignKeyConstraints(static function () use ($table): void {
-        DB::statement("alter table `{$table}` modify `idempotency_key` varchar(64) character set ascii collate ascii_bin null");
+        Schema::table($table, static function (Blueprint $blueprint): void {
+            $blueprint->string('idempotency_key', 64)->charset('ascii')->collation('ascii_bin')->nullable()->change();
+        });
     });
 }
 
