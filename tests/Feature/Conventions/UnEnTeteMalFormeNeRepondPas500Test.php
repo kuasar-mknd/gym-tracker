@@ -231,7 +231,7 @@ it('recense chaque en-tête que le code de app/ lit, et en déduit les routes qu
         ->and($routes['X-Copies-Hors-Ligne'] ?? [])->not->toContain('api.v1.sets.store');
 });
 
-it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou une constante, et pas celle d’une réponse', function (): void {
+it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou une constante, et pas celle d’une réponse ni d’un receveur d’un autre type', function (): void {
     $code = <<<'PHP'
         <?php
         namespace App\Http\Middleware;
@@ -274,9 +274,42 @@ it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou un
                 $this->header('X-Dix');
             }
         }
+        namespace App\Http\Controllers;
+        use Illuminate\Http\Response;
+        use Illuminate\Support\Facades\Request as Requete;
+        final class LitAutrement
+        {
+            public function store($request, Response $retour)
+            {
+                Requete::header('X-Douze');
+                \Illuminate\Support\Facades\Request::header('X-Treize');
+                $entetes = $request->headers;
+                $entetes->get('X-Quatorze');
+                $request->headers->keys();
+                foreach ($request->headers as $nom => $valeur) {
+                }
+                $request->Header('X-Quinze');
+                $request->headers->GET('X-Seize');
+                $serveur = $request->server;
+                $request->headers->remove('X-Dix-Sept');
+                $retour->header('X-Dix-Huit');
+                $retour->headers->get('X-Dix-Neuf');
+            }
+        }
+        namespace App\Models;
+        final class ExceptionEnregistree
+        {
+            protected static function booted(): void
+            {
+                self::saving(function (self $exception): void {
+                    $exception->headers = self::masquer($exception->headers);
+                });
+            }
+        }
         PHP;
 
     $classe = VerifieLeCompteDeLEcriture::class;
+    $autre = 'App\\Http\\Controllers\\LitAutrement';
 
     expect(EntetesLus::lecturesDuCode($code))->toBe([
         ['ligne' => 9, 'entete' => 'idempotency-key', 'classe' => $classe, 'methode' => 'handle'],
@@ -296,5 +329,13 @@ it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou un
         ['ligne' => 30, 'entete' => '*', 'classe' => $classe, 'methode' => 'handle'],
         ['ligne' => 31, 'entete' => 'x-onze', 'classe' => $classe, 'methode' => 'handle'],
         ['ligne' => 39, 'entete' => 'x-dix', 'classe' => 'App\\Http\\Middleware\\LitUnEnTete', 'methode' => 'lire'],
+        ['ligne' => 49, 'entete' => 'x-douze', 'classe' => $autre, 'methode' => 'store'],
+        ['ligne' => 50, 'entete' => 'x-treize', 'classe' => $autre, 'methode' => 'store'],
+        ['ligne' => 51, 'entete' => null, 'classe' => $autre, 'methode' => 'store'],
+        ['ligne' => 53, 'entete' => '*', 'classe' => $autre, 'methode' => 'store'],
+        ['ligne' => 54, 'entete' => null, 'classe' => $autre, 'methode' => 'store'],
+        ['ligne' => 56, 'entete' => 'x-quinze', 'classe' => $autre, 'methode' => 'store'],
+        ['ligne' => 57, 'entete' => 'x-seize', 'classe' => $autre, 'methode' => 'store'],
+        ['ligne' => 58, 'entete' => null, 'classe' => $autre, 'methode' => 'store'],
     ]);
 });

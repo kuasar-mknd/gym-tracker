@@ -15,12 +15,15 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Request as RequeteDeLaFacade;
 use Illuminate\Support\Str;
 use PhpToken;
+use ReflectionClass;
 use ReflectionFunction;
 use ReflectionMethod;
 use ReflectionNamedType;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\HttpFoundation\Request as RequeteDeSymfony;
 
 /**
  * Les en-têtes que le code de app/ et routes/ lit lui-même (#2094), pour la
@@ -30,33 +33,65 @@ use Symfony\Component\Finder\Finder;
  * qui trouve chaque lecture et en déduit les routes.
  *
  * Une lecture est un appel qui rend la valeur d'un en-tête de la requête :
- * `header()`, `hasHeader()`, `headers->get()` (`has`, `all`, `contains`),
- * `server('HTTP_…')`, `server->get('HTTP_…')`, `$_SERVER['HTTP_…']`,
- * `getenv('HTTP_…')`, `bearerToken()` (`Authorization`), `userAgent()`
- * (`User-Agent`), `getallheaders()`. Ce que lit le framework ou un paquet
+ * `header()`, `hasHeader()`, `headers->get()` (`has`, `all`, `contains`,
+ * `getDate`), `server('HTTP_…')`, `server->get('HTTP_…')`,
+ * `$_SERVER['HTTP_…']`, `getenv('HTTP_…')`, `bearerToken()`
+ * (`Authorization`), `userAgent()` (`User-Agent`), `getallheaders()`, la
+ * façade `Request` comprise, sous un alias ou son nom complet. Un nom de
+ * méthode se lit sans tenir compte de la casse, comme PHP. Tout autre usage
+ * du sac des en-têtes ou des variables de serveur (`keys()`, le sac rangé
+ * dans une variable, parcouru par `foreach`, passé à une fonction) en est
+ * une aussi, dont le nom ne se lit pas ; écrire dans le sac (`set()`,
+ * `remove()`) n'en est pas. Ce que lit le framework ou un paquet
  * (`expectsJson()`, `ip()`, `getHost()`, les en-têtes d'Inertia et de
- * Sanctum) n'en est pas. Un appel sur une réponse (une variable `$reponse` ou `$response`,
- * `response()`, `redirect()`, `back()`, `Response::`, `Redirect::`, `Http::`)
- * n'en est pas non plus ; tout autre receveur compte pour une requête.
+ * Sanctum) n'en est pas. Un appel sur une réponse (une variable `$reponse`
+ * ou `$response`, `response()`, `redirect()`, `back()`, `Response::`,
+ * `Redirect::`, `Http::`) n'en est pas non plus, ni un appel sur une
+ * variable que la fonction reçoit sous un type qui n'est pas une requête
+ * (`Response $retour`, `self $exception` dans un modèle) ; tout autre
+ * receveur compte pour une requête.
  */
 final class EntetesLus
 {
     /**
      * Les méthodes de la requête qui lisent l'en-tête que nomme leur premier
-     * argument.
+     * argument, en minuscules : PHP ne tient pas compte de la casse d'un nom
+     * de méthode.
      */
-    private const array LECTURES_PAR_NOM = ['header', 'hasHeader'];
+    private const array LECTURES_PAR_NOM = ['header', 'hasheader'];
 
     /**
-     * Les méthodes de la requête qui lisent un en-tête fixe.
+     * Les méthodes de la requête qui lisent un en-tête fixe, en minuscules.
      */
-    private const array LECTURES_FIXES = ['bearerToken' => 'authorization', 'userAgent' => 'user-agent'];
+    private const array LECTURES_FIXES = ['bearertoken' => 'authorization', 'useragent' => 'user-agent'];
 
     /**
-     * Les méthodes du sac des en-têtes (`->headers`) ou des variables de
-     * serveur (`->server`) qui en lisent un.
+     * Pour le sac des en-têtes (`->headers`) et celui des variables de
+     * serveur (`->server`), en minuscules : les méthodes qui lisent ce que
+     * nomme leur premier argument (`all()` sans argument les lit tous), celles
+     * qui les lisent tous, et celles qui écrivent. Tout autre usage du sac (le
+     * ranger dans une variable, le parcourir, le passer, une autre méthode)
+     * est une lecture dont le nom ne se lit pas.
+     *
+     * @var array<string, array{parNom: list<string>, tous: list<string>, ecritures: list<string>}>
      */
-    private const array LECTURES_DU_SAC = ['get', 'has', 'all', 'contains'];
+    private const array SACS = [
+        'headers' => [
+            'parNom' => ['get', 'has', 'all', 'contains', 'getdate'],
+            'tous' => ['keys', 'getiterator', 'count'],
+            'ecritures' => ['set', 'remove', 'add', 'replace'],
+        ],
+        'server' => [
+            'parNom' => ['get', 'has', 'all', 'getstring', 'getint', 'getboolean', 'getalpha', 'getalnum', 'getdigits', 'getenum', 'filter'],
+            'tous' => ['keys', 'getheaders', 'getiterator', 'count'],
+            'ecritures' => ['set', 'remove', 'add', 'replace'],
+        ],
+    ];
+
+    /**
+     * Les jetons d'un type déclaré devant un paramètre.
+     */
+    private const array JETONS_DE_TYPE = [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED];
 
     /**
      * Les fonctions qui rendent tous les en-têtes.
@@ -203,7 +238,7 @@ final class EntetesLus
 
         foreach ($jetons as $i => $jeton) {
             if ($jeton->is(T_NAMESPACE) && ($jetons[$i + 1] ?? null)?->is([T_STRING, T_NAME_QUALIFIED]) === true) {
-                $contexte['espace'] = $jetons[$i + 1]->text;
+                $contexte = ['espace' => $jetons[$i + 1]->text, 'imports' => [], 'classe' => null];
             } elseif ($jeton->is(T_USE) && $pile === []) {
                 $contexte['imports'] = [...$contexte['imports'], ...self::importsDe($jetons, $i)];
             } elseif ($jeton->is([T_CLASS, T_TRAIT, T_INTERFACE, T_ENUM]) && ! self::estPrecedeDe($jetons, $i, ['::']) && ($jetons[$i + 1] ?? null)?->is(T_STRING) === true) {
@@ -496,30 +531,113 @@ final class EntetesLus
         }
 
         $acces = $jeton->is([T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR]);
-        $statique = $jeton->is(T_DOUBLE_COLON) && self::teteStatique($jetons, $i) === 'Request::';
+
+        if ($acces && $suivant?->is(T_STRING) === true && isset(self::SACS[$suivant->text]) && ! $ouvrante) {
+            $lue = self::lectureDuSac($jetons, $i, $contexte);
+
+            return $lue === false || self::nEstPasLaRequete($jetons, $i - 1, $contexte) ? false : $lue;
+        }
+
+        $classe = $jeton->is(T_DOUBLE_COLON) && ($jetons[$i - 1] ?? null)?->is(self::JETONS_DE_TYPE) === true
+            ? self::classeNommee($jetons[$i - 1]->text, $contexte)
+            : null;
+        $statique = $classe !== null && self::estLaRequete($classe);
 
         if ((! $acces && ! $statique) || $suivant?->is(T_STRING) !== true || ! $ouvrante) {
             return false;
         }
 
-        $methode = $suivant->text;
-        $sac = ($jetons[$i - 1] ?? null)?->text;
-        $duSac = $acces && in_array($methode, self::LECTURES_DU_SAC, true) && in_array($sac, ['headers', 'server'], true) && self::estPrecedeDe($jetons, $i - 1, ['->', '?->']);
+        if ($acces && isset(self::SACS[$jetons[$i - 1]->text]) && self::estPrecedeDe($jetons, $i - 1, ['->', '?->'])) {
+            return false;
+        }
+
+        $methode = strtolower($suivant->text);
 
         $lue = match (true) {
-            $duSac && $sac === 'headers' => self::nomEnArgument($jetons, $i + 3, $contexte),
-            $duSac => self::nomDuServeur(self::nomEnArgument($jetons, $i + 3, $contexte)),
             in_array($methode, self::LECTURES_PAR_NOM, true) => self::nomEnArgument($jetons, $i + 3, $contexte),
             array_key_exists($methode, self::LECTURES_FIXES) => self::LECTURES_FIXES[$methode],
             $methode === 'server' => self::nomDuServeur(self::nomEnArgument($jetons, $i + 3, $contexte)),
             default => false,
         };
 
-        if ($lue === false || ($statique ? false : self::estUneReponse($jetons, $duSac ? $i - 3 : $i - 1))) {
+        if ($lue === false || ($statique ? false : self::nEstPasLaRequete($jetons, $i - 1, $contexte))) {
             return false;
         }
 
         return $lue;
+    }
+
+    /**
+     * Ce que lit l'accès au sac du jeton `$i` (`->headers` ou `->server`,
+     * sans parenthèse) : le nom que reçoit une méthode qui lit par nom
+     * (`SACS`), `*` pour une méthode qui les lit tous, faux pour une écriture
+     * (une méthode qui écrit, une affectation de la propriété), `null` pour
+     * tout autre usage (le sac rangé dans une variable, parcouru, passé, ou
+     * une autre méthode).
+     *
+     * @param  list<PhpToken>  $jetons
+     * @param  array{espace: string, imports: array<string, string>, classe: string|null}  $contexte
+     */
+    private static function lectureDuSac(array $jetons, int $i, array $contexte): string|null|false
+    {
+        $sac = self::SACS[$jetons[$i + 1]->text];
+        $apres = $jetons[$i + 2] ?? null;
+        $methode = $jetons[$i + 3] ?? null;
+
+        if ($apres?->is([T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR]) !== true || $methode?->is(T_STRING) !== true || ($jetons[$i + 4] ?? null)?->text !== '(') {
+            return $apres?->text === '=' ? false : null;
+        }
+
+        $nom = strtolower($methode->text);
+        $argument = self::nomEnArgument($jetons, $i + 5, $contexte);
+
+        return match (true) {
+            in_array($nom, $sac['parNom'], true) => $jetons[$i + 1]->text === 'server' ? self::nomDuServeur($argument) : $argument,
+            in_array($nom, $sac['tous'], true) => '*',
+            in_array($nom, $sac['ecritures'], true) => false,
+            default => null,
+        };
+    }
+
+    /**
+     * Une classe désigne-t-elle la requête : celle de Laravel ou de Symfony
+     * (ou une fille), ou la façade `Request`, sous un alias compris ? Une
+     * classe que l'autochargement ne trouve pas compte pour la requête si son
+     * nom court est `Request` : dans le doute, la garde tombe.
+     */
+    private static function estLaRequete(string $classe): bool
+    {
+        if (! class_exists($classe) && ! interface_exists($classe)) {
+            return class_basename($classe) === 'Request';
+        }
+
+        $nom = new ReflectionClass($classe)->getName();
+
+        return $nom === RequeteDeLaFacade::class || is_a($nom, RequeteDeSymfony::class, true);
+    }
+
+    /**
+     * La classe que déclare le type du paramètre qu'est la variable du jeton
+     * `$j` (`Response $retour`, `self $exception`), cherchée en remontant
+     * jusqu'au mot `function` ou `fn` le plus proche ; `null` pour une
+     * variable sans type déclaré dans la fonction qui la reçoit.
+     *
+     * @param  list<PhpToken>  $jetons
+     * @param  array{espace: string, imports: array<string, string>, classe: string|null}  $contexte
+     */
+    private static function typeDuParametre(array $jetons, int $j, array $contexte): ?string
+    {
+        for ($k = $j - 1; $k > 1; $k--) {
+            if ($jetons[$k]->is([T_FUNCTION, T_FN])) {
+                return null;
+            }
+
+            if ($jetons[$k]->is(T_VARIABLE) && $jetons[$k]->text === $jetons[$j]->text && $jetons[$k - 1]->is(self::JETONS_DE_TYPE) && in_array($jetons[$k - 2]->text, ['(', ',', '?', ']'], true)) {
+                return self::classeNommee($jetons[$k - 1]->text, $contexte);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -651,28 +769,19 @@ final class EntetesLus
     }
 
     /**
-     * La classe d'un appel statique au jeton `::` `$i`, sous son nom court
-     * suivi de `::` (`Request::`).
+     * Le receveur qui finit au jeton `$j` est-il autre chose que la requête ?
+     * On remonte la chaîne (`$a->b()->c`) jusqu'à un nom qui tranche : une
+     * variable ou une propriété dit son nom (`$reponse`, `->response`), un
+     * appel de fonction ou de classe en tête aussi (`response()`, `Http::`) ;
+     * le résultat d'une méthode ne dit rien, et l'on remonte. Une variable
+     * que la fonction reçoit sous un type qui n'est pas une requête
+     * (`Response $retour`, `self $exception` dans un modèle) n'en est pas
+     * une. Rien ne tranche : une requête.
      *
      * @param  list<PhpToken>  $jetons
+     * @param  array{espace: string, imports: array<string, string>, classe: string|null}  $contexte
      */
-    private static function teteStatique(array $jetons, int $i): string
-    {
-        $classe = isset($jetons[$i - 1]) ? $jetons[$i - 1]->text : '';
-
-        return class_basename(ltrim($classe, '\\')).'::';
-    }
-
-    /**
-     * Le receveur qui finit au jeton `$j` est-il une réponse ? On remonte la
-     * chaîne (`$a->b()->c`) jusqu'à un nom qui tranche : une variable ou une
-     * propriété dit son nom (`$reponse`, `->response`), un appel de fonction
-     * ou de classe en tête aussi (`response()`, `Http::`) ; le résultat d'une
-     * méthode ne dit rien, et l'on remonte. Rien ne tranche : une requête.
-     *
-     * @param  list<PhpToken>  $jetons
-     */
-    private static function estUneReponse(array $jetons, int $j): bool
+    private static function nEstPasLaRequete(array $jetons, int $j, array $contexte): bool
     {
         while ($j >= 0 && isset($jetons[$j])) {
             $jeton = $jetons[$j];
@@ -713,7 +822,9 @@ final class EntetesLus
                     return in_array(class_basename(ltrim(($jetons[$j - 2] ?? $jeton)->text, '\\')).'::', self::TETES_DE_REPONSE, true);
                 }
 
-                return false;
+                $type = $jeton->is(T_VARIABLE) ? self::typeDuParametre($jetons, $j, $contexte) : null;
+
+                return $type !== null && (class_exists($type) || interface_exists($type)) && ! self::estLaRequete($type);
             }
 
             return false;
