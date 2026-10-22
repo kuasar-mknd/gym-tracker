@@ -65,14 +65,15 @@ use function Pest\Laravel\json;
  * première liste (`keys.auth` à sa place, son parent devenant l'objet qui
  * le porte), sur des lignes créées pour elle (une suppression ne prive pas
  * la route suivante) : un tableau, un tableau imbriqué, une chaîne vide,
- * une chaîne énorme, un entier hors bornes, un flottant hors bornes, et une
+ * une chaîne énorme, un entier hors bornes, un flottant hors bornes, une
  * liste d'un objet qui porte, à chaque profondeur, chaque nom validé dans
  * les éléments d'une liste (`exercises.*.id`…), un flottant hors bornes à
- * chaque feuille. Elle reçoit aussi un formulaire dont chaque champ porte
- * un octet hors UTF-8 : celui-là doit être refusé en 400 avant la route,
- * puisque la validation n'en vérifie pas l'encodage, et qu'une valeur
- * qu'elle laisse passer (un nom, une note) irait jusqu'à la base, qui la
- * refuse en 500 ; envoyés tous à la fois, des champs mal formés
+ * chaque feuille, et une date suivie de mots démesurés, que Carbon lit en
+ * appliquant leur sens (#2094). Elle reçoit aussi un formulaire dont chaque
+ * champ porte un octet hors UTF-8 : celui-là doit être refusé en 400 avant
+ * la route, puisque la validation n'en vérifie pas l'encodage, et qu'une
+ * valeur qu'elle laisse passer (un nom, une note) irait jusqu'à la base, qui
+ * la refuse en 500 ; envoyés tous à la fois, des champs mal formés
  * n'atteindraient jamais la base. Le témoin est la première forme : ni 401,
  * ni 404, ni 405, sans quoi la route n'est pas atteinte (une suppression
  * réussie rend ensuite 404 aux formes suivantes, d'où la première).
@@ -92,12 +93,12 @@ use function Pest\Laravel\json;
  * posant pas : le lien de confirmation d'adresse a son propre test
  * (`ChangementDAdresseMemeReponseTest`). Seuls les noms ci-dessus sont
  * essayés : un paramètre lu par une clef calculée, ou d'un tableau reçu
- * entier, ne l'est que s'il est parmi les noms courants. Les en-têtes ne
- * sont pas essayés : la clé `Idempotency-Key`, lue après la validation, a
- * son propre test (`IdempotentCreateTest`). Les rappels des fournisseurs de
- * connexion ne sont pas visités par un invité, qui appellerait le
- * fournisseur. Les pages et les routes des paquets (Pulse, Horizon,
- * journaux, Livewire) ne sont pas visitées.
+ * entier, ne l'est que s'il est parmi les noms courants. Les en-têtes que
+ * l'application lit ont leur garde (`UnEnTeteMalFormeNeRepondPas500Test`,
+ * #2094), qui reprend ces corps sous un en-tête mal formé. Les rappels des
+ * fournisseurs de connexion ne sont pas visités par un invité, qui
+ * appellerait le fournisseur. Les pages et les routes des paquets (Pulse,
+ * Horizon, journaux, Livewire) ne sont pas visitées.
  */
 
 beforeEach(function (): void {

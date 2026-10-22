@@ -139,7 +139,7 @@ it('n enregistre pas une cle vide, qui ferait collisionner deux series distincte
     $seconde = $action->execute($user, $workoutLine, ['weight' => 60.0, 'reps' => 8, 'idempotency_key' => '']);
 
     // Deux series bien distinctes : si la chaine vide etait retenue comme cle,
-    // l'index unique (workout_line_id, idempotency_key) refuserait la seconde
+    // l'index unique (idempotency_key, workout_line_id) refuserait la seconde
     // et l'action rendrait la premiere a sa place.
     expect($seconde->id)->not->toBe($premiere->id);
     expect($premiere->idempotency_key)->toBeNull();

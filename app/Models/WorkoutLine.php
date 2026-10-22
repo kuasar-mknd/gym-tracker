@@ -98,12 +98,13 @@ class WorkoutLine extends Model
      * Les séries de cette ligne, dans l'ordre où elles ont été ajoutées.
      *
      * L'ordre est posé explicitement : sans ORDER BY, la base rend ce que
-     * l'index qu'elle a choisi lui donne. Cette table porte
+     * l'index qu'elle a choisi lui donne. Cette table a porté
      * `sets_workout_line_id_weight_reps_index` (workout_line_id, weight, reps) à
-     * côté de l'index simple sur `workout_line_id`, et quand l'optimiseur retient
-     * le premier, les séries reviennent triées PAR POIDS — corriger le poids
-     * d'une série la faisait donc monter ou descendre dans la liste au
-     * chargement suivant. L'ordre de création est le seul ordre qu'une série
+     * côté de l'index simple sur `workout_line_id`, jusqu'à #2095, et quand
+     * l'optimiseur retenait le premier, les séries revenaient triées PAR POIDS
+     * — corriger le poids d'une série la faisait donc monter ou descendre dans
+     * la liste au chargement suivant. Tout index qui commence par
+     * `workout_line_id` range les séries à sa façon. L'ordre de création est le seul ordre qu'une série
      * possède, et tous les appelants de cette relation l'affichent ainsi :
      * l'écran de séance, l'API, l'historique d'exercice et le modèle copié
      * depuis une séance.
