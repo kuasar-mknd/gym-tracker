@@ -20,6 +20,7 @@ use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Support\EntetesLus;
 use Tests\Support\RequetesMalFormees;
+use Tests\Support\SacDEntetesEspionne;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\call;
@@ -53,17 +54,23 @@ use function Pest\Laravel\json;
  * validation ou de la fermeture d'une route (dont les routes ne se déduisent
  * pas) font tomber la garde.
  *
- * Les routes. Chaque lecture donne ses routes : celles qui nomment son
- * middleware (les groupes `web` et `api`, le panneau), celles de son
- * contrôleur (de la méthode qui lit, quand c'est une action), celles dont
- * l'action reçoit sa requête de validation, ou une requête qui utilise son
- * trait, celle dont la fermeture la porte. Une écriture qui lit un en-tête après ses middlewares envoie sa
+ * Les routes. Chaque lecture donne ses routes : toutes pour un middleware
+ * de la pile globale, celles qui nomment son middleware (les groupes `web`
+ * et `api`, le panneau), celles de son contrôleur (de la méthode qui lit,
+ * quand c'est une action), celles dont l'action reçoit sa requête de
+ * validation, ou une requête qui utilise son trait, celle dont la fermeture
+ * la porte. Une écriture qui lit un en-tête après ses middlewares envoie sa
  * requête valide (`EntetesLus::requetesValides()`), pour un compte neuf à
  * chaque essai : sans elle, la validation la refuserait avant la lecture, et
  * une écriture nouvelle qui en lit un fait tomber la garde jusqu'à ce qu'elle
  * y soit. Les autres routes sont demandées comme une page (GET, sans corps)
  * ou reçoivent un corps JSON vide, leurs paramètres créés pour elles : la
- * lecture se fait dans un middleware, avant la validation.
+ * lecture se fait dans un middleware, avant la validation. Un en-tête lu
+ * sous certaines méthodes seulement le déclare (`EntetesLus::recenses()`) :
+ * la marque du préchauffage, que `OuvreLaSession` ne lit que sous GET et
+ * HEAD, est essayée sous les deux sur chaque page, et une écriture qui
+ * traverse le middleware n'en reçoit que son témoin, qui ne doit pas la
+ * lire.
  *
  * Les formes. Chaque route est demandée sans l'en-tête, le témoin, qui doit
  * atteindre la route (une page selon `RequetesMalFormees::temoinAtteint()`,
@@ -75,7 +82,10 @@ use function Pest\Laravel\json;
  * aucune exception n'est rapportée (`RequetesMalFormees::defauts()`,
  * `Exceptions::fake()` avant chaque requête), et chacune répond comme le
  * témoin, ou par le refus que l'en-tête déclare : une valeur ignorée laisse
- * l'écriture se faire.
+ * l'écriture se faire. Chaque requête, témoin compris, doit atteindre la
+ * lecture qu'elle éprouve : un sac des en-têtes espion
+ * (`Tests\Support\SacDEntetesEspionne`), posé sur la requête et sur chaque
+ * requête de validation, retient chaque nom cherché.
  *
  * Le corps et l'en-tête à la fois. Une requête de validation lit l'heure de
  * l'appareil avec l'instant du corps, avant de le valider : deux dates
@@ -83,11 +93,19 @@ use function Pest\Laravel\json;
  * déborder leur soustraction (#2093), ce qu'aucune des deux gardes ne voit
  * seule, l'une n'envoyant que des en-têtes sous un corps valide, l'autre que
  * des corps sans en-tête. Chaque écriture qui lit un en-tête après ses
- * middlewares reçoit donc aussi chaque valeur inattendue de l'en-tête sous
- * chaque corps mal formé de `UneRequeteMalFormeeNeRepondPas500Test`
+ * middlewares et avant toute requête de validation (dans la requête de
+ * validation ou son trait, ou dans une action qui n'en reçoit pas) reçoit
+ * donc aussi chaque valeur inattendue de l'en-tête sous chaque corps mal
+ * formé de `UneRequeteMalFormeeNeRepondPas500Test`
  * (`RequetesMalFormees::formesDeCorps()`, dont une date suivie de mots
- * démesurés) : aucune 500, aucune exception rapportée.
- *
+ * démesurés) : aucune 500, aucune exception rapportée, et la lecture
+ * atteinte. Une lecture qu'une requête de validation précède (la clé des
+ * écritures de l'API, lue après `validated()`) n'y est pas : le corps mal
+ * formé est refusé avant elle. Une lecture dans un middleware n'y est pas
+ * non plus : essayée sur chaque écriture de son groupe, elle multiplierait
+ * par huit les essais du premier test, et les deux middlewares qui lisent
+ * un en-tête aujourd'hui ne lisent pas le corps.
+
  * Limites. Les pages du panneau ont leur part dans
  * `UnePageDuPanneauNeRepondPas500Test`. Sous `/api/v1`, la requête porte
  * le jeton de Sanctum, comme dans la garde voisine : la session que Sanctum
@@ -97,6 +115,7 @@ use function Pest\Laravel\json;
  * paquets. Seules les lectures que le texte montre sont recensées : un
  * en-tête lu par un paquet (Sanctum, Inertia), ou par le framework pour
  * l'application (`expectsJson()`, `ip()`, `getHost()`), n'en est pas.
+ * config/ et database/ ne sont pas lus.
  */
 
 beforeEach(function (): void {
@@ -107,17 +126,20 @@ beforeEach(function (): void {
 });
 
 /**
- * Envoie à une route qui lit `$entete` sa requête, sans l'en-tête (`$forme`
- * nulle, le témoin) ou sous cette forme de `EntetesLus::formes()`. Une route
- * qui a une requête valide la reçoit pour un compte neuf ; une autre, pour
- * le compte commun, avec des paramètres neufs pour une écriture. Un
- * `$corpsMalForme` remplace le corps d'une écriture, pour le compte commun.
+ * Envoie à une route qui lit `$entete` sa requête, sous `$methode`, sans
+ * l'en-tête (`$forme` nulle, le témoin) ou sous cette forme de
+ * `EntetesLus::formes()`, et dit si la requête a cherché l'en-tête (`$lus`,
+ * que remplit `SacDEntetesEspionne`). Une route qui a une requête valide la
+ * reçoit pour un compte neuf ; une autre, pour le compte commun, avec des
+ * paramètres neufs pour une écriture. Un `$corpsMalForme` remplace le corps
+ * d'une écriture, pour le compte commun.
  *
  * @param  Closure(string): string  $valeursDesPages
+ * @param  ArrayObject<int, string>  $lus
  * @param  array<mixed>|null  $corpsMalForme
- * @return TestResponse<Response>
+ * @return array{reponse: TestResponse<Response>, lu: bool}
  */
-function enteteMalFormeEssayer(Route $route, string $entete, ?string $forme, User $compteCommun, Closure $valeursDesPages, ?array $corpsMalForme = null): TestResponse
+function enteteMalFormeEssayer(Route $route, string $methode, string $entete, ?string $forme, User $compteCommun, Closure $valeursDesPages, ArrayObject $lus, ?array $corpsMalForme = null): array
 {
     $valide = EntetesLus::requetesValides()[(string) $route->getName()] ?? null;
     $ecriture = $route->methods() !== ['GET', 'HEAD'];
@@ -135,22 +157,26 @@ function enteteMalFormeEssayer(Route $route, string $entete, ?string $forme, Use
         actingAs($compte);
     }
 
-    if (! $ecriture) {
-        return call('GET', $adresse, [], [], [], RequetesMalFormees::serveur($entetes, null));
-    }
+    $lus->exchangeArray([]);
+    $reponse = in_array($methode, ['GET', 'HEAD'], true)
+        ? call($methode, $adresse, [], [], [], RequetesMalFormees::serveur($entetes, null))
+        : json($methode, $adresse, $corps, $entetes);
 
-    return json(array_first(array_diff($route->methods(), ['GET', 'HEAD'])) ?? 'POST', $adresse, $corps, $entetes);
+    return ['reponse' => $reponse, 'lu' => in_array(strtolower($entete), $lus->getArrayCopy(), true)];
 }
 
 it('aucune route de l’application ne répond 500 à une valeur inattendue d’un en-tête qu’elle lit', function (): void {
+    $lus = new ArrayObject();
+    SacDEntetesEspionne::poser(app(), $lus);
     $compte = User::factory()->create();
     $valeursDesPages = RequetesMalFormees::valeursDeRoute($compte);
     $formes = array_keys(EntetesLus::formes('valeur'));
     $defauts = [];
     $essais = [];
+    $temoinsSansLecture = 0;
 
     foreach (EntetesLus::routesQuiLisent() as $entete => $lisent) {
-        $refus = EntetesLus::recenses()[$entete]['refus'];
+        ['refus' => $refus, 'methodes' => $methodesLues] = EntetesLus::recenses()[$entete];
 
         foreach ($lisent as ['route' => $route]) {
             if (RequetesMalFormees::duPanneau($route) || $route->getName() === 'social.callback.apple') {
@@ -158,30 +184,52 @@ it('aucune route de l’application ne répond 500 à une valeur inattendue d’
             }
 
             $ecriture = $route->methods() !== ['GET', 'HEAD'];
-            $methode = $ecriture ? array_first(array_diff($route->methods(), ['GET', 'HEAD'])) : 'GET';
-            $temoin = enteteMalFormeEssayer($route, $entete, null, $compte, $valeursDesPages);
-            $attendu = $temoin->getStatusCode();
-            $cas = "{$methode} {$route->uri()}, {$entete}";
-            $defauts = [...$defauts, ...RequetesMalFormees::defauts($temoin, "{$cas} (témoin)")];
+            $principale = $ecriture ? (string) array_first(array_diff($route->methods(), ['GET', 'HEAD'])) : 'GET';
+            $methodes = $methodesLues === null ? [$principale] : array_values(array_intersect($methodesLues, $route->methods()));
 
-            $atteinte = match (true) {
-                ! $ecriture => RequetesMalFormees::temoinAtteint($route, $attendu),
-                array_key_exists((string) $route->getName(), EntetesLus::requetesValides()) => $attendu < 400,
-                default => ! in_array($attendu, [401, 404, 405], true),
-            };
+            if ($methodes === []) {
+                $temoinsSansLecture++;
 
-            if (! $atteinte) {
-                $defauts[] = "{$cas} (témoin) : {$attendu}, la route n'est pas atteinte";
+                if (enteteMalFormeEssayer($route, $principale, $entete, null, $compte, $valeursDesPages, $lus)['lu']) {
+                    $defauts[] = "{$principale} {$route->uri()}, {$entete} (témoin) : lu sous {$principale}, que EntetesLus::recenses() ne déclare pas";
+                }
+
+                continue;
             }
 
-            foreach ($formes as $forme) {
-                $reponse = enteteMalFormeEssayer($route, $entete, $forme, $compte, $valeursDesPages);
-                $statut = $reponse->getStatusCode();
-                $essais[$entete] = ($essais[$entete] ?? 0) + 1;
-                $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, "{$cas} ({$forme})")];
+            foreach ($methodes as $methode) {
+                ['reponse' => $temoin, 'lu' => $lu] = enteteMalFormeEssayer($route, $methode, $entete, null, $compte, $valeursDesPages, $lus);
+                $attendu = $temoin->getStatusCode();
+                $cas = "{$methode} {$route->uri()}, {$entete}";
+                $defauts = [...$defauts, ...RequetesMalFormees::defauts($temoin, "{$cas} (témoin)")];
 
-                if ($statut !== $attendu && $statut !== $refus) {
-                    $defauts[] = "{$cas} ({$forme}) : {$statut}, ni comme sans l'en-tête ({$attendu}) ni par son refus";
+                $atteinte = match (true) {
+                    ! $ecriture => RequetesMalFormees::temoinAtteint($route, $attendu),
+                    array_key_exists((string) $route->getName(), EntetesLus::requetesValides()) => $attendu < 400,
+                    default => ! in_array($attendu, [401, 404, 405], true),
+                };
+
+                if (! $atteinte) {
+                    $defauts[] = "{$cas} (témoin) : {$attendu}, la route n'est pas atteinte";
+                }
+
+                if (! $lu) {
+                    $defauts[] = "{$cas} (témoin) : la lecture de l'en-tête n'est pas atteinte";
+                }
+
+                foreach ($formes as $forme) {
+                    ['reponse' => $reponse, 'lu' => $lu] = enteteMalFormeEssayer($route, $methode, $entete, $forme, $compte, $valeursDesPages, $lus);
+                    $statut = $reponse->getStatusCode();
+                    $essais[$entete][$methode] = ($essais[$entete][$methode] ?? 0) + 1;
+                    $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, "{$cas} ({$forme})")];
+
+                    if ($statut !== $attendu && $statut !== $refus) {
+                        $defauts[] = "{$cas} ({$forme}) : {$statut}, ni comme sans l'en-tête ({$attendu}) ni par son refus";
+                    }
+
+                    if (! $lu) {
+                        $defauts[] = "{$cas} ({$forme}) : la lecture de l'en-tête n'est pas atteinte";
+                    }
                 }
             }
         }
@@ -189,36 +237,49 @@ it('aucune route de l’application ne répond 500 à une valeur inattendue d’
 
     expect($defauts)->toBe([])
         ->and(array_keys($essais))->toEqualCanonicalizing(array_keys(EntetesLus::recenses()))
-        ->and($essais['X-Compte-De-L-Ecriture'] ?? 0)->toBeGreaterThanOrEqual(100 * count($formes));
+        ->and(array_sum($essais['X-Compte-De-L-Ecriture'] ?? []))->toBeGreaterThanOrEqual(100 * count($formes))
+        ->and(array_keys($essais[OuvreLaSession::ENTETE] ?? []))->toEqualCanonicalizing(['GET', 'HEAD'])
+        ->and($temoinsSansLecture)->toBeGreaterThanOrEqual(50);
 });
 
-it('aucune écriture qui lit un en-tête après ses middlewares ne répond 500 sous un en-tête et un corps mal formés à la fois', function (): void {
+it('aucune écriture qui lit un en-tête avant d’en valider le corps ne répond 500 sous un en-tête et un corps mal formés à la fois', function (): void {
+    $lus = new ArrayObject();
+    SacDEntetesEspionne::poser(app(), $lus);
     $compte = User::factory()->create();
     $valeursDesPages = RequetesMalFormees::valeursDeRoute($compte);
     $formes = array_keys(EntetesLus::formes('valeur'));
     $defauts = [];
+    $paires = [];
     $essais = 0;
 
     foreach (EntetesLus::routesQuiLisent() as $entete => $lisent) {
-        foreach ($lisent as ['route' => $route, 'apresLesMiddlewares' => $apres]) {
-            if (! $apres || $route->methods() === ['GET', 'HEAD']) {
+        foreach ($lisent as ['route' => $route, 'avantLaValidation' => $avant]) {
+            if (! $avant || $route->methods() === ['GET', 'HEAD']) {
                 continue;
             }
 
-            $methode = array_first(array_diff($route->methods(), ['GET', 'HEAD']));
+            $methode = (string) array_first(array_diff($route->methods(), ['GET', 'HEAD']));
+            $paires[] = "{$entete} {$route->getName()}";
 
             foreach (RequetesMalFormees::formesDeCorps() as $formeDuCorps => $valeur) {
                 foreach ($formes as $forme) {
-                    $reponse = enteteMalFormeEssayer($route, $entete, $forme, $compte, $valeursDesPages, RequetesMalFormees::corpsMalForme($valeur));
+                    ['reponse' => $reponse, 'lu' => $lu] = enteteMalFormeEssayer($route, $methode, $entete, $forme, $compte, $valeursDesPages, $lus, RequetesMalFormees::corpsMalForme($valeur));
+                    $cas = "{$methode} {$route->uri()}, {$entete} ({$forme}), corps ({$formeDuCorps})";
                     $essais++;
-                    $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, "{$methode} {$route->uri()}, {$entete} ({$forme}), corps ({$formeDuCorps})")];
+                    $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, $cas)];
+
+                    if (! $lu) {
+                        $defauts[] = "{$cas} : {$reponse->getStatusCode()}, la lecture de l'en-tête n'est pas atteinte";
+                    }
                 }
             }
         }
     }
 
     expect($defauts)->toBe([])
-        ->and($essais)->toBeGreaterThanOrEqual(7 * count(RequetesMalFormees::formesDeCorps()) * count($formes));
+        ->and($paires)->toContain('X-Heure-De-L-Appareil api.v1.workouts.store', 'X-Heure-De-L-Appareil api.v1.workouts.finish')
+        ->and(array_intersect($paires, ['Idempotency-Key api.v1.sets.store', 'Idempotency-Key api.v1.workout-lines.store', 'Idempotency-Key api.v1.workouts.store']))->toBe([])
+        ->and($essais)->toBe(count($paires) * count(RequetesMalFormees::formesDeCorps()) * count($formes));
 });
 
 it('recense chaque en-tête que le code de l’application lit, et en déduit les routes qui le lisent', function (): void {

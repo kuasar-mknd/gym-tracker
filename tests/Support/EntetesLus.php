@@ -109,12 +109,16 @@ final class EntetesLus
     private const array TETES_DE_REPONSE = ['response()', 'redirect()', 'back()', 'Response::', 'Redirect::', 'Http::'];
 
     /**
-     * Chaque en-tête que le code de app/ lit, sous le nom qu'il lui donne :
-     * sa valeur attendue pour un compte (celle qu'écrit le client), et le
-     * statut de son refus quand une valeur inattendue est refusée plutôt
-     * qu'ignorée (`null` : la requête répond comme sans l'en-tête).
+     * Chaque en-tête que le code de l'application lit, sous le nom qu'il lui
+     * donne : sa valeur attendue pour un compte (celle qu'écrit le client),
+     * le statut de son refus quand une valeur inattendue est refusée plutôt
+     * qu'ignorée (`null` : la requête répond comme sans l'en-tête), et les
+     * méthodes sous lesquelles le code le lit quand il ne le lit pas sous
+     * toutes (`null` : sous toutes). Une route d'une autre méthode ne reçoit
+     * que son témoin, qui ne doit pas le lire : une méthode oubliée fait
+     * tomber la garde.
      *
-     * @return array<string, array{attendue: Closure(User): string, refus: int|null}>
+     * @return array<string, array{attendue: Closure(User): string, refus: int|null, methodes: list<string>|null}>
      */
     public static function recenses(): array
     {
@@ -123,21 +127,25 @@ final class EntetesLus
             'Idempotency-Key' => [
                 'attendue' => static fn (User $compte): string => Str::uuid()->toString(),
                 'refus' => null,
+                'methodes' => null,
             ],
             // HeureDeLAppareil::ageDe() : la forme de toISOString(), ignorée sinon.
             HeureDeLAppareil::ENTETE => [
                 'attendue' => static fn (User $compte): string => now()->utc()->format('Y-m-d\TH:i:s.v\Z'),
                 'refus' => null,
+                'methodes' => null,
             ],
-            // OuvreLaSession : la seule marque du préchauffage, ignorée sinon.
+            // OuvreLaSession::estUnPrechauffage() : la seule marque du préchauffage, ignorée sinon, lue sous GET et HEAD seulement.
             OuvreLaSession::ENTETE => [
                 'attendue' => static fn (User $compte): string => OuvreLaSession::PRECHAUFFAGE,
                 'refus' => null,
+                'methodes' => ['GET', 'HEAD'],
             ],
             // VerifieLeCompteDeLEcriture : un autre compte que celui de la session répond 409.
             VerifieLeCompteDeLEcriture::ENTETE => [
                 'attendue' => static fn (User $compte): string => (string) $compte->id,
                 'refus' => 409,
+                'methodes' => null,
             ],
         ];
     }
@@ -319,11 +327,14 @@ final class EntetesLus
      * requête de validation qui le lit (ou une requête qui utilise le trait
      * qui le lit), celle dont la fermeture le lit. Pour chacune, la lecture
      * se fait-elle après les middlewares, dans le contrôleur, la requête ou
-     * la fermeture ? Les lectures sont celles de l'application, ou
-     * `$lectures`.
+     * la fermeture ? Et avant toute requête de validation : dans la requête
+     * de validation (ou son trait), ou dans une action qui n'en reçoit pas ?
+     * Une lecture faite dans une action qui reçoit une requête de validation
+     * vient après elle : un corps mal formé n'y arrive jamais. Les lectures
+     * sont celles de l'application, ou `$lectures`.
      *
      * @param  list<array{fichier: string, ligne: int, entete: string|null, classe: string|null, methode: string|null}>|null  $lectures
-     * @return array<string, list<array{route: Route, apresLesMiddlewares: bool}>>
+     * @return array<string, list<array{route: Route, apresLesMiddlewares: bool, avantLaValidation: bool}>>
      */
     public static function routesQuiLisent(?array $lectures = null): array
     {
@@ -342,7 +353,9 @@ final class EntetesLus
             foreach ($deduites['routes'] as $route) {
                 $cle = spl_object_id($route);
                 $apres = $deduites['apresLesMiddlewares'] || ($lisent[$entete][$cle]['apresLesMiddlewares'] ?? false);
-                $lisent[$entete][$cle] = ['route' => $route, 'apresLesMiddlewares' => $apres];
+                $avant = ($deduites['apresLesMiddlewares'] && ($deduites['dansLaValidation'] || ! self::recoitUneRequeteDeValidation($route)))
+                    || ($lisent[$entete][$cle]['avantLaValidation'] ?? false);
+                $lisent[$entete][$cle] = ['route' => $route, 'apresLesMiddlewares' => $apres, 'avantLaValidation' => $avant];
             }
         }
 
@@ -419,7 +432,8 @@ final class EntetesLus
     }
 
     /**
-     * Les routes d'une lecture, et si elle se fait après les middlewares :
+     * Les routes d'une lecture, si elle se fait après les middlewares, et si
+     * elle se fait dans une requête de validation (ou l'un de ses traits) :
      * toutes pour un middleware de la pile globale (`prepend` et `append` de
      * bootstrap/app.php, que le routeur ne voit pas) ; `null` quand elle
      * n'est ni dans un middleware de cette pile ou qu'une route nomme, ni
@@ -428,7 +442,7 @@ final class EntetesLus
      *
      * @param  array{fichier: string, ligne: int, classe: string|null, methode: string|null}  $lecture
      * @param  list<Route>  $routes
-     * @return array{routes: list<Route>, apresLesMiddlewares: bool}|null
+     * @return array{routes: list<Route>, apresLesMiddlewares: bool, dansLaValidation: bool}|null
      */
     private static function routesDeLaLecture(array $lecture, array $routes): ?array
     {
@@ -437,13 +451,13 @@ final class EntetesLus
         if ($classe === null) {
             $deLaFermeture = array_values(array_filter($routes, static fn (Route $route): bool => self::fermeturePorte($route, $lecture['fichier'], $lecture['ligne'])));
 
-            return $deLaFermeture === [] ? null : ['routes' => $deLaFermeture, 'apresLesMiddlewares' => true];
+            return $deLaFermeture === [] ? null : ['routes' => $deLaFermeture, 'apresLesMiddlewares' => true, 'dansLaValidation' => false];
         }
 
         $noyau = app(Kernel::class);
 
         if ($noyau instanceof NoyauHttp && in_array($classe, $noyau->getGlobalMiddleware(), true)) {
-            return ['routes' => $routes, 'apresLesMiddlewares' => false];
+            return ['routes' => $routes, 'apresLesMiddlewares' => false, 'dansLaValidation' => false];
         }
 
         $routeur = app(Router::class);
@@ -454,7 +468,7 @@ final class EntetesLus
         )));
 
         if ($parLeMiddleware !== []) {
-            return ['routes' => $parLeMiddleware, 'apresLesMiddlewares' => false];
+            return ['routes' => $parLeMiddleware, 'apresLesMiddlewares' => false, 'dansLaValidation' => false];
         }
 
         $duControleur = array_values(array_filter($routes, static fn (Route $route): bool => RequetesMalFormees::classeDeLAction($route) === $classe));
@@ -462,7 +476,7 @@ final class EntetesLus
         if ($duControleur !== []) {
             $deLaMethode = array_values(array_filter($duControleur, static fn (Route $route): bool => self::methodeDeLAction($route) === $lecture['methode']));
 
-            return ['routes' => $deLaMethode === [] ? $duControleur : $deLaMethode, 'apresLesMiddlewares' => true];
+            return ['routes' => $deLaMethode === [] ? $duControleur : $deLaMethode, 'apresLesMiddlewares' => true, 'dansLaValidation' => false];
         }
 
         $requetes = match (true) {
@@ -481,7 +495,17 @@ final class EntetesLus
         return [
             'routes' => array_values(array_filter($routes, static fn (Route $route): bool => array_intersect(self::typesRecusParLAction($route), $requetes) !== [])),
             'apresLesMiddlewares' => true,
+            'dansLaValidation' => true,
         ];
+    }
+
+    /**
+     * L'action d'une route reçoit-elle une requête de validation, qui
+     * refuse un corps mal formé avant qu'elle ne s'exécute ?
+     */
+    private static function recoitUneRequeteDeValidation(Route $route): bool
+    {
+        return array_filter(self::typesRecusParLAction($route), static fn (string $type): bool => is_subclass_of($type, FormRequest::class)) !== [];
     }
 
     /**

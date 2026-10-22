@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Testing\TestResponse;
 use Tests\Support\EntetesLus;
 use Tests\Support\RequetesMalFormees;
+use Tests\Support\SacDEntetesEspionne;
 
 use function Pest\Laravel\actingAs;
 
@@ -33,9 +34,11 @@ use function Pest\Laravel\actingAs;
  * `UnEnTeteMalFormeNeRepondPas500Test`, mêmes formes, même recensement.
  * Chaque page du panneau qu'une lecture atteint (aujourd'hui la marque du
  * préchauffage, que lit `OuvreLaSession`, dans la pile du panneau) est
- * demandée sans l'en-tête, puis sous chaque valeur inattendue : aucune 500,
- * aucune exception rapportée, et la même réponse que sans l'en-tête, ou le
- * refus que l'en-tête déclare.
+ * demandée sans l'en-tête, puis sous chaque valeur inattendue, sous chaque
+ * méthode que l'en-tête déclare (GET et HEAD pour la marque) : aucune 500,
+ * aucune exception rapportée, la même réponse que sans l'en-tête, ou le
+ * refus que l'en-tête déclare, et la lecture atteinte
+ * (`SacDEntetesEspionne`).
  */
 
 it('aucune page du panneau ne répond 500 à une chaîne de requête mal formée', function (): void {
@@ -60,16 +63,18 @@ it('aucune page du panneau ne répond 500 à une chaîne de requête mal formée
 });
 
 it('aucune page du panneau ne répond 500 à une valeur inattendue d’un en-tête qu’elle lit', function (): void {
+    $lus = new ArrayObject();
+    SacDEntetesEspionne::poser(app(), $lus);
     $lisent = EntetesLus::routesQuiLisent();
     $routes = array_values(array_filter(RequetesMalFormees::routes(['GET']), RequetesMalFormees::duPanneau(...)));
     $administrateur = RequetesMalFormees::administrateur($routes);
     $valeurs = RequetesMalFormees::valeursDeRoute(User::factory()->create());
     $compte = User::factory()->create();
     $defauts = [];
-    $essais = 0;
+    $essais = [];
 
     foreach ($lisent as $entete => $parRoute) {
-        ['attendue' => $attendue, 'refus' => $refus] = EntetesLus::recenses()[$entete];
+        ['attendue' => $attendue, 'refus' => $refus, 'methodes' => $methodesLues] = EntetesLus::recenses()[$entete];
 
         foreach ($parRoute as ['route' => $route]) {
             if (! RequetesMalFormees::duPanneau($route)) {
@@ -78,33 +83,47 @@ it('aucune page du panneau ne répond 500 à une valeur inattendue d’un en-tê
 
             $adresse = RequetesMalFormees::adresse($route, $valeurs);
             $formes = EntetesLus::formes($attendue($compte));
-            $visiter = static function (?string $forme) use ($administrateur, $adresse, $entete, $formes): TestResponse {
-                Exceptions::fake();
-                RateLimiter::clear('admin-panel:127.0.0.1');
-                $entetes = $forme === null ? [] : [$entete => $formes[$forme]];
 
-                return actingAs($administrateur, 'admin')->call('GET', $adresse, [], [], [], RequetesMalFormees::serveur($entetes, null));
-            };
-            $cas = "GET {$route->uri()}, {$entete}";
-            $temoin = $visiter(null);
-            $defauts = [...$defauts, ...RequetesMalFormees::defauts($temoin, "{$cas} (témoin)")];
+            foreach ($methodesLues ?? ['GET'] as $methode) {
+                $visiter = static function (?string $forme) use ($administrateur, $adresse, $entete, $formes, $lus, $methode): TestResponse {
+                    Exceptions::fake();
+                    RateLimiter::clear('admin-panel:127.0.0.1');
+                    $entetes = $forme === null ? [] : [$entete => $formes[$forme]];
+                    $lus->exchangeArray([]);
 
-            if (! RequetesMalFormees::temoinAtteint($route, $temoin->getStatusCode())) {
-                $defauts[] = "{$cas} (témoin) : {$temoin->getStatusCode()}, la page n'est pas atteinte";
-            }
+                    return actingAs($administrateur, 'admin')->call($methode, $adresse, [], [], [], RequetesMalFormees::serveur($entetes, null));
+                };
+                $lu = static fn (): bool => in_array(strtolower($entete), $lus->getArrayCopy(), true);
+                $cas = "{$methode} {$route->uri()}, {$entete}";
+                $temoin = $visiter(null);
+                $defauts = [...$defauts, ...RequetesMalFormees::defauts($temoin, "{$cas} (témoin)")];
 
-            foreach (array_keys($formes) as $forme) {
-                $reponse = $visiter($forme);
-                $essais++;
-                $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, "{$cas} ({$forme})")];
+                if (! RequetesMalFormees::temoinAtteint($route, $temoin->getStatusCode())) {
+                    $defauts[] = "{$cas} (témoin) : {$temoin->getStatusCode()}, la page n'est pas atteinte";
+                }
 
-                if ($reponse->getStatusCode() !== $temoin->getStatusCode() && $reponse->getStatusCode() !== $refus) {
-                    $defauts[] = "{$cas} ({$forme}) : {$reponse->getStatusCode()}, ni comme sans l'en-tête ({$temoin->getStatusCode()}) ni par son refus";
+                if (! $lu()) {
+                    $defauts[] = "{$cas} (témoin) : la lecture de l'en-tête n'est pas atteinte";
+                }
+
+                foreach (array_keys($formes) as $forme) {
+                    $reponse = $visiter($forme);
+                    $essais[$methode] = ($essais[$methode] ?? 0) + 1;
+                    $defauts = [...$defauts, ...RequetesMalFormees::defauts($reponse, "{$cas} ({$forme})")];
+
+                    if ($reponse->getStatusCode() !== $temoin->getStatusCode() && $reponse->getStatusCode() !== $refus) {
+                        $defauts[] = "{$cas} ({$forme}) : {$reponse->getStatusCode()}, ni comme sans l'en-tête ({$temoin->getStatusCode()}) ni par son refus";
+                    }
+
+                    if (! $lu()) {
+                        $defauts[] = "{$cas} ({$forme}) : la lecture de l'en-tête n'est pas atteinte";
+                    }
                 }
             }
         }
     }
 
     expect($defauts)->toBe([])
-        ->and($essais)->toBeGreaterThanOrEqual(20 * count(EntetesLus::formes('valeur')));
+        ->and($essais['GET'] ?? 0)->toBeGreaterThanOrEqual(20 * count(EntetesLus::formes('valeur')))
+        ->and($essais['HEAD'] ?? 0)->toBe($essais['GET'] ?? 0);
 });
