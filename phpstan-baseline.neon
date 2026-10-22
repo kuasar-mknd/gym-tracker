@@ -309,7 +309,7 @@ parameters:
 		-
 			message: '#^Using nullsafe property access "\?\-\>duration_seconds" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
-			count: 3
+			count: 2
 			path: tests/Browser/WorkoutSetEntryRegressionTest.php
 
 		-
