@@ -59,7 +59,7 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 4 759 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
+| **Tests backend** | 4 762 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
 | **Tests frontend** | 3 993 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 182 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
@@ -318,7 +318,7 @@ Sous Sail, `cp .env.example .env` suffit : le gabarit vise les services de `comp
 
 | Catégorie | Technologies |
 | --- | --- |
-| **Backend** | Laravel 13, PHP 8.5 (8.5.12 au moins dans l'image, Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.2, la LTS suivante), Redis et Laravel Horizon |
+| **Backend** | Laravel 13, PHP 8.5 (8.5.12 au moins, que l'image et `composer.json` exigent, Strict Types), Laravel Octane sur FrankenPHP, MySQL 8.4 (la CI teste aussi 9.7.2, la LTS suivante), Redis et Laravel Horizon |
 | **Frontend** | Vue 3, Inertia.js 3, Tailwind CSS 4, Vite 8 |
 | **Backoffice** | Filament 5 |
 | **Testing** | Pest 5, PHPUnit 13, Laravel Dusk 8 |
