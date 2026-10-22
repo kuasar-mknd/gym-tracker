@@ -240,7 +240,7 @@ it('compte une requête SQL consignée sans durée, sans rien ajouter à la dur�
     tempsServeurAllumer();
     app('router')->get('/_temps-serveur-sans-duree', function (): Response {
         Auth::guard('web')->setUser(new User());
-        DB::connection()->logQuery('select 1', [], null);
+        DB::connection()->logQuery('select 1', []);
 
         return response('mesuré');
     });
