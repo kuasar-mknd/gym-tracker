@@ -78,7 +78,7 @@ final class TempsDuServeurServiceProvider extends ServiceProvider
         }
 
         $evenements->listen(QueryExecuted::class, static function (QueryExecuted $requete): void {
-            self::mesure()?->compterUneRequeteSql($requete->time);
+            self::mesure()?->compterUneRequeteSql($requete->time ?? 0.0);
         });
 
         $evenements->listen(RouteMatched::class, static function (): void {
