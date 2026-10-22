@@ -45,10 +45,12 @@ function crochetReglesDeLintStaged(): array
 }
 
 /**
- * La contrainte « php » de `composer.json` et sa borne basse, que le script
- * lit lui aussi.
+ * La contrainte « php » de `composer.json`, sa borne basse, correctif compris,
+ * comme le script la lit, et la version qui la précède juste. La contrainte
+ * porte un correctif depuis qu'elle exige 8.5.12 : un PHP 8.5.0 ne l'atteint
+ * plus.
  *
- * @return array{contrainte: string, majeur: int, mineur: int}
+ * @return array{contrainte: string, borne: string, anterieure: string, majeur: int}
  */
 function crochetPhpDuProjet(): array
 {
@@ -57,12 +59,25 @@ function crochetPhpDuProjet(): array
 
     expect($contrainte)->toBeString('composer.json ne déclare plus de contrainte « php ».');
     assert(is_string($contrainte));
-    preg_match('/(\d+)\.(\d+)/', $contrainte, $borne);
+    preg_match('/(\d+)\.(\d+)(?:\.(\d+))?/', $contrainte, $borne);
 
-    expect($borne)->toHaveCount(3, "La contrainte « {$contrainte} » n'a pas de borne basse lisible.");
-    assert(count($borne) === 3);
+    expect(count($borne))->toBeGreaterThanOrEqual(3, "La contrainte « {$contrainte} » n'a pas de borne basse lisible.");
+    assert(count($borne) >= 3);
 
-    return ['contrainte' => $contrainte, 'majeur' => (int) $borne[1], 'mineur' => (int) $borne[2]];
+    $majeur = (int) $borne[1];
+    $mineur = (int) $borne[2];
+    $correctif = (int) ($borne[3] ?? 0);
+
+    return [
+        'contrainte' => $contrainte,
+        'borne' => "{$majeur}.{$mineur}.{$correctif}",
+        'anterieure' => match (true) {
+            $correctif > 0 => sprintf('%d.%d.%d', $majeur, $mineur, $correctif - 1),
+            $mineur > 0 => sprintf('%d.%d.99', $majeur, $mineur - 1),
+            default => sprintf('%d.99.99', $majeur - 1),
+        },
+        'majeur' => $majeur,
+    ];
 }
 
 /**
@@ -196,7 +211,7 @@ it('formate dans le conteneur de Sail quand il tourne, avec des chemins relatifs
             $resultat = crochetFormater(
                 [crochetCheminAbsolu('app/Models/User.php')],
                 sailTourne: true,
-                versionDuPhp: "{$projet['majeur']}.{$projet['mineur']}.0",
+                versionDuPhp: $projet['borne'],
                 dossierDeSail: $dossierDeSail,
             );
 
@@ -214,16 +229,14 @@ it('formate dans le conteneur de Sail quand il tourne, avec des chemins relatifs
 
 it('n’entre jamais dans le conteneur de Sail d’un autre dossier, même s’il porte le même nom', function (): void {
     $projet = crochetPhpDuProjet();
-    $ancien = $projet['mineur'] > 0
-        ? sprintf('%d.%d.99', $projet['majeur'], $projet['mineur'] - 1)
-        : sprintf('%d.99.99', $projet['majeur'] - 1);
+    $ancien = $projet['anterieure'];
     $dossier = storage_path('framework/testing/crochet-autre-'.uniqid());
     $homonyme = $dossier.'/'.basename(crochetRacineReelle());
     File::ensureDirectoryExists($homonyme);
 
     try {
         foreach (['une autre copie du même nom' => $homonyme, 'un dossier absent de l’hôte' => $dossier.'/absent', 'aucun dossier' => ''] as $cas => $dossierDeSail) {
-            $assezRecent = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: true, versionDuPhp: "{$projet['majeur']}.{$projet['mineur']}.0", dossierDeSail: $dossierDeSail);
+            $assezRecent = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: true, versionDuPhp: $projet['borne'], dossierDeSail: $dossierDeSail);
             $tropAncien = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: true, versionDuPhp: $ancien, dossierDeSail: $dossierDeSail);
 
             // Entrer dans ce conteneur formaterait l'autre copie, et le commit passerait sans formatage.
@@ -245,7 +258,7 @@ it('n’entre jamais dans le conteneur de Sail d’un autre dossier, même s’i
 it('formate avec le PHP de l’hôte dès qu’il atteint la borne basse de composer.json', function (): void {
     $projet = crochetPhpDuProjet();
 
-    foreach (["{$projet['majeur']}.{$projet['mineur']}.0", ($projet['majeur'] + 1).'.0.0'] as $version) {
+    foreach ([$projet['borne'], ($projet['majeur'] + 1).'.0.0'] as $version) {
         $resultat = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: false, versionDuPhp: $version);
 
         expect($resultat['code'])->toBe(0, "PHP {$version} : ".$resultat['erreurs'])
@@ -256,9 +269,7 @@ it('formate avec le PHP de l’hôte dès qu’il atteint la borne basse de comp
 
 it('s’arrête en échec en disant de lancer Sail quand le PHP de l’hôte est plus ancien que le projet', function (): void {
     $projet = crochetPhpDuProjet();
-    $ancien = $projet['mineur'] > 0
-        ? sprintf('%d.%d.99', $projet['majeur'], $projet['mineur'] - 1)
-        : sprintf('%d.99.99', $projet['majeur'] - 1);
+    $ancien = $projet['anterieure'];
 
     $resultat = crochetFormater([crochetCheminAbsolu('app/Models/User.php')], sailTourne: false, versionDuPhp: $ancien);
 
@@ -286,7 +297,7 @@ it('rend le code d’échec de Pint, sans jamais le changer en succès', functio
     $resultat = crochetFormater(
         [crochetCheminAbsolu('app/Models/User.php')],
         sailTourne: $sailTourne,
-        versionDuPhp: "{$projet['majeur']}.{$projet['mineur']}.0",
+        versionDuPhp: $projet['borne'],
         codeDePint: 3,
     );
 

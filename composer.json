@@ -9,7 +9,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.5",
+        "php": "^8.5.12",
         "bezhansalleh/filament-exceptions": "^4.2",
         "bezhansalleh/filament-shield": "^4.0",
         "filament/filament": "^5.10.3",
