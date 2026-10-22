@@ -230,6 +230,27 @@ it('compte les requêtes SQL de chaque requête, et d’elle seule', function ()
     }
 });
 
+/*
+ * Laravel 13.38 type enfin `QueryExecuted::$time` comme `Connection::logQuery()`
+ * le reçoit, `float|null` : une requête que la connexion consigne sans l'avoir
+ * chronométrée compte, et n'ajoute rien à la durée SQL, au lieu de lever une
+ * erreur de type dans l'écouteur.
+ */
+it('compte une requête SQL consignée sans durée, sans rien ajouter à la durée SQL', function (): void {
+    tempsServeurAllumer();
+    app('router')->get('/_temps-serveur-sans-duree', function (): Response {
+        Auth::guard('web')->setUser(new User());
+        DB::connection()->logQuery('select 1', []);
+
+        return response('mesuré');
+    });
+
+    $reponse = get('/_temps-serveur-sans-duree')->assertOk();
+
+    expect(tempsServeurRequetesAnnoncees($reponse->baseResponse))->toBe(1)
+        ->and((string) $reponse->headers->get('Server-Timing'))->toContain('sql;dur=0.0;desc="1 requete"');
+});
+
 it('mesure le panneau pour un administrateur', function (): void {
     tempsServeurAllumer();
     $administrateur = FilamentAdminPanel::admin(['ViewAny:User']);

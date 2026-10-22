@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Mail\Markdown;
 use Illuminate\Notifications\Messages\MailMessage;
 
@@ -26,9 +27,22 @@ use Illuminate\Notifications\Messages\MailMessage;
 function courrielsEnFrancaisAEnvoyer(): array
 {
     return [
-        'vérification de l’adresse' => static fn (User $utilisateur): MailMessage => new VerifyEmail()->toMail($utilisateur),
-        'réinitialisation du mot de passe' => static fn (User $utilisateur): MailMessage => new ResetPassword('jeton-de-test')->toMail($utilisateur),
+        'vérification de l’adresse' => static fn (User $utilisateur): MailMessage => courrielsEnFrancaisLeMessage(new VerifyEmail()->toMail($utilisateur)),
+        'réinitialisation du mot de passe' => static fn (User $utilisateur): MailMessage => courrielsEnFrancaisLeMessage(new ResetPassword('jeton-de-test')->toMail($utilisateur)),
     ];
+}
+
+/**
+ * Le message que rend `toMail()`, que Laravel 13.38 déclare
+ * `MailMessage|Mailable` (un rappel `toMailUsing()` peut rendre un Mailable) :
+ * les deux courriels de l'application sont des `MailMessage`.
+ */
+function courrielsEnFrancaisLeMessage(MailMessage|Mailable $courriel): MailMessage
+{
+    expect($courriel)->toBeInstanceOf(MailMessage::class);
+    assert($courriel instanceof MailMessage);
+
+    return $courriel;
 }
 
 it('rend chaque courriel en français, pied compris', function (string $courriel): void {

@@ -6,12 +6,14 @@ namespace App\Filament\Sauvegardes;
 
 use App\Models\Admin;
 use Filament\Notifications\Notification;
+use Filament\Panel;
+use Illuminate\Support\Arr;
 use ShuvroRoy\FilamentSpatieLaravelBackup\Enums\BackupType;
 use ShuvroRoy\FilamentSpatieLaravelBackup\Pages\Backups;
 
 /**
  * La page « Sauvegardes » du greffon, déclarée par `usingPage()`, qui sonde le
- * dossier des archives avant de le lister (#1929).
+ * dossier des archives avant de le lister ou d'en servir une archive (#1929).
  *
  * S'il ne répond pas dans le délai, elle le dit au lieu de rendre les deux
  * tableaux, et ne propose pas de créer une sauvegarde qui ne pourrait pas
@@ -30,6 +32,20 @@ final class PageDesSauvegardes extends Backups
 
     #[\Override]
     protected string $view = 'filament.pages.sauvegardes';
+
+    /**
+     * Les maillons de la route de la page, que le greffon reprend pour sa
+     * route de téléchargement (`FilamentSpatieLaravelBackupPlugin::register()`),
+     * plus la sonde du dossier, qui ne vaut que pour celle-ci
+     * (`NeTelechargeQueSiLeDossierRepond`).
+     *
+     * @return array<string>
+     */
+    #[\Override]
+    public static function getRouteMiddleware(Panel $panel): array
+    {
+        return [...Arr::wrap(parent::getRouteMiddleware($panel)), NeTelechargeQueSiLeDossierRepond::class];
+    }
 
     #[\Override]
     protected function getHeaderActions(): array
