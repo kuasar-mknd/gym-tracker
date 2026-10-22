@@ -247,8 +247,9 @@ final class EntetesLus
      * qui nomment le middleware qui le lit, celles du contrôleur qui le lit
      * (de sa méthode quand c'est une action), celles dont l'action reçoit la
      * requête de validation qui le lit (ou une requête qui utilise le trait
-     * qui le lit). Pour chacune, la lecture se fait-elle après les
-     * middlewares, dans le contrôleur ou la requête ?
+     * qui le lit), celle dont la fermeture le lit. Pour chacune, la lecture
+     * se fait-elle après les middlewares, dans le contrôleur, la requête ou
+     * la fermeture ?
      *
      * @return array<string, list<array{route: Route, apresLesMiddlewares: bool}>>
      */
