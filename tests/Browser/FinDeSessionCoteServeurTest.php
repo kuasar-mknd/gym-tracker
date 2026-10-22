@@ -38,8 +38,8 @@ use Tests\Support\ParcoursHorsLigne;
  * visitée (#2091) : la coquille de l'accueil, laissée telle quelle faute de
  * clé, se recharge au premier `online`, que Chrome émet dans le document
  * quitté quand le pilote navigue. Ce rechargement prenait la place de la
- * visite de la séance, que le parcours croyait vérifier, puis, sous Chrome
- * 155, celle de la page blanche demandée dans le même onglet.
+ * visite de la séance, que le parcours croyait vérifier, et, sous Chrome 155
+ * et 156, celle d'une page blanche demandée dans le même onglet.
  */
 class FinDeSessionCoteServeurTest extends DuskTestCase
 {

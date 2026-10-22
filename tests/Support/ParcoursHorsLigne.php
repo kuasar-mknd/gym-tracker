@@ -30,11 +30,12 @@ use PHPUnit\Framework\Assert;
  * precache et des copies, ou ne s'ouvre pas. Elle attend d'abord que la page
  * n'ait plus de visite d'Inertia en vol, et une page ouverte sans réseau se
  * vérifie à l'adresse que sa navigation demandait (#2091,
- * `attendreLaCoquilleServieA()`). Une visite qui quitte la coquille laissée
- * telle quelle part de la page blanche d'un onglet neuf, l'onglet quitté
- * fermé (`partirDUnePageBlanche()`) : quittée dans son onglet, la coquille se
- * recharge au départ, et sous Chrome 155 ce rechargement prenait la place de
- * la page blanche à chaque passe.
+ * `attendreLaCoquilleServieA()`). Sous une coupure, celle-ci ou celle que le
+ * parcours pose par `reglerLeReseau()`, une visite qui quitte la coquille
+ * laissée telle quelle part de la page blanche d'un onglet neuf, l'onglet
+ * quitté fermé (`partirDUnePageBlanche()`) : quittée dans son onglet, la
+ * coquille se recharge au départ, et sous Chrome 155 et 156 ce rechargement
+ * prenait la place de la page demandée à chaque passe.
  *
  * **La lenteur.** `reglerLeReseau()` pose aussi une latence : Chrome la compte
  * de l'envoi de la requête à l'arrivée de ses en-têtes, sur chaque requête de
@@ -458,9 +459,10 @@ trait ParcoursHorsLigne
 
     /**
      * Quitte le document affiché pour la page blanche d'un onglet neuf, avant
-     * une nouvelle visite sous la coupure de `sansReseauNiConstruction()`
-     * (#2091) : l'onglet quitté est fermé, et l'onglet neuf, au premier plan,
-     * a le réseau coupé, sans latence, comme sous la coupure.
+     * une nouvelle visite sous une coupure, celle de
+     * `sansReseauNiConstruction()` ou celle que le parcours pose par
+     * `reglerLeReseau()` (#2091) : l'onglet quitté est fermé, et l'onglet neuf,
+     * au premier plan, a le réseau coupé, sans latence.
      *
      * La coquille laissée telle quelle (sans copie à monter) recharge son
      * adresse au premier `online` (`laisserLaCoquille()`,
@@ -469,26 +471,31 @@ trait ParcoursHorsLigne
      * `Network.emulateNetworkConditions`, juste avant son `pagehide` : les
      * réglages des outils de Chrome quittent alors ce document, son réseau
      * émulé avec eux. Dans le même onglet, ce rechargement prenait la place de
-     * la page blanche que le pilote demandait, et de la visite qui la suivait.
-     * Sous Chromium 141, rarement ; sous Chrome 155, la version de la CI, au
-     * premier départ de la coquille à chaque passe, et le plus souvent aux
-     * suivants, chaque coquille rechargée reposant son écouteur : redemander
-     * la page blanche ne gagnait plus. Fermé, l'onglet emporte le document, ses
-     * écouteurs, ses minuteries et le rechargement qu'il lance ; rien n'en
-     * atteint l'onglet neuf. Couper les scripts de la page le temps du départ
+     * la page que le pilote demandait ensuite. Sous Chromium 141, celle d'une
+     * visite selon le parcours, rarement celle d'une page blanche ; sous
+     * Chrome 155 et 156, ceux des images de la CI au 22/10/2026 (la CI prend
+     * le Chrome de l'image ubuntu-latest, sans l'épingler), celle de presque
+     * chaque visite, et celle de la page blanche au premier départ de la
+     * coquille à chaque passe, et le plus souvent aux suivants, chaque
+     * coquille rechargée reposant son écouteur : redemander la page blanche
+     * ne gagnait plus. Fermé, l'onglet emporte le document, ses écouteurs, ses
+     * minuteries et le rechargement qu'il lance ; rien n'en atteint l'onglet
+     * neuf. Couper les scripts de la page le temps du départ
      * (`Emulation.setScriptExecutionDisabled`) n'y suffit pas : la coupure
      * quitte le document au même moment que le réseau émulé, et son écouteur
      * `online` est appelé quand même (`.ai/rules/browser.md`).
      *
-     * L'onglet neuf garde le profil et la fenêtre : cookies, worker et ses
-     * caches, IndexedDB, localStorage, taille, agent et préférences. Il n'a ni
-     * le sessionStorage de l'onglet fermé, ni ses réglages des outils de
-     * Chrome, ni le premier plan : `Page.bringToFront` le lui donne
-     * (`document.hasFocus()`), et le réseau s'y coupe de nouveau
+     * L'onglet neuf garde le profil et la fenêtre : cookies, localStorage,
+     * taille, agent et préférences, et ce que l'origine partage entre ses
+     * onglets, le magasin des copies (IndexedDB) et les caches du worker, qui
+     * sert la coquille. Il n'a ni le sessionStorage de l'onglet fermé, ni ses
+     * réglages des outils de Chrome, ni le premier plan : `Page.bringToFront`
+     * le lui donne (`document.hasFocus()`), et le réseau s'y coupe de nouveau
      * (`navigator.onLine`). Les outils de Chrome visent l'onglet courant du
-     * pilote : ceux que `sansReseauNiConstruction()` a reçus rendent le réseau
-     * à l'onglet neuf dans son `finally`. La console du navigateur, que
-     * `DuskTestCase` relève, garde les messages des deux onglets.
+     * pilote : ceux que le parcours a créés avant le départ rendent le réseau
+     * à l'onglet neuf, dans le `finally` de `sansReseauNiConstruction()` comme
+     * dans celui du parcours. La console du navigateur, que `DuskTestCase`
+     * relève, garde les messages des deux onglets.
      */
     private function partirDUnePageBlanche(Browser $browser): Browser
     {
