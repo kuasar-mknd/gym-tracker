@@ -509,6 +509,13 @@ final class AppServiceProvider extends ServiceProvider
      * production et que son lien restait caché. La nôtre est définie après la
      * sienne (Pulse la pose dès que le Gate est résolu, donc avant notre premier
      * `Gate::define`) et la remplace, en local compris.
+     *
+     * Les capacités `DeleteAny:…` ouvrent la suppression groupée de chaque
+     * table du panneau qui en porte une (méthode `deleteAny()` des policies) :
+     * Shield ne les crée qu'à `shield:generate`, que rien ne lance au
+     * déploiement, et le super administrateur les tient d'ici. Chaque ligne
+     * choisie passe encore par `delete()`, donc par sa permission `Delete:…`.
+     * `sync-planning` ouvre « Relire le planning » des tâches planifiées.
      */
     private function ouvrirLesOutilsAuSuperAdministrateur(): void
     {
@@ -528,6 +535,16 @@ final class AppServiceProvider extends ServiceProvider
             'Delete:ErreurNavigateur',
             'ViewAny:TachePlanifiee',
             'View:TachePlanifiee',
+            'sync-planning',
+            'DeleteAny:User',
+            'DeleteAny:Workout',
+            'DeleteAny:Goal',
+            'DeleteAny:Exercise',
+            'DeleteAny:Supplement',
+            'DeleteAny:Achievement',
+            'DeleteAny:Role',
+            'DeleteAny:ExceptionEnregistree',
+            'DeleteAny:ErreurNavigateur',
             'view-logs',
             'view-outils',
             'view-diagnostic',

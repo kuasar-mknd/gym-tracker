@@ -16,6 +16,12 @@ class ListExercises extends ListRecords
     #[\Override]
     protected static string $resource = ExerciseResource::class;
 
+    /**
+     * « Installer Exercices par Défaut » écrit dans le catalogue commun : il
+     * demande la capacité de créer un exercice, comme le bouton de création.
+     *
+     * @return array<int, Action>
+     */
     #[\Override]
     protected function getHeaderActions(): array
     {
@@ -24,6 +30,7 @@ class ListExercises extends ListRecords
                 ->label('Installer Exercices par Défaut')
                 ->icon('heroicon-o-plus-circle')
                 ->color('info')
+                ->authorize(static fn (): bool => ExerciseResource::canCreate())
                 ->requiresConfirmation()
                 ->action(function (PrecorExerciseSeeder $seeder): void {
                     $seeder->run();

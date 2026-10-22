@@ -10,6 +10,10 @@ use Illuminate\Foundation\Auth\User as AuthUser;
 /**
  * Lecture seule, et seulement pour un administrateur qui en a la permission
  * Shield : un journal d'audit se consulte, il ne se corrige pas.
+ *
+ * Elle répond à chaque méthode que Filament consulte : le panneau est en
+ * autorisation stricte, où une méthode absente lève au lieu d'autoriser
+ * (`LePanneauAutoriseChaqueActionTest`).
  */
 final class ActivityLogPolicy
 {
@@ -36,6 +40,41 @@ final class ActivityLogPolicy
     }
 
     public function delete(): bool
+    {
+        return false;
+    }
+
+    public function deleteAny(): bool
+    {
+        return false;
+    }
+
+    public function forceDelete(): bool
+    {
+        return false;
+    }
+
+    public function forceDeleteAny(): bool
+    {
+        return false;
+    }
+
+    public function restore(): bool
+    {
+        return false;
+    }
+
+    public function restoreAny(): bool
+    {
+        return false;
+    }
+
+    public function replicate(): bool
+    {
+        return false;
+    }
+
+    public function reorder(): bool
     {
         return false;
     }

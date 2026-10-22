@@ -36,6 +36,15 @@ final class RolePolicy
         return $utilisateurConnecte->can('Delete:Role');
     }
 
+    /**
+     * La suppression groupée du panneau : `DeleteAny:Role`, puis
+     * `delete()` pour chaque ligne choisie (`authorizeIndividualRecords()`).
+     */
+    public function deleteAny(AuthUser $utilisateurConnecte): bool
+    {
+        return $utilisateurConnecte->can('DeleteAny:Role');
+    }
+
     public function restore(AuthUser $utilisateurConnecte): bool
     {
         return $utilisateurConnecte->can('Restore:Role');

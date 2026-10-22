@@ -20,6 +20,7 @@ const REACHABLE_ROLE_ABILITIES = [
     'create' => 'Create:Role',
     'update' => 'Update:Role',
     'delete' => 'Delete:Role',
+    'deleteAny' => 'DeleteAny:Role',
 ];
 
 function adminWithRoleAbilities(array $abilities): Admin
@@ -102,7 +103,7 @@ it('grants nothing at all to a principal with no permissions', function (string 
 
     expect($granted)->toBe([])
         ->and($abilityMethods->all())->toBe([
-            'viewAny', 'view', 'create', 'update', 'delete', 'restore',
+            'viewAny', 'view', 'create', 'update', 'delete', 'deleteAny', 'restore',
             'forceDelete', 'forceDeleteAny', 'restoreAny', 'replicate', 'reorder',
         ]);
 })->with(['admin', 'user']);

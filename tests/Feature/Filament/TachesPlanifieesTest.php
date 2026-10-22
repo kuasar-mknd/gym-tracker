@@ -88,7 +88,7 @@ it('se refuse à un administrateur ordinaire', function (): void {
 });
 
 it('relit le planning d’un bouton', function (): void {
-    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:TachePlanifiee']), 'admin');
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:TachePlanifiee', 'sync-planning']), 'admin');
 
     Livewire::test(ListTachesPlanifiees::class)->callAction('synchroniser');
 

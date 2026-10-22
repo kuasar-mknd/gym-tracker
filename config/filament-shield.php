@@ -115,6 +115,10 @@ return [
     | When merge is enabled, the methods below will be combined with any
     | resource-specific methods you define in the resources section.
     |
+    | `deleteAny` décide de la suppression groupée du panneau : le panneau est
+    | en autorisation stricte, et chaque policy porte chaque méthode que
+    | Filament consulte (`LePanneauAutoriseChaqueActionTest`).
+    |
     */
 
     'policies' => [
@@ -127,6 +131,7 @@ return [
             'create',
             'update',
             'delete',
+            'deleteAny',
             'restore',
             'forceDelete',
             'forceDeleteAny',
@@ -180,6 +185,7 @@ return [
                 'create',
                 'update',
                 'delete',
+                'deleteAny',
             ],
         ],
         'exclude' => [

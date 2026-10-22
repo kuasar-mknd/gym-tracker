@@ -14,6 +14,10 @@ use App\Support\Csp\Nonce\SigneLesScriptsEnLigneDesPaquets;
 use App\Support\Csp\RetireLesRessourcesDistantesDesPaquets;
 use BezhanSalleh\FilamentExceptions\FilamentExceptionsPlugin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\Actions\BulkAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -47,11 +51,27 @@ final class AdminPanelProvider extends PanelProvider
      * Horizon, Pulse et Telescope chargent leur fonte, et Pulse des icônes,
      * depuis d'autres sites : ces balises sont retirées de leurs gabarits à la
      * compilation.
+     *
+     * Une suppression, restauration ou suppression définitive groupée vérifie
+     * chaque ligne choisie (`delete()`, `restore()`, `forceDelete()` de la
+     * policy), en plus de la capacité du groupe (`deleteAny()`…) : posé ici,
+     * le réglage atteint aussi les tables des greffons (rôles de Shield,
+     * exceptions enregistrées), qu'on ne réécrit pas. Il vit dans le
+     * gestionnaire des composants de l'application de base, que Filament
+     * recopie à chaque requête, Octane compris. Une table hors d'une page de
+     * ressource n'a pas de règle par défaut pour une ligne : elle passe la
+     * capacité à `authorizeIndividualRecords('delete')`.
      */
     public function boot(): void
     {
         Blade::precompiler(new SigneLesScriptsEnLigneDesPaquets());
         Blade::precompiler(new RetireLesRessourcesDistantesDesPaquets());
+
+        foreach ([DeleteBulkAction::class, ForceDeleteBulkAction::class, RestoreBulkAction::class] as $actionGroupee) {
+            $actionGroupee::configureUsing(static function (BulkAction $action): void {
+                $action->authorizeIndividualRecords();
+            });
+        }
     }
 
     /**
@@ -121,6 +141,12 @@ final class AdminPanelProvider extends PanelProvider
              * initiales de son nom.
              */
             ->defaultAvatarProvider(AvatarDesInitiales::class)
+            /*
+             * Une méthode de policy absente lève au lieu d'autoriser : chaque
+             * policy d'une ressource du panneau porte chaque méthode que
+             * Filament consulte (`LePanneauAutoriseChaqueActionTest`).
+             */
+            ->strictAuthorization()
             ->multiFactorAuthentication([AppAuthentication::make()]);
     }
 
