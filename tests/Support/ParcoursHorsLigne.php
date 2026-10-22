@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use Closure;
 use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
+use Facebook\WebDriver\Exception\TimeoutException;
 use Laravel\Dusk\Browser;
 use PHPUnit\Framework\Assert;
 
@@ -138,6 +139,21 @@ trait ParcoursHorsLigne
             () => fini(true),
             (erreur) => fini(String(erreur)),
         );
+    SCRIPT;
+
+    /**
+     * Le document affiché, en JSON : son adresse, celle que demandait la
+     * navigation qui l'a ouvert et son type, et la marque de la coquille.
+     */
+    private const string CE_QU_EST_LE_DOCUMENT = <<<'SCRIPT'
+        const navigation = performance.getEntriesByType('navigation')[0];
+
+        return JSON.stringify({
+            adresse: location.pathname,
+            navigation: navigation ? { adresse: new URL(navigation.name).pathname, type: navigation.type } : null,
+            coquille: document.documentElement.hasAttribute('data-coquille'),
+            raison: document.documentElement.getAttribute('data-raison'),
+        });
     SCRIPT;
 
     /**
@@ -377,9 +393,46 @@ trait ParcoursHorsLigne
 
     /**
      * Si la page est la coquille que le worker a servie, et pour quelle raison.
+     * Avec un chemin, il faut aussi que la navigation qui a ouvert le document
+     * l'ait demandé (#2091) : son entrée de `performance` garde l'adresse
+     * demandée, qu'Inertia ne réécrit pas, quand l'adresse de la page devient
+     * celle de la page montée.
      */
-    private function laCoquilleServiePour(string $raison): string
+    private function laCoquilleServiePour(string $raison, ?string $chemin = null): string
     {
-        return "document.documentElement.hasAttribute('data-coquille') && document.documentElement.getAttribute('data-raison') === ".json_encode($raison, JSON_THROW_ON_ERROR);
+        $coquille = "document.documentElement.hasAttribute('data-coquille') && document.documentElement.getAttribute('data-raison') === ".json_encode($raison, JSON_THROW_ON_ERROR);
+
+        if ($chemin === null) {
+            return $coquille;
+        }
+
+        return "{$coquille} && new URL(performance.getEntriesByType('navigation')[0]?.name ?? 'about:blank').pathname === ".json_encode($chemin, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Attend la coquille servie pour cette raison en réponse à la navigation
+     * vers ce chemin (#2091). Une coquille servie à une autre adresse, comme
+     * l'accueil que la page quittée recharge, ne passe pas : l'échec dit ce
+     * qu'est le document à la place.
+     */
+    private function attendreLaCoquilleServieA(Browser $browser, string $chemin, string $raison = 'reseau', int $secondes = 15): Browser
+    {
+        try {
+            return $browser->waitUntil($this->laCoquilleServiePour($raison, $chemin), $secondes);
+        } catch (TimeoutException) {
+            Assert::fail("la coquille n’a pas été servie à {$chemin} pour la raison {$raison} : ".$this->ceQuEstLeDocument($browser));
+        }
+    }
+
+    /**
+     * Ce qu'est le document affiché : son adresse, celle que la navigation
+     * qui l'a ouvert demandait et son type (`navigate`, `reload`…), et s'il
+     * est la coquille, et pour quelle raison. Ce que cite un échec.
+     */
+    private function ceQuEstLeDocument(Browser $browser): string
+    {
+        $document = $browser->script(self::CE_QU_EST_LE_DOCUMENT)[0];
+
+        return is_string($document) ? $document : 'illisible';
     }
 }

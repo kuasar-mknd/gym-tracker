@@ -115,8 +115,7 @@ class FinDeSessionCoteServeurTest extends DuskTestCase
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $compte, $jetons, $cheminDeLaSeance): void {
                 foreach (['/dashboard', $cheminDeLaSeance] as $chemin) {
-                    $browser->visit($chemin)
-                        ->waitUntil($this->laCoquilleServiePour('reseau'), 15, "la coquille n’a pas été servie à {$chemin}")
+                    $this->attendreLaCoquilleServieA($browser->visit($chemin), $chemin)
                         ->waitFor('[dusk="page-hors-ligne"]', 15)
                         ->assertScript($this->texteDe('[dusk="page-hors-ligne"] h1'), 'Pas de réseau')
                         ->assertMissing('#app')

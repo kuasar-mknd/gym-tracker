@@ -150,8 +150,7 @@ class OuvertureHorsLigneTest extends DuskTestCase
 
             try {
                 $this->sansReseauNiConstruction($browser, $outils, function () use ($browser): void {
-                    $browser->visit('/dashboard')
-                        ->waitUntil($this->laCoquilleServiePour('reseau'), 15, 'la coquille n’a pas été servie sans réseau')
+                    $this->attendreLaCoquilleServieA($browser->visit('/dashboard'), '/dashboard')
                         ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
                         ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
                         // Le logo tracé dans la barre, à sa taille.

@@ -34,6 +34,10 @@ use Tests\Support\ParcoursHorsLigne;
  * coupure (`Tests\Support\ParcoursHorsLigne`). Les jetons cherchés sont tirés
  * au hasard, en ASCII. Le parcours exige un contexte sûr : la CI sert
  * 127.0.0.1 ; sous Sail, il se déclare sauté.
+ *
+ * La coquille attendue est celle que la navigation vers la séance de A a
+ * ouverte (#2091) : une coquille servie à une autre adresse, comme l'accueil
+ * rechargé, ne passe plus pour elle.
  */
 class CopiesDUnAutreCompteTest extends DuskTestCase
 {
@@ -115,8 +119,7 @@ class CopiesDUnAutreCompteTest extends DuskTestCase
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $compteA, $compteB, $jetonsDeA, $cheminDeLaSeanceDeA, $cleDeA, $cleDeB): void {
                 // La séance de A, à son adresse : la coquille n'a pour B que la page qui dit ce qui s'ouvre sans réseau.
-                $browser->visit($cheminDeLaSeanceDeA)
-                    ->waitUntil($this->laCoquilleServiePour('reseau'), 15, 'la coquille n’a pas été servie')
+                $this->attendreLaCoquilleServieA($browser->visit($cheminDeLaSeanceDeA), $cheminDeLaSeanceDeA)
                     ->waitFor('[dusk="page-hors-ligne-sans-copie"]', 15)
                     ->assertPathIs($cheminDeLaSeanceDeA)
                     ->waitFor('[dusk="page-sans-reseau"]', 15);
