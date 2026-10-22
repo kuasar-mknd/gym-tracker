@@ -15,6 +15,7 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Request as RequeteDeLaFacade;
 use Illuminate\Support\Str;
 use PhpToken;
@@ -26,9 +27,9 @@ use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request as RequeteDeSymfony;
 
 /**
- * Les en-têtes que le code de app/ et routes/ lit lui-même (#2094), pour la
- * garde des en-têtes mal formés (`UnEnTeteMalFormeNeRepondPas500Test`) :
- * leur recensement, les valeurs inattendues essayées, la requête valide de
+ * Les en-têtes que le code de l'application (app/, routes/, bootstrap/, les
+ * vues) lit lui-même (#2094), pour la garde des en-têtes mal formés
+ * (`UnEnTeteMalFormeNeRepondPas500Test`) : leur recensement, les valeurs inattendues essayées, la requête valide de
  * chaque route qui en lit un après ses middlewares, et la lecture du code
  * qui trouve chaque lecture et en déduit les routes.
  *
@@ -201,21 +202,51 @@ final class EntetesLus
     }
 
     /**
-     * Chaque lecture d'en-tête du code de app/ et routes/, avec son fichier.
+     * Chaque lecture d'en-tête du code de l'application, avec son fichier,
+     * relatif à `$racine` (celle de l'application par défaut) : app/,
+     * routes/, bootstrap/ hors de bootstrap/cache (que Laravel écrit), et
+     * les vues de resources/views, une vue Blade lue une fois compilée
+     * (`vueCompilee()`).
      *
      * @return list<array{fichier: string, ligne: int, entete: string|null, classe: string|null, methode: string|null}>
      */
-    public static function lecturesDeLApplication(): array
+    public static function lecturesDeLApplication(?string $racine = null): array
     {
+        $racine = (string) realpath($racine ?? base_path());
+        $dossiers = array_values(array_filter(
+            array_map(static fn (string $dossier): string => "{$racine}/{$dossier}", ['app', 'routes', 'bootstrap', 'resources/views']),
+            is_dir(...),
+        ));
         $lectures = [];
 
-        foreach (Finder::create()->files()->in([app_path(), base_path('routes')])->name('*.php')->sortByName() as $fichier) {
-            foreach (self::lecturesDuCode($fichier->getContents()) as $lecture) {
-                $lectures[] = ['fichier' => str_replace('\\', '/', mb_substr((string) $fichier->getRealPath(), mb_strlen((string) realpath(base_path())) + 1)), ...$lecture];
+        foreach (Finder::create()->files()->in($dossiers)->name('*.php')->sortByName() as $fichier) {
+            $chemin = str_replace('\\', '/', mb_substr((string) $fichier->getRealPath(), mb_strlen($racine) + 1));
+
+            if (str_starts_with($chemin, 'bootstrap/cache/')) {
+                continue;
+            }
+
+            $code = str_ends_with($chemin, '.blade.php') ? self::vueCompilee($fichier->getContents()) : $fichier->getContents();
+
+            foreach (self::lecturesDuCode($code) as $lecture) {
+                $lectures[] = ['fichier' => $chemin, ...$lecture];
             }
         }
 
         return $lectures;
+    }
+
+    /**
+     * Le code PHP d'une vue Blade (`Blade::compileString()`). Un commentaire
+     * de Blade, que la compilation efface, laisse ses sauts de ligne : la
+     * ligne d'une lecture reste celle de la vue, sauf après une directive
+     * que Blade écrit sur plusieurs lignes (un composant).
+     */
+    private static function vueCompilee(string $vue): string
+    {
+        $sansCommentaires = (string) preg_replace_callback('/\{\{--.*?--\}\}/s', static fn (array $commentaire): string => str_repeat("\n", substr_count($commentaire[0], "\n")), $vue);
+
+        return Blade::compileString($sansCommentaires);
     }
 
     /**
@@ -284,17 +315,19 @@ final class EntetesLus
      * requête de validation qui le lit (ou une requête qui utilise le trait
      * qui le lit), celle dont la fermeture le lit. Pour chacune, la lecture
      * se fait-elle après les middlewares, dans le contrôleur, la requête ou
-     * la fermeture ?
+     * la fermeture ? Les lectures sont celles de l'application, ou
+     * `$lectures`.
      *
+     * @param  list<array{fichier: string, ligne: int, entete: string|null, classe: string|null, methode: string|null}>|null  $lectures
      * @return array<string, list<array{route: Route, apresLesMiddlewares: bool}>>
      */
-    public static function routesQuiLisent(): array
+    public static function routesQuiLisent(?array $lectures = null): array
     {
         $routes = RequetesMalFormees::routes(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
         $parNom = array_change_key_case(array_combine(array_keys(self::recenses()), array_keys(self::recenses())));
         $lisent = [];
 
-        foreach (self::lecturesDeLApplication() as $lecture) {
+        foreach ($lectures ?? self::lecturesDeLApplication() as $lecture) {
             $entete = $parNom[$lecture['entete'] ?? ''] ?? null;
             $deduites = self::routesDeLaLecture($lecture, $routes);
 
@@ -318,11 +351,12 @@ final class EntetesLus
      * en-tête recensé que plus rien ne lit, une lecture dont les routes ne se
      * déduisent pas, une écriture qui lit un en-tête après ses middlewares
      * sans requête valide dans `requetesValides()`, une requête valide qui ne
-     * sert plus.
+     * sert plus. Les lectures sont celles de l'application, ou `$lectures`.
      *
+     * @param  list<array{fichier: string, ligne: int, entete: string|null, classe: string|null, methode: string|null}>|null  $lectures
      * @return list<string>
      */
-    public static function defautsDuRecensement(): array
+    public static function defautsDuRecensement(?array $lectures = null): array
     {
         $routes = RequetesMalFormees::routes(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
         $recenses = array_map(strtolower(...), array_keys(self::recenses()));
@@ -330,7 +364,7 @@ final class EntetesLus
         $avecRequeteValide = [];
         $defauts = [];
 
-        foreach (self::lecturesDeLApplication() as $lecture) {
+        foreach ($lectures ?? self::lecturesDeLApplication() as $lecture) {
             $ou = "{$lecture['fichier']}:{$lecture['ligne']}";
             $entete = $lecture['entete'];
 

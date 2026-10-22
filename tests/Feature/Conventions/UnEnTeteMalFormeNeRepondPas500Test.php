@@ -8,9 +8,11 @@ use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Exceptions;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,11 +37,12 @@ use function Pest\Laravel\json;
  * allait jusqu'à MySQL (#2071) : chacun avait son test, aucune garde ne
  * tenait la règle pour tous (`.ai/rules/controllers.md`).
  *
- * Le recensement. `Tests\Support\EntetesLus` lit le code de app/ et de
- * routes/ et y trouve chaque lecture d'en-tête (`header()`, `headers->get()`,
+ * Le recensement. `Tests\Support\EntetesLus` lit le code de app/, de
+ * routes/, de bootstrap/ (hors de son cache) et des vues compilées, et y
+ * trouve chaque lecture d'en-tête (`header()`, `headers->get()`,
  * `server('HTTP_…')`, `$_SERVER`, `getenv()`, `bearerToken()`,
- * `userAgent()`…), son nom lu dans le texte, une chaîne ou une constante de
- * classe. Chaque en-tête lu doit être
+ * `userAgent()`, tout autre usage du sac des en-têtes…), son nom lu dans le
+ * texte, une chaîne ou une constante de classe. Chaque en-tête lu doit être
  * recensé (`EntetesLus::recenses()`), avec sa valeur attendue et ce que
  * l'application fait d'une autre : l'ignorer (la requête répond comme sans
  * l'en-tête) ou la refuser par un statut (409 pour le compte d'une écriture).
@@ -216,7 +219,7 @@ it('aucune écriture qui lit un en-tête après ses middlewares ne répond 500 s
         ->and($essais)->toBeGreaterThanOrEqual(7 * count(RequetesMalFormees::formesDeCorps()) * count($formes));
 });
 
-it('recense chaque en-tête que le code de app/ lit, et en déduit les routes qui le lisent', function (): void {
+it('recense chaque en-tête que le code de l’application lit, et en déduit les routes qui le lisent', function (): void {
     $routes = array_map(
         static fn (array $lisent): array => array_values(array_unique(array_map(static fn (array $lit): string => (string) $lit['route']->getName(), $lisent))),
         EntetesLus::routesQuiLisent(),
@@ -229,6 +232,46 @@ it('recense chaque en-tête que le code de app/ lit, et en déduit les routes qu
         ->and($routes['X-Compte-De-L-Ecriture'] ?? [])->toContain('api.v1.sets.store', 'workouts.store', 'dashboard', 'profile.update')
         ->and($routes['X-Copies-Hors-Ligne'] ?? [])->toContain('dashboard', 'workouts.show')
         ->and($routes['X-Copies-Hors-Ligne'] ?? [])->not->toContain('api.v1.sets.store');
+});
+
+it('lit app/, routes/, bootstrap/ hors de son cache et les vues, et refuse une lecture dans bootstrap/ ou une vue', function (): void {
+    $racine = sys_get_temp_dir().'/entetes-lus-'.Str::uuid()->toString();
+    $fichiers = [
+        'app/Http/Middleware/LitUnEnTete.php' => "<?php\nnamespace App\\Http\\Middleware;\nfinal class LitUnEnTete\n{\n    public function handle(\$request)\n    {\n        return \$request->header('X-App');\n    }\n}\n",
+        'routes/web.php' => "<?php\nRoute::get('/', fn (\$request) => \$request->header('X-Routes'));\n",
+        'bootstrap/app.php' => "<?php\nreturn Application::configure()->withExceptions(function (\$exceptions): void {\n    \$exceptions->render(fn (\\Throwable \$e, \\Illuminate\\Http\\Request \$request) => \$request->header('X-Bootstrap'));\n});\n",
+        'bootstrap/cache/services.php' => "<?php\nreturn ['x' => request()->header('X-Cache')];\n",
+        'resources/views/partiels/page.blade.php' => "{{-- Un commentaire\n     sur deux lignes --}}\n<main>\n    <p>{{ request()->header('X-Vue') }}</p>\n</main>\n",
+    ];
+
+    try {
+        foreach ($fichiers as $chemin => $contenu) {
+            File::ensureDirectoryExists(dirname("{$racine}/{$chemin}"));
+            File::put("{$racine}/{$chemin}", $contenu);
+        }
+
+        $lues = array_map(static fn (array $lecture): string => "{$lecture['fichier']}:{$lecture['ligne']}:{$lecture['entete']}", EntetesLus::lecturesDeLApplication($racine));
+    } finally {
+        File::deleteDirectory($racine);
+    }
+
+    $ailleurs = [
+        ['fichier' => 'bootstrap/app.php', 'ligne' => 305, 'entete' => 'idempotency-key', 'classe' => null, 'methode' => null],
+        ['fichier' => 'resources/views/app.blade.php', 'ligne' => 2, 'entete' => 'idempotency-key', 'classe' => null, 'methode' => null],
+    ];
+    $horsPlace = array_values(array_filter(
+        EntetesLus::defautsDuRecensement([...EntetesLus::lecturesDeLApplication(), ...$ailleurs]),
+        static fn (string $defaut): bool => str_starts_with($defaut, 'bootstrap/') || str_starts_with($defaut, 'resources/'),
+    ));
+
+    expect($lues)->toEqualCanonicalizing([
+        'app/Http/Middleware/LitUnEnTete.php:7:x-app',
+        'routes/web.php:2:x-routes',
+        'bootstrap/app.php:3:x-bootstrap',
+        'resources/views/partiels/page.blade.php:4:x-vue',
+    ])
+        ->and($horsPlace)->toHaveCount(2)
+        ->and(array_filter($horsPlace, static fn (string $defaut): bool => str_contains($defaut, ' : lu hors ')))->toHaveCount(2);
 });
 
 it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou une constante, et pas celle d’une réponse ni d’un receveur d’un autre type', function (): void {
