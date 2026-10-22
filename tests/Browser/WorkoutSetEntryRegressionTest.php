@@ -107,8 +107,14 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
                 // Leaves the distance field, which is what commits it.
                 ->click('#main-content');
 
-            // Debounced write: wait for the row this test asserts on below.
-            $this->waitForDatabase(fn (): bool => (int) ($workout->workoutLines()->first()?->sets()->first()?->duration_seconds ?? 0) === 1530);
+            // Une ecriture debouncee par champ, chacune dans sa file : la duree
+            // arrivee ne dit rien de la distance. On attend les deux valeurs
+            // que le test lit plus bas (#2100).
+            $this->waitForDatabase(function () use ($workout): bool {
+                $serie = $workout->workoutLines()->first()?->sets()->first();
+
+                return (int) ($serie->duration_seconds ?? 0) === 1530 && (float) ($serie->distance_km ?? 0) === 5.5;
+            }, message: 'la duree et la distance saisies n’ont pas toutes deux atteint la base');
 
             $browser->assertNoConsoleExceptions();
         });
@@ -279,9 +285,9 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
      */
     public function test_a_set_row_offers_the_delete_its_input_can_actually_reach(): void
     {
-        [$user, $workout] = $this->aSessionWith('strength');
+        [$user, $workout, $line] = $this->aSessionWith('strength');
 
-        $this->browse(function (Browser $browser) use ($user, $workout): void {
+        $this->browse(function (Browser $browser) use ($user, $workout, $line): void {
             $browser->loginAs(User::findOrFail($user->id))
                 ->resizeToIphone15()
                 ->visit('/workouts/'.$workout->id)
@@ -303,6 +309,17 @@ class WorkoutSetEntryRegressionTest extends DuskTestCase
 
             // The swipe action is there either way, and reachable without one.
             $browser->assertPresent('@swipe-remove-set-0-0');
+
+            // La rangee s'affiche avant la reponse du serveur : la creation est
+            // optimiste. Le parcours l'attend en base avant de finir : arrivee
+            // au serveur apres coup, elle se posait dans la ligne du parcours
+            // suivant, dont la base videe reprend les identifiants a 1 (#2100).
+            // Sa reponse peut encore etre en route : `DuskTestCase` arrete la
+            // page et vide sa file avant de rendre le navigateur.
+            $this->waitForDatabase(
+                fn (): bool => $line->sets()->exists(),
+                message: 'la serie ajoutee n’a jamais atteint la base',
+            );
         });
     }
 
