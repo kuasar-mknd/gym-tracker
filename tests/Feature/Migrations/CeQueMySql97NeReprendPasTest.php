@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Schema;
  * nommer chaque objet qui appelle `md5()`, `sha1()` ou `sha()`, que 9.7 ne
  * fournit plus en fonctions natives, puis compter, sous chaque clé étrangère,
  * les lignes dont le parent n'existe pas, qu'un essai sous 9.7 a pu écrire
- * (#2095), et ne rien rendre pour le schéma de l'application. Chaque forme se
+ * (#2095), avec la requête qui les liste, et ne rien rendre pour le schéma de
+ * l'application. Chaque forme se
  * crée dans la base du test : un ordre DDL valide la transaction de
  * `RefreshDatabase`, et ce fichier retire lui-même ce qu'il a créé avant d'en
  * rouvrir une (`.ai/rules/tests.md`). Un déclencheur ne se crée pas sans le
@@ -24,12 +25,13 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Ce que la vérification rend pour la base du test : chaque objet qui appelle
- * ces fonctions en « objet : nom », et chaque clé étrangère qui a des lignes
- * orphelines en « nom : lignes ». Les ordres se lancent un à un, comme le
- * client `mysql` les lit, et chaque ordre qui rend des lignes en donne un
- * résultat : les appels d'abord, les orphelines ensuite.
+ * ces fonctions en « objet : nom », chaque clé étrangère qui a des lignes
+ * orphelines en « nom : lignes », et la requête qu'elle donne pour les lister,
+ * par clé. Les ordres se lancent un à un, comme le client `mysql` les lit, et
+ * chaque ordre qui rend des lignes en donne un résultat : les appels d'abord,
+ * les orphelines ensuite.
  *
- * @return array{appels: list<string>, orphelines: list<string>}
+ * @return array{appels: list<string>, orphelines: list<string>, pourLesLister: array<string, string>}
  */
 function avantMysql97Verifier(): array
 {
@@ -58,16 +60,19 @@ function avantMysql97Verifier(): array
 
     $appels = [];
     $orphelines = [];
+    $pourLesLister = [];
 
     foreach ($resultats[0] as $ligne) {
         $appels[] = sprintf('%s : %s', avantMysql97Texte($ligne['objet'] ?? null), avantMysql97Texte($ligne['nom'] ?? null));
     }
 
     foreach ($resultats[1] as $ligne) {
-        $orphelines[] = sprintf('%s : %s', avantMysql97Texte($ligne['nom'] ?? null), avantMysql97Texte($ligne['lignes'] ?? null));
+        $nom = avantMysql97Texte($ligne['nom'] ?? null);
+        $orphelines[] = sprintf('%s : %s', $nom, avantMysql97Texte($ligne['lignes'] ?? null));
+        $pourLesLister[$nom] = avantMysql97Texte($ligne['pour_les_lister'] ?? null);
     }
 
-    return ['appels' => $appels, 'orphelines' => $orphelines];
+    return ['appels' => $appels, 'orphelines' => $orphelines, 'pourLesLister' => $pourLesLister];
 }
 
 /**
@@ -145,10 +150,10 @@ afterEach(function (): void {
 });
 
 it('ne trouve rien dans le schéma de l’application', function (): void {
-    expect(avantMysql97Verifier())->toBe(['appels' => [], 'orphelines' => []]);
+    expect(avantMysql97Verifier())->toBe(['appels' => [], 'orphelines' => [], 'pourLesLister' => []]);
 });
 
-it('compte les lignes orphelines de chaque clé étrangère, et rien sous une clé que la ligne ne vise pas', function (): void {
+it('compte les lignes orphelines de chaque clé étrangère, donne la requête qui les liste, et rien sous une clé que la ligne ne vise pas', function (): void {
     DB::statement('create table avant97_parent (id int primary key, a int not null, b int not null, unique key avant97_ab (a, b))');
     DB::statement('create table avant97_enfant (id int primary key, parent_id int null, a int null, b int null, constraint avant97_fk foreign key (parent_id) references avant97_parent (id), constraint avant97_fk_ab foreign key (a, b) references avant97_parent (a, b))');
     DB::statement('create table avant97_sain (id int primary key, parent_id int not null, constraint avant97_fk_sain foreign key (parent_id) references avant97_parent (id))');
@@ -159,7 +164,18 @@ it('compte les lignes orphelines de chaque clé étrangère, et rien sous une cl
         DB::insert('insert into avant97_enfant (id, parent_id, a, b) values (1, 1, 10, 20), (2, 2, 10, 21), (3, 3, null, 20), (4, null, 11, 20)');
     });
 
-    expect(avantMysql97Verifier())->toBe(['appels' => [], 'orphelines' => ['avant97_enfant.avant97_fk : 2', 'avant97_enfant.avant97_fk_ab : 2']]);
+    $verification = avantMysql97Verifier();
+    $listees = [];
+
+    foreach ($verification['pourLesLister'] as $nom => $requete) {
+        $identifiants = array_map(static fn (mixed $ligne): string => avantMysql97Texte(data_get($ligne, 'id')), DB::select($requete));
+        sort($identifiants);
+        $listees[$nom] = $identifiants;
+    }
+
+    expect($verification['appels'])->toBe([])
+        ->and($verification['orphelines'])->toBe(['avant97_enfant.avant97_fk : 2', 'avant97_enfant.avant97_fk_ab : 2'])
+        ->and($listees)->toBe(['avant97_enfant.avant97_fk' => ['2', '3'], 'avant97_enfant.avant97_fk_ab' => ['2', '4']]);
 });
 
 it('nomme chaque objet que 9.7 ne reprendrait pas, et rien de ce qui appelle SHA2()', function (array $ordres, array $trouvailles): void {
