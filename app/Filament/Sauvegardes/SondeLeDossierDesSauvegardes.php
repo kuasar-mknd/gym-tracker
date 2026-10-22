@@ -49,10 +49,21 @@ trait SondeLeDossierDesSauvegardes
     protected function explicationDuDossierQuiNeRepondPas(): string
     {
         return sprintf(
-            "Il n'a pas répondu en %d s : la page ne liste pas les archives et ne propose pas d'en créer, "
+            "Il n'a pas répondu en %d s : %s, "
             .'pour ne pas attendre un partage qui ne rend plus la main. La page « Santé » le suit (« Dossier des sauvegardes ») ; '
             .'sur le serveur, vérifier que le partage BACKUP_HOST_PATH est monté et que la machine qui le sert répond.',
             self::DELAI_DE_LA_SONDE_EN_SECONDES,
+            $this->ceQuiNeSeFaitPasSansLeDossier(),
         );
+    }
+
+    /**
+     * Ce qui ne se fait pas tant que le dossier se tait, tel que l'explication
+     * le dit : la page et ses tableaux renoncent à lister et à créer, le lien
+     * de téléchargement à servir l'archive.
+     */
+    protected function ceQuiNeSeFaitPasSansLeDossier(): string
+    {
+        return "la page ne liste pas les archives et ne propose pas d'en créer";
     }
 }
