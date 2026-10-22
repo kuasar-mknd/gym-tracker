@@ -56,8 +56,8 @@ class ReorganiserLesExercicesTest extends DuskTestCase
             // d'ecriture.
             //
             // Cette attente ne prouve que l'ecran : la page reordonne ses
-            // cartes avant d'envoyer le PATCH (mise a jour optimiste), et elle
-            // vient donc avant toute reponse du serveur.
+            // cartes avant d'envoyer le PATCH (mise a jour optimiste), et
+            // l'attente aboutit sans rien savoir du serveur.
             $browser->keys('[dusk="reorder-line-0"]', '{ARROW_DOWN}')
                 // `textContent` rend le texte SOURCE : la majuscule vient de
                 // `uppercase`, une regle CSS, et ne s'y voit pas.
