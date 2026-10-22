@@ -253,3 +253,74 @@ it('crée sans clé quand la clé n’est pas de l’ASCII imprimable', function
     'espace' => ['une cle'],
     'trop longue' => [str_repeat('a', 65)],
 ]);
+
+/**
+ * Crée par l'API, sous cette clé, une ligne dans la séance et une série dans
+ * la ligne, comme la file hors ligne, et rend leurs identifiants.
+ *
+ * @return array{ligne: mixed, serie: mixed}
+ */
+function idempotenceCreerSousLaCle(User $compte, Workout $seance, WorkoutLine $ligne, string $cle): array
+{
+    return [
+        'ligne' => actingAs($compte)
+            ->postJson(route('api.v1.workout-lines.store'), ['workout_id' => $seance->id, 'exercise_id' => $ligne->exercise_id], ['Idempotency-Key' => $cle])
+            ->assertSuccessful()
+            ->json('data.id'),
+        'serie' => actingAs($compte)
+            ->postJson(route('api.v1.sets.store'), ['workout_line_id' => $ligne->id, 'weight' => 80, 'reps' => 8], ['Idempotency-Key' => $cle])
+            ->assertSuccessful()
+            ->json('data.id'),
+    ];
+}
+
+/*
+ * Deux clés qui ne diffèrent que par la casse nomment deux tentatives
+ * (#2097) : la file hors ligne qui les envoie reçoit deux lignes et deux
+ * séries, et chaque rejeu reçoit les siennes. Sous `utf8mb4_unicode_ci`, la
+ * seconde recevait la ligne et la série de la première.
+ */
+it('crée deux lignes et deux séries pour deux clés qui ne diffèrent que par la casse', function (string $cle, string $autreCle): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => Exercise::factory()->create()->id]);
+
+    $premieres = idempotenceCreerSousLaCle($compte, $seance, $ligne, $cle);
+    $secondes = idempotenceCreerSousLaCle($compte, $seance, $ligne, $autreCle);
+
+    expect($secondes['ligne'])->not->toBe($premieres['ligne'])
+        ->and($secondes['serie'])->not->toBe($premieres['serie'])
+        ->and(idempotenceCreerSousLaCle($compte, $seance, $ligne, $cle))->toBe($premieres)
+        ->and(idempotenceCreerSousLaCle($compte, $seance, $ligne, $autreCle))->toBe($secondes)
+        ->and(WorkoutLine::query()->whereKey($secondes['ligne'])->value('idempotency_key'))->toBe($autreCle)
+        ->and(Set::query()->whereKey($secondes['serie'])->value('idempotency_key'))->toBe($autreCle)
+        ->and(WorkoutLine::query()->where('workout_id', $seance->id)->count())->toBe(3)
+        ->and($ligne->sets()->count())->toBe(2);
+})->with([
+    'minuscules puis capitales' => ['tentative-a', 'TENTATIVE-A'],
+    'un UUID puis le même en capitales' => ['5f1e7a2c-2097-4d3b-8c1a-00000000000a', '5F1E7A2C-2097-4D3B-8C1A-00000000000A'],
+]);
+
+/*
+ * Une espace finale ne fait pas non plus une seule tentative de deux, mais ce
+ * n'est pas la colonne qui l'écarte : `ascii_bin`, comme
+ * `utf8mb4_unicode_ci`, tient une espace finale pour insignifiante (PAD
+ * SPACE). Le motif de `CreateSetAction::idempotencyKey()` refuse l'espace :
+ * la clé qui en porte une est ignorée, et la création a lieu sans clé
+ * (#2097). Un motif qui admettrait l'espace rendrait à la seconde clé la
+ * ligne et la série de la première.
+ */
+it('crée deux lignes et deux séries pour deux clés qui ne diffèrent que par une espace finale', function (): void {
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'ended_at' => null]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => Exercise::factory()->create()->id]);
+
+    $premieres = idempotenceCreerSousLaCle($compte, $seance, $ligne, 'tentative-a');
+    $secondes = idempotenceCreerSousLaCle($compte, $seance, $ligne, 'tentative-a ');
+
+    expect($secondes['ligne'])->not->toBe($premieres['ligne'])
+        ->and($secondes['serie'])->not->toBe($premieres['serie'])
+        ->and(WorkoutLine::query()->whereKey($secondes['ligne'])->value('idempotency_key'))->toBeNull()
+        ->and(Set::query()->whereKey($secondes['serie'])->value('idempotency_key'))->toBeNull()
+        ->and(idempotenceCreerSousLaCle($compte, $seance, $ligne, 'tentative-a'))->toBe($premieres);
+});
