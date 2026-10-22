@@ -188,8 +188,8 @@ it('passe en ascii_bin les clés d’une base d’avant, sans toucher à leur in
  * Chaque clé passe ce que `CreateSetAction::idempotencyKey()` en garde : une
  * clé que la recherche ne trouverait jamais (aucun en-tête ne la porte
  * jusqu'à elle) s'efface, sa ligne reste. Sans cela, une clé hors ASCII
- * arrêtait la migration au milieu (1366), et une clé à espace finale, que
- * `ascii_bin` compare comme `utf8mb4_unicode_ci` (PAD SPACE), rendait encore
+ * arrêterait la migration au milieu (1366), et une clé à espace finale, que
+ * `ascii_bin` compare comme `utf8mb4_unicode_ci` (PAD SPACE), rendrait encore
  * sa série à la clé sans l'espace. Chaque clé a son parent : sous
  * `utf8mb4_unicode_ci`, l'index unique tient « tentative » et « tentative »
  * suivi d'une espace pour une seule.
