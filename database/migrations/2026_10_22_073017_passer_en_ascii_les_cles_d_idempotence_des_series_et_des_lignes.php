@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Schema;
  * la migration : aucune recherche ne trouvera plus jamais une telle clé, puisque
  * chaque clé reçue passe par ce motif et que les clés dérivées par le serveur
  * (`modele-ligne:…`, `modele-serie:…`) n'en sortent pas ; sa ligne n'y perd
- * rien. La garder arrêtait la migration au milieu d'un déploiement : une clé
+ * rien. La garder arrêterait la migration au milieu d'un déploiement : une clé
  * hors ASCII ne se convertit pas (1366, « Incorrect string value »). Et une
  * clé ASCII à espace finale, écrite avant le motif (#2071), se convertit, mais
  * rendrait encore sa série à la clé sans l'espace : `ascii_bin`, comme
