@@ -18,8 +18,9 @@ use Illuminate\Support\Facades\DB;
  * `CreateSetAction::idempotencyKey()`.
  *
  * `ascii_bin` tient encore une espace finale pour insignifiante (PAD SPACE,
- * comme toute collation de MySQL hors des `utf8mb4_0900_*`) : c'est le motif
- * de la clé, sans espace, qui l'écarte, pas la colonne.
+ * comme `utf8mb4_unicode_ci` ; seules `binary` et les collations UCA 9.0.0,
+ * `…_0900_…`, sont NO PAD) : c'est le motif de la clé, sans espace, qui
+ * l'écarte, pas la colonne.
  *
  * La garde lit la base des tests, montée du schéma figé puis des migrations
  * d'après, dans `information_schema` : une nouvelle colonne de clé (son nom

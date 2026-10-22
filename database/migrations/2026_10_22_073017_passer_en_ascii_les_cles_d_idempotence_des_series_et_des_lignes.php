@@ -28,9 +28,10 @@ use Illuminate\Support\Facades\Schema;
  * hors ASCII ne se convertit pas (1366, « Incorrect string value »). Et une
  * clé ASCII à espace finale, écrite avant le motif (#2071), se convertit, mais
  * rendrait encore sa série à la clé sans l'espace : `ascii_bin`, comme
- * `utf8mb4_unicode_ci` et toute collation de MySQL hors des `utf8mb4_0900_*`,
- * tient une espace finale pour insignifiante (PAD SPACE). C'est le motif de la
- * clé, sans espace, qui écarte ce cas, pas la colonne.
+ * `utf8mb4_unicode_ci`, tient une espace finale pour insignifiante (PAD SPACE
+ * dans `information_schema.collations`, où seules `binary` et les collations
+ * UCA 9.0.0, `…_0900_…`, sont NO PAD). C'est le motif de la clé, sans espace,
+ * qui écarte ce cas, pas la colonne.
  *
  * Le motif se juge dans la base, en une instruction par table : le même que
  * celui de `idempotencyKey()` (`/^[\x21-\x7E]{1,64}$/D`), écrit pour ICU.
