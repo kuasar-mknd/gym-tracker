@@ -144,6 +144,28 @@ function clesHorsNullesUnCompte(): int
     return DB::table('users')->insertGetId(['name' => 'Témoin', 'email' => 'temoin-'.bin2hex(random_bytes(4)).'@example.org']);
 }
 
+/**
+ * L'instant du serveur, à la seconde, comme il date une ligne.
+ */
+function clesHorsNullesMaintenant(): string
+{
+    $instant = DB::scalar('select current_timestamp');
+    assert(is_string($instant));
+
+    return $instant;
+}
+
+/**
+ * Un identifiant que la table n'a pas, pour une ligne qui viserait un parent
+ * absent.
+ */
+function clesHorsNullesUnAbsent(string $table): int
+{
+    $plusGrand = DB::table($table)->max('id');
+
+    return (is_numeric($plusGrand) ? (int) $plusGrand : 0) + 1_000;
+}
+
 afterEach(function (): void {
     if (DB::getPdo()->inTransaction()) {
         return;
@@ -203,6 +225,41 @@ it('date une ligne qui n’en avait pas avant d’exiger la date de création', 
         ->and(DB::table('goals')->where('id', $jamaisDatee)->value('created_at'))->toBeString()
         ->and(DB::table('goals')->where('id', $datee)->value('created_at'))->toBe('2026-03-01 08:00:00')
         ->and(DB::table('goals')->count())->toBe(3);
+});
+
+it('date les lignes orphelines sans revérifier leur clé, et va au bout', function (): void {
+    clesHorsNullesDescendre();
+
+    // Des lignes sans parent ni date, écrites clés coupées : une archive
+    // restaurée, ou une écriture faite hors d'Eloquent. Sous 8.4, réécrire la
+    // date réécrit l'entrée de `(user_id, created_at)`, l'index qui porte la
+    // clé, et le serveur revérifie alors la clé de la ligne (1452).
+    $absent = clesHorsNullesUnAbsent('users');
+    $ligneAbsente = clesHorsNullesUnAbsent('workout_lines');
+    $sansDate = ['user_id' => $absent, 'created_at' => null, 'updated_at' => null];
+
+    Schema::withoutForeignKeyConstraints(static function () use ($sansDate, $ligneAbsente): void {
+        DB::table('goals')->insert([...$sansDate, 'title' => 'Orphelin', 'type' => 'weight', 'target_value' => 1]);
+        DB::table('interval_timers')->insert([...$sansDate, 'name' => 'Orphelin', 'work_seconds' => 30, 'rest_seconds' => 30, 'rounds' => 3, 'updated_at' => '2026-05-01 10:00:00']);
+        DB::table('macro_calculations')->insert([...$sansDate, 'gender' => 'male', 'age' => 30, 'height' => 180, 'weight' => 80, 'activity_level' => 1.5, 'goal' => 'maintain', 'tdee' => 2500, 'target_calories' => 2500, 'protein' => 150, 'fat' => 70, 'carbs' => 300]);
+        DB::table('wilks_scores')->insert([...$sansDate, 'body_weight' => 80, 'lifted_weight' => 500, 'gender' => 'male', 'score' => 350]);
+        DB::table('workout_templates')->insert([...$sansDate, 'name' => 'Orphelin']);
+        DB::table('sets')->insert(['workout_line_id' => $ligneAbsente]);
+    });
+
+    $avant = clesHorsNullesMaintenant();
+    clesHorsNullesMonter();
+    $apres = clesHorsNullesMaintenant();
+
+    expect(clesHorsNullesEtat())->toBe(clesHorsNullesEtatAttendu(apres: true))
+        ->and(DB::table('interval_timers')->where('user_id', $absent)->value('created_at'))->toBe('2026-05-01 10:00:00')
+        ->and(DB::table('sets')->where('workout_line_id', $ligneAbsente)->count())->toBe(1);
+
+    foreach (['goals', 'macro_calculations', 'wilks_scores', 'workout_templates'] as $table) {
+        expect(DB::table($table)->where('user_id', $absent)->value('created_at'))
+            ->toBeGreaterThanOrEqual($avant)
+            ->toBeLessThanOrEqual($apres);
+    }
 });
 
 it('garde un index à la clé quand celui qui part était le seul à la porter', function (): void {

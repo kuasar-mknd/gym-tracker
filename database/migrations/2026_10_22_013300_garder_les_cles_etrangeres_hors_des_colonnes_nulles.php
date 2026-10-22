@@ -37,7 +37,8 @@ use Illuminate\Support\Facades\Schema;
  *   et modèles n'est plus nullable : `latest()` y lit `(user_id, created_at)`
  *   dans l'ordre, qu'aucun autre index ne sert. Eloquent l'écrit toujours ;
  *   une ligne qui n'en aurait pas prend sa date de modification, sinon
- *   l'instant de la migration, et le serveur date une insertion qui l'omet.
+ *   l'instant de la migration, clés étrangères coupées le temps de l'écrire
+ *   (`dater()`), et le serveur date une insertion qui l'omet.
  *
  * Les index se cherchent par leurs colonnes, pas par leur nom : une base plus
  * ancienne peut les avoir nommés autrement. Avant d'en retirer un, la table
@@ -103,7 +104,7 @@ return new class() extends Migration
                 continue;
             }
 
-            DB::table($table)->whereNull('created_at')->update(['created_at' => DB::raw('coalesce(updated_at, current_timestamp)')]);
+            $this->dater($table);
 
             Schema::table($table, function (Blueprint $blueprint): void {
                 $blueprint->timestamp('created_at')->useCurrent()->change();
@@ -197,6 +198,24 @@ return new class() extends Migration
                 $blueprint->index([$colonne]);
             });
         }
+    }
+
+    /**
+     * Date chaque ligne qui n'a pas de date de création : sa date de
+     * modification, sinon l'instant de la migration. Les clés étrangères
+     * sont coupées le temps de l'écriture, qui ne touche aucune de leurs
+     * colonnes : sous 8.4, réécrire `created_at` réécrit l'entrée de
+     * `(user_id, created_at)`, l'index qui porte la clé, et le serveur
+     * revérifie alors la clé de la ligne. Une ligne orpheline (une archive
+     * restaurée, une écriture hors d'Eloquent) arrêterait la migration au
+     * milieu ; elle reste ce qu'elle était, et la vérification d'avant la
+     * bascule la compte (`docker/mysql/avant-mysql-9-7.sql`).
+     */
+    private function dater(string $table): void
+    {
+        Schema::withoutForeignKeyConstraints(static function () use ($table): void {
+            DB::table($table)->whereNull('created_at')->update(['created_at' => DB::raw('coalesce(updated_at, current_timestamp)')]);
+        });
     }
 
     /**
