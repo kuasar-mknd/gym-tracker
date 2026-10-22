@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Browser;
 
 use App\Models\Exercise;
+use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
@@ -37,6 +38,30 @@ class RestTimerTest extends DuskTestCase
             100,
             fn (): bool => $this->toggleLabel($browser) === $label,
             "Le bouton de la serie devait porter « {$label} », il porte « {$this->toggleLabel($browser)} »",
+        );
+    }
+
+    /**
+     * Attend que la base porte la coche que l'ecran montre.
+     *
+     * La bascule est optimiste : le libelle change avant la reponse du serveur,
+     * et `waitForToggle()` ne prouve que l'ecran. Chaque coche attend donc la
+     * sienne en base avant la suivante : la base porte alors la derniere, et non
+     * une precedente de meme valeur. Le parcours ne s'arrete pas non plus sur
+     * une bascule en vol : le suivant vide la base, qui reprend ses identifiants
+     * a 1, et une ecriture arrivee apres coup pouvait toucher sa serie (#2100).
+     */
+    private function waitForCompletionInDatabase(Browser $browser, Workout $seance, bool $validee): void
+    {
+        $browser->waitUsing(
+            15,
+            100,
+            fn (): bool => Set::query()
+                ->whereHas('workoutLine', fn ($ligne) => $ligne->where('workout_id', $seance->id))
+                ->first()?->is_completed === $validee,
+            $validee
+                ? 'Apres %s s, la serie n’est toujours pas validee en base : la coche est restee a l’ecran'
+                : 'Apres %s s, la serie est toujours validee en base : la decoche est restee a l’ecran',
         );
     }
 
@@ -95,15 +120,17 @@ class RestTimerTest extends DuskTestCase
         )[0];
     }
 
-    private function retriggerRestTimer(Browser $browser): Browser
+    private function retriggerRestTimer(Browser $browser, Workout $seance): Browser
     {
         // En instructions plutot qu'en chaine fluide : `tap()` ne declare pas
         // son type de retour, et l'enchainer rendait la methode `mixed`.
         $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
         $this->waitForToggle($browser, 'Valider la série');
+        $this->waitForCompletionInDatabase($browser, $seance, false);
 
         $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
         $this->waitForToggle($browser, 'Annuler la série');
+        $this->waitForCompletionInDatabase($browser, $seance, true);
 
         return $browser->waitFor('[dusk="skip-rest-timer"]', 15);
     }
@@ -151,6 +178,7 @@ class RestTimerTest extends DuskTestCase
             $browser->clickWhenSettled('[dusk="complete-set-0-0"]');
             $browser->waitFor('[dusk="skip-rest-timer"]', 15)
                 ->assertSee('REPOS');
+            $this->waitForCompletionInDatabase($browser, $workout, true);
 
             /*
              * La croix etait posee en `absolute` PAR-DESSUS le bouton de pause :
@@ -179,7 +207,7 @@ class RestTimerTest extends DuskTestCase
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10);
 
             // 3. Trigger again and use "Skip" (Passer)
-            $this->retriggerRestTimer($browser)
+            $this->retriggerRestTimer($browser, $workout)
                 ->click('@skip-rest-timer')
                 ->waitUntilMissing('[dusk="skip-rest-timer"]', 10)
                 ->assertNoConsoleExceptions();
