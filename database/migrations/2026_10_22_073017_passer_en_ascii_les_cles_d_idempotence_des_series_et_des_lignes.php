@@ -48,9 +48,12 @@ use Illuminate\Support\Facades\Schema;
  * l'index unique, qui ne porte aucune clé étrangère, et la reconstruction se
  * fait clés coupées (`changer()`).
  *
- * Chaque table se passe seule, et seulement si sa colonne n'est pas déjà en
- * `ascii_bin` : une reprise après un échec retombe sur ses pieds
- * (`MigrationsRejouablesTest`).
+ * Chaque table se passe seule, et seulement si sa propre colonne n'est pas
+ * déjà en `ascii_bin` (ou, au retour en arrière, l'est encore) : chaque ordre
+ * se valide seul, et une reprise après un arrêt entre les deux tables ne
+ * repasse que celle qui reste (`ClesDIdempotenceEnAsciiTest`, « reprend un
+ * passage interrompu après les séries » et « reprend un retour en arrière
+ * arrêté sur les lignes »).
  *
  * `down()` rend la collation des tables, et s'arrête (1062) sur deux clés d'un
  * même parent que seule la casse distingue : l'ancien index unique les

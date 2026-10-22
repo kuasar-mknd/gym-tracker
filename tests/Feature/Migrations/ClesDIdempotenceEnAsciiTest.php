@@ -18,7 +18,8 @@ use Illuminate\Support\Facades\Schema;
  * le tient ; ce fichier tient le passage : une base d'avant, des clés que
  * `CreateSetAction::idempotencyKey()` refuserait (hors ASCII, espace,
  * caractère de contrôle, vide), sous un parent ou orphelines, un second
- * passage, le retour en arrière.
+ * passage, le retour en arrière, et chacun des deux repris après un arrêt
+ * entre les séries et les lignes.
  *
  * Ces cas passent par des ordres DDL, qui valident la transaction de
  * `RefreshDatabase` : ce fichier fait lui-même ce que le `migrate:fresh` qui
@@ -121,6 +122,31 @@ function clesAsciiOrdresDe(Closure $etape): array
         array_map(static fn (array $requete): string => (string) $requete['query'], DB::getQueryLog()),
         static fn (string $requete): bool => preg_match('/^\s*(alter|update)\b/i', $requete) === 1,
     ));
+}
+
+/**
+ * La table que vise chacun de ces ordres, dans l'ordre où ils partent.
+ *
+ * @param  list<string>  $ordres
+ * @return list<string>
+ */
+function clesAsciiTablesDe(array $ordres): array
+{
+    return array_map(
+        static fn (string $ordre): string => preg_match('/^\s*(?:alter\s+table|update)\s+`([^`]+)`/i', $ordre, $morceaux) === 1 ? $morceaux[1] : $ordre,
+        $ordres,
+    );
+}
+
+/**
+ * Passe en `ascii` / `ascii_bin` la clé d'une seule table, comme la migration
+ * la laisse quand l'ordre de l'autre table ne va pas au bout.
+ */
+function clesAsciiPasserSeule(string $table): void
+{
+    Schema::withoutForeignKeyConstraints(static function () use ($table): void {
+        DB::statement("alter table `{$table}` modify `idempotency_key` varchar(64) character set ascii collate ascii_bin null");
+    });
 }
 
 /**
@@ -281,6 +307,33 @@ it('ne change rien à une base déjà passée', function (): void {
 });
 
 /*
+ * Chaque table passe par son propre ALTER, validé seul, et celui de la seconde
+ * peut ne pas aller au bout (un processus tué pendant le déploiement, une
+ * attente de verrou, un disque plein pendant la copie) : la migration n'est
+ * pas notée comme jouée, et le `migrate` suivant la rejoue sur une base à
+ * moitié passée. Chaque table se juge sur sa propre collation : les séries,
+ * déjà passées, ne reçoivent aucun ordre, et les lignes passent entières,
+ * leurs clés hors du motif effacées.
+ */
+it('reprend un passage interrompu après les séries', function (): void {
+    clesAsciiDescendre();
+
+    $parent = clesAsciiUneLigne();
+    $serie = DB::table('sets')->insertGetId(['workout_line_id' => $parent['ligne'], 'idempotency_key' => 'tentative']);
+    clesAsciiPasserSeule('sets');
+    $refusee = DB::table('workout_lines')->insertGetId(['workout_id' => $parent['seance'], 'exercise_id' => $parent['exercice'], 'idempotency_key' => 'clé']);
+    $gardee = DB::table('workout_lines')->insertGetId(['workout_id' => $parent['seance'], 'exercise_id' => $parent['exercice'], 'idempotency_key' => 'Autre']);
+
+    expect(clesAsciiEtat()['sets.idempotency_key'])->toBe('varchar(64) ascii_bin nullable')
+        ->and(clesAsciiEtat()['workout_lines.idempotency_key'])->toBe('varchar(64) utf8mb4_unicode_ci nullable')
+        ->and(clesAsciiTablesDe(clesAsciiOrdresDe(clesAsciiMonter(...))))->toBe(['workout_lines', 'workout_lines'])
+        ->and(clesAsciiEtat())->toBe(clesAsciiEtatAttendu(apres: true))
+        ->and(DB::table('workout_lines')->where('id', $refusee)->value('idempotency_key'))->toBeNull()
+        ->and(DB::table('workout_lines')->where('id', $gardee)->value('idempotency_key'))->toBe('Autre')
+        ->and(DB::table('sets')->where('id', $serie)->value('idempotency_key'))->toBe('tentative');
+});
+
+/*
  * Le retour en arrière ne choisit pas laquelle oublier de deux clés qu'une
  * collation insensible à la casse confondrait : l'index unique de l'ancienne
  * collation les refuse côte à côte, et `down()` s'arrête sur ce refus, la
@@ -294,4 +347,26 @@ it('arrête down() sur deux clés d’un même parent que seule la casse disting
     expect(clesAsciiDescendre(...))->toThrow(UniqueConstraintViolationException::class)
         ->and(clesAsciiEtat()['sets.idempotency_key'])->toBe('varchar(64) ascii_bin nullable')
         ->and(DB::table('sets')->where('workout_line_id', $parent['ligne'])->orderBy('id')->pluck('idempotency_key')->all())->toBe(['tentative', 'TENTATIVE']);
+});
+
+/*
+ * Le retour en arrière s'arrête de même entre les deux tables : sur deux clés
+ * de ligne que seule la casse distingue, `down()` a déjà rendu sa collation
+ * aux séries quand l'ordre des lignes tombe (1062), et la migration reste
+ * notée comme jouée. L'une des deux clés retirée, le `migrate:rollback`
+ * suivant ne repasse que les lignes.
+ */
+it('reprend un retour en arrière arrêté sur les lignes', function (): void {
+    $parent = clesAsciiUneLigne();
+    DB::table('workout_lines')->insert(['workout_id' => $parent['seance'], 'exercise_id' => $parent['exercice'], 'idempotency_key' => 'tentative']);
+    $doublon = DB::table('workout_lines')->insertGetId(['workout_id' => $parent['seance'], 'exercise_id' => $parent['exercice'], 'idempotency_key' => 'TENTATIVE']);
+
+    expect(clesAsciiDescendre(...))->toThrow(UniqueConstraintViolationException::class)
+        ->and(clesAsciiEtat()['sets.idempotency_key'])->toBe('varchar(64) utf8mb4_unicode_ci nullable')
+        ->and(clesAsciiEtat()['workout_lines.idempotency_key'])->toBe('varchar(64) ascii_bin nullable');
+
+    DB::table('workout_lines')->where('id', $doublon)->delete();
+
+    expect(clesAsciiTablesDe(clesAsciiOrdresDe(clesAsciiDescendre(...))))->toBe(['workout_lines'])
+        ->and(clesAsciiEtat())->toBe(clesAsciiEtatAttendu(apres: false));
 });
