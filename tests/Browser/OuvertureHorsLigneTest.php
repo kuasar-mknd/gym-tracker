@@ -36,6 +36,14 @@ use Tests\Support\ParcoursHorsLigne;
  * elle efface le témoin, porteur de la clé, et la coquille, qui ne trouve plus
  * de clé, purge le magasin et garde son contenu statique. Le second démarre à
  * froid sur la copie de l'accueil, et y trouve le logo et `cloud_off`.
+ *
+ * Dans le premier, chaque visite de la coupure part de la page blanche d'un
+ * onglet neuf, l'onglet quitté fermé, et la coquille attendue est celle de
+ * l'adresse visitée (#2091) : la coquille laissée telle quelle faute de clé
+ * se recharge au premier `online`, que Chrome émet dans le document quitté
+ * quand le pilote navigue. Sous Chrome 155 et 156, ce rechargement prenait la
+ * place de la deuxième et de la troisième visite, et le parcours passait sans
+ * les avoir vues, le document rechargé satisfaisant les mêmes assertions.
  */
 class OuvertureHorsLigneTest extends DuskTestCase
 {
@@ -88,7 +96,7 @@ class OuvertureHorsLigneTest extends DuskTestCase
 
             try {
                 foreach (['/dashboard', '/workouts/'.$seance->id, '/'] as $chemin) {
-                    $browser->visit($chemin)
+                    $this->attendreLaCoquilleServieA($this->partirDUnePageBlanche($browser)->visit($chemin), $chemin)
                         ->waitFor('[dusk="page-hors-ligne"]', 15)
                         ->assertTitle('Hors ligne - GymTracker')
                         ->assertScript($texteDe('[dusk="page-hors-ligne"] h1'), 'Pas de réseau')
@@ -150,8 +158,7 @@ class OuvertureHorsLigneTest extends DuskTestCase
 
             try {
                 $this->sansReseauNiConstruction($browser, $outils, function () use ($browser): void {
-                    $browser->visit('/dashboard')
-                        ->waitUntil($this->laCoquilleServiePour('reseau'), 15, 'la coquille n’a pas été servie sans réseau')
+                    $this->attendreLaCoquilleServieA($browser->visit('/dashboard'), '/dashboard')
                         ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
                         ->assertScript($this->texteDe('[dusk="bandeau-hors-ligne-titre"]').".startsWith('Hors ligne · copie du ')")
                         // Le logo tracé dans la barre, à sa taille.

@@ -32,6 +32,14 @@ use Tests\Support\ParcoursHorsLigne;
  * Le réseau de la page est coupé et public/build introuvable pendant la
  * coupure (`Tests\Support\ParcoursHorsLigne`). Le parcours exige un contexte
  * sûr : la CI sert 127.0.0.1 ; sous Sail, il se déclare sauté.
+ *
+ * Chaque visite de la coupure part de la page blanche d'un onglet neuf,
+ * l'onglet quitté fermé, et la coquille attendue est celle de l'adresse
+ * visitée (#2091) : la coquille de l'accueil, laissée telle quelle faute de
+ * clé, se recharge au premier `online`, que Chrome émet dans le document
+ * quitté quand le pilote navigue. Ce rechargement prenait la place de la
+ * visite de la séance, que le parcours croyait vérifier, et, sous Chrome 155
+ * et 156, celle d'une page blanche demandée dans le même onglet.
  */
 class FinDeSessionCoteServeurTest extends DuskTestCase
 {
@@ -115,8 +123,7 @@ class FinDeSessionCoteServeurTest extends DuskTestCase
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $compte, $jetons, $cheminDeLaSeance): void {
                 foreach (['/dashboard', $cheminDeLaSeance] as $chemin) {
-                    $browser->visit($chemin)
-                        ->waitUntil($this->laCoquilleServiePour('reseau'), 15, "la coquille n’a pas été servie à {$chemin}")
+                    $this->attendreLaCoquilleServieA($this->partirDUnePageBlanche($browser)->visit($chemin), $chemin)
                         ->waitFor('[dusk="page-hors-ligne"]', 15)
                         ->assertScript($this->texteDe('[dusk="page-hors-ligne"] h1'), 'Pas de réseau')
                         ->assertMissing('#app')
