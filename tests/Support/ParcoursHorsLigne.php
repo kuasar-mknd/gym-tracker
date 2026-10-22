@@ -29,7 +29,8 @@ use PHPUnit\Framework\Assert;
  * precache et des copies, ou ne s'ouvre pas. Elle attend d'abord que la page
  * n'ait plus de visite d'Inertia en vol, et une page ouverte sans réseau se
  * vérifie à l'adresse que sa navigation demandait (#2091,
- * `attendreLaCoquilleServieA()`).
+ * `attendreLaCoquilleServieA()`). Une visite qui quitte la coquille laissée
+ * telle quelle part d'une page blanche (`partirDUnePageBlanche()`).
  *
  * **La lenteur.** `reglerLeReseau()` pose aussi une latence : Chrome la compte
  * de l'envoi de la requête à l'arrivée de ses en-têtes, sur chaque requête de
@@ -449,6 +450,30 @@ trait ParcoursHorsLigne
         } catch (TimeoutException) {
             Assert::fail("la coquille n’a pas été servie à {$chemin} pour la raison {$raison} : ".$this->ceQuEstLeDocument($browser));
         }
+    }
+
+    /**
+     * Quitte le document affiché pour une page blanche, redemandée jusqu'à y
+     * être, avant une nouvelle visite sous la coupure (#2091).
+     *
+     * La coquille laissée telle quelle (sans copie à monter) recharge son
+     * adresse au premier `online` (`laisserLaCoquille()`,
+     * `resources/js/Utils/demarrageHorsLigne.js`), et Chrome en émet un dans
+     * le document quitté quand le pilote navigue sous
+     * `Network.emulateNetworkConditions` : ce rechargement prenait la place
+     * de la visite suivante. Une page blanche n'écoute rien ; la première
+     * demandée peut encore être prise par ce même rechargement, d'où la
+     * boucle, et l'échec cite ce qu'est le document à sa place.
+     */
+    private function partirDUnePageBlanche(Browser $browser, int $essais = 5): Browser
+    {
+        for ($essai = 1; $essai <= $essais; $essai++) {
+            if ($browser->blank()->script('return location.href;')[0] === 'about:blank') {
+                return $browser;
+            }
+        }
+
+        Assert::fail("la page blanche n’a pas tenu en {$essais} essais : ".$this->ceQuEstLeDocument($browser));
     }
 
     /**
