@@ -93,10 +93,11 @@ final class RequetesMalFormees
 
     /**
      * Les variables de serveur d'une visite : ses en-têtes, et le type d'un
-     * corps JSON quand elle en porte un.
+     * corps JSON quand elle en porte un. Un en-tête en liste arrive répété
+     * (deux lignes), comme Symfony le range.
      *
-     * @param  array<string, string>  $entetes
-     * @return array<string, string>
+     * @param  array<string, string|list<string>>  $entetes
+     * @return array<string, string|list<string>>
      */
     public static function serveur(array $entetes, ?string $corps): array
     {
@@ -120,7 +121,9 @@ final class RequetesMalFormees
      * démesuré avertit à la conversion en entier, là où un entier démesuré
      * n'avertit pas ; la liste d'objets porte, à chaque profondeur, chaque
      * nom qu'une requête valide sous un champ (`exercises.*.id`,
-     * `exercises.*.sets.*.reps`…), ce qu'un lecteur hors des règles lit aussi.
+     * `exercises.*.sets.*.reps`…), ce qu'un lecteur hors des règles lit aussi ;
+     * une date suivie de mots démesurés se lit comme une date, dont Carbon
+     * applique le sens (#2094, l'instant d'un geste avant sa validation).
      *
      * @return array<string, mixed>
      */
@@ -134,6 +137,7 @@ final class RequetesMalFormees
             'nombre hors bornes' => PHP_INT_MAX,
             'flottant hors bornes' => 1e30,
             'liste d’objets' => self::listeDObjets(1e30),
+            'date suivie de mots démesurés' => '2026-10-21T10:00:00Z -290000000000 years',
         ];
     }
 
