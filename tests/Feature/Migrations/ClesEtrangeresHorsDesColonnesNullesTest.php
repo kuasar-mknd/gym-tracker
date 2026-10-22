@@ -15,8 +15,10 @@ use Illuminate\Support\Facades\Schema;
  * `database/migrations/2026_10_22_013300_garder_les_cles_etrangeres_hors_des_colonnes_nulles.php`).
  * Ce que le schéma doit devenir, `ChaqueCleEtrangereRefuseUneLigneOrphelineTest`
  * le tient ; ce fichier tient le passage : une base d'avant, des lignes sans
- * date de création, un index qui part alors qu'il était le seul à porter sa
- * clé, un second passage, le retour en arrière.
+ * date de création, orphelines comprises, des index nommés autrement, un
+ * index qui part alors qu'il était le seul à porter sa clé, ou que le seul
+ * autre a une colonne nullable derrière elle, un second passage, le retour en
+ * arrière.
  *
  * Ces cas passent par des ordres DDL, qui valident la transaction de
  * `RefreshDatabase` : ce fichier fait lui-même ce que le `migrate:fresh` qui
@@ -181,17 +183,23 @@ afterEach(function (): void {
 
     clesHorsNullesMonter();
 
-    // Le cas de l'index seul à porter sa clé retire `(user_id, name)` : la
-    // table le retrouve, et perd l'index que la migration a posé à sa place.
+    // Deux cas retirent `(user_id, name)` et posent d'autres index sur
+    // `exercises` : la table le retrouve, et perd ceux qu'elle n'a pas
+    // d'ordinaire (l'index simple que la migration a posé, `(user_id,
+    // category)`).
     if (! Schema::hasIndex('exercises', ['user_id', 'name'])) {
         Schema::table('exercises', function (Blueprint $blueprint): void {
             $blueprint->index(['user_id', 'name']);
         });
     }
 
-    if (Schema::hasIndex('exercises', ['user_id'])) {
-        Schema::table('exercises', function (Blueprint $blueprint): void {
-            $blueprint->dropIndex(['user_id']);
+    foreach (Schema::getIndexes('exercises') as $index) {
+        if ($index['primary'] || $index['columns'] === ['user_id', 'name']) {
+            continue;
+        }
+
+        Schema::table('exercises', function (Blueprint $blueprint) use ($index): void {
+            $blueprint->dropIndex($index['name']);
         });
     }
 
@@ -219,10 +227,12 @@ it('date une ligne qui n’en avait pas avant d’exiger la date de création', 
     $jamaisDatee = DB::table('goals')->insertGetId(['user_id' => $compte, 'title' => 'Jamais datée', 'type' => 'weight', 'target_value' => 100, 'created_at' => null, 'updated_at' => null]);
     $datee = DB::table('goals')->insertGetId(['user_id' => $compte, 'title' => 'Datée', 'type' => 'weight', 'target_value' => 100, 'created_at' => '2026-03-01 08:00:00', 'updated_at' => '2026-06-01 08:00:00']);
 
+    $avant = clesHorsNullesMaintenant();
     clesHorsNullesMonter();
+    $apres = clesHorsNullesMaintenant();
 
     expect(DB::table('goals')->where('id', $modifiee)->value('created_at'))->toBe('2026-05-01 10:00:00')
-        ->and(DB::table('goals')->where('id', $jamaisDatee)->value('created_at'))->toBeString()
+        ->and(DB::table('goals')->where('id', $jamaisDatee)->value('created_at'))->toBeString()->toBeGreaterThanOrEqual($avant)->toBeLessThanOrEqual($apres)
         ->and(DB::table('goals')->where('id', $datee)->value('created_at'))->toBe('2026-03-01 08:00:00')
         ->and(DB::table('goals')->count())->toBe(3);
 });
@@ -274,6 +284,57 @@ it('garde un index à la clé quand celui qui part était le seul à la porter',
 
     expect($index)->toBe([['user_id']])
         ->and(fn () => DB::table('exercises')->insert(['name' => 'Orphelin', 'category' => null, 'user_id' => $compte + 1000]))->toThrow(QueryException::class, '1452');
+});
+
+it('trouve par leurs colonnes les index d’une base d’avant nommés autrement', function (): void {
+    clesHorsNullesDescendre();
+
+    // Une base plus ancienne a pu nommer ces index autrement que les
+    // migrations d'aujourd'hui : chacun change de nom, et doit partir.
+    $anciens = [
+        'sets' => [['workout_line_id', 'idempotency_key'], ['workout_line_id', 'weight', 'reps']],
+        'workout_lines' => [['workout_id', 'idempotency_key']],
+        'workouts' => [['user_id', 'ended_at', 'started_at']],
+        'exercises' => [['user_id', 'category', 'name']],
+    ];
+    $renommes = 0;
+
+    foreach ($anciens as $table => $formes) {
+        foreach (Schema::getIndexes($table) as $index) {
+            if (in_array($index['columns'], $formes, true)) {
+                DB::statement(sprintf('alter table `%s` rename index `%s` to `ancien_%d`', $table, $index['name'], ++$renommes));
+            }
+        }
+    }
+
+    clesHorsNullesMonter();
+
+    expect($renommes)->toBe(5)
+        ->and(clesHorsNullesEtat())->toBe(clesHorsNullesEtatAttendu(apres: true));
+});
+
+it('ne laisse pas la clé au seul index qui a une colonne nullable derrière elle', function (): void {
+    clesHorsNullesDescendre();
+
+    // Une base où l'autre index qui commence par la clé porte une colonne
+    // nullable derrière elle : il ne peut pas la garder, et la migration en
+    // pose un simple avant de retirer `(user_id, category, name)`.
+    Schema::table('exercises', function (Blueprint $blueprint): void {
+        $blueprint->index(['user_id', 'category']);
+    });
+    Schema::table('exercises', function (Blueprint $blueprint): void {
+        $blueprint->dropIndex(['user_id', 'name']);
+    });
+
+    clesHorsNullesMonter();
+
+    $formes = array_map(
+        static fn (array $index): string => implode(', ', $index['columns']),
+        array_values(array_filter(Schema::getIndexes('exercises'), static fn (array $index): bool => ! $index['primary'])),
+    );
+    sort($formes);
+
+    expect($formes)->toBe(['user_id', 'user_id, category']);
 });
 
 it('ne change rien à une base déjà rangée', function (): void {
