@@ -7,6 +7,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 use Tests\Support\FormulaireDeReinitialisation;
@@ -43,7 +44,7 @@ class PasswordResetTest extends TestCase
         $this->post('/forgot-password', ['email' => $user->email]);
 
         Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): true {
-            $response = $this->get($notification->toMail($user)->actionUrl);
+            $response = $this->get($this->lienDuCourriel($notification, $user));
 
             $response->assertStatus(200)->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
                 ->component('Auth/ResetPassword')
@@ -63,7 +64,7 @@ class PasswordResetTest extends TestCase
         $this->post('/forgot-password', ['email' => $user->email]);
 
         Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user): true {
-            $lien = $notification->toMail($user)->actionUrl;
+            $lien = $this->lienDuCourriel($notification, $user);
 
             $response = $this->post('/reset-password', FormulaireDeReinitialisation::depuisLeLien($lien, 'password'));
 
@@ -73,5 +74,18 @@ class PasswordResetTest extends TestCase
 
             return true;
         });
+    }
+
+    /**
+     * Le lien du courriel de réinitialisation. Depuis Laravel 13.38, `toMail()`
+     * se déclare `MailMessage|Mailable` (un rappel `toMailUsing()` peut rendre
+     * un Mailable) ; l'application rend un `MailMessage`, qui porte le lien.
+     */
+    private function lienDuCourriel(ResetPassword $notification, User $user): string
+    {
+        $courriel = $notification->toMail($user);
+        $this->assertInstanceOf(MailMessage::class, $courriel);
+
+        return (string) $courriel->actionUrl;
     }
 }
