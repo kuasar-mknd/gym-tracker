@@ -23,19 +23,19 @@ use ReflectionNamedType;
 use Symfony\Component\Finder\Finder;
 
 /**
- * Les en-têtes que le code de app/ lit lui-même (#2094), pour la garde des
- * en-têtes mal formés (`UnEnTeteMalFormeNeRepondPas500Test`) : leur
- * recensement, les valeurs inattendues essayées, la requête valide de chaque
- * route qui en lit un après ses middlewares, et la lecture du code qui trouve
- * chaque lecture et en déduit les routes.
+ * Les en-têtes que le code de app/ et routes/ lit lui-même (#2094), pour la
+ * garde des en-têtes mal formés (`UnEnTeteMalFormeNeRepondPas500Test`) :
+ * leur recensement, les valeurs inattendues essayées, la requête valide de
+ * chaque route qui en lit un après ses middlewares, et la lecture du code
+ * qui trouve chaque lecture et en déduit les routes.
  *
  * Une lecture est un appel qui rend la valeur d'un en-tête de la requête :
  * `header()`, `hasHeader()`, `headers->get()` (`has`, `all`, `contains`),
  * `server('HTTP_…')`, `server->get('HTTP_…')`, `$_SERVER['HTTP_…']`,
- * `bearerToken()` (`Authorization`), `userAgent()` (`User-Agent`),
- * `getallheaders()`. Ce que lit le framework ou un paquet (`expectsJson()`,
- * `ip()`, `getHost()`, les en-têtes d'Inertia et de Sanctum) n'en est pas.
- * Un appel sur une réponse (une variable `$reponse` ou `$response`,
+ * `getenv('HTTP_…')`, `bearerToken()` (`Authorization`), `userAgent()`
+ * (`User-Agent`), `getallheaders()`. Ce que lit le framework ou un paquet
+ * (`expectsJson()`, `ip()`, `getHost()`, les en-têtes d'Inertia et de
+ * Sanctum) n'en est pas. Un appel sur une réponse (une variable `$reponse` ou `$response`,
  * `response()`, `redirect()`, `back()`, `Response::`, `Redirect::`, `Http::`)
  * n'en est pas non plus ; tout autre receveur compte pour une requête.
  */
@@ -166,7 +166,7 @@ final class EntetesLus
     }
 
     /**
-     * Chaque lecture d'en-tête du code de app/, avec son fichier.
+     * Chaque lecture d'en-tête du code de app/ et routes/, avec son fichier.
      *
      * @return list<array{fichier: string, ligne: int, entete: string|null, classe: string|null, methode: string|null}>
      */
@@ -174,9 +174,9 @@ final class EntetesLus
     {
         $lectures = [];
 
-        foreach (Finder::create()->files()->in(app_path())->name('*.php')->sortByName() as $fichier) {
+        foreach (Finder::create()->files()->in([app_path(), base_path('routes')])->name('*.php')->sortByName() as $fichier) {
             foreach (self::lecturesDuCode($fichier->getContents()) as $lecture) {
-                $lectures[] = ['fichier' => 'app/'.str_replace('\\', '/', $fichier->getRelativePathname()), ...$lecture];
+                $lectures[] = ['fichier' => str_replace('\\', '/', mb_substr((string) $fichier->getRealPath(), mb_strlen((string) realpath(base_path())) + 1)), ...$lecture];
             }
         }
 
@@ -346,10 +346,11 @@ final class EntetesLus
 
     /**
      * Les routes d'une lecture, et si elle se fait après les middlewares ;
-     * `null` quand sa classe n'est ni un middleware qu'une route nomme, ni un
-     * contrôleur, ni une requête de validation (ou l'un de ses traits).
+     * `null` quand elle n'est ni dans un middleware qu'une route nomme, ni
+     * dans un contrôleur, ni dans une requête de validation (ou l'un de ses
+     * traits), ni dans la fermeture d'une route.
      *
-     * @param  array{classe: string|null, methode: string|null}  $lecture
+     * @param  array{fichier: string, ligne: int, classe: string|null, methode: string|null}  $lecture
      * @param  list<Route>  $routes
      * @return array{routes: list<Route>, apresLesMiddlewares: bool}|null
      */
@@ -358,7 +359,9 @@ final class EntetesLus
         $classe = $lecture['classe'];
 
         if ($classe === null) {
-            return null;
+            $deLaFermeture = array_values(array_filter($routes, static fn (Route $route): bool => self::fermeturePorte($route, $lecture['fichier'], $lecture['ligne'])));
+
+            return $deLaFermeture === [] ? null : ['routes' => $deLaFermeture, 'apresLesMiddlewares' => true];
         }
 
         $routeur = app(Router::class);
@@ -397,6 +400,25 @@ final class EntetesLus
             'routes' => array_values(array_filter($routes, static fn (Route $route): bool => array_intersect(self::typesRecusParLAction($route), $requetes) !== [])),
             'apresLesMiddlewares' => true,
         ];
+    }
+
+    /**
+     * L'action d'une route est-elle une fermeture écrite dans ce fichier
+     * (relatif à la racine), autour de cette ligne ?
+     */
+    private static function fermeturePorte(Route $route, string $fichier, int $ligne): bool
+    {
+        $action = $route->getAction('uses');
+
+        if (! $action instanceof Closure) {
+            return false;
+        }
+
+        $fermeture = new ReflectionFunction($action);
+
+        return $fermeture->getFileName() === realpath(base_path($fichier))
+            && $ligne >= (int) $fermeture->getStartLine()
+            && $ligne <= (int) $fermeture->getEndLine();
     }
 
     /**
@@ -460,8 +482,16 @@ final class EntetesLus
             return ($suivant?->text === '[') ? self::nomDuServeur(self::nomEnArgument($jetons, $i + 2, $contexte)) : null;
         }
 
-        if ($jeton->is(T_STRING) && in_array(strtolower($jeton->text), self::FONCTIONS_DE_TOUS_LES_ENTETES, true) && $suivant?->text === '(' && ! self::estPrecedeDe($jetons, $i, ['->', '?->', '::', 'function'])) {
+        $fonction = $jeton->is([T_STRING, T_NAME_FULLY_QUALIFIED]) && $suivant?->text === '(' && ! self::estPrecedeDe($jetons, $i, ['->', '?->', '::', 'function', 'new'])
+            ? strtolower(ltrim($jeton->text, '\\'))
+            : '';
+
+        if (in_array($fonction, self::FONCTIONS_DE_TOUS_LES_ENTETES, true)) {
             return '*';
+        }
+
+        if ($fonction === 'getenv') {
+            return self::nomDuServeur(self::nomEnArgument($jetons, $i + 2, $contexte));
         }
 
         $acces = $jeton->is([T_OBJECT_OPERATOR, T_NULLSAFE_OBJECT_OPERATOR]);

@@ -35,22 +35,24 @@ use function Pest\Laravel\json;
  * allait jusqu'à MySQL (#2071) : chacun avait son test, aucune garde ne
  * tenait la règle pour tous (`.ai/rules/controllers.md`).
  *
- * Le recensement. `Tests\Support\EntetesLus` lit le code de app/ et y trouve
- * chaque lecture d'en-tête (`header()`, `headers->get()`, `server('HTTP_…')`,
- * `$_SERVER`, `bearerToken()`, `userAgent()`…), son nom lu dans le texte,
- * une chaîne ou une constante de classe. Chaque en-tête lu doit être
+ * Le recensement. `Tests\Support\EntetesLus` lit le code de app/ et de
+ * routes/ et y trouve chaque lecture d'en-tête (`header()`, `headers->get()`,
+ * `server('HTTP_…')`, `$_SERVER`, `getenv()`, `bearerToken()`,
+ * `userAgent()`…), son nom lu dans le texte, une chaîne ou une constante de
+ * classe. Chaque en-tête lu doit être
  * recensé (`EntetesLus::recenses()`), avec sa valeur attendue et ce que
  * l'application fait d'une autre : l'ignorer (la requête répond comme sans
  * l'en-tête) ou la refuser par un statut (409 pour le compte d'une écriture).
  * Un nom que le texte ne dit pas, un en-tête recensé que plus rien ne lit, ou
- * une lecture hors d'un middleware, d'un contrôleur ou d'une requête de
- * validation (dont les routes ne se déduisent pas) font tomber la garde.
+ * une lecture hors d'un middleware, d'un contrôleur, d'une requête de
+ * validation ou de la fermeture d'une route (dont les routes ne se déduisent
+ * pas) font tomber la garde.
  *
  * Les routes. Chaque lecture donne ses routes : celles qui nomment son
  * middleware (les groupes `web` et `api`, le panneau), celles de son
  * contrôleur (de la méthode qui lit, quand c'est une action), celles dont
  * l'action reçoit sa requête de validation, ou une requête qui utilise son
- * trait. Une écriture qui lit un en-tête après ses middlewares envoie sa
+ * trait, celle dont la fermeture la porte. Une écriture qui lit un en-tête après ses middlewares envoie sa
  * requête valide (`EntetesLus::requetesValides()`), pour un compte neuf à
  * chaque essai : sans elle, la validation la refuserait avant la lecture, et
  * une écriture nouvelle qui en lit un fait tomber la garde jusqu'à ce qu'elle
@@ -260,6 +262,9 @@ it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou un
                 $request->server('REMOTE_ADDR');
                 $request->headers->set('X-Neuf', 'oui');
                 Http::get('/')->header('Retry-After');
+                \getallheaders();
+                getenv('HTTP_X_ONZE');
+                getenv('APP_ENV');
             }
         }
         trait LitUnEnTete
@@ -288,6 +293,8 @@ it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou un
         ['ligne' => 20, 'entete' => '*', 'classe' => $classe, 'methode' => 'handle'],
         ['ligne' => 21, 'entete' => '*', 'classe' => $classe, 'methode' => 'handle'],
         ['ligne' => 22, 'entete' => '*', 'classe' => $classe, 'methode' => 'handle'],
-        ['ligne' => 36, 'entete' => 'x-dix', 'classe' => 'App\\Http\\Middleware\\LitUnEnTete', 'methode' => 'lire'],
+        ['ligne' => 30, 'entete' => '*', 'classe' => $classe, 'methode' => 'handle'],
+        ['ligne' => 31, 'entete' => 'x-onze', 'classe' => $classe, 'methode' => 'handle'],
+        ['ligne' => 39, 'entete' => 'x-dix', 'classe' => 'App\\Http\\Middleware\\LitUnEnTete', 'methode' => 'lire'],
     ]);
 });
