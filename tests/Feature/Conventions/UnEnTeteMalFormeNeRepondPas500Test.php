@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\OuvreLaSession;
+use App\Http\Middleware\TempsDuServeur;
 use App\Http\Middleware\VerifieLeCompteDeLEcriture;
 use App\Models\User;
 use Illuminate\Routing\Middleware\ThrottleRequests;
@@ -225,7 +227,7 @@ it('recense chaque en-tête que le code de l’application lit, et en déduit le
         EntetesLus::routesQuiLisent(),
     );
 
-    expect(EntetesLus::defautsDuRecensement())->toBe([], 'recense l’en-tête dans EntetesLus::recenses(), ou lis-le dans un middleware, un contrôleur ou une requête de validation (.ai/rules/controllers.md)')
+    expect(EntetesLus::defautsDuRecensement())->toBe([], 'recense l’en-tête dans EntetesLus::recenses(), ou lis-le dans un middleware, un contrôleur, une requête de validation ou la fermeture d’une route (.ai/rules/controllers.md)')
         ->and(count(EntetesLus::lecturesDeLApplication()))->toBeGreaterThanOrEqual(8)
         ->and($routes['Idempotency-Key'] ?? [])->toEqualCanonicalizing(['api.v1.sets.store', 'api.v1.workout-lines.store', 'api.v1.workouts.store', 'workouts.store', 'templates.execute'])
         ->and($routes['X-Heure-De-L-Appareil'] ?? [])->toEqualCanonicalizing(['api.v1.workouts.store', 'api.v1.workouts.finish'])
@@ -272,6 +274,17 @@ it('lit app/, routes/, bootstrap/ hors de son cache et les vues, et refuse une l
     ])
         ->and($horsPlace)->toHaveCount(2)
         ->and(array_filter($horsPlace, static fn (string $defaut): bool => str_contains($defaut, ' : lu hors ')))->toHaveCount(2);
+});
+
+it('déduit d’une lecture dans un middleware de la pile globale chaque route, lue avant ses middlewares', function (): void {
+    $dansLaPile = ['fichier' => 'app/Http/Middleware/TempsDuServeur.php', 'ligne' => 80, 'entete' => strtolower(OuvreLaSession::ENTETE), 'classe' => TempsDuServeur::class, 'methode' => 'handle'];
+    $lectures = [...EntetesLus::lecturesDeLApplication(), $dansLaPile];
+    $lisent = EntetesLus::routesQuiLisent($lectures)[OuvreLaSession::ENTETE] ?? [];
+
+    expect(EntetesLus::defautsDuRecensement($lectures))->toBe([])
+        ->and(array_map(static fn (array $lit): string => (string) $lit['route']->getName(), $lisent))->toContain('api.v1.sets.store', 'sonde', 'dashboard')
+        ->and($lisent)->toHaveCount(count(RequetesMalFormees::routes(['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])))
+        ->and(array_filter($lisent, static fn (array $lit): bool => $lit['apresLesMiddlewares']))->toBe([]);
 });
 
 it('lit chaque forme d’une lecture d’en-tête, son nom par une chaîne ou une constante, et pas celle d’une réponse ni d’un receveur d’un autre type', function (): void {

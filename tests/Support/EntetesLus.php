@@ -12,7 +12,9 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Support\HeureDeLAppareil;
 use Closure;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Foundation\Http\Kernel as NoyauHttp;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
@@ -29,9 +31,10 @@ use Symfony\Component\HttpFoundation\Request as RequeteDeSymfony;
 /**
  * Les en-têtes que le code de l'application (app/, routes/, bootstrap/, les
  * vues) lit lui-même (#2094), pour la garde des en-têtes mal formés
- * (`UnEnTeteMalFormeNeRepondPas500Test`) : leur recensement, les valeurs inattendues essayées, la requête valide de
- * chaque route qui en lit un après ses middlewares, et la lecture du code
- * qui trouve chaque lecture et en déduit les routes.
+ * (`UnEnTeteMalFormeNeRepondPas500Test`) : leur recensement, les valeurs
+ * inattendues essayées, la requête valide de chaque route qui en lit un
+ * après ses middlewares, et la lecture du code qui trouve chaque lecture et
+ * en déduit les routes.
  *
  * Une lecture est un appel qui rend la valeur d'un en-tête de la requête :
  * `header()`, `hasHeader()`, `headers->get()` (`has`, `all`, `contains`,
@@ -309,8 +312,9 @@ final class EntetesLus
     }
 
     /**
-     * Les routes de l'application qui lisent chaque en-tête recensé : celles
-     * qui nomment le middleware qui le lit, celles du contrôleur qui le lit
+     * Les routes de l'application qui lisent chaque en-tête recensé : toutes
+     * quand un middleware de la pile globale le lit, celles qui nomment le
+     * middleware qui le lit, celles du contrôleur qui le lit
      * (de sa méthode quand c'est une action), celles dont l'action reçoit la
      * requête de validation qui le lit (ou une requête qui utilise le trait
      * qui le lit), celle dont la fermeture le lit. Pour chacune, la lecture
@@ -385,7 +389,7 @@ final class EntetesLus
             $deduites = self::routesDeLaLecture($lecture, $routes);
 
             if ($deduites === null || $deduites['routes'] === []) {
-                $defauts[] = "{$ou} : lu hors d'un middleware, d'un contrôleur ou d'une requête de validation d'une route, ses routes ne se déduisent pas";
+                $defauts[] = "{$ou} : lu hors d'un middleware (de la pile globale ou d'une route), d'un contrôleur, d'une requête de validation ou de la fermeture d'une route, ses routes ne se déduisent pas";
 
                 continue;
             }
@@ -415,8 +419,10 @@ final class EntetesLus
     }
 
     /**
-     * Les routes d'une lecture, et si elle se fait après les middlewares ;
-     * `null` quand elle n'est ni dans un middleware qu'une route nomme, ni
+     * Les routes d'une lecture, et si elle se fait après les middlewares :
+     * toutes pour un middleware de la pile globale (`prepend` et `append` de
+     * bootstrap/app.php, que le routeur ne voit pas) ; `null` quand elle
+     * n'est ni dans un middleware de cette pile ou qu'une route nomme, ni
      * dans un contrôleur, ni dans une requête de validation (ou l'un de ses
      * traits), ni dans la fermeture d'une route.
      *
@@ -432,6 +438,12 @@ final class EntetesLus
             $deLaFermeture = array_values(array_filter($routes, static fn (Route $route): bool => self::fermeturePorte($route, $lecture['fichier'], $lecture['ligne'])));
 
             return $deLaFermeture === [] ? null : ['routes' => $deLaFermeture, 'apresLesMiddlewares' => true];
+        }
+
+        $noyau = app(Kernel::class);
+
+        if ($noyau instanceof NoyauHttp && in_array($classe, $noyau->getGlobalMiddleware(), true)) {
+            return ['routes' => $routes, 'apresLesMiddlewares' => false];
         }
 
         $routeur = app(Router::class);
