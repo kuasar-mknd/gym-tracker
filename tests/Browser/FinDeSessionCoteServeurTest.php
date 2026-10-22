@@ -33,11 +33,13 @@ use Tests\Support\ParcoursHorsLigne;
  * coupure (`Tests\Support\ParcoursHorsLigne`). Le parcours exige un contexte
  * sûr : la CI sert 127.0.0.1 ; sous Sail, il se déclare sauté.
  *
- * Chaque visite de la coupure part d'une page blanche, et la coquille
- * attendue est celle de l'adresse visitée (#2091) : la coquille de l'accueil,
- * laissée telle quelle faute de clé, se recharge au premier `online`, que
- * Chrome émet dans le document quitté quand le pilote navigue. Ce rechargement
- * prenait la place de la visite de la séance, que le parcours croyait vérifier.
+ * Chaque visite de la coupure part de la page blanche d'un onglet neuf,
+ * l'onglet quitté fermé, et la coquille attendue est celle de l'adresse
+ * visitée (#2091) : la coquille de l'accueil, laissée telle quelle faute de
+ * clé, se recharge au premier `online`, que Chrome émet dans le document
+ * quitté quand le pilote navigue. Ce rechargement prenait la place de la
+ * visite de la séance, que le parcours croyait vérifier, puis, sous Chrome
+ * 155, celle de la page blanche demandée dans le même onglet.
  */
 class FinDeSessionCoteServeurTest extends DuskTestCase
 {

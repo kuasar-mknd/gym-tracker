@@ -7,6 +7,7 @@ namespace Tests\Support;
 use Closure;
 use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
 use Facebook\WebDriver\Exception\TimeoutException;
+use Facebook\WebDriver\WebDriverTargetLocator;
 use Laravel\Dusk\Browser;
 use PHPUnit\Framework\Assert;
 
@@ -30,7 +31,10 @@ use PHPUnit\Framework\Assert;
  * n'ait plus de visite d'Inertia en vol, et une page ouverte sans réseau se
  * vérifie à l'adresse que sa navigation demandait (#2091,
  * `attendreLaCoquilleServieA()`). Une visite qui quitte la coquille laissée
- * telle quelle part d'une page blanche (`partirDUnePageBlanche()`).
+ * telle quelle part de la page blanche d'un onglet neuf, l'onglet quitté
+ * fermé (`partirDUnePageBlanche()`) : quittée dans son onglet, la coquille se
+ * recharge au départ, et sous Chrome 155 ce rechargement prenait la place de
+ * la page blanche à chaque passe.
  *
  * **La lenteur.** `reglerLeReseau()` pose aussi une latence : Chrome la compte
  * de l'envoi de la requête à l'arrivée de ses en-têtes, sur chaque requête de
@@ -453,27 +457,61 @@ trait ParcoursHorsLigne
     }
 
     /**
-     * Quitte le document affiché pour une page blanche, redemandée jusqu'à y
-     * être, avant une nouvelle visite sous la coupure (#2091).
+     * Quitte le document affiché pour la page blanche d'un onglet neuf, avant
+     * une nouvelle visite sous la coupure de `sansReseauNiConstruction()`
+     * (#2091) : l'onglet quitté est fermé, et l'onglet neuf, au premier plan,
+     * a le réseau coupé, sans latence, comme sous la coupure.
      *
      * La coquille laissée telle quelle (sans copie à monter) recharge son
      * adresse au premier `online` (`laisserLaCoquille()`,
      * `resources/js/Utils/demarrageHorsLigne.js`), et Chrome en émet un dans
-     * le document quitté quand le pilote navigue sous
-     * `Network.emulateNetworkConditions` : ce rechargement prenait la place
-     * de la visite suivante. Une page blanche n'écoute rien ; la première
-     * demandée peut encore être prise par ce même rechargement, d'où la
-     * boucle, et l'échec cite ce qu'est le document à sa place.
+     * le document que le pilote fait naviguer sous
+     * `Network.emulateNetworkConditions`, juste avant son `pagehide` : les
+     * réglages des outils de Chrome quittent alors ce document, son réseau
+     * émulé avec eux. Dans le même onglet, ce rechargement prenait la place de
+     * la page blanche que le pilote demandait, et de la visite qui la suivait.
+     * Sous Chromium 141, rarement ; sous Chrome 155, la version de la CI, au
+     * premier départ de la coquille à chaque passe, et le plus souvent aux
+     * suivants, chaque coquille rechargée reposant son écouteur : redemander
+     * la page blanche ne gagnait plus. Fermé, l'onglet emporte le document, ses
+     * écouteurs, ses minuteries et le rechargement qu'il lance ; rien n'en
+     * atteint l'onglet neuf. Couper les scripts de la page le temps du départ
+     * (`Emulation.setScriptExecutionDisabled`) n'y suffit pas : la coupure
+     * quitte le document au même moment que le réseau émulé, et son écouteur
+     * `online` est appelé quand même (`.ai/rules/browser.md`).
+     *
+     * L'onglet neuf garde le profil et la fenêtre : cookies, worker et ses
+     * caches, IndexedDB, localStorage, taille, agent et préférences. Il n'a ni
+     * le sessionStorage de l'onglet fermé, ni ses réglages des outils de
+     * Chrome, ni le premier plan : `Page.bringToFront` le lui donne
+     * (`document.hasFocus()`), et le réseau s'y coupe de nouveau
+     * (`navigator.onLine`). Les outils de Chrome visent l'onglet courant du
+     * pilote : ceux que `sansReseauNiConstruction()` a reçus rendent le réseau
+     * à l'onglet neuf dans son `finally`. La console du navigateur, que
+     * `DuskTestCase` relève, garde les messages des deux onglets.
      */
-    private function partirDUnePageBlanche(Browser $browser, int $essais = 5): Browser
+    private function partirDUnePageBlanche(Browser $browser): Browser
     {
-        for ($essai = 1; $essai <= $essais; $essai++) {
-            if ($browser->blank()->script('return location.href;')[0] === 'about:blank') {
-                return $browser;
-            }
-        }
+        $pilote = $browser->driver;
+        $quitte = $pilote->getWindowHandle();
+        $neuf = $pilote->switchTo()->newWindow(WebDriverTargetLocator::WINDOW_TYPE_TAB)->getWindowHandle();
 
-        Assert::fail("la page blanche n’a pas tenu en {$essais} essais : ".$this->ceQuEstLeDocument($browser));
+        $pilote->switchTo()->window($quitte)->close();
+        $pilote->switchTo()->window($neuf);
+
+        Assert::assertSame([$neuf], $pilote->getWindowHandles(), 'l’onglet quitté ne s’est pas fermé');
+
+        $outils = $this->outilsDuNavigateur($browser);
+        $outils->execute('Page.bringToFront');
+        $this->reglerLeReseau($outils, true);
+
+        Assert::assertSame(
+            ['about:blank', false, true],
+            $browser->script('return [location.href, navigator.onLine, document.hasFocus()];')[0],
+            'l’onglet neuf n’est pas une page blanche au premier plan, réseau coupé (adresse, navigator.onLine, document.hasFocus())',
+        );
+
+        return $browser;
     }
 
     /**
