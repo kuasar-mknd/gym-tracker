@@ -15,10 +15,11 @@ use function Pest\Laravel\actingAs;
  * A set has no order of its own — creation order is the only order it has, and
  * every screen renders it as such. Without an explicit ORDER BY the database
  * hands the rows back in whatever order the index it picked happens to give,
- * and this table carries sets_workout_line_id_weight_reps_index
- * (workout_line_id, weight, reps) next to the plain workout_line_id one. When
- * the optimiser chooses that one the sets come back sorted BY WEIGHT, so
- * correcting the weight of a set moved it up or down the list.
+ * and this table carried sets_workout_line_id_weight_reps_index
+ * (workout_line_id, weight, reps) next to the plain workout_line_id one, until
+ * #2095. When the optimiser chose that one the sets came back sorted BY
+ * WEIGHT, so correcting the weight of a set moved it up or down the list; any
+ * index that starts with workout_line_id orders them its own way.
  *
  * The weights below descend as the ids ascend, so a weight-ordered result is
  * the exact reverse of the right answer.

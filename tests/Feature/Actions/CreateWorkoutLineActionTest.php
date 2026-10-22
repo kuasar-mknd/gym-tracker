@@ -72,7 +72,7 @@ it('respects explicitly provided order', function (): void {
  * `return $existing;` survivaient tous les deux.
  *
  * Pourquoi ils sont invisibles a l'oeil nu : sans le raccourci, l'action va
- * jusqu'au `save()`, l'index unique (workout_id, idempotency_key) le refuse, le
+ * jusqu'au `save()`, l'index unique (idempotency_key, workout_id) le refuse, le
  * `catch` rattrape et rend la meme ligne. Le rejeu rend donc le BON objet dans
  * les deux cas — mais en passant par une ecriture refusee, c'est-a-dire en
  * s'appuyant sur une exception pour ce qui devrait etre une simple lecture.

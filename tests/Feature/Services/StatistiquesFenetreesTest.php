@@ -79,8 +79,8 @@ function semerSeances(User $user, int $combien, int $depuisJours, Exercise $exer
  * La repartition musculaire annonce trente jours et lisait toute la base.
  *
  * Jointe a `exercises` et groupee sur `exercises.category`, MySQL attaquait par
- * le CATALOGUE — son index `(user_id, category, name)` rend le groupe deja
- * trie, ce qu'il prefere a tout le reste — puis tirait toutes les lignes de
+ * le CATALOGUE — son index `(user_id, category, name)`, retire depuis par
+ * #2095, rendait le groupe deja trie, ce qu'il prefere a tout le reste — puis tirait toutes les lignes de
  * chaque exercice, tous utilisateurs confondus. La borne de trente jours ne
  * s'appliquait qu'a la fin, ligne par ligne. Mesure aux compteurs
  * `Handler_read_*` : 706 lectures, puis 2 506 apres neuf cents seances

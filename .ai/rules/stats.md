@@ -6,7 +6,7 @@ paths:
 # Stats
 
 ## Ne pas joindre exercises dans une agrégation de séries
-Joindre `exercises` à `workout_lines`/`sets` en groupant ou ordonnant sur `exercises.*` fait choisir à MySQL `exercises_user_id_category_name_index` comme TÊTE de plan : il tire alors les lignes de chaque exercice, tous utilisateurs confondus, et n'applique le filtre qu'à la fin. Une borne de 30 jours devient décorative.
+Joindre `exercises` à `workout_lines`/`sets` en groupant ou ordonnant sur `exercises.*` fait choisir à MySQL un index d'`exercises` comme TÊTE de plan (`exercises_user_id_category_name_index` à l'époque, retiré depuis par #2095) : il tire alors les lignes de chaque exercice, tous utilisateurs confondus, et n'applique le filtre qu'à la fin. Une borne de 30 jours devient décorative.
 
 Agréger par `workout_lines.exercise_id`, puis relire les libellés à part par clef primaire. Deux requêtes, chacune servie exactement.
 
