@@ -63,6 +63,7 @@ it('aucune page du panneau ne répond 500 à une chaîne de requête mal formée
 });
 
 it('aucune page du panneau ne répond 500 à une valeur inattendue d’un en-tête qu’elle lit', function (): void {
+    /** @var ArrayObject<int, string> $lus */
     $lus = new ArrayObject();
     SacDEntetesEspionne::poser(app(), $lus);
     $lisent = EntetesLus::routesQuiLisent();

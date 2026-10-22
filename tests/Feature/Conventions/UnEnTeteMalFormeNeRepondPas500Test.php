@@ -166,6 +166,7 @@ function enteteMalFormeEssayer(Route $route, string $methode, string $entete, ?s
 }
 
 it('aucune route de l’application ne répond 500 à une valeur inattendue d’un en-tête qu’elle lit', function (): void {
+    /** @var ArrayObject<int, string> $lus */
     $lus = new ArrayObject();
     SacDEntetesEspionne::poser(app(), $lus);
     $compte = User::factory()->create();
@@ -243,6 +244,7 @@ it('aucune route de l’application ne répond 500 à une valeur inattendue d’
 });
 
 it('aucune écriture qui lit un en-tête avant d’en valider le corps ne répond 500 sous un en-tête et un corps mal formés à la fois', function (): void {
+    /** @var ArrayObject<int, string> $lus */
     $lus = new ArrayObject();
     SacDEntetesEspionne::poser(app(), $lus);
     $compte = User::factory()->create();
