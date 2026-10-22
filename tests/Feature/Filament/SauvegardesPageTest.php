@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process as Processus;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Testing\TestResponse;
 use Livewire\Finder\Finder;
 use Livewire\Livewire;
@@ -255,3 +256,59 @@ it('retrouve les tableaux de la page par leur seul nom, comme à chaque rafraîc
 
     expect($repertoire->resolveClassComponentClassName((string) $repertoire->normalizeName($tableau)))->toBe($tableau);
 })->with([ListeDesSauvegardes::class, EtatDesSauvegardes::class]);
+
+/*
+ * Depuis la 4.1 du greffon, « Télécharger » n'est plus une action Livewire qui
+ * rend le flux de l'archive : c'est un lien signé, ouvert dans un nouvel
+ * onglet, vers une route du panneau qui reprend sa pile (session de
+ * l'administrateur, accès à la page) puis demande `download-backup`. Ces deux
+ * tests tiennent la chaîne : le tableau donne ce lien, le lien sert l'archive à
+ * qui peut télécharger, et il ne sert rien sans signature ni à qui ne le peut
+ * pas. Le flux n'est pas lu : le greffon refuse d'écrire sous le tampon de
+ * sortie que PHPUnit ouvre autour de chaque test.
+ */
+it('sert une archive par le lien signé que donne le tableau, et refuse ce lien sans sa signature', function (): void {
+    $racine = storage_path('framework/testing/sauvegardes-'.uniqid());
+    $archive = sauvegardesPageDossierAvecUneArchive($racine);
+    $parametres = sauvegardesPageParametresDuTelechargement($archive);
+    $lien = URL::signedRoute('filament.admin.filament-spatie-backup.download', $parametres);
+    $this->actingAs(FilamentAdminPanel::admin(['download-backup']), 'admin');
+
+    try {
+        Livewire::test(ListeDesSauvegardes::class)->assertSee($lien);
+
+        $this->get($lien)
+            ->assertOk()
+            ->assertDownload($archive)
+            ->assertHeader('Content-Length', (string) strlen('archive'));
+
+        $this->get(route('filament.admin.filament-spatie-backup.download', $parametres))->assertForbidden();
+    } finally {
+        File::deleteDirectory($racine);
+    }
+});
+
+it('refuse le lien signé d’une archive à un administrateur de la page qui ne peut pas télécharger', function (): void {
+    $racine = storage_path('framework/testing/sauvegardes-'.uniqid());
+    $archive = sauvegardesPageDossierAvecUneArchive($racine);
+    $lien = URL::signedRoute('filament.admin.filament-spatie-backup.download', sauvegardesPageParametresDuTelechargement($archive));
+
+    try {
+        $this->actingAs(FilamentAdminPanel::admin(['create-backup']), 'admin')
+            ->get($lien)
+            ->assertForbidden();
+    } finally {
+        File::deleteDirectory($racine);
+    }
+});
+
+/**
+ * Le disque et le chemin d'une archive, tels que le tableau du greffon les
+ * met dans le lien de téléchargement.
+ *
+ * @return array{disk: string, path: string}
+ */
+function sauvegardesPageParametresDuTelechargement(string $archive): array
+{
+    return ['disk' => 'sauvegardes', 'path' => config()->string('backup.backup.name').'/'.$archive];
+}
