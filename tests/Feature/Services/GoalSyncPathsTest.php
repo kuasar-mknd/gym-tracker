@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\GoalType;
+use App\Models\BodyMeasurement;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\Set;
@@ -112,6 +113,72 @@ it('donne la même valeur par les deux chemins', function (GoalType $type, ?floa
     'charge, série pesée : la valeur suit le maximum' => [GoalType::Weight, 80.0, 80.0],
     'volume, série sans poids : la valeur revient au départ' => [GoalType::Volume, null, 20.0],
     'volume, série pesée : la valeur suit la meilleure séance' => [GoalType::Volume, 80.0, 800.0],
+]);
+
+/**
+ * Un objectif de mensuration lu dans les pesées, parti de 20, à 50 sur 100 :
+ * les trois mêmes valeurs distinctes que pour la charge.
+ */
+function objectifDePeseeSuivi(User $user, string $colonne): Goal
+{
+    return Goal::factory()->create([
+        'user_id' => $user->id,
+        'exercise_id' => null,
+        'type' => GoalType::Measurement,
+        'measurement_type' => $colonne,
+        'start_value' => 20,
+        'target_value' => 100,
+        'current_value' => 50,
+    ]);
+}
+
+/**
+ * Le poids de corps et la masse grasse, par les deux chemins (#2107).
+ *
+ * Les deux lisaient la dernière pesée, qu'elle porte ou non la colonne visée,
+ * et ne touchaient à rien quand elle n'en portait pas. Plus aucune pesée, ou
+ * une dernière pesée sans masse grasse, laissaient donc l'objectif à 50 : la
+ * valeur d'une pesée supprimée depuis, comme un objectif de charge avant #1953.
+ *
+ * Les deux chemins lisent maintenant la dernière pesée qui PORTE la colonne,
+ * et reviennent à la valeur de départ, 20, quand il n'y en a aucune. Les
+ * pesées sont posées avant l'objectif : celles que l'observateur recalcule en
+ * les enregistrant ne le connaissent pas encore.
+ */
+it('donne la même valeur de pesée par les deux chemins', function (string $colonne, array $pesees, float $attendu): void {
+    /** @var list<array{0: string, 1: float, 2: float|null}> $pesees date, poids, masse grasse */
+    $user = User::factory()->create();
+
+    foreach ($pesees as [$le, $poids, $masseGrasse]) {
+        BodyMeasurement::factory()->create([
+            'user_id' => $user->id,
+            'measured_at' => $le,
+            'weight' => $poids,
+            'body_fat' => $masseGrasse,
+        ]);
+    }
+
+    $service = app(GoalService::class);
+
+    $groupe = objectifDePeseeSuivi($user, $colonne);
+    $service->syncGoals($user->refresh());
+    $valeurGroupe = (float) Goal::query()->findOrFail($groupe->id)->current_value;
+
+    $groupe->delete();
+
+    $seul = objectifDePeseeSuivi($user, $colonne);
+    $service->updateGoalProgress($seul);
+
+    expect($valeurGroupe)->toBe($attendu)
+        ->and((float) $seul->current_value)->toBe($attendu);
+})->with([
+    'poids de corps, aucune pesée : la valeur revient au départ' => ['weight', [], 20.0],
+    'masse grasse, aucune pesée n’en porte : la valeur revient au départ' => ['body_fat', [['2026-06-10', 80.0, null]], 20.0],
+    'masse grasse, la dernière pesée n’en porte pas : la valeur suit la dernière qui en porte' => [
+        'body_fat',
+        [['2026-06-10', 81.0, 30.0], ['2026-06-15', 80.0, null]],
+        30.0,
+    ],
 ]);
 
 /**
