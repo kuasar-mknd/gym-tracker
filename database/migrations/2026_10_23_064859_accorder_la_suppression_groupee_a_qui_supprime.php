@@ -12,11 +12,12 @@ use Spatie\Permission\PermissionRegistrar;
  * méthode `deleteAny()` de chaque policy), puis `delete()` pour chaque ligne
  * choisie (`authorizeIndividualRecords()`). Shield ne générait pas cette
  * permission jusqu'ici, et rien ne lance `shield:generate` au déploiement :
- * un rôle qui supprime une ligne (`Delete:X`) ne supprimerait plus en groupe.
+ * sans elle, un rôle qui supprime une ligne (`Delete:X`) ne supprimerait pas
+ * en groupe.
  *
- * Chaque rôle, et chaque administrateur qui la tient en direct, qui porte
- * `Delete:X` reçoit donc `DeleteAny:X`, sur la même garde : il supprime en
- * groupe ce qu'il supprimait ligne à ligne, et rien de plus. Un rôle qui ne
+ * Chaque rôle qui porte `Delete:X`, et chaque administrateur qui la tient en
+ * direct, reçoit donc `DeleteAny:X`, sur la même garde : il supprime en
+ * groupe ce qu'il supprime ligne à ligne, et rien de plus. Un rôle qui ne
  * supprime rien ne reçoit rien. Le super administrateur tient déjà ces
  * capacités par la liste de `AppServiceProvider`.
  *

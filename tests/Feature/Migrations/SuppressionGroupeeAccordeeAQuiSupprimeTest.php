@@ -19,8 +19,8 @@ use Spatie\Permission\PermissionRegistrar;
  * La suppression groupée du panneau demande `DeleteAny:X`, que Shield ne
  * générait pas avant : la migration la donne à chaque rôle, et à chaque
  * administrateur en direct, qui tient `Delete:X`, sur la même garde. Un rôle
- * qui tenait le jeu de permissions que Shield générait jusqu'ici supprime de
- * nouveau en groupe ; un rôle qui ne supprime rien ne reçoit rien, et la
+ * qui tient le jeu de permissions que Shield générait avant `deleteAny`
+ * supprime alors en groupe ; un rôle qui ne supprime rien ne reçoit rien, et la
  * suppression groupée lui reste cachée. La migration se rejoue sans rien
  * écrire de plus. Elle n'écrit que des lignes (aucun ordre DDL) : la
  * transaction de `RefreshDatabase` les efface après chaque cas.
@@ -85,7 +85,7 @@ function suppressionGroupeeAccordeeAttributions(string $permission): array
     ];
 }
 
-it('rend la suppression groupée au rôle qui tenait le jeu de permissions que Shield générait', function (): void {
+it('donne la suppression groupée au rôle qui tient le jeu de permissions que Shield générait avant deleteAny', function (): void {
     $administrateur = suppressionGroupeeAccordeeAdministrateur('moderateur', suppressionGroupeeAccordeeJeuDOrigine('User'));
     $comptes = User::factory()->count(2)->create();
 
