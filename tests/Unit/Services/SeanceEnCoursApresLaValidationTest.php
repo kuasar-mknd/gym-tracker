@@ -117,6 +117,7 @@ it('partage la séance lancée d’un modèle quand une autre requête l’a lue
     $modele = seanceApresValidationModele($compte);
     expect(seanceApresValidationLueAilleurs($compte->id))->toBeNull();
 
+    /** @var ArrayObject<string, int|Workout|false|null> $lecture */
     $lecture = new ArrayObject(['niveau' => null, 'seance' => false]);
     DB::beforeExecuting(function (string $requete, array $liaisons, Connection $connexion) use ($compte, $lecture): void {
         if ($lecture['niveau'] !== null || ! str_starts_with($requete, 'insert into `sets`')) {
@@ -206,6 +207,7 @@ it('oublie la séance en cours après la validation de l’écriture, pas avant'
  */
 it('oublie la séance qu’une transaction annulée a lue avant de s’annuler', function (): void {
     $compte = User::factory()->create();
+    /** @var ArrayObject<string, Workout|null> $lueDansLaTransaction */
     $lueDansLaTransaction = new ArrayObject(['seance' => null]);
 
     expect(fn (): mixed => DB::transaction(function () use ($compte, $lueDansLaTransaction): void {
