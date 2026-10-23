@@ -238,3 +238,30 @@ it('suit la dernière pesée qui porte une masse grasse, quelles que soient les 
         ->and($objectif->progress_pct)->toBe(20.0)
         ->and($objectif->completed_at)->toBeNull();
 });
+
+/*
+ * Avant toute pesée, un objectif « descendre à 75 kg » créé depuis la page des
+ * objectifs part de sa valeur de départ. Il partait de 0, la valeur par défaut
+ * de la colonne : sa barre s'affichait pleine, à 100 %, avant la moindre pesée
+ * (#2107).
+ */
+it('fait partir de sa valeur de départ un objectif de poids de corps créé avant toute pesée', function (): void {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->post(route('goals.store'), [
+            'title' => 'Descendre à 75 kg',
+            'type' => 'measurement',
+            'measurement_type' => 'weight',
+            'start_value' => 80,
+            'target_value' => 75,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('goals.index'));
+
+    $objectif = Goal::query()->where('user_id', $user->id)->sole();
+
+    expect($objectif->current_value)->toBe(80.0)
+        ->and($objectif->progress_pct)->toBe(0.0)
+        ->and($objectif->completed_at)->toBeNull();
+});
