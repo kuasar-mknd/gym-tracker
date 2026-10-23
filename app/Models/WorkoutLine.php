@@ -169,7 +169,8 @@ class WorkoutLine extends Model
                 return;
             }
 
-            app(\App\Services\ActiveWorkoutService::class)->forget($workout->user_id);
+            // Après la validation de l'écrivain, pas au moment de l'écriture (#2108).
+            app(\App\Services\ActiveWorkoutService::class)->oublierApresLaTransaction($workout->user_id);
         };
 
         /*
