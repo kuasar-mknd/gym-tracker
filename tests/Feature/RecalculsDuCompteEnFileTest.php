@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Notifications\AchievementUnlocked;
+use App\Services\PersonalRecordService;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Database\Events\QueryExecuted;
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 
 /*
  * Un recalcul des objectifs ou des succès demandé pendant qu'un autre tourne
@@ -474,6 +476,28 @@ it('recalcule après le record de la dernière série quand les séries attenden
             SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class,
         ])
         ->and(DB::table('jobs')->count())->toBe(0);
+});
+
+it('ne renvoie aucun recalcul quand le record s’écrit dans la requête ou par un appel direct', function (): void {
+    Notification::fake();
+    [$user, $ligne] = recalculEnFileObjectifDeCharge();
+
+    /** @var list<string> $lances */
+    $lances = [];
+    Event::listen(JobProcessing::class, static function (JobProcessing $evenement) use (&$lances): void {
+        $lances[] = $evenement->job->resolveName();
+    });
+
+    // La file synchrone des tests : `Set::saved` lance le travail des records
+    // dans la requête, puis envoie lui-même les deux recalculs, une fois.
+    $serie = recalculEnFileValiderUneSerie($ligne, 110);
+
+    expect($lances)->toBe([SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class]);
+
+    Queue::fake();
+    new SyncPersonalRecord($serie, $user)->handle(app(PersonalRecordService::class));
+
+    Queue::assertNothingPushed();
 });
 
 it('met en file le recalcul envoyé trois jours après un vidage de la file', function (string $classe): void {
