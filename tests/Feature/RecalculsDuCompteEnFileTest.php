@@ -35,6 +35,8 @@ use Illuminate\Support\Facades\Queue;
 use Laravel\Horizon\ProvisioningPlan;
 use Laravel\Horizon\SupervisorOptions;
 
+use function Pest\Laravel\actingAs;
+
 /*
  * Un recalcul des objectifs ou des succès demandé pendant qu'un autre tourne
  * pour le même compte n'est plus perdu, et un verrou orphelin ne les bloque
@@ -305,6 +307,44 @@ function recalculEnFileCheminDeProduction(): void
 function recalculEnFileSuccesDeCharge(): Achievement
 {
     return Achievement::factory()->create(['type' => 'weight_record', 'threshold' => 100]);
+}
+
+/**
+ * Un pratiquant à 800 kg soulevés au cumulé (une série de 200 kg × 4, qui
+ * tient aussi les records de l'exercice) dans une séance en cours, puis le
+ * succès « 1 000 kg soulevés », que lit `User::volumeSouleve()`, la somme des
+ * volumes de séance.
+ *
+ * @return array{0: User, 1: WorkoutLine, 2: Achievement}
+ */
+function recalculEnFileCompteA800Kg(): array
+{
+    $user = User::factory()->create();
+    $exercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
+    $seance = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => null]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+    Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 200, 'reps' => 4, 'is_warmup' => false, 'is_completed' => true]);
+    $succes = Achievement::factory()->create(['type' => 'volume_total', 'threshold' => 1000]);
+
+    expect($user->volumeSouleve())->toBe(800.0);
+
+    return [$user, $ligne, $succes];
+}
+
+/**
+ * Valide une série par l'API, comme la page de séance.
+ */
+function recalculEnFileValiderParLaRoute(User $user, WorkoutLine $ligne, float $poids, int $repetitions): void
+{
+    actingAs($user, 'sanctum')
+        ->postJson(route('api.v1.sets.store'), [
+            'workout_line_id' => $ligne->id,
+            'weight' => $poids,
+            'reps' => $repetitions,
+            'is_warmup' => false,
+            'is_completed' => true,
+        ])
+        ->assertCreated();
 }
 
 it('recalcule les objectifs d’une série validée pendant que le recalcul du même compte lit les records', function (): void {
@@ -790,3 +830,65 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
     'objectifs' => [SyncUserGoals::class],
     'succès' => [SyncUserAchievements::class],
 ]);
+
+it('débloque le succès du volume cumulé dès la série validée qui franchit son seuil : le volume de la séance s’écrit avant les recalculs', function (): void {
+    Notification::fake();
+    [$user, $ligne, $succes] = recalculEnFileCompteA800Kg();
+
+    /** @var list<string> $journal */
+    $journal = [];
+
+    DB::listen(static function (QueryExecuted $requete) use (&$journal): void {
+        if (str_starts_with($requete->sql, 'update `workouts` set `workout_volume`')) {
+            $journal[] = 'écriture du volume de la séance';
+        } elseif (str_starts_with($requete->sql, 'select sum(`workout_volume`)')) {
+            $journal[] = 'lecture du volume cumulé';
+        }
+    });
+
+    // La file synchrone des tests : les recalculs tournent dans la requête,
+    // au moment de leur envoi.
+    recalculEnFileValiderParLaRoute($user, $ligne, 100, 2);
+
+    expect($user->volumeSouleve())->toBe(1000.0)
+        ->and(DB::table('user_achievements')->where('user_id', $user->id)->where('achievement_id', $succes->id)->count())->toBe(1)
+        ->and($journal)->toBe(['écriture du volume de la séance', 'lecture du volume cumulé']);
+
+    Notification::assertSentToTimes($user, AchievementUnlocked::class, 1);
+});
+
+it('débloque le succès du volume cumulé quand un worker vide la file pendant que la requête écrit le volume de la séance, sur le chemin de production', function (): void {
+    Notification::fake();
+    [$user, $ligne, $succes] = recalculEnFileCompteA800Kg();
+
+    config(['queue.default' => 'database']);
+    recalculEnFileCheminDeProduction();
+
+    $fileAuVolume = null;
+    $pendantLeVolume = null;
+
+    DB::listen(static function (QueryExecuted $requete) use (&$fileAuVolume, &$pendantLeVolume): void {
+        if ($pendantLeVolume !== null || ! str_starts_with($requete->sql, 'select `workout_volume` from `workouts`') || ! str_contains($requete->sql, 'for update')) {
+            return;
+        }
+
+        // La requête relit sous verrou le volume de la séance, qu'elle n'a pas
+        // encore écrit : un worker prend tout ce que la file lui offre.
+        $pendantLeVolume = [];
+        $fileAuVolume = recalculEnFileContenu();
+        $pendantLeVolume = array_column(recalculEnFileViderLaFile(recalculEnFileUnWorker()), 'travail');
+    });
+
+    recalculEnFileValiderParLaRoute($user, $ligne, 100, 2);
+
+    $apresLaRequete = array_column(recalculEnFileViderLaFile(recalculEnFileUnWorker()), 'travail');
+
+    expect($user->volumeSouleve())->toBe(1000.0)
+        ->and(DB::table('user_achievements')->where('user_id', $user->id)->where('achievement_id', $succes->id)->count())->toBe(1)
+        ->and($fileAuVolume)->toBe([SyncPersonalRecord::class])
+        ->and($pendantLeVolume)->toBe([SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class])
+        ->and($apresLaRequete)->toBe([SyncUserAchievements::class, SyncUserGoals::class])
+        ->and(DB::table('jobs')->count())->toBe(0);
+
+    Notification::assertSentToTimes($user, AchievementUnlocked::class, 1);
+});
