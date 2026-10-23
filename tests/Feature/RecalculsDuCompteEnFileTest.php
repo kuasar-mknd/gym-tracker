@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\GoalType;
+use App\Jobs\SyncPersonalRecord;
 use App\Jobs\SyncUserAchievements;
 use App\Jobs\SyncUserGoals;
 use App\Models\Achievement;
@@ -230,6 +231,26 @@ function recalculEnFileLeTravail(string $classe, User $user): SyncUserGoals|Sync
     };
 }
 
+/**
+ * Le chemin des records en production : `Set::saved` met `SyncPersonalRecord`
+ * en file, devant les deux recalculs, au lieu de l'exécuter dans la requête
+ * comme sous APP_ENV=testing ou sur la base de la CI, gym_tracker_testing
+ * (`AppServiceProvider::registerSetEvents()`). Seule la configuration que lit
+ * cette condition change : la connexion, déjà ouverte, reste celle du test.
+ */
+function recalculEnFileCheminDeProduction(): void
+{
+    config(['app.env' => 'production', 'database.connections.mysql.database' => 'gym_tracker']);
+}
+
+/**
+ * Le succès de charge « 100 kg », que débloque un record de poids maximal.
+ */
+function recalculEnFileSuccesDeCharge(): Achievement
+{
+    return Achievement::factory()->create(['type' => 'weight_record', 'threshold' => 100]);
+}
+
 it('recalcule les objectifs d’une série validée pendant que le recalcul du même compte lit les records', function (): void {
     Notification::fake();
     [$user, $ligne, $objectif] = recalculEnFileObjectifDeCharge();
@@ -357,6 +378,102 @@ it('ne fait jamais tourner ensemble deux recalculs des succès d’un même comp
         ->and(DB::table('user_achievements')->where('user_id', $user->id)->where('achievement_id', $succes->id)->count())->toBe(1);
 
     Notification::assertSentToTimes($user, AchievementUnlocked::class, 1);
+});
+
+it('recalcule les objectifs et les succès après le record qu’un worker écrit pendant que deux autres recalculent, sur le chemin de production', function (): void {
+    Notification::fake();
+    $succes = recalculEnFileSuccesDeCharge();
+    [$user, $ligne, $objectif] = recalculEnFileObjectifDeCharge();
+
+    config(['queue.default' => 'database']);
+    recalculEnFileCheminDeProduction();
+    recalculEnFileValiderUneSerie($ligne, 90);
+
+    expect(recalculEnFileContenu())->toBe([SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class]);
+
+    $travailEnCours = recalculEnFileSuivreLeTravailEnCours();
+    $fileApresB = null;
+    $pendantLeRecord = null;
+
+    DB::listen(static function (QueryExecuted $requete) use (&$fileApresB, &$pendantLeRecord, $travailEnCours, $ligne): void {
+        if (! str_contains($requete->sql, '`personal_records`')) {
+            return;
+        }
+
+        if ($fileApresB === null && $travailEnCours() === SyncUserGoals::class) {
+            $fileApresB = [];
+            recalculEnFileValiderUneSerie($ligne, 110);
+            $fileApresB = recalculEnFileContenu();
+
+            return;
+        }
+
+        if ($fileApresB !== null && $pendantLeRecord === null && $travailEnCours() === SyncPersonalRecord::class) {
+            // Le record de B n'est pas encore écrit : deux autres workers
+            // prennent aussitôt les deux recalculs que la série a mis en file.
+            $pendantLeRecord = [];
+            $pendantLeRecord = [
+                recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
+                recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
+            ];
+        }
+    });
+
+    $traites = array_column(recalculEnFileViderLaFile(recalculEnFileUnWorker()), 'travail');
+
+    $objectif->refresh();
+    $record = PersonalRecord::query()
+        ->where('user_id', $user->id)
+        ->where('exercise_id', $ligne->exercise_id)
+        ->where('type', 'max_weight')
+        ->sole();
+
+    expect($fileApresB)->toBe([SyncUserGoals::class, SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class])
+        ->and($pendantLeRecord)->toBe([
+            ['travail' => SyncUserAchievements::class, 'issue' => 'traité', 'exception' => null],
+            ['travail' => SyncUserGoals::class, 'issue' => 'traité', 'exception' => null],
+        ])
+        ->and($record->value)->toBe('110.00')
+        ->and($objectif->current_value)->toBe(110.0)
+        ->and($objectif->completed_at)->not->toBeNull()
+        ->and(DB::table('user_achievements')->where('user_id', $user->id)->where('achievement_id', $succes->id)->count())->toBe(1)
+        ->and($traites)->toBe([
+            SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class,
+            SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class,
+        ])
+        ->and(DB::table('jobs')->count())->toBe(0);
+
+    Notification::assertSentToTimes($user, AchievementUnlocked::class, 1);
+});
+
+it('recalcule après le record de la dernière série quand les séries attendent la file avec leur recalcul, un seul worker, sur le chemin de production', function (): void {
+    Notification::fake();
+    $succes = recalculEnFileSuccesDeCharge();
+    [$user, $ligne, $objectif] = recalculEnFileObjectifDeCharge();
+
+    config(['queue.default' => 'database']);
+    recalculEnFileCheminDeProduction();
+
+    // La file hors ligne rejoue les séries l'une derrière l'autre, avant que le
+    // worker ne prenne le premier travail : les recalculs de la seconde sont
+    // écartés, puisque ceux de la première attendent encore.
+    recalculEnFileValiderUneSerie($ligne, 90);
+    recalculEnFileValiderUneSerie($ligne, 110);
+
+    expect(recalculEnFileContenu())->toBe([SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class, SyncPersonalRecord::class]);
+
+    $traites = array_column(recalculEnFileViderLaFile(recalculEnFileUnWorker()), 'travail');
+
+    $objectif->refresh();
+
+    expect($objectif->current_value)->toBe(110.0)
+        ->and($objectif->completed_at)->not->toBeNull()
+        ->and(DB::table('user_achievements')->where('user_id', $user->id)->where('achievement_id', $succes->id)->count())->toBe(1)
+        ->and($traites)->toBe([
+            SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class,
+            SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class,
+        ])
+        ->and(DB::table('jobs')->count())->toBe(0);
 });
 
 it('met en file le recalcul envoyé trois jours après un vidage de la file', function (string $classe): void {
