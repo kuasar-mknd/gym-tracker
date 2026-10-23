@@ -380,6 +380,37 @@ test('une mensuration à zéro n’atteint pas un objectif à la baisse', functi
 });
 
 /**
+ * Un objectif de mensuration sans mensuration choisie n'est pas atteint par
+ * sa valeur actuelle à zéro.
+ *
+ * Le panneau permet de le créer : la mensuration y est facultative, et la
+ * valeur actuelle vaut 0 par défaut. `updateMeasurementGoal()` ne le touche
+ * pas, faute de savoir quoi lire, et sa valeur reste à 0, sous toute cible :
+ * c'est l'autre cas que tient le garde `&& $goal->current_value > 0`, en plus
+ * de la mensuration à zéro du test du dessus.
+ */
+test('un objectif de mensuration sans mensuration choisie n’est pas atteint à zéro', function (): void {
+    $user = User::factory()->create();
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => null,
+        'start_value' => 80,
+        'current_value' => 0,
+        'target_value' => 75,
+        'completed_at' => null,
+    ]);
+
+    $this->service->syncGoals($user);
+
+    $goal->refresh();
+
+    expect($goal->current_value)->toBe(0.0)
+        ->and($goal->completed_at)->toBeNull();
+});
+
+/**
  * Et le sens de l'objectif se lit sur les valeurs, pas sur son type.
  *
  * « Descendre a 80 » et « monter a 100 » sont tous deux des objectifs de type
