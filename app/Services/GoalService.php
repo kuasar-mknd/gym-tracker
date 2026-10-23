@@ -334,12 +334,19 @@ final class GoalService
      * en sous-requête, l'autre seule : deux écritures de la même lecture
      * finiraient par diverger (`GoalSyncPathsTest`).
      *
+     * La requête part de la relation, qui pose le propriétaire, puis s'en
+     * détache (`getQuery()`) : `selectSub()` attend une requête, et sur une
+     * relation, `limit()` devient une fenêtre par parent
+     * (`row_number() over (partition by user_id …)`) dès que le compte n'est pas
+     * enregistré, au lieu d'une lecture qui s'arrête à la première pesée.
+     *
      * @param  string  $colonne  L'une des `COLONNES_DES_PESEES`.
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\BodyMeasurement, User>
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\BodyMeasurement>
      */
-    private function dernierePeseeQuiPorte(User $user, string $colonne): \Illuminate\Database\Eloquent\Relations\HasMany
+    private function dernierePeseeQuiPorte(User $user, string $colonne): \Illuminate\Database\Eloquent\Builder
     {
         return $user->bodyMeasurements()
+            ->getQuery()
             ->whereNotNull($colonne)
             ->orderByDesc('measured_at')
             ->orderByDesc('id')
@@ -462,9 +469,10 @@ final class GoalService
          * objectif de partie du corps lit ailleurs, et sans objectif de poids de
          * corps ni de masse grasse, la lecture n'a pas lieu.
          */
-        $colonnesSuivies = array_intersect(
+        $mensurationsSuivies = $goals->where('type', GoalType::Measurement)->pluck('measurement_type');
+        $colonnesSuivies = array_filter(
             self::COLONNES_DES_PESEES,
-            $goals->where('type', GoalType::Measurement)->pluck('measurement_type')->all(),
+            fn (string $colonne): bool => $mensurationsSuivies->contains($colonne),
         );
 
         if ($colonnesSuivies !== []) {
