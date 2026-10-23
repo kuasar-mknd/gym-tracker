@@ -72,7 +72,17 @@ vi.mock('@/Components/UI/ConfirmDialog.vue', () => ({ default: { name: 'ConfirmD
 const pages = suivreLesPagesMontees()
 
 const CLE = 'cle-de-la-seance-terminee'
-const HEURE_DU_GESTE = new Date('2026-10-19T17:05:00.000Z')
+
+/**
+ * L'heure du geste : une heure avant le chargement du fichier, à la minute.
+ * La fin mise en file la garde après le retour de l'horloge réelle, et la file
+ * abandonne au vidage ce qui attend depuis plus de trente jours : écrite en
+ * dur, cette heure faisait tomber le test trente jours après (#2123).
+ */
+const HEURE_DU_GESTE = new Date(Math.floor((Date.now() - 3_600_000) / 60_000) * 60_000)
+
+/** Le début de la séance, cinquante minutes avant la fin, tiré de la même heure. */
+const DEBUT_DE_LA_SEANCE = new Date(HEURE_DU_GESTE.getTime() - 50 * 60_000).toISOString()
 
 let sync
 let visites
@@ -103,7 +113,7 @@ it('met la fin d’une séance démarrée sans réseau en file à part, la derni
     const queueId = sync.mettreEnFile({
         method: 'post',
         url: '/api/v1/workouts',
-        data: { started_at: '2026-10-19T16:15:00.000Z' },
+        data: { started_at: DEBUT_DE_LA_SEANCE },
         headers: { 'Idempotency-Key': CLE },
     })
     const { ouvrirLaSeanceEnAttente } = await import('@/composables/useDemarrageDUneSeance')
@@ -139,7 +149,7 @@ it('met la fin d’une séance démarrée sans réseau en file à part, la derni
 
     // La fin, à part et la dernière : la création ne porte aucune fin.
     expect(creation.id).toBe(queueId)
-    expect(creation.data).toEqual({ started_at: '2026-10-19T16:15:00.000Z' })
+    expect(creation.data).toEqual({ started_at: DEBUT_DE_LA_SEANCE })
     expect([ligne.url, serie.url]).toEqual(['/api/v1/workout-lines', '/api/v1/sets'])
     expect(fin).toMatchObject({
         method: 'patch',
@@ -164,7 +174,7 @@ it('met la fin d’une séance démarrée sans réseau en file à part, la derni
     await sync.processQueue()
 
     expect(reseau.serveur.resume()).toEqual([
-        'post /api/v1/workouts {"started_at":"2026-10-19T16:15:00.000Z"}',
+        `post /api/v1/workouts {"started_at":"${DEBUT_DE_LA_SEANCE}"}`,
         'post /api/v1/workout-lines {"workout_id":42,"exercise_id":8}',
         expect.stringMatching(/^post \/api\/v1\/sets \{"workout_line_id":70,/),
         `patch /api/v1/workouts/finish {"workout_id":42,"ended_at":"${HEURE_DU_GESTE.toISOString()}"}`,
