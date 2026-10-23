@@ -725,7 +725,9 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
     expect($sansChevauchement->key)->toBe((string) $user->id)
         ->and($sansChevauchement->shareKey)->toBeFalse()
         ->and($attente)->toBeGreaterThan(0)
-        ->and($charge['maxTries'])->toBe(intdiv($sansChevauchement->expiresAfter, $attente) + 1)
+        // Le premier essai, un retour par attente pendant la vie du verrou, et
+        // un de plus pour la seconde pleine où la file rend le travail.
+        ->and($charge['maxTries'])->toBe(intdiv($sansChevauchement->expiresAfter, $attente) + 2)
         ->and($charge['maxExceptions'])->toBe(1)
         ->and($charge['countCrashesAsExceptions'])->toBeTrue()
         ->and($charge['backoff'])->toBeNull()
