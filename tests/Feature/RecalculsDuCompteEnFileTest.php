@@ -488,10 +488,8 @@ it('recalcule les objectifs et les succès après le record qu’un worker écri
             // Le record de B n'est pas encore écrit : deux autres workers
             // prennent aussitôt les deux recalculs que la série a mis en file.
             $pendantLeRecord = [];
-            $pendantLeRecord = [
-                recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
-                recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
-            ];
+            $pendantLeRecord[] = recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker());
+            $pendantLeRecord[] = recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker());
         }
     });
 
