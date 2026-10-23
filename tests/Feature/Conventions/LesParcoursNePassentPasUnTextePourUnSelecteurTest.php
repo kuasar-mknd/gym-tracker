@@ -32,16 +32,19 @@ use Tests\Support\NavigateurDesParcours;
  * parcours dont le premier paramètre est un sélecteur ou un champ (`$selector`
  * ou `$field`, chez Dusk comme dans les macros de `DuskTestCase`), une chaîne
  * qui ne porte aucun signe d'un sélecteur voulu et qui a un caractère hors
- * ASCII, qu'aucun nom de balise ne porte, ou au moins deux mots en capitales :
- * le texte d'un titre ou d'un bouton que le CSS passe en majuscules, tel que
- * WebDriver le rend (.ai/rules/browser.md), ponctuation comprise. Un mot seul
- * reste permis : un nom de balise en capitales (`NAV`) est un sélecteur
- * valide. Aucun parcours ne nomme ses éléments par des balises en capitales ;
- * il le fait par `dusk`, par `data-testid` ou par des balises en minuscules.
+ * ASCII, qu'aucun nom de balise ne porte, ou un mot d'au moins deux
+ * capitales : le texte d'un titre ou d'un bouton que le CSS passe en
+ * majuscules, tel que WebDriver le rend (.ai/rules/browser.md), ponctuation
+ * comprise. Un mot seul suffit (`ANNULER`), le même défaut : une balise en
+ * capitales (`NAV`) serait un sélecteur valide, mais aucun parcours ne nomme
+ * ses éléments ainsi ; il le fait par `dusk`, par `data-testid` ou par des
+ * balises en minuscules. Seul un champ d'un seul mot reste permis, même en
+ * capitales ou hors ASCII : c'est un nom, que Dusk cherche aussi par
+ * `input[name="…"]`.
  *
  * Elle lit des jetons, pas ce que le code fera : un sélecteur calculé,
- * concaténé ou passé par son nom lui échappe. Un texte en ASCII sans deux
- * mots en capitales lui échappe aussi (`Annuler la suppression`,
+ * concaténé ou passé par son nom lui échappe. Un texte en ASCII sans mot en
+ * capitales lui échappe aussi (`Annuler la suppression`,
  * `Oui, supprimer`) : il se lit comme des noms de balises, et le reconnaître
  * demanderait la liste des balises HTML et SVG, à tenir à jour. De même pour
  * un texte qui porte un signe de sélecteur (`SÉRIES (3)`).
@@ -49,13 +52,14 @@ use Tests\Support\NavigateurDesParcours;
 
 /**
  * Les méthodes du navigateur des parcours qui prennent un sélecteur ou un
- * champ en premier argument, indexées par leur nom en minuscules : celles de
- * Dusk et de `NavigateurDesParcours`, et les macros que `DuskTestCase`
- * déclare avec un tel premier paramètre. Pas celles de l'`ElementResolver`,
- * qu'aucun parcours n'appelle : son `format()` porterait le nom de celui de
- * Carbon, dont un format en capitales (`'D M Y'`) passerait pour un texte.
+ * champ en premier argument, indexées par leur nom en minuscules, vrai pour
+ * un champ : celles de Dusk et de `NavigateurDesParcours`, et les macros que
+ * `DuskTestCase` déclare avec un tel premier paramètre. Pas celles de
+ * l'`ElementResolver`, qu'aucun parcours n'appelle : son `format()` porterait
+ * le nom de celui de Carbon, dont un format en capitales (`'D M Y'`)
+ * passerait pour un texte.
  *
- * @return array<string, string>
+ * @return array<string, bool>
  */
 function texteEnSelecteurMethodes(): array
 {
@@ -65,18 +69,19 @@ function texteEnSelecteurMethodes(): array
         $premier = $methode->getParameters()[0] ?? null;
 
         if ($premier !== null && in_array($premier->getName(), ['selector', 'field'], true)) {
-            $methodes[strtolower($methode->getName())] = $methode->getName();
+            $methodes[strtolower($methode->getName())] = $premier->getName() === 'field';
         }
     }
 
     preg_match_all(
-        '/Browser::macro\(\s*[\'"](\w+)[\'"]\s*,\s*(?:static\s+)?(?:function|fn)\s*\(\s*(?:[\w\\\\|?]+\s+)?\$(?:selector|field)\b/',
+        '/Browser::macro\(\s*[\'"](\w+)[\'"]\s*,\s*(?:static\s+)?(?:function|fn)\s*\(\s*(?:[\w\\\\|?]+\s+)?\$(selector|field)\b/',
         (string) file_get_contents(base_path('tests/DuskTestCase.php')),
         $macros,
+        PREG_SET_ORDER,
     );
 
-    foreach ($macros[1] as $macro) {
-        $methodes[strtolower($macro)] = $macro;
+    foreach ($macros as [, $macro, $parametre]) {
+        $methodes[strtolower($macro)] = $parametre === 'field';
     }
 
     return $methodes;
@@ -113,7 +118,7 @@ function texteEnSelecteurFichiersDesParcours(): array
  * Les textes en capitales que ce code passe, en premier argument littéral, à
  * l'une de ces méthodes.
  *
- * @param  array<string, string>  $methodes  indexées par leur nom en minuscules
+ * @param  array<string, bool>  $methodes  indexées par leur nom en minuscules, vrai pour un champ
  * @return list<array{ligne: int, methode: string, texte: string}>
  */
 function texteEnSelecteurTrouves(string $code, array $methodes): array
@@ -142,7 +147,7 @@ function texteEnSelecteurTrouves(string $code, array $methodes): array
             ? strtr($texte, ["\\'" => "'", '\\\\' => '\\'])
             : stripcslashes($texte);
 
-        if (texteEnSelecteurEstUnTexte($texte)) {
+        if (texteEnSelecteurEstUnTexte($texte, $methodes[strtolower($jeton->text)])) {
             $trouves[] = ['ligne' => $jeton->line, 'methode' => $jeton->text, 'texte' => $texte];
         }
     }
@@ -154,19 +159,21 @@ function texteEnSelecteurTrouves(string $code, array $methodes): array
  * Ce premier argument est un texte, et non un sélecteur : il ne porte aucun
  * signe d'un sélecteur voulu (crochet, `#`, `@`, parenthèse, `=`, `*`, `.` ou
  * `:` collé à un nom), et il a soit un caractère hors ASCII, qu'aucun nom de
- * balise ne porte, soit au moins deux mots en capitales. Virgules, `+ > ~`,
- * guillemets et ponctuation finale n'y changent rien.
+ * balise ne porte, soit un mot d'au moins deux capitales. Virgules, `+ > ~`,
+ * guillemets et ponctuation finale n'y changent rien. Le champ d'un seul mot
+ * est un nom, que Dusk cherche aussi par `input[name="…"]` (`CVV`).
  */
-function texteEnSelecteurEstUnTexte(string $argument): bool
+function texteEnSelecteurEstUnTexte(string $argument, bool $champ): bool
 {
     $argument = trim($argument);
 
-    if (preg_match('/[\[\]#@()=*]|[.:][\p{L}_-]/u', $argument) === 1) {
+    if (preg_match('/[\[\]#@()=*]|[.:][\p{L}_-]/u', $argument) === 1
+        || ($champ && preg_match('/\s/u', $argument) !== 1)) {
         return false;
     }
 
     return preg_match('/[^\x00-\x7F]/', $argument) === 1
-        || preg_match_all('/(?<![\p{L}\p{M}\p{N}])\p{Lu}[\p{Lu}\p{M}\'’-]*(?![\p{L}\p{M}\p{N}])/u', $argument) >= 2;
+        || preg_match('/(?<![\p{L}\p{M}\p{N}])\p{Lu}[\p{Lu}\p{M}\'’-]*\p{Lu}\p{M}*(?![\p{L}\p{M}\p{N}])/u', $argument) === 1;
 }
 
 it('connaît les méthodes qui prennent un sélecteur, et pas celles qui lisent un texte', function (): void {
@@ -177,6 +184,10 @@ it('connaît les méthodes qui prennent un sélecteur, et pas celles qui lisent 
 
     expect($methodes)
         ->not->toHaveKeys(['waituntilmissingtext', 'waitfortext', 'assertsee', 'assertdontsee', 'press', 'clicklink', 'format']);
+
+    expect(array_keys(array_filter($methodes)))
+        ->toContain('type', 'select', 'check')
+        ->not->toContain('waituntilmissing', 'assertmissing', 'clickwhensettled');
 });
 
 it('reconnaît un texte en capitales passé pour un sélecteur, et rien d’autre', function (): void {
@@ -198,6 +209,7 @@ it('reconnaît un texte en capitales passé pour un sélecteur, et rien d’autr
         ['ligne' => 3, 'methode' => 'assertMissing', 'texte' => 'MOT DE PASSE'],
         ['ligne' => 4, 'methode' => 'clickWhenSettled', 'texte' => 'L\'ÉCRAN D’ACCUEIL'],
         ['ligne' => 5, 'methode' => 'type', 'texte' => 'NOUVEAU MOT DE PASSE'],
+        ['ligne' => 8, 'methode' => 'assertMissing', 'texte' => 'NAV'],
     ]);
 });
 
@@ -212,11 +224,14 @@ it('refuse un texte que Dusk lirait comme un sélecteur, ou dont il avalerait l�
     'un texte en casse mixte, hors ASCII' => ["assertMissing('Enregistré ✓')"],
     'une question, dont assertNotPresent() avale l’erreur de sélecteur' => ["assertNotPresent('SUPPRIMER LE COMPTE ?')"],
     'une phrase finie par un point' => ["assertNotPresent('CONFIRMER LA SUPPRESSION.')"],
+    'un mot seul en capitales' => ["waitUntilMissing('ANNULER', 15)"],
+    'un autre mot seul en capitales' => ["assertMissing('SUPPRIMER')"],
 ]);
 
 it('laisse passer un sélecteur, même hors ASCII ou entre deux combinateurs', function (string $appel): void {
     expect(texteEnSelecteurTrouves("<?php\n\$browser->{$appel};", texteEnSelecteurMethodes()))->toBe([]);
 })->with([
+    'une balise' => ["mouseover('nav')"],
     'des balises imbriquées' => ["waitFor('header h1')"],
     'une liste de balises' => ["assertMissing('ul, ol')"],
     'un combinateur entre deux balises' => ["waitFor('body > main')"],
@@ -225,6 +240,8 @@ it('laisse passer un sélecteur, même hors ASCII ou entre deux combinateurs', f
     'une classe après une balise' => ["waitUntilMissing('div.Écran')"],
     'une pseudo-classe' => ["waitFor('button:not([disabled])')"],
     'un texte lu comme un texte' => ["waitUntilMissingText('ENREGISTRÉ ✓', 3)"],
+    'un champ nommé d’un mot en capitales' => ["type('CVV', '123')"],
+    'un champ nommé d’un mot accentué' => ["type('prénom', 'Léa')"],
 ]);
 
 it('ne passe aucun texte à une méthode des parcours qui prend un sélecteur', function (): void {
