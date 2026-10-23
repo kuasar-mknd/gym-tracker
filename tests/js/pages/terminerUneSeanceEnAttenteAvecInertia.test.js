@@ -72,6 +72,7 @@ vi.mock('@/Components/UI/ConfirmDialog.vue', () => ({ default: { name: 'ConfirmD
 const pages = suivreLesPagesMontees()
 
 const CLE = 'cle-de-la-seance-terminee'
+
 /**
  * L'heure du geste : une heure avant le chargement du fichier, à la minute.
  * La fin mise en file la garde après le retour de l'horloge réelle, et la file
