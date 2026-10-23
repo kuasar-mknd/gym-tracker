@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Horizon\ProvisioningPlan;
+use Laravel\Horizon\SupervisorOptions;
 
 /*
  * Un recalcul des objectifs ou des succès demandé pendant qu'un autre tourne
@@ -771,19 +773,28 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
         ->and($travail->uniqueFor())->toBeGreaterThanOrEqual($sansChevauchement->expiresAfter);
 
     // Le verrou de l'exécution survit au délai que Horizon laisse à un
-    // travail, dans chaque environnement : un recalcul qui tourne jusqu'à ce
-    // délai le garde jusqu'au bout.
-    $superviseurs = [config('horizon.defaults.supervisor-1')];
+    // travail, sous chaque superviseur qui sert la file des recalculs, dans
+    // chaque environnement : un recalcul qui tourne jusqu'à ce délai le garde
+    // jusqu'au bout. Le plan est celui que Horizon déploie, chaque superviseur
+    // des défauts fusionné par son nom avec celui de l'environnement.
+    $superviseursDeLaFile = 0;
 
-    foreach ((array) config('horizon.environments') as $environnement) {
-        assert(is_array($environnement));
-        $superviseurs[] = array_merge((array) config('horizon.defaults.supervisor-1'), (array) ($environnement['supervisor-1'] ?? []));
+    foreach (ProvisioningPlan::get('recalculs')->parsed as $superviseurs) {
+        assert(is_iterable($superviseurs));
+
+        foreach ($superviseurs as $options) {
+            assert($options instanceof SupervisorOptions && is_string($options->queue) && is_int($options->timeout));
+
+            if (! in_array(config('queue.connections.'.$options->connection.'.queue'), explode(',', $options->queue), true)) {
+                continue;
+            }
+
+            $superviseursDeLaFile++;
+            expect($sansChevauchement->expiresAfter)->toBeGreaterThan($options->timeout);
+        }
     }
 
-    foreach ($superviseurs as $superviseur) {
-        assert(is_array($superviseur) && is_int($superviseur['timeout']));
-        expect($sansChevauchement->expiresAfter)->toBeGreaterThan($superviseur['timeout']);
-    }
+    expect($superviseursDeLaFile)->toBeGreaterThan(0);
 })->with([
     'objectifs' => [SyncUserGoals::class],
     'succès' => [SyncUserAchievements::class],
