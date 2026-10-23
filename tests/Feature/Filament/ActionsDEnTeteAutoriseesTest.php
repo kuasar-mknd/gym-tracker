@@ -8,6 +8,7 @@ use App\Filament\Resources\TachesPlanifiees\Pages\ListTachesPlanifiees;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\TachePlanifiee;
+use App\Models\User;
 use App\Models\WorkoutTemplateLine;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Livewire;
@@ -18,9 +19,11 @@ use Tests\Support\FilamentAdminPanel;
  * Les actions d'en-tête écrites pour le panneau exigent la capacité de ce
  * qu'elles font : « Installer Exercices par Défaut » crée, dans le catalogue
  * commun, les exercices qui y manquent, et demande donc celle de créer un
- * exercice (`Create:Exercise`) ; il ne modifie ni ne supprime rien, ce que
- * le vrai catalogue (`PrecorExerciseSeeder`) montre ici, avec le mode strict
- * d'Eloquent comme hors production, et sans lui comme en production.
+ * exercice (`Create:Exercise`) ; il ne modifie ni ne supprime rien, et un
+ * exercice personnel du même nom qu'un exercice du catalogue ne l'empêche
+ * pas de créer ce dernier, ce que le vrai catalogue (`PrecorExerciseSeeder`)
+ * montre ici, avec le mode strict d'Eloquent comme hors production, et sans
+ * lui comme en production.
  * « Relire le planning » réécrit la liste des tâches surveillées, et demande
  * `sync-planning`, ouverte au super administrateur par la liste des
  * capacités. Sans elle, le bouton est caché, et un appel forgé, qui monte
@@ -83,6 +86,24 @@ it('ne modifie ni ne supprime aucun exercice du catalogue en l’installant', fu
         ->and($existant->fresh()?->only(['type', 'category']))->toBe(['type' => 'cardio', 'category' => ExerciseCategory::Cardio])
         ->and(Exercise::query()->whereNull('user_id')->where('name', 'Chest Press')->count())->toBe(1)
         ->and(actionsDEnTeteExercicesCommuns())->toBe(25);
+})->with([
+    'mode strict, hors production' => [true],
+    'sans mode strict, en production' => [false],
+]);
+
+it('crée l’exercice commun du catalogue à côté d’un exercice personnel du même nom, sans toucher ce dernier', function (bool $strict): void {
+    Model::shouldBeStrict($strict);
+    $compte = User::factory()->create();
+    $personnel = Exercise::factory()->create(['name' => 'Leg Press', 'user_id' => $compte->id, 'type' => 'cardio', 'category' => 'Cardio']);
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:Exercise', 'Create:Exercise']), 'admin');
+
+    Livewire::test(ListExercises::class)
+        ->callAction('installerParDefaut')
+        ->assertNotified('Exercices installés avec succès !');
+
+    expect(Exercise::query()->whereNull('user_id')->where('name', 'Leg Press')->count())->toBe(1)
+        ->and(actionsDEnTeteExercicesCommuns())->toBe(24)
+        ->and($personnel->fresh()?->only(['type', 'category', 'user_id']))->toBe(['type' => 'cardio', 'category' => ExerciseCategory::Cardio, 'user_id' => $compte->id]);
 })->with([
     'mode strict, hors production' => [true],
     'sans mode strict, en production' => [false],
