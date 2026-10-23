@@ -144,6 +144,11 @@ function objectifDePeseeSuivi(User $user, string $colonne): Goal
  * et reviennent à la valeur de départ, 20, quand il n'y en a aucune. Les
  * pesées sont posées avant l'objectif : celles que l'observateur recalcule en
  * les enregistrant ne le connaissent pas encore.
+ *
+ * La dernière se lit par sa date, pas par l'ordre de saisie : une pesée
+ * oubliée, saisie après coup à sa date passée, ne passe pas devant une pesée
+ * plus récente. Ailleurs, les pesées sont saisies dans l'ordre de leurs dates,
+ * et un tri par le seul identifiant passerait aussi.
  */
 it('donne la même valeur de pesée par les deux chemins', function (string $colonne, array $pesees, float $attendu): void {
     /** @var list<array{0: string, 1: float, 2: float|null}> $pesees date, poids, masse grasse */
@@ -178,6 +183,16 @@ it('donne la même valeur de pesée par les deux chemins', function (string $col
         'body_fat',
         [['2026-06-10', 81.0, 30.0], ['2026-06-15', 80.0, null]],
         30.0,
+    ],
+    'poids de corps, une pesée antidatée saisie en dernier : la valeur suit la plus récente par sa date' => [
+        'weight',
+        [['2026-06-15', 80.0, 18.0], ['2026-06-10', 84.0, 22.0]],
+        80.0,
+    ],
+    'masse grasse, une pesée antidatée saisie en dernier : la valeur suit la plus récente par sa date' => [
+        'body_fat',
+        [['2026-06-15', 80.0, 18.0], ['2026-06-10', 84.0, 22.0]],
+        18.0,
     ],
 ]);
 
