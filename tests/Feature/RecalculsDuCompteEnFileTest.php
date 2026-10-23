@@ -219,26 +219,6 @@ function recalculEnFileContenu(): array
 }
 
 /**
- * Le compte de chaque recalcul de la file, dans l'ordre où ils y sont entrés.
- *
- * @return list<int>
- */
-function recalculEnFileComptesEnFile(): array
-{
-    return array_values(DB::table('jobs')->orderBy('id')->pluck('payload')
-        ->map(static function (mixed $charge): int {
-            assert(is_string($charge));
-            $decodee = json_decode($charge, true, flags: JSON_THROW_ON_ERROR);
-            assert(is_array($decodee) && is_array($decodee['data'] ?? null) && is_string($decodee['data']['command'] ?? null));
-            $travail = unserialize($decodee['data']['command']);
-            assert($travail instanceof SyncUserGoals || $travail instanceof SyncUserAchievements);
-
-            return (int) $travail->user->id;
-        })
-        ->all());
-}
-
-/**
  * Un pratiquant, un exercice dans une séance, et un objectif « 100 kg » sur
  * cet exercice, posés pendant que la file est encore synchrone.
  *
@@ -575,14 +555,22 @@ it('ne renvoie aucun recalcul quand le record s’écrit dans la requête ou par
 it('tient un verrou d’unicité par compte : le recalcul qui attend pour un compte n’écarte pas celui d’un autre', function (string $classe): void {
     $premier = User::factory()->create();
     $second = User::factory()->create();
-    config(['queue.default' => 'database']);
+
+    // Le verrou d'unicité se prend à l'envoi, quel que soit le pilote de la
+    // file : la file simulée rend les travaux mis en file, compte compris.
+    Queue::fake();
 
     $classe::dispatch($premier);
     $classe::dispatch($second);
     $classe::dispatch($premier);
 
-    expect(recalculEnFileContenu())->toBe([$classe, $classe])
-        ->and(recalculEnFileComptesEnFile())->toBe([$premier->id, $second->id]);
+    $comptes = Queue::pushed($classe)->map(static function (mixed $travail): int {
+        assert($travail instanceof SyncUserGoals || $travail instanceof SyncUserAchievements);
+
+        return (int) $travail->user->id;
+    })->all();
+
+    expect($comptes)->toBe([$premier->id, $second->id]);
 })->with([
     'objectifs' => [SyncUserGoals::class],
     'succès' => [SyncUserAchievements::class],
