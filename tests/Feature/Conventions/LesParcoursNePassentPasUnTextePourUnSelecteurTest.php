@@ -12,27 +12,39 @@ use Tests\Support\NavigateurDesParcours;
  * compte par `waitUntilMissing('CONFIRMER LA SUPPRESSION', 15)`. Dusk y lisait
  * le sélecteur `body CONFIRMER LA SUPPRESSION`, des éléments <confirmer>, <la>
  * et <suppression> imbriqués, que la page n'a jamais. Une absence attendue
- * (`waitUntilMissing()`, `assertMissing()`) sur un sélecteur qui ne désigne
- * rien passe au premier essai : les trois parcours affirmaient que « Annuler »
- * fermait la fenêtre sans le vérifier. Une présence attendue sur un tel
- * sélecteur échoue, mais en parlant d'un sélecteur que personne n'a voulu
- * écrire. Un texte s'attend par `waitForText()` ou `waitUntilMissingText()`,
- * et se vérifie par `assertSee()` ou `assertDontSee()`.
+ * (`waitUntilMissing()`, `assertMissing()`, `assertNotPresent()`) sur un
+ * sélecteur qui ne désigne rien passe au premier essai : les trois parcours
+ * affirmaient que « Annuler » fermait la fenêtre sans le vérifier. Une
+ * présence attendue sur un tel sélecteur échoue, mais en parlant d'un
+ * sélecteur que personne n'a voulu écrire. Un texte s'attend par
+ * `waitForText()` ou `waitUntilMissingText()`, et se vérifie par
+ * `assertSee()` ou `assertDontSee()`.
+ *
+ * Un texte reste un sélecteur valide, quelle que soit sa casse, avec des
+ * virgules, des `+ > ~` ou des caractères hors ASCII (’ « » ✓ …) : ces trois
+ * méthodes d'absence passent alors en silence. Une ponctuation ASCII qui casse
+ * le CSS (`.` final, `!`, `?`) le rend invalide : `waitUntilMissing()`
+ * échoue au bout de son délai, `assertMissing()` tout de suite, mais
+ * `assertNotPresent()` passe encore, car `ElementResolver::find()` avale toute
+ * exception, l'erreur de sélecteur comprise.
  *
  * La garde refuse, en premier argument d'une méthode du navigateur des
  * parcours dont le premier paramètre est un sélecteur ou un champ (`$selector`
  * ou `$field`, chez Dusk comme dans les macros de `DuskTestCase`), une chaîne
- * faite d'au moins deux mots en capitales séparés par des espaces : le texte
- * d'un titre ou d'un bouton que le CSS passe en majuscules, tel que WebDriver
- * le rend (.ai/rules/browser.md). Un mot seul reste permis : un nom de balise
- * en capitales (`NAV`) est un sélecteur valide. Aucun parcours ne nomme ses
- * éléments par des balises en capitales ; il le fait par `dusk`, par
- * `data-testid` ou par des balises en minuscules.
+ * qui ne porte aucun signe d'un sélecteur voulu et qui a un caractère hors
+ * ASCII, qu'aucun nom de balise ne porte, ou au moins deux mots en capitales :
+ * le texte d'un titre ou d'un bouton que le CSS passe en majuscules, tel que
+ * WebDriver le rend (.ai/rules/browser.md), ponctuation comprise. Un mot seul
+ * reste permis : un nom de balise en capitales (`NAV`) est un sélecteur
+ * valide. Aucun parcours ne nomme ses éléments par des balises en capitales ;
+ * il le fait par `dusk`, par `data-testid` ou par des balises en minuscules.
  *
  * Elle lit des jetons, pas ce que le code fera : un sélecteur calculé,
- * concaténé ou passé par son nom lui échappe, comme un texte en minuscules
- * sans ponctuation (`Annuler la suppression`), qui serait lui aussi un
- * sélecteur valide qui ne désigne rien.
+ * concaténé ou passé par son nom lui échappe. Un texte en ASCII sans deux
+ * mots en capitales lui échappe aussi (`Annuler la suppression`,
+ * `Oui, supprimer`) : il se lit comme des noms de balises, et le reconnaître
+ * demanderait la liste des balises HTML et SVG, à tenir à jour. De même pour
+ * un texte qui porte un signe de sélecteur (`SÉRIES (3)`).
  */
 
 /**
@@ -130,12 +142,31 @@ function texteEnSelecteurTrouves(string $code, array $methodes): array
             ? strtr($texte, ["\\'" => "'", '\\\\' => '\\'])
             : stripcslashes($texte);
 
-        if (preg_match('/^\p{Lu}[\p{Lu}\p{M}\'’-]*(?:\s+\p{Lu}[\p{Lu}\p{M}\'’-]*)+$/u', trim($texte)) === 1) {
+        if (texteEnSelecteurEstUnTexte($texte)) {
             $trouves[] = ['ligne' => $jeton->line, 'methode' => $jeton->text, 'texte' => $texte];
         }
     }
 
     return $trouves;
+}
+
+/**
+ * Ce premier argument est un texte, et non un sélecteur : il ne porte aucun
+ * signe d'un sélecteur voulu (crochet, `#`, `@`, parenthèse, `=`, `*`, `.` ou
+ * `:` collé à un nom), et il a soit un caractère hors ASCII, qu'aucun nom de
+ * balise ne porte, soit au moins deux mots en capitales. Virgules, `+ > ~`,
+ * guillemets et ponctuation finale n'y changent rien.
+ */
+function texteEnSelecteurEstUnTexte(string $argument): bool
+{
+    $argument = trim($argument);
+
+    if (preg_match('/[\[\]#@()=*]|[.:][\p{L}_-]/u', $argument) === 1) {
+        return false;
+    }
+
+    return preg_match('/[^\x00-\x7F]/', $argument) === 1
+        || preg_match_all('/(?<![\p{L}\p{M}\p{N}])\p{Lu}[\p{Lu}\p{M}\'’-]*(?![\p{L}\p{M}\p{N}])/u', $argument) >= 2;
 }
 
 it('connaît les méthodes qui prennent un sélecteur, et pas celles qui lisent un texte', function (): void {
@@ -169,6 +200,32 @@ it('reconnaît un texte en capitales passé pour un sélecteur, et rien d’autr
         ['ligne' => 5, 'methode' => 'type', 'texte' => 'NOUVEAU MOT DE PASSE'],
     ]);
 });
+
+it('refuse un texte que Dusk lirait comme un sélecteur, ou dont il avalerait l’erreur', function (string $appel): void {
+    expect(texteEnSelecteurTrouves("<?php\n\$browser->{$appel};", texteEnSelecteurMethodes()))->toHaveCount(1);
+})->with([
+    'un signe hors ASCII après le mot' => ["waitUntilMissing('ENREGISTRÉ ✓', 3)"],
+    'deux mots séparés par une virgule' => ["assertMissing('OUI, SUPPRIMER')"],
+    'des guillemets français' => ["assertNotPresent('« ENREGISTRÉ »')"],
+    'un combinateur entre deux mots' => ["waitUntilMissing('RETOUR > ACCUEIL')"],
+    'un texte en minuscules, hors ASCII' => ["waitUntilMissing('n’a pas pu être ajouté', 3)"],
+    'un texte en casse mixte, hors ASCII' => ["assertMissing('Enregistré ✓')"],
+    'une question, dont assertNotPresent() avale l’erreur de sélecteur' => ["assertNotPresent('SUPPRIMER LE COMPTE ?')"],
+    'une phrase finie par un point' => ["assertNotPresent('CONFIRMER LA SUPPRESSION.')"],
+]);
+
+it('laisse passer un sélecteur, même hors ASCII ou entre deux combinateurs', function (string $appel): void {
+    expect(texteEnSelecteurTrouves("<?php\n\$browser->{$appel};", texteEnSelecteurMethodes()))->toBe([]);
+})->with([
+    'des balises imbriquées' => ["waitFor('header h1')"],
+    'une liste de balises' => ["assertMissing('ul, ol')"],
+    'un combinateur entre deux balises' => ["waitFor('body > main')"],
+    'un attribut au texte accentué' => ["assertMissing('nav[aria-label=\"Pagination de l’historique\"]')"],
+    'un attribut dusk accentué' => ["click('@réglages')"],
+    'une classe après une balise' => ["waitUntilMissing('div.Écran')"],
+    'une pseudo-classe' => ["waitFor('button:not([disabled])')"],
+    'un texte lu comme un texte' => ["waitUntilMissingText('ENREGISTRÉ ✓', 3)"],
+]);
 
 it('ne passe aucun texte à une méthode des parcours qui prend un sélecteur', function (): void {
     $methodes = texteEnSelecteurMethodes();
