@@ -26,7 +26,9 @@ use Illuminate\Queue\Jobs\SyncJob;
  * recalcul déjà commencé laisse passer l'envoi, qui tourne après lui
  * (`UnRecalculParCompteALaFois`). Exécuté dans la requête (`dispatchSync()`,
  * les tests), il écrit le record avant les envois de `Set::saved`, et ne
- * renvoie rien.
+ * renvoie rien. Appelé directement (`handle()`), il n'envoie rien non plus,
+ * et aucun envoi de `Set::saved` ne le suit : l'appelant envoie lui-même les
+ * deux recalculs après lui.
  */
 final class SyncPersonalRecord implements ShouldBeUnique, ShouldQueue
 {

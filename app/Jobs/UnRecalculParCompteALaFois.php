@@ -20,11 +20,13 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  * donc un nouveau travail en file, qui relira l'état final. Tant qu'un travail
  * attend sans avoir commencé, les envois suivants restent écartés : il lira
  * l'écriture qu'ils annonçaient, pourvu que chaque envoi suive son écriture.
- * Le record d'une série s'écrit dans un worker, après les envois que fait
- * `Set::saved` : `SyncPersonalRecord` renvoie donc les deux recalculs une fois
- * le record écrit. `ShouldBeUnique` gardait le verrou jusqu'à la fin de
- * `handle()`, et l'envoi était écarté alors que le travail en cours avait déjà
- * lu l'état d'avant.
+ * `Set::saved` envoie depuis `Set::booted()`, après le volume de la séance,
+ * que lit le succès du volume cumulé, et après les records qu'écrit
+ * l'écouteur d'`AppServiceProvider`. Seul le record d'une série s'écrit après
+ * eux, dans un worker en production : `SyncPersonalRecord` renvoie donc les
+ * deux recalculs une fois le record écrit. `ShouldBeUnique` gardait le verrou
+ * jusqu'à la fin de `handle()`, et l'envoi était écarté alors que le travail
+ * en cours avait déjà lu l'état d'avant.
  *
  * Le verrou d'unicité expire après `VERROU_D_UNICITE` secondes. Sans échéance,
  * un travail retiré de la file sans être traité (file vidée, clé perdue) le
@@ -41,9 +43,11 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  * différentes. Un travail qui trouve le compte occupé revient en file
  * `ATTENTE_AVANT_DE_RETENTER` secondes plus tard, sans tenir de worker pendant
  * ce temps. Le verrou d'exécution expire après `VERROU_D_EXECUTION` secondes,
- * plus que le délai que Horizon laisse à un travail (`timeout` de
- * `config/horizon.php`) : un recalcul garde son verrou jusqu'à ce que Horizon
- * l'arrête, et un worker tué ne bloque le compte que jusqu'à cette échéance.
+ * plus que le délai que le worker laisse à un travail : le `timeout` de
+ * `config/horizon.php`, que la classe ne remplace par aucun délai à elle
+ * (`#[Timeout]` l'emporterait). Un recalcul garde son verrou jusqu'à ce que
+ * Horizon l'arrête, et un worker tué ne bloque le compte que jusqu'à cette
+ * échéance.
  *
  * Chaque retour en file compte comme un essai : la classe en permet
  * `ESSAIS_PERMIS` (`#[Tries]`), assez pour attendre la fin d'un verrou
@@ -62,7 +66,8 @@ trait UnRecalculParCompteALaFois
 
     /**
      * La durée de vie, en secondes, du verrou d'exécution d'un compte : au-delà
-     * du délai que Horizon laisse à un travail.
+     * du délai que le worker laisse à un travail, celui du superviseur de
+     * Horizon tant que la classe n'en déclare aucun.
      */
     public const int VERROU_D_EXECUTION = 120;
 
