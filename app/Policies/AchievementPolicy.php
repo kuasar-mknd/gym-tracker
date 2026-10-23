@@ -52,6 +52,15 @@ final class AchievementPolicy
         return $utilisateurConnecte->can('Delete:Achievement');
     }
 
+    /**
+     * La suppression groupée du panneau : `DeleteAny:Achievement`, puis
+     * `delete()` pour chaque ligne choisie (`authorizeIndividualRecords()`).
+     */
+    public function deleteAny(AuthUser $utilisateurConnecte): bool
+    {
+        return $utilisateurConnecte->can('DeleteAny:Achievement');
+    }
+
     public function restore(AuthUser $utilisateurConnecte): bool
     {
         return $utilisateurConnecte->can('Restore:Achievement');

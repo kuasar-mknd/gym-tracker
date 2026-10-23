@@ -7,16 +7,22 @@ namespace Database\Seeders;
 use App\Models\Exercise;
 use Illuminate\Database\Seeder;
 
+/**
+ * Le catalogue commun des exercices des machines de la salle, que le bouton
+ * « Installer Exercices par Défaut » du panneau installe.
+ *
+ * Il ne fait que créer ce qui manque : un exercice commun du même nom est
+ * laissé tel quel, et rien n'est supprimé. Le bouton ne demande donc que la
+ * capacité de créer un exercice (`ListExercises`) ; modifier ou supprimer un
+ * exercice du catalogue passe par sa fiche, et par sa permission. Le
+ * propriétaire n'est pas affecté en masse (`user_id` n'est pas dans le
+ * `$fillable` d'`Exercise`) : la recherche se borne au catalogue commun, et
+ * un exercice créé n'a pas de propriétaire.
+ */
 class PrecorExerciseSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Nettoyage des anciens exercices avec le préfixe "Precor"
-        Exercise::where('name', 'like', 'Precor %')->whereNull('user_id')->delete();
-
         $exercises = [
             // Pectoraux
             ['name' => 'Chest Press', 'type' => 'strength', 'category' => 'Pectoraux'],
@@ -58,10 +64,7 @@ class PrecorExerciseSeeder extends Seeder
         ];
 
         foreach ($exercises as $exercise) {
-            Exercise::updateOrCreate(
-                ['name' => $exercise['name'], 'user_id' => null],
-                $exercise
-            );
+            Exercise::query()->whereNull('user_id')->firstOrCreate(['name' => $exercise['name']], $exercise);
         }
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Middleware\OuvreLaSession;
 use App\Models\Admin;
 use App\Models\BodyMeasurement;
 use App\Models\BodyPartMeasurement;
+use App\Models\ErreurNavigateur;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -21,24 +22,30 @@ use App\Support\Sessions\GestionnaireDesSessions;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Mail\MailManager;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use PDO;
 use RuntimeException;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use Spatie\Backup\Events\BackupManifestWasCreated;
 use Spatie\Backup\Events\DumpingDatabase;
 use Spatie\DbDumper\Databases\MySql;
+use Spatie\Permission\Models\Role;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -77,8 +84,10 @@ final class AppServiceProvider extends ServiceProvider
         $this->refuserLesArchivesEnClair();
         $this->sauvegarderSansLesLignesDePulse();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
+        $this->garderLeNomDuRoleDuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
         $this->ouvrirLeLecteurDeJournaux();
+        $this->plafonnerLaCollecteDesErreursDuNavigateur();
 
         // Le nonce CSP n'est plus tiré ici mais à chaque requête, par
         // NonceCspParRequete : sous Octane, boot() ne tourne qu'une fois par
@@ -493,6 +502,30 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
+     * La collecte des erreurs du navigateur a son limiteur, par compte :
+     * `ErreurNavigateur::RAPPORTS_PAR_MINUTE` par minute et
+     * `RAPPORTS_PAR_JOUR` par jour, chacun sous sa clé (deux limites sous une
+     * même clé compteraient chaque envoi deux fois). Au-delà, la route répond
+     * 204 sans rien écrire : le rapporteur de la page ne réessaie pas, et un
+     * rapport refusé ne se distingue pas d'un rapport gardé. Le limiteur vit
+     * dans le singleton de l'application de base, que les requêtes d'Octane
+     * partagent.
+     */
+    private function plafonnerLaCollecteDesErreursDuNavigateur(): void
+    {
+        RateLimiter::for(ErreurNavigateur::LIMITEUR, static function (Request $requete): array {
+            $compte = $requete->user();
+            $cle = $compte instanceof User ? 'compte:'.$compte->id : 'adresse:'.$requete->ip();
+            $sansRienEcrire = static fn (): HttpResponse => response()->noContent();
+
+            return [
+                Limit::perMinute(ErreurNavigateur::RAPPORTS_PAR_MINUTE)->by('minute|'.$cle)->response($sansRienEcrire),
+                Limit::perDay(ErreurNavigateur::RAPPORTS_PAR_JOUR)->by('jour|'.$cle)->response($sansRienEcrire),
+            ];
+        });
+    }
+
+    /**
      * Les greffons demandent `create-backup`, `download-backup`, `delete-backup`
      * et `view-health` ; Shield ne les connaît pas et ne pose aucune porte pour
      * le super administrateur, si bien que personne ne voyait le bouton. Les
@@ -509,12 +542,16 @@ final class AppServiceProvider extends ServiceProvider
      * production et que son lien restait caché. La nôtre est définie après la
      * sienne (Pulse la pose dès que le Gate est résolu, donc avant notre premier
      * `Gate::define`) et la remplace, en local compris.
+     *
+     * Les capacités `DeleteAny:…` ouvrent la suppression groupée de chaque
+     * table du panneau qui en porte une (méthode `deleteAny()` des policies) :
+     * Shield ne les crée qu'à `shield:generate`, que rien ne lance au
+     * déploiement, et le super administrateur les tient d'ici. Chaque ligne
+     * choisie passe encore par `delete()`, donc par sa permission `Delete:…`.
+     * `sync-planning` ouvre « Relire le planning » des tâches planifiées.
      */
     private function ouvrirLesOutilsAuSuperAdministrateur(): void
     {
-        $role = config('filament-shield.super_admin.name');
-        $superAdministrateur = is_string($role) ? $role : 'super_admin';
-
         $capacites = [
             'create-backup',
             'download-backup',
@@ -528,6 +565,16 @@ final class AppServiceProvider extends ServiceProvider
             'Delete:ErreurNavigateur',
             'ViewAny:TachePlanifiee',
             'View:TachePlanifiee',
+            'sync-planning',
+            'DeleteAny:User',
+            'DeleteAny:Workout',
+            'DeleteAny:Goal',
+            'DeleteAny:Exercise',
+            'DeleteAny:Supplement',
+            'DeleteAny:Achievement',
+            'DeleteAny:Role',
+            'DeleteAny:ExceptionEnregistree',
+            'DeleteAny:ErreurNavigateur',
             'view-logs',
             'view-outils',
             'view-diagnostic',
@@ -536,7 +583,29 @@ final class AppServiceProvider extends ServiceProvider
 
         foreach ($capacites as $capacite) {
             Gate::define($capacite, fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
-                && $utilisateur->hasRole($superAdministrateur));
+                && $utilisateur->estSuperAdministrateur());
         }
+    }
+
+    /**
+     * Les capacités de la liste suivent le nom du rôle : le rôle du super
+     * administrateur ne se renomme pas, et aucun autre rôle ne prend son nom.
+     * `RolePolicy` ne laisse modifier ce rôle qu'à qui le porte ; ce qu'un
+     * client écrit dans le formulaire des rôles de Shield (`data.name`, le
+     * chemin de son champ, où le refus s'affiche) n'est vérifié qu'ici, par
+     * le modèle. Un rôle créé sous ce nom, quand il n'existe pas encore, ne
+     * s'accorde à personne depuis le panneau.
+     */
+    private function garderLeNomDuRoleDuSuperAdministrateur(): void
+    {
+        Role::updating(static function (Role $role): void {
+            $nom = Admin::roleDuSuperAdministrateur();
+
+            if ($role->isDirty('name') && in_array($nom, [$role->getOriginal('name'), $role->getAttribute('name')], true)) {
+                throw ValidationException::withMessages([
+                    'data.name' => "Le rôle « {$nom} » garde son nom, et aucun autre rôle ne le prend : les capacités du super administrateur suivent ce nom.",
+                ]);
+            }
+        });
     }
 }

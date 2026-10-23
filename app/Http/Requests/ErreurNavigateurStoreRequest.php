@@ -22,7 +22,11 @@ class ErreurNavigateurStoreRequest extends FormRequest
     /**
      * La ligne et la colonne sont bornées (`ErreurNavigateur::POSITION_MAX`) :
      * au-delà de la colonne (unsigned int), la base refusait l'écriture et la
-     * requête finissait en 500. La pile l'est par ce que sa colonne tient
+     * requête finissait en 500. Elles ne s'admettent qu'en nombres entiers
+     * (`integer:strict`), la seule forme qu'envoie le rapporteur de la page :
+     * la ligne entre dans l'empreinte (`ErreurNavigateur::empreinteDe()`),
+     * qui l'attend en entier, et un nombre écrit en texte est refusé ici
+     * (422), sans rien écrire. La pile l'est par ce que sa colonne tient
      * (`ErreurNavigateur::PILE_MAX_CARACTERES`), une fois coupée
      * (`prepareForValidation()`).
      *
@@ -34,8 +38,8 @@ class ErreurNavigateurStoreRequest extends FormRequest
             'type' => ['required', 'string', Rule::in(ErreurNavigateur::TYPES)],
             'message' => ['required', 'string', 'max:2000'],
             'source' => ['nullable', 'string', 'max:2048'],
-            'ligne' => ['nullable', 'integer', 'min:0', 'max:'.ErreurNavigateur::POSITION_MAX],
-            'colonne' => ['nullable', 'integer', 'min:0', 'max:'.ErreurNavigateur::POSITION_MAX],
+            'ligne' => ['nullable', 'integer:strict', 'min:0', 'max:'.ErreurNavigateur::POSITION_MAX],
+            'colonne' => ['nullable', 'integer:strict', 'min:0', 'max:'.ErreurNavigateur::POSITION_MAX],
             'pile' => ['nullable', 'string', 'max:'.ErreurNavigateur::PILE_MAX_CARACTERES],
             'url' => ['required', 'string', 'max:2048'],
             'agent' => ['nullable', 'string', 'max:512'],
