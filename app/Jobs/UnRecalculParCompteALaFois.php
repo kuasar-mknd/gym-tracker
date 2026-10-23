@@ -7,7 +7,6 @@ namespace App\Jobs;
 use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
-use Throwable;
 
 /**
  * Le recalcul en file de ce que l'activité d'un compte fait bouger (objectifs,
@@ -118,9 +117,9 @@ trait UnRecalculParCompteALaFois
      * qui épuise ses essais à attendre le compte le garderait jusqu'à son
      * échéance, et les envois du compte resteraient écartés jusque-là. Le
      * verrou se rend par son propriétaire : celui d'un envoi plus récent reste
-     * pris.
+     * pris. L'exception que Laravel passe ne change rien à ce qu'il faut rendre.
      */
-    public function failed(?Throwable $exception = null): void
+    public function failed(): void
     {
         new UniqueLock(app(Repository::class))->release($this);
     }
