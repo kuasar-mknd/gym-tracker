@@ -106,17 +106,22 @@ final class ErreurNavigateur extends Model
     }
 
     /**
-     * Une ligne effacée du panneau rend sa clé de regroupement : l'erreur qui
-     * se reproduit dans l'heure s'écrit de nouveau, et la liste ne la montre
-     * pas comme disparue. La purge (`MassPrunable`) et l'effacement du compte
-     * (clé étrangère en cascade) ne passent pas par ici, mais ne touchent que des lignes
-     * de plus de trente jours, ou un compte qui n'enverra plus rien.
+     * Une ligne de l'heure en cours effacée du panneau rend sa clé de
+     * regroupement : l'erreur qui se reproduit dans l'heure s'écrit de
+     * nouveau, et la liste ne la montre pas comme disparue. Une ligne plus
+     * ancienne que `SECONDES_DU_REGROUPEMENT` ne rend rien : sa clé est déjà
+     * tombée, et celle qui court, qui ne porte que le compte et l'empreinte,
+     * est celle de l'occurrence de l'heure en cours, seule écrite dans la
+     * fenêtre, qui reste dans la liste. La purge (`MassPrunable`) et
+     * l'effacement du compte (clé étrangère en cascade) ne passent pas par
+     * ici, mais ne touchent que des lignes de plus de trente jours, ou un
+     * compte qui n'enverra plus rien.
      */
     #[\Override]
     protected static function booted(): void
     {
         self::deleted(static function (self $erreur): void {
-            if ($erreur->user_id !== null) {
+            if ($erreur->user_id !== null && $erreur->created_at->greaterThan(now()->subSeconds(self::SECONDES_DU_REGROUPEMENT))) {
                 Cache::forget(self::cleDuRegroupement($erreur->user_id, $erreur->empreinte));
             }
         });

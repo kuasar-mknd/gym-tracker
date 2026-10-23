@@ -9,6 +9,7 @@ use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -23,8 +24,10 @@ use Tests\Support\FilamentAdminPanel;
  * Ni le plafond ni le regroupement d'un compte ne touchent un autre compte.
  * La ligne et la colonne ne s'admettent qu'en nombres entiers, la forme
  * qu'envoie la page : un nombre écrit en texte est refusé sans rien écrire,
- * exception comprise. Une erreur effacée du panneau rend sa clé de
- * regroupement : elle s'écrit de nouveau si elle se reproduit.
+ * exception comprise. Une erreur de l'heure en cours effacée du panneau rend
+ * sa clé de regroupement : elle s'écrit de nouveau si elle se reproduit.
+ * Effacer une occurrence plus ancienne laisse la clé à celle de l'heure en
+ * cours, qui reste dans la liste.
  */
 
 beforeEach(function (): void {
@@ -173,4 +176,26 @@ it('garde de nouveau une erreur qui se reproduit après avoir été effacée du 
     $this->actingAs($compte)->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())->assertNoContent();
 
     expect(collecteDesErreursGardees($compte))->toBe(1);
+});
+
+it('laisse sa clé à l’occurrence de l’heure en cours quand une occurrence plus ancienne est effacée du panneau', function (): void {
+    $compte = User::factory()->create();
+    $this->actingAs($compte)->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())->assertNoContent();
+    $ancienne = ErreurNavigateur::query()->where('user_id', $compte->id)->sole();
+
+    $this->travel(65)->minutes();
+    $this->actingAs($compte)->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())->assertNoContent();
+    expect(collecteDesErreursGardees($compte))->toBe(2);
+
+    $this->travel(5)->minutes();
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:ErreurNavigateur', 'View:ErreurNavigateur', 'Delete:ErreurNavigateur']), 'admin');
+    Livewire::test(ListErreursNavigateur::class)->callAction(TestAction::make('delete')->table($ancienne));
+    expect(ErreurNavigateur::query()->whereKey($ancienne->id)->exists())->toBeFalse();
+
+    $this->travel(5)->minutes();
+    $this->actingAs($compte)->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())->assertNoContent();
+
+    expect(ErreurNavigateur::query()->where('user_id', $compte->id)->orderBy('id')->get()
+        ->map(static fn (ErreurNavigateur $erreur): string => $erreur->created_at->format('H:i'))->all())->toBe(['11:05'])
+        ->and(Cache::has(ErreurNavigateur::cleDuRegroupement($compte->id, $ancienne->empreinte)))->toBeTrue();
 });
