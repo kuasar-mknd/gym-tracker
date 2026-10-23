@@ -30,7 +30,8 @@ use Tests\Support\NavigateurDesParcours;
  *
  * La garde refuse, en premier argument d'une méthode du navigateur des
  * parcours dont le premier paramètre est un sélecteur ou un champ (`$selector`
- * ou `$field`, chez Dusk comme dans les macros de `DuskTestCase`), une chaîne
+ * ou `$field` chez Dusk, et aussi `$selecteur` ou `$champ` dans les aides du
+ * dépôt : `NavigateurDesParcours` et les macros de `DuskTestCase`), une chaîne
  * qui ne porte aucun signe d'un sélecteur voulu et qui a un caractère hors
  * ASCII, qu'aucun nom de balise ne porte, ou un mot d'au moins deux
  * capitales : le texte d'un titre ou d'un bouton que le CSS passe en
@@ -42,6 +43,11 @@ use Tests\Support\NavigateurDesParcours;
  * capitales ou hors ASCII : c'est un nom, que Dusk cherche aussi par
  * `input[name="…"]`.
  *
+ * Une aide du dépôt dont le premier paramètre peut recevoir une chaîne (sans
+ * type, `string` ou `mixed`) sous un autre nom (`$cible`) fait échouer la
+ * garde, tant qu'elle n'est pas rangée parmi les aides sans sélecteur : sans
+ * cela, la garde ne surveillerait pas ses appels, et rien ne le dirait.
+ *
  * Elle lit des jetons, pas ce que le code fera : un sélecteur calculé,
  * concaténé ou passé par son nom lui échappe. Un texte en ASCII sans mot en
  * capitales lui échappe aussi (`Annuler la suppression`,
@@ -51,40 +57,139 @@ use Tests\Support\NavigateurDesParcours;
  */
 
 /**
- * Les méthodes du navigateur des parcours qui prennent un sélecteur ou un
- * champ en premier argument, indexées par leur nom en minuscules, vrai pour
- * un champ : celles de Dusk et de `NavigateurDesParcours`, et les macros que
- * `DuskTestCase` déclare avec un tel premier paramètre. Pas celles de
- * l'`ElementResolver`, qu'aucun parcours n'appelle : son `format()` porterait
- * le nom de celui de Carbon, dont un format en capitales (`'D M Y'`)
- * passerait pour un texte.
+ * Les noms d'un premier paramètre qui prend un sélecteur (faux) ou un champ
+ * (vrai) : ceux de Dusk, et leur traduction dans les aides du dépôt.
  *
  * @return array<string, bool>
  */
-function texteEnSelecteurMethodes(): array
+function texteEnSelecteurNomsDesParametres(): array
 {
+    return ['selector' => false, 'selecteur' => false, 'field' => true, 'champ' => true];
+}
+
+/**
+ * Les macros que ce code déclare sur `Browser`, indexées par leur nom, avec
+ * le nom et le type de leur premier paramètre (vide sans type). Une macro sans
+ * paramètre n'y est pas.
+ *
+ * @return array<string, array{parametre: string, type: string}>
+ */
+function texteEnSelecteurMacros(string $code): array
+{
+    preg_match_all(
+        '/Browser::macro\(\s*[\'"](\w+)[\'"]\s*,\s*(?:static\s+)?(?:function|fn)\s*\(\s*(?:([\w\\\\|?]+)\s+)?\$(\w+)/u',
+        $code,
+        $trouvees,
+        PREG_SET_ORDER,
+    );
+
+    $macros = [];
+
+    foreach ($trouvees as [, $nom, $type, $parametre]) {
+        $macros[$nom] = ['parametre' => $parametre, 'type' => $type];
+    }
+
+    return $macros;
+}
+
+/**
+ * Le code qui déclare les macros des parcours : `tests/DuskTestCase.php`, ou
+ * celui qu'un test d'exemple donne.
+ */
+function texteEnSelecteurCodeDesMacros(?string $code = null): string
+{
+    return $code ?? (string) file_get_contents(base_path('tests/DuskTestCase.php'));
+}
+
+/**
+ * Les méthodes du navigateur des parcours qui prennent un sélecteur ou un
+ * champ en premier argument, indexées par leur nom en minuscules, vrai pour
+ * un champ : celles de Dusk et de `NavigateurDesParcours`, et les macros
+ * déclarées avec un tel premier paramètre, en anglais ou en français. Pas
+ * celles de l'`ElementResolver`, qu'aucun parcours n'appelle : son `format()`
+ * porterait le nom de celui de Carbon, dont un format en capitales
+ * (`'D M Y'`) passerait pour un texte.
+ *
+ * @return array<string, bool>
+ */
+function texteEnSelecteurMethodes(?string $codeDesMacros = null): array
+{
+    $noms = texteEnSelecteurNomsDesParametres();
     $methodes = [];
 
     foreach (new ReflectionClass(NavigateurDesParcours::class)->getMethods(ReflectionMethod::IS_PUBLIC) as $methode) {
         $premier = $methode->getParameters()[0] ?? null;
 
-        if ($premier !== null && in_array($premier->getName(), ['selector', 'field'], true)) {
-            $methodes[strtolower($methode->getName())] = $premier->getName() === 'field';
+        if ($premier !== null && isset($noms[$premier->getName()])) {
+            $methodes[strtolower($methode->getName())] = $noms[$premier->getName()];
         }
     }
 
-    preg_match_all(
-        '/Browser::macro\(\s*[\'"](\w+)[\'"]\s*,\s*(?:static\s+)?(?:function|fn)\s*\(\s*(?:[\w\\\\|?]+\s+)?\$(selector|field)\b/',
-        (string) file_get_contents(base_path('tests/DuskTestCase.php')),
-        $macros,
-        PREG_SET_ORDER,
-    );
-
-    foreach ($macros as [, $macro, $parametre]) {
-        $methodes[strtolower($macro)] = $parametre === 'field';
+    foreach (texteEnSelecteurMacros(texteEnSelecteurCodeDesMacros($codeDesMacros)) as $nom => ['parametre' => $parametre]) {
+        if (isset($noms[$parametre])) {
+            $methodes[strtolower($nom)] = $noms[$parametre];
+        }
     }
 
     return $methodes;
+}
+
+/**
+ * Les aides que le dépôt ajoute au navigateur des parcours, indexées par leur
+ * nom, avec le nom et le type de leur premier paramètre : les méthodes que
+ * `NavigateurDesParcours` déclare elle-même, et les macros.
+ *
+ * @return array<string, array{parametre: string, type: string}>
+ */
+function texteEnSelecteurPremiersParametresDesAides(?string $codeDesMacros = null): array
+{
+    $aides = [];
+
+    foreach (new ReflectionClass(NavigateurDesParcours::class)->getMethods(ReflectionMethod::IS_PUBLIC) as $methode) {
+        $premier = $methode->getParameters()[0] ?? null;
+
+        if ($premier !== null && $methode->getDeclaringClass()->getName() === NavigateurDesParcours::class) {
+            $aides[$methode->getName()] = ['parametre' => $premier->getName(), 'type' => (string) $premier->getType()];
+        }
+    }
+
+    return $aides + texteEnSelecteurMacros(texteEnSelecteurCodeDesMacros($codeDesMacros));
+}
+
+/**
+ * Les aides du dépôt dont le premier paramètre peut recevoir une chaîne sans
+ * être ni un sélecteur ni un champ, avec ce qu'il est.
+ *
+ * @return array<string, string>
+ */
+function texteEnSelecteurAidesSansSelecteur(): array
+{
+    return ['waitUsing' => 'une durée, sans type comme chez Dusk'];
+}
+
+/**
+ * Les aides du dépôt dont le premier paramètre peut recevoir une chaîne (sans
+ * type, `string` ou `mixed`) et que la garde ne range nulle part : ni parmi
+ * les sélecteurs et les champs, faute d'un nom qu'elle connaît (`$cible`), ni
+ * parmi les aides sans sélecteur. Elle ne surveillerait pas leurs appels.
+ *
+ * @return list<string>
+ */
+function texteEnSelecteurAidesNonRangees(?string $codeDesMacros = null): array
+{
+    $noms = texteEnSelecteurNomsDesParametres();
+    $sansSelecteur = texteEnSelecteurAidesSansSelecteur();
+    $nonRangees = [];
+
+    foreach (texteEnSelecteurPremiersParametresDesAides($codeDesMacros) as $nom => ['parametre' => $parametre, 'type' => $type]) {
+        $prendUneChaine = $type === '' || preg_match('/(?:^|[|?])(?:string|mixed)(?:$|\|)/i', $type) === 1;
+
+        if ($prendUneChaine && ! isset($noms[$parametre]) && ! isset($sansSelecteur[$nom])) {
+            $nonRangees[] = $nom;
+        }
+    }
+
+    return $nonRangees;
 }
 
 /**
@@ -185,9 +290,36 @@ it('connaît les méthodes qui prennent un sélecteur, et pas celles qui lisent 
     expect($methodes)
         ->not->toHaveKeys(['waituntilmissingtext', 'waitfortext', 'assertsee', 'assertdontsee', 'press', 'clicklink', 'format']);
 
-    expect(array_keys(array_filter($methodes)))
-        ->toContain('type', 'select', 'check')
-        ->not->toContain('waituntilmissing', 'assertmissing', 'clickwhensettled');
+    $champs = array_keys(array_filter($methodes));
+
+    expect($champs)->toContain('type', 'select', 'check');
+    expect($champs)->not->toContain('waituntilmissing', 'assertmissing', 'clickwhensettled');
+});
+
+it('reconnaît une macro par le nom de son premier paramètre, en français comme en anglais', function (): void {
+    $code = <<<'PHP'
+        Browser::macro('attendreLaDisparition', function (string $selecteur, int $secondes = 15): object {});
+        Browser::macro('remplirLeChamp', static fn (?string $champ, string $valeur): object => $this);
+        Browser::macro('choisirLaDuree', function (string $selector, int $heures): object {});
+        Browser::macro('viserLaCible', function (string $cible): object {});
+        Browser::macro('sansType', fn ($quoi): object => $this);
+        Browser::macro('attendreLesSecondes', function (int $secondes): object {});
+        Browser::macro('auRepos', fn (): object => $this);
+        PHP;
+
+    $methodes = texteEnSelecteurMethodes($code);
+
+    expect($methodes)->toMatchArray(['attendreladisparition' => false, 'remplirlechamp' => true, 'choisirladuree' => false]);
+    expect($methodes)->not->toHaveKeys(['viserlacible', 'sanstype', 'attendrelessecondes', 'aurepos']);
+
+    expect(texteEnSelecteurAidesNonRangees($code))->toBe(['viserLaCible', 'sansType']);
+});
+
+it('range chaque aide du dépôt dont le premier paramètre peut être une chaîne', function (): void {
+    expect(texteEnSelecteurAidesNonRangees())->toBe([]);
+
+    expect(texteEnSelecteurPremiersParametresDesAides())
+        ->toHaveKeys(array_keys(texteEnSelecteurAidesSansSelecteur()));
 });
 
 it('reconnaît un texte en capitales passé pour un sélecteur, et rien d’autre', function (): void {
