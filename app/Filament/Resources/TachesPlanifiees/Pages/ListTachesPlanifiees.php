@@ -19,8 +19,8 @@ class ListTachesPlanifiees extends ListRecords
      * Le planning se relit au déploiement (`schedule-monitor:sync` dans
      * l'image) ; ce bouton sert quand une tâche a changé sans déploiement.
      * Il réécrit la liste des tâches surveillées : il demande `sync-planning`,
-     * que la liste des capacités ouvre au super administrateur, et non la
-     * seule lecture de la page.
+     * que la liste des capacités ouvre au super administrateur. Le formulaire
+     * des rôles de Shield ne la propose pas.
      *
      * @return array<int, Action>
      */

@@ -12,8 +12,7 @@ use Illuminate\Foundation\Auth\User as AuthUser;
  * (`sync-planning`), il ne s'écrit pas ici.
  *
  * Elle répond à chaque méthode que Filament consulte : le panneau est en
- * autorisation stricte, où une méthode absente lève au lieu d'autoriser
- * (`LePanneauAutoriseChaqueActionTest`).
+ * autorisation stricte, qui exige chacune (`LePanneauAutoriseChaqueActionTest`).
  */
 final class TachePlanifieePolicy
 {

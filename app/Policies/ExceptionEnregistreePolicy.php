@@ -12,8 +12,7 @@ use Illuminate\Foundation\Auth\User as AuthUser;
  * crée ni ne les modifie à la main.
  *
  * Elle répond à chaque méthode que Filament consulte : le panneau est en
- * autorisation stricte, où une méthode absente lève au lieu d'autoriser
- * (`LePanneauAutoriseChaqueActionTest`).
+ * autorisation stricte, qui exige chacune (`LePanneauAutoriseChaqueActionTest`).
  */
 final class ExceptionEnregistreePolicy
 {

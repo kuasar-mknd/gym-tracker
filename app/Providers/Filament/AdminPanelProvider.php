@@ -142,9 +142,9 @@ final class AdminPanelProvider extends PanelProvider
              */
             ->defaultAvatarProvider(AvatarDesInitiales::class)
             /*
-             * Une méthode de policy absente lève au lieu d'autoriser : chaque
-             * policy d'une ressource du panneau porte chaque méthode que
-             * Filament consulte (`LePanneauAutoriseChaqueActionTest`).
+             * Filament exige de chaque policy chaque méthode qu'il consulte, et
+             * lève sur une méthode absente : chaque policy d'une ressource du
+             * panneau les porte toutes (`LePanneauAutoriseChaqueActionTest`).
              */
             ->strictAuthorization()
             ->multiFactorAuthentication([AppAuthentication::make()]);

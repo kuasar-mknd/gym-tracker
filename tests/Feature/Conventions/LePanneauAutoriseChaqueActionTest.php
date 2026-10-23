@@ -27,13 +27,12 @@ use Symfony\Component\Finder\Finder;
 use Tests\Support\FilamentAdminPanel;
 
 /*
- * Chaque action du panneau se décide sur une capacité, et aucune ne passe
- * faute de règle.
+ * Chaque action du panneau se décide sur une capacité.
  *
  * Filament consulte, pour une ressource, douze méthodes de sa policy
  * (`panneauAutorisationsMethodesConsultees()`) ; le panneau est en autorisation stricte
- * (`strictAuthorization()`), si bien qu'une méthode absente lève au lieu
- * d'autoriser : chaque policy d'une ressource du panneau, celles des greffons
+ * (`strictAuthorization()`), qui exige chacune et lève sur une méthode
+ * absente : chaque policy d'une ressource du panneau, celles des greffons
  * comprises, les porte toutes, et un administrateur sans aucune permission
  * n'en obtient rien. Shield les écrit dans les policies qu'il génère
  * (`filament-shield.policies.methods`).
