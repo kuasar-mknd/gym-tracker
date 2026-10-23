@@ -197,6 +197,53 @@ it('donne la même valeur de pesée par les deux chemins', function (string $col
 ]);
 
 /**
+ * Un objectif ne lit que les pesées de son compte, par les deux chemins.
+ *
+ * La lecture part de la relation du compte (`dernierePeseeQuiPorte()`), qui
+ * pose le propriétaire, puis s'en détache pour servir de sous-requête au lot.
+ * Écrite depuis le modèle (`BodyMeasurement::query()`), la forme habituelle
+ * d'une sous-requête, elle perdrait ce filtre sans qu'aucun autre test ne
+ * tombe : chacun n'a qu'un compte qui pèse. Ici, l'autre compte a la pesée la
+ * plus récente et le plus grand identifiant, celle que lirait une requête sans
+ * propriétaire.
+ */
+it('ne lit que les pesées du compte de l’objectif, par les deux chemins', function (string $colonne, float $attendu): void {
+    $user = User::factory()->create();
+    $autreCompte = User::factory()->create();
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'measured_at' => '2026-06-10',
+        'weight' => 84.0,
+        'body_fat' => 25.0,
+    ]);
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $autreCompte->id,
+        'measured_at' => '2026-06-15',
+        'weight' => 60.0,
+        'body_fat' => 10.0,
+    ]);
+
+    $service = app(GoalService::class);
+
+    $groupe = objectifDePeseeSuivi($user, $colonne);
+    $service->syncGoals($user->refresh());
+    $valeurGroupe = (float) Goal::query()->findOrFail($groupe->id)->current_value;
+
+    $groupe->delete();
+
+    $seul = objectifDePeseeSuivi($user, $colonne);
+    $service->updateGoalProgress($seul);
+
+    expect($valeurGroupe)->toBe($attendu)
+        ->and((float) $seul->current_value)->toBe($attendu);
+})->with([
+    'poids de corps' => ['weight', 84.0],
+    'masse grasse' => ['body_fat', 25.0],
+]);
+
+/**
  * L'écriture groupée doit remonter `updated_at`, sinon la ligne ment sur sa
  * fraîcheur.
  *
