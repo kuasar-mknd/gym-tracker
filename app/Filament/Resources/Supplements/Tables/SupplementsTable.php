@@ -33,7 +33,7 @@ class SupplementsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()->chunkSelectedRecords(100),
+                    DeleteBulkAction::make()->authorizeIndividualRecords()->chunkSelectedRecords(100),
                 ]),
             ]);
     }

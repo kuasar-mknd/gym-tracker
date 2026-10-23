@@ -57,6 +57,15 @@ final class SupplementPolicy
         return $utilisateurConnecte->can('Delete:Supplement');
     }
 
+    /**
+     * La suppression groupée du panneau : `DeleteAny:Supplement`, puis
+     * `delete()` pour chaque ligne choisie (`authorizeIndividualRecords()`).
+     */
+    public function deleteAny(AuthUser $utilisateurConnecte): bool
+    {
+        return $utilisateurConnecte->can('DeleteAny:Supplement');
+    }
+
     public function restore(AuthUser $utilisateurConnecte): bool
     {
         return $utilisateurConnecte->can('Restore:Supplement');

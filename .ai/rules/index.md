@@ -10,7 +10,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Controllers/** | .ai/rules/controllers.md |
 | database/**, app/**, config/**, routes/** | .ai/rules/database.md |
 | package.json, package-lock.json, composer.json, composer.lock | .ai/rules/dependencies.md |
-| app/Filament/**, app/Support/AvatarDesInitiales.php, app/Support/ComptesVusParPulse.php, app/Providers/TelescopeServiceProvider.php | .ai/rules/filament.md |
+| app/Filament/**, app/Support/AvatarDesInitiales.php, app/Support/ComptesVusParPulse.php, app/Providers/TelescopeServiceProvider.php, app/Policies/**, config/filament-shield.php, app/Providers/Filament/AdminPanelProvider.php | .ai/rules/filament.md |
 | **/*.md | .ai/rules/general.md |
 | app/** | .ai/rules/horloge.md |
 | app/Jobs/** | .ai/rules/jobs.md |
@@ -21,7 +21,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Providers/**, routes/console.php, config/backup.php, lang/vendor/health/**, resources/views/vendor/health/**, app/Console/Commands/PurgerLesJournaux.php, app/Support/FichiersDuJour.php, app/Support/Courriels/**, app/Support/TexteSansAdresse.php | .ai/rules/providers.md |
 | README.md, .env.example, docker-compose.prod.yml, compose.yaml, Dockerfile, entrypoint.sh, docker/**, config/**, app/Support/Journaux/** | .ai/rules/readme.md |
 | app/Http/Requests/**, app/Rules/** | .ai/rules/requests.md |
-| routes/web.php, app/Support/IdentifiantsDesRoutes.php | .ai/rules/routes.md |
+| routes/web.php, app/Support/IdentifiantsDesRoutes.php, app/Http/Controllers/ErreurNavigateurController.php, app/Http/Requests/ErreurNavigateurStoreRequest.php, app/Models/ErreurNavigateur.php | .ai/rules/routes.md |
 | app/Services/** | .ai/rules/services.md |
 | app/Services/Stats/** | .ai/rules/stats.md |
 | tests/js/** | .ai/rules/tests-js.md |

@@ -57,6 +57,15 @@ final class GoalPolicy
         return $utilisateurConnecte->can('Delete:Goal');
     }
 
+    /**
+     * La suppression groupée du panneau : `DeleteAny:Goal`, puis
+     * `delete()` pour chaque ligne choisie (`authorizeIndividualRecords()`).
+     */
+    public function deleteAny(AuthUser $utilisateurConnecte): bool
+    {
+        return $utilisateurConnecte->can('DeleteAny:Goal');
+    }
+
     public function restore(AuthUser $utilisateurConnecte): bool
     {
         return $utilisateurConnecte->can('Restore:Goal');
