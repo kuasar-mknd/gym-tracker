@@ -17,8 +17,10 @@ class ListExercises extends ListRecords
     protected static string $resource = ExerciseResource::class;
 
     /**
-     * « Installer Exercices par Défaut » écrit dans le catalogue commun : il
-     * demande la capacité de créer un exercice, comme le bouton de création.
+     * « Installer Exercices par Défaut » crée, dans le catalogue commun, les
+     * exercices qui y manquent (`PrecorExerciseSeeder`), sans modifier ni
+     * supprimer ceux qui y sont : il demande la capacité de créer un
+     * exercice, comme le bouton de création.
      *
      * @return array<int, Action>
      */
