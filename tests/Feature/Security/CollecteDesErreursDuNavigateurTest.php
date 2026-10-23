@@ -2,10 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Filament\Resources\ErreursNavigateur\Pages\ListErreursNavigateur;
 use App\Models\ErreurNavigateur;
+use App\Models\ExceptionEnregistree;
 use App\Models\User;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Carbon;
+use Livewire\Livewire;
+use Tests\Support\FilamentAdminPanel;
 
 /*
  * Le point de collecte des erreurs du navigateur (`erreurs-navigateur.store`)
@@ -16,6 +21,10 @@ use Illuminate\Support\Carbon;
  * réessaie pas ; et une même erreur (même empreinte) du même compte ne
  * s'écrit qu'une fois par fenêtre (`ErreurNavigateur::SECONDES_DU_REGROUPEMENT`).
  * Ni le plafond ni le regroupement d'un compte ne touchent un autre compte.
+ * La ligne et la colonne ne s'admettent qu'en nombres entiers, la forme
+ * qu'envoie la page : un nombre écrit en texte est refusé sans rien écrire,
+ * exception comprise. Une erreur effacée du panneau rend sa clé de
+ * regroupement : elle s'écrit de nouveau si elle se reproduit.
  */
 
 beforeEach(function (): void {
@@ -131,4 +140,37 @@ it('ne touche pas un autre compte, ni par le plafond ni par le regroupement du p
 
     expect(collecteDesErreursGardees($premier))->toBe(ErreurNavigateur::RAPPORTS_PAR_MINUTE)
         ->and(collecteDesErreursGardees($second))->toBe(2);
+});
+
+it('refuse une ligne ou une colonne écrite autrement qu’en nombre entier, sans rien écrire, exception comprise', function (Closure $envoyer): void {
+    $compte = User::factory()->create();
+    $this->actingAs($compte);
+
+    foreach (range(1, 3) as $envoi) {
+        $envoyer($this)->assertUnprocessable();
+    }
+
+    expect(collecteDesErreursGardees($compte))->toBe(0)
+        ->and(ExceptionEnregistree::query()->count())->toBe(0);
+})->with([
+    'formulaire, ligne en texte' => [static fn ($test) => $test->post(route('erreurs-navigateur.store'), [...collecteDesErreursRapport(), 'ligne' => '3'], ['Accept' => 'application/json'])],
+    'JSON, ligne en texte' => [static fn ($test) => $test->postJson(route('erreurs-navigateur.store'), [...collecteDesErreursRapport(), 'ligne' => '3'])],
+    'JSON, ligne en flottant' => [static fn ($test) => $test->call('POST', route('erreurs-navigateur.store'), [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'], (string) json_encode([...collecteDesErreursRapport(), 'ligne' => 3.0], JSON_PRESERVE_ZERO_FRACTION))],
+    'JSON, colonne en texte' => [static fn ($test) => $test->postJson(route('erreurs-navigateur.store'), [...collecteDesErreursRapport(), 'colonne' => '7'])],
+]);
+
+it('garde de nouveau une erreur qui se reproduit après avoir été effacée du panneau', function (): void {
+    $compte = User::factory()->create();
+    $this->actingAs($compte)->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())->assertNoContent();
+    $gardee = ErreurNavigateur::query()->where('user_id', $compte->id)->sole();
+
+    $this->actingAs(FilamentAdminPanel::admin(['ViewAny:ErreurNavigateur', 'View:ErreurNavigateur', 'Delete:ErreurNavigateur']), 'admin');
+    Livewire::test(ListErreursNavigateur::class)->callAction(TestAction::make('delete')->table($gardee));
+    expect(collecteDesErreursGardees($compte))->toBe(0);
+
+    $this->travel(10)->minutes();
+    $this->actingAs($compte)->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())->assertNoContent();
+    $this->actingAs($compte)->postJson(route('erreurs-navigateur.store'), collecteDesErreursRapport())->assertNoContent();
+
+    expect(collecteDesErreursGardees($compte))->toBe(1);
 });

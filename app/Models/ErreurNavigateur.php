@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Une erreur survenue dans le navigateur d'un utilisateur, rapportée par la
@@ -102,6 +103,23 @@ final class ErreurNavigateur extends Model
     public static function cleDuRegroupement(int $compte, string $empreinte): string
     {
         return "erreurs-navigateur:{$compte}:{$empreinte}";
+    }
+
+    /**
+     * Une ligne effacée du panneau rend sa clé de regroupement : l'erreur qui
+     * se reproduit dans l'heure s'écrit de nouveau, et la liste ne la montre
+     * pas comme disparue. La purge (`MassPrunable`) et l'effacement du compte
+     * (clé étrangère en cascade) ne passent pas par ici, mais ne touchent que des lignes
+     * de plus de trente jours, ou un compte qui n'enverra plus rien.
+     */
+    #[\Override]
+    protected static function booted(): void
+    {
+        self::deleted(static function (self $erreur): void {
+            if ($erreur->user_id !== null) {
+                Cache::forget(self::cleDuRegroupement($erreur->user_id, $erreur->empreinte));
+            }
+        });
     }
 
     /** @return BelongsTo<User, $this> */
