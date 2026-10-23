@@ -163,13 +163,20 @@ function recalculEnFileViderLaFile(Worker $worker): array
  * l'heure où le prochain travail le redevient (`available_at`, une seconde
  * pleine), sans rien de plus.
  *
+ * Chaque essai coûte au plus deux tours, l'attente de son heure puis son
+ * traitement : la borne suit les essais que le travail permet, plus celui qui
+ * échoue faute d'essais et le tour qui trouve la file vide. Un cas écrit sur
+ * `ESSAIS_PERMIS` suit ainsi les constantes du trait. Une file qui garde des
+ * travaux à la borne lève, au lieu de rendre une liste tronquée.
+ *
  * @return list<array{travail: string, issue: string, exception: string|null}>
  */
-function recalculEnFileReprendreDesQueRendu(Worker $worker): array
+function recalculEnFileReprendreDesQueRendu(Worker $worker, int $essaisPermis): array
 {
     $traites = [];
+    $tours = 2 * $essaisPermis + 2;
 
-    foreach (range(1, 80) as $_tour) {
+    foreach (range(1, $tours) as $_tour) {
         $disponibleA = DB::table('jobs')->min('available_at');
 
         if (! is_numeric($disponibleA)) {
@@ -185,6 +192,10 @@ function recalculEnFileReprendreDesQueRendu(Worker $worker): array
         }
 
         $traites[] = $resultat;
+    }
+
+    if (DB::table('jobs')->exists()) {
+        throw new LogicException(sprintf('La file garde des travaux après %d tours, la borne pour %d essais permis.', $tours, $essaisPermis));
     }
 
     return $traites;
@@ -702,7 +713,7 @@ it('attend la fin du verrou d’un worker tué pris en cours de seconde, même r
     $this->travelTo(Carbon::parse('2026-10-23 10:00:00.800'));
     $classe::dispatch($user);
 
-    $issues = recalculEnFileReprendreDesQueRendu(recalculEnFileUnWorker());
+    $issues = recalculEnFileReprendreDesQueRendu(recalculEnFileUnWorker(), recalculEnFileLeTravail($classe, $user)::ESSAIS_PERMIS);
 
     expect(array_column($issues, 'issue'))->toBe([...array_fill(0, 25, 'remis en file'), 'traité'])
         ->and($issues[25])->toBe(['travail' => $classe, 'issue' => 'traité', 'exception' => null])
@@ -722,8 +733,8 @@ it('rend le verrou d’unicité d’un recalcul qui épuise ses essais sans avoi
     recalculEnFilePoserUnVerrouOrphelin($classe, $user, 3600);
     $classe::dispatch($user);
 
-    $issues = recalculEnFileReprendreDesQueRendu(recalculEnFileUnWorker());
     $essais = recalculEnFileLeTravail($classe, $user)::ESSAIS_PERMIS;
+    $issues = recalculEnFileReprendreDesQueRendu(recalculEnFileUnWorker(), $essais);
 
     expect($issues)->toHaveCount($essais + 1)
         ->and(array_unique(array_column(array_slice($issues, 0, $essais), 'issue')))->toBe(['remis en file'])
