@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createApp, h } from 'vue'
 
 import { creerUneFabriqueEnMemoire } from './baseIndexeeEnMemoire'
+import { horodatageRecent } from './fileHorsLigne'
 import { RequeteSimulee, relayerLesRejetsNonGeres, reseau, requetes, uneTache } from './reseauSimule'
 import { pageHorsLigne } from '@/sw/pageHorsLigne'
 import { TEMOIN, creerLeMagasinDesCopies, ouvrirLaBaseDuNavigateur } from '@/Utils/copiesHorsLigne'
@@ -83,7 +84,10 @@ beforeAll(async () => {
     expect(await enLigne.ecrireUneCopie(accueil, { ziggy: routes })).toBe('ecrite')
     await enLigne.fermer()
 
-    // « Démarrer » sans réseau, plus tôt aussi : la création de la séance attend la file.
+    // « Démarrer » sans réseau, il y a une heure : la création de la séance attend la file.
+    // Datée en dur, elle passait trente jours, et la file l'abandonnait au chargement (#2123).
+    const demarree = horodatageRecent()
+
     localStorage.setItem(
         'offline_sync_queue',
         JSON.stringify([
@@ -91,9 +95,9 @@ beforeAll(async () => {
                 id: 'q-seance',
                 method: 'post',
                 url: '/api/v1/workouts',
-                data: { started_at: '2026-10-19T08:15:00.000Z' },
+                data: { started_at: demarree },
                 headers: { 'Idempotency-Key': CLE_DE_LA_SEANCE },
-                timestamp: '2026-10-19T08:15:00.000Z',
+                timestamp: demarree,
                 compte: String(COMPTE),
             },
         ]),
