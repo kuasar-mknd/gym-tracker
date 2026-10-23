@@ -117,7 +117,7 @@ trait UnRecalculParCompteALaFois
      * qui épuise ses essais à attendre le compte le garderait jusqu'à son
      * échéance, et les envois du compte resteraient écartés jusque-là. Le
      * verrou se rend par son propriétaire : celui d'un envoi plus récent reste
-     * pris. L'exception que Laravel passe ne change rien à ce qu'il faut rendre.
+     * pris. L'exception que Laravel passe ne change rien au verrou à rendre.
      */
     public function failed(): void
     {
