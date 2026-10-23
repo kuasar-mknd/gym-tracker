@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
-import { jsRoot } from './sourceFiles'
+import { importsDe, jsRoot } from './sourceFiles'
 import { sansCommentairesHtml } from './gabarits'
 import { PAGES_GARDEES } from '@/Utils/pagesGardees'
 
@@ -66,26 +66,6 @@ const REMPLIS_SANS_RECALAGE = [
         ],
     },
 ]
-
-/** Les modules qu'un fichier importe, en tête ou à la demande, résolus dans resources/js. */
-const importsDe = (chemin, source) =>
-    [...source.matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*)['"]([^'"]+)['"]/g)].flatMap(([, specification]) => {
-        const base = specification.startsWith('@/')
-            ? join(jsRoot, specification.slice(2))
-            : specification.startsWith('.')
-              ? resolve(dirname(chemin), specification)
-              : null
-
-        if (base === null) {
-            return []
-        }
-
-        const trouve = [base, `${base}.js`, `${base}.vue`, join(base, 'index.js')].find(
-            (candidat) => existsSync(candidat) && statSync(candidat).isFile(),
-        )
-
-        return trouve === undefined ? [] : [trouve]
-    })
 
 /** Les fichiers qu'atteint une page gardée, la page comprise. */
 const fichiersDesPagesGardees = () => {

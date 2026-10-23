@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 
 /**
  * The walk every convention guard needs.
@@ -36,6 +36,39 @@ export const collectSourceFiles = ({ extensions = ['.vue'], skip = [] } = {}) =>
 
     return walk(jsRoot)
 }
+
+/**
+ * Les modules qu'un fichier importe, résolus sur le disque : en tête
+ * (`from '…'`), pour leur seul effet (`import '…'`), à la demande
+ * (`import('…')`) ou dans leur version réelle (`vi.importActual('…')`).
+ * `@/…` part de resources/js, un chemin relatif du fichier ; un paquet n'est
+ * pas suivi. Écrite d'abord pour `formulairesDesCopies.test.js`, partagée
+ * depuis `entreesDeFileDatees.test.js` (#2123).
+ *
+ * @param {string} chemin Le fichier, en absolu.
+ * @param {string} source Son texte.
+ * @returns {string[]} Chemins absolus.
+ */
+export const importsDe = (chemin, source) =>
+    [...source.matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+|\bimportActual\s*\(\s*)['"]([^'"]+)['"]/g)].flatMap(
+        ([, specification]) => {
+            const base = specification.startsWith('@/')
+                ? join(jsRoot, specification.slice(2))
+                : specification.startsWith('.')
+                  ? resolve(dirname(chemin), specification)
+                  : null
+
+            if (base === null) {
+                return []
+            }
+
+            const trouve = [base, `${base}.js`, `${base}.vue`, join(base, 'index.js')].find(
+                (candidat) => existsSync(candidat) && statSync(candidat).isFile(),
+            )
+
+            return trouve === undefined ? [] : [trouve]
+        },
+    )
 
 /**
  * Reports offenders as repo-relative paths, which is what a failing guard has
