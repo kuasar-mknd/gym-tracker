@@ -102,8 +102,7 @@ class DeconnexionHorsLigneTest extends DuskTestCase
 
             $this->sansReseauNiConstruction($browser, $outils, function () use ($browser, $empreinte): void {
                 // « Plus », ouvert à froid : la coquille démarre l'application sur sa copie.
-                $browser->visit('/profile')
-                    ->waitUntil($this->laCoquilleServiePour('reseau'), 15, 'la coquille n’a pas été servie')
+                $this->attendreLaCoquilleServieA($browser->visit('/profile'), '/profile')
                     ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
                     ->disableAnimations()
                     ->waitFor('[data-testid="logout-button"]', 15);

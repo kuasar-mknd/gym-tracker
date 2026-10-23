@@ -6,6 +6,8 @@ namespace Tests\Support;
 
 use Closure;
 use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
+use Facebook\WebDriver\Exception\TimeoutException;
+use Facebook\WebDriver\WebDriverTargetLocator;
 use Laravel\Dusk\Browser;
 use PHPUnit\Framework\Assert;
 
@@ -25,7 +27,15 @@ use PHPUnit\Framework\Assert;
  * public/build introuvable (renommé, rétabli dans son `finally`), après avoir
  * vidé le cache HTTP du navigateur et les deux caches du worker que la route
  * des actifs lit après le precache : ce qui s'ouvre pendant la coupure vient du
- * precache et des copies, ou ne s'ouvre pas.
+ * precache et des copies, ou ne s'ouvre pas. Elle attend d'abord que la page
+ * n'ait plus de visite d'Inertia en vol, et une page ouverte sans réseau se
+ * vérifie à l'adresse que sa navigation demandait (#2091,
+ * `attendreLaCoquilleServieA()`). Sous une coupure, celle-ci ou celle que le
+ * parcours pose par `reglerLeReseau()`, une visite qui quitte la coquille
+ * laissée telle quelle part de la page blanche d'un onglet neuf, l'onglet
+ * quitté fermé (`partirDUnePageBlanche()`) : quittée dans son onglet, la
+ * coquille se recharge au départ, et sous Chrome 155 et 156 ce rechargement
+ * prenait la place de la page demandée à chaque passe.
  *
  * **La lenteur.** `reglerLeReseau()` pose aussi une latence : Chrome la compte
  * de l'envoi de la requête à l'arrivée de ses en-têtes, sur chaque requête de
@@ -138,6 +148,36 @@ trait ParcoursHorsLigne
             () => fini(true),
             (erreur) => fini(String(erreur)),
         );
+    SCRIPT;
+
+    /**
+     * Le nombre de requêtes que le routeur d'Inertia a en vol, dans ses deux
+     * files : `null` sans routeur, `-1` quand ses files n'ont plus la forme
+     * que ce script lit.
+     */
+    private const string VISITES_D_INERTIA_EN_VOL = <<<'SCRIPT'
+        const routeur = window.Inertia;
+        if (routeur === undefined || routeur === null) {
+            return null;
+        }
+        const files = [routeur.syncRequestStream?.requests, routeur.asyncRequestStream?.requests];
+
+        return files.every(Array.isArray) ? files[0].length + files[1].length : -1;
+    SCRIPT;
+
+    /**
+     * Le document affiché, en JSON : son adresse, celle que demandait la
+     * navigation qui l'a ouvert et son type, et la marque de la coquille.
+     */
+    private const string CE_QU_EST_LE_DOCUMENT = <<<'SCRIPT'
+        const navigation = performance.getEntriesByType('navigation')[0];
+
+        return JSON.stringify({
+            adresse: location.pathname,
+            navigation: navigation ? { adresse: new URL(navigation.name).pathname, type: navigation.type } : null,
+            coquille: document.documentElement.hasAttribute('data-coquille'),
+            raison: document.documentElement.getAttribute('data-raison'),
+        });
     SCRIPT;
 
     /**
@@ -305,10 +345,19 @@ trait ParcoursHorsLigne
      * d'abord, le réseau ensuite. Une construction retirée restée d'une passe
      * interrompue fait échouer le parcours avant toute coupure.
      *
+     * Rien ne se coupe tant que la page attend une visite d'Inertia
+     * (`attendreAucuneVisiteEnVol()`, #2091) : la coupure n'arrête pas une
+     * requête déjà partie, dont la réponse arrive encore, et le serveur, qui
+     * ne voit plus public/build, y répond 409 sans version d'actifs. Inertia
+     * en fait une visite complète de l'adresse de la page, qui l'emporte sur
+     * celle que le parcours lance.
+     *
      * @param  Closure(): void  $parcours
      */
     private function sansReseauNiConstruction(Browser $browser, ChromeDevToolsDriver $outils, Closure $parcours): void
     {
+        $this->attendreAucuneVisiteEnVol($browser);
+
         Assert::assertTrue(
             $browser->driver->executeAsyncScript(self::VIDER_LES_CACHES_DES_ACTIFS),
             'les caches des actifs du worker ne se sont pas vidés',
@@ -377,9 +426,142 @@ trait ParcoursHorsLigne
 
     /**
      * Si la page est la coquille que le worker a servie, et pour quelle raison.
+     * Avec un chemin, il faut aussi que la navigation qui a ouvert le document
+     * l'ait demandé (#2091) : son entrée de `performance` garde l'adresse
+     * demandée, qu'Inertia ne réécrit pas, quand l'adresse de la page devient
+     * celle de la page montée.
      */
-    private function laCoquilleServiePour(string $raison): string
+    private function laCoquilleServiePour(string $raison, ?string $chemin = null): string
     {
-        return "document.documentElement.hasAttribute('data-coquille') && document.documentElement.getAttribute('data-raison') === ".json_encode($raison, JSON_THROW_ON_ERROR);
+        $coquille = "document.documentElement.hasAttribute('data-coquille') && document.documentElement.getAttribute('data-raison') === ".json_encode($raison, JSON_THROW_ON_ERROR);
+
+        if ($chemin === null) {
+            return $coquille;
+        }
+
+        return "{$coquille} && new URL(performance.getEntriesByType('navigation')[0]?.name ?? 'about:blank').pathname === ".json_encode($chemin, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Attend la coquille servie pour cette raison en réponse à la navigation
+     * vers ce chemin (#2091). Une coquille servie à une autre adresse, comme
+     * l'accueil que la page quittée recharge, ne passe pas : l'échec dit ce
+     * qu'est le document à la place.
+     */
+    private function attendreLaCoquilleServieA(Browser $browser, string $chemin, string $raison = 'reseau', int $secondes = 15): Browser
+    {
+        try {
+            return $browser->waitUntil($this->laCoquilleServiePour($raison, $chemin), $secondes);
+        } catch (TimeoutException) {
+            Assert::fail("la coquille n’a pas été servie à {$chemin} pour la raison {$raison} : ".$this->ceQuEstLeDocument($browser));
+        }
+    }
+
+    /**
+     * Quitte le document affiché pour la page blanche d'un onglet neuf, avant
+     * une nouvelle visite sous une coupure, celle de
+     * `sansReseauNiConstruction()` ou celle que le parcours pose par
+     * `reglerLeReseau()` (#2091) : l'onglet quitté est fermé, et l'onglet neuf,
+     * au premier plan, a le réseau coupé, sans latence.
+     *
+     * La coquille laissée telle quelle (sans copie à monter) recharge son
+     * adresse au premier `online` (`laisserLaCoquille()`,
+     * `resources/js/Utils/demarrageHorsLigne.js`), et Chrome en émet un dans
+     * le document que le pilote fait naviguer sous
+     * `Network.emulateNetworkConditions`, juste avant son `pagehide` : les
+     * réglages des outils de Chrome quittent alors ce document, son réseau
+     * émulé avec eux. Dans le même onglet, ce rechargement prenait la place de
+     * la page que le pilote demandait ensuite. Sous Chromium 141, celle d'une
+     * visite selon le parcours, rarement celle d'une page blanche ; sous
+     * Chrome 155 et 156, ceux des images de la CI au 22/10/2026 (la CI prend
+     * le Chrome de l'image ubuntu-latest, sans l'épingler), celle de presque
+     * chaque visite, et celle de la page blanche au premier départ de la
+     * coquille à chaque passe, et le plus souvent aux suivants, chaque
+     * coquille rechargée reposant son écouteur : redemander la page blanche
+     * ne gagnait plus. Fermé, l'onglet emporte le document, ses écouteurs, ses
+     * minuteries et le rechargement qu'il lance ; rien n'en atteint l'onglet
+     * neuf. Couper les scripts de la page le temps du départ
+     * (`Emulation.setScriptExecutionDisabled`) n'y suffit pas : la coupure
+     * quitte le document au même moment que le réseau émulé, et son écouteur
+     * `online` est appelé quand même (`.ai/rules/browser.md`).
+     *
+     * L'onglet neuf garde le profil et la fenêtre : cookies, localStorage,
+     * taille, agent et préférences, et ce que l'origine partage entre ses
+     * onglets, le magasin des copies (IndexedDB) et les caches du worker, qui
+     * sert la coquille. Il n'a ni le sessionStorage de l'onglet fermé, ni ses
+     * réglages des outils de Chrome, ni le premier plan : `Page.bringToFront`
+     * le lui donne (`document.hasFocus()`), et le réseau s'y coupe de nouveau
+     * (`navigator.onLine`). Les outils de Chrome visent l'onglet courant du
+     * pilote : ceux que le parcours a créés avant le départ rendent le réseau
+     * à l'onglet neuf, dans le `finally` de `sansReseauNiConstruction()` comme
+     * dans celui du parcours. La console du navigateur, que `DuskTestCase`
+     * relève, garde les messages des deux onglets.
+     */
+    private function partirDUnePageBlanche(Browser $browser): Browser
+    {
+        $pilote = $browser->driver;
+        $quitte = $pilote->getWindowHandle();
+        $neuf = $pilote->switchTo()->newWindow(WebDriverTargetLocator::WINDOW_TYPE_TAB)->getWindowHandle();
+
+        $pilote->switchTo()->window($quitte)->close();
+        $pilote->switchTo()->window($neuf);
+
+        Assert::assertSame([$neuf], $pilote->getWindowHandles(), 'l’onglet quitté ne s’est pas fermé');
+
+        $outils = $this->outilsDuNavigateur($browser);
+        $outils->execute('Page.bringToFront');
+        $this->reglerLeReseau($outils, true);
+
+        Assert::assertSame(
+            ['about:blank', false, true],
+            $browser->script('return [location.href, navigator.onLine, document.hasFocus()];')[0],
+            'l’onglet neuf n’est pas une page blanche au premier plan, réseau coupé (adresse, navigator.onLine, document.hasFocus())',
+        );
+
+        return $browser;
+    }
+
+    /**
+     * Ce qu'est le document affiché : son adresse, celle que la navigation
+     * qui l'a ouvert demandait et son type (`navigate`, `reload`…), et s'il
+     * est la coquille, et pour quelle raison. Ce que cite un échec.
+     */
+    private function ceQuEstLeDocument(Browser $browser): string
+    {
+        $document = $browser->script(self::CE_QU_EST_LE_DOCUMENT)[0];
+
+        return is_string($document) ? $document : 'illisible';
+    }
+
+    /**
+     * Attend que la page n'ait plus de visite d'Inertia en vol (#2091) : ni
+     * visite, ni rechargement partiel, props différées comprises. Ce que
+     * `sansReseauNiConstruction()` fait avant de couper.
+     *
+     * Le routeur est celui que `resources/js/main.js` expose aux parcours
+     * (`window.Inertia`) : ses deux files gardent chacune les requêtes parties
+     * et pas encore traitées. Un document sans routeur (la coquille laissée
+     * telle quelle) n'a rien en vol. Un routeur sans ces deux listes, qu'une
+     * montée d'Inertia aurait renommées, fait échouer l'attente au lieu de la
+     * laisser passer à vide.
+     */
+    private function attendreAucuneVisiteEnVol(Browser $browser, int $secondes = 15): void
+    {
+        $limite = microtime(true) + $secondes;
+
+        do {
+            $compte = $browser->script(self::VISITES_D_INERTIA_EN_VOL)[0];
+            $enVol = $compte === null ? 0 : (is_int($compte) ? $compte : -1);
+
+            Assert::assertNotSame(-1, $enVol, 'le routeur d’Inertia n’a plus les files de requêtes que la coupure lit');
+
+            if ($enVol === 0) {
+                return;
+            }
+
+            usleep(100_000);
+        } while (microtime(true) < $limite);
+
+        Assert::fail("la page a encore {$enVol} visite(s) d’Inertia en vol avant la coupure");
     }
 }

@@ -270,7 +270,7 @@ class NavigationHorsLigneTest extends DuskTestCase
      */
     private function attendreLaCopieAFroid(Browser $browser, string $chemin, string $titre): void
     {
-        $browser->waitUntil($this->laCoquilleServiePour('reseau'), 15, "la coquille n’a pas été servie à {$chemin}")
+        $this->attendreLaCoquilleServieA($browser, $chemin)
             ->waitFor('[dusk="bandeau-hors-ligne"]', 15)
             ->assertPathIs($chemin)
             ->assertMissing('[dusk="page-hors-ligne"]')
