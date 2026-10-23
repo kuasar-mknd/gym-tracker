@@ -444,7 +444,7 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
     $middlewares = $travail->middleware();
     expect($middlewares)->toHaveCount(1);
     $sansChevauchement = $middlewares[0];
-    assert($sansChevauchement instanceof WithoutOverlapping);
+    expect($sansChevauchement)->toBeInstanceOf(WithoutOverlapping::class);
     $attente = $sansChevauchement->releaseAfter;
     assert(is_int($attente));
 
