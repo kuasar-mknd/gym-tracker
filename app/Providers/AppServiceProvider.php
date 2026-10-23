@@ -38,12 +38,14 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use PDO;
 use RuntimeException;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use Spatie\Backup\Events\BackupManifestWasCreated;
 use Spatie\Backup\Events\DumpingDatabase;
 use Spatie\DbDumper\Databases\MySql;
+use Spatie\Permission\Models\Role;
 
 final class AppServiceProvider extends ServiceProvider
 {
@@ -82,6 +84,7 @@ final class AppServiceProvider extends ServiceProvider
         $this->refuserLesArchivesEnClair();
         $this->sauvegarderSansLesLignesDePulse();
         $this->ouvrirLesOutilsAuSuperAdministrateur();
+        $this->garderLeNomDuRoleDuSuperAdministrateur();
         \BezhanSalleh\FilamentExceptions\Facades\FilamentExceptions::model(\App\Models\ExceptionEnregistree::class);
         $this->ouvrirLeLecteurDeJournaux();
         $this->plafonnerLaCollecteDesErreursDuNavigateur();
@@ -549,9 +552,6 @@ final class AppServiceProvider extends ServiceProvider
      */
     private function ouvrirLesOutilsAuSuperAdministrateur(): void
     {
-        $role = config('filament-shield.super_admin.name');
-        $superAdministrateur = is_string($role) ? $role : 'super_admin';
-
         $capacites = [
             'create-backup',
             'download-backup',
@@ -583,7 +583,29 @@ final class AppServiceProvider extends ServiceProvider
 
         foreach ($capacites as $capacite) {
             Gate::define($capacite, fn (?Authenticatable $utilisateur = null): bool => $utilisateur instanceof Admin
-                && $utilisateur->hasRole($superAdministrateur));
+                && $utilisateur->estSuperAdministrateur());
         }
+    }
+
+    /**
+     * Les capacités de la liste suivent le nom du rôle : le rôle du super
+     * administrateur ne se renomme pas, et aucun autre rôle ne prend son nom.
+     * `RolePolicy` ne laisse modifier ce rôle qu'à qui le porte ; ce qu'un
+     * client écrit dans le formulaire des rôles de Shield (`data.name`, le
+     * chemin de son champ, où le refus s'affiche) n'est vérifié qu'ici, par
+     * le modèle. Un rôle créé sous ce nom, quand il n'existe pas encore, ne
+     * s'accorde à personne depuis le panneau.
+     */
+    private function garderLeNomDuRoleDuSuperAdministrateur(): void
+    {
+        Role::updating(static function (Role $role): void {
+            $nom = Admin::roleDuSuperAdministrateur();
+
+            if ($role->isDirty('name') && in_array($nom, [$role->getOriginal('name'), $role->getAttribute('name')], true)) {
+                throw ValidationException::withMessages([
+                    'data.name' => "Le rôle « {$nom} » garde son nom, et aucun autre rôle ne le prend : les capacités du super administrateur suivent ce nom.",
+                ]);
+            }
+        });
     }
 }

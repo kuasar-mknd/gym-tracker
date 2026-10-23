@@ -59,6 +59,27 @@ class Admin extends Authenticatable implements FilamentUser, HasAppAuthenticatio
         return $this->roles()->exists() || $this->permissions()->exists();
     }
 
+    /**
+     * Le nom du rôle du super administrateur (`filament-shield.super_admin.name`).
+     * Les capacités de `AppServiceProvider::ouvrirLesOutilsAuSuperAdministrateur()`
+     * suivent ce nom : `RolePolicy` ne laisse ni modifier ce rôle à qui ne le
+     * porte pas, ni le supprimer, et aucun rôle ne prend ni ne perd ce nom.
+     */
+    public static function roleDuSuperAdministrateur(): string
+    {
+        $role = config('filament-shield.super_admin.name');
+
+        return is_string($role) && $role !== '' ? $role : 'super_admin';
+    }
+
+    /**
+     * L'administrateur porte-t-il le rôle du super administrateur.
+     */
+    public function estSuperAdministrateur(): bool
+    {
+        return $this->hasRole(self::roleDuSuperAdministrateur());
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
