@@ -307,6 +307,7 @@ describe('la garde', () => {
         expect(atteint("import SyncService from '@/Utils/SyncService'"), 'en tête').toBe(true)
         expect(atteint("file = (await import('@/Utils/SyncService')).default"), 'à la demande').toBe(true)
         expect(atteint("import { chargerSyncService } from '../utils/fileHorsLigne'"), 'par une aide').toBe(true)
+        expect(atteint("import Notifications from '@/Pages/Notifications/Index.vue'"), 'par une page').toBe(true)
         expect(atteint("import '@/composables/useDeconnexion'"), 'pour son seul effet').toBe(true)
         expect(atteint("export { default } from '@/Utils/SyncService'"), 'réexportée').toBe(true)
         expect(atteint("const vraie = await vi.importActual('@/Utils/SyncService')"), 'réelle').toBe(true)
@@ -330,7 +331,7 @@ describe('la garde', () => {
         const entree = "\nconst entree = { id: 'q9', compte: '1', timestamp: '2026-10-19T08:15:00.000Z' }"
 
         for (const source of [
-            "import OneRepMax from '@/Pages/Tools/OneRepMax.vue'",
+            "import Notifications from '@/Pages/Notifications/Index.vue'",
             "import GuestLayout from '@/Layouts/GuestLayout.vue'",
             "const { useDeconnexion } = await import('@/composables/useDeconnexion')",
             "import { lireLaFileDuStockage } from '@/Utils/seanceEnAttente'",
