@@ -17,13 +17,13 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\Support\FilamentAdminPanel;
 
 /*
- * Le rôle du super administrateur ouvre, par son nom, les capacités de
- * `AppServiceProvider::ouvrirLesOutilsAuSuperAdministrateur()`. Il ne se
- * supprime pas, ni par l'action de sa ligne, ni par le bouton de sa page, ni
- * en groupe, même pour qui porte `Delete:Role` et `DeleteAny:Role` ; il ne se
- * modifie que par qui le porte (`RolePolicy`) ; il ne se renomme pas, et
- * aucun autre rôle ne prend son nom (`AppServiceProvider::garderLeNomDuRoleDuSuperAdministrateur()`).
- * Les appels forgés montent l'action par son nom, sans le bouton.
+ * Le rôle du super administrateur (`Admin::roleDuSuperAdministrateur()`) ne
+ * se supprime par personne, titulaire compris, ni par l'action de sa ligne,
+ * ni par le bouton de sa page de modification, ni en groupe ; il ne se
+ * modifie que par qui le porte, à qui seul s'ouvre sa page de modification
+ * (`RolePolicy`) ; il garde son nom, et aucun autre rôle ne prend le sien
+ * (`AppServiceProvider::garderLeNomDuRoleDuSuperAdministrateur()`). Les
+ * appels forgés montent l'action par son nom, sans le bouton.
  */
 
 /**
@@ -78,7 +78,7 @@ function roleDuSuperAdministrateurCapacitesDe(Admin $administrateur): array
         ->all();
 }
 
-it('ne supprime pas le rôle du super administrateur par l’action de sa ligne, même avec Delete:Role et DeleteAny:Role', function (): void {
+it('ne supprime pas le rôle du super administrateur par l’action de sa ligne, et supprime un autre rôle par la sienne', function (): void {
     [$role, $titulaire] = roleDuSuperAdministrateurPorte();
     $autre = roleDuSuperAdministrateurRole('moderateur');
     $this->actingAs(FilamentAdminPanel::admin(['ViewAny:Role', 'View:Role', 'Delete:Role', 'DeleteAny:Role']), 'admin');
@@ -106,7 +106,7 @@ it('ne supprime pas le rôle du super administrateur en groupe, et supprime les 
         ->and(Role::query()->whereKey($autre->getKey())->exists())->toBeFalse();
 });
 
-it('ne laisse ni ouvrir ni supprimer le rôle du super administrateur par sa page à qui ne le porte pas', function (): void {
+it('ne laisse ni modifier ni supprimer le rôle du super administrateur par sa page de modification à qui ne le porte pas', function (): void {
     [$role] = roleDuSuperAdministrateurPorte();
     $this->actingAs(FilamentAdminPanel::admin(['ViewAny:Role', 'View:Role', 'Update:Role', 'Delete:Role', 'DeleteAny:Role']), 'admin');
 
@@ -148,7 +148,7 @@ it('refuse de renommer le rôle du super administrateur, même à son titulaire'
         ->and(roleDuSuperAdministrateurCapacitesDe($titulaire))->each->toBeTrue();
 });
 
-it('refuse le nom du super administrateur à un autre rôle, et ses capacités restent fermées', function (bool $leRoleExiste): void {
+it('refuse le nom du super administrateur à un autre rôle', function (bool $leRoleExiste): void {
     $titulaire = null;
 
     if ($leRoleExiste) {

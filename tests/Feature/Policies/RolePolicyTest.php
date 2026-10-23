@@ -139,9 +139,8 @@ it('grants nothing at all to a principal with no permissions', function (string 
 })->with(['admin', 'user']);
 
 /**
- * Le rôle du super administrateur ouvre, par son nom, les capacités de la
- * liste d'`AppServiceProvider` : il ne se modifie que par qui le porte, et ne
- * se supprime par personne, même avec la permission de supprimer un rôle.
+ * Le rôle du super administrateur ne se modifie que par qui le porte, et ne
+ * se supprime par personne, titulaire compris.
  */
 it('ne laisse modifier le rôle du super administrateur qu’à qui le porte', function (): void {
     $superAdministrateur = rolePolicyRole(Admin::roleDuSuperAdministrateur());
