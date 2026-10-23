@@ -17,6 +17,15 @@ import { importsDe, jsRoot } from './sourceFiles'
  * telle entrée prend `horodatageRecent()` (`tests/js/utils/fileHorsLigne.js`),
  * ou une heure tirée de celle que le cas a figée.
  *
+ * La garde reconnaît la date écrite donnée à `timestamp` directement, sous une
+ * clé entre guillemets ou dans du JSON écrit en chaîne, par une affectation, ou
+ * par une constante liée à une date écrite dans le même fichier
+ * (`const demarree = '2026-…'` puis `timestamp: demarree`, la forme même du
+ * test de la coquille). Une constante que le fichier fige
+ * (`vi.setSystemTime(MAINTENANT)`) n'en est pas une : une heure qui en est
+ * tirée relève de l'heure figée, plus bas. Elle ne suit ni une date importée
+ * d'un autre module, ni une date rangée dans un objet.
+ *
  * La vraie file se charge par une aide ou par `@/Utils/SyncService`, mais
  * aussi par une page, un layout ou un composable (le layout authentifié
  * l'atteint par `useDeconnexion`) : le texte d'un fichier ne dit pas s'il la
@@ -54,12 +63,51 @@ const SANS_LA_VRAIE_FILE = [
 ]
 
 /**
- * Une heure écrite en dur donnée à `timestamp` : une chaîne qui commence par
- * une date, ou une `Date` construite d'une telle chaîne, d'une année écrite ou
- * de `Date.UTC`.
+ * Une date écrite en dur : une chaîne qui commence par une date (son
+ * guillemet échappé compris, dans du JSON écrit en chaîne), ou une `Date`
+ * construite d'une telle chaîne, d'une année écrite, de `Date.UTC`, de
+ * `Date.parse` ou d'un nombre de millisecondes.
  */
-const HEURE_ECRITE =
-    /\btimestamp\s*:\s*(?:(['"`])\d{4}-\d{2}-\d{2}|new Date\(\s*(?:['"`]\d{4}-|\d{4}\s*,|Date\.UTC\())/g
+const DATE_ECRITE =
+    /(?:\\?['"`]\d{4}-\d{2}-\d{2}|new Date\(\s*(?:\\?['"`]\d{4}-|\d{4}\s*,|Date\.(?:UTC|parse)\(|\d{12,13}\b))/
+
+/**
+ * `timestamp` qui reçoit une valeur : une clé, nue ou entre guillemets (une
+ * entrée écrite en JSON comprise), ou une affectation. Une clé nue précédée
+ * d'un point (`entree.timestamp : …`, dans un ternaire) n'en est pas une.
+ */
+const CLE =
+    /(?:(?<![\w$.])timestamp\s*:|\\?['"]timestamp\\?['"]\s*:|(?:\.timestamp|\[\s*['"]timestamp['"]\s*\])\s*=(?!=))\s*/
+
+/** Une date écrite donnée directement à `timestamp`. */
+const HEURE_ECRITE = new RegExp(CLE.source + DATE_ECRITE.source, 'g')
+
+/** Une constante donnée à `timestamp`, telle quelle ou passée à `new Date` ou `Date.parse`. */
+const HEURE_PAR_UNE_CONSTANTE = new RegExp(
+    `${CLE.source}(?:new Date\\(\\s*|Date\\.parse\\(\\s*)?(?!new\\b)([A-Za-z_$][\\w$]*)(?![\\w$]|\\s*\\()`,
+    'g',
+)
+
+/** `{ id, timestamp }` : la constante `timestamp` donnée à la clé du même nom. */
+const HEURE_EN_RACCOURCI = /(?<=[{,]\s*)(timestamp)(?=\s*[,}])/g
+
+/**
+ * La liaison, dans le même source, d'une constante à une date écrite en dur,
+ * ou `null`. Celle que le source fige (`vi.setSystemTime(MAINTENANT)`) n'en
+ * est pas une : une heure tirée de l'heure figée relève de l'autre forme du
+ * piège, que la garde ne voit pas.
+ *
+ * @param {string} source
+ * @param {string} constante
+ * @returns {string | null}
+ */
+const dateDeLaConstante = (source, constante) => {
+    const nom = constante.replaceAll('$', '\\$')
+    const liaison = source.match(new RegExp(`\\b(?:const|let|var)\\s+${nom}\\s*=\\s*${DATE_ECRITE.source}`))
+    const figee = new RegExp(`\\bsetSystemTime\\(\\s*(?:new Date\\(\\s*)?${nom}(?![\\w$])`).test(source)
+
+    return liaison === null || figee ? null : liaison[0]
+}
 
 const racineDesTests = resolve(__dirname, '..')
 const racineDuDepot = resolve(racineDesTests, '../..')
@@ -133,16 +181,26 @@ const cheminVersLaVraieFile = (chemin, source) => {
 }
 
 /**
- * Les heures écrites en dur d'un source, avec leur ligne.
+ * Les heures écrites en dur qu'un source donne à `timestamp`, directement ou
+ * par une constante liée dans le même source, avec leur ligne.
  *
  * @param {string} source
  * @returns {{ligne: number, texte: string}[]}
  */
-const heuresEcrites = (source) =>
-    [...source.matchAll(HEURE_ECRITE)].map((correspondance) => ({
-        ligne: source.slice(0, correspondance.index).split('\n').length,
-        texte: correspondance[0],
-    }))
+const heuresEcrites = (source) => {
+    const parUneConstante = [...source.matchAll(HEURE_PAR_UNE_CONSTANTE), ...source.matchAll(HEURE_EN_RACCOURCI)]
+        .map((correspondance) => ({ correspondance, liaison: dateDeLaConstante(source, correspondance[1]) }))
+        .filter(({ liaison }) => liaison !== null)
+        .map(({ correspondance, liaison }) => ({
+            index: correspondance.index,
+            texte: `${correspondance[0]} ← ${liaison}`,
+        }))
+    const directes = [...source.matchAll(HEURE_ECRITE)].map(({ index, 0: texte }) => ({ index, texte }))
+
+    return [...directes, ...parUneConstante]
+        .toSorted((une, autre) => une.index - autre.index)
+        .map(({ index, texte }) => ({ ligne: source.slice(0, index).split('\n').length, texte }))
+}
 
 /**
  * Les heures écrites en dur d'un fichier de tests/js, hors de ses exceptions.
@@ -195,7 +253,7 @@ describe('les entrées de file des tests', () => {
 
 describe('la garde', () => {
     it('reconnaît une heure écrite en dur, sous chacune de ses formes', () => {
-        for (const source of [
+        const formes = [
             "timestamp: '2026-10-19T08:15:00.000Z',",
             'timestamp: "2026-10-19T08:15:00.000Z",',
             'timestamp: `2026-10-19T08:15:00.000Z`,',
@@ -203,23 +261,43 @@ describe('la garde', () => {
             "timestamp: new Date('2026-10-19T08:15:00.000Z').toISOString(),",
             'timestamp: new Date(2026, 9, 19).toISOString(),',
             'timestamp: new Date(Date.UTC(2026, 9, 19)).toISOString(),',
-        ]) {
-            expect(heuresEcrites(source), source).toHaveLength(1)
-        }
+            "timestamp: new Date(Date.parse('2026-10-19T08:15:00.000Z')).toISOString(),",
+            'timestamp: new Date(1792397700000).toISOString(),',
+            "'timestamp': '2026-10-19T08:15:00.000Z',",
+            '"timestamp": "2026-10-19T08:15:00.000Z",',
+            `localStorage.setItem('offline_sync_queue', '[{"id":"q9","compte":"1","timestamp":"2026-10-19T08:15:00.000Z"}]')`,
+            'localStorage.setItem("offline_sync_queue", "[{\\"id\\":\\"q9\\",\\"timestamp\\":\\"2026-10-19T08:15:00.000Z\\"}]")',
+            "entree.timestamp = '2026-10-19T08:15:00.000Z'",
+            "const demarree = '2026-10-19T08:15:00.000Z'\nconst entree = { id: 'q9', timestamp: demarree }",
+            "const DEMARREE = new Date('2026-10-19T08:15:00.000Z')\nconst entree = { timestamp: DEMARREE.toISOString() }",
+            "let demarree = '2026-10-19T08:15:00.000Z'\nconst entree = { timestamp: new Date(demarree).toISOString() }",
+            "const timestamp = '2026-10-19T08:15:00.000Z'\nconst entree = { id: 'q9', timestamp }",
+        ]
+
+        expect(formes.filter((source) => heuresEcrites(source).length !== 1)).toEqual([])
     })
 
     it('laisse passer une heure tirée de l’horloge, ou ce qui n’est pas une date', () => {
-        for (const source of [
+        const formes = [
             'timestamp: horodatageRecent(),',
             'timestamp: new Date().toISOString(),',
             'timestamp: new Date(MAINTENANT.getTime() - ilYA).toISOString(),',
             'timestamp: HEURE_DU_GESTE.toISOString(),',
             "timestamp: 'illisible',",
             "started_at: '2026-10-19T08:15:00.000Z',",
+            `'[{"started_at":"2026-10-19T08:15:00.000Z"}]'`,
             "it('takes the day out of a full timestamp', () => {",
-        ]) {
-            expect(heuresEcrites(source), source).toEqual([])
-        }
+            "expect(entree.timestamp).toBe('2026-10-19T08:15:00.000Z')",
+            "expect(entree.timestamp === '2026-10-19T08:15:00.000Z').toBe(true)",
+            "const quand = attendue ? entree.timestamp : '2026-10-19'",
+            "const demarree = horodatageRecent()\nconst entree = { id: 'q9', timestamp: demarree }",
+            "const timestamp = horodatageRecent()\nconst entree = { id: 'q9', timestamp }",
+            "const { timestamp } = entree\nconst DEBUT = '2026-10-19T08:15:00.000Z'",
+            "const MAINTENANT = new Date('2026-10-16T12:00:00.000Z')\nvi.setSystemTime(MAINTENANT)\nconst entree = { timestamp: MAINTENANT.toISOString() }",
+            "const MAINTENANT = new Date('2026-10-16T12:00:00.000Z')\nvi.setSystemTime(MAINTENANT)\nconst entree = { timestamp: new Date(MAINTENANT.getTime() - ilYA).toISOString() }",
+        ]
+
+        expect(formes.filter((source) => heuresEcrites(source).length > 0)).toEqual([])
     })
 
     it('suit les imports jusqu’à la vraie file, sans compter un mock comme une coupure', () => {
