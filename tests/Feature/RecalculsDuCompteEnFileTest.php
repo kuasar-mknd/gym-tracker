@@ -803,11 +803,17 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
         ->and($charge['retryUntil'])->toBeNull()
         ->and($travail->uniqueFor())->toBeGreaterThanOrEqual($sansChevauchement->expiresAfter);
 
-    // Le verrou de l'exécution survit au délai que Horizon laisse à un
+    // Le verrou de l'exécution survit au délai que le worker laisse à un
     // travail, sous chaque superviseur qui sert la file des recalculs, dans
     // chaque environnement : un recalcul qui tourne jusqu'à ce délai le garde
-    // jusqu'au bout. Le plan est celui que Horizon déploie, chaque superviseur
-    // des défauts fusionné par son nom avec celui de l'environnement.
+    // jusqu'au bout. Le délai que déclare le travail (`#[Timeout]`, `$timeout`,
+    // qui arrive dans la charge) l'emporte sur celui du superviseur
+    // (`Worker::timeoutForJob()`), et un délai nul n'en pose aucun : le verrou
+    // expirerait alors sous un recalcul qui tourne encore. Le plan est celui
+    // que Horizon déploie, chaque superviseur des défauts fusionné par son nom
+    // avec celui de l'environnement.
+    $delaiDuTravail = $charge['timeout'];
+    assert($delaiDuTravail === null || is_int($delaiDuTravail));
     $superviseursDeLaFile = 0;
 
     foreach (ProvisioningPlan::get('recalculs')->parsed as $superviseurs) {
@@ -821,7 +827,10 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
             }
 
             $superviseursDeLaFile++;
-            expect($sansChevauchement->expiresAfter)->toBeGreaterThan($options->timeout);
+            $delai = $delaiDuTravail ?? $options->timeout;
+
+            expect($delai)->toBeGreaterThan(0)
+                ->and($sansChevauchement->expiresAfter)->toBeGreaterThan($delai);
         }
     }
 
