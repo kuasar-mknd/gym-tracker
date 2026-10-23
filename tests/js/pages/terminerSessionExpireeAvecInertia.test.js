@@ -60,7 +60,13 @@ vi.mock('@/Components/UI/ConfirmDialog.vue', () => ({ default: { name: 'ConfirmD
 
 const pages = suivreLesPagesMontees()
 
-const HEURE_DU_GESTE = new Date('2026-10-19T16:42:00.000Z')
+/**
+ * L'heure du geste : une heure avant le chargement du fichier, à la minute.
+ * La fin mise en file la garde après le retour de l'horloge réelle, et la file
+ * abandonne au vidage ce qui attend depuis plus de trente jours : écrite en
+ * dur, cette heure faisait tomber le test trente jours après (#2123).
+ */
+const HEURE_DU_GESTE = new Date(Math.floor((Date.now() - 3_600_000) / 60_000) * 60_000)
 
 /** La page de connexion, celle que le serveur rend à une session expirée. */
 const pageDeConnexion = () => ({
@@ -126,7 +132,7 @@ it('met la fin en file à l’heure du geste, mène à la connexion, et termine 
     sessionExpiree = true
     reseau.serveur.pages = { '/workouts/5': pageDeConnexion }
 
-    // « Terminer », puis « Confirmer » à 16:42 : l'heure du geste.
+    // « Terminer », puis « Confirmer » à l'heure du geste.
     await cliquer('[dusk="finish-workout-mobile"]')
     await vi.waitUntil(() => present('dialog[open] [dusk="confirm-finish-button"]'))
     vi.useFakeTimers({ toFake: ['Date'] })
