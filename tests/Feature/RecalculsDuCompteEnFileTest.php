@@ -558,13 +558,13 @@ it('tient un verrou d’unicité par compte : le recalcul qui attend pour un com
 
     // Le verrou d'unicité se prend à l'envoi, quel que soit le pilote de la
     // file : la file simulée rend les travaux mis en file, compte compris.
-    Queue::fake();
+    $file = Queue::fake();
 
     $classe::dispatch($premier);
     $classe::dispatch($second);
     $classe::dispatch($premier);
 
-    $comptes = Queue::pushed($classe)->map(static function (mixed $travail): int {
+    $comptes = $file->pushed($classe)->map(static function (mixed $travail): int {
         assert($travail instanceof SyncUserGoals || $travail instanceof SyncUserAchievements);
 
         return (int) $travail->user->id;
