@@ -19,6 +19,7 @@ const REACHABLE_USER_ABILITIES = [
     'create' => 'Create:User',
     'update' => 'Update:User',
     'delete' => 'Delete:User',
+    'deleteAny' => 'DeleteAny:User',
 ];
 
 /** Methods that take the acted-upon user as a second argument. */
@@ -117,7 +118,7 @@ describe('admin permissions', function (): void {
 
         expect($policy->{$method}($granted))->toBeTrue()
             ->and($policy->{$method}($denied))->toBeFalse();
-    })->with(['viewAny', 'create']);
+    })->with(['viewAny', 'create', 'deleteAny']);
 });
 
 /**
@@ -148,7 +149,7 @@ it('grants a permission-less admin nothing over another account', function (): v
 
     expect($granted)->toBe([])
         ->and($methods->all())->toBe([
-            'viewAny', 'view', 'create', 'update', 'delete', 'restore',
+            'viewAny', 'view', 'create', 'update', 'delete', 'deleteAny', 'restore',
             'forceDelete', 'forceDeleteAny', 'restoreAny', 'replicate', 'reorder',
         ]);
 });

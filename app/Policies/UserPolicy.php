@@ -51,6 +51,15 @@ final class UserPolicy
         return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('Delete:User');
     }
 
+    /**
+     * La suppression groupée du panneau : `DeleteAny:User`, puis
+     * `delete()` pour chaque ligne choisie (`authorizeIndividualRecords()`).
+     */
+    public function deleteAny(AuthUser $utilisateurConnecte): bool
+    {
+        return $utilisateurConnecte->can('DeleteAny:User');
+    }
+
     public function restore(AuthUser $utilisateurConnecte, User $user): bool
     {
         return $this->estLuiMeme($utilisateurConnecte, $user) || $utilisateurConnecte->can('Restore:User');

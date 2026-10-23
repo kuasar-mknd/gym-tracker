@@ -57,6 +57,15 @@ final class ExercisePolicy
         return $utilisateurConnecte->can('Delete:Exercise');
     }
 
+    /**
+     * La suppression groupée du panneau : `DeleteAny:Exercise`, puis
+     * `delete()` pour chaque ligne choisie (`authorizeIndividualRecords()`).
+     */
+    public function deleteAny(AuthUser $utilisateurConnecte): bool
+    {
+        return $utilisateurConnecte->can('DeleteAny:Exercise');
+    }
+
     public function restore(AuthUser $utilisateurConnecte): bool
     {
         return $utilisateurConnecte->can('Restore:Exercise');

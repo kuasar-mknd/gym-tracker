@@ -5,8 +5,10 @@ declare(strict_types=1);
 use App\Models\Admin;
 use App\Models\User;
 use App\Policies\RolePolicy;
+use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Support\Facades\Gate;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
@@ -20,6 +22,7 @@ const REACHABLE_ROLE_ABILITIES = [
     'create' => 'Create:Role',
     'update' => 'Update:Role',
     'delete' => 'Delete:Role',
+    'deleteAny' => 'DeleteAny:Role',
 ];
 
 function adminWithRoleAbilities(array $abilities): Admin
@@ -36,6 +39,35 @@ function adminWithRoleAbilities(array $abilities): Admin
     return $admin->fresh();
 }
 
+/**
+ * Appelle une méthode de la policy comme le Gate : celles qui portent sur un
+ * rôle (`update`, `delete`, `forceDelete`) le reçoivent, un autre rôle que
+ * celui du super administrateur sauf mention contraire.
+ */
+function rolePolicyAppel(string $method, ?AuthUser $actor, ?Role $role = null): bool
+{
+    assert($actor instanceof AuthUser);
+    $policy = new RolePolicy();
+    $arity = new ReflectionMethod(RolePolicy::class, $method)->getNumberOfParameters();
+
+    if ($arity === 1) {
+        return $policy->{$method}($actor) === true;
+    }
+
+    return $policy->{$method}($actor, $role ?? rolePolicyRole('moderateur')) === true;
+}
+
+/**
+ * Un rôle de la garde du panneau.
+ */
+function rolePolicyRole(string $nom): Role
+{
+    $role = Role::findOrCreate($nom, 'admin');
+    assert($role instanceof Role);
+
+    return $role;
+}
+
 it('is the policy Laravel resolves for the configured role model', function (): void {
     $roleModel = config('permission.models.role');
 
@@ -44,9 +76,8 @@ it('is the policy Laravel resolves for the configured role model', function (): 
 
 it('grants an admin holding exactly the matching ability', function (string $method, string $ability): void {
     $admin = adminWithRoleAbilities([$ability]);
-    $policy = new RolePolicy();
 
-    expect($policy->{$method}($admin))->toBeTrue();
+    expect(rolePolicyAppel($method, $admin))->toBeTrue();
 })->with(
     collect(REACHABLE_ROLE_ABILITIES)
         ->map(fn (string $ability, string $method): array => [$method, $ability])
@@ -61,9 +92,8 @@ it('grants an admin holding exactly the matching ability', function (string $met
 it('denies an admin holding every other role ability but not the matching one', function (string $method, string $ability): void {
     $others = array_values(array_diff(array_values(REACHABLE_ROLE_ABILITIES), [$ability]));
     $admin = adminWithRoleAbilities($others);
-    $policy = new RolePolicy();
 
-    expect($policy->{$method}($admin))->toBeFalse();
+    expect(rolePolicyAppel($method, $admin))->toBeFalse();
 })->with(
     collect(REACHABLE_ROLE_ABILITIES)
         ->map(fn (string $ability, string $method): array => [$method, $ability])
@@ -76,9 +106,8 @@ it('denies an admin holding every other role ability but not the matching one', 
  */
 it('denies an application user every reachable role ability', function (string $method): void {
     $user = User::factory()->create();
-    $policy = new RolePolicy();
 
-    expect($policy->{$method}($user))->toBeFalse();
+    expect(rolePolicyAppel($method, $user))->toBeFalse();
 })->with(array_keys(REACHABLE_ROLE_ABILITIES));
 
 /**
@@ -88,21 +117,55 @@ it('denies an application user every reachable role ability', function (string $
  */
 it('grants nothing at all to a principal with no permissions', function (string $principal): void {
     $actor = $principal === 'admin' ? Admin::factory()->create() : User::factory()->create();
-    $policy = new RolePolicy();
+    $superAdministrateur = rolePolicyRole(Admin::roleDuSuperAdministrateur());
 
     $abilityMethods = collect(new ReflectionClass(RolePolicy::class)->getMethods(ReflectionMethod::IS_PUBLIC))
-        ->reject(fn (ReflectionMethod $method): bool => $method->isStatic() || $method->getNumberOfParameters() !== 1)
+        ->reject(fn (ReflectionMethod $method): bool => $method->isStatic()
+            || ! in_array($method->getNumberOfParameters(), [1, 2], true)
+            || (string) $method->getParameters()[0]->getType() !== AuthUser::class)
         ->map(fn (ReflectionMethod $method): string => $method->getName())
         ->values();
 
     $granted = $abilityMethods
-        ->filter(fn (string $method): bool => $policy->{$method}($actor) === true)
+        ->filter(fn (string $method): bool => rolePolicyAppel($method, $actor) || rolePolicyAppel($method, $actor, $superAdministrateur))
         ->values()
         ->all();
 
     expect($granted)->toBe([])
         ->and($abilityMethods->all())->toBe([
-            'viewAny', 'view', 'create', 'update', 'delete', 'restore',
+            'viewAny', 'view', 'create', 'update', 'delete', 'deleteAny', 'restore',
             'forceDelete', 'forceDeleteAny', 'restoreAny', 'replicate', 'reorder',
         ]);
 })->with(['admin', 'user']);
+
+/**
+ * Le rôle du super administrateur ne se modifie que par qui le porte, et ne
+ * se supprime par personne, titulaire compris.
+ */
+it('ne laisse modifier le rôle du super administrateur qu’à qui le porte', function (): void {
+    $superAdministrateur = rolePolicyRole(Admin::roleDuSuperAdministrateur());
+    $administrateur = adminWithRoleAbilities(['Update:Role']);
+    $titulaire = adminWithRoleAbilities(['Update:Role']);
+    $titulaire->assignRole($superAdministrateur);
+    $autreTitulaire = adminWithRoleAbilities([]);
+    $autreTitulaire->assignRole($superAdministrateur);
+
+    expect(rolePolicyAppel('update', $administrateur, $superAdministrateur))->toBeFalse()
+        ->and(rolePolicyAppel('update', $administrateur))->toBeTrue()
+        ->and(rolePolicyAppel('update', $titulaire->fresh(), $superAdministrateur))->toBeTrue()
+        ->and(rolePolicyAppel('update', $autreTitulaire->fresh(), $superAdministrateur))->toBeFalse();
+});
+
+it('ne laisse supprimer le rôle du super administrateur à personne, son titulaire compris', function (string $method, string $ability): void {
+    $superAdministrateur = rolePolicyRole(Admin::roleDuSuperAdministrateur());
+    $administrateur = adminWithRoleAbilities([$ability]);
+    $titulaire = adminWithRoleAbilities([$ability]);
+    $titulaire->assignRole($superAdministrateur);
+
+    expect(rolePolicyAppel($method, $administrateur, $superAdministrateur))->toBeFalse()
+        ->and(rolePolicyAppel($method, $titulaire->fresh(), $superAdministrateur))->toBeFalse()
+        ->and(rolePolicyAppel($method, $administrateur))->toBeTrue();
+})->with([
+    'suppression' => ['delete', 'Delete:Role'],
+    'suppression définitive' => ['forceDelete', 'ForceDelete:Role'],
+]);

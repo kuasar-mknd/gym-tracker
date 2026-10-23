@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Une erreur survenue dans le navigateur d'un utilisateur, rapportée par la
@@ -16,6 +17,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Elle part à trente jours (`prunable()`), ou avec le compte qui l'a
  * rapportée : la clé de `user_id` est en cascade (#1938), parce que le
  * message et l'URL peuvent porter ce que le compte a saisi.
+ *
+ * Une ligne est la première occurrence d'une erreur pour un compte sur une
+ * heure (`SECONDES_DU_REGROUPEMENT`) : la route de collecte ne réécrit pas
+ * une empreinte déjà gardée pour ce compte dans la fenêtre, et se plafonne
+ * par compte (`RAPPORTS_PAR_MINUTE`, `RAPPORTS_PAR_JOUR`).
  *
  * @property int $id
  * @property int|null $user_id
@@ -52,6 +58,32 @@ final class ErreurNavigateur extends Model
      */
     public const int PILE_MAX_CARACTERES = 16_383;
 
+    /**
+     * Le limiteur propre à la route de collecte (`erreurs-navigateur.store`),
+     * défini par `AppServiceProvider::plafonnerLaCollecteDesErreursDuNavigateur()`.
+     */
+    public const string LIMITEUR = 'erreurs-navigateur';
+
+    /**
+     * Les rapports qu'un compte peut envoyer en une minute : dix, autant que
+     * le rapporteur de la page en envoie au plus (`rapporteurDErreurs.js`).
+     * Au-delà, la route répond 204 sans rien écrire.
+     */
+    public const int RAPPORTS_PAR_MINUTE = 10;
+
+    /**
+     * Les rapports qu'un compte peut envoyer en une journée, au-delà desquels
+     * la route répond 204 sans rien écrire.
+     */
+    public const int RAPPORTS_PAR_JOUR = 200;
+
+    /**
+     * La fenêtre, une heure, sur laquelle une même erreur (même empreinte) du
+     * même compte ne s'écrit qu'une fois : la première occurrence est gardée,
+     * les suivantes ne réécrivent rien.
+     */
+    public const int SECONDES_DU_REGROUPEMENT = 3_600;
+
     #[\Override]
     protected $table = 'erreurs_navigateur';
 
@@ -62,6 +94,37 @@ final class ErreurNavigateur extends Model
     public static function empreinteDe(string $type, string $message, ?string $source, ?int $ligne): string
     {
         return md5($type.'|'.$message.'|'.($source ?? '').'|'.($ligne ?? ''));
+    }
+
+    /**
+     * La clé de cache qui retient, le temps de `SECONDES_DU_REGROUPEMENT`,
+     * qu'une erreur de cette empreinte a déjà été gardée pour ce compte.
+     */
+    public static function cleDuRegroupement(int $compte, string $empreinte): string
+    {
+        return "erreurs-navigateur:{$compte}:{$empreinte}";
+    }
+
+    /**
+     * Une ligne de l'heure en cours effacée du panneau rend sa clé de
+     * regroupement : l'erreur qui se reproduit dans l'heure s'écrit de
+     * nouveau, et la liste ne la montre pas comme disparue. Une ligne plus
+     * ancienne que `SECONDES_DU_REGROUPEMENT` ne rend rien : sa clé est déjà
+     * tombée, et celle qui court, qui ne porte que le compte et l'empreinte,
+     * est celle de l'occurrence de l'heure en cours, seule écrite dans la
+     * fenêtre, qui reste dans la liste. La purge (`MassPrunable`) et
+     * l'effacement du compte (clé étrangère en cascade) ne passent pas par
+     * ici, mais ne touchent que des lignes de plus de trente jours, ou un
+     * compte qui n'enverra plus rien.
+     */
+    #[\Override]
+    protected static function booted(): void
+    {
+        self::deleted(static function (self $erreur): void {
+            if ($erreur->user_id !== null && $erreur->created_at->greaterThan(now()->subSeconds(self::SECONDES_DU_REGROUPEMENT))) {
+                Cache::forget(self::cleDuRegroupement($erreur->user_id, $erreur->empreinte));
+            }
+        });
     }
 
     /** @return BelongsTo<User, $this> */
