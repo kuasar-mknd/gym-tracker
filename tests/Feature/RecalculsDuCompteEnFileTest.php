@@ -20,12 +20,14 @@ use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\QueueManager;
 use Illuminate\Queue\Worker;
 use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -144,6 +146,51 @@ function recalculEnFileViderLaFile(Worker $worker): array
     }
 
     return $traites;
+}
+
+/**
+ * Traite la file comme un worker qui reprend chaque travail remis en file dès
+ * que la file le rend : quand rien n'est disponible, l'horloge avance jusqu'à
+ * l'heure où le prochain travail le redevient (`available_at`, une seconde
+ * pleine), sans rien de plus.
+ *
+ * @return list<array{travail: string, issue: string, exception: string|null}>
+ */
+function recalculEnFileReprendreDesQueRendu(Worker $worker): array
+{
+    $traites = [];
+
+    foreach (range(1, 80) as $_tour) {
+        $disponibleA = DB::table('jobs')->min('available_at');
+
+        if (! is_numeric($disponibleA)) {
+            break;
+        }
+
+        $resultat = recalculEnFileTraiterLeSuivant($worker);
+
+        if ($resultat === null) {
+            Carbon::setTestNow(Carbon::createFromTimestamp((int) $disponibleA, date_default_timezone_get()));
+
+            continue;
+        }
+
+        $traites[] = $resultat;
+    }
+
+    return $traites;
+}
+
+/**
+ * Pose le verrou d'exécution du recalcul de ce compte, comme le laisse un
+ * worker tué en plein recalcul, pour la durée donnée.
+ */
+function recalculEnFilePoserUnVerrouOrphelin(string $classe, User $user, int $secondes): void
+{
+    $travail = recalculEnFileLeTravail($classe, $user);
+    $sansChevauchement = $travail->middleware()[0];
+
+    expect(Cache::lock($sansChevauchement->getLockKey($travail), $secondes)->get())->toBeTrue();
 }
 
 /**
@@ -566,6 +613,92 @@ it('fait échouer au premier essai un recalcul qui lève, sans verrou laissé de
     $classe::dispatch($user);
 
     expect(recalculEnFileTraiterLeSuivant($worker))->toBe(['travail' => $classe, 'issue' => 'traité', 'exception' => null]);
+})->with([
+    'objectifs' => [SyncUserGoals::class, 'select * from `goals`'],
+    'succès' => [SyncUserAchievements::class, 'select `achievement_id` from `user_achievements`'],
+]);
+
+it('attend la fin du verrou d’un worker tué pris en cours de seconde, même repris dès que la file le rend', function (string $classe): void {
+    Notification::fake();
+    $user = User::factory()->create();
+    config(['queue.default' => 'database']);
+
+    $this->travelTo(Carbon::parse('2026-10-23 10:00:00.500'));
+    recalculEnFilePoserUnVerrouOrphelin($classe, $user, recalculEnFileLeTravail($classe, $user)::VERROU_D_EXECUTION);
+
+    // Le recalcul suivant du compte est pris dans la même seconde. La file
+    // le rend à la seconde pleine : son premier retour ne dure que 4,2 s, et
+    // chacun des suivants 5 s, jusqu'au 25e, à 10:02:00, une demi-seconde
+    // avant la fin du verrou.
+    $this->travelTo(Carbon::parse('2026-10-23 10:00:00.800'));
+    $classe::dispatch($user);
+
+    $issues = recalculEnFileReprendreDesQueRendu(recalculEnFileUnWorker());
+
+    expect(array_column($issues, 'issue'))->toBe([...array_fill(0, 25, 'remis en file'), 'traité'])
+        ->and($issues[25])->toBe(['travail' => $classe, 'issue' => 'traité', 'exception' => null])
+        ->and(now()->format('H:i:s.v'))->toBe('10:02:05.000');
+})->with([
+    'objectifs' => [SyncUserGoals::class],
+    'succès' => [SyncUserAchievements::class],
+]);
+
+it('rend le verrou d’unicité d’un recalcul qui épuise ses essais sans avoir commencé, et l’envoi suivant part aussitôt', function (string $classe): void {
+    Notification::fake();
+    $user = User::factory()->create();
+    config(['queue.default' => 'database']);
+    $this->travelTo('2026-10-23 10:00:00');
+
+    // Un verrou d'exécution qui tient plus que tous les essais du recalcul.
+    recalculEnFilePoserUnVerrouOrphelin($classe, $user, 3600);
+    $classe::dispatch($user);
+
+    $issues = recalculEnFileReprendreDesQueRendu(recalculEnFileUnWorker());
+    $essais = recalculEnFileLeTravail($classe, $user)::ESSAIS_PERMIS;
+
+    expect($issues)->toHaveCount($essais + 1)
+        ->and(array_unique(array_column(array_slice($issues, 0, $essais), 'issue')))->toBe(['remis en file'])
+        ->and($issues[$essais])->toBe(['travail' => $classe, 'issue' => 'en échec', 'exception' => MaxAttemptsExceededException::class])
+        ->and(DB::table('jobs')->count())->toBe(0);
+
+    // Bien avant l'échéance du verrou d'unicité, la prochaine écriture du
+    // compte remet un recalcul en file.
+    $classe::dispatch($user);
+
+    expect(recalculEnFileContenu())->toBe([$classe]);
+})->with([
+    'objectifs' => [SyncUserGoals::class],
+    'succès' => [SyncUserAchievements::class],
+]);
+
+it('ne rend pas, en échouant, le verrou d’unicité d’un envoi plus récent', function (string $classe, string $lecture): void {
+    Notification::fake();
+    $user = User::factory()->create();
+    config(['queue.default' => 'database']);
+    $this->travelTo('2026-10-23 10:00:00');
+
+    $classe::dispatch($user);
+    $this->travel(recalculEnFileLeTravail($classe, $user)->uniqueFor())->seconds();
+    $classe::dispatch($user);
+
+    expect(recalculEnFileContenu())->toBe([$classe, $classe]);
+
+    $leve = false;
+    DB::beforeExecuting(static function (string $sql) use (&$leve, $lecture): void {
+        if (! $leve && str_starts_with($sql, $lecture)) {
+            $leve = true;
+
+            throw new RuntimeException('base indisponible');
+        }
+    });
+
+    // Le plus ancien échoue : le verrou d'unicité appartient au plus récent,
+    // qui attend encore, et l'envoi suivant reste écarté.
+    expect(recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()))->toBe(['travail' => $classe, 'issue' => 'en échec', 'exception' => RuntimeException::class]);
+
+    $classe::dispatch($user);
+
+    expect(recalculEnFileContenu())->toBe([$classe]);
 })->with([
     'objectifs' => [SyncUserGoals::class, 'select * from `goals`'],
     'succès' => [SyncUserAchievements::class, 'select `achievement_id` from `user_achievements`'],
