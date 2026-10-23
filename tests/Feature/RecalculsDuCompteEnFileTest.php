@@ -849,10 +849,11 @@ it('débloque le succès du volume cumulé dès la série validée qui franchit 
     // La file synchrone des tests : les recalculs tournent dans la requête,
     // au moment de leur envoi.
     recalculEnFileValiderParLaRoute($user, $ligne, 100, 2);
+    $journalDeLaRequete = $journal;
 
     expect($user->volumeSouleve())->toBe(1000.0)
         ->and(DB::table('user_achievements')->where('user_id', $user->id)->where('achievement_id', $succes->id)->count())->toBe(1)
-        ->and($journal)->toBe(['écriture du volume de la séance', 'lecture du volume cumulé']);
+        ->and($journalDeLaRequete)->toBe(['écriture du volume de la séance', 'lecture du volume cumulé']);
 
     Notification::assertSentToTimes($user, AchievementUnlocked::class, 1);
 });
