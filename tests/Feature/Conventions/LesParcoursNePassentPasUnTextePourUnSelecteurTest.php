@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Laravel\Dusk\ElementResolver;
 use Symfony\Component\Finder\Finder;
 use Tests\Support\NavigateurDesParcours;
 
@@ -39,8 +38,10 @@ use Tests\Support\NavigateurDesParcours;
 /**
  * Les méthodes du navigateur des parcours qui prennent un sélecteur ou un
  * champ en premier argument, indexées par leur nom en minuscules : celles de
- * Dusk et de `NavigateurDesParcours`, celles de son `ElementResolver`, et les
- * macros que `DuskTestCase` déclare avec un tel premier paramètre.
+ * Dusk et de `NavigateurDesParcours`, et les macros que `DuskTestCase`
+ * déclare avec un tel premier paramètre. Pas celles de l'`ElementResolver`,
+ * qu'aucun parcours n'appelle : son `format()` porterait le nom de celui de
+ * Carbon, dont un format en capitales (`'D M Y'`) passerait pour un texte.
  *
  * @return array<string, string>
  */
@@ -48,13 +49,11 @@ function texteEnSelecteurMethodes(): array
 {
     $methodes = [];
 
-    foreach ([NavigateurDesParcours::class, ElementResolver::class] as $classe) {
-        foreach (new ReflectionClass($classe)->getMethods(ReflectionMethod::IS_PUBLIC) as $methode) {
-            $premier = $methode->getParameters()[0] ?? null;
+    foreach (new ReflectionClass(NavigateurDesParcours::class)->getMethods(ReflectionMethod::IS_PUBLIC) as $methode) {
+        $premier = $methode->getParameters()[0] ?? null;
 
-            if ($premier !== null && in_array($premier->getName(), ['selector', 'field'], true)) {
-                $methodes[strtolower($methode->getName())] = $methode->getName();
-            }
+        if ($premier !== null && in_array($premier->getName(), ['selector', 'field'], true)) {
+            $methodes[strtolower($methode->getName())] = $methode->getName();
         }
     }
 
@@ -143,10 +142,10 @@ it('connaît les méthodes qui prennent un sélecteur, et pas celles qui lisent 
     $methodes = texteEnSelecteurMethodes();
 
     expect($methodes)
-        ->toHaveKeys(['waituntilmissing', 'assertmissing', 'assertnotpresent', 'waitfor', 'click', 'type', 'clickwhensettled', 'findorfail']);
+        ->toHaveKeys(['waituntilmissing', 'assertmissing', 'assertnotpresent', 'waitfor', 'click', 'type', 'clickwhensettled']);
 
     expect($methodes)
-        ->not->toHaveKeys(['waituntilmissingtext', 'waitfortext', 'assertsee', 'assertdontsee', 'press', 'clicklink']);
+        ->not->toHaveKeys(['waituntilmissingtext', 'waitfortext', 'assertsee', 'assertdontsee', 'press', 'clicklink', 'format']);
 });
 
 it('reconnaît un texte en capitales passé pour un sélecteur, et rien d’autre', function (): void {
@@ -160,6 +159,7 @@ it('reconnaît un texte en capitales passé pour un sélecteur, et rien d’autr
         $browser->press('SUPPRIMER LE COMPTE')->clickLink('MES PROGRAMMES');
         $browser->waitUntilMissing('dialog[open]', 15)->waitFor('@add-habit')->assertMissing('NAV');
         $browser->mouseover('header h1')->waitFor('[dusk="'.$id.' A B"]')->assertSeeIn('@titre', 'MON PROFIL');
+        $browser->assertSee(now()->format('D M Y'));
         PHP;
 
     expect(texteEnSelecteurTrouves($code, texteEnSelecteurMethodes()))->toBe([
