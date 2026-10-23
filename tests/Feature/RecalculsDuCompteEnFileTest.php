@@ -50,6 +50,11 @@ use Laravel\Horizon\SupervisorOptions;
  * (`Worker::process()`), avec les réglages de Horizon en production : un
  * second worker qui prend un travail pendant qu'un premier en traite un autre
  * joue deux processus, comme les trois de la production.
+ *
+ * Sous APP_ENV=testing, `Set::saved` écrit le record d'une série dans la
+ * requête, avant d'envoyer les recalculs. En production, `SyncPersonalRecord`
+ * l'écrit dans un worker, derrière eux : les cas « sur le chemin de
+ * production » le jouent (`recalculEnFileCheminDeProduction()`).
  */
 
 afterEach(function (): void {
