@@ -108,10 +108,40 @@ class ProfileEditTest extends DuskTestCase
                 ->script("document.querySelector('[data-testid=\"delete-account-button\"]').click();");
 
             $browser->waitForText('CONFIRMER LA SUPPRESSION', 15)
-                ->assertSee('Cette action est irréversible.')
-                ->script("document.querySelector('[data-testid=\"cancel-delete-button\"]').click();");
+                ->assertSee('Cette action est irréversible.');
 
-            $browser->waitUntilMissing('CONFIRMER LA SUPPRESSION', 15);
+            // La fenêtre ouverte retient le défilement de la page. Sans ce
+            // relevé, le défilement « rendu » vérifié plus bas passerait aussi
+            // pour une fenêtre qui ne l'a jamais retenu. Il se lit sur <html>,
+            // comme dans ModalSemanticsTest : c'est lui que lit la fenêtre du
+            // navigateur.
+            $this->assertSame(
+                'hidden',
+                $browser->script('return getComputedStyle(document.documentElement).overflowY;')[0],
+                'la fenêtre de suppression ouverte laissait la page défiler derrière elle'
+            );
+
+            $browser->script("document.querySelector('[data-testid=\"cancel-delete-button\"]').click();");
+
+            // `waitUntilMissing()` prend un sélecteur, pas un texte : il
+            // cherchait des éléments <confirmer>, <la> et <suppression>, qui
+            // n'existent pas, et passait au premier essai, que la fenêtre se
+            // ferme ou non (#2124). Le texte disparu ne suffit pas non plus :
+            // le panneau se cache aussitôt, mais le <dialog> ne se ferme que
+            // 200 ms plus tard, et un dialogue modal resté ouvert, même vide,
+            // rend toute la page inerte.
+            $browser->waitUntilMissingText('CONFIRMER LA SUPPRESSION', 15)
+                ->waitUntil(
+                    '! document.querySelector("dialog[open]")',
+                    15,
+                    '« Annuler » laissait le dialogue de suppression ouvert après %s secondes'
+                );
+
+            $this->assertNotSame(
+                'hidden',
+                $browser->script('return getComputedStyle(document.documentElement).overflowY;')[0],
+                '« Annuler » fermait la fenêtre de suppression sans rendre le défilement de la page'
+            );
 
             $browser->assertNoConsoleExceptions();
         } catch (\Exception $e) {
