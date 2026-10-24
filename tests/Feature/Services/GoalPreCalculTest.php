@@ -234,6 +234,73 @@ it('ne lit la dernière mensuration qu’une fois pour plusieurs objectifs', fun
         ->and(lecturesDeLaTableDObjectifs($sql, 'body_measurements'))->toBe(1);
 });
 
+/*
+ * Chaque colonne à la dernière pesée qui la porte, et toujours en une lecture
+ * (#2107).
+ *
+ * Le lot lisait UNE pesée, la dernière, pour le poids de corps et la masse
+ * grasse à la fois. La masse grasse est facultative : une dernière pesée sans
+ * elle laissait l'objectif de masse grasse à sa valeur d'avant. Chaque colonne
+ * a désormais sa sous-requête, dans la même instruction.
+ */
+it('lit chaque colonne à la dernière pesée qui la porte, en une seule lecture', function (): void {
+    $user = User::factory()->create();
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'weight' => 86,
+        'body_fat' => 22,
+        'measured_at' => now()->subDays(3),
+    ]);
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'weight' => 85,
+        'body_fat' => null,
+        'measured_at' => now(),
+    ]);
+
+    $poids = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'weight']);
+    $masseGrasse = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'body_fat']);
+
+    $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
+
+    expect($poids->refresh()->current_value)->toBe(85.0)
+        ->and($masseGrasse->refresh()->current_value)->toBe(22.0)
+        ->and(lecturesDeLaTableDObjectifs($sql, 'body_measurements'))->toBe(1);
+});
+
+/*
+ * Un objectif de partie du corps se lit dans `body_part_measurements` : la
+ * lecture des pesées ne le sert pas. Le lot la faisait pour tout objectif de
+ * mensuration ; il ne la fait plus que pour le poids de corps et la masse
+ * grasse (#2107).
+ */
+it('ne lit pas les pesées pour les seuls objectifs de partie du corps', function (): void {
+    $user = User::factory()->create();
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'weight' => 85,
+        'measured_at' => now(),
+    ]);
+
+    BodyPartMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'part' => 'Waist',
+        'value' => 88,
+        'unit' => 'cm',
+        'measured_at' => now(),
+    ]);
+
+    $objectif = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'Waist']);
+
+    $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
+
+    expect($objectif->refresh()->current_value)->toBe(88.0)
+        ->and(lecturesDeLaTableDObjectifs($sql, 'body_measurements'))->toBe(0);
+});
+
 /**
  * L'utilisateur est deja en main : le rattacher a chaque objectif evite qu'ils
  * aillent le rechercher un par un.

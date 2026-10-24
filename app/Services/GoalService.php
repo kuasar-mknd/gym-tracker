@@ -18,6 +18,13 @@ use App\Models\User;
 final class GoalService
 {
     /**
+     * Les mensurations qui sont des COLONNES de `body_measurements`, lues sur
+     * les pesées ; les autres sont des parties du corps, lignes de
+     * `body_part_measurements` (#1454).
+     */
+    private const array COLONNES_DES_PESEES = ['weight', 'body_fat'];
+
+    /**
      * Recalcule l'avancement de tous les objectifs d'un utilisateur.
      *
      * Appelé par SyncUserGoals après l'enregistrement ou la suppression d'une
@@ -107,7 +114,7 @@ final class GoalService
      * Recalcule un objectif : sa valeur courante, puis son état et sa barre.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
      */
     public function updateGoalProgress(Goal $goal, array $mesures = []): void
     {
@@ -172,7 +179,7 @@ final class GoalService
      * atteint par une série ensuite supprimée (#1953).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateWeightGoal(Goal $goal, array $mesures = []): void
     {
@@ -206,7 +213,7 @@ final class GoalService
      * L'avancement d'un objectif de fréquence : le nombre de séances.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateFrequencyGoal(Goal $goal, array $mesures = []): void
     {
@@ -232,7 +239,7 @@ final class GoalService
      * comme un objectif de charge sans record (#1953).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateVolumeGoal(Goal $goal, array $mesures = []): void
     {
@@ -267,8 +274,12 @@ final class GoalService
     /**
      * L'avancement d'un objectif de mensuration : la dernière valeur relevée.
      *
+     * Sans valeur relevée — aucune pesée qui porte la colonne visée, aucune
+     * mesure de la partie du corps —, l'objectif revient à sa valeur de départ,
+     * comme un objectif de charge sans record (#1953, #1954, #2107).
+     *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateMeasurementGoal(Goal $goal, array $mesures = []): void
     {
@@ -284,24 +295,63 @@ final class GoalService
          * designees par leur nom. Lire les secondes comme les premieres rendait
          * « Unknown column 'waist' » — une erreur 500 a chaque pesee (#1454).
          */
-        if (! in_array($goal->measurement_type, ['weight', 'body_fat'], true)) {
+        if (! in_array($goal->measurement_type, self::COLONNES_DES_PESEES, true)) {
             $this->releverLaPartieDuCorps($goal);
 
             return;
         }
 
-        if (isset($mesures['latest_measurement']) && $mesures['latest_measurement'] instanceof \App\Models\BodyMeasurement) {
-            $m = $mesures['latest_measurement'];
-            $latestValue = $m->{$goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type};
-        } else {
-            $latestValue = $goal->user->bodyMeasurements()
-                ->latest('measured_at')
-                ->value($goal->measurement_type === 'weight' ? 'weight' : $goal->measurement_type);
-        }
+        /*
+         * La dernière pesée qui PORTE la colonne, et non la dernière pesée.
+         *
+         * La masse grasse est facultative à la saisie. L'objectif la cherchait
+         * sur la dernière pesée, n'y trouvait rien quand elle n'en avait pas, et
+         * gardait sa valeur d'avant : celle d'une mesure supprimée depuis, avec
+         * son « atteint » et ses 100 %. Sans aucune pesée restante, l'objectif
+         * de poids de corps faisait de même (#2107).
+         *
+         * Le lot a lu, par la même requête, la dernière valeur de chaque
+         * colonne suivie : une colonne nulle dans sa ligne n'a aucune pesée qui
+         * la porte.
+         */
+        $valeur = isset($mesures['dernieres_pesees'])
+            ? ($mesures['dernieres_pesees'][$goal->measurement_type] ?? null)
+            : $this->dernierePeseeQuiPorte($goal->user, $goal->measurement_type)->value($goal->measurement_type);
 
-        if ($latestValue !== null && is_numeric($latestValue)) {
-            $goal->current_value = (float) $latestValue;
-        }
+        $goal->current_value = is_numeric($valeur) ? (float) $valeur : $goal->start_value;
+    }
+
+    /**
+     * La dernière pesée qui porte la colonne demandée, réduite à cette colonne.
+     *
+     * La plus récente par sa date, puis par son identifiant : `measured_at` est
+     * un jour, et deux pesées du même jour se départagent par l'ordre de leur
+     * saisie plutôt que par celui que MySQL choisit. L'index
+     * `(user_id, measured_at)` sert la lecture, parcourue à rebours jusqu'à la
+     * première pesée qui porte la colonne.
+     *
+     * Le lot et le chemin d'un seul objectif posent cette même question, l'un
+     * en sous-requête, l'autre seule : deux écritures de la même lecture
+     * finiraient par diverger (`GoalSyncPathsTest`).
+     *
+     * La requête part de la relation, qui pose le propriétaire, puis s'en
+     * détache (`getQuery()`) : `selectSub()` attend une requête, et sur une
+     * relation, `limit()` devient une fenêtre par parent
+     * (`row_number() over (partition by user_id …)`) dès que le compte n'est pas
+     * enregistré, au lieu d'une lecture qui s'arrête à la première pesée.
+     *
+     * @param  string  $colonne  L'une des `COLONNES_DES_PESEES`.
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\BodyMeasurement>
+     */
+    private function dernierePeseeQuiPorte(User $user, string $colonne): \Illuminate\Database\Eloquent\Builder
+    {
+        return $user->bodyMeasurements()
+            ->getQuery()
+            ->whereNotNull($colonne)
+            ->orderByDesc('measured_at')
+            ->orderByDesc('id')
+            ->limit(1)
+            ->select($colonne);
     }
 
     /**
@@ -386,7 +436,7 @@ final class GoalService
      *
      * @param  User  $user  L'utilisateur concerné.
      * @param  \Illuminate\Support\Collection<int, Goal>  $goals  Les objectifs à servir.
-     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, latest_measurement?: \App\Models\BodyMeasurement|null}
+     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}
      */
     private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
     {
@@ -414,13 +464,45 @@ final class GoalService
             $mesures['max_volumes'] = $this->preCalculateMaxVolumes($user, $idsExercices);
         }
 
-        if ($types->contains(GoalType::Measurement)) {
-            $mesures['latest_measurement'] = $user->bodyMeasurements()
-                ->latest('measured_at')
-                ->first();
+        /*
+         * Seules les colonnes des pesées que suit un objectif se lisent : un
+         * objectif de partie du corps lit ailleurs, et sans objectif de poids de
+         * corps ni de masse grasse, la lecture n'a pas lieu.
+         */
+        $mensurationsSuivies = $goals->where('type', GoalType::Measurement)->pluck('measurement_type');
+        $colonnesSuivies = array_filter(
+            self::COLONNES_DES_PESEES,
+            fn (string $colonne): bool => $mensurationsSuivies->contains($colonne),
+        );
+
+        if ($colonnesSuivies !== []) {
+            $mesures['dernieres_pesees'] = $this->preCalculateDernieresPesees($user, $colonnesSuivies);
         }
 
         return $mesures;
+    }
+
+    /**
+     * La dernière valeur de chacune des colonnes suivies, en une seule lecture.
+     *
+     * Une sous-requête par colonne, chacune celle du chemin individuel
+     * (`dernierePeseeQuiPorte()`) : `select (…) as weight, (…) as body_fat`.
+     * Une colonne qu'aucune pesée ne porte revient nulle. C'était une seule
+     * pesée, la dernière, pour les deux colonnes : une dernière pesée sans
+     * masse grasse ne disait rien de la masse grasse (#2107).
+     *
+     * @param  array<array-key, string>  $colonnes
+     * @return array<array-key, mixed>
+     */
+    private function preCalculateDernieresPesees(User $user, array $colonnes): array
+    {
+        $lecture = \Illuminate\Support\Facades\DB::query();
+
+        foreach ($colonnes as $colonne) {
+            $lecture->selectSub($this->dernierePeseeQuiPorte($user, $colonne), $colonne);
+        }
+
+        return (array) $lecture->first();
     }
 
     /**
