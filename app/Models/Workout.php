@@ -244,8 +244,12 @@ class Workout extends Model
             $workout->workoutLines()->update(['workout_started_at' => $workout->started_at]);
         });
 
+        /*
+         * Après la validation de l'écrivain, pas au moment de l'écriture
+         * (#2108) : `ActiveWorkoutService::oublierApresLaTransaction()`.
+         */
         $clearCache = function (self $workout): void {
-            app(\App\Services\ActiveWorkoutService::class)->forget($workout->user_id);
+            app(\App\Services\ActiveWorkoutService::class)->oublierApresLaTransaction($workout->user_id);
         };
 
         static::saved($clearCache);

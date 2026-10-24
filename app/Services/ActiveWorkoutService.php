@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Workout;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * La séance ouverte d'un utilisateur, lue une fois par requête.
@@ -57,9 +58,34 @@ final class ActiveWorkoutService
             ->first();
     }
 
-    public function forget(int $idUtilisateur): void
+    /**
+     * Oublie la séance en cours du compte quand la transaction ouverte se
+     * termine, validée ou annulée, et tout de suite hors transaction (#2108).
+     *
+     * Les écouteurs de `Workout` et de `WorkoutLine` appellent cette méthode
+     * au moment de l'écriture, donc dans la transaction de l'écrivain quand il
+     * en ouvre une : le lancement d'un modèle écrit la séance et ses lignes,
+     * puis insère les séries, avant de valider. Une requête du même compte
+     * servie entre les deux (un autre onglet, un autre appareil, le
+     * préchauffage des pages) ne voit pas encore l'écriture et remet en cache
+     * l'état d'avant pour deux heures : oubliée tout de suite, l'entrée ne
+     * l'était plus après la validation, et la séance lancée disparaissait de
+     * chaque page. Après une annulation, une lecture faite dans la transaction
+     * même, qui voyait l'écriture, garderait de même une séance qui n'existe
+     * pas.
+     *
+     * Le gestionnaire des transactions est commun aux connexions : le rappel
+     * suit la transaction ouverte la plus récente, quelle que soit la
+     * connexion de l'écriture.
+     */
+    public function oublierApresLaTransaction(int $idUtilisateur): void
     {
-        Cache::forget(self::cle($idUtilisateur));
+        $oublier = static function () use ($idUtilisateur): void {
+            Cache::forget(self::cle($idUtilisateur));
+        };
+
+        DB::afterCommit($oublier);
+        DB::afterRollBack($oublier);
     }
 
     /**
