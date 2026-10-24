@@ -6,6 +6,7 @@ namespace Tests\Feature\Services;
 
 use App\Enums\GoalType;
 use App\Models\BodyMeasurement;
+use App\Models\BodyPartMeasurement;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\Set;
@@ -308,18 +309,21 @@ test('guard clauses for missing exercise_id and measurement_type', function (): 
 });
 
 /**
- * Un objectif de perte de poids sans mesure n'est pas un objectif atteint.
+ * Un objectif de perte de poids sans pesée revient à sa valeur de départ, et
+ * n'est pas atteint.
  *
- * `current_value` vaut 0 par defaut en base. Pour un objectif « descendre a
- * 80 kg », le critere est `current_value <= target_value` — et 0 <= 80. Le
- * garde `&& $goal->current_value > 0` est la seule chose qui empeche un
- * objectif tout juste cree d'etre annonce comme atteint avant meme la premiere
- * pesee.
+ * `current_value` vaut 0 par défaut en base. Pour un objectif « descendre à
+ * 80 kg », le critère est `current_value <= target_value` — et 0 <= 80. Ce test
+ * affirmait que l'objectif gardait ce 0, que seul le garde
+ * `&& $goal->current_value > 0` empêchait d'annoncer atteint avant même la
+ * première pesée.
  *
- * Rien ne l'assurait : la mutation `> 0` en `>= 0` survivait, et l'utilisateur
- * aurait vu « objectif atteint ! » le jour de sa creation.
+ * Depuis #2107, sans pesée qui porte sa colonne, l'objectif revient à sa
+ * valeur de départ, comme un objectif de charge sans record (#1953) ou de
+ * partie du corps sans mesure (#1954) : 90, loin de la cible. Le garde du zéro
+ * se prouve désormais par une mensuration à zéro, juste en dessous.
  */
-test('un objectif de perte de poids sans mesure n’est pas atteint', function (): void {
+test('un objectif de perte de poids sans pesée revient à sa valeur de départ, non atteint', function (): void {
     $user = User::factory()->create();
 
     $goal = Goal::factory()->create([
@@ -333,6 +337,74 @@ test('un objectif de perte de poids sans mesure n’est pas atteint', function (
     ]);
 
     $this->service->updateGoalProgress($goal);
+
+    expect($goal->current_value)->toBe(90.0)
+        ->and($goal->progress_pct)->toBe(0.0)
+        ->and($goal->completed_at)->toBeNull();
+});
+
+/**
+ * Une mensuration à zéro n'atteint pas un objectif à la baisse.
+ *
+ * La saisie d'une partie du corps accepte zéro (`min:0`) : un tour de taille à
+ * 0 cm passe sous toute cible, et seul le garde `&& $goal->current_value > 0`
+ * empêche l'objectif « descendre à 80 » d'être annoncé atteint. Le test du
+ * dessus ne l'éprouve plus, l'objectif sans pesée revenant à son départ : sans
+ * ce cas, la mutation `> 0` en `>= 0` survivrait.
+ */
+test('une mensuration à zéro n’atteint pas un objectif à la baisse', function (): void {
+    $user = User::factory()->create();
+
+    BodyPartMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'part' => 'Waist',
+        'value' => 0,
+        'unit' => 'cm',
+        'measured_at' => Carbon::now(),
+    ]);
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => 'Waist',
+        'start_value' => 90,
+        'current_value' => 90,
+        'target_value' => 80,
+        'completed_at' => null,
+    ]);
+
+    $this->service->updateGoalProgress($goal);
+
+    expect($goal->current_value)->toBe(0.0)
+        ->and($goal->completed_at)->toBeNull();
+});
+
+/**
+ * Un objectif de mensuration sans mensuration choisie n'est pas atteint par
+ * sa valeur actuelle à zéro.
+ *
+ * Le panneau permet de le créer : la mensuration y est facultative, et la
+ * valeur actuelle vaut 0 par défaut. `updateMeasurementGoal()` ne le touche
+ * pas, faute de savoir quoi lire, et sa valeur reste à 0, sous toute cible :
+ * c'est l'autre cas que tient le garde `&& $goal->current_value > 0`, en plus
+ * de la mensuration à zéro du test du dessus.
+ */
+test('un objectif de mensuration sans mensuration choisie n’est pas atteint à zéro', function (): void {
+    $user = User::factory()->create();
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => GoalType::Measurement,
+        'measurement_type' => null,
+        'start_value' => 80,
+        'current_value' => 0,
+        'target_value' => 75,
+        'completed_at' => null,
+    ]);
+
+    $this->service->syncGoals($user);
+
+    $goal->refresh();
 
     expect($goal->current_value)->toBe(0.0)
         ->and($goal->completed_at)->toBeNull();
