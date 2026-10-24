@@ -15,8 +15,8 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  * bon à un travail jamais traité (#2105). La classe qui s'en sert déclare
  * `ShouldBeUniqueUntilProcessing` et porte le compte dans `$user`. Sa clé
  * (`uniqueId()`), celle du verrou d'unicité comme du verrou d'exécution, est
- * le compte ; une classe qui la restreint la redéfinit : `SyncPersonalRecord`
- * la porte à la série du compte (#2130).
+ * le compte (`compte:{compte}`) ; une classe qui la restreint la redéfinit :
+ * `SyncPersonalRecord` la porte à la série du compte (#2130).
  *
  * Unique jusqu'au traitement : Laravel rend le verrou d'unicité au moment où
  * le travail commence. Un envoi qui arrive pendant le recalcul du compte met
@@ -90,11 +90,15 @@ trait UnRecalculParCompteALaFois
     public const int ESSAIS_PERMIS = self::VERROU_D_EXECUTION / self::ATTENTE_AVANT_DE_RETENTER + 2;
 
     /**
-     * Le compte : un seul travail de cette classe l'attend en file.
+     * Le compte : un seul travail de cette classe l'attend en file. Laravel
+     * préfixe la clé du nom de la classe. Elle n'a plus la forme d'avant #2105
+     * (l'identifiant du compte seul) : un verrou pris sous cette forme n'avait
+     * pas d'échéance, et celui d'un travail vidé de la file avant ce correctif
+     * retiendrait sinon les recalculs du compte pour toujours (#2130).
      */
     public function uniqueId(): string
     {
-        return (string) $this->user->id;
+        return "compte:{$this->user->id}";
     }
 
     /**
