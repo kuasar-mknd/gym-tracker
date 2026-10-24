@@ -13,7 +13,10 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  * succès) : un envoi n'est jamais perdu, deux recalculs de la même classe pour
  * un même compte ne tournent jamais ensemble, et aucun verrou ne survit pour de
  * bon à un travail jamais traité (#2105). La classe qui s'en sert déclare
- * `ShouldBeUniqueUntilProcessing` et porte le compte dans `$user`.
+ * `ShouldBeUniqueUntilProcessing` et porte le compte dans `$user`. Sa clé
+ * (`uniqueId()`), celle du verrou d'unicité comme du verrou d'exécution, est
+ * le compte ; une classe qui la restreint la redéfinit : `SyncPersonalRecord`
+ * la porte à la série du compte (#2130).
  *
  * Unique jusqu'au traitement : Laravel rend le verrou d'unicité au moment où
  * le travail commence. Un envoi qui arrive pendant le recalcul du compte met
@@ -35,7 +38,7 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  * garde sa place. Un travail qui échoue le rend (`failed()`).
  *
  * Une seule exécution à la fois par compte et par classe (`WithoutOverlapping`
- * sur son identifiant). Sans elle, le recalcul accepté pendant un autre
+ * sur la clé du travail). Sans elle, le recalcul accepté pendant un autre
  * tournerait à côté de lui : le plus ancien écrirait en dernier l'état qu'il a
  * lu avant, et deux recalculs des succès inséreraient le même succès, que
  * l'index unique de `user_achievements` refuse. Un recalcul des objectifs et
@@ -103,14 +106,15 @@ trait UnRecalculParCompteALaFois
     }
 
     /**
-     * Un seul recalcul de cette classe à la fois pour le compte.
+     * Un seul recalcul de cette classe à la fois pour la clé du travail : le
+     * compte, ou ce à quoi la classe la restreint.
      *
      * @return list<WithoutOverlapping>
      */
     public function middleware(): array
     {
         return [
-            new WithoutOverlapping((string) $this->user->id)
+            new WithoutOverlapping($this->uniqueId())
                 ->releaseAfter(self::ATTENTE_AVANT_DE_RETENTER)
                 ->expireAfter(self::VERROU_D_EXECUTION),
         ];
