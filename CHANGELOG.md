@@ -8,7 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Corrigé
-- **La séance lancée depuis un modèle ne disparaît plus du bandeau quand une autre page du compte la lit pendant son lancement** (#2108, #PR) : la séance en cours, que chaque page partage, se garde en cache, et son oubli partait dans la transaction du lancement, avant l'insertion des séries et la validation. Un autre onglet, un autre appareil ou le préchauffage des pages servi dans cette fenêtre remettait en cache « aucune séance en cours » pour deux heures, ou jusqu'à la prochaine écriture de la séance ou de l'un de ses exercices. L'oubli part désormais à la fin de la transaction de l'écrivain, validée ou annulée, pour la séance comme pour ses exercices et quel que soit l'écrivain ; hors transaction, il part aussitôt, comme avant.
+- **La séance lancée depuis un modèle ne disparaît plus du bandeau quand une autre page du compte la lit pendant son lancement** (#2108, #2135) : la séance en cours, que chaque page partage, se garde en cache, et son oubli partait dans la transaction du lancement, avant l'insertion des séries et la validation. Un autre onglet, un autre appareil ou le préchauffage des pages servi dans cette fenêtre remettait en cache « aucune séance en cours » pour deux heures, ou jusqu'à la prochaine écriture de la séance ou de l'un de ses exercices. L'oubli part désormais à la fin de la transaction de l'écrivain, validée ou annulée, pour la séance comme pour ses exercices et quel que soit l'écrivain ; hors transaction, il part aussitôt, comme avant.
 
 ## [1.7.0] - 2026-10-23
 
