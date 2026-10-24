@@ -219,6 +219,24 @@ class Set extends Model
 
         static::saved(function (Set $set): void {
             $set->mettreAJourLesVolumes();
+
+            /*
+             * Les recalculs des succès et des objectifs du compte, après le
+             * volume de la séance, que lit le succès du volume cumulé
+             * (`User::volumeSouleve()`). Ils partaient de l'écouteur de
+             * `AppServiceProvider::registerSetEvents()`, qui tourne avant
+             * celui-ci : le recalcul des succès lisait le volume d'avant, et la
+             * série qui franchissait le seuil laissait le succès verrouillé
+             * jusqu'à l'écriture suivante (#2105). Ici, ils suivent aussi ce
+             * que cet écouteur-là écrit dans la requête : le record de la série
+             * sous APP_ENV=testing, et les records que la série détenait.
+             */
+            $user = $set->workoutLine?->workout?->user;
+
+            if ($user instanceof User) {
+                \App\Jobs\SyncUserAchievements::dispatch($user);
+                \App\Jobs\SyncUserGoals::dispatch($user);
+            }
         });
 
         static::deleted(function (Set $set): void {

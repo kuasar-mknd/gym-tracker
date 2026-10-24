@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Un recalcul des objectifs ou des succès demandé pendant un autre n'est plus perdu** (#2105, #2129) : une série validée ou supprimée, une pesée ou une fin de séance qui arrivait pendant le recalcul du même compte n'en mettait aucun nouveau en file, et l'objectif restait « non atteint » alors que le record l'atteignait, ou le succès verrouillé, jusqu'à l'écriture suivante. Le recalcul demandé pendant un autre attend désormais qu'il finisse, puis relit l'état final ; deux recalculs des objectifs, ou deux des succès, d'un même compte ne tournent plus jamais ensemble. Le record d'une série, écrit en file après l'envoi des recalculs, les relance une fois écrit : ils pouvaient tourner avant lui sur un autre worker, ou derrière un recalcul en attente qui le précédait dans la file. La série validée qui franchit un seuil de volume cumulé débloque aussitôt son succès : le recalcul lisait le volume de la séance d'avant elle, et le succès attendait l'écriture suivante. Un travail retiré de la file sans être traité ne bloque plus les recalculs du compte que cinq minutes, au lieu de toujours.
+
 ## [1.7.0] - 2026-10-23
 
 ### Ajouté
