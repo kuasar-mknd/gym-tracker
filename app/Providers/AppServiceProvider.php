@@ -265,8 +265,11 @@ final class AppServiceProvider extends ServiceProvider
             app(\App\Services\PersonalRecordService::class)->refreshRecordsHeldBy($set, $user);
             app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $user->id);
 
-            \App\Jobs\SyncUserAchievements::dispatch($user);
-            \App\Jobs\SyncUserGoals::dispatch($user);
+            /*
+             * Les recalculs des succès et des objectifs partent de l'écouteur
+             * de `Set::booted()`, qui tourne après celui-ci, une fois écrit le
+             * volume de la séance que lit le succès du volume cumulé (#2105).
+             */
         });
 
         Set::deleted(function (Set $set): void {
