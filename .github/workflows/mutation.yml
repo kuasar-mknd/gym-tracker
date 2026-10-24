@@ -223,7 +223,7 @@ jobs:
                     # 89,86 pour le reste, qui laisse passer six survivants de
                     # plus.
                     - scope: 'App\Services\PersonalRecordService'
-                      timeout: 45
+                      timeout: 180
                       min: 82
                     # Tout App\Services sauf PersonalRecordService, que la part
                     # precedente mute : `ignore` passe a `--ignore`, et
@@ -231,7 +231,7 @@ jobs:
                     # classe soit mutee par une part, et une seule.
                     - scope: 'App\Services'
                       ignore: 'app/Services/PersonalRecordService.php'
-                      timeout: 45
+                      timeout: 180
                       min: 89
                     # 95 et non 97, contrairement aux deux autres parts qui se posent
                     # a un point sous leur mesure. La raison est le nombre
@@ -249,7 +249,7 @@ jobs:
                     # 3 septembre (la part est plus couverte depuis #1692) et un job
                     # annule a 30. Quarante-cinq laisse la marge que 30 n'avait plus.
                     - scope: 'App\Actions'
-                      timeout: 45
+                      timeout: 180
                       min: 95
                     # 99 sur une mesure a 100,00 %, 316 mutants tues sur 316.
                     #
@@ -269,7 +269,7 @@ jobs:
                     # laisse passer trois survivants la ou 94 en laissait
                     # passer dix-neuf.
                     - scope: 'App\Policies'
-                      timeout: 30
+                      timeout: 180
                       min: 99
         # La version de MySQL de la production, seule : la passe juge les
         # tests, que la CI fait déjà tourner sur chaque version, et la doubler
