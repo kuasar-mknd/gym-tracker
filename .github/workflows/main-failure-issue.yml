@@ -14,6 +14,16 @@ name: Signaler un workflow rouge sur main
 # ouverte pour le meme workflow — sans quoi une semaine de rouge produirait sept
 # issues identiques et on cesserait de les lire.
 #
+# Un run ANNULE se signale comme un run en echec. Un job qui depasse son
+# `timeout-minutes` est annule, pas en echec, et la promotion d'un tag exige
+# une passe reussie : une nuit annulee bloque la livraison comme une nuit
+# rouge. Du 16 au 24/10, la part App\Services a depasse ses 45 minutes chaque
+# nuit, neuf nuits annulees, et aucune issue ne s'est ouverte : le blocage
+# s'est decouvert le jour de la release. Sur main, rien n'annule un run de
+# lui-meme : ci.yml n'annule un run en cours que sur une PR, et
+# mutation.yml n'a pas de groupe de concurrence. Reste l'arret a la main, qui
+# bloque la promotion de la meme facon.
+#
 # LIMITE CONNUE, ecrite ici pour qu'elle ne se redecouvre pas : une fusion faite
 # avec le GITHUB_TOKEN — c'est le cas des PR Dependabot passees par auto-merge —
 # ne declenche AUCUN run sur main. GitHub ne reveille pas les workflows pour un
@@ -37,13 +47,14 @@ permissions:
 
 jobs:
     signaler:
-        if: github.event.workflow_run.conclusion == 'failure'
+        if: github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled'
         runs-on: ubuntu-latest
         steps:
             - name: Ouvrir ou completer l'issue
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   REPO: ${{ github.repository }}
+                  CONCLUSION: ${{ github.event.workflow_run.conclusion }}
                   RUN_ID: ${{ github.event.workflow_run.id }}
                   RUN_URL: ${{ github.event.workflow_run.html_url }}
                   SHA: ${{ github.event.workflow_run.head_sha }}
@@ -54,13 +65,20 @@ jobs:
                   # Les jobs en echec, pas seulement le fait qu'il y en ait un :
                   # « laravel-tests » et « browser-tests » n'appellent pas la
                   # meme reaction, et le titre doit le dire sans avoir a ouvrir
-                  # le run.
+                  # le run. Un job annule, le plus souvent par sa limite de
+                  # temps, est nomme lui aussi, et dit l'etre.
                   JOBS=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
-                    --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+                    --jq '[.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | if .conclusion == "cancelled" then "\(.name) (annule)" else .name end] | join(", ")')
                   [ -n "$JOBS" ] || JOBS="cause inconnue"
 
+                  if [ "$CONCLUSION" = "cancelled" ]; then
+                      ETAT_DU_RUN="a ete annule sur \`main\`, par la limite de temps d'un job (\`timeout-minutes\`) ou a la main. Une passe annulee n'est pas verte : la promotion attend une passe reussie."
+                  else
+                      ETAT_DU_RUN="a echoue sur \`main\`."
+                  fi
+
                   BODY=$(cat <<EOF
-                  **$WORKFLOW** a echoue sur \`main\`.
+                  **$WORKFLOW** $ETAT_DU_RUN
 
                   | | |
                   |---|---|
