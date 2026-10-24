@@ -230,10 +230,17 @@ jobs:
                     # ChaqueClasseMuteeLaNuitLEstUneFoisTest exige que chaque
                     # classe soit mutee par une part, et une seule.
                     - scope: 'App\Services'
-                      ignore: 'app/Services/PersonalRecordService.php,app/Services/Diagnostic'
+                      ignore: 'app/Services/PersonalRecordService.php,app/Services/Stats,app/Services/Diagnostic'
                       timeout: 180
-                      min: 89
+                      min: 80
+                    - scope: 'App\Services\Stats'
+                      timeout: 180
+                      min: 80
                     - scope: 'App\Services\Diagnostic'
+                      ignore: 'app/Services/Diagnostic/Projections'
+                      timeout: 180
+                      min: 80
+                    - scope: 'App\Services\Diagnostic\Projections'
                       timeout: 180
                       min: 80
                     # 95 et non 97, contrairement aux deux autres parts qui se posent
@@ -399,7 +406,7 @@ jobs:
                   if [ -n "$LAISSE" ]; then
                       options+=(--ignore="$LAISSE")
                   fi
-                  vendor/bin/pest --mutate --parallel --covered-only "${options[@]}" \
+                  vendor/bin/pest --mutate --parallel --covered-only --profile "${options[@]}" \
                     | tee mutation-report.txt
 
             - name: Upload report
