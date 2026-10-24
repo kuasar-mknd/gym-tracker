@@ -16,6 +16,7 @@ use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Notifications\AchievementUnlocked;
 use App\Services\PersonalRecordService;
+use Illuminate\Bus\UniqueLock;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Database\Events\QueryExecuted;
@@ -32,6 +33,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 use Laravel\Horizon\ProvisioningPlan;
 use Laravel\Horizon\SupervisorOptions;
 
@@ -57,6 +59,16 @@ use function Pest\Laravel\actingAs;
  * requête, avant d'envoyer les recalculs. En production, `SyncPersonalRecord`
  * l'écrit dans un worker, derrière eux : les cas « sur le chemin de
  * production » le jouent (`recalculEnFileCheminDeProduction()`).
+ *
+ * `SyncPersonalRecord` suit la même voie, par série et par compte (#2130). Il
+ * était `ShouldBeUnique` sans échéance : la correction d'une série arrivée
+ * pendant la synchronisation de ses records, qui avait déjà relu la série,
+ * n'en mettait aucune nouvelle en file, et un travail vidé de la file bloquait
+ * les records de la série pour toujours. Les cas dont le jeu de données nomme
+ * « records d’une série » le jouent comme les deux recalculs ; ceux qui
+ * passent par `recalculEnFilePendantLaLectureDesRecords()` arrêtent la
+ * synchronisation sous le verrou des records de l'exercice, comme
+ * `RecordsConcurrentsTest`.
  */
 
 afterEach(function (): void {
@@ -289,15 +301,96 @@ function recalculEnFileSuivreLeTravailEnCours(): Closure
 }
 
 /**
- * Le recalcul que nomme un jeu de données, pour ce compte.
+ * Le travail que nomme un jeu de données, pour ce compte : un recalcul, ou la
+ * synchronisation des records de sa série (`recalculEnFileUneSerieDe()`).
  */
-function recalculEnFileLeTravail(string $classe, User $user): SyncUserGoals|SyncUserAchievements
+function recalculEnFileLeTravail(string $classe, User $user): SyncUserGoals|SyncUserAchievements|SyncPersonalRecord
 {
     return match ($classe) {
         SyncUserGoals::class => new SyncUserGoals($user),
         SyncUserAchievements::class => new SyncUserAchievements($user),
-        default => throw new LogicException('Ni les objectifs ni les succès : '.$classe),
+        SyncPersonalRecord::class => new SyncPersonalRecord(recalculEnFileUneSerieDe($user), $user),
+        default => throw new LogicException('Ni les objectifs, ni les succès, ni les records : '.$classe),
     };
+}
+
+/**
+ * Envoie le travail que nomme un jeu de données, pour ce compte, comme le font
+ * les écouteurs : `dispatch()`, qui prend le verrou d'unicité.
+ */
+function recalculEnFileEnvoyer(string $classe, User $user): void
+{
+    dispatch(recalculEnFileLeTravail($classe, $user));
+}
+
+/**
+ * La série que synchronise `SyncPersonalRecord` dans les cas qu'il partage
+ * avec les deux recalculs : la dernière du compte, ou une série faite de
+ * 100 kg posée sans évènement, qui ne met rien en file.
+ */
+function recalculEnFileUneSerieDe(User $user): Set
+{
+    $serie = Set::query()->where('user_id', $user->id)->orderByDesc('id')->first();
+
+    if ($serie instanceof Set) {
+        return $serie;
+    }
+
+    $exercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
+    $seance = Workout::factory()->createQuietly(['user_id' => $user->id]);
+    $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
+
+    return Set::factory()->createQuietly([
+        'workout_line_id' => $ligne->id,
+        'user_id' => $user->id,
+        'weight' => 100,
+        'reps' => 1,
+        'is_warmup' => false,
+        'is_completed' => true,
+    ]);
+}
+
+/**
+ * Lance `$premier` dans une fibre et l'arrête à sa lecture des records, sous
+ * le verrou des records de l'exercice, la série déjà relue, puis lance
+ * `$pendant`. Chaque attente de ce verrou (`Sleep`, simulé) rend la main à la
+ * fibre, qui termine ; sinon elle reprend après `$pendant`. Rend ce que rend
+ * chacun.
+ *
+ * @return array{0: mixed, 1: mixed}
+ */
+function recalculEnFilePendantLaLectureDesRecords(Closure $premier, Closure $pendant): array
+{
+    $suspendue = false;
+    $fibre = new Fiber($premier);
+
+    DB::listen(static function (QueryExecuted $requete) use (&$suspendue, $fibre): void {
+        if (! $suspendue && Fiber::getCurrent() === $fibre && str_starts_with($requete->sql, 'select * from `personal_records`')) {
+            $suspendue = true;
+            Fiber::suspend();
+        }
+    });
+
+    Sleep::fake();
+    Sleep::whenFakingSleep(static function () use ($fibre): void {
+        if ($fibre->isSuspended()) {
+            $fibre->resume();
+        }
+    });
+
+    $fibre->start();
+
+    expect($fibre->isSuspended())->toBeTrue('La synchronisation devait lire les records avant d’écrire.');
+
+    $pendantLaLecture = $pendant();
+
+    if ($fibre->isSuspended()) {
+        $fibre->resume();
+    }
+
+    expect($fibre->isTerminated())->toBeTrue();
+
+    return [$fibre->getReturn(), $pendantLaLecture];
 }
 
 /**
@@ -603,6 +696,144 @@ it('ne renvoie aucun recalcul quand le record s’écrit dans la requête ou par
     Queue::assertNothingPushed();
 });
 
+it('synchronise les records de la valeur corrigée quand la série est corrigée pendant la synchronisation de ses records, sur le chemin de production', function (): void {
+    Notification::fake();
+    $succes = recalculEnFileSuccesDeCharge();
+    [$user, $ligne, $objectif] = recalculEnFileObjectifDeCharge();
+
+    // Le record en place, 95 kg, tenu par une autre série et écrit dans la
+    // requête : l'objectif « 100 kg » n'est pas atteint.
+    recalculEnFileValiderUneSerie($ligne, 95);
+
+    config(['queue.default' => 'database']);
+    recalculEnFileCheminDeProduction();
+
+    // 90 kg, sous le record : la série n'en tient aucun.
+    $serie = recalculEnFileValiderUneSerie($ligne, 90);
+
+    expect(recalculEnFileContenu())->toBe([SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class]);
+
+    [$synchronisation, $fileApresLaCorrection] = recalculEnFilePendantLaLectureDesRecords(
+        static fn (): ?array => recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
+        static function () use ($serie): array {
+            // La faute de frappe corrigée aussitôt, pendant que la
+            // synchronisation compare les records à la série relue à 90 kg.
+            // La requête attend le verrou des records, puis ne reconstruit
+            // que ceux que la série tient : aucun.
+            Set::query()->findOrFail($serie->id)->update(['weight' => 120]);
+
+            return recalculEnFileContenu();
+        },
+    );
+
+    $traites = array_column(recalculEnFileViderLaFile(recalculEnFileUnWorker()), 'travail');
+
+    $objectif->refresh();
+    $record = PersonalRecord::query()
+        ->where('user_id', $user->id)
+        ->where('exercise_id', $ligne->exercise_id)
+        ->where('type', 'max_weight')
+        ->sole();
+
+    expect($record->value)->toBe('120.00')
+        ->and($record->set_id)->toBe($serie->id)
+        ->and($objectif->current_value)->toBe(120.0)
+        ->and($objectif->completed_at)->not->toBeNull()
+        ->and(DB::table('user_achievements')->where('user_id', $user->id)->where('achievement_id', $succes->id)->count())->toBe(1)
+        ->and($synchronisation)->toBe(['travail' => SyncPersonalRecord::class, 'issue' => 'traité', 'exception' => null])
+        ->and($fileApresLaCorrection)->toBe([SyncUserAchievements::class, SyncUserGoals::class, SyncPersonalRecord::class])
+        ->and($traites)->toBe([
+            SyncUserAchievements::class, SyncUserGoals::class,
+            SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class,
+        ])
+        ->and(DB::table('jobs')->count())->toBe(0);
+
+    Notification::assertSentToTimes($user, AchievementUnlocked::class, 1);
+});
+
+it('ne fait jamais tourner ensemble deux synchronisations des records d’une même série, et laisse tourner celle d’une autre série du compte', function (): void {
+    Notification::fake();
+    [$user, $ligne] = recalculEnFileObjectifDeCharge();
+    $serie = recalculEnFileValiderUneSerie($ligne, 90);
+    $autreExercice = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
+    $autreLigne = WorkoutLine::factory()->create(['workout_id' => $ligne->workout_id, 'exercise_id' => $autreExercice->id]);
+    $autreSerie = recalculEnFileValiderUneSerie($autreLigne, 60);
+
+    config(['queue.default' => 'database']);
+    recalculEnFileCheminDeProduction();
+    SyncPersonalRecord::dispatch($serie, $user);
+
+    [$premiere, $pendantLaPremiere] = recalculEnFilePendantLaLectureDesRecords(
+        static fn (): ?array => recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
+        static function () use ($serie, $autreSerie, $user): array {
+            // Deux envois pendant la première synchronisation, la même série
+            // puis une autre série du compte, que deux autres workers
+            // prennent aussitôt.
+            SyncPersonalRecord::dispatch($serie, $user);
+            SyncPersonalRecord::dispatch($autreSerie, $user);
+
+            return [
+                recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
+                recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()),
+            ];
+        },
+    );
+
+    $traites = recalculEnFileViderLaFile(recalculEnFileUnWorker());
+
+    expect($premiere)->toBe(['travail' => SyncPersonalRecord::class, 'issue' => 'traité', 'exception' => null])
+        ->and($pendantLaPremiere)->toBe([
+            ['travail' => SyncPersonalRecord::class, 'issue' => 'remis en file', 'exception' => null],
+            ['travail' => SyncPersonalRecord::class, 'issue' => 'traité', 'exception' => null],
+        ])
+        ->and($traites)->toBe([
+            ['travail' => SyncUserAchievements::class, 'issue' => 'traité', 'exception' => null],
+            ['travail' => SyncUserGoals::class, 'issue' => 'traité', 'exception' => null],
+            ['travail' => SyncPersonalRecord::class, 'issue' => 'traité', 'exception' => null],
+            ['travail' => SyncUserAchievements::class, 'issue' => 'traité', 'exception' => null],
+            ['travail' => SyncUserGoals::class, 'issue' => 'traité', 'exception' => null],
+        ]);
+});
+
+it('tient un verrou d’unicité par série : la synchronisation qui attend pour une série n’écarte pas celle d’une autre série du compte', function (): void {
+    [$user, $ligne] = recalculEnFileObjectifDeCharge();
+    $premiere = recalculEnFileValiderUneSerie($ligne, 90);
+    $seconde = recalculEnFileValiderUneSerie($ligne, 80);
+
+    $file = Queue::fake();
+
+    SyncPersonalRecord::dispatch($premiere, $user);
+    SyncPersonalRecord::dispatch($seconde, $user);
+    SyncPersonalRecord::dispatch($premiere, $user);
+
+    $series = $file->pushed(SyncPersonalRecord::class)->map(static function (mixed $travail): int {
+        assert($travail instanceof SyncPersonalRecord);
+
+        return $travail->set->id;
+    })->all();
+
+    expect($series)->toBe([$premiere->id, $seconde->id]);
+});
+
+it('met en file la synchronisation des records d’une série que retenait, sans échéance, un verrou d’unicité pris sous l’ancienne clé', function (): void {
+    [$user, $ligne] = recalculEnFileObjectifDeCharge();
+    $serie = recalculEnFileValiderUneSerie($ligne, 90);
+    config(['queue.default' => 'database']);
+
+    // Le verrou qu'un travail vidé de la file a pu laisser avant #2130 : pris
+    // à l'envoi sous la clé d'alors (`sync_pr_{compte}_{série}`), sans
+    // échéance, il ne se rendait jamais.
+    $travail = new SyncPersonalRecord($serie, $user);
+    $cle = UniqueLock::getKey($travail);
+    $ancienneCle = substr($cle, 0, -strlen($travail->uniqueId())).'sync_pr_'.$user->id.'_'.$serie->id;
+
+    expect(Cache::lock($ancienneCle)->get())->toBeTrue();
+
+    SyncPersonalRecord::dispatch($serie, $user);
+
+    expect(recalculEnFileContenu())->toBe([SyncPersonalRecord::class]);
+});
+
 it('tient un verrou d’unicité par compte : le recalcul qui attend pour un compte n’écarte pas celui d’un autre', function (string $classe): void {
     $premier = User::factory()->create();
     $second = User::factory()->create();
@@ -631,19 +862,20 @@ it('met en file le recalcul envoyé trois jours après un vidage de la file', fu
     $user = User::factory()->create();
     config(['queue.default' => 'database']);
 
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
     expect(DB::table('jobs')->count())->toBe(1);
 
     Artisan::call('queue:clear', ['connection' => 'database', '--force' => true]);
     expect(DB::table('jobs')->count())->toBe(0);
 
     $this->travel(3)->days();
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
 
     expect(recalculEnFileContenu())->toBe([$classe]);
 })->with([
     'objectifs' => [SyncUserGoals::class],
     'succès' => [SyncUserAchievements::class],
+    'records d’une série' => [SyncPersonalRecord::class],
 ]);
 
 it('écarte un doublon tant que le verrou d’un recalcul jamais traité tient, et l’accepte à son échéance', function (string $classe): void {
@@ -651,21 +883,22 @@ it('écarte un doublon tant que le verrou d’un recalcul jamais traité tient, 
     $user = User::factory()->create();
     config(['queue.default' => 'database']);
 
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
     Artisan::call('queue:clear', ['connection' => 'database', '--force' => true]);
 
     $echeance = recalculEnFileLeTravail($classe, $user)->uniqueFor();
 
     $this->travel($echeance - 1)->seconds();
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
     expect(DB::table('jobs')->count())->toBe(0);
 
     $this->travel(1)->seconds();
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
     expect(recalculEnFileContenu())->toBe([$classe]);
 })->with([
     'objectifs' => [SyncUserGoals::class],
     'succès' => [SyncUserAchievements::class],
+    'records d’une série' => [SyncPersonalRecord::class],
 ]);
 
 it('fait échouer au premier essai un recalcul qui lève, sans verrou laissé derrière lui', function (string $classe, string $lecture): void {
@@ -682,7 +915,7 @@ it('fait échouer au premier essai un recalcul qui lève, sans verrou laissé de
         }
     });
 
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
     $worker = recalculEnFileUnWorker();
 
     expect(recalculEnFileTraiterLeSuivant($worker))->toBe(['travail' => $classe, 'issue' => 'en échec', 'exception' => RuntimeException::class])
@@ -690,12 +923,13 @@ it('fait échouer au premier essai un recalcul qui lève, sans verrou laissé de
 
     // Ni le verrou d'unicité ni celui de l'exécution ne survivent à l'échec :
     // l'écriture suivante remet un recalcul en file, et il tourne.
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
 
     expect(recalculEnFileTraiterLeSuivant($worker))->toBe(['travail' => $classe, 'issue' => 'traité', 'exception' => null]);
 })->with([
     'objectifs' => [SyncUserGoals::class, 'select * from `goals`'],
     'succès' => [SyncUserAchievements::class, 'select `achievement_id` from `user_achievements`'],
+    'records d’une série' => [SyncPersonalRecord::class, 'select * from `personal_records`'],
 ]);
 
 it('attend la fin du verrou d’un worker tué pris en cours de seconde, même repris dès que la file le rend', function (string $classe): void {
@@ -731,7 +965,7 @@ it('rend le verrou d’unicité d’un recalcul qui épuise ses essais sans avoi
 
     // Un verrou d'exécution qui tient plus que tous les essais du recalcul.
     recalculEnFilePoserUnVerrouOrphelin($classe, $user, 3600);
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
 
     $essais = recalculEnFileLeTravail($classe, $user)::ESSAIS_PERMIS;
     $issues = recalculEnFileReprendreDesQueRendu(recalculEnFileUnWorker(), $essais);
@@ -743,12 +977,13 @@ it('rend le verrou d’unicité d’un recalcul qui épuise ses essais sans avoi
 
     // Bien avant l'échéance du verrou d'unicité, la prochaine écriture du
     // compte remet un recalcul en file.
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
 
     expect(recalculEnFileContenu())->toBe([$classe]);
 })->with([
     'objectifs' => [SyncUserGoals::class],
     'succès' => [SyncUserAchievements::class],
+    'records d’une série' => [SyncPersonalRecord::class],
 ]);
 
 it('ne rend pas, en échouant, le verrou d’unicité d’un envoi plus récent', function (string $classe, string $lecture): void {
@@ -757,9 +992,9 @@ it('ne rend pas, en échouant, le verrou d’unicité d’un envoi plus récent'
     config(['queue.default' => 'database']);
     $this->travelTo('2026-10-23 10:00:00');
 
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
     $this->travel(recalculEnFileLeTravail($classe, $user)->uniqueFor())->seconds();
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
 
     expect(recalculEnFileContenu())->toBe([$classe, $classe]);
 
@@ -776,18 +1011,19 @@ it('ne rend pas, en échouant, le verrou d’unicité d’un envoi plus récent'
     // qui attend encore, et l'envoi suivant reste écarté.
     expect(recalculEnFileTraiterLeSuivant(recalculEnFileUnWorker()))->toBe(['travail' => $classe, 'issue' => 'en échec', 'exception' => RuntimeException::class]);
 
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
 
     expect(recalculEnFileContenu())->toBe([$classe]);
 })->with([
     'objectifs' => [SyncUserGoals::class, 'select * from `goals`'],
     'succès' => [SyncUserAchievements::class, 'select `achievement_id` from `user_achievements`'],
+    'records d’une série' => [SyncPersonalRecord::class, 'select * from `personal_records`'],
 ]);
 
 it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qui échoue ou plante', function (string $classe): void {
     $user = User::factory()->create();
     config(['queue.default' => 'database']);
-    $classe::dispatch($user);
+    recalculEnFileEnvoyer($classe, $user);
 
     $charge = DB::table('jobs')->sole()->payload;
     assert(is_string($charge));
@@ -802,7 +1038,9 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
     $attente = $sansChevauchement->releaseAfter;
     assert(is_int($attente));
 
-    expect($sansChevauchement->key)->toBe((string) $user->id)
+    // La clé de l'exécution est celle du verrou d'unicité : le compte pour un
+    // recalcul, la série du compte pour ses records.
+    expect($sansChevauchement->key)->toBe($travail->uniqueId())
         ->and($sansChevauchement->shareKey)->toBeFalse()
         ->and($attente)->toBeGreaterThan(0)
         // Le premier essai, un retour par attente pendant la vie du verrou, et
@@ -849,6 +1087,7 @@ it('dit au worker de rejouer un recalcul qui attend son tour, et jamais celui qu
 })->with([
     'objectifs' => [SyncUserGoals::class],
     'succès' => [SyncUserAchievements::class],
+    'records d’une série' => [SyncPersonalRecord::class],
 ]);
 
 it('débloque le succès du volume cumulé dès la série validée qui franchit son seuil : le volume de la séance s’écrit avant les recalculs', function (): void {
