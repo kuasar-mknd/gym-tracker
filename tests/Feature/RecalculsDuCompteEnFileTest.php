@@ -324,6 +324,23 @@ function recalculEnFileEnvoyer(string $classe, User $user): void
 }
 
 /**
+ * La clé du verrou d'unicité que prenait, sans échéance, la version d'avant
+ * le correctif de la classe : l'identifiant du compte seul pour un recalcul
+ * (avant #2105), `sync_pr_{compte}_{série}` pour les records (avant #2130).
+ * Seul l'identifiant change : le préfixe, qui nomme la classe, vient de
+ * Laravel (`UniqueLock::getKey()`).
+ */
+function recalculEnFileAncienneCle(string $classe, User $user): string
+{
+    $travail = recalculEnFileLeTravail($classe, $user);
+    $ancienIdentifiant = $travail instanceof SyncPersonalRecord
+        ? 'sync_pr_'.$user->id.'_'.$travail->set->id
+        : (string) $user->id;
+
+    return substr(UniqueLock::getKey($travail), 0, -strlen($travail->uniqueId())).$ancienIdentifiant;
+}
+
+/**
  * La série que synchronise `SyncPersonalRecord` dans les cas qu'il partage
  * avec les deux recalculs : la dernière du compte, ou une série faite de
  * 100 kg posée sans évènement, qui ne met rien en file.
@@ -815,24 +832,23 @@ it('tient un verrou d’unicité par série : la synchronisation qui attend pour
     expect($series)->toBe([$premiere->id, $seconde->id]);
 });
 
-it('met en file la synchronisation des records d’une série que retenait, sans échéance, un verrou d’unicité pris sous l’ancienne clé', function (): void {
-    [$user, $ligne] = recalculEnFileObjectifDeCharge();
-    $serie = recalculEnFileValiderUneSerie($ligne, 90);
+it('met en file le travail que retenait, sans échéance, un verrou d’unicité pris sous l’ancienne clé', function (string $classe): void {
+    $user = User::factory()->create();
     config(['queue.default' => 'database']);
 
-    // Le verrou qu'un travail vidé de la file a pu laisser avant #2130 : pris
-    // à l'envoi sous la clé d'alors (`sync_pr_{compte}_{série}`), sans
-    // échéance, il ne se rendait jamais.
-    $travail = new SyncPersonalRecord($serie, $user);
-    $cle = UniqueLock::getKey($travail);
-    $ancienneCle = substr($cle, 0, -strlen($travail->uniqueId())).'sync_pr_'.$user->id.'_'.$serie->id;
+    // Le verrou qu'un travail vidé de la file a pu laisser avant le correctif
+    // de sa classe (#2105 pour les recalculs, #2130 pour les records) : pris à
+    // l'envoi sous la clé d'alors, sans échéance, il ne se rendait jamais.
+    expect(Cache::lock(recalculEnFileAncienneCle($classe, $user))->get())->toBeTrue();
 
-    expect(Cache::lock($ancienneCle)->get())->toBeTrue();
+    recalculEnFileEnvoyer($classe, $user);
 
-    SyncPersonalRecord::dispatch($serie, $user);
-
-    expect(recalculEnFileContenu())->toBe([SyncPersonalRecord::class]);
-});
+    expect(recalculEnFileContenu())->toBe([$classe]);
+})->with([
+    'objectifs' => [SyncUserGoals::class],
+    'succès' => [SyncUserAchievements::class],
+    'records d’une série' => [SyncPersonalRecord::class],
+]);
 
 it('tient un verrou d’unicité par compte : le recalcul qui attend pour un compte n’écarte pas celui d’un autre', function (string $classe): void {
     $premier = User::factory()->create();
