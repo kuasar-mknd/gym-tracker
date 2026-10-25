@@ -59,12 +59,12 @@ Chaque seuil ci-dessous est **appliqué par la CI**, pas déclaratif. Ils sont p
 | Contrôle | Seuil | Où |
 | --- | --- | --- |
 | **PHPStan** | `level: max` + strict-rules, deprecation-rules, détecteur de code mort | bloquant par PR |
-| **Tests backend** | 4 995 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
+| **Tests backend** | 5 000 tests, couverture ≥ **94 %**, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
 | **Tests frontend** | 3 999 tests, ≥ **95 %** statements / 92 branches / 92 functions / 95 lines | bloquant par PR |
 | **Tests navigateur** | 182 parcours Dusk sous Chrome headless, sur MySQL 8.4 et 9.7.2 | bloquant par PR |
 | **PHP Insights** | ≥ 90 en qualité, complexité, architecture et style | bloquant par PR |
 | **Rector / Pint** | aucun changement en attente | bloquant par PR |
-| **Mutation testing** | ≥ 82 % `App\Services\PersonalRecordService`, 89 % le reste d'`App\Services`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
+| **Mutation testing** | ≥ 82 % `App\Services\PersonalRecordService`, 94 % le reste d'`App\Services`, 83 % `App\Services\Stats`, 88 % le reste d'`App\Services\Diagnostic`, 91 % `App\Services\Diagnostic\Projections`, 95 % `App\Actions`, 99 % `App\Policies` | nocturne, **bloque la release** |
 
 S'y ajoutent plus de quarante **gardes de convention** — des tests qui protègent une règle plutôt qu'un comportement : sous-ensemble de police d'icônes, frontières de propriété des policies, absence d'oracle de divulgation sur l'API, zoom des champs sur iOS, identifiants provisoires qui ne doivent jamais atteindre le serveur, variables d'environnement documentées.
 
@@ -93,7 +93,7 @@ gh workflow run mutation.yml --ref v1.2.3
 
 Une fois la nuit verte, rien ne relance la publication tout seul : relancer les jobs échoués du run de CI du tag (`gh run rerun <id> --failed`), ce qui rejoue `promotion`, puis le run de `release.yml`.
 
-Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow.
+Un échec sur `main` — CI ou passe nocturne — **ouvre automatiquement une issue**, dédupliquée par workflow. Un run annulé aussi, par la limite de temps d'une part ou à la main : il ne compte pas comme vert pour la promotion. Seul le run de CI remplacé par un push plus récent avant d'avoir commencé n'en ouvre pas : il n'a rien testé.
 
 La page « Santé » du panneau dit ce que le dépôt ne peut pas corriger seul sur le serveur de production ; comme les autres contrôles, ces trois-là écrivent à `HEALTH_TO_ADDRESS` quand ils passent au rouge :
 
@@ -455,7 +455,7 @@ L'erreur ne va que dans un sens : le parallèle **cache** des survivants, il n'e
 
 Le nocturne n'est pas concerné : le runner ne lance qu'un processus par cœur (« Parallel: 4 processes » dans chaque rapport), sans autre charge, et sa passe de référence se mesure dans les mêmes conditions que ses mutants. Mesure sur trois nuits consécutives — 1 timeout sur les 841 mutations de `App\Services`, 4 sur les 887 de `App\Actions`, 0 sur `App\Policies`.
 
-Sa **durée**, elle, suit le runner : un runner lent exécute chaque test plus lentement, et chaque mutant, qui rejoue les tests couvrant sa ligne, le paie. Le 07/10, la passe de référence de la part `App\Services` a pris 126 s, contre 96 et 82 pour les deux autres parts du même run, et la part, qui tenait en 34 minutes la veille, a été annulée à son délai de 60 (#2004). Elle est depuis coupée en deux parts de 45 minutes, `PersonalRecordService` et le reste, chacune mesurée : le calcul est en tête du job dans `.github/workflows/mutation.yml`.
+Sa **durée**, elle, suit le runner : un runner lent exécute chaque test plus lentement, et chaque mutant, qui rejoue les tests couvrant sa ligne, le paie. Le 07/10, la passe de référence de la part `App\Services` a pris 126 s, contre 96 et 82 pour les deux autres parts du même run, et la part, qui tenait en 34 minutes la veille, a été annulée à son délai de 60 (#2004). Elle a été coupée en deux, `PersonalRecordService` et le reste. Du 16 au 24/10, la passe a de nouveau été annulée chaque nuit : le diagnostic (#2032) avait presque doublé la part, et la suite était passée de 3 489 à 4 998 tests. À code égal, `App\Policies` a pris 26 minutes sur un runner et 39 sur un autre. `App\Services` compte désormais cinq parts, pour sept en tout ; la limite de chacune est le double de la plus longue de ses mesures, et chaque rapport nomme ses dix mutants les plus lents (`--profile`). Les mesures sont en tête du job dans `.github/workflows/mutation.yml`.
 
 ---
 

@@ -47,8 +47,8 @@ jobs:
         # Decoupe par namespace : chaque part a son propre delai, une part lente
         # n'empeche pas les autres de publier, et fail-fast: false garantit
         # qu'une part qui deborde ne coupe pas celles qui tournent encore. La
-        # passe de reference (~100 s) est repayee par part, ce qui est
-        # negligeable devant la mutation elle-meme.
+        # passe de reference (de 170 a 340 s le 24/10) est repayee par part,
+        # ce qui reste peu devant la mutation elle-meme.
         #
         # Les delais suivent la mesure locale, avec une marge d'environ le
         # double parce que les runners GitHub sont plus lents que la machine qui
@@ -129,6 +129,56 @@ jobs:
         # plus de temps par mutant, comme le 07/10, 31 a 36, et 34 a 39 avec
         # la passe de reference et l'installation. D'ou 45 minutes pour
         # chacune, comme App\Actions.
+        #
+        # SEPT PARTS depuis le 2026-10-24, apres neuf nuits annulees.
+        #
+        # Du 16 au 24/10, la part App\Services a depasse ses 45 minutes chaque
+        # nuit : la passe etait annulee, et aucun tag pris sur main ne pouvait
+        # passer la promotion (la 1.6.2, sur sa branche de correctif sans le
+        # diagnostic, l'a passee). Deux causes, que la mesure separe :
+        #
+        #   - App\Services\Diagnostic (#2032, le 15/10) : 31 classes et 664
+        #     mutants que la part mutait avec le reste, passee de 773 a
+        #     1 437 mutants. ValeurLue, l'une d'elles, sert aussi aux
+        #     controleurs, aux actions et au panneau : ses mutants rejouent
+        #     des centaines de tests.
+        #   - la suite a grandi, 3 489 tests de reference le 15/10, 4 998 le
+        #     24/10, et chaque mutant rejoue plus de tests : 6,1 s par mutant
+        #     du reste de Services (Stats compris) le 24/10, 3,0 le 15/10.
+        #
+        # Trois mesures, chacune lancee a la main sur une branche, limites a
+        # 180 minutes : 2111fd66 (quatre parts), 6ca0d2df (cinq, le
+        # diagnostic a part) et d0757743 (les sept d'aujourd'hui). Duree de
+        # l'etape « Execute mutation testing », passe de reference comprise, et
+        # entre parentheses cette passe de reference, qui dit la vitesse du
+        # runner :
+        #
+        #                       mutants score  2111fd66    6ca0d2df    d0757743
+        #   PersonalRecordSvc       191 82,20  28,1 (178)  55,4 (324)  50,1 (316)
+        #   reste de Services       502 94,02  \           \ 83,7      71,0 (313)
+        #   Services\Stats          271 83,76  | 169,8     / (271)     20,2 (198)
+        #   reste du Diagnostic     320 88,75  | (310)     \ 80,0      35,2 (317)
+        #   Diagnostic\Projections  344 91,57  /           / (310)     56,1 (339)
+        #   App\Actions           1 267 95,90  59,6 (306)  37,8 (173)  41,2 (197)
+        #   App\Policies            351 99,15  22,7 (180)  25,8 (191)  39,3 (308)
+        #
+        # (Une accolade reunit les parts qui n'en faisaient qu'une ce jour-la.)
+        #
+        # D'un runner a l'autre, la meme part varie du simple au double, et sa
+        # duree suit la passe de reference : a code egal (6ca0d2df et d0757743
+        # ne different que par la CI et une garde de convention), Policies a
+        # pris 25,8 minutes derriere 191 s de reference, 39,3 derriere 308.
+        # Chaque limite est donc le double de la plus longue des mesures de sa
+        # part, arrondi aux cinq minutes. Les quatre parts nees de la derniere
+        # coupe n'ont qu'une mesure chacune : le reste de Services (313 s), le
+        # reste du diagnostic (317) et les projections (339) sur des runners
+        # lents, Stats (198) sur un rapide, dont le double couvre un runner
+        # deux fois plus lent : les references relevees vont de 173 a 339 s.
+        #
+        # Chaque rapport porte les dix mutants les plus lents de sa part
+        # (--profile) : c'est ce qui dira ou couper la prochaine fois. Une
+        # part annulee par sa limite ouvre desormais l'issue de
+        # main-failure-issue.yml, comme une part rouge.
         timeout-minutes: ${{ matrix.timeout }}
         strategy:
             fail-fast: false
@@ -222,17 +272,53 @@ jobs:
                     # (un survivant de plus le fait passer dessous) ; 89 sous
                     # 89,86 pour le reste, qui laisse passer six survivants de
                     # plus.
+                    #
+                    # Le reste d'App\Services en quatre parts depuis le 24/10
+                    # (la mesure en tete du job) : les seuils se posent de meme
+                    # juste sous la mesure de chacune. Les 34 survivants de
+                    # PersonalRecordService sont toujours les memes.
+                    #
+                    # Limites : le double de la plus longue des mesures de la
+                    # part, arrondi aux cinq minutes (55,4 -> 115).
                     - scope: 'App\Services\PersonalRecordService'
-                      timeout: 45
+                      timeout: 115
                       min: 82
-                    # Tout App\Services sauf PersonalRecordService, que la part
-                    # precedente mute : `ignore` passe a `--ignore`, et
+                    # Tout App\Services sauf PersonalRecordService, Stats et le
+                    # diagnostic, que les parts voisines mutent : `ignore` passe
+                    # a `--ignore` (un dossier y vaut tout ce qu'il contient), et
                     # ChaqueClasseMuteeLaNuitLEstUneFoisTest exige que chaque
                     # classe soit mutee par une part, et une seule.
+                    # 94 sous 94,02 : 30 survivants sur 502 (21 dans
+                    # RecommendedValuesService, 8 dans GoalService, 1 dans
+                    # StreakService). Une mesure, 71,0 minutes derriere 313 s de
+                    # reference : 145. La plus longue des sept, donc la premiere
+                    # a couper quand elle debordera, d'apres les mutants les plus
+                    # lents de son rapport.
                     - scope: 'App\Services'
-                      ignore: 'app/Services/PersonalRecordService.php'
+                      ignore: 'app/Services/PersonalRecordService.php,app/Services/Stats,app/Services/Diagnostic'
+                      timeout: 145
+                      min: 94
+                    # 83 sous 83,76 : 44 survivants sur 271. Une mesure, 20,2
+                    # minutes derriere 198 s de reference : 45.
+                    - scope: 'App\Services\Stats'
                       timeout: 45
-                      min: 89
+                      min: 83
+                    # Le diagnostic sauf ses projections : expurgation,
+                    # enveloppe, fenetre, ValeurLue. 88 sous 88,75 : 36
+                    # survivants sur 320. 35,2 minutes derriere 317 s : 75.
+                    - scope: 'App\Services\Diagnostic'
+                      ignore: 'app/Services/Diagnostic/Projections'
+                      timeout: 75
+                      min: 88
+                    # Les projections : chacune lit une table d'erreurs, de
+                    # files ou de taches, et ses tests en remplissent des
+                    # milliers de lignes ; leurs mutants les plus lents passent
+                    # deux minutes. 91 sous 91,57 : 29 survivants sur 344. 56,1
+                    # minutes derriere 339 s, la reference la plus lente des
+                    # trois mesures : 115.
+                    - scope: 'App\Services\Diagnostic\Projections'
+                      timeout: 115
+                      min: 91
                     # 95 et non 97, contrairement aux deux autres parts qui se posent
                     # a un point sous leur mesure. La raison est le nombre
                     # d'observations, pas la prudence : Services et Policies ont
@@ -248,8 +334,10 @@ jobs:
                     # App\Actions : 24 min mesurees sur quatre nocturnes, puis 31 le
                     # 3 septembre (la part est plus couverte depuis #1692) et un job
                     # annule a 30. Quarante-cinq laisse la marge que 30 n'avait plus.
+                    # Le 24/10, 1 267 mutants et 95,90 % : 59,6, 37,8 et 41,2
+                    # minutes sur trois runners, d'ou 120.
                     - scope: 'App\Actions'
-                      timeout: 45
+                      timeout: 120
                       min: 95
                     # 99 sur une mesure a 100,00 %, 316 mutants tues sur 316.
                     #
@@ -268,8 +356,11 @@ jobs:
                     # 316 mutants, un seul survivant rend 99,68 %, donc 99
                     # laisse passer trois survivants la ou 94 en laissait
                     # passer dix-neuf.
+                    #
+                    # Le 24/10 : 99,15 %, 3 survivants sur 351, et 22,7, 25,8
+                    # et 39,3 minutes sur trois runners, d'ou 80.
                     - scope: 'App\Policies'
-                      timeout: 30
+                      timeout: 80
                       min: 99
         # La version de MySQL de la production, seule : la passe juge les
         # tests, que la CI fait déjà tourner sur chaque version, et la doubler
@@ -396,14 +487,14 @@ jobs:
                   if [ -n "$LAISSE" ]; then
                       options+=(--ignore="$LAISSE")
                   fi
-                  vendor/bin/pest --mutate --parallel --covered-only "${options[@]}" \
+                  vendor/bin/pest --mutate --parallel --covered-only --profile "${options[@]}" \
                     | tee mutation-report.txt
 
             - name: Upload report
               if: always()
               uses: actions/upload-artifact@v7
               with:
-                  # Un nom par part, sans quoi les quatre televersements se
+                  # Un nom par part, sans quoi les sept televersements se
                   # disputeraient le meme artefact.
                   name: mutation-report-${{ strategy.job-index }}
                   path: mutation-report.txt
