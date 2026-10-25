@@ -133,8 +133,9 @@ jobs:
         # SEPT PARTS depuis le 2026-10-24, apres neuf nuits annulees.
         #
         # Du 16 au 24/10, la part App\Services a depasse ses 45 minutes chaque
-        # nuit : la passe etait annulee, et aucun tag ne pouvait passer la
-        # promotion. Deux causes, que la mesure separe :
+        # nuit : la passe etait annulee, et aucun tag pris sur main ne pouvait
+        # passer la promotion (la 1.6.2, sur sa branche de correctif sans le
+        # diagnostic, l'a passee). Deux causes, que la mesure separe :
         #
         #   - App\Services\Diagnostic (#2032, le 15/10) : 31 classes et 664
         #     mutants que la part mutait avec le reste, passee de 773 a
@@ -163,14 +164,16 @@ jobs:
         #
         # (Une accolade reunit les parts qui n'en faisaient qu'une ce jour-la.)
         #
-        # Le meme code prend du simple au double d'un runner a l'autre, et la
-        # duree suit la passe de reference : Policies, 22,7 minutes derriere
-        # 180 s de reference, 39,3 derriere 308. Chaque limite est donc le
-        # double de la plus longue des mesures de sa part, arrondi aux cinq
-        # minutes. Les deux parts nees le 24/10 sans diagnostic n'ont qu'une
-        # mesure chacune : le reste de Services sur un runner lent (313 s),
-        # Stats sur un rapide (198 s), dont le double couvre un runner 1,8 fois
-        # plus lent, l'ecart le plus grand releve.
+        # D'un runner a l'autre, la meme part varie du simple au double, et sa
+        # duree suit la passe de reference : a code egal (6ca0d2df et d0757743
+        # ne different que par la CI et une garde de convention), Policies a
+        # pris 25,8 minutes derriere 191 s de reference, 39,3 derriere 308.
+        # Chaque limite est donc le double de la plus longue des mesures de sa
+        # part, arrondi aux cinq minutes. Les quatre parts nees de la derniere
+        # coupe n'ont qu'une mesure chacune : le reste de Services (313 s), le
+        # reste du diagnostic (317) et les projections (339) sur des runners
+        # lents, Stats (198) sur un rapide, dont le double couvre un runner
+        # deux fois plus lent : les references relevees vont de 173 a 339 s.
         #
         # Chaque rapport porte les dix mutants les plus lents de sa part
         # (--profile) : c'est ce qui dira ou couper la prochaine fois. Une
@@ -491,7 +494,7 @@ jobs:
               if: always()
               uses: actions/upload-artifact@v7
               with:
-                  # Un nom par part, sans quoi les quatre televersements se
+                  # Un nom par part, sans quoi les sept televersements se
                   # disputeraient le meme artefact.
                   name: mutation-report-${{ strategy.job-index }}
                   path: mutation-report.txt

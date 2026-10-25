@@ -19,10 +19,16 @@ name: Signaler un workflow rouge sur main
 # une passe reussie : une nuit annulee bloque la livraison comme une nuit
 # rouge. Du 16 au 24/10, la part App\Services a depasse ses 45 minutes chaque
 # nuit, neuf nuits annulees, et aucune issue ne s'est ouverte : le blocage
-# s'est decouvert le jour de la release. Sur main, rien n'annule un run de
-# lui-meme : ci.yml n'annule un run en cours que sur une PR, et
-# mutation.yml n'a pas de groupe de concurrence. Reste l'arret a la main, qui
-# bloque la promotion de la meme facon.
+# s'est decouvert le jour de la release. Un arret a la main bloque la
+# promotion de la meme facon.
+#
+# Seul un run annule SANS AUCUN JOB ne se signale pas : c'est le run de CI
+# qu'un push plus recent a remplace pendant qu'il attendait son tour dans le
+# groupe de concurrence de ci.yml (sur main, ci.yml n'annule jamais un run en
+# cours, mais GitHub annule celui qui attend), comme le 03/10 quand trois
+# fusions sont tombees dans le temps d'une CI. Il n'a rien teste et ne bloque
+# rien : un tag a son propre groupe. Une part coupee par sa limite, elle, a un
+# job annule.
 #
 # LIMITE CONNUE, ecrite ici pour qu'elle ne se redecouvre pas : une fusion faite
 # avec le GITHUB_TOKEN — c'est le cas des PR Dependabot passees par auto-merge —
@@ -67,9 +73,27 @@ jobs:
                   # meme reaction, et le titre doit le dire sans avoir a ouvrir
                   # le run. Un job annule, le plus souvent par sa limite de
                   # temps, est nomme lui aussi, et dit l'etre.
-                  JOBS=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
-                    --jq '[.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | if .conclusion == "cancelled" then "\(.name) (annule)" else .name end] | join(", ")')
+                  NOMS=$(gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" \
+                    --jq '[.jobs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | if .conclusion == "cancelled" then "\(.name) (annule)" else .name end]')
+                  NOMBRE=$(jq 'length' <<<"$NOMS")
+
+                  if [ "$CONCLUSION" = "cancelled" ] && [ "$NOMBRE" -eq 0 ]; then
+                      echo "Run annule sans aucun job : remplace dans son groupe de concurrence, rien a signaler."
+                      exit 0
+                  fi
+
+                  JOBS=$(jq -r 'join(", ")' <<<"$NOMS")
                   [ -n "$JOBS" ] || JOBS="cause inconnue"
+
+                  # Le titre d'une issue tient en 256 caracteres, et le nom d'un
+                  # job de matrice en fait jusqu'a cent : au-dela d'un job, le
+                  # titre nomme le premier et compte les autres, et le corps les
+                  # nomme tous. Trop long, le titre ferait refuser l'issue.
+                  if [ "$NOMBRE" -gt 1 ]; then
+                      EN_TITRE="$(jq -r '.[0]' <<<"$NOMS") et $((NOMBRE - 1)) autre(s)"
+                  else
+                      EN_TITRE="$JOBS"
+                  fi
 
                   if [ "$CONCLUSION" = "cancelled" ]; then
                       ETAT_DU_RUN="a ete annule sur \`main\`, par la limite de temps d'un job (\`timeout-minutes\`) ou a la main. Une passe annulee n'est pas verte : la promotion attend une passe reussie."
@@ -82,7 +106,7 @@ jobs:
 
                   | | |
                   |---|---|
-                  | jobs en echec | **$JOBS** |
+                  | jobs en echec ou annules | **$JOBS** |
                   | commit | \`$SHA\` |
                   | run | $RUN_URL |
 
@@ -116,7 +140,7 @@ jobs:
                         --color B60205 --description "$WORKFLOW rouge sur main" 2>/dev/null || true
 
                       gh issue create --repo "$REPO" \
-                        --title "ci: $WORKFLOW est rouge sur main — $JOBS" \
+                        --title "ci: $WORKFLOW est rouge sur main — $EN_TITRE" \
                         --label "$LABEL" \
                         --body "$BODY"
                   fi
