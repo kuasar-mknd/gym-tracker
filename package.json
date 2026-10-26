@@ -52,7 +52,7 @@
     },
     "dependencies": {
         "@formkit/drag-and-drop": "^0.6.1",
-        "chart.js": "^4.5.1",
+        "chart.js": "^4.6.1",
         "dayjs": "^1.11.23",
         "vue-chartjs": "^5.3.4",
         "ziggy-js": "^2.6.5"
