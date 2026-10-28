@@ -542,7 +542,9 @@ final class GoalService
          * `updateMeasurementGoal()`. Chaque nom distinct se lit une fois, tel
          * que l'objectif le porte : « waist » et « Waist » sont deux noms, deux
          * lectures, que la collation de la colonne rapproche chacune de la même
-         * mesure. Les comparer en PHP, sans la collation, les séparerait.
+         * mesure. Les fondre en PHP demanderait cette collation, que PHP n'a
+         * pas : `mb_strtolower()` ne rapproche ni les accents ni les espaces
+         * de fin comme elle.
          */
         $partiesSuivies = $mensurationsSuivies
             ->filter(fn (mixed $mensuration): bool => is_string($mensuration)
