@@ -62,3 +62,56 @@ it('laisse passer une langue explicite', () => {
         expect(appelsSansLangue(source), source).toEqual([])
     }
 })
+
+/**
+ * Une heure qui part au serveur porte son décalage (#2111).
+ *
+ * La page du jeûne envoyait `dayjs().format('YYYY-MM-DDTHH:mm')` et
+ * `dayjs().format('YYYY-MM-DD HH:mm:ss')` : une heure murale de l'appareil, sans
+ * fuseau, que le serveur lit comme une heure de l'application. Un appareil à
+ * Toronto démarrait son jeûne cinq heures trop tôt. Un champ `datetime-local`
+ * part par `formatToUTC()` de `Utils/date.js`, l'instant présent par
+ * `toISOString()`, et rien ne fabrique plus une date à l'heure dans la forme du
+ * serveur. L'affichage (`DD/MM/YYYY HH:mm`) et le jour seul (`YYYY-MM-DD`)
+ * restent permis : l'un ne part nulle part, l'autre n'est pas un instant.
+ */
+const HEURE_MURALE_A_ENVOYER = /\.format\(\s*['"`]YYYY-MM-DD[T ]HH/g
+
+/**
+ * @param {string} source
+ * @returns {{ligne: number, appel: string}[]}
+ */
+const heuresMuralesAEnvoyer = (source) =>
+    [...source.matchAll(HEURE_MURALE_A_ENVOYER)].map((correspondance) => ({
+        ligne: source.slice(0, correspondance.index).split('\n').length,
+        appel: correspondance[0].trim(),
+    }))
+
+it('n’envoie aucune heure murale sans décalage', () => {
+    const fautifs = collectSourceFiles({ extensions: ['.vue', '.js'] }).flatMap((chemin) =>
+        heuresMuralesAEnvoyer(readFileSync(chemin, 'utf8')).map(
+            ({ ligne, appel }) => `${chemin.replace(jsRoot, 'resources/js')}:${ligne} ${appel}`,
+        ),
+    )
+
+    expect(fautifs, 'passer par formatToUTC() pour un champ, toISOString() pour l’instant présent').toEqual([])
+})
+
+it('reconnaît les heures murales qu’elle existe pour refuser, et laisse l’affichage et le jour', () => {
+    for (const source of [
+        "dayjs().format('YYYY-MM-DDTHH:mm')",
+        "dayjs().format('YYYY-MM-DD HH:mm:ss')",
+        'dayjs(debut).format("YYYY-MM-DD HH:mm")',
+    ]) {
+        expect(heuresMuralesAEnvoyer(source), source).toHaveLength(1)
+    }
+
+    for (const source of [
+        "dayjs(date).format('DD/MM/YYYY HH:mm')",
+        "dayjs().format('YYYY-MM-DD')",
+        'new Date().toISOString()',
+        'formatToUTC(data.start_time)',
+    ]) {
+        expect(heuresMuralesAEnvoyer(source), source).toEqual([])
+    }
+})
