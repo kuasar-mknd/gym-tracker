@@ -42,10 +42,19 @@ function semerLignesPourExercices(User $user, int $seances, int $combienExercice
  * lisait pourtant toutes les lignes de toutes les seances — 321 lectures
  * d'index a 40 seances, 1 601 a 200, pour le meme chiffre.
  *
- * Le controle porte sur la forme : un `distinct` ou un `group by` sur cette
- * table est le defaut lui-meme, et MySQL ne retient pas de balayage lache ici.
+ * Ce test refusait tout `distinct` sur cette table, tenu pour le defaut
+ * lui-meme. La mesure dit autre chose (#2106, MySQL 8.4 et 9.7.2) : MySQL
+ * saute dans l'index d'un exercice au suivant (« Using index for group-by »)
+ * des que les colonnes du `distinct` forment le PREFIXE de
+ * `(user_id, exercise_id, workout_started_at)`. `count(distinct exercise_id)`
+ * n'en est pas un, et lit chaque ligne du compte ; `count(distinct user_id,
+ * exercise_id)` en est un, et lit E + 3 entrees : 83 a quatre-vingts
+ * exercices et 9 000 lignes, contre 9 001.
+ *
+ * Le controle porte sur la forme ecrite, que les statistiques de la table ne
+ * font pas varier : le plan, lui, est un choix de cout.
  */
-it('ne balaie pas les lignes pour compter les exercices', function (): void {
+it('compte les exercices sur le préfixe de l’index, que MySQL parcourt par sauts', function (): void {
     $user = User::factory()->create();
     semerLignesPourExercices($user, 30, 6);
 
@@ -57,18 +66,14 @@ it('ne balaie pas les lignes pour compter les exercices', function (): void {
     $requetes = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
     DB::disableQueryLog();
 
-    expect($compte)->toBe(6);
+    $comptesDistincts = array_values(array_filter(
+        $requetes,
+        fn (string $sql): bool => str_contains($sql, 'from `workout_lines`') && str_contains(mb_strtolower($sql), 'distinct'),
+    ));
 
-    foreach ($requetes as $sql) {
-        $minuscule = mb_strtolower($sql);
-
-        if (! str_contains($minuscule, 'from `workout_lines`')) {
-            continue;
-        }
-
-        expect($minuscule)->not->toContain('distinct')
-            ->and($minuscule)->not->toContain('group by');
-    }
+    expect($compte)->toBe(6)
+        ->and($comptesDistincts)->toHaveCount(1, implode("\n", $requetes));
+    expect($comptesDistincts[0])->toContain('count(distinct `user_id`, `exercise_id`)');
 });
 
 it('compte les exercices sans les répétitions', function (): void {
