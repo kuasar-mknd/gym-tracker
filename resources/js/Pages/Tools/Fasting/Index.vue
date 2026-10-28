@@ -26,6 +26,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 
 const FastingHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/FastingHistoryChart.vue'))
 import dayjs from 'dayjs'
@@ -143,26 +144,39 @@ watch(
     { immediate: true },
 )
 
+// Le champ montre l'heure de l'appareil, à la minute ; `startFast` en envoie l'instant.
 onMounted(() => {
-    startForm.start_time = dayjs().format('YYYY-MM-DDTHH:mm')
+    startForm.start_time = formatToLocalISO(new Date())
 })
 
 onUnmounted(() => {
     if (timerInterval.value) clearInterval(timerInterval.value)
 })
 
+/**
+ * Le début part à l'instant que le champ désigne, avec son décalage (#2111).
+ *
+ * Le champ `datetime-local` montre une heure murale de l'appareil, sans
+ * fuseau ; envoyée telle quelle, le serveur la lisait comme une heure de
+ * l'application, et un appareil à Toronto démarrait son jeûne cinq heures trop
+ * tôt, la page en affichant autant d'écoulées dès le départ. `formatToUTC()`
+ * la lit dans le fuseau de l'appareil, comme les réglages de séance, et le
+ * serveur ramène l'instant au sien (`RameneLesDatesAuFuseauDeLApplication`).
+ */
 const startFast = () => {
     startForm
         .transform((data) => ({
             ...data,
+            start_time: formatToUTC(data.start_time),
             target_duration_minutes: selectedType.value.hours * 60,
             type: selectedType.value.value,
         }))
         .post(route('tools.fasting.store'))
 }
 
+/** La fin part de même à l'instant de l'appareil, avec son décalage (#2111). */
 const endFast = () => {
-    endForm.end_time = dayjs().format('YYYY-MM-DD HH:mm:ss')
+    endForm.end_time = new Date().toISOString()
     endForm.patch(route('tools.fasting.update', props.activeFast.id))
 }
 
