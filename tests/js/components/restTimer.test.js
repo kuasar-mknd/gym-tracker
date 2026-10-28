@@ -26,10 +26,11 @@ beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())
 
 /**
- * The bar is scaled against the duration it started with, and the +30s button
- * pushes the remaining time past it. The fill overflowed its track, and the
- * progressbar reported an aria-valuenow above its own aria-valuemax — a value a
- * screen reader is entitled to treat as nonsense.
+ * La barre se mesure sur la durée du repos, et le temps restant peut la
+ * dépasser : une durée qui raccourcit pendant le décompte le laisse au-dessus
+ * (le bouton « +30s », retiré depuis, faisait de même). Le remplissage débordait
+ * de sa piste, et la barre annonçait un aria-valuenow au-dessus de son propre
+ * aria-valuemax, une valeur qu'un lecteur d'écran peut tenir pour absurde.
  */
 describe('RestTimer progress bar', () => {
     it('reports a full bar at the start', () => {

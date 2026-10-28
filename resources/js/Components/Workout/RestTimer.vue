@@ -100,10 +100,12 @@ const sortieAudio = props.sortieAudio ?? useSortieAudio()
 /**
  * Calculated progress percentage for the visual bar.
  *
- * Clamped, because the +30s button pushes timeLeft past the duration the bar is
- * scaled against: the fill overflowed its track, and the progressbar reported an
- * aria-valuenow above its own aria-valuemax — a value a screen reader is
- * entitled to treat as nonsense.
+ * Bornée, parce que le temps restant peut dépasser la durée sur laquelle la
+ * barre se mesure : une durée qui raccourcit pendant un repos ne touche pas un
+ * décompte en cours (l'observateur de `duration`, plus bas), et le bouton
+ * « +30s », retiré depuis, faisait de même. Le remplissage débordait de sa
+ * piste, et la barre annonçait un aria-valuenow au-dessus de son propre
+ * aria-valuemax, une valeur qu'un lecteur d'écran peut tenir pour absurde.
  */
 const progress = computed(() => {
     if (!props.duration) {
