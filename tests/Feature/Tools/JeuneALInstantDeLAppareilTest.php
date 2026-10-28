@@ -22,9 +22,10 @@ use function Pest\Laravel\actingAs;
  * l'instant servi, affichait dès le départ cinq heures écoulées. Elle envoie
  * désormais le début par `formatToUTC()` et la fin par `toISOString()`.
  * `tests/js/pages/fastingIndex.test.js` vérifie, sous le fuseau de Toronto,
- * qu'elle envoie les valeurs que ce fichier envoie au serveur ; il vérifie ici
- * qu'elles sont relues au même instant (`RameneLesDatesAuFuseauDeLApplication`,
- * #1952) et servies à la page telles qu'elle compte un écoulé nul au départ.
+ * qu'elle envoie les valeurs que ce fichier envoie au serveur. Ce fichier les
+ * envoie comme elle, en JSON, et vérifie qu'elles sont relues au même instant
+ * (`RameneLesDatesAuFuseauDeLApplication`, #1952) et servies à la page telles
+ * qu'elle compte un écoulé nul au départ.
  *
  * Le 10 mars 2026 à 12:00Z : 08:00 à Toronto (UTC-4 depuis le 8 mars), 13:00 à
  * Paris (UTC+1), le fuseau de l'application. Seize heures plus tard : minuit à
@@ -40,16 +41,48 @@ afterEach(function (): void {
 });
 
 /**
+ * Envoie le formulaire comme la page, depuis la page du jeûne : en JSON, avec
+ * les en-têtes d'une visite d'Inertia (`.ai/rules/tests.md`).
+ *
+ * @param  array<string, mixed>  $donnees
+ * @return TestResponse<Response>
+ */
+function jeuneALInstantEnvoyer(User $user, string $methode, string $adresse, array $donnees): TestResponse
+{
+    /** @var TestResponse<Response> $reponse */
+    $reponse = actingAs($user)->from(route('tools.fasting.index'))->json($methode, $adresse, $donnees, [
+        'X-Inertia' => 'true',
+        'X-Requested-With' => 'XMLHttpRequest',
+        'Accept' => 'text/html, application/xhtml+xml',
+    ]);
+
+    return $reponse;
+}
+
+/**
  * Démarre un jeûne de seize heures comme la page, avec le début donné.
  *
  * @return TestResponse<Response>
  */
 function jeuneALInstantDemarrer(User $user, string $debut): TestResponse
 {
-    return actingAs($user)->post(route('tools.fasting.store'), [
+    return jeuneALInstantEnvoyer($user, 'POST', route('tools.fasting.store'), [
         'start_time' => $debut,
         'target_duration_minutes' => 960,
         'type' => '16:8',
+    ]);
+}
+
+/**
+ * Termine le jeûne comme la page, avec la fin donnée.
+ *
+ * @return TestResponse<Response>
+ */
+function jeuneALInstantTerminer(User $user, Fast $jeune, string $fin): TestResponse
+{
+    return jeuneALInstantEnvoyer($user, 'PATCH', route('tools.fasting.update', $jeune), [
+        'end_time' => $fin,
+        'status' => 'completed',
     ]);
 }
 
@@ -121,11 +154,7 @@ it('termine au même instant le jeûne fini depuis Toronto, et le range dans l�
 
     Carbon::setTestNow(Carbon::parse('2026-03-11T04:00:00Z'));
 
-    $this->actingAs($user)
-        ->patch(route('tools.fasting.update', $jeune), [
-            'end_time' => '2026-03-11T04:00:00.000Z',
-            'status' => 'completed',
-        ])
+    jeuneALInstantTerminer($user, $jeune, '2026-03-11T04:00:00.000Z')
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
@@ -156,12 +185,8 @@ it('enregistre le jeûne d’un appareil à l’heure de Paris comme avant', fun
     $jeuneDAvant = Fast::query()->where('user_id', $avant->id)->sole();
     $jeuneDApres = Fast::query()->where('user_id', $apres->id)->sole();
 
-    $this->actingAs($avant)
-        ->patch(route('tools.fasting.update', $jeuneDAvant), ['end_time' => '2026-03-11 05:00:00', 'status' => 'completed'])
-        ->assertSessionHasNoErrors();
-    $this->actingAs($apres)
-        ->patch(route('tools.fasting.update', $jeuneDApres), ['end_time' => '2026-03-11T04:00:00.000Z', 'status' => 'completed'])
-        ->assertSessionHasNoErrors();
+    jeuneALInstantTerminer($avant, $jeuneDAvant, '2026-03-11 05:00:00')->assertSessionHasNoErrors();
+    jeuneALInstantTerminer($apres, $jeuneDApres, '2026-03-11T04:00:00.000Z')->assertSessionHasNoErrors();
 
     $jeuneDAvant->refresh();
     $jeuneDApres->refresh();
