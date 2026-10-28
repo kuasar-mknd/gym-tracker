@@ -17,6 +17,7 @@ import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useSortieAudio } from '@/composables/useSortieAudio'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
@@ -81,17 +82,9 @@ watch(
 /** Une seance close est un compte rendu, pas un espace de travail. */
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
-// La sortie audio du repos s'ouvre dans le geste qui le lance, et la page la rend en partant (#2112).
-const {
-    showTimer,
-    timerDuration,
-    autoRestTimer,
-    timerRun,
-    sortieAudio,
-    openRestTimer,
-    setAutoRestTimer,
-    apresValidation,
-} = useMinuteurDeRepos()
+const sortieAudio = useSortieAudio()
+const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
+    useMinuteurDeRepos({ sortieAudio })
 // Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 

@@ -11,8 +11,18 @@ import { useSortieAudio } from '@/composables/useSortieAudio'
 export const REPOS_AUTOMATIQUE_SANS_RESEAU =
     "Pas de réponse du serveur : le changement du repos automatique n'est pas confirmé."
 
-/** Le minuteur de repos de la seance : son etat, son reglage, et ce qui le lance. */
-export const useMinuteurDeRepos = () => {
+/**
+ * Le minuteur de repos de la seance : son etat, son reglage, et ce qui le lance.
+ *
+ * `sortieAudio` est la sortie où sonne la fin de chaque repos (#2112) : celle
+ * de la page (`useSortieAudio`), qui la passe aussi au minuteur et la rend en
+ * partant. Le minuteur, remonté à chaque repos et démonté à sa fin, ne peut pas
+ * la tenir : la fermer avec lui couperait le bip qu'il vient de lancer. Sans
+ * elle, le composable ouvre la sienne.
+ *
+ * @param {{ sortieAudio?: ReturnType<typeof useSortieAudio> }} [options]
+ */
+export const useMinuteurDeRepos = ({ sortieAudio = useSortieAudio() } = {}) => {
     const showTimer = ref(false)
     const timerDuration = ref(90)
 
@@ -22,14 +32,6 @@ export const useMinuteurDeRepos = () => {
      * de la seance en cours.
      */
     const autoRestTimer = ref(usePage().props.auth.user.auto_rest_timer !== false)
-
-    /**
-     * La sortie audio où sonne la fin de chaque repos (#2112) : une pour la
-     * page, que le minuteur reçoit, et que la page rend en partant. Le
-     * minuteur, remonté à chaque repos et démonté à sa fin, ne peut pas la
-     * tenir : la fermer avec lui couperait le bip qu'il vient de lancer.
-     */
-    const sortieAudio = useSortieAudio()
 
     /**
      * Le repos, demande explicitement.
@@ -104,14 +106,5 @@ export const useMinuteurDeRepos = () => {
      */
     const timerRun = ref(0)
 
-    return {
-        showTimer,
-        timerDuration,
-        autoRestTimer,
-        timerRun,
-        sortieAudio,
-        openRestTimer,
-        setAutoRestTimer,
-        apresValidation,
-    }
+    return { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation }
 }
