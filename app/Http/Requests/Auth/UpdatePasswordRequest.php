@@ -4,13 +4,23 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Requests\Concerns\DonneLeCheminVersUnMotDePasse;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Changer le mot de passe exige le mot de passe actuel, compté sous la clé
+ * qu'il partage avec le changement d'adresse (`throttleKey()`). Un compte
+ * relié à un fournisseur de connexion peut n'en avoir jamais choisi : le refus
+ * lui donne le chemin vers un mot de passe (`DonneLeCheminVersUnMotDePasse`,
+ * #2104).
+ */
 class UpdatePasswordRequest extends FormRequest
 {
+    use DonneLeCheminVersUnMotDePasse;
+
     public function authorize(): bool
     {
         return true;
@@ -29,6 +39,18 @@ class UpdatePasswordRequest extends FormRequest
             'current_password' => ['bail', 'required', 'string', 'current_password', 'max:255'],
             'password' => ['required', Password::defaults(), 'confirmed'],
         ];
+    }
+
+    /**
+     * Les refus de tout compte, suivis du chemin vers un mot de passe pour un
+     * compte relié à un fournisseur.
+     *
+     * @return array<string, string>
+     */
+    #[\Override]
+    public function messages(): array
+    {
+        return $this->refusDuMotDePasseActuel('current_password');
     }
 
     public function withValidator(\Illuminate\Validation\Validator $validator): void
