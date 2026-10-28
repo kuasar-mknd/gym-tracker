@@ -81,8 +81,17 @@ watch(
 /** Une seance close est un compte rendu, pas un espace de travail. */
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
-const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
-    useMinuteurDeRepos()
+// La sortie audio du repos s'ouvre dans le geste qui le lance, et la page la rend en partant (#2112).
+const {
+    showTimer,
+    timerDuration,
+    autoRestTimer,
+    timerRun,
+    sortieAudio,
+    openRestTimer,
+    setAutoRestTimer,
+    apresValidation,
+} = useMinuteurDeRepos()
 // Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
@@ -388,6 +397,7 @@ onUnmounted(() => {
             :auto-rest-timer="autoRestTimer"
             :reglage-desactive="surUneCopie"
             :raison-du-reglage="raisonDUneEcriture"
+            :sortie-audio="sortieAudio"
             @finished="showTimer = false"
             @close="showTimer = false"
             @update:auto-rest-timer="setAutoRestTimer"

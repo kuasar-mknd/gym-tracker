@@ -207,24 +207,35 @@ describe('ce qui échoue ne remonte jamais au geste', () => {
         expect(avertissement).toHaveBeenCalled()
     })
 
+    /*
+     * Les refus viennent d'une sous-classe, pas de `vi.spyOn(…).mockRejectedValue` :
+     * l'espion de Vitest suit la promesse qu'il rend (`settledResults`), donc la
+     * traite, et un rejet que le composable laisserait sans preneur passerait
+     * inaperçu (vu en l'écrivant : la contre-épreuve restait verte).
+     */
     it('une reprise refusée ou qui lève ne remonte ni au geste ni en rejet non géré', async () => {
+        let reprises = 0
+        window.AudioContext = class extends SortieAudioWebKit {
+            resume() {
+                reprises += 1
+
+                if (reprises === 3) {
+                    throw new TypeError('resume absent')
+                }
+
+                return Promise.reject(new DOMException('refusée', 'NotAllowedError'))
+            }
+        }
         const { sortie } = monter()
         await dansUnGeste(() => sortie.preparer())
         sorties[0].state = 'suspended'
-        const reprise = vi
-            .spyOn(SortieAudioWebKit.prototype, 'resume')
-            .mockRejectedValueOnce(new DOMException('refusée', 'NotAllowedError'))
-            .mockRejectedValueOnce(new DOMException('refusée', 'NotAllowedError'))
-            .mockImplementationOnce(() => {
-                throw new TypeError('resume absent')
-            })
 
         await dansUnGeste(() => sortie.preparer())
         sortie.jouer(bip)
         await dansUnGeste(() => sortie.preparer())
         await flushPromises()
 
-        expect(reprise).toHaveBeenCalledTimes(3)
+        expect(reprises).toBe(3)
         expect(sorties[0].sons).toEqual([])
     })
 
@@ -269,14 +280,21 @@ describe('rendre la sortie', () => {
     })
 
     it('une fermeture refusée ne devient pas un rejet non géré', async () => {
-        vi.spyOn(SortieAudioWebKit.prototype, 'close').mockRejectedValue(new DOMException('déjà fermée', 'InvalidStateError'))
+        let fermetures = 0
+        window.AudioContext = class extends SortieAudioWebKit {
+            close() {
+                fermetures += 1
+
+                return Promise.reject(new DOMException('déjà fermée', 'InvalidStateError'))
+            }
+        }
         const { hote, sortie } = monter()
         await dansUnGeste(() => sortie.preparer())
 
         hote.unmount()
         await flushPromises()
 
-        expect(SortieAudioWebKit.prototype.close).toHaveBeenCalledTimes(1)
+        expect(fermetures).toBe(1)
     })
 
     it('hors d’un composant, ne pose aucune fermeture, et ne le reproche pas', () => {

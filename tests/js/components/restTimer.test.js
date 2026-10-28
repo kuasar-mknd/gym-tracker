@@ -263,6 +263,22 @@ describe('le bip de fin, minuteur monté seul (#2112)', () => {
         expect(sorties).toHaveLength(0)
     })
 
+    it('démarré au montage, sans sortie : « Passer » l’ouvre dans son geste, y sonne, et la rend en partant', async () => {
+        const wrapper = mountTimer({ duration: 90, autoStart: true })
+        vi.advanceTimersByTime(10000)
+        expect(sorties).toHaveLength(0)
+
+        await dansUnGeste(() => button(wrapper, 'skip-rest-timer').trigger('click'))
+
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].creeeDansUnGeste).toBe(true)
+        expect(sorties[0].sonsAudibles).toHaveLength(1)
+
+        wrapper.unmount()
+
+        expect(sorties[0].fermetures).toBe(1)
+    })
+
     it('rend sa sortie en partant', async () => {
         const wrapper = mountTimer({ duration: 30, autoStart: false })
 

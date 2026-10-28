@@ -14,6 +14,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
+import { useSortieAudio } from '@/composables/useSortieAudio'
 import GlassToggle from '@/Components/UI/GlassToggle.vue'
 
 /**
@@ -56,6 +57,18 @@ const props = defineProps({
         type: String,
         default: undefined,
     },
+
+    /**
+     * La sortie audio de la page (`useSortieAudio`, #2112), ouverte dans le
+     * geste qui a lancé le repos : la fin y sonne. La page la tient parce que
+     * le minuteur se démonte à chaque fin, bip compris. Monté seul, sans
+     * elle, le minuteur ouvre la sienne dans ses propres gestes et la rend en
+     * partant.
+     */
+    sortieAudio: {
+        type: Object,
+        default: null,
+    },
 })
 
 /**
@@ -79,6 +92,9 @@ const timer = ref(null)
 
 /** Timestamp (ms) when the timer should finish. */
 const endTime = ref(null)
+
+/** Où sonne la fin : la sortie de la page, ou la sienne quand il est monté seul. */
+const sortieAudio = props.sortieAudio ?? useSortieAudio()
 
 /**
  * Calculated progress percentage for the visual bar.
@@ -137,25 +153,59 @@ const pauseTimer = () => {
     isActive.value = false
 }
 
-/** Toggles between start and pause states. */
+/**
+ * Toggles between start and pause states.
+ *
+ * La reprise est un geste : la sortie y repart, qu'iOS ait pu interrompre
+ * pendant la pause (#2112).
+ */
 const toggleTimer = () => {
     triggerHaptic('toggle')
     if (isActive.value) {
         pauseTimer()
     } else {
+        sortieAudio.preparer()
         startTimer()
     }
 }
 
-/** Immediately finishes the timer. */
+/** Immediately finishes the timer, dans un geste qui reprend la sortie avant d'y sonner. */
 const skipTimer = () => {
     triggerHaptic('tap')
+    sortieAudio.preparer()
     finishTimer()
+}
+
+/**
+ * Le bip de fin : un la aigu (880 Hz) d'une demi-seconde, qui s'éteint.
+ *
+ * @param {AudioContext} contexte
+ */
+const jouerLeBipDeFin = (contexte) => {
+    const oscillator = contexte.createOscillator()
+    const gainNode = contexte.createGain()
+
+    oscillator.connect(gainNode)
+    gainNode.connect(contexte.destination)
+
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(880, contexte.currentTime)
+    gainNode.gain.setValueAtTime(0.1, contexte.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, contexte.currentTime + 0.5)
+
+    oscillator.start()
+    oscillator.stop(contexte.currentTime + 0.5)
 }
 
 /**
  * Handles timer completion logic.
  * Triggers haptic feedback, plays sound, and emits 'finished' event.
+ *
+ * La fin naturelle arrive dans le rappel de la minuterie, hors de tout geste :
+ * le bip se joue sur la sortie que le geste du départ a ouverte, jamais sur une
+ * sortie créée ici, que WebKit laisserait muette (#2112). Le retour haptique
+ * passe par `navigator.vibrate`, que Safari iOS n'a pas : sur iPhone, c'est le
+ * son seul qui prévient.
  */
 const finishTimer = () => {
     pauseTimer()
@@ -164,25 +214,7 @@ const finishTimer = () => {
     // Haptic feedback
     triggerHaptic('timer')
 
-    // Play a subtle sound if possible
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-        const oscillator = audioCtx.createOscillator()
-        const gainNode = audioCtx.createGain()
-
-        oscillator.connect(gainNode)
-        gainNode.connect(audioCtx.destination)
-
-        oscillator.type = 'sine'
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime)
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime)
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5)
-
-        oscillator.start()
-        oscillator.stop(audioCtx.currentTime + 0.5)
-    } catch (e) {
-        console.warn('Could not play notification sound')
-    }
+    sortieAudio.jouer(jouerLeBipDeFin)
 
     emit('finished')
 }

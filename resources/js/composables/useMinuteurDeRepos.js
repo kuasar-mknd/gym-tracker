@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
+import { useSortieAudio } from '@/composables/useSortieAudio'
 
 /**
  * Ce que dit un réglage du repos automatique resté sans réponse (#2048). Pas
@@ -23,13 +24,28 @@ export const useMinuteurDeRepos = () => {
     const autoRestTimer = ref(usePage().props.auth.user.auto_rest_timer !== false)
 
     /**
+     * La sortie audio où sonne la fin de chaque repos (#2112) : une pour la
+     * page, que le minuteur reçoit, et que la page rend en partant. Le
+     * minuteur, remonté à chaque repos et démonté à sa fin, ne peut pas la
+     * tenir : la fermer avec lui couperait le bip qu'il vient de lancer.
+     */
+    const sortieAudio = useSortieAudio()
+
+    /**
      * Le repos, demande explicitement.
      *
      * Sans lui, couper le demarrage automatique fermait une porte a sens unique :
      * plus rien n'ouvrait le minuteur, et l'interrupteur qui le rallume vit DANS le
      * minuteur. Le reglage etait donc irreversible depuis l'interface.
+     *
+     * Appelé dans le geste qui lance le repos (une série validée, « Démarrer un
+     * repos »), avant tout `await` : c'est là que la sortie s'ouvre ou reprend
+     * (#2112). Le minuteur ne se monte qu'au rendu suivant, hors du geste, et sa
+     * fin tombe dans le rappel d'une minuterie, où WebKit ne démarre aucune
+     * sortie.
      */
     const demarrerLeRepos = (duree) => {
+        sortieAudio.preparer()
         timerDuration.value = duree || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
         showTimer.value = true
@@ -88,5 +104,14 @@ export const useMinuteurDeRepos = () => {
      */
     const timerRun = ref(0)
 
-    return { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation }
+    return {
+        showTimer,
+        timerDuration,
+        autoRestTimer,
+        timerRun,
+        sortieAudio,
+        openRestTimer,
+        setAutoRestTimer,
+        apresValidation,
+    }
 }

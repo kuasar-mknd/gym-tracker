@@ -165,7 +165,7 @@ beforeAll(() => {
 
 beforeEach(() => {
     localStorage.clear()
-    // La minuterie du repos et l'heure seulement : `flushPromises` garde les siennes.
+    // La minuterie du repos et l'heure seulement : le reste de la page garde ses minuteries réelles.
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
     installerLaSortieWebKit()
     patch.mockReset()
