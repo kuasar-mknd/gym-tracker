@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **La fin naturelle du repos sonne sur iPhone, et un repos ne laisse plus de sortie audio ouverte** (#2112) : le minuteur créait son bip à la fin du repos, dans le rappel de sa minuterie, hors de tout geste ; WebKit n'y démarre aucune sortie audio, et Safari iOS n'a pas la vibration. Sur iPhone, la carte du repos disparaissait sans un son, et seul « Passer » sonnait ; partout, chaque repos laissait une sortie audio ouverte jusqu'au rechargement. La page de séance tient désormais une seule sortie, ouverte ou reprise dans le geste qui lance le repos (une série validée, en ligne, sans réseau ou sur une copie, ou « Démarrer un repos ») et dans ceux du minuteur (la reprise après une pause, « Passer »), même quand iOS l'a interrompue ou suspendue entre deux repos ; le bip de fin s'y joue, et la page la rend en partant. Le minuteur d'intervalles ne change pas. Reste sans son la fin d'un repos page cachée ou écran verrouillé.
+
 ## [1.7.0] - 2026-10-25
 
 ### Ajouté
