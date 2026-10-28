@@ -1,18 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
+import { installerLInvitationDInstallation } from '@/composables/useInvitationDInstallation'
 
-const monter = () =>
-    mount(InvitationDInstallation, {
+const CLEF_DU_REFUS = 'gym-tracker:invitation-installation-refusee'
+
+/*
+ * L'écoute du document, posée comme `main.js` la pose, puis retirée après
+ * chaque cas : son retrait oublie aussi ce qu'elle a capté, et aucun
+ * évènement ni refus ne passe d'un cas à l'autre (#2114).
+ */
+let nePlusEcouter = () => {}
+const montees = []
+
+const monter = () => {
+    const wrapper = mount(InvitationDInstallation, {
         global: { directives: { press: {} }, stubs: { GlassCard: { template: '<div><slot /></div>' } } },
     })
+    montees.push(wrapper)
+
+    return wrapper
+}
 
 const inviter = () => {
-    const evenement = new Event('beforeinstallprompt')
+    const evenement = new Event('beforeinstallprompt', { cancelable: true })
     evenement.prompt = vi.fn()
     evenement.userChoice = Promise.resolve({ outcome: 'accepted' })
     window.dispatchEvent(evenement)
+
+    return evenement
 }
+
+const carte = (wrapper) => wrapper.find('[dusk="invitation-installation"]')
+
+const refuser = (wrapper) => wrapper.get('button[aria-label="Ne plus proposer l\'installation"]').trigger('click')
 
 beforeEach(() => {
     window.localStorage.clear()
@@ -22,11 +43,21 @@ beforeEach(() => {
     })
     Object.defineProperty(window.navigator, 'standalone', { value: false, configurable: true })
     window.matchMedia = vi.fn().mockReturnValue({ matches: false })
+    nePlusEcouter = installerLInvitationDInstallation()
+})
+
+afterEach(() => {
+    for (const wrapper of montees.splice(0)) {
+        wrapper.unmount()
+    }
+
+    nePlusEcouter()
+    vi.restoreAllMocks()
 })
 
 describe('InvitationDInstallation', () => {
     it('ne dessine rien tant qu’il n’y a rien à proposer', () => {
-        expect(monter().find('[dusk="invitation-installation"]').exists()).toBe(false)
+        expect(carte(monter()).exists()).toBe(false)
     })
 
     it('propose le bouton quand le navigateur sait installer', async () => {
@@ -35,7 +66,7 @@ describe('InvitationDInstallation', () => {
         inviter()
         await wrapper.vm.$nextTick()
 
-        expect(wrapper.find('[dusk="invitation-installation"]').exists()).toBe(true)
+        expect(carte(wrapper).exists()).toBe(true)
         expect(wrapper.find('[dusk="installer-application"]').exists()).toBe(true)
     })
 
@@ -59,7 +90,7 @@ describe('InvitationDInstallation', () => {
 
         inviter()
         await wrapper.vm.$nextTick()
-        await wrapper.get('button[aria-label="Ne plus proposer l\'installation"]').trigger('click')
+        await refuser(wrapper)
         await wrapper.vm.$nextTick()
 
         expect(wrapper.emitted('visibilite')).toEqual([[true], [false]])
@@ -70,8 +101,133 @@ describe('InvitationDInstallation', () => {
 
         inviter()
         await wrapper.vm.$nextTick()
-        await wrapper.get('button[aria-label="Ne plus proposer l\'installation"]').trigger('click')
+        await refuser(wrapper)
 
-        expect(wrapper.find('[dusk="invitation-installation"]').exists()).toBe(false)
+        expect(carte(wrapper).exists()).toBe(false)
+    })
+})
+
+/*
+ * Chromium n'émet `beforeinstallprompt` qu'au chargement du document, et une
+ * visite d'Inertia ne le recharge pas : l'évènement se garde pour tout le
+ * document, pas pour le seul passage de l'accueil (#2114).
+ */
+describe('un seul évènement pour tout le document', () => {
+    it('revient après un aller-retour vers une autre page, sans nouvel évènement', async () => {
+        const accueil = monter()
+
+        inviter()
+        await accueil.vm.$nextTick()
+
+        expect(carte(accueil).exists()).toBe(true)
+
+        // La séance ouverte, puis le retour à l'accueil : deux visites d'Inertia.
+        accueil.unmount()
+        const auRetour = monter()
+        await auRetour.vm.$nextTick()
+
+        expect(carte(auRetour).exists()).toBe(true)
+        expect(auRetour.find('[dusk="installer-application"]').exists()).toBe(true)
+        expect(window.localStorage.getItem(CLEF_DU_REFUS)).toBeNull()
+    })
+
+    it('se montre au montage quand le navigateur a parlé sur une autre page', async () => {
+        const evenement = inviter()
+
+        // L'invite du navigateur est écartée : la carte la remplace.
+        expect(evenement.defaultPrevented).toBe(true)
+
+        const accueil = monter()
+        await accueil.vm.$nextTick()
+
+        expect(carte(accueil).exists()).toBe(true)
+        expect(accueil.emitted('visibilite')).toEqual([[true]])
+    })
+
+    it('« Installer » ouvre l’invite de l’évènement gardé, une fois, et la carte ne revient pas', async () => {
+        const evenement = inviter()
+        const accueil = monter()
+
+        await accueil.get('[dusk="installer-application"]').trigger('click')
+        await flushPromises()
+
+        expect(evenement.prompt).toHaveBeenCalledOnce()
+        expect(carte(accueil).exists()).toBe(false)
+
+        accueil.unmount()
+
+        expect(carte(monter()).exists()).toBe(false)
+    })
+
+    it('ne revient pas après une installation faite pendant qu’une autre page est affichée', async () => {
+        const accueil = monter()
+        inviter()
+        await accueil.vm.$nextTick()
+        accueil.unmount()
+
+        window.dispatchEvent(new Event('appinstalled'))
+
+        expect(carte(monter()).exists()).toBe(false)
+    })
+
+    it('ne revient pas après un refus, même quand le navigateur réémet l’évènement', async () => {
+        const accueil = monter()
+        inviter()
+        await accueil.vm.$nextTick()
+        await refuser(accueil)
+        accueil.unmount()
+
+        const reemis = inviter()
+
+        expect(carte(monter()).exists()).toBe(false)
+        // « Ne plus proposer l'installation » vaut aussi pour l'invite du navigateur.
+        expect(reemis.defaultPrevented).toBe(true)
+        expect(window.localStorage.getItem(CLEF_DU_REFUS)).toBe('1')
+    })
+
+    it('tient le refus pour tout le document quand le stockage refuse d’écrire', async () => {
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new Error('stockage refusé')
+        })
+        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+            throw new Error('stockage refusé')
+        })
+
+        const accueil = monter()
+        inviter()
+        await accueil.vm.$nextTick()
+        await refuser(accueil)
+        accueil.unmount()
+
+        // De retour à l'accueil, le navigateur réémet l'évènement.
+        const auRetour = monter()
+        inviter()
+        await auRetour.vm.$nextTick()
+
+        expect(carte(auRetour).exists()).toBe(false)
+    })
+
+    /*
+     * Le refus vaut pour l'appareil, comme celui des notifications : la
+     * déconnexion n'efface pas sa clé, et le compte suivant, dans le même
+     * document ou dans un autre, ne revoit pas la carte.
+     */
+    it('tient le refus d’un compte à l’autre, dans ce document comme au suivant', async () => {
+        const accueil = monter()
+        inviter()
+        await accueil.vm.$nextTick()
+        await refuser(accueil)
+        accueil.unmount()
+
+        // Déconnexion puis connexion d'un autre compte : des visites d'Inertia.
+        inviter()
+        expect(carte(monter()).exists()).toBe(false)
+
+        // Un document neuf : rien en mémoire, seule la clé de l'appareil reste.
+        nePlusEcouter()
+        nePlusEcouter = installerLInvitationDInstallation()
+        inviter()
+
+        expect(carte(monter()).exists()).toBe(false)
     })
 })

@@ -1,10 +1,16 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { useInvitationDInstallation } from '@/composables/useInvitationDInstallation'
+import { jsRoot } from '../conventions/sourceFiles'
+import { installerLInvitationDInstallation, useInvitationDInstallation } from '@/composables/useInvitationDInstallation'
 
 const CLEF = 'gym-tracker:invitation-installation-refusee'
 
 let montages = []
+
+/** L'écoute du document, posée comme `main.js` la pose (#2114). */
+let nePlusEcouter = () => {}
 
 const monter = () => {
     let etat
@@ -38,12 +44,15 @@ beforeEach(() => {
     window.localStorage.clear()
     poserLePlatforme('Mozilla/5.0 (Linux; Android 14)')
     window.matchMedia = vi.fn().mockReturnValue({ matches: false })
+    nePlusEcouter = installerLInvitationDInstallation()
 })
 
 afterEach(() => {
     for (const wrapper of montages.splice(0)) {
         wrapper.unmount()
     }
+
+    nePlusEcouter()
 })
 
 describe('useInvitationDInstallation', () => {
@@ -133,5 +142,72 @@ describe('useInvitationDInstallation', () => {
 
         setItem.mockRestore()
         getItem.mockRestore()
+    })
+})
+
+describe('l’écoute du document', () => {
+    /*
+     * Le retrait de l'écoute oublie ce qu'elle a capté : un document neuf, et
+     * un cas de test qui ne reçoit rien du précédent (#2114).
+     */
+    it('oublie, à son retrait, l’évènement et le refus qu’elle tenait', () => {
+        inviter()
+        monter().refuser()
+        window.localStorage.clear()
+        inviter()
+
+        nePlusEcouter()
+        const seconde = installerLInvitationDInstallation()
+
+        try {
+            expect(monter().visible.value).toBe(false)
+
+            inviter()
+
+            expect(monter().visible.value).toBe(true)
+        } finally {
+            seconde()
+        }
+    })
+
+    it('n’écoute plus une fois retirée', () => {
+        nePlusEcouter()
+
+        const evenement = inviter()
+
+        expect(evenement.defaultPrevented).toBe(false)
+        expect(monter().visible.value).toBe(false)
+    })
+
+    it('ne double pas l’écoute quand elle est posée deux fois', () => {
+        const encore = installerLInvitationDInstallation()
+        const evenement = new Event('beforeinstallprompt', { cancelable: true })
+        const empecher = vi.spyOn(evenement, 'preventDefault')
+
+        window.dispatchEvent(evenement)
+        encore()
+
+        expect(empecher).toHaveBeenCalledOnce()
+    })
+})
+
+describe('le branchement', () => {
+    /*
+     * Le navigateur émet `beforeinstallprompt` quand il veut, sur n'importe
+     * quelle page, et une seule fois par document : `main.js` pose l'écoute
+     * d'emblée, avant d'attendre le démarrage dans la coquille, et l'accueil ne
+     * fait plus que lire ce qu'elle a capté (#2114).
+     */
+    it('est posé par main.js, avant le démarrage dans la coquille et le montage de l’application', () => {
+        const main = readFileSync(resolve(jsRoot, 'main.js'), 'utf-8')
+        const pose = main.indexOf('installerLInvitationDInstallation()')
+
+        expect(main).toContain(
+            "import { installerLInvitationDInstallation } from '@/composables/useInvitationDInstallation'",
+        )
+        expect(pose).toBeGreaterThan(-1)
+        expect(pose).toBeLessThan(main.indexOf('const demarrerLApplication = () => {'))
+        expect(pose).toBeLessThan(main.indexOf('demarrerHorsLigne().then('))
+        expect(pose).toBeLessThan(main.indexOf('createInertiaApp({'))
     })
 })
