@@ -76,6 +76,20 @@ describe('useInvitationDInstallation', () => {
         expect(visible.value).toBe(false)
     })
 
+    /*
+     * L'invite native ne s'ouvre qu'une fois par évènement : un second appui
+     * pendant qu'elle est ouverte ne rappelle pas `prompt()`, que le navigateur
+     * refuserait (#2114).
+     */
+    it('n’ouvre l’invite qu’une fois, même sur un second appui', async () => {
+        const { installer } = monter()
+        const evenement = inviter()
+
+        await Promise.all([installer(), installer()])
+
+        expect(evenement.prompt).toHaveBeenCalledOnce()
+    })
+
     /** Sans cela, Chrome affiche sa propre barre en bas de page par-dessus la nôtre. */
     it('empêche l’invite native du navigateur', () => {
         monter()
