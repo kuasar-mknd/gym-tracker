@@ -46,7 +46,10 @@ const props = defineProps({
 
             <!-- Password -->
             <GlassCard class="stagger-2 animate-slide-up">
-                <UpdatePasswordForm />
+                <UpdatePasswordForm
+                    :fournisseur-de-connexion="fournisseurDeConnexion"
+                    :la-messagerie-sait-ecrire-son-adresse="laMessagerieSaitEcrireSonAdresse"
+                />
             </GlassCard>
 
             <!-- Notification Preferences -->
@@ -59,7 +62,10 @@ const props = defineProps({
 
             <!-- Delete Account -->
             <GlassCard class="stagger-4 animate-slide-up">
-                <DeleteUserForm />
+                <DeleteUserForm
+                    :fournisseur-de-connexion="fournisseurDeConnexion"
+                    :la-messagerie-sait-ecrire-son-adresse="laMessagerieSaitEcrireSonAdresse"
+                />
             </GlassCard>
         </div>
     </AuthenticatedLayout>

@@ -72,6 +72,7 @@ vi.mock('@/composables/useAbonnementPush', () => ({ retransmettreLAbonnementPush
 
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
+import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
 import ProfileEdit from '@/Pages/Profile/Edit.vue'
 import { layoutStub, passesSlot } from './pageStubs'
 import { ECRITURE_NON_CONFIRMEE, ENVOI_DU_LIEN_NON_CONFIRME } from '@/Utils/visitesHorsLigne'
@@ -319,7 +320,72 @@ describe('UpdatePasswordForm', () => {
             const wrapper = mountPartial(UpdatePasswordForm)
 
             expect(identifiant(wrapper).element.value).toBe('nouvelle@example.org')
-            expect(Object.keys(wrapper.props())).toEqual([])
+            // Ses deux props disent le fournisseur et la messagerie (#2104), aucune l'adresse.
+            expect(Object.keys(wrapper.props())).toEqual(['fournisseurDeConnexion', 'laMessagerieSaitEcrireSonAdresse'])
+            expect(Object.values(wrapper.props())).not.toContain('nouvelle@example.org')
+        })
+    })
+
+    /*
+     * Un compte ouvert par Google, GitHub ou Apple reçoit un mot de passe tiré
+     * au hasard, que personne ne connaît : le formulaire qui demande le mot de
+     * passe actuel lui dit comment en obtenir un, avec le même encadré que le
+     * formulaire de l'adresse (#2104).
+     */
+    describe('compte relié à un fournisseur de connexion', () => {
+        const aide = (wrapper) => wrapper.find('[data-testid="profile-social-password-help"]')
+
+        beforeEach(() => {
+            currentPage = { props: { auth: { user: { id: 7, email: 'camille@example.org' } } } }
+        })
+
+        it('dit comment obtenir un mot de passe, sous le mot de passe actuel', () => {
+            const wrapper = mountPartial(UpdatePasswordForm, { fournisseurDeConnexion: 'Google' })
+
+            expect(aide(wrapper).text()).toBe(
+                'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle, camille@example.org.',
+            )
+            // Dans le formulaire, juste après le champ qu'il explique.
+            const champ = wrapper.find('input[autocomplete="current-password"]').element
+            expect(champ.compareDocumentPosition(aide(wrapper).element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+            expect(wrapper.find('form').element.contains(aide(wrapper).element)).toBe(true)
+        })
+
+        it('ne promet aucun lien quand la messagerie n’écrit pas l’adresse, et renvoie à un administrateur', () => {
+            currentPage = { props: { auth: { user: { id: 7, email: 'camille(salle)@example.org' } } } }
+            const wrapper = mountPartial(UpdatePasswordForm, {
+                fournisseurDeConnexion: 'Apple',
+                laMessagerieSaitEcrireSonAdresse: false,
+            })
+
+            expect(aide(wrapper).text()).toBe(
+                'Ton compte est relié à Apple. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+            )
+        })
+
+        it('ne montre rien à un compte sans fournisseur', () => {
+            const wrapper = mountPartial(UpdatePasswordForm)
+
+            expect(aide(wrapper).exists()).toBe(false)
+        })
+
+        /*
+         * Le refus du serveur porte le même chemin sous le champ
+         * (`UpdatePasswordRequest`) : l'encadré s'efface plutôt que de le
+         * répéter. Un refus qui ne vise que le nouveau mot de passe le laisse.
+         */
+        it('s’efface quand le refus du mot de passe actuel dit la même chose sous le champ', async () => {
+            const wrapper = mountPartial(UpdatePasswordForm, { fournisseurDeConnexion: 'Google' })
+
+            wrapper.vm.form.errors = { password: 'Le mot de passe doit contenir au moins 8 caractères.' }
+            await nextTick()
+            expect(aide(wrapper).exists()).toBe(true)
+
+            wrapper.vm.form.errors = {
+                current_password: 'Le mot de passe est incorrect. Ton compte est relié à Google. …',
+            }
+            await nextTick()
+            expect(aide(wrapper).exists()).toBe(false)
         })
     })
 })
@@ -790,5 +856,43 @@ describe('Profile/Edit', () => {
         expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: false }))).toBe(false)
         expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: true }))).toBe(true)
         expect(formProp(mountEdit({}))).toBe(true)
+    })
+
+    /*
+     * Le changement du mot de passe et la suppression du compte demandent eux
+     * aussi le mot de passe actuel : sans ces props, ils ne pouvaient pas dire
+     * à un compte relié à un fournisseur comment en obtenir un (#2104).
+     */
+    it('transmet le fournisseur et l’état de la messagerie aux formulaires du mot de passe et de la suppression', () => {
+        const mountEdit = (props) =>
+            mount(ProfileEdit, {
+                props: { mustVerifyEmail: true, ...props },
+                shallow: true,
+                global: {
+                    mocks: { route: globalThis.route },
+                    stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+                },
+            })
+        const propsDe = (wrapper, formulaire) => {
+            const { fournisseurDeConnexion, laMessagerieSaitEcrireSonAdresse } = wrapper
+                .findComponent(formulaire)
+                .props()
+
+            return { fournisseurDeConnexion, laMessagerieSaitEcrireSonAdresse }
+        }
+
+        const relie = mountEdit({ fournisseurDeConnexion: 'Google', laMessagerieSaitEcrireSonAdresse: false })
+        const seul = mountEdit({})
+
+        for (const formulaire of [UpdatePasswordForm, DeleteUserForm]) {
+            expect(propsDe(relie, formulaire)).toEqual({
+                fournisseurDeConnexion: 'Google',
+                laMessagerieSaitEcrireSonAdresse: false,
+            })
+            expect(propsDe(seul, formulaire)).toEqual({
+                fournisseurDeConnexion: null,
+                laMessagerieSaitEcrireSonAdresse: true,
+            })
+        }
     })
 })

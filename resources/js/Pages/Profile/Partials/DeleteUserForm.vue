@@ -3,6 +3,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import Modal from '@/Components/UI/Modal.vue'
+import CheminVersUnMotDePasse from '@/Components/Form/CheminVersUnMotDePasse.vue'
 import { useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { detacherLAppareil } from '@/composables/useAbonnementPush'
@@ -12,6 +13,25 @@ import { oublierLesCopies, oublierLesCopiesAvantUnEnvoi } from '@/Utils/copiesHo
 import { siLaVisiteAboutit } from '@/Utils/miseAJourOptimiste'
 import { effacerLaRecherche } from '@/Utils/rechercheDExercice'
 import { SUPPRESSION_DU_COMPTE_NON_CONFIRMEE, direSansReseau } from '@/Utils/visitesHorsLigne'
+
+/*
+ * Un compte relié à un fournisseur de connexion peut n'avoir jamais choisi de
+ * mot de passe : la fenêtre qui le demande lui dit comment en obtenir un,
+ * comme le formulaire de l'adresse (#2104). Les deux props viennent de la page
+ * (`ProfileController::edit`).
+ */
+const props = defineProps({
+    /** Le fournisseur relié au compte (« Google »…), ou null pour un compte à mot de passe seul. */
+    fournisseurDeConnexion: {
+        type: String,
+        default: null,
+    },
+    /** La messagerie écrit-elle l'adresse actuelle telle quelle ? Sinon, aucun lien ne lui part. */
+    laMessagerieSaitEcrireSonAdresse: {
+        type: Boolean,
+        default: true,
+    },
+})
 
 const confirmingUserDeletion = ref(false)
 const passwordInput = ref(null)
@@ -157,6 +177,14 @@ const closeModal = () => {
                         data-testid="delete-password-input"
                     />
                 </div>
+
+                <!-- Le refus du serveur porte le même chemin sous le champ : l'encadré s'efface devant lui. -->
+                <CheminVersUnMotDePasse
+                    v-if="!form.errors.password"
+                    class="mt-4"
+                    :fournisseur-de-connexion="props.fournisseurDeConnexion"
+                    :la-messagerie-sait-ecrire-son-adresse="props.laMessagerieSaitEcrireSonAdresse"
+                />
 
                 <div class="mt-6 flex justify-end gap-3">
                     <GlassButton variant="secondary" @click="closeModal" data-testid="cancel-delete-button">

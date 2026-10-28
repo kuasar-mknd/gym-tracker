@@ -34,10 +34,11 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => true,
             'status' => session('status'),
-            // Le formulaire d'adresse explique à un compte relié à un
-            // fournisseur comment obtenir le mot de passe qu'il exige, sans
-            // promettre le lien « mot de passe oublié » à une adresse que la
-            // messagerie n'écrit pas telle quelle, qui ne le reçoit pas (#2075).
+            // Les trois formulaires qui exigent le mot de passe actuel
+            // (l'adresse, le mot de passe, la suppression du compte) expliquent
+            // à un compte relié à un fournisseur comment l'obtenir (#2104),
+            // sans promettre le lien « mot de passe oublié » à une adresse que
+            // la messagerie n'écrit pas telle quelle, qui ne le reçoit pas (#2075).
             'fournisseurDeConnexion' => $this->user()->fournisseurDeConnexion(),
             'laMessagerieSaitEcrireSonAdresse' => $this->user()->laMessagerieSaitEcrireSonAdresse(),
             // `auth.user` ne dit pas si l'adresse est vérifiée : le formulaire

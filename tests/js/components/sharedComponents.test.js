@@ -1128,8 +1128,9 @@ describe('DeleteUserForm', () => {
         template: '<div v-if="show" class="modal"><slot /></div>',
     }
 
-    const mountForm = () =>
+    const mountForm = (props = {}) =>
         mount(DeleteUserForm, {
+            props,
             attachTo: document.body,
             global: { ...global, stubs: { Modal: ModalStub } },
         })
@@ -1497,5 +1498,82 @@ describe('DeleteUserForm', () => {
         expect(wrapper.get('[data-testid="confirm-delete-button"]').attributes('aria-busy')).toBe('true')
 
         wrapper.unmount()
+    })
+
+    /*
+     * Un compte ouvert par Google, GitHub ou Apple reçoit un mot de passe tiré
+     * au hasard, que personne ne connaît : la fenêtre qui le demande lui dit
+     * comment en obtenir un, comme le formulaire de l'adresse (#2104). Sans
+     * fournisseur, rien ne change.
+     */
+    describe('compte relié à un fournisseur de connexion', () => {
+        const aide = (wrapper) => wrapper.find('[data-testid="profile-social-password-help"]')
+
+        beforeEach(() => {
+            hoisted.page.props = { auth: { user: { id: 7, email: 'camille@example.org' } } }
+        })
+
+        afterEach(() => {
+            hoisted.page.props = {}
+        })
+
+        it('dit, dans la fenêtre de confirmation, comment obtenir un mot de passe', async () => {
+            const wrapper = mountForm({ fournisseurDeConnexion: 'Google', laMessagerieSaitEcrireSonAdresse: true })
+
+            expect(aide(wrapper).exists()).toBe(false)
+
+            await openConfirmation(wrapper)
+
+            expect(wrapper.get('.modal').find('[data-testid="profile-social-password-help"]').text()).toBe(
+                'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle, camille@example.org.',
+            )
+
+            wrapper.unmount()
+        })
+
+        it('ne promet aucun lien quand la messagerie n’écrit pas l’adresse, et renvoie à un administrateur', async () => {
+            hoisted.page.props = { auth: { user: { id: 7, email: 'camille(salle)@example.org' } } }
+            const wrapper = mountForm({ fournisseurDeConnexion: 'GitHub', laMessagerieSaitEcrireSonAdresse: false })
+            await openConfirmation(wrapper)
+
+            expect(aide(wrapper).text()).toBe(
+                'Ton compte est relié à GitHub. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+            )
+            expect(aide(wrapper).text()).not.toContain('Mot de passe oublié')
+
+            wrapper.unmount()
+        })
+
+        it('ne montre rien à un compte sans fournisseur', async () => {
+            const wrapper = mountForm()
+            await openConfirmation(wrapper)
+
+            expect(passwordField(wrapper).exists()).toBe(true)
+            expect(aide(wrapper).exists()).toBe(false)
+
+            wrapper.unmount()
+        })
+
+        /*
+         * Le refus du serveur porte le même chemin sous le champ
+         * (`DeleteUserRequest`) : l'encadré s'efface plutôt que de le répéter,
+         * et revient à la fenêtre suivante.
+         */
+        it('s’efface quand le refus du serveur dit la même chose sous le champ', async () => {
+            const wrapper = mountForm({ fournisseurDeConnexion: 'Google' })
+            await openConfirmation(wrapper)
+
+            formOf().errors = { password: 'Le mot de passe est incorrect. Ton compte est relié à Google. …' }
+            await wrapper.vm.$nextTick()
+
+            expect(aide(wrapper).exists()).toBe(false)
+
+            await wrapper.get('[data-testid="cancel-delete-button"]').trigger('click')
+            await openConfirmation(wrapper)
+
+            expect(aide(wrapper).exists()).toBe(true)
+
+            wrapper.unmount()
+        })
     })
 })
