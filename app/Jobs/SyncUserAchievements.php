@@ -18,7 +18,7 @@ use Illuminate\Queue\Attributes\Tries;
  * `UnRecalculParCompteALaFois` dit comment (#2105).
  *
  * Supprimé sans être lancé quand le compte a disparu avant son tour
- * (`#[DeleteWhenMissingModels]`, #2109) : il n'y a plus de les succès à
+ * (`#[DeleteWhenMissingModels]`, #2109) : il n'y a plus de succès à
  * recalculer, et Laravel, qui levait `ModelNotFoundException` en restaurant le
  * compte, envoyait sinon le travail dans `failed_jobs`.
  */
