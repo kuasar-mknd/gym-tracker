@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Fast;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -68,6 +69,16 @@ function jeuneALInstantPage(User $user): TestResponse
 }
 
 /**
+ * L'instant d'une date relue en base, en UTC, pour le comparer à celui envoyé.
+ */
+function jeuneALInstantEnUtc(mixed $date): string
+{
+    assert($date instanceof CarbonInterface);
+
+    return $date->toIso8601ZuluString();
+}
+
+/**
  * L'écoulé que la page affiche pour le jeûne en cours qu'elle reçoit :
  * maintenant moins le début servi, en secondes, comme son `updateTimer()`.
  *
@@ -91,7 +102,7 @@ it('relit au même instant le début envoyé depuis Toronto, et le sert à la pa
 
     $jeune = Fast::query()->where('user_id', $user->id)->sole();
 
-    expect($jeune->start_time->toIso8601ZuluString())->toBe('2026-03-10T12:00:00Z');
+    expect(jeuneALInstantEnUtc($jeune->start_time))->toBe('2026-03-10T12:00:00Z');
 
     $page = jeuneALInstantPage($user);
 
@@ -118,7 +129,7 @@ it('termine au même instant le jeûne fini depuis Toronto, et le range dans l�
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
-    expect($jeune->refresh()->end_time?->toIso8601ZuluString())->toBe('2026-03-11T04:00:00Z');
+    expect(jeuneALInstantEnUtc($jeune->refresh()->end_time))->toBe('2026-03-11T04:00:00Z');
 
     $page = jeuneALInstantPage($user);
     $debut = $page->json('props.history.data.0.start_time');
