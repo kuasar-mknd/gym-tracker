@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const inertia = vi.hoisted(() => ({ patch: vi.fn(), utilisateur: { auto_rest_timer: true, default_rest_time: 75 } }))
 vi.mock('@inertiajs/vue3', () => ({
@@ -9,6 +9,7 @@ vi.mock('@inertiajs/vue3', () => ({
 import { REPOS_AUTOMATIQUE_SANS_RESEAU, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
 import { annoncesPendant } from '../utils/annoncesSansReseau'
 import { noterQueLeServeurRepond, useEtatDuReseau } from '@/composables/useEtatDuReseau'
+import { dansUnGeste, installerLaSortieWebKit, retirerLaSortieWebKit, sorties } from '../utils/sortieAudioWebKit'
 
 beforeEach(() => {
     vi.clearAllMocks()
@@ -100,5 +101,43 @@ describe('le minuteur de repos', () => {
         inertia.utilisateur.auto_rest_timer = false
 
         expect(useMinuteurDeRepos().autoRestTimer.value).toBe(false)
+    })
+})
+
+/*
+ * La fin du repos tombe dans le rappel d'une minuterie, où WebKit ne démarre
+ * aucune sortie audio (#2112) : la sortie s'ouvre, ou reprend, dans le geste
+ * qui lance le repos, avant que le minuteur ne soit seulement monté.
+ */
+describe('la sortie audio du repos', () => {
+    beforeEach(() => installerLaSortieWebKit())
+    afterEach(() => retirerLaSortieWebKit())
+
+    it('s’ouvre dans le geste de la validation qui lance le repos, et seulement quand elle le lance', async () => {
+        const minuteur = useMinuteurDeRepos()
+
+        minuteur.setAutoRestTimer(false)
+        await dansUnGeste(() => minuteur.apresValidation(60))
+        expect(sorties).toHaveLength(0)
+
+        minuteur.setAutoRestTimer(true)
+        await dansUnGeste(() => minuteur.apresValidation(60))
+
+        expect(minuteur.showTimer.value).toBe(true)
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].creeeDansUnGeste).toBe(true)
+        expect(sorties[0].state).toBe('running')
+    })
+
+    it('reprend dans le geste d’un repos demandé la sortie qu’iOS a interrompue depuis, sans en ouvrir une autre', async () => {
+        const minuteur = useMinuteurDeRepos()
+
+        await dansUnGeste(() => minuteur.apresValidation(60))
+        sorties[0].interrompre()
+        await dansUnGeste(() => minuteur.openRestTimer())
+
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].reprises).toEqual([{ dansUnGeste: true, etat: 'interrupted' }])
+        expect(sorties[0].state).toBe('running')
     })
 })
