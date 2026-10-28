@@ -297,15 +297,20 @@ test('guard clauses for missing exercise_id and measurement_type', function (): 
     $this->service->updateGoalProgress($goalVolume);
     expect($goalVolume->current_value)->toBe(0.0);
 
-    // Measurement goal missing measurement_type
+    /*
+     * Un objectif de mensuration sans mensuration ne suit rien : il revient à
+     * sa valeur de départ, comme un objectif dont la mensuration n'a aucune
+     * mesure (#2132). Il gardait sa valeur actuelle, 0 par défaut.
+     */
     $goalMeasurement = Goal::factory()->create([
         'user_id' => $user->id,
         'type' => GoalType::Measurement,
         'measurement_type' => null,
+        'start_value' => 42,
         'current_value' => 0,
     ]);
     $this->service->updateGoalProgress($goalMeasurement);
-    expect($goalMeasurement->current_value)->toBe(0.0);
+    expect($goalMeasurement->current_value)->toBe(42.0);
 });
 
 /**
@@ -380,35 +385,53 @@ test('une mensuration à zéro n’atteint pas un objectif à la baisse', functi
 });
 
 /**
- * Un objectif de mensuration sans mensuration choisie n'est pas atteint par
- * sa valeur actuelle à zéro.
+ * Un objectif de mensuration sans mensuration choisie revient à sa valeur de
+ * départ : barre à zéro, jamais atteint (#2132).
  *
- * Le panneau permet de le créer : la mensuration y est facultative, et la
- * valeur actuelle vaut 0 par défaut. `updateMeasurementGoal()` ne le touche
- * pas, faute de savoir quoi lire, et sa valeur reste à 0, sous toute cible :
- * c'est l'autre cas que tient le garde `&& $goal->current_value > 0`, en plus
- * de la mensuration à zéro du test du dessus.
+ * Le panneau permettait de le créer : la mensuration y était facultative, et
+ * la valeur actuelle valait 0 par défaut. `updateMeasurementGoal()` ne le
+ * touchait pas, faute de savoir quoi lire, et sa valeur restait à 0. Ce test
+ * affirmait alors seulement qu'il n'était pas atteint, ce que tenait le garde
+ * `&& $goal->current_value > 0` (#2107) : sa barre, elle, comptait le chemin de
+ * 80 à 0, plafonné à 100 %, et ne bougeait plus quoi que la personne saisisse.
+ *
+ * Il revient désormais à son départ, comme un objectif sans valeur relevée
+ * (#1953, #1954, #2107), par les deux chemins. L'objectif est posé tel que
+ * l'ancien recalcul l'a laissé en base, barre pleine : le prochain recalcul le
+ * répare. Le garde du zéro ne se prouve plus que par une mensuration à zéro,
+ * plus haut.
  */
-test('un objectif de mensuration sans mensuration choisie n’est pas atteint à zéro', function (): void {
+test('un objectif de mensuration sans mensuration choisie revient à sa valeur de départ, barre à zéro', function (?string $mensuration, string $chemin): void {
     $user = User::factory()->create();
 
     $goal = Goal::factory()->create([
         'user_id' => $user->id,
         'type' => GoalType::Measurement,
-        'measurement_type' => null,
+        'measurement_type' => $mensuration,
         'start_value' => 80,
         'current_value' => 0,
         'target_value' => 75,
+        'progress_pct' => 100,
         'completed_at' => null,
     ]);
 
-    $this->service->syncGoals($user);
+    if ($chemin === 'lot') {
+        $this->service->syncGoals($user);
+        $goal->refresh();
+    } else {
+        $this->service->updateGoalProgress($goal);
+    }
 
-    $goal->refresh();
-
-    expect($goal->current_value)->toBe(0.0)
+    expect($goal->current_value)->toBe(80.0)
+        ->and((float) $goal->progress_pct)->toBe(0.0)
         ->and($goal->completed_at)->toBeNull();
-});
+})->with([
+    'sans mensuration' => [null],
+    'mensuration vide' => [''],
+])->with([
+    'par le lot' => ['lot'],
+    'par le chemin d’un seul objectif' => ['seul'],
+]);
 
 /**
  * Et le sens de l'objectif se lit sur les valeurs, pas sur son type.
