@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Un jeûne commence et finit à l'instant de l'appareil, même hors du fuseau de l'application** (#2111, #PR) : la page du jeûne envoyait son début et sa fin en heure murale de l'appareil, sans décalage, que le serveur lit comme une heure de l'application. Sur un appareil réglé sur un autre fuseau, le jeûne s'enregistrait décalé de l'écart entre les deux, et la page affichait dès le départ des heures déjà écoulées. Le début et la fin partent désormais avec leur décalage ; sur un appareil à l'heure de l'application, rien ne change. Les jeûnes déjà enregistrés depuis un autre fuseau gardent leurs heures : rien ne dit de quel fuseau ils venaient.
+
 ## [1.7.0] - 2026-10-25
 
 ### Ajouté
