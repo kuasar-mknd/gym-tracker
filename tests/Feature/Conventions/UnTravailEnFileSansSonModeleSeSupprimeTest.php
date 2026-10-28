@@ -102,7 +102,7 @@ function sansSonModeleVientDuFramework(ReflectionClass $classe, ReflectionProper
     }
 
     foreach (class_uses_recursive($classe->getName()) as $trait) {
-        if (! str_starts_with($trait, 'App\\') && new ReflectionClass($trait)->hasProperty($propriete->getName())) {
+        if (! str_starts_with($trait, 'App\\') && property_exists($trait, $propriete->getName())) {
             return true;
         }
     }
@@ -199,7 +199,7 @@ function sansSonModeleSeSupprime(ReflectionClass $classe): bool
 /**
  * Les classes en file qui portent un modèle, et les propriétés qui le portent.
  *
- * @return array<string, list<string>>
+ * @return array<class-string, list<string>>
  */
 function sansSonModelePorteurs(): array
 {

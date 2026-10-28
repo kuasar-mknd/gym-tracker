@@ -120,6 +120,7 @@ function sansModeleValiderParLaRoute(User $user, WorkoutLine $ligne, float $poid
         ])
         ->assertCreated()
         ->json('data.id');
+    assert(is_int($id));
 
     return Set::query()->findOrFail($id);
 }
