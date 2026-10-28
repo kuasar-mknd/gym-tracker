@@ -7,6 +7,12 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Un objectif de mensuration créé au panneau sans mensuration n'affiche plus une barre pleine** (#2132) : le panneau laissait la mensuration facultative quel que soit le type, et la valeur actuelle valait 0 par défaut. L'objectif ne suivait rien, gardait ce 0 et, quand sa cible était sous son départ, affichait 100 % sans jamais s'achever ni bouger quoi que la personne saisisse. Le panneau exige désormais la mensuration d'un objectif de mensuration, à la création, à la modification et depuis la table, comme le formulaire de l'application ; le recalcul ramène un objectif sans mensuration à sa valeur de départ, barre à 0 %, et répare au prochain recalcul de son compte celui qui existe déjà.
+
+### Optimisé
+- **Le recalcul des objectifs lit les mesures des parties du corps en une instruction** (#2131) : chaque objectif de tour de taille, de poitrine ou d'une autre partie lisait sa dernière mesure par sa propre requête, à chaque séance, série ou mesure enregistrée ou supprimée. Une seule lecture sert désormais toutes les parties suivies, par la même requête que le calcul d'un seul objectif ; elle s'arrête à la dernière mesure de chacune, quelle que soit la longueur de l'historique. Les valeurs rendues ne changent pas.
+
 ## [1.7.0] - 2026-10-25
 
 ### Ajouté
