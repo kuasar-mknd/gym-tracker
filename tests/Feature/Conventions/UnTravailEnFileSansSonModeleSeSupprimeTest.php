@@ -101,13 +101,7 @@ function sansSonModeleVientDuFramework(ReflectionClass $classe, ReflectionProper
         return true;
     }
 
-    foreach (class_uses_recursive($classe->getName()) as $trait) {
-        if (! str_starts_with($trait, 'App\\') && property_exists($trait, $propriete->getName())) {
-            return true;
-        }
-    }
-
-    return false;
+    return array_any(class_uses_recursive($classe->getName()), fn (string $trait): bool => ! str_starts_with($trait, 'App\\') && property_exists($trait, $propriete->getName()));
 }
 
 /**
