@@ -74,9 +74,12 @@ const FastingIndex = (await import('@/Pages/Tools/Fasting/Index.vue')).default
 const NOW = new Date('2026-03-10T12:00:00Z')
 
 /**
- * The page stamps times in the browser's own zone. Rebuilt here from the Date
- * API rather than from dayjs, so the expectation is not the implementation
- * read back, and so the suite holds in any TZ the machine happens to run in.
+ * The page shows times in the browser's own zone, and sends the instant they
+ * name (#2111). Le champ du début est une heure murale de l'appareil, à la
+ * minute ; ce qui part au serveur porte son décalage, et désigne le même
+ * instant où que soit l'appareil. Rebuilt here from the Date API rather than
+ * from dayjs, so the expectation is not the implementation read back, and so
+ * the suite holds in any TZ the machine happens to run in.
  */
 const pad = (value) => String(value).padStart(2, '0')
 const localStamp = (date, separator) =>
@@ -129,6 +132,12 @@ const runningFast = (seconds, targetMinutes) => ({
 
 const elapsedReadout = (wrapper) => wrapper.find('.font-mono.text-4xl').text()
 
+const boutonTerminer = (wrapper) =>
+    wrapper.findAll('button').find((button) => button.text().includes('Terminer le jeûne'))
+
+/** Une heure qui porte son fuseau : `Z`, ou un décalage (`-04:00`, `+0100`). */
+const AVEC_SON_DECALAGE = /(?:Z|[+-]\d{2}:?\d{2})$/
+
 describe('Fasting — le compteur du jeûne en cours', () => {
     it('affiche les heures, minutes et secondes écoulées', async () => {
         const wrapper = await mountPage({ activeFast: runningFast(2 * 3600 + 3 * 60 + 4, 16 * 60) })
@@ -177,16 +186,17 @@ describe('Fasting — le compteur du jeûne en cours', () => {
         expect(Number(wrapper.findAll('circle')[1].attributes('stroke-dashoffset'))).toBe(0)
     })
 
-    it('termine le jeûne en horodatant la fin', async () => {
+    it('termine le jeûne en horodatant la fin à l’instant, avec son décalage', async () => {
         const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
 
-        const finish = wrapper.findAll('button').find((button) => button.text().includes('Terminer le jeûne'))
-        await finish.trigger('click')
+        await boutonTerminer(wrapper).trigger('click')
 
         expect(hoisted.patch).toHaveBeenCalledTimes(1)
         const [url, payload] = hoisted.patch.mock.calls[0]
         expect(url).toBe('/tools.fasting.update/7')
-        expect(payload.end_time).toBe(`${localStamp(NOW, ' ')}:00`)
+        // L'heure murale de l'appareil (`AAAA-MM-JJ HH:mm:ss`) partait sans
+        // décalage, et le serveur la lisait comme une heure de l'application (#2111).
+        expect(payload.end_time).toBe(NOW.toISOString())
         expect(payload.status).toBe('completed')
     })
 
@@ -400,5 +410,156 @@ describe('Fasting — le compteur quand le jeûne démarre en cours de route', (
         expect(wrapper.text()).not.toContain('01:00:0')
 
         wrapper.unmount()
+    })
+})
+
+/**
+ * Un appareil hors du fuseau de l'application (#2111).
+ *
+ * Le début partait en heure murale de l'appareil (`2026-03-10T08:00` à
+ * Toronto), la fin aussi (`2026-03-11 00:00:00`), sans décalage : le serveur
+ * lit une telle heure comme une heure de l'application (Paris), et le jeûne
+ * s'enregistrait cinq heures trop tôt ; la page relisait cet instant et
+ * affichait dès le départ cinq heures écoulées. Le champ reste à l'heure de
+ * l'appareil ; ce qui part porte son décalage et désigne l'instant de l'appareil.
+ *
+ * Le fuseau se pose par `process.env.TZ`, que Node relit dans un processus (le
+ * pool `forks`, celui de Vitest par défaut et de la CI), mais qu'il ignore
+ * dans un worker de `--pool=threads`, sans erreur : chaque cas vérifie d'abord
+ * que le fuseau est en vigueur, sans quoi il passerait sans rien prouver.
+ *
+ * `tests/Feature/Tools/JeuneALInstantDeLAppareilTest.php` envoie au serveur ces
+ * mêmes valeurs, et vérifie qu'il les relit au même instant et sert un jeûne
+ * dont l'écoulé est nul au départ.
+ */
+const fuseauDOrigine = process.env.TZ
+
+/**
+ * @param {string} fuseau
+ * @param {number} decalageEnMinutes ce que `getTimezoneOffset()` rend à `NOW` dans ce fuseau
+ */
+const poserLeFuseau = (fuseau, decalageEnMinutes) => {
+    process.env.TZ = fuseau
+
+    expect(NOW.getTimezoneOffset(), `le fuseau ${fuseau} doit être en vigueur`).toBe(decalageEnMinutes)
+}
+
+const rendreLeFuseau = () => {
+    // `process.env.TZ = undefined` écrirait la chaîne « undefined », que Node
+    // lit comme un fuseau inconnu, donc UTC, pour la suite du processus.
+    if (fuseauDOrigine === undefined) {
+        delete process.env.TZ
+    } else {
+        process.env.TZ = fuseauDOrigine
+    }
+}
+
+/** Seize heures après `NOW` : minuit à Toronto, 05:00 à Paris. */
+const FIN = new Date('2026-03-11T04:00:00Z')
+
+/** Le jeûne que le serveur sert pour un début reçu à `NOW`, sous la forme d'Eloquent. */
+const jeuneServiAuDepart = {
+    id: 7,
+    type: '16:8',
+    start_time: '2026-03-10T12:00:00.000000Z',
+    end_time: null,
+    target_duration_minutes: 16 * 60,
+}
+
+const envoyerLeDebut = async (wrapper) => {
+    await wrapper.find('form').trigger('submit')
+
+    expect(hoisted.post).toHaveBeenCalledTimes(1)
+
+    return hoisted.post.mock.calls[0][1].start_time
+}
+
+const envoyerLaFin = async (wrapper) => {
+    await boutonTerminer(wrapper).trigger('click')
+
+    expect(hoisted.patch).toHaveBeenCalledTimes(1)
+
+    return hoisted.patch.mock.calls[0][1].end_time
+}
+
+describe('Fasting — un appareil à Toronto, hors du fuseau de l’application (#2111)', () => {
+    // 12:00Z le 10 mars 2026 : 08:00 à Toronto (UTC-4 depuis le 8 mars), 13:00 à Paris (UTC+1).
+    beforeEach(() => poserLeFuseau('America/Toronto', 240))
+
+    afterEach(rendreLeFuseau)
+
+    it('garde dans le champ l’heure de l’appareil, et envoie le début à son instant, avec son décalage', async () => {
+        const wrapper = await mountPage({})
+
+        expect(wrapper.find('input[type="datetime-local"]').element.value).toBe('2026-03-10T08:00')
+
+        const debut = await envoyerLeDebut(wrapper)
+
+        expect(debut).toMatch(AVEC_SON_DECALAGE)
+        expect(Date.parse(debut)).toBe(NOW.getTime())
+        expect(debut).toBe('2026-03-10T12:00:00.000Z')
+    })
+
+    it('envoie un début corrigé à la main à l’instant que l’appareil lit dans son champ', async () => {
+        const wrapper = await mountPage({})
+
+        await wrapper.find('input[type="datetime-local"]').setValue('2026-03-10T06:30')
+        const debut = await envoyerLeDebut(wrapper)
+
+        expect(debut).toMatch(AVEC_SON_DECALAGE)
+        expect(Date.parse(debut)).toBe(Date.parse('2026-03-10T10:30:00Z'))
+    })
+
+    it('relit le jeûne servi au départ à zéro, le termine à l’instant de l’appareil, puis le date dans l’historique à son heure', async () => {
+        const wrapper = await mountPage({ activeFast: jeuneServiAuDepart })
+
+        expect(elapsedReadout(wrapper)).toBe('00:00:00')
+        expect(wrapper.text()).toContain('16:00:00 restants')
+        expect(wrapper.text()).toContain('Débuté : 10/03/2026 08:00')
+
+        vi.setSystemTime(FIN)
+        const fin = await envoyerLaFin(wrapper)
+
+        expect(fin).toMatch(AVEC_SON_DECALAGE)
+        expect(Date.parse(fin)).toBe(FIN.getTime())
+        expect(fin).toBe('2026-03-11T04:00:00.000Z')
+
+        const termine = { ...jeuneServiAuDepart, end_time: '2026-03-11T04:00:00.000000Z', status: 'completed' }
+        await wrapper.setProps({ activeFast: null, history: { ...emptyHistory, data: [termine] } })
+        await flushPromises()
+
+        expect(wrapper.text()).toContain('10/03/2026 08:00 - 11/03/2026 00:00')
+        expect(wrapper.text()).toContain('16:00:00')
+        expect(wrapper.findComponent({ name: 'FastingHistoryChart' }).props('data')).toEqual([termine])
+
+        wrapper.unmount()
+    })
+})
+
+describe('Fasting — un appareil à Paris, dans le fuseau de l’application (#2111)', () => {
+    beforeEach(() => poserLeFuseau('Europe/Paris', -60))
+
+    afterEach(rendreLeFuseau)
+
+    it('envoie le même instant qu’avant, désormais avec son décalage', async () => {
+        const debutPage = await mountPage({})
+
+        // Ce que la page envoyait (« 2026-03-10T13:00 »), lu comme une heure de
+        // Paris, désignait déjà cet instant : le jeûne s'enregistre comme avant.
+        expect(debutPage.find('input[type="datetime-local"]').element.value).toBe('2026-03-10T13:00')
+
+        const debut = await envoyerLeDebut(debutPage)
+
+        expect(debut).toMatch(AVEC_SON_DECALAGE)
+        expect(Date.parse(debut)).toBe(Date.parse('2026-03-10T13:00:00+01:00'))
+
+        const finPage = await mountPage({ activeFast: jeuneServiAuDepart })
+        vi.setSystemTime(FIN)
+        const fin = await envoyerLaFin(finPage)
+
+        expect(fin).toMatch(AVEC_SON_DECALAGE)
+        expect(Date.parse(fin)).toBe(Date.parse('2026-03-11T05:00:00+01:00'))
+
+        finPage.unmount()
     })
 })
