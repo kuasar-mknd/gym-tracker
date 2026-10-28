@@ -8,9 +8,23 @@ use App\Models\PersonalRecord;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use Illuminate\Queue\Attributes\DeleteWhenMissingModels;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
+/**
+ * Annonce un record personnel que la synchronisation d'une série vient
+ * d'établir.
+ *
+ * Supprimée sans partir quand le record a disparu avant son envoi
+ * (`#[DeleteWhenMissingModels]`, #2109) : la série qui le tenait a été
+ * supprimée, et sa suppression a retiré le record que plus rien ne tient, ou
+ * le compte l'a été. Il n'y a plus de record à annoncer, et Laravel, qui
+ * levait `ModelNotFoundException` en restaurant le record, envoyait sinon
+ * l'avis dans `failed_jobs`. Le destinataire, lui, se restaure en collection :
+ * un compte supprimé ne fait rien échouer, l'avis ne part à personne.
+ */
+#[DeleteWhenMissingModels]
 final class PersonalRecordAchieved extends Notification implements ShouldQueue
 {
     use Queueable;
