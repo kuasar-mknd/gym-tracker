@@ -7,6 +7,7 @@ namespace App\Actions\Workouts;
 use App\Models\Exercise;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\WorkoutLine;
 use App\Services\Stats\ClesDeStats;
 use App\Services\Stats\VolumeStatsService;
 use App\Services\Stats\WorkoutStatsService;
@@ -14,7 +15,6 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 final class FetchWorkoutsIndexAction
 {
@@ -83,7 +83,7 @@ final class FetchWorkoutsIndexAction
     }
 
     /**
-     * Un COUNT DISTINCT sur toutes les lignes de toutes les seances.
+     * Le compte des exercices distincts (`compterExercicesDistincts()`).
      *
      * Il restait immediat pendant que le reste de la page passait en differe et
      * en cache — et la requete XHR de la prop differee rejoue le controleur, si
@@ -101,37 +101,51 @@ final class FetchWorkoutsIndexAction
     }
 
     /**
-     * Combien d'exercices differents cet utilisateur a deja faits.
+     * Combien d'exercices différents cet utilisateur a déjà faits.
      *
-     * `distinct()->count()` lisait toutes les lignes de toutes les seances :
-     * 321 lectures d'index a 40 seances, 1 601 a 200, pour rendre un chiffre
-     * qui ne depend que de la BIBLIOTHEQUE de l'utilisateur. Un `group by`
-     * n'aide pas — MySQL ne retient pas de balayage lache ici, `Extra` restant
-     * « Using index » et jamais « Using index for group-by ».
+     * Le chiffre ne dépend que de la BIBLIOTHÈQUE de l'utilisateur, pas de son
+     * historique : il se lit en sautant dans l'index d'un exercice au suivant,
+     * sans parcourir les lignes. MySQL fait ce saut lui-même (« Using index
+     * for group-by », « Covering index skip scan for deduplication ») quand
+     * les colonnes du `distinct` forment le PRÉFIXE d'un index : d'où
+     * `user_id` devant `exercise_id`, sur
+     * `(user_id, exercise_id, workout_started_at)`. Le compte n'en change pas,
+     * toutes les lignes lues portant le même `user_id`. `count(distinct
+     * exercise_id)` seul n'est pas un préfixe, et lit chaque ligne du compte ;
+     * un `group by exercise_id` de même.
      *
-     * Le saut, lui, coute une lecture par exercice trouve : `min(exercise_id)`
-     * au-dela du curseur forme une plage sur
-     * `(user_id, exercise_id, workout_started_at)` et s'arrete a la premiere
-     * entree. Neuf lectures aux deux profondeurs mesurees. Meme recette que
-     * `FetchBodyPartMeasurementsIndexAction`, et meme raison.
+     * Deltas de `Handler_read%`, MySQL 8.4.11 et 9.7.2, deux comptes voisins
+     * dans la table (#2106) :
      *
-     * La boucle tourne dans la base, par une expression de table recursive :
-     * une instruction, quel que soit le nombre d'exercices, la ou une boucle
-     * PHP coutait un aller-retour par exercice trouve.
+     *     exercices  lignes  ce compte  count(distinct exercise_id)  CTE récursive
+     *            40   2 500         43                        2 501        100 124
+     *            80   9 000         83                        9 001        720 244
+     *
+     * soit E + 3 lectures, en une instruction : moins d'une demi-milliseconde
+     * (médianes), contre 11 et près de 80 ms pour la CTE. Celle-ci promettait
+     * une lecture par exercice, mais son membre récursif était une
+     * sous-requête dépendante que MySQL ne réduit pas à une plage : elle
+     * relisait toutes les lignes du compte à chaque exercice, E × L lectures.
+     * La boucle PHP de `min()` coûte E + 1 lectures, mais autant
+     * d'allers-retours (81 requêtes, 10 à 12 ms à quatre-vingts exercices),
+     * et une boucle sans borne connue n'a pas sa place dans le code muté
+     * (`.ai/rules/mutation.md`).
+     *
+     * Le saut reste un choix de coût, que MySQL fait d'après les statistiques
+     * de la table. Il a été retenu dans chaque cas mesuré où elles
+     * connaissaient les lignes (après `ANALYZE TABLE` ou le recalcul
+     * automatique d'InnoDB) : compte dense, clairsemé, un exercice par ligne
+     * (E + 3 = L + 3), compte sans ligne. Sur une table que les statistiques
+     * croient vide, comme la base des tests, MySQL lit les lignes du compte
+     * (L + 1, le coût de `count(distinct exercise_id)`). Jamais E × L.
      */
     private function compterExercicesDistincts(User $user): int
     {
-        $compte = DB::scalar(
-            'with recursive saut as ('
-            .'select min(exercise_id) as exercise_id from workout_lines where user_id = ? '
-            .'union all '
-            .'select (select min(exercise_id) from workout_lines where user_id = ? and exercise_id > saut.exercise_id) '
-            .'from saut where saut.exercise_id is not null'
-            .') select count(exercise_id) from saut',
-            [$user->id, $user->id],
-        );
-
-        return is_numeric($compte) ? (int) $compte : 0;
+        return WorkoutLine::query()
+            ->toBase()
+            ->where('user_id', $user->id)
+            ->distinct()
+            ->count(['user_id', 'exercise_id']);
     }
 
     /**

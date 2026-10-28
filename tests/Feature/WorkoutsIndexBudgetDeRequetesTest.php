@@ -161,9 +161,11 @@ it('tient sous quinze requêtes à froid, quel que soit le nombre d’exercices'
  * Le contrôle porte sur la forme, pas sur un compte exact que les
  * statistiques de la table feraient bouger (`.ai/rules/services.md`) : pas de
  * sous-requête dépendante dans le plan, et au plus une entrée d'index par
- * ligne du compte, plus celle qui ouvre la plage. La requête et son coût sont
- * isolés par le cache : la seconde lecture de la page ne refait que ce que le
- * cache n'épargne pas.
+ * ligne du compte, plus celle qui ouvre la plage. C'est le coût exact ici : la
+ * base des tests, que ses statistiques croient vide, ne fait pas choisir à
+ * MySQL le saut d'un exercice au suivant (E + 3 lectures en production). La
+ * requête et son coût sont isolés par le cache : la seconde lecture de la
+ * page ne refait que ce que le cache n'épargne pas.
  */
 it('compte les exercices sans sous-requête dépendante, en une lecture d’index au plus par ligne du compte', function (): void {
     $user = User::factory()->create();

@@ -52,9 +52,10 @@ function semerLignesPourExercices(User $user, int $seances, int $combienExercice
  * exercices et 9 000 lignes, contre 9 001.
  *
  * Le controle porte sur la forme ecrite, que les statistiques de la table ne
- * font pas varier : le plan, lui, est un choix de cout.
+ * font pas varier : le plan, lui, est un choix de cout. Dans la base des
+ * tests, que ses statistiques croient vide, MySQL lit les lignes du compte.
  */
-it('compte les exercices sur le préfixe de l’index, que MySQL parcourt par sauts', function (): void {
+it('compte les exercices sur le préfixe de l’index, que MySQL peut parcourir par sauts', function (): void {
     $user = User::factory()->create();
     semerLignesPourExercices($user, 30, 6);
 
