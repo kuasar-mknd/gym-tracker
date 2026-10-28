@@ -63,7 +63,8 @@ const props = defineProps({
      * geste qui a lancé le repos : la fin y sonne. La page la tient parce que
      * le minuteur se démonte à chaque fin, bip compris. Monté seul, sans
      * elle, le minuteur ouvre la sienne dans ses propres gestes et la rend en
-     * partant.
+     * partant : un parent qui le démonte à `finished` lui passe donc la sienne,
+     * sans quoi le bip se couperait aussitôt parti.
      */
     sortieAudio: {
         type: Object,

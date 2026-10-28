@@ -15,7 +15,8 @@ import {
 /**
  * La sortie audio d'une page (#2112) : ouverte ou reprise dans un geste, jouée
  * ensuite hors geste, rendue au démontage. La sortie factice applique la règle
- * de WebKit : créée ou reprise hors geste, elle reste suspendue.
+ * de WebKit : neuve, elle est suspendue jusqu'à un `resume()` dans un geste, et
+ * créée ou reprise hors geste, elle le reste.
  */
 
 /** Le composable pose sa fermeture sur le démontage : il lui faut un composant hôte. */
@@ -87,17 +88,25 @@ describe('ouvrir la sortie dans le geste', () => {
         await dansUnGeste(() => sortie.preparer())
 
         expect(sorties).toHaveLength(1)
-        expect(sorties[0].reprises).toEqual([{ dansUnGeste: true, etat }])
+        expect(sorties[0].reprises.at(-1)).toEqual({ dansUnGeste: true, etat })
         expect(sorties[0].state).toBe('running')
     })
 
-    it('ne reprend pas une sortie qui tourne', async () => {
+    /*
+     * Dans WebKit, une sortie neuve est `suspended`, même créée dans un geste :
+     * sans `resume()` dans ce même geste, elle ne démarrerait qu'au geste
+     * suivant, et la fin du repos, dans le rappel d'une minuterie, se tairait.
+     */
+    it('reprend la sortie neuve dans le geste qui la crée, puis ne reprend plus une sortie qui tourne', async () => {
         const { sortie } = monter()
 
         await dansUnGeste(() => sortie.preparer())
+        expect(sorties[0].reprises).toEqual([{ dansUnGeste: true, etat: 'suspended' }])
+        expect(sorties[0].state).toBe('running')
+
         await dansUnGeste(() => sortie.preparer())
 
-        expect(sorties[0].reprises).toEqual([])
+        expect(sorties[0].reprises).toHaveLength(1)
     })
 
     it('recrée dans le geste une sortie fermée', async () => {
@@ -227,15 +236,16 @@ describe('ce qui échoue ne remonte jamais au geste', () => {
             }
         }
         const { sortie } = monter()
+        // La sortie neuve, refusée : elle reste suspendue.
         await dansUnGeste(() => sortie.preparer())
-        sorties[0].state = 'suspended'
+        expect(sorties[0].state).toBe('suspended')
 
         await dansUnGeste(() => sortie.preparer())
         sortie.jouer(bip)
         await dansUnGeste(() => sortie.preparer())
         await flushPromises()
 
-        expect(reprises).toBe(3)
+        expect(reprises).toBe(4)
         expect(sorties[0].sons).toEqual([])
     })
 
@@ -295,6 +305,18 @@ describe('rendre la sortie', () => {
         await flushPromises()
 
         expect(fermetures).toBe(1)
+    })
+
+    it('une fermeture qui lève ne remonte pas au démontage', async () => {
+        window.AudioContext = class extends SortieAudioWebKit {
+            close() {
+                throw new TypeError('close absent')
+            }
+        }
+        const { hote, sortie } = monter()
+        await dansUnGeste(() => sortie.preparer())
+
+        expect(() => hote.unmount()).not.toThrow()
     })
 
     it('hors d’un composant, ne pose aucune fermeture, et ne le reproche pas', () => {

@@ -11,19 +11,28 @@ export const DELAI_DE_REPRISE_MS = 1000
 const ETATS_A_REPRENDRE = new Set(['suspended', 'interrupted'])
 
 /**
- * Reprend une sortie, sans jamais lever ni laisser de rejet non géré : une
- * sortie qui ne repart pas reste muette, et c'est tout.
+ * Appelle une méthode de la sortie qui rend une promesse (`resume`, `close`),
+ * sans jamais lever ni laisser de rejet non géré : une sortie qui ne repart
+ * pas reste muette, une sortie qui ne se ferme pas n'a plus rien à rendre.
  *
- * @param {AudioContext} contexte
+ * @param {() => Promise<void>|void} appel
  * @returns {Promise<void>}
  */
-const reprendre = (contexte) => {
+const sansLever = (appel) => {
     try {
-        return Promise.resolve(contexte.resume()).catch(() => {})
+        return Promise.resolve(appel()).catch(() => {})
     } catch {
         return Promise.resolve()
     }
 }
+
+/**
+ * Reprend une sortie ; une reprise refusée ou qui lève ne remonte pas.
+ *
+ * @param {AudioContext} contexte
+ * @returns {Promise<void>}
+ */
+const reprendre = (contexte) => sansLever(() => contexte.resume())
 
 /**
  * Construit et démarre un son sur une sortie qui tourne. Un son qui échoue ne
@@ -55,11 +64,12 @@ const construireLeSon = (construire, contexte) => {
  * sortie ouverte jusqu'au rechargement.
  *
  * - `preparer()` s'appelle DANS le geste : il crée la sortie (`AudioContext`,
- *   ou `webkitAudioContext` seul), la reprend quand elle est `suspended` ou
- *   `interrupted` (l'état que WebKit donne à une sortie qu'un appel, Siri ou une
- *   autre application ont prise), et en recrée une quand la précédente est
- *   `closed`. Il ne lève jamais : un geste qui lance un repos ne doit pas
- *   tomber faute de son.
+ *   ou `webkitAudioContext` seul), la reprend quand elle est `suspended` (dans
+ *   WebKit, c'est l'état d'une sortie neuve, même créée dans un geste : elle
+ *   ne démarre qu'à ce `resume()`) ou `interrupted` (l'état que WebKit donne à
+ *   une sortie qu'un appel, Siri ou une autre application ont prise), et en
+ *   recrée une quand la précédente est `closed`. Il ne lève jamais : un geste
+ *   qui lance un repos ne doit pas tomber faute de son.
  * - `jouer(construire)` joue un son, hors geste comme dans un geste. Une sortie
  *   qui tourne le joue tout de suite. Une sortie arrêtée est reprise, et le son
  *   ne part que si elle tourne dans les `DELAI_DE_REPRISE_MS` : un son démarré
@@ -121,14 +131,15 @@ export const useSortieAudio = () => {
 
     /**
      * Rend la sortie : une sortie laissée ouverte garde la sortie audio de
-     * l'appareil éveillée. Un refus de fermer n'a plus rien à rendre.
+     * l'appareil éveillée. Un refus de fermer, rejet ou erreur, ne remonte pas
+     * au démontage de la page.
      */
     const fermer = () => {
         const contexte = sortie
         sortie = null
 
         if (contexte !== null && contexte.state !== 'closed') {
-            Promise.resolve(contexte.close()).catch(() => {})
+            sansLever(() => contexte.close())
         }
     }
 
