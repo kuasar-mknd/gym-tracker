@@ -52,7 +52,10 @@ class StoreFastRequest extends FormRequest
 
     /**
      * Un début envoyé avec un décalage est un instant, relu dans le fuseau de
-     * l'application (#1952).
+     * l'application (#1952). La page du jeûne l'envoie ainsi depuis #2111, par
+     * `formatToUTC()` du champ : une heure murale sans décalage, celle d'une
+     * page chargée avant, reste lue comme une heure de l'application, ce qui
+     * n'est juste que pour un appareil dans ce fuseau.
      */
     #[\Override]
     protected function prepareForValidation(): void
