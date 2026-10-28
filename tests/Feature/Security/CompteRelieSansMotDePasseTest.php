@@ -93,8 +93,8 @@ it('donne le chemin vers un mot de passe à un compte relié qui veut supprimer 
     expect(User::query()->whereKey($compte->id)->exists())->toBeTrue()
         ->and(RateLimiter::attempts('delete-account-'.$compte->id))->toBe(2);
 })->with([
-    'messagerie qui écrit l’adresse' => [fn (): User => compteRelieOuvertParGoogle(), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
-    'messagerie qui ne l’écrit pas' => [fn (): User => compteRelieALAdresseQueLaMessagerieNEcritPas(), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
+    'messagerie qui écrit l’adresse' => [compteRelieOuvertParGoogle(...), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
+    'messagerie qui ne l’écrit pas' => [compteRelieALAdresseQueLaMessagerieNEcritPas(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
 ]);
 
 it('donne le chemin vers un mot de passe à un compte relié qui veut changer son mot de passe', function (Closure $creer, string $chemin): void {
@@ -114,8 +114,8 @@ it('donne le chemin vers un mot de passe à un compte relié qui veut changer so
     expect($compte->refresh()->password)->toBe($empreinte)
         ->and(RateLimiter::attempts('update-password-'.$compte->id))->toBe(2);
 })->with([
-    'messagerie qui écrit l’adresse' => [fn (): User => compteRelieOuvertParGoogle(), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
-    'messagerie qui ne l’écrit pas' => [fn (): User => compteRelieALAdresseQueLaMessagerieNEcritPas(), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
+    'messagerie qui écrit l’adresse' => [compteRelieOuvertParGoogle(...), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
+    'messagerie qui ne l’écrit pas' => [compteRelieALAdresseQueLaMessagerieNEcritPas(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
 ]);
 
 it('garde ses refus tels quels à un compte sans fournisseur', function (): void {
