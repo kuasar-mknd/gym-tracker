@@ -23,7 +23,8 @@ import {
  * fin s'y joue, et la page la rend en partant.
  *
  * La sortie factice applique la règle de WebKit (`tests/js/utils/sortieAudioWebKit.js`) :
- * créée ou reprise hors geste, elle reste suspendue, et rien ne s'y entend.
+ * neuve, elle est suspendue jusqu'à un `resume()` dans un geste ; créée ou
+ * reprise hors geste, elle le reste, et rien ne s'y entend.
  */
 
 const patch = vi.fn()
@@ -222,14 +223,16 @@ describe('la fin du repos sur la page de séance (#2112)', () => {
             entreDeuxRepos.push(sorties.map((sortie) => sortie.state))
         }
 
-        // Le bilan d'un coup : sur l'ancien code, il dit ce que l'issue mesurait.
+        // Le bilan d'un coup : sur l'ancien code, il dit ce que l'issue mesurait. La seule reprise
+        // est celle qui démarre la sortie neuve, dans le geste du premier repos.
         expect({
             sorties: sorties.length,
             arretees: sorties.filter((sortie) => sortie.state !== 'running').length,
             reprises: sorties.reduce((total, sortie) => total + sortie.reprises.length, 0),
             fermetures: sorties.reduce((total, sortie) => total + sortie.fermetures, 0),
             sonsAudibles: sonsAudibles().length,
-        }).toEqual({ sorties: 1, arretees: 0, reprises: 0, fermetures: 0, sonsAudibles: 4 })
+        }).toEqual({ sorties: 1, arretees: 0, reprises: 1, fermetures: 0, sonsAudibles: 4 })
+        expect(sorties[0].reprises).toEqual([{ dansUnGeste: true, etat: 'suspended' }])
         expect(entreDeuxRepos).toEqual([['running'], ['running'], ['running'], ['running']])
     })
 

@@ -2,8 +2,10 @@
  * Une sortie audio factice qui tient la règle de WebKit (#2112).
  *
  * Sur iOS, WebKit ne démarre une sortie Web Audio que sous l'activation
- * récente de la page, c'est-à-dire pendant un geste : créée hors geste (depuis
- * le rappel d'une minuterie), elle reste `suspended`, et `resume()` appelé hors
+ * récente de la page, c'est-à-dire pendant un geste. Une sortie neuve est
+ * `suspended`, même créée dans un geste : WebKit ne la démarre qu'à un
+ * `resume()`, ou à un son qui y démarre, pendant un geste. Créée hors geste
+ * (depuis le rappel d'une minuterie), elle le reste, et `resume()` appelé hors
  * geste ne la démarre pas ; sa promesse attend le geste suivant. Rien de ce qui
  * se joue sur une sortie arrêtée ne s'entend, et un son démarré sur son
  * horloge arrêtée part quand elle reprend : au geste suivant, à contretemps.
@@ -96,6 +98,11 @@ class Oscillateur extends Noeud {
     }
 
     start() {
+        // Un son qui démarre pendant un geste démarre sa sortie (`nodeWillBeginPlayback` de WebKit).
+        if (enGeste && this.sortie.state === 'suspended') {
+            this.sortie.demarrer()
+        }
+
         this.son = {
             frequence: this.frequency.value,
             relie: this.relie(),
@@ -130,7 +137,8 @@ export class SortieAudioWebKit {
     static repriseHorsGeste = false
 
     constructor() {
-        this.state = enGeste ? 'running' : 'suspended'
+        // Neuve, elle attend son démarrage, geste ou non : seuls `resume()` ou un son dans un geste la démarrent.
+        this.state = 'suspended'
         this.creeeDansUnGeste = enGeste
         this.repriseHorsGeste = SortieAudioWebKit.repriseHorsGeste
         this.currentTime = 0

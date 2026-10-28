@@ -137,7 +137,10 @@ describe('la sortie audio du repos', () => {
         await dansUnGeste(() => minuteur.openRestTimer())
 
         expect(sorties).toHaveLength(1)
-        expect(sorties[0].reprises).toEqual([{ dansUnGeste: true, etat: 'interrupted' }])
+        expect(sorties[0].reprises).toEqual([
+            { dansUnGeste: true, etat: 'suspended' },
+            { dansUnGeste: true, etat: 'interrupted' },
+        ])
         expect(sorties[0].state).toBe('running')
     })
 })
