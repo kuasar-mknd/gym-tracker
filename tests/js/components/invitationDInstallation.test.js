@@ -35,6 +35,13 @@ const carte = (wrapper) => wrapper.find('[dusk="invitation-installation"]')
 
 const refuser = (wrapper) => wrapper.get('button[aria-label="Ne plus proposer l\'installation"]').trigger('click')
 
+/** Sur iPhone, aucun évènement : la carte se montre d'elle-même, avec le geste à faire. */
+const surIPhone = () =>
+    Object.defineProperty(window.navigator, 'userAgent', {
+        value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',
+        configurable: true,
+    })
+
 beforeEach(() => {
     window.localStorage.clear()
     Object.defineProperty(window.navigator, 'userAgent', {
@@ -72,16 +79,27 @@ describe('InvitationDInstallation', () => {
 
     /** Sur iPhone il n'y a pas d'évènement : il faut dire le geste, pas offrir un bouton. */
     it('explique le geste sur iPhone, sans bouton qui ne ferait rien', async () => {
-        Object.defineProperty(window.navigator, 'userAgent', {
-            value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',
-            configurable: true,
-        })
+        surIPhone()
 
         const wrapper = monter()
         await wrapper.vm.$nextTick()
 
         expect(wrapper.text()).toContain('Sur l’écran d’accueil'.replace(/’/g, "'"))
         expect(wrapper.find('[dusk="installer-application"]').exists()).toBe(false)
+    })
+
+    /*
+     * Sur iPhone, aucun évènement à effacer : c'est le refus de ce document qui
+     * retire la carte, celle de l'accueil affiché comprise (#2114).
+     */
+    it('se retire sur iPhone quand on la refuse, et le dit à l’accueil', async () => {
+        surIPhone()
+
+        const wrapper = monter()
+        await refuser(wrapper)
+
+        expect(carte(wrapper).exists()).toBe(false)
+        expect(wrapper.emitted('visibilite')).toEqual([[true], [false]])
     })
 
     /** L'accueil ne montre qu'une invitation à la fois, et celle-ci passe d'abord. */

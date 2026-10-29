@@ -138,6 +138,16 @@ describe('useInvitationDInstallation', () => {
         poserLePlatforme('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')
 
         expect(monter().visible.value).toBe(false)
+
+        /*
+         * Au chargement suivant, le refus tenu en mémoire est oublié : sur
+         * iPhone, où la carte se montre sans évènement, seule la clé rangée la
+         * retient (#2114).
+         */
+        nePlusEcouter()
+        nePlusEcouter = installerLInvitationDInstallation()
+
+        expect(monter().visible.value).toBe(false)
     })
 
     it('reste possible quand le stockage est bloqué', () => {
