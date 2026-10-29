@@ -37,6 +37,13 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
  * file. Il dure plus que le verrou d'exécution : un travail qui attend son tour
  * garde sa place. Un travail qui échoue le rend (`failed()`).
  *
+ * Un travail dont le modèle a disparu avant son tour se supprime sans être
+ * lancé : la classe déclare `#[DeleteWhenMissingModels]` (#2109). Il ne
+ * laisse aucun verrou : Laravel rend celui d'unicité par son propriétaire, lu
+ * dans la charge (`CallQueuedHandler::handleModelNotFound()`), même après un
+ * retour en file, et le verrou d'exécution ne se prend qu'au lancement.
+ * `failed()` n'est pas appelé, le travail ne pouvant pas être restauré.
+ *
  * Une seule exécution à la fois par compte et par classe (`WithoutOverlapping`
  * sur la clé du travail). Sans elle, le recalcul accepté pendant un autre
  * tournerait à côté de lui : le plus ancien écrirait en dernier l'état qu'il a
