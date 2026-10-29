@@ -49,11 +49,11 @@
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
         "nunomaduro/phpinsights": "^2.13",
-        "pestphp/pest": "^5.3.3",
+        "pestphp/pest": "^5.3.4",
         "pestphp/pest-plugin-laravel": "^5.0",
         "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^13.4.3",
+        "phpunit/phpunit": "^13.4.4",
         "rector/rector": "^2.3",
         "roave/security-advisories": "dev-latest",
         "shipmonk/dead-code-detector": "^1.3"
