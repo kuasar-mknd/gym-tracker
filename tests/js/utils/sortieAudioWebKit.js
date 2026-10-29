@@ -10,15 +10,30 @@
  * se joue sur une sortie arrêtée ne s'entend, et un son démarré sur son
  * horloge arrêtée part quand elle reprend : au geste suivant, à contretemps.
  *
+ * L'état d'une sortie ne change jamais pendant l'appel qui la démarre. WebKit
+ * le pose dans une tâche mise en file, puis résout la promesse de `resume()` ;
+ * le faux le pose à la suite, dans une microtâche, puis résout la promesse.
+ * Un code qui lit l'état juste après `resume()` y lit donc encore l'ancien,
+ * comme sur l'appareil ; seul celui qui attend la promesse la voit tourner. Un
+ * son démarré pendant un geste démarre sa sortie suspendue de même, à la
+ * suite, et s'entend dès qu'elle tourne, sans partir à contretemps.
+ *
  * Le geste se joue par `dansUnGeste(geste)` : l'activation ne vaut que pendant
  * la partie synchrone du geste, comme le traitement d'un évènement, et non
- * pour ce qu'il attend ensuite. C'est plus strict que WebKit, qui la garde
- * quelques secondes : ce qui sonne ici sonne a fortiori sur un iPhone.
+ * pour ce qu'il attend ensuite ; WebKit la garde quelques secondes.
+ *
+ * Sur ces deux points, l'activation et l'état qui ne change qu'à la résolution
+ * de la reprise, le faux est aussi strict que WebKit ou davantage. Il ne l'est
+ * pas en tout : sa mise en route arrive plus tôt que la tâche de WebKit, si
+ * bien qu'un code qui lirait l'état après quelques tours de microtâches, au
+ * lieu d'attendre la promesse de `resume()`, pourrait sonner ici et se taire
+ * sur l'appareil ; et sa fermeture, que seule la page demande, est immédiate.
+ * Seul un iPhone dit tout à fait ce qui s'entend.
  *
  * Chaque sortie créée se range dans `sorties`, et chaque son démarré dans les
  * `sons` de sa sortie : sa fréquence, s'il s'est entendu à son départ
- * (`audible`), et s'il est parti plus tard, à la reprise d'une sortie arrêtée
- * (`aContretemps`).
+ * (`audible` : sa sortie tournait, ou le geste qui l'a lancé l'a démarrée), et
+ * s'il est parti plus tard, à la reprise d'une sortie arrêtée (`aContretemps`).
  */
 
 let enGeste = false
@@ -98,19 +113,32 @@ class Oscillateur extends Noeud {
     }
 
     start() {
-        // Un son qui démarre pendant un geste démarre sa sortie (`nodeWillBeginPlayback` de WebKit).
-        if (enGeste && this.sortie.state === 'suspended') {
-            this.sortie.demarrer()
-        }
-
-        this.son = {
+        const sortie = this.sortie
+        const son = {
             frequence: this.frequency.value,
             relie: this.relie(),
-            audible: this.sortie.state === 'running' && this.relie(),
+            audible: sortie.state === 'running' && this.relie(),
             aContretemps: false,
             fin: null,
         }
-        this.sortie.sons.push(this.son)
+        this.son = son
+        sortie.sons.push(son)
+
+        /*
+         * Un son qui démarre pendant un geste démarre sa sortie suspendue
+         * (`sourceNodeWillBeginPlayback` de WebKit), à la suite et non pendant
+         * l'appel : il s'entend dès qu'elle tourne.
+         */
+        if (enGeste && sortie.state === 'suspended') {
+            sortie.sonsQuiLaDemarrent.add(son)
+            Promise.resolve().then(() => {
+                if (sortie.state === 'suspended') {
+                    sortie.demarrer()
+                }
+
+                sortie.sonsQuiLaDemarrent.delete(son)
+            })
+        }
     }
 
     stop(quand) {
@@ -147,10 +175,17 @@ export class SortieAudioWebKit {
         this.reprises = []
         this.fermetures = 0
         this.sons = []
+        /** Les sons démarrés pendant un geste sur la sortie suspendue, qui la démarrent à la suite. */
+        this.sonsQuiLaDemarrent = new Set()
         this.enAttenteDeReprise = []
         sorties.push(this)
     }
 
+    /**
+     * Comme WebKit, l'état ne change pas pendant l'appel : la sortie tourne à
+     * la suite, juste avant que la promesse ne se résolve. Une sortie fermée
+     * entre-temps reste fermée.
+     */
     resume() {
         this.reprises.push({ dansUnGeste: enGeste, etat: this.state })
 
@@ -162,21 +197,33 @@ export class SortieAudioWebKit {
             return new Promise((resoudre) => this.enAttenteDeReprise.push(resoudre))
         }
 
-        this.demarrer()
-
-        return Promise.resolve()
+        return Promise.resolve().then(() => {
+            if (this.state !== 'closed') {
+                this.demarrer()
+            }
+        })
     }
 
-    /** La sortie tourne : ce qui attendait sa reprise part, à contretemps. */
+    /**
+     * La sortie tourne : un son qui l'a démarrée depuis un geste s'entend, ce
+     * qui attendait sa reprise part, à contretemps.
+     */
     demarrer() {
         this.state = 'running'
 
         for (const son of this.sons) {
-            if (!son.audible && son.relie) {
+            if (son.audible || !son.relie) {
+                continue
+            }
+
+            if (this.sonsQuiLaDemarrent.has(son)) {
+                son.audible = true
+            } else {
                 son.aContretemps = true
             }
         }
 
+        this.sonsQuiLaDemarrent.clear()
         this.enAttenteDeReprise.splice(0).forEach((resoudre) => resoudre())
     }
 
