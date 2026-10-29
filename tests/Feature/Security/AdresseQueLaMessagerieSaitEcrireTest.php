@@ -716,7 +716,7 @@ it('laisse un compte relié à un fournisseur, dont l’adresse est antérieure 
 it('ne promet pas le lien « mot de passe oublié » à un compte relié à un fournisseur dont la messagerie n’écrit pas l’adresse', function (string $adresse): void {
     $compte = User::factory()->create(['email' => $adresse]);
     $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
-    $chemin = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
+    $chemin = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
 
     actingAs($compte)
         ->patch(route('profile.update'), ['name' => $compte->name, 'email' => 'camille.martin@example.org'])
@@ -753,7 +753,7 @@ it('ne promet plus le lien « mot de passe oublié » à un compte relié à un 
 
     actingAs($compte)
         ->patch(route('profile.update'), ['name' => $compte->name, 'email' => 'camille.martin@example.org'])
-        ->assertSessionHasErrors(['current_password' => 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.']);
+        ->assertSessionHasErrors(['current_password' => 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle. Demande à un administrateur de l’application de la changer.']);
 
     actingAs($compte)->get(route('profile.edit'))->assertInertia(
         fn (AssertableInertia $page): AssertableInertia => $page->where('peutRecevoirLeLienDeReinitialisation', false),

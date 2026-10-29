@@ -362,7 +362,7 @@ describe('UpdatePasswordForm', () => {
             })
 
             expect(aide(wrapper).text()).toBe(
-                'Ton compte est relié à Apple. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+                'Ton compte est relié à Apple. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
             )
         })
 
@@ -734,7 +734,7 @@ describe('UpdateProfileInformationForm', () => {
         const aide = wrapper.find('[data-testid="profile-social-password-help"]').text()
 
         expect(aide).toBe(
-            'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+            'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
         )
         expect(aide).not.toContain('Mot de passe oublié')
     })

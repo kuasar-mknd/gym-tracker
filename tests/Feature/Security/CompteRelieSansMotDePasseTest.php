@@ -37,7 +37,7 @@ const COMPTE_RELIE_CHEMIN_PAR_LE_LIEN = 'Ton compte est relié à Google. Si tu 
  * Le renvoi à un administrateur, pour un compte relié à Google à qui aucun
  * lien ne parviendrait.
  */
-const COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
+const COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
 
 /**
  * Le refus du limiteur (`auth.throttle`) sous une horloge arrêtée, une minute

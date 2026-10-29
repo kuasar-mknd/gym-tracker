@@ -51,8 +51,8 @@ const adresseActuelle = computed(() => page.props.auth?.user?.email ?? '')
         </p>
         <p v-else class="text-accent-info-deep text-sm">
             Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de passe, aucun
-            lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle,
-            {{ adresseActuelle }}. Demande à un administrateur de l’application de la changer.
+            lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle, {{ adresseActuelle }}. Demande
+            à un administrateur de l’application de la changer.
         </p>
     </div>
 </template>

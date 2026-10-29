@@ -59,7 +59,7 @@ trait DonneLeCheminVersUnMotDePasse
         $compteRelie = "Ton compte est relié à {$fournisseur}. Si tu n’as jamais choisi de mot de passe, ";
 
         if (! $compte->peutRecevoirLeLienDeReinitialisation()) {
-            return $compteRelie.'aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
+            return $compteRelie.'aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
         }
 
         return $compteRelie.'choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.';
