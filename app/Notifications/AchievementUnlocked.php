@@ -8,9 +8,21 @@ use App\Models\Achievement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use Illuminate\Queue\Attributes\DeleteWhenMissingModels;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
+/**
+ * Annonce un badge que le recalcul des succès vient de débloquer.
+ *
+ * Supprimée sans partir quand le badge a été retiré du catalogue avant son
+ * envoi (`#[DeleteWhenMissingModels]`, #2109) : il n'y a plus de badge à
+ * annoncer, et Laravel, qui levait `ModelNotFoundException` en restaurant le
+ * badge, envoyait sinon l'avis dans `failed_jobs`. Le destinataire, lui, se
+ * restaure en collection : un compte supprimé ne fait rien échouer, l'avis ne
+ * part à personne.
+ */
+#[DeleteWhenMissingModels]
 final class AchievementUnlocked extends Notification implements ShouldQueue
 {
     use Queueable;
