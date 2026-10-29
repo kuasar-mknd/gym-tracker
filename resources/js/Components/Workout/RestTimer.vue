@@ -98,7 +98,7 @@ const endTime = ref(null)
 const sortieAudio = props.sortieAudio ?? useSortieAudio()
 
 /**
- * Calculated progress percentage for the visual bar.
+ * Le remplissage de la barre de progression, en pourcentage.
  *
  * Bornée, parce que le temps restant peut dépasser la durée sur laquelle la
  * barre se mesure : une durée qui raccourcit pendant un repos ne touche pas un
@@ -157,7 +157,7 @@ const pauseTimer = () => {
 }
 
 /**
- * Toggles between start and pause states.
+ * Bascule entre la marche et la pause.
  *
  * La reprise est un geste : la sortie y repart, qu'iOS ait pu interrompre
  * pendant la pause (#2112).
@@ -172,7 +172,7 @@ const toggleTimer = () => {
     }
 }
 
-/** Immediately finishes the timer, dans un geste qui reprend la sortie avant d'y sonner. */
+/** Termine le repos tout de suite, dans un geste qui reprend la sortie avant d'y sonner. */
 const skipTimer = () => {
     triggerHaptic('tap')
     sortieAudio.preparer()
@@ -201,8 +201,7 @@ const jouerLeBipDeFin = (contexte) => {
 }
 
 /**
- * Handles timer completion logic.
- * Triggers haptic feedback, plays sound, and emits 'finished' event.
+ * La fin du repos : le retour haptique, le bip, puis `finished`.
  *
  * La fin naturelle arrive dans le rappel de la minuterie, hors de tout geste :
  * le bip se joue sur la sortie que le geste du départ a ouverte, jamais sur une
