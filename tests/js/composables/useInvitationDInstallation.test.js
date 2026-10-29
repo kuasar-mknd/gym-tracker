@@ -26,8 +26,9 @@ const monter = () => {
     return etat
 }
 
+/** Annulable, comme celui du navigateur : sans cela, `defaultPrevented` reste faux quoi qu'il arrive. */
 const inviter = () => {
-    const evenement = new Event('beforeinstallprompt')
+    const evenement = new Event('beforeinstallprompt', { cancelable: true })
     evenement.prompt = vi.fn()
     evenement.userChoice = Promise.resolve({ outcome: 'accepted' })
     window.dispatchEvent(evenement)
