@@ -5,7 +5,7 @@ paths:
 
 # Services
 
-## Mesurer un coût SQL : trois pièges qui rendent la mesure fausse
+## Mesurer un coût SQL : les pièges qui rendent la mesure fausse
 Seuls les deltas de `show session status like 'Handler_read%'` disent la vérité. `EXPLAIN.rows` est une estimation ; sommer un arbre `EXPLAIN ANALYZE` compte deux fois les nœuds imbriqués ; compter les requêtes ne mesure rien.
 
 Trois pièges de protocole, rencontrés en série sur #1593 :
