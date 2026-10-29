@@ -200,6 +200,10 @@ it('suit le poids de corps quand c’est la mensuration visée', function (): vo
  * objectifs sans type existent en base. Sans le garde, ils partiraient chercher
  * une partie du corps qui ne s'appelle pas — une lecture qui ne peut rien
  * ramener.
+ *
+ * Ne rien chercher n'est pas tout garder : l'objectif revient à sa valeur de
+ * départ, comme un objectif dont la mensuration n'a aucune mesure (#2132). Il
+ * gardait sa valeur actuelle, qui valait 0 depuis le panneau.
  */
 it('ne cherche aucune mensuration quand l’objectif n’en nomme pas', function (?string $type): void {
     $user = User::factory()->create();
@@ -210,11 +214,11 @@ it('ne cherche aucune mensuration quand l’objectif n’en nomme pas', function
         'measured_at' => now(),
     ]);
 
-    $objectif = objectifSuiviSeul($user, GoalType::Measurement, ['measurement_type' => $type]);
+    $objectif = objectifSuiviSeul($user, GoalType::Measurement, ['measurement_type' => $type, 'start_value' => 64]);
 
     $sql = sqlPendantLeSuiviDUnObjectif(fn () => app(GoalService::class)->updateGoalProgress($objectif));
 
-    expect($objectif->current_value)->toBe(0.0)
+    expect($objectif->current_value)->toBe(64.0)
         ->and(lecturesDeLaTableDUnObjectif($sql, 'body_part_measurements'))->toBe(0)
         ->and(lecturesDeLaTableDUnObjectif($sql, 'body_measurements'))->toBe(0);
 })->with([
