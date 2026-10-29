@@ -348,10 +348,13 @@ describe('UpdatePasswordForm', () => {
             expect(aide(wrapper).text()).toBe(
                 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle, camille@example.org.',
             )
-            // Dans le formulaire, juste après le champ qu'il explique.
+            // Dans le formulaire, sous le champ qu'il explique et avant le nouveau mot de passe.
+            const encadre = aide(wrapper).element
             const champ = wrapper.find('input[autocomplete="current-password"]').element
-            expect(champ.compareDocumentPosition(aide(wrapper).element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-            expect(wrapper.find('form').element.contains(aide(wrapper).element)).toBe(true)
+            const nouveauMotDePasse = wrapper.find('input[autocomplete="new-password"]').element
+            expect(champ.compareDocumentPosition(encadre) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+            expect(encadre.compareDocumentPosition(nouveauMotDePasse) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+            expect(wrapper.find('form').element.contains(encadre)).toBe(true)
         })
 
         it('ne promet aucun lien quand la messagerie n’écrit pas l’adresse, et renvoie à un administrateur', () => {

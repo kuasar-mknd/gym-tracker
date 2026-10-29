@@ -1527,6 +1527,13 @@ describe('DeleteUserForm', () => {
             expect(wrapper.get('.modal').find('[data-testid="profile-social-password-help"]').text()).toBe(
                 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle, camille@example.org.',
             )
+            // Sous le champ du mot de passe, qu'il explique, et avant le bouton qui supprime.
+            const encadre = aide(wrapper).element
+            const bouton = wrapper.get('[data-testid="confirm-delete-button"]').element
+            expect(
+                passwordField(wrapper).element.compareDocumentPosition(encadre) & Node.DOCUMENT_POSITION_FOLLOWING,
+            ).toBeTruthy()
+            expect(encadre.compareDocumentPosition(bouton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
             wrapper.unmount()
         })
