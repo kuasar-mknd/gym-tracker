@@ -7,9 +7,13 @@ vi.mock('@inertiajs/vue3', () => ({
 }))
 
 import { REPOS_AUTOMATIQUE_SANS_RESEAU, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useSortieAudio } from '@/composables/useSortieAudio'
 import { annoncesPendant } from '../utils/annoncesSansReseau'
 import { noterQueLeServeurRepond, useEtatDuReseau } from '@/composables/useEtatDuReseau'
 import { dansUnGeste, installerLaSortieWebKit, retirerLaSortieWebKit, sorties } from '../utils/sortieAudioWebKit'
+
+/** Le minuteur comme la séance le crée : avec la sortie audio de la page, qu'elle passe aussi au minuteur. */
+const minuteurDeLaPage = () => useMinuteurDeRepos({ sortieAudio: useSortieAudio() })
 
 beforeEach(() => {
     vi.clearAllMocks()
@@ -19,7 +23,7 @@ beforeEach(() => {
 
 describe('le minuteur de repos', () => {
     it('démarre à la durée de l’exercice, sinon à celle du profil, et compte chaque repos', () => {
-        const minuteur = useMinuteurDeRepos()
+        const minuteur = minuteurDeLaPage()
         expect(minuteur.showTimer.value).toBe(false)
 
         minuteur.apresValidation(120)
@@ -33,7 +37,7 @@ describe('le minuteur de repos', () => {
     })
 
     it('écrit le réglage tout de suite et ne démarre plus rien après une validation quand il est coupé', () => {
-        const minuteur = useMinuteurDeRepos()
+        const minuteur = minuteurDeLaPage()
 
         minuteur.setAutoRestTimer(false)
         minuteur.apresValidation(60)
@@ -53,7 +57,7 @@ describe('le minuteur de repos', () => {
      */
     it('revient en arrière et le dit quand le réglage part sans réseau', () => {
         noterQueLeServeurRepond()
-        const minuteur = useMinuteurDeRepos()
+        const minuteur = minuteurDeLaPage()
 
         minuteur.setAutoRestTimer(false)
         const options = inertia.patch.mock.calls[0][2]
@@ -73,7 +77,7 @@ describe('le minuteur de repos', () => {
      * `tests/js/pages/misesAJourOptimistesAvecInertia.test.js`.
      */
     it('revient au réglage de la page quand la visite finit sans succès, quelle qu’en soit la raison', () => {
-        const minuteur = useMinuteurDeRepos()
+        const minuteur = minuteurDeLaPage()
 
         minuteur.setAutoRestTimer(false)
         inertia.patch.mock.calls[0][2].onFinish()
@@ -82,7 +86,7 @@ describe('le minuteur de repos', () => {
     })
 
     it('garde le réglage accepté, et ne laisse pas un envoi dépassé défaire le suivant', () => {
-        const minuteur = useMinuteurDeRepos()
+        const minuteur = minuteurDeLaPage()
 
         minuteur.setAutoRestTimer(false)
         minuteur.setAutoRestTimer(true)
@@ -100,7 +104,7 @@ describe('le minuteur de repos', () => {
     it('lit le réglage du profil au départ', () => {
         inertia.utilisateur.auto_rest_timer = false
 
-        expect(useMinuteurDeRepos().autoRestTimer.value).toBe(false)
+        expect(minuteurDeLaPage().autoRestTimer.value).toBe(false)
     })
 })
 
@@ -113,8 +117,22 @@ describe('la sortie audio du repos', () => {
     beforeEach(() => installerLaSortieWebKit())
     afterEach(() => retirerLaSortieWebKit())
 
+    /*
+     * Sans sortie, le composable ouvrait la sienne et ne la rendait pas : rien ne
+     * pouvait la passer au minuteur, qui en ouvrait une autre, que le geste du
+     * départ n'avait pas préparée, et la fin naturelle du repos se taisait.
+     */
+    it('refuse de se créer sans la sortie de la page, qu’il ne pourrait pas rendre au minuteur', () => {
+        for (const options of [undefined, {}, { sortieAudio: null }]) {
+            expect(() => useMinuteurDeRepos(options)).toThrow(TypeError)
+            expect(() => useMinuteurDeRepos(options)).toThrow(/la sortie audio de la page/)
+        }
+
+        expect(sorties).toHaveLength(0)
+    })
+
     it('s’ouvre dans le geste de la validation qui lance le repos, et seulement quand elle le lance', async () => {
-        const minuteur = useMinuteurDeRepos()
+        const minuteur = minuteurDeLaPage()
 
         minuteur.setAutoRestTimer(false)
         await dansUnGeste(() => minuteur.apresValidation(60))
@@ -130,7 +148,7 @@ describe('la sortie audio du repos', () => {
     })
 
     it('reprend dans le geste d’un repos demandé la sortie qu’iOS a interrompue depuis, sans en ouvrir une autre', async () => {
-        const minuteur = useMinuteurDeRepos()
+        const minuteur = minuteurDeLaPage()
 
         await dansUnGeste(() => minuteur.apresValidation(60))
         sorties[0].interrompre()

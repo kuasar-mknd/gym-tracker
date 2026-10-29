@@ -2,7 +2,6 @@ import { ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { direSansReseau } from '@/Utils/visitesHorsLigne'
 import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
-import { useSortieAudio } from '@/composables/useSortieAudio'
 
 /**
  * Ce que dit un réglage du repos automatique resté sans réponse (#2048). Pas
@@ -14,15 +13,25 @@ export const REPOS_AUTOMATIQUE_SANS_RESEAU =
 /**
  * Le minuteur de repos de la seance : son etat, son reglage, et ce qui le lance.
  *
- * `sortieAudio` est la sortie où sonne la fin de chaque repos (#2112) : celle
- * de la page (`useSortieAudio`), qui la passe aussi au minuteur et la rend en
- * partant. Le minuteur, remonté à chaque repos et démonté à sa fin, ne peut pas
- * la tenir : la fermer avec lui couperait le bip qu'il vient de lancer. Sans
- * elle, le composable ouvre la sienne.
+ * `sortieAudio`, obligatoire, est la sortie où sonne la fin de chaque repos
+ * (#2112) : celle de la page (`useSortieAudio`), qui la passe aussi au minuteur
+ * (`sortie-audio`) et la rend en partant. Le minuteur, remonté à chaque repos
+ * et démonté à sa fin, ne peut pas la tenir : la fermer avec lui couperait le
+ * bip qu'il vient de lancer. Le composable ne l'ouvre pas non plus à la place
+ * de la page : il ne la rendrait pas, le minuteur en ouvrirait une autre, que
+ * le geste du départ n'aurait pas préparée, et la fin naturelle se tairait.
+ * Sans elle, il lève dès sa création, plutôt que dans le geste d'une série.
  *
- * @param {{ sortieAudio?: ReturnType<typeof useSortieAudio> }} [options]
+ * @param {{ sortieAudio: ReturnType<typeof import('@/composables/useSortieAudio').useSortieAudio> }} options
+ * @throws {TypeError} sans la sortie de la page
  */
-export const useMinuteurDeRepos = ({ sortieAudio = useSortieAudio() } = {}) => {
+export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
+    if (typeof sortieAudio?.preparer !== 'function') {
+        throw new TypeError(
+            'useMinuteurDeRepos attend la sortie audio de la page (useSortieAudio), qu’elle passe aussi au minuteur.',
+        )
+    }
+
     const showTimer = ref(false)
     const timerDuration = ref(90)
 
