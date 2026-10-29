@@ -33,7 +33,9 @@ use App\Models\User;
  * (`ProfileController::edit`) : il n'en apprend rien de plus. Le formulaire
  * en montre le même texte avant l'envoi
  * (`resources/js/Components/Form/CheminVersUnMotDePasse.vue`). Un compte sans
- * fournisseur garde ses refus tels quels.
+ * fournisseur garde ses refus tels quels. La confirmation du mot de passe
+ * (`ConfirmPasswordRequest`) ne l'utilise pas encore : aucune route ne
+ * l'exige (`.ai/rules/requests.md`).
  *
  * @phpstan-require-extends \Illuminate\Foundation\Http\FormRequest
  */

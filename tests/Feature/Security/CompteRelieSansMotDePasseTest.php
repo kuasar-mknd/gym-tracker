@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 use App\Actions\ResolveSocialUserAction;
 use App\Models\User;
+use Illuminate\Auth\Middleware\RequirePassword;
+use Illuminate\Routing\Route;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
 /*
@@ -254,4 +258,26 @@ it('garde le refus du limiteur tel quel à un compte sans fournisseur', function
 
     $this->from('/profile/edit')->patch('/profile', ['name' => $compte->name, 'email' => 'autre@example.org', 'current_password' => 'password']);
     expect(session('errors')->get('current_password'))->toBe([COMPTE_RELIE_REFUS_DU_LIMITEUR]);
+});
+
+/*
+ * Une quatrième requête évalue le mot de passe actuel du compte connecté : la
+ * confirmation du mot de passe (`ConfirmPasswordRequest`, page
+ * Auth/ConfirmPassword), que le middleware `password.confirm` exige d'une
+ * route. Elle ne donne pas le chemin : son refus reste celui de `auth.password`
+ * et du limiteur. Aucune route ne l'exige, et personne n'y est envoyé. Le jour
+ * où une route l'exigera, un compte relié s'y bloquera comme avant #2104 : ce
+ * cas échoue alors, pour que la requête et la page donnent d'abord le chemin.
+ */
+it('n’envoie personne à la confirmation du mot de passe, qui ne donne pas le chemin à un compte relié', function (): void {
+    $routeur = app(Router::class);
+
+    $routesQuiLExigent = collect($routeur->getRoutes()->getRoutes())
+        ->filter(static fn (Route $route): bool => collect($routeur->gatherRouteMiddleware($route))
+            ->contains(static fn (mixed $maillon): bool => is_string($maillon) && Str::before($maillon, ':') === RequirePassword::class))
+        ->map(static fn (Route $route): string => implode('|', $route->methods()).' '.$route->uri())
+        ->values()
+        ->all();
+
+    expect($routesQuiLExigent)->toBe([], 'Ces routes exigent la confirmation du mot de passe : ConfirmPasswordRequest et la page Auth/ConfirmPassword doivent d’abord donner le chemin à un compte relié (DonneLeCheminVersUnMotDePasse, CheminVersUnMotDePasse).');
 });
