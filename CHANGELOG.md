@@ -8,7 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Corrigé
-- **L'invitation à installer l'application revient à chaque passage de l'accueil** (#2114, #PR) : le navigateur ne propose l'installation qu'une fois par chargement de l'application, et l'accueil ne l'écoutait que pendant qu'il était affiché, en écartant l'invite du navigateur. Après un aller-retour vers une séance, la carte disparaissait jusqu'au rechargement suivant sans que rien d'autre ne propose l'installation, et une proposition arrivée sur une autre page n'était jamais reprise. Elle se garde désormais pour toute l'application ouverte, et se montre dès l'arrivée sur l'accueil, avant l'invitation aux notifications ; l'installation et « Ne plus proposer l'installation » restent définitifs, et un refus que le navigateur ne laisse pas enregistrer tient jusqu'au prochain chargement.
+- **L'invitation à installer l'application revient à chaque passage de l'accueil** (#2114, #PR) : le navigateur ne propose l'installation qu'une fois par chargement de l'application, et l'accueil ne l'écoutait que pendant qu'il était affiché, en écartant l'invite du navigateur. Après un aller-retour vers une séance, la carte disparaissait jusqu'au rechargement suivant, et l'installation ne restait possible que depuis le navigateur lui-même (son menu) ; une proposition arrivée sur une autre page n'était jamais reprise. Elle se garde désormais pour toute l'application ouverte, et se montre dès l'arrivée sur l'accueil, avant l'invitation aux notifications ; l'installation et « Ne plus proposer l'installation » restent définitifs, et un refus que le navigateur ne laisse pas enregistrer tient jusqu'au prochain chargement.
 
 ## [1.7.0] - 2026-10-25
 
