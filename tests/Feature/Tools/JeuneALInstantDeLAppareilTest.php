@@ -20,7 +20,9 @@ use function Pest\Laravel\actingAs;
  * serveur lit une telle heure comme une heure de l'application : un appareil à
  * Toronto démarrait son jeûne cinq heures trop tôt, et la page, qui relit
  * l'instant servi, affichait dès le départ cinq heures écoulées. Elle envoie
- * désormais le début par `formatToUTC()` et la fin par `toISOString()`.
+ * désormais le début par `toISOString()`, à l'instant du geste, ou par
+ * `formatToUTC()` quand l'heure du champ a été changée, et la fin par
+ * `toISOString()`.
  * `tests/js/pages/fastingIndex.test.js` vérifie, sous le fuseau de Toronto,
  * qu'elle envoie les valeurs que ce fichier envoie au serveur. Ce fichier les
  * envoie comme elle, en JSON, et vérifie qu'elles sont relues au même instant
@@ -142,7 +144,7 @@ it('relit au même instant le début envoyé depuis Toronto, et le sert à la pa
     expect($page->json('props.activeFast.start_time'))->toBe('2026-03-10T12:00:00.000000Z')
         ->and(jeuneALInstantEcouleAffiche($page))->toBe(0);
 })->with([
-    'ce que la page envoie, formatToUTC() du champ' => '2026-03-10T12:00:00.000Z',
+    'ce que la page envoie, l’instant en UTC' => '2026-03-10T12:00:00.000Z',
     'la même heure écrite avec le décalage de Toronto' => '2026-03-10T08:00:00-04:00',
 ]);
 
