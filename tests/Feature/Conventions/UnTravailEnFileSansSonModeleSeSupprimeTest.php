@@ -2,21 +2,33 @@
 
 declare(strict_types=1);
 
-use App\Jobs\EnvoyerLeLienDeReinitialisation;
 use App\Jobs\SyncPersonalRecord;
 use App\Jobs\SyncUserAchievements;
 use App\Jobs\SyncUserGoals;
-use App\Jobs\TraiterUnChangementDAdresse;
 use App\Models\Achievement;
+use App\Models\Set;
 use App\Models\User;
 use App\Notifications\AchievementUnlocked;
 use App\Notifications\PersonalRecordAchieved;
-use App\Notifications\TrainingReminder;
+use App\Services\PersonalRecordService;
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Contracts\Mail\Mailable as MailableContract;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\SendQueuedMailable;
+use Illuminate\Notifications\Notification;
+use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Queue\Attributes\DeleteWhenMissingModels;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
+use Illuminate\Support\Traits\ReadsClassAttributes;
 use Symfony\Component\Finder\Finder;
+use Tests\Support\ParenteQuiSeSupprimeSansSonModele;
+use Tests\Support\ReprendSeSupprimeSansSonModele;
+use Tests\Support\SeSupprimeSansSonModele;
 
 /*
  * Un travail en file qui porte un modèle se supprime quand ce modèle a disparu,
@@ -33,18 +45,38 @@ use Symfony\Component\Finder\Finder;
  * collection, ne lève pas : seul un modèle que l'avis porte lui-même compte.
  *
  * Cette garde lit chaque classe concrète de `app/` qui implémente
- * `ShouldQueue` (travaux, avis, et tout écouteur ou courriel mis en file plus
- * tard). Une propriété typée par un modèle Eloquent, nullable ou dans une
- * union, exige la déclaration : l'attribut sur la classe, l'une de ses
- * parentes ou l'un de leurs traits, ou `$deleteWhenMissingModels` à vrai par
- * défaut, là où Laravel les lit (`ReadsClassAttributes`). Une collection de
- * modèles ne compte pas : Laravel la restaure sans les modèles disparus, sans
- * lever. Une propriété sans type que l'application déclare est refusée : la
- * garde ne saurait pas ce qu'elle porte. Celles des classes et des traits du
- * framework (`Queueable`, `Notification`) n'en sont pas. Un travail qui doit
- * échouer sans son modèle s'inscrit dans `sansSonModeleExceptions()`, avec sa
- * raison ; une exception qui ne porte plus de modèle, ou qui le déclare, fait
- * échouer la garde.
+ * `ShouldQueue` : travaux, avis, courriels et écouteurs. Une propriété peut
+ * porter un modèle quand son type en admet un : un modèle Eloquent, une
+ * interface ou une classe qu'un modèle de `app/Models` remplit
+ * (`Authenticatable`, `Arrayable`…), `object` ou `mixed`, nullable ou dans une
+ * union. `SerializesModels` sérialise en identifiant toute instance de modèle,
+ * quel que soit le type déclaré. Un écouteur en file reçoit l'évènement sous
+ * lequel le répartiteur de l'application l'inscrit (découverte de
+ * `app/Listeners` comprise) : Laravel met l'évènement dans `CallQueuedListener`
+ * et le restaure avant de lancer l'écouteur. Les propriétés de l'évènement
+ * comptent donc pour l'écouteur, et l'une d'elles sans type, comme le
+ * framework en déclare, compte comme un modèle possible.
+ *
+ * Une classe qui peut porter un modèle exige la déclaration, lue comme la file
+ * la lit : `ReadsClassAttributes` sur ce que Laravel met en file. C'est
+ * `SendQueuedNotifications` pour un avis, `SendQueuedMailable` pour un
+ * courriel, qui recopient la déclaration de la classe (le second seulement
+ * dans les versions récentes de Laravel) ; l'écouteur lui-même, que
+ * `Dispatcher::propagateListenerOptions()` lit pour `CallQueuedListener` ; le
+ * travail tel quel. L'attribut compte sur la classe, l'une de ses parentes ou
+ * l'un de leurs traits, pas sur le trait d'un trait ; `$deleteWhenMissingModels`
+ * à vrai par défaut aussi, et une sous-classe qui le remet à faux dément
+ * l'attribut d'une parente.
+ *
+ * Une collection de modèles ne compte pas : Laravel la restaure sans les
+ * modèles disparus, sans lever. Une propriété sans type que la classe en file
+ * déclare est refusée : la garde ne saurait pas ce qu'elle porte. Celles des
+ * classes et des traits du framework (`Queueable`, `Notification`) n'en sont
+ * pas. Un travail qui doit échouer sans son modèle s'inscrit dans
+ * `sansSonModeleExceptions()`, avec sa raison ; une exception qui ne porte plus
+ * de modèle, ou qui le déclare, fait échouer la garde. Restent hors de vue un
+ * modèle tenu sous l'interface d'un paquet qu'aucun modèle de `app/Models` ne
+ * remplit, et un écouteur inscrit sous une interface ou un motif (`*`).
  */
 
 /**
@@ -105,30 +137,119 @@ function sansSonModeleVientDuFramework(ReflectionClass $classe, ReflectionProper
 }
 
 /**
- * Les noms des classes que nomme le type d'une propriété, unions comprises.
+ * Les modèles Eloquent de `app/Models`, abstraits compris.
  *
- * @return list<string>
+ * @return list<class-string<Model>>
  */
-function sansSonModeleClassesDuType(ReflectionType $type): array
+function sansSonModeleModelesDeLApplication(): array
 {
-    if ($type instanceof ReflectionNamedType) {
-        return $type->isBuiltin() ? [] : [$type->getName()];
-    }
+    $modeles = [];
 
-    $classes = [];
+    foreach (Finder::create()->files()->in(app_path('Models'))->name('*.php')->sortByName() as $fichier) {
+        $classe = 'App\\Models\\'.str_replace(['/', '.php'], ['\\', ''], $fichier->getRelativePathname());
 
-    if ($type instanceof ReflectionUnionType || $type instanceof ReflectionIntersectionType) {
-        foreach ($type->getTypes() as $membre) {
-            $classes = [...$classes, ...sansSonModeleClassesDuType($membre)];
+        if (class_exists($classe) && is_subclass_of($classe, Model::class)) {
+            $modeles[] = $classe;
         }
     }
 
-    return $classes;
+    if ($modeles === []) {
+        throw new RuntimeException('Aucun modèle trouvé sous app/Models : la garde ne verrait aucune interface qu’un modèle remplit.');
+    }
+
+    return $modeles;
+}
+
+/**
+ * Le type admet-il un modèle ? Un modèle Eloquent, une interface ou une classe
+ * qu'un modèle de `app/Models` remplit, `object` ou `mixed` ; dans une union,
+ * l'un de ses membres ; dans une intersection, chacun.
+ */
+function sansSonModeleTypeAdmetUnModele(ReflectionType $type): bool
+{
+    if ($type instanceof ReflectionUnionType) {
+        return array_any($type->getTypes(), static fn (ReflectionType $membre): bool => sansSonModeleTypeAdmetUnModele($membre));
+    }
+
+    if ($type instanceof ReflectionIntersectionType) {
+        return array_all($type->getTypes(), static fn (ReflectionType $membre): bool => sansSonModeleTypeAdmetUnModele($membre));
+    }
+
+    if (! $type instanceof ReflectionNamedType) {
+        return false;
+    }
+
+    $nom = $type->getName();
+
+    if ($type->isBuiltin()) {
+        return in_array($nom, ['mixed', 'object'], true);
+    }
+
+    return is_a($nom, Model::class, true)
+        || array_any(sansSonModeleModelesDeLApplication(), static fn (string $modele): bool => is_a($modele, $nom, true));
+}
+
+/**
+ * Les propriétés que la classe tient d'elle-même, ou de ses parentes et de
+ * ses traits de l'application : ni statiques, ni du framework.
+ *
+ * @param  ReflectionClass<object>  $classe
+ * @return list<ReflectionProperty>
+ */
+function sansSonModeleProprietesTenues(ReflectionClass $classe): array
+{
+    return array_values(array_filter(
+        $classe->getProperties(),
+        static fn (ReflectionProperty $propriete): bool => ! $propriete->isStatic() && ! sansSonModeleVientDuFramework($classe, $propriete),
+    ));
+}
+
+/**
+ * Les évènements que reçoit un écouteur en file, chacun avec le nom du
+ * paramètre qui le reçoit : ceux sous lesquels le répartiteur de
+ * l'application l'inscrit, découverte de `app/Listeners` comprise, la méthode
+ * se lisant comme Laravel la lit (`handle` par défaut, `__invoke` à défaut).
+ * Un travail n'en reçoit aucun : les paramètres de son `handle()` sont des
+ * services que le conteneur construit au lancement, hors de la charge. Un
+ * évènement nommé par une chaîne (`eloquent.saved: …`) n'est pas une classe.
+ *
+ * @param  ReflectionClass<object>  $classe
+ * @return list<array{0: string, 1: ReflectionClass<object>}>
+ */
+function sansSonModeleEvenementsRecus(ReflectionClass $classe): array
+{
+    $recus = [];
+
+    foreach (Event::getRawListeners() as $evenement => $ecouteurs) {
+        if (! is_string($evenement) || ! class_exists($evenement) || ! is_array($ecouteurs)) {
+            continue;
+        }
+
+        foreach ($ecouteurs as $ecouteur) {
+            [$nom, $methode] = match (true) {
+                is_string($ecouteur) => Str::parseCallback($ecouteur, 'handle'),
+                is_array($ecouteur) && is_string($ecouteur[0] ?? null) => [$ecouteur[0], $ecouteur[1] ?? 'handle'],
+                default => [null, null],
+            };
+
+            if ($nom !== $classe->getName()) {
+                continue;
+            }
+
+            $methode = is_string($methode) && $classe->hasMethod($methode) ? $methode : '__invoke';
+            $parametre = $classe->hasMethod($methode) ? ($classe->getMethod($methode)->getParameters()[0] ?? null)?->getName() : null;
+            $recus[] = [$parametre ?? 'evenement', new ReflectionClass($evenement)];
+        }
+    }
+
+    return $recus;
 }
 
 /**
  * Ce que la classe porte qui se restaure en levant quand il a disparu : ses
- * propriétés typées par un modèle, et celles, sans type, qu'elle déclare.
+ * propriétés dont le type admet un modèle, celles, sans type, qu'elle déclare,
+ * et, pour un écouteur, les propriétés de l'évènement qu'il reçoit qui en
+ * admettent un ou n'ont pas de type (`evenement->serie`).
  *
  * @param  ReflectionClass<object>  $classe
  * @return array{modeles: list<string>, sansType: list<string>}
@@ -137,57 +258,65 @@ function sansSonModelePortee(ReflectionClass $classe): array
 {
     $portee = ['modeles' => [], 'sansType' => []];
 
-    foreach ($classe->getProperties() as $propriete) {
-        if ($propriete->isStatic() || sansSonModeleVientDuFramework($classe, $propriete)) {
-            continue;
-        }
-
+    foreach (sansSonModeleProprietesTenues($classe) as $propriete) {
         $type = $propriete->getType();
 
         if ($type === null) {
             $portee['sansType'][] = $propriete->getName();
-
-            continue;
+        } elseif (sansSonModeleTypeAdmetUnModele($type)) {
+            $portee['modeles'][] = $propriete->getName();
         }
+    }
 
-        foreach (sansSonModeleClassesDuType($type) as $nom) {
-            if (is_a($nom, Model::class, true)) {
-                $portee['modeles'][] = $propriete->getName();
+    foreach (sansSonModeleEvenementsRecus($classe) as [$parametre, $evenement]) {
+        foreach (sansSonModeleProprietesTenues($evenement) as $propriete) {
+            $type = $propriete->getType();
 
-                break;
+            if ($type === null || sansSonModeleTypeAdmetUnModele($type)) {
+                $portee['modeles'][] = $parametre.'->'.$propriete->getName();
             }
         }
     }
+
+    $portee['modeles'] = array_values(array_unique($portee['modeles']));
 
     return $portee;
 }
 
 /**
- * La classe se supprime-t-elle quand un modèle qu'elle porte a disparu ?
- * L'attribut se lit sur elle, ses parentes et leurs traits, la propriété par
- * sa valeur par défaut, comme `ReadsClassAttributes` les lit.
+ * La classe se supprime-t-elle quand un modèle qu'elle porte a disparu ? La
+ * réponse est celle de la charge que Laravel écrirait : `deleteWhenMissingModels`
+ * lu par `ReadsClassAttributes` sur ce que la file reçoit
+ * (`Queue::createObjectPayload()`). Un avis y part dans
+ * `SendQueuedNotifications`, un courriel dans `SendQueuedMailable`, qui
+ * recopient à leur construction ce qu'ils lisent sur la classe ; un écouteur
+ * dans `CallQueuedListener`, sur lequel `Dispatcher::propagateListenerOptions()`
+ * recopie ce qu'il lit sur l'écouteur : lire l'écouteur revient au même. La
+ * classe n'est pas construite, comme le répartiteur ne construit pas
+ * l'écouteur qu'il lit.
  *
  * @param  ReflectionClass<object>  $classe
  */
 function sansSonModeleSeSupprime(ReflectionClass $classe): bool
 {
-    if (($classe->getDefaultProperties()['deleteWhenMissingModels'] ?? false) === true) {
-        return true;
-    }
+    $instance = $classe->newInstanceWithoutConstructor();
+    $misEnFile = match (true) {
+        $instance instanceof Notification => new SendQueuedNotifications(new Collection(), $instance),
+        $instance instanceof MailableContract => new SendQueuedMailable($instance),
+        default => $instance,
+    };
 
-    for ($niveau = $classe; $niveau !== false; $niveau = $niveau->getParentClass()) {
-        if ($niveau->getAttributes(DeleteWhenMissingModels::class) !== []) {
-            return true;
+    $file = new class()
+    {
+        use ReadsClassAttributes;
+
+        public function supprimeSansSonModele(object $misEnFile): bool
+        {
+            return (bool) ($this->getAttributeValue($misEnFile, DeleteWhenMissingModels::class, 'deleteWhenMissingModels') ?? false);
         }
+    };
 
-        foreach ($niveau->getTraits() as $trait) {
-            if ($trait->getAttributes(DeleteWhenMissingModels::class) !== []) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    return $file->supprimeSansSonModele($misEnFile);
 }
 
 /**
@@ -210,19 +339,29 @@ function sansSonModelePorteurs(): array
     return $porteurs;
 }
 
-it('voit les travaux et les avis en file qui portent un modèle, et eux seuls', function (): void {
-    $porteurs = sansSonModelePorteurs();
+/**
+ * Inscrit l'écouteur sous l'évènement, comme la découverte de `app/Listeners`
+ * ou un `Event::listen()` d'un fournisseur, et le rend.
+ */
+function sansSonModeleEcouteurInscrit(object $ecouteur, object $evenement): object
+{
+    Event::listen($evenement::class, [$ecouteur::class, 'handle']);
 
-    expect($porteurs)->toMatchArray([
+    return $ecouteur;
+}
+
+it('voit les travaux et les avis en file qui portent un modèle, et eux seuls', function (): void {
+    // La carte entière : une classe de plus, même déclarée, fait tomber le cas.
+    // Les autres (`TraiterUnChangementDAdresse`, `EnvoyerLeLienDeReinitialisation`,
+    // `TrainingReminder`…) portent un identifiant, des chaînes, ou leur seul
+    // destinataire : rien à restaurer qui lève.
+    expect(sansSonModelePorteurs())->toBe([
         SyncPersonalRecord::class => ['set', 'user'],
         SyncUserAchievements::class => ['user'],
         SyncUserGoals::class => ['user'],
         AchievementUnlocked::class => ['achievement'],
         PersonalRecordAchieved::class => ['personalRecord'],
-    ])
-        // Un identifiant, des chaînes, un avis qui ne porte que son
-        // destinataire : rien à restaurer qui lève.
-        ->and($porteurs)->not->toHaveKeys([TraiterUnChangementDAdresse::class, EnvoyerLeLienDeReinitialisation::class, TrainingReminder::class]);
+    ]);
 });
 
 it('fait supprimer, quand son modèle a disparu, chaque travail en file qui en porte un', function (): void {
@@ -235,10 +374,11 @@ it('fait supprimer, quand son modèle a disparu, chaque travail en file qui en p
     }
 
     expect($enEchec)->toBe([], implode("\n", [
-        'Ces classes en file portent un modèle, et partiraient dans failed_jobs s’il disparaissait avant leur tour :',
+        'Ces classes en file peuvent porter un modèle (le leur, ou celui de l’évènement qu’un écouteur reçoit), et partiraient dans failed_jobs s’il disparaissait avant leur tour :',
         '  '.implode("\n  ", $enEchec),
         '',
-        'Leur poser #[DeleteWhenMissingModels] (Illuminate\Queue\Attributes) : Laravel les supprime alors sans les lancer (#2109).',
+        'Leur poser #[DeleteWhenMissingModels] (Illuminate\Queue\Attributes), sur l’écouteur pour un évènement : Laravel les supprime alors sans les lancer (#2109).',
+        'Un type plus précis qu’une interface, object ou mixed suffit quand la propriété ne tient jamais de modèle.',
         "Si l'échec doit rester visible, les inscrire dans sansSonModeleExceptions(), avec leur raison.",
     ]));
 });
@@ -334,5 +474,187 @@ it('lit un modèle dans le type d’une propriété, et la suppression là où L
         },
         ['modeles' => [], 'sansType' => ['quelqueChose']],
         false,
+    ],
+    'un modèle sous une interface qu’un modèle remplit' => [
+        fn (): object => new class(null) implements ShouldQueue
+        {
+            public function __construct(public ?Authenticatable $compte)
+            {
+            }
+        },
+        ['modeles' => ['compte'], 'sansType' => []],
+        false,
+    ],
+    'un modèle sous mixed' => [
+        fn (): object => new class() implements ShouldQueue
+        {
+            public function __construct(public mixed $sujet = null)
+            {
+            }
+        },
+        ['modeles' => ['sujet'], 'sansType' => []],
+        false,
+    ],
+    'un modèle sous object, sous l’attribut' => [
+        fn (): object => new #[DeleteWhenMissingModels] class(null) implements ShouldQueue
+        {
+            public function __construct(public ?object $sujet)
+            {
+            }
+        },
+        ['modeles' => ['sujet'], 'sansType' => []],
+        true,
+    ],
+    'une interface qu’aucun modèle ne remplit' => [
+        fn (): object => new class(null) implements ShouldQueue
+        {
+            public function __construct(public ?DateTimeInterface $instant)
+            {
+            }
+        },
+        ['modeles' => [], 'sansType' => []],
+        false,
+    ],
+    // Un travail reçoit dans handle() des services que le conteneur construit
+    // au lancement : ils ne voyagent pas dans la charge.
+    'un travail dont handle() reçoit un service' => [
+        fn (): object => new class() implements ShouldQueue
+        {
+            public function handle(PersonalRecordService $service): void
+            {
+            }
+        },
+        ['modeles' => [], 'sansType' => []],
+        false,
+    ],
+    'un écouteur en file d’un évènement qui porte un modèle' => [
+        fn (): object => sansSonModeleEcouteurInscrit(
+            new class() implements ShouldQueue
+            {
+                public function handle(object $evenement): void
+                {
+                }
+            },
+            new class(null)
+            {
+                use SerializesModels;
+
+                public function __construct(public ?Set $serie)
+                {
+                }
+            },
+        ),
+        ['modeles' => ['evenement->serie'], 'sansType' => []],
+        false,
+    ],
+    'un écouteur en file d’un évènement qui porte un modèle, sous l’attribut' => [
+        fn (): object => sansSonModeleEcouteurInscrit(
+            new #[DeleteWhenMissingModels] class() implements ShouldQueue
+            {
+                public function handle(object $evenement): void
+                {
+                }
+            },
+            new class(null)
+            {
+                use SerializesModels;
+
+                public function __construct(public ?Set $serie)
+                {
+                }
+            },
+        ),
+        ['modeles' => ['evenement->serie'], 'sansType' => []],
+        true,
+    ],
+    // Une propriété d'évènement sans type ne se refuse pas : l'évènement peut
+    // venir du framework, que l'application ne type pas. Elle peut tenir un modèle.
+    'un écouteur en file d’un évènement dont une propriété n’a pas de type' => [
+        fn (): object => sansSonModeleEcouteurInscrit(
+            new class() implements ShouldQueue
+            {
+                public function handle(object $recu): void
+                {
+                }
+            },
+            new class()
+            {
+                use SerializesModels;
+
+                /** @var mixed */
+                public $quelqueChose;
+            },
+        ),
+        ['modeles' => ['recu->quelqueChose'], 'sansType' => []],
+        false,
+    ],
+    'un modèle, l’attribut sur une classe parente' => [
+        fn (): object => new class(null) extends ParenteQuiSeSupprimeSansSonModele
+        {
+            public function __construct(public ?User $compte)
+            {
+            }
+        },
+        ['modeles' => ['compte'], 'sansType' => []],
+        true,
+    ],
+    'un modèle, l’attribut sur un trait' => [
+        fn (): object => new class(null) implements ShouldQueue
+        {
+            use SeSupprimeSansSonModele;
+
+            public function __construct(public ?User $compte)
+            {
+            }
+        },
+        ['modeles' => ['compte'], 'sansType' => []],
+        true,
+    ],
+    'un modèle, l’attribut sur le trait d’un trait, que Laravel ne lit pas' => [
+        fn (): object => new class(null) implements ShouldQueue
+        {
+            use ReprendSeSupprimeSansSonModele;
+
+            public function __construct(public ?User $compte)
+            {
+            }
+        },
+        ['modeles' => ['compte'], 'sansType' => []],
+        false,
+    ],
+    'un modèle, l’attribut d’une parente démenti par la propriété à faux' => [
+        fn (): object => new class(null) extends ParenteQuiSeSupprimeSansSonModele
+        {
+            public bool $deleteWhenMissingModels = false;
+
+            public function __construct(public ?User $compte)
+            {
+            }
+        },
+        ['modeles' => ['compte'], 'sansType' => []],
+        false,
+    ],
+    'un avis qui porte un modèle, sous l’attribut' => [
+        fn (): object => new #[DeleteWhenMissingModels] class(null) extends Notification implements ShouldQueue
+        {
+            public function __construct(public ?Set $serie)
+            {
+            }
+        },
+        ['modeles' => ['serie'], 'sansType' => []],
+        true,
+    ],
+    // Laravel lit la déclaration d'un courriel sur l'enveloppe que la file
+    // reçoit, `SendQueuedMailable`, qui ne la recopie du courriel que dans ses
+    // versions récentes : la garde suit la version installée.
+    'un courriel qui porte un modèle, sous l’attribut' => [
+        fn (): object => new #[DeleteWhenMissingModels] class(null) extends Mailable implements ShouldQueue
+        {
+            public function __construct(public ?Set $serie)
+            {
+            }
+        },
+        ['modeles' => ['serie'], 'sansType' => []],
+        property_exists(SendQueuedMailable::class, 'deleteWhenMissingModels'),
     ],
 ]);
