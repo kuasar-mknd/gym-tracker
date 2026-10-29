@@ -45,16 +45,17 @@ function semerLignesPourExercices(User $user, int $seances, int $combienExercice
  *
  * Ce test refusait tout `distinct` sur cette table, tenu pour le defaut
  * lui-meme. La mesure dit autre chose (#2106, MySQL 8.4 et 9.7.2) : MySQL
- * saute dans l'index d'un exercice au suivant (« Using index for group-by »)
- * des que les colonnes du `distinct` forment le PREFIXE de
- * `(user_id, exercise_id, workout_started_at)`. `count(distinct exercise_id)`
- * n'en est pas un, et lit chaque ligne du compte ; `count(distinct user_id,
- * exercise_id)` en est un, et lit E + 3 entrees : 83 a quatre-vingts
- * exercices et 9 000 lignes, contre 9 001.
+ * peut sauter dans l'index d'un exercice au suivant (« Using index for
+ * group-by ») quand les colonnes du `distinct` forment le PREFIXE de
+ * `(user_id, exercise_id, workout_started_at)`, et seulement alors.
+ * `count(distinct exercise_id)` n'en est pas un, et lit chaque ligne du
+ * compte ; `count(distinct user_id, exercise_id)` en est un : 83 entrees a
+ * quatre-vingts exercices et 9 000 lignes quand MySQL saute (E + 3), contre
+ * 9 001.
  *
  * Le controle porte sur la forme ecrite, que les statistiques de la table ne
- * font pas varier : le plan, lui, est un choix de cout. Dans la base des
- * tests, que ses statistiques croient vide, MySQL lit les lignes du compte.
+ * font pas varier : le plan, lui, est un choix de cout, qu'elles font varier
+ * dans la base des tests comme ailleurs (`.ai/rules/services.md`, piege 5).
  */
 it('compte les exercices sur le préfixe de l’index, que MySQL peut parcourir par sauts', function (): void {
     $user = User::factory()->create();

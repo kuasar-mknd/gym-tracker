@@ -138,8 +138,9 @@ function budgetReleverUnGeste(callable $geste): array
  * La page des seances comptait ses exercices distincts par un saut d'index,
  * une requete par exercice trouve : juste en lectures, mais quatre-vingts
  * allers-retours pour un compte de quatre-vingts exercices, a chaque
- * expiration du cache. Le meme saut tient en une seule instruction, que
- * MySQL fait lui-meme (`count(distinct user_id, exercise_id)`, #2106).
+ * expiration du cache. Le compte tient en une seule instruction, que MySQL
+ * peut parcourir lui-meme par sauts (`count(distinct user_id, exercise_id)`,
+ * #2106).
  */
 it('tient sous quinze requêtes à froid, quel que soit le nombre d’exercices', function (): void {
     $user = User::factory()->create();
@@ -160,13 +161,16 @@ it('tient sous quinze requêtes à froid, quel que soit le nombre d’exercices'
  * Le contrôle porte sur la forme, pas sur un compte exact que les
  * statistiques de la table feraient bouger (`.ai/rules/services.md`) : pas de
  * sous-requête dépendante dans le plan, et au plus une entrée d'index par
- * ligne du compte, plus celle qui ouvre la plage. C'est le coût exact ici : la
- * base des tests, que ses statistiques croient vide, ne fait pas choisir à
- * MySQL le saut d'un exercice au suivant (E + 3 lectures en production). La
- * requête et son coût sont isolés par le cache : la seconde lecture de la
- * page ne refait que ce que le cache n'épargne pas.
+ * ligne du compte, plus celle qui ouvre la plage. Les deux plans de MySQL
+ * tiennent cette borne ici, et le cas lit l'un ou l'autre selon ce qui a
+ * tourné avant lui : la lecture des lignes du compte (L + 1, 401) quand il
+ * tourne seul, le saut d'un exercice au suivant (E + 3, 43) quand le
+ * recalcul automatique d'InnoDB a échantillonné les lignes, jamais validées,
+ * d'un test voisin (`.ai/rules/services.md`, piège 5). La requête et son coût
+ * sont isolés par le cache : la seconde lecture de la page ne refait que ce
+ * que le cache n'épargne pas.
  */
-it('compte les exercices sans sous-requête dépendante, en une lecture d’index au plus par ligne du compte', function (): void {
+it('compte les exercices sans sous-requête dépendante, en une lecture d’index au plus par ligne du compte, plus une', function (): void {
     $user = User::factory()->create();
     $voisin = User::factory()->create();
     $lignesDuCompte = budgetSemerLesLignesDUnCompte($user, Exercise::factory()->count(40)->create(['user_id' => null]), 50);
