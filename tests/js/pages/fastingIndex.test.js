@@ -257,6 +257,34 @@ describe('Fasting — démarrer un jeûne', () => {
         expect(wrapper.find('input[type="datetime-local"]').element.value).toBe(localStamp(NOW, 'T'))
     })
 
+    it('envoie un début laissé tel quel à l’instant du geste, pas à celui où la page l’a prérempli', async () => {
+        // Le champ prérempli dit « maintenant ». Ouverte à 12:00 et validée à
+        // 12:40, la page envoyait 12:00 : le jeûne commençait quarante minutes
+        // avant le geste, et la page les affichait aussitôt écoulées.
+        const wrapper = await mountPage({})
+        const geste = new Date(NOW.getTime() + 40 * 60 * 1000)
+
+        vi.setSystemTime(geste)
+        await wrapper.find('form').trigger('submit')
+
+        expect(hoisted.post.mock.calls[0][1].start_time).toBe(geste.toISOString())
+    })
+
+    it('remplit de nouveau le début quand le formulaire réapparaît, sans que la page soit remontée', async () => {
+        // Terminer passe par Inertia, qui garde l'état : la page n'est pas
+        // remontée, et le champ gardait l'heure de son montage, celle du début
+        // du jeûne qui vient de finir (#2111).
+        const wrapper = await mountPage({ activeFast: runningFast(16 * 3600, 16 * 60) })
+        const fin = new Date(NOW.getTime() + 3 * 3600 * 1000)
+
+        vi.setSystemTime(fin)
+        await wrapper.setProps({ activeFast: null })
+
+        expect(wrapper.find('input[type="datetime-local"]').element.value).toBe(localStamp(fin, 'T'))
+
+        wrapper.unmount()
+    })
+
     it('montre le refus du serveur, même sans champ associé', async () => {
         const wrapper = await mountPage({})
 
@@ -436,12 +464,13 @@ const fuseauDOrigine = process.env.TZ
 
 /**
  * @param {string} fuseau
- * @param {number} decalageEnMinutes ce que `getTimezoneOffset()` rend à `NOW` dans ce fuseau
+ * @param {number} decalageEnMinutes ce que `getTimezoneOffset()` rend à `instant` dans ce fuseau
+ * @param {Date} instant l'instant du cas, `NOW` par défaut
  */
-const poserLeFuseau = (fuseau, decalageEnMinutes) => {
+const poserLeFuseau = (fuseau, decalageEnMinutes, instant = NOW) => {
     process.env.TZ = fuseau
 
-    expect(NOW.getTimezoneOffset(), `le fuseau ${fuseau} doit être en vigueur`).toBe(decalageEnMinutes)
+    expect(instant.getTimezoneOffset(), `le fuseau ${fuseau} doit être en vigueur`).toBe(decalageEnMinutes)
 }
 
 const rendreLeFuseau = () => {
@@ -561,5 +590,28 @@ describe('Fasting — un appareil à Paris, dans le fuseau de l’application (#
         expect(Date.parse(fin)).toBe(Date.parse('2026-03-11T05:00:00+01:00'))
 
         finPage.unmount()
+    })
+})
+
+describe('Fasting — un appareil à Toronto pendant l’heure que le passage à l’heure d’hiver répète (#2111)', () => {
+    // 06:30Z le 1er novembre 2026 : 01:30 EST, la seconde fois que Toronto lit
+    // 01:30 cette nuit-là (la première, 01:30 EDT, était 05:30Z).
+    const SECONDE_OCCURRENCE = new Date('2026-11-01T06:30:00Z')
+
+    beforeEach(() => {
+        vi.setSystemTime(SECONDE_OCCURRENCE)
+        poserLeFuseau('America/Toronto', 300, SECONDE_OCCURRENCE)
+    })
+
+    afterEach(rendreLeFuseau)
+
+    it('envoie le début prérempli à l’instant du geste, que l’heure murale du champ ne distingue pas de l’heure d’avant', async () => {
+        const wrapper = await mountPage({})
+
+        expect(wrapper.find('input[type="datetime-local"]').element.value).toBe('2026-11-01T01:30')
+
+        // Relu dans son champ, « 01:30 » désigne la première occurrence
+        // (05:30Z, ECMAScript) : le jeûne partait une heure avant le geste.
+        expect(await envoyerLeDebut(wrapper)).toBe('2026-11-01T06:30:00.000Z')
     })
 })
