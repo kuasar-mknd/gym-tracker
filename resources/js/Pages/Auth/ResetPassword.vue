@@ -74,7 +74,12 @@ const submit = () => {
             </Link>
         </div>
 
-        <form v-if="!lienRefuse" @submit.prevent="submit" class="space-y-4">
+        <!--
+            `novalidate`, comme « mot de passe oublié » : le navigateur
+            refuserait une adresse que le lien a reçue et que le serveur admet.
+            Le serveur juge chaque champ, et ses refus s'affichent dessous (#2104).
+        -->
+        <form v-if="!lienRefuse" novalidate @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.email"
                 type="email"

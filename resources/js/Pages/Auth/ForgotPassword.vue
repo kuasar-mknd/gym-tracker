@@ -31,7 +31,14 @@ const submit = () => {
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit" class="space-y-4">
+        <!--
+            `novalidate` : le navigateur juge un champ `type="email"` selon la
+            spécification HTML, plus étroite que la règle `email` du serveur, et
+            n'envoyait pas une adresse que la messagerie écrit et que le profil
+            promet au lien (partie locale entre guillemets, domaine littéral).
+            Le serveur juge l'adresse, et son refus s'affiche sous le champ (#2104).
+        -->
+        <form novalidate @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.email"
                 type="email"

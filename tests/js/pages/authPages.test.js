@@ -492,7 +492,39 @@ it('sait encore voir une ressource d’une autre origine dans une page montée',
     ])
 })
 
+/**
+ * Des adresses que la messagerie écrit et que la règle `email` du serveur
+ * admet, et que le navigateur refuse dans un champ `type="email"`, jugé selon
+ * la spécification HTML : une partie locale entre guillemets, un domaine
+ * littéral. Le lien « mot de passe oublié » leur part et les réinitialise
+ * (`AdresseQueLaMessagerieSaitEcrireTest`), et le profil le leur promet
+ * (#2104) : la demande et la réinitialisation laissent le serveur en juger.
+ */
+const ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE = ['"camille.martin"@example.org', 'camille@[192.0.2.1]']
+
 describe('ForgotPassword', () => {
+    /*
+     * `requestSubmit()` juge le formulaire comme un clic sur « Envoyer le
+     * lien » : sans `novalidate`, jsdom refuse de l'envoyer, comme le navigateur.
+     */
+    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
+        'envoie la demande pour %s, que le navigateur refuserait et que le serveur admet',
+        async (adresse) => {
+            const wrapper = mountPage(ForgotPassword)
+
+            await typeInto(wrapper, 'Email', adresse)
+
+            expect(wrapper.find('input[type="email"]').element.validity.typeMismatch).toBe(true)
+
+            wrapper.find('form').element.requestSubmit()
+            await nextTick()
+
+            expect(formPost).toHaveBeenCalledTimes(1)
+            expect(submitted()[0]).toBe('/password.email')
+            expect(openRequest.email).toBe(adresse)
+        },
+    )
+
     it('poste l’email vers la route d’envoi du lien', async () => {
         const wrapper = mountPage(ForgotPassword)
 
@@ -575,6 +607,26 @@ describe('ResetPassword', () => {
             wrapper.findAll('input[type="password"]').map((motDePasse) => motDePasse.attributes('autocomplete')),
         ).toEqual(['new-password', 'new-password'])
     })
+
+    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
+        'envoie le nouveau mot de passe de %s, que le navigateur refuserait et que le serveur admet',
+        async (adresse) => {
+            const wrapper = mountPage(ResetPassword, { props })
+
+            await champDuCompte(wrapper).setValue(adresse)
+            await typeInto(wrapper, 'Nouveau mot de passe', 'Nouveau-mot-de-passe-2026!')
+            await typeInto(wrapper, 'Confirmer le mot de passe', 'Nouveau-mot-de-passe-2026!')
+
+            expect(champDuCompte(wrapper).element.validity.typeMismatch).toBe(true)
+
+            wrapper.find('form').element.requestSubmit()
+            await nextTick()
+
+            expect(formPost).toHaveBeenCalledTimes(1)
+            expect(submitted()[0]).toBe('/password.store')
+            expect(openRequest.email).toBe(adresse)
+        },
+    )
 
     it('envoie l’adresse saisie avec le formulaire, à côté de la valeur chiffrée, qui ne s’affiche pas', async () => {
         const wrapper = mountPage(ResetPassword, { props })
