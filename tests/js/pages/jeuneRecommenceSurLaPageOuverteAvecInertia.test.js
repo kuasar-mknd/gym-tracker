@@ -182,6 +182,8 @@ it('recommence à l’instant du second geste, sur la page restée montée depui
 
     expect(champDuDebut().value).toBe(heureDuChamp(MONTAGE))
 
+    // `vi.waitUntil` avance l'horloge simulée à chaque attente (`.ai/rules/tests-js.md`) : le geste se joue à l'heure dite.
+    vi.setSystemTime(MONTAGE)
     const premier = await ecrire(
         () => document.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
         pageDuJeune({ activeFast: jeuneEnCours(1, MONTAGE) }),

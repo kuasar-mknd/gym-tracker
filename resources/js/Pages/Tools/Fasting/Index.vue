@@ -21,7 +21,7 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
@@ -68,6 +68,7 @@ const startForm = useForm({
     target_duration_minutes: 16 * 60,
     type: '16:8',
 })
+let debutPrerempli = ''
 
 const endForm = useForm({
     end_time: '',
@@ -128,6 +129,8 @@ watch(
         if (!fast) {
             elapsedSeconds.value = 0
             progressPercentage.value = 0
+            debutPrerempli = formatToLocalISO(new Date())
+            startForm.start_time = debutPrerempli
 
             return
         }
@@ -138,23 +141,20 @@ watch(
     { immediate: true },
 )
 
-onMounted(() => {
-    startForm.start_time = formatToLocalISO(new Date())
-})
-
 onUnmounted(() => {
     if (timerInterval.value) clearInterval(timerInterval.value)
 })
 
 /**
- * Le champ montre l'heure de l'appareil ; le début part à l'instant qu'il désigne et la fin à l'instant présent, avec
- * leur décalage : sans lui, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
+ * Le champ montre l'heure de l'appareil, remplie à chaque retour du formulaire, la page n'étant pas remontée. Laissé
+ * tel quel, il dit « maintenant » : le début part à l'instant du geste ; changé, à l'instant qu'il désigne. La fin part
+ * à l'instant présent. Sans décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
  */
 const startFast = () => {
     startForm
         .transform((data) => ({
             ...data,
-            start_time: formatToUTC(data.start_time),
+            start_time: data.start_time === debutPrerempli ? new Date().toISOString() : formatToUTC(data.start_time),
             target_duration_minutes: selectedType.value.hours * 60,
             type: selectedType.value.value,
         }))
