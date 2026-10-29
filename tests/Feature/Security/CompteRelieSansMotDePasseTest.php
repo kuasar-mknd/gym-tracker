@@ -18,23 +18,24 @@ use Laravel\Socialite\Two\User as SocialiteUser;
  *
  * Comme le changement d'adresse (`ChangementDAdresseTest`), chaque refus du
  * mot de passe actuel donne à un tel compte le chemin vers un mot de passe :
- * se déconnecter, puis « Mot de passe oublié ? ». Ou, quand la messagerie ne
- * sait pas écrire son adresse et qu'aucun lien ne lui parviendrait, le renvoi
- * à un administrateur (`AdresseQueLaMessagerieSaitEcrireTest`). Un compte sans
+ * se déconnecter, puis « Mot de passe oublié ? ». Ou, quand aucun lien ne lui
+ * parviendrait, parce que la messagerie ne sait pas écrire son adresse ou que
+ * la demande du lien la refuse, le renvoi à un administrateur
+ * (`AdresseQueLaMessagerieSaitEcrireTest`). Un compte sans
  * fournisseur garde ses refus tels quels. Le message ne s'adresse qu'à la
  * session du compte, à qui la page du profil nomme déjà son fournisseur et
  * dit si la messagerie écrit son adresse.
  */
 
 /**
- * Le chemin que donne un refus à un compte relié à Google dont la messagerie
- * écrit l'adresse.
+ * Le chemin que donne un refus à un compte relié à Google à qui le lien
+ * « mot de passe oublié » parvient.
  */
 const COMPTE_RELIE_CHEMIN_PAR_LE_LIEN = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.';
 
 /**
- * Le renvoi à un administrateur, pour un compte relié à Google dont la
- * messagerie n'écrit pas l'adresse : aucun lien ne lui parviendrait.
+ * Le renvoi à un administrateur, pour un compte relié à Google à qui aucun
+ * lien ne parviendrait.
  */
 const COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
 
@@ -73,6 +74,19 @@ function compteRelieALAdresseQueLaMessagerieNEcritPas(): User
 }
 
 /**
+ * Un compte relié à Google dont l'adresse, antérieure à #2075, porte un tiret
+ * bas dans le domaine : la messagerie l'écrit, mais la demande du lien
+ * « mot de passe oublié » la refuse (règle `email`), et aucun lien ne part.
+ */
+function compteRelieALAdresseQueLaDemandeDuLienRefuse(): User
+{
+    $compte = User::factory()->create(['email' => 'camille@exa_mple.org']);
+    $compte->forceFill(['provider' => 'google', 'provider_id' => 'identifiant-google', 'liaison_prouvee_le' => now()])->save();
+
+    return $compte;
+}
+
+/**
  * Un nouveau mot de passe recevable, et sa confirmation.
  *
  * @return array{password: string, password_confirmation: string}
@@ -102,6 +116,7 @@ it('donne le chemin vers un mot de passe à un compte relié qui veut supprimer 
 })->with([
     'messagerie qui écrit l’adresse' => [compteRelieOuvertParGoogle(...), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
     'messagerie qui ne l’écrit pas' => [compteRelieALAdresseQueLaMessagerieNEcritPas(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
+    'demande du lien qui refuse l’adresse' => [compteRelieALAdresseQueLaDemandeDuLienRefuse(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
 ]);
 
 it('donne le chemin vers un mot de passe à un compte relié qui veut changer son mot de passe', function (Closure $creer, string $chemin): void {
@@ -124,6 +139,7 @@ it('donne le chemin vers un mot de passe à un compte relié qui veut changer so
 })->with([
     'messagerie qui écrit l’adresse' => [compteRelieOuvertParGoogle(...), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
     'messagerie qui ne l’écrit pas' => [compteRelieALAdresseQueLaMessagerieNEcritPas(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
+    'demande du lien qui refuse l’adresse' => [compteRelieALAdresseQueLaDemandeDuLienRefuse(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
 ]);
 
 it('garde ses refus tels quels à un compte sans fournisseur', function (): void {

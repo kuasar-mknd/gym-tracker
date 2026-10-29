@@ -1518,7 +1518,7 @@ describe('DeleteUserForm', () => {
         })
 
         it('dit, dans la fenêtre de confirmation, comment obtenir un mot de passe', async () => {
-            const wrapper = mountForm({ fournisseurDeConnexion: 'Google', laMessagerieSaitEcrireSonAdresse: true })
+            const wrapper = mountForm({ fournisseurDeConnexion: 'Google', peutRecevoirLeLienDeReinitialisation: true })
 
             expect(aide(wrapper).exists()).toBe(false)
 
@@ -1533,7 +1533,7 @@ describe('DeleteUserForm', () => {
 
         it('ne promet aucun lien quand la messagerie n’écrit pas l’adresse, et renvoie à un administrateur', async () => {
             hoisted.page.props = { auth: { user: { id: 7, email: 'camille(salle)@example.org' } } }
-            const wrapper = mountForm({ fournisseurDeConnexion: 'GitHub', laMessagerieSaitEcrireSonAdresse: false })
+            const wrapper = mountForm({ fournisseurDeConnexion: 'GitHub', peutRecevoirLeLienDeReinitialisation: false })
             await openConfirmation(wrapper)
 
             expect(aide(wrapper).text()).toBe(

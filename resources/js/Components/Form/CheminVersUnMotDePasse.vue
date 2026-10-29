@@ -11,10 +11,11 @@ import { computed } from 'vue'
  * La connexion sociale crée le compte avec un mot de passe tiré au hasard,
  * que personne ne connaît. Le chemin passe par « Mot de passe oublié ? »,
  * ouvert aux seuls invités, d'où la déconnexion d'abord ; le lien part à
- * l'adresse actuelle, lue sur la page (`auth.user`). Il ne part pas à une
- * adresse que la messagerie n'écrit pas telle quelle, qu'un compte d'avant
- * #2075 peut porter : l'encadré ne le promet pas, et renvoie à un
- * administrateur. C'est le texte des refus du serveur
+ * l'adresse actuelle, lue sur la page (`auth.user`). Il ne parvient pas à
+ * certaines adresses qu'un compte d'avant #2075 peut porter, que la
+ * messagerie n'écrit pas telles quelles ou que la demande du lien refuse :
+ * l'encadré ne le promet pas, et renvoie à un administrateur. C'est le texte
+ * des refus du serveur
  * (`DonneLeCheminVersUnMotDePasse`), avec l'adresse en plus : chaque
  * formulaire cache l'encadré devant le refus de son champ, qui le dit déjà.
  * Sans fournisseur, rien ne s'affiche.
@@ -25,8 +26,8 @@ const props = defineProps({
         type: String,
         default: null,
     },
-    /** La messagerie écrit-elle l'adresse actuelle telle quelle (`User::laMessagerieSaitEcrireSonAdresse()`) ? */
-    laMessagerieSaitEcrireSonAdresse: {
+    /** Le lien « mot de passe oublié » parvient-il à l'adresse actuelle (`User::peutRecevoirLeLienDeReinitialisation()`) ? */
+    peutRecevoirLeLienDeReinitialisation: {
         type: Boolean,
         default: true,
     },
@@ -43,7 +44,7 @@ const adresseActuelle = computed(() => page.props.auth?.user?.email ?? '')
         class="bg-accent-info/10 rounded-xl p-3"
         data-testid="profile-social-password-help"
     >
-        <p v-if="props.laMessagerieSaitEcrireSonAdresse" class="text-accent-info-deep text-sm">
+        <p v-if="props.peutRecevoirLeLienDeReinitialisation" class="text-accent-info-deep text-sm">
             Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de passe,
             choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien
             part à ton adresse actuelle, {{ adresseActuelle }}.

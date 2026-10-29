@@ -342,7 +342,7 @@ it('dit à un compte relié à un fournisseur comment obtenir un mot de passe', 
     $this->get('/profile/edit')->assertInertia(
         fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page
             ->where('fournisseurDeConnexion', 'Google')
-            ->where('laMessagerieSaitEcrireSonAdresse', true),
+            ->where('peutRecevoirLeLienDeReinitialisation', true),
     );
 });
 

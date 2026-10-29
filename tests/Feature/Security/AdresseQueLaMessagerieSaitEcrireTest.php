@@ -20,6 +20,7 @@ use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Validator;
@@ -36,6 +37,7 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Exception\RfcComplianceException;
 use Tests\Support\CeQueLeClientLit;
 use Tests\Support\FilamentAdminPanel;
+use Tests\Support\FormulaireDeReinitialisation;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertAuthenticatedAs;
@@ -110,6 +112,7 @@ $ecritesParMime = [
 
 $refuseesParLaRegleEmailEcritesParMime = [
     'un tiret bas dans le domaine' => ['camille@exa_mple.org'],
+    'un tiret bas dans un sous-domaine' => ['camille@sub_d.example.org'],
 ];
 
 /*
@@ -279,6 +282,29 @@ function adresseMessagerieLienDeConfirmationRecuPar(string $adresse): string
     }
 
     throw new LogicException('Aucun lien de confirmation n’est parti à cette adresse.');
+}
+
+/**
+ * Le lien « mot de passe oublié » que porte le courriel parti à cette
+ * adresse, ou null s'il n'en est parti aucun.
+ */
+function adresseMessagerieLienDeReinitialisationRecuPar(string $adresse): ?string
+{
+    $transport = Mail::mailer()->getSymfonyTransport();
+    assert($transport instanceof ArrayTransport);
+
+    foreach ($transport->messages() as $envoi) {
+        assert($envoi instanceof SentMessage);
+        $message = $envoi->getOriginalMessage();
+        assert($message instanceof Email);
+        $corps = html_entity_decode((string) $message->getHtmlBody(), ENT_QUOTES | ENT_HTML5);
+
+        if ($message->getTo()[0]->getAddress() === $adresse && preg_match('#https?://[^\s"<>]+/reset-password/[^\s"<>]+#', $corps, $lien) === 1) {
+            return $lien[0];
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -703,7 +729,7 @@ it('ne promet pas le lien « mot de passe oublié » à un compte relié à un f
     actingAs($compte)->get(route('profile.edit'))->assertInertia(
         fn (AssertableInertia $page): AssertableInertia => $page
             ->where('fournisseurDeConnexion', 'Google')
-            ->where('laMessagerieSaitEcrireSonAdresse', false),
+            ->where('peutRecevoirLeLienDeReinitialisation', false),
     );
 
     expect($compte->refresh()->email)->toBe($adresse)
@@ -714,21 +740,67 @@ it('ne promet pas le lien « mot de passe oublié » à un compte relié à un f
 ]);
 
 /*
- * Une adresse d'avant la règle que la messagerie écrit reçoit le lien
- * « mot de passe oublié » : le profil le promet toujours.
+ * Une adresse d'avant la règle que la messagerie écrit, mais que la règle
+ * `email` refuse (un tiret bas dans le domaine), ne reçoit pas le lien
+ * « mot de passe oublié » : la demande, qui juge l'adresse saisie par cette
+ * règle, répond par l'erreur du format, et rien ne part. Le profil le lui
+ * promettait ; il la renvoie désormais à un administrateur, comme une adresse
+ * que la messagerie n'écrit pas (`User::peutRecevoirLeLienDeReinitialisation()`).
  */
-it('promet toujours le lien « mot de passe oublié » à un compte relié à un fournisseur dont la messagerie écrit l’adresse antérieure à la règle', function (string $adresse): void {
+it('ne promet plus le lien « mot de passe oublié » à un compte relié à un fournisseur dont la demande du lien refuse l’adresse antérieure à la règle', function (string $adresse): void {
     $compte = User::factory()->create(['email' => $adresse]);
     $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
 
     actingAs($compte)
         ->patch(route('profile.update'), ['name' => $compte->name, 'email' => 'camille.martin@example.org'])
-        ->assertSessionHasErrors(['current_password' => 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.']);
+        ->assertSessionHasErrors(['current_password' => 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.']);
 
     actingAs($compte)->get(route('profile.edit'))->assertInertia(
-        fn (AssertableInertia $page): AssertableInertia => $page->where('laMessagerieSaitEcrireSonAdresse', true),
+        fn (AssertableInertia $page): AssertableInertia => $page->where('peutRecevoirLeLienDeReinitialisation', false),
     );
+
+    auth()->guard('web')->logout();
+
+    post(route('password.email'), ['email' => $adresse])
+        ->assertSessionHasErrors(['email' => adresseMessagerieMessageDuFormat()]);
+
+    expect($compte->laMessagerieSaitEcrireSonAdresse())->toBeTrue()
+        ->and($compte->peutRecevoirLeLienDeReinitialisation())->toBeFalse()
+        ->and(adresseMessagerieDestinataires())->toBe([]);
 })->with($refuseesParLaRegleEmailEcritesParMime);
+
+/*
+ * La promesse du lien se juge sur ce que fait « mot de passe oublié » : le
+ * lien part à l'adresse du compte, et il réinitialise son mot de passe,
+ * exactement quand `User::peutRecevoirLeLienDeReinitialisation()` le dit,
+ * pour chaque forme qu'un compte peut porter. Le prédicat recopie la règle de
+ * la demande (`PasswordResetLinkRequest`) : ce cas le dit si l'une change
+ * sans l'autre.
+ */
+it('ne promet le lien « mot de passe oublié » qu’à une adresse qui le reçoit et qu’il réinitialise', function (string $adresse): void {
+    $compte = User::factory()->create(['email' => $adresse]);
+    $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
+    $promis = $compte->peutRecevoirLeLienDeReinitialisation();
+
+    post(route('password.email'), ['email' => $adresse]);
+    $lien = adresseMessagerieLienDeReinitialisationRecuPar($adresse);
+
+    expect($lien !== null)->toBe($promis);
+
+    if ($lien === null) {
+        return;
+    }
+
+    post(route('password.store'), FormulaireDeReinitialisation::depuisLeLien($lien, 'Nouveau-mot-de-passe-2026!'))
+        ->assertSessionHasNoErrors();
+
+    expect(Hash::check('Nouveau-mot-de-passe-2026!', (string) $compte->refresh()->password))->toBeTrue();
+})->with([
+    ...$admisesParLaRegleEmailRefuseesParMime,
+    ...$refuseesParLaRegleEmailCommeParMime,
+    ...$refuseesParLaRegleEmailEcritesParMime,
+    ...$ecritesParMime,
+]);
 
 it('laisse le panneau enregistrer le nom d’un compte dont l’adresse est antérieure à la règle, par la page comme par la table', function (string $adresse): void {
     actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('User')), 'admin');

@@ -37,10 +37,11 @@ class ProfileController extends Controller
             // Les trois formulaires qui exigent le mot de passe actuel
             // (l'adresse, le mot de passe, la suppression du compte) expliquent
             // à un compte relié à un fournisseur comment l'obtenir (#2104),
-            // sans promettre le lien « mot de passe oublié » à une adresse que
-            // la messagerie n'écrit pas telle quelle, qui ne le reçoit pas (#2075).
+            // sans promettre le lien « mot de passe oublié » à une adresse qui
+            // ne le reçoit pas : la messagerie ne l'écrit pas telle quelle
+            // (#2075), ou la demande du lien la refuse.
             'fournisseurDeConnexion' => $this->user()->fournisseurDeConnexion(),
-            'laMessagerieSaitEcrireSonAdresse' => $this->user()->laMessagerieSaitEcrireSonAdresse(),
+            'peutRecevoirLeLienDeReinitialisation' => $this->user()->peutRecevoirLeLienDeReinitialisation(),
             // `auth.user` ne dit pas si l'adresse est vérifiée : le formulaire
             // en tire l'annonce de l'avis à l'adresse actuelle et le bandeau
             // qui propose de renvoyer le lien de vérification.

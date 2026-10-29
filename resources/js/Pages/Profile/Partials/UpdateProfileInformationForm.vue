@@ -17,12 +17,13 @@ const props = defineProps({
         default: null,
     },
     /**
-     * La messagerie écrit-elle l'adresse actuelle telle quelle ? Non pour
-     * certaines adresses d'avant #2075 (`User::laMessagerieSaitEcrireSonAdresse()`) :
-     * aucun lien ne leur parvient, « Mot de passe oublié ? » compris, et
-     * l'aide à un compte relié à un fournisseur ne le promet pas.
+     * Le lien « mot de passe oublié » parvient-il à l'adresse actuelle ? Non
+     * pour certaines adresses d'avant #2075
+     * (`User::peutRecevoirLeLienDeReinitialisation()`) : la messagerie ne les
+     * écrit pas telles quelles, ou la demande du lien les refuse, et l'aide à
+     * un compte relié à un fournisseur ne le promet pas.
      */
-    laMessagerieSaitEcrireSonAdresse: {
+    peutRecevoirLeLienDeReinitialisation: {
         type: Boolean,
         default: true,
     },
@@ -168,7 +169,7 @@ const submit = () => {
                 <CheminVersUnMotDePasse
                     v-if="!form.errors.current_password"
                     :fournisseur-de-connexion="props.fournisseurDeConnexion"
-                    :la-messagerie-sait-ecrire-son-adresse="props.laMessagerieSaitEcrireSonAdresse"
+                    :peut-recevoir-le-lien-de-reinitialisation="props.peutRecevoirLeLienDeReinitialisation"
                 />
             </template>
 

@@ -20,14 +20,16 @@ use App\Models\User;
  * n'est ouvert qu'aux invités, d'où la déconnexion d'abord ; le lien part à
  * l'adresse actuelle du compte.
  *
- * Le lien ne part pas à une adresse que la messagerie n'écrit pas telle
- * quelle, qu'un compte d'avant #2075 peut porter
- * (`User::routeNotificationForMail()`), et la demande refuse même des points
- * consécutifs ou un point final (règle `email`) : le message ne le promet pas,
- * et renvoie à un administrateur, qui change l'adresse au panneau.
+ * Le lien ne parvient pas à toute adresse qu'un compte d'avant #2075 peut
+ * porter : il ne part pas à une adresse que la messagerie n'écrit pas telle
+ * quelle (`User::routeNotificationForMail()`), et la demande refuse, par la
+ * règle `email`, des adresses que la messagerie écrit, comme un tiret bas dans
+ * le domaine. Le message ne le promet donc qu'à un compte qui le reçoit
+ * (`User::peutRecevoirLeLienDeReinitialisation()`), et renvoie tout autre à
+ * un administrateur, qui change l'adresse au panneau.
  *
  * Le chemin ne s'écrit qu'à la session du compte, à qui la page du profil
- * nomme déjà son fournisseur et dit si la messagerie écrit son adresse
+ * nomme déjà son fournisseur et dit si le lien lui parvient
  * (`ProfileController::edit`) : il n'en apprend rien de plus. Le formulaire
  * en montre le même texte avant l'envoi
  * (`resources/js/Components/Form/CheminVersUnMotDePasse.vue`). Un compte sans
@@ -56,7 +58,7 @@ trait DonneLeCheminVersUnMotDePasse
 
         $compteRelie = "Ton compte est relié à {$fournisseur}. Si tu n’as jamais choisi de mot de passe, ";
 
-        if (! $compte->laMessagerieSaitEcrireSonAdresse()) {
+        if (! $compte->peutRecevoirLeLienDeReinitialisation()) {
             return $compteRelie.'aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
         }
 

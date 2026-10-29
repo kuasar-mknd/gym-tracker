@@ -320,8 +320,11 @@ describe('UpdatePasswordForm', () => {
             const wrapper = mountPartial(UpdatePasswordForm)
 
             expect(identifiant(wrapper).element.value).toBe('nouvelle@example.org')
-            // Ses deux props disent le fournisseur et la messagerie (#2104), aucune l'adresse.
-            expect(Object.keys(wrapper.props())).toEqual(['fournisseurDeConnexion', 'laMessagerieSaitEcrireSonAdresse'])
+            // Ses deux props disent le fournisseur et si le lien parvient (#2104), aucune l'adresse.
+            expect(Object.keys(wrapper.props())).toEqual([
+                'fournisseurDeConnexion',
+                'peutRecevoirLeLienDeReinitialisation',
+            ])
             expect(Object.values(wrapper.props())).not.toContain('nouvelle@example.org')
         })
     })
@@ -355,7 +358,7 @@ describe('UpdatePasswordForm', () => {
             currentPage = { props: { auth: { user: { id: 7, email: 'camille(salle)@example.org' } } } }
             const wrapper = mountPartial(UpdatePasswordForm, {
                 fournisseurDeConnexion: 'Apple',
-                laMessagerieSaitEcrireSonAdresse: false,
+                peutRecevoirLeLienDeReinitialisation: false,
             })
 
             expect(aide(wrapper).text()).toBe(
@@ -724,7 +727,7 @@ describe('UpdateProfileInformationForm', () => {
 
         const wrapper = mountPartial(UpdateProfileInformationForm, {
             fournisseurDeConnexion: 'Google',
-            laMessagerieSaitEcrireSonAdresse: false,
+            peutRecevoirLeLienDeReinitialisation: false,
         })
 
         await typeInto(wrapper, 'Email', 'nouveau@example.com')
@@ -838,7 +841,7 @@ describe('Profile/Edit', () => {
         expect(wrapper.findComponent(UpdateProfileInformationForm).props('fournisseurDeConnexion')).toBe('GitHub')
     })
 
-    it('dit au formulaire d’adresse si la messagerie écrit l’adresse actuelle', () => {
+    it('dit au formulaire d’adresse si le lien « mot de passe oublié » parvient à l’adresse actuelle', () => {
         const mountEdit = (props) =>
             mount(ProfileEdit, {
                 props: { mustVerifyEmail: true, fournisseurDeConnexion: 'GitHub', ...props },
@@ -849,12 +852,12 @@ describe('Profile/Edit', () => {
                 },
             })
         const formProp = (wrapper) =>
-            wrapper.findComponent(UpdateProfileInformationForm).props('laMessagerieSaitEcrireSonAdresse')
+            wrapper.findComponent(UpdateProfileInformationForm).props('peutRecevoirLeLienDeReinitialisation')
 
         // Sans elle, le formulaire promettait le lien « mot de passe oublié »
         // à une adresse qui ne le reçoit pas.
-        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: false }))).toBe(false)
-        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: true }))).toBe(true)
+        expect(formProp(mountEdit({ peutRecevoirLeLienDeReinitialisation: false }))).toBe(false)
+        expect(formProp(mountEdit({ peutRecevoirLeLienDeReinitialisation: true }))).toBe(true)
         expect(formProp(mountEdit({}))).toBe(true)
     })
 
@@ -863,7 +866,7 @@ describe('Profile/Edit', () => {
      * aussi le mot de passe actuel : sans ces props, ils ne pouvaient pas dire
      * à un compte relié à un fournisseur comment en obtenir un (#2104).
      */
-    it('transmet le fournisseur et l’état de la messagerie aux formulaires du mot de passe et de la suppression', () => {
+    it('transmet le fournisseur, et si le lien lui parvient, aux formulaires du mot de passe et de la suppression', () => {
         const mountEdit = (props) =>
             mount(ProfileEdit, {
                 props: { mustVerifyEmail: true, ...props },
@@ -874,24 +877,24 @@ describe('Profile/Edit', () => {
                 },
             })
         const propsDe = (wrapper, formulaire) => {
-            const { fournisseurDeConnexion, laMessagerieSaitEcrireSonAdresse } = wrapper
+            const { fournisseurDeConnexion, peutRecevoirLeLienDeReinitialisation } = wrapper
                 .findComponent(formulaire)
                 .props()
 
-            return { fournisseurDeConnexion, laMessagerieSaitEcrireSonAdresse }
+            return { fournisseurDeConnexion, peutRecevoirLeLienDeReinitialisation }
         }
 
-        const relie = mountEdit({ fournisseurDeConnexion: 'Google', laMessagerieSaitEcrireSonAdresse: false })
+        const relie = mountEdit({ fournisseurDeConnexion: 'Google', peutRecevoirLeLienDeReinitialisation: false })
         const seul = mountEdit({})
 
         for (const formulaire of [UpdatePasswordForm, DeleteUserForm]) {
             expect(propsDe(relie, formulaire)).toEqual({
                 fournisseurDeConnexion: 'Google',
-                laMessagerieSaitEcrireSonAdresse: false,
+                peutRecevoirLeLienDeReinitialisation: false,
             })
             expect(propsDe(seul, formulaire)).toEqual({
                 fournisseurDeConnexion: null,
-                laMessagerieSaitEcrireSonAdresse: true,
+                peutRecevoirLeLienDeReinitialisation: true,
             })
         }
     })

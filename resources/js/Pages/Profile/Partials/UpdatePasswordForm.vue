@@ -20,8 +20,8 @@ const props = defineProps({
         type: String,
         default: null,
     },
-    /** La messagerie écrit-elle l'adresse actuelle telle quelle ? Sinon, aucun lien ne lui part. */
-    laMessagerieSaitEcrireSonAdresse: {
+    /** Le lien « mot de passe oublié » parvient-il à l'adresse actuelle (`User::peutRecevoirLeLienDeReinitialisation()`) ? */
+    peutRecevoirLeLienDeReinitialisation: {
         type: Boolean,
         default: true,
     },
@@ -95,7 +95,7 @@ const updatePassword = () => {
             <CheminVersUnMotDePasse
                 v-if="!form.errors.current_password"
                 :fournisseur-de-connexion="props.fournisseurDeConnexion"
-                :la-messagerie-sait-ecrire-son-adresse="props.laMessagerieSaitEcrireSonAdresse"
+                :peut-recevoir-le-lien-de-reinitialisation="props.peutRecevoirLeLienDeReinitialisation"
             />
 
             <GlassInput

@@ -25,6 +25,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -266,6 +267,31 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function laMessagerieSaitEcrireSonAdresse(): bool
     {
         return AdresseQueLaMessagerieSaitEcrire::laMessagerieSaitLEcrire($this->getEmailForVerification());
+    }
+
+    /**
+     * Le lien « mot de passe oublié » parvient-il à ce compte, et le
+     * réinitialise-t-il ?
+     *
+     * Il faut deux choses. La messagerie écrit son adresse telle quelle
+     * (`laMessagerieSaitEcrireSonAdresse()`), sans quoi sa route est vide et
+     * rien ne part. La demande admet l'adresse, que la personne saisit : elle
+     * la juge par la règle `email` (`PasswordResetLinkRequest`), comme la
+     * réinitialisation qui suit (`NewPasswordRequest`). Cette règle refuse des
+     * adresses que la messagerie écrit et qu'un compte créé par la connexion
+     * sociale avant #2075 peut porter, comme un tiret bas dans le domaine :
+     * la page répond par l'erreur du format, et aucun lien ne part. Le chemin
+     * vers un mot de passe ne promet le lien qu'à un compte qui le reçoit
+     * (`DonneLeCheminVersUnMotDePasse`, `ProfileController::edit`).
+     *
+     * La règle est recopiée de la demande, pas lue sur elle : la comparaison
+     * avec ce que fait vraiment « mot de passe oublié », pour chaque forme
+     * d'adresse, vit dans `AdresseQueLaMessagerieSaitEcrireTest`.
+     */
+    public function peutRecevoirLeLienDeReinitialisation(): bool
+    {
+        return $this->laMessagerieSaitEcrireSonAdresse()
+            && Validator::make(['email' => $this->getEmailForPasswordReset()], ['email' => ['required', 'email']])->passes();
     }
 
     /**
