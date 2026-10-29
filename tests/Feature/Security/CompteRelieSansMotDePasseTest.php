@@ -78,6 +78,7 @@ function compteRelieNouveauMotDePasse(): array
 
 it('donne le chemin vers un mot de passe à un compte relié qui veut supprimer son compte', function (Closure $creer, string $chemin): void {
     $compte = $creer();
+    assert($compte instanceof User);
     $this->actingAs($compte);
 
     $this->from('/profile/edit')
@@ -99,6 +100,7 @@ it('donne le chemin vers un mot de passe à un compte relié qui veut supprimer 
 
 it('donne le chemin vers un mot de passe à un compte relié qui veut changer son mot de passe', function (Closure $creer, string $chemin): void {
     $compte = $creer();
+    assert($compte instanceof User);
     $empreinte = $compte->password;
     $this->actingAs($compte);
 
