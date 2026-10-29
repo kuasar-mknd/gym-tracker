@@ -275,7 +275,7 @@ it('n’envoie personne à la confirmation du mot de passe, qui ne donne pas le 
     $routesQuiLExigent = collect($routeur->getRoutes()->getRoutes())
         ->filter(static fn (Route $route): bool => collect($routeur->gatherRouteMiddleware($route))
             ->contains(static fn (mixed $maillon): bool => is_string($maillon) && Str::before($maillon, ':') === RequirePassword::class))
-        ->map(static fn (Route $route): string => implode('|', $route->methods()).' '.$route->uri())
+        ->map(static fn (Route $route): string => $route->uri())
         ->values()
         ->all();
 
