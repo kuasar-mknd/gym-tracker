@@ -397,11 +397,19 @@ test('une mensuration à zéro n’atteint pas un objectif à la baisse', functi
  *
  * Il revient désormais à son départ, comme un objectif sans valeur relevée
  * (#1953, #1954, #2107), par les deux chemins. L'objectif est posé tel que
- * l'ancien recalcul l'a laissé en base, barre pleine : le prochain recalcul le
- * répare. Le garde du zéro ne se prouve plus que par une mensuration à zéro,
- * plus haut.
+ * l'ancien recalcul l'a laissé en base, barre pleine sous une cible plus basse
+ * que son départ : le prochain recalcul le répare. Le garde du zéro ne se
+ * prouve plus que par une mensuration à zéro, plus haut.
+ *
+ * Revenir au départ ne suffit pas sous une cible égale à son départ : la
+ * valeur y vaut la cible, et l'objectif passait pour atteint, barre pleine,
+ * sans rien suivre. Sur l'ancien code, sa valeur de 0 le laissait à 0 %. Un
+ * objectif qui ne suit rien reste donc à 0 % et n'est jamais atteint, quelle
+ * que soit sa cible, et une date d'atteinte tapée au panneau s'efface. Un
+ * objectif dont la mensuration n'a aucune mesure, lui, suit le repli commun
+ * (`ObjectifSurUneMensurationTest`).
  */
-test('un objectif de mensuration sans mensuration choisie revient à sa valeur de départ, barre à zéro', function (?string $mensuration, string $chemin): void {
+test('un objectif de mensuration sans mensuration choisie revient à sa valeur de départ, barre à zéro, jamais atteint', function (?string $mensuration, int $cible, int $avancementEnBase, ?string $atteintEnBase, string $chemin): void {
     $user = User::factory()->create();
 
     $goal = Goal::factory()->create([
@@ -410,9 +418,9 @@ test('un objectif de mensuration sans mensuration choisie revient à sa valeur d
         'measurement_type' => $mensuration,
         'start_value' => 80,
         'current_value' => 0,
-        'target_value' => 75,
-        'progress_pct' => 100,
-        'completed_at' => null,
+        'target_value' => $cible,
+        'progress_pct' => $avancementEnBase,
+        'completed_at' => $atteintEnBase,
     ]);
 
     if ($chemin === 'lot') {
@@ -428,6 +436,10 @@ test('un objectif de mensuration sans mensuration choisie revient à sa valeur d
 })->with([
     'sans mensuration' => [null],
     'mensuration vide' => [''],
+])->with([
+    'cible sous le départ, barre pleine en base' => [75, 100, null],
+    'cible égale au départ' => [80, 0, null],
+    'cible égale au départ, atteint tapé au panneau' => [80, 0, '2026-10-01 12:00:00'],
 ])->with([
     'par le lot' => ['lot'],
     'par le chemin d’un seul objectif' => ['seul'],

@@ -135,6 +135,12 @@ final class GoalService
 
     protected function updateProgressPercentage(Goal $goal): void
     {
+        if ($this->neSuitAucuneMensuration($goal)) {
+            $goal->progress_pct = 0.0;
+
+            return;
+        }
+
         if ($goal->target_value === $goal->start_value) {
             $goal->progress_pct = $goal->current_value >= $goal->target_value ? 100.0 : 0.0;
 
@@ -290,7 +296,8 @@ final class GoalService
     {
         /*
          * Un objectif sans mensuration ne suit rien : il revient à sa valeur de
-         * départ, sans rien lire.
+         * départ, sans rien lire, et sa barre reste à 0 %, sans qu'il soit
+         * jamais atteint (`neSuitAucuneMensuration()`).
          *
          * Il gardait sa valeur actuelle, que le panneau met à 0 par défaut et
          * qui permettait de l'y créer sans mensuration. Sous une cible plus
@@ -476,6 +483,10 @@ final class GoalService
 
     protected function isGoalCriteriaMet(Goal $goal): bool
     {
+        if ($this->neSuitAucuneMensuration($goal)) {
+            return false;
+        }
+
         // Une cible sous le départ est une cible qu'on atteint en descendant :
         // c'est une perte de poids ou de tour de taille.
         if ($goal->type === GoalType::Measurement && $goal->target_value < $goal->start_value) {
@@ -484,6 +495,23 @@ final class GoalService
 
         // Partout ailleurs, on monte vers la cible.
         return $goal->current_value >= $goal->target_value;
+    }
+
+    /**
+     * Un objectif de mensuration qui ne nomme aucune mensuration ne suit rien.
+     *
+     * Il revient à sa valeur de départ (`updateMeasurementGoal()`), mais sa
+     * barre reste à 0 % et il n'est jamais atteint, quelle que soit sa cible.
+     * Le retour au départ seul le disait atteint, barre pleine, sous une cible
+     * égale à son départ, sans que rien ait été mesuré (#2132). Un objectif
+     * dont la mensuration n'a encore aucune mesure, lui, suit quelque chose :
+     * il garde le repli commun, et une cible égale à son départ l'atteint
+     * d'emblée, comme tout objectif sans valeur relevée (#1953, #1954).
+     */
+    private function neSuitAucuneMensuration(Goal $goal): bool
+    {
+        return $goal->type === GoalType::Measurement
+            && ($goal->measurement_type === null || $goal->measurement_type === '');
     }
 
     /**
