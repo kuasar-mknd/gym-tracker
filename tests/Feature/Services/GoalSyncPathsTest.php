@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\GoalService;
+use Illuminate\Support\Facades\DB;
 
 /*
  * Un objectif se met a jour par deux chemins, et ils doivent dire la meme chose.
@@ -269,10 +270,15 @@ function objectifDePartieSuivie(User $user, string $partie): Goal
  * faisaient la même chose. Le lot lit désormais toutes les parties suivies en
  * une instruction, une sous-requête par partie : c'est la même requête
  * (`derniereMesureDeLaPartie()`), et ces cas tiennent l'accord sur chaque
- * façon de lire une mesure. La dernière se lit par sa date puis par l'ordre de
- * saisie (deux mesures du même jour), la saisie en pouces se ramène en
- * centimètres, une partie sans mesure revient au départ, et la collation de la
- * colonne rapproche « waist » de « Waist », sans `lower()`.
+ * façon de lire une mesure. La dernière se lit par sa date (mesure antidatée),
+ * la saisie en pouces se ramène en centimètres, une partie sans mesure revient
+ * au départ, et la collation de la colonne rapproche « waist » de « Waist »,
+ * sans `lower()`.
+ *
+ * Deux mesures du même jour s'y accordent sur la dernière saisie, mais ce cas
+ * ne prouve pas le départage par l'identifiant : sous InnoDB, le parcours à
+ * rebours de l'index rend déjà l'identifiant décroissant à date égale, avec ou
+ * sans `orderByDesc('id')`. Le cas suivant l'affirme sur la requête.
  *
  * Les mesures sont posées avant l'objectif : celles que l'observateur
  * recalcule en les enregistrant ne le connaissent pas encore.
@@ -336,6 +342,80 @@ it('donne la même valeur de partie du corps par les deux chemins', function (st
         83.0,
     ],
 ]);
+
+/**
+ * Les lectures de `body_part_measurements` faites pendant le geste, dans
+ * l'ordre.
+ *
+ * @return list<string>
+ */
+function lecturesDesPartiesDuCorpsPendant(callable $geste): array
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+
+    try {
+        $geste();
+    } finally {
+        DB::disableQueryLog();
+    }
+
+    $lectures = array_map(fn (array $entree): string => (string) $entree['query'], DB::getQueryLog());
+
+    return array_values(array_filter(
+        $lectures,
+        fn (string $requete): bool => str_contains($requete, '`body_part_measurements`'),
+    ));
+}
+
+/**
+ * Deux mesures du même jour se départagent par leur identifiant, dans la
+ * requête de chaque chemin (#2131).
+ *
+ * Les données ne peuvent pas le prouver. Chaque entrée de l'index
+ * `(user_id, part, measured_at)` porte la clé primaire derrière elle : le
+ * parcours à rebours, sans tri, rend déjà la mesure saisie en dernier à date
+ * égale, et la requête sans `orderByDesc('id')` rend la même valeur, sur 8.4
+ * comme sur 9.7.2 (plan `Index lookup … (reverse)`). Ce départage tiendrait
+ * alors au plan que choisit le serveur, que des statistiques ou un index de
+ * plus peuvent changer. Il s'affirme donc sur le texte de la requête : la
+ * date, puis l'identifiant, puis une seule ligne, dans chacune des deux
+ * sous-requêtes du lot (la valeur et l'unité) comme dans la lecture du chemin
+ * d'un seul objectif.
+ */
+it('départage deux mesures de partie du corps du même jour par l’identifiant, dans la requête de chaque chemin', function (): void {
+    $user = User::factory()->create();
+
+    foreach ([86.0, 84.0] as $valeur) {
+        BodyPartMeasurement::factory()->create([
+            'user_id' => $user->id,
+            'part' => 'Waist',
+            'value' => $valeur,
+            'unit' => 'cm',
+            'measured_at' => '2026-06-15',
+        ]);
+    }
+
+    $service = app(GoalService::class);
+    $ordre = 'order by `measured_at` desc, `id` desc limit 1';
+
+    $groupe = objectifDePartieSuivie($user, 'Waist');
+    $lot = lecturesDesPartiesDuCorpsPendant(fn () => $service->syncGoals($user->refresh()));
+    $valeurGroupe = (float) Goal::query()->findOrFail($groupe->id)->current_value;
+
+    $groupe->delete();
+
+    $seul = objectifDePartieSuivie($user, 'Waist');
+    $unSeul = lecturesDesPartiesDuCorpsPendant(fn () => $service->updateGoalProgress($seul));
+
+    expect($lot)->toHaveCount(1)
+        ->and(substr_count($lot[0], 'from `body_part_measurements`'))->toBe(2)
+        ->and(substr_count($lot[0], $ordre))->toBe(2)
+        ->and($unSeul)->toHaveCount(1)
+        ->and(substr_count($unSeul[0], $ordre))->toBe(1)
+        ->and($valeurGroupe)->toBe(84.0)
+        ->and((float) $seul->current_value)->toBe(84.0);
+});
 
 /**
  * Un objectif de partie du corps ne lit que les mesures de son compte, par
