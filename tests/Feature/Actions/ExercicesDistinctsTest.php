@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Actions\Workouts\FetchWorkoutsIndexAction;
 use App\Models\Exercise;
 use App\Models\User;
+use App\Services\Stats\ClesDeStats;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -94,4 +95,22 @@ it('rend zéro pour un compte sans aucune ligne', function (): void {
     $action = app(FetchWorkoutsIndexAction::class);
 
     expect($action->execute($user)['totalExercises'])->toBe(0);
+});
+
+/**
+ * Le compte se garde une heure, et le cache de la production ne le rend pas
+ * toujours en entier : `RedisStore` range un nombre sans le sérialiser et le
+ * relit tel quel, en chaîne, là où le cache `array` des tests rend l'entier.
+ * Le `(int)` de `getTotalExercises()` le ramène au type que son retour exige
+ * sous `strict_types` ; sans lui, chaque lecture du cache lèverait une erreur
+ * de type (#2106).
+ */
+it('rend un entier quand le cache rend le compte en chaîne, comme Redis', function (): void {
+    $user = User::factory()->create();
+
+    Cache::flush();
+    Cache::put(ClesDeStats::seances($user, 'total_exercises'), '6', now()->addHour());
+    $action = app(FetchWorkoutsIndexAction::class);
+
+    expect($action->execute($user)['totalExercises'])->toBe(6);
 });
