@@ -19,6 +19,7 @@ use App\Notifications\AchievementUnlocked;
 use App\Notifications\PersonalRecordAchieved;
 use App\Notifications\TrainingReminder;
 use Illuminate\Bus\UniqueLock;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -283,7 +284,13 @@ it('ne laisse aucun travail en échec quand une série validée est supprimée a
         ->and(DB::table('jobs')->count())->toBe(0)
         ->and($record->value)->toBe('90.00')
         ->and((int) $record->set_id)->toBe($premiere->id)
-        ->and(PersonalRecord::query()->where('set_id', $supprimee->id)->exists())->toBeFalse()
+        // Chaque record du compte reste tenu par la première série. Chercher ceux
+        // de la série supprimée ne prouverait rien : `personal_records.set_id`
+        // passe à nul quand sa série disparaît (ON DELETE SET NULL).
+        ->and(PersonalRecord::query()
+            ->where('user_id', $user->id)
+            ->where(static fn (Builder $records): Builder => $records->whereNull('set_id')->orWhere('set_id', '<>', $premiere->id))
+            ->doesntExist())->toBeTrue()
         ->and($objectif->current_value)->toBe(90.0)
         ->and($objectif->completed_at)->toBeNull();
 
