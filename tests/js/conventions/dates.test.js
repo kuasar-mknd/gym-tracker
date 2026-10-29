@@ -97,11 +97,17 @@ it('n’envoie aucune heure murale sans décalage', () => {
     expect(fautifs, 'passer par formatToUTC() pour un champ, toISOString() pour l’instant présent').toEqual([])
 })
 
-it('reconnaît les heures murales qu’elle existe pour refuser, et laisse l’affichage et le jour', () => {
+it('reconnaît les heures murales qu’elle existe pour refuser, et laisse l’affichage, le jour et une heure qui porte son décalage', () => {
     for (const source of [
         "dayjs().format('YYYY-MM-DDTHH:mm')",
         "dayjs().format('YYYY-MM-DD HH:mm:ss')",
         'dayjs(debut).format("YYYY-MM-DD HH:mm")',
+        'dayjs().format(`YYYY-MM-DDTHH:mm`)',
+        // Les crochets de dayjs écrivent leur contenu tel quel : la même heure murale.
+        "dayjs().format('YYYY-MM-DD[T]HH:mm')",
+        "dayjs().format('YYYY-MM-DD[ ]HH:mm:ss')",
+        // Un « Z » entre crochets n'est qu'une lettre, posée sur l'heure de l'appareil.
+        "dayjs().format('YYYY-MM-DDTHH:mm:ss[Z]')",
     ]) {
         expect(heuresMuralesAEnvoyer(source), source).toHaveLength(1)
     }
@@ -111,6 +117,9 @@ it('reconnaît les heures murales qu’elle existe pour refuser, et laisse l’a
         "dayjs().format('YYYY-MM-DD')",
         'new Date().toISOString()',
         'formatToUTC(data.start_time)',
+        // Le jeton `Z` (`-04:00`) ou `ZZ` (`-0400`) écrit le décalage, que le serveur ramène.
+        "dayjs().format('YYYY-MM-DDTHH:mm:ssZ')",
+        "dayjs().format('YYYY-MM-DD[T]HH:mm:ssZZ')",
     ]) {
         expect(heuresMuralesAEnvoyer(source), source).toEqual([])
     }
