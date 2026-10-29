@@ -302,33 +302,168 @@ it('ne lit pas les pesées pour les seuls objectifs de partie du corps', functio
 });
 
 /**
- * L'utilisateur est deja en main : le rattacher a chaque objectif evite qu'ils
- * aillent le rechercher un par un.
- *
- * Une mensuration de partie du corps est le chemin qui deroule la relation —
- * `$goal->user->bodyPartMeasurements()`. Sans le rattachement, trois objectifs
- * font trois lectures de `users` pour retrouver celui qu'on tient deja.
+ * Une mesure de partie du corps, à sa date.
  */
-it('ne relit pas l’utilisateur pour chaque objectif', function (): void {
-    $user = User::factory()->create();
-
+function mesureDePartieDObjectif(User $user, string $partie, float $valeur, string $unite, string $le): void
+{
     BodyPartMeasurement::factory()->create([
         'user_id' => $user->id,
-        'part' => 'Waist',
-        'value' => 88,
-        'unit' => 'cm',
-        'measured_at' => now(),
+        'part' => $partie,
+        'value' => $valeur,
+        'unit' => $unite,
+        'measured_at' => $le,
     ]);
+}
 
-    $objectifs = collect(range(1, 3))->map(
-        fn (): Goal => objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'Waist'])
+/*
+ * La dernière mesure de chaque partie suivie, en une seule lecture (#2131).
+ *
+ * Chaque objectif de partie du corps lisait sa mesure par sa propre requête :
+ * trois objectifs, trois lectures de `body_part_measurements`, la même requête
+ * chaque fois. Le lot lit désormais toutes les parties suivies dans la même
+ * instruction, comme les colonnes des pesées.
+ *
+ * Chaque cas de lecture y est : une partie mesurée deux fois (la dernière
+ * compte), une mesure en pouces (ramenée en centimètres), une partie jamais
+ * mesurée (la valeur de départ).
+ */
+it('ne lit la dernière mesure des parties du corps qu’une fois pour plusieurs objectifs', function (): void {
+    $user = User::factory()->create();
+
+    mesureDePartieDObjectif($user, 'Waist', 88, 'cm', '2026-06-01');
+    mesureDePartieDObjectif($user, 'Waist', 85, 'cm', '2026-06-15');
+    mesureDePartieDObjectif($user, 'Chest', 101, 'cm', '2026-06-10');
+    mesureDePartieDObjectif($user, 'Hips', 38, 'in', '2026-06-12');
+
+    $taille = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'Waist']);
+    $poitrine = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'Chest']);
+    $hanches = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'Hips']);
+    $cou = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'Neck', 'start_value' => 7]);
+
+    $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
+
+    expect($taille->refresh()->current_value)->toBe(85.0)
+        ->and($poitrine->refresh()->current_value)->toBe(101.0)
+        ->and($hanches->refresh()->current_value)->toBe(38 * 2.54)
+        ->and($cou->refresh()->current_value)->toBe(7.0)
+        ->and(lecturesDeLaTableDObjectifs($sql, 'body_part_measurements'))->toBe(1);
+});
+
+/*
+ * La forme de cette lecture : une sous-requête par partie distincte et par
+ * mesure lue, la valeur et l'unité, et aucune pour un objectif qui ne nomme
+ * pas de partie (sans mensuration, ou une colonne des pesées).
+ *
+ * Deux objectifs sur la même partie posent la même question : elle ne se pose
+ * qu'une fois. Le compte des lectures ne le dit pas, la forme si : c'est elle
+ * qu'on affirme, pas un nombre de lignes lues, qui dépend des statistiques
+ * que MySQL tient (`.ai/rules/services.md`).
+ */
+it('ne pose qu’une sous-requête par partie distincte et par mesure lue', function (): void {
+    $user = User::factory()->create();
+
+    mesureDePartieDObjectif($user, 'Waist', 85, 'cm', '2026-06-15');
+    mesureDePartieDObjectif($user, 'Chest', 101, 'cm', '2026-06-10');
+
+    $objectifs = collect(['Waist', 'Waist', 'Chest', null, '', 'weight', 'body_fat'])->map(
+        fn (?string $mensuration): Goal => objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => $mensuration])
     );
 
     $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
 
-    foreach ($objectifs as $objectif) {
-        expect($objectif->refresh()->current_value)->toBe(88.0);
-    }
+    $lectures = array_values(array_filter($sql, fn (string $requete): bool => str_contains($requete, '`body_part_measurements`')));
 
-    expect(lecturesDeLaTableDObjectifs($sql, 'users'))->toBe(0);
+    expect($lectures)->toHaveCount(1)
+        ->and(substr_count($lectures[0], 'from `body_part_measurements`'))->toBe(4)
+        ->and($objectifs->map(fn (Goal $objectif): float => $objectif->refresh()->current_value)->all())
+        ->toBe([85.0, 85.0, 101.0, 0.0, 0.0, 0.0, 0.0]);
+});
+
+/*
+ * Deux objectifs peuvent nommer la même partie dans deux casses : « waist »
+ * vient des objectifs d'avant les noms proposés, « Waist » des suivants. La
+ * collation de la colonne les rapproche tous deux de la mesure saisie sous
+ * « Waist », dans le lot comme dans le chemin d'un seul objectif
+ * (`ObjectifSurUneMensurationTest`) : chacun a sa sous-requête, à sa
+ * position, et le lot ne compare pas les noms en PHP.
+ */
+it('rend la même mesure à deux objectifs qui nomment la partie dans deux casses', function (): void {
+    $user = User::factory()->create();
+
+    mesureDePartieDObjectif($user, 'Waist', 84, 'cm', '2026-06-15');
+
+    $majuscule = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'Waist']);
+    $minuscule = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'waist']);
+
+    $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
+
+    expect($majuscule->refresh()->current_value)->toBe(84.0)
+        ->and($minuscule->refresh()->current_value)->toBe(84.0)
+        ->and(lecturesDeLaTableDObjectifs($sql, 'body_part_measurements'))->toBe(1);
+});
+
+/*
+ * Et sans objectif de partie du corps, la lecture n'a pas lieu : un compte
+ * qui ne suit que son poids de corps ne paie pas celle des parties, même s'il
+ * en mesure.
+ */
+it('ne lit pas les parties du corps pour les seuls objectifs de pesée', function (): void {
+    $user = User::factory()->create();
+
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'weight' => 85,
+        'measured_at' => now(),
+    ]);
+    mesureDePartieDObjectif($user, 'Waist', 88, 'cm', '2026-06-15');
+
+    $objectif = objectifASynchroniser($user, GoalType::Measurement, ['measurement_type' => 'weight']);
+
+    $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
+
+    expect($objectif->refresh()->current_value)->toBe(85.0)
+        ->and(lecturesDeLaTableDObjectifs($sql, 'body_part_measurements'))->toBe(0);
+});
+
+/**
+ * Le lot ne repasse jamais par le compte de chaque objectif.
+ *
+ * L'utilisateur est déjà en main, et chaque lecture du lot part de lui :
+ * séances, records, volumes, pesées et, depuis #2131, parties du corps. Ces
+ * dernières étaient le chemin qui déroulait la relation de l'objectif —
+ * `$goal->user->bodyPartMeasurements()` — et le lot rattachait le compte à
+ * chaque objectif pour ne pas le relire. Il ne le rattache plus : plus rien
+ * dans le lot ne lit `$goal->user`. Un chemin qui s'y remettrait relirait
+ * `users` pour chaque objectif, et le mode strict d'Eloquent lèverait sur ce
+ * chargement paresseux : ce cas tient toutes les sortes d'objectifs à la fois.
+ */
+it('ne relit pas l’utilisateur pour chaque objectif', function (): void {
+    $user = User::factory()->create();
+    $exerciceDeForce = Exercise::factory()->create();
+    $exerciceDeVolume = Exercise::factory()->create();
+
+    recordDeForceDObjectif($user, $exerciceDeForce, 80);
+    seanceDeVolumeDObjectif($user, $exerciceDeVolume, 50, 10);
+    BodyMeasurement::factory()->create([
+        'user_id' => $user->id,
+        'weight' => 85,
+        'measured_at' => now(),
+    ]);
+    mesureDePartieDObjectif($user, 'Waist', 88, 'cm', '2026-06-15');
+
+    $objectifs = collect([
+        [GoalType::Measurement, ['measurement_type' => 'Waist']],
+        [GoalType::Measurement, ['measurement_type' => 'Waist']],
+        [GoalType::Measurement, ['measurement_type' => 'weight']],
+        [GoalType::Measurement, ['measurement_type' => null, 'start_value' => 3]],
+        [GoalType::Weight, ['exercise_id' => $exerciceDeForce->id]],
+        [GoalType::Volume, ['exercise_id' => $exerciceDeVolume->id]],
+        [GoalType::Frequency, []],
+    ])->map(fn (array $objectif): Goal => objectifASynchroniser($user, ...$objectif));
+
+    $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
+
+    expect($objectifs->map(fn (Goal $objectif): float => $objectif->refresh()->current_value)->all())
+        ->toBe([88.0, 88.0, 85.0, 3.0, 80.0, 500.0, 1.0])
+        ->and(lecturesDeLaTableDObjectifs($sql, 'users'))->toBe(0);
 });

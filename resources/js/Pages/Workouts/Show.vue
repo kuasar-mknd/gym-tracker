@@ -17,6 +17,7 @@ import { useLignesDeLaSeance } from '@/composables/useLignesDeLaSeance'
 import { useReglagesDeLaSeance } from '@/composables/useReglagesDeLaSeance'
 import { useIdentiteDesRangees } from '@/composables/useIdentiteDesRangees'
 import { useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useSortieAudio } from '@/composables/useSortieAudio'
 import { useRechargementApresLeVidage } from '@/composables/useRechargementApresLeVidage'
 import { useSeanceEtSaFile } from '@/composables/useSeanceEtSaFile'
 import { useCopieDeLaSeance } from '@/composables/useCopieDeLaSeance'
@@ -81,8 +82,9 @@ watch(
 /** Une seance close est un compte rendu, pas un espace de travail. */
 const isFinished = computed(() => Boolean(localWorkout.value.ended_at))
 
+const sortieAudio = useSortieAudio()
 const { showTimer, timerDuration, autoRestTimer, timerRun, openRestTimer, setAutoRestTimer, apresValidation } =
-    useMinuteurDeRepos()
+    useMinuteurDeRepos({ sortieAudio })
 // Sur une copie hors ligne, le réglage du repos ne part pas (#2048) ; le minuteur, lui, tourne.
 const { surUneCopie, raisonDUneEcriture } = useCopieHorsLigne()
 
@@ -388,6 +390,7 @@ onUnmounted(() => {
             :auto-rest-timer="autoRestTimer"
             :reglage-desactive="surUneCopie"
             :raison-du-reglage="raisonDUneEcriture"
+            :sortie-audio="sortieAudio"
             @finished="showTimer = false"
             @close="showTimer = false"
             @update:auto-rest-timer="setAutoRestTimer"

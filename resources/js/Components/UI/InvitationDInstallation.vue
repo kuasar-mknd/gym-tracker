@@ -17,10 +17,16 @@ import { useInvitationDInstallation } from '@/composables/useInvitationDInstalla
 /**
  * `visibilite` : la carte se montre ou se retire. L'accueil n'en montre qu'une
  * à la fois, et celle-ci passe avant l'invitation aux notifications (#1848).
+ * L'accueil part d'une carte absente : elle le dit aussi quand elle est là dès
+ * le montage, l'évènement du navigateur arrivé sur une autre page (#2114).
  */
 const emit = defineEmits(['visibilite'])
 
 const { visible, forme, installer, refuser } = useInvitationDInstallation()
+
+if (visible.value) {
+    emit('visibilite', true)
+}
 
 watch(visible, (estVisible) => emit('visibilite', estVisible))
 </script>

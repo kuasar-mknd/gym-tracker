@@ -51,12 +51,16 @@ final class GoalService
          */
         $goals = $user->goals()->get();
 
-        // Les métriques sont calculées en un lot pour tous les objectifs : sans
-        // cela, chacun repartait chercher les siennes, une requête par objectif.
+        /*
+         * Les métriques sont calculées en un lot pour tous les objectifs : sans
+         * cela, chacun repartait chercher les siennes, une requête par
+         * objectif. Le lot couvre chaque sorte d'objectif, parties du corps
+         * comprises depuis #2131 : aucun ne repasse par son compte
+         * (`$goal->user`), qu'il n'est donc plus utile de lui rattacher.
+         */
         $mesures = $this->preCalculateMetrics($user, $goals);
 
         foreach ($goals as $goal) {
-            $goal->setRelation('user', $user);
             $this->updateGoalProgress($goal, $mesures);
         }
 
@@ -114,7 +118,7 @@ final class GoalService
      * Recalcule un objectif : sa valeur courante, puis son état et sa barre.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
      */
     public function updateGoalProgress(Goal $goal, array $mesures = []): void
     {
@@ -131,6 +135,12 @@ final class GoalService
 
     protected function updateProgressPercentage(Goal $goal): void
     {
+        if ($this->neSuitAucuneMensuration($goal)) {
+            $goal->progress_pct = 0.0;
+
+            return;
+        }
+
         if ($goal->target_value === $goal->start_value) {
             $goal->progress_pct = $goal->current_value >= $goal->target_value ? 100.0 : 0.0;
 
@@ -179,7 +189,7 @@ final class GoalService
      * atteint par une série ensuite supprimée (#1953).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateWeightGoal(Goal $goal, array $mesures = []): void
     {
@@ -213,7 +223,7 @@ final class GoalService
      * L'avancement d'un objectif de fréquence : le nombre de séances.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateFrequencyGoal(Goal $goal, array $mesures = []): void
     {
@@ -239,7 +249,7 @@ final class GoalService
      * comme un objectif de charge sans record (#1953).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateVolumeGoal(Goal $goal, array $mesures = []): void
     {
@@ -276,14 +286,29 @@ final class GoalService
      *
      * Sans valeur relevée — aucune pesée qui porte la colonne visée, aucune
      * mesure de la partie du corps —, l'objectif revient à sa valeur de départ,
-     * comme un objectif de charge sans record (#1953, #1954, #2107).
+     * comme un objectif de charge sans record (#1953, #1954, #2107). Sans
+     * mensuration à suivre, de même (#2132).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateMeasurementGoal(Goal $goal, array $mesures = []): void
     {
+        /*
+         * Un objectif sans mensuration ne suit rien : il revient à sa valeur de
+         * départ, sans rien lire, et sa barre reste à 0 %, sans qu'il soit
+         * jamais atteint (`neSuitAucuneMensuration()`).
+         *
+         * Il gardait sa valeur actuelle, que le panneau met à 0 par défaut et
+         * qui permettait de l'y créer sans mensuration. Sous une cible plus
+         * basse que le départ, la barre comptait alors le chemin du départ à 0
+         * et se remplissait, sans que l'objectif s'achève jamais ni bouge quoi
+         * qu'on saisisse (#2132). Le panneau exige désormais la mensuration ;
+         * un objectif créé avant se répare au prochain recalcul.
+         */
         if ($goal->measurement_type === null || $goal->measurement_type === '') {
+            $goal->current_value = $goal->start_value;
+
             return;
         }
 
@@ -296,7 +321,7 @@ final class GoalService
          * « Unknown column 'waist' » — une erreur 500 a chaque pesee (#1454).
          */
         if (! in_array($goal->measurement_type, self::COLONNES_DES_PESEES, true)) {
-            $this->releverLaPartieDuCorps($goal);
+            $this->releverLaPartieDuCorps($goal, $goal->measurement_type, $mesures);
 
             return;
         }
@@ -357,27 +382,30 @@ final class GoalService
     /**
      * La derniere mesure d'une partie du corps, ramenee en centimetres.
      *
-     * `part` est du texte libre, mais sa collation `utf8mb4_unicode_ci` compare
-     * sans egard a la casse : un objectif sur « waist » retrouve les mesures
-     * saisies sous « Waist » SANS `lower()`, qui aurait ecarte l'index
-     * `(user_id, part, measured_at)`. Mesure a 20 000 lignes et 400 jours
-     * d'historique : une seule lecture d'index, parcourue a l'envers, sans tri.
+     * Le lot a lu, par la même requête, la dernière mesure de chaque partie
+     * suivie (#2131) : il la donne ici telle que la base l'a rendue, valeur et
+     * unité. Le chemin d'un seul objectif la lit seul. Une partie absente du
+     * lot n'a aucune mesure : la relire un par un referait la requête que le
+     * lot évite.
      *
      * Sans mesure de cette partie — mensuration inconnue, jamais relevée, ou
      * dont on a supprimé la dernière mesure —, l'objectif revient à sa valeur
      * de départ, sans progression, plutôt que de planter ou de garder une valeur
      * que plus rien ne soutient : supprimer la mesure qui l'avait atteint le
      * rouvre (#1954).
+     *
+     * @param  string  $partie  Le nom de la partie, tel que l'objectif le porte.
+     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
-    private function releverLaPartieDuCorps(Goal $goal): void
+    private function releverLaPartieDuCorps(Goal $goal, string $partie, array $mesures = []): void
     {
-        $mesure = $goal->user->bodyPartMeasurements()
-            ->where('part', $goal->measurement_type)
-            ->orderByDesc('measured_at')
-            ->orderByDesc('id')
-            ->first(['value', 'unit']);
+        $mesure = isset($mesures['dernieres_parties'])
+            ? ($mesures['dernieres_parties'][$partie] ?? [])
+            : (array) $this->derniereMesureDeLaPartie($goal->user, $partie)->toBase()->first(['value', 'unit']);
 
-        if (! $mesure instanceof \App\Models\BodyPartMeasurement) {
+        $valeur = $mesure['value'] ?? null;
+
+        if (! is_numeric($valeur)) {
             $goal->current_value = $goal->start_value;
 
             return;
@@ -388,9 +416,46 @@ final class GoalService
          * Sans cette conversion, « descendre a 80 » serait atteint par une
          * mesure de 80 pouces, soit deux metres de tour de taille.
          */
-        $goal->current_value = $mesure->unit === 'in'
-            ? (float) $mesure->value * 2.54
-            : (float) $mesure->value;
+        $goal->current_value = ($mesure['unit'] ?? null) === 'in'
+            ? (float) $valeur * 2.54
+            : (float) $valeur;
+    }
+
+    /**
+     * La dernière mesure d'une partie du corps, sans colonne choisie : le lot
+     * en lit la valeur et l'unité par deux sous-requêtes, le chemin d'un seul
+     * objectif les deux à la fois.
+     *
+     * La plus récente par sa date, puis par son identifiant : deux mesures du
+     * même jour se départagent par l'ordre de leur saisie, et une mesure
+     * oubliée, saisie après coup à sa date, ne passe pas devant une plus
+     * récente.
+     *
+     * `part` est du texte libre, mais sa collation `utf8mb4_unicode_ci` compare
+     * sans egard a la casse : un objectif sur « waist » retrouve les mesures
+     * saisies sous « Waist » SANS `lower()`, qui aurait ecarte l'index
+     * `(user_id, part, measured_at)`. Mesure a 20 000 lignes et 400 jours
+     * d'historique : une seule lecture d'index, parcourue a l'envers, sans tri.
+     * En sous-requête, de même, chacune s'arrête à la première entrée de
+     * l'index (mesuré sur 8.4 et 9.7.2, #2131).
+     *
+     * Comme `dernierePeseeQuiPorte()`, la requête part de la relation du
+     * compte, qui pose le propriétaire, puis s'en détache (`getQuery()`) pour
+     * que `limit()` reste une lecture qui s'arrête à la première mesure, et non
+     * une fenêtre par parent. Le lot et le chemin d'un seul objectif passent
+     * par elle : deux écritures de la même lecture finiraient par diverger
+     * (`GoalSyncPathsTest`).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\BodyPartMeasurement>
+     */
+    private function derniereMesureDeLaPartie(User $user, string $partie): \Illuminate\Database\Eloquent\Builder
+    {
+        return $user->bodyPartMeasurements()
+            ->getQuery()
+            ->where('part', $partie)
+            ->orderByDesc('measured_at')
+            ->orderByDesc('id')
+            ->limit(1);
     }
 
     /**
@@ -418,6 +483,10 @@ final class GoalService
 
     protected function isGoalCriteriaMet(Goal $goal): bool
     {
+        if ($this->neSuitAucuneMensuration($goal)) {
+            return false;
+        }
+
         // Une cible sous le départ est une cible qu'on atteint en descendant :
         // c'est une perte de poids ou de tour de taille.
         if ($goal->type === GoalType::Measurement && $goal->target_value < $goal->start_value) {
@@ -429,6 +498,23 @@ final class GoalService
     }
 
     /**
+     * Un objectif de mensuration qui ne nomme aucune mensuration ne suit rien.
+     *
+     * Il revient à sa valeur de départ (`updateMeasurementGoal()`), mais sa
+     * barre reste à 0 % et il n'est jamais atteint, quelle que soit sa cible.
+     * Le retour au départ seul le disait atteint, barre pleine, sous une cible
+     * égale à son départ, sans que rien ait été mesuré (#2132). Un objectif
+     * dont la mensuration n'a encore aucune mesure, lui, suit quelque chose :
+     * il garde le repli commun, et une cible égale à son départ l'atteint
+     * d'emblée, comme tout objectif sans valeur relevée (#1953, #1954).
+     */
+    private function neSuitAucuneMensuration(Goal $goal): bool
+    {
+        return $goal->type === GoalType::Measurement
+            && ($goal->measurement_type === null || $goal->measurement_type === '');
+    }
+
+    /**
      * Les métriques dont les objectifs auront besoin, calculées en un lot.
      *
      * Seuls les types réellement présents sont interrogés : un utilisateur sans
@@ -436,7 +522,7 @@ final class GoalService
      *
      * @param  User  $user  L'utilisateur concerné.
      * @param  \Illuminate\Support\Collection<int, Goal>  $goals  Les objectifs à servir.
-     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>}
+     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}
      */
     private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
     {
@@ -479,7 +565,79 @@ final class GoalService
             $mesures['dernieres_pesees'] = $this->preCalculateDernieresPesees($user, $colonnesSuivies);
         }
 
+        /*
+         * Toute autre mensuration nommée est une partie du corps, comme dans
+         * `updateMeasurementGoal()`. Chaque nom distinct se lit une fois, tel
+         * que l'objectif le porte : « waist » et « Waist » sont deux noms, deux
+         * lectures, que la collation de la colonne rapproche chacune de la même
+         * mesure. Les fondre en PHP demanderait cette collation, que PHP n'a
+         * pas : `mb_strtolower()` ne rapproche ni les accents ni les espaces
+         * de fin comme elle.
+         */
+        $partiesSuivies = $mensurationsSuivies
+            ->filter(fn (mixed $mensuration): bool => is_string($mensuration)
+                && $mensuration !== ''
+                && ! in_array($mensuration, self::COLONNES_DES_PESEES, true))
+            ->uniqueStrict()
+            ->all();
+
+        if ($partiesSuivies !== []) {
+            $mesures['dernieres_parties'] = $this->preCalculateDernieresParties($user, $partiesSuivies);
+        }
+
         return $mesures;
+    }
+
+    /**
+     * La dernière mesure de chacune des parties suivies, en une seule lecture.
+     *
+     * Chaque objectif de partie du corps lisait la sienne par sa propre requête :
+     * dix objectifs, dix lectures de `body_part_measurements` à chaque
+     * recalcul (#2131). Le lot pose désormais, dans une seule instruction, deux
+     * sous-requêtes par partie, la valeur et l'unité, chacune celle du chemin
+     * d'un seul objectif (`derniereMesureDeLaPartie()`) : `select (…) as
+     * valeur_0, (…) as unite_0, (…) as valeur_1, …`. Une sous-requête scalaire
+     * ne rend qu'une colonne ; les deux lisent la même ligne, dans le même
+     * ordre et la même instruction.
+     *
+     * La partie est du texte libre : elle n'entre dans la requête que comme
+     * valeur liée, et ses colonnes s'appellent par sa position. Une partie sans
+     * mesure revient nulle.
+     *
+     * Mesuré sur 8.4.11 et 9.7.2 (deltas de `Handler_read%`, dix parties
+     * suivies, 16 900 puis 20 800 lignes, de 100 puis 400 jours d'historique
+     * pour le compte) : vingt lectures d'index, une par sous-requête, chacune à
+     * rebours sur `(user_id, part, measured_at)`, sans tri, quelle que soit la
+     * profondeur de l'historique ; les dix requêtes d'avant en faisaient dix.
+     * Une fenêtre par partie (`row_number() over (partition by part …)`) lisait
+     * tout l'historique des parties suivies, triées puis matérialisées : 1 312
+     * puis 5 212 lectures. Le nom qu'elle rend est en outre celui d'une
+     * mesure, qu'il faudrait rapprocher en PHP, sans la collation, du nom que
+     * porte l'objectif.
+     *
+     * @param  array<array-key, string>  $parties  Les noms distincts, tels que les objectifs les portent, sous leur position.
+     * @return array<array-key, array{value: mixed, unit: mixed}>
+     */
+    private function preCalculateDernieresParties(User $user, array $parties): array
+    {
+        $lecture = \Illuminate\Support\Facades\DB::query();
+
+        foreach ($parties as $position => $partie) {
+            $lecture->selectSub($this->derniereMesureDeLaPartie($user, $partie)->select('value'), "valeur_{$position}")
+                ->selectSub($this->derniereMesureDeLaPartie($user, $partie)->select('unit'), "unite_{$position}");
+        }
+
+        $ligne = (array) $lecture->first();
+        $dernieres = [];
+
+        foreach ($parties as $position => $partie) {
+            $dernieres[$partie] = [
+                'value' => $ligne["valeur_{$position}"] ?? null,
+                'unit' => $ligne["unite_{$position}"] ?? null,
+            ];
+        }
+
+        return $dernieres;
     }
 
     /**
