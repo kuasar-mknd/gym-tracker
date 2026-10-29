@@ -16,6 +16,7 @@ import { installerLePrechauffage } from '@/Utils/prechauffage'
 import { oublierLesCopiesDUnAutreTitulaire } from '@/Utils/copiesHorsLigne'
 import { installerLesMessagesDuWorker } from '@/Utils/messagesDuWorker'
 import { demarrerHorsLigne, estLaCoquille } from '@/Utils/demarrageHorsLigne'
+import { installerLInvitationDInstallation } from '@/composables/useInvitationDInstallation'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -28,6 +29,14 @@ import { registerSW } from 'virtual:pwa-register'
  */
 if (typeof window !== 'undefined') {
     installerLesMessagesDuWorker()
+
+    /*
+     * L'invitation à installer : le navigateur n'émet `beforeinstallprompt`
+     * qu'une fois par document, sur la page où il veut, coquille comprise
+     * pendant qu'elle démarre. L'écoute le garde pour tout le document, et
+     * l'accueil le lit à chacun de ses passages (#2114).
+     */
+    installerLInvitationDInstallation()
 }
 
 /**
