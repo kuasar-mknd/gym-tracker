@@ -103,7 +103,7 @@ function budgetSemerLesLignesDUnCompte(User $user, Collection $bibliotheque, int
  * Ce que coûte un geste en base : les entrées d'index lues (deltas de
  * `Handler_read%`, `.ai/rules/services.md`) et les requêtes envoyées.
  *
- * @return array{lectures: int, requetes: list<array{query: string, bindings: array<int, mixed>}>}
+ * @return array{lectures: int, requetes: list<array{query: string, bindings: list<mixed>}>}
  */
 function budgetReleverUnGeste(callable $geste): array
 {
@@ -125,7 +125,6 @@ function budgetReleverUnGeste(callable $geste): array
     DB::enableQueryLog();
     $geste();
 
-    /** @var list<array{query: string, bindings: array<int, mixed>}> $requetes */
     $requetes = array_values(array_map(fn (array $entree): array => [
         'query' => (string) $entree['query'],
         'bindings' => array_values((array) $entree['bindings']),
@@ -198,9 +197,9 @@ it('compte les exercices sans sous-requête dépendante, en une lecture d’inde
 
     $explication = 'explain format=tree '.$requetesDuCompte[0]['query'];
 
-    /** @var list<object> $plan */
+    /** @var list<object{EXPLAIN: string}> $plan */
     $plan = DB::select($explication, $requetesDuCompte[0]['bindings']);
-    $arbre = implode("\n", array_map(fn (object $ligne): string => (string) array_values((array) $ligne)[0], $plan));
+    $arbre = implode("\n", array_map(fn (object $ligne): string => $ligne->EXPLAIN, $plan));
 
     expect(str_contains(mb_strtolower($arbre), 'dependent'))->toBeFalse($arbre)
         ->and($aFroid['lectures'] - $aChaud['lectures'])->toBeLessThanOrEqual($lignesDuCompte + 1, $arbre);

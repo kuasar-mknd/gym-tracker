@@ -147,8 +147,8 @@ final class FetchWorkoutsIndexAction
         return WorkoutLine::query()
             ->toBase()
             ->where('user_id', $user->id)
-            ->distinct()
-            ->count(['user_id', 'exercise_id']);
+            ->distinct('user_id', 'exercise_id')
+            ->count();
     }
 
     /**
