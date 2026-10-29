@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 vi.mock('@/composables/useHaptics', () => ({ triggerHaptic: vi.fn() }))
 
 import RestTimer from '@/Components/Workout/RestTimer.vue'
+import { dansUnGeste, installerLaSortieWebKit, retirerLaSortieWebKit, sorties } from '../utils/sortieAudioWebKit'
 
 const mountTimer = (props = {}) =>
     mount(RestTimer, {
@@ -25,10 +26,11 @@ beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())
 
 /**
- * The bar is scaled against the duration it started with, and the +30s button
- * pushes the remaining time past it. The fill overflowed its track, and the
- * progressbar reported an aria-valuenow above its own aria-valuemax — a value a
- * screen reader is entitled to treat as nonsense.
+ * La barre se mesure sur la durée du repos, et le temps restant peut la
+ * dépasser : une durée qui raccourcit pendant le décompte le laisse au-dessus
+ * (le bouton « +30s », retiré depuis, faisait de même). Le remplissage débordait
+ * de sa piste, et la barre annonçait un aria-valuenow au-dessus de son propre
+ * aria-valuemax, une valeur qu'un lecteur d'écran peut tenir pour absurde.
  */
 describe('RestTimer progress bar', () => {
     it('reports a full bar at the start', () => {
@@ -185,6 +187,107 @@ describe('RestTimer countdown', () => {
         wrapper.unmount()
 
         expect(vi.getTimerCount()).toBe(0)
+    })
+})
+
+/**
+ * La fin du repos sonne sur un iPhone (#2112). Elle arrive dans le rappel de la
+ * minuterie, hors de tout geste, où WebKit ne démarre aucune sortie audio : le
+ * minuteur en créait pourtant une à ce moment-là, qui restait muette et ouverte.
+ * Monté seul, sans la sortie de la page (`tests/js/pages/reposQuiSonne.test.js`
+ * joue la page), il ouvre la sienne dans le geste qui le démarre ou le
+ * reprend, la reprend dans « Passer », et la rend en partant.
+ */
+describe('le bip de fin, minuteur monté seul (#2112)', () => {
+    beforeEach(() => installerLaSortieWebKit())
+    afterEach(() => retirerLaSortieWebKit())
+
+    it('démarré dans un geste, sonne à la fin naturelle du repos, sur la sortie ouverte par ce geste', async () => {
+        const wrapper = mountTimer({ duration: 30, autoStart: false })
+
+        await dansUnGeste(() => toggleButton(wrapper).trigger('click'))
+
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].creeeDansUnGeste).toBe(true)
+
+        vi.advanceTimersByTime(30000)
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].sonsAudibles).toHaveLength(1)
+        expect(sorties[0].sonsAudibles[0]).toMatchObject({ frequence: 880, fin: 0.5 })
+    })
+
+    it('repris dans un geste après une pause, reprend la sortie qu’iOS avait interrompue, et la fin sonne', async () => {
+        const wrapper = mountTimer({ duration: 30, autoStart: false })
+
+        await dansUnGeste(() => toggleButton(wrapper).trigger('click'))
+        vi.advanceTimersByTime(10000)
+        await dansUnGeste(() => toggleButton(wrapper).trigger('click'))
+        sorties[0].interrompre()
+
+        await dansUnGeste(() => toggleButton(wrapper).trigger('click'))
+
+        expect(sorties[0].reprises.at(-1)).toEqual({ dansUnGeste: true, etat: 'interrupted' })
+        expect(sorties[0].state).toBe('running')
+
+        vi.advanceTimersByTime(20000)
+        await wrapper.vm.$nextTick()
+
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].sonsAudibles).toHaveLength(1)
+    })
+
+    it('« Passer », dans un geste, reprend et fait sonner la sortie que le départ a ouverte', async () => {
+        const wrapper = mountTimer({ duration: 90, autoStart: false })
+
+        await dansUnGeste(() => toggleButton(wrapper).trigger('click'))
+        expect(sorties).toHaveLength(1)
+        sorties[0].interrompre()
+
+        await dansUnGeste(() => button(wrapper, 'skip-rest-timer').trigger('click'))
+
+        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].reprises.at(-1)).toEqual({ dansUnGeste: true, etat: 'interrupted' })
+        expect(sorties[0].sonsAudibles).toHaveLength(1)
+    })
+
+    it('n’ouvre aucune sortie hors d’un geste : démarré au montage, il finit sans en laisser une muette', async () => {
+        const wrapper = mountTimer({ duration: 30, autoStart: true })
+
+        vi.advanceTimersByTime(30000)
+        await wrapper.vm.$nextTick()
+
+        expect(wrapper.emitted('finished')).toHaveLength(1)
+        expect(sorties).toHaveLength(0)
+    })
+
+    it('démarré au montage, sans sortie : « Passer » l’ouvre dans son geste, y sonne, et la rend en partant', async () => {
+        const wrapper = mountTimer({ duration: 90, autoStart: true })
+        vi.advanceTimersByTime(10000)
+        expect(sorties).toHaveLength(0)
+
+        await dansUnGeste(() => button(wrapper, 'skip-rest-timer').trigger('click'))
+
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].creeeDansUnGeste).toBe(true)
+        expect(sorties[0].sonsAudibles).toHaveLength(1)
+
+        wrapper.unmount()
+
+        expect(sorties[0].fermetures).toBe(1)
+    })
+
+    it('rend sa sortie en partant', async () => {
+        const wrapper = mountTimer({ duration: 30, autoStart: false })
+
+        await dansUnGeste(() => toggleButton(wrapper).trigger('click'))
+        wrapper.unmount()
+
+        expect(sorties).toHaveLength(1)
+        expect(sorties[0].fermetures).toBe(1)
     })
 })
 
