@@ -10,8 +10,28 @@ import { revenirSiLaVisiteEchoue } from '@/Utils/miseAJourOptimiste'
 export const REPOS_AUTOMATIQUE_SANS_RESEAU =
     "Pas de réponse du serveur : le changement du repos automatique n'est pas confirmé."
 
-/** Le minuteur de repos de la seance : son etat, son reglage, et ce qui le lance. */
-export const useMinuteurDeRepos = () => {
+/**
+ * Le minuteur de repos de la seance : son etat, son reglage, et ce qui le lance.
+ *
+ * `sortieAudio`, obligatoire, est la sortie où sonne la fin de chaque repos
+ * (#2112) : celle de la page (`useSortieAudio`), qui la passe aussi au minuteur
+ * (`sortie-audio`) et la rend en partant. Le minuteur, remonté à chaque repos
+ * et démonté à sa fin, ne peut pas la tenir : la fermer avec lui couperait le
+ * bip qu'il vient de lancer. Le composable ne l'ouvre pas non plus à la place
+ * de la page : il ne la rendrait pas, le minuteur en ouvrirait une autre, que
+ * le geste du départ n'aurait pas préparée, et la fin naturelle se tairait.
+ * Sans elle, il lève dès sa création, plutôt que dans le geste d'une série.
+ *
+ * @param {{ sortieAudio: ReturnType<typeof import('@/composables/useSortieAudio').useSortieAudio> }} options
+ * @throws {TypeError} sans la sortie de la page
+ */
+export const useMinuteurDeRepos = ({ sortieAudio } = {}) => {
+    if (typeof sortieAudio?.preparer !== 'function') {
+        throw new TypeError(
+            'useMinuteurDeRepos attend la sortie audio de la page (useSortieAudio), qu’elle passe aussi au minuteur.',
+        )
+    }
+
     const showTimer = ref(false)
     const timerDuration = ref(90)
 
@@ -28,8 +48,15 @@ export const useMinuteurDeRepos = () => {
      * Sans lui, couper le demarrage automatique fermait une porte a sens unique :
      * plus rien n'ouvrait le minuteur, et l'interrupteur qui le rallume vit DANS le
      * minuteur. Le reglage etait donc irreversible depuis l'interface.
+     *
+     * Appelé dans le geste qui lance le repos (une série validée, « Démarrer un
+     * repos »), avant tout `await` : c'est là que la sortie s'ouvre ou reprend
+     * (#2112). Le minuteur ne se monte qu'au rendu suivant, hors du geste, et sa
+     * fin tombe dans le rappel d'une minuterie, où WebKit ne démarre aucune
+     * sortie.
      */
     const demarrerLeRepos = (duree) => {
+        sortieAudio.preparer()
         timerDuration.value = duree || usePage().props.auth.user.default_rest_time || 90
         timerRun.value += 1
         showTimer.value = true
