@@ -104,11 +104,11 @@ final class FetchWorkoutsIndexAction
      * Combien d'exercices différents cet utilisateur a déjà faits.
      *
      * Le chiffre ne dépend que de la BIBLIOTHÈQUE de l'utilisateur, pas de son
-     * historique : il se lit en sautant dans l'index d'un exercice au suivant,
-     * sans parcourir les lignes. MySQL fait ce saut lui-même (« Using index
-     * for group-by », « Covering index skip scan for deduplication ») quand
-     * les colonnes du `distinct` forment le PRÉFIXE d'un index : d'où
-     * `user_id` devant `exercise_id`, sur
+     * historique : il peut se lire en sautant dans l'index d'un exercice au
+     * suivant, sans parcourir les lignes. MySQL ne fait ce saut lui-même
+     * (« Using index for group-by », « Covering index skip scan for
+     * deduplication ») que si les colonnes du `distinct` forment le PRÉFIXE
+     * d'un index : d'où `user_id` devant `exercise_id`, sur
      * `(user_id, exercise_id, workout_started_at)`. Le compte n'en change pas,
      * toutes les lignes lues portant le même `user_id`. `count(distinct
      * exercise_id)` seul n'est pas un préfixe, et lit chaque ligne du compte ;
@@ -121,26 +121,31 @@ final class FetchWorkoutsIndexAction
      *            40   2 500         43                        2 501        100 124
      *            80   9 000         83                        9 001        720 244
      *
-     * soit E + 3 lectures, en une instruction : moins d'une demi-milliseconde
-     * (médianes), contre 11 et près de 80 ms pour la CTE. Celle-ci promettait
-     * une lecture par exercice, mais son membre récursif était une
-     * sous-requête dépendante que MySQL ne réduit pas à une plage : elle
-     * relisait toutes les lignes du compte à chaque exercice, E × L lectures.
+     * soit E + 3 lectures quand MySQL saute, en une instruction : moins d'une
+     * demi-milliseconde (médianes), contre 11 et près de 80 ms pour la CTE.
+     * Celle-ci promettait une lecture par exercice, mais son membre récursif
+     * était une sous-requête dépendante que MySQL ne réduit pas à une plage :
+     * elle relisait toutes les lignes du compte à chaque exercice, E × L
+     * lectures.
      * La boucle PHP de `min()` coûte E + 1 lectures, mais autant
      * d'allers-retours (81 requêtes, 10 à 12 ms à quatre-vingts exercices),
      * et une boucle sans borne connue n'a pas sa place dans le code muté
      * (`.ai/rules/mutation.md`).
      *
-     * Le saut reste un choix de coût, que MySQL fait d'après les statistiques
-     * de la table. Il a été retenu dans chaque cas mesuré où elles
-     * connaissaient les lignes (après `ANALYZE TABLE` ou le recalcul
-     * automatique d'InnoDB) : compte dense, clairsemé, un exercice par ligne
-     * (E + 3 = L + 3), compte sans ligne. Tant qu'elles ne les connaissent
-     * pas, MySQL lit les lignes du compte (L + 1, le coût de
-     * `count(distinct exercise_id)`) : dans la base des tests, dont les
-     * écritures ne sont jamais validées, et à la première requête qui suit
-     * une écriture en masse (9 001 lectures, puis 83 à la suivante, avant
-     * même le recalcul). Jamais E × L.
+     * Le saut est un choix de coût, et ce n'est pas la fraîcheur des
+     * statistiques qui le décide : MySQL le choisit sur le nombre de groupes
+     * qu'il estime pour le compte, d'après la cardinalité du préfixe
+     * `(user_id, exercise_id)` sur TOUTE la table, donc selon la façon dont
+     * se répartissent les autres comptes. Sinon, il lit les lignes du compte
+     * (L + 1, le coût de `count(distinct exercise_id)`). Mesuré sur 8.4.11,
+     * juste après `ANALYZE TABLE` : un compte d'un exercice sur 320 lignes lit
+     * 321 entrées à côté de quatre comptes de 200 à 1 100 exercices d'une
+     * ligne chacun, puis 4 une fois ces comptes partis ; 9.7.2 saute aussi
+     * sur des statistiques périmées. Le coût est donc L + 1 ou E + 3 selon le
+     * plan, au plus L + 3 (un exercice par ligne, lu par saut), jamais E × L.
+     * La base des tests n'y échappe pas : ses statistiques suivent ce que le
+     * recalcul automatique d'InnoDB a échantillonné, lignes jamais validées
+     * des tests voisins comprises (`.ai/rules/services.md`, piège 5).
      */
     private function compterExercicesDistincts(User $user): int
     {
