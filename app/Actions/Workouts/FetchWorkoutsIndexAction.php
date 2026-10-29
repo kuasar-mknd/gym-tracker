@@ -135,9 +135,12 @@ final class FetchWorkoutsIndexAction
      * de la table. Il a été retenu dans chaque cas mesuré où elles
      * connaissaient les lignes (après `ANALYZE TABLE` ou le recalcul
      * automatique d'InnoDB) : compte dense, clairsemé, un exercice par ligne
-     * (E + 3 = L + 3), compte sans ligne. Sur une table que les statistiques
-     * croient vide, comme la base des tests, MySQL lit les lignes du compte
-     * (L + 1, le coût de `count(distinct exercise_id)`). Jamais E × L.
+     * (E + 3 = L + 3), compte sans ligne. Tant qu'elles ne les connaissent
+     * pas, MySQL lit les lignes du compte (L + 1, le coût de
+     * `count(distinct exercise_id)`) : dans la base des tests, dont les
+     * écritures ne sont jamais validées, et à la première requête qui suit
+     * une écriture en masse (9 001 lectures, puis 83 à la suivante, avant
+     * même le recalcul). Jamais E × L.
      */
     private function compterExercicesDistincts(User $user): int
     {
