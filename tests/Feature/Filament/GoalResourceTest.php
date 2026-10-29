@@ -10,6 +10,8 @@ use App\Filament\Resources\Goals\Pages\ListGoals;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\User;
+use Filament\Actions\Testing\TestAction;
+use Filament\Forms\Components\Field;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -101,6 +103,110 @@ it("refuse un type d'objectif hors de la liste proposée", function (): void {
 
     expect(Goal::query()->where('title', 'Objectif exotique')->exists())->toBeFalse();
 });
+
+/*
+ * Un objectif de mensuration suit une mensuration : sans elle, il ne suit
+ * rien (#2132).
+ *
+ * `GoalStoreRequest` l'exige (`required_if:type,measurement`), mais le
+ * panneau n'y passe pas : la mensuration y était facultative quel que soit le
+ * type, et la valeur actuelle valait 0 par défaut. L'objectif « de 80 à 75 »
+ * ainsi créé affichait une barre pleine au premier recalcul, et ne s'achevait
+ * jamais. La création, la page de modification et l'action de la table
+ * partagent le formulaire : les trois refusent.
+ */
+dataset('mensurations absentes d’un objectif du panneau', [
+    'sans mensuration' => [null],
+    'mensuration vide' => [''],
+    'mensuration faite d’espaces' => ['   '],
+]);
+
+it('exige la mensuration d’un objectif de mensuration créé au panneau', function (?string $mensuration): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $owner->getKey(),
+            'title' => 'Descendre à 75',
+            'type' => 'measurement',
+            'measurement_type' => $mensuration,
+            'target_value' => 75,
+            'current_value' => 0,
+            'start_value' => 80,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['measurement_type' => 'required']);
+
+    expect(Goal::query()->where('title', 'Descendre à 75')->exists())->toBeFalse();
+})->with('mensurations absentes d’un objectif du panneau');
+
+it('exige la mensuration d’un objectif de mensuration modifié au panneau, par la page et par la table', function (): void {
+    $goal = Goal::factory()->create([
+        'type' => 'measurement',
+        'measurement_type' => null,
+        'title' => 'Sans mensuration',
+        'start_value' => 80,
+        'current_value' => 0,
+        'target_value' => 75,
+    ]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm(['title' => 'Toujours sans mensuration'])
+        ->call('save')
+        ->assertHasFormErrors(['measurement_type' => 'required']);
+
+    Livewire::test(ListGoals::class)
+        ->callAction(TestAction::make('edit')->table($goal), ['title' => 'Toujours sans mensuration'])
+        ->assertHasFormErrors(['measurement_type' => 'required']);
+
+    expect($goal->refresh()->title)->toBe('Sans mensuration');
+});
+
+/*
+ * Le type se change dans le même formulaire : un objectif de fréquence passé
+ * en mensuration doit en nommer une. Le type est `live()` : le champ se
+ * marque obligatoire dès le choix, sans attendre l'envoi.
+ */
+it('exige la mensuration quand un objectif passe en mensuration au panneau', function (): void {
+    $goal = Goal::factory()->create(['type' => 'frequency', 'measurement_type' => null]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->assertFormFieldExists('type', fn (Field $champ): bool => $champ->isLive())
+        ->assertFormFieldExists('measurement_type', fn (Field $champ): bool => ! $champ->isRequired())
+        ->fillForm(['type' => 'measurement'])
+        ->assertFormFieldExists('measurement_type', fn (Field $champ): bool => $champ->isRequired())
+        ->call('save')
+        ->assertHasFormErrors(['measurement_type' => 'required']);
+
+    expect($goal->refresh()->type)->toBe(GoalType::Frequency);
+});
+
+/*
+ * L'exigence ne vaut que pour une mensuration : un objectif de fréquence n'en
+ * nomme aucune, et un objectif de mensuration qui en nomme une s'enregistre.
+ */
+it('n’exige la mensuration que d’un objectif de mensuration', function (string $type, ?string $mensuration): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $owner->getKey(),
+            'title' => 'Objectif bien formé',
+            'type' => $type,
+            'measurement_type' => $mensuration,
+            'target_value' => 75,
+            'current_value' => 0,
+            'start_value' => 80,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Goal::query()->where('title', 'Objectif bien formé')->sole()->measurement_type)->toBe($mensuration);
+})->with([
+    'fréquence, sans mensuration' => ['frequency', null],
+    'mensuration, tour de taille' => ['measurement', 'Waist'],
+    'mensuration, poids de corps' => ['measurement', 'weight'],
+]);
 
 it("charge l'objectif existant dans le formulaire d'édition", function (): void {
     $owner = User::factory()->create();

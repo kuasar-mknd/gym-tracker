@@ -6,6 +6,7 @@ import {
     installerLesVisitesHorsLigne,
 } from '@/Utils/visitesHorsLigne'
 import { REPOS_AUTOMATIQUE_SANS_RESEAU, useMinuteurDeRepos } from '@/composables/useMinuteurDeRepos'
+import { useSortieAudio } from '@/composables/useSortieAudio'
 import {
     RequeteSimulee,
     chargementsCompletsPendant,
@@ -137,11 +138,11 @@ const ecouterLesAnnonces = (evenement) => {
     }
 }
 
-/** Une page de test qui tient le réglage du repos automatique, comme la séance. */
+/** Une page de test qui tient le réglage du repos automatique, comme la séance, avec sa sortie audio. */
 const ReglageDuRepos = {
     name: 'ReglageDuRepos',
     setup() {
-        const { autoRestTimer, setAutoRestTimer } = useMinuteurDeRepos()
+        const { autoRestTimer, setAutoRestTimer } = useMinuteurDeRepos({ sortieAudio: useSortieAudio() })
 
         return () =>
             h(

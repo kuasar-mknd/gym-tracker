@@ -123,6 +123,8 @@ vi.mock('@inertiajs/vue3', async () => {
 })
 
 import Dashboard from '@/Pages/Dashboard.vue'
+import InvitationDInstallation from '@/Components/UI/InvitationDInstallation.vue'
+import { installerLInvitationDInstallation } from '@/composables/useInvitationDInstallation'
 import GoalsEdit from '@/Pages/Goals/Edit.vue'
 import StatsIndex from '@/Pages/Stats/Index.vue'
 import { layoutStub, passesSlot } from './pageStubs'
@@ -373,6 +375,35 @@ describe('Dashboard', () => {
             expect(
                 wrapper.findComponent({ name: 'InvitationAuxNotifications' }).props('uneAutreInvitationPasseAvant'),
             ).toBe(true)
+        })
+
+        /*
+         * La vraie invitation d'installation, sur un évènement que le
+         * navigateur a émis avant le retour à l'accueil, pendant la séance :
+         * elle est là dès le montage, et le dit, sans quoi la carte des
+         * notifications s'afficherait à côté (#2114).
+         */
+        it('fait passer l’invitation d’installation dès le montage, quand le navigateur a parlé sur une autre page', async () => {
+            const nePlusEcouter = installerLInvitationDInstallation()
+
+            try {
+                const evenement = new Event('beforeinstallprompt', { cancelable: true })
+                evenement.prompt = vi.fn()
+                window.dispatchEvent(evenement)
+
+                const wrapper = monterLAccueil({
+                    flash: { proposerLesNotifications: true },
+                    installation: InvitationDInstallation,
+                })
+                await nextTick()
+
+                expect(wrapper.find('[dusk="invitation-installation"]').exists()).toBe(true)
+                expect(
+                    wrapper.findComponent({ name: 'InvitationAuxNotifications' }).props('uneAutreInvitationPasseAvant'),
+                ).toBe(true)
+            } finally {
+                nePlusEcouter()
+            }
         })
     })
 })

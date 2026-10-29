@@ -41,7 +41,10 @@ class UpdateFastRequest extends FormRequest
 
     /**
      * Un début ou une fin envoyés avec un décalage sont des instants, relus dans
-     * le fuseau de l'application (#1952).
+     * le fuseau de l'application (#1952). La page du jeûne envoie sa fin ainsi
+     * depuis #2111, par `toISOString()` : une heure murale sans décalage, celle
+     * d'une page chargée avant, reste lue comme une heure de l'application, ce
+     * qui n'est juste que pour un appareil dans ce fuseau.
      */
     #[\Override]
     protected function prepareForValidation(): void

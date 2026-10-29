@@ -12,6 +12,7 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Attributes\CountCrashesAsExceptions;
+use Illuminate\Queue\Attributes\DeleteWhenMissingModels;
 use Illuminate\Queue\Attributes\MaxExceptions;
 use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Queue\Jobs\SyncJob;
@@ -49,8 +50,17 @@ use Illuminate\Queue\Jobs\SyncJob;
  * d'un même exercice s'écrivent déjà l'une après l'autre sous ce verrou, et
  * celles des autres exercices n'ont rien à attendre : la sérialisation
  * s'arrête à la série.
+ *
+ * Supprimé sans être lancé quand la série ou le compte a disparu avant son
+ * tour (`#[DeleteWhenMissingModels]`, #2109) : une série cochée puis supprimée
+ * aussitôt, ou que la file hors ligne rejoue ajoutée puis supprimée. Sa
+ * suppression a déjà refait les records qu'elle tenait (`Set::deleting`,
+ * `Set::deleted`), et un compte supprimé n'a plus rien à synchroniser. Laravel
+ * levait `ModelNotFoundException` en restaurant la série, et le travail partait
+ * dans `failed_jobs`, au milieu des vrais échecs.
  */
 #[CountCrashesAsExceptions]
+#[DeleteWhenMissingModels]
 #[MaxExceptions(1)]
 #[Tries(self::ESSAIS_PERMIS)]
 final class SyncPersonalRecord implements ShouldBeUniqueUntilProcessing, ShouldQueue
