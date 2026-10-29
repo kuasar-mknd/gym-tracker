@@ -41,9 +41,11 @@ const COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR = 'Ton compte est relié à Goog
 
 /**
  * Le refus du limiteur (`auth.throttle`) sous une horloge arrêtée, une minute
- * avant le prochain essai.
+ * avant le prochain essai. Il tutoie, comme le chemin qui le suit pour un
+ * compte relié : la phrase vouvoyait, et le refus changeait de registre en
+ * son milieu (#2119).
  */
-const COMPTE_RELIE_REFUS_DU_LIMITEUR = 'Trop de tentatives de connexion. Veuillez essayer de nouveau dans 60 secondes.';
+const COMPTE_RELIE_REFUS_DU_LIMITEUR = 'Trop d’essais. Réessaie dans 60 secondes.';
 
 /**
  * Un compte ouvert par Google, comme la connexion sociale le crée : son mot de
