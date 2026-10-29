@@ -84,13 +84,8 @@ class UpdatePasswordRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if (RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
-            $seconds = RateLimiter::availableIn($this->throttleKey());
-
             throw ValidationException::withMessages([
-                'current_password' => trans('auth.throttle', [
-                    'seconds' => $seconds,
-                    'minutes' => ceil($seconds / 60),
-                ]),
+                'current_password' => $this->refusDuLimiteur(RateLimiter::availableIn($this->throttleKey())),
             ]);
         }
     }

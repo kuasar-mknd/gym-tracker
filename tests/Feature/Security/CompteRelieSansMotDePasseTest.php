@@ -39,6 +39,12 @@ const COMPTE_RELIE_CHEMIN_PAR_LE_LIEN = 'Ton compte est relié à Google. Si tu 
 const COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR = 'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
 
 /**
+ * Le refus du limiteur (`auth.throttle`) sous une horloge arrêtée, une minute
+ * avant le prochain essai.
+ */
+const COMPTE_RELIE_REFUS_DU_LIMITEUR = 'Trop de tentatives de connexion. Veuillez essayer de nouveau dans 60 secondes.';
+
+/**
  * Un compte ouvert par Google, comme la connexion sociale le crée : son mot de
  * passe, tiré au hasard, n'est connu de personne.
  */
@@ -147,11 +153,14 @@ it('garde ses refus tels quels à un compte sans fournisseur', function (): void
 
 /*
  * Le chemin ne change rien au limiteur : cinq essais manqués, puis le refus
- * du limiteur, même avec le bon mot de passe. Deux cas plutôt qu'un : la
+ * du limiteur, même avec le bon mot de passe. Ce refus donne encore le
+ * chemin : le formulaire cache son aide devant tout refus du champ, et la
+ * personne bloquée ne le lirait plus nulle part. Deux cas plutôt qu'un : la
  * limite de route de `PUT /password` (six requêtes par minute) couperait la
  * seconde moitié d'un cas unique en 429.
  */
-it('bloque la suppression d’un compte relié après cinq essais, chemin ou non', function (): void {
+it('bloque la suppression d’un compte relié après cinq essais, et le refus du limiteur donne encore le chemin', function (): void {
+    $this->freezeSecond();
     $compte = compteRelieOuvertParGoogle();
     $compte->forceFill(['password' => Hash::make('connu-desormais')])->save();
     $this->actingAs($compte);
@@ -164,12 +173,13 @@ it('bloque la suppression d’un compte relié après cinq essais, chemin ou non
 
     $this->from('/profile/edit')
         ->delete('/profile', ['password' => 'connu-desormais'])
-        ->assertInvalid(['password' => 'essayer de nouveau dans']);
+        ->assertSessionHasErrors(['password' => COMPTE_RELIE_REFUS_DU_LIMITEUR.' '.COMPTE_RELIE_CHEMIN_PAR_LE_LIEN]);
 
     expect(User::query()->whereKey($compte->id)->exists())->toBeTrue();
 });
 
-it('bloque le changement du mot de passe d’un compte relié après cinq essais, chemin ou non', function (): void {
+it('bloque le changement du mot de passe d’un compte relié après cinq essais, et le refus du limiteur donne encore le chemin', function (): void {
+    $this->freezeSecond();
     $compte = compteRelieOuvertParGoogle();
     $compte->forceFill(['password' => Hash::make('connu-desormais')])->save();
     $empreinte = $compte->password;
@@ -183,7 +193,47 @@ it('bloque le changement du mot de passe d’un compte relié après cinq essais
 
     $this->from('/profile/edit')
         ->put('/password', ['current_password' => 'connu-desormais', ...compteRelieNouveauMotDePasse()])
-        ->assertInvalid(['current_password' => 'essayer de nouveau dans']);
+        ->assertSessionHasErrors(['current_password' => COMPTE_RELIE_REFUS_DU_LIMITEUR.' '.COMPTE_RELIE_CHEMIN_PAR_LE_LIEN]);
 
     expect($compte->refresh()->password)->toBe($empreinte);
+});
+
+/*
+ * Le changement d'adresse compte ses essais sous la clé du mot de passe : son
+ * refus du limiteur donne le même chemin, et le formulaire de l'adresse cache
+ * lui aussi son aide devant le refus de son champ.
+ */
+it('donne aussi le chemin au refus du limiteur du changement d’adresse d’un compte relié', function (): void {
+    $this->freezeSecond();
+    $compte = compteRelieOuvertParGoogle();
+    foreach (range(1, 5) as $_essai) {
+        RateLimiter::hit('update-password-'.$compte->id);
+    }
+    $this->actingAs($compte);
+
+    $this->from('/profile/edit')
+        ->patch('/profile', ['name' => 'Camille', 'email' => 'autre@example.org', 'current_password' => 'devine'])
+        ->assertRedirect('/profile/edit');
+
+    expect(session('errors')->get('current_password'))->toBe([COMPTE_RELIE_REFUS_DU_LIMITEUR.' '.COMPTE_RELIE_CHEMIN_PAR_LE_LIEN])
+        ->and($compte->refresh()->email)->toBe('camille@example.org');
+});
+
+it('garde le refus du limiteur tel quel à un compte sans fournisseur', function (): void {
+    $this->freezeSecond();
+    $compte = User::factory()->create();
+    foreach (range(1, 5) as $_essai) {
+        RateLimiter::hit('delete-account-'.$compte->id);
+        RateLimiter::hit('update-password-'.$compte->id);
+    }
+    $this->actingAs($compte);
+
+    $this->from('/profile/edit')->delete('/profile', ['password' => 'password']);
+    expect(session('errors')->get('password'))->toBe([COMPTE_RELIE_REFUS_DU_LIMITEUR]);
+
+    $this->from('/profile/edit')->put('/password', ['current_password' => 'password', ...compteRelieNouveauMotDePasse()]);
+    expect(session('errors')->get('current_password'))->toBe([COMPTE_RELIE_REFUS_DU_LIMITEUR]);
+
+    $this->from('/profile/edit')->patch('/profile', ['name' => $compte->name, 'email' => 'autre@example.org', 'current_password' => 'password']);
+    expect(session('errors')->get('current_password'))->toBe([COMPTE_RELIE_REFUS_DU_LIMITEUR]);
 });

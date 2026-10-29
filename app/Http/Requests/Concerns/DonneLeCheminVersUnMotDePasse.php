@@ -14,8 +14,9 @@ use App\Models\User;
  * (`ResolveSocialUserAction`), que personne ne connaît. Changer l'adresse
  * (`ProfileUpdateRequest`), changer le mot de passe (`UpdatePasswordRequest`)
  * et supprimer le compte (`DeleteUserRequest`) exigent pourtant le mot de
- * passe actuel : leur refus donne le chemin plutôt qu'un refus sec, que seul
- * le changement d'adresse donnait avant #2104. « Mot de passe oublié ? »
+ * passe actuel : leurs refus, celui du limiteur compris, donnent le chemin
+ * plutôt qu'un refus sec, que seul le changement d'adresse donnait avant
+ * #2104, et encore pas après cinq essais. « Mot de passe oublié ? »
  * n'est ouvert qu'aux invités, d'où la déconnexion d'abord ; le lien part à
  * l'adresse actuelle du compte.
  *
@@ -83,17 +84,38 @@ trait DonneLeCheminVersUnMotDePasse
         }
 
         return [
-            "{$champ}.required" => self::phraseDuValidateur('required').' '.$chemin,
-            "{$champ}.current_password" => self::phraseDuValidateur('current_password').' '.$chemin,
+            "{$champ}.required" => self::phrase('validation.required').' '.$chemin,
+            "{$champ}.current_password" => self::phrase('validation.current_password').' '.$chemin,
         ];
     }
 
     /**
-     * La phrase que `lang/fr/validation.php` donne à une règle.
+     * Le refus du limiteur, une fois les cinq essais manqués : la phrase de
+     * tout compte (`auth.throttle`), suivie du chemin pour un compte relié à
+     * un fournisseur.
+     *
+     * Le formulaire cache son aide devant tout refus du champ : sans le
+     * chemin, la personne bloquée ne le lirait plus nulle part.
      */
-    private static function phraseDuValidateur(string $regle): string
+    protected function refusDuLimiteur(int $secondes): string
     {
-        $phrase = trans("validation.{$regle}");
+        $refus = self::phrase('auth.throttle', [
+            'seconds' => $secondes,
+            'minutes' => ceil($secondes / 60),
+        ]);
+        $chemin = $this->cheminVersUnMotDePasse();
+
+        return $chemin === null ? $refus : $refus.' '.$chemin;
+    }
+
+    /**
+     * La phrase que les fichiers de `lang/fr` donnent à une clé.
+     *
+     * @param  array<string, float|int>  $remplacements
+     */
+    private static function phrase(string $cle, array $remplacements = []): string
+    {
+        $phrase = trans($cle, $remplacements);
 
         return is_string($phrase) ? $phrase : '';
     }
