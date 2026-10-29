@@ -8,7 +8,7 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Corrigé
-- **Une série supprimée avant la synchronisation de ses records, ou un compte supprimé alors qu'un de ses recalculs attend, ne laisse plus de travail en échec** (#2109, #PR) : le travail en file ne trouvait plus son modèle et partait dans `failed_jobs`, gardé trente jours et montré par Horizon et le diagnostic au milieu des vrais échecs, alors qu'il n'avait plus rien à faire. La synchronisation des records, les recalculs des objectifs et des succès, et l'annonce d'un record ou d'un badge qui n'existe plus se suppriment désormais sans s'exécuter, sans laisser de verrou ; les records restent justes. Une garde de convention exige la même chose de toute classe en file qui porte un modèle.
+- **Une série supprimée avant la synchronisation de ses records, ou un compte supprimé alors qu'un de ses recalculs attend, ne laisse plus de travail en échec** (#2109, #PR) : le travail en file ne trouvait plus son modèle et partait dans `failed_jobs`, gardé trente jours et montré par Horizon et le diagnostic au milieu des vrais échecs, alors qu'il n'avait plus rien à faire. La synchronisation des records, les recalculs des objectifs et des succès, et l'annonce d'un record ou d'un badge qui n'existe plus se suppriment désormais sans s'exécuter, sans laisser de verrou ; les records restent justes. Une garde de convention exige la même chose de tout travail, avis, courriel ou écouteur en file dont une propriété, ou celle de l'évènement qu'il reçoit, peut tenir un modèle.
 
 ## [1.7.0] - 2026-10-25
 
