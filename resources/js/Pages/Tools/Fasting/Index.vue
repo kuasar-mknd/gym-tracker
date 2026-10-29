@@ -2,10 +2,9 @@
 /**
  * Fasting Tracker Component.
  *
- * This component provides an interface for users to track their intermittent fasting.
- * It displays the currently active fast with a live progress timer, allows starting
- * new fasts by selecting different duration types (e.g., 16:8, 20:4), and shows a
- * history of past completed fasts.
+ * This component provides an interface for users to track their intermittent fasting. It displays the currently
+ * active fast with a live progress timer, allows starting new fasts by selecting different duration types (e.g.,
+ * 16:8, 20:4), and shows a history of past completed fasts.
  *
  * Props:
  * @prop {Object} activeFast - The currently ongoing fast object, if any. Null otherwise.
@@ -22,10 +21,11 @@ import GlassIconButton from '@/Components/UI/GlassIconButton.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassSelect from '@/Components/UI/GlassSelect.vue'
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
+import { formatToLocalISO, formatToUTC } from '@/Utils/date'
 
 const FastingHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/FastingHistoryChart.vue'))
 import dayjs from 'dayjs'
@@ -42,12 +42,10 @@ const props = defineProps({
     history: Object,
 })
 
-// `type` is validated server-side against a fixed list — StoreFastRequest:
-// in:16:8,18:6,20:4,24:0,36:0,48:0,custom — so it is data, not something to
-// carve out of the label. It used to be derived with label.split(' ')[0],
-// which yields '16:8', '18:6' and '20:4' correctly and then '24h' and '36h',
-// neither of which the server accepts: two of the five options could never
-// start a fast, and the page rendered no error to say why.
+// `type` is validated server-side against a fixed list — StoreFastRequest: in:16:8,18:6,20:4,24:0,36:0,48:0,custom —
+// so it is data, not something to carve out of the label. It used to be derived with label.split(' ')[0], which yields
+// '16:8', '18:6' and '20:4' correctly and then '24h' and '36h', neither of which the server accepts: two of the five
+// options could never start a fast, and the page rendered no error to say why.
 const fastingTypes = [
     { value: '16:8', label: '16:8 (Leangains)', hours: 16 },
     { value: '18:6', label: '18:6', hours: 18 },
@@ -56,10 +54,9 @@ const fastingTypes = [
     { value: '36:0', label: '36h (Monk)', hours: 36 },
 ]
 
-// A <select> can only ever hand back a string. Binding the objects directly made
-// every option render value="[object Object]", so picking anything other than the
-// default left selectedType as that string — .hours became NaN and .label.split()
-// threw, silently killing the "Commencer" button.
+// A <select> can only ever hand back a string. Binding the objects directly made every option render
+// value="[object Object]", so picking anything other than the default left selectedType as that string — .hours
+// became NaN and .label.split() threw, silently killing the "Commencer" button.
 const selectedTypeValue = ref(fastingTypes[0].value)
 
 const selectedType = computed(
@@ -71,6 +68,7 @@ const startForm = useForm({
     target_duration_minutes: 16 * 60,
     type: '16:8',
 })
+let debutPrerempli = ''
 
 const endForm = useForm({
     end_time: '',
@@ -117,12 +115,10 @@ const updateTimer = () => {
 /**
  * Arms and disarms the clock as the fast itself comes and goes.
  *
- * `onMounted` alone was not enough. Starting a fast posts through Inertia, and
- * `router.post` preserves state by default, so this component is never
- * remounted — the hook does not run a second time. Anyone opening the page
- * without a fast in progress, which is the ordinary case, then pressed
- * "Commencer" and watched the card appear stuck at 00:00:00 with an empty ring,
- * for as long as they left it open.
+ * `onMounted` alone was not enough. Starting a fast posts through Inertia, and `router.post` preserves state by
+ * default, so this component is never remounted — the hook does not run a second time. Anyone opening the page without
+ * a fast in progress, which is the ordinary case, then pressed "Commencer" and watched the card appear stuck at
+ * 00:00:00 with an empty ring, for as long as they left it open.
  */
 watch(
     () => props.activeFast,
@@ -133,6 +129,8 @@ watch(
         if (!fast) {
             elapsedSeconds.value = 0
             progressPercentage.value = 0
+            debutPrerempli = formatToLocalISO(new Date())
+            startForm.start_time = debutPrerempli
 
             return
         }
@@ -143,18 +141,20 @@ watch(
     { immediate: true },
 )
 
-onMounted(() => {
-    startForm.start_time = dayjs().format('YYYY-MM-DDTHH:mm')
-})
-
 onUnmounted(() => {
     if (timerInterval.value) clearInterval(timerInterval.value)
 })
 
+/**
+ * Le champ montre l'heure de l'appareil, remplie à chaque retour du formulaire, la page n'étant pas remontée. Laissé
+ * tel quel, il dit « maintenant » : le début part à l'instant du geste ; changé, à l'instant qu'il désigne. La fin part
+ * à l'instant présent. Sans décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
+ */
 const startFast = () => {
     startForm
         .transform((data) => ({
             ...data,
+            start_time: data.start_time === debutPrerempli ? new Date().toISOString() : formatToUTC(data.start_time),
             target_duration_minutes: selectedType.value.hours * 60,
             type: selectedType.value.value,
         }))
@@ -162,7 +162,7 @@ const startFast = () => {
 }
 
 const endFast = () => {
-    endForm.end_time = dayjs().format('YYYY-MM-DD HH:mm:ss')
+    endForm.end_time = new Date().toISOString()
     endForm.patch(route('tools.fasting.update', props.activeFast.id))
 }
 
