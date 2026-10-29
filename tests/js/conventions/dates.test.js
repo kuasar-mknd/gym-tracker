@@ -69,13 +69,20 @@ it('laisse passer une langue explicite', () => {
  * La page du jeûne envoyait `dayjs().format('YYYY-MM-DDTHH:mm')` et
  * `dayjs().format('YYYY-MM-DD HH:mm:ss')` : une heure murale de l'appareil, sans
  * fuseau, que le serveur lit comme une heure de l'application. Un appareil à
- * Toronto démarrait son jeûne cinq heures trop tôt. Un champ `datetime-local`
- * part par `formatToUTC()` de `Utils/date.js`, l'instant présent par
- * `toISOString()`, et rien ne fabrique plus une date à l'heure dans la forme du
- * serveur. L'affichage (`DD/MM/YYYY HH:mm`) et le jour seul (`YYYY-MM-DD`)
- * restent permis : l'un ne part nulle part, l'autre n'est pas un instant.
+ * Toronto démarrait son jeûne trop tôt de l'écart entre les deux fuseaux : cinq
+ * heures le 10 mars 2026, six la plus grande partie de l'année. Un champ
+ * `datetime-local` part par `formatToUTC()` de `Utils/date.js`, l'instant
+ * présent par `toISOString()`.
+ *
+ * La garde refuse un format qui écrit le jour puis l'heure dans la forme du
+ * serveur, séparés par `T` ou par une espace, entre crochets ou non (dayjs
+ * écrit tel quel ce qu'ils entourent), sans jeton `Z` hors des crochets : `Z`
+ * et `ZZ` écrivent le décalage, que le serveur ramène. L'affichage
+ * (`DD/MM/YYYY HH:mm`) et le jour seul (`YYYY-MM-DD`) restent permis : l'un ne
+ * part nulle part, l'autre n'est pas un instant. Elle ne voit pas un champ
+ * envoyé tel quel, sans `formatToUTC()` : seul le test de la page en témoigne.
  */
-const HEURE_MURALE_A_ENVOYER = /\.format\(\s*['"`]YYYY-MM-DD[T ]HH/g
+const HEURE_MURALE_A_ENVOYER = /\.format\(\s*(['"`])YYYY-MM-DD(?:T|\[T\]| |\[ \])HH(?:\[[^\]]*\]|(?!\1)[^Z[])*\1/g
 
 /**
  * @param {string} source
