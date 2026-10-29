@@ -176,23 +176,30 @@ describe('l’écoute du document', () => {
      * un cas de test qui ne reçoit rien du précédent (#2114).
      */
     it('oublie, à son retrait, l’évènement et le refus qu’elle tenait', () => {
+        // L'évènement gardé, sans refus : le document neuf ne l'a jamais reçu.
+        inviter()
+
+        expect(monter().visible.value).toBe(true)
+
+        nePlusEcouter()
+        nePlusEcouter = installerLInvitationDInstallation()
+
+        expect(monter().visible.value).toBe(false)
+
+        // Le refus que le stockage n'a pas gardé : le document neuf l'oublie.
         inviter()
         monter().refuser()
         window.localStorage.clear()
         inviter()
 
         nePlusEcouter()
-        const seconde = installerLInvitationDInstallation()
+        nePlusEcouter = installerLInvitationDInstallation()
 
-        try {
-            expect(monter().visible.value).toBe(false)
+        expect(monter().visible.value).toBe(false)
 
-            inviter()
+        inviter()
 
-            expect(monter().visible.value).toBe(true)
-        } finally {
-            seconde()
-        }
+        expect(monter().visible.value).toBe(true)
     })
 
     it('n’écoute plus une fois retirée', () => {
