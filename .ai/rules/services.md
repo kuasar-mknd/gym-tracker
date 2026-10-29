@@ -5,7 +5,7 @@ paths:
 
 # Services
 
-## Mesurer un coût SQL : trois pièges qui rendent la mesure fausse
+## Mesurer un coût SQL : les pièges qui rendent la mesure fausse
 Seuls les deltas de `show session status like 'Handler_read%'` disent la vérité. `EXPLAIN.rows` est une estimation ; sommer un arbre `EXPLAIN ANALYZE` compte deux fois les nœuds imbriqués ; compter les requêtes ne mesure rien.
 
 Trois pièges de protocole, rencontrés en série sur #1593 :
@@ -14,7 +14,13 @@ Trois pièges de protocole, rencontrés en série sur #1593 :
 2. **Table minuscule** — MySQL balaie au lieu de parcourir l'index en dessous de quelques centaines de lignes. Comparer petit et grand mesure ce basculement, pas le défaut. Placer la mesure entre deux états déjà volumineux.
 3. **Témoin instable** — un test qui assère un nombre de lectures passe seul et tombe dans la suite : les statistiques que MySQL tient par table bougent avec les tests voisins. Un témoin de coût doit porter sur la FORME de la requête, pas sur le compte.
 
-Voir `.ai/rules/actions.md` pour le saut d'index par `min()`.
+Réglé le 2026-10-28 (#2106). Trois pièges de plus, rencontrés sur le compte des exercices distincts :
+
+4. **Un coût écrit sans relevé** — un docblock et une règle promettaient à une CTE récursive « exactement les mêmes lectures d'index » qu'une boucle : elle en lisait E × L. Un coût qui entre dans un docblock ou une règle vient des deltas de `Handler_read%` de la méthode réelle, à deux tailles au moins. Dans `EXPLAIN ANALYZE`, `loops=` sur une sous-requête « dependent » multiplie tout ce qu'elle lit.
+5. **Un choix de coût ne suit pas un état connu de la table, dans les tests comme ailleurs** — le recalcul automatique d'InnoDB échantillonne aussi les lignes jamais validées, et l'annulation ne les retire pas des statistiques : mesuré sur 8.4.11 et 9.7.2, 2 000 lignes insérées dans une transaction ouverte, puis annulées, laissent leurs cardinalités à la table. Les statistiques de la base des tests suivent donc ce que ce recalcul a vu des tests voisins, à l'instant où il est passé (le piège 3, côté plan) : le même témoin de `count(distinct user_id, exercise_id)` lit les L lignes du compte (L + 1, 401) quand il tourne seul, et saute d'un exercice au suivant (E + 3, 43) après un voisin qui a semé 2 000 lignes de trente exercices. En production non plus, le saut n'attend pas des statistiques fraîches : il dépend de la répartition de toute la table (`.ai/rules/actions.md`). Un témoin borne donc ce que les deux plans tiennent (au plus L + 1, sur un jeu où E + 3 reste en deçà, et aucune sous-requête dépendante), jamais le plan ni le chiffre. `ANALYZE TABLE` n'est pas une issue : il valide la transaction du test, comme un ordre DDL (`.ai/rules/tests.md`).
+6. **`EXPLAIN` sans format ne rend pas la même chose sur les deux serveurs** — 8.4.11 rend un tableau, 9.7.2 un arbre (`explain_format` y vaut TREE par défaut, TRADITIONAL sur 8.4.11). Un test qui lit un plan nomme son format : `explain format=tree`, où une sous-requête dépendante s'écrit « dependent », ou `format=traditional` pour les colonnes `select_type` et `Extra`.
+
+Voir `.ai/rules/actions.md` pour le saut d'index par `min()` et le compte des valeurs distinctes.
 
 ## Une relation qui lit une ligne exige une contrainte d'unicité
 `keyBy()` et `firstOrNew()` ne gardent que la dernière ligne d'une clef répétée. La ligne en trop n'est alors ni corrigée, ni supprimée, indéfiniment — elle annonce une valeur que plus rien ne soutient.
