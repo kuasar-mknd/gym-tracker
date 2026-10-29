@@ -147,8 +147,8 @@ it('liste les séances en un nombre de requêtes qui ne dépend pas du nombre de
         return ecrituresPendant(fn () => actingAs($user)->get(route('workouts.index'))->assertOk())['requetes'];
     };
 
-    // Le compte des exercices distincts coûte une lecture par exercice (décision
-    // mesurée, .ai/rules/actions.md) : à exercices constants, le nombre de
-    // séances ne doit rien ajouter.
+    // Le compte des exercices distincts tient en une requête, quel que soit le
+    // nombre d'exercices (décision mesurée, .ai/rules/actions.md, #2106) : à
+    // exercices constants, le nombre de séances ne doit rien ajouter.
     expect($compter(8))->toBe($compter(2));
 });

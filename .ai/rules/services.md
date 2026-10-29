@@ -14,7 +14,13 @@ Trois pièges de protocole, rencontrés en série sur #1593 :
 2. **Table minuscule** — MySQL balaie au lieu de parcourir l'index en dessous de quelques centaines de lignes. Comparer petit et grand mesure ce basculement, pas le défaut. Placer la mesure entre deux états déjà volumineux.
 3. **Témoin instable** — un test qui assère un nombre de lectures passe seul et tombe dans la suite : les statistiques que MySQL tient par table bougent avec les tests voisins. Un témoin de coût doit porter sur la FORME de la requête, pas sur le compte.
 
-Voir `.ai/rules/actions.md` pour le saut d'index par `min()`.
+Réglé le 2026-10-28 (#2106). Trois pièges de plus, rencontrés sur le compte des exercices distincts :
+
+4. **Un coût écrit sans relevé** — un docblock et une règle promettaient à une CTE récursive « exactement les mêmes lectures d'index » qu'une boucle : elle en lisait E × L. Un coût qui entre dans un docblock ou une règle vient des deltas de `Handler_read%` de la méthode réelle, à deux tailles au moins. Dans `EXPLAIN ANALYZE`, `loops=` sur une sous-requête « dependent » multiplie tout ce qu'elle lit.
+5. **Le plan des tests n'est pas celui de la production** — la base des tests écrit dans des transactions jamais validées, sur des tables que leurs statistiques croient vides, et un choix de coût peut y tomber autrement : `count(distinct user_id, exercise_id)` saute d'un exercice au suivant en production (E + 3 lectures), et lit les L lignes du compte dans les tests (L + 1). Un témoin borne donc ce que les deux plans tiennent (au plus L + 1, aucune sous-requête dépendante), jamais le chiffre de la production. `ANALYZE TABLE` n'est pas une issue : il valide la transaction du test, comme un ordre DDL (`.ai/rules/tests.md`).
+6. **`EXPLAIN` sans format ne rend pas la même chose sur les deux serveurs** — 8.4.11 rend un tableau, 9.7.2 un arbre (`explain_format` y vaut TREE par défaut, TRADITIONAL sur 8.4.11). Un test qui lit un plan nomme son format : `explain format=tree`, où une sous-requête dépendante s'écrit « dependent », ou `format=traditional` pour les colonnes `select_type` et `Extra`.
+
+Voir `.ai/rules/actions.md` pour le saut d'index par `min()` et le compte des valeurs distinctes.
 
 ## Une relation qui lit une ligne exige une contrainte d'unicité
 `keyBy()` et `firstOrNew()` ne gardent que la dernière ligne d'une clef répétée. La ligne en trop n'est alors ni corrigée, ni supprimée, indéfiniment — elle annonce une valeur que plus rien ne soutient.
