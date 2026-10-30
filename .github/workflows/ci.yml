@@ -748,9 +748,12 @@ jobs:
             - name: Checkpoint
               run: php artisan checkpoint:scan --no-interaction --skip="Composer CVE Audit,NPM CVE Audit,Supply Chain Tooling,Package Freshness (Supply Chain)"
 
-            # La fraîcheur des paquets est un signal, pas un verdict : une montée
-            # Dependabot fusionnée le jour de sa publication le déclencherait
-            # trois jours de suite. Elle s'annonce, sans bloquer.
+            # La fraîcheur des paquets est un signal, pas un verdict : un
+            # correctif de faille monte le jour de sa publication, et
+            # roave/security-advisories à son dernier instantané, ce qui la
+            # déclencherait trois jours de suite. Elle ne lit que le `time` du
+            # verrou, la date du commit étiqueté, pas celle de la publication.
+            # Elle s'annonce, sans bloquer.
             - name: Checkpoint, fraîcheur des paquets
               continue-on-error: true
               run: php artisan checkpoint:scan --no-interaction --only="Package Freshness (Supply Chain)"
