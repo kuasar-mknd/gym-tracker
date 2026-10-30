@@ -75,14 +75,20 @@ const submit = () => {
         </div>
 
         <!--
-            `novalidate`, comme « mot de passe oublié » : le navigateur
-            refuserait une adresse que le lien a reçue et que le serveur admet.
-            Le serveur juge chaque champ, et ses refus s'affichent dessous (#2104).
+            Comme « mot de passe oublié » (#2104) : l'adresse part telle qu'elle
+            est tapée, dans un champ texte au clavier d'adresse, que le navigateur
+            ne juge ni ne convertit en Punycode, et le serveur juge chaque champ,
+            vide compris (`novalidate`) ; ses refus s'affichent dessous. Un champ
+            `type="email"` refusait ou transformait une adresse que le lien a
+            reçue et sous laquelle le serveur retrouve le compte.
         -->
         <form v-if="!lienRefuse" novalidate @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.email"
-                type="email"
+                type="text"
+                inputmode="email"
+                autocapitalize="none"
+                spellcheck="false"
                 name="email"
                 label="Email"
                 placeholder="ton@email.com"

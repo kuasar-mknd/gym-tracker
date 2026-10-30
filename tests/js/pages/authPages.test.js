@@ -494,27 +494,59 @@ it('sait encore voir une ressource d’une autre origine dans une page montée',
 
 /**
  * Des adresses que la messagerie écrit et que la règle `email` du serveur
- * admet, et que le navigateur refuse dans un champ `type="email"`, jugé selon
- * la spécification HTML : une partie locale entre guillemets, un domaine
- * littéral. Le lien « mot de passe oublié » leur part et les réinitialise
+ * admet, et qu'un champ `type="email"` n'envoie pas telles quelles. Le
+ * navigateur le juge selon la spécification HTML, et refuse une partie locale
+ * entre guillemets ou un domaine littéral. Chromium y convertit en Punycode
+ * un domaine internationalisé (« bücher » devient « xn--bcher-kva »), sous
+ * lequel le serveur ne trouve pas le compte. Le lien « mot de passe oublié »
+ * leur part et les réinitialise, tapées telles quelles
  * (`AdresseQueLaMessagerieSaitEcrireTest`), et le profil le leur promet
- * (#2104) : la demande et la réinitialisation laissent le serveur en juger.
+ * (#2104) : la demande et la réinitialisation les envoient comme elles sont
+ * tapées.
  */
-const ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE = ['"camille.martin"@example.org', 'camille@[192.0.2.1]']
+const ADRESSES_QU_UN_CHAMP_EMAIL_N_ENVOIE_PAS_TELLES_QUELLES = [
+    '"camille.martin"@example.org',
+    'camille@[192.0.2.1]',
+    'camille.martin@bücher.example.org',
+]
+
+/**
+ * Un champ d'adresse que le navigateur ne juge ni ne transforme : un champ
+ * texte, avec le clavier d'une adresse (`inputmode`), sans majuscule
+ * automatique ni correcteur d'orthographe. jsdom ne convertit rien en
+ * Punycode : c'est le type du champ qui en tient lieu de preuve.
+ */
+const CHAMP_D_ADRESSE_ENVOYEE_TELLE_QUELLE = {
+    type: 'text',
+    inputmode: 'email',
+    autocapitalize: 'none',
+    spellcheck: 'false',
+}
 
 describe('ForgotPassword', () => {
+    /** Le champ de l'adresse, trouvé par son libellé. */
+    const champDeLAdresse = (wrapper) => wrapper.find(`#${wrapper.find('label').attributes('for')}`)
+
+    it('tape l’adresse dans un champ texte au clavier d’adresse, que le navigateur ne juge ni ne transforme', () => {
+        const champ = champDeLAdresse(mountPage(ForgotPassword))
+
+        expect(champ.attributes()).toMatchObject({ ...CHAMP_D_ADRESSE_ENVOYEE_TELLE_QUELLE, autocomplete: 'email' })
+        expect(champ.attributes('required')).toBeDefined()
+    })
+
     /*
      * `requestSubmit()` juge le formulaire comme un clic sur « Envoyer le
-     * lien » : sans `novalidate`, jsdom refuse de l'envoyer, comme le navigateur.
+     * lien » : jsdom refuse d'envoyer un champ `type="email"` qu'il juge mal
+     * formé, comme le navigateur.
      */
-    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
-        'envoie la demande pour %s, que le navigateur refuserait et que le serveur admet',
+    it.each(ADRESSES_QU_UN_CHAMP_EMAIL_N_ENVOIE_PAS_TELLES_QUELLES)(
+        'envoie la demande pour %s telle qu’elle est tapée',
         async (adresse) => {
             const wrapper = mountPage(ForgotPassword)
 
             await typeInto(wrapper, 'Email', adresse)
 
-            expect(wrapper.find('input[type="email"]').element.validity.typeMismatch).toBe(true)
+            expect(champDeLAdresse(wrapper).element.validity.valid).toBe(true)
 
             wrapper.find('form').element.requestSubmit()
             await nextTick()
@@ -524,6 +556,21 @@ describe('ForgotPassword', () => {
             expect(openRequest.email).toBe(adresse)
         },
     )
+
+    /*
+     * `novalidate` : le navigateur n'arrête pas un champ vide, qu'il dirait
+     * dans sa langue et hors de la page ; le serveur le refuse, et la page
+     * affiche ce refus sous le champ.
+     */
+    it('envoie aussi une demande vide, que le serveur juge', async () => {
+        const wrapper = mountPage(ForgotPassword)
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(openRequest.email).toBe('')
+    })
 
     it('poste l’email vers la route d’envoi du lien', async () => {
         const wrapper = mountPage(ForgotPassword)
@@ -596,7 +643,7 @@ describe('ResetPassword', () => {
 
         expect(libelles).toEqual(['Email', 'Nouveau mot de passe', 'Confirmer le mot de passe'])
         expect(champ.element.value).toBe('')
-        expect(champ.attributes('type')).toBe('email')
+        expect(champ.attributes()).toMatchObject(CHAMP_D_ADRESSE_ENVOYEE_TELLE_QUELLE)
         expect(champ.attributes('name')).toBe('email')
         expect(champ.attributes('required')).toBeDefined()
         expect(champ.attributes('readonly')).toBeUndefined()
@@ -608,8 +655,8 @@ describe('ResetPassword', () => {
         ).toEqual(['new-password', 'new-password'])
     })
 
-    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
-        'envoie le nouveau mot de passe de %s, que le navigateur refuserait et que le serveur admet',
+    it.each(ADRESSES_QU_UN_CHAMP_EMAIL_N_ENVOIE_PAS_TELLES_QUELLES)(
+        'envoie le nouveau mot de passe de %s, l’adresse telle qu’elle est tapée',
         async (adresse) => {
             const wrapper = mountPage(ResetPassword, { props })
 
@@ -617,7 +664,7 @@ describe('ResetPassword', () => {
             await typeInto(wrapper, 'Nouveau mot de passe', 'Nouveau-mot-de-passe-2026!')
             await typeInto(wrapper, 'Confirmer le mot de passe', 'Nouveau-mot-de-passe-2026!')
 
-            expect(champDuCompte(wrapper).element.validity.typeMismatch).toBe(true)
+            expect(champDuCompte(wrapper).element.validity.valid).toBe(true)
 
             wrapper.find('form').element.requestSubmit()
             await nextTick()
@@ -627,6 +674,20 @@ describe('ResetPassword', () => {
             expect(openRequest.email).toBe(adresse)
         },
     )
+
+    /*
+     * `novalidate`, comme « mot de passe oublié » : le serveur juge chaque
+     * champ vide, et la page affiche chaque refus sous son champ.
+     */
+    it('envoie aussi un formulaire vide, que le serveur juge', async () => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect([openRequest.email, openRequest.password, openRequest.password_confirmation]).toEqual(['', '', ''])
+    })
 
     it('envoie l’adresse saisie avec le formulaire, à côté de la valeur chiffrée, qui ne s’affiche pas', async () => {
         const wrapper = mountPage(ResetPassword, { props })
