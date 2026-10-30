@@ -18,8 +18,8 @@ final class FetchCalendarEventsAction
      * @param  int  $year  The year of the events.
      * @param  int  $month  The month of the events.
      * @return array{
-     *     workouts: \Illuminate\Support\Collection<int, array{id: int, name: string, date: non-falsy-string, started_at: string, exercises_count: int<0, max>, preview_exercises: array<int, string>}>,
-     *     journals: \Illuminate\Support\Collection<int, array{id: int, date: non-falsy-string, mood_score: int|null, has_note: bool}>
+     *     workouts: \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}>,
+     *     journals: \Illuminate\Support\Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}>
      * }
      */
     public function execute(User $user, int $year, int $month): array
@@ -77,14 +77,14 @@ final class FetchCalendarEventsAction
     }
 
     /*
-     * `non-falsy-string` et `int<0, max>` ne sont pas de la coquetterie : une
-     * `Collection` est invariante dans son type de valeur, donc ce que `format()`
-     * et `withCount()` produisent n'est PAS accepte la ou un `string` et un `int`
-     * sont declares. Accorder la signature au reel evite d'elargir le contrat
-     * pour faire taire l'analyse — et dit au passage ce qui est vrai : la date
-     * n'est jamais vide, le compte jamais negatif.
+     * `string` et `int`, et non `non-falsy-string` et `int<0, max>` : depuis
+     * Larastan 3.13.1, `map()` rend des valeurs generalisees, la date que
+     * `format()` produit y devient un `string` et le compte de `withCount()` un
+     * `int`. Une `Collection` est invariante dans son type de valeur : une
+     * signature plus precise que ce que l'analyse prouve serait refusee. La
+     * date n'en est pas plus vide, ni le compte negatif.
      */
-    /** @return \Illuminate\Support\Collection<int, array{id: int, name: string, date: non-falsy-string, started_at: string, exercises_count: int<0, max>, preview_exercises: array<int, string>}> */
+    /** @return \Illuminate\Support\Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}> */
     private function seancesDeLUtilisateur(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
         /*
@@ -112,13 +112,6 @@ final class FetchCalendarEventsAction
          */
         $previews = $this->getWorkoutPreviews($workouts->modelKeys());
 
-        /*
-         * La forme est declaree ici, la ou elle est produite : `Collection` est
-         * invariante dans son type de valeur, donc un `non-falsy-string` rendu
-         * par `format()` n'est PAS accepte la ou la methode declare un `string`.
-         * L'annoter au point de production accorde les deux sans elargir le
-         * contrat.
-         */
         return $workouts->map(
             fn (Workout $workout): array => [
                 'id' => $workout->id,
@@ -131,7 +124,7 @@ final class FetchCalendarEventsAction
         );
     }
 
-    /** @return \Illuminate\Support\Collection<int, array{id: int, date: non-falsy-string, mood_score: int|null, has_note: bool}> */
+    /** @return \Illuminate\Support\Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}> */
     private function getJournals(User $user, Carbon $start, Carbon $end): \Illuminate\Support\Collection
     {
         // ⚡ Bolt: PERFORMANCE OPTIMIZATION
