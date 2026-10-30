@@ -155,6 +155,20 @@ $horsDeLAsciiAvantLaRegle = [
     'une partie locale accentuée devant un domaine internationalisé' => ['hélène.martin@bücher.example.org'],
 ];
 
+/*
+ * Un domaine internationalisé enregistré en Punycode, comme l'inscription le
+ * reçoit depuis #2001 ou comme le panneau l'enregistre. Le champ
+ * `type="email"` du profil le montre en Unicode
+ * (`adresseMessagerieCeQueMontreLeProfil()`), et celui de la demande ne le
+ * rend en Punycode que sous une adresse que la spécification HTML admet : ni
+ * une partie locale entre guillemets, ni un commentaire dans le domaine.
+ */
+$domaineEnPunycode = [
+    'un domaine en Punycode' => ['jean@xn--bcher-kva.example.org'],
+    'un domaine en Punycode sous une partie locale entre guillemets' => ['"jean"@xn--bcher-kva.example.org'],
+    'un domaine en Punycode et un commentaire' => ['jean@xn--bcher-kva.example(sud).org'],
+];
+
 dataset('adresses que la règle email admet et que Mime refuse', $admisesParLaRegleEmailRefuseesParMime);
 dataset('adresses que Mime refuse d’écrire', [...$admisesParLaRegleEmailRefuseesParMime, ...$refuseesParLaRegleEmailCommeParMime]);
 dataset('adresses que Mime écrit', $ecritesParMime);
@@ -341,11 +355,12 @@ function adresseMessagerieLienDeReinitialisationRecuPar(string $adresse): ?strin
  * blancs ASCII qui l'entourent, comme la spécification HTML nettoie la valeur
  * d'un tel champ. D'une autre, Chromium convertit le domaine en Punycode, et
  * n'envoie la conversion que si elle donne une adresse que la spécification
- * admet, donc sous une partie locale en ASCII ; sinon, l'adresse part telle
- * qu'elle est tapée. La table donne ce qu'il envoie de chaque adresse hors de
- * l'ASCII de ce fichier, mesuré sous Chromium 141, au clavier comme collée :
- * seul un domaine internationalisé sous une partie locale en ASCII change.
- * Une adresse qu'elle ne porte pas se mesure avant d'y entrer.
+ * admet, donc sous une partie locale en ASCII qui n'est pas entre guillemets,
+ * et sans commentaire ; sinon, l'adresse part telle qu'elle est tapée. La
+ * table donne ce qu'il envoie de chaque adresse hors de l'ASCII de ce fichier,
+ * mesuré sous Chromium 141, au clavier comme collée : seul un domaine
+ * internationalisé sous une adresse que la spécification admet change. Une
+ * adresse qu'elle ne porte pas se mesure avant d'y entrer.
  */
 function adresseMessagerieCeQueChromiumEnvoie(string $adresseTapee): string
 {
@@ -359,9 +374,34 @@ function adresseMessagerieCeQueChromiumEnvoie(string $adresseTapee): string
         "camille@example.org\u{3164}" => "camille@example.org\u{3164}",
         'camille.martin@bücher.example.org' => 'camille.martin@xn--bcher-kva.example.org',
         'jean@bücher.example.org' => 'jean@xn--bcher-kva.example.org',
+        '"jean"@bücher.example.org' => '"jean"@bücher.example.org',
+        'jean@bücher.example(sud).org' => 'jean@bücher.example(sud).org',
         'hélène.martin@example.org' => 'hélène.martin@example.org',
         'hélène.martin@bücher.example.org' => 'hélène.martin@bücher.example.org',
     ][$adresseTapee] ?? throw new LogicException('Ce que Chromium envoie de cette adresse n’a pas été mesuré.');
+}
+
+/**
+ * Ce que montre de l'adresse du compte le champ `type="email"` du profil sous
+ * Chromium, et que la personne recopie à « mot de passe oublié ».
+ *
+ * Chromium montre en Unicode un domaine en Punycode : il le fait d'une adresse
+ * en ASCII où « xn-- » suit le premier @, et le décode quand il le juge sûr.
+ * La table donne ce qu'il montre de chaque adresse de ce fichier qui en porte,
+ * mesuré sous Chromium 141 ; toute autre adresse se montre telle qu'elle est
+ * enregistrée.
+ */
+function adresseMessagerieCeQueMontreLeProfil(string $adresse): string
+{
+    if (! Str::isAscii($adresse) || ! Str::contains(Str::after($adresse, '@'), 'xn--')) {
+        return $adresse;
+    }
+
+    return [
+        'jean@xn--bcher-kva.example.org' => 'jean@bücher.example.org',
+        '"jean"@xn--bcher-kva.example.org' => '"jean"@bücher.example.org',
+        'jean@xn--bcher-kva.example(sud).org' => 'jean@bücher.example(sud).org',
+    ][$adresse] ?? throw new LogicException('Ce que Chromium montre de cette adresse n’a pas été mesuré.');
 }
 
 /**
@@ -834,15 +874,18 @@ it('ne promet plus le lien « mot de passe oublié » à un compte relié à un 
  * la demande (`PasswordResetLinkRequest`) et la coupe des blancs qui la
  * précède (`TrimStrings`) : ce cas le dit si l'une change sans l'autre. La
  * personne saisit l'adresse du compte telle que la page du profil la lui
- * montre, et chaque page envoie ce qu'en donne son champ `type="email"` sous
- * Chromium : le Punycode d'un domaine internationalisé, sous lequel la
- * demande ne retrouve pas un compte enregistré en Unicode, avant #2001.
+ * montre, un domaine en Punycode en Unicode, et chaque page envoie ce qu'en
+ * donne son champ `type="email"` sous Chromium : le Punycode d'un domaine
+ * internationalisé sous une adresse que la spécification HTML admet. La
+ * demande ne retrouve donc ni un compte enregistré en Unicode, avant #2001,
+ * ni un domaine en Punycode sous une partie locale entre guillemets ou avec
+ * un commentaire, que le champ envoie en Unicode.
  */
 it('ne promet le lien « mot de passe oublié » qu’à une adresse qui le reçoit et qu’il réinitialise', function (string $adresse): void {
     $compte = User::factory()->create(['email' => $adresse]);
     $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
     $promis = $compte->peutRecevoirLeLienDeReinitialisation();
-    $adresseEnvoyee = adresseMessagerieCeQueChromiumEnvoie($adresse);
+    $adresseEnvoyee = adresseMessagerieCeQueChromiumEnvoie(adresseMessagerieCeQueMontreLeProfil($adresse));
 
     post(route('password.email'), ['email' => $adresseEnvoyee]);
     $lien = adresseMessagerieLienDeReinitialisationRecuPar($adresse);
@@ -863,6 +906,7 @@ it('ne promet le lien « mot de passe oublié » qu’à une adresse qui le reç
     ...$refuseesParLaRegleEmailEcritesParMime,
     ...$ecritesParMime,
     ...$horsDeLAsciiAvantLaRegle,
+    ...$domaineEnPunycode,
 ]);
 
 /*
