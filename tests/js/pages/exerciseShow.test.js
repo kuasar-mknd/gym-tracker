@@ -85,7 +85,8 @@ vi.mock('vue', async (importOriginal) => ({
 }))
 
 import ExerciseShow from '@/Pages/Exercises/Show.vue'
-import { passesSlot, layoutSansEnTeteDePage } from './pageStubs'
+import { passesSlot, layoutSansEnTeteDePage, layoutStub } from './pageStubs'
+import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
 
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${JSON.stringify(params ?? '')}`
@@ -345,5 +346,26 @@ describe('sans l’en-tête de page, sur une tablette debout comme sur un télé
         await flushPromises()
 
         expect(wrapper.text().replace(/\s+/g, ' ')).toContain(attendu)
+    })
+})
+
+describe('le retour de l’en-tête de bureau (#2116)', () => {
+    /* `h-10 w-10` : 40 px, sous les 44 de la charte. */
+    it('offre 44 px au pouce', async () => {
+        const wrapper = mount(ExerciseShow, {
+            props: {
+                exercise: { id: 1, name: 'Développé Couché', type: 'strength', category: 'Pectoraux' },
+                progress: [],
+                history: [],
+            },
+            global: {
+                mocks: { route: globalThis.route },
+                stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+            },
+        })
+
+        await flushPromises()
+
+        expect(cibleDuRendu(wrapper.get('[aria-label="Retour aux exercices"]').element)).toBeGreaterThanOrEqual(CIBLE)
     })
 })

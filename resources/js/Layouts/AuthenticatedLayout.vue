@@ -293,7 +293,7 @@ onUnmounted(() => {
                     v-if="showBack"
                     v-press
                     :href="backRoute ? route(backRoute) : 'javascript:history.back()'"
-                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex h-10 w-10 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
                     aria-label="Retour"
                 >
                     <GlassIcon name="arrow_back" />

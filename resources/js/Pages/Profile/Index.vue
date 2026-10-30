@@ -147,11 +147,13 @@ const menuGroups = [
                         <!--
                             Le bouton que rendait `<Link as="button">`, à l'identique : la
                             déconnexion détache d'abord l'appareil du compte (#1926), ce
-                            qu'un lien Inertia ne sait pas attendre.
+                            qu'un lien Inertia ne sait pas attendre. Sous 1 024 px, c'est
+                            la seule déconnexion de l'application : il offre au pouce les
+                            44 px de la charte (`min-h-touch`), son texte centré (#2116).
                         -->
                         <button
                             type="button"
-                            class="text-accent-danger-deep hover:text-accent-danger-deep text-xs font-black tracking-widest uppercase"
+                            class="text-accent-danger-deep hover:text-accent-danger-deep min-h-touch inline-flex items-center text-xs font-black tracking-widest uppercase"
                             data-testid="logout-button"
                             @click="seDeconnecter"
                         >

@@ -131,7 +131,7 @@ const {
                                     :href="route('templates.edit', { template: template.id })"
                                     :dusk="`edit-template-${template.id}`"
                                     :aria-label="`Modifier ${template.name}`"
-                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken rounded-xl p-2 transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken flex size-11 items-center justify-center rounded-xl transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
                                     <GlassIcon name="edit" size="sm" class="block" />
                                 </Link>

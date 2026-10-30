@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 
 import { layoutStub } from './pageStubs'
 import { nomAccessible } from '../utils/nomAccessible'
+import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
 
 /**
  * La question passe par un dialogue de l'application, plus par `confirm()`.
@@ -619,7 +620,7 @@ describe('Fasting — un appareil à Toronto pendant l’heure que le passage à
     })
 })
 
-describe('Fasting — le retour de l’en-tête de bureau (#2115)', () => {
+describe('Fasting — le retour de l’en-tête de bureau (#2115, #2116)', () => {
     /*
      * L'en-tête de page (`#header`), qui ne se montre qu'à partir de 1 024 px,
      * porte un lien réduit à une icône vers les outils. Sans nom, un lecteur
@@ -638,6 +639,22 @@ describe('Fasting — le retour de l’en-tête de bureau (#2115)', () => {
         await flushPromises()
 
         expect(nomAccessible(wrapper.get('a[href="/tools.index"]').element)).toBe('Retour aux outils')
+
+        wrapper.unmount()
+    })
+
+    it('offre 44 px au pouce', async () => {
+        const wrapper = mount(FastingIndex, {
+            props: { activeFast: null, history: emptyHistory },
+            global: {
+                directives: { press: {} },
+                mocks: { route: globalThis.route },
+                stubs: { AuthenticatedLayout: layoutStub },
+            },
+        })
+        await flushPromises()
+
+        expect(cibleDuRendu(wrapper.get('a[href="/tools.index"]').element)).toBeGreaterThanOrEqual(CIBLE)
 
         wrapper.unmount()
     })

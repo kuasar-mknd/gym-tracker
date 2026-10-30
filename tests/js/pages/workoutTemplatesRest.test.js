@@ -75,6 +75,7 @@ import TemplateForm from '@/Components/Templates/TemplateForm.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import TemplateIndex from '@/Pages/Workouts/Templates/Index.vue'
 import { passesSlot, layoutStub } from './pageStubs'
+import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
 import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 // Le formulaire vit dans TemplateForm, sous la page : ses internes se lisent là.
@@ -175,6 +176,17 @@ describe('the template listing', () => {
             { id: 12, exercise: { name: 'Dips' }, workout_template_sets_count: 3 },
         ],
     }
+
+    /**
+     * « Modifier » : `p-2` autour d'une `GlassIcon size="sm"`, une ligature de
+     * 20 px, soit 36 px de large, à côté d'un « Supprimer » de 44 (#2116).
+     */
+    it('offre au pouce un « Modifier » de 44 px, comme le « Supprimer » voisin', () => {
+        const wrapper = mountIndex([pushA])
+
+        expect(cibleDuRendu(wrapper.get('[dusk="edit-template-7"]').element)).toBeGreaterThanOrEqual(CIBLE)
+        expect(cibleDuRendu(wrapper.get('[dusk="delete-template-7"]').element)).toBeGreaterThanOrEqual(CIBLE)
+    })
 
     it('offers a way in rather than an empty grid when nothing has been created', () => {
         const wrapper = mountIndex([])

@@ -24,6 +24,7 @@ const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
 import { PAGE_INDISPONIBLE, RESEAU_LENT, annoncerSansReseau, retirerLAnnonce } from '@/Utils/visitesHorsLigne'
 import { chargerSyncService, horodatageRecent, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
@@ -421,6 +422,20 @@ describe('AuthenticatedLayout — the mobile header', () => {
         const wrapper = mountLayout({ props: { showBack: true, backRoute: 'templates.index' } })
 
         expect(wrapper.get('[aria-label="Retour"]').attributes('href')).toBe('/resolved/templates.index')
+    })
+
+    /**
+     * Le retour de l'en-tête mobile, sur les seize pages qui en ont un, dont
+     * l'écran de séance, tenait en 40 px (`h-10 w-10`) : moins que les 44 de
+     * la charte, que la cloche voisine atteint déjà (#2116).
+     */
+    it('offre au pouce un retour de 44 px, comme la cloche voisine', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Séance', showBack: true } })
+
+        expect(cibleDuRendu(wrapper.get('[aria-label="Retour"]').element)).toBeGreaterThanOrEqual(CIBLE)
+        for (const cloche of notificationLinks(wrapper)) {
+            expect(cibleDuRendu(cloche.element)).toBeGreaterThanOrEqual(CIBLE)
+        }
     })
 
     it('falls back to the browser’s own history when no route was named', () => {

@@ -89,6 +89,7 @@ const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import { passesSlot, layoutStub } from './pageStubs'
+import { CIBLE, cibleDuRendu, hauteurDuRendu } from '../conventions/ciblesTactiles'
 
 import PartShow from '@/Pages/Measurements/Parts/Show.vue'
 import NotificationsIndex from '@/Pages/Notifications/Index.vue'
@@ -757,6 +758,19 @@ describe('Profile/Index — the menu', () => {
     })
 })
 
+describe('Profile/Index — la déconnexion se touche au pouce (#2116)', () => {
+    /**
+     * Sous 1 024 px, ce bouton est le seul moyen de se déconnecter : l'autre
+     * est dans le menu du compte, que seule la barre de bureau porte. Un
+     * `<button>` brut en `text-xs`, sans rembourrage : 16 px de haut.
+     */
+    it('offre 44 px de haut', () => {
+        expect(hauteurDuRendu(mountProfile().get('[data-testid="logout-button"]').element)).toBeGreaterThanOrEqual(
+            CIBLE,
+        )
+    })
+})
+
 describe('Profile/Index — the identity block', () => {
     it('builds the avatar from the initial of the name, in capitals', () => {
         const wrapper = mountProfile({ name: 'samuel', email: 'sam@example.com' })
@@ -790,6 +804,13 @@ const mountTools = () =>
 /** The tool cards, i.e. every link but the one going back to the profile. */
 const toolCards = (wrapper) =>
     wrapper.findAll('a').filter((link) => link.attributes('href') !== '/routes/profile.index')
+
+describe('Tools/Index — le retour de l’en-tête de bureau (#2116)', () => {
+    /* `h-10 w-10` : 40 px, sous les 44 de la charte. */
+    it('offre 44 px au pouce', () => {
+        expect(cibleDuRendu(mountTools().get('a[href="/routes/profile.index"]').element)).toBeGreaterThanOrEqual(CIBLE)
+    })
+})
 
 describe('Tools/Index — the tool grid', () => {
     it('sends every card to a route the application declares', () => {
