@@ -29,7 +29,7 @@ const props = defineProps({
 
     <AuthenticatedLayout page-title="Mon Profil" show-back back-route="profile.index">
         <template #header>
-            <h2 class="titre-carte">Mon Profil</h2>
+            <h1 class="titre-carte">Mon Profil</h1>
         </template>
 
         <div class="space-y-6">

@@ -46,7 +46,7 @@ const cancel = () => {
     <AuthenticatedLayout page-title="Modifier l'objectif">
         <template #header>
             <div>
-                <h2 class="titre-section">Modifier l'objectif</h2>
+                <h1 class="titre-section">Modifier l'objectif</h1>
                 <p class="text-text-muted text-sm">Ajuste ta cible, son échéance ou son intitulé.</p>
             </div>
         </template>

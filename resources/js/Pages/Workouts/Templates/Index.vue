@@ -72,23 +72,23 @@ const {
     <Head title="Mes Modèles" />
 
     <AuthenticatedLayout page-title="Mes Modèles" show-back back-route="workouts.index">
+        <!--
+            « Nouveau modèle » est une navigation : `GlassButton` la rend en un
+            seul lien par `href`, jamais un bouton posé dans un `Link` (#2117).
+        -->
         <template #header-actions>
-            <Link :href="route('templates.create')">
-                <GlassButton variant="primary" size="sm" aria-label="Nouveau modèle">
-                    <GlassIcon name="add" size="xs" />
-                </GlassButton>
-            </Link>
+            <GlassButton :href="route('templates.create')" variant="primary" size="sm" aria-label="Nouveau modèle">
+                <GlassIcon name="add" size="xs" />
+            </GlassButton>
         </template>
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Mes Modèles</h2>
-                <Link :href="route('templates.create')">
-                    <GlassButton variant="primary">
-                        <GlassIcon name="add" size="xs" class="mr-2" />
-                        Nouveau Modèle
-                    </GlassButton>
-                </Link>
+                <h1 class="titre-carte">Mes Modèles</h1>
+                <GlassButton :href="route('templates.create')" variant="primary">
+                    <GlassIcon name="add" size="xs" class="mr-2" />
+                    Nouveau modèle
+                </GlassButton>
             </div>
         </template>
 
@@ -102,9 +102,9 @@ const {
                 description="Crée tes routines pour gagner du temps."
             >
                 <template #action>
-                    <Link :href="route('templates.create')">
-                        <GlassButton variant="primary">Créer mon premier modèle</GlassButton>
-                    </Link>
+                    <GlassButton :href="route('templates.create')" variant="primary"
+                        >Créer mon premier modèle</GlassButton
+                    >
                 </template>
             </GlassEmptyState>
 
@@ -131,7 +131,7 @@ const {
                                     :href="route('templates.edit', { template: template.id })"
                                     :dusk="`edit-template-${template.id}`"
                                     :aria-label="`Modifier ${template.name}`"
-                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken rounded-xl p-2 transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                                    class="text-text-muted focus-visible:ring-accent-primary hover:text-accent-primary-deep hover:bg-surface-sunken flex size-11 shrink-0 items-center justify-center rounded-xl transition duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                                 >
                                     <GlassIcon name="edit" size="sm" class="block" />
                                 </Link>

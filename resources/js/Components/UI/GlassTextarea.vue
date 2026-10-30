@@ -5,6 +5,20 @@
  * suit le texte au lieu d'une barre de défilement dans le champ.
  */
 import { computed, nextTick, onMounted, ref, useId, watch } from 'vue'
+import { compte } from '@/Utils/nombre'
+
+/**
+ * Les caractères restants qui font parler la région annoncée, du plus serré au
+ * plus large (#2121). Le compteur visible n'est pas une région annoncée : il
+ * changeait à chaque frappe, et un lecteur d'écran mettait en file « 1 / 1000 »,
+ * « 2 / 1000 »… par-dessus l'écho de la saisie. Le champ le désigne par
+ * `aria-describedby`, qui le fait lire à la prise du focus. Seule l'approche de
+ * la limite s'annonce, une fois par palier franchi : à 50 caractères restants,
+ * à 25, à 10, puis à la limite, que `maxlength` empêche de dépasser sans rien
+ * dire. Ni l'effacement ni une saisie qui hésite autour d'un seuil ne
+ * reparlent.
+ */
+const PALIERS = [0, 10, 25, 50]
 
 const props = defineProps({
     modelValue: {
@@ -66,6 +80,37 @@ watch(
 const longueur = computed(() => (props.modelValue ?? '').length)
 const compteur = computed(() => (props.maxlength ? `${longueur.value} / ${props.maxlength}` : null))
 const depassement = computed(() => props.maxlength !== null && longueur.value > props.maxlength)
+const restant = computed(() => (props.maxlength === null ? null : props.maxlength - longueur.value))
+const palier = computed(() =>
+    restant.value === null ? null : (PALIERS.find((seuil) => restant.value <= seuil) ?? null),
+)
+
+/*
+ * Ce que la région annoncée dit : rien au montage (un texte prérempli près de
+ * la limite ne parle pas à l'ouverture de la page), puis une phrase à chaque
+ * palier franchi en approchant de la limite, et rien quand le texte s'en
+ * éloigne. Le palier le plus serré déjà annoncé, ou celui du texte au montage,
+ * se retient : la région parlait à chaque changement de palier, dans les deux
+ * sens, et disait en effaçant depuis la limite « Plus que 1 caractère. »,
+ * « Plus que 11 caractères. », « Plus que 26 caractères. », puis à chaque
+ * aller-retour entre 10 et 11 caractères restants. Il s'oublie au-delà de 50
+ * caractères restants : l'approche suivante s'annonce de nouveau.
+ */
+const annonce = ref('')
+let palierAnnonce = palier.value
+
+watch(palier, (seuil) => {
+    if (seuil === null) {
+        annonce.value = ''
+        palierAnnonce = null
+    } else if (palierAnnonce === null || seuil < palierAnnonce) {
+        annonce.value =
+            seuil === 0 ? 'Limite atteinte.' : `Plus que ${compte(restant.value, 'caractère', 'caractères')}.`
+        palierAnnonce = seuil
+    } else {
+        annonce.value = ''
+    }
+})
 const decritPar = computed(
     () =>
         [compteur.value ? `${id}-compteur` : null, props.error ? `${id}-erreur` : null].filter(Boolean).join(' ') ||
@@ -82,10 +127,10 @@ const decritPar = computed(
                 :id="`${id}-compteur`"
                 class="text-xs tabular-nums"
                 :class="depassement ? 'text-accent-danger-deep' : 'text-text-muted'"
-                aria-live="polite"
                 >{{ compteur }}</span
             >
         </div>
+        <span v-if="maxlength !== null" class="sr-only" aria-live="polite" aria-atomic="true">{{ annonce }}</span>
         <textarea
             :id="id"
             ref="champ"

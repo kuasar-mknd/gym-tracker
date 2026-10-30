@@ -65,7 +65,7 @@ const selectCommonPart = (part) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Mensurations</h2>
+                <h1 class="titre-carte">Mensurations</h1>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter

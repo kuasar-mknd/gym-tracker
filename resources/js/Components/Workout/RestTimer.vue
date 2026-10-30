@@ -294,7 +294,7 @@ watch(
                     <div class="flex shrink-0 items-center gap-2">
                         <button
                             @click="toggleTimer"
-                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="bg-accent-primary focus-visible:ring-accent-primary text-text-on-accent shadow-accent-primary/20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full shadow-lg transition hover:brightness-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
                             :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
                         >
@@ -310,7 +310,7 @@ watch(
                         <button
                             @click="close"
                             dusk="close-timer-x"
-                            class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken flex h-11 w-11 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="focus-visible:ring-accent-primary bg-surface-sunken/50 text-text-muted hover:bg-surface-sunken flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             aria-label="Fermer le minuteur"
                             title="Fermer le minuteur"
                         >

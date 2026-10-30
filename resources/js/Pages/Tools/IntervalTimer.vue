@@ -190,7 +190,7 @@ const previewFromForm = () => {
                     <div class="mt-12 flex gap-4">
                         <button
                             @click="toggleTimer"
-                            class="text-text-main bg-surface-card focus-visible:ring-accent-primary flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="text-text-main bg-surface-card focus-visible:ring-accent-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             :aria-label="status === 'running' ? 'Mettre en pause' : 'Démarrer'"
                         >
                             <GlassIcon :name="status === 'running' ? 'pause' : 'play_arrow'" size="lg" />
@@ -198,7 +198,7 @@ const previewFromForm = () => {
 
                         <button
                             @click="resetRunner"
-                            class="border-border bg-surface-card/50 text-text-muted focus-visible:ring-accent-primary flex h-16 w-16 items-center justify-center rounded-full border shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
+                            class="border-border bg-surface-card/50 text-text-muted focus-visible:ring-accent-primary flex h-16 w-16 shrink-0 items-center justify-center rounded-full border shadow-lg transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:outline-none active:scale-95"
                             aria-label="Réinitialiser"
                         >
                             <GlassIcon name="restart_alt" size="lg" />

@@ -101,9 +101,11 @@ export const listeDeLaBalise = (attributs) =>
  * Chaque élément porte aussi ses attributs, tels qu'écrits, et son contenu :
  * le texte entre son ouvrante et sa fermante, vide pour une balise qui se
  * referme seule (`<div />`, `<img>`), `null` pour une balise restée ouverte.
+ * `debut` et `fin` le situent dans le texte, de son `<` à ce qui suit le `>`
+ * de sa fermante ; `fin` vaut `null` pour une balise restée ouverte.
  *
  * @param {string} texte
- * @returns {{elements: {nom: string, liste: string, attributs: string, contenu: string|null, parent: object|null}[], ouverts: string[], orphelines: string[]}}
+ * @returns {{elements: {nom: string, liste: string, attributs: string, contenu: string|null, parent: object|null, debut: number, fin: number|null}[], ouverts: string[], orphelines: string[]}}
  */
 export const elementsDuGabarit = (texte) => {
     const elements = []
@@ -149,6 +151,7 @@ export const elementsDuGabarit = (texte) => {
             } else {
                 ouverts.push(...pile.slice(rang + 1).map((ouvert) => ouvert.nom))
                 pile[rang].contenu = texte.slice(debutsDuContenu.get(pile[rang]), position)
+                pile[rang].fin = fin + 1
                 pile.length = rang
             }
         } else {
@@ -158,12 +161,15 @@ export const elementsDuGabarit = (texte) => {
                 attributs,
                 contenu: '',
                 parent: pile.at(-1) ?? null,
+                debut: position,
+                fin: fin + 1,
             }
 
             elements.push(element)
 
             if (!attributs.trimEnd().endsWith('/') && !ELEMENTS_VIDES.has(nom)) {
                 element.contenu = null
+                element.fin = null
                 debutsDuContenu.set(element, fin + 1)
                 pile.push(element)
             }

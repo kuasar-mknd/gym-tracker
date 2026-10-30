@@ -11,9 +11,13 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  */
 const ROLES = ['titre-page', 'titre-section', 'titre-carte', 'sur-titre']
 
-/** Ce qui place ou colore, par opposition à ce qui compose. */
+/**
+ * Ce qui place ou colore, par opposition à ce qui compose. `sr-only` cache aux
+ * yeux sans rien composer : le titre de bureau que le layout pose pour les
+ * lecteurs d'écran n'a pas de typographie à choisir (#2120).
+ */
 const MISE_EN_PAGE =
-    /^(m[btlrxy]?-|p[btlrxy]?-|gap-|space-|w-|max-w-|min-w-|flex|grid|truncate|line-clamp|souris:line-clamp|shrink|grow|inline|block|hidden|sm:block|bureau:block|text-center|text-left|text-right|break-|overflow|whitespace|self-|items-|justify-|sticky|top-|z-|border|bg-|backdrop-|rounded|shadow|group|relative|absolute)/
+    /^(m[btlrxy]?-|p[btlrxy]?-|gap-|space-|w-|max-w-|min-w-|flex|grid|truncate|line-clamp|souris:line-clamp|shrink|grow|inline|block|hidden|sr-only|sm:block|bureau:block|text-center|text-left|text-right|break-|overflow|whitespace|self-|items-|justify-|sticky|top-|z-|border|bg-|backdrop-|rounded|shadow|group|relative|absolute)/
 
 const COULEUR =
     /^(text-(text|accent|surface)-|text-transparent|bg-clip-text|bg-linear|from-|via-|to-|text-gradient|drop-shadow)/

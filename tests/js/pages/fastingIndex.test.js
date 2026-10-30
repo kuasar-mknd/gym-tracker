@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
+import { layoutStub } from './pageStubs'
+import { nomAccessible } from '../utils/nomAccessible'
+import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
+
 /**
  * La question passe par un dialogue de l'application, plus par `confirm()`.
  *
@@ -613,5 +617,45 @@ describe('Fasting — un appareil à Toronto pendant l’heure que le passage à
         // Relu dans son champ, « 01:30 » désigne la première occurrence
         // (05:30Z, ECMAScript) : le jeûne partait une heure avant le geste.
         expect(await envoyerLeDebut(wrapper)).toBe('2026-11-01T06:30:00.000Z')
+    })
+})
+
+describe('Fasting — le retour de l’en-tête de bureau (#2115, #2116)', () => {
+    /*
+     * L'en-tête de page (`#header`), qui ne se montre qu'à partir de 1 024 px,
+     * porte un lien réduit à une icône vers les outils. Sans nom, un lecteur
+     * d'écran l'annonçait « lien », ou lisait son adresse ; ses jumeaux des
+     * outils et d'un exercice se nommaient déjà.
+     */
+    it('se nomme « Retour aux outils », comme ses jumeaux', async () => {
+        const wrapper = mount(FastingIndex, {
+            props: { activeFast: null, history: emptyHistory },
+            global: {
+                directives: { press: {} },
+                mocks: { route: globalThis.route },
+                stubs: { AuthenticatedLayout: layoutStub },
+            },
+        })
+        await flushPromises()
+
+        expect(nomAccessible(wrapper.get('a[href="/tools.index"]').element)).toBe('Retour aux outils')
+
+        wrapper.unmount()
+    })
+
+    it('offre 44 px au pouce', async () => {
+        const wrapper = mount(FastingIndex, {
+            props: { activeFast: null, history: emptyHistory },
+            global: {
+                directives: { press: {} },
+                mocks: { route: globalThis.route },
+                stubs: { AuthenticatedLayout: layoutStub },
+            },
+        })
+        await flushPromises()
+
+        expect(cibleDuRendu(wrapper.get('a[href="/tools.index"]').element)).toBeGreaterThanOrEqual(CIBLE)
+
+        wrapper.unmount()
     })
 })
