@@ -44,7 +44,7 @@ test('it awards count achievement', function (): void {
     ]);
 
     // Une séance faite : terminée, avec une série cochée.
-    Workout::factory()->faite()->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Workout => Workout::factory()->faite()->create(['user_id' => $user->id]));
 
     $this->service->syncAchievements($user);
 
@@ -427,7 +427,7 @@ test('it does not duplicate achievement assignments', function (): void {
         'threshold' => 1,
     ]);
 
-    Workout::factory()->faite()->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Workout => Workout::factory()->faite()->create(['user_id' => $user->id]));
 
     // First sync
     $this->service->syncAchievements($user);

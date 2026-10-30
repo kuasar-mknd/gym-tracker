@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\GoalService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 
@@ -127,7 +128,7 @@ it('n’interroge pas les séries pour un objectif de volume sans exercice', fun
  */
 it('ne recompte pas les séances déjà comptées', function (): void {
     $user = User::factory()->create();
-    Workout::factory()->count(3)->faite()->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Collection => Workout::factory()->count(3)->faite()->create(['user_id' => $user->id]));
 
     $objectif = objectifSuiviSeul($user, GoalType::Frequency);
     $service = app(GoalService::class);

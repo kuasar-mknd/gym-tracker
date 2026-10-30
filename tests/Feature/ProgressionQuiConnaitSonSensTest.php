@@ -8,6 +8,7 @@ use App\Models\Goal;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\GoalService;
+use Illuminate\Database\Eloquent\Collection;
 
 /*
  * #1501 : deux défauts distincts, tous deux visibles par l'utilisateur.
@@ -75,7 +76,7 @@ it('ne dépasse pas cent quand on va au-delà de la cible', function (): void {
 it('dé-marque un objectif dont le fait sous-jacent a reculé', function (): void {
     $user = User::factory()->create();
 
-    Workout::factory()->count(2)->faite()->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Collection => Workout::factory()->count(2)->faite()->create(['user_id' => $user->id]));
 
     $goal = Goal::factory()->create([
         'user_id' => $user->id,
@@ -96,7 +97,7 @@ it('dé-marque un objectif dont le fait sous-jacent a reculé', function (): voi
 it('laisse marqué un objectif que les faits soutiennent encore', function (): void {
     $user = User::factory()->create();
 
-    Workout::factory()->count(7)->faite()->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Collection => Workout::factory()->count(7)->faite()->create(['user_id' => $user->id]));
 
     $goal = Goal::factory()->create([
         'user_id' => $user->id,

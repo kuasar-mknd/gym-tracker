@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\GoalService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 
@@ -205,7 +206,7 @@ it('ne lit pas les mensurations sans objectif de mensuration', function (): void
         'measured_at' => now(),
     ]);
 
-    Workout::factory()->count(2)->faite()->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Collection => Workout::factory()->count(2)->faite()->create(['user_id' => $user->id]));
     $objectif = objectifASynchroniser($user, GoalType::Frequency);
 
     $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));
