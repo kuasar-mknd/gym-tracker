@@ -102,6 +102,25 @@ function compteRelieNouveauMotDePasse(): array
     return ['password' => 'Nouveau-mot-de-passe-2026!', 'password_confirmation' => 'Nouveau-mot-de-passe-2026!'];
 }
 
+/**
+ * Les adresses des routes qui envoient un compte connecté à la confirmation
+ * du mot de passe : celles dont un maillon, tel que le routeur les rassemble
+ * (alias et groupes résolus), est `RequirePassword` ou une sous-classe.
+ *
+ * @return array<int, string>
+ */
+function compteRelieRoutesQuiExigentLaConfirmation(): array
+{
+    $routeur = app(Router::class);
+
+    return collect($routeur->getRoutes()->getRoutes())
+        ->filter(static fn (Route $route): bool => collect($routeur->gatherRouteMiddleware($route))
+            ->contains(static fn (mixed $maillon): bool => is_string($maillon) && is_a(Str::before($maillon, ':'), RequirePassword::class, true)))
+        ->map(static fn (Route $route): string => $route->uri())
+        ->values()
+        ->all();
+}
+
 it('donne le chemin vers un mot de passe à un compte relié qui veut supprimer son compte', function (Closure $creer, string $chemin): void {
     $compte = $creer();
     assert($compte instanceof User);
@@ -263,21 +282,30 @@ it('garde le refus du limiteur tel quel à un compte sans fournisseur', function
 /*
  * Une quatrième requête évalue le mot de passe actuel du compte connecté : la
  * confirmation du mot de passe (`ConfirmPasswordRequest`, page
- * Auth/ConfirmPassword), que le middleware `password.confirm` exige d'une
- * route. Elle ne donne pas le chemin : son refus reste celui de `auth.password`
+ * Auth/ConfirmPassword), que le middleware `password.confirm`
+ * (`RequirePassword`, ou une sous-classe) exige d'une route. Elle ne donne
+ * pas le chemin : son refus reste celui de `auth.password`
  * et du limiteur. Aucune route ne l'exige, et personne n'y est envoyé. Le jour
  * où une route l'exigera, un compte relié s'y bloquera comme avant #2104 : ce
  * cas échoue alors, pour que la requête et la page donnent d'abord le chemin.
  */
 it('n’envoie personne à la confirmation du mot de passe, qui ne donne pas le chemin à un compte relié', function (): void {
+    expect(compteRelieRoutesQuiExigentLaConfirmation())->toBe([], 'Ces routes exigent la confirmation du mot de passe, par RequirePassword ou une sous-classe : ConfirmPasswordRequest et la page Auth/ConfirmPassword doivent d’abord donner le chemin à un compte relié (DonneLeCheminVersUnMotDePasse, CheminVersUnMotDePasse).');
+});
+
+/*
+ * Une application adapte souvent la confirmation par une sous-classe de
+ * `RequirePassword`, posée sur la route ou derrière l'alias
+ * `password.confirm` redirigé vers elle. Elle envoie le compte relié à la
+ * même page, sans le chemin : la garde la voit aussi.
+ */
+it('voit aussi une route qui exige la confirmation par une sous-classe de RequirePassword', function (): void {
+    $sousClasse = Mockery::mock(RequirePassword::class)::class;
     $routeur = app(Router::class);
+    $routeur->aliasMiddleware('password.confirm', $sousClasse);
 
-    $routesQuiLExigent = collect($routeur->getRoutes()->getRoutes())
-        ->filter(static fn (Route $route): bool => collect($routeur->gatherRouteMiddleware($route))
-            ->contains(static fn (mixed $maillon): bool => is_string($maillon) && Str::before($maillon, ':') === RequirePassword::class))
-        ->map(static fn (Route $route): string => $route->uri())
-        ->values()
-        ->all();
+    $routeur->get('/_garde-confirmation/sous-classe', static fn (): string => 'sonde')->middleware($sousClasse);
+    $routeur->get('/_garde-confirmation/alias', static fn (): string => 'sonde')->middleware('password.confirm');
 
-    expect($routesQuiLExigent)->toBe([], 'Ces routes exigent la confirmation du mot de passe : ConfirmPasswordRequest et la page Auth/ConfirmPassword doivent d’abord donner le chemin à un compte relié (DonneLeCheminVersUnMotDePasse, CheminVersUnMotDePasse).');
+    expect(compteRelieRoutesQuiExigentLaConfirmation())->toBe(['_garde-confirmation/sous-classe', '_garde-confirmation/alias']);
 });
