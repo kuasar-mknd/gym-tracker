@@ -12,9 +12,10 @@ import { computed } from 'vue'
  * que personne ne connaît. Le chemin passe par « Mot de passe oublié ? »,
  * ouvert aux seuls invités, d'où la déconnexion d'abord ; le lien part à
  * l'adresse actuelle, lue sur la page (`auth.user`). Il ne parvient pas à
- * certaines adresses qu'un compte d'avant #2075 peut porter, que la
- * messagerie n'écrit pas telles quelles, que la demande du lien refuse, ou
- * sous lesquelles elle ne retrouve pas le compte :
+ * certaines adresses qu'un compte ancien peut porter, que la messagerie
+ * n'écrit pas telles quelles, que la demande du lien refuse, ou sous
+ * lesquelles elle ne retrouve pas le compte, comme un domaine accentué
+ * enregistré avant #2001, que le navigateur lui envoie en Punycode :
  * l'encadré ne le promet pas, et renvoie à un administrateur. C'est le texte
  * des refus du serveur
  * (`DonneLeCheminVersUnMotDePasse`), avec l'adresse en plus : chaque

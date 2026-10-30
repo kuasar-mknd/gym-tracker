@@ -20,12 +20,14 @@ use App\Models\User;
  * n'est ouvert qu'aux invités, d'où la déconnexion d'abord ; le lien part à
  * l'adresse actuelle du compte.
  *
- * Le lien ne parvient pas à toute adresse qu'un compte d'avant #2075 peut
- * porter : il ne part pas à une adresse que la messagerie n'écrit pas telle
- * quelle (`User::routeNotificationForMail()`), et la demande refuse, par la
- * règle `email`, des adresses que la messagerie écrit, comme un tiret bas dans
- * le domaine, ou ne retrouve pas le compte sous l'adresse saisie, qu'elle
- * coupe de ses blancs (une espace insécable en tête). Le message ne le
+ * Le lien ne parvient pas à toute adresse qu'un compte ancien peut porter :
+ * il ne part pas à une adresse que la messagerie n'écrit pas telle quelle
+ * (`User::routeNotificationForMail()`), et la demande refuse, par la règle
+ * `email`, des adresses que la messagerie écrit, comme un tiret bas dans le
+ * domaine, ou ne retrouve pas le compte sous l'adresse qu'elle reçoit : elle
+ * la coupe de ses blancs (une espace insécable en tête), et le champ
+ * `type="email"` de Chromium lui envoie en Punycode un domaine accentué,
+ * qu'un compte d'avant #2001 porte en Unicode. Le message ne le
  * promet donc qu'à un compte qui le reçoit
  * (`User::peutRecevoirLeLienDeReinitialisation()`), et renvoie tout autre à
  * un administrateur, qui change l'adresse au panneau.

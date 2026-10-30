@@ -40,7 +40,9 @@ class ProfileController extends Controller
             // sans promettre le lien « mot de passe oublié » à une adresse qui
             // ne le reçoit pas : la messagerie ne l'écrit pas telle quelle
             // (#2075), ou la demande du lien la refuse ou n'y retrouve pas le
-            // compte (`User::peutRecevoirLeLienDeReinitialisation()`).
+            // compte, sous l'adresse coupée de ses blancs ou sous le Punycode
+            // que le navigateur envoie d'un domaine accentué
+            // (`User::peutRecevoirLeLienDeReinitialisation()`).
             'fournisseurDeConnexion' => $this->user()->fournisseurDeConnexion(),
             'peutRecevoirLeLienDeReinitialisation' => $this->user()->peutRecevoirLeLienDeReinitialisation(),
             // `auth.user` ne dit pas si l'adresse est vérifiée : le formulaire
