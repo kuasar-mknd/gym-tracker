@@ -23,6 +23,8 @@ export const TAILLES = ['sm', 'md', 'lg', 'xl']
 </script>
 
 <script setup>
+import { Link } from '@inertiajs/vue3'
+
 defineProps({
     variant: {
         type: String,
@@ -71,6 +73,19 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    /**
+     * L'adresse d'une navigation qui ressemble à un bouton : le composant se
+     * rend alors par le `Link` d'Inertia, un seul `<a>` aux classes du bouton
+     * (#2117). Posé dans un `Link`, il rendait un `<button>` dans un
+     * `<a href>`, que le HTML interdit : deux arrêts de tabulation pour un
+     * seul geste, et un lecteur d'écran qui annonçait le lien puis le bouton.
+     * Un lien n'a ni `type`, ni état désactivé, ni chargement : `type`,
+     * `disabled` et `loading` ne valent que sans adresse.
+     */
+    href: {
+        type: String,
+        default: null,
+    },
 })
 
 const sizeClasses = {
@@ -82,11 +97,13 @@ const sizeClasses = {
 </script>
 
 <template>
-    <button
+    <component
+        :is="href ? Link : 'button'"
         v-press
-        :type="type"
-        :disabled="disabled || loading"
-        :aria-busy="loading"
+        :href="href ?? undefined"
+        :type="href ? undefined : type"
+        :disabled="href ? undefined : disabled || loading"
+        :aria-busy="href ? undefined : loading"
         :aria-label="ariaLabel || $attrs['aria-label']"
         :title="ariaLabel"
         :class="[
@@ -135,5 +152,5 @@ const sizeClasses = {
         </span>
 
         <slot />
-    </button>
+    </component>
 </template>

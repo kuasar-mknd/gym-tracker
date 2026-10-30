@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
-import { Head, useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import { dateAvecJour, parseCalendarDate, todayAsCalendarDate } from '@/Utils/date'
@@ -76,10 +76,9 @@ const formatMeasuredAt = (measuredAt) => dateAvecJour(parseCalendarDate(measured
     <Head :title="nom" />
 
     <AuthenticatedLayout :page-title="nom">
+        <!-- Une navigation : un seul lien, par `href` (#2117). -->
         <template #header-actions>
-            <Link :href="route('body-parts.index')">
-                <GlassButton size="sm" variant="secondary"> Retour </GlassButton>
-            </Link>
+            <GlassButton :href="route('body-parts.index')" size="sm" variant="secondary"> Retour </GlassButton>
         </template>
 
         <template #header>

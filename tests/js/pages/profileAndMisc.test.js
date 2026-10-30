@@ -90,6 +90,7 @@ vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import { passesSlot, layoutStub } from './pageStubs'
 import { CIBLE, cibleDuRendu, hauteurDuRendu } from '../conventions/ciblesTactiles'
+import { nomAccessible } from '../utils/nomAccessible'
 
 import PartShow from '@/Pages/Measurements/Parts/Show.vue'
 import NotificationsIndex from '@/Pages/Notifications/Index.vue'
@@ -245,6 +246,21 @@ describe('Measurements/Parts/Show — the unit a new entry inherits', () => {
         await openAddForm(wrapper)
 
         expect(wrapper.vm.form.unit).toBe('cm')
+    })
+})
+
+describe('Measurements/Parts/Show — le retour de l’en-tête mobile (#2117)', () => {
+    /** Un `GlassButton` posé dans un `Link` : un bouton dans un lien, deux arrêts de tabulation. */
+    it('ramène aux mensurations par un seul lien « Retour »', () => {
+        const { wrapper } = mountPart()
+        const retours = wrapper
+            .findAll('a[href], button:not([disabled])')
+            .filter((commande) => nomAccessible(commande.element) === 'Retour')
+
+        expect(wrapper.findAll('a button')).toHaveLength(0)
+        expect(retours.map((commande) => [commande.element.tagName, commande.attributes('href')])).toEqual([
+            ['A', '/routes/body-parts.index'],
+        ])
     })
 })
 
