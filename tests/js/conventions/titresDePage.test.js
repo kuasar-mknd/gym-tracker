@@ -49,9 +49,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
  * titre, sauf quand l'expression finit par un repli écrit (`|| 'Séance'`) ou
  * que la page figure dans `TITRES_LIES_JAMAIS_VIDES`, avec sa raison.
  *
- * Ce qu'elle ne voit pas : un `<h1>` sous `v-if` compte comme rendu, et un
- * `<h1>` posé par un composant que la page monte ; ce dernier cas, aucun
- * composant ne le fait, et la garde le refuse.
+ * Un `<h1>` posé par un composant que la page monte échapperait à ce compte :
+ * la garde refuse donc un `<h1>` dans tout composant, c'est-à-dire tout
+ * fichier `.vue` qui n'est ni un layout ni une page (qui monte
+ * `AuthenticatedLayout` ou `GuestLayout`), les partiels d'une page
+ * (`Pages/Profile/Partials`) compris. Ce qu'elle ne voit pas : un `<h1>` sous
+ * `v-if` compte comme rendu.
  */
 const LAYOUT = /<AuthenticatedLayout\b/
 
@@ -221,6 +224,18 @@ export const titresDeLaPage = (source, { titreLieNonVide = false } = {}) => {
 
 const relatif = (chemin) => chemin.replace(jsRoot, 'resources/js')
 
+/**
+ * Un composant : un fichier qui n'est ni un layout ni une page. Une page monte
+ * son layout, `AuthenticatedLayout` ou `GuestLayout` ; un partiel de page,
+ * monté par elle, n'en monte aucun.
+ *
+ * @param {string} chemin
+ * @param {string} source
+ * @returns {boolean}
+ */
+const estUnComposant = (chemin, source) =>
+    !chemin.startsWith(`${jsRoot}/Layouts/`) && !/<(?:Authenticated|Guest)Layout\b/.test(source)
+
 describe('un seul titre de niveau 1 par page, à toute largeur', () => {
     it('donne à chaque page sous le layout un h1 sur téléphone et un sur bureau', () => {
         const ecarts = collectSourceFiles()
@@ -240,15 +255,33 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
         ).toEqual([])
     })
 
+    /**
+     * Le test ne lisait que `resources/js/Components` : un `<h1>` posé dans un
+     * partiel de page (`Pages/Profile/Partials`), que `Profile/Edit` monte
+     * dans son créneau par défaut, en donnait deux à la page à chaque largeur,
+     * sans qu'aucune des deux gardes ne le voie.
+     */
     it('ne laisse aucun composant poser un h1, que la garde ne compterait pas', () => {
         const poseurs = collectSourceFiles()
-            .filter((chemin) => chemin.includes('/Components/'))
+            .filter((chemin) => estUnComposant(chemin, readFileSync(chemin, 'utf8')))
             .filter((chemin) =>
                 elementsDuGabarit(gabarit(readFileSync(chemin, 'utf8'))).elements.some(({ nom }) => nom === 'h1'),
             )
             .map(relatif)
 
-        expect(poseurs).toEqual([])
+        expect(poseurs, 'un h2 : le titre de niveau 1 appartient à la page').toEqual([])
+    })
+
+    it('tient pour composant tout fichier qui n’est ni un layout ni une page', () => {
+        const page = '<template><AuthenticatedLayout page-title="Profil"><h1 /></AuthenticatedLayout></template>'
+
+        expect(estUnComposant(`${jsRoot}/Components/UI/Carte.vue`, '<template><div /></template>')).toBe(true)
+        expect(estUnComposant(`${jsRoot}/Pages/Profile/Partials/Formulaire.vue`, '<template><form /></template>')).toBe(
+            true,
+        )
+        expect(estUnComposant(`${jsRoot}/Pages/Profile/Edit.vue`, page)).toBe(false)
+        expect(estUnComposant(`${jsRoot}/Pages/Auth/Login.vue`, '<template><GuestLayout /></template>')).toBe(false)
+        expect(estUnComposant(`${jsRoot}/Layouts/AuthenticatedLayout.vue`, '<template><h1 /></template>')).toBe(false)
     })
 
     it('compte les titres comme un lecteur d’écran les trouve', () => {
