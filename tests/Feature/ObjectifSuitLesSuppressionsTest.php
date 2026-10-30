@@ -83,8 +83,9 @@ it('rouvre un objectif de fréquence quand on supprime la séance qui l’atteig
         'completed_at' => null,
     ]);
 
-    Workout::factory()->create(['user_id' => $user->id]);
-    $seconde = Workout::factory()->create(['user_id' => $user->id]);
+    // Des séances faites : seules elles comptent pour la fréquence (#2110).
+    Workout::factory()->faite()->create(['user_id' => $user->id]);
+    $seconde = Workout::factory()->faite()->create(['user_id' => $user->id]);
 
     expect($objectif->refresh()->completed_at)->not->toBeNull();
 

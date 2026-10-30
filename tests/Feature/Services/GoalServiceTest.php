@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Services\GoalService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 
 beforeEach(function (): void {
@@ -42,10 +43,10 @@ test('syncGoals updates multiple dirty goals and ignores completed ones', functi
         'target_value' => 10,
     ]);
 
-    // Simulate 3 workouts
-    Workout::factory()->count(3)->create([
+    // Trois séances faites : seules elles comptent pour la fréquence (#2110)
+    Workout::withoutEvents(static fn (): Collection => Workout::factory()->count(3)->faite()->create([
         'user_id' => $user->id,
-    ]);
+    ]));
 
     $this->service->syncGoals($user);
 

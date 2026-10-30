@@ -32,8 +32,19 @@ test('it awards count achievement', function (): void {
         'slug' => 'first-workout',
     ]);
 
-    // Perform workout
+    // Une séance démarrée, sans série, ne compte pas (#2110) : elle comptait,
+    // et ce test l'affirmait.
     Workout::factory()->create(['user_id' => $user->id]);
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseMissing('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement->id,
+    ]);
+
+    // Une séance faite : terminée, avec une série cochée.
+    Workout::withoutEvents(static fn (): Workout => Workout::factory()->faite()->create(['user_id' => $user->id]));
 
     $this->service->syncAchievements($user);
 
@@ -416,7 +427,7 @@ test('it does not duplicate achievement assignments', function (): void {
         'threshold' => 1,
     ]);
 
-    Workout::factory()->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Workout => Workout::factory()->faite()->create(['user_id' => $user->id]));
 
     // First sync
     $this->service->syncAchievements($user);
@@ -444,7 +455,8 @@ test('it awards multiple achievements at once', function (): void {
         'slug' => 'heavy-lifter',
     ]);
 
-    $workout = Workout::factory()->create(['user_id' => $user->id]);
+    // Terminée : une séance en cours ne compte pas pour `first-workout` (#2110).
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id]);
     Set::factory()->create([
         'workout_line_id' => $line->id,

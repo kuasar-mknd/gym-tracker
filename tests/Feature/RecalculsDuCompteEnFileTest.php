@@ -552,7 +552,7 @@ it('ne fait jamais tourner ensemble deux recalculs des objectifs d’un même co
 it('ne fait jamais tourner ensemble deux recalculs des succès d’un même compte, et n’en perd aucun', function (): void {
     Notification::fake();
     $user = User::factory()->create();
-    Workout::withoutEvents(static fn (): Workout => Workout::factory()->create(['user_id' => $user->id]));
+    Workout::withoutEvents(static fn (): Workout => Workout::factory()->faite()->create(['user_id' => $user->id]));
     $succes = Achievement::factory()->create(['type' => 'count', 'threshold' => 1]);
 
     config(['queue.default' => 'database']);

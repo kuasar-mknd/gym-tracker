@@ -6,6 +6,7 @@ use App\Models\Achievement;
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\AchievementService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -25,10 +26,12 @@ use Illuminate\Support\Facades\Queue;
  */
 it('ne relit pas les préférences pour chaque succès débloqué', function (): void {
     /*
-     * L'enregistrement d'une seance met deja les succes en file. Sans cette
-     * mise en attente, tout serait debloque avant l'appel qu'on mesure, et il
-     * n'aurait plus rien a faire. La mise en file ne masque pas la lecture
-     * mesuree : `via()` est appele avant la mise en file, pas dans le travail.
+     * L'enregistrement d'une seance met deja les succes en file, et la serie
+     * d'une seance faite passe par les records : les seances s'ecrivent donc
+     * sans ecouteurs (`.ai/rules/tests.md`), et rien n'est debloque avant
+     * l'appel qu'on mesure. Les notifications des succes debloques restent en
+     * file. La mise en file ne masque pas la lecture mesuree : `via()` est
+     * appele avant la mise en file, pas dans le travail.
      */
     Queue::fake();
 
@@ -42,7 +45,7 @@ it('ne relit pas les préférences pour chaque succès débloqué', function ():
         ]);
     }
 
-    Workout::factory()->count(3)->create(['user_id' => $user->id]);
+    Workout::withoutEvents(static fn (): Collection => Workout::factory()->count(3)->faite()->create(['user_id' => $user->id]));
 
     /** @var list<string> $sql */
     $sql = [];

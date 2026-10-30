@@ -7,6 +7,7 @@ namespace Tests\Feature\Models;
 use App\Models\Achievement;
 use App\Models\Exercise;
 use App\Models\User;
+use App\Models\Workout;
 use App\Notifications\AchievementUnlocked;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -28,9 +29,20 @@ class AchievementTest extends TestCase
         Notification::fake();
 
         $user = User::factory()->create();
+        $premiereSeance = Achievement::where('slug', 'first-workout')->firstOrFail();
 
-        // Perform first workout
+        // Une séance terminée sans série ne débloque plus rien (#2110) : elle le
+        // débloquait, et ce test l'affirmait.
         $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+
+        $this->assertDatabaseMissing('user_achievements', [
+            'user_id' => $user->id,
+            'achievement_id' => $premiereSeance->id,
+        ]);
+        Notification::assertNothingSentTo($user);
+
+        // Une première séance faite : terminée, avec une série cochée.
+        Workout::factory()->faite()->create(['user_id' => $user->id]);
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,
@@ -74,13 +86,13 @@ class AchievementTest extends TestCase
         $user = User::factory()->create();
 
         // Unlock first workout
-        $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+        Workout::factory()->faite()->create(['user_id' => $user->id]);
 
         // Check count
         $this->assertEquals(1, $user->achievements()->count());
 
         // Do another workout
-        $user->workouts()->create(['started_at' => now()->addDay(), 'ended_at' => now()->addDay()]);
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => now()->addDay()]);
 
         // Still 1 (assuming Next badge is at 3)
         $this->assertEquals(1, $user->achievements()->count());
