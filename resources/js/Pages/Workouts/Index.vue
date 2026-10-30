@@ -124,7 +124,7 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Mes Séances</h2>
+                <h1 class="titre-carte">Mes Séances</h1>
                 <div class="flex gap-2">
                     <!-- Des navigations : un seul lien chacune, par `href` (#2117). -->
                     <GlassButton :href="route('calendar.index')">

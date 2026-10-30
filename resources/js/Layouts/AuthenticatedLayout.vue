@@ -53,6 +53,15 @@ defineProps({
         default: 'large',
         validator: (valeur) => ['large', 'moyenne', 'etroite'].includes(valeur),
     },
+    /**
+     * La page pose elle-même son `<h1>` de bureau dans son contenu (les
+     * statistiques, la bibliothèque, les compléments), caché jusqu'à `bureau:` :
+     * le layout ne pose pas le sien (#2120).
+     */
+    titreDansLaPage: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const LARGEURS = { large: 'max-w-7xl', moyenne: 'max-w-3xl', etroite: 'max-w-2xl' }
@@ -346,6 +355,18 @@ onUnmounted(() => {
             class="px-sure-5 sm:px-sure-6 lg:px-sure-8 relative z-10 py-6"
             :class="[{ 'pt-main-safe sm:pt-main-safe': !pageTitle && !showBack }, 'pb-main-safe']"
         >
+            <!--
+                Le titre de niveau 1 du bureau (#2120). Celui de l'en-tête mobile
+                se cache à partir de 1 024 px : sans celui-ci, une page dont
+                l'en-tête de page (`#header`) ne porte pas de `<h1>` n'en avait
+                aucun sur bureau, et un lecteur d'écran n'y trouvait pas de titre
+                principal. Caché aux yeux, pour un rendu inchangé ; absent quand
+                la page porte le sien, dans `#header` ou dans son contenu
+                (`titre-dans-la-page`).
+            -->
+            <h1 v-if="pageTitle && !$slots.header && !titreDansLaPage" class="bureau:block sr-only hidden">
+                {{ pageTitle }}
+            </h1>
             <!--
                 Sous le bandeau de mise à jour, et dans le flux plutôt que
                 par-dessus : une page servie depuis sa copie hors ligne le

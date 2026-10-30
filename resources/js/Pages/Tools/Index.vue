@@ -10,7 +10,7 @@
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h2 class="titre-carte">Outils</h2>
+                <h1 class="titre-carte">Outils</h1>
             </div>
         </template>
 

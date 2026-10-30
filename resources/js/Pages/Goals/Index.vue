@@ -116,7 +116,7 @@ const goalDistribution = computed(() => {
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="titre-section">Mes Objectifs 🎯</h2>
+                    <h1 class="titre-section">Mes Objectifs 🎯</h1>
                     <p class="text-text-muted text-sm">Fixe tes cibles et dépasse tes limites.</p>
                 </div>
                 <GlassButton

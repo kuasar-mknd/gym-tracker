@@ -82,7 +82,7 @@ const formatDate = (date) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Notifications</h2>
+                <h1 class="titre-carte">Notifications</h1>
                 <GlassButton
                     v-if="aDesNonLues"
                     @click="markAllAsRead"

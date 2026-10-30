@@ -280,7 +280,7 @@ describe('Measurements/Parts/Show — le nom de la partie', () => {
         })
         await flushPromises()
 
-        expect(wrapper.find('h2').text()).toBe('Taille')
+        expect(wrapper.find('h1').text()).toBe('Taille')
         expect(wrapper.find('[title="Taille"]').exists()).toBe(true)
         expect(wrapper.findComponent({ name: 'BodyPartHistoryChart' }).props('label')).toBe('Taille')
         expect(wrapper.text()).toContain('Historique')
@@ -291,7 +291,7 @@ describe('Measurements/Parts/Show — le nom de la partie', () => {
     it('garde le nom saisi d’une partie libre', () => {
         const { wrapper } = mountPart()
 
-        expect(wrapper.find('h2').text()).toBe('Biceps')
+        expect(wrapper.find('h1').text()).toBe('Biceps')
     })
 })
 
@@ -444,7 +444,7 @@ describe('Measurements/Parts/Show — recording a measurement', () => {
 
         expect(wrapper.vm.form.part).toBe('Taille')
         expect(wrapper.vm.form.keep_part_name).toBe(true)
-        expect(wrapper.find('h2').text()).toBe('Taille (saisie libre)')
+        expect(wrapper.find('h1').text()).toBe('Taille (saisie libre)')
     })
 
     /**

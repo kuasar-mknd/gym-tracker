@@ -201,7 +201,7 @@ const formatHistoryDuration = (start, end) => {
                 >
                     <GlassIcon name="arrow_back" />
                 </Link>
-                <h2 class="titre-carte">Suivi de Jeûne</h2>
+                <h1 class="titre-carte">Suivi de Jeûne</h1>
             </div>
         </template>
 

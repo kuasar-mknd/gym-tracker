@@ -84,7 +84,7 @@ const {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Mes Modèles</h2>
+                <h1 class="titre-carte">Mes Modèles</h1>
                 <GlassButton :href="route('templates.create')" variant="primary">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Nouveau modèle
