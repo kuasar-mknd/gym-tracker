@@ -15,7 +15,8 @@ import { compte } from '@/Utils/nombre'
  * `aria-describedby`, qui le fait lire à la prise du focus. Seule l'approche de
  * la limite s'annonce, une fois par palier franchi : à 50 caractères restants,
  * à 25, à 10, puis à la limite, que `maxlength` empêche de dépasser sans rien
- * dire.
+ * dire. Ni l'effacement ni une saisie qui hésite autour d'un seuil ne
+ * reparlent.
  */
 const PALIERS = [0, 10, 25, 50]
 
@@ -87,16 +88,27 @@ const palier = computed(() =>
 /*
  * Ce que la région annoncée dit : rien au montage (un texte prérempli près de
  * la limite ne parle pas à l'ouverture de la page), puis une phrase à chaque
- * palier franchi, et de nouveau rien quand le texte s'éloigne de la limite.
+ * palier franchi en approchant de la limite, et rien quand le texte s'en
+ * éloigne. Le palier le plus serré déjà annoncé, ou celui du texte au montage,
+ * se retient : la région parlait à chaque changement de palier, dans les deux
+ * sens, et disait en effaçant depuis la limite « Plus que 1 caractère. »,
+ * « Plus que 11 caractères. », « Plus que 26 caractères. », puis à chaque
+ * aller-retour entre 10 et 11 caractères restants. Il s'oublie au-delà de 50
+ * caractères restants : l'approche suivante s'annonce de nouveau.
  */
 const annonce = ref('')
+let palierAnnonce = palier.value
 
 watch(palier, (seuil) => {
     if (seuil === null) {
         annonce.value = ''
-    } else {
+        palierAnnonce = null
+    } else if (palierAnnonce === null || seuil < palierAnnonce) {
         annonce.value =
             seuil === 0 ? 'Limite atteinte.' : `Plus que ${compte(restant.value, 'caractère', 'caractères')}.`
+        palierAnnonce = seuil
+    } else {
+        annonce.value = ''
     }
 })
 const decritPar = computed(

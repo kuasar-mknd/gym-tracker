@@ -133,6 +133,71 @@ describe('GlassTextarea — ce que le compteur annonce', () => {
         expect(regionsAnnoncees(wrapper)).toEqual([''])
     })
 
+    /** Efface le texte caractère par caractère, comme la touche retour, et relève les régions après chacun. */
+    const effacer = async (wrapper, depart, combien) => {
+        const releves = []
+
+        for (let longueur = depart.length - 1; longueur >= depart.length - combien; longueur -= 1) {
+            await wrapper.setProps({ modelValue: depart.slice(0, longueur) })
+            releves.push(regionsAnnoncees(wrapper)[0])
+        }
+
+        return releves
+    }
+
+    /*
+     * La région parlait à chaque changement de palier, dans les deux sens : en
+     * effaçant depuis la limite, elle disait « Plus que 1 caractère. », puis
+     * « Plus que 11 caractères. », puis « Plus que 26 caractères. », des nombres
+     * qui ne sont pas des paliers, alors que la règle et le commentaire du
+     * composant la disent muette quand le texte s'éloigne de la limite.
+     */
+    it('ne dit rien en effaçant depuis la limite', async () => {
+        const plein = 'x'.repeat(LIMITE - 12)
+        const wrapper = monter({ modelValue: plein, maxlength: LIMITE })
+        const approche = await saisir(wrapper, plein, 'y'.repeat(12))
+
+        expect(approche.at(-1)).toEqual(['Limite atteinte.'])
+        expect(await effacer(wrapper, plein + 'y'.repeat(12), 60)).toEqual(Array(60).fill(''))
+    })
+
+    it('ne dit rien en effaçant un texte prérempli à la limite', async () => {
+        const plein = 'x'.repeat(LIMITE)
+        const wrapper = monter({ modelValue: plein, maxlength: LIMITE })
+
+        expect(await effacer(wrapper, plein, 60)).toEqual(Array(60).fill(''))
+    })
+
+    /*
+     * Une saisie qui hésite autour d'un seuil (une lettre, la touche retour, une
+     * lettre…) ne fait pas répéter l'annonce : le palier le plus serré déjà
+     * annoncé se retient tant que le texte reste à moins de 50 caractères de la
+     * limite.
+     */
+    it('n’annonce un palier qu’une fois quand la saisie hésite autour de son seuil', async () => {
+        const depart = 'x'.repeat(LIMITE - 11)
+        const wrapper = monter({ modelValue: depart, maxlength: LIMITE })
+        const releves = []
+
+        for (const longueur of [LIMITE - 10, LIMITE - 11, LIMITE - 10, LIMITE - 11, LIMITE - 10]) {
+            await wrapper.setProps({ modelValue: 'x'.repeat(longueur) })
+            releves.push(regionsAnnoncees(wrapper)[0])
+        }
+
+        expect(releves.filter((texte) => texte !== '')).toEqual(['Plus que 10 caractères.'])
+    })
+
+    it('annonce de nouveau l’approche une fois le texte revenu loin de la limite', async () => {
+        const wrapper = monter({ modelValue: 'x'.repeat(LIMITE - 60), maxlength: LIMITE })
+
+        await wrapper.setProps({ modelValue: 'x'.repeat(LIMITE - 5) })
+        expect(regionsAnnoncees(wrapper)).toEqual(['Plus que 5 caractères.'])
+
+        await wrapper.setProps({ modelValue: 'x'.repeat(LIMITE - 300) })
+        await wrapper.setProps({ modelValue: 'x'.repeat(LIMITE - 50) })
+        expect(regionsAnnoncees(wrapper)).toEqual(['Plus que 50 caractères.'])
+    })
+
     it('n’annonce rien sans longueur maximale', async () => {
         const wrapper = monter()
 
