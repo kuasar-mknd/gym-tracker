@@ -269,7 +269,7 @@ onUnmounted(() => {
 <template>
     <Head :title="localWorkout.name || 'Séance'" />
     <AuthenticatedLayout
-        :page-title="localWorkout.name"
+        :page-title="localWorkout.name || 'Séance'"
         :show-back="true"
         back-route="workouts.index"
         largeur="moyenne"

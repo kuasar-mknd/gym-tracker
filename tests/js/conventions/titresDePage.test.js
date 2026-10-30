@@ -41,13 +41,36 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
  * La garde monte le VRAI layout avec les attributs que chaque page lui passe et
  * des marques dans ses créneaux : elle y lit ses `<h1>` et ce que chaque
  * créneau montre à 390 et à 1 280 px. Elle lit ensuite les `<h1>` de la page,
- * leur créneau et les classes qui les entourent, et additionne. Ce qu'elle ne
- * voit pas : un `<h1>` sous `v-if` compte comme rendu, un `page-title` lié
- * (`:page-title`) comme non vide, et un `<h1>` posé par un composant que la
- * page monte ; ce dernier cas, aucun composant ne le fait, et la garde le
- * refuse.
+ * leur créneau et les classes qui les entourent, et additionne.
+ *
+ * Un `page-title` lié (`:page-title`) peut valoir `null` : le nom d'une séance
+ * se vide par ses réglages (`'name' => 'nullable'`), et les deux `<h1>` du
+ * layout tiennent à `pageTitle`. La garde compte donc aussi la page sans
+ * titre, sauf quand l'expression finit par un repli écrit (`|| 'Séance'`) ou
+ * que la page figure dans `TITRES_LIES_JAMAIS_VIDES`, avec sa raison.
+ *
+ * Ce qu'elle ne voit pas : un `<h1>` sous `v-if` compte comme rendu, et un
+ * `<h1>` posé par un composant que la page monte ; ce dernier cas, aucun
+ * composant ne le fait, et la garde le refuse.
  */
 const LAYOUT = /<AuthenticatedLayout\b/
+
+/**
+ * Les pages dont le `:page-title` lié ne peut pas être vide, et pourquoi.
+ */
+const TITRES_LIES_JAMAIS_VIDES = new Map([
+    [
+        'resources/js/Pages/Exercises/Show.vue',
+        'exercises.name est NOT NULL, et requis par ExerciseStoreRequest et ExerciseUpdateRequest',
+    ],
+    [
+        'resources/js/Pages/Measurements/Parts/Show.vue',
+        'la partie est un segment non vide de l’adresse, et son libellé une chaîne que le serveur tire d’elle',
+    ],
+])
+
+/** Une expression qui finit par un repli écrit et non vide : `seance.name || 'Séance'`. */
+const REPLI_ECRIT = /\|\|\s*(?:'[^']*\S[^']*'|`[^`]*\S[^`]*`)\s*$/
 
 /** Ziggy, réduit à ce que le layout lui demande : une adresse, ou `route().current(…)`. */
 const route = (nom) => (nom === undefined ? { current: () => false } : `/${nom}`)
@@ -132,13 +155,33 @@ const afficheDansLaPage = (element, largeur) => {
 }
 
 /**
+ * Ce que la page passe au layout pour `page-title` : un titre écrit, un titre
+ * lié qui peut être vide, ou rien.
+ *
+ * @param {string} attributs
+ * @param {boolean} titreLieNonVide
+ * @returns {'ecrit'|'peutEtreVide'|'absent'}
+ */
+const titreDuLayout = (attributs, titreLieNonVide) => {
+    const lie = /(?:^|\s)(?::|v-bind:)page-title\s*=\s*"([^"]*)"/.exec(attributs)
+
+    if (lie !== null) {
+        return titreLieNonVide || REPLI_ECRIT.test(lie[1]) ? 'ecrit' : 'peutEtreVide'
+    }
+
+    return /(?:^|\s)page-title\s*=\s*"[^"]*\S[^"]*"/.test(attributs) ? 'ecrit' : 'absent'
+}
+
+/**
  * Le nombre de `<h1>` qu'une page expose à 390 et à 1 280 px, ceux du layout
- * compris.
+ * compris. Pour un titre lié qui peut être vide, le compte qui s'écarte d'un
+ * titre par largeur, sans titre d'abord.
  *
  * @param {string} source
+ * @param {{titreLieNonVide?: boolean}} [options] Le titre lié ne peut pas être vide.
  * @returns {{telephone: number, bureau: number}|null} `null` pour une page hors du layout.
  */
-export const titresDeLaPage = (source) => {
+export const titresDeLaPage = (source, { titreLieNonVide = false } = {}) => {
     const { elements } = elementsDuGabarit(gabarit(source))
     const layout = elements.find(({ nom }) => nom === 'AuthenticatedLayout')
 
@@ -151,22 +194,29 @@ export const titresDeLaPage = (source) => {
         .filter((element) => element.parent === layout)
         .map(nomDuCreneau)
         .filter((creneau) => creneau !== null && creneau !== 'default')
-    const expose = ceQueLeLayoutExpose({
-        pageTitle: attribut('page-title'),
-        showBack: attribut('show-back'),
-        titreDansLaPage: attribut('titre-dans-la-page'),
-        creneaux,
-    })
     const titres = elements.filter(({ nom }) => nom === 'h1')
+    const titre = titreDuLayout(layout.attributs, titreLieNonVide)
 
-    return Object.fromEntries(
-        Object.entries(LARGEURS).map(([nom, largeur]) => [
-            nom,
-            expose[nom].titres +
-                titres.filter((titre) => expose[nom].creneaux[creneauDe(titre)] && afficheDansLaPage(titre, largeur))
-                    .length,
-        ]),
-    )
+    const compter = (pageTitle) => {
+        const expose = ceQueLeLayoutExpose({
+            pageTitle,
+            showBack: attribut('show-back'),
+            titreDansLaPage: attribut('titre-dans-la-page'),
+            creneaux,
+        })
+
+        return Object.fromEntries(
+            Object.entries(LARGEURS).map(([nom, largeur]) => [
+                nom,
+                expose[nom].titres +
+                    titres.filter((h1) => expose[nom].creneaux[creneauDe(h1)] && afficheDansLaPage(h1, largeur)).length,
+            ]),
+        )
+    }
+
+    const comptes = titre === 'peutEtreVide' ? [compter(false), compter(true)] : [compter(titre === 'ecrit')]
+
+    return comptes.find((compte) => Object.values(compte).some((nombre) => nombre !== 1)) ?? comptes[0]
 }
 
 const relatif = (chemin) => chemin.replace(jsRoot, 'resources/js')
@@ -175,7 +225,12 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
     it('donne à chaque page sous le layout un h1 sur téléphone et un sur bureau', () => {
         const ecarts = collectSourceFiles()
             .filter((chemin) => chemin.includes('/Pages/') && LAYOUT.test(readFileSync(chemin, 'utf8')))
-            .map((chemin) => [relatif(chemin), titresDeLaPage(readFileSync(chemin, 'utf8'))])
+            .map((chemin) => [
+                relatif(chemin),
+                titresDeLaPage(readFileSync(chemin, 'utf8'), {
+                    titreLieNonVide: TITRES_LIES_JAMAIS_VIDES.has(relatif(chemin)),
+                }),
+            ])
             .filter(([, compte]) => compte.telephone !== 1 || compte.bureau !== 1)
             .map(([chemin, compte]) => `${chemin} : ${compte.telephone} sur téléphone, ${compte.bureau} sur bureau`)
 
@@ -245,6 +300,26 @@ describe('un seul titre de niveau 1 par page, à toute largeur', () => {
         expect(titresDeLaPage(pageDe('show-back', '<p>Rien</p>'))).toEqual({ telephone: 0, bureau: 0 })
         // Le layout pose seul le titre de bureau d'une page qui n'en a pas.
         expect(titresDeLaPage(pageDe('page-title="Accueil"', '<p>Bonjour</p>'))).toEqual({ telephone: 1, bureau: 1 })
+        // Une séance dont on a vidé le nom : sans repli, aucun titre à aucune largeur.
+        expect(titresDeLaPage(pageDe(':page-title="seance.name" show-back', '<p />'))).toEqual({
+            telephone: 0,
+            bureau: 0,
+        })
+        expect(titresDeLaPage(pageDe(':page-title="seance.name || \'Séance\'" show-back', '<p />'))).toEqual({
+            telephone: 1,
+            bureau: 1,
+        })
+        expect(titresDeLaPage(pageDe(':page-title="seance.name || \' \'" show-back', '<p />'))).toEqual({
+            telephone: 0,
+            bureau: 0,
+        })
+        expect(
+            titresDeLaPage(pageDe(':page-title="exercice.name" show-back', '<p />'), { titreLieNonVide: true }),
+        ).toEqual({ telephone: 1, bureau: 1 })
+        // Un titre lié vide n'enlève rien à un en-tête de page qui porte le sien, sur bureau.
+        expect(
+            titresDeLaPage(pageDe(':page-title="nom"', '<template #header><h1>{{ nom }}</h1></template><p />')),
+        ).toEqual({ telephone: 0, bureau: 1 })
         expect(titresDeLaPage('<template><div /></template>')).toBeNull()
     })
 })
