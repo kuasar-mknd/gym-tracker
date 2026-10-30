@@ -617,7 +617,7 @@ jobs:
             # deterministe et ne depend pas de ce que le runner embarque.
             - name: Semgrep (default + php + owasp-top-ten)
               run: |
-                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.182.0 \
+                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.182.1 \
                     semgrep scan --config p/default --config p/php --config p/owasp-top-ten \
                     --severity ERROR --error .
 
