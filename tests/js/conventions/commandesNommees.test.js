@@ -19,7 +19,10 @@ import { collectSourceFiles, jsRoot, visibleText } from './sourceFiles'
  * La garde lit chaque lien d'Inertia (`Link`), chaque lien HTML, chaque bouton
  * brut et chaque `GlassButton` dont le contenu se réduit à une icône
  * (`GlassIcon`, une ligature Material Symbols ou un `<svg>`, au plus le nom
- * d'une ligature comme texte visible). Ce qui la nomme :
+ * d'une ligature comme texte visible). Un `GlassButton` qui reçoit `icon`
+ * rend lui-même cette icône, décorative (`aria-hidden="true"`) : sans contenu
+ * qui nomme, `<GlassButton icon="close" />` est un bouton sans nom. Ce qui la
+ * nomme :
  * - `aria-label` ou `aria-labelledby`, écrit ou lié, non vide ;
  * - une icône qui porte elle-même un nom (`GlassIcon` avec `label`, rendue
  *   `role="img"`), ou un descendant nommé par `aria-label`, que le calcul du
@@ -44,6 +47,13 @@ import { collectSourceFiles, jsRoot, visibleText } from './sourceFiles'
 const COMMANDES = new Set(['Link', 'a', 'button', 'GlassButton'])
 
 const ICONE = /<GlassIcon\b|material-symbols|<svg\b/
+
+/** La prop `icon` de `GlassButton`, écrite ou liée. */
+const PROP_ICONE = /(?:^|\s)(?::|v-bind:)?icon\s*=/
+
+/** Une commande dont le contenu, ou la prop `icon` d'un `GlassButton`, porte une icône. */
+const porteUneIcone = ({ nom, attributs, contenu }) =>
+    ICONE.test(contenu) || (nom === 'GlassButton' && PROP_ICONE.test(attributs))
 
 const ATTRIBUT_QUI_NOMME = /(?:^|\s)(?::|v-bind:)?aria-label(?:ledby)?\s*=\s*(?:"[^"]*\S[^"]*"|'[^']*\S[^']*')/
 
@@ -143,7 +153,7 @@ const brancheNommee = (branche) =>
  */
 export const commandesSansNom = (source) =>
     elementsDuGabarit(gabarit(source))
-        .elements.filter(({ nom, contenu }) => COMMANDES.has(nom) && contenu !== null && ICONE.test(contenu))
+        .elements.filter((element) => COMMANDES.has(element.nom) && element.contenu !== null && porteUneIcone(element))
         .filter(({ contenu }) => !/<slot\b/.test(contenu))
         .filter(({ attributs, contenu }) => !ATTRIBUT_QUI_NOMME.test(attributs) && !contenuQuiNomme(contenu))
         .map(({ nom, attributs }) => `<${nom}${attributs.replace(/\s+/g, ' ')}>`.slice(0, 140))
@@ -179,6 +189,12 @@ describe('chaque commande réduite à une icône a un nom', () => {
         ).toHaveLength(1)
         expect(
             commandesSansNom(gabaritDe('<GlassButton variant="primary"><GlassIcon name="add" /></GlassButton>')),
+        ).toHaveLength(1)
+        // `GlassButton` rend lui-même l'icône de sa prop `icon`, décorative.
+        expect(commandesSansNom(gabaritDe('<GlassButton icon="close" variant="ghost" @click="x" />'))).toHaveLength(1)
+        expect(commandesSansNom(gabaritDe('<GlassButton :icon="icone"></GlassButton>'))).toHaveLength(1)
+        expect(
+            commandesSansNom(gabaritDe('<GlassButton icon="add"><span v-if="large">Ajouter</span></GlassButton>')),
         ).toHaveLength(1)
         // Un nom vide, ou posé là où il n'atteint pas la commande, ne nomme rien.
         expect(
@@ -277,6 +293,9 @@ describe('chaque commande réduite à une icône a un nom', () => {
                 ),
             ),
         ).toEqual([])
+        expect(commandesSansNom(gabaritDe('<GlassButton icon="add" aria-label="Ajouter" />'))).toEqual([])
+        expect(commandesSansNom(gabaritDe('<GlassButton icon="add">Ajouter</GlassButton>'))).toEqual([])
+        expect(commandesSansNom(gabaritDe('<GlassButton>Enregistrer</GlassButton>'))).toEqual([])
         // Un primitif reçoit son texte en créneau : ses appels sont lus à sa place.
         expect(commandesSansNom(gabaritDe('<button type="button"><GlassIcon name="add" /><slot /></button>'))).toEqual(
             [],
