@@ -617,7 +617,7 @@ jobs:
             # deterministe et ne depend pas de ce que le runner embarque.
             - name: Semgrep (default + php + owasp-top-ten)
               run: |
-                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.182.0 \
+                  docker run --rm -v "$PWD":/src -w /src semgrep/semgrep:1.182.1 \
                     semgrep scan --config p/default --config p/php --config p/owasp-top-ten \
                     --severity ERROR --error .
 
@@ -639,9 +639,9 @@ jobs:
             # choisit l'image, se monte dans la même PR, et
             # LesActionsDeLaCiSontFigeesTest refuse qu'elles s'écartent.
             - name: TruffleHog
-              uses: trufflesecurity/trufflehog@e63326d6545de8f425d93ce24078c6e68d83f70e # v3.99.3
+              uses: trufflesecurity/trufflehog@31ce31ee1abbcc7dc8eee5764c17121c3044c8b2 # v3.99.7
               with:
-                  version: '3.99.3'
+                  version: '3.99.7'
                   path: ./
                   base: ''
                   head: ''
@@ -748,9 +748,12 @@ jobs:
             - name: Checkpoint
               run: php artisan checkpoint:scan --no-interaction --skip="Composer CVE Audit,NPM CVE Audit,Supply Chain Tooling,Package Freshness (Supply Chain)"
 
-            # La fraîcheur des paquets est un signal, pas un verdict : une montée
-            # Dependabot fusionnée le jour de sa publication le déclencherait
-            # trois jours de suite. Elle s'annonce, sans bloquer.
+            # La fraîcheur des paquets est un signal, pas un verdict : un
+            # correctif de faille monte le jour de sa publication, et
+            # roave/security-advisories à son dernier instantané, ce qui la
+            # déclencherait trois jours de suite. Elle ne lit que le `time` du
+            # verrou, la date du commit étiqueté, pas celle de la publication.
+            # Elle s'annonce, sans bloquer.
             - name: Checkpoint, fraîcheur des paquets
               continue-on-error: true
               run: php artisan checkpoint:scan --no-interaction --only="Package Freshness (Supply Chain)"

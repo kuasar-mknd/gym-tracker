@@ -234,10 +234,11 @@ it('was built from the icon list it ships with', function (): void {
 
 /**
  * `--check` compare l'empreinte enregistrée à la liste sans rien télécharger.
- * L'option se lit `=== true` : depuis Laravel 13.36, Larastan 3.13.0 ne retrouve
- * plus la signature des commandes du noyau et la type comme n'importe quelle
- * option, et une comparaison stricte fausse (`=== 'true'`, `=== 1`) enverrait
- * la commande chez Google au lieu de vérifier.
+ * L'option se lit `=== true` : avec Laravel 13.36, Larastan 3.13.0 ne retrouvait
+ * plus la signature des commandes du noyau et la typait comme n'importe quelle
+ * option (3.13.1 la type de nouveau en booléen), et une comparaison stricte
+ * fausse (`=== 'true'`, `=== 1`) enverrait la commande chez Google au lieu de
+ * vérifier.
  */
 it('vérifie la fonte par --check sans rien demander à Google', function (): void {
     Http::preventStrayRequests();

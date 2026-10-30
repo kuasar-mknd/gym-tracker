@@ -74,13 +74,13 @@ function journalDuCalendrier(User $user, string $jour, ?string $contenu, ?int $h
     ]);
 }
 
-/** @return Collection<int, array{id: int, name: string, date: non-falsy-string, started_at: string, exercises_count: int<0, max>, preview_exercises: array<int, string>}> */
+/** @return Collection<int, array{id: int, name: string, date: string, started_at: string, exercises_count: int, preview_exercises: array<int, string>}> */
 function seancesDeJuin(User $user): Collection
 {
     return app(FetchCalendarEventsAction::class)->execute($user, 2026, 6)['workouts'];
 }
 
-/** @return Collection<int, array{id: int, date: non-falsy-string, mood_score: int|null, has_note: bool}> */
+/** @return Collection<int, array{id: int, date: string, mood_score: int|null, has_note: bool}> */
 function journauxDeJuin(User $user): Collection
 {
     return app(FetchCalendarEventsAction::class)->execute($user, 2026, 6)['journals'];
