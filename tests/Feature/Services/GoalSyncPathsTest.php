@@ -495,9 +495,10 @@ it('remonte la date de modification quand la progression change', function (): v
 
     $this->travel(1)->days();
 
-    // L'observateur de séance déclenche la synchronisation : la progression passe
-    // de 0 à 1, l'objectif est donc sale et part dans l'écriture groupée.
-    Workout::factory()->create(['user_id' => $user->id]);
+    // La série cochée de la séance faite déclenche la synchronisation : la
+    // progression passe de 0 à 1, l'objectif est donc sale et part dans
+    // l'écriture groupée.
+    Workout::factory()->faite()->create(['user_id' => $user->id]);
 
     $apres = $goal->refresh();
 

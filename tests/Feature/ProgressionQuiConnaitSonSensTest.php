@@ -75,7 +75,7 @@ it('ne dépasse pas cent quand on va au-delà de la cible', function (): void {
 it('dé-marque un objectif dont le fait sous-jacent a reculé', function (): void {
     $user = User::factory()->create();
 
-    Workout::factory()->count(2)->create(['user_id' => $user->id]);
+    Workout::factory()->count(2)->faite()->create(['user_id' => $user->id]);
 
     $goal = Goal::factory()->create([
         'user_id' => $user->id,
@@ -88,7 +88,7 @@ it('dé-marque un objectif dont le fait sous-jacent a reculé', function (): voi
 
     app(GoalService::class)->syncGoals($user);
 
-    // Deux séances en base, une cible à cinq : le critère n'est plus rempli.
+    // Deux séances faites, une cible à cinq : le critère n'est plus rempli.
     expect($goal->refresh()->completed_at)->toBeNull()
         ->and($goal->current_value)->toBe(2.0);
 });
@@ -96,7 +96,7 @@ it('dé-marque un objectif dont le fait sous-jacent a reculé', function (): voi
 it('laisse marqué un objectif que les faits soutiennent encore', function (): void {
     $user = User::factory()->create();
 
-    Workout::factory()->count(7)->create(['user_id' => $user->id]);
+    Workout::factory()->count(7)->faite()->create(['user_id' => $user->id]);
 
     $goal = Goal::factory()->create([
         'user_id' => $user->id,

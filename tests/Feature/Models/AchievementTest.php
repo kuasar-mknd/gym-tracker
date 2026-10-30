@@ -7,6 +7,7 @@ namespace Tests\Feature\Models;
 use App\Models\Achievement;
 use App\Models\Exercise;
 use App\Models\User;
+use App\Models\Workout;
 use App\Notifications\AchievementUnlocked;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -29,8 +30,8 @@ class AchievementTest extends TestCase
 
         $user = User::factory()->create();
 
-        // Perform first workout
-        $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+        // Une première séance faite : terminée, avec une série cochée (#2110)
+        Workout::factory()->faite()->create(['user_id' => $user->id]);
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,
@@ -74,13 +75,13 @@ class AchievementTest extends TestCase
         $user = User::factory()->create();
 
         // Unlock first workout
-        $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+        Workout::factory()->faite()->create(['user_id' => $user->id]);
 
         // Check count
         $this->assertEquals(1, $user->achievements()->count());
 
         // Do another workout
-        $user->workouts()->create(['started_at' => now()->addDay(), 'ended_at' => now()->addDay()]);
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => now()->addDay()]);
 
         // Still 1 (assuming Next badge is at 3)
         $this->assertEquals(1, $user->achievements()->count());

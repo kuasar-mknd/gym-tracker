@@ -127,7 +127,7 @@ it('n’interroge pas les séries pour un objectif de volume sans exercice', fun
  */
 it('ne recompte pas les séances déjà comptées', function (): void {
     $user = User::factory()->create();
-    Workout::factory()->count(3)->create(['user_id' => $user->id]);
+    Workout::factory()->count(3)->faite()->create(['user_id' => $user->id]);
 
     $objectif = objectifSuiviSeul($user, GoalType::Frequency);
     $service = app(GoalService::class);

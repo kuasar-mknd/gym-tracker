@@ -113,8 +113,14 @@ final class AchievementService
         $mesures = [];
 
         if ($types->contains('count')) {
-            // `toBase()` evite d'hydrater des modeles pour lire un compte.
-            $mesures['count'] = $user->workouts()->toBase()->count();
+            /*
+             * Les seules séances faites, terminées avec une série cochée, comme
+             * les objectifs de fréquence (`User::seancesFaites()`) : toutes les
+             * séances du compte comptaient, et démarrer une séance débloquait
+             * « Première Séance » avant toute série (#2110). `toBase()` évite
+             * d'hydrater des modèles pour lire un compte.
+             */
+            $mesures['count'] = $user->seancesFaites()->toBase()->count();
         }
 
         if ($types->contains('weight_record')) {

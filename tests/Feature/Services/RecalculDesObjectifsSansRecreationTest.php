@@ -65,7 +65,7 @@ function recalculEcrituresPendant(callable $geste): array
 
 it('ne fait pas réapparaître un objectif supprimé pendant le recalcul', function (): void {
     $user = User::factory()->create();
-    Workout::factory()->create(['user_id' => $user->id]);
+    Workout::factory()->faite()->create(['user_id' => $user->id]);
 
     // Créé après la séance : le recalcul qui suit le fera passer de 0 à 1.
     $objectif = recalculObjectifDeFrequence($user);
@@ -98,7 +98,7 @@ it('écrit en une seule mise à jour les valeurs propres à chaque objectif modi
 
     $user = User::factory()->create();
     $autre = User::factory()->create();
-    Workout::factory()->count(3)->create(['user_id' => $user->id]);
+    Workout::factory()->count(3)->faite()->create(['user_id' => $user->id]);
 
     $hier = now()->subDay();
     $atteint = recalculObjectifDeFrequence($user, ['target_value' => 2]);

@@ -42,7 +42,7 @@ it('ne relit pas les préférences pour chaque succès débloqué', function ():
         ]);
     }
 
-    Workout::factory()->count(3)->create(['user_id' => $user->id]);
+    Workout::factory()->count(3)->faite()->create(['user_id' => $user->id]);
 
     /** @var list<string> $sql */
     $sql = [];

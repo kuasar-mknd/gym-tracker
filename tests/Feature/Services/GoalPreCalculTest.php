@@ -98,11 +98,11 @@ function recordDeForceDObjectif(User $user, Exercise $exercise, float $valeur): 
 }
 
 /**
- * Une seance dont une serie faite porte le volume demande.
+ * Une seance faite, terminee, dont une serie cochee porte le volume demande.
  */
 function seanceDeVolumeDObjectif(User $user, Exercise $exercise, float $poids, int $repetitions): void
 {
-    $seance = Workout::factory()->create(['user_id' => $user->id]);
+    $seance = Workout::factory()->create(['user_id' => $user->id, 'ended_at' => now()]);
     $workoutLine = WorkoutLine::factory()->create([
         'workout_id' => $seance->id,
         'exercise_id' => $exercise->id,
@@ -205,7 +205,7 @@ it('ne lit pas les mensurations sans objectif de mensuration', function (): void
         'measured_at' => now(),
     ]);
 
-    Workout::factory()->count(2)->create(['user_id' => $user->id]);
+    Workout::factory()->count(2)->faite()->create(['user_id' => $user->id]);
     $objectif = objectifASynchroniser($user, GoalType::Frequency);
 
     $sql = sqlPendantLaSynchronisationDObjectifs(fn () => app(GoalService::class)->syncGoals($user));

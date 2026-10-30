@@ -42,8 +42,8 @@ test('syncGoals updates multiple dirty goals and ignores completed ones', functi
         'target_value' => 10,
     ]);
 
-    // Simulate 3 workouts
-    Workout::factory()->count(3)->create([
+    // Trois séances faites : seules elles comptent pour la fréquence (#2110)
+    Workout::factory()->count(3)->faite()->create([
         'user_id' => $user->id,
     ]);
 

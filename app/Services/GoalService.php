@@ -118,7 +118,7 @@ final class GoalService
      * Recalcule un objectif : sa valeur courante, puis son état et sa barre.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
+     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot ; sinon chaque objectif refait ses requêtes.
      */
     public function updateGoalProgress(Goal $goal, array $mesures = []): void
     {
@@ -189,7 +189,7 @@ final class GoalService
      * atteint par une série ensuite supprimée (#1953).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateWeightGoal(Goal $goal, array $mesures = []): void
     {
@@ -220,25 +220,36 @@ final class GoalService
     }
 
     /**
-     * L'avancement d'un objectif de fréquence : le nombre de séances.
+     * L'avancement d'un objectif de fréquence : le nombre de séances faites,
+     * terminées avec au moins une série cochée (`User::seancesFaites()`).
+     *
+     * Toutes les séances du compte comptaient : démarrer une séance faisait
+     * avancer l'objectif avant toute série, et trois séances terminées sans
+     * rien soulever en valaient trois (#2110). Le lot et le chemin d'un seul
+     * objectif lisent la même relation, celle des succès de séances.
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateFrequencyGoal(Goal $goal, array $mesures = []): void
     {
-        if (isset($mesures['workouts_count']) && is_int($mesures['workouts_count'])) {
-            $goal->current_value = $mesures['workouts_count'];
+        if (isset($mesures['seances_faites']) && is_int($mesures['seances_faites'])) {
+            $goal->current_value = $mesures['seances_faites'];
 
             return;
         }
 
-        // Le compte est retenu sur le modèle : plusieurs objectifs de fréquence
-        // posent la même question, elle n'est posée qu'une fois.
+        /*
+         * Le compte est retenu sur le modèle : plusieurs objectifs de fréquence
+         * posent la même question, elle n'est posée qu'une fois. Sous
+         * `seances_faites_count`, le nom que `withCount('seancesFaites')`
+         * donne au même compte : `workouts_count`, celui de
+         * `withCount('workouts')`, compterait toutes les séances.
+         */
         /** @phpstan-ignore assign.propertyReadOnly */
-        $goal->user->workouts_count ??= $goal->user->workouts()->count();
+        $goal->user->seances_faites_count ??= $goal->user->seancesFaites()->count();
 
-        $goal->current_value = $goal->user->workouts_count;
+        $goal->current_value = $goal->user->seances_faites_count;
     }
 
     /**
@@ -249,7 +260,7 @@ final class GoalService
      * comme un objectif de charge sans record (#1953).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateVolumeGoal(Goal $goal, array $mesures = []): void
     {
@@ -290,7 +301,7 @@ final class GoalService
      * mensuration à suivre, de même (#2132).
      *
      * @param  Goal  $goal  L'objectif à revoir.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateMeasurementGoal(Goal $goal, array $mesures = []): void
     {
@@ -395,7 +406,7 @@ final class GoalService
      * rouvre (#1954).
      *
      * @param  string  $partie  Le nom de la partie, tel que l'objectif le porte.
-     * @param  array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
+     * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     private function releverLaPartieDuCorps(Goal $goal, string $partie, array $mesures = []): void
     {
@@ -522,7 +533,7 @@ final class GoalService
      *
      * @param  User  $user  L'utilisateur concerné.
      * @param  \Illuminate\Support\Collection<int, Goal>  $goals  Les objectifs à servir.
-     * @return array{workouts_count?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}
+     * @return array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}
      */
     private function preCalculateMetrics(User $user, \Illuminate\Support\Collection $goals): array
     {
@@ -539,7 +550,8 @@ final class GoalService
             ->toArray();
 
         if ($types->contains(GoalType::Frequency)) {
-            $mesures['workouts_count'] = $user->workouts()->count();
+            // Les séances faites, comme le chemin d'un seul objectif (#2110).
+            $mesures['seances_faites'] = $user->seancesFaites()->count();
         }
 
         if ($types->contains(GoalType::Weight) && $idsExercices !== []) {
