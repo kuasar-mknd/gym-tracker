@@ -206,7 +206,6 @@ const formatHistoryDuration = (start, end) => {
         </template>
 
         <div class="space-y-6">
-            <!-- Active Fast Section -->
             <div v-if="activeFast" class="flex justify-center">
                 <GlassCard class="relative flex w-full max-w-md flex-col items-center overflow-hidden p-8 text-center">
                     <!-- Circular Progress -->
