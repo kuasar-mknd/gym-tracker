@@ -84,6 +84,51 @@ export const filesMatching = (pattern, options = {}) =>
         .map((path) => path.replace(jsRoot, 'resources/js'))
 
 /**
+ * Un fragment de gabarit découpé en balises et en textes, dans l'ordre. Une
+ * balise commence par `<` suivi d'une lettre ou de `/`, et finit au `>` qui
+ * n'est pas entre guillemets ; un `<` isolé (`{{ a < b }}`) reste du texte.
+ *
+ * @param {string} fragment
+ * @returns {string[]}
+ */
+const morceauxDuFragment = (fragment) => {
+    const morceaux = []
+    let position = 0
+
+    while (position < fragment.length) {
+        const debut = fragment.slice(position).search(/<[A-Za-z/]/)
+
+        if (debut === -1) {
+            morceaux.push(fragment.slice(position))
+
+            break
+        }
+
+        morceaux.push(fragment.slice(position, position + debut))
+
+        let fin = position + debut + 1
+        let guillemet = null
+
+        for (; fin < fragment.length; fin += 1) {
+            const caractere = fragment[fin]
+
+            if (guillemet !== null) {
+                guillemet = caractere === guillemet ? null : guillemet
+            } else if (caractere === '"' || caractere === "'") {
+                guillemet = caractere
+            } else if (caractere === '>') {
+                break
+            }
+        }
+
+        morceaux.push(fragment.slice(position + debut, fin + 1))
+        position = fin + 1
+    }
+
+    return morceaux
+}
+
+/**
  * Le texte qu'un fragment de gabarit met réellement sous les yeux.
  *
  * Écrite d'abord comme un `replace(/<[^>]*>/g, '')`, cette fonction a fait
@@ -101,6 +146,11 @@ export const filesMatching = (pattern, options = {}) =>
  * Les régions `aria-hidden="true"` sont écartées avec leur contenu : ce sont les
  * ligatures Material Symbols, qui ajoutaient « add » devant chaque « Ajouter ».
  *
+ * Une balise se lit jusqu'au `>` qui n'est pas entre guillemets, comme dans
+ * `elementsDuGabarit` : découpé au premier `>`, `<span v-if="n > 0" …>`
+ * laissait la fin de ses attributs (`0" class="…">`) passer pour un texte
+ * visible (#2115).
+ *
  * @param {string} fragment
  * @returns {string}
  */
@@ -108,7 +158,7 @@ export const visibleText = (fragment) => {
     let masquees = 0
     let texte = ''
 
-    for (const morceau of fragment.split(/(<[^<>]*>)/)) {
+    for (const morceau of morceauxDuFragment(fragment)) {
         if (!morceau.startsWith('<')) {
             if (masquees === 0) {
                 texte += morceau

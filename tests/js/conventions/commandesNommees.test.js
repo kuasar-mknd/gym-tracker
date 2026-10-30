@@ -26,13 +26,20 @@ import { collectSourceFiles, jsRoot, visibleText } from './sourceFiles'
  *   nom lit en parcourant le contenu ;
  * - un texte que la garde voit : `visibleText` garde un texte `sr-only` et
  *   écarte ce qui est `aria-hidden`.
+ * Ce qui ne s'affiche que sous condition ne nomme rien quand elle est fausse :
+ * le lien Notifications du layout ne contient, sans notification non lue,
+ * que son icône, sa pastille (`v-if="… > 0"`) n'étant pas rendue. La garde
+ * retire donc du contenu un élément sous `v-show`, et une suite `v-if`…
+ * `v-else-if` qui ne finit pas par `v-else` ou dont une branche ne nomme pas
+ * (`contenuToujoursRendu`).
  * Une commande dont le contenu vient d'un `<slot>` est nommée par son appel :
  * c'est un composant primitif, dont la garde lit les appels.
  *
  * Ce qu'elle ne voit pas : un nom calculé dans le script et lié par une
- * variable qui vaudrait une chaîne vide, une icône posée par `v-html`, une
- * commande rendue par un composant qu'elle ne connaît pas (`NavLink`,
- * `DropdownLink` reçoivent leur texte en créneau).
+ * variable qui vaudrait une chaîne vide, une interpolation (`{{ nom }}`) qui
+ * le vaudrait aussi, une icône posée par `v-html`, une commande rendue par un
+ * composant qu'elle ne connaît pas (`NavLink`, `DropdownLink` reçoivent leur
+ * texte en créneau).
  */
 const COMMANDES = new Set(['Link', 'a', 'button', 'GlassButton'])
 
@@ -41,6 +48,92 @@ const ICONE = /<GlassIcon\b|material-symbols|<svg\b/
 const ATTRIBUT_QUI_NOMME = /(?:^|\s)(?::|v-bind:)?aria-label(?:ledby)?\s*=\s*(?:"[^"]*\S[^"]*"|'[^']*\S[^']*')/
 
 const ICONE_NOMMEE = /<GlassIcon\b(?:[^>"']|"[^"]*"|'[^']*')*?\s(?::|v-bind:)?label\s*=\s*"[^"]*\S[^"]*"/
+
+/** La directive qui conditionne un élément : `v-if`, `v-else-if`, `v-else` ou `v-show`. */
+const CONDITION = /(?:^|\s)(v-if|v-else-if|v-else|v-show)(?=[\s=/]|$)/
+
+const conditionDe = (element) => CONDITION.exec(element.attributs)?.[1] ?? null
+
+/**
+ * Le contenu d'une commande sans ce qui peut ne pas s'afficher : un élément
+ * sous `v-show`, et une suite `v-if`, `v-else-if`… qui ne finit pas par
+ * `v-else`, ou dont une branche ne nomme pas. Une suite complète dont chaque
+ * branche nomme reste : l'une d'elles s'affiche toujours.
+ *
+ * @param {string} contenu
+ * @returns {string}
+ */
+const contenuToujoursRendu = (contenu) => {
+    const { elements } = elementsDuGabarit(contenu)
+    const retires = []
+
+    elements.forEach((element) => {
+        const condition = conditionDe(element)
+
+        if (condition === 'v-show') {
+            retires.push(element)
+        }
+
+        if (condition !== 'v-if') {
+            return
+        }
+
+        const freres = elements.filter((autre) => autre.parent === element.parent)
+        const suite = [element]
+
+        for (let rang = freres.indexOf(element) + 1; rang < freres.length; rang += 1) {
+            const suivante = conditionDe(freres[rang])
+
+            if (suivante !== 'v-else-if' && suivante !== 'v-else') {
+                break
+            }
+
+            suite.push(freres[rang])
+
+            if (suivante === 'v-else') {
+                break
+            }
+        }
+
+        const complete = conditionDe(suite.at(-1)) === 'v-else'
+
+        if (!complete || !suite.every(brancheNommee)) {
+            retires.push(...suite)
+        }
+    })
+
+    let garde = ''
+    let position = 0
+
+    for (const { debut, fin } of retires.sort((a, b) => a.debut - b.debut)) {
+        if (debut >= position) {
+            garde += contenu.slice(position, debut)
+            position = fin ?? contenu.length
+        }
+    }
+
+    return garde + contenu.slice(position)
+}
+
+/**
+ * Un contenu nomme-t-il sa commande ? Un texte autre qu'une ligature, un
+ * descendant nommé par `aria-label` ou une icône nommée, parmi ce qui
+ * s'affiche toujours.
+ *
+ * @param {string} contenu
+ * @returns {boolean}
+ */
+const contenuQuiNomme = (contenu) => {
+    const toujours = contenuToujoursRendu(contenu)
+
+    return !/^[a-z_]*$/.test(visibleText(toujours)) || ATTRIBUT_QUI_NOMME.test(toujours) || ICONE_NOMMEE.test(toujours)
+}
+
+/** Une branche d'une suite `v-if` nomme-t-elle, par elle-même ou par son contenu ? */
+const brancheNommee = (branche) =>
+    ATTRIBUT_QUI_NOMME.test(branche.attributs) ||
+    ICONE_NOMMEE.test(`<${branche.nom}${branche.attributs}>`) ||
+    contenuQuiNomme(branche.contenu ?? '')
 
 /**
  * Les commandes d'un composant monofichier réduites à une icône, sans nom.
@@ -52,11 +145,7 @@ export const commandesSansNom = (source) =>
     elementsDuGabarit(gabarit(source))
         .elements.filter(({ nom, contenu }) => COMMANDES.has(nom) && contenu !== null && ICONE.test(contenu))
         .filter(({ contenu }) => !/<slot\b/.test(contenu))
-        .filter(({ contenu }) => /^[a-z_]*$/.test(visibleText(contenu)))
-        .filter(
-            ({ attributs, contenu }) =>
-                !ATTRIBUT_QUI_NOMME.test(attributs) && !ATTRIBUT_QUI_NOMME.test(contenu) && !ICONE_NOMMEE.test(contenu),
-        )
+        .filter(({ attributs, contenu }) => !ATTRIBUT_QUI_NOMME.test(attributs) && !contenuQuiNomme(contenu))
         .map(({ nom, attributs }) => `<${nom}${attributs.replace(/\s+/g, ' ')}>`.slice(0, 140))
 
 describe('chaque commande réduite à une icône a un nom', () => {
@@ -98,6 +187,47 @@ describe('chaque commande réduite à une icône a un nom', () => {
         expect(
             commandesSansNom(gabaritDe('<Link href="/"><GlassIcon name="home" title="Accueil" /></Link>')),
         ).toHaveLength(1)
+        // Un texte sous condition ne nomme rien quand la condition est fausse : le
+        // lien Notifications sans notification non lue n'a plus que son icône.
+        expect(
+            commandesSansNom(
+                gabaritDe('<Link href="/"><GlassIcon name="notifications" /><span v-if="n > 0">{{ n }}</span></Link>'),
+            ),
+        ).toHaveLength(1)
+        expect(
+            commandesSansNom(
+                gabaritDe(
+                    '<Link href="/"><GlassIcon name="notifications" /><span v-if="n > 0" class="pastille"></span></Link>',
+                ),
+            ),
+        ).toHaveLength(1)
+        expect(
+            commandesSansNom(
+                gabaritDe('<Link href="/"><GlassIcon name="home" /><span v-show="ouvert">Accueil</span></Link>'),
+            ),
+        ).toHaveLength(1)
+        expect(
+            commandesSansNom(
+                gabaritDe(
+                    '<button type="button"><GlassIcon name="save" /><span v-if="a">Enregistrement</span><span v-else-if="b">Enregistrer</span></button>',
+                ),
+            ),
+        ).toHaveLength(1)
+        expect(
+            commandesSansNom(
+                gabaritDe(
+                    '<button type="button"><GlassIcon name="save" /><span v-if="a">Enregistrer</span><span v-else class="vide"></span></button>',
+                ),
+            ),
+        ).toHaveLength(1)
+        // Un `>` dans la valeur d'un attribut ne coupe pas la balise : le reste n'est pas un texte.
+        expect(
+            commandesSansNom(
+                gabaritDe(
+                    '<Link href="/"><span :class="a > b ? \'p\' : \'q\'"><GlassIcon name="home" /></span></Link>',
+                ),
+            ),
+        ).toHaveLength(1)
         expect(
             commandesSansNom(gabaritDe('<Link href="/" title="Accueil"><GlassIcon name="home" /></Link>')),
         ).toHaveLength(1)
@@ -125,6 +255,28 @@ describe('chaque commande réduite à une icône a un nom', () => {
         ).toEqual([])
         expect(commandesSansNom(gabaritDe('<Link href="/"><GlassIcon name="arrow_back" /> Retour</Link>'))).toEqual([])
         expect(commandesSansNom(gabaritDe('<Link href="/"><GlassIcon name="person" />{{ nom }}</Link>'))).toEqual([])
+        // Une condition complète, dont chaque branche porte un texte, nomme toujours.
+        expect(
+            commandesSansNom(
+                gabaritDe(
+                    '<button type="button"><GlassIcon name="save" /><span v-if="a">Enregistrement</span><span v-else-if="b">Envoi</span><span v-else>Enregistrer</span></button>',
+                ),
+            ),
+        ).toEqual([])
+        expect(
+            commandesSansNom(
+                gabaritDe(
+                    '<Link href="/" :aria-label="n > 0 ? `${n} non lues` : \'Notifications\'"><GlassIcon name="notifications" /><span v-if="n > 0">{{ n }}</span></Link>',
+                ),
+            ),
+        ).toEqual([])
+        expect(
+            commandesSansNom(
+                gabaritDe(
+                    '<Link href="/"><GlassIcon name="home" /><span v-if="a" class="sr-only">Accueil</span><span v-else aria-label="Accueil" /></Link>',
+                ),
+            ),
+        ).toEqual([])
         // Un primitif reçoit son texte en créneau : ses appels sont lus à sa place.
         expect(commandesSansNom(gabaritDe('<button type="button"><GlassIcon name="add" /><slot /></button>'))).toEqual(
             [],
