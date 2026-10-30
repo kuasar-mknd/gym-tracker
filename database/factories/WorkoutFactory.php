@@ -44,9 +44,15 @@ class WorkoutFactory extends Factory
     public function faite(): static
     {
         return $this
-            ->state(fn (array $attributes): array => [
-                'ended_at' => \Illuminate\Support\Carbon::parse($attributes['started_at'])->addHour(),
-            ])
+            ->state(function (array $attributes): array {
+                $debut = $attributes['started_at'] ?? null;
+
+                return [
+                    'ended_at' => ($debut instanceof \DateTimeInterface
+                        ? \Illuminate\Support\Carbon::instance($debut)
+                        : \Illuminate\Support\Carbon::parse(is_string($debut) ? $debut : 'now'))->addHour(),
+                ];
+            })
             ->afterCreating(function (\App\Models\Workout $seance): void {
                 \App\Models\Set::factory()->create([
                     'workout_line_id' => \App\Models\WorkoutLine::factory()->create(['workout_id' => $seance->id])->id,

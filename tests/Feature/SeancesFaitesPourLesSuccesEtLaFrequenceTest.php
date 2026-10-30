@@ -112,11 +112,17 @@ function seancesFaitesSuccesDuCompte(User $compte): array
  */
 function seancesFaitesSuccesAnnonces(User $compte): array
 {
-    return Notification::sent($compte, AchievementUnlocked::class)
-        ->map(fn (AchievementUnlocked $annonce): string => $annonce->achievement->slug)
-        ->sort()
-        ->values()
-        ->all();
+    $slugs = [];
+
+    foreach (Notification::sent($compte, AchievementUnlocked::class) as $annonce) {
+        if ($annonce instanceof AchievementUnlocked) {
+            $slugs[] = $annonce->achievement->slug;
+        }
+    }
+
+    sort($slugs);
+
+    return $slugs;
 }
 
 it('ne débloque rien au démarrage d’une séance, ni après sa suppression', function (): void {

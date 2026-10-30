@@ -49,6 +49,16 @@ trait HasFitnessData
      * `withCount('seancesFaites')` rend le même compte sous
      * `seances_faites_count`, l'attribut que `GoalService` retient.
      *
+     * Mesuré sur 8.4.11 et 9.7.2 (deltas de `Handler_read%`, 100 puis 400
+     * séances terminées de quatre lignes de quatre séries, trois comptes
+     * voisins de 400 séances) : une semi-jointure qui parcourt les séances du
+     * compte par `(user_id, started_at)` et s'arrête, pour chacune, à sa
+     * première série cochée. Quand c'est la première série de la première
+     * ligne, 2N + 1 lectures d'index et N lectures suivantes ; au pire, une
+     * séance terminée sans aucune série cochée lit toutes ses lignes et
+     * toutes ses séries (5N + 1 et 21N). Le compte de toutes les séances en
+     * faisait 1 et N.
+     *
      * @return HasMany<Workout, $this>
      */
     public function seancesFaites(): HasMany
