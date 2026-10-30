@@ -262,7 +262,7 @@ it('tient le compteur d’essais : plein, il bloque l’adresse mais pas le nom,
     $this->patch('/profile', $mauvais)->assertSessionHasErrors('current_password');
 
     $this->patch('/profile', ['name' => 'Titulaire', 'email' => 'autre@example.org', 'current_password' => 'password'])
-        ->assertInvalid(['current_password' => 'essayer de nouveau dans']);
+        ->assertInvalid(['current_password' => 'Réessaie dans']);
 
     $this->patch('/profile', ['name' => 'Encore Libre', 'email' => 'titulaire@example.org'])->assertSessionHasNoErrors();
     expect($compte->refresh()->name)->toBe('Encore Libre');
@@ -295,7 +295,7 @@ it('bloque le changement d’adresse quand les essais du mot de passe sont épui
     // Même avec le bon mot de passe, l'adresse attend que le compteur se vide.
     $this->from('/profile/edit')
         ->patch('/profile', ['name' => 'Titulaire', 'email' => 'autre@example.org', 'current_password' => 'password'])
-        ->assertInvalid(['current_password' => 'essayer de nouveau dans']);
+        ->assertInvalid(['current_password' => 'Réessaie dans']);
 
     changementDAdresseRienNAChange($compte, 'titulaire@example.org');
 });
@@ -314,7 +314,7 @@ it('bloque le changement de mot de passe quand les essais de l’adresse sont é
 
     $this->from('/profile/edit')
         ->put('/password', ['current_password' => 'password', ...changementDAdresseNouveauMotDePasse()])
-        ->assertInvalid(['current_password' => 'essayer de nouveau dans']);
+        ->assertInvalid(['current_password' => 'Réessaie dans']);
 
     expect($compte->refresh()->password)->toBe($empreinteDuMotDePasse);
     changementDAdresseRienNAChange($compte, 'titulaire@example.org');
@@ -342,7 +342,7 @@ it('dit à un compte relié à un fournisseur comment obtenir un mot de passe', 
     $this->get('/profile/edit')->assertInertia(
         fn (Inertia\Testing\AssertableInertia $page): Inertia\Testing\AssertableInertia => $page
             ->where('fournisseurDeConnexion', 'Google')
-            ->where('laMessagerieSaitEcrireSonAdresse', true),
+            ->where('peutRecevoirLeLienDeReinitialisation', true),
     );
 });
 

@@ -14,7 +14,7 @@ const props = defineProps({
         type: String,
         default: null,
     },
-    laMessagerieSaitEcrireSonAdresse: {
+    peutRecevoirLeLienDeReinitialisation: {
         type: Boolean,
         default: true,
     },
@@ -39,14 +39,17 @@ const props = defineProps({
                     :must-verify-email="mustVerifyEmail"
                     :status="status"
                     :fournisseur-de-connexion="fournisseurDeConnexion"
-                    :la-messagerie-sait-ecrire-son-adresse="laMessagerieSaitEcrireSonAdresse"
+                    :peut-recevoir-le-lien-de-reinitialisation="peutRecevoirLeLienDeReinitialisation"
                     :adresse-verifiee="adresseVerifiee"
                 />
             </GlassCard>
 
             <!-- Password -->
             <GlassCard class="stagger-2 animate-slide-up">
-                <UpdatePasswordForm />
+                <UpdatePasswordForm
+                    :fournisseur-de-connexion="fournisseurDeConnexion"
+                    :peut-recevoir-le-lien-de-reinitialisation="peutRecevoirLeLienDeReinitialisation"
+                />
             </GlassCard>
 
             <!-- Notification Preferences -->
@@ -59,7 +62,10 @@ const props = defineProps({
 
             <!-- Delete Account -->
             <GlassCard class="stagger-4 animate-slide-up">
-                <DeleteUserForm />
+                <DeleteUserForm
+                    :fournisseur-de-connexion="fournisseurDeConnexion"
+                    :peut-recevoir-le-lien-de-reinitialisation="peutRecevoirLeLienDeReinitialisation"
+                />
             </GlassCard>
         </div>
     </AuthenticatedLayout>

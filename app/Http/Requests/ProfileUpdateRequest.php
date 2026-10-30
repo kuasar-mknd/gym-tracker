@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\DonneLeCheminVersUnMotDePasse;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
@@ -41,6 +42,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ProfileUpdateRequest extends FormRequest
 {
+    use DonneLeCheminVersUnMotDePasse;
+
     /**
      * La requête ne vérifie que la connexion ; l'autorisation vit dans le
      * contrôleur, et son refus est rendu en 404 par bootstrap/app.php.
@@ -90,26 +93,25 @@ class ProfileUpdateRequest extends FormRequest
 
     /**
      * Un compte relié à un fournisseur de connexion peut ne connaître aucun
-     * mot de passe : le message lui donne le chemin plutôt qu'un refus sec.
-     * « Mot de passe oublié ? » n'est ouvert qu'aux invités, d'où la
-     * déconnexion d'abord ; le lien part à l'adresse actuelle du compte, quand
-     * la messagerie l'écrit (`cheminVersUnMotDePasse()`).
+     * mot de passe : le message lui donne le chemin plutôt qu'un refus sec
+     * (`DonneLeCheminVersUnMotDePasse`, que partagent le changement du mot de
+     * passe et la suppression du compte). Le champ vide reçoit le seul chemin :
+     * il n'apparaît qu'avec une nouvelle adresse, et le chemin dit déjà qu'un
+     * mot de passe est demandé.
      *
      * @return array<string, string>
      */
     #[\Override]
     public function messages(): array
     {
-        $fournisseur = $this->compte()?->fournisseurDeConnexion();
+        $chemin = $this->cheminVersUnMotDePasse();
 
-        if ($fournisseur === null) {
+        if ($chemin === null) {
             return [
                 'current_password.required' => 'Ton mot de passe actuel est demandé pour changer d’adresse.',
                 'current_password.current_password' => 'Ce mot de passe ne correspond pas à ton compte.',
             ];
         }
-
-        $chemin = "Ton compte est relié à {$fournisseur}. Si tu n’as jamais choisi de mot de passe, ".$this->cheminVersUnMotDePasse();
 
         return [
             'current_password.required' => $chemin,
@@ -159,13 +161,8 @@ class ProfileUpdateRequest extends FormRequest
             return;
         }
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
-
         throw ValidationException::withMessages([
-            'current_password' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'current_password' => $this->refusDuLimiteur(RateLimiter::availableIn($this->throttleKey())),
         ]);
     }
 
@@ -175,25 +172,6 @@ class ProfileUpdateRequest extends FormRequest
         if ($this->changeLAdresse()) {
             RateLimiter::clear($this->throttleKey());
         }
-    }
-
-    /**
-     * Comment un compte relié à un fournisseur obtient un mot de passe.
-     *
-     * Le lien « mot de passe oublié » ne part pas à une adresse que la
-     * messagerie n'écrit pas telle quelle, qu'un compte d'avant #2075 peut
-     * porter (`User::routeNotificationForMail()`), et la demande refuse même
-     * des points consécutifs ou un point final (règle `email`) : le message ne
-     * le promet pas, et renvoie à un administrateur, qui change l'adresse au
-     * panneau.
-     */
-    private function cheminVersUnMotDePasse(): string
-    {
-        if ($this->compte()?->laMessagerieSaitEcrireSonAdresse() === false) {
-            return 'aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle. Demande à un administrateur de l’application de la changer.';
-        }
-
-        return 'choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle.';
     }
 
     private function compte(): ?User

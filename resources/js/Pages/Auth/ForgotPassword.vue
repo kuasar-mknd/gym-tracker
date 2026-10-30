@@ -31,10 +31,22 @@ const submit = () => {
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit" class="space-y-4">
+        <!--
+            `novalidate` : le navigateur juge un champ `type="email"` selon la
+            spécification HTML, plus étroite que la règle `email` du serveur, et
+            n'envoyait pas une adresse que la messagerie écrit et que le profil
+            promet au lien (partie locale entre guillemets, domaine littéral),
+            ni un champ vide. Le serveur juge l'adresse, et son refus s'affiche
+            sous le champ (#2104). Le champ reste `type="email"`, comme ceux de
+            l'inscription et de la connexion : Chromium y convertit en Punycode
+            un domaine internationalisé, la forme sous laquelle l'inscription
+            l'enregistre depuis #2001 et sous laquelle le serveur le retrouve.
+        -->
+        <form novalidate @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.email"
                 type="email"
+                autocomplete="email"
                 label="Email"
                 placeholder="ton@email.com"
                 :error="form.errors.email"

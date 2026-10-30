@@ -72,6 +72,7 @@ vi.mock('@/composables/useAbonnementPush', () => ({ retransmettreLAbonnementPush
 
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
+import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
 import ProfileEdit from '@/Pages/Profile/Edit.vue'
 import { layoutStub, passesSlot } from './pageStubs'
 import { ECRITURE_NON_CONFIRMEE, ENVOI_DU_LIEN_NON_CONFIRME } from '@/Utils/visitesHorsLigne'
@@ -319,7 +320,78 @@ describe('UpdatePasswordForm', () => {
             const wrapper = mountPartial(UpdatePasswordForm)
 
             expect(identifiant(wrapper).element.value).toBe('nouvelle@example.org')
-            expect(Object.keys(wrapper.props())).toEqual([])
+            // Ses deux props disent le fournisseur et si le lien parvient (#2104), aucune l'adresse.
+            expect(Object.keys(wrapper.props())).toEqual([
+                'fournisseurDeConnexion',
+                'peutRecevoirLeLienDeReinitialisation',
+            ])
+            expect(Object.values(wrapper.props())).not.toContain('nouvelle@example.org')
+        })
+    })
+
+    /*
+     * Un compte ouvert par Google, GitHub ou Apple reçoit un mot de passe tiré
+     * au hasard, que personne ne connaît : le formulaire qui demande le mot de
+     * passe actuel lui dit comment en obtenir un, avec le même encadré que le
+     * formulaire de l'adresse (#2104).
+     */
+    describe('compte relié à un fournisseur de connexion', () => {
+        const aide = (wrapper) => wrapper.find('[data-testid="profile-social-password-help"]')
+
+        beforeEach(() => {
+            currentPage = { props: { auth: { user: { id: 7, email: 'camille@example.org' } } } }
+        })
+
+        it('dit comment obtenir un mot de passe, sous le mot de passe actuel', () => {
+            const wrapper = mountPartial(UpdatePasswordForm, { fournisseurDeConnexion: 'Google' })
+
+            expect(aide(wrapper).text()).toBe(
+                'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de connexion. Le lien part à ton adresse actuelle, camille@example.org.',
+            )
+            // Dans le formulaire, sous le champ qu'il explique et avant le nouveau mot de passe.
+            const encadre = aide(wrapper).element
+            const champ = wrapper.find('input[autocomplete="current-password"]').element
+            const nouveauMotDePasse = wrapper.find('input[autocomplete="new-password"]').element
+            expect(champ.compareDocumentPosition(encadre) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+            expect(encadre.compareDocumentPosition(nouveauMotDePasse) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+            expect(wrapper.find('form').element.contains(encadre)).toBe(true)
+        })
+
+        it('ne promet aucun lien quand la messagerie n’écrit pas l’adresse, et renvoie à un administrateur', () => {
+            currentPage = { props: { auth: { user: { id: 7, email: 'camille(salle)@example.org' } } } }
+            const wrapper = mountPartial(UpdatePasswordForm, {
+                fournisseurDeConnexion: 'Apple',
+                peutRecevoirLeLienDeReinitialisation: false,
+            })
+
+            expect(aide(wrapper).text()).toBe(
+                'Ton compte est relié à Apple. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+            )
+        })
+
+        it('ne montre rien à un compte sans fournisseur', () => {
+            const wrapper = mountPartial(UpdatePasswordForm)
+
+            expect(aide(wrapper).exists()).toBe(false)
+        })
+
+        /*
+         * Le refus du serveur porte le même chemin sous le champ
+         * (`UpdatePasswordRequest`) : l'encadré s'efface plutôt que de le
+         * répéter. Un refus qui ne vise que le nouveau mot de passe le laisse.
+         */
+        it('s’efface quand le refus du mot de passe actuel dit la même chose sous le champ', async () => {
+            const wrapper = mountPartial(UpdatePasswordForm, { fournisseurDeConnexion: 'Google' })
+
+            wrapper.vm.form.errors = { password: 'Le mot de passe doit contenir au moins 8 caractères.' }
+            await nextTick()
+            expect(aide(wrapper).exists()).toBe(true)
+
+            wrapper.vm.form.errors = {
+                current_password: 'Le mot de passe est incorrect. Ton compte est relié à Google. …',
+            }
+            await nextTick()
+            expect(aide(wrapper).exists()).toBe(false)
         })
     })
 })
@@ -658,14 +730,14 @@ describe('UpdateProfileInformationForm', () => {
 
         const wrapper = mountPartial(UpdateProfileInformationForm, {
             fournisseurDeConnexion: 'Google',
-            laMessagerieSaitEcrireSonAdresse: false,
+            peutRecevoirLeLienDeReinitialisation: false,
         })
 
         await typeInto(wrapper, 'Email', 'nouveau@example.com')
         const aide = wrapper.find('[data-testid="profile-social-password-help"]').text()
 
         expect(aide).toBe(
-            'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
+            'Ton compte est relié à Google. Si tu n’as jamais choisi de mot de passe, aucun lien ne peut t’en donner un : nous n’en envoyons pas à ton adresse actuelle, camille(salle)@example.org. Demande à un administrateur de l’application de la changer.',
         )
         expect(aide).not.toContain('Mot de passe oublié')
     })
@@ -772,7 +844,7 @@ describe('Profile/Edit', () => {
         expect(wrapper.findComponent(UpdateProfileInformationForm).props('fournisseurDeConnexion')).toBe('GitHub')
     })
 
-    it('dit au formulaire d’adresse si la messagerie écrit l’adresse actuelle', () => {
+    it('dit au formulaire d’adresse si le lien « mot de passe oublié » parvient à l’adresse actuelle', () => {
         const mountEdit = (props) =>
             mount(ProfileEdit, {
                 props: { mustVerifyEmail: true, fournisseurDeConnexion: 'GitHub', ...props },
@@ -783,12 +855,50 @@ describe('Profile/Edit', () => {
                 },
             })
         const formProp = (wrapper) =>
-            wrapper.findComponent(UpdateProfileInformationForm).props('laMessagerieSaitEcrireSonAdresse')
+            wrapper.findComponent(UpdateProfileInformationForm).props('peutRecevoirLeLienDeReinitialisation')
 
         // Sans elle, le formulaire promettait le lien « mot de passe oublié »
         // à une adresse qui ne le reçoit pas.
-        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: false }))).toBe(false)
-        expect(formProp(mountEdit({ laMessagerieSaitEcrireSonAdresse: true }))).toBe(true)
+        expect(formProp(mountEdit({ peutRecevoirLeLienDeReinitialisation: false }))).toBe(false)
+        expect(formProp(mountEdit({ peutRecevoirLeLienDeReinitialisation: true }))).toBe(true)
         expect(formProp(mountEdit({}))).toBe(true)
+    })
+
+    /*
+     * Le changement du mot de passe et la suppression du compte demandent eux
+     * aussi le mot de passe actuel : sans ces props, ils ne pouvaient pas dire
+     * à un compte relié à un fournisseur comment en obtenir un (#2104).
+     */
+    it('transmet le fournisseur, et si le lien lui parvient, aux formulaires du mot de passe et de la suppression', () => {
+        const mountEdit = (props) =>
+            mount(ProfileEdit, {
+                props: { mustVerifyEmail: true, ...props },
+                shallow: true,
+                global: {
+                    mocks: { route: globalThis.route },
+                    stubs: { AuthenticatedLayout: layoutStub, GlassCard: passesSlot },
+                },
+            })
+        const propsDe = (wrapper, formulaire) => {
+            const { fournisseurDeConnexion, peutRecevoirLeLienDeReinitialisation } = wrapper
+                .findComponent(formulaire)
+                .props()
+
+            return { fournisseurDeConnexion, peutRecevoirLeLienDeReinitialisation }
+        }
+
+        const relie = mountEdit({ fournisseurDeConnexion: 'Google', peutRecevoirLeLienDeReinitialisation: false })
+        const seul = mountEdit({})
+
+        for (const formulaire of [UpdatePasswordForm, DeleteUserForm]) {
+            expect(propsDe(relie, formulaire)).toEqual({
+                fournisseurDeConnexion: 'Google',
+                peutRecevoirLeLienDeReinitialisation: false,
+            })
+            expect(propsDe(seul, formulaire)).toEqual({
+                fournisseurDeConnexion: null,
+                peutRecevoirLeLienDeReinitialisation: true,
+            })
+        }
     })
 })

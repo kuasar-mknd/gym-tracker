@@ -3,6 +3,7 @@ import GlassButton from '@/Components/UI/GlassButton.vue'
 import GlassInput from '@/Components/UI/GlassInput.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import IdentifiantDuCompte from '@/Components/Form/IdentifiantDuCompte.vue'
+import CheminVersUnMotDePasse from '@/Components/Form/CheminVersUnMotDePasse.vue'
 import { Link, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { ENVOI_DU_LIEN_NON_CONFIRME, direSansReseau } from '@/Utils/visitesHorsLigne'
@@ -16,12 +17,13 @@ const props = defineProps({
         default: null,
     },
     /**
-     * La messagerie écrit-elle l'adresse actuelle telle quelle ? Non pour
-     * certaines adresses d'avant #2075 (`User::laMessagerieSaitEcrireSonAdresse()`) :
-     * aucun lien ne leur parvient, « Mot de passe oublié ? » compris, et
-     * l'aide à un compte relié à un fournisseur ne le promet pas.
+     * Le lien « mot de passe oublié » parvient-il à l'adresse actuelle ? Non
+     * pour certaines adresses d'avant #2075
+     * (`User::peutRecevoirLeLienDeReinitialisation()`) : la messagerie ne les
+     * écrit pas telles quelles, ou la demande du lien les refuse, et l'aide à
+     * un compte relié à un fournisseur ne le promet pas.
      */
-    laMessagerieSaitEcrireSonAdresse: {
+    peutRecevoirLeLienDeReinitialisation: {
         type: Boolean,
         default: true,
     },
@@ -164,22 +166,11 @@ const submit = () => {
                     >
                 </p>
 
-                <div
-                    v-if="props.fournisseurDeConnexion && !form.errors.current_password"
-                    class="bg-accent-info/10 rounded-xl p-3"
-                    data-testid="profile-social-password-help"
-                >
-                    <p v-if="props.laMessagerieSaitEcrireSonAdresse" class="text-accent-info-deep text-sm">
-                        Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de
-                        passe, choisis-en un d’abord : déconnecte-toi, puis « Mot de passe oublié ? » sur la page de
-                        connexion. Le lien part à ton adresse actuelle, {{ user.email }}.
-                    </p>
-                    <p v-else class="text-accent-info-deep text-sm">
-                        Ton compte est relié à {{ props.fournisseurDeConnexion }}. Si tu n’as jamais choisi de mot de
-                        passe, aucun lien ne peut t’en donner un : notre messagerie ne sait pas écrire à ton adresse
-                        actuelle, {{ user.email }}. Demande à un administrateur de l’application de la changer.
-                    </p>
-                </div>
+                <CheminVersUnMotDePasse
+                    v-if="!form.errors.current_password"
+                    :fournisseur-de-connexion="props.fournisseurDeConnexion"
+                    :peut-recevoir-le-lien-de-reinitialisation="props.peutRecevoirLeLienDeReinitialisation"
+                />
             </template>
 
             <div

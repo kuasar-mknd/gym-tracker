@@ -121,10 +121,36 @@ const inputNamed = (wrapper, name) => wrapper.find(`input[name="${name}"]`)
  * @returns {Promise<void>}
  */
 const typeInto = async (wrapper, labelText, value) => {
-    // A required field's label carries a trailing asterisk for sighted users.
-    const label = wrapper.findAll('label').find((candidate) => candidate.text().replace(/\s*\*$/, '') === labelText)
+    await champSousLeLibelle(wrapper, labelText).setValue(value)
+}
 
-    await wrapper.find(`#${label.attributes('for')}`).setValue(value)
+/**
+ * Le champ que nomme un libellé visible, trouvé par le `for` du libellé.
+ *
+ * @param {import('@vue/test-utils').VueWrapper} wrapper
+ * @param {string} libelle - Le libellé, sans l'astérisque d'un champ requis.
+ * @returns {import('@vue/test-utils').DOMWrapper<Element>}
+ */
+const champSousLeLibelle = (wrapper, libelle) => {
+    // A required field's label carries a trailing asterisk for sighted users.
+    const label = wrapper.findAll('label').find((candidate) => candidate.text().replace(/\s*\*$/, '') === libelle)
+
+    return wrapper.find(`#${label.attributes('for')}`)
+}
+
+/**
+ * Le refus que le champ annonce, lu par son `aria-describedby` : la phrase
+ * qu'un lecteur d'écran lit avec le champ, sans l'icône qui la précède, ou
+ * null s'il n'en annonce aucun.
+ *
+ * @param {import('@vue/test-utils').VueWrapper} wrapper
+ * @param {import('@vue/test-utils').DOMWrapper<Element>} champ
+ * @returns {string|null}
+ */
+const refusAnnonceSous = (wrapper, champ) => {
+    const refus = champ.attributes('aria-describedby')
+
+    return refus === undefined ? null : wrapper.find(`#${refus} p`).text()
 }
 
 /**
@@ -492,7 +518,124 @@ it('sait encore voir une ressource d’une autre origine dans une page montée',
     ])
 })
 
+/**
+ * Des adresses que la messagerie écrit et que la règle `email` du serveur
+ * admet, et que le navigateur refuse dans un champ `type="email"`, jugé selon
+ * la spécification HTML : une partie locale entre guillemets, un domaine
+ * littéral. Le lien « mot de passe oublié » leur part et les réinitialise
+ * (`AdresseQueLaMessagerieSaitEcrireTest`), et le profil le leur promet
+ * (#2104) : la demande et la réinitialisation portent `novalidate`, et
+ * laissent le serveur en juger.
+ */
+const ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE = ['"camille.martin"@example.org', 'camille@[192.0.2.1]']
+
+/**
+ * Ce que Chromium envoie d'un domaine internationalisé tapé dans un champ
+ * `type="email"` (« camille.martin@bücher.example.org ») : sa forme Punycode,
+ * sous laquelle l'inscription enregistre le compte depuis #2001, et sous
+ * laquelle la demande le retrouve (mesuré sous Chromium 141). jsdom ne
+ * convertit rien : le type du champ en tient lieu de preuve, et la page
+ * envoie telle quelle la valeur que le champ lui donne.
+ */
+const DOMAINE_INTERNATIONALISE_EN_PUNYCODE = 'camille.martin@xn--bcher-kva.example.org'
+
+/**
+ * Le champ d'adresse des deux pages : `type="email"`, comme l'inscription et
+ * la connexion (#2104). Un champ texte envoyait en Unicode le domaine
+ * internationalisé tapé, sous lequel la demande ne retrouve pas un compte
+ * enregistré en Punycode : la page disait le lien parti, et rien ne partait.
+ * Les attributs du champ texte (`inputmode`, `autocapitalize`, `spellcheck`)
+ * n'ont plus d'objet.
+ */
+const CHAMP_D_ADRESSE = { type: 'email' }
+
+/** Les attributs qui faisaient d'un champ texte un champ d'adresse. */
+const ATTRIBUTS_DU_CHAMP_TEXTE = ['inputmode', 'autocapitalize', 'spellcheck']
+
 describe('ForgotPassword', () => {
+    /** Le champ de l'adresse, trouvé par son libellé. */
+    const champDeLAdresse = (wrapper) => champSousLeLibelle(wrapper, 'Email')
+
+    it('tape l’adresse dans un champ type="email", sous un formulaire qui laisse le serveur en juger', () => {
+        const wrapper = mountPage(ForgotPassword)
+        const champ = champDeLAdresse(wrapper)
+
+        expect(champ.attributes()).toMatchObject({ ...CHAMP_D_ADRESSE, autocomplete: 'email' })
+        expect(ATTRIBUTS_DU_CHAMP_TEXTE.filter((attribut) => champ.attributes(attribut) !== undefined)).toEqual([])
+        expect(champ.attributes('required')).toBeDefined()
+        expect(wrapper.find('form').attributes('novalidate')).toBeDefined()
+    })
+
+    /*
+     * `requestSubmit()` juge le formulaire comme un clic sur « Envoyer le
+     * lien » : sans `novalidate`, jsdom refuse d'envoyer un champ
+     * `type="email"` qu'il juge mal formé, comme le navigateur.
+     */
+    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
+        'envoie la demande pour %s, que le navigateur refuserait et que le serveur admet',
+        async (adresse) => {
+            const wrapper = mountPage(ForgotPassword)
+
+            await typeInto(wrapper, 'Email', adresse)
+
+            expect(champDeLAdresse(wrapper).element.validity.typeMismatch).toBe(true)
+
+            wrapper.find('form').element.requestSubmit()
+            await nextTick()
+
+            expect(formPost).toHaveBeenCalledTimes(1)
+            expect(submitted()[0]).toBe('/password.email')
+            expect(openRequest.email).toBe(adresse)
+        },
+    )
+
+    it('envoie telle quelle la forme Punycode que Chromium donne d’un domaine internationalisé', async () => {
+        const wrapper = mountPage(ForgotPassword)
+
+        await typeInto(wrapper, 'Email', DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+
+        expect(champDeLAdresse(wrapper).element.validity.valid).toBe(true)
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(openRequest.email).toBe(DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+    })
+
+    /*
+     * `novalidate` : le navigateur n'arrête pas un champ vide, qu'il dirait
+     * dans sa langue et hors de la page ; le serveur le refuse, et la page
+     * affiche ce refus sous le champ.
+     */
+    it('envoie aussi une demande vide, que le serveur juge', async () => {
+        const wrapper = mountPage(ForgotPassword)
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(openRequest.email).toBe('')
+    })
+
+    /*
+     * Le navigateur ne signale plus une adresse vide ou mal formée
+     * (`novalidate`) : le refus du serveur, sous le champ, est le seul retour.
+     */
+    it('affiche sous le champ, et l’y annonce, le refus de l’adresse par le serveur', async () => {
+        const wrapper = mountPage(ForgotPassword)
+
+        expect(refusAnnonceSous(wrapper, champDeLAdresse(wrapper))).toBeNull()
+
+        wrapper.vm.form.errors = { email: 'Le champ adresse e-mail doit être une adresse e-mail valide.' }
+        await nextTick()
+
+        expect(champDeLAdresse(wrapper).attributes('aria-invalid')).toBe('true')
+        expect(refusAnnonceSous(wrapper, champDeLAdresse(wrapper))).toBe(
+            'Le champ adresse e-mail doit être une adresse e-mail valide.',
+        )
+    })
+
     it('poste l’email vers la route d’envoi du lien', async () => {
         const wrapper = mountPage(ForgotPassword)
 
@@ -564,7 +707,9 @@ describe('ResetPassword', () => {
 
         expect(libelles).toEqual(['Email', 'Nouveau mot de passe', 'Confirmer le mot de passe'])
         expect(champ.element.value).toBe('')
-        expect(champ.attributes('type')).toBe('email')
+        expect(champ.attributes()).toMatchObject({ ...CHAMP_D_ADRESSE, autocomplete: 'username' })
+        expect(ATTRIBUTS_DU_CHAMP_TEXTE.filter((attribut) => champ.attributes(attribut) !== undefined)).toEqual([])
+        expect(wrapper.find('form').attributes('novalidate')).toBeDefined()
         expect(champ.attributes('name')).toBe('email')
         expect(champ.attributes('required')).toBeDefined()
         expect(champ.attributes('readonly')).toBeUndefined()
@@ -574,6 +719,80 @@ describe('ResetPassword', () => {
         expect(
             wrapper.findAll('input[type="password"]').map((motDePasse) => motDePasse.attributes('autocomplete')),
         ).toEqual(['new-password', 'new-password'])
+    })
+
+    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
+        'envoie le nouveau mot de passe de %s, que le navigateur refuserait et que le serveur admet',
+        async (adresse) => {
+            const wrapper = mountPage(ResetPassword, { props })
+
+            await champDuCompte(wrapper).setValue(adresse)
+            await typeInto(wrapper, 'Nouveau mot de passe', 'Nouveau-mot-de-passe-2026!')
+            await typeInto(wrapper, 'Confirmer le mot de passe', 'Nouveau-mot-de-passe-2026!')
+
+            expect(champDuCompte(wrapper).element.validity.typeMismatch).toBe(true)
+
+            wrapper.find('form').element.requestSubmit()
+            await nextTick()
+
+            expect(formPost).toHaveBeenCalledTimes(1)
+            expect(submitted()[0]).toBe('/password.store')
+            expect(openRequest.email).toBe(adresse)
+        },
+    )
+
+    it('envoie le nouveau mot de passe sous la forme Punycode que Chromium donne d’un domaine internationalisé', async () => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        await champDuCompte(wrapper).setValue(DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+        await typeInto(wrapper, 'Nouveau mot de passe', 'Nouveau-mot-de-passe-2026!')
+        await typeInto(wrapper, 'Confirmer le mot de passe', 'Nouveau-mot-de-passe-2026!')
+
+        expect(champDuCompte(wrapper).element.validity.valid).toBe(true)
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(openRequest.email).toBe(DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+    })
+
+    /*
+     * `novalidate`, comme « mot de passe oublié » : le serveur juge chaque
+     * champ vide, et la page affiche chaque refus sous son champ.
+     */
+    it('envoie aussi un formulaire vide, que le serveur juge', async () => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect([openRequest.email, openRequest.password, openRequest.password_confirmation]).toEqual(['', '', ''])
+    })
+
+    /*
+     * Le navigateur n'impose plus `required` aux deux mots de passe
+     * (`novalidate`) : chaque refus du serveur s'affiche sous son propre
+     * champ, et seulement sous lui.
+     */
+    it.each([
+        ['Nouveau mot de passe', 'password', 'Le champ mot de passe est obligatoire.'],
+        [
+            'Confirmer le mot de passe',
+            'password_confirmation',
+            'Le champ confirmation du mot de passe est obligatoire.',
+        ],
+    ])('affiche sous « %s », et l’y annonce, le refus de son champ par le serveur', async (libelle, cle, refus) => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        wrapper.vm.form.errors = { [cle]: refus }
+        await nextTick()
+
+        expect(champSousLeLibelle(wrapper, libelle).attributes('aria-invalid')).toBe('true')
+        expect(refusAnnonceSous(wrapper, champSousLeLibelle(wrapper, libelle))).toBe(refus)
+        expect(wrapper.findAll('input[aria-invalid="true"]')).toHaveLength(1)
+        expect(wrapper.find('[data-testid="lien-refuse"]').exists()).toBe(false)
     })
 
     it('envoie l’adresse saisie avec le formulaire, à côté de la valeur chiffrée, qui ne s’affiche pas', async () => {
