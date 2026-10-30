@@ -75,6 +75,8 @@ import TemplateForm from '@/Components/Templates/TemplateForm.vue'
 import AjoutDExerciceModal from '@/Components/Workout/AjoutDExerciceModal.vue'
 import TemplateIndex from '@/Pages/Workouts/Templates/Index.vue'
 import { passesSlot, layoutStub } from './pageStubs'
+import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
+import { nomAccessible } from '../utils/nomAccessible'
 import { ID_DE_LA_RAISON_DES_ECRITURES } from '@/composables/useCopieHorsLigne'
 
 // Le formulaire vit dans TemplateForm, sous la page : ses internes se lisent là.
@@ -175,6 +177,55 @@ describe('the template listing', () => {
             { id: 12, exercise: { name: 'Dips' }, workout_template_sets_count: 3 },
         ],
     }
+
+    /**
+     * « Modifier » : `p-2` autour d'une `GlassIcon size="sm"`, une ligature de
+     * 20 px, soit 36 px de large, à côté d'un « Supprimer » de 44 (#2116).
+     */
+    it('offre au pouce un « Modifier » de 44 px, comme le « Supprimer » voisin', () => {
+        const wrapper = mountIndex([pushA])
+
+        expect(cibleDuRendu(wrapper.get('[dusk="edit-template-7"]').element)).toBeGreaterThanOrEqual(CIBLE)
+        expect(cibleDuRendu(wrapper.get('[dusk="delete-template-7"]').element)).toBeGreaterThanOrEqual(CIBLE)
+    })
+
+    /**
+     * Les commandes que la tabulation atteint, et leur nom : un lien qui a une
+     * adresse, un bouton qui n'est pas désactivé.
+     */
+    const arrets = (wrapper, nom) =>
+        wrapper
+            .findAll('a[href], button:not([disabled])')
+            .filter((commande) => nom.test(nomAccessible(commande.element)))
+
+    /**
+     * « Nouveau modèle » se posait dans un `Link` autour d'un `GlassButton` :
+     * un bouton dans un lien, deux arrêts de tabulation par geste, et
+     * « Nouveau Modèle » sur bureau à côté de « Nouveau modèle » sur
+     * téléphone (#2117). L'en-tête mobile et celui du bureau en ont chacun un.
+     */
+    it('ouvre la création par un seul lien « Nouveau modèle » dans chaque en-tête', () => {
+        const wrapper = mountIndex([pushA])
+        const nouveaux = arrets(wrapper, /nouveau mod[eè]le/i)
+
+        expect(wrapper.findAll('a button')).toHaveLength(0)
+        expect(nouveaux.map((commande) => [commande.element.tagName, nomAccessible(commande.element)])).toEqual([
+            ['A', 'Nouveau modèle'],
+            ['A', 'Nouveau modèle'],
+        ])
+        expect(nouveaux.every((commande) => commande.attributes('href') === globalThis.route('templates.create'))).toBe(
+            true,
+        )
+    })
+
+    it('ouvre le premier modèle par un seul lien depuis l’état vide', () => {
+        const wrapper = mountIndex([])
+        const premier = arrets(wrapper, /premier modèle/i)
+
+        expect(wrapper.findAll('a button')).toHaveLength(0)
+        expect(premier.map((commande) => commande.element.tagName)).toEqual(['A'])
+        expect(premier[0].attributes('href')).toBe(globalThis.route('templates.create'))
+    })
 
     it('offers a way in rather than an empty grid when nothing has been created', () => {
         const wrapper = mountIndex([])

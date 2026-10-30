@@ -134,7 +134,7 @@ const latestBodyFat = computed(() => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Poids</h2>
+                <h1 class="titre-carte">Poids</h1>
                 <GlassButton :variant="showAddForm ? 'secondary' : 'primary'" @click="showAddForm = !showAddForm">
                     <GlassIcon :name="showAddForm ? 'close' : 'add'" size="xs" class="mr-2" />
                     {{ showAddForm ? 'Annuler' : 'Ajouter' }}

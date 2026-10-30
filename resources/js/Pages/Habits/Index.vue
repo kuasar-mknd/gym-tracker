@@ -122,7 +122,7 @@ const getProgressPercent = (habit) => {
 
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Habitudes</h2>
+                <h1 class="titre-carte">Habitudes</h1>
                 <GlassButton variant="primary" @click="openAddForm">
                     <GlassIcon name="add" size="xs" class="mr-2" />
                     Ajouter

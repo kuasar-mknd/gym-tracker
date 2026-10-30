@@ -1,78 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 
+import { CIBLE, cible, icone, mesurable, seRetrecit } from './ciblesTactiles'
+import { elementsDuGabarit, gabarit } from './gabarits'
 import { collectSourceFiles, jsRoot, visibleText } from './sourceFiles'
-
-/** La charte fixe `--spacing-touch` à 44 px, comme les WCAG 2.5.8 (AAA). */
-const CIBLE = 44
-
-/** Le carré d'une ligature Material Symbols à sa taille par défaut. */
-const ICONE = 24
-
-/**
- * Le carré que l'icône occupe réellement.
- *
- * Une ligature vaut 24 px ; un `<svg>`, lui, DÉCLARE sa taille — `h-4` en fait
- * un carré de 16. Supposer 24 pour les deux surestimait la cible de chaque
- * bouton SVG, donc sous-estimait le défaut : treize d'entre eux étaient sous la
- * cible, et ce garde n'en voyait aucun.
- */
-const icone = (corps) => {
-    const svg = /<svg[^>]*class="([^"]*)"/.exec(corps)
-
-    if (svg === null) {
-        return ICONE
-    }
-
-    const tailles = svg[1]
-        .split(/\s+/)
-        .map((mot) => /^(?:size|[hw])-(\d+(?:\.5)?|px)$/.exec(mot))
-        .filter(Boolean)
-        .map((trouve) => echelle(trouve[1]))
-
-    return tailles.length > 0 ? Math.min(...tailles) : ICONE
-}
-
-const echelle = (valeur) => (valeur === 'px' ? 1 : Number(valeur) * 4)
-
-/**
- * La plus petite dimension que ce bouton offre au doigt, en pixels.
- *
- * Trois façons de l'obtenir cohabitent dans le dépôt, et elles s'additionnent :
- * une taille explicite (`size-11`), un rembourrage autour de l'icône (`p-2`), et
- * un pseudo-élément qui déborde sans pousser les voisins
- * (`before:-inset-2.5`) — cette dernière étant la seule utilisable quand le
- * bouton doit rester visuellement petit.
- */
-const cible = (classes, tailleIcone) => {
-    const mots = classes.split(/\s+/)
-
-    const explicite = mots
-        .map((mot) => /^(?:size|[hw])-(\d+(?:\.5)?|px)$/.exec(mot))
-        .filter(Boolean)
-        .map((trouve) => echelle(trouve[1]))
-
-    const rembourrage = mots
-        .map((mot) => /^p-(\d+(?:\.5)?|px)$/.exec(mot))
-        .filter(Boolean)
-        .map((trouve) => echelle(trouve[1]))
-
-    const debord = mots
-        .map((mot) => /^before:-inset-(\d+(?:\.5)?|px)$/.exec(mot))
-        .filter(Boolean)
-        .map((trouve) => echelle(trouve[1]))
-
-    if (mots.includes('min-h-touch') || mots.includes('min-w-touch')) {
-        return CIBLE
-    }
-
-    const boite = explicite.length > 0 ? Math.min(...explicite) : tailleIcone + 2 * Math.max(0, ...rembourrage, 0)
-
-    return boite + 2 * Math.max(0, ...debord, 0)
-}
 
 /** `<button>` dont le contenu visible se réduit à une ligature. */
 const boutonsIcone = /<button\b(?<attributs>(?:[^>"']|"[^"]*"|'[^']*')*?)>(?<corps>.*?)<\/button>/gs
+
+/** Les trois formes d'icône du dépôt : `GlassIcon`, la ligature Material Symbols écrite à la main, le `<svg>` en ligne. */
+const ICONE_DANS = /<GlassIcon\b|material-symbols|<svg\b/
 
 /**
  * `GlassButton`, `GlassIconButton` et `GlassInput` DÉFINISSENT l'affordance ;
@@ -90,17 +27,9 @@ const primitives = [
     'Components/UI/GlassTile.vue',
 ]
 
-/**
- * Les boutons dont la taille ne se lit PAS dans leurs classes.
- *
- * Deux formes, toutes deux légitimes : celui qui remplit son parent (`h-full`,
- * la trappe de suppression d'une ligne qu'on fait glisser) et celui qui porte un
- * utilitaire nommé de la charte (`glass-nav-fab`, qui vaut 72 px). Les compter à
- * 24 px serait faux ; les compter comme conformes serait un mensonge. Ils sont
- * écartés de la mesure, et cette note est là pour que personne ne croie la
- * mesure exhaustive.
- */
-const mesurable = (classes) => !/\b(?:[hw]-full|size-full|inset-0|flex-1|glass-[a-z-]+)\b/.test(classes)
+const relatif = (fichier) => fichier.replace(jsRoot, 'resources/js')
+
+const ligne = (source, index) => source.slice(0, index).split('\n').length
 
 describe('les cibles tactiles', () => {
     /**
@@ -120,20 +49,19 @@ describe('les cibles tactiles', () => {
             return (
                 [...source.matchAll(boutonsIcone)]
                     /*
-                     * Deux formes portent une icône dans ce dépôt : la ligature
-                     * Material Symbols et le `<svg>` en ligne. Ne filtrer que sur
-                     * la première laissait la seconde entièrement hors de portée —
-                     * c'est ainsi que treize boutons, dont neuf suppressions et un
-                     * à 20 px sur l'écran de séance, tenaient sous un garde vert.
+                     * Trois formes portent une icône dans ce dépôt : `GlassIcon`,
+                     * la ligature Material Symbols et le `<svg>` en ligne. Ne
+                     * filtrer que sur la ligature laissait le `<svg>` hors de
+                     * portée — c'est ainsi que treize boutons, dont neuf
+                     * suppressions et un à 20 px sur l'écran de séance, tenaient
+                     * sous un garde vert — et `GlassIcon` aussi, jusqu'à #2116.
                      */
                     .filter(
                         (trouve) =>
-                            (trouve.groups.corps.includes('material-symbols') ||
-                                trouve.groups.corps.includes('<svg')) &&
-                            /^[a-z_]*$/.test(visibleText(trouve.groups.corps)),
+                            ICONE_DANS.test(trouve.groups.corps) && /^[a-z_]*$/.test(visibleText(trouve.groups.corps)),
                     )
                     .map((trouve) => ({
-                        ou: `${fichier.replace(jsRoot, 'resources/js')}:${source.slice(0, trouve.index).split('\n').length}`,
+                        ou: `${relatif(fichier)}:${ligne(source, trouve.index)}`,
                         classes: [...trouve.groups.attributs.matchAll(/(?:class|:class)="([^"]*)"/gs)]
                             .map((c) => c[1])
                             .join(' '),
@@ -148,4 +76,155 @@ describe('les cibles tactiles', () => {
 
         expect(trop_petits).toEqual([])
     })
+
+    /**
+     * Un lien réduit à une icône se touche comme un bouton (#2116). La garde ne
+     * lisait que des `<button>` : le retour de l'en-tête mobile, sur les seize
+     * pages qui en ont un, ceux de l'en-tête de bureau des outils, d'un exercice
+     * et du jeûne tenaient en 40 px (`h-10 w-10`), et « Modifier » d'un modèle
+     * en 36 (`p-2` autour d'une `GlassIcon size="sm"`, 20 px de large).
+     */
+    it('donne 44 px à tout lien réduit à une icône', () => {
+        const trop_petits = collectSourceFiles({ skip: primitives }).flatMap((fichier) => {
+            const source = readFileSync(fichier, 'utf8')
+
+            return liensTropPetits(source).map(
+                ({ attributs, px }) => `${relatif(fichier)}:${ligne(source, source.indexOf(attributs))} — ${px} px`,
+            )
+        })
+
+        expect(trop_petits, 'size-11, ou min-h-touch min-w-touch, ou un before:-inset-* qui déborde').toEqual([])
+    })
+
+    it('mesure les liens comme les boutons, icône comprise', () => {
+        const gabaritDe = (corps) => `<script setup></script>\n<template>\n<div>${corps}</div>\n</template>`
+        const mesure = (corps) => liensTropPetits(gabaritDe(corps)).map(({ px }) => px)
+
+        // Les défauts de #2116.
+        expect(
+            mesure('<Link href="/" class="flex h-10 w-10" aria-label="Retour"><GlassIcon name="arrow_back" /></Link>'),
+        ).toEqual([40])
+        expect(
+            mesure(
+                '<Link href="/" class="rounded-xl p-2" aria-label="Modifier"><GlassIcon name="edit" size="sm" /></Link>',
+            ),
+        ).toEqual([36])
+        expect(mesure('<a href="/" aria-label="Aide"><svg class="size-4" /></a>')).toEqual([16])
+        // `min-h-touch` ne donne que la hauteur, `min-w-touch` que la largeur :
+        // l'autre dimension reste celle de l'icône et de son rembourrage.
+        expect(
+            mesure(
+                '<Link href="/" class="min-h-touch" aria-label="Modifier"><GlassIcon name="edit" size="sm" /></Link>',
+            ),
+        ).toEqual([20])
+        expect(
+            mesure('<Link href="/" class="flex min-w-touch" aria-label="Aide"><GlassIcon name="help" /></Link>'),
+        ).toEqual([24])
+        expect(cible('min-h-touch px-2', 20)).toBe(36)
+        expect(cible('min-w-touch py-1', 24)).toBe(32)
+
+        expect(
+            mesure('<Link href="/" class="flex size-11" aria-label="Retour"><GlassIcon name="arrow_back" /></Link>'),
+        ).toEqual([])
+        expect(
+            mesure(
+                '<Link href="/" class="min-h-touch px-3" aria-label="Série"><GlassIcon name="local_fire_department" /></Link>',
+            ),
+        ).toEqual([])
+        expect(
+            mesure(
+                '<Link href="/" class="relative p-2 before:-inset-0.5" aria-label="Lire"><GlassIcon name="play_circle" /></Link>',
+            ),
+        ).toEqual([])
+        expect(
+            mesure(
+                '<Link href="/" class="min-h-touch min-w-touch" aria-label="Modifier"><GlassIcon name="edit" size="sm" /></Link>',
+            ),
+        ).toEqual([])
+        // Un lien qui porte un texte ne se mesure pas ici : sa largeur suit son libellé.
+        expect(mesure('<Link href="/" class="p-1"><GlassIcon name="arrow_back" /> Retour</Link>')).toEqual([])
+    })
+
+    /**
+     * Une largeur fixe ne tient pas dans une rangée flexible qui déborde
+     * (#2116). Le retour de l'en-tête de bureau d'un exercice, `size-11` à côté
+     * du nom, descendait à 26 px de large dès que le nom dépassait la rangée,
+     * mesuré dans Chrome à 1 024 et à 1 280 px : un nom en admet 255. Son
+     * jumeau de l'en-tête mobile portait `shrink-0`, pas lui.
+     */
+    it('garde 44 px de large à toute commande réduite à une icône dans une rangée flexible', () => {
+        const retrecies = collectSourceFiles({ skip: primitives }).flatMap((fichier) => {
+            const source = readFileSync(fichier, 'utf8')
+
+            return commandesRetrecies(source).map(
+                ({ attributs, px }) => `${relatif(fichier)}:${ligne(source, source.indexOf(attributs))} — ${px} px`,
+            )
+        })
+
+        expect(retrecies, 'shrink-0 sur une commande de taille fixe posée dans une rangée flexible').toEqual([])
+    })
+
+    it('mesure ce qu’une rangée flexible laisse à une commande de taille fixe', () => {
+        const gabaritDe = (corps) => `<script setup></script>\n<template>\n${corps}\n</template>`
+        const mesure = (corps) => commandesRetrecies(gabaritDe(corps)).map(({ px }) => px)
+        const retour = (classes) =>
+            `<Link href="/" class="${classes}" aria-label="Retour"><GlassIcon name="arrow_back" /></Link>`
+
+        // Le défaut de #2116 : il ne garde que sa ligature de 24 px.
+        expect(
+            mesure(`<div class="flex items-center gap-4">${retour('flex size-11')}<h1>Développé couché</h1></div>`),
+        ).toEqual([24])
+        expect(mesure(`<div class="bureau:flex hidden">${retour('flex size-11')}</div>`)).toEqual([24])
+        expect(
+            mesure(
+                '<div class="flex"><button type="button" class="flex h-11 w-11" aria-label="Pause"><svg class="h-5 w-5" /></button></div>',
+            ),
+        ).toEqual([20])
+
+        expect(mesure(`<div class="flex items-center gap-4">${retour('flex size-11 shrink-0')}</div>`)).toEqual([])
+        expect(mesure(`<div class="flex">${retour('flex size-11 flex-none')}</div>`)).toEqual([])
+        expect(mesure(`<div class="flex">${retour('min-h-touch min-w-touch')}</div>`)).toEqual([])
+        // Une rangée qui passe à la ligne, une colonne, un bloc ne pressent pas la largeur.
+        expect(mesure(`<div class="flex flex-wrap gap-2">${retour('flex size-11')}</div>`)).toEqual([])
+        expect(mesure(`<div class="flex flex-col">${retour('flex size-11')}</div>`)).toEqual([])
+        expect(mesure(`<div class="space-y-2">${retour('flex size-11')}</div>`)).toEqual([])
+        expect(seRetrecit('flex size-11', 'flex flex-col sm:flex-row')).toBe(true)
+    })
 })
+
+/**
+ * Les commandes réduites à une icône dont une rangée flexible ramène la
+ * largeur sous 44 px : leur parent dans le gabarit est une rangée, et rien ne
+ * tient leur largeur fixe.
+ *
+ * @param {string} source
+ * @returns {{attributs: string, px: number}[]}
+ */
+const commandesRetrecies = (source) =>
+    elementsDuGabarit(gabarit(source))
+        .elements.filter(({ nom, contenu }) => ['Link', 'a', 'button'].includes(nom) && contenu !== null)
+        .filter(({ contenu }) => !/<(?:button|GlassButton|GlassIconButton)\b/.test(contenu))
+        .filter(({ contenu }) => ICONE_DANS.test(contenu) && /^[a-z_]*$/.test(visibleText(contenu)))
+        .filter(({ liste, parent }) => mesurable(liste) && seRetrecit(liste, parent?.liste ?? ''))
+        .map(({ attributs, liste, contenu, parent }) => ({
+            attributs,
+            px: cible(liste, icone(contenu), parent?.liste ?? ''),
+        }))
+        .filter(({ px }) => px < CIBLE)
+
+/**
+ * Les liens d'Inertia et les liens HTML réduits à une icône, sous 44 px.
+ *
+ * @param {string} source
+ * @returns {{attributs: string, px: number}[]}
+ */
+const liensTropPetits = (source) =>
+    elementsDuGabarit(gabarit(source))
+        .elements.filter(({ nom, contenu }) => ['Link', 'a'].includes(nom) && contenu !== null)
+        // Un lien qui enveloppe un bouton n'est pas réduit à une icône : le bouton
+        // porte la cible, et l'imbrication relève de liensSansBouton.test.js (#2117).
+        .filter(({ contenu }) => !/<(?:button|GlassButton|GlassIconButton)\b/.test(contenu))
+        .filter(({ contenu }) => ICONE_DANS.test(contenu) && /^[a-z_]*$/.test(visibleText(contenu)))
+        .filter(({ liste }) => mesurable(liste))
+        .map(({ attributs, liste, contenu }) => ({ attributs, px: cible(liste, icone(contenu)) }))
+        .filter(({ px }) => px < CIBLE)

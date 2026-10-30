@@ -89,6 +89,8 @@ const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import { passesSlot, layoutStub } from './pageStubs'
+import { CIBLE, cibleDuRendu, hauteurDuRendu } from '../conventions/ciblesTactiles'
+import { nomAccessible } from '../utils/nomAccessible'
 
 import PartShow from '@/Pages/Measurements/Parts/Show.vue'
 import NotificationsIndex from '@/Pages/Notifications/Index.vue'
@@ -247,6 +249,21 @@ describe('Measurements/Parts/Show — the unit a new entry inherits', () => {
     })
 })
 
+describe('Measurements/Parts/Show — le retour de l’en-tête mobile (#2117)', () => {
+    /** Un `GlassButton` posé dans un `Link` : un bouton dans un lien, deux arrêts de tabulation. */
+    it('ramène aux mensurations par un seul lien « Retour »', () => {
+        const { wrapper } = mountPart()
+        const retours = wrapper
+            .findAll('a[href], button:not([disabled])')
+            .filter((commande) => nomAccessible(commande.element) === 'Retour')
+
+        expect(wrapper.findAll('a button')).toHaveLength(0)
+        expect(retours.map((commande) => [commande.element.tagName, commande.attributes('href')])).toEqual([
+            ['A', '/routes/body-parts.index'],
+        ])
+    })
+})
+
 describe('Measurements/Parts/Show — le nom de la partie', () => {
     /*
      * La clef reste anglaise en base et dans l'adresse ; l'écran montre le nom
@@ -263,7 +280,7 @@ describe('Measurements/Parts/Show — le nom de la partie', () => {
         })
         await flushPromises()
 
-        expect(wrapper.find('h2').text()).toBe('Taille')
+        expect(wrapper.find('h1').text()).toBe('Taille')
         expect(wrapper.find('[title="Taille"]').exists()).toBe(true)
         expect(wrapper.findComponent({ name: 'BodyPartHistoryChart' }).props('label')).toBe('Taille')
         expect(wrapper.text()).toContain('Historique')
@@ -274,7 +291,7 @@ describe('Measurements/Parts/Show — le nom de la partie', () => {
     it('garde le nom saisi d’une partie libre', () => {
         const { wrapper } = mountPart()
 
-        expect(wrapper.find('h2').text()).toBe('Biceps')
+        expect(wrapper.find('h1').text()).toBe('Biceps')
     })
 })
 
@@ -427,7 +444,7 @@ describe('Measurements/Parts/Show — recording a measurement', () => {
 
         expect(wrapper.vm.form.part).toBe('Taille')
         expect(wrapper.vm.form.keep_part_name).toBe(true)
-        expect(wrapper.find('h2').text()).toBe('Taille (saisie libre)')
+        expect(wrapper.find('h1').text()).toBe('Taille (saisie libre)')
     })
 
     /**
@@ -757,6 +774,19 @@ describe('Profile/Index — the menu', () => {
     })
 })
 
+describe('Profile/Index — la déconnexion se touche au pouce (#2116)', () => {
+    /**
+     * Sous 1 024 px, ce bouton est le seul moyen de se déconnecter : l'autre
+     * est dans le menu du compte, que seule la barre de bureau porte. Un
+     * `<button>` brut en `text-xs`, sans rembourrage : 16 px de haut.
+     */
+    it('offre 44 px de haut', () => {
+        expect(hauteurDuRendu(mountProfile().get('[data-testid="logout-button"]').element)).toBeGreaterThanOrEqual(
+            CIBLE,
+        )
+    })
+})
+
 describe('Profile/Index — the identity block', () => {
     it('builds the avatar from the initial of the name, in capitals', () => {
         const wrapper = mountProfile({ name: 'samuel', email: 'sam@example.com' })
@@ -790,6 +820,13 @@ const mountTools = () =>
 /** The tool cards, i.e. every link but the one going back to the profile. */
 const toolCards = (wrapper) =>
     wrapper.findAll('a').filter((link) => link.attributes('href') !== '/routes/profile.index')
+
+describe('Tools/Index — le retour de l’en-tête de bureau (#2116)', () => {
+    /* `h-10 w-10` : 40 px, sous les 44 de la charte. */
+    it('offre 44 px au pouce', () => {
+        expect(cibleDuRendu(mountTools().get('a[href="/routes/profile.index"]').element)).toBeGreaterThanOrEqual(CIBLE)
+    })
+})
 
 describe('Tools/Index — the tool grid', () => {
     it('sends every card to a route the application declares', () => {

@@ -679,3 +679,39 @@ describe('Workouts/Index — sur une copie hors ligne', () => {
         expect(wrapper.get('[aria-label="Nouvelle séance"]').attributes('aria-describedby')).toBeUndefined()
     })
 })
+
+/**
+ * « Calendrier » et « Modèles », dans l'en-tête de bureau, se posaient dans un
+ * `Link` autour d'un `GlassButton` : un bouton dans un lien, deux arrêts de
+ * tabulation pour un seul geste (#2117). Le vrai `GlassButton` les rend ici.
+ */
+describe('Workouts/Index — les liens de l’en-tête de bureau', () => {
+    it.each([
+        ['Calendrier', 'calendar.index'],
+        ['Modèles', 'templates.index'],
+    ])('ouvre « %s » par un seul lien', (nom, nomDeRoute) => {
+        const wrapper = mount(WorkoutsIndex, {
+            props: {
+                workouts: structuredClone(paginator),
+                totalExercises: 12,
+                deferredData: structuredClone(deferredData),
+            },
+            shallow: true,
+            global: {
+                stubs: { ...stubs, GlassButton: false },
+                directives: { press: {} },
+                mocks: { route: globalThis.route },
+            },
+        })
+        const commandes = wrapper
+            .findAll('a[href], button:not([disabled])')
+            .filter((commande) => commande.text().replace(/\s+/g, ' ').trim() === nom)
+
+        expect(wrapper.findAll('a button')).toHaveLength(0)
+        expect(commandes.map((commande) => [commande.element.tagName, commande.attributes('href')])).toEqual([
+            ['A', globalThis.route(nomDeRoute)],
+        ])
+
+        wrapper.unmount()
+    })
+})

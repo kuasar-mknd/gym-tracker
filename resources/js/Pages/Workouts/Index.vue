@@ -3,7 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import GlassCard from '@/Components/UI/GlassCard.vue'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassButton from '@/Components/UI/GlassButton.vue'
-import { Head, useForm, Link, Deferred, router } from '@inertiajs/vue3'
+import { Head, useForm, Deferred, router } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import IndicateurDeRafraichissement from '@/Components/UI/IndicateurDeRafraichissement.vue'
@@ -124,20 +124,17 @@ const { isRefreshing, pullDistance } = usePullToRefresh()
         <IndicateurDeRafraichissement :distance="pullDistance" :en-cours="isRefreshing" />
         <template #header>
             <div class="flex items-center justify-between">
-                <h2 class="titre-carte">Mes Séances</h2>
+                <h1 class="titre-carte">Mes Séances</h1>
                 <div class="flex gap-2">
-                    <Link :href="route('calendar.index')">
-                        <GlassButton>
-                            <GlassIcon name="calendar_month" size="sm" class="mr-2" />
-                            Calendrier
-                        </GlassButton>
-                    </Link>
-                    <Link :href="route('templates.index')">
-                        <GlassButton>
-                            <GlassIcon name="inventory_2" size="sm" class="mr-2" />
-                            Modèles
-                        </GlassButton>
-                    </Link>
+                    <!-- Des navigations : un seul lien chacune, par `href` (#2117). -->
+                    <GlassButton :href="route('calendar.index')">
+                        <GlassIcon name="calendar_month" size="sm" class="mr-2" />
+                        Calendrier
+                    </GlassButton>
+                    <GlassButton :href="route('templates.index')">
+                        <GlassIcon name="inventory_2" size="sm" class="mr-2" />
+                        Modèles
+                    </GlassButton>
                     <GlassButton
                         variant="primary"
                         :loading="demarrageEnCours"

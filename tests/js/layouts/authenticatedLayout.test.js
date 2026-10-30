@@ -24,6 +24,8 @@ const seDeconnecter = vi.hoisted(() => vi.fn())
 vi.mock('@/composables/useDeconnexion', () => ({ seDeconnecter }))
 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
+import { titresExposes } from '../conventions/exposition'
 import { PAGE_INDISPONIBLE, RESEAU_LENT, annoncerSansReseau, retirerLAnnonce } from '@/Utils/visitesHorsLigne'
 import { chargerSyncService, horodatageRecent, poserLaPage, retirerLesEcouteursDuService } from '../utils/fileHorsLigne'
 
@@ -423,6 +425,20 @@ describe('AuthenticatedLayout — the mobile header', () => {
         expect(wrapper.get('[aria-label="Retour"]').attributes('href')).toBe('/resolved/templates.index')
     })
 
+    /**
+     * Le retour de l'en-tête mobile, sur les seize pages qui en ont un, dont
+     * l'écran de séance, tenait en 40 px (`h-10 w-10`) : moins que les 44 de
+     * la charte, que la cloche voisine atteint déjà (#2116).
+     */
+    it('offre au pouce un retour de 44 px, comme la cloche voisine', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Séance', showBack: true } })
+
+        expect(cibleDuRendu(wrapper.get('[aria-label="Retour"]').element)).toBeGreaterThanOrEqual(CIBLE)
+        for (const cloche of notificationLinks(wrapper)) {
+            expect(cibleDuRendu(cloche.element)).toBeGreaterThanOrEqual(CIBLE)
+        }
+    })
+
     it('falls back to the browser’s own history when no route was named', () => {
         const wrapper = mountLayout({ props: { showBack: true } })
 
@@ -446,6 +462,41 @@ describe('AuthenticatedLayout — the mobile header', () => {
         const wrapper = mountLayout({ props: { pageTitle: 'Mesures' }, slots: { header: '<h2>Mesures</h2>' } })
 
         expect(wrapper.findAll('header')).toHaveLength(2)
+    })
+})
+
+/**
+ * Le seul `<h1>` du layout était celui de l'en-tête mobile, caché à partir de
+ * 1 024 px : sur bureau, une page sans titre dans son en-tête de page n'avait
+ * aucun titre de niveau 1 (#2120). Le layout tire de `page-title` un `<h1>`
+ * `sr-only` de bureau, sauf quand la page porte le sien : dans `#header`, ou
+ * dans son contenu, ce qu'elle dit par `titre-dans-la-page`.
+ */
+describe('AuthenticatedLayout — un seul titre de niveau 1 à toute largeur', () => {
+    it('pose pour les lecteurs d’écran le titre de bureau d’une page qui n’en a pas', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Accueil' } })
+
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Accueil'], bureau: ['Accueil'] })
+        expect(wrapper.findAll('h1').at(-1).classes()).toContain('sr-only')
+    })
+
+    it('laisse l’en-tête de page porter le titre de bureau', () => {
+        const wrapper = mountLayout({ props: { pageTitle: 'Mes Séances' }, slots: { header: '<h1>Mes Séances</h1>' } })
+
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mes Séances'], bureau: ['Mes Séances'] })
+    })
+
+    it('s’efface devant le titre de bureau que la page pose dans son contenu', () => {
+        const wrapper = mountLayout({
+            props: { pageTitle: 'Mon Évolution', titreDansLaPage: true },
+            slots: { default: '<div class="bureau:block hidden"><h1>Mon Évolution</h1></div>' },
+        })
+
+        expect(titresExposes(wrapper.element)).toEqual({ telephone: ['Mon Évolution'], bureau: ['Mon Évolution'] })
+    })
+
+    it('ne pose aucun titre sans page-title, la page portant le sien', () => {
+        expect(titresExposes(mountLayout({ props: { showBack: true } }).element)).toEqual({ telephone: [], bureau: [] })
     })
 })
 
