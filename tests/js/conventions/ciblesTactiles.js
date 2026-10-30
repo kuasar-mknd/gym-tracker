@@ -90,12 +90,18 @@ export const icone = (corps) => {
  * largeur. Les compter pour les deux laissait passer à 44 px un lien de 20 px
  * de large, une `GlassIcon size="sm"` sous `min-h-touch` seul.
  *
+ * Une largeur explicite ne tient pas dans une rangée flexible qui déborde
+ * (`seRetrecit`) : le contrôle n'y garde que son contenu, l'icône et son
+ * rembourrage.
+ *
  * @param {string} classes
  * @param {number} tailleIcone
+ * @param {string} [classesDuParent] Les classes de l'élément qui le contient.
  * @returns {number}
  */
-export const cible = (classes, tailleIcone) => {
+export const cible = (classes, tailleIcone, classesDuParent = '') => {
     const mots = classes.split(/\s+/)
+    const retreci = seRetrecit(classes, classesDuParent)
     const debord = 2 * Math.max(0, ...tailles(mots, /^before:-inset-(\d+(?:\.5)?|px)$/))
     const tousCotes = tailles(mots, /^p-(\d+(?:\.5)?|px)$/)
 
@@ -110,12 +116,47 @@ export const cible = (classes, tailleIcone) => {
             ...tousCotes,
             ...tailles(mots, new RegExp(`^p${axe === 'w' ? 'x' : 'y'}-(\\d+(?:\\.5)?|px)$`)),
         ]
-        const boite = explicite.length > 0 ? Math.min(...explicite) : tailleIcone + 2 * Math.max(0, ...rembourrage)
+        const contenu = tailleIcone + 2 * Math.max(0, ...rembourrage)
+        const boite =
+            explicite.length === 0 ? contenu : Math.min(...explicite, ...(axe === 'w' && retreci ? [contenu] : []))
 
         return Math.max(boite + debord, mots.includes(minimum) ? CIBLE : 0)
     }
 
     return Math.min(dimension('w', 'min-w-touch'), dimension('h', 'min-h-touch'))
+}
+
+/** Le mot d'une classe sans ses variantes : `bureau:flex` → `flex`. */
+const base = (mot) => mot.slice(mot.lastIndexOf(':') + 1)
+
+/**
+ * Un contrôle de largeur fixe se rétrécit-il dans son parent ?
+ *
+ * Un élément d'une rangée flexible garde `flex-shrink: 1` et `min-width: auto` :
+ * quand la rangée déborde, il descend jusqu'à la largeur de son contenu. Le
+ * retour de l'en-tête de bureau d'un exercice, `size-11` à côté d'un titre qui
+ * ne se coupe pas, tombait ainsi à 26 px de large pour un nom de 140
+ * caractères (un nom en admet 255), mesuré dans Chrome à 1 024 et à 1 280 px
+ * (#2116). `shrink-0`, `flex-none` ou un `min-w-*` le tiennent ; une rangée
+ * qui passe à la ligne (`flex-wrap`) ou une colonne (`flex-col`) ne le
+ * pressent pas en largeur. Seul le parent écrit dans le même gabarit se lit :
+ * un contrôle posé directement dans un créneau ne voit pas la rangée de
+ * l'appelant.
+ *
+ * @param {string} classes
+ * @param {string} classesDuParent
+ * @returns {boolean}
+ */
+export const seRetrecit = (classes, classesDuParent) => {
+    const mots = classes.split(/\s+/)
+    const parent = classesDuParent.split(/\s+/)
+    const enRangee =
+        parent.some((mot) => /^(?:inline-)?flex$/.test(base(mot))) &&
+        (!parent.some((mot) => /^flex-col(?:-reverse)?$/.test(mot)) || parent.some((mot) => base(mot) === 'flex-row'))
+    const largeurFixe = mots.some((mot) => /^(?:size|w)-(?:\d+(?:\.5)?|px)$/.test(mot))
+    const tenu = mots.some((mot) => /^(?:shrink-0|flex-none|min-w-.+)$/.test(mot))
+
+    return enRangee && largeurFixe && !tenu && !parent.includes('flex-wrap')
 }
 
 /**
@@ -135,8 +176,9 @@ export const mesurable = (classes) => !/\b(?:[hw]-full|size-full|inset-0|flex-1|
 
 /**
  * La même arithmétique sur un contrôle RENDU, réduit à une icône : ses classes,
- * et la taille de l'icône qu'il contient, lue sur l'icône rendue (`text-xl`
- * pour `GlassIcon size="sm"`, les classes d'un `<svg>`).
+ * la taille de l'icône qu'il contient, lue sur l'icône rendue (`text-xl`
+ * pour `GlassIcon size="sm"`, les classes d'un `<svg>`), et les classes de son
+ * parent rendu, qui disent s'il se rétrécit.
  *
  * @param {Element} controle
  * @returns {number}
@@ -149,7 +191,7 @@ export const cibleDuRendu = (controle) => {
             ? icone(`<svg class="${classesDuSymbole.join(' ')}">`)
             : (classesDuSymbole.map((classe) => TEXTES[classe]?.police).find(Boolean) ?? ICONE)
 
-    return cible(controle.getAttribute('class') ?? '', taille)
+    return cible(controle.getAttribute('class') ?? '', taille, controle.parentElement?.getAttribute('class') ?? '')
 }
 
 /**

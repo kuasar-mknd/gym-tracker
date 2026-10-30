@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 
-import { CIBLE, cible, icone, mesurable } from './ciblesTactiles'
+import { CIBLE, cible, icone, mesurable, seRetrecit } from './ciblesTactiles'
 import { elementsDuGabarit, gabarit } from './gabarits'
 import { collectSourceFiles, jsRoot, visibleText } from './sourceFiles'
 
@@ -144,7 +144,73 @@ describe('les cibles tactiles', () => {
         // Un lien qui porte un texte ne se mesure pas ici : sa largeur suit son libellé.
         expect(mesure('<Link href="/" class="p-1"><GlassIcon name="arrow_back" /> Retour</Link>')).toEqual([])
     })
+
+    /**
+     * Une largeur fixe ne tient pas dans une rangée flexible qui déborde
+     * (#2116). Le retour de l'en-tête de bureau d'un exercice, `size-11` à côté
+     * du nom, descendait à 26 px de large dès que le nom dépassait la rangée,
+     * mesuré dans Chrome à 1 024 et à 1 280 px : un nom en admet 255. Son
+     * jumeau de l'en-tête mobile portait `shrink-0`, pas lui.
+     */
+    it('garde 44 px de large à toute commande réduite à une icône dans une rangée flexible', () => {
+        const retrecies = collectSourceFiles({ skip: primitives }).flatMap((fichier) => {
+            const source = readFileSync(fichier, 'utf8')
+
+            return commandesRetrecies(source).map(
+                ({ attributs, px }) => `${relatif(fichier)}:${ligne(source, source.indexOf(attributs))} — ${px} px`,
+            )
+        })
+
+        expect(retrecies, 'shrink-0 sur une commande de taille fixe posée dans une rangée flexible').toEqual([])
+    })
+
+    it('mesure ce qu’une rangée flexible laisse à une commande de taille fixe', () => {
+        const gabaritDe = (corps) => `<script setup></script>\n<template>\n${corps}\n</template>`
+        const mesure = (corps) => commandesRetrecies(gabaritDe(corps)).map(({ px }) => px)
+        const retour = (classes) =>
+            `<Link href="/" class="${classes}" aria-label="Retour"><GlassIcon name="arrow_back" /></Link>`
+
+        // Le défaut de #2116 : il ne garde que sa ligature de 24 px.
+        expect(
+            mesure(`<div class="flex items-center gap-4">${retour('flex size-11')}<h1>Développé couché</h1></div>`),
+        ).toEqual([24])
+        expect(mesure(`<div class="bureau:flex hidden">${retour('flex size-11')}</div>`)).toEqual([24])
+        expect(
+            mesure(
+                '<div class="flex"><button type="button" class="flex h-11 w-11" aria-label="Pause"><svg class="h-5 w-5" /></button></div>',
+            ),
+        ).toEqual([20])
+
+        expect(mesure(`<div class="flex items-center gap-4">${retour('flex size-11 shrink-0')}</div>`)).toEqual([])
+        expect(mesure(`<div class="flex">${retour('flex size-11 flex-none')}</div>`)).toEqual([])
+        expect(mesure(`<div class="flex">${retour('min-h-touch min-w-touch')}</div>`)).toEqual([])
+        // Une rangée qui passe à la ligne, une colonne, un bloc ne pressent pas la largeur.
+        expect(mesure(`<div class="flex flex-wrap gap-2">${retour('flex size-11')}</div>`)).toEqual([])
+        expect(mesure(`<div class="flex flex-col">${retour('flex size-11')}</div>`)).toEqual([])
+        expect(mesure(`<div class="space-y-2">${retour('flex size-11')}</div>`)).toEqual([])
+        expect(seRetrecit('flex size-11', 'flex flex-col sm:flex-row')).toBe(true)
+    })
 })
+
+/**
+ * Les commandes réduites à une icône dont une rangée flexible ramène la
+ * largeur sous 44 px : leur parent dans le gabarit est une rangée, et rien ne
+ * tient leur largeur fixe.
+ *
+ * @param {string} source
+ * @returns {{attributs: string, px: number}[]}
+ */
+const commandesRetrecies = (source) =>
+    elementsDuGabarit(gabarit(source))
+        .elements.filter(({ nom, contenu }) => ['Link', 'a', 'button'].includes(nom) && contenu !== null)
+        .filter(({ contenu }) => !/<(?:button|GlassButton|GlassIconButton)\b/.test(contenu))
+        .filter(({ contenu }) => ICONE_DANS.test(contenu) && /^[a-z_]*$/.test(visibleText(contenu)))
+        .filter(({ liste, parent }) => mesurable(liste) && seRetrecit(liste, parent?.liste ?? ''))
+        .map(({ attributs, liste, contenu, parent }) => ({
+            attributs,
+            px: cible(liste, icone(contenu), parent?.liste ?? ''),
+        }))
+        .filter(({ px }) => px < CIBLE)
 
 /**
  * Les liens d'Inertia et les liens HTML réduits à une icône, sous 44 px.

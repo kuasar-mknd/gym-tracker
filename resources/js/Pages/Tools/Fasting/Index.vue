@@ -196,7 +196,7 @@ const formatHistoryDuration = (start, end) => {
             <div class="flex items-center gap-4">
                 <Link
                     :href="route('tools.index')"
-                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 items-center justify-center rounded-full border shadow-sm transition-colors"
+                    class="text-text-muted hover:text-accent-primary-deep border-border bg-surface-card flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition-colors"
                     aria-label="Retour aux outils"
                 >
                     <GlassIcon name="arrow_back" />
