@@ -51,7 +51,7 @@ class PasswordUpdateRateLimitTest extends TestCase
         // and when RateLimiter::availableIn() is called in the test.
         // It's safer to just check if it contains the rate limit message structure.
 
-        $this->assertStringContainsString('essayer de nouveau dans', session('errors')->get('current_password')[0]);
+        $this->assertStringContainsString('Réessaie dans', session('errors')->get('current_password')[0]);
         $this->assertStringContainsString('secondes.', session('errors')->get('current_password')[0]);
     }
 

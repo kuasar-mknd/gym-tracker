@@ -25,6 +25,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -72,6 +74,14 @@ final class User extends Authenticatable implements MustVerifyEmail
      * adresse avant d'être effacé (`prunable()`). Le lien d'ouverture le dit.
      */
     public const int JOURS_AVANT_LA_PURGE = 7;
+
+    /**
+     * Une adresse que la spécification HTML admet dans un champ
+     * `type="email"` (« valid e-mail address ») : ni partie locale entre
+     * guillemets, ni commentaire, ni domaine littéral, et des labels de
+     * lettres, de chiffres et de tirets (`leNavigateurLaisseraitSonDomaineEnUnicode()`).
+     */
+    private const string ADRESSE_QUE_LA_SPECIFICATION_HTML_ADMET = "/^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/D";
 
     /**
      * La valeur en memoire d'une instance fraiche, alignee sur celle de la base.
@@ -266,6 +276,103 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function laMessagerieSaitEcrireSonAdresse(): bool
     {
         return AdresseQueLaMessagerieSaitEcrire::laMessagerieSaitLEcrire($this->getEmailForVerification());
+    }
+
+    /**
+     * Le lien « mot de passe oublié » parvient-il à ce compte, et le
+     * réinitialise-t-il ?
+     *
+     * Il faut deux choses. La messagerie écrit son adresse telle quelle
+     * (`laMessagerieSaitEcrireSonAdresse()`), sans quoi sa route est vide et
+     * rien ne part. La demande admet l'adresse, que la personne saisit : elle
+     * la juge par la règle `email` (`PasswordResetLinkRequest`), comme la
+     * réinitialisation qui suit (`NewPasswordRequest`). Cette règle refuse des
+     * adresses que la messagerie écrit et qu'un compte créé par la connexion
+     * sociale avant #2075 peut porter, comme un tiret bas dans le domaine :
+     * la page répond par l'erreur du format, et aucun lien ne part. Le chemin
+     * vers un mot de passe ne promet le lien qu'à un compte qui le reçoit
+     * (`DonneLeCheminVersUnMotDePasse`, `ProfileController::edit`).
+     *
+     * La demande ne juge pas l'adresse telle qu'elle est tapée : `TrimStrings`
+     * la coupe d'abord de ses blancs Unicode, espace insécable comprise
+     * (`Str::trim()`), et le courtier cherche le compte sous l'adresse coupée,
+     * selon la collation de `users.email`. Un compte d'avant #2001 peut porter
+     * un tel blanc, que la messagerie écrit et que la règle admet. En tête,
+     * l'adresse coupée ne retrouve pas le compte ; au bout, elle le retrouve
+     * quand la collation néglige le blanc (une espace insécable), pas
+     * autrement (un remplissage hangul). Le prédicat le demande donc à la
+     * base, sur ce seul compte, quand la coupe change l'adresse, et seulement
+     * alors.
+     *
+     * La personne tape l'adresse dans un champ `type="email"`, à « mot de
+     * passe oublié » comme à la réinitialisation et à la connexion, et
+     * Chromium y convertit en Punycode un domaine qui n'est pas en ASCII sous
+     * une adresse que la spécification HTML admet, donc sous une partie
+     * locale en ASCII qui n'est pas entre guillemets (« bücher » devient
+     * « xn--bcher-kva », mesuré sous Chromium 141). Depuis #2001, un tel
+     * domaine s'enregistre en Punycode, sous lequel la demande retrouve le
+     * compte. Un compte d'avant #2001 peut le porter en Unicode, que la
+     * collation ne rapproche pas du Punycode : le prédicat ne lui promet pas
+     * le lien, et le chemin le renvoie à un administrateur, qui peut lui
+     * donner au panneau sa forme ASCII (#2104). Il ne le promet pas davantage
+     * quand la conversion ramènerait le domaine à un ASCII sous lequel la
+     * collation retrouve le compte (une lettre pleine chasse, mesuré). Le
+     * profil montre en Unicode un domaine enregistré en Punycode, et le champ
+     * de la demande ne le rend en Punycode que sous une adresse que la
+     * spécification admet : le prédicat ne promet pas le lien à un tel
+     * domaine sous une partie locale entre guillemets ou avec un commentaire
+     * (mesuré). Dans le doute, il tait un lien qui part plutôt que d'en
+     * promettre un qui ne part pas. D'une partie locale qui n'est pas en
+     * ASCII, Chromium envoie l'adresse telle qu'elle est tapée, domaine
+     * compris, et la demande la retrouve.
+     *
+     * La règle est recopiée de la demande, pas lue sur elle : la comparaison
+     * avec ce que fait vraiment « mot de passe oublié », pour chaque forme
+     * d'adresse, vit dans `AdresseQueLaMessagerieSaitEcrireTest`.
+     */
+    public function peutRecevoirLeLienDeReinitialisation(): bool
+    {
+        $adresse = $this->getEmailForPasswordReset();
+        $adresseRecueParLaDemande = Str::trim($adresse);
+
+        return $this->laMessagerieSaitEcrireSonAdresse()
+            && ! self::leNavigateurConvertiraitSonDomaine($adresseRecueParLaDemande)
+            && ! self::leNavigateurLaisseraitSonDomaineEnUnicode($adresseRecueParLaDemande)
+            && Validator::make(['email' => $adresseRecueParLaDemande], ['email' => ['required', 'email']])->passes()
+            && ($adresseRecueParLaDemande === $adresse
+                || self::query()->whereKey($this->getKey())->where('email', $adresseRecueParLaDemande)->exists());
+    }
+
+    /**
+     * Un champ `type="email"` de Chromium enverrait-il cette adresse sous un
+     * autre domaine que le sien ? Il convertit en Punycode un domaine qui
+     * n'est pas en ASCII, et ne garde la conversion que si elle donne une
+     * adresse que la spécification HTML admet, donc sous une partie locale
+     * en ASCII. Le prédicat le suppose de toute partie locale en ASCII, entre
+     * guillemets comprise : dans le doute, il tait le lien
+     * (`peutRecevoirLeLienDeReinitialisation()`).
+     */
+    private static function leNavigateurConvertiraitSonDomaine(string $adresse): bool
+    {
+        return ! Str::isAscii(Str::afterLast($adresse, '@')) && Str::isAscii(Str::beforeLast($adresse, '@'));
+    }
+
+    /**
+     * Le champ `type="email"` du profil montrerait-il le domaine de cette
+     * adresse en Unicode, sans que celui de « mot de passe oublié » le rende
+     * en Punycode ? Chromium montre en Unicode un domaine en Punycode
+     * (« xn--bcher-kva » devient « bücher »), et ne le reconvertit à l'envoi
+     * que si l'adresse obtenue est une adresse que la spécification HTML
+     * admet : ni une partie locale entre guillemets, ni un commentaire
+     * (mesuré sous Chromium 141). La personne qui tape l'adresse montrée
+     * envoie alors l'Unicode, sous lequel la demande ne retrouve pas le
+     * compte. Le prédicat le suppose de tout « xn-- » qui suit le premier @,
+     * casse ignorée, quand l'adresse n'est pas une adresse HTML valide.
+     */
+    private static function leNavigateurLaisseraitSonDomaineEnUnicode(string $adresse): bool
+    {
+        return Str::contains(Str::after($adresse, '@'), 'xn--', ignoreCase: true)
+            && preg_match(self::ADRESSE_QUE_LA_SPECIFICATION_HTML_ADMET, $adresse) !== 1;
     }
 
     /**
