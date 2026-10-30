@@ -13,7 +13,8 @@ import { computed } from 'vue'
  * ouvert aux seuls invités, d'où la déconnexion d'abord ; le lien part à
  * l'adresse actuelle, lue sur la page (`auth.user`). Il ne parvient pas à
  * certaines adresses qu'un compte d'avant #2075 peut porter, que la
- * messagerie n'écrit pas telles quelles ou que la demande du lien refuse :
+ * messagerie n'écrit pas telles quelles, que la demande du lien refuse, ou
+ * sous lesquelles elle ne retrouve pas le compte :
  * l'encadré ne le promet pas, et renvoie à un administrateur. C'est le texte
  * des refus du serveur
  * (`DonneLeCheminVersUnMotDePasse`), avec l'adresse en plus : chaque

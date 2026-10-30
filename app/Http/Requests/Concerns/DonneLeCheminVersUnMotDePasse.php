@@ -24,7 +24,9 @@ use App\Models\User;
  * porter : il ne part pas à une adresse que la messagerie n'écrit pas telle
  * quelle (`User::routeNotificationForMail()`), et la demande refuse, par la
  * règle `email`, des adresses que la messagerie écrit, comme un tiret bas dans
- * le domaine. Le message ne le promet donc qu'à un compte qui le reçoit
+ * le domaine, ou ne retrouve pas le compte sous l'adresse saisie, qu'elle
+ * coupe de ses blancs (une espace insécable en tête). Le message ne le
+ * promet donc qu'à un compte qui le reçoit
  * (`User::peutRecevoirLeLienDeReinitialisation()`), et renvoie tout autre à
  * un administrateur, qui change l'adresse au panneau.
  *

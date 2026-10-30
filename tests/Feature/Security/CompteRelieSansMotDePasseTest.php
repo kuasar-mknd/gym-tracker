@@ -23,12 +23,12 @@ use Laravel\Socialite\Two\User as SocialiteUser;
  * Comme le changement d'adresse (`ChangementDAdresseTest`), chaque refus du
  * mot de passe actuel donne à un tel compte le chemin vers un mot de passe :
  * se déconnecter, puis « Mot de passe oublié ? ». Ou, quand aucun lien ne lui
- * parviendrait, parce que la messagerie ne sait pas écrire son adresse ou que
- * la demande du lien la refuse, le renvoi à un administrateur
- * (`AdresseQueLaMessagerieSaitEcrireTest`). Un compte sans
+ * parviendrait, parce que la messagerie ne sait pas écrire son adresse, ou que
+ * la demande du lien la refuse ou n'y retrouve pas le compte, le renvoi à un
+ * administrateur (`AdresseQueLaMessagerieSaitEcrireTest`). Un compte sans
  * fournisseur garde ses refus tels quels. Le message ne s'adresse qu'à la
  * session du compte, à qui la page du profil nomme déjà son fournisseur et
- * dit si la messagerie écrit son adresse.
+ * dit si le lien « mot de passe oublié » lui parvient.
  */
 
 /**

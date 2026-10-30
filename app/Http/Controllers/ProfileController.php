@@ -39,7 +39,8 @@ class ProfileController extends Controller
             // à un compte relié à un fournisseur comment l'obtenir (#2104),
             // sans promettre le lien « mot de passe oublié » à une adresse qui
             // ne le reçoit pas : la messagerie ne l'écrit pas telle quelle
-            // (#2075), ou la demande du lien la refuse.
+            // (#2075), ou la demande du lien la refuse ou n'y retrouve pas le
+            // compte (`User::peutRecevoirLeLienDeReinitialisation()`).
             'fournisseurDeConnexion' => $this->user()->fournisseurDeConnexion(),
             'peutRecevoirLeLienDeReinitialisation' => $this->user()->peutRecevoirLeLienDeReinitialisation(),
             // `auth.user` ne dit pas si l'adresse est vérifiée : le formulaire
