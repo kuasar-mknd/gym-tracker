@@ -10,6 +10,7 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
 /*
@@ -93,6 +94,21 @@ function compteRelieALAdresseQueLaDemandeDuLienRefuse(): User
 }
 
 /**
+ * Un compte relié à Google dont le domaine internationalisé s'est enregistré
+ * en Unicode, avant #2001 : la messagerie l'écrit et la demande du lien
+ * l'admet, mais « mot de passe oublié » le reçoit en Punycode du champ
+ * `type="email"` de Chromium, et ne retrouve pas le compte. Aucun lien ne
+ * part.
+ */
+function compteRelieALAdresseAuDomaineEnUnicode(): User
+{
+    $compte = User::factory()->create(['email' => 'camille.martin@bücher.example.org']);
+    $compte->forceFill(['provider' => 'google', 'provider_id' => 'identifiant-google', 'liaison_prouvee_le' => now()])->save();
+
+    return $compte;
+}
+
+/**
  * Un nouveau mot de passe recevable, et sa confirmation.
  *
  * @return array{password: string, password_confirmation: string}
@@ -142,6 +158,7 @@ it('donne le chemin vers un mot de passe à un compte relié qui veut supprimer 
     'messagerie qui écrit l’adresse' => [compteRelieOuvertParGoogle(...), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
     'messagerie qui ne l’écrit pas' => [compteRelieALAdresseQueLaMessagerieNEcritPas(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
     'demande du lien qui refuse l’adresse' => [compteRelieALAdresseQueLaDemandeDuLienRefuse(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
+    'domaine internationalisé enregistré en Unicode' => [compteRelieALAdresseAuDomaineEnUnicode(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
 ]);
 
 it('donne le chemin vers un mot de passe à un compte relié qui veut changer son mot de passe', function (Closure $creer, string $chemin): void {
@@ -165,7 +182,30 @@ it('donne le chemin vers un mot de passe à un compte relié qui veut changer so
     'messagerie qui écrit l’adresse' => [compteRelieOuvertParGoogle(...), COMPTE_RELIE_CHEMIN_PAR_LE_LIEN],
     'messagerie qui ne l’écrit pas' => [compteRelieALAdresseQueLaMessagerieNEcritPas(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
     'demande du lien qui refuse l’adresse' => [compteRelieALAdresseQueLaDemandeDuLienRefuse(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
+    'domaine internationalisé enregistré en Unicode' => [compteRelieALAdresseAuDomaineEnUnicode(...), COMPTE_RELIE_CHEMIN_PAR_UN_ADMINISTRATEUR],
 ]);
+
+/*
+ * Un domaine internationalisé enregistré en Unicode, avant #2001, ne reçoit
+ * pas le lien : « mot de passe oublié » le reçoit en Punycode du champ
+ * `type="email"` de Chromium, et la collation ne rapproche pas les deux
+ * formes (`AdresseQueLaMessagerieSaitEcrireTest`). La page du profil ne le
+ * promet pas davantage que les refus, et la forme Punycode, que l'inscription
+ * enregistre depuis #2001, le reçoit.
+ */
+it('ne promet pas le lien à un compte relié dont le domaine internationalisé s’est enregistré en Unicode', function (): void {
+    $compte = compteRelieALAdresseAuDomaineEnUnicode();
+
+    $this->actingAs($compte)->get('/profile/edit')->assertInertia(
+        static fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('fournisseurDeConnexion', 'Google')
+            ->where('peutRecevoirLeLienDeReinitialisation', false),
+    );
+
+    expect($compte->laMessagerieSaitEcrireSonAdresse())->toBeTrue()
+        ->and($compte->peutRecevoirLeLienDeReinitialisation())->toBeFalse()
+        ->and($compte->forceFill(['email' => 'camille.martin@xn--bcher-kva.example.org'])->peutRecevoirLeLienDeReinitialisation())->toBeTrue();
+});
 
 it('garde ses refus tels quels à un compte sans fournisseur', function (): void {
     $compte = User::factory()->create();

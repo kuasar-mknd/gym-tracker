@@ -520,59 +520,65 @@ it('sait encore voir une ressource d’une autre origine dans une page montée',
 
 /**
  * Des adresses que la messagerie écrit et que la règle `email` du serveur
- * admet, et qu'un champ `type="email"` n'envoie pas telles quelles. Le
- * navigateur le juge selon la spécification HTML, et refuse une partie locale
- * entre guillemets ou un domaine littéral. Chromium y convertit en Punycode
- * un domaine internationalisé (« bücher » devient « xn--bcher-kva »), sous
- * lequel le serveur ne trouve pas le compte. Le lien « mot de passe oublié »
- * leur part et les réinitialise, tapées telles quelles
+ * admet, et que le navigateur refuse dans un champ `type="email"`, jugé selon
+ * la spécification HTML : une partie locale entre guillemets, un domaine
+ * littéral. Le lien « mot de passe oublié » leur part et les réinitialise
  * (`AdresseQueLaMessagerieSaitEcrireTest`), et le profil le leur promet
- * (#2104) : la demande et la réinitialisation les envoient comme elles sont
- * tapées.
+ * (#2104) : la demande et la réinitialisation portent `novalidate`, et
+ * laissent le serveur en juger.
  */
-const ADRESSES_QU_UN_CHAMP_EMAIL_N_ENVOIE_PAS_TELLES_QUELLES = [
-    '"camille.martin"@example.org',
-    'camille@[192.0.2.1]',
-    'camille.martin@bücher.example.org',
-]
+const ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE = ['"camille.martin"@example.org', 'camille@[192.0.2.1]']
 
 /**
- * Un champ d'adresse que le navigateur ne juge ni ne transforme : un champ
- * texte, avec le clavier d'une adresse (`inputmode`), sans majuscule
- * automatique ni correcteur d'orthographe. jsdom ne convertit rien en
- * Punycode : c'est le type du champ qui en tient lieu de preuve.
+ * Ce que Chromium envoie d'un domaine internationalisé tapé dans un champ
+ * `type="email"` (« camille.martin@bücher.example.org ») : sa forme Punycode,
+ * sous laquelle l'inscription enregistre le compte depuis #2001, et sous
+ * laquelle la demande le retrouve (mesuré sous Chromium 141). jsdom ne
+ * convertit rien : le type du champ en tient lieu de preuve, et la page
+ * envoie telle quelle la valeur que le champ lui donne.
  */
-const CHAMP_D_ADRESSE_ENVOYEE_TELLE_QUELLE = {
-    type: 'text',
-    inputmode: 'email',
-    autocapitalize: 'none',
-    spellcheck: 'false',
-}
+const DOMAINE_INTERNATIONALISE_EN_PUNYCODE = 'camille.martin@xn--bcher-kva.example.org'
+
+/**
+ * Le champ d'adresse des deux pages : `type="email"`, comme l'inscription et
+ * la connexion (#2104). Un champ texte envoyait en Unicode le domaine
+ * internationalisé tapé, sous lequel la demande ne retrouve pas un compte
+ * enregistré en Punycode : la page disait le lien parti, et rien ne partait.
+ * Les attributs du champ texte (`inputmode`, `autocapitalize`, `spellcheck`)
+ * n'ont plus d'objet.
+ */
+const CHAMP_D_ADRESSE = { type: 'email' }
+
+/** Les attributs qui faisaient d'un champ texte un champ d'adresse. */
+const ATTRIBUTS_DU_CHAMP_TEXTE = ['inputmode', 'autocapitalize', 'spellcheck']
 
 describe('ForgotPassword', () => {
     /** Le champ de l'adresse, trouvé par son libellé. */
     const champDeLAdresse = (wrapper) => champSousLeLibelle(wrapper, 'Email')
 
-    it('tape l’adresse dans un champ texte au clavier d’adresse, que le navigateur ne juge ni ne transforme', () => {
-        const champ = champDeLAdresse(mountPage(ForgotPassword))
+    it('tape l’adresse dans un champ type="email", sous un formulaire qui laisse le serveur en juger', () => {
+        const wrapper = mountPage(ForgotPassword)
+        const champ = champDeLAdresse(wrapper)
 
-        expect(champ.attributes()).toMatchObject({ ...CHAMP_D_ADRESSE_ENVOYEE_TELLE_QUELLE, autocomplete: 'email' })
+        expect(champ.attributes()).toMatchObject({ ...CHAMP_D_ADRESSE, autocomplete: 'email' })
+        expect(ATTRIBUTS_DU_CHAMP_TEXTE.filter((attribut) => champ.attributes(attribut) !== undefined)).toEqual([])
         expect(champ.attributes('required')).toBeDefined()
+        expect(wrapper.find('form').attributes('novalidate')).toBeDefined()
     })
 
     /*
      * `requestSubmit()` juge le formulaire comme un clic sur « Envoyer le
-     * lien » : jsdom refuse d'envoyer un champ `type="email"` qu'il juge mal
-     * formé, comme le navigateur.
+     * lien » : sans `novalidate`, jsdom refuse d'envoyer un champ
+     * `type="email"` qu'il juge mal formé, comme le navigateur.
      */
-    it.each(ADRESSES_QU_UN_CHAMP_EMAIL_N_ENVOIE_PAS_TELLES_QUELLES)(
-        'envoie la demande pour %s telle qu’elle est tapée',
+    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
+        'envoie la demande pour %s, que le navigateur refuserait et que le serveur admet',
         async (adresse) => {
             const wrapper = mountPage(ForgotPassword)
 
             await typeInto(wrapper, 'Email', adresse)
 
-            expect(champDeLAdresse(wrapper).element.validity.valid).toBe(true)
+            expect(champDeLAdresse(wrapper).element.validity.typeMismatch).toBe(true)
 
             wrapper.find('form').element.requestSubmit()
             await nextTick()
@@ -582,6 +588,20 @@ describe('ForgotPassword', () => {
             expect(openRequest.email).toBe(adresse)
         },
     )
+
+    it('envoie telle quelle la forme Punycode que Chromium donne d’un domaine internationalisé', async () => {
+        const wrapper = mountPage(ForgotPassword)
+
+        await typeInto(wrapper, 'Email', DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+
+        expect(champDeLAdresse(wrapper).element.validity.valid).toBe(true)
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(openRequest.email).toBe(DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+    })
 
     /*
      * `novalidate` : le navigateur n'arrête pas un champ vide, qu'il dirait
@@ -687,7 +707,9 @@ describe('ResetPassword', () => {
 
         expect(libelles).toEqual(['Email', 'Nouveau mot de passe', 'Confirmer le mot de passe'])
         expect(champ.element.value).toBe('')
-        expect(champ.attributes()).toMatchObject(CHAMP_D_ADRESSE_ENVOYEE_TELLE_QUELLE)
+        expect(champ.attributes()).toMatchObject({ ...CHAMP_D_ADRESSE, autocomplete: 'username' })
+        expect(ATTRIBUTS_DU_CHAMP_TEXTE.filter((attribut) => champ.attributes(attribut) !== undefined)).toEqual([])
+        expect(wrapper.find('form').attributes('novalidate')).toBeDefined()
         expect(champ.attributes('name')).toBe('email')
         expect(champ.attributes('required')).toBeDefined()
         expect(champ.attributes('readonly')).toBeUndefined()
@@ -699,8 +721,8 @@ describe('ResetPassword', () => {
         ).toEqual(['new-password', 'new-password'])
     })
 
-    it.each(ADRESSES_QU_UN_CHAMP_EMAIL_N_ENVOIE_PAS_TELLES_QUELLES)(
-        'envoie le nouveau mot de passe de %s, l’adresse telle qu’elle est tapée',
+    it.each(ADRESSES_QUE_SEUL_LE_NAVIGATEUR_REFUSE)(
+        'envoie le nouveau mot de passe de %s, que le navigateur refuserait et que le serveur admet',
         async (adresse) => {
             const wrapper = mountPage(ResetPassword, { props })
 
@@ -708,7 +730,7 @@ describe('ResetPassword', () => {
             await typeInto(wrapper, 'Nouveau mot de passe', 'Nouveau-mot-de-passe-2026!')
             await typeInto(wrapper, 'Confirmer le mot de passe', 'Nouveau-mot-de-passe-2026!')
 
-            expect(champDuCompte(wrapper).element.validity.valid).toBe(true)
+            expect(champDuCompte(wrapper).element.validity.typeMismatch).toBe(true)
 
             wrapper.find('form').element.requestSubmit()
             await nextTick()
@@ -718,6 +740,22 @@ describe('ResetPassword', () => {
             expect(openRequest.email).toBe(adresse)
         },
     )
+
+    it('envoie le nouveau mot de passe sous la forme Punycode que Chromium donne d’un domaine internationalisé', async () => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        await champDuCompte(wrapper).setValue(DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+        await typeInto(wrapper, 'Nouveau mot de passe', 'Nouveau-mot-de-passe-2026!')
+        await typeInto(wrapper, 'Confirmer le mot de passe', 'Nouveau-mot-de-passe-2026!')
+
+        expect(champDuCompte(wrapper).element.validity.valid).toBe(true)
+
+        wrapper.find('form').element.requestSubmit()
+        await nextTick()
+
+        expect(formPost).toHaveBeenCalledTimes(1)
+        expect(openRequest.email).toBe(DOMAINE_INTERNATIONALISE_EN_PUNYCODE)
+    })
 
     /*
      * `novalidate`, comme « mot de passe oublié » : le serveur juge chaque

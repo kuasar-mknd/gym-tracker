@@ -32,25 +32,21 @@ const submit = () => {
         </div>
 
         <!--
-            L'adresse part telle qu'elle est tapée, et le serveur en juge (#2104) :
-            le profil promet le lien à une adresse que la messagerie écrit et que
-            la règle `email` admet, et le serveur cherche le compte sous l'adresse
-            reçue. Un champ `type="email"` ne l'envoyait pas toujours ainsi. Le
-            navigateur le juge selon la spécification HTML, plus étroite que la
-            règle du serveur (partie locale entre guillemets, domaine littéral),
-            et Chromium y convertit en Punycode un domaine internationalisé. Le
-            champ est donc un champ texte au clavier d'adresse (`inputmode`), et
-            le formulaire porte `novalidate`, qui laisse aussi au serveur un
-            champ vide : son refus s'affiche sous le champ.
+            `novalidate` : le navigateur juge un champ `type="email"` selon la
+            spécification HTML, plus étroite que la règle `email` du serveur, et
+            n'envoyait pas une adresse que la messagerie écrit et que le profil
+            promet au lien (partie locale entre guillemets, domaine littéral),
+            ni un champ vide. Le serveur juge l'adresse, et son refus s'affiche
+            sous le champ (#2104). Le champ reste `type="email"`, comme ceux de
+            l'inscription et de la connexion : Chromium y convertit en Punycode
+            un domaine internationalisé, la forme sous laquelle l'inscription
+            l'enregistre depuis #2001 et sous laquelle le serveur le retrouve.
         -->
         <form novalidate @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.email"
-                type="text"
-                inputmode="email"
+                type="email"
                 autocomplete="email"
-                autocapitalize="none"
-                spellcheck="false"
                 label="Email"
                 placeholder="ton@email.com"
                 :error="form.errors.email"

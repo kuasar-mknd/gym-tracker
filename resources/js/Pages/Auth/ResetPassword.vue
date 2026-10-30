@@ -75,20 +75,17 @@ const submit = () => {
         </div>
 
         <!--
-            Comme « mot de passe oublié » (#2104) : l'adresse part telle qu'elle
-            est tapée, dans un champ texte au clavier d'adresse, que le navigateur
-            ne juge ni ne convertit en Punycode, et le serveur juge chaque champ,
-            vide compris (`novalidate`) ; ses refus s'affichent dessous. Un champ
-            `type="email"` refusait ou transformait une adresse que le lien a
-            reçue et sous laquelle le serveur retrouve le compte.
+            `novalidate`, comme « mot de passe oublié » : le navigateur
+            refuserait une adresse que le lien a reçue et que le serveur admet,
+            ou un champ vide. Le serveur juge chaque champ, et ses refus
+            s'affichent dessous (#2104). Le champ d'adresse reste `type="email"`,
+            dont Chromium envoie en Punycode un domaine internationalisé, la
+            forme sous laquelle le compte s'enregistre depuis #2001.
         -->
         <form v-if="!lienRefuse" novalidate @submit.prevent="submit" class="space-y-4">
             <GlassInput
                 v-model="form.email"
-                type="text"
-                inputmode="email"
-                autocapitalize="none"
-                spellcheck="false"
+                type="email"
                 name="email"
                 label="Email"
                 placeholder="ton@email.com"

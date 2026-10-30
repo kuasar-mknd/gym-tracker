@@ -296,6 +296,22 @@ final class User extends Authenticatable implements MustVerifyEmail
      * base, sur ce seul compte, quand la coupe change l'adresse, et seulement
      * alors.
      *
+     * La personne tape l'adresse dans un champ `type="email"`, à « mot de
+     * passe oublié » comme à la réinitialisation et à la connexion, et
+     * Chromium y convertit en Punycode un domaine qui n'est pas en ASCII sous
+     * une partie locale qui l'est (« bücher » devient « xn--bcher-kva »,
+     * mesuré sous Chromium 141). Depuis #2001, un tel domaine s'enregistre en
+     * Punycode, sous lequel la demande retrouve le compte. Un compte d'avant
+     * #2001 peut le porter en Unicode, que la collation ne rapproche pas du
+     * Punycode : le prédicat ne lui promet pas le lien, et le chemin le
+     * renvoie à un administrateur, qui peut lui donner au panneau sa forme
+     * ASCII (#2104). Il ne le promet pas davantage quand la conversion
+     * ramènerait le domaine à un ASCII sous lequel la collation retrouve le
+     * compte (une lettre pleine chasse, mesuré) : le prédicat peut taire un
+     * lien qui part, jamais promettre un lien qui ne part pas. D'une partie
+     * locale qui n'est pas en ASCII, Chromium envoie l'adresse telle qu'elle
+     * est tapée, domaine compris, et la demande la retrouve.
+     *
      * La règle est recopiée de la demande, pas lue sur elle : la comparaison
      * avec ce que fait vraiment « mot de passe oublié », pour chaque forme
      * d'adresse, vit dans `AdresseQueLaMessagerieSaitEcrireTest`.
@@ -306,9 +322,24 @@ final class User extends Authenticatable implements MustVerifyEmail
         $adresseRecueParLaDemande = Str::trim($adresse);
 
         return $this->laMessagerieSaitEcrireSonAdresse()
+            && ! self::leNavigateurConvertiraitSonDomaine($adresseRecueParLaDemande)
             && Validator::make(['email' => $adresseRecueParLaDemande], ['email' => ['required', 'email']])->passes()
             && ($adresseRecueParLaDemande === $adresse
                 || self::query()->whereKey($this->getKey())->where('email', $adresseRecueParLaDemande)->exists());
+    }
+
+    /**
+     * Un champ `type="email"` de Chromium enverrait-il cette adresse sous un
+     * autre domaine que le sien ? Il convertit en Punycode un domaine qui
+     * n'est pas en ASCII, et ne garde la conversion que si elle donne une
+     * adresse que la spécification HTML admet, donc sous une partie locale
+     * en ASCII. Le prédicat le suppose de toute partie locale en ASCII, entre
+     * guillemets comprise : il ne promet ainsi jamais un lien qui ne part pas
+     * (`peutRecevoirLeLienDeReinitialisation()`).
+     */
+    private static function leNavigateurConvertiraitSonDomaine(string $adresse): bool
+    {
+        return ! Str::isAscii(Str::afterLast($adresse, '@')) && Str::isAscii(Str::beforeLast($adresse, '@'));
     }
 
     /**
