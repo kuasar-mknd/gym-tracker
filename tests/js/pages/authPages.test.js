@@ -121,10 +121,36 @@ const inputNamed = (wrapper, name) => wrapper.find(`input[name="${name}"]`)
  * @returns {Promise<void>}
  */
 const typeInto = async (wrapper, labelText, value) => {
-    // A required field's label carries a trailing asterisk for sighted users.
-    const label = wrapper.findAll('label').find((candidate) => candidate.text().replace(/\s*\*$/, '') === labelText)
+    await champSousLeLibelle(wrapper, labelText).setValue(value)
+}
 
-    await wrapper.find(`#${label.attributes('for')}`).setValue(value)
+/**
+ * Le champ que nomme un libellé visible, trouvé par le `for` du libellé.
+ *
+ * @param {import('@vue/test-utils').VueWrapper} wrapper
+ * @param {string} libelle - Le libellé, sans l'astérisque d'un champ requis.
+ * @returns {import('@vue/test-utils').DOMWrapper<Element>}
+ */
+const champSousLeLibelle = (wrapper, libelle) => {
+    // A required field's label carries a trailing asterisk for sighted users.
+    const label = wrapper.findAll('label').find((candidate) => candidate.text().replace(/\s*\*$/, '') === libelle)
+
+    return wrapper.find(`#${label.attributes('for')}`)
+}
+
+/**
+ * Le refus que le champ annonce, lu par son `aria-describedby` : la phrase
+ * qu'un lecteur d'écran lit avec le champ, sans l'icône qui la précède, ou
+ * null s'il n'en annonce aucun.
+ *
+ * @param {import('@vue/test-utils').VueWrapper} wrapper
+ * @param {import('@vue/test-utils').DOMWrapper<Element>} champ
+ * @returns {string|null}
+ */
+const refusAnnonceSous = (wrapper, champ) => {
+    const refus = champ.attributes('aria-describedby')
+
+    return refus === undefined ? null : wrapper.find(`#${refus} p`).text()
 }
 
 /**
@@ -525,7 +551,7 @@ const CHAMP_D_ADRESSE_ENVOYEE_TELLE_QUELLE = {
 
 describe('ForgotPassword', () => {
     /** Le champ de l'adresse, trouvé par son libellé. */
-    const champDeLAdresse = (wrapper) => wrapper.find(`#${wrapper.find('label').attributes('for')}`)
+    const champDeLAdresse = (wrapper) => champSousLeLibelle(wrapper, 'Email')
 
     it('tape l’adresse dans un champ texte au clavier d’adresse, que le navigateur ne juge ni ne transforme', () => {
         const champ = champDeLAdresse(mountPage(ForgotPassword))
@@ -570,6 +596,24 @@ describe('ForgotPassword', () => {
 
         expect(formPost).toHaveBeenCalledTimes(1)
         expect(openRequest.email).toBe('')
+    })
+
+    /*
+     * Le navigateur ne signale plus une adresse vide ou mal formée
+     * (`novalidate`) : le refus du serveur, sous le champ, est le seul retour.
+     */
+    it('affiche sous le champ, et l’y annonce, le refus de l’adresse par le serveur', async () => {
+        const wrapper = mountPage(ForgotPassword)
+
+        expect(refusAnnonceSous(wrapper, champDeLAdresse(wrapper))).toBeNull()
+
+        wrapper.vm.form.errors = { email: 'Le champ adresse e-mail doit être une adresse e-mail valide.' }
+        await nextTick()
+
+        expect(champDeLAdresse(wrapper).attributes('aria-invalid')).toBe('true')
+        expect(refusAnnonceSous(wrapper, champDeLAdresse(wrapper))).toBe(
+            'Le champ adresse e-mail doit être une adresse e-mail valide.',
+        )
     })
 
     it('poste l’email vers la route d’envoi du lien', async () => {
@@ -687,6 +731,30 @@ describe('ResetPassword', () => {
 
         expect(formPost).toHaveBeenCalledTimes(1)
         expect([openRequest.email, openRequest.password, openRequest.password_confirmation]).toEqual(['', '', ''])
+    })
+
+    /*
+     * Le navigateur n'impose plus `required` aux deux mots de passe
+     * (`novalidate`) : chaque refus du serveur s'affiche sous son propre
+     * champ, et seulement sous lui.
+     */
+    it.each([
+        ['Nouveau mot de passe', 'password', 'Le champ mot de passe est obligatoire.'],
+        [
+            'Confirmer le mot de passe',
+            'password_confirmation',
+            'Le champ confirmation du mot de passe est obligatoire.',
+        ],
+    ])('affiche sous « %s », et l’y annonce, le refus de son champ par le serveur', async (libelle, cle, refus) => {
+        const wrapper = mountPage(ResetPassword, { props })
+
+        wrapper.vm.form.errors = { [cle]: refus }
+        await nextTick()
+
+        expect(champSousLeLibelle(wrapper, libelle).attributes('aria-invalid')).toBe('true')
+        expect(refusAnnonceSous(wrapper, champSousLeLibelle(wrapper, libelle))).toBe(refus)
+        expect(wrapper.findAll('input[aria-invalid="true"]')).toHaveLength(1)
+        expect(wrapper.find('[data-testid="lien-refuse"]').exists()).toBe(false)
     })
 
     it('envoie l’adresse saisie avec le formulaire, à côté de la valeur chiffrée, qui ne s’affiche pas', async () => {
