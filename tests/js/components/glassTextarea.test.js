@@ -109,6 +109,18 @@ describe('GlassTextarea — ce que le compteur annonce', () => {
         ])
     })
 
+    /*
+     * Un texte prérempli près de la limite (une note de séance, la
+     * description d'un modèle) ne parle pas à l'ouverture de la page : la
+     * région n'annonce qu'un palier franchi pendant la saisie. Les autres cas
+     * montent le champ loin de la limite, où le palier est nul et où une
+     * annonce dès le montage ne se distinguerait pas du silence.
+     */
+    it('se tait au montage, même près de la limite', () => {
+        expect(regionsAnnoncees(monter({ modelValue: 'x'.repeat(LIMITE - 5), maxlength: LIMITE }))).toEqual([''])
+        expect(regionsAnnoncees(monter({ modelValue: 'x'.repeat(LIMITE), maxlength: LIMITE }))).toEqual([''])
+    })
+
     it('se tait de nouveau quand le texte s’éloigne de la limite', async () => {
         const wrapper = monter({ modelValue: 'x'.repeat(LIMITE - 60), maxlength: LIMITE })
 
