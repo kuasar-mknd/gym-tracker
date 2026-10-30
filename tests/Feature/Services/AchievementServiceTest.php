@@ -32,7 +32,18 @@ test('it awards count achievement', function (): void {
         'slug' => 'first-workout',
     ]);
 
-    // Une séance faite : terminée, avec une série cochée (#2110)
+    // Une séance démarrée, sans série, ne compte pas (#2110) : elle comptait,
+    // et ce test l'affirmait.
+    Workout::factory()->create(['user_id' => $user->id]);
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseMissing('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement->id,
+    ]);
+
+    // Une séance faite : terminée, avec une série cochée.
     Workout::factory()->faite()->create(['user_id' => $user->id]);
 
     $this->service->syncAchievements($user);

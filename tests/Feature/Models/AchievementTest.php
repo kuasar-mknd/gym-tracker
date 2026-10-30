@@ -29,8 +29,19 @@ class AchievementTest extends TestCase
         Notification::fake();
 
         $user = User::factory()->create();
+        $premiereSeance = Achievement::where('slug', 'first-workout')->firstOrFail();
 
-        // Une première séance faite : terminée, avec une série cochée (#2110)
+        // Une séance terminée sans série ne débloque plus rien (#2110) : elle le
+        // débloquait, et ce test l'affirmait.
+        $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+
+        $this->assertDatabaseMissing('user_achievements', [
+            'user_id' => $user->id,
+            'achievement_id' => $premiereSeance->id,
+        ]);
+        Notification::assertNothingSentTo($user);
+
+        // Une première séance faite : terminée, avec une série cochée.
         Workout::factory()->faite()->create(['user_id' => $user->id]);
 
         $this->assertDatabaseHas('user_achievements', [
