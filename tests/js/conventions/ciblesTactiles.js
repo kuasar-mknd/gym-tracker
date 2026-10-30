@@ -85,24 +85,37 @@ export const icone = (corps) => {
  * (`before:-inset-2.5`) — cette dernière étant la seule utilisable quand le
  * contrôle doit rester visuellement petit.
  *
+ * La largeur et la hauteur se calculent chacune à part, et la plus petite
+ * l'emporte : `min-h-touch` ne porte que la hauteur, `min-w-touch` que la
+ * largeur. Les compter pour les deux laissait passer à 44 px un lien de 20 px
+ * de large, une `GlassIcon size="sm"` sous `min-h-touch` seul.
+ *
  * @param {string} classes
  * @param {number} tailleIcone
  * @returns {number}
  */
 export const cible = (classes, tailleIcone) => {
     const mots = classes.split(/\s+/)
+    const debord = 2 * Math.max(0, ...tailles(mots, /^before:-inset-(\d+(?:\.5)?|px)$/))
+    const tousCotes = tailles(mots, /^p-(\d+(?:\.5)?|px)$/)
 
-    if (mots.includes('min-h-touch') || mots.includes('min-w-touch')) {
-        return CIBLE
+    /**
+     * Une dimension : sa taille explicite (`size-11`, `w-10`), sinon l'icône et
+     * son rembourrage de ce côté (`p-2`, `px-3`), plus le débord ; le minimum
+     * de la charte (`min-w-touch`) la porte à 44 px au moins.
+     */
+    const dimension = (axe, minimum) => {
+        const explicite = tailles(mots, new RegExp(`^(?:size|${axe})-(\\d+(?:\\.5)?|px)$`))
+        const rembourrage = [
+            ...tousCotes,
+            ...tailles(mots, new RegExp(`^p${axe === 'w' ? 'x' : 'y'}-(\\d+(?:\\.5)?|px)$`)),
+        ]
+        const boite = explicite.length > 0 ? Math.min(...explicite) : tailleIcone + 2 * Math.max(0, ...rembourrage)
+
+        return Math.max(boite + debord, mots.includes(minimum) ? CIBLE : 0)
     }
 
-    const explicite = tailles(mots, /^(?:size|[hw])-(\d+(?:\.5)?|px)$/)
-    const rembourrage = tailles(mots, /^p-(\d+(?:\.5)?|px)$/)
-    const debord = tailles(mots, /^before:-inset-(\d+(?:\.5)?|px)$/)
-
-    const boite = explicite.length > 0 ? Math.min(...explicite) : tailleIcone + 2 * Math.max(0, ...rembourrage, 0)
-
-    return boite + 2 * Math.max(0, ...debord, 0)
+    return Math.min(dimension('w', 'min-w-touch'), dimension('h', 'min-h-touch'))
 }
 
 /**

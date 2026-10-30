@@ -31,7 +31,7 @@ Trois règles se tiennent dans `tests/js/conventions/buttonVariants.test.js` et 
 - tout `type="submit"` DÉCLARE sa variante (l'absence retombe sur `default`, le verre pâle des actions tertiaires) ;
 - « Annuler » est toujours `secondary`, jamais `ghost` : refuser et confirmer ne doivent pas se ressembler ;
 - toute création (« Ajouter », « Créer », « Nouveau », l'icône `add`) est `primary` ;
-- un bouton ou un lien réduit à une icône atteint 44 px, par `min-h-touch`, par une taille explicite (`size-11`), ou par un `before:-inset-*` qui déborde sans pousser ses voisins (section « Une commande réduite à une icône… » plus bas).
+- un bouton ou un lien réduit à une icône atteint 44 px dans les deux dimensions, par `min-h-touch min-w-touch` (l'un ne porte que la hauteur, l'autre que la largeur), par une taille explicite (`size-11`), ou par un `before:-inset-*` qui déborde sans pousser ses voisins (section « Une commande réduite à une icône… » plus bas).
 
 Sur `GlassSelect`, `placeholder` est une INVITE (rendue `disabled`) et `empty-label` est un CHOIX vide sélectionnable. Les confondre donnait un « — Aucune — » sur lequel personne ne pouvait revenir.
 

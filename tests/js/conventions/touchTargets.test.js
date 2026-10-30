@@ -110,6 +110,18 @@ describe('les cibles tactiles', () => {
             ),
         ).toEqual([36])
         expect(mesure('<a href="/" aria-label="Aide"><svg class="size-4" /></a>')).toEqual([16])
+        // `min-h-touch` ne donne que la hauteur, `min-w-touch` que la largeur :
+        // l'autre dimension reste celle de l'icône et de son rembourrage.
+        expect(
+            mesure(
+                '<Link href="/" class="min-h-touch" aria-label="Modifier"><GlassIcon name="edit" size="sm" /></Link>',
+            ),
+        ).toEqual([20])
+        expect(
+            mesure('<Link href="/" class="flex min-w-touch" aria-label="Aide"><GlassIcon name="help" /></Link>'),
+        ).toEqual([24])
+        expect(cible('min-h-touch px-2', 20)).toBe(36)
+        expect(cible('min-w-touch py-1', 24)).toBe(32)
 
         expect(
             mesure('<Link href="/" class="flex size-11" aria-label="Retour"><GlassIcon name="arrow_back" /></Link>'),
@@ -122,6 +134,11 @@ describe('les cibles tactiles', () => {
         expect(
             mesure(
                 '<Link href="/" class="relative p-2 before:-inset-0.5" aria-label="Lire"><GlassIcon name="play_circle" /></Link>',
+            ),
+        ).toEqual([])
+        expect(
+            mesure(
+                '<Link href="/" class="min-h-touch min-w-touch" aria-label="Modifier"><GlassIcon name="edit" size="sm" /></Link>',
             ),
         ).toEqual([])
         // Un lien qui porte un texte ne se mesure pas ici : sa largeur suit son libellé.
