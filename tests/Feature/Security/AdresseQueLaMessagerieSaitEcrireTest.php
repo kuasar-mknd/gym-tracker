@@ -130,6 +130,25 @@ $coupeesParLaMessagerie = [
     'une espace en tête' => [' camille@example.org'],
 ];
 
+/*
+ * Ce qu'un compte d'avant #2001 peut porter hors de l'ASCII, que la
+ * messagerie écrit et que la règle `email` admet : le panneau l'enregistrait
+ * telle quelle (Livewire ne coupe pas les blancs). La demande du lien
+ * « mot de passe oublié » coupe l'adresse saisie de ses blancs Unicode,
+ * espace insécable comprise (`TrimStrings`, `Str::trim()`), puis cherche le
+ * compte sous l'adresse coupée, selon la collation de `users.email` : elle le
+ * retrouve sans une espace insécable au bout, que la collation pèse comme une
+ * espace, mais pas sans un blanc en tête, ni sans un remplissage hangul au
+ * bout, que la collation ne néglige pas. Un domaine internationalisé se
+ * cherche tel qu'il est saisi.
+ */
+$horsDeLAsciiAvantLaRegle = [
+    'une espace insécable en tête' => ["\u{00A0}camille@example.org"],
+    'une espace insécable au bout' => ["camille@example.org\u{00A0}"],
+    'un remplissage hangul au bout' => ["camille@example.org\u{3164}"],
+    'un domaine internationalisé' => ['camille.martin@bücher.example.org'],
+];
+
 dataset('adresses que la règle email admet et que Mime refuse', $admisesParLaRegleEmailRefuseesParMime);
 dataset('adresses que Mime refuse d’écrire', [...$admisesParLaRegleEmailRefuseesParMime, ...$refuseesParLaRegleEmailCommeParMime]);
 dataset('adresses que Mime écrit', $ecritesParMime);
@@ -774,8 +793,10 @@ it('ne promet plus le lien « mot de passe oublié » à un compte relié à un 
  * lien part à l'adresse du compte, et il réinitialise son mot de passe,
  * exactement quand `User::peutRecevoirLeLienDeReinitialisation()` le dit,
  * pour chaque forme qu'un compte peut porter. Le prédicat recopie la règle de
- * la demande (`PasswordResetLinkRequest`) : ce cas le dit si l'une change
- * sans l'autre.
+ * la demande (`PasswordResetLinkRequest`) et la coupe des blancs qui la
+ * précède (`TrimStrings`) : ce cas le dit si l'une change sans l'autre. La
+ * personne saisit l'adresse du compte telle que la page du profil la lui
+ * montre, et la page l'envoie telle quelle.
  */
 it('ne promet le lien « mot de passe oublié » qu’à une adresse qui le reçoit et qu’il réinitialise', function (string $adresse): void {
     $compte = User::factory()->create(['email' => $adresse]);
@@ -800,6 +821,7 @@ it('ne promet le lien « mot de passe oublié » qu’à une adresse qui le reç
     ...$refuseesParLaRegleEmailCommeParMime,
     ...$refuseesParLaRegleEmailEcritesParMime,
     ...$ecritesParMime,
+    ...$horsDeLAsciiAvantLaRegle,
 ]);
 
 it('laisse le panneau enregistrer le nom d’un compte dont l’adresse est antérieure à la règle, par la page comme par la table', function (string $adresse): void {

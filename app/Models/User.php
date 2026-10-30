@@ -26,6 +26,7 @@ use Illuminate\Notifications\DatabaseNotification as Notification;
 use Illuminate\Notifications\DatabaseNotificationCollection as NotifColl;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -284,14 +285,30 @@ final class User extends Authenticatable implements MustVerifyEmail
      * vers un mot de passe ne promet le lien qu'à un compte qui le reçoit
      * (`DonneLeCheminVersUnMotDePasse`, `ProfileController::edit`).
      *
+     * La demande ne juge pas l'adresse telle qu'elle est tapée : `TrimStrings`
+     * la coupe d'abord de ses blancs Unicode, espace insécable comprise
+     * (`Str::trim()`), et le courtier cherche le compte sous l'adresse coupée,
+     * selon la collation de `users.email`. Un compte d'avant #2001 peut porter
+     * un tel blanc, que la messagerie écrit et que la règle admet. En tête,
+     * l'adresse coupée ne retrouve pas le compte ; au bout, elle le retrouve
+     * quand la collation néglige le blanc (une espace insécable), pas
+     * autrement (un remplissage hangul). Le prédicat le demande donc à la
+     * base, sur ce seul compte, quand la coupe change l'adresse, et seulement
+     * alors.
+     *
      * La règle est recopiée de la demande, pas lue sur elle : la comparaison
      * avec ce que fait vraiment « mot de passe oublié », pour chaque forme
      * d'adresse, vit dans `AdresseQueLaMessagerieSaitEcrireTest`.
      */
     public function peutRecevoirLeLienDeReinitialisation(): bool
     {
+        $adresse = $this->getEmailForPasswordReset();
+        $adresseRecueParLaDemande = Str::trim($adresse);
+
         return $this->laMessagerieSaitEcrireSonAdresse()
-            && Validator::make(['email' => $this->getEmailForPasswordReset()], ['email' => ['required', 'email']])->passes();
+            && Validator::make(['email' => $adresseRecueParLaDemande], ['email' => ['required', 'email']])->passes()
+            && ($adresseRecueParLaDemande === $adresse
+                || self::query()->whereKey($this->getKey())->where('email', $adresseRecueParLaDemande)->exists());
     }
 
     /**
