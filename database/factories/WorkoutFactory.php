@@ -40,18 +40,23 @@ class WorkoutFactory extends Factory
      * au hasard jusqu'à 200 kg comme celle de la fabrique des séries, elle
      * débloquerait au passage un succès de charge dans un test qui sème tout
      * le catalogue pour ne compter que des séances (`AchievementTest`).
+     *
+     * La fin se pose sur la séance faite, pas dans un état : la fabrique
+     * applique les attributs donnés à `create()` ou `make()`, et les états
+     * posés après celui-ci, après lui. Un état ne voyait donc que le début
+     * par défaut, et une séance démarrée demain finissait aujourd'hui. Une fin
+     * donnée reste la sienne (`FabriqueDesSeancesFaitesTest`).
+     *
+     * La série passe par les écouteurs des séries (records, valeurs
+     * recommandées, volume, recalculs du compte). Un test qui ne lit pas leur
+     * effet crée ses séances faites sous `Workout::withoutEvents()`
+     * (`.ai/rules/tests.md`).
      */
     public function faite(): static
     {
         return $this
-            ->state(function (array $attributes): array {
-                $debut = $attributes['started_at'] ?? null;
-
-                return [
-                    'ended_at' => ($debut instanceof \DateTimeInterface
-                        ? \Illuminate\Support\Carbon::instance($debut)
-                        : \Illuminate\Support\Carbon::parse(is_string($debut) ? $debut : 'now'))->addHour(),
-                ];
+            ->afterMaking(function (\App\Models\Workout $seance): void {
+                $seance->ended_at ??= $seance->started_at->copy()->addHour();
             })
             ->afterCreating(function (\App\Models\Workout $seance): void {
                 \App\Models\Set::factory()->create([
