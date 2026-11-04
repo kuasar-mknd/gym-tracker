@@ -1,8 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 
 import { useMinuteurDIntervalles } from '@/composables/useMinuteurDIntervalles'
+import {
+    cacherLaPage,
+    demandes,
+    installerLeVerrouDEcran,
+    montrerLaPage,
+    retirerLeVerrouDEcran,
+    verrouDEcran,
+    verrous,
+    verrousActifs,
+} from '../utils/verrouDEcranSimule'
 
 /** Chaque oscillateur demandé, dans l'ordre : sa fréquence dit quel bip c'était. */
 let bips
@@ -29,6 +39,13 @@ class FausseSortieAudio {
     }
 }
 
+/**
+ * Chaque hôte monté par un cas, démonté après lui s'il ne l'est pas déjà : un
+ * minuteur laissé monté garde ses minuteries et son écoute de la page, et
+ * répondrait au retour de la page d'un cas suivant.
+ */
+let hotes = []
+
 /** Le composable pose ses crochets de cycle de vie : il lui faut un composant hôte. */
 const monter = () => {
     let minuteur
@@ -40,6 +57,7 @@ const monter = () => {
             },
         }),
     )
+    hotes.push(wrapper)
     return { wrapper, minuteur }
 }
 
@@ -53,6 +71,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+    hotes.filter((hote) => !hote.vm.$.isUnmounted).forEach((hote) => hote.unmount())
+    hotes = []
     vi.useRealTimers()
     delete window.AudioContext
 })
@@ -193,5 +213,217 @@ describe('le minuteur d’intervalles', () => {
         expect(minuteur.timeLeft.value).toBe(9)
         expect(FausseSortieAudio.instances).toHaveLength(1)
         expect(FausseSortieAudio.instances[0].fermee).toBe(true)
+    })
+})
+
+/**
+ * Le minuteur lit l'horloge (#2113). Il avançait en ôtant une seconde à chaque
+ * tic, sans retenir ni son départ ni sa fin : une page suspendue (l'écran
+ * verrouillé sur iOS, l'application en arrière-plan) ou une minuterie espacée
+ * (un onglet caché dans Chrome, un onglet gelé sur Android) le figeait, et il
+ * repartait d'où il s'était figé, phase, tour et temps restant faux. Il retient
+ * désormais le temps de marche (le départ, moins les pauses) et en tire la
+ * phase, le tour et le temps restant à chaque minuterie et au retour de la
+ * page ; un bip manqué de plus d'une seconde ne se rejoue pas. Et il garde
+ * l'écran allumé tant qu'il tourne (`navigator.wakeLock`), sans quoi l'écran
+ * se verrouille au bout du délai réglé sur l'appareil.
+ *
+ * Une suspension se joue en avançant l'horloge sans jouer les minuteries
+ * (`vi.setSystemTime`), la page cachée puis rendue visible ; le verrou d'écran
+ * et la visibilité de la page sont ceux du faux de `tests/js/utils/verrouDEcranSimule.js`.
+ */
+describe('le minuteur d’intervalles lit l’horloge et garde l’écran allumé (#2113)', () => {
+    const tabata = { name: 'Tabata', work: 20, rest: 10, rounds: 8, warmup: 10 }
+
+    /** L'écran verrouillé : la page se cache, l'horloge avance de `ms` sans qu'aucune minuterie ne parte, puis la page revient. */
+    const suspendre = (ms) => {
+        cacherLaPage()
+        vi.setSystemTime(Date.now() + ms)
+        montrerLaPage()
+    }
+
+    const notes = () => bips.map((osc) => osc.frequency.value)
+
+    beforeEach(() => installerLeVerrouDEcran())
+    afterEach(() => retirerLeVerrouDEcran())
+
+    it('suspendu une minute, se recale sur l’horloge au retour de la page : phase, tour et temps restant', () => {
+        const { minuteur } = monter()
+        minuteur.charger(tabata)
+        minuteur.startTimer()
+        vi.advanceTimersByTime(6000)
+        expect(minuteur.formattedTime.value).toBe('00:04')
+
+        suspendre(60_000)
+
+        // 66 s après le départ : échauffement 10, travail 20, repos 10, travail 20, puis 6 s du second repos.
+        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.formattedTime.value).toBe('00:04')
+        expect(minuteur.currentRound.value).toBe(2)
+        expect(minuteur.status.value).toBe('running')
+    })
+
+    it('ne rejoue pas les bips manqués pendant la suspension, puis sonne chacun à son heure', () => {
+        const { minuteur } = monter()
+        minuteur.charger(tabata)
+        minuteur.startTimer()
+        vi.advanceTimersByTime(6000)
+
+        suspendre(60_000)
+        expect(notes()).toEqual([])
+
+        vi.advanceTimersByTime(1000)
+        expect(notes()).toEqual([440])
+        expect(minuteur.formattedTime.value).toBe('00:03')
+
+        vi.advanceTimersByTime(3000)
+        expect(notes()).toEqual([440, 440, 440, 880])
+        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.currentRound.value).toBe(3)
+        expect(minuteur.formattedTime.value).toBe('00:20')
+    })
+
+    it('lit l’horloge quand sa minuterie part en retard, retenue par l’arrière-plan, au lieu d’ôter une seconde', () => {
+        const { minuteur } = monter()
+        minuteur.charger(tabata)
+        minuteur.startTimer()
+        vi.advanceTimersByTime(5000)
+
+        // Un onglet caché espace ses minuteries : la suivante part trente secondes plus tard, sans évènement de la page.
+        vi.setSystemTime(Date.now() + 30_000)
+        vi.advanceTimersToNextTimer()
+
+        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.formattedTime.value).toBe('00:04')
+        expect(minuteur.currentRound.value).toBe(1)
+        expect(notes()).toEqual([])
+    })
+
+    it('ne compte pas le temps passé en pause, même suspendu, ni ne perd la fraction de seconde où la pause a pris', () => {
+        const { minuteur } = monter()
+        minuteur.charger({ ...sprint, warmup: 0, work: 10 })
+        minuteur.startTimer()
+        vi.advanceTimersByTime(4300)
+        minuteur.toggleTimer()
+        expect(minuteur.status.value).toBe('paused')
+
+        suspendre(5 * 60_000)
+
+        expect(minuteur.status.value).toBe('paused')
+        expect(minuteur.formattedTime.value).toBe('00:06')
+
+        minuteur.toggleTimer()
+        vi.advanceTimersByTime(699)
+        expect(minuteur.formattedTime.value).toBe('00:06')
+
+        // 4,3 s de marche avant la pause : la seconde suivante tombe 0,7 s après la reprise, pas une seconde entière.
+        vi.advanceTimersByTime(1)
+        expect(minuteur.formattedTime.value).toBe('00:05')
+    })
+
+    it('revenu après la fin, se dit terminé, sans sonner ni laisser de minuterie, et ne redemande pas le verrou', async () => {
+        const { minuteur } = monter()
+        minuteur.charger(sprint)
+        minuteur.startTimer()
+        vi.advanceTimersByTime(1000)
+        await flushPromises()
+        // La dernière seconde de l'échauffement a sonné ; la séance dure 10 s.
+        expect(notes()).toEqual([440])
+
+        suspendre(60_000)
+        await flushPromises()
+
+        expect(minuteur.status.value).toBe('finished')
+        expect(minuteur.phaseLabel.value).toBe('TERMINÉ')
+        expect(minuteur.formattedTime.value).toBe('00:00')
+        expect(minuteur.currentRound.value).toBe(2)
+        expect(notes()).toEqual([440])
+        expect(vi.getTimerCount()).toBe(0)
+        expect(demandes).toHaveLength(1)
+        expect(verrousActifs()).toEqual([])
+    })
+
+    it('garde l’écran allumé tant qu’il tourne : demandé au départ, relâché en pause, redemandé à la reprise, relâché à la fin', async () => {
+        const { minuteur } = monter()
+        minuteur.charger({ ...sprint, warmup: 0, work: 3, rounds: 1 })
+
+        minuteur.startTimer()
+        await flushPromises()
+        expect(demandes).toEqual([{ type: 'screen', visibilite: 'visible' }])
+        expect(verrousActifs()).toEqual([verrous[0]])
+
+        minuteur.toggleTimer()
+        expect(verrous[0]).toMatchObject({ released: true, relachePar: 'page' })
+
+        minuteur.toggleTimer()
+        await flushPromises()
+        expect(verrousActifs()).toEqual([verrous[1]])
+
+        vi.advanceTimersByTime(3000)
+        expect(minuteur.status.value).toBe('finished')
+        expect(verrous[1]).toMatchObject({ released: true, relachePar: 'page' })
+        expect(verrousActifs()).toEqual([])
+    })
+
+    it('relâche le verrou à la réinitialisation et au démontage', async () => {
+        const { wrapper, minuteur } = monter()
+        minuteur.charger(tabata)
+
+        minuteur.startTimer()
+        await flushPromises()
+        minuteur.resetRunner()
+        expect(verrous[0]).toMatchObject({ released: true, relachePar: 'page' })
+
+        minuteur.startTimer()
+        await flushPromises()
+        wrapper.unmount()
+
+        expect(verrous[1]).toMatchObject({ released: true, relachePar: 'page' })
+        expect(verrousActifs()).toEqual([])
+        expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('redemande au retour de la page le verrou que le navigateur a relâché en la cachant, et pas en pause', async () => {
+        const { minuteur } = monter()
+        minuteur.charger(tabata)
+        minuteur.startTimer()
+        await flushPromises()
+
+        cacherLaPage()
+        expect(verrous[0]).toMatchObject({ released: true, relachePar: 'systeme' })
+        montrerLaPage()
+        await flushPromises()
+
+        expect(demandes).toHaveLength(2)
+        expect(verrousActifs()).toEqual([verrous[1]])
+
+        minuteur.toggleTimer()
+        cacherLaPage()
+        montrerLaPage()
+        await flushPromises()
+
+        expect(demandes).toHaveLength(2)
+        expect(verrousActifs()).toEqual([])
+    })
+
+    it('tourne jusqu’au bout quand le navigateur refuse le verrou d’écran, ou ne l’a pas', async () => {
+        verrouDEcran.refuser = true
+        const refuse = monter().minuteur
+        refuse.charger({ ...sprint, warmup: 0, work: 2, rounds: 1 })
+        refuse.startTimer()
+        await flushPromises()
+        vi.advanceTimersByTime(2000)
+
+        expect(demandes).toHaveLength(1)
+        expect(verrous).toEqual([])
+        expect(refuse.status.value).toBe('finished')
+
+        installerLeVerrouDEcran({ sansApi: true })
+        const sansApi = monter().minuteur
+        sansApi.charger({ ...sprint, warmup: 0, work: 2, rounds: 1 })
+        sansApi.startTimer()
+        vi.advanceTimersByTime(2000)
+
+        expect(sansApi.status.value).toBe('finished')
     })
 })

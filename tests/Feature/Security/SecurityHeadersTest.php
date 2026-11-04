@@ -27,3 +27,17 @@ it('les pose aussi sur une réponse d erreur', function (): void {
         ->assertHeader('X-Content-Type-Options', 'nosniff')
         ->assertHeader('X-Frame-Options', 'SAMEORIGIN');
 });
+
+/**
+ * Le minuteur d'intervalles garde l'écran allumé tant qu'il tourne
+ * (`navigator.wakeLock`, #2113). La capacité `screen-wake-lock` est permise à
+ * la page elle-même par défaut (`self`) : une politique qui la refuserait
+ * laisserait de nouveau l'écran se verrouiller, la page suspendue, sans aucune
+ * erreur visible, la demande du verrou étant refusée en silence.
+ */
+it('laisse au minuteur d’intervalles le verrou d’écran', function (): void {
+    $politique = (string) $this->get('/login')->headers->get('Permissions-Policy');
+
+    expect($politique)->not->toBe('')
+        ->and($politique)->not->toContain('screen-wake-lock');
+});
