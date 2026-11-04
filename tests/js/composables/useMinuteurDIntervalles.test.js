@@ -189,6 +189,40 @@ describe('le minuteur d’intervalles', () => {
         expect(bips.map((osc) => osc.frequency.value)).toEqual([440, 440, 440, 880, 1200])
     })
 
+    it('sonne la fin une seule fois, au bout du dernier travail, même quand le repos qui le précède finit une seconde avant', () => {
+        const { minuteur } = monter()
+        minuteur.charger({ ...sprint, warmup: 0, work: 1, rest: 1, rounds: 2 })
+
+        minuteur.startTimer()
+        vi.advanceTimersByTime(3000)
+
+        expect(minuteur.status.value).toBe('finished')
+        expect(bips.map((osc) => osc.frequency.value)).toEqual([880, 880, 880, 1200])
+    })
+
+    /*
+     * Un repos de 0 s, que le formulaire et le serveur permettent, ne dure rien
+     * (#2113) : le travail suivant enchaîne, sur un seul bip de changement. Au
+     * compte des tics, il durait une seconde, « REPOS 00:00 » entre deux bips
+     * de changement, et décalait la séance d'une seconde par tour.
+     */
+    it('enchaîne les travaux sans repos quand le repos dure 0 s', () => {
+        const { minuteur } = monter()
+        minuteur.charger({ ...sprint, warmup: 0, work: 2, rest: 0, rounds: 2 })
+
+        minuteur.startTimer()
+        vi.advanceTimersByTime(2000)
+
+        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.currentRound.value).toBe(2)
+        expect(minuteur.formattedTime.value).toBe('00:02')
+
+        vi.advanceTimersByTime(2000)
+
+        expect(minuteur.status.value).toBe('finished')
+        expect(bips.map((osc) => osc.frequency.value)).toEqual([440, 880, 440, 880, 1200])
+    })
+
     it('court sans bruit là où le navigateur n’a pas de sortie audio', () => {
         delete window.AudioContext
         const { minuteur } = monter()
@@ -319,6 +353,36 @@ describe('le minuteur d’intervalles lit l’horloge et garde l’écran allum�
         // 4,3 s de marche avant la pause : la seconde suivante tombe 0,7 s après la reprise, pas une seconde entière.
         vi.advanceTimersByTime(1)
         expect(minuteur.formattedTime.value).toBe('00:05')
+    })
+
+    /*
+     * L'aperçu « Lancer » du formulaire n'est pas validé : un nombre de tours
+     * démesuré y part tel quel. L'étape d'un instant se calcule, sans liste
+     * des tours dressée d'avance, qui bloquerait la page ; et un retour
+     * dix jours plus tard ne lit que les étapes de la dernière seconde.
+     */
+    it('lance un préréglage démesuré sans rien dresser d’avance, et le retrouve juste dix jours plus tard', () => {
+        const { minuteur } = monter()
+        minuteur.charger({ name: 'Sans fin', work: 1, rest: 1, rounds: 1_000_000_000, warmup: 0 })
+        minuteur.startTimer()
+        vi.advanceTimersByTime(3000)
+
+        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.currentRound.value).toBe(2)
+
+        suspendre(10 * 24 * 3_600_000)
+
+        // 864 003 s de marche, des tours de 2 s : le repos du tour 432 002 commence à l'instant même du retour.
+        // Seul ce changement-là sonne, à l'heure ; les 864 000 d'avant ne se rejouent pas.
+        expect(minuteur.phaseLabel.value).toBe('REPOS')
+        expect(minuteur.currentRound.value).toBe(432_002)
+        expect(minuteur.formattedTime.value).toBe('00:01')
+        expect(notes()).toEqual([880, 880, 880, 880])
+
+        vi.advanceTimersByTime(1000)
+        expect(minuteur.phaseLabel.value).toBe('TRAVAIL')
+        expect(minuteur.currentRound.value).toBe(432_003)
+        expect(notes()).toEqual([880, 880, 880, 880, 880])
     })
 
     it('revenu après la fin, se dit terminé, sans sonner ni laisser de minuterie, et ne redemande pas le verrou', async () => {

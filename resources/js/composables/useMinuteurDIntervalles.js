@@ -3,8 +3,8 @@ import { useSortieAudio } from '@/composables/useSortieAudio'
 import { useVerrouDEcran } from '@/composables/useVerrouDEcran'
 
 /**
- * Au-delà de ce retard sur son heure, un bip ne se joue plus (#2113) : il
- * partirait à contretemps, après une page suspendue ou une minuterie que
+ * Un bip qui a ce retard sur son heure, ou davantage, ne se joue plus (#2113) :
+ * il partirait à contretemps, après une page suspendue ou une minuterie que
  * l'arrière-plan a retenue. Une seconde, comme le délai qu'une sortie arrêtée a
  * pour reprendre (`DELAI_DE_REPRISE_MS` de `useSortieAudio`).
  */
@@ -20,8 +20,8 @@ const BIP_DU_CHANGEMENT = { frequence: 880, duree: 400 }
 const BIP_DE_LA_FIN = { frequence: 1200, duree: 600 }
 
 /**
- * Une durée réglée en secondes, en millisecondes ; vide, nulle ou négative,
- * elle ne dure rien.
+ * Une durée réglée en secondes, en millisecondes entières ; vide, nulle ou
+ * négative, elle ne dure rien.
  *
  * @param {number|string|null|undefined} secondes
  * @returns {number}
@@ -29,68 +29,108 @@ const BIP_DE_LA_FIN = { frequence: 1200, duree: 600 }
 const enMillisecondes = (secondes) => {
     const valeur = Number(secondes)
 
-    return Number.isFinite(valeur) && valeur > 0 ? valeur * 1000 : 0
+    return Number.isFinite(valeur) && valeur > 0 ? Math.round(valeur * 1000) : 0
 }
 
 /**
- * Le programme d'une configuration, en temps de marche (ms) : chaque étape
- * (phase, tour, début, fin) et chaque bip à son heure, dans l'ordre. Une étape
- * qui ne dure rien (un repos de 0 s) ne s'affiche ni ne sonne : le travail
- * suivant enchaîne.
+ * Le programme d'une configuration, en temps de marche (ms) : l'échauffement,
+ * puis chaque tour, un travail suivi d'un repos, sauf le dernier, sans repos.
+ * Rien ne se calcule d'avance tour par tour : l'étape d'un instant se lit par
+ * `etapeA`, si bien qu'un aperçu aux tours démesurés part aussitôt.
  *
  * @param {{ work: number, rest: number, rounds: number, warmup: number }} config
- * @returns {{
- *   etapes: Array<{ phase: 'warmup'|'work'|'rest', tour: number, debut: number, fin: number }>,
- *   bips: Array<{ a: number, frequence: number, duree: number }>,
- * }}
  */
 const programmeDe = (config) => {
-    const etapes = []
-    let debut = 0
-
-    const ajouter = (phase, tour, secondes) => {
-        const fin = debut + enMillisecondes(secondes)
-        etapes.push({ phase, tour, debut, fin })
-        debut = fin
-    }
-
-    if (config.warmup > 0) {
-        ajouter('warmup', 1, config.warmup)
-    }
-
+    const echauffement = config.warmup > 0 ? enMillisecondes(config.warmup) : 0
+    const travail = enMillisecondes(config.work)
+    const repos = enMillisecondes(config.rest)
     const tours = Math.max(1, Math.floor(Number(config.rounds)) || 1)
 
-    for (let tour = 1; tour <= tours; tour++) {
-        ajouter('work', tour, config.work)
+    return {
+        echauffement,
+        travail,
+        tours,
+        cycle: travail + repos,
+        duree: echauffement + tours * travail + (tours - 1) * repos,
+    }
+}
 
-        if (tour < tours) {
-            ajouter('rest', tour, config.rest)
+/**
+ * L'étape en cours à `marche` : sa phase, son tour, son début et sa fin, en
+ * temps de marche ; `null` une fois le programme fini. Une étape qui ne dure
+ * rien (un repos de 0 s) n'est jamais l'étape en cours : le travail suivant
+ * enchaîne.
+ *
+ * @param {ReturnType<typeof programmeDe>} programme
+ * @param {number} marche
+ * @returns {{ phase: 'warmup'|'work'|'rest', tour: number, debut: number, fin: number }|null}
+ */
+const etapeA = (programme, marche) => {
+    const { echauffement, travail, cycle, duree } = programme
+
+    if (marche < echauffement) {
+        return { phase: 'warmup', tour: 1, debut: 0, fin: echauffement }
+    }
+
+    if (marche >= duree) {
+        return null
+    }
+
+    /*
+     * Sous la durée du programme, un tour au moins dure : `cycle` n'est pas
+     * nul, et le tour se lit sans borne, le dernier, sans repos, finissant
+     * avant le suivant.
+     */
+    const indice = Math.floor((marche - echauffement) / cycle)
+    const debutDuTour = echauffement + indice * cycle
+
+    if (marche < debutDuTour + travail) {
+        return { phase: 'work', tour: indice + 1, debut: debutDuTour, fin: debutDuTour + travail }
+    }
+
+    return { phase: 'rest', tour: indice + 1, debut: debutDuTour + travail, fin: debutDuTour + cycle }
+}
+
+/**
+ * Les bips dont l'heure tombe dans `]depuis, jusqua]`, dans l'ordre : le
+ * décompte des trois dernières secondes d'une étape (sauf celle où l'étape
+ * commence), son changement de phase à sa fin, et la fin du programme avec
+ * le dernier changement. Seules les étapes de la fenêtre se lisent.
+ *
+ * @param {ReturnType<typeof programmeDe>} programme
+ * @param {number} depuis
+ * @param {number} jusqua
+ * @returns {Array<{ frequence: number, duree: number }>}
+ */
+const bipsEntre = (programme, depuis, jusqua) => {
+    const bips = []
+    const ajouter = (a, bip) => {
+        if (a > depuis && a <= jusqua) {
+            bips.push(bip)
         }
     }
 
-    const bips = []
+    let etape = etapeA(programme, depuis)
 
-    for (const etape of etapes) {
-        if (etape.fin === etape.debut) {
-            continue
-        }
-
+    while (etape !== null && etape.debut <= jusqua) {
         for (const secondesRestantes of [3, 2, 1]) {
             const a = etape.fin - secondesRestantes * 1000
 
             if (a > etape.debut) {
-                bips.push({ a, ...BIP_DU_DECOMPTE })
+                ajouter(a, BIP_DU_DECOMPTE)
             }
         }
 
-        bips.push({ a: etape.fin, ...BIP_DU_CHANGEMENT })
+        ajouter(etape.fin, BIP_DU_CHANGEMENT)
+
+        if (etape.fin === programme.duree) {
+            ajouter(etape.fin, BIP_DE_LA_FIN)
+        }
+
+        etape = etapeA(programme, etape.fin)
     }
 
-    if (debut > 0) {
-        bips.push({ a: debut, ...BIP_DE_LA_FIN })
-    }
-
-    return { etapes, bips }
+    return bips
 }
 
 /**
@@ -105,7 +145,7 @@ const programmeDe = (config) => {
  * suivante, et au retour de la page (`visibilitychange`). Il comptait des
  * tics : une page suspendue (l'écran verrouillé, l'application en
  * arrière-plan) ou une minuterie espacée par le navigateur le figeait, et il
- * repartait d'où il s'était figé. Un bip dont l'heure est passée de plus de
+ * repartait d'où il s'était figé. Un bip dont l'heure est passée d'au moins
  * `RETARD_MAX_D_UN_BIP_MS` ne se rejoue pas ; l'affichage et la suite, si.
  *
  * Il garde l'écran allumé tant qu'il tourne (`useVerrouDEcran`), demandé dans
@@ -198,34 +238,30 @@ export function useMinuteurDIntervalles() {
     }
 
     /**
-     * Joue chaque bip tombé depuis le recalage précédent, sauf celui qui
-     * partirait à contretemps : une page suspendue ne rejoue pas, à son
-     * retour, les bips qu'elle a manqués.
+     * Joue chaque bip tombé depuis le recalage précédent, sauf celui qui a
+     * une seconde de retard ou plus et partirait à contretemps : une page
+     * suspendue ne rejoue pas, à son retour, les bips qu'elle a manqués. La
+     * fenêtre ne remonte jamais plus loin : après dix jours d'arrière-plan,
+     * seules les étapes de la dernière seconde se lisent.
      *
      * @param {number} marche
      */
     const sonnerJusqua = (marche) => {
-        for (const bip of programme.bips) {
-            if (bip.a > marche) {
-                break
-            }
+        const depuis = Math.max(bipsJusqua, marche - RETARD_MAX_D_UN_BIP_MS)
 
-            if (bip.a > bipsJusqua && marche - bip.a <= RETARD_MAX_D_UN_BIP_MS) {
-                playBeep(bip.frequence, bip.duree)
-            }
+        for (const bip of bipsEntre(programme, depuis, marche)) {
+            playBeep(bip.frequence, bip.duree)
         }
 
         bipsJusqua = Math.max(bipsJusqua, marche)
     }
 
     const terminer = () => {
-        const derniere = programme.etapes.at(-1)
-
         status.value = 'finished'
         phase.value = 'finished'
         timeLeft.value = 0
-        currentRound.value = derniere?.tour ?? 1
-        marcheAvantLaReprise = derniere?.fin ?? 0
+        currentRound.value = programme.tours
+        marcheAvantLaReprise = programme.duree
         repriseA = null
         arreterLaMinuterie()
         verrouDEcran.relacher()
@@ -245,9 +281,9 @@ export function useMinuteurDIntervalles() {
         const marche = tempsDeMarche(Date.now())
         sonnerJusqua(marche)
 
-        const etape = programme.etapes.find((candidate) => marche < candidate.fin)
+        const etape = etapeA(programme, marche)
 
-        if (etape === undefined) {
+        if (etape === null) {
             terminer()
 
             return
