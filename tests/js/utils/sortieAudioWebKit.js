@@ -232,6 +232,15 @@ export class SortieAudioWebKit {
         this.state = 'interrupted'
     }
 
+    /**
+     * Ce que fait le navigateur d'une sortie qu'il arrête de lui-même (la page
+     * cachée, l'écran verrouillé) : elle ne repart qu'à un `resume()`, et,
+     * dans WebKit, qu'à celui d'un geste (#2156).
+     */
+    suspendre() {
+        this.state = 'suspended'
+    }
+
     close() {
         this.fermetures += 1
         this.state = 'closed'

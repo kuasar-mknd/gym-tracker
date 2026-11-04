@@ -1,10 +1,18 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useSortieAudio } from '@/composables/useSortieAudio'
 
 /**
  * Le minuteur d'intervalles : une machine à quatre phases (échauffement,
  * travail, repos, terminé) qu'un seul `tick` par seconde fait avancer, les
  * bips du décompte et des transitions, et l'habillage de la phase en cours.
  * La page ne garde que ses onglets et ses préréglages.
+ *
+ * Les bips passent par `useSortieAudio` (#2156) : « Démarrer », qui est aussi
+ * le geste de la reprise après une pause, ouvre ou reprend la sortie (neuve,
+ * `suspended`, `interrupted` après un appel ou Siri, ou recréée si elle est
+ * `closed`), et chaque bip s'y joue ensuite depuis la minuterie, sans jamais
+ * partir à contretemps sur une sortie arrêtée. La sortie se ferme au démontage
+ * du composant qui appelle le minuteur.
  */
 export function useMinuteurDIntervalles() {
     const timerConfig = ref({
@@ -21,27 +29,21 @@ export function useMinuteurDIntervalles() {
     const currentRound = ref(1)
     let intervalId = null
 
-    const audioCtx = ref(null)
+    const { preparer, jouer } = useSortieAudio()
 
-    const getAudioCtx = () => {
-        if (!audioCtx.value) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext
-            if (AudioContext) {
-                audioCtx.value = new AudioContext()
-            }
-        }
-        // Resume if suspended (browser policy)
-        if (audioCtx.value && audioCtx.value.state === 'suspended') {
-            audioCtx.value.resume()
-        }
-        return audioCtx.value
-    }
-
+    /**
+     * Un bip : une sinusoïde à `freq` Hz, qui s'éteint en `duration` ms. 440 Hz
+     * pendant 100 ms pour chacune des trois dernières secondes d'une phase,
+     * 880 Hz pendant 400 ms au changement de phase, 1 200 Hz pendant 600 ms à
+     * la fin. Sans sortie ouverte par un geste, ou sur une sortie qui ne
+     * repart pas à temps, il ne se joue pas ; un son qui échoue ne fait rien
+     * tomber (`useSortieAudio`).
+     *
+     * @param {number} freq
+     * @param {number} duration
+     */
     const playBeep = (freq = 440, duration = 200) => {
-        try {
-            const ctx = getAudioCtx()
-            if (!ctx) return
-
+        jouer((ctx) => {
             const osc = ctx.createOscillator()
             const gain = ctx.createGain()
 
@@ -54,9 +56,7 @@ export function useMinuteurDIntervalles() {
             osc.start()
             gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + duration / 1000)
             osc.stop(ctx.currentTime + duration / 1000)
-        } catch (e) {
-            console.error('Audio error', e)
-        }
+        })
     }
 
     const stopInterval = () => {
@@ -119,9 +119,14 @@ export function useMinuteurDIntervalles() {
         }
     }
 
+    /**
+     * Démarre, ou reprend après une pause. C'est le geste de « Démarrer » :
+     * la sortie s'y ouvre ou s'y reprend, avant toute autre chose, et
+     * `preparer` ne lève jamais, si bien qu'un navigateur qui refuse la sortie
+     * laisse le minuteur partir, sans son.
+     */
     const startTimer = () => {
-        // Initialize audio context on user gesture
-        getAudioCtx()
+        preparer()
 
         if (status.value === 'finished') {
             resetRunner()
@@ -204,12 +209,7 @@ export function useMinuteurDIntervalles() {
 
     onMounted(resetRunner)
 
-    onUnmounted(() => {
-        stopInterval()
-        if (audioCtx.value) {
-            audioCtx.value.close()
-        }
-    })
+    onUnmounted(stopInterval)
 
     return {
         timerConfig,

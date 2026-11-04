@@ -77,9 +77,11 @@ const construireLeSon = (construire, contexte) => {
  *   contretemps. Sans sortie ouverte par un geste, rien : la créer ici, hors
  *   geste, est le défaut même.
  *
- * Le minuteur d'intervalles (`useMinuteurDIntervalles`) suit le même motif
- * avec sa propre sortie : la factoriser ici changerait son comportement (il
- * joue même sur une sortie arrêtée, et ne reprend pas `interrupted`).
+ * Le minuteur d'intervalles (`useMinuteurDIntervalles`) passe aussi par ici
+ * depuis #2156 : il gardait sa propre sortie, qui jouait même arrêtée, ne
+ * reprenait pas `interrupted`, ne remplaçait pas `closed` et levait quand le
+ * navigateur refusait de l'ouvrir. Sa page ne l'appelle qu'une fois, et la
+ * sortie se ferme à son démontage.
  *
  * @returns {{
  *   preparer: () => AudioContext|null,
