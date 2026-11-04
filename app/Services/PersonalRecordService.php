@@ -285,6 +285,10 @@ final class PersonalRecordService
              * Aucune notification ici. C'est une correction, pas un exploit —
              * annoncer un record personnel à quelqu'un qui vient de rattraper
              * une faute de frappe serait pire que de se taire.
+             *
+             * La ligne se réécrit en place : une annonce de la série encore en
+             * file la relira à son départ, et ne partira pas si la série ne la
+             * tient plus ou ne dépasse plus la valeur d'avant (#2155).
              */
             $record->fill([
                 'value' => $valeur,
@@ -546,7 +550,11 @@ final class PersonalRecordService
      * série est annoncée pour chaque record qu'elle détient désormais.
      *
      * Les annonces partent une fois le verrou rendu : elles ne retiennent
-     * pas les autres écritures de l'exercice.
+     * pas les autres écritures de l'exercice. Chacune retient la valeur que
+     * son record portait avant la série, lue sous le verrou avant toute
+     * écriture, et la série qui l'a établi : en file, elle relit le record à
+     * son départ, et ne part pas s'il ne dit plus vrai (#2155,
+     * `PersonalRecordAchieved::shouldSend()`).
      *
      * @param  \App\Models\User  $user  L'auteur de la série.
      * @param  int  $idExercice  L'exercice concerné.
@@ -588,7 +596,7 @@ final class PersonalRecordService
 
         if ($etablis !== [] && $user->notificationActivee('personal_record')) {
             foreach ($etablis as $record) {
-                $user->notify(new PersonalRecordAchieved($record));
+                $user->notify(new PersonalRecordAchieved($record, $avant[$record->type->value]['valeur'] ?? null));
             }
         }
     }
