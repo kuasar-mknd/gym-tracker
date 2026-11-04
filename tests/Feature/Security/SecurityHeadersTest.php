@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use function Pest\Laravel\get;
+
 /**
  * Le middleware est prépendu à toute la pile HTTP : chaque réponse, page ou
  * JSON, porte ces en-têtes. Il n'avait aucun test qui le nomme (audit du
@@ -36,7 +38,7 @@ it('les pose aussi sur une réponse d erreur', function (): void {
  * erreur visible, la demande du verrou étant refusée en silence.
  */
 it('laisse au minuteur d’intervalles le verrou d’écran', function (): void {
-    $politique = (string) $this->get('/login')->headers->get('Permissions-Policy');
+    $politique = (string) get('/login')->headers->get('Permissions-Policy');
 
     expect($politique)->not->toBe('')
         ->and($politique)->not->toContain('screen-wake-lock');
