@@ -333,6 +333,65 @@ describe('le minuteur d’intervalles lit l’horloge et garde l’écran allum�
         expect(notes()).toEqual([])
     })
 
+    /*
+     * L'autre bord de `RETARD_MAX_D_UN_BIP_MS` : un onglet caché de Chrome
+     * fait partir ses minuteries sur des réveils alignés à la seconde, jusqu'à
+     * 999 ms en retard. Le bip s'y joue encore ; une fenêtre plus étroite
+     * tairait tous les bips d'un onglet en arrière-plan.
+     */
+    it.each([600, 999])(
+        'joue encore le bip du décompte quand sa minuterie part %i ms en retard, puis le suivant à son heure',
+        (retard) => {
+            const { minuteur } = monter()
+            minuteur.charger({ ...sprint, warmup: 0, work: 5, rest: 0, rounds: 1 })
+            minuteur.startTimer()
+            vi.advanceTimersByTime(1000)
+            expect(notes()).toEqual([])
+
+            // La minuterie de la deuxième seconde, le premier bip du décompte, part en retard.
+            vi.setSystemTime(Date.now() + retard)
+            vi.advanceTimersToNextTimer()
+
+            expect(notes()).toEqual([440])
+            expect(minuteur.formattedTime.value).toBe('00:03')
+
+            vi.advanceTimersByTime(1000 - retard)
+            expect(notes()).toEqual([440, 440])
+            expect(minuteur.formattedTime.value).toBe('00:02')
+        },
+    )
+
+    /*
+     * La pause se recale avant de figer la marche : le bip échu avant elle,
+     * dont la minuterie n'était pas encore partie (le fil principal occupé),
+     * sonne au geste, à moins d'une seconde de son heure. Sans ce recalage, il
+     * partirait à la reprise, des minutes plus tard, à contretemps, et la pause
+     * afficherait la seconde d'avant.
+     */
+    it('sonne à la pause le bip échu dont la minuterie avait du retard, et rien à la reprise', () => {
+        const { minuteur } = monter()
+        minuteur.charger({ ...sprint, warmup: 0, work: 5, rest: 0, rounds: 1 })
+        minuteur.startTimer()
+        vi.advanceTimersByTime(1000)
+
+        // 2,4 s de marche : le bip de la deuxième seconde est échu, sa minuterie n'est pas partie.
+        vi.setSystemTime(Date.now() + 1400)
+        minuteur.toggleTimer()
+
+        expect(minuteur.status.value).toBe('paused')
+        expect(notes()).toEqual([440])
+        expect(minuteur.formattedTime.value).toBe('00:03')
+
+        vi.advanceTimersByTime(5 * 60_000)
+        minuteur.toggleTimer()
+
+        expect(notes()).toEqual([440])
+
+        vi.advanceTimersByTime(600)
+        expect(notes()).toEqual([440, 440])
+        expect(minuteur.formattedTime.value).toBe('00:02')
+    })
+
     it('ne compte pas le temps passé en pause, même suspendu, ni ne perd la fraction de seconde où la pause a pris', () => {
         const { minuteur } = monter()
         minuteur.charger({ ...sprint, warmup: 0, work: 10 })
