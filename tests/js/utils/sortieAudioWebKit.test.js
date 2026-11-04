@@ -160,6 +160,24 @@ describe('la sortie factice de WebKit', () => {
         expect(sortie.sonsAudibles).toEqual([])
     })
 
+    it('arrêtée par le navigateur pendant qu’elle tourne, tait ce qu’on y joue, et ne repart qu’au geste suivant', async () => {
+        const sortie = await sortieNeuve()
+        await dansUnGeste(() => sortie.resume())
+
+        sortie.suspendre()
+        const son = sonSur(sortie)
+        sortie.resume()
+        await flushPromises()
+
+        expect(sortie.state).toBe('suspended')
+        expect(son).toMatchObject({ audible: false, aContretemps: false })
+
+        await dansUnGeste(() => sortie.resume())
+
+        expect(sortie.state).toBe('running')
+        expect(son).toMatchObject({ audible: false, aContretemps: true })
+    })
+
     it('un son démarré sur une sortie qui tourne s’entend tout de suite', async () => {
         const sortie = await sortieNeuve()
         await dansUnGeste(() => sortie.resume())
