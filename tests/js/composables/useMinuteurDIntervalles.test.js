@@ -258,9 +258,9 @@ describe('le minuteur d’intervalles', () => {
  * repartait d'où il s'était figé, phase, tour et temps restant faux. Il retient
  * désormais le temps de marche (le départ, moins les pauses) et en tire la
  * phase, le tour et le temps restant à chaque minuterie et au retour de la
- * page ; un bip manqué de plus d'une seconde ne se rejoue pas. Et il garde
- * l'écran allumé tant qu'il tourne (`navigator.wakeLock`), sans quoi l'écran
- * se verrouille au bout du délai réglé sur l'appareil.
+ * page ; un bip qui a une seconde de retard ou plus ne se rejoue pas. Et il
+ * garde l'écran allumé tant qu'il tourne (`navigator.wakeLock`), sans quoi
+ * l'écran se verrouille au bout du délai réglé sur l'appareil.
  *
  * Une suspension se joue en avançant l'horloge sans jouer les minuteries
  * (`vi.setSystemTime`), la page cachée puis rendue visible ; le verrou d'écran
