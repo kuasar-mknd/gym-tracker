@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\GoalType;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
 use App\Models\Goal;
+use App\Rules\CibleAuMoinsEgaleAuDepart;
 use App\Rules\DateQueSaColonneTient;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -60,7 +62,23 @@ class GoalStoreRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'type' => ['required', 'in:weight,frequency,volume,measurement'],
-            'target_value' => ['required', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
+            /*
+             * Hors mensuration, la cible ne descend pas sous le départ : le
+             * record, la meilleure séance et le nombre de séances ne font que
+             * monter (#2164). La comparaison se fait en nombres, par la règle
+             * que partage le panneau, derrière `bail`.
+             */
+            'target_value' => [
+                'bail',
+                'required',
+                'numeric',
+                'min:0',
+                'max:'.Goal::VALEUR_MAX,
+                Rule::when(
+                    $this->input('type') !== GoalType::Measurement->value,
+                    [new CibleAuMoinsEgaleAuDepart($this->input('start_value'))],
+                ),
+            ],
             'exercise_id' => [
                 'bail',
                 'required_if:type,weight,volume',
@@ -87,7 +105,12 @@ class GoalStoreRequest extends FormRequest
             'deadline' => $this->deadlineIsUnchanged()
                 ? ['bail', 'nullable', 'date', DateQueSaColonneTient::date()]
                 : ['bail', 'nullable', 'date', DateQueSaColonneTient::date(), 'after:today'],
-            'start_value' => ['nullable', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
+            /*
+             * Un départ envoyé vide est déjà ramené à 0 (`prepareForValidation()`) :
+             * il n'arrive jamais nul ici. Absent du corps, il ne se valide pas,
+             * et la modification garde celui qui est en base (#2165).
+             */
+            'start_value' => ['sometimes', 'required', 'numeric', 'min:0', 'max:'.Goal::VALEUR_MAX],
         ];
     }
 
@@ -120,10 +143,30 @@ class GoalStoreRequest extends FormRequest
     /**
      * Une échéance envoyée avec un décalage désigne le jour de Paris de cet
      * instant, et c'est ce jour que `after:today` doit juger (#1952).
+     *
+     * Un départ envoyé vide vaut 0, à la création comme à la modification : le
+     * formulaire de l'application présente le champ comme facultatif et
+     * affiche 0 quand il est vide. Seule la création le ramenait à 0, dans le
+     * contrôleur ; la modification le transmettait nul à une colonne qui le
+     * refuse, et répondait 500 sans rien enregistrer (#2165). Ramené avant les
+     * règles, il vaut aussi 0 pour la borne de la cible.
      */
     #[\Override]
     protected function prepareForValidation(): void
     {
         $this->ramenerLesJoursAuFuseauDeLApplication(['deadline']);
+
+        if ($this->has('start_value') && $this->estVide($this->input('start_value'))) {
+            $this->merge(['start_value' => 0]);
+        }
+    }
+
+    /**
+     * Nul, ou une chaîne faite de blancs : ce que donne un champ vidé, avant
+     * comme après `TrimStrings` et `ConvertEmptyStringsToNull`.
+     */
+    private function estVide(mixed $valeur): bool
+    {
+        return $valeur === null || (is_string($valeur) && trim($valeur) === '');
     }
 }

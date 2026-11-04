@@ -278,25 +278,31 @@ test('updateProgressPercentage handles edge cases', function (): void {
 test('guard clauses for missing exercise_id and measurement_type', function (): void {
     $user = User::factory()->create();
 
-    // Weight goal missing exercise_id
+    /*
+     * Un objectif de charge ou de volume sans exercice ne suit rien : il
+     * revient à sa valeur de départ, comme un objectif de mensuration sans
+     * mensuration (#2164). Il gardait sa valeur actuelle, 0 par défaut au
+     * panneau.
+     */
     $goalWeight = Goal::factory()->create([
         'user_id' => $user->id,
         'type' => GoalType::Weight,
         'exercise_id' => null,
+        'start_value' => 42,
         'current_value' => 0,
     ]);
     $this->service->updateGoalProgress($goalWeight);
-    expect($goalWeight->current_value)->toBe(0.0);
+    expect($goalWeight->current_value)->toBe(42.0);
 
-    // Volume goal missing exercise_id
     $goalVolume = Goal::factory()->create([
         'user_id' => $user->id,
         'type' => GoalType::Volume,
         'exercise_id' => null,
+        'start_value' => 42,
         'current_value' => 0,
     ]);
     $this->service->updateGoalProgress($goalVolume);
-    expect($goalVolume->current_value)->toBe(0.0);
+    expect($goalVolume->current_value)->toBe(42.0);
 
     /*
      * Un objectif de mensuration sans mensuration ne suit rien : il revient à
@@ -441,6 +447,57 @@ test('un objectif de mensuration sans mensuration choisie revient à sa valeur d
     'cible sous le départ, barre pleine en base' => [75, 100, null],
     'cible égale au départ' => [80, 0, null],
     'cible égale au départ, atteint tapé au panneau' => [80, 0, '2026-10-01 12:00:00'],
+])->with([
+    'par le lot' => ['lot'],
+    'par le chemin d’un seul objectif' => ['seul'],
+]);
+
+/**
+ * Un objectif de charge ou de volume sans exercice ne suit rien : il revient à
+ * sa valeur de départ, barre à zéro, jamais atteint, par les deux chemins
+ * (#2164).
+ *
+ * Le panneau permettait de le créer, l'exercice y étant facultatif, et le
+ * recalcul rendait la main sans rien écrire : la valeur tapée au panneau, 0
+ * par défaut, restait pour toujours. Sous une cible plus basse que son
+ * départ, sa barre se remplissait sans qu'il soit atteint ; une valeur tapée
+ * au moins égale à la cible le disait atteint, barre vide. C'est la règle de
+ * l'objectif de mensuration sans mensuration (#2132), cas précédent : quelle
+ * que soit sa cible, et la date d'atteinte tapée au panneau s'efface. Le
+ * prochain recalcul répare un tel objectif déjà en base.
+ */
+test('un objectif de charge ou de volume sans exercice revient à sa valeur de départ, barre à zéro, jamais atteint', function (GoalType $type, int $cible, int $valeurEnBase, int $avancementEnBase, ?string $atteintEnBase, string $chemin): void {
+    $user = User::factory()->create();
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'type' => $type,
+        'exercise_id' => null,
+        'start_value' => 80,
+        'current_value' => $valeurEnBase,
+        'target_value' => $cible,
+        'progress_pct' => $avancementEnBase,
+        'completed_at' => $atteintEnBase,
+    ]);
+
+    if ($chemin === 'lot') {
+        $this->service->syncGoals($user);
+        $goal->refresh();
+    } else {
+        $this->service->updateGoalProgress($goal);
+    }
+
+    expect($goal->current_value)->toBe(80.0)
+        ->and((float) $goal->progress_pct)->toBe(0.0)
+        ->and($goal->completed_at)->toBeNull();
+})->with([
+    'charge' => [GoalType::Weight],
+    'volume' => [GoalType::Volume],
+])->with([
+    'cible sous le départ, valeur tapée à 0, barre pleine en base' => [75, 0, 100, null],
+    'cible sous le départ, valeur tapée au-dessus, atteint tapé au panneau' => [75, 90, 0, '2026-10-01 12:00:00'],
+    'cible égale au départ' => [80, 0, 0, null],
+    'cible au-dessus du départ, valeur tapée à la cible, atteint tapé au panneau' => [100, 100, 100, '2026-10-01 12:00:00'],
 ])->with([
     'par le lot' => ['lot'],
     'par le chemin d’un seul objectif' => ['seul'],

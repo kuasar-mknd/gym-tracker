@@ -45,12 +45,27 @@ final class ReglesDesRequetes
     }
 
     /**
-     * Les règles de chaque champ d'une requête, une par élément.
+     * Les règles de chaque champ d'une requête, une par élément. Un tableau
+     * imbriqué, que Laravel lit comme une seule règle (`[nom, paramètres…]`),
+     * n'y figure pas : `brutesDe()` le garde.
      *
      * @param  class-string<FormRequest>  $classe
      * @return array<string, list<string|object>>
      */
     public static function de(string $classe): array
+    {
+        return array_map(self::enListe(...), self::brutesDe($classe));
+    }
+
+    /**
+     * Les règles de chaque champ d'une requête telles que `rules()` les rend :
+     * une chaîne, un objet, ou une liste dont un élément peut être un tableau
+     * imbriqué.
+     *
+     * @param  class-string<FormRequest>  $classe
+     * @return array<string, mixed>
+     */
+    public static function brutesDe(string $classe): array
     {
         $requete = new $classe();
         $requete->setContainer(app());
@@ -59,7 +74,7 @@ final class ReglesDesRequetes
         $parChamp = [];
 
         foreach (is_array($regles) ? $regles : [] as $champ => $regle) {
-            $parChamp[(string) $champ] = self::enListe($regle);
+            $parChamp[(string) $champ] = $regle;
         }
 
         return $parChamp;

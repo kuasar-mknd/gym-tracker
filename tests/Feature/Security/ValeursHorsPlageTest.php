@@ -49,7 +49,8 @@ function horsPlageRequete(string $cas, User $compte): array
         'échauffement' => ['post', route('tools.warmup.update'), $echauffement],
         'erreur navigateur' => ['post', route('erreurs-navigateur.store'), ['type' => 'error', 'message' => 'boum', 'url' => 'https://gym.example.org/']],
         'objectif créé' => ['post', route('goals.store'), $objectif],
-        'objectif modifié' => ['put', route('goals.update', Goal::factory()->create(['user_id' => $compte->id, 'type' => 'frequency'])), $objectif],
+        // La cible au plafond, elle aussi : une cible sous le départ est refusée hors mensuration (#2164).
+        'objectif modifié' => ['put', route('goals.update', Goal::factory()->create(['user_id' => $compte->id, 'type' => 'frequency'])), [...$objectif, 'target_value' => Goal::VALEUR_MAX]],
         'ligne de séance' => ['post', route('api.v1.workout-lines.store'), [
             'workout_id' => Workout::factory()->create(['user_id' => $compte->id])->id,
             'exercise_id' => Exercise::factory()->create(['user_id' => $compte->id])->id,
