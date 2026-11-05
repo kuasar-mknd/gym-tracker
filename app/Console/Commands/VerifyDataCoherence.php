@@ -206,10 +206,12 @@ class VerifyDataCoherence extends Command
      * rouge indefiniment — et un controle qui ne peut pas passer au vert finit
      * desactive. C'est le sort de toutes les portes qu'on ne peut pas franchir.
      *
-     * La reparation n'invente rien : elle appelle `recompute()`, exactement ce
-     * que l'application execute deja quand une serie disparait (#1476). Les
-     * records sont reconstruits depuis les series qui restent, ou supprimes s'il
-     * n'en reste aucune.
+     * La reparation n'invente rien : elle reconstruit comme `recompute()`,
+     * exactement ce que l'application execute deja quand une serie disparait
+     * (#1476). Les records sont reconstruits depuis les series qui restent, ou
+     * supprimes s'il n'en reste aucune. Elle passe par `reparer()`, qui
+     * n'annonce rien (#2185) : un record qu'elle remonte peut designer une serie
+     * deja annoncee, que l'ecart avait seulement fait descendre.
      *
      * Elle reprend aussi les exercices dont un record ne vaut pas la meilleure
      * serie eligible (#1984) : un tel record designe une serie qui existe, qui
@@ -242,7 +244,7 @@ class VerifyDataCoherence extends Command
                      * laissait le record sur l'ancien chiffre, et rien ne
                      * pouvait plus le remettre d'aplomb.
                      *
-                     * Le tri sur `max_weight` suffit a declencher : `recompute()`
+                     * Le tri sur `max_weight` suffit a declencher : `reparer()`
                      * refait les trois types du couple (utilisateur, exercice)
                      * d'un seul coup.
                      */
@@ -255,7 +257,7 @@ class VerifyDataCoherence extends Command
             ->get();
 
         // Un couple (utilisateur, exercice) ne se reconstruit qu'une fois :
-        // `recompute()` traite les trois types d'un coup.
+        // `reparer()` traite les trois types d'un coup.
         /** @var array<string, array{0: int, 1: int}> $aRefaire */
         $aRefaire = [];
 
@@ -285,7 +287,7 @@ class VerifyDataCoherence extends Command
                 continue;
             }
 
-            $service->recompute($user, $idExercice);
+            $service->reparer($user, $idExercice);
             $faits[$cle] = true;
         }
 
@@ -448,10 +450,11 @@ class VerifyDataCoherence extends Command
      * passait tous les autres controles.
      *
      * La meilleure serie vient de `PersonalRecordService::recordsAttendus()`,
-     * le classement et la mesure memes que `recompute()` ecrit. Un exercice
-     * sans aucune serie eligible n'est pas juge ici : ses records s'appuient
-     * forcement sur une serie absente ou qui ne compte pas, et les controles
-     * voisins les signalent deja.
+     * le classement et la mesure memes qu'ecrit la reconstruction
+     * (`recompute()`, `reparer()`). Un exercice sans aucune serie eligible
+     * n'est pas juge ici : ses records s'appuient forcement sur une serie
+     * absente ou qui ne compte pas, et les controles voisins les signalent
+     * deja.
      *
      * @return array{int, list<string>}
      */
