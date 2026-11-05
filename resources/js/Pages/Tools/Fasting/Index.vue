@@ -25,10 +25,9 @@ import { ref, computed, onUnmounted, watch } from 'vue'
 import { graphiqueAsynchrone } from '@/Utils/graphiqueAsynchrone'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { useConfirmation } from '@/composables/useConfirmation'
-import { formatToLocalISO, formatToUTC } from '@/Utils/date'
+import { dateCourte, formatToLocalISO, formatToUTC, heureCourte } from '@/Utils/date'
 
 const FastingHistoryChart = graphiqueAsynchrone(() => import('@/Components/Stats/FastingHistoryChart.vue'))
-import dayjs from 'dayjs'
 import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
 
@@ -96,11 +95,16 @@ const remainingTime = computed(() => {
     return formatDuration(remaining) + ' restants'
 })
 
+/**
+ * Les secondes pleines entre deux instants : l'écart réel, que l'heure murale ne donne pas la nuit où elle se répète.
+ * Tronqué vers zéro, comme `diff(…, 'second')` de dayjs : la seconde qui précède un début à venir affiche 00:00:00.
+ * Un instant servi porte son fuseau (`2026-03-10T12:00:00.000000Z`), et se lit donc par `new Date()` (#2189).
+ */
+const secondesEntre = (debut, fin) => Math.trunc((new Date(fin) - new Date(debut)) / 1000)
+
 const updateTimer = () => {
     if (!props.activeFast) return
-    const start = dayjs(props.activeFast.start_time)
-    const now = dayjs()
-    const diff = now.diff(start, 'second')
+    const diff = secondesEntre(props.activeFast.start_time, new Date())
     elapsedSeconds.value = diff
 
     const targetSeconds = props.activeFast.target_duration_minutes * 60
@@ -176,11 +180,9 @@ const {
     router.delete(route('tools.fasting.destroy', id), { onFinish: termine })
 })
 
-const formatDate = (date) => dayjs(date).format('DD/MM/YYYY HH:mm')
-const formatHistoryDuration = (start, end) => {
-    const diff = dayjs(end).diff(dayjs(start), 'second')
-    return formatDuration(diff)
-}
+/** `10/03/2026 08:00`, à l'heure de l'appareil, comme les autres pages (`.ai/rules/js.md`). */
+const formatDate = (instant) => `${dateCourte(new Date(instant))} ${heureCourte(new Date(instant))}`
+const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start, end))
 </script>
 
 <template>
