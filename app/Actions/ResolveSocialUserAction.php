@@ -9,6 +9,7 @@ use App\Exceptions\SocialAuthException;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
+use App\Support\AdresseCanonique;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -54,6 +55,15 @@ use Laravel\Socialite\Contracts\User as SocialUser;
  * signe kelvin sur « k », les formes pleine chasse sur l'ASCII, et néglige les
  * espaces finales.
  *
+ * L'adresse rendue prend d'abord sa forme canonique (`AdresseCanonique`,
+ * #2168), avant la recherche et chaque comparaison : un domaine
+ * internationalisé rendu en Unicode s'écrit en ASCII, la forme que
+ * l'inscription enregistre. Il retrouve donc le compte enregistré sous cette
+ * forme, et crée sous elle le compte qui manque, au lieu d'être refusé ; il
+ * ne rapproche jamais « bücher » de « bucher », que la collation confond. Un
+ * compte resté en Unicode, que la migration de #2168 laisse quand sa forme
+ * ASCII est prise, ne s'ouvre plus qu'à une liaison prouvée.
+ *
  * Chaque refus propose une issue qui existe : quand un compte occupe
  * l'adresse, la connexion par mot de passe, et jamais l'inscription, que
  * l'index unique de la même collation refuserait.
@@ -77,11 +87,13 @@ final readonly class ResolveSocialUserAction
             throw new SocialAuthException('Erreur lors de la connexion avec '.ucfirst($fournisseur));
         }
 
-        $adresse = $utilisateurSocial->getEmail();
+        $adresseRendue = $utilisateurSocial->getEmail();
 
-        if (! is_string($adresse) || $adresse === '') {
+        if (! is_string($adresseRendue) || $adresseRendue === '') {
             throw new SocialAuthException(ucfirst($fournisseur).' ne nous a transmis aucune adresse email. Connecte-toi avec ton email et ton mot de passe, ou inscris-toi.');
         }
+
+        $adresse = AdresseCanonique::de($adresseRendue);
 
         $comptesDeLIdentite = $this->comptesDeLIdentite($fournisseur, $identifiant);
 
@@ -385,11 +397,13 @@ final readonly class ResolveSocialUserAction
      * confond avec l'ASCII, et NFKC, qui les replie, garde « ß » quand la base
      * le tient pour « ss » : aucune forme normale ne reproduit la collation.
      * `mb_strtolower()` et le repli de casse Unicode créent eux aussi des
-     * égalités (le signe kelvin y devient « k »). Et un domaine
-     * internationalisé s'écrit de deux façons (Unicode ou Punycode) que rien
-     * ici ne saurait apparier. Les trois fournisseurs rendent de l'ASCII pour
-     * l'immense majorité des comptes, et l'inscription comme le profil n'en
-     * admettent pas d'autre (`AdresseEnAsciiImprimable`, même motif).
+     * égalités (le signe kelvin y devient « k »). Un domaine
+     * internationalisé, qui s'écrit de deux façons (Unicode ou Punycode),
+     * arrive ici sous sa forme canonique, en ASCII (`AdresseCanonique`,
+     * #2168) : il a donc une forme comparable, celle sous laquelle
+     * l'inscription l'enregistre. Les trois fournisseurs rendent de l'ASCII
+     * pour l'immense majorité des comptes, et l'inscription comme le profil
+     * n'en admettent pas d'autre (`AdresseEnAsciiImprimable`, même motif).
      */
     private function adresseComparable(string $adresse): ?string
     {

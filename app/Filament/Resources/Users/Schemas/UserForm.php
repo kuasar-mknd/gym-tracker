@@ -8,6 +8,7 @@ use App\Models\Exercise;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
+use App\Support\AdresseCanonique;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -55,12 +56,23 @@ class UserForm
              * dont l'adresse porte un commentaire, un tiret bas dans le domaine
              * ou un point final. Le champ garde le clavier d'une adresse
              * (`inputmode`).
+             *
+             * Une nouvelle adresse prend sa forme canonique avant les règles,
+             * et s'enregistre sous elle : un domaine internationalisé tapé en
+             * Unicode s'écrit en ASCII (`AdresseCanonique`, #2168), comme à
+             * l'inscription et au profil. Filament ne valide que l'état que
+             * `mutateStateForValidationUsing()` lui donne, et enregistre
+             * l'état brut, que `mutateDehydratedStateUsing()` convertit à son
+             * tour. L'adresse actuelle du compte, reçue telle quelle, ne
+             * change pas : convertie, elle passerait pour une nouvelle.
              */
             TextInput::make('email')
                 ->label('Adresse e-mail')
                 ->inputMode('email')
                 ->required()
                 ->maxLength(255)
+                ->mutateStateForValidationUsing(self::formeCanonique(...))
+                ->mutateDehydratedStateUsing(self::formeCanonique(...))
                 ->rule('email', static fn (?User $record, mixed $state): bool => $state !== $record?->email)
                 ->rule(fn (?User $record): AdresseEnAsciiImprimable => new AdresseEnAsciiImprimable($record?->email))
                 ->rule(fn (?User $record): AdresseQueLaMessagerieSaitEcrire => new AdresseQueLaMessagerieSaitEcrire($record?->email)),
@@ -146,5 +158,18 @@ class UserForm
             TextInput::make('longest_streak')->label('Plus longue série')->numeric()->readOnly()->dehydrated(false),
             DateTimePicker::make('last_workout_at')->label('Dernière séance')->readOnly()->dehydrated(false),
         ];
+    }
+
+    /**
+     * L'adresse saisie sous sa forme canonique, sauf l'adresse actuelle du
+     * compte, reçue telle quelle.
+     */
+    private static function formeCanonique(mixed $state, ?User $record): mixed
+    {
+        if (! is_string($state) || $state === $record?->email) {
+            return $state;
+        }
+
+        return AdresseCanonique::de($state);
     }
 }

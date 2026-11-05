@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Support\AdresseCanonique;
 use Illuminate\Auth\Passwords\PasswordBrokerManager;
 use Illuminate\Contracts\Auth\PasswordBroker;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
@@ -33,6 +34,13 @@ use Illuminate\Support\Traits\Localizable;
  * parce que le courrielleur la relève sans (`CourrielleurQuiTaitLesAdresses`,
  * #2076).
  *
+ * Le courtier cherche le compte sous la forme canonique de l'adresse saisie
+ * (`AdresseCanonique`, #2168) : un domaine internationalisé tapé en Unicode
+ * trouve le compte enregistré en ASCII, la forme que Chromium envoie, et le
+ * lien part à l'adresse du compte. La base cherche comme avant, selon sa
+ * collation. Le job garde la saisie telle quelle et la convertit ici : un
+ * job mis en file avant la conversion s'y plie aussi.
+ *
  * Le courtier du conteneur pose le plancher commun des réponses
  * d'authentification (`auth.timebox_duration`, une seconde) autour de
  * `sendResetLink()`, sans jamais rendre la main tôt : il endormirait le
@@ -55,7 +63,7 @@ final class EnvoyerLeLienDeReinitialisation implements ShouldBeEncrypted, Should
     {
         $this->withLocale(
             $this->langue,
-            fn (): string => self::courtierSansPlancher()->sendResetLink(['email' => $this->adresse]),
+            fn (): string => self::courtierSansPlancher()->sendResetLink(['email' => AdresseCanonique::de($this->adresse)]),
         );
     }
 
