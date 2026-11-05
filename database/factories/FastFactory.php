@@ -27,4 +27,20 @@ class FastFactory extends Factory
             'status' => 'active',
         ];
     }
+
+    /**
+     * Un jeûne écrit avant #2159, sans le décalage de son début et de sa fin :
+     * il se lit comme le cast `datetime` le lisait, une heure de l'heure que le
+     * passage à l'heure d'hiver répète dans sa seconde occurrence.
+     *
+     * Le cast (`InstantAvecSonDecalage`) écrit le décalage avec l'instant :
+     * l'état l'efface ensuite, à la fabrication.
+     */
+    public function sansDecalage(): static
+    {
+        return $this->afterMaking(function (\App\Models\Fast $jeune): void {
+            $jeune->start_time_offset = null;
+            $jeune->end_time_offset = null;
+        });
+    }
 }
