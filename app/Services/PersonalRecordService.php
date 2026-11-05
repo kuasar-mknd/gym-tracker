@@ -196,15 +196,45 @@ final class PersonalRecordService
      * synchronise une autre série du même exercice, et chacun écrivait sur
      * une lecture que l'autre venait de rendre fausse.
      *
+     * Annonce, une fois le verrou rendu, le record que la reconstruction donne
+     * à une série dont la synchronisation n'a pas écrit (#2185, `reconstruire()`).
+     *
      * @param  list<string>|null  $types  Limite la reconstruction à ces records.
      *                                    Null les prend tous, ce qui est juste quand une série a disparu et
      *                                    que plus rien ne dit quels records elle détenait.
      */
     public function recompute(User $user, int $idExercice, ?array $types = null): void
     {
-        $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice, $types): void {
-            $this->reconstruire($user, $idExercice, $types);
-        });
+        $this->annoncer($user, $this->reconstruireLExercice($user, $idExercice, $types));
+    }
+
+    /**
+     * Reconstruit les records d'un exercice pour le contrôle de cohérence, sans
+     * rien annoncer.
+     *
+     * La réparation reprend des records qu'une écriture d'avant les correctifs
+     * a laissés faux : un record resté sous la meilleure série peut désigner une
+     * série que sa synchronisation a déjà annoncée, puis qu'une écriture plus
+     * lente a écrasée (#1984). Le remonter n'est pas un exploit à annoncer de
+     * nouveau ; la reconstruction des écritures de l'application, elle, ne
+     * remonte un record que vers une série que sa synchronisation n'a pas encore
+     * écrite (#2185).
+     */
+    public function reparer(User $user, int $idExercice): void
+    {
+        $this->reconstruireLExercice($user, $idExercice, null);
+    }
+
+    /**
+     * Le corps de `recompute()`, sous le verrou de l'exercice, sans annoncer :
+     * rend les annonces dues, à faire une fois le verrou rendu.
+     *
+     * @param  list<string>|null  $types  Limite la reconstruction à ces records ; null les prend tous.
+     * @return array<int, array{record: PersonalRecord, avant: float|null}>
+     */
+    private function reconstruireLExercice(User $user, int $idExercice, ?array $types): array
+    {
+        return $this->sousLeVerrou($user->id, $idExercice, fn (): array => $this->reconstruire($user, $idExercice, $types));
     }
 
     /**
@@ -215,9 +245,25 @@ final class PersonalRecordService
      * reconstruisent dans la même section : passer par `recompute()`
      * attendrait leur propre verrou jusqu'au délai.
      *
+     * Rend les records qu'elle donne à une série qui ne les tenait pas,
+     * au-dessus de la valeur qu'ils portaient, ou qu'elle crée (#2185). Une
+     * série qui compte, et dont la synchronisation a écrit la valeur qu'elle
+     * porte, laisse le record au moins à cette valeur, et une reconstruction,
+     * qui prend la meilleure des séries qui comptent, ne le descend jamais sous
+     * elle : une telle série n'a donc pas été synchronisée depuis sa dernière
+     * écriture. Sa synchronisation, que cette écriture a mise en file, ne
+     * trouvera plus rien à battre, et personne n'annonçait ce record. L'appelant
+     * l'annonce pour elle, une fois le verrou rendu, avec la valeur que le
+     * record portait avant, comme sa synchronisation l'aurait fait ; l'annonce
+     * se juge à son départ comme les autres
+     * (`PersonalRecordAchieved::shouldSend()`). Le record que la série tenait
+     * déjà, même remonté par sa correction, et celui qui ne dépasse pas sa
+     * valeur d'avant ne sont pas rendus.
+     *
      * @param  list<string>|null  $types  Limite la reconstruction à ces records ; null les prend tous.
+     * @return array<int, array{record: PersonalRecord, avant: float|null}> Par identifiant du record.
      */
-    private function reconstruire(User $user, int $idExercice, ?array $types): void
+    private function reconstruire(User $user, int $idExercice, ?array $types): array
     {
         $gagnantes = $this->gagnantes($user->id, $idExercice);
 
@@ -247,6 +293,9 @@ final class PersonalRecordService
         // chaque `delete()` separe coutait une ecriture sur le serveur.
         /** @var list<int> $aSupprimer */
         $aSupprimer = [];
+
+        /** @var array<int, array{record: PersonalRecord, avant: float|null}> $aAnnoncer */
+        $aAnnoncer = [];
 
         foreach ($tous as $existant) {
             $type = $existant->type->value;
@@ -279,12 +328,18 @@ final class PersonalRecordService
 
             [$valeur, $secondaire] = $this->mesurer($type, $meilleure['poids'], $meilleure['repetitions']);
 
+            // Ce que le record portait avant : sa série et sa valeur, lues
+            // avant de le réécrire ; null quand la reconstruction le crée.
+            $avant = $record === null ? null : ['serie' => $record->set_id, 'valeur' => (float) $record->value];
+
             $record ??= new PersonalRecord(['user_id' => $user->id, 'exercise_id' => $idExercice, 'type' => $type]);
 
             /**
-             * Aucune notification ici. C'est une correction, pas un exploit —
-             * annoncer un record personnel à quelqu'un qui vient de rattraper
-             * une faute de frappe serait pire que de se taire.
+             * Une correction n'est pas un exploit : le record que la série
+             * tenait déjà, même remonté parce qu'on l'a corrigée, ne s'annonce
+             * pas de nouveau — annoncer un record personnel à quelqu'un qui
+             * vient de rattraper une faute de frappe serait pire que de se
+             * taire.
              *
              * La ligne se réécrit en place : une annonce de la série encore en
              * file la relira à son départ, et ne partira pas si elle ne dépasse
@@ -298,11 +353,20 @@ final class PersonalRecordService
                 'set_id' => $meilleure['id'],
                 'achieved_at' => $meilleure['obtenu'] ?? now(),
             ])->save();
+
+            // Donné à une série qui ne le tenait pas, au-dessus de ce qu'il
+            // portait, ou créé : sa synchronisation n'a pas écrit, et ne
+            // l'annoncera pas (#2185).
+            if ($avant === null || ($avant['serie'] !== $meilleure['id'] && $valeur > $avant['valeur'])) {
+                $aAnnoncer[$record->id] = ['record' => $record, 'avant' => $avant['valeur'] ?? null];
+            }
         }
 
         if ($aSupprimer !== []) {
             PersonalRecord::query()->whereKey($aSupprimer)->delete();
         }
+
+        return $aAnnoncer;
     }
 
     /**
@@ -502,6 +566,9 @@ final class PersonalRecordService
      * Décide sous le verrou de l'exercice de la série quels records
      * reconstruire, puis les reconstruit dans la même section (#1984).
      *
+     * Annonce ensuite, verrou rendu, le record que la reconstruction donne à
+     * une série dont la synchronisation n'a pas écrit (#2185, `reconstruire()`).
+     *
      * @param  Closure(int, int): (list<string>|null)  $aReconstruire  Reçoit le compte et l'exercice ; rend les records à reconstruire, une liste vide pour aucun, null pour tous.
      */
     private function reconstruireSousLeVerrou(Set $set, ?User $user, Closure $aReconstruire): void
@@ -516,15 +583,17 @@ final class PersonalRecordService
 
         $idExercice = (int) $idExercice;
 
-        $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice, $aReconstruire): void {
+        $annonces = $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice, $aReconstruire): array {
             $types = $aReconstruire($user->id, $idExercice);
 
             if ($types === []) {
-                return;
+                return [];
             }
 
-            $this->reconstruire($user, $idExercice, $types);
+            return $this->reconstruire($user, $idExercice, $types);
         });
+
+        $this->annoncer($user, $annonces);
     }
 
     /**
@@ -547,8 +616,9 @@ final class PersonalRecordService
      *
      * Une violation d'unicité ne devrait plus arriver : il faudrait qu'un
      * verrou ait expiré, ou qu'une écriture passe hors de ce service. Elle
-     * n'est plus fatale pour autant : `recompute()` repart des séries, et la
-     * série est annoncée pour chaque record qu'elle détient désormais.
+     * n'est plus fatale pour autant : la reconstruction repart des séries, et
+     * la série est annoncée pour chaque record qu'elle détient désormais, une
+     * seule fois quand la reconstruction l'annonce déjà (#2185).
      *
      * Les annonces partent une fois le verrou rendu : elles ne retiennent
      * pas les autres écritures de l'exercice. Chacune retient la valeur que
@@ -590,16 +660,55 @@ final class PersonalRecordService
                     $this->update($user, $idExercice, 'max_volume_set', (float) $serie->weight * (int) $serie->reps, null, $serie, $existingPRs->get('max_volume_set')),
                 ]));
             });
-        } catch (UniqueConstraintViolationException) {
-            $this->recompute($user, $idExercice);
 
-            $etablis = $this->recordsGagnesPar($set, $user, $idExercice, $avant);
+            $annonces = self::annoncesDe($etablis, $avant);
+        } catch (UniqueConstraintViolationException) {
+            // Ce que la reconstruction annonce d'abord ; ce que la série a
+            // gagné ensuite, sans doubler un record déjà annoncé.
+            $annonces = $this->reconstruireLExercice($user, $idExercice, null)
+                + self::annoncesDe($this->recordsGagnesPar($set, $user, $idExercice, $avant), $avant);
         }
 
-        if ($etablis !== [] && $user->notificationActivee('personal_record')) {
-            foreach ($etablis as $record) {
-                $user->notify(new PersonalRecordAchieved($record, $avant[$record->type->value]['valeur'] ?? null));
-            }
+        $this->annoncer($user, $annonces);
+    }
+
+    /**
+     * Les annonces des records que la série vient d'établir, chacune avec la
+     * valeur que son record portait avant elle.
+     *
+     * @param  list<PersonalRecord>  $records
+     * @param  array<string, array{serie: int|null, valeur: float}>  $avant  Les records lus avant la synchronisation, par type.
+     * @return array<int, array{record: PersonalRecord, avant: float|null}> Par identifiant du record.
+     */
+    private static function annoncesDe(array $records, array $avant): array
+    {
+        $annonces = [];
+
+        foreach ($records as $record) {
+            $annonces[$record->id] = ['record' => $record, 'avant' => $avant[$record->type->value]['valeur'] ?? null];
+        }
+
+        return $annonces;
+    }
+
+    /**
+     * Annonce chaque record, une fois le verrou rendu : les annonces ne
+     * retiennent pas les autres écritures de l'exercice. Rien ne part quand
+     * la personne a coupé l'annonce de ses records.
+     *
+     * La préférence ne se lit que s'il y a à annoncer : la plupart des
+     * synchronisations et des reconstructions n'établissent rien.
+     *
+     * @param  array<int, array{record: PersonalRecord, avant: float|null}>  $annonces
+     */
+    private function annoncer(User $user, array $annonces): void
+    {
+        if ($annonces === [] || ! $user->notificationActivee('personal_record')) {
+            return;
+        }
+
+        foreach ($annonces as $annonce) {
+            $user->notify(new PersonalRecordAchieved($annonce['record'], $annonce['avant']));
         }
     }
 

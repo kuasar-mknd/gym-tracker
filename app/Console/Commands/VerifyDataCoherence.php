@@ -206,10 +206,12 @@ class VerifyDataCoherence extends Command
      * rouge indefiniment — et un controle qui ne peut pas passer au vert finit
      * desactive. C'est le sort de toutes les portes qu'on ne peut pas franchir.
      *
-     * La reparation n'invente rien : elle appelle `recompute()`, exactement ce
-     * que l'application execute deja quand une serie disparait (#1476). Les
-     * records sont reconstruits depuis les series qui restent, ou supprimes s'il
-     * n'en reste aucune.
+     * La reparation n'invente rien : elle reconstruit comme `recompute()`,
+     * exactement ce que l'application execute deja quand une serie disparait
+     * (#1476). Les records sont reconstruits depuis les series qui restent, ou
+     * supprimes s'il n'en reste aucune. Elle passe par `reparer()`, qui
+     * n'annonce rien (#2185) : un record qu'elle remonte peut designer une serie
+     * deja annoncee, que l'ecart avait seulement fait descendre.
      *
      * Elle reprend aussi les exercices dont un record ne vaut pas la meilleure
      * serie eligible (#1984) : un tel record designe une serie qui existe, qui
@@ -285,7 +287,7 @@ class VerifyDataCoherence extends Command
                 continue;
             }
 
-            $service->recompute($user, $idExercice);
+            $service->reparer($user, $idExercice);
             $faits[$cle] = true;
         }
 

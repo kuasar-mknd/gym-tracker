@@ -41,6 +41,15 @@ use function Pest\Laravel\actingAs;
  * ne dépasse plus la valeur d'avant. Sinon le message dit la valeur qu'il porte
  * alors, y compris quand une série validée après, sans la battre, l'a repris.
  *
+ * Une reconstruction pouvait aussi donner le record à une série validée dont la
+ * synchronisation attendait encore en file (#2185) : la série qui le tenait,
+ * corrigée, décochée ou supprimée, ou son exercice retiré de la séance, avant
+ * le passage du worker. Cette synchronisation ne trouvait plus rien à battre, et
+ * personne n'annonçait le record. La reconstruction l'annonce désormais pour
+ * cette série, avec la valeur que le record portait avant elle, et l'annonce se
+ * juge à son départ comme les autres ; elle ne dit rien quand le record ne
+ * dépasse pas celui que la personne tenait, ni quand la série le tenait déjà.
+ *
  * Les cas jouent le chemin de production : file `database`, synchronisation des
  * records mise en file par `Set::saved` (`annonceRelueCheminDeProduction()`), et
  * vrais workers (`queue:work --once`), un travail à la fois
@@ -133,6 +142,44 @@ function annonceRelueSupprimer(User $user, Set $serie): void
     actingAs($user, 'sanctum')
         ->deleteJson(route('api.v1.sets.destroy', $serie))
         ->assertNoContent();
+}
+
+/**
+ * Décoche une série par l'API, comme la page de séance.
+ */
+function annonceRelueDecocher(User $user, Set $serie): void
+{
+    actingAs($user, 'sanctum')
+        ->patchJson(route('api.v1.sets.update', $serie), ['is_completed' => false])
+        ->assertOk();
+}
+
+/**
+ * Retire un exercice de la séance par l'API, comme la page de séance : ses
+ * séries partent avec lui, par la base.
+ */
+function annonceRelueRetirerLaLigne(User $user, WorkoutLine $ligne): void
+{
+    actingAs($user, 'sanctum')
+        ->deleteJson(route('api.v1.workout-lines.destroy', $ligne))
+        ->assertNoContent();
+}
+
+/**
+ * Une seconde ligne du même exercice dans la même séance, posée pendant que la
+ * file est encore synchrone : retirer l'autre ligne ne l'emporte pas.
+ */
+function annonceRelueAutreLigne(WorkoutLine $ligne): WorkoutLine
+{
+    return WorkoutLine::factory()->create(['workout_id' => $ligne->workout_id, 'exercise_id' => $ligne->exercise_id]);
+}
+
+/**
+ * Le nombre de records de l'exercice que la série tient, à cette valeur.
+ */
+function annonceRelueRecordsTenusPar(User $user, Set $serie, float $valeur): int
+{
+    return PersonalRecord::query()->where('user_id', $user->id)->where('set_id', $serie->id)->where('value', $valeur)->count();
 }
 
 /**
@@ -539,4 +586,185 @@ it('envoie sans échec une annonce mise en file avant le correctif, qui ne porte
     expect(annonceRelueTravauxEnEchec())->toBe([])
         ->and(DB::table('jobs')->count())->toBe(0)
         ->and($envois())->toBe(['database : '.$message, 'push : '.$message]);
+});
+
+it('annonce le record qu’une reconstruction donne à une série dont la synchronisation attend encore, une fois par record, sur le chemin de production', function (string $retouche): void {
+    [$user, $ligne] = annonceRelueCompte();
+    $autreLigne = annonceRelueAutreLigne($ligne);
+
+    // Le record de 90 kg, établi et annoncé dans la requête (file synchrone).
+    $tenante = annonceRelueValider($user, $ligne, 90);
+    annonceRelueCheminDeProduction();
+    $envois = annonceRelueSuivreLesEnvois();
+
+    // La série de 110 kg, validée : sa synchronisation attend son worker.
+    $lourde = annonceRelueValider($user, $autreLigne, 110);
+
+    expect(annonceRelueContenuDeLaFile())->toBe([SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class]);
+
+    match ($retouche) {
+        'corrigée à 85 kg' => annonceRelueCorriger($user, $tenante, 85),
+        'supprimée' => annonceRelueSupprimer($user, $tenante),
+        'décochée' => annonceRelueDecocher($user, $tenante),
+        'son exercice retiré' => annonceRelueRetirerLaLigne($user, $ligne),
+        default => throw new LogicException('Retouche inconnue : '.$retouche),
+    };
+
+    // La reconstruction a donné les trois records à la série de 110 kg avant sa
+    // synchronisation, qui n'aura plus rien à battre.
+    expect(annonceRelueRecordsTenusPar($user, $lourde, 110))->toBe(3);
+
+    annonceRelueViderLaFile();
+
+    expect(annonceRelueTravauxEnEchec())->toBe([])
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and($envois())->toBe(annonceRelueEnvoisDe('110'))
+        ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueTrier([...annonceRelueMessages('90'), ...annonceRelueMessages('110')]));
+})->with([
+    // La sonde de l'issue : la série de 90 kg corrigée à 85.
+    'la série qui le tenait corrigée sous lui' => ['corrigée à 85 kg'],
+    'la série qui le tenait supprimée' => ['supprimée'],
+    'la série qui le tenait décochée' => ['décochée'],
+    'l’exercice de la série qui le tenait retiré de la séance' => ['son exercice retiré'],
+]);
+
+it('annonce le record qu’une reconstruction donne à une série plus lourde encore en attente, quand la série dont les annonces attendent est supprimée ou corrigée, sur le chemin de production', function (string $retouche): void {
+    [$user, $ligne] = annonceRelueCompte();
+
+    // Le record de 90 kg, établi et annoncé dans la requête (file synchrone).
+    annonceRelueValider($user, $ligne, 90);
+    annonceRelueCheminDeProduction();
+    $envois = annonceRelueSuivreLesEnvois();
+
+    // La série de 110 kg bat les trois records ; ses annonces attendent. La
+    // série de 120 kg, validée ensuite, attend sa synchronisation derrière elles.
+    $serie = annonceRelueValider($user, $ligne, 110);
+    annonceRelueTraiterLeSuivant();
+    $plusLourde = annonceRelueValider($user, $ligne, 120);
+
+    expect(annonceRelueContenuDeLaFile())->toBe([...annonceRelueFileApresLaSynchronisation(), SyncPersonalRecord::class]);
+
+    match ($retouche) {
+        'supprimée' => annonceRelueSupprimer($user, $serie),
+        'corrigée à 100 kg' => annonceRelueCorriger($user, $serie, 100),
+        default => throw new LogicException('Retouche inconnue : '.$retouche),
+    };
+
+    // La reconstruction a donné les trois records à la série de 120 kg : les
+    // annonces de la série de 110 kg se taisent devant elle (#2155), et sa
+    // synchronisation n'aura plus rien à battre.
+    expect(annonceRelueRecordsTenusPar($user, $plusLourde, 120))->toBe(3);
+
+    annonceRelueViderLaFile();
+
+    expect(annonceRelueTravauxEnEchec())->toBe([])
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and($envois())->toBe(annonceRelueEnvoisDe('120'))
+        ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueTrier([...annonceRelueMessages('90'), ...annonceRelueMessages('120')]));
+})->with([
+    'la série supprimée' => ['supprimée'],
+    'la série corrigée sous elle' => ['corrigée à 100 kg'],
+]);
+
+it('annonce le premier record d’un exercice qu’une reconstruction donne à une série dont la synchronisation attend encore, sur le chemin de production', function (): void {
+    [$user, $ligne] = annonceRelueCompte();
+    $autreLigne = annonceRelueAutreLigne($ligne);
+    annonceRelueCheminDeProduction();
+    $envois = annonceRelueSuivreLesEnvois();
+
+    // Les deux premières séries de l'exercice, sur deux lignes : aucune
+    // synchronisation n'est encore passée, l'exercice n'a aucun record.
+    annonceRelueValider($user, $ligne, 90);
+    $lourde = annonceRelueValider($user, $autreLigne, 110);
+
+    expect(annonceRelueContenuDeLaFile())->toBe([SyncPersonalRecord::class, SyncUserAchievements::class, SyncUserGoals::class, SyncPersonalRecord::class])
+        ->and(PersonalRecord::query()->where('user_id', $user->id)->count())->toBe(0);
+
+    // L'exercice de la première retiré de la séance : la reconstruction crée
+    // les trois records, au nom de la série de 110 kg.
+    annonceRelueRetirerLaLigne($user, $ligne);
+
+    expect(annonceRelueRecordsTenusPar($user, $lourde, 110))->toBe(3);
+
+    annonceRelueViderLaFile();
+
+    expect(annonceRelueTravauxEnEchec())->toBe([])
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and($envois())->toBe(annonceRelueEnvoisDe('110'))
+        ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueMessages('110'));
+});
+
+it('n’annonce pas le record qu’une reconstruction donne à une série en attente sans dépasser celui que la personne tenait, sur le chemin de production', function (float $poidsDeLaTenante, float $poidsEnAttente, string $valeurTenue): void {
+    [$user, $ligne] = annonceRelueCompte();
+    $tenante = annonceRelueValider($user, $ligne, $poidsDeLaTenante);
+    annonceRelueCheminDeProduction();
+    $envois = annonceRelueSuivreLesEnvois();
+
+    $enAttente = annonceRelueValider($user, $ligne, $poidsEnAttente);
+    annonceRelueSupprimer($user, $tenante);
+
+    // La série en attente tient les trois records sans dépasser ceux que la
+    // personne tenait : aucune annonce n'entre en file.
+    expect(annonceRelueRecordsTenusPar($user, $enAttente, $poidsEnAttente))->toBe(3)
+        ->and(annonceRelueContenuDeLaFile())->not->toContain(PersonalRecordAchieved::class);
+
+    annonceRelueViderLaFile();
+
+    expect(annonceRelueTravauxEnEchec())->toBe([])
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and($envois())->toBe([])
+        ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueMessages($valeurTenue));
+})->with([
+    'à égalité' => [100.0, 100.0, '100'],
+    'plus légère' => [110.0, 100.0, '110'],
+]);
+
+it('n’annonce pas le record qu’une reconstruction a donné à une série en attente, quand celle-ci est supprimée avant le départ de l’annonce, sur le chemin de production', function (): void {
+    [$user, $ligne] = annonceRelueCompte();
+    $tenante = annonceRelueValider($user, $ligne, 90);
+    annonceRelueCheminDeProduction();
+    $envois = annonceRelueSuivreLesEnvois();
+
+    $lourde = annonceRelueValider($user, $ligne, 110);
+    annonceRelueCorriger($user, $tenante, 85);
+
+    expect(annonceRelueRecordsTenusPar($user, $lourde, 110))->toBe(3);
+
+    // La série de 110 kg disparaît avant le passage du worker : les records
+    // reviennent à 85 kg, sous les 90 que la personne tenait.
+    annonceRelueSupprimer($user, $lourde);
+    annonceRelueViderLaFile();
+
+    expect(annonceRelueTravauxEnEchec())->toBe([])
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and(annonceRelueRecordsTenusPar($user, $tenante, 85))->toBe(3)
+        ->and($envois())->toBe([])
+        ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueMessages('90'));
+});
+
+it('n’annonce pas de nouveau le record d’une série corrigée au-dessus de sa valeur après le départ de ses annonces, sur le chemin de production', function (): void {
+    [$user, $ligne] = annonceRelueCompte();
+    annonceRelueValider($user, $ligne, 90);
+    annonceRelueCheminDeProduction();
+    $envois = annonceRelueSuivreLesEnvois();
+
+    // La série de 110 kg bat les trois records, et ses annonces partent.
+    $serie = annonceRelueValider($user, $ligne, 110);
+    annonceRelueViderLaFile();
+
+    expect($envois())->toBe(annonceRelueEnvoisDe('110'));
+
+    // Une faute de frappe rattrapée : la série garde les records, plus haut.
+    // Une correction, pas un exploit : rien n'entre en file pour l'annoncer.
+    annonceRelueCorriger($user, $serie, 120);
+
+    expect(annonceRelueRecordsTenusPar($user, $serie, 120))->toBe(3)
+        ->and(annonceRelueContenuDeLaFile())->not->toContain(PersonalRecordAchieved::class);
+
+    annonceRelueViderLaFile();
+
+    expect(annonceRelueTravauxEnEchec())->toBe([])
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and($envois())->toBe(annonceRelueEnvoisDe('110'))
+        ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueTrier([...annonceRelueMessages('90'), ...annonceRelueMessages('110')]));
 });

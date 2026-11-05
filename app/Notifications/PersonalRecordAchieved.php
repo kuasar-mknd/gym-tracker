@@ -101,9 +101,9 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
      *
      * L'avis ne sait pas comment l'autre série a pris le record. Quand une
      * reconstruction le lui donne avant sa propre synchronisation, plus haut
-     * que la valeur écrite ici, celle-ci ne trouve plus rien à battre et ce
-     * record n'est annoncé par personne : un défaut de la reconstruction, qui
-     * le laisse de même sans annonce quand aucun avis n'attend.
+     * que la valeur écrite ici, celle-ci ne trouve plus rien à battre : c'est
+     * la reconstruction qui annonce ce record pour elle (#2185,
+     * `PersonalRecordService::reconstruire()`), et cet avis se tait.
      *
      * Un avis sans série ni valeur d'avant (mis en file avant #2155, ou construit
      * sur un record sans série) n'est jugé que sur l'existence du record, comme

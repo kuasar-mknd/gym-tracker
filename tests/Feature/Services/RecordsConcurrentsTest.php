@@ -277,8 +277,9 @@ it('reconstruit au lieu d’échouer quand le premier record a été inséré en
 
     expect($plantee)->toBeTrue()
         ->and(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendus($lourde))
-        // La reconstruction n'annonce rien d'elle-même : la série qui gagne
-        // est annoncée pour chaque record qu'elle détient désormais.
+        // La série qui gagne est annoncée une fois pour chaque record qu'elle
+        // détient désormais : la reconstruction, qui les lui donne (#2185), et
+        // la synchronisation ne doublent pas l'annonce.
         ->and(recordsConcurrentsAnnonces($user, $lourde))->toBe(['max_1rm' => 1, 'max_volume_set' => 1, 'max_weight' => 1]);
 });
 

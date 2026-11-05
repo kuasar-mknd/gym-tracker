@@ -3,12 +3,14 @@
 declare(strict_types=1);
 
 use App\Models\Exercise;
+use App\Models\NotificationPreference;
 use App\Models\PersonalRecord;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 
 /*
@@ -531,6 +533,24 @@ it('remonte par --repair un record resté sous la meilleure série éligible', f
 
     expect((float) $record->value)->toBe(105.0)
         ->and($record->set_id)->toBe($lourde->id);
+});
+
+/*
+ * La réparation remonte le record vers une série que sa synchronisation a
+ * déjà annoncée : la plus lente des deux l'avait écrasé ensuite. Elle n'annonce
+ * rien (#2185), là où la reconstruction des écritures de l'application annonce
+ * le record qu'elle donne au-dessus de sa valeur à une autre série.
+ */
+it('n’annonce rien du record que --repair remonte vers la meilleure série', function (): void {
+    [$user, $lourde] = coherenceRecordResteSousLaMeilleureSerie();
+    NotificationPreference::factory()->create(['user_id' => $user->id, 'type' => 'personal_record', 'is_enabled' => true, 'is_push_enabled' => true]);
+    Notification::fake();
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])->assertExitCode(0);
+
+    expect(PersonalRecord::query()->where('user_id', $user->id)->where('type', 'max_weight')->value('set_id'))->toBe($lourde->id);
+
+    Notification::assertNothingSentTo($user);
 });
 
 /*
