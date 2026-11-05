@@ -103,10 +103,23 @@ class AchievementTest extends TestCase
         Notification::fake();
         $user = User::factory()->create();
 
-        // Create workouts on 3 consecutive days
+        // Trois séances terminées sans série, trois jours de suite, ne
+        // débloquent rien (#2171) : elles le débloquaient, et ce test
+        // l'affirmait.
         $user->workouts()->create(['started_at' => now()->subDays(2), 'ended_at' => now()->subDays(2)]);
         $user->workouts()->create(['started_at' => now()->subDays(1), 'ended_at' => now()->subDays(1)]);
         $user->workouts()->create(['started_at' => now(), 'ended_at' => now()]);
+
+        $this->assertDatabaseMissing('user_achievements', [
+            'user_id' => $user->id,
+            'achievement_id' => Achievement::where('slug', 'streak-3')->firstOrFail()->id,
+        ]);
+        Notification::assertNothingSent();
+
+        // Trois séances faites, trois jours de suite : terminées, avec une série cochée.
+        foreach ([2, 1, 0] as $recul) {
+            Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => now()->subDays($recul)->setTime(7, 0)]);
+        }
 
         $this->assertDatabaseHas('user_achievements', [
             'user_id' => $user->id,

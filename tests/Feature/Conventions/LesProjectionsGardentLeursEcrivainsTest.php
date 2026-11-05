@@ -144,15 +144,17 @@ function projectionsLInventaire(): array
             domaine: 'La chaîne de jours',
             colonnes: ['current_streak', 'longest_streak', 'last_workout_at'],
             ecrivains: [
-                'la reconstruction depuis les séances' => [
+                /*
+                 * Un seul écrivain depuis #2171 : l'avance d'un cran à chaque
+                 * séance créée (`updateStreak()`) comptait la séance avant de
+                 * savoir si elle serait faite. La série se reconstruit depuis
+                 * les séances faites quand une séance peut le devenir ou
+                 * cesser de l'être.
+                 */
+                'la reconstruction depuis les séances faites' => [
                     'app/Services/StreakService.php' => ['recalculerDepuisLesFaits'],
                 ],
-                'l’avance d’un cran à chaque séance enregistrée' => [
-                    'app/Services/StreakService.php' => ['updateStreak', 'rememberIfMoreRecent', 'calculateNewStreak'],
-                ],
             ],
-            dette: 'Deux calculs de la même série : l’un repart des séances, l’autre ajuste la valeur stockée. '
-                .'Une séance saisie après coup, déplacée (#1983) ou supprimée passe déjà par le premier ; la cible n’en garde qu’un.',
         ),
         'le volume d’une séance' => projectionsDecrire(
             genre: 'colonne',

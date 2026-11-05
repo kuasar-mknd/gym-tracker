@@ -107,8 +107,8 @@ class VerifyDataCoherence extends Command
      * 10/08 pour une derniere seance du 24/05.
      *
      * `recalculerDepuisLesFaits()` refait les trois valeurs — la date, la serie
-     * en cours et la plus longue — depuis les seances qui restent. C'est deja
-     * ce que la suppression d'une seance declenche.
+     * en cours et la plus longue — depuis les séances faites qui restent
+     * (#2171). C'est deja ce que la suppression d'une seance declenche.
      *
      * Une serie fausse sous une date juste se refait aussi : deplacer une
      * seance vers l'avant gonflait la serie et son record sans toucher a la
@@ -136,6 +136,8 @@ class VerifyDataCoherence extends Command
      *
      * La reconstruction est celle de l'ecrivain, `serieDepuisLesFaits()` : une
      * seule definition de la serie, que le controle et la reparation partagent.
+     * Elle ne compte que les séances faites (#2171) : le contrôle et l'écrivain
+     * donnent la même série pour le même compte.
      *
      * @param  callable(User, array{derniere: string|null, enCours: int, plusLongue: int}, array{derniere: string|null, enCours: int, plusLongue: int}): void  $pourChaqueEcart  Le compte, la serie stockee, la serie reconstruite.
      */
@@ -595,30 +597,34 @@ class VerifyDataCoherence extends Command
     }
 
     /**
-     * `users.last_workout_at` contre la seance la plus recente.
+     * `users.last_workout_at` contre la séance faite la plus récente.
      *
      * C'est la seule memoire du calcul de serie. Une fois en retard, l'ecart
      * calcule a la seance suivante part d'une date fausse et casse une serie
      * pourtant continue (#1459).
      *
+     * La séance la plus récente est celle que la série compte, la dernière
+     * séance FAITE (`User::seancesFaites()`, #2171), lue par la relation
+     * elle-même (`withMax()`) : une définition écrite ici une seconde fois
+     * pourrait donner tort à l'écrivain. Comparée à la dernière séance tout
+     * court, la date juste d'un compte dont la dernière séance est vide ou en
+     * cours passerait pour un écart chaque nuit, que `--repair`, qui
+     * reconstruit depuis les séances faites, ne ferait jamais disparaître.
+     *
      * @return array{int, list<string>}
      */
     private function dateDerniereSeance(): array
     {
-        $requete = DB::table('users')
-            ->leftJoinSub(
-                DB::table('workouts')
-                    ->selectRaw('user_id, MAX(started_at) as reel')
-                    ->groupBy('user_id'),
+        $requete = DB::query()
+            ->fromSub(
+                User::query()
+                    ->select(['id', 'last_workout_at as stocke'])
+                    ->withMax('seancesFaites as reel', 'started_at'),
                 'calcul',
-                'calcul.user_id',
-                '=',
-                'users.id',
             )
-            ->selectRaw('users.id, users.last_workout_at as stocke, calcul.reel')
-            // Un compte sans aucune seance doit avoir une date nulle, et une
-            // date posee doit correspondre a la seance la plus recente.
-            ->whereRaw('NOT (users.last_workout_at <=> calcul.reel)');
+            // Un compte sans aucune seance faite doit avoir une date nulle, et
+            // une date posee doit correspondre a la seance faite la plus recente.
+            ->whereRaw('NOT (calcul.stocke <=> calcul.reel)');
 
         return $this->ecarts($requete, fn (array $workoutLine): string => sprintf(
             'utilisateur %s : stocké %s, dernière séance %s',
