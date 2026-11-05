@@ -48,7 +48,7 @@ final class TentativeSurTonAdresse extends Notification implements ShouldQueue
     public function toMail(User $notifiable): MailMessage
     {
         $application = config()->string('app.name');
-        $courriel = new MailMessage()->greeting('Bonjour,');
+        $courriel = new MailMessage();
 
         if ($this->motif === MotifDeLaTentative::Inscription) {
             $courriel->subject("Une inscription à {$application} a été demandée avec ton adresse");
