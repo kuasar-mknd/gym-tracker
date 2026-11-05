@@ -8,6 +8,7 @@ use Carbon\CarbonTimeZone;
 use Carbon\Exceptions\InvalidFormatException;
 use DateTimeInterface;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
+use Illuminate\Database\Eloquent\MissingAttributeException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
@@ -44,6 +45,11 @@ use InvalidArgumentException;
  * modifier ne change pas le modèle. Le modèle sérialise un instant ainsi
  * casté comme ses autres dates (`serializeDate()`, `…Z`).
  *
+ * Sous le mode strict d'Eloquent (hors production), lire un instant dont la
+ * lecture du modèle n'a pas choisi la colonne, ou celle de son décalage, lève
+ * `MissingAttributeException`, comme pour le cast `datetime` : une lecture
+ * qui choisit ses colonnes prend l'instant avec son décalage.
+ *
  * @implements CastsAttributes<Carbon, mixed>
  */
 final class InstantAvecSonDecalage implements CastsAttributes
@@ -79,6 +85,8 @@ final class InstantAvecSonDecalage implements CastsAttributes
      */
     public function get(Model $model, string $key, mixed $value, array $attributes): ?Carbon
     {
+        $this->leverSiLaLectureNAPasChoisi($model, $key, $attributes);
+
         if ($value === null) {
             return null;
         }
@@ -141,6 +149,37 @@ final class InstantAvecSonDecalage implements CastsAttributes
         return $occurrence->format(self::FORMAT_DE_L_HEURE_MURALE) === $commeAvant->format(self::FORMAT_DE_L_HEURE_MURALE)
             ? $occurrence
             : $commeAvant;
+    }
+
+    /**
+     * Lève `MissingAttributeException`, comme Eloquent pour le cast `datetime`,
+     * quand la lecture d'un modèle n'a pas choisi l'instant ou son décalage, sous
+     * le mode strict (`Model::shouldBeStrict()`, hors production, dans
+     * `AppServiceProvider`).
+     *
+     * Eloquent ne lève que pour un cast primitif ou une énumération
+     * (`HasAttributes::transformModelValue()`) : sous ce cast, un instant
+     * oublié dans un `select` se lisait nul, et un décalage oublié relisait sans
+     * bruit la seconde occurrence de l'heure répétée, une heure trop tard. Mêmes
+     * conditions qu'Eloquent (`throwMissingAttributeExceptionIfApplicable()`) :
+     * un modèle lu en base, ni neuf ni tout juste créé ; l'instant manquant,
+     * ou son décalage, quelle que soit la valeur de l'instant. L'application
+     * ne pose pas de rappel de violation (`handleMissingAttributeViolationUsing()`),
+     * que cette levée ne consulterait pas.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function leverSiLaLectureNAPasChoisi(Model $model, string $key, array $attributes): void
+    {
+        if (! Model::preventsAccessingMissingAttributes() || ! $model->exists || $model->wasRecentlyCreated) {
+            return;
+        }
+
+        foreach ([$key, $this->colonneDuDecalage] as $colonne) {
+            if (! array_key_exists($colonne, $attributes)) {
+                throw new MissingAttributeException($model, $colonne);
+            }
+        }
     }
 
     /**

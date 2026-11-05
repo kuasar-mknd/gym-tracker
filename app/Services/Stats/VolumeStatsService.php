@@ -44,11 +44,15 @@ final class VolumeStatsService
                  * colonnes : il n'evitait que l'hydratation de quelques
                  * dizaines de lignes, et il coutait deux entrees de baseline
                  * PHPStan. Eloquent caste `started_at` en Carbon et `name` en
-                 * `?string`, ce qui supprime le reparsage a la main.
+                 * `?string`, ce qui supprime le reparsage a la main. Le début
+                 * vient avec son décalage (#2159), que son cast exige sous le
+                 * mode strict : sans lui, il se relirait dans la seconde
+                 * occurrence de l'heure que le passage à l'heure d'hiver
+                 * répète, sans changer le jour, seul lu ici.
                  */
                 $workouts = $user->workouts()
                     ->where('started_at', '>=', now()->subDays($jours))
-                    ->select(['id', 'started_at', 'name', 'workout_volume'])
+                    ->select(['id', 'started_at', 'started_at_offset', 'name', 'workout_volume'])
                     ->orderBy('started_at')
                     ->get();
 
@@ -158,11 +162,12 @@ final class VolumeStatsService
                  * Meme raison que dans `getVolumeTrend` : le `toBase()` qui
                  * etait ici portait sur une requete bornee par `limit($limit)`,
                  * donc il n'evitait l'hydratation que de `$limit` lignes, pour
-                 * deux entrees de baseline PHPStan.
+                 * deux entrees de baseline PHPStan. Le début vient avec son
+                 * décalage (#2159), comme dans `getVolumeTrend`.
                  */
                 $workouts = $user->workouts()
                     ->whereNotNull('ended_at')
-                    ->select(['id', 'started_at', 'name', 'workout_volume'])
+                    ->select(['id', 'started_at', 'started_at_offset', 'name', 'workout_volume'])
                     ->latest('started_at')
                     ->limit($limit)
                     ->get()
