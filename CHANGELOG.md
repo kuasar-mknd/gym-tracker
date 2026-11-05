@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Un record que reçoit une série encore en attente d'enregistrement est annoncé** (#2185, #2195) : quand la série qui tenait un record était corrigée, décochée ou supprimée, ou son exercice ou sa séance retirés, juste après la validation d'une série plus lourde et avant que le record de celle-ci ne soit enregistré, la série plus lourde recevait le record sans que rien ne l'annonce, ni au centre de notifications ni en push. Il est désormais annoncé, à la valeur qu'il porte, s'il dépasse celui que la personne tenait ; quelques suites de trois retouches faites avant cet enregistrement l'annoncent deux fois, à la même valeur. Corriger une série qui tient déjà le record ne l'annonce pas de nouveau, et la réparation du contrôle de cohérence n'annonce rien. Une migration remonte une fois, sans annonce, les records restés sous leur meilleure série, que le contrôle de nuit signalait : la retouche suivante de l'exercice les aurait annoncés de nouveau.
+
 ## [1.7.0] - 2026-11-05
 
 ### Ajouté
