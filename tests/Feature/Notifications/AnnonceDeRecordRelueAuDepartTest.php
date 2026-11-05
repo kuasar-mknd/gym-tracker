@@ -507,7 +507,7 @@ it('n’annonce qu’une fois le record d’une série corrigée sous l’ancien
         ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueTrier([...annonceRelueMessages('90'), ...annonceRelueMessages('110')]));
 });
 
-it('envoie sans échec une annonce mise en file avant le correctif, qui ne porte ni sa série ni la valeur d’avant', function (): void {
+it('envoie sans échec une annonce mise en file avant le correctif, qui ne porte ni sa série, ni la valeur écrite, ni la valeur d’avant', function (): void {
     [$user, $ligne] = annonceRelueCompte();
     $serie = annonceRelueValider($user, $ligne, 110);
     $record = PersonalRecord::query()->where('set_id', $serie->id)->where('type', 'max_weight')->sole();
