@@ -366,17 +366,23 @@ final class AppServiceProvider extends ServiceProvider
              * La série de jours ne compte que les séances faites, terminées
              * avec une série cochée (#2171). Une séance ne compte donc pas à
              * sa création, encore vide : elle compte quand elle se termine,
-             * et cesse de compter quand le panneau la rouvre. Un début qui
-             * change déplace son jour, qu'il quitte autant qu'il en gagne un
-             * (#1983). Dans ces cas, et dans eux seuls, la série se
-             * reconstruit depuis les séances faites ; renommer une séance n'y
-             * change rien.
+             * et cesse de compter quand le panneau la rouvre. Le début d'une
+             * séance terminée qui change, par le panneau, déplace son jour,
+             * qu'il quitte autant qu'il en gagne un (#1983). Dans ces cas, et
+             * dans eux seuls, la série se reconstruit depuis les séances
+             * faites ; renommer une séance n'y change rien.
+             *
+             * Le début d'une séance en cours, que ses réglages déplacent, ne
+             * change rien non plus : elle n'est faite ni avant ni après, et
+             * la lecture des séances faites ne servait à rien. Une
+             * réouverture qui déplace aussi le début passe par la fin qui
+             * change.
              *
              * L'avance d'un cran à la création comptait chaque séance dès
              * « Démarrer » : trois séances vides, trois jours de suite,
              * faisaient une série de trois jours.
              */
-            if ($workout->wasChanged(['started_at', 'ended_at'])) {
+            if ($workout->wasChanged('ended_at') || ($workout->wasChanged('started_at') && $workout->ended_at !== null)) {
                 app(StreakService::class)->recalculerPourLaSeance($workout);
             }
 

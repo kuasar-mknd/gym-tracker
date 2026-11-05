@@ -36,7 +36,9 @@ function seanceOuvertePourLesEcritures(): array
 /**
  * Compte les instructions modifiantes émises pendant l'action, et les requêtes en tout.
  *
- * @return array{ecritures: int, requetes: int, sql: list<string>}
+ * `sql` ne garde que les écritures ; `toutes`, chaque requête, dans l'ordre.
+ *
+ * @return array{ecritures: int, requetes: int, sql: list<string>, toutes: list<string>}
  */
 function ecrituresPendant(callable $action): array
 {
@@ -52,7 +54,7 @@ function ecrituresPendant(callable $action): array
 
     $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
 
-    return ['ecritures' => count($ecritures), 'requetes' => count($sql), 'sql' => $ecritures];
+    return ['ecritures' => count($ecritures), 'requetes' => count($sql), 'sql' => $ecritures, 'toutes' => $sql];
 }
 
 beforeEach(function (): void {
@@ -85,27 +87,34 @@ it('modifie une série en deux écritures', function (): void {
     expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']));
 });
 
-it('supprime une série en deux écritures', function (): void {
+/*
+ * Une séance en cours n'est jamais faite : la série cochée qu'on y supprime,
+ * ou l'exercice qu'on en retire avec ses séries cochées, ne change rien à la
+ * série de jours, et ne la fait pas lire (#2171).
+ */
+it('supprime une série cochée en deux écritures, sans lire la série de jours', function (): void {
     [$user, , $line] = seanceOuvertePourLesEcritures();
-    $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5]);
+    $set = Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true]);
 
     $mesure = ecrituresPendant(fn () => actingAs($user, 'sanctum')
         ->deleteJson(route('api.v1.sets.destroy', $set))
         ->assertNoContent());
 
-    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']));
+    expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
+        ->and(serieDeJoursLectures($mesure['toutes']))->toBe([]);
 });
 
-it('retire un exercice de la séance en deux écritures, sans journal d activité', function (): void {
+it('retire un exercice de la séance en deux écritures, sans journal d activité ni lecture de la série de jours', function (): void {
     [$user, , $line] = seanceOuvertePourLesEcritures();
-    Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5]);
+    Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true]);
 
     $mesure = ecrituresPendant(fn () => actingAs($user, 'sanctum')
         ->deleteJson(route('api.v1.workout-lines.destroy', $line))
         ->assertNoContent());
 
     expect($mesure['ecritures'])->toBe(2, implode("\n", $mesure['sql']))
-        ->and(implode("\n", $mesure['sql']))->not->toContain('activity_log');
+        ->and(implode("\n", $mesure['sql']))->not->toContain('activity_log')
+        ->and(serieDeJoursLectures($mesure['toutes']))->toBe([]);
 });
 
 it('retire un exercice qui portait des records en trois écritures : la ligne, ses records d un coup, le volume de la séance', function (): void {
@@ -247,4 +256,66 @@ it('termine une séance vide en une lecture de ses séances faites, sans écrire
         ->and(serieDeJoursEcritures($sql))->toBe([])
         ->and(count($ecritures))->toBe(1, implode("\n", $ecritures))
         ->and(count($sql))->toBe(10, implode("\n", $sql));
+});
+
+/*
+ * La file hors ligne termine la séance par sa propre route, et la page la
+ * supprime par la sienne. Comme la fin par la page, ni l'une ni l'autre n'a
+ * chargé le compte de la séance avant l'écouteur : la relecture du compte
+ * (`StreakService::recalculerPourLaSeance()`) ne leur coûte aucune requête.
+ * Ces comptes le tiennent : un compte chargé plus tôt sur l'un de ces chemins
+ * ajouterait sa lecture, et la relecture la sienne.
+ */
+it('termine une séance faite par la file hors ligne en une lecture de ses séances faites et une écriture de la série', function (): void {
+    [$user, $workout, $line] = seanceOuvertePourLesEcritures();
+    Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true]);
+
+    $sql = serieDeJoursRequetesPendant(fn () => actingAs($user, 'sanctum')
+        ->patchJson(route('api.v1.workouts.finish'), ['workout_id' => $workout->id])
+        ->assertOk());
+    $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
+
+    expect(serieDeJoursLectures($sql))->toHaveCount(1)
+        ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
+        ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
+        ->and(count($sql))->toBe(10, implode("\n", $sql));
+});
+
+it('supprime une séance faite en une lecture des séances faites qui restent et une écriture de la série', function (): void {
+    [$user, $workout, $line] = seanceOuvertePourLesEcritures();
+    Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true]);
+    $workout->update(['ended_at' => now()]);
+
+    expect(User::query()->findOrFail($user->id)->current_streak)->toBe(1);
+
+    $sql = serieDeJoursRequetesPendant(fn () => actingAs($user)
+        ->delete(route('workouts.destroy', $workout))
+        ->assertRedirect(route('workouts.index')));
+    $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
+
+    expect(serieDeJoursLectures($sql))->toHaveCount(1)
+        ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
+        ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
+        ->and(count($sql))->toBe(12, implode("\n", $sql));
+});
+
+/*
+ * Une séance en cours n'est jamais faite, ni avant ni après qu'on la déplace :
+ * déplacer son début par ses réglages, le seul déplacement que l'application
+ * permet (la politique refuse de modifier une séance terminée), ne change rien
+ * à la série de jours, et ne la lit pas (#2171).
+ */
+it('déplace le début d une séance en cours sans lire la série de jours', function (): void {
+    [$user, $workout] = seanceOuvertePourLesEcritures();
+    $workout->update(['started_at' => now()->subHours(2)]);
+    $nouveauDebut = now()->subHour()->format('Y-m-d\TH:i');
+
+    $sql = serieDeJoursRequetesPendant(fn () => actingAs($user)
+        ->patch(route('workouts.update', $workout), ['started_at' => $nouveauDebut])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors());
+
+    expect($workout->refresh()->started_at->format('Y-m-d\TH:i'))->toBe($nouveauDebut)
+        ->and(serieDeJoursLectures($sql))->toBe([])
+        ->and(serieDeJoursEcritures($sql))->toBe([]);
 });

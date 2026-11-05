@@ -70,10 +70,11 @@ final class StreakService
      * pouvait n'écrire rien sur une série pourtant fausse en base. La fin
      * d'une séance, par la page ou par la file hors ligne, et sa suppression
      * par la page n'ont pas encore chargé ce compte : la relecture ne leur
-     * coûte aucune requête (`EcrituresParOperationTest`). Ailleurs (le
-     * panneau, une série écrite dans une séance terminée), elle coûte une
-     * lecture. Le compte relu reste sur la séance, pour les écouteurs qui
-     * suivent.
+     * coûte aucune requête (`EcrituresParOperationTest` compte les requêtes
+     * de chacune des trois, qui restent les mêmes sans la relecture).
+     * Ailleurs (le panneau, une série écrite dans une séance terminée), elle
+     * coûte une lecture. Le compte relu reste sur la séance, pour les
+     * écouteurs qui suivent.
      */
     public function recalculerPourLaSeance(Workout $seance): void
     {
