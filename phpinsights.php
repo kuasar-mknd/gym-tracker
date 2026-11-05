@@ -37,6 +37,14 @@ return [
                 'app/Models/User.php',
             ],
         ],
+        // Eloquent lit `withoutObjectCaching` sur le cast par son nom, en
+        // propriété publique (`HasAttributes::getClassCastableAttributeValue()`) :
+        // c'est ainsi qu'un cast rend une copie à chaque lecture (#2159).
+        \SlevomatCodingStandard\Sniffs\Classes\ForbiddenPublicPropertySniff::class => [
+            'exclude' => [
+                'app/Models/Casts/InstantAvecSonDecalage.php',
+            ],
+        ],
         // Une surcharge de `Store::setId()`, que Laravel nomme ainsi.
         \NunoMaduro\PhpInsights\Domain\Sniffs\ForbiddenSetterSniff::class => [
             'exclude' => [
