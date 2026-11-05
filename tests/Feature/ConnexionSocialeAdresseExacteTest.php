@@ -288,7 +288,6 @@ it('refuse une adresse seulement proche de celle d’un compte, sans créer de d
     'le signe kelvin' => ['kim@example.org', "\u{212A}im@example.org"],
     'le s long' => ['sam@example.org', "\u{17F}am@example.org"],
     '« ß » pour « ss »' => ['strasse@example.org', 'straße@example.org'],
-    'un domaine internationalisé' => ['jean@bucher.example.org', 'jean@bücher.example.org'],
     'la pleine chasse' => ['jean@example.org', "\u{FF4A}ean@example.org"],
     'l’accent porté par le compte' => ['jéan@example.org', 'jean@example.org'],
     'le signe kelvin porté par le compte, que mb_strtolower replie sur « k »' => ["\u{212A}im@example.org", 'kim@example.org'],
@@ -296,9 +295,17 @@ it('refuse une adresse seulement proche de celle d’un compte, sans créer de d
     '« ß » porté par le compte, que le repli de casse développe en « ss »' => ['straße@example.org', 'strasse@example.org'],
 ]);
 
-it('refuse une adresse non ASCII même quand aucun compte ne lui ressemble', function (string $fournisseur): void {
+/*
+ * Une adresse qui reste hors ASCII une fois sous sa forme canonique
+ * (`AdresseCanonique`) : une partie locale accentuée, qui n'a pas de forme
+ * ASCII, un domaine en « ß », que le traitement transitoire écrit autrement,
+ * et une lettre pleine chasse, dont la conversion ne donne aucun label
+ * `xn--`. Un domaine internationalisé, lui, crée le compte sous sa forme
+ * ASCII (#2168, plus bas).
+ */
+it('refuse une adresse non ASCII même quand aucun compte ne lui ressemble', function (string $fournisseur, string $adresseRendue): void {
     Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
-        fournisseurSocialQuiRend(retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), 'jean@bücher.example.org')),
+        fournisseurSocialQuiRend(retourSocialDe($fournisseur, identiteSocialeDe($fournisseur), $adresseRendue)),
     );
 
     get(route('social.callback', $fournisseur))
@@ -309,7 +316,49 @@ it('refuse une adresse non ASCII même quand aucun compte ne lui ressemble', fun
 
     // Créé, ce compte aurait occupé l'adresse ASCII voisine aux yeux de l'index unique.
     expect(User::query()->count())->toBe(0);
-})->with($fournisseurs);
+})->with($fournisseurs)->with([
+    'une partie locale accentuée' => ['jéan@example.org'],
+    'un « ß » dans le domaine' => ['sam@straße.example.org'],
+    'une lettre pleine chasse dans le domaine' => ["jean@\u{FF45}xample.org"],
+]);
+
+/*
+ * Un domaine internationalisé rendu en Unicode prend sa forme ASCII avant la
+ * recherche et la comparaison des adresses (`AdresseCanonique`, #2168) : le
+ * compte se crée sous cette forme, celle que l'inscription enregistre, au
+ * lieu d'être refusé. Le compte d'un domaine que la collation confond avec la
+ * forme Unicode (« bucher ») n'est ni ouvert, ni rattaché, ni doublé : la
+ * forme ASCII ne lui ressemble pas.
+ */
+it('crée le compte sous la forme ASCII d’un domaine internationalisé rendu en Unicode', function (string $fournisseur, string $adresseRendue, ?string $compteVoisin): void {
+    Carbon::setTestNow('2026-11-05 09:00:00');
+    $voisin = $compteVoisin === null ? null : compteSocialExistant($compteVoisin);
+    $identifiant = identiteSocialeDe($fournisseur);
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe($fournisseur, $identifiant, $adresseRendue)),
+    );
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    $compte = User::query()->where('provider_id', $identifiant)->sole();
+    assertAuthenticatedAs($compte);
+
+    expect($compte->email)->toBe('jean@xn--bcher-kva.example.org')
+        ->and($compte->provider)->toBe($fournisseur)
+        ->and($compte->hasVerifiedEmail())->toBeTrue()
+        ->and($compte->liaison_prouvee_le?->toDateTimeString())->toBe('2026-11-05 09:00:00')
+        ->and(User::query()->count())->toBe($voisin === null ? 1 : 2);
+
+    if ($voisin !== null) {
+        expect($voisin->refresh()->provider_id)->toBeNull()
+            ->and($voisin->email)->toBe($compteVoisin);
+    }
+})->with($fournisseurs)->with([
+    'en minuscules, sans compte' => ['jean@bücher.example.org', null],
+    'un « b » pleine chasse, sans compte' => ["jean@\u{FF42}ücher.example.org", null],
+    'à côté du compte d’un domaine voisin' => ['jean@bücher.example.org', 'jean@bucher.example.org'],
+]);
 
 it('rattache l’adresse identique et vérifiée, puis reconnaît l’identité quand l’adresse change chez le fournisseur', function (string $fournisseur): void {
     Carbon::setTestNow('2026-10-05 08:30:00');
@@ -541,9 +590,12 @@ it('n’ouvre pas le compte auquel une identité a été liée sur une adresse s
      *
      * Ici, toute adresse rendue atteint la comparaison des deux adresses,
      * hors ASCII comprise. Seule la casse ASCII y est ignorée : ni
-     * `mb_strtolower()`, ni le repli de casse Unicode, ni une forme normale, ni
-     * la conversion d'un domaine internationalisé en Punycode, qui replie
-     * elle-même casse et signe kelvin, n'y rapprochent deux adresses.
+     * `mb_strtolower()`, ni le repli de casse Unicode, ni une forme normale
+     * n'y rapprochent deux adresses. Un domaine internationalisé y arrive
+     * sous sa forme canonique, en ASCII (`AdresseCanonique`, #2168) : il ne
+     * rapproche que la forme Unicode de la forme ASCII du même domaine, la
+     * même boîte, jamais « bücher » de « bucher » ; un compte enregistré en
+     * ASCII s'ouvre donc à la forme Unicode de son adresse (plus bas).
      */
     $identifiant = identiteSocialeDe($fournisseur);
     $compte = compteSocialExistant($adresseDuCompte, $fournisseur, $identifiant);
@@ -574,11 +626,45 @@ it('n’ouvre pas le compte auquel une identité a été liée sur une adresse s
     'le s long, que le repli de casse ramène à « s »' => ['sam@example.org', "\u{17F}am@example.org"],
     '« ß » pour « ss », que le repli de casse confond' => ['strasse@example.org', 'straße@example.org'],
     'un domaine internationalisé' => ['jean@bucher.example.org', 'jean@bücher.example.org'],
-    'un domaine internationalisé, en Punycode dans le compte' => ['jean@xn--bcher-kva.example.org', 'jean@bücher.example.org'],
     'la pleine chasse' => ['jean.dupont@example.org', "\u{FF4A}ean.dupont@example.org"],
     'une espace finale' => ['jean.dupont@example.org', 'jean.dupont@example.org '],
     'une adresse sans rapport' => ['jean.dupont@example.org', 'dominique.petit@example.net'],
     'une adresse relais' => ['jean.dupont@example.org', 'x7k2p9q4rs@privaterelay.appleid.com'],
+]);
+
+/*
+ * La forme Unicode d'un domaine que le compte porte en ASCII désigne la même
+ * boîte : sous sa forme canonique (`AdresseCanonique`, #2168), l'adresse
+ * rendue est exactement celle du compte. L'identité liée sans preuve l'ouvre
+ * donc, et prouve sa liaison ; sans identité, l'adresse garantie rattache le
+ * compte vérifié, comme sa forme ASCII. Ce retour était refusé : rien ne
+ * rapprochait les deux formes.
+ */
+it('ouvre le compte enregistré en ASCII quand le fournisseur rend la forme Unicode de son adresse', function (string $fournisseur, bool $identiteDejaLiee, string $adresseRendue): void {
+    Carbon::setTestNow('2026-11-05 09:00:00');
+    $identifiant = identiteSocialeDe($fournisseur);
+    $compte = compteSocialExistant('jean@xn--bcher-kva.example.org', $identiteDejaLiee ? $fournisseur : null, $identiteDejaLiee ? $identifiant : null);
+
+    Socialite::shouldReceive('driver')->with($fournisseur)->andReturn(
+        fournisseurSocialQuiRend(retourSocialDe($fournisseur, $identifiant, $adresseRendue)),
+    );
+
+    get(route('social.callback', $fournisseur))->assertRedirect(route('dashboard'));
+
+    assertAuthenticatedAs($compte);
+    $compte->refresh();
+
+    expect(User::query()->count())->toBe(1)
+        ->and($compte->email)->toBe('jean@xn--bcher-kva.example.org')
+        ->and($compte->provider)->toBe($fournisseur)
+        ->and($compte->provider_id)->toBe($identifiant)
+        ->and($compte->liaison_prouvee_le?->toDateTimeString())->toBe('2026-11-05 09:00:00');
+})->with($fournisseurs)->with([
+    'par l’identité liée sans preuve' => [true],
+    'par l’adresse, sans identité' => [false],
+])->with([
+    'en minuscules' => ['jean@bücher.example.org'],
+    'en capitales' => ['JEAN@BÜCHER.EXAMPLE.ORG'],
 ]);
 
 it('n’ouvre pas le compte d’une liaison posée sur une adresse seulement proche quand l’adresse change ensuite', function (string $fournisseur, string $adresseSansRapport): void {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Requests\Concerns\EcritLAdresseSousSaFormeCanonique;
 use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,6 +22,8 @@ use Illuminate\Validation\Rules;
  */
 class RegisterRequest extends FormRequest
 {
+    use EcritLAdresseSousSaFormeCanonique;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -35,8 +38,10 @@ class RegisterRequest extends FormRequest
      * L'adresse s'écrit en minuscules et en ASCII imprimable : la base ne
      * confond alors deux adresses que si elles sont identiques, et une
      * inscription ne peut pas occuper l'adresse d'un autre
-     * (`AdresseEnAsciiImprimable`). La messagerie doit l'écrire telle quelle,
-     * sans quoi le lien qui ouvre le compte ne lui parviendrait jamais
+     * (`AdresseEnAsciiImprimable`). Un domaine internationalisé tapé en
+     * Unicode a déjà pris sa forme ASCII (`prepareForValidation()`, #2168) :
+     * il s'inscrit au lieu d'être refusé. La messagerie doit l'écrire telle
+     * quelle, sans quoi le lien qui ouvre le compte ne lui parviendrait jamais
      * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; son refus est le message
      * de toute adresse mal formée. Une adresse déjà prise passe la
      * validation comme une autre.
@@ -50,5 +55,16 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', new AdresseEnAsciiImprimable(), new AdresseQueLaMessagerieSaitEcrire()],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
+    }
+
+    /**
+     * L'adresse prend sa forme canonique avant les règles : un domaine
+     * internationalisé s'écrit en ASCII (`AdresseCanonique`), la forme que
+     * Chromium envoie déjà et que la connexion cherche.
+     */
+    #[\Override]
+    protected function prepareForValidation(): void
+    {
+        $this->ecrireLAdresseSousSaFormeCanonique();
     }
 }

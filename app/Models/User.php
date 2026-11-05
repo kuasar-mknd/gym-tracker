@@ -13,6 +13,7 @@ use App\Models\Traits\OublieLaPreuveDeSaLiaison;
 use App\Models\Traits\SurveilleSonAdresse;
 use App\Notifications\LienDOuvertureDuCompte;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
+use App\Support\AdresseCanonique;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -301,30 +302,37 @@ final class User extends Authenticatable implements MustVerifyEmail
      * l'adresse coupée ne retrouve pas le compte ; au bout, elle le retrouve
      * quand la collation néglige le blanc (une espace insécable), pas
      * autrement (un remplissage hangul). Le prédicat le demande donc à la
-     * base, sur ce seul compte, quand la coupe change l'adresse, et seulement
-     * alors.
+     * base, sur ce seul compte, quand la coupe ou la forme canonique (plus
+     * bas) change l'adresse, et seulement alors.
      *
-     * La personne tape l'adresse dans un champ `type="email"`, à « mot de
-     * passe oublié » comme à la réinitialisation et à la connexion, et
-     * Chromium y convertit en Punycode un domaine qui n'est pas en ASCII sous
-     * une adresse que la spécification HTML admet, donc sous une partie
-     * locale en ASCII qui n'est pas entre guillemets (« bücher » devient
-     * « xn--bcher-kva », mesuré sous Chromium 141). Depuis #2001, un tel
-     * domaine s'enregistre en Punycode, sous lequel la demande retrouve le
-     * compte. Un compte d'avant #2001 peut le porter en Unicode, que la
-     * collation ne rapproche pas du Punycode : le prédicat ne lui promet pas
-     * le lien, et le chemin le renvoie à un administrateur, qui peut lui
-     * donner au panneau sa forme ASCII (#2104). Il ne le promet pas davantage
-     * quand la conversion ramènerait le domaine à un ASCII sous lequel la
-     * collation retrouve le compte (une lettre pleine chasse, mesuré). Le
-     * profil montre en Unicode un domaine enregistré en Punycode, et le champ
-     * de la demande ne le rend en Punycode que sous une adresse que la
-     * spécification admet : le prédicat ne promet pas le lien à un tel
-     * domaine sous une partie locale entre guillemets ou avec un commentaire
-     * (mesuré). Dans le doute, il tait un lien qui part plutôt que d'en
-     * promettre un qui ne part pas. D'une partie locale qui n'est pas en
-     * ASCII, Chromium envoie l'adresse telle qu'elle est tapée, domaine
-     * compris, et la demande la retrouve.
+     * La personne tape l'adresse que le profil lui montre dans un champ
+     * `type="email"`, à « mot de passe oublié » comme à la réinitialisation
+     * et à la connexion, et la demande écrit l'adresse reçue sous sa forme
+     * canonique (`AdresseCanonique`, #2168) avant de chercher le compte :
+     * un domaine internationalisé, reçu en Unicode ou en Punycode, se cherche
+     * en ASCII, la forme que l'inscription enregistre depuis #2001. Chromium
+     * convertit en Punycode un domaine qui n'est pas en ASCII sous une
+     * adresse que la spécification HTML admet, donc sous une partie locale
+     * en ASCII qui n'est pas entre guillemets (« bücher » devient
+     * « xn--bcher-kva », mesuré sous Chromium 141), et montre au profil en
+     * Unicode un domaine enregistré en Punycode, qu'il ne reconvertit à
+     * l'envoi que sous une telle adresse : la demande reçoit alors l'Unicode
+     * (`ceQueLaDemandeRecevrait()`), et le reconvertit elle-même, sauf sous un
+     * commentaire, que la conversion refuse (règles STD3). Un compte resté en
+     * Unicode, que la migration de #2168 laisse quand sa forme ASCII est
+     * prise, ne se retrouve pas sous l'ASCII cherché : le prédicat ne lui
+     * promet pas le lien, et le chemin le renvoie à un administrateur
+     * (#2104). Il ne promet pas davantage le lien à un domaine
+     * hors ASCII sous une partie locale en ASCII, que Chromium envoie sous sa
+     * propre conversion : « strasse » d'un « straße », un ASCII ordinaire
+     * d'une lettre pleine chasse, sous lesquels la collation retrouverait
+     * peut-être le compte (mesuré), ou le Punycode d'un « ς », que la forme
+     * canonique laisse aussi tel quel et sous lequel la base ne le retrouve
+     * pas (`AdresseQueLaMessagerieSaitEcrireTest` en tient le témoin). Dans
+     * le doute, il tait un lien qui part plutôt que d'en promettre un qui ne
+     * part pas. D'une partie locale qui
+     * n'est pas en ASCII, Chromium envoie l'adresse telle qu'elle est tapée,
+     * domaine compris, et la demande en convertit le domaine.
      *
      * La règle est recopiée de la demande, pas lue sur elle : la comparaison
      * avec ce que fait vraiment « mot de passe oublié », pour chaque forme
@@ -333,14 +341,15 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function peutRecevoirLeLienDeReinitialisation(): bool
     {
         $adresse = $this->getEmailForPasswordReset();
-        $adresseRecueParLaDemande = Str::trim($adresse);
+        $adresseCoupee = Str::trim($adresse);
+        $adresseRecueParLaDemande = self::ceQueLaDemandeRecevrait($adresseCoupee);
+        $adresseCherchee = AdresseCanonique::de($adresseRecueParLaDemande);
 
         return $this->laMessagerieSaitEcrireSonAdresse()
-            && ! self::leNavigateurConvertiraitSonDomaine($adresseRecueParLaDemande)
-            && ! self::leNavigateurLaisseraitSonDomaineEnUnicode($adresseRecueParLaDemande)
+            && ! self::leNavigateurConvertiraitSonDomaine($adresseCoupee)
             && Validator::make(['email' => $adresseRecueParLaDemande], ['email' => ['required', 'email']])->passes()
-            && ($adresseRecueParLaDemande === $adresse
-                || self::query()->whereKey($this->getKey())->where('email', $adresseRecueParLaDemande)->exists());
+            && ($adresseCherchee === $adresse
+                || self::query()->whereKey($this->getKey())->where('email', $adresseCherchee)->exists());
     }
 
     /**
@@ -358,16 +367,47 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Ce que la demande reçoit quand la personne tape l'adresse que le profil
+     * montre : le domaine en Unicode quand le champ `type="email"` de Chromium
+     * le laisserait ainsi (`leNavigateurLaisseraitSonDomaineEnUnicode()`),
+     * l'adresse telle quelle sinon. Chromium montre en Unicode un domaine en
+     * Punycode, le décodant comme UTS #46 ; une adresse que ce décodage
+     * refuse se montre, et part, telle quelle, comme une adresse qui finit
+     * par un @ (un domaine vide, que `idn_to_utf8()` refuse par une erreur).
+     */
+    private static function ceQueLaDemandeRecevrait(string $adresse): string
+    {
+        if (! self::leNavigateurLaisseraitSonDomaineEnUnicode($adresse)) {
+            return $adresse;
+        }
+
+        $arobase = (int) strrpos($adresse, '@');
+        $domaineEnPunycode = substr($adresse, $arobase + 1);
+
+        if ($domaineEnPunycode === '') {
+            return $adresse;
+        }
+
+        $details = [];
+        $domaine = idn_to_utf8($domaineEnPunycode, IDNA_NONTRANSITIONAL_TO_UNICODE, INTL_IDNA_VARIANT_UTS46, $details);
+
+        if (! is_string($domaine) || ! is_array($details) || ($details['errors'] ?? null) !== 0) {
+            return $adresse;
+        }
+
+        return substr($adresse, 0, $arobase + 1).$domaine;
+    }
+
+    /**
      * Le champ `type="email"` du profil montrerait-il le domaine de cette
      * adresse en Unicode, sans que celui de « mot de passe oublié » le rende
      * en Punycode ? Chromium montre en Unicode un domaine en Punycode
      * (« xn--bcher-kva » devient « bücher »), et ne le reconvertit à l'envoi
      * que si l'adresse obtenue est une adresse que la spécification HTML
      * admet : ni une partie locale entre guillemets, ni un commentaire
-     * (mesuré sous Chromium 141). La personne qui tape l'adresse montrée
-     * envoie alors l'Unicode, sous lequel la demande ne retrouve pas le
-     * compte. Le prédicat le suppose de tout « xn-- » qui suit le premier @,
-     * casse ignorée, quand l'adresse n'est pas une adresse HTML valide.
+     * (mesuré sous Chromium 141). La demande reçoit alors l'Unicode. Le
+     * prédicat le suppose de tout « xn-- » qui suit le premier @, casse
+     * ignorée, quand l'adresse n'est pas une adresse HTML valide.
      */
     private static function leNavigateurLaisseraitSonDomaineEnUnicode(string $adresse): bool
     {

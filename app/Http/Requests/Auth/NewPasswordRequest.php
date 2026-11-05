@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Support\AdresseCanonique;
 use App\Support\LiensDesCourriels;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
@@ -77,10 +78,13 @@ class NewPasswordRequest extends FormRequest
      * le compte du lien que s'il porte aussi l'adresse saisie, dans la même
      * requête, selon la collation de `users.email`, comme la connexion le
      * cherche par cette adresse. La casse n'y compte pas, et `TrimStrings` a
-     * ôté les espaces autour, comme pour la connexion. Une adresse qui ne
-     * désigne pas le compte du lien ne trouve rien : le courtier rend
-     * `passwords.user`, que le contrôleur refuse comme un jeton faux, sans
-     * que le jeton soit lu ni consommé.
+     * ôté les espaces autour, comme pour la connexion. L'adresse saisie y
+     * prend sa forme canonique, comme à la connexion (`AdresseCanonique`,
+     * #2168) : un domaine internationalisé tapé en Unicode désigne le compte
+     * enregistré en ASCII. L'adresse du lien, celle du compte, reste telle
+     * quelle. Une adresse qui ne désigne pas le compte du lien ne trouve
+     * rien : le courtier rend `passwords.user`, que le contrôleur refuse
+     * comme un jeton faux, sans que le jeton soit lu ni consommé.
      *
      * L'adresse déchiffrée n'est fusionnée dans aucune requête, ni dans celle
      * de l'application (`request()`), ni dans celle-ci : la page envoie du
@@ -101,7 +105,7 @@ class NewPasswordRequest extends FormRequest
             return null;
         }
 
-        $adresseSaisie = $this->string('email')->value();
+        $adresseSaisie = AdresseCanonique::de($this->string('email')->value());
 
         return [
             'token' => $this->string('token')->value(),
