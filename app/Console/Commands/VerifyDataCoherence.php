@@ -244,7 +244,7 @@ class VerifyDataCoherence extends Command
                      * laissait le record sur l'ancien chiffre, et rien ne
                      * pouvait plus le remettre d'aplomb.
                      *
-                     * Le tri sur `max_weight` suffit a declencher : `recompute()`
+                     * Le tri sur `max_weight` suffit a declencher : `reparer()`
                      * refait les trois types du couple (utilisateur, exercice)
                      * d'un seul coup.
                      */
@@ -257,7 +257,7 @@ class VerifyDataCoherence extends Command
             ->get();
 
         // Un couple (utilisateur, exercice) ne se reconstruit qu'une fois :
-        // `recompute()` traite les trois types d'un coup.
+        // `reparer()` traite les trois types d'un coup.
         /** @var array<string, array{0: int, 1: int}> $aRefaire */
         $aRefaire = [];
 
@@ -450,10 +450,11 @@ class VerifyDataCoherence extends Command
      * passait tous les autres controles.
      *
      * La meilleure serie vient de `PersonalRecordService::recordsAttendus()`,
-     * le classement et la mesure memes que `recompute()` ecrit. Un exercice
-     * sans aucune serie eligible n'est pas juge ici : ses records s'appuient
-     * forcement sur une serie absente ou qui ne compte pas, et les controles
-     * voisins les signalent deja.
+     * le classement et la mesure memes qu'ecrit la reconstruction
+     * (`recompute()`, `reparer()`). Un exercice sans aucune serie eligible
+     * n'est pas juge ici : ses records s'appuient forcement sur une serie
+     * absente ou qui ne compte pas, et les controles voisins les signalent
+     * deja.
      *
      * @return array{int, list<string>}
      */

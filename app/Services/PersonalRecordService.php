@@ -209,8 +209,10 @@ final class PersonalRecordService
     }
 
     /**
-     * Reconstruit les records d'un exercice pour le contrôle de cohérence, sans
-     * rien annoncer.
+     * Reconstruit les records d'un exercice pour réparer des données, sans
+     * rien annoncer : le contrôle de cohérence (`--repair`) et la migration
+     * qui remonte les records restés sous leur meilleure série
+     * (`2026_11_05_152528_remonter_les_records_restes_sous_leur_meilleure_serie`).
      *
      * La réparation reprend des records qu'une écriture d'avant les correctifs
      * a laissés faux : un record resté sous la meilleure série peut désigner une
@@ -259,6 +261,11 @@ final class PersonalRecordService
      * (`PersonalRecordAchieved::shouldSend()`). Le record que la série tenait
      * déjà, même remonté par sa correction, et celui qui ne dépasse pas sa
      * valeur d'avant ne sont pas rendus.
+     *
+     * Les records d'avant les correctifs qui ne tenaient pas cet invariant,
+     * restés sous leur meilleure série (#1984), ont été repris une fois, sans
+     * annonce, par la migration que nomme `reparer()` ; sous le verrou, les
+     * écritures de l'application le tiennent.
      *
      * @param  list<string>|null  $types  Limite la reconstruction à ces records ; null les prend tous.
      * @return array<int, array{record: PersonalRecord, avant: float|null}> Par identifiant du record.
