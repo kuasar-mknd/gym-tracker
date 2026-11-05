@@ -13,6 +13,7 @@ use App\Notifications\AdresseDuCompteChangee;
 use App\Notifications\LienDeChangementDAdresse;
 use App\Notifications\TentativeSurTonAdresse;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
+use App\Support\AdresseCanonique;
 use Filament\Actions\Testing\TestAction;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -962,6 +963,40 @@ it('envoie le lien « mot de passe oublié » à un compte relié dont le domain
     'en Punycode, comme le champ de Chromium l’envoie' => ['jean@xn--bcher-kva.example.org'],
     'en Unicode, comme un champ texte l’envoie' => ['jean@bücher.example.org'],
 ]);
+
+/*
+ * Un domaine hors ASCII que la forme canonique laisse tel quel, parce que le
+ * traitement transitoire l'écrit autrement (« ς »), sous une partie locale
+ * en ASCII : la messagerie écrit l'adresse, la règle `email` l'admet, et la
+ * demande chercherait telle quelle une saisie identique. Mais le champ
+ * `type="email"` de Chromium convertit lui-même un tel domaine en Punycode,
+ * et la collation ne rapproche pas le Punycode de l'Unicode : que le champ
+ * replie « ς » sur « σ » (traitement transitoire, comme il écrit
+ * « strasse » d'un « straße ») ou non, la demande ne retrouve pas le compte,
+ * et rien ne part. Seule la clause prudente du prédicat
+ * (`leNavigateurConvertiraitSonDomaine()`) tait ce lien : sans elle, la
+ * forme cherchée serait l'adresse du compte, et la promesse serait faite.
+ */
+it('ne promet pas le lien à un compte relié dont le domaine hors ASCII reste tel quel et que le champ de Chromium convertirait', function (): void {
+    $compte = User::factory()->create(['email' => 'jean@ς.example.org']);
+    $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
+
+    expect($compte->laMessagerieSaitEcrireSonAdresse())->toBeTrue()
+        ->and(AdresseCanonique::de($compte->email))->toBe($compte->email)
+        ->and(Validator::make(['email' => $compte->email], ['email' => ['required', 'email']])->passes())->toBeTrue()
+        ->and($compte->peutRecevoirLeLienDeReinitialisation())->toBeFalse();
+
+    expect(idn_to_ascii('ς.example.org', 0, INTL_IDNA_VARIANT_UTS46))->toBe('xn--4xa.example.org')
+        ->and(idn_to_ascii('ς.example.org', IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46))->toBe('xn--3xa.example.org');
+
+    foreach (['jean@xn--4xa.example.org', 'jean@xn--3xa.example.org'] as $adresseEnvoyee) {
+        post(route('password.email'), ['email' => $adresseEnvoyee])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', __('passwords.sent'));
+    }
+
+    expect(adresseMessagerieDestinataires())->toBe([]);
+});
 
 it('laisse le panneau enregistrer le nom d’un compte dont l’adresse est antérieure à la règle, par la page comme par la table', function (string $adresse): void {
     actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('User')), 'admin');
