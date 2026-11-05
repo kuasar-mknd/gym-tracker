@@ -298,6 +298,89 @@ const ecrituresDuFuseau = (source) => {
     return ecritures
 }
 
+/**
+ * Les noms sous lesquels un source appelle `poserLeFuseau` : le sien, et celui
+ * qu'une importation renommée lui donne (`import { poserLeFuseau as poser }`).
+ *
+ * @param {object} programme
+ * @returns {Set<string>}
+ */
+const nomsDePoserLeFuseau = (programme) =>
+    new Set([
+        'poserLeFuseau',
+        ...programme.body
+            .filter((noeud) => noeud.type === 'ImportDeclaration')
+            .flatMap(({ specifiers }) => specifiers)
+            .filter(
+                (specificateur) =>
+                    specificateur.type === 'ImportSpecifier' &&
+                    nomDeLaCle(specificateur.imported, false) === 'poserLeFuseau',
+            )
+            .map(({ local }) => local.name),
+    ])
+
+/**
+ * Un appel de `poserLeFuseau`, sous l'un de ses noms ou par un espace de noms
+ * (`fuseau.poserLeFuseau(…)`).
+ *
+ * @param {object} noeud
+ * @param {Set<string>} noms
+ * @returns {boolean}
+ */
+const appellePoserLeFuseau = (noeud, noms) =>
+    noeud.type === 'CallExpression' &&
+    ((noeud.callee.type === 'Identifier' && noms.has(noeud.callee.name)) ||
+        (noeud.callee.type === 'MemberExpression' &&
+            nomDeLaCle(noeud.callee.property, noeud.callee.computed) === 'poserLeFuseau'))
+
+/**
+ * Ce qu'une instruction jette : sa valeur, et celle qu'un `await` ou un `void`
+ * attend ou écarte avec elle.
+ *
+ * @param {object} expression
+ * @returns {object}
+ */
+const valeurJetee = (expression) =>
+    expression.type === 'AwaitExpression' || (expression.type === 'UnaryExpression' && expression.operator === 'void')
+        ? valeurJetee(expression.argument)
+        : expression
+
+/**
+ * Les appels de `poserLeFuseau` dont la remise est jetée, avec leur ligne : un
+ * appel seul sur son instruction, comme `beforeEach(() => { poserLeFuseau(…) })`.
+ * Le fuseau y est posé et vérifié, mais jamais remis : il reste en vigueur pour
+ * les cas suivants du fichier, et pour les fichiers suivants sous
+ * `--no-isolate`. Rendue au hook, confiée à `onTestFinished`, gardée dans une
+ * variable ou appelée, la remise passe.
+ *
+ * @param {string} source
+ * @returns {{ligne: number, appel: string}[]}
+ */
+const remisesJetees = (source) => {
+    if (!source.includes('poserLeFuseau')) {
+        return []
+    }
+
+    const programme = babelParse(source, { sourceType: 'module' }).program
+    const noms = nomsDePoserLeFuseau(programme)
+    const jetees = []
+
+    walk(programme, {
+        enter(noeud) {
+            const appel = noeud.type === 'ExpressionStatement' ? valeurJetee(noeud.expression) : null
+
+            if (appel !== null && appellePoserLeFuseau(appel, noms)) {
+                jetees.push({
+                    ligne: appel.loc.start.line,
+                    appel: source.slice(appel.start, appel.end).split('\n')[0],
+                })
+            }
+        },
+    })
+
+    return jetees
+}
+
 describe('le fuseau des tests', () => {
     it('ne s’écrit que par poserLeFuseau, qui vérifie qu’il est en vigueur', () => {
         const fautifs = [...fichiersJs(racineDesTests), AVANT_CHAQUE_FICHIER]
@@ -316,6 +399,19 @@ describe('le fuseau des tests', () => {
 
     it('s’écrit dans l’utilitaire, la seule exception de la garde', () => {
         expect(ecrituresDuFuseau(readFileSync(L_UTILITAIRE, 'utf8')).length).toBeGreaterThan(0)
+    })
+
+    it('se rend toujours : la remise que rend poserLeFuseau n’est jamais jetée', () => {
+        const fautifs = [...fichiersJs(racineDesTests), AVANT_CHAQUE_FICHIER].flatMap((chemin) =>
+            remisesJetees(readFileSync(chemin, 'utf8')).map(
+                ({ ligne, appel }) => `${relative(racineDuDepot, chemin)}:${ligne} ${appel}`,
+            ),
+        )
+
+        expect(
+            fautifs,
+            'rendre la remise à Vitest (beforeEach(() => poserLeFuseau(…)), ou return dans un hook à accolades), ou la confier à onTestFinished : jetée, le fuseau reste posé pour les cas et les fichiers suivants',
+        ).toEqual([])
     })
 })
 
@@ -387,5 +483,37 @@ describe('la garde', () => {
         ]
 
         expect(formes.filter((source) => ecrituresDuFuseau(source).length > 0)).toEqual([])
+    })
+
+    it('reconnaît une remise jetée, à sa ligne', () => {
+        const formes = [
+            "beforeEach(() => {\n    poserLeFuseau('America/New_York', 240, instant)\n})",
+            "beforeAll(async () => {\n    await poserLeFuseau('Europe/Paris', -120, instant)\n})",
+            "it('lit le jour', () => {\n    void poserLeFuseau('America/Los_Angeles', 420, instant)\n})",
+            "import { poserLeFuseau as poser } from '../utils/fuseauDeLAppareil'\n\nbeforeEach(() => {\n    poser('Europe/Paris', -120, instant)\n})",
+            "fuseau.poserLeFuseau('America/Toronto', 240, instant)",
+        ]
+
+        expect(formes.filter((source) => remisesJetees(source).length !== 1)).toEqual([])
+        expect(
+            remisesJetees(
+                "beforeEach(() => {\n    vi.setSystemTime(instant)\n    poserLeFuseau('America/Toronto', 300, instant)\n})",
+            ),
+        ).toEqual([{ ligne: 3, appel: "poserLeFuseau('America/Toronto', 300, instant)" }])
+    })
+
+    it('laisse passer une remise rendue au hook, confiée à onTestFinished, gardée ou appelée', () => {
+        const formes = [
+            "beforeEach(() => poserLeFuseau('America/New_York', 240, instant))",
+            "beforeEach(() => {\n    vi.setSystemTime(instant)\n\n    return poserLeFuseau('America/Toronto', 300, instant)\n})",
+            "onTestFinished(poserLeFuseau('Europe/Paris', -120, instant))",
+            "const rendreLeFuseau = poserLeFuseau('Europe/Paris', -60, instant)",
+            "poserLeFuseau('America/New_York', 240, instant)()",
+            "expect(() => poserLeFuseau('America/New_York', 240)).toThrow()",
+            "// poserLeFuseau('Europe/Paris', -120, instant)",
+            "poserLeFuseauDeParis('Europe/Paris')",
+        ]
+
+        expect(formes.filter((source) => remisesJetees(source).length > 0)).toEqual([])
     })
 })

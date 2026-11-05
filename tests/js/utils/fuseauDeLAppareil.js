@@ -29,8 +29,10 @@ import { expect } from 'vitest'
  *     beforeEach(() => poserLeFuseau('America/Toronto', 240, NOW))
  *     onTestFinished(poserLeFuseau('Europe/Paris', -120, instant))
  *
- * `tests/js/conventions/fuseauxVerifies.test.js` refuse toute autre écriture
- * du fuseau dans tests/js.
+ * `tests/js/conventions/fuseauxVerifies.test.js` refuse dans tests/js les
+ * autres écritures du fuseau, et un appel dont la remise est jetée : un hook à
+ * accolades sans `return`, `beforeEach(() => { poserLeFuseau(…) })`, pose et
+ * vérifie le fuseau, mais ne le remet jamais.
  *
  * @param {string} fuseau Un fuseau IANA : `America/New_York`, `Europe/Paris`.
  * @param {number} decalageEnMinutes Ce que `getTimezoneOffset()` rend à `instant` dans ce fuseau.
