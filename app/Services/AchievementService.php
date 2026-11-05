@@ -172,6 +172,12 @@ final class AchievementService
      * Toutes les dates distinctes auxquelles l'utilisateur s'est entraine, de la
      * plus recente a la plus ancienne.
      *
+     * Un jour compte quand il a au moins une séance faite, terminée avec une
+     * série cochée (`User::seancesFaites()`), comme la série de jours
+     * (`StreakService::serieDepuisLesFaits()`) : toutes les séances
+     * comptaient, et démarrer une séance trois jours de suite, puis la
+     * terminer sans rien soulever, débloquait « Série de 3 » (#2171).
+     *
      * Sans borne temporelle, et c'est le point : la requete cherchait dans les
      * `seuil + 30` derniers jours, si bien qu'une serie plus ancienne ne
      * debloquait plus rien. Trois jours consecutifs il y a deux mois, puis plus
@@ -203,7 +209,7 @@ final class AchievementService
          * se lisant partout de la meme facon. Meme correctif qu'en #1600.
          */
         /** @var list<string> $horodatages */
-        $horodatages = $user->workouts()
+        $horodatages = $user->seancesFaites()
             ->toBase()
             ->orderByDesc('started_at')
             ->pluck('started_at')

@@ -5,10 +5,18 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Workout;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
+/**
+ * La série de jours ne compte que les séances faites, terminées avec une série
+ * cochée (#2171) : chaque cas les crée par `Workout::factory()->faite()`, dont
+ * la série cochée, écrite après la fin de la séance, la fait compter. Ces cas
+ * créaient des séances nues, démarrées ou terminées sans rien, et les
+ * comptaient.
+ */
 class StreakTest extends TestCase
 {
     use RefreshDatabase;
@@ -17,16 +25,18 @@ class StreakTest extends TestCase
     {
         $user = User::factory()->create();
 
+        // Une séance démarrée, sans série, ne compte pas.
+        $user->workouts()->create(['started_at' => Carbon::parse('2023-01-01 08:00:00')]);
+        $this->assertEquals(0, $user->refresh()->current_streak);
+
         // Day 1
-        $d1 = Carbon::parse('2023-01-01 12:00:00');
-        $user->workouts()->create(['started_at' => $d1, 'ended_at' => $d1->copy()->addHour()]);
+        $this->seanceFaite($user, '2023-01-01 12:00:00');
 
         $this->assertEquals(1, $user->refresh()->current_streak);
         $this->assertEquals(1, $user->refresh()->longest_streak);
 
         // Day 2
-        $d2 = Carbon::parse('2023-01-02 12:00:00');
-        $user->workouts()->create(['started_at' => $d2, 'ended_at' => $d2->copy()->addHour()]);
+        $this->seanceFaite($user, '2023-01-02 12:00:00');
 
         $this->assertEquals(2, $user->refresh()->current_streak);
         $this->assertEquals(2, $user->refresh()->longest_streak);
@@ -36,14 +46,12 @@ class StreakTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $d1 = Carbon::parse('2023-01-01 10:00:00');
-        $user->workouts()->create(['started_at' => $d1, 'ended_at' => $d1->copy()->addHour()]);
+        $this->seanceFaite($user, '2023-01-01 10:00:00');
 
         $this->assertEquals(1, $user->refresh()->current_streak);
 
         // Later same day
-        $d1_later = Carbon::parse('2023-01-01 18:00:00');
-        $user->workouts()->create(['started_at' => $d1_later, 'ended_at' => $d1_later->copy()->addHour()]);
+        $this->seanceFaite($user, '2023-01-01 18:00:00');
 
         $this->assertEquals(1, $user->refresh()->current_streak);
     }
@@ -53,13 +61,11 @@ class StreakTest extends TestCase
         $user = User::factory()->create();
 
         // Day 1
-        $d1 = Carbon::parse('2023-01-01 12:00:00');
-        $user->workouts()->create(['started_at' => $d1]);
+        $this->seanceFaite($user, '2023-01-01 12:00:00');
         $this->assertEquals(1, $user->refresh()->current_streak);
 
         // Skip Day 2, workout on Day 3
-        $d3 = Carbon::parse('2023-01-03 12:00:00');
-        $user->workouts()->create(['started_at' => $d3]);
+        $this->seanceFaite($user, '2023-01-03 12:00:00');
 
         // Should reset to 1
         $this->assertEquals(1, $user->refresh()->current_streak);
@@ -72,17 +78,25 @@ class StreakTest extends TestCase
         $user = User::factory()->create();
 
         // 3 days streak
-        $user->workouts()->create(['started_at' => Carbon::parse('2023-01-01')]);
-        $user->workouts()->create(['started_at' => Carbon::parse('2023-01-02')]);
-        $user->workouts()->create(['started_at' => Carbon::parse('2023-01-03')]);
+        $this->seanceFaite($user, '2023-01-01 00:00:00');
+        $this->seanceFaite($user, '2023-01-02 00:00:00');
+        $this->seanceFaite($user, '2023-01-03 00:00:00');
 
         $this->assertEquals(3, $user->refresh()->current_streak);
         $this->assertEquals(3, $user->refresh()->longest_streak);
 
         // Break streak (Day 5)
-        $user->workouts()->create(['started_at' => Carbon::parse('2023-01-05')]);
+        $this->seanceFaite($user, '2023-01-05 00:00:00');
 
         $this->assertEquals(1, $user->refresh()->current_streak);
         $this->assertEquals(3, $user->refresh()->longest_streak);
+    }
+
+    /**
+     * Une séance faite qui commence à cet instant, écrite par les modèles.
+     */
+    private function seanceFaite(User $user, string $debut): void
+    {
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => Carbon::parse($debut)]);
     }
 }

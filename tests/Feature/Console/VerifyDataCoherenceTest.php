@@ -21,7 +21,11 @@ use Illuminate\Support\Facades\Schema;
  */
 
 /**
- * Un compte avec une seance, une serie, et les records qui vont avec.
+ * Un compte avec une seance faite, une serie, et les records qui vont avec.
+ *
+ * La séance est terminée : la série de jours ne compte que les séances faites
+ * (#2171), et une séance en cours laisserait la série et la date de dernière
+ * séance à rien.
  *
  * @return array{0: User, 1: Set}
  */
@@ -29,7 +33,7 @@ function compteCoherent(): array
 {
     $user = User::factory()->create();
     $exercise = Exercise::factory()->create(['user_id' => $user->id, 'type' => 'strength']);
-    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDay()]);
+    $workout = Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDay(), 'ended_at' => now()->subDay()->addHour()]);
     $line = WorkoutLine::factory()->create(['workout_id' => $workout->id, 'exercise_id' => $exercise->id]);
 
     $set = Set::factory()->create([

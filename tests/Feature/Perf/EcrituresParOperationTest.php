@@ -152,3 +152,99 @@ it('liste les séances en un nombre de requêtes qui ne dépend pas du nombre de
     // exercices constants, le nombre de séances ne doit rien ajouter.
     expect($compter(8))->toBe($compter(2));
 });
+
+/**
+ * Toutes les requêtes émises pendant l'action, dans l'ordre.
+ *
+ * @return list<string>
+ */
+function serieDeJoursRequetesPendant(callable $action): array
+{
+    /** @var list<string> $sql */
+    $sql = [];
+    DB::listen(function (\Illuminate\Database\Events\QueryExecuted $query) use (&$sql): void {
+        $sql[] = $query->sql;
+    });
+
+    $action();
+
+    DB::getEventDispatcher()->forget(\Illuminate\Database\Events\QueryExecuted::class);
+
+    return $sql;
+}
+
+/**
+ * Les lectures de la série de jours parmi ces requêtes : les débuts des
+ * séances faites du compte (`StreakService::serieDepuisLesFaits()`).
+ *
+ * @param  list<string>  $sql
+ * @return list<string>
+ */
+function serieDeJoursLectures(array $sql): array
+{
+    return array_values(array_filter($sql, fn (string $s): bool => str_starts_with($s, 'select `started_at` from `workouts`')));
+}
+
+/**
+ * Les écritures de la série de jours parmi ces requêtes.
+ *
+ * @param  list<string>  $sql
+ * @return list<string>
+ */
+function serieDeJoursEcritures(array $sql): array
+{
+    return array_values(array_filter($sql, fn (string $s): bool => str_starts_with($s, 'update `users` set') && str_contains($s, '_streak')));
+}
+
+/*
+ * La série de jours ne compte plus une séance à son démarrage, mais à la fin
+ * d'une séance faite (#2171). Le démarrage perd l'écriture de la série et la
+ * relecture du compte qui la suit (le journal d'activité relit le compte après
+ * chaque écriture, par `fresh()`, même quand il n'en garde rien) : 8 requêtes
+ * dont 2 écritures avant, 6 dont 1 après. La fin gagne une lecture des séances
+ * faites du compte et, quand la série change, son écriture et cette relecture :
+ * 9 requêtes dont 1 écriture avant, 12 dont 2 pour une séance faite, 10 dont 1
+ * pour une séance vide. Une séance faite coûte en tout une requête de plus (17
+ * puis 18) pour autant d'écritures (3) ; une séance vide, une requête et une
+ * écriture de moins.
+ */
+it('démarre une séance sans lire ni écrire la série de jours', function (): void {
+    $user = User::factory()->create();
+
+    $sql = serieDeJoursRequetesPendant(fn () => actingAs($user)->post(route('workouts.store'))->assertRedirect());
+    $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
+
+    expect(serieDeJoursLectures($sql))->toBe([])
+        ->and(serieDeJoursEcritures($sql))->toBe([])
+        ->and(count($ecritures))->toBe(1, implode("\n", $ecritures))
+        ->and(count($sql))->toBe(6, implode("\n", $sql));
+});
+
+it('termine une séance faite en une lecture de ses séances faites et une écriture de la série', function (): void {
+    [$user, $workout, $line] = seanceOuvertePourLesEcritures();
+    Set::factory()->create(['workout_line_id' => $line->id, 'weight' => 80, 'reps' => 5, 'is_completed' => true]);
+
+    $sql = serieDeJoursRequetesPendant(fn () => actingAs($user)
+        ->patch(route('workouts.update', $workout), ['is_finished' => true])
+        ->assertRedirect(route('dashboard')));
+    $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
+
+    expect(serieDeJoursLectures($sql))->toHaveCount(1)
+        ->and(serieDeJoursEcritures($sql))->toHaveCount(1)
+        ->and(count($ecritures))->toBe(2, implode("\n", $ecritures))
+        ->and(count($sql))->toBe(12, implode("\n", $sql));
+});
+
+it('termine une séance vide en une lecture de ses séances faites, sans écrire la série', function (): void {
+    [$user, $workout] = seanceOuvertePourLesEcritures();
+
+    $sql = serieDeJoursRequetesPendant(fn () => actingAs($user)
+        ->patch(route('workouts.update', $workout), ['is_finished' => true])
+        ->assertRedirect(route('dashboard')));
+    $ecritures = array_values(array_filter($sql, fn (string $s): bool => preg_match('/^\s*(insert|update|delete)\b/i', $s) === 1));
+
+    expect(serieDeJoursLectures($sql))->toHaveCount(1)
+        ->and(serieDeJoursEcritures($sql))->toBe([])
+        ->and(count($ecritures))->toBe(1, implode("\n", $ecritures))
+        ->and(count($sql))->toBe(10, implode("\n", $sql));
+});

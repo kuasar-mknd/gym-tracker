@@ -126,10 +126,25 @@ test('it awards streak achievement', function (): void {
         'slug' => 'streak-3',
     ]);
 
-    // Create 3 workouts on 3 consecutive days
-    Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays(2)]);
-    Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays(1)]);
-    Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()]);
+    // Trois séances démarrées, sans série, trois jours de suite, ne comptent
+    // pas (#2171) : elles comptaient, et ce test l'affirmait.
+    foreach ([2, 1, 0] as $recul) {
+        Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays($recul)]);
+    }
+
+    $this->service->syncAchievements($user);
+
+    assertDatabaseMissing('user_achievements', [
+        'user_id' => $user->id,
+        'achievement_id' => $achievement->id,
+    ]);
+
+    // Trois séances faites, trois jours de suite : terminées, avec une série cochée.
+    Workout::withoutEvents(function () use ($user): void {
+        foreach ([2, 1, 0] as $recul) {
+            Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => now()->subDays($recul)->setTime(9, 0)]);
+        }
+    });
 
     $this->service->syncAchievements($user);
 
@@ -163,13 +178,15 @@ test('un enchaînement ancien débloque encore le succès de série', function (
         'slug' => 'streak-3',
     ]);
 
-    // Cinq jours consecutifs il y a sept mois, et rien depuis.
-    foreach ([204, 203, 202, 201, 200] as $joursEnArriere) {
-        Workout::factory()->create([
-            'user_id' => $user->id,
-            'started_at' => now()->subDays($joursEnArriere)->setTime(12, 0),
-        ]);
-    }
+    // Cinq jours consecutifs faits il y a sept mois, et rien depuis.
+    Workout::withoutEvents(function () use ($user): void {
+        foreach ([204, 203, 202, 201, 200] as $joursEnArriere) {
+            Workout::factory()->faite()->create([
+                'user_id' => $user->id,
+                'started_at' => now()->subDays($joursEnArriere)->setTime(12, 0),
+            ]);
+        }
+    });
 
     $this->service->syncAchievements($user);
 
@@ -194,8 +211,10 @@ test('deux jours non consécutifs ne font pas une série de deux', function (): 
         'slug' => 'streak-2',
     ]);
 
-    Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->setTime(12, 0)]);
-    Workout::factory()->create(['user_id' => $user->id, 'started_at' => now()->subDays(5)->setTime(12, 0)]);
+    Workout::withoutEvents(function () use ($user): void {
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => now()->setTime(12, 0)]);
+        Workout::factory()->faite()->create(['user_id' => $user->id, 'started_at' => now()->subDays(5)->setTime(12, 0)]);
+    });
 
     $this->service->syncAchievements($user);
 
@@ -229,12 +248,14 @@ test('une série à cheval sur un changement d’heure reste une série', functi
         'slug' => 'streak-3-'.$transition,
     ]);
 
-    foreach ([$veille, $transition, $lendemain] as $jour) {
-        Workout::factory()->create([
-            'user_id' => $user->id,
-            'started_at' => $jour.' 12:00:00',
-        ]);
-    }
+    Workout::withoutEvents(function () use ($user, $veille, $transition, $lendemain): void {
+        foreach ([$veille, $transition, $lendemain] as $jour) {
+            Workout::factory()->faite()->create([
+                'user_id' => $user->id,
+                'started_at' => \Illuminate\Support\Carbon::parse($jour.' 12:00:00'),
+            ]);
+        }
+    });
 
     $this->service->syncAchievements($user);
 

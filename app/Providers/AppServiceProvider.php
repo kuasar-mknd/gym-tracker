@@ -266,6 +266,16 @@ final class AppServiceProvider extends ServiceProvider
             app(\App\Services\RecommendedValuesService::class)->invaliderPour((int) $user->id);
 
             /*
+             * Une série cochée ou décochée dans une séance terminée la fait
+             * devenir faite ou cesser de l'être : la série de jours se
+             * reconstruit (#2171). Dans une séance en cours, où se cochent les
+             * séries, rien ne change pour elle et rien n'est lu.
+             */
+            if ($set->workoutLine->workout->ended_at !== null && ($set->wasChanged('is_completed') || ($set->wasRecentlyCreated && $set->is_completed))) {
+                app(StreakService::class)->recalculerPourLaSeance($set->workoutLine->workout);
+            }
+
+            /*
              * Les recalculs des succès et des objectifs partent de l'écouteur
              * de `Set::booted()`, qui tourne après celui-ci, une fois écrit le
              * volume de la séance que lit le succès du volume cumulé (#2105).
@@ -304,9 +314,16 @@ final class AppServiceProvider extends ServiceProvider
          * atteint un objectif le laissait atteint (#1953).
          */
         Set::deleted(function (Set $set): void {
-            $user = $set->workoutLine?->workout?->user;
+            $seance = $set->workoutLine?->workout;
+            $user = $seance?->user;
 
             if ($user instanceof User) {
+                // La série cochée d'une séance terminée qui disparaît peut lui
+                // retirer sa place dans la série de jours (#2171).
+                if ($set->is_completed && $seance?->ended_at !== null) {
+                    app(StreakService::class)->recalculerPourLaSeance($seance);
+                }
+
                 \App\Jobs\SyncUserGoals::dispatch($user);
             }
         });
@@ -330,6 +347,12 @@ final class AppServiceProvider extends ServiceProvider
             if ($user instanceof User) {
                 app(\App\Services\PersonalRecordService::class)->recompute($user, $line->exercise_id);
 
+                // Les séries cochées qu'emporte la ligne peuvent retirer à une
+                // séance terminée sa place dans la série de jours (#2171).
+                if ($line->workout?->ended_at !== null) {
+                    app(StreakService::class)->recalculerPourLaSeance($line->workout);
+                }
+
                 // Après les records, que lit l'objectif de charge (#1953).
                 \App\Jobs\SyncUserGoals::dispatch($user);
             }
@@ -340,20 +363,21 @@ final class AppServiceProvider extends ServiceProvider
     {
         Workout::saved(function (Workout $workout): void {
             /*
-             * La série ne bouge qu'à la création de la séance ou au changement
-             * de sa date : renommer une séance ne change rien au calendrier.
+             * La série de jours ne compte que les séances faites, terminées
+             * avec une série cochée (#2171). Une séance ne compte donc pas à
+             * sa création, encore vide : elle compte quand elle se termine,
+             * et cesse de compter quand le panneau la rouvre. Un début qui
+             * change déplace son jour, qu'il quitte autant qu'il en gagne un
+             * (#1983). Dans ces cas, et dans eux seuls, la série se
+             * reconstruit depuis les séances faites ; renommer une séance n'y
+             * change rien.
              *
-             * Une séance déplacée quitte un jour autant qu'elle en gagne un :
-             * l'avance d'un cran ajoutait le jour d'arrivée sans retirer celui
-             * de départ, et chaque déplacement vers l'avant allongeait la série
-             * et son record (#1983). Elle se reconstruit donc depuis les
-             * séances, comme après une suppression. La création seule garde
-             * l'avance d'un cran.
+             * L'avance d'un cran à la création comptait chaque séance dès
+             * « Démarrer » : trois séances vides, trois jours de suite,
+             * faisaient une série de trois jours.
              */
-            if ($workout->wasChanged('started_at')) {
-                app(StreakService::class)->recalculerDepuisLesFaits($workout->user);
-            } elseif ($workout->wasRecentlyCreated) {
-                app(StreakService::class)->updateStreak($workout->user, $workout);
+            if ($workout->wasChanged(['started_at', 'ended_at'])) {
+                app(StreakService::class)->recalculerPourLaSeance($workout);
             }
 
             \App\Jobs\SyncUserAchievements::dispatch($workout->user);
@@ -376,13 +400,7 @@ final class AppServiceProvider extends ServiceProvider
          * milieu d'une suite aussi bien qu'a son extremite.
          */
         Workout::deleted(function (Workout $workout): void {
-            $user = $workout->user;
-
-            if ($user === null) {
-                return;
-            }
-
-            app(StreakService::class)->recalculerDepuisLesFaits($user);
+            app(StreakService::class)->recalculerPourLaSeance($workout);
 
             // Les objectifs se recalculent dans `Workout::booted()`, après les
             // records qu'ils lisent : cet écouteur-ci tourne avant (#1953).
