@@ -83,10 +83,16 @@
         U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/*
+ * `block`, et non `swap` : pendant le chargement, une icône reste vide au lieu
+ * d'écrire le nom de sa ligature (« notifications ») ; trois secondes au plus,
+ * le temps que le navigateur laisse à une police bloquante. Sa place est tenue
+ * à un em par la règle `material-symbols-outlined` de app.css.
+ */
 @font-face {
     font-family: 'Material Symbols Outlined';
     font-style: normal;
     font-weight: 400;
-    font-display: swap;
+    font-display: block;
     src: url('../fonts/material-symbols-outlined.woff2') format('woff2');
 }

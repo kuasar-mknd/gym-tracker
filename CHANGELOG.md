@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Avant l'arrivée de la police des icônes, leur nom ne s'écrit plus en toutes lettres et l'accueil ne déborde plus sur le côté** (#2193, #PR) : une icône est une ligature (« notifications », « bar_chart_4_bars ») que la police Material Symbols dessine en un glyphe d'un em. Tant que la police n'était pas arrivée, le mot s'affichait dans la police de secours et prenait toute sa longueur : la barre du bas et l'en-tête de l'accueil dépassaient l'écran d'un téléphone, puis la page se remettait en place. Une icône tient désormais dans son carré d'un em, police arrivée ou non (`width: 1em`, l'axe horizontal coupé par `overflow-x: clip`), ce qui ne déplace rien une fois la police chargée, et la police des icônes passe en `font-display: block` : pendant le chargement, l'icône reste vide au lieu d'écrire son nom. `IconesAvantLeurPoliceTest` impose la police de secours aux icônes sur l'accueil, les séances et le profil, et mesure chaque icône et la page ; `PageScrollTest`, qui tombait au hasard quand il mesurait l'accueil avant la police, ne dépend plus de cet instant. `OuvertureHorsLigneTest` mesure désormais le texte de l'icône, et non sa boîte, pour prouver que sa police vient du precache.
+
 ## [1.7.0] - 2026-11-05
 
 ### Ajouté

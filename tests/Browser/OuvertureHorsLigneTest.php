@@ -168,8 +168,9 @@ class OuvertureHorsLigneTest extends DuskTestCase
                             15,
                             'la police des icônes ne se charge pas sans réseau',
                         )
-                        // Dessinée par sa police, l'icône tient dans son carré ; sans elle, on lirait le mot « cloud_off ».
-                        ->assertScript("(() => { const icone = document.querySelector('[dusk=\"bandeau-hors-ligne\"] .material-symbols-outlined'); return icone !== null && icone.textContent.trim() === 'cloud_off' && icone.getBoundingClientRect().width < parseFloat(getComputedStyle(icone).fontSize) * 1.5; })()");
+                        // Dessinée par sa police, la ligature tient dans un em ; sans elle, le mot « cloud_off » s'écrirait en toutes lettres.
+                        // La boîte de l'icône fait un em dans les deux cas (app.css, IconesAvantLeurPoliceTest) : c'est son texte qui se mesure.
+                        ->assertScript("(() => { const icone = document.querySelector('[dusk=\"bandeau-hors-ligne\"] .material-symbols-outlined'); if (icone === null || icone.textContent.trim() !== 'cloud_off') { return false; } const texte = document.createRange(); texte.selectNodeContents(icone); return texte.getBoundingClientRect().width < parseFloat(getComputedStyle(icone).fontSize) * 1.5; })()");
                 });
             } finally {
                 $browser->resize(393, 852);
