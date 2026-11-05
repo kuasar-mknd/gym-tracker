@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Filament\Resources\Workouts\Pages\EditWorkout;
 use App\Models\Set;
 use App\Models\User;
 use App\Models\Workout;
@@ -9,6 +10,8 @@ use App\Models\WorkoutLine;
 use App\Services\StreakService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
+use Tests\Support\FilamentAdminPanel;
 
 /*
  * #1983 : déplacer une séance existante vers l'avant gonflait la série de
@@ -21,16 +24,23 @@ use Illuminate\Support\Facades\DB;
  * une suppression, et le contrôle nocturne compare la série stockée à cette
  * reconstruction.
  *
- * La date d'une séance se change depuis ses réglages, tant qu'elle n'est pas
- * terminée : la séance déplacée est donc toujours ouverte, les autres
- * faites. Elle ne passe pas maintenant (#2049) : l'horloge s'arrête après
- * le dernier jour où une séance avance.
- *
  * Seules les séances faites, terminées avec une série cochée, comptent pour
- * la série (#2171) : la séance ouverte ne compte pas tant qu'elle est en
- * cours, où qu'on la déplace, et compte au jour où elle se trouve quand elle
- * se termine. Chaque cas la termine après l'avoir déplacée ; ils la
- * comptaient dès sa création.
+ * la série depuis #2171. Deux chemins déplacent une séance :
+ *
+ * - Ses réglages, dans l'application, tant qu'elle n'est pas terminée. En
+ *   cours, elle ne compte pas, où qu'on la déplace : le déplacement ne change
+ *   rien à la série, et ne la lit pas (`EcrituresParOperationTest`). Elle
+ *   compte au jour où elle se trouve quand elle se termine, et c'est la fin
+ *   qui reconstruit la série. Ces cas-là tiennent donc la fin d'une séance
+ *   déplacée : chacun la termine après l'avoir déplacée. Elle ne passe pas
+ *   maintenant (#2049) : l'horloge s'arrête après le dernier jour où une
+ *   séance avance.
+ * - Le panneau, pour une séance déjà faite : la politique refuse de modifier
+ *   une séance terminée dans l'application. Seul son début change, sa fin
+ *   reste la sienne. Les deux cas « le panneau ne change que le début d'une
+ *   séance faite » tiennent le déplacement lui-même, la défense de #1983 : le
+ *   début qui change sur une séance terminée reconstruit la série
+ *   (`Workout::saved`).
  */
 
 beforeEach(function (): void {
@@ -176,6 +186,65 @@ it('reconstruit la série quand une séance recule', function (): void {
 
     // Restent le 30/09, le 1 et le 2 : trois jours, finis le 2.
     expect(serieDeplaceeStockee($user))->toBe(['2026-10-02 10:00:00', 3, 3])
+        ->and(serieDeplaceeReconstruite($user))->toBe(serieDeplaceeStockee($user));
+});
+
+/**
+ * Change par le panneau le début de cette séance, et rien d'autre : la fin
+ * reste celle qu'elle avait.
+ */
+function deplacerLaSeanceParLePanneau(Workout $workout, string $debut): void
+{
+    $fin = $workout->refresh()->ended_at?->toDateTimeString();
+
+    test()->actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('Workout')), 'admin');
+
+    Livewire::test(EditWorkout::class, ['record' => $workout->getKey()])
+        ->fillForm(['started_at' => $debut])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $workout->refresh();
+
+    expect($workout->started_at->toDateTimeString())->toBe($debut)
+        ->and($workout->ended_at?->toDateTimeString())->toBe($fin);
+}
+
+/*
+ * Le panneau déplace une séance déjà faite, sans toucher à sa fin. Sans
+ * reconstruction au début qui change, la série et le record restaient ceux
+ * d'avant le déplacement.
+ */
+it('reconstruit la série quand le panneau ne change que le début d’une séance faite, vers l’arrière', function (): void {
+    $user = User::factory()->create();
+    $deplacee = seanceDeplaceeLe($user, '2026-10-05');
+    seanceDeplaceeLe($user, '2026-10-06');
+
+    expect(serieDeplaceeStockee($user))->toBe(['2026-10-06 10:00:00', 2, 2]);
+
+    deplacerLaSeanceParLePanneau($deplacee, '2026-10-03 10:00:00');
+
+    // Restent le 3 et le 6 : la suite du 5 et du 6 est coupée.
+    expect(serieDeplaceeStockee($user))->toBe(['2026-10-06 10:00:00', 1, 1])
+        ->and(serieDeplaceeReconstruite($user))->toBe(serieDeplaceeStockee($user));
+});
+
+it('reconstruit la série quand le panneau ne change que le début d’une séance faite, vers l’avant au-delà de minuit', function (): void {
+    $user = User::factory()->create();
+    $deplacee = Workout::factory()->faite()->create([
+        'user_id' => $user->id,
+        'started_at' => Carbon::parse('2026-10-01 23:00:00'),
+        'ended_at' => Carbon::parse('2026-10-02 01:00:00'),
+    ]);
+    seanceDeplaceeLe($user, '2026-10-02');
+    seanceDeplaceeLe($user, '2026-10-03');
+
+    expect(serieDeplaceeStockee($user))->toBe(['2026-10-03 10:00:00', 3, 3]);
+
+    deplacerLaSeanceParLePanneau($deplacee, '2026-10-02 00:30:00');
+
+    // Le 1er n'a plus de séance : restent le 2 et le 3, deux jours et non trois.
+    expect(serieDeplaceeStockee($user))->toBe(['2026-10-03 10:00:00', 2, 2])
         ->and(serieDeplaceeReconstruite($user))->toBe(serieDeplaceeStockee($user));
 });
 

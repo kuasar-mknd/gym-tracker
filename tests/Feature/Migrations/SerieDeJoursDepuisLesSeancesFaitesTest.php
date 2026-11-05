@@ -240,6 +240,11 @@ it('ne touche pas un autre compte', function (): void {
     serieMigreeDebloquer($juste, 'streak-3');
     $miseAJour = DB::table('users')->where('id', $juste->id)->value('updated_at');
 
+    // `updated_at` tient à la seconde : dans la seconde de la création du
+    // compte, une écriture rendrait la même valeur, et l'égalité ci-dessous ne
+    // verrait rien.
+    $this->travel(1)->minutes();
+
     serieMigreeMigrer();
 
     expect(serieMigreeStockee($aCorriger))->toBe([null, 0, 0])
@@ -249,6 +254,40 @@ it('ne touche pas un autre compte', function (): void {
         ->and(serieMigreeAnnonces($juste))->toBe(['streak-3'])
         ->and(DB::table('users')->where('id', $juste->id)->value('updated_at'))->toBe($miseAJour);
 });
+
+/*
+ * Chaque critère choisit seul un compte à traiter. Un compte sans aucune
+ * séance peut tenir un succès de série : un succès mérité dont les séances ont
+ * toutes été supprimées depuis, la suppression ne retirant jamais un succès.
+ * Les autres cas isolent chacune des colonnes de la série stockée, et des
+ * séances faites que rien n'a encore comptées.
+ */
+it('traite un compte que choisit un seul de ses critères', function (bool $succes, ?string $derniere, int $enCours, int $plusLongue, bool $seances, array $attendue): void {
+    $compte = User::factory()->create();
+
+    if ($seances) {
+        serieMigreeSeances($compte, faites: ['2026-10-06 10:00:00', '2026-10-07 10:00:00']);
+    }
+
+    serieMigreePoser($compte, $derniere, $enCours, $plusLongue);
+
+    if ($succes) {
+        serieMigreeDebloquer($compte, 'streak-3');
+    }
+
+    serieMigreeMigrer();
+
+    expect(serieMigreeStockee($compte))->toBe($attendue)
+        ->and(serieMigreeSucces($compte))->toBe([])
+        ->and(serieMigreeAnnonces($compte))->toBe([]);
+})->with([
+    'un succès de série, sans séance ni série stockée' => [true, null, 0, 0, false, [null, 0, 0]],
+    'un succès de série et une série stockée, sans séance' => [true, '2026-10-07 10:00:00', 3, 3, false, [null, 0, 0]],
+    'une dernière séance stockée seule' => [false, '2026-10-07 10:00:00', 0, 0, false, [null, 0, 0]],
+    'une série en cours stockée seule' => [false, null, 3, 0, false, [null, 0, 0]],
+    'une plus longue série stockée seule' => [false, null, 0, 3, false, [null, 0, 0]],
+    'des séances faites, sans série stockée' => [false, null, 0, 0, true, ['2026-10-07 10:00:00', 2, 2]],
+]);
 
 it('oublie le dernier badge non lu que le cache gardait pour la modale de célébration', function (): void {
     $compte = User::factory()->create();

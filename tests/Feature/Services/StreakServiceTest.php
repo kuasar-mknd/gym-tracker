@@ -145,7 +145,7 @@ it('updates longest streak if current streak surpasses it', function (): void {
  * La série se lit dans les séances faites, jamais dans les colonnes stockées :
  * une reconstruction ne part pas de la valeur qu'elle remplace.
  */
-it('updates streak correctly without passing workout parameter', function (): void {
+it('reconstruit la série depuis les séances faites, sans partir des colonnes stockées', function (): void {
     $user = User::factory()->create([
         'current_streak' => 1,
         'longest_streak' => 1,
@@ -236,7 +236,7 @@ it('ne fait pas reculer l’heure quand une séance plus ancienne du jour est sa
 /**
  * Une reconstruction qui retrouve la série stockée ne touche à rien.
  */
-it('ne touche à rien quand on recalcule sans séance le même jour', function (): void {
+it('n’écrit rien quand la reconstruction retrouve la série stockée', function (): void {
     $user = User::factory()->create();
 
     streakFaiteLe($user, Carbon::now()->startOfDay()->addHours(12));
@@ -285,7 +285,7 @@ it('ne casse pas la série en cours quand une séance antérieure est saisie', f
  * série d'un jour ne différait de rien et ne s'écrivait pas : la base gardait
  * deux jours.
  */
-it('traite la séance fournie et non la plus récente en base', function (): void {
+it('reconstruit la série sur le compte relu, pas sur celui que la séance gardait', function (): void {
     $user = User::factory()->create();
 
     $aujourdHui = streakFaiteLe($user, Carbon::now()->setTime(10, 0));
@@ -347,7 +347,7 @@ it('ne reconstruit rien pour une séance dont le compte a disparu', function ():
  * La date de la dernière séance faite est la plus récente du jour, même
  * quand une reconstruction repart des séances.
  */
-it('ne ramène pas la date au matin quand on recalcule sans séance le même jour', function (): void {
+it('garde l’heure de la dernière séance faite du jour à la reconstruction', function (): void {
     $leSoir = Carbon::now()->startOfDay()->addHours(21);
     $leMatin = Carbon::now()->startOfDay()->addHours(6);
 
