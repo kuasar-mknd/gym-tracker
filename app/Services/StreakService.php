@@ -67,10 +67,13 @@ final class StreakService
      * séance chargée avant qu'un autre écrivain ne réécrive la série (la série
      * cochée qui l'a faite, une autre séance du compte) garde le compte
      * d'alors, et la reconstruction, qui n'écrit que ce qui diffère de lui,
-     * pouvait n'écrire rien sur une série pourtant fausse en base. Les chemins
-     * de l'application chargent ce compte à ce moment-là : la relecture ne
-     * leur coûte aucune requête. Le compte relu reste sur la séance, pour les
-     * écouteurs qui suivent.
+     * pouvait n'écrire rien sur une série pourtant fausse en base. La fin
+     * d'une séance, par la page ou par la file hors ligne, et sa suppression
+     * par la page n'ont pas encore chargé ce compte : la relecture ne leur
+     * coûte aucune requête (`EcrituresParOperationTest`). Ailleurs (le
+     * panneau, une série écrite dans une séance terminée), elle coûte une
+     * lecture. Le compte relu reste sur la séance, pour les écouteurs qui
+     * suivent.
      */
     public function recalculerPourLaSeance(Workout $seance): void
     {
@@ -128,6 +131,17 @@ final class StreakService
      * Le tri se fait en PHP plutôt qu'en SQL : `DATE(started_at)` s'écrirait
      * différemment selon le pilote, et une séance par jour reste un volume
      * qu'on ordonne sans y penser.
+     *
+     * Mesuré sur 8.4.13 et 9.7.2 (deltas de `Handler_read%`, 100 puis 400
+     * séances terminées de quatre lignes de quatre séries, trois comptes
+     * voisins de 400 séances), à l'identique sur les deux serveurs : la
+     * lecture parcourt à rebours `workouts(user_id, started_at)`, sans tri,
+     * et s'arrête, pour chaque séance, à sa première série cochée. Quand
+     * c'est la première série, 2N + 1 lectures d'index et N à rebours ; au
+     * pire, une séance sans série cochée lit toutes ses lignes et toutes ses
+     * séries (5N + 1 lectures d'index, 20N suivantes, N à rebours). La
+     * lecture de toutes les séances en faisait 1 et N. Elle passe une fois à
+     * la fin d'une séance, et non plus à son démarrage (#2171).
      *
      * @return array{derniere: string|null, enCours: int, plusLongue: int}
      */
