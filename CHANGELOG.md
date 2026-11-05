@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Un record que reçoit une série encore en attente d'enregistrement est annoncé** (#2185, #PR) : quand la série qui tenait un record était corrigée, décochée ou supprimée, ou son exercice retiré de la séance, juste après la validation d'une série plus lourde et avant que le record de celle-ci ne soit enregistré, elle recevait le record sans que rien ne l'annonce, ni au centre de notifications ni en push. Il est désormais annoncé une fois par record, à la valeur qu'il porte, s'il dépasse celui que la personne tenait. Corriger une série qui tient déjà le record ne l'annonce pas de nouveau, et la réparation du contrôle de cohérence n'annonce rien.
+
 ## [1.7.0] - 2026-11-05
 
 ### Ajouté
