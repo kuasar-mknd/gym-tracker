@@ -8,12 +8,14 @@ use App\Models\User;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
 use App\Notifications\AchievementUnlocked;
+use App\Notifications\PersonalRecordAchieved;
 use App\Services\NotificationService;
 use Database\Seeders\AchievementSeeder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 /*
  * La série de jours et les succès de type `streak` qu'un compte tient d'avant
@@ -187,10 +189,15 @@ it('retire les succès de série que les séances faites ne soutiennent pas, ave
     serieMigreeDebloquer($compte, 'streak-4', '2026-10-08 11:00:00');
 
     // L'annonce de « Série de 3 » a été lue ; celle de la série de quatre non.
-    $compte->notifications()
-        ->where('data->achievement_id', Achievement::query()->where('slug', 'streak-3')->value('id'))
-        ->firstOrFail()
-        ->markAsRead();
+    // Celle d'un record, d'un autre type, porte le même identifiant par hasard
+    // et reste.
+    $serieDeTrois = Achievement::query()->where('slug', 'streak-3')->value('id');
+    $compte->notifications()->where('data->achievement_id', $serieDeTrois)->firstOrFail()->markAsRead();
+    $compte->notifications()->create([
+        'id' => (string) Str::uuid(),
+        'type' => PersonalRecordAchieved::class,
+        'data' => ['achievement_id' => $serieDeTrois],
+    ]);
 
     Notification::fake();
 
@@ -198,6 +205,7 @@ it('retire les succès de série que les séances faites ne soutiennent pas, ave
 
     expect(serieMigreeSucces($compte))->toBe(['first-workout' => '2026-10-05 11:00:00', 'streak-2' => '2026-10-06 11:00:00'])
         ->and(serieMigreeAnnonces($compte))->toBe(['first-workout', 'streak-2'])
+        ->and($compte->notifications()->where('type', PersonalRecordAchieved::class)->count())->toBe(1)
         ->and(serieMigreeStockee($compte))->toBe(['2026-10-06 10:00:00', 2, 2]);
 
     Notification::assertNothingSent();
