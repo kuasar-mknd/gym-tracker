@@ -369,7 +369,8 @@ final class User extends Authenticatable implements MustVerifyEmail
      * le laisserait ainsi (`leNavigateurLaisseraitSonDomaineEnUnicode()`),
      * l'adresse telle quelle sinon. Chromium montre en Unicode un domaine en
      * Punycode, le décodant comme UTS #46 ; une adresse que ce décodage
-     * refuse se montre, et part, telle quelle.
+     * refuse se montre, et part, telle quelle, comme une adresse qui finit
+     * par un @ (un domaine vide, que `idn_to_utf8()` refuse par une erreur).
      */
     private static function ceQueLaDemandeRecevrait(string $adresse): string
     {
@@ -378,8 +379,14 @@ final class User extends Authenticatable implements MustVerifyEmail
         }
 
         $arobase = (int) strrpos($adresse, '@');
+        $domaineEnPunycode = substr($adresse, $arobase + 1);
+
+        if ($domaineEnPunycode === '') {
+            return $adresse;
+        }
+
         $details = [];
-        $domaine = idn_to_utf8(substr($adresse, $arobase + 1), IDNA_NONTRANSITIONAL_TO_UNICODE, INTL_IDNA_VARIANT_UTS46, $details);
+        $domaine = idn_to_utf8($domaineEnPunycode, IDNA_NONTRANSITIONAL_TO_UNICODE, INTL_IDNA_VARIANT_UTS46, $details);
 
         if (! is_string($domaine) || ! is_array($details) || ($details['errors'] ?? null) !== 0) {
             return $adresse;

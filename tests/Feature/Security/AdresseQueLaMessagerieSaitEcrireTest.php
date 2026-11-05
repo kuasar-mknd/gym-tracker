@@ -814,7 +814,11 @@ it('laisse un compte relié à un fournisseur, dont l’adresse est antérieure 
  * une adresse que la messagerie n'écrit pas telle quelle (route vide), et
  * « mot de passe oublié » refuse même, par la règle `email`, des points
  * consécutifs ou un point final. Le message et la page ne le promettent plus,
- * et renvoient à un administrateur, qui change l'adresse au panneau.
+ * et renvoient à un administrateur, qui change l'adresse au panneau. Une
+ * adresse qui finit par un @ après un domaine en Punycode, que la connexion
+ * sociale créait avant #2075, n'a pas de domaine que le profil montrerait en
+ * Unicode : le prédicat ne décode pas un domaine vide, et la page comme les
+ * refus répondent comme pour toute autre adresse (#2168).
  */
 it('ne promet pas le lien « mot de passe oublié » à un compte relié à un fournisseur dont la messagerie n’écrit pas l’adresse', function (string $adresse): void {
     $compte = User::factory()->create(['email' => $adresse]);
@@ -840,6 +844,7 @@ it('ne promet pas le lien « mot de passe oublié » à un compte relié à un f
 })->with([
     ...$admisesParLaRegleEmailRefuseesParMime,
     ...$refuseesParLaRegleEmailCommeParMime,
+    'un domaine en Punycode suivi d’un @' => ['jean@xn--bcher-kva.example.org@'],
 ]);
 
 /*
