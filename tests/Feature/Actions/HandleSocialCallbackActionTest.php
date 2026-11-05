@@ -64,7 +64,7 @@ it('throws exception if email is not verified and environment is not local', fun
     $action = app(HandleSocialCallbackAction::class);
 
     expect(fn () => $action->execute('google'))
-        ->toThrow(SocialAuthException::class, 'Votre email n\'est pas vérifié par Google');
+        ->toThrow(SocialAuthException::class, 'Ton email n\'est pas vérifié par Google');
 });
 
 it('logs warning and proceeds if email is not verified but environment is local', function (): void {
@@ -166,7 +166,7 @@ it('refuse une valeur de vérification qui n’est pas un vrai oui', function (m
     app()->detectEnvironment(fn (): string => 'production');
 
     expect(fn () => app(HandleSocialCallbackAction::class)->execute('google'))
-        ->toThrow(SocialAuthException::class, 'Votre email n\'est pas vérifié par Google');
+        ->toThrow(SocialAuthException::class, 'Ton email n\'est pas vérifié par Google');
 })->with([
     'la chaîne « false »' => ['false'],
     'la chaîne « no »' => ['no'],

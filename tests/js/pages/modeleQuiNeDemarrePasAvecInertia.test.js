@@ -291,7 +291,7 @@ describe('lancer un modèle qui ne démarre pas', () => {
         await vi.waitUntil(() => document.getElementById('message-de-la-seance')?.textContent !== '')
 
         expect(document.getElementById('message-de-la-seance').textContent).toBe(
-            "Le modèle « Push A » n'a pas été démarré : une séance est déjà en cours. Terminez-la avant d'en commencer une autre.",
+            "Le modèle « Push A » n'a pas été démarré. Une séance est déjà en cours : termine-la avant d'en commencer une autre.",
         )
         expect(fileStockee()).toEqual([])
         expect(api.requetes).toEqual([])
@@ -320,7 +320,10 @@ describe('lancer un modèle qui ne démarre pas', () => {
         expect(api.requetes).toEqual([
             { method: 'post', url: '/api/v1/workouts', data: { started_at: expect.any(String), template_id: 3 } },
         ])
-        expect(document.getElementById('message-de-la-seance').textContent).toContain("« Push A » n'a pas été démarré")
+        // Le message du serveur, relu de sa réponse : la page n'en garde une copie que pour se passer de lui.
+        expect(document.getElementById('message-de-la-seance').textContent).toBe(
+            "Le modèle « Push A » n'a pas été démarré. Une séance est déjà en cours.",
+        )
         expect(fileStockee()).toEqual([])
     })
 })

@@ -5,30 +5,29 @@ declare(strict_types=1);
 use App\Models\User;
 use App\Models\Workout;
 use App\Services\AchievementService;
-use App\Services\StreakService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Une séance faite il y a tant de jours, à 10 h, écrite par les modèles : sa
+ * série cochée, écrite après sa fin, recalcule la série de jours (#2171).
+ */
 function seanceIlYA(User $user, int $recul): Workout
 {
-    $seance = Workout::factory()->create([
+    return Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::now()->subDays($recul)->setTime(10, 0),
     ]);
-
-    app(StreakService::class)->updateStreak($user->refresh(), $seance);
-
-    return $seance;
 }
 
 /**
  * L'application affichait « record : 1 jour » a qui portait deja le trophee des
  * trois jours.
  *
- * `updateStreak()` est incremental : il ne sait qu'avancer d'un cran depuis
- * `last_workout_at`, et ne peut donc pas voir qu'une seance saisie apres coup
- * vient de combler un trou. `recalculerDepuisLesFaits()` existait et repartait
- * des faits, mais n'etait branche que sur la SUPPRESSION.
+ * L'avance d'un cran (`updateStreak()`, retiré par #2171) ne savait
+ * qu'avancer depuis `last_workout_at`, et ne pouvait donc pas voir qu'une
+ * seance saisie apres coup venait de combler un trou. `recalculerDepuisLesFaits()`
+ * existait et repartait des faits, mais n'etait branche que sur la SUPPRESSION.
  *
  * Le moteur de succes, lui, repart des faits a chaque synchronisation : les
  * deux chemins repondaient donc differemment a la meme question.

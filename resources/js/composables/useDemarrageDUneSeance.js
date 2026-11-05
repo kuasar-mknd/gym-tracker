@@ -69,7 +69,8 @@ import { triggerHaptic } from '@/composables/useHaptics'
  *
  * - une séance déjà en cours, que la page ou la file connaissent (1 et 2), ou
  *   que le serveur nomme (409), s'ouvre, et la page dit que le modèle n'a pas
- *   été démarré, comme le serveur le disait (`messageDuModeleNonDemarre`) ;
+ *   été démarré (`messageDuModeleNonDemarre`), avec le message du refus quand
+ *   le serveur a répondu ;
  * - sans réseau et sans le contenu du modèle (une copie qui ne le porte pas),
  *   rien ne part : `MODELE_SANS_RESEAU` ;
  * - sur une copie ou le serveur injoignable, la séance, ses lignes et ses
@@ -91,16 +92,29 @@ import { triggerHaptic } from '@/composables/useHaptics'
 export const DEMARRAGE_REFUSE = "La séance n'a pas pu démarrer. Réessaie."
 
 /**
+ * Ce que dit le serveur d'une séance déjà en cours
+ * (`UneSeanceEstDejaEnCours::MESSAGE`), que son refus porte (`message` du
+ * 409) : la seule copie de la page, pour le dire sans réponse du serveur,
+ * quand la séance en cours vient de la page ou de la file (#2119).
+ * `DemarrageDeSeanceIdempotentTest` la garde égale à celle du serveur.
+ */
+export const SEANCE_DEJA_EN_COURS = "Une séance est déjà en cours : termine-la avant d'en commencer une autre."
+
+/**
  * Ce que dit un modèle qui ne démarre pas parce qu'une séance est déjà en
- * cours : le message que le serveur donnait à la page des modèles
- * (`WorkoutTemplateController::execute`), que la page dit désormais elle-même,
- * l'API ne nommant pas le modèle.
+ * cours, comme le serveur le dit à la page des modèles
+ * (`WorkoutTemplateController::execute`) : le modèle, que le refus de l'API ne
+ * nomme pas, puis le message du serveur, relu de sa réponse quand il a
+ * répondu, sinon sa copie (`SEANCE_DEJA_EN_COURS`).
  *
  * @param {string} nom
+ * @param {unknown} [messageDuServeur] le `message` du refus, quand le serveur a répondu
  * @returns {string}
  */
-export const messageDuModeleNonDemarre = (nom) =>
-    `Le modèle « ${nom} » n'a pas été démarré : une séance est déjà en cours. Terminez-la avant d'en commencer une autre.`
+export const messageDuModeleNonDemarre = (nom, messageDuServeur) =>
+    `Le modèle « ${nom} » n'a pas été démarré. ${
+        typeof messageDuServeur === 'string' && messageDuServeur.trim() !== '' ? messageDuServeur : SEANCE_DEJA_EN_COURS
+    }`
 
 /** Combien de temps la page de séance qui s'ouvre peut se faire attendre pour recevoir son message. */
 const ATTENTE_DE_LA_SEANCE_MS = 20_000
@@ -301,10 +315,11 @@ export const useDemarrageDUneSeance = () => {
      *
      * @param {() => Promise<unknown>|unknown} ouvrir
      * @param {{ name: string } | null} modele
+     * @param {unknown} [messageDuServeur] le `message` du refus, quand le serveur a répondu
      */
-    const ouvrirLaSeanceEnCours = async (ouvrir, modele) => {
+    const ouvrirLaSeanceEnCours = async (ouvrir, modele, messageDuServeur) => {
         if (modele !== null) {
-            direSurLaSeanceQuiSOuvre(page, messageDuModeleNonDemarre(modele.name))
+            direSurLaSeanceQuiSOuvre(page, messageDuModeleNonDemarre(modele.name, messageDuServeur))
         }
 
         await ouvrir()
@@ -346,7 +361,7 @@ export const useDemarrageDUneSeance = () => {
         const enCours = refus?.data?.seance?.id
 
         if (refus?.status === 409 && refus.data?.raison === RAISON_SEANCE_DEJA_EN_COURS && enCours) {
-            await ouvrirLaSeanceEnCours(() => router.visit(route('workouts.show', enCours)), modele)
+            await ouvrirLaSeanceEnCours(() => router.visit(route('workouts.show', enCours)), modele, refus.data.message)
 
             return
         }

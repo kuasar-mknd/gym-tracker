@@ -177,7 +177,7 @@ const journalsByMonth = computed(() => {
             <GlassCard v-if="journals.length > 1" class="animate-slide-up">
                 <div class="mb-4">
                     <h3 class="titre-carte">Tendances</h3>
-                    <p class="text-text-muted text-xs font-semibold">Évolution de vos métriques</p>
+                    <p class="text-text-muted text-xs font-semibold">Évolution de tes métriques</p>
                 </div>
                 <JournalChart :data="journals" />
             </GlassCard>
@@ -194,8 +194,8 @@ const journalsByMonth = computed(() => {
             <GlassEmptyState
                 v-if="journals.length === 0 && !showAddForm"
                 icon="📓"
-                title="Votre journal est vide"
-                description="Commencez par ajouter une note pour aujourd'hui."
+                title="Ton journal est vide"
+                description="Commence par ajouter une note pour aujourd'hui."
                 action-label="Commencer"
                 action-id="empty-state-journal"
                 @action="openAddForm"

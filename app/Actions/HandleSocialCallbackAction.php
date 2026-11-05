@@ -44,7 +44,7 @@ final class HandleSocialCallbackAction
                     'email' => $utilisateurSocial->getEmail(),
                 ]);
             } else {
-                throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($fournisseur));
+                throw new SocialAuthException('Ton email n\'est pas vérifié par '.ucfirst($fournisseur));
             }
         }
 

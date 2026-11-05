@@ -48,7 +48,6 @@ final class LienDeChangementDAdresse extends Notification implements ShouldBeEnc
 
         return new MailMessage()
             ->subject("Confirme ta nouvelle adresse {$application}")
-            ->greeting('Bonjour,')
             ->line("Tu as demandé que cette adresse devienne celle de ton compte {$application}. Elle ne le deviendra qu’une fois ce lien suivi, depuis un appareil où tu es connecté.")
             ->action('Confirmer cette adresse', $this->lien)
             ->line('Le lien vaut '.LiensDesCourriels::minutesDeValiditeDUnLien().' minutes. Ton adresse actuelle sera prévenue du changement.')

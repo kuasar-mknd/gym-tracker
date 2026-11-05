@@ -25,6 +25,18 @@ final class UneSeanceEstDejaEnCours extends RuntimeException
      */
     public const string RAISON = 'seance-deja-en-cours';
 
+    /**
+     * Ce que la personne lit d'un démarrage refusé, déclaré ici seulement
+     * (#2119) : le 409 de l'API le porte (`message`), le lancement d'un
+     * modèle par la voie web (`WorkoutTemplateController::execute`) le met
+     * après le nom du modèle, et la page qui lance un modèle le relit de la
+     * réponse de l'API. Elle n'en garde qu'une copie, pour le dire sans
+     * réponse du serveur (`SEANCE_DEJA_EN_COURS`,
+     * `useDemarrageDUneSeance.js`), que `DemarrageDeSeanceIdempotentTest`
+     * garde égale à celle-ci.
+     */
+    public const string MESSAGE = "Une séance est déjà en cours : termine-la avant d'en commencer une autre.";
+
     public function __construct(public readonly Workout $seanceEnCours)
     {
         parent::__construct(sprintf('La séance %d est déjà en cours.', $seanceEnCours->id));
