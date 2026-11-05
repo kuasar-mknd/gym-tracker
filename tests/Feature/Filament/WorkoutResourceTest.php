@@ -8,6 +8,7 @@ use App\Filament\Resources\Workouts\Pages\ListWorkouts;
 use App\Filament\Resources\Workouts\WorkoutResource;
 use App\Models\User;
 use App\Models\Workout;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
@@ -164,4 +165,67 @@ it('interdit la gestion des séances à un admin sans les permissions Workout', 
         ->and(WorkoutResource::canCreate())->toBeFalse()
         ->and(WorkoutResource::canEdit($workout))->toBeFalse()
         ->and(WorkoutResource::canDelete($workout))->toBeFalse();
+});
+
+/*
+ * Le début et la fin d'une séance s'écrivent avec leur décalage (#2159). Le
+ * champ du panneau ne montre que l'heure murale de l'application, que les
+ * deux occurrences de l'heure répétée au passage à l'heure d'hiver partagent :
+ * relue comme une heure sans décalage, elle replaçait dans la seconde
+ * occurrence, une heure plus tard, la séance commencée dans la première, au
+ * premier enregistrement venu, un simple renommage compris.
+ */
+dataset('enregistrements d’une séance du panneau', [
+    'la page de modification' => [fn (Workout $seance): mixed => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->fillForm(['name' => 'Renommée au panneau'])
+        ->call('save')
+        ->assertHasNoFormErrors()],
+    'l’action de modification de la table' => [fn (Workout $seance): mixed => Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), ['name' => 'Renommée au panneau'])
+        ->assertHasNoFormErrors()],
+]);
+
+it('garde l’occurrence du début et de la fin d’une séance qu’il renomme', function (Closure $enregistrer): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = Workout::factory()->create([
+        'started_at' => Carbon::parse('2026-10-25T00:30:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T00:50:00Z')->setTimezone($fuseau),
+    ]);
+
+    $enregistrer($seance);
+
+    $seance->refresh();
+
+    expect($seance->name)->toBe('Renommée au panneau')
+        ->and($seance->started_at->toJSON())->toBe('2026-10-25T00:30:00.000000Z')
+        ->and($seance->ended_at?->toJSON())->toBe('2026-10-25T00:50:00.000000Z');
+})->with('enregistrements d’une séance du panneau');
+
+it('écrit le décalage du début et de la fin qu’il reçoit, une heure de l’heure répétée dans la seconde occurrence', function (): void {
+    $proprietaire = User::factory()->create();
+
+    Livewire::test(CreateWorkout::class)
+        ->fillForm([
+            'user_id' => $proprietaire->getKey(),
+            'name' => 'Saisie au panneau',
+            'started_at' => '2026-10-25 02:30:00',
+            'ended_at' => '2026-10-25 04:00:00',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $seance = Workout::query()->where('name', 'Saisie au panneau')->sole();
+
+    expect($seance->started_at->toJSON())->toBe('2026-10-25T01:30:00.000000Z')
+        ->and($seance->ended_at?->toJSON())->toBe('2026-10-25T03:00:00.000000Z')
+        ->and($seance->getRawOriginal('started_at_offset'))->toBe(60)
+        ->and($seance->getRawOriginal('ended_at_offset'))->toBe(60);
+
+    Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->fillForm(['started_at' => '2026-10-24 21:00:00'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($seance->refresh()->started_at->toJSON())->toBe('2026-10-24T19:00:00.000000Z')
+        ->and($seance->getRawOriginal('started_at_offset'))->toBe(120);
 });

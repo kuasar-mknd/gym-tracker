@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Filament\Resources\Workouts\Schemas;
 
+use App\Models\Casts\InstantAvecSonDecalage;
+use App\Models\Workout;
 use App\Rules\DateQueSaColonneTient;
+use Carbon\CarbonInterface;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -41,6 +44,17 @@ class WorkoutForm
      * (`users.last_workout_at`). Le nom tient dans ses 255 caractères, les
      * notes dans les mille que l'application leur laisse. Au-delà,
      * l'enregistrement finissait en 500 (#2071).
+     *
+     * Le début et la fin s'écrivent avec leur décalage (#2159) : le champ ne
+     * montre que l'heure murale de l'application, que les deux occurrences de
+     * l'heure répétée au passage à l'heure d'hiver partagent, et chaque
+     * enregistrement, un simple renommage compris, la renvoie. Relue sans
+     * décalage, elle replaçait dans la seconde occurrence, une heure plus
+     * tard, une séance commencée ou finie dans la première. Une heure laissée
+     * telle quelle repart donc avec le décalage que la séance porte déjà
+     * (`avecLeDecalageEnregistre()`) ; une heure changée est une heure de
+     * l'application, lue dans la seconde occurrence quand elle tombe dans
+     * l'heure répétée, comme toute heure sans décalage.
      */
     public static function configure(Schema $schema): Schema
     {
@@ -56,13 +70,35 @@ class WorkoutForm
                 DateTimePicker::make('started_at')->label('Début')
                     ->required()
                     ->minDate(DateQueSaColonneTient::horodatage()->premierInstant())
-                    ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant()),
+                    ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant())
+                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => self::avecLeDecalageEnregistre($state, $record?->started_at)),
                 DateTimePicker::make('ended_at')->label('Fin')
                     ->minDate(DateQueSaColonneTient::date()->premierInstant())
-                    ->maxDate(DateQueSaColonneTient::date()->dernierInstant()),
+                    ->maxDate(DateQueSaColonneTient::date()->dernierInstant())
+                    ->dehydrateStateUsing(fn (mixed $state, ?Workout $record): mixed => self::avecLeDecalageEnregistre($state, $record?->ended_at)),
                 Textarea::make('notes')->label('Notes')
                     ->maxLength(1000)
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * L'heure du champ, telle que Filament la rend (l'heure murale de
+     * l'application, `Y-m-d H:i:s`), suivie du décalage de l'instant
+     * enregistré quand elle est la sienne : le cast relit alors la même
+     * occurrence. Une autre heure, ou une séance sans cet instant, part
+     * telle quelle.
+     */
+    private static function avecLeDecalageEnregistre(mixed $heure, ?CarbonInterface $enregistre): mixed
+    {
+        if (! is_string($heure) || ! $enregistre instanceof CarbonInterface) {
+            return $heure;
+        }
+
+        $enregistre = $enregistre->copy()->setTimezone(config()->string('app.timezone'));
+
+        return $enregistre->format(InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE) === $heure
+            ? $enregistre->format(InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE.'P')
+            : $heure;
     }
 }
