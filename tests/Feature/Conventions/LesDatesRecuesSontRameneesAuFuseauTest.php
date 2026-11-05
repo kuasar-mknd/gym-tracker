@@ -22,7 +22,9 @@ use Symfony\Component\Finder\Finder;
  *
  * Cette garde EXÉCUTE la préparation de chaque requête de app/Http/Requests sur
  * chacun de ses champs `date` (chaîne ou `Rule::date()`), avec 22 h 30 UTC, et
- * exige l'instant ou le jour de l'application. Elle ne voit pas :
+ * exige l'instant ou le jour de l'application : l'instant à l'heure murale,
+ * seule ou suivie du décalage de l'application à cet instant, que gardent le
+ * début et la fin d'une séance et d'un jeûne (#2159). Elle ne voit pas :
  *
  * - un champ `date_format`, dont la conversion casserait le format exigé ;
  * - une validation écrite hors d'une requête de formulaire (`$request->validate()`
@@ -108,7 +110,7 @@ function datesRecuesEcart(FormRequest $requete, string $champ): ?string
     (fn () => $this->prepareForValidation())->call($requete);
 
     $instant = Carbon::parse('2026-10-04T22:30:00Z')->setTimezone(config()->string('app.timezone'));
-    $attendues = [$instant->format('Y-m-d H:i:s'), $instant->format('Y-m-d')];
+    $attendues = [$instant->format('Y-m-d H:i:s'), $instant->format('Y-m-d H:i:sP'), $instant->format('Y-m-d')];
     $recue = $requete->input($champ);
 
     return in_array($recue, $attendues, true)
@@ -137,7 +139,7 @@ it('ramène au fuseau de l’application chaque champ validé par date', functio
 
     expect($fautes)->toBe([], "une date reçue avec un décalage serait écrite à l'heure du décalage, relue à celle de l'application :\n  "
         .implode("\n  ", $fautes)
-        ."\n  Appeler ramenerLesInstantsAuFuseauDeLApplication() ou ramenerLesJoursAuFuseauDeLApplication() dans prepareForValidation().");
+        ."\n  Appeler ramenerLesInstantsAuFuseauDeLApplication(), ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage() ou ramenerLesJoursAuFuseauDeLApplication() dans prepareForValidation().");
 });
 
 it('voit une requête qui laisse passer le décalage, et pas celle qui le ramène', function (): void {
@@ -166,6 +168,28 @@ it('voit une requête qui laisse passer le décalage, et pas celle qui le ramèn
             $this->ramenerLesInstantsAuFuseauDeLApplication(['quand']);
         }
     };
+
+    $avecDecalage = new class() extends FormRequest
+    {
+        use RameneLesDatesAuFuseauDeLApplication;
+
+        /** @return array<string, list<string>> */
+        public function rules(): array
+        {
+            return ['quand' => ['required', 'date']];
+        }
+
+        #[\Override]
+        protected function prepareForValidation(): void
+        {
+            $this->ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage(['quand']);
+        }
+    };
+
+    $requeteAvecDecalage = datesRecuesPreparer($avecDecalage::class, ['quand' => '2026-10-04T22:30:00Z']);
+
+    expect(datesRecuesEcart($requeteAvecDecalage, 'quand'))->toBeNull()
+        ->and($requeteAvecDecalage->input('quand'))->toBe('2026-10-05 00:30:00+02:00');
 
     expect(datesRecuesEstUneRegleDate($sansConversion->rules()['quand']))->toBeTrue()
         ->and(datesRecuesEstUneRegleDate(['required', 'date_format:Y-m-d']))->toBeFalse()
