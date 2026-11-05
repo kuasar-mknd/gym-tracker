@@ -13,7 +13,9 @@ use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\Mail\Mailable;
 use Illuminate\Mail\Markdown;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
+use Symfony\Component\Finder\Finder;
 use Tests\Support\Vouvoiement;
 
 /*
@@ -34,6 +36,9 @@ use Tests\Support\Vouvoiement;
  * autres écrivaient « Bonjour, » (#2118). Chaque courriel que l'application
  * envoie est rendu ici, dans chacune de ses variantes ; la liste des avis
  * vient du code, et un avis ajouté sans être rendu ici fait tomber la suite.
+ * Une variante ajoutée à un avis déjà rendu (une branche de `toMail()`) ne
+ * la fait pas tomber : la liste compare des classes, pas leurs branches. Elle
+ * s'ajoute à la main à `courrielsEnFrancaisAEnvoyer()`.
  *
  * Les courriels de l'exploitant n'en sont pas : l'alerte de santé et les avis
  * des sauvegardes partent aux adresses de la configuration
@@ -122,22 +127,41 @@ function courrielsEnFrancaisRendus(MailMessage $message): array
 }
 
 /**
+ * Les classes que déclarent les fichiers PHP d'un dossier, sous-dossiers
+ * compris, nommées d'après leur chemin, comme l'autoloader PSR-4 les
+ * cherche, dans l'ordre. Lu à sa seule racine, `app/Notifications` laissait
+ * hors de la liste un avis rangé dans un sous-dossier.
+ *
+ * @return list<string>
+ */
+function courrielsEnFrancaisClassesDuDossier(string $dossier, string $espaceDeNoms): array
+{
+    $classes = [];
+
+    foreach (Finder::create()->files()->in($dossier)->name('*.php') as $fichier) {
+        $chemin = str_replace(DIRECTORY_SEPARATOR, '\\', $fichier->getRelativePathname());
+        $classes[] = $espaceDeNoms.mb_substr($chemin, 0, -mb_strlen('.php'));
+    }
+
+    sort($classes);
+
+    return $classes;
+}
+
+/**
  * Les avis que l'application envoie par courriel, tirés du code : chaque avis
- * de `app/Notifications` qui se rend en courriel, et ceux que le compte fait
- * partir par ses méthodes `send…Notification()`, dont deux viennent de
- * Laravel (`ResetPassword`, `VerifyEmail`), pour un compte vérifié, non
- * vérifié et en attente.
+ * de `app/Notifications`, sous-dossiers compris, qui se rend en courriel
+ * (`toMail()`), et ceux que le compte fait partir par ses méthodes
+ * `send…Notification()`, dont deux viennent de Laravel (`ResetPassword`,
+ * `VerifyEmail`), pour un compte vérifié, non vérifié et en attente.
  *
  * @return list<string>
  */
 function courrielsEnFrancaisAvisEnvoyesParCourriel(): array
 {
     $avis = [];
-    $fichiers = glob(app_path('Notifications/*.php'));
 
-    foreach (is_array($fichiers) ? $fichiers : [] as $chemin) {
-        $classe = 'App\\Notifications\\'.basename($chemin, '.php');
-
+    foreach (courrielsEnFrancaisClassesDuDossier(app_path('Notifications'), 'App\\Notifications\\') as $classe) {
         if (method_exists($classe, 'toMail')) {
             $avis[] = $classe;
         }
@@ -180,6 +204,23 @@ it('rend chaque courriel que l’application envoie', function (): void {
     expect(courrielsEnFrancaisAvisEnvoyesParCourriel())
         ->toContain(ResetPassword::class, VerifyEmail::class, LienDOuvertureDuCompte::class)
         ->toBe($rendus, 'ajoute à courrielsEnFrancaisAEnvoyer() chaque courriel que l’application envoie');
+});
+
+it('tire les avis de chaque fichier de leur dossier, sous-dossiers compris', function (): void {
+    $dossier = sys_get_temp_dir().'/avis-'.bin2hex(random_bytes(6));
+    File::ensureDirectoryExists("{$dossier}/Comptes");
+    File::put("{$dossier}/RappelALaRacine.php", '<?php');
+    File::put("{$dossier}/Comptes/RappelRange.php", '<?php');
+    File::put("{$dossier}/Comptes/notes.md", '');
+
+    try {
+        expect(courrielsEnFrancaisClassesDuDossier($dossier, 'App\\Notifications\\'))->toBe([
+            'App\\Notifications\\Comptes\\RappelRange',
+            'App\\Notifications\\RappelALaRacine',
+        ]);
+    } finally {
+        File::deleteDirectory($dossier);
+    }
 });
 
 it('rend chaque courriel en français, pied compris', function (string $courriel): void {
