@@ -120,15 +120,15 @@ function heureRepeteeJeuneServi(User $compte, string $chemin): mixed
 }
 
 /**
- * Une séance faite, commencée dans la première occurrence et terminée
- * quarante minutes plus tard, sans passer par les écouteurs.
+ * Une séance faite, sans passer par les écouteurs : par défaut commencée dans
+ * la première occurrence et terminée quarante minutes plus tard.
  */
-function heureRepeteeSeanceFaite(User $compte): Workout
+function heureRepeteeSeanceFaite(User $compte, string $debut = '2026-10-25T00:30:00Z', string $fin = '2026-10-25T01:10:00Z'): Workout
 {
     return Workout::withoutEvents(fn (): Workout => Workout::factory()->create([
         'user_id' => $compte->id,
-        'started_at' => heureRepeteeInstant('2026-10-25T00:30:00Z'),
-        'ended_at' => heureRepeteeInstant('2026-10-25T01:10:00Z'),
+        'started_at' => heureRepeteeInstant($debut),
+        'ended_at' => heureRepeteeInstant($fin),
     ]));
 }
 
@@ -307,6 +307,33 @@ describe('ce que les pages servent d’une séance', function (): void {
         $durees = app(WorkoutStatsService::class)->repartitionsDesSeances($compte)['duration'];
 
         expect(array_map(fn (\App\DTOs\Stats\DistributionStat $tranche): int => $tranche->count, $durees))->toBe([0, 1, 0, 0]);
+    });
+
+    /*
+     * Commencée hors de l'heure répétée (01:50 à Paris, `+02:00`) et finie
+     * dans sa première occurrence (02:50, `+02:00`) : seul le décalage de la
+     * fin dit laquelle. Relue sans lui, la fin revenait à 01:50Z, et la
+     * séance d'une heure en durait deux.
+     */
+    it('compte soixante minutes dans l’historique des durées d’une séance finie dans la première occurrence', function (): void {
+        $compte = User::factory()->create();
+        heureRepeteeSeanceFaite($compte, '2026-10-24T23:50:00Z', '2026-10-25T00:50:00Z');
+
+        $historique = app(WorkoutStatsService::class)->getDurationHistory($compte);
+
+        expect($historique)->toHaveCount(1)
+            ->and($historique[0]->duration)->toBe(60);
+    });
+
+    it('range entre soixante et quatre-vingt-dix minutes une séance finie dans la première occurrence', function (): void {
+        $compte = User::factory()->create();
+        heureRepeteeSeanceFaite($compte, '2026-10-24T23:50:00Z', '2026-10-25T00:50:00Z');
+        heureRepeteeHorlogeA('2026-10-25T09:00:00Z');
+
+        $durees = app(WorkoutStatsService::class)->repartitionsDesSeances($compte)['duration'];
+
+        expect(array_map(fn (\App\DTOs\Stats\DistributionStat $tranche): string => $tranche->label, $durees))->toBe(['< 30 min', '30-60 min', '60-90 min', '90+ min'])
+            ->and(array_map(fn (\App\DTOs\Stats\DistributionStat $tranche): int => $tranche->count, $durees))->toBe([0, 0, 1, 0]);
     });
 
     it('place la séance du calendrier à l’heure de son début', function (): void {
