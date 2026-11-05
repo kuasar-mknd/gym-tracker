@@ -26,7 +26,12 @@ use Illuminate\Translation\PotentiallyTranslatedString;
  * confond rien : l'égalité de la base y est l'égalité octet par octet. C'est
  * le motif d'`adresseComparable()`, dans `ResolveSocialUserAction`. Un domaine
  * internationalisé s'écrit sous sa forme ASCII (« xn--… »), que les serveurs
- * de messagerie emploient de toute façon.
+ * de messagerie emploient de toute façon : tapé en Unicode, il l'a déjà prise
+ * quand la règle le juge, l'inscription, le profil et le panneau écrivant
+ * l'adresse sous sa forme canonique avant leurs règles (`AdresseCanonique`,
+ * #2168). La règle ne refuse donc plus qu'une adresse que cette forme laisse
+ * hors ASCII : une partie locale accentuée, un domaine en « ß », une lettre
+ * pleine chasse, une conversion refusée.
  *
  * L'adresse actuelle d'un compte, quand elle est donnée, reste admise telle
  * quelle : un compte ouvert avant la règle enregistre son profil sans devoir

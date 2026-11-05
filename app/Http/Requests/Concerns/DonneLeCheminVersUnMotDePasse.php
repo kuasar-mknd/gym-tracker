@@ -25,10 +25,10 @@ use App\Models\User;
  * (`User::routeNotificationForMail()`), et la demande refuse, par la règle
  * `email`, des adresses que la messagerie écrit, comme un tiret bas dans le
  * domaine, ou ne retrouve pas le compte sous l'adresse qu'elle reçoit : elle
- * la coupe de ses blancs (une espace insécable en tête), et le champ
- * `type="email"` de Chromium lui envoie en Punycode un domaine accentué,
- * qu'un compte d'avant #2001 porte en Unicode. Le message ne le
- * promet donc qu'à un compte qui le reçoit
+ * la coupe de ses blancs (une espace insécable en tête), et cherche un
+ * domaine accentué sous sa forme ASCII (`AdresseCanonique`, #2168), qu'un
+ * compte resté en Unicode ne porte pas. Le message ne le promet donc qu'à un
+ * compte qui le reçoit
  * (`User::peutRecevoirLeLienDeReinitialisation()`), et renvoie tout autre à
  * un administrateur, qui change l'adresse au panneau.
  *
