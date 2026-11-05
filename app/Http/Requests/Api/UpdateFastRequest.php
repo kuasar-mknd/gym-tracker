@@ -24,14 +24,18 @@ class UpdateFastRequest extends FormRequest
 
     /**
      * La durée cible est bornée comme à la création
-     * (`Fast::DUREE_CIBLE_MAX_MINUTES`).
+     * (`Fast::DUREE_CIBLE_MAX_MINUTES`), et le début aussi : un début déplacé
+     * ne passe pas l'instant de la requête de plus de
+     * `StoreFastRequest::AVANCE_TOLEREE_MINUTES` (#2198). La fin n'est pas
+     * jugée : la page l'envoie à l'instant du geste, sans champ pour la
+     * corriger, et un jeûne terminé avant son début y dure zéro.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'start_time' => ['bail', 'sometimes', 'date', DateQueSaColonneTient::horodatage()],
+            'start_time' => ['bail', 'sometimes', 'date', DateQueSaColonneTient::horodatage(), StoreFastRequest::regleDuDebutAuPlusTard()],
             'end_time' => ['bail', 'nullable', 'date', DateQueSaColonneTient::horodatage()],
             'target_duration_minutes' => ['sometimes', 'integer', 'min:1', 'max:'.Fast::DUREE_CIBLE_MAX_MINUTES],
             'type' => ['sometimes', 'string', 'max:255'],

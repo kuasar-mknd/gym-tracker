@@ -315,6 +315,9 @@ return [
         'measurement_type' => [
             'required_if' => 'Choisis la mensuration suivie.',
         ],
+        'start_time' => [
+            'before_or_equal' => 'Ton jeûne ne peut pas commencer dans le futur : vérifie l\'heure du début et celle de ton appareil.',
+        ],
         'started_at' => [
             'before_or_equal' => 'Le début de la séance ne peut pas être dans le futur.',
         ],
