@@ -20,7 +20,8 @@ use Tests\Support\Vouvoiement;
  * - chaque traduction française : `lang/fr.json`, `lang/fr/*.php` et
  *   `lang/vendor/{paquet}/fr/*.php`, que l'application lit tous ;
  * - chaque chaîne littérale du PHP de `app/` et de `database/seeders` (le
- *   catalogue des badges), commentaires exclus par le tokenizer ;
+ *   catalogue des badges), commentaires exclus par le tokenizer, telle
+ *   qu'elle s'affiche : échappements remplacés par ce qu'ils écrivent ;
  * - chaque vue de `resources/views`, commentaires Blade ôtés (pages
  *   d'erreur, gabarits des courriels) ;
  * - chaque texte du manifeste de l'application (`public/manifest.webmanifest`,
@@ -89,6 +90,75 @@ function tutoiementValeurs(array $traductions, string $prefixe = ''): array
 }
 
 /**
+ * Ce qu'affiche le source d'une chaîne entre guillemets doubles ou d'un
+ * heredoc : chaque séquence d'échappement remplacée par ce qu'elle écrit,
+ * comme PHP le fait. Lu tel quel, « \nVotre » collait le « n » de
+ * l'échappement au mot, et le motif ne le reconnaissait plus. Un octet
+ * échappé qui ne forme pas un caractère UTF-8 entier, ou un point de code
+ * qui n'en est pas un, devient « ? ».
+ */
+function tutoiementSansEchappements(string $source): string
+{
+    $caracteres = ['n' => "\n", 'r' => "\r", 't' => "\t", 'v' => "\v", 'e' => "\e", 'f' => "\f"];
+
+    $texte = (string) preg_replace_callback(
+        '/\\\\(?:([nrtvef\\\\$"])|x([0-9A-Fa-f]{1,2})|u\{([0-9A-Fa-f]+)\}|([0-7]{1,3}))/',
+        static function (array $echappement) use ($caracteres): string {
+            if ($echappement[1] !== null) {
+                return $caracteres[$echappement[1]] ?? $echappement[1];
+            }
+
+            if ($echappement[3] !== null) {
+                $caractere = mb_chr((int) hexdec($echappement[3]), 'UTF-8');
+
+                return $caractere === false ? '?' : $caractere;
+            }
+
+            $octet = $echappement[2] !== null ? hexdec($echappement[2]) : octdec((string) $echappement[4]);
+
+            return chr((int) $octet & 0xFF);
+        },
+        $source,
+        flags: PREG_UNMATCHED_AS_NULL,
+    );
+
+    return mb_scrub($texte, 'UTF-8');
+}
+
+/**
+ * Chaque chaîne littérale d'un source PHP, telle qu'elle s'affiche, sous la
+ * ligne où elle commence, commentaires exclus par le tokenizer. Les
+ * échappements se lisent entre guillemets doubles et dans un heredoc, pas
+ * entre apostrophes ni dans un nowdoc, où PHP les écrit tels quels. Les
+ * chaînes d'une même ligne se suivent, séparées d'une espace.
+ *
+ * @return array<int, string>
+ */
+function tutoiementChainesDuPhp(string $source): array
+{
+    $chaines = [];
+    $dansUnNowdoc = false;
+
+    foreach (token_get_all($source) as $jeton) {
+        if (! is_array($jeton)) {
+            continue;
+        }
+
+        [$genre, $texte, $ligne] = $jeton;
+
+        if ($genre === T_START_HEREDOC || $genre === T_END_HEREDOC) {
+            $dansUnNowdoc = $genre === T_START_HEREDOC && str_contains($texte, "'");
+        } elseif ($genre === T_CONSTANT_ENCAPSED_STRING || $genre === T_ENCAPSED_AND_WHITESPACE) {
+            $echappementsLus = $genre === T_ENCAPSED_AND_WHITESPACE ? ! $dansUnNowdoc : str_ends_with($texte, '"');
+            $affiche = $echappementsLus ? tutoiementSansEchappements($texte) : $texte;
+            $chaines[$ligne] = isset($chaines[$ligne]) ? "{$chaines[$ligne]} {$affiche}" : $affiche;
+        }
+    }
+
+    return $chaines;
+}
+
+/**
  * Chaque texte que le serveur peut montrer, sous l'endroit qui l'écrit :
  * « fichier « clef » » pour une traduction, « fichier:ligne » pour le code et
  * les vues.
@@ -132,11 +202,8 @@ function tutoiementTextesDuServeur(): array
             continue;
         }
 
-        foreach (token_get_all($fichier->getContents()) as $jeton) {
-            if (is_array($jeton) && in_array($jeton[0], [T_CONSTANT_ENCAPSED_STRING, T_ENCAPSED_AND_WHITESPACE], true)) {
-                $endroit = "{$chemin}:{$jeton[2]}";
-                $textes[$endroit] = isset($textes[$endroit]) ? "{$textes[$endroit]} {$jeton[1]}" : $jeton[1];
-            }
+        foreach (tutoiementChainesDuPhp($fichier->getContents()) as $ligne => $chainesDeLaLigne) {
+            $textes["{$chemin}:{$ligne}"] = $chainesDeLaLigne;
         }
     }
 
@@ -204,6 +271,33 @@ it('lit les traductions, le code, les vues et le manifeste que la personne voit'
             'public/manifest.webmanifest « description »',
         )
         ->and($endroits)->not->toContain('app/Filament/', 'resources/views/filament/');
+});
+
+it('lit chaque chaîne du PHP telle qu’elle s’affiche, échappements compris', function (): void {
+    $chaines = tutoiementChainesDuPhp(<<<'PHP'
+        <?php
+        $guillemets = "Séance enregistrée.\nVotre record tient toujours.";
+        $heredoc = <<<TEXTE
+            Bravo, {$nom} !\tContinuez ainsi.
+            TEXTE;
+        $unicode = "Pr\u{e9}f\u{e9}rez la barre, \x76os s\303\251ries.";
+        $antislash = "Le chemin C:\\nVotre reste écrit tel quel.";
+        $apostrophes = 'Le code \x56otre reste écrit tel quel.';
+        $nowdoc = <<<'TEXTE'
+            Le code \x56otre reste écrit tel quel.
+            TEXTE;
+        PHP);
+
+    // Un antislash échappé n'échappe rien : « C:\nVotre » ne dit pas « Votre ».
+    // Entre apostrophes et dans un nowdoc, rien ne s'échappe.
+    expect(array_map(Vouvoiement::mots(...), $chaines))->toBe([
+        2 => ['Votre'],
+        4 => ['Continuez'],
+        6 => ['Préférez', 'vos'],
+        7 => [],
+        8 => [],
+        10 => [],
+    ]);
 });
 
 it('n’exempte que des dossiers qui existent', function (): void {

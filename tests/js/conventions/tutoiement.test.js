@@ -15,11 +15,48 @@ import { motsQuiVouvoient } from './vouvoiement'
  *
  * La garde lit chaque fichier de resources/js, commentaires compris : un
  * exemple de docbloc (`<GlassSection description="…">`) se recopie dans un
- * gabarit. Aucun fichier n'en est exempté : rien de resources/js ne
- * s'adresse à quelqu'un d'autre que la personne qui s'entraîne (le panneau
- * d'administration, qui vouvoie comme Filament, est rendu par le serveur, et
- * sa garde est `tests/Feature/Conventions/LesTextesDuServeurTutoientTest.php`).
+ * gabarit. Elle lit chaque ligne telle qu'elle s'affiche, échappements
+ * remplacés par ce qu'ils écrivent (`\n`, `\t`, `\x…`, `\u…`). Aucun fichier
+ * n'en est exempté : rien de resources/js ne s'adresse à quelqu'un d'autre
+ * que la personne qui s'entraîne (le panneau d'administration, qui vouvoie
+ * comme Filament, est rendu par le serveur, et sa garde est
+ * `tests/Feature/Conventions/LesTextesDuServeurTutoientTest.php`).
  */
+
+/**
+ * Un échappement d'une chaîne JavaScript. `\\` en est un, qui écrit un
+ * antislash : dans `'C:\\nVotre'`, le « n » n'est pas échappé.
+ */
+const ECHAPPEMENT = /\\(?:u\{([0-9a-fA-F]+)\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([nrtvfb0\\]))/g
+const ECRIT_PAR = { n: '\n', r: '\r', t: '\t', v: '\v', f: '\f', b: '\b', 0: '\0', '\\': '\\' }
+
+/**
+ * Ce qu'une ligne du source affiche : chaque échappement remplacé par ce
+ * qu'il écrit. Lue telle quelle, « '…\nVotre…' » collait le « n » de
+ * l'échappement au mot, et le motif ne le reconnaissait plus.
+ *
+ * @param {string} ligne
+ * @returns {string}
+ */
+const sansEchappements = (ligne) =>
+    ligne.replace(ECHAPPEMENT, (_, accolades, quatreChiffres, deuxChiffres, lettre) => {
+        if (lettre !== undefined) {
+            return ECRIT_PAR[lettre]
+        }
+
+        const point = Number.parseInt(accolades ?? quatreChiffres ?? deuxChiffres, 16)
+
+        return point <= 0x10ffff ? String.fromCodePoint(point) : ' '
+    })
+
+/**
+ * Les mots qui vouvoient dans le texte qu'une ligne du source affiche.
+ *
+ * @param {string} ligne
+ * @returns {string[]}
+ */
+const motsDeLaLigne = (ligne) => motsQuiVouvoient(sansEchappements(ligne))
+
 it('tutoie dans chaque texte de resources/js', () => {
     const fichiers = collectSourceFiles({ extensions: ['.vue', '.js'] })
 
@@ -30,7 +67,7 @@ it('tutoie dans chaque texte de resources/js', () => {
         readFileSync(fichier, 'utf8')
             .split('\n')
             .flatMap((ligne, rang) => {
-                const mots = motsQuiVouvoient(ligne)
+                const mots = motsDeLaLigne(ligne)
 
                 return mots.length === 0
                     ? []
@@ -58,4 +95,14 @@ it('reconnaît le vouvoiement qu’elle refuse, et laisse passer le tutoiement',
     expect(motsQuiVouvoient('Crée et lance tes propres minuteurs, chez toi, assez vite.')).toEqual([])
     expect(motsQuiVouvoient('3 modifications faites hors ligne ; les choses dites.')).toEqual([])
     expect(motsQuiVouvoient('const vosges = rezDeChaussee + nouveauVous')).toEqual([])
+})
+
+it('lit chaque ligne telle qu’elle s’affiche, échappements compris', () => {
+    expect(motsDeLaLigne(String.raw`const MESSAGE = 'Séance enregistrée.\nVotre record tient toujours.'`)).toEqual([
+        'Votre',
+    ])
+    expect(motsDeLaLigne(String.raw`titre: "Bravo !\tContinuez ainsi."`)).toEqual(['Continuez'])
+    expect(motsDeLaLigne(String.raw`'Pr\u00e9f\u{e9}rez la barre, \x76os séries.'`)).toEqual(['Préférez', 'vos'])
+    // Un antislash échappé n'échappe rien : « C:\nVotre » ne dit pas « Votre ».
+    expect(motsDeLaLigne(String.raw`const chemin = 'C:\\nVotre'`)).toEqual([])
 })
