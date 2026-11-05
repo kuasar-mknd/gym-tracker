@@ -62,14 +62,19 @@ it('laisse l’adresse telle qu’elle est tapée hors d’un domaine internatio
  * domaine un « @ » (NFKC) : l'adresse changerait de domaine, et une partie
  * de l'ancien deviendrait une partie locale. Les règles STD3 refusent le
  * « @ » obtenu : la conversion échoue, et l'adresse reste telle quelle.
+ * Seul un domaine qui porte aussi un label internationalisé en dépend : sans
+ * label `xn--`, l'adresse resterait telle quelle sans les règles STD3.
  */
-it('ne fait pas d’un « ＠ » pleine chasse du domaine un « @ »', function (): void {
-    $adresse = 'jean@evil.example＠victim.org';
+it('ne fait pas d’un « ＠ » pleine chasse du domaine un « @ »', function (string $adresse, string $sansLesReglesStd3): void {
+    $domaine = substr($adresse, (int) strrpos($adresse, '@') + 1);
 
-    expect(idn_to_ascii('evil.example＠victim.org', IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46))->toBe('evil.example@victim.org')
+    expect(idn_to_ascii($domaine, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46))->toBe($sansLesReglesStd3)
         ->and(AdresseCanonique::de($adresse))->toBe($adresse)
         ->and(substr_count(AdresseCanonique::de($adresse), '@'))->toBe(1);
-});
+})->with([
+    'sous un label internationalisé' => ['jean@bücher.example＠victim.org', 'xn--bcher-kva.example@victim.org'],
+    'sans label internationalisé' => ['jean@evil.example＠victim.org', 'evil.example@victim.org'],
+]);
 
 it('rend une forme qui ne change plus', function (string $adresse): void {
     $forme = AdresseCanonique::de($adresse);
