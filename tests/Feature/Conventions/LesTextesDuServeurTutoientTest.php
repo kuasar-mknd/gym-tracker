@@ -50,13 +50,7 @@ function tutoiementExceptions(): array
 
 function tutoiementEstExempte(string $chemin): bool
 {
-    foreach (array_keys(tutoiementExceptions()) as $prefixe) {
-        if (str_starts_with($chemin, $prefixe)) {
-            return true;
-        }
-    }
-
-    return false;
+    return array_any(array_keys(tutoiementExceptions()), static fn (string $prefixe): bool => str_starts_with($chemin, $prefixe));
 }
 
 /**
@@ -104,11 +98,16 @@ function tutoiementTextesDuServeur(): array
     /** @var array<string, string> $json */
     $json = json_decode((string) file_get_contents(lang_path('fr.json')), true, flags: JSON_THROW_ON_ERROR);
 
-    foreach ($json as $clef => $valeur) {
-        $textes["lang/fr.json « {$clef} »"] = $valeur;
+    foreach ($json as $clefDuJson => $texteDuJson) {
+        $textes["lang/fr.json « {$clefDuJson} »"] = $texteDuJson;
     }
 
-    $traductions = [...(glob(lang_path('fr/*.php')) ?: []), ...(glob(lang_path('vendor/*/fr/*.php')) ?: [])];
+    $fichiersDeLangue = glob(lang_path('fr/*.php'));
+    $fichiersDesPaquets = glob(lang_path('vendor/*/fr/*.php'));
+    $traductions = [
+        ...(is_array($fichiersDeLangue) ? $fichiersDeLangue : []),
+        ...(is_array($fichiersDesPaquets) ? $fichiersDesPaquets : []),
+    ];
 
     foreach ($traductions as $fichier) {
         $contenu = require $fichier;
