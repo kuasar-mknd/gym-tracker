@@ -135,13 +135,30 @@ final class GoalService
 
     protected function updateProgressPercentage(Goal $goal): void
     {
-        if ($this->neSuitAucuneMensuration($goal)) {
+        if ($this->neSuitRien($goal)) {
             $goal->progress_pct = 0.0;
 
             return;
         }
 
-        if ($goal->target_value === $goal->start_value) {
+        /*
+         * Hors mensuration, une cible sous le départ se lit comme une cible
+         * égale au départ : barre pleine quand l'objectif est atteint, vide
+         * sinon (#2164).
+         *
+         * Le record, la meilleure séance et le nombre de séances ne font que
+         * monter. Sous une telle cible, la barre comptait la descente et
+         * `isGoalCriteriaMet()` la montée : départ 100, cible 80, un record de
+         * 70 remplissait la barre sans que l'objectif soit atteint. Les deux
+         * formulaires refusent désormais une telle cible ; un objectif déjà en
+         * base sous son départ voit sa barre suivre son état dès le prochain
+         * recalcul. Seule la mensuration descend.
+         */
+        $cibleLue = $goal->type === GoalType::Measurement
+            ? $goal->target_value
+            : max($goal->target_value, $goal->start_value);
+
+        if ($cibleLue === $goal->start_value) {
             $goal->progress_pct = $goal->current_value >= $goal->target_value ? 100.0 : 0.0;
 
             return;
@@ -158,7 +175,8 @@ final class GoalService
          *
          * Le sens se lit sur la cible et le depart, exactement comme dans
          * `isGoalCriteriaMet()` : une cible sous le depart est une cible qu'on
-         * atteint en descendant.
+         * atteint en descendant. Seule une mensuration arrive ici en
+         * descendant (plus haut).
          */
         $descendant = $goal->target_value < $goal->start_value;
 
@@ -175,7 +193,7 @@ final class GoalService
          *
          * La division reste sans garde : la seule facon d'obtenir zero au
          * denominateur est `target === start`, et la methode a deja retourne
-         * dans ce cas.
+         * dans ce cas, `$cibleLue` valant alors le depart.
          */
         $goal->progress_pct = max(0.0, min($parcouru / $aParcourir * 100, 100.0));
     }
@@ -188,12 +206,19 @@ final class GoalService
      * mieux. Garder la dernière valeur laissait atteint, pour de bon, un objectif
      * atteint par une série ensuite supprimée (#1953).
      *
+     * Sans exercice, l'objectif ne suit rien : il revient à sa valeur de
+     * départ, sans rien lire, et sa barre reste à 0 %, sans qu'il soit jamais
+     * atteint (`neSuitRien()`). Il gardait la valeur actuelle tapée au
+     * panneau, qui permettait de l'y créer sans exercice (#2164).
+     *
      * @param  Goal  $goal  L'objectif à revoir.
      * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
      */
     protected function updateWeightGoal(Goal $goal, array $mesures = []): void
     {
         if ($goal->exercise_id === null) {
+            $goal->current_value = $goal->start_value;
+
             return;
         }
 
@@ -257,7 +282,8 @@ final class GoalService
      * atteint sur l'exercice au cours d'une seule séance.
      *
      * Sans série validée et pesée, l'objectif revient à sa valeur de départ,
-     * comme un objectif de charge sans record (#1953).
+     * comme un objectif de charge sans record (#1953). Sans exercice, il ne
+     * suit rien, comme un objectif de charge sans exercice (#2164).
      *
      * @param  Goal  $goal  L'objectif à revoir.
      * @param  array{seances_faites?: int, max_weights?: array<int, float>, max_volumes?: array<int, float>, dernieres_pesees?: array<array-key, mixed>, dernieres_parties?: array<array-key, array{value: mixed, unit: mixed}>}  $mesures  Métriques déjà calculées en lot.
@@ -265,6 +291,8 @@ final class GoalService
     protected function updateVolumeGoal(Goal $goal, array $mesures = []): void
     {
         if ($goal->exercise_id === null) {
+            $goal->current_value = $goal->start_value;
+
             return;
         }
 
@@ -308,7 +336,7 @@ final class GoalService
         /*
          * Un objectif sans mensuration ne suit rien : il revient à sa valeur de
          * départ, sans rien lire, et sa barre reste à 0 %, sans qu'il soit
-         * jamais atteint (`neSuitAucuneMensuration()`).
+         * jamais atteint (`neSuitRien()`).
          *
          * Il gardait sa valeur actuelle, que le panneau met à 0 par défaut et
          * qui permettait de l'y créer sans mensuration. Sous une cible plus
@@ -494,7 +522,7 @@ final class GoalService
 
     protected function isGoalCriteriaMet(Goal $goal): bool
     {
-        if ($this->neSuitAucuneMensuration($goal)) {
+        if ($this->neSuitRien($goal)) {
             return false;
         }
 
@@ -509,20 +537,27 @@ final class GoalService
     }
 
     /**
-     * Un objectif de mensuration qui ne nomme aucune mensuration ne suit rien.
+     * Un objectif qui ne nomme pas ce qu'il suit ne suit rien : une
+     * mensuration sans mensuration (#2132), une charge ou un volume sans
+     * exercice (#2164).
      *
-     * Il revient à sa valeur de départ (`updateMeasurementGoal()`), mais sa
-     * barre reste à 0 % et il n'est jamais atteint, quelle que soit sa cible.
-     * Le retour au départ seul le disait atteint, barre pleine, sous une cible
-     * égale à son départ, sans que rien ait été mesuré (#2132). Un objectif
-     * dont la mensuration n'a encore aucune mesure, lui, suit quelque chose :
-     * il garde le repli commun, et une cible égale à son départ l'atteint
-     * d'emblée, comme tout objectif sans valeur relevée (#1953, #1954).
+     * Il revient à sa valeur de départ (`updateMeasurementGoal()`,
+     * `updateWeightGoal()`, `updateVolumeGoal()`), mais sa barre reste à 0 %
+     * et il n'est jamais atteint, quelle que soit sa cible. Le retour au départ
+     * seul le disait atteint, barre pleine, sous une cible égale à son départ,
+     * sans que rien ait été mesuré. Un objectif dont la mensuration n'a encore
+     * aucune mesure, ou dont l'exercice n'a aucun record, lui, suit quelque
+     * chose : il garde le repli commun, et une cible égale à son départ
+     * l'atteint d'emblée, comme tout objectif sans valeur relevée (#1953,
+     * #1954). Une fréquence suit toujours les séances faites.
      */
-    private function neSuitAucuneMensuration(Goal $goal): bool
+    private function neSuitRien(Goal $goal): bool
     {
-        return $goal->type === GoalType::Measurement
-            && ($goal->measurement_type === null || $goal->measurement_type === '');
+        return match ($goal->type) {
+            GoalType::Weight, GoalType::Volume => $goal->exercise_id === null,
+            GoalType::Measurement => $goal->measurement_type === null || $goal->measurement_type === '',
+            GoalType::Frequency => false,
+        };
     }
 
     /**

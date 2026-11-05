@@ -15,6 +15,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { triggerHaptic } from '@/composables/useHaptics'
 import { useSortieAudio } from '@/composables/useSortieAudio'
+import GlassIcon from '@/Components/UI/GlassIcon.vue'
 import GlassToggle from '@/Components/UI/GlassToggle.vue'
 
 /**
@@ -298,13 +299,8 @@ watch(
                             :title="isActive ? 'Pause' : 'Démarrer le minuteur'"
                             :aria-label="isActive ? 'Pause' : 'Démarrer le minuteur'"
                         >
-                            <svg v-if="isActive" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M6 4h4v16H6V4zm8 0h4v16h4V4z" />
-                                <path fill="none" d="M0 0h24v24H0z" />
-                            </svg>
-                            <svg v-else class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z" />
-                            </svg>
+                            <!-- Les ligatures de la police d'icônes, pas un dessin à la main (#2122). -->
+                            <GlassIcon :name="isActive ? 'pause' : 'play_arrow'" size="sm" />
                         </button>
 
                         <button

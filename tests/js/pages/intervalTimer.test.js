@@ -97,10 +97,11 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 /**
- * The runner is a four-state machine — warmup, work, rest, finished — and every
- * transition is driven by a single `tick` reading `timeLeft`. Nothing here was
- * covered: a round that never increments, or a last round that loops instead of
- * finishing, would have been invisible.
+ * The runner is a four-state machine — warmup, work, rest, finished. Nothing
+ * here was covered: a round that never increments, or a last round that loops
+ * instead of finishing, would have been invisible. Depuis #2113, la phase, le
+ * tour et le temps restant se lisent sur l'horloge plutôt qu'au compte des tics
+ * (`tests/js/composables/useMinuteurDIntervalles.test.js`, la page suspendue).
  */
 describe('IntervalTimer runner', () => {
     it('runs warmup, then alternates work and rest for the configured rounds', async () => {

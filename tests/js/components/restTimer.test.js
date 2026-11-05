@@ -291,6 +291,47 @@ describe('le bip de fin, minuteur monté seul (#2112)', () => {
     })
 })
 
+/**
+ * L'icône de la bascule (#2122). Le dessin de « Pause », écrit à la main,
+ * fermait son second trait par `h4` au lieu de `h-4` : la barre droite se
+ * remplissait de 18 à 22 au lieu de 14 à 18, à deux unités du bord, et le
+ * pictogramme était décentré de deux unités sur un bouton qu'on touche à chaque
+ * repos. La bascule rend désormais les ligatures de la police d'icônes, `pause`
+ * et `play_arrow`, comme le minuteur d'intervalles et la barre du bas, à la
+ * taille du dessin qu'elles remplacent (20 px, `sm`) ; le bouton se nomme
+ * lui-même, l'icône reste décorative.
+ */
+describe('l’icône de la bascule (#2122)', () => {
+    const icone = (wrapper) => toggleButton(wrapper).find('.material-symbols-outlined')
+
+    it('montre la ligature « pause » pendant le décompte, décorative, à 20 px, sans dessin à la main', async () => {
+        const wrapper = mountTimer({ duration: 90, autoStart: true })
+        // Le départ automatique se fait au montage : le bouton se redessine au tour suivant.
+        await wrapper.vm.$nextTick()
+
+        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Pause')
+        expect(icone(wrapper).exists()).toBe(true)
+        expect(icone(wrapper).text()).toBe('pause')
+        expect(icone(wrapper).attributes('aria-hidden')).toBe('true')
+        expect(icone(wrapper).classes()).toContain('text-xl')
+        expect(toggleButton(wrapper).find('svg').exists()).toBe(false)
+    })
+
+    it('montre la ligature « play_arrow » à l’arrêt, puis « pause » une fois reparti', async () => {
+        const wrapper = mountTimer({ duration: 90, autoStart: false })
+
+        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Démarrer le minuteur')
+        expect(icone(wrapper).text()).toBe('play_arrow')
+        expect(icone(wrapper).classes()).toContain('text-xl')
+        expect(toggleButton(wrapper).find('svg').exists()).toBe(false)
+
+        await toggleButton(wrapper).trigger('click')
+
+        expect(toggleButton(wrapper).attributes('aria-label')).toBe('Pause')
+        expect(icone(wrapper).text()).toBe('pause')
+    })
+})
+
 describe('le démarrage automatique', () => {
     it('annonce le basculement sans rien écrire lui-même', async () => {
         const wrapper = mountTimer({ duration: 90, autoRestTimer: true })

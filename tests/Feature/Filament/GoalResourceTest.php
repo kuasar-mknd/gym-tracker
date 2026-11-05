@@ -7,11 +7,13 @@ use App\Filament\Resources\Goals\GoalResource;
 use App\Filament\Resources\Goals\Pages\CreateGoal;
 use App\Filament\Resources\Goals\Pages\EditGoal;
 use App\Filament\Resources\Goals\Pages\ListGoals;
+use App\Http\Controllers\GoalController;
 use App\Models\Exercise;
 use App\Models\Goal;
 use App\Models\User;
 use Filament\Actions\Testing\TestAction;
 use Filament\Forms\Components\Field;
+use Filament\Forms\Components\Select;
 use Livewire\Livewire;
 use Tests\Support\FilamentAdminPanel;
 
@@ -185,7 +187,12 @@ it('exige la mensuration quand un objectif passe en mensuration au panneau', fun
  * L'exigence ne vaut que pour une mensuration : un objectif de fréquence n'en
  * nomme aucune, et un objectif de mensuration qui en nomme une s'enregistre.
  */
-it('n’exige la mensuration que d’un objectif de mensuration', function (string $type, ?string $mensuration): void {
+/*
+ * Le départ est de 80 : une mensuration descend vers sa cible de 75, une
+ * fréquence ne descend pas, et prend une cible au moins égale à son départ
+ * (#2164).
+ */
+it('n’exige la mensuration que d’un objectif de mensuration', function (string $type, ?string $mensuration, int $cible): void {
     $owner = User::factory()->create();
 
     Livewire::test(CreateGoal::class)
@@ -194,7 +201,7 @@ it('n’exige la mensuration que d’un objectif de mensuration', function (stri
             'title' => 'Objectif bien formé',
             'type' => $type,
             'measurement_type' => $mensuration,
-            'target_value' => 75,
+            'target_value' => $cible,
             'current_value' => 0,
             'start_value' => 80,
         ])
@@ -203,10 +210,323 @@ it('n’exige la mensuration que d’un objectif de mensuration', function (stri
 
     expect(Goal::query()->where('title', 'Objectif bien formé')->sole()->measurement_type)->toBe($mensuration);
 })->with([
-    'fréquence, sans mensuration' => ['frequency', null],
-    'mensuration, tour de taille' => ['measurement', 'Waist'],
-    'mensuration, poids de corps' => ['measurement', 'weight'],
+    'fréquence, sans mensuration' => ['frequency', null, 80],
+    'mensuration, tour de taille' => ['measurement', 'Waist', 75],
+    'mensuration, poids de corps' => ['measurement', 'weight', 75],
 ]);
+
+/*
+ * Un objectif de charge ou de volume suit un exercice : sans lui, il ne suit
+ * rien (#2164).
+ *
+ * `GoalStoreRequest` l'exige (`required_if:type,weight,volume`), le panneau
+ * non : l'objectif ainsi créé gardait la valeur actuelle tapée, 0 par défaut,
+ * et sous une cible plus basse que son départ, sa barre restait pleine sans
+ * qu'il soit jamais atteint. La création, la page de modification et l'action
+ * de la table partagent le formulaire : les trois refusent, y compris quand
+ * seul le type change.
+ */
+it('exige l’exercice d’un objectif de charge ou de volume créé au panneau', function (string $type): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $owner->getKey(),
+            'title' => 'Sans exercice',
+            'type' => $type,
+            'exercise_id' => null,
+            'target_value' => 100,
+            'current_value' => 0,
+            'start_value' => 60,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['exercise_id' => 'required']);
+
+    expect(Goal::query()->where('title', 'Sans exercice')->exists())->toBeFalse();
+})->with([
+    'charge' => ['weight'],
+    'volume' => ['volume'],
+]);
+
+it('exige l’exercice d’un objectif de charge ou de volume modifié au panneau, par la page et par la table', function (string $type): void {
+    $goal = Goal::factory()->create([
+        'type' => $type,
+        'exercise_id' => null,
+        'title' => 'Sans exercice',
+        'start_value' => 60,
+        'current_value' => 0,
+        'target_value' => 100,
+    ]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm(['title' => 'Toujours sans exercice'])
+        ->call('save')
+        ->assertHasFormErrors(['exercise_id' => 'required']);
+
+    Livewire::test(ListGoals::class)
+        ->callAction(TestAction::make('edit')->table($goal), ['title' => 'Toujours sans exercice'])
+        ->assertHasFormErrors(['exercise_id' => 'required']);
+
+    expect($goal->refresh()->title)->toBe('Sans exercice');
+})->with([
+    'charge' => ['weight'],
+    'volume' => ['volume'],
+]);
+
+it('exige l’exercice quand un objectif passe en charge au panneau', function (): void {
+    $goal = Goal::factory()->create(['type' => 'frequency', 'exercise_id' => null, 'start_value' => 0, 'target_value' => 20]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->assertFormFieldExists('exercise_id', fn (Field $champ): bool => ! $champ->isRequired())
+        ->fillForm(['type' => 'weight'])
+        ->assertFormFieldExists('exercise_id', fn (Field $champ): bool => $champ->isRequired())
+        ->call('save')
+        ->assertHasFormErrors(['exercise_id' => 'required']);
+
+    expect($goal->refresh()->type)->toBe(GoalType::Frequency);
+});
+
+it('n’exige l’exercice ni d’une fréquence ni d’une mensuration', function (string $type, ?string $mensuration): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $owner->getKey(),
+            'title' => 'Sans exercice, à raison',
+            'type' => $type,
+            'exercise_id' => null,
+            'measurement_type' => $mensuration,
+            'target_value' => 90,
+            'current_value' => 0,
+            'start_value' => 80,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Goal::query()->where('title', 'Sans exercice, à raison')->sole()->exercise_id)->toBeNull();
+})->with([
+    'fréquence' => ['frequency', null],
+    'mensuration' => ['measurement', 'Waist'],
+]);
+
+/*
+ * La mensuration se choisit dans la liste de l'application, sous son nom
+ * français, comme `GoalStoreRequest` la ferme (`Rule::in()`) : un nom qu'aucune
+ * mesure ne porte, « Taille » tapé à la place de `Waist`, ne suivait rien et
+ * revenait à son départ (#2164). La liste vient de
+ * `GoalController::measurementTypes()`, que les deux formulaires de
+ * l'application lisent aussi ; `waist` est refusé comme la requête le refuse,
+ * même si la collation de la colonne le rapprocherait de `Waist`.
+ */
+it('propose les mensurations de l’application, sous leur nom français', function (): void {
+    $attendues = array_column(GoalController::measurementTypes(), 'label', 'value');
+
+    Livewire::test(CreateGoal::class)
+        ->assertFormFieldExists('measurement_type', fn (Select $champ): bool => $champ->getOptions() === $attendues);
+
+    expect($attendues)->toHaveCount(15)
+        ->and($attendues['Waist'])->toBe('Taille')
+        ->and($attendues['weight'])->toBe('Poids de corps');
+});
+
+it('refuse au panneau une mensuration hors de la liste', function (string $mensuration): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $owner->getKey(),
+            'title' => 'Mensuration hors liste',
+            'type' => 'measurement',
+            'measurement_type' => $mensuration,
+            'target_value' => 80,
+            'current_value' => 0,
+            'start_value' => 90,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['measurement_type' => 'in']);
+
+    expect(Goal::query()->where('title', 'Mensuration hors liste')->exists())->toBeFalse();
+})->with([
+    'le nom français de Waist' => ['Taille'],
+    'un nom inventé' => ['tour_de_taille'],
+    'la clef dans une autre casse' => ['waist'],
+]);
+
+it('admet au panneau chacune des mensurations de la liste', function (string $mensuration): void {
+    $owner = User::factory()->create();
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $owner->getKey(),
+            'title' => 'Mensuration de la liste',
+            'type' => 'measurement',
+            'measurement_type' => $mensuration,
+            'target_value' => 80,
+            'current_value' => 0,
+            'start_value' => 90,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Goal::query()->where('title', 'Mensuration de la liste')->sole()->measurement_type)->toBe($mensuration);
+})->with(fn (): array => GoalController::measurementTypeValues());
+
+/*
+ * L'exercice d'un objectif se choisit parmi le catalogue et les exercices du
+ * compte de l'objectif, comme `GoalStoreRequest` le borne (#2166).
+ *
+ * Le panneau proposait les exercices de tous les comptes, et enregistrait sans
+ * refus un objectif posé sur l'exercice personnel d'un autre : le recalcul lit
+ * les records du compte de l'objectif, qu'il n'a pas sur cet exercice, et
+ * l'objectif ne suivait rien. Les options suivent le compte choisi, qui est
+ * `live()` ; sans compte, le catalogue seul. Le `Select` ne retrouve que ce
+ * que sa liste filtrée contient, et refuse le reste (`in`), à la création, à
+ * la page de modification et à l'action de la table, y compris quand seul le
+ * compte de l'objectif change.
+ */
+
+/**
+ * Deux comptes, chacun avec son exercice personnel, et un exercice du
+ * catalogue.
+ *
+ * @return array{0: User, 1: User, 2: Exercise, 3: Exercise, 4: Exercise} le compte A, le compte B, l'exercice personnel de A, celui de B, l'exercice du catalogue
+ */
+function exercicesDeDeuxComptesAuPanneau(): array
+{
+    $compteA = User::factory()->create();
+    $compteB = User::factory()->create();
+
+    return [
+        $compteA,
+        $compteB,
+        Exercise::factory()->create(['user_id' => $compteA->id, 'name' => 'Presse secrète de A']),
+        Exercise::factory()->create(['user_id' => $compteB->id, 'name' => 'Fente de B']),
+        Exercise::factory()->create(['user_id' => null, 'name' => 'Rowing de la salle']),
+    ];
+}
+
+it('ne propose que le catalogue et les exercices du compte choisi', function (): void {
+    [, $compteB, , $exerciceDeB, $catalogue] = exercicesDeDeuxComptesAuPanneau();
+    $proposes = [];
+    $releve = function (Select $champ) use (&$proposes): bool {
+        $resultats = $champ->getSearchResults('de');
+        ksort($resultats);
+        $proposes[] = $resultats;
+
+        return true;
+    };
+
+    Livewire::test(CreateGoal::class)
+        ->assertFormFieldExists('user_id', fn (Field $champ): bool => $champ->isLive())
+        ->assertFormFieldExists('exercise_id', $releve)
+        ->fillForm(['user_id' => $compteB->getKey()])
+        ->assertFormFieldExists('exercise_id', $releve);
+
+    expect($proposes)->toBe([
+        [$catalogue->id => 'Rowing de la salle'],
+        [$exerciceDeB->id => 'Fente de B', $catalogue->id => 'Rowing de la salle'],
+    ]);
+});
+
+it('refuse au panneau l’exercice personnel d’un autre compte, à la création', function (): void {
+    [, $compteB, $exerciceDeA] = exercicesDeDeuxComptesAuPanneau();
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $compteB->getKey(),
+            'title' => 'Sur l’exercice de A',
+            'type' => 'weight',
+            'exercise_id' => $exerciceDeA->getKey(),
+            'target_value' => 100,
+            'current_value' => 0,
+            'start_value' => 60,
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['exercise_id' => 'in']);
+
+    expect(Goal::query()->where('title', 'Sur l’exercice de A')->exists())->toBeFalse();
+});
+
+it('admet au panneau l’exercice du catalogue et celui du compte', function (int $rang): void {
+    $exercices = exercicesDeDeuxComptesAuPanneau();
+    $compteB = $exercices[1];
+    $exercice = $exercices[$rang];
+
+    Livewire::test(CreateGoal::class)
+        ->fillForm([
+            'user_id' => $compteB->getKey(),
+            'title' => 'Sur un exercice permis',
+            'type' => 'volume',
+            'exercise_id' => $exercice->getKey(),
+            'target_value' => 1000,
+            'current_value' => 0,
+            'start_value' => 600,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Goal::query()->where('title', 'Sur un exercice permis')->sole()->exercise_id)->toBe($exercice->getKey());
+})->with([
+    'l’exercice du compte' => [3],
+    'l’exercice du catalogue' => [4],
+]);
+
+it('refuse au panneau l’exercice d’un autre compte à la modification, par la page et par la table', function (): void {
+    [, $compteB, $exerciceDeA, $exerciceDeB] = exercicesDeDeuxComptesAuPanneau();
+    $goal = Goal::factory()->create([
+        'user_id' => $compteB->getKey(),
+        'type' => 'weight',
+        'exercise_id' => $exerciceDeB->getKey(),
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm(['exercise_id' => $exerciceDeA->getKey()])
+        ->call('save')
+        ->assertHasFormErrors(['exercise_id' => 'in']);
+
+    Livewire::test(ListGoals::class)
+        ->callAction(TestAction::make('edit')->table($goal), ['exercise_id' => $exerciceDeA->getKey()])
+        ->assertHasFormErrors(['exercise_id' => 'in']);
+
+    expect($goal->refresh()->exercise_id)->toBe($exerciceDeB->getKey());
+});
+
+/*
+ * Seul le compte change : l'objectif de A, sur l'exercice personnel de A,
+ * donné à B, se poserait sur l'exercice d'un autre compte. Le même objectif
+ * modifié sans changer de compte s'enregistre.
+ */
+it('refuse au panneau de donner à un autre compte un objectif posé sur un exercice personnel', function (): void {
+    [$compteA, $compteB, $exerciceDeA] = exercicesDeDeuxComptesAuPanneau();
+    $goal = Goal::factory()->create([
+        'user_id' => $compteA->getKey(),
+        'type' => 'weight',
+        'exercise_id' => $exerciceDeA->getKey(),
+        'title' => 'Objectif de A',
+        'start_value' => 60,
+        'target_value' => 100,
+    ]);
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm(['user_id' => $compteB->getKey()])
+        ->call('save')
+        ->assertHasFormErrors(['exercise_id' => 'in']);
+
+    Livewire::test(ListGoals::class)
+        ->callAction(TestAction::make('edit')->table($goal), ['user_id' => $compteB->getKey()])
+        ->assertHasFormErrors(['exercise_id' => 'in']);
+
+    expect($goal->refresh()->user_id)->toBe($compteA->getKey());
+
+    Livewire::test(EditGoal::class, ['record' => $goal->getKey()])
+        ->fillForm(['title' => 'Objectif de A, renommé'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($goal->refresh()->title)->toBe('Objectif de A, renommé');
+});
 
 it("charge l'objectif existant dans le formulaire d'édition", function (): void {
     $owner = User::factory()->create();

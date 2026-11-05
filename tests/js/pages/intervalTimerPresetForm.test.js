@@ -448,8 +448,13 @@ describe('the beeps', () => {
         expect(wrapper.text()).toContain('TERMINÉ')
     })
 
+    /*
+     * Le son en échec se signale par `console.warn`, comme tout son de
+     * `useSortieAudio`, par lequel les bips passent depuis #2156 ; il le
+     * faisait par `console.error`.
+     */
     it('swallows an audio failure rather than stopping the session', async () => {
-        const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const avertissement = vi.spyOn(console, 'warn').mockImplementation(() => {})
         vi.spyOn(FakeAudioContext.prototype, 'createOscillator').mockImplementation(() => {
             throw new Error('no output device')
         })
@@ -460,7 +465,7 @@ describe('the beeps', () => {
         await wrapper.vm.$nextTick()
 
         expect(wrapper.text()).toContain('TERMINÉ')
-        expect(error).toHaveBeenCalled()
+        expect(avertissement).toHaveBeenCalledWith('Le son n’a pas pu se jouer.', expect.any(Error))
     })
 
     it('gives the audio context back when the page is left', async () => {

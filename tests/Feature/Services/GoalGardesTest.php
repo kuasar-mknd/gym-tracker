@@ -79,9 +79,10 @@ function objectifSuiviSeul(User $user, GoalType $type, array $attributs = []): G
 /*
  * Un objectif de force sans exercice n'a rien a mesurer.
  *
- * Le formulaire en impose un, mais la colonne est nullable et le service ne
- * suppose rien : sans exercice, il n'y a pas de record a chercher, et la
- * question ne se pose pas a la base.
+ * Les deux formulaires en imposent un, celui de l'application et celui du
+ * panneau (#2164), mais la colonne est nullable et le service ne suppose
+ * rien : sans exercice, il n'y a pas de record a chercher, et la question ne
+ * se pose pas a la base. L'objectif revient a sa valeur de depart, ici 0.
  */
 it('n’interroge pas les records pour un objectif de force sans exercice', function (): void {
     $user = User::factory()->create();

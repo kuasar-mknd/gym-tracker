@@ -12,7 +12,10 @@ use function Pest\Laravel\get;
 
 it('displays the goals index page for an authenticated user', function (): void {
     $user = User::factory()->create();
-    Goal::factory()->count(3)->create(['user_id' => $user->id]);
+    // De fréquence : la fabrique rattache un exercice du catalogue à un
+    // objectif de charge ou de volume, qui compterait parmi les exercices
+    // proposés à côté des deux du compte (#2164).
+    Goal::factory()->count(3)->create(['user_id' => $user->id, 'type' => 'frequency']);
     Exercise::factory()->count(2)->create(['user_id' => $user->id]);
 
     actingAs($user)
@@ -88,6 +91,34 @@ it('can store a new measurement goal', function (): void {
         'start_value' => 0,
     ]);
 });
+
+/**
+ * Un départ envoyé vide à la création vaut 0, comme un départ absent (cas
+ * précédent). La règle vit dans la requête que la création et la modification
+ * partagent (#2165) : ces cas la tiennent à la création.
+ */
+it('enregistre un départ à 0 quand la création l’envoie vide', function (?string $depart): void {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->post('/goals', [
+            'title' => 'Séances du trimestre',
+            'type' => 'frequency',
+            'target_value' => 30,
+            'start_value' => $depart,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('goals.index'));
+
+    $this->assertDatabaseHas('goals', [
+        'user_id' => $user->id,
+        'title' => 'Séances du trimestre',
+        'start_value' => 0,
+    ]);
+})->with([
+    'départ nul' => [null],
+    'départ vide' => [''],
+]);
 
 it('can update an existing goal', function (): void {
     $user = User::factory()->create();
