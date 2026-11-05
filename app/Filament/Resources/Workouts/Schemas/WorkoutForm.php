@@ -50,10 +50,11 @@ class WorkoutForm
      * l'heure répétée au passage à l'heure d'hiver partagent, et chaque
      * enregistrement, un simple renommage compris, la renvoie. Relue sans
      * décalage, elle replaçait dans la seconde occurrence, une heure plus
-     * tard, une séance commencée ou finie dans la première. Une heure laissée
-     * telle quelle repart donc avec le décalage que la séance porte déjà
-     * (`avecLeDecalageEnregistre()`) ; une heure changée est une heure de
-     * l'application, lue dans la seconde occurrence quand elle tombe dans
+     * tard, une séance commencée ou finie dans la première. Une heure repart
+     * donc avec le décalage que la séance porte déjà, tant qu'il redonne
+     * cette heure (`avecLeDecalageEnregistre()`) : laissée telle quelle, ou
+     * changée sans quitter l'occurrence de la séance. Sinon, c'est une heure
+     * de l'application, lue dans la seconde occurrence quand elle tombe dans
      * l'heure répétée, comme toute heure sans décalage.
      */
     public static function configure(Schema $schema): Schema
@@ -85,9 +86,19 @@ class WorkoutForm
     /**
      * L'heure du champ, telle que Filament la rend (l'heure murale de
      * l'application, `Y-m-d H:i:s`), suivie du décalage de l'instant
-     * enregistré quand elle est la sienne : le cast relit alors la même
-     * occurrence. Une autre heure, ou une séance sans cet instant, part
-     * telle quelle.
+     * enregistré quand ce décalage redonne cette heure dans le fuseau de
+     * l'application, c'est-à-dire quand le cast le retiendrait
+     * (`InstantAvecSonDecalage::lire()`). Une autre heure, ou une séance sans
+     * cet instant, part telle quelle.
+     *
+     * Une heure inchangée garde ainsi son occurrence. Une heure changée garde
+     * celle de l'instant enregistré tant que son décalage va avec elle : une
+     * séance de la première occurrence dont on retouche le début ou la fin
+     * dans l'heure répétée y reste. Lue seule, cette heure passait dans la
+     * seconde occurrence, à côté de l'autre champ resté dans la première :
+     * l'écran montrait le début avant la fin, et la fin s'enregistrait avant
+     * le début. Une heure dont le décalage enregistré ne va plus (passée de
+     * l'été à l'hiver) se lit seule, comme toute heure sans décalage.
      */
     private static function avecLeDecalageEnregistre(mixed $heure, ?CarbonInterface $enregistre): mixed
     {
@@ -96,9 +107,11 @@ class WorkoutForm
         }
 
         $enregistre = $enregistre->copy()->setTimezone(config()->string('app.timezone'));
+        $decalage = $enregistre->getOffset();
+        $lue = InstantAvecSonDecalage::lire($heure, intdiv($decalage, 60));
 
-        return $enregistre->format(InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE) === $heure
-            ? $enregistre->format(InstantAvecSonDecalage::FORMAT_DE_L_HEURE_MURALE.'P')
+        return $lue->getOffset() === $decalage
+            ? $heure.$enregistre->format('P')
             : $heure;
     }
 }

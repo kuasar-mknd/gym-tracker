@@ -229,3 +229,43 @@ it('écrit le décalage du début et de la fin qu’il reçoit, une heure de l�
     expect($seance->refresh()->started_at->toJSON())->toBe('2026-10-24T19:00:00.000000Z')
         ->and($seance->getRawOriginal('started_at_offset'))->toBe(120);
 });
+
+/*
+ * Une heure changée au panneau ne porte pas de décalage. Elle reprend celui de
+ * l'instant enregistré tant qu'il redonne cette heure murale (#2159) : une
+ * séance de la première occurrence dont on retouche le début ou la fin dans
+ * l'heure répétée y reste, à côté de l'autre champ laissé tel quel, et
+ * l'écran, qui montrait le début avant la fin, dit vrai. Lue seule, l'heure
+ * passait dans la seconde occurrence, une heure plus tard : la fin tombait
+ * avant le début (-50 min), ou la séance gagnait une heure.
+ */
+dataset('modifications d’une séance du panneau', [
+    'la page de modification' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(EditWorkout::class, ['record' => $seance->getKey()])
+        ->fillForm($donnees)
+        ->call('save')
+        ->assertHasNoFormErrors()],
+    'l’action de modification de la table' => [fn (Workout $seance, array $donnees): mixed => Livewire::test(ListWorkouts::class)
+        ->callAction(TestAction::make('edit')->table($seance), $donnees)
+        ->assertHasNoFormErrors()],
+]);
+
+it('lit une heure changée avec le décalage enregistré quand il redonne cette heure', function (Closure $modifier, bool $sansDecalage, array $donnees, string $debut, string $fin): void {
+    $fuseau = config()->string('app.timezone');
+    $seance = ($sansDecalage ? Workout::factory()->sansDecalage() : Workout::factory())->create([
+        'started_at' => Carbon::parse('2026-10-25T00:30:00Z')->setTimezone($fuseau),
+        'ended_at' => Carbon::parse('2026-10-25T00:50:00Z')->setTimezone($fuseau),
+    ]);
+
+    $modifier($seance, $donnees);
+
+    $seance->refresh();
+
+    expect($seance->started_at->toJSON())->toBe($debut)
+        ->and($seance->ended_at?->toJSON())->toBe($fin);
+})->with('modifications d’une séance du panneau')->with([
+    'début changé dans l’heure répétée, séance de la première occurrence' => [false, ['started_at' => '2026-10-25 02:40:00'], '2026-10-25T00:40:00.000000Z', '2026-10-25T00:50:00.000000Z'],
+    'fin changée dans l’heure répétée, séance de la première occurrence' => [false, ['ended_at' => '2026-10-25 02:55:00'], '2026-10-25T00:30:00.000000Z', '2026-10-25T00:55:00.000000Z'],
+    'contre-épreuve : début changé, séance écrite sans décalage (seconde occurrence)' => [true, ['started_at' => '2026-10-25 02:40:00'], '2026-10-25T01:40:00.000000Z', '2026-10-25T01:50:00.000000Z'],
+    'contre-épreuve : début changé avant l’heure répétée, où le décalage enregistré va encore' => [false, ['started_at' => '2026-10-25 01:40:00'], '2026-10-24T23:40:00.000000Z', '2026-10-25T00:50:00.000000Z'],
+    'contre-épreuve : fin changée après l’heure répétée, où le décalage enregistré ne va plus' => [false, ['ended_at' => '2026-10-25 03:20:00'], '2026-10-25T00:30:00.000000Z', '2026-10-25T02:20:00.000000Z'],
+]);
