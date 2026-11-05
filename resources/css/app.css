@@ -755,22 +755,24 @@
 }
 
 /*
- * Une icône tient dans son carré d'un em, que sa police soit arrivée ou non.
- * Avant elle, la ligature se compose en toutes lettres dans la police de
- * secours (« notifications », « bar_chart_4_bars »), et ce mot poussait la
- * page au-delà de l'écran (tests/Browser/IconesAvantLeurPoliceTest.php). La
- * police chargée, chaque glyphe fait un em : la largeur ne change rien. Seul
- * l'axe horizontal est coupé (`clip`, qui laisse l'autre axe visible), pour
- * ne rien rogner du dessin au-dessus ou au-dessous de la ligne.
+ * Avant sa police, une icône n'écrit rien et garde son carré d'un em. Sa
+ * ligature (« notifications », « bar_chart_4_bars ») se compose alors dans la
+ * police suivante de la pile : en toutes lettres, ce mot poussait la page
+ * au-delà de l'écran (tests/Browser/IconesAvantLeurPoliceTest.php). Cette
+ * suite est « Icones en attente », que main.js pose avant la première icône
+ * (resources/js/Utils/policeDeRepliDesIcones.js) : chaque glyphe y est vide et
+ * sans largeur, et `min-width` tient la place. Police chargée, la boîte suit
+ * le glyphe, même agrandi par une taille de police minimale du navigateur,
+ * qu'une longueur en em ne suit pas : une largeur fixée en em le couperait
+ * (tests/Browser/IconesSousUneTailleMinimaleTest.php).
  */
 @utility material-symbols-outlined {
-    font-family: 'Material Symbols Outlined';
+    font-family: 'Material Symbols Outlined', 'Icones en attente';
     font-weight: normal;
     font-style: normal;
     font-size: 24px;
     display: inline-block;
-    width: 1em;
-    overflow-x: clip;
+    min-width: 1em;
     line-height: 1;
     text-transform: none;
     letter-spacing: normal;

@@ -168,9 +168,10 @@ class OuvertureHorsLigneTest extends DuskTestCase
                             15,
                             'la police des icônes ne se charge pas sans réseau',
                         )
-                        // Dessinée par sa police, la ligature tient dans un em ; sans elle, le mot « cloud_off » s'écrirait en toutes lettres.
-                        // La boîte de l'icône fait un em dans les deux cas (app.css, IconesAvantLeurPoliceTest) : c'est son texte qui se mesure.
-                        ->assertScript("(() => { const icone = document.querySelector('[dusk=\"bandeau-hors-ligne\"] .material-symbols-outlined'); if (icone === null || icone.textContent.trim() !== 'cloud_off') { return false; } const texte = document.createRange(); texte.selectNodeContents(icone); return texte.getBoundingClientRect().width < parseFloat(getComputedStyle(icone).fontSize) * 1.5; })()");
+                        // Dessinée par sa police, la ligature fait un em. Sans elle, la police de repli n'écrit rien (largeur nulle),
+                        // et la police par défaut écrirait « cloud_off » en toutes lettres. La boîte de l'icône fait un em dans tous
+                        // les cas (app.css, IconesAvantLeurPoliceTest) : c'est son texte qui se mesure, par une plage.
+                        ->assertScript("(() => { const icone = document.querySelector('[dusk=\"bandeau-hors-ligne\"] .material-symbols-outlined'); if (icone === null || icone.textContent.trim() !== 'cloud_off') { return false; } const texte = document.createRange(); texte.selectNodeContents(icone); const largeur = texte.getBoundingClientRect().width; const taille = parseFloat(getComputedStyle(icone).fontSize); return largeur > taille * 0.5 && largeur < taille * 1.5; })()");
                 });
             } finally {
                 $browser->resize(393, 852);

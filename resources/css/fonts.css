@@ -84,10 +84,11 @@
 }
 
 /*
- * `block`, et non `swap` : pendant le chargement, une icône reste vide au lieu
- * d'écrire le nom de sa ligature (« notifications ») ; trois secondes au plus,
- * le temps que le navigateur laisse à une police bloquante. Sa place est tenue
- * à un em par la règle `material-symbols-outlined` de app.css.
+ * Avant elle, une icône prend la police de repli qui la suit dans sa pile
+ * (resources/js/Utils/policeDeRepliDesIcones.js), où son nom ne s'écrit pas.
+ * `block`, et non `swap` : si cette police manquait (un navigateur sans
+ * `FontFace`), le nom d'une ligature (« notifications ») resterait au moins
+ * invisible pendant la période de blocage, trois secondes au plus.
  */
 @font-face {
     font-family: 'Material Symbols Outlined';
