@@ -277,8 +277,9 @@ it('reconstruit au lieu d’échouer quand le premier record a été inséré en
 
     expect($plantee)->toBeTrue()
         ->and(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendus($lourde))
-        // La reconstruction n'annonce rien d'elle-même : la série qui gagne
-        // est annoncée pour chaque record qu'elle détient désormais.
+        // La série qui gagne est annoncée une fois pour chaque record qu'elle
+        // détient désormais : la reconstruction, qui les lui donne (#2185), et
+        // la synchronisation ne doublent pas l'annonce.
         ->and(recordsConcurrentsAnnonces($user, $lourde))->toBe(['max_1rm' => 1, 'max_volume_set' => 1, 'max_weight' => 1]);
 });
 
@@ -315,6 +316,113 @@ it('n’annonce rien pour une série que la reconstruction ne retient pas', func
     expect($plantee)->toBeTrue()
         ->and(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendus($lourde))
         ->and(recordsConcurrentsAnnonces($user, $legere))->toBe([]);
+});
+
+/**
+ * Plante en base le record de poids maximum de cette série dès que la
+ * synchronisation a lu les records, avant qu'elle n'écrive : une écriture
+ * concurrente que le verrou n'a pas retenue. L'insertion de la
+ * synchronisation heurte alors la contrainte d'unicité, et le repli
+ * reconstruit l'exercice (`processUpdates()`).
+ */
+function recordsConcurrentsPlanterPendantLaLecture(User $user, Exercise $exercice, Set $serie): void
+{
+    $plantee = false;
+
+    DB::listen(function (QueryExecuted $requete) use (&$plantee, $user, $exercice, $serie): void {
+        if ($plantee || ! str_starts_with($requete->sql, 'select * from `personal_records`')) {
+            return;
+        }
+
+        $plantee = true;
+
+        DB::table('personal_records')->insert([
+            'user_id' => $user->id,
+            'exercise_id' => $exercice->id,
+            'type' => 'max_weight',
+            'value' => $serie->weight,
+            'secondary_value' => $serie->reps,
+            'workout_id' => $serie->workoutLine->workout_id,
+            'set_id' => $serie->id,
+            'achieved_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    });
+}
+
+/**
+ * La valeur d'avant que retient chaque annonce partie pour cette série, par
+ * type : celle que l'annonce compare au record à son départ (#2155).
+ *
+ * @return array<string, float|null>
+ */
+function recordsConcurrentsValeursDAvant(User $user, Set $serie): array
+{
+    $propriete = new ReflectionProperty(PersonalRecordAchieved::class, 'valeurDAvant');
+    $parType = [];
+
+    foreach (Notification::sent($user, PersonalRecordAchieved::class) as $annonce) {
+        if (! $annonce instanceof PersonalRecordAchieved || $annonce->personalRecord->set_id !== $serie->id) {
+            continue;
+        }
+
+        $valeur = $propriete->getValue($annonce);
+        $parType[$annonce->personalRecord->type->value] = is_numeric($valeur) ? (float) $valeur : null;
+    }
+
+    ksort($parType);
+
+    return $parType;
+}
+
+/*
+ * Le repli reconstruit tout l'exercice, et peut donner un record à une autre
+ * série que celle qu'il synchronise : une série validée dont la
+ * synchronisation attend encore, et qui ne trouvera plus rien à battre. Le
+ * repli l'annonce pour elle (#2185), une fois, avec la valeur que le record
+ * portait juste avant la reconstruction.
+ */
+it('annonce une fois, avec la valeur que le record portait avant lui, le record que le repli donne à une autre série encore en attente', function (): void {
+    Notification::fake();
+    [$user, $exercice, $ligne] = recordsConcurrentsScene(false);
+    $tenante = recordsConcurrentsSerie($user, $ligne, 90);
+    $legere = recordsConcurrentsSerie($user, $ligne, 100);
+    // Validée, sa synchronisation attend encore en file.
+    $enAttente = recordsConcurrentsSerie($user, $ligne, 105);
+    recordsConcurrentsPlanterPendantLaLecture($user, $exercice, $tenante);
+
+    new SyncPersonalRecord($legere, $user)->handle(app(PersonalRecordService::class));
+
+    expect(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendus($enAttente))
+        ->and(recordsConcurrentsAnnonces($user, $enAttente))->toBe(['max_1rm' => 1, 'max_volume_set' => 1, 'max_weight' => 1])
+        // Le poids maximum valait 90 kg juste avant le repli ; les deux autres
+        // records, il les crée.
+        ->and(recordsConcurrentsValeursDAvant($user, $enAttente))->toBe(['max_1rm' => null, 'max_volume_set' => null, 'max_weight' => 90.0])
+        ->and(recordsConcurrentsAnnonces($user, $legere))->toBe([]);
+});
+
+/*
+ * Le repli réunit les annonces de la reconstruction et ce que la série a
+ * gagné, la reconstruction d'abord. Un record que les deux désignent garde la
+ * valeur d'avant de la reconstruction, lue juste avant de le réécrire, et
+ * non celle que la synchronisation avait lue avant l'écriture concurrente :
+ * ici, aucune. Sans valeur d'avant, l'annonce du poids maximum partirait
+ * encore si la série de 105 kg disparaissait avant son départ, à 100 kg, un
+ * record que la série de 100 kg a déjà.
+ */
+it('retient, pour un record que le repli et la série désignent tous deux, la valeur que le record portait juste avant la reconstruction', function (): void {
+    Notification::fake();
+    [$user, $exercice, $ligne] = recordsConcurrentsScene(false);
+    $legere = recordsConcurrentsSerie($user, $ligne, 100);
+    $lourde = recordsConcurrentsSerie($user, $ligne, 105);
+    recordsConcurrentsPlanterPendantLaLecture($user, $exercice, $legere);
+
+    new SyncPersonalRecord($lourde, $user)->handle(app(PersonalRecordService::class));
+
+    expect(recordsConcurrentsEtat($user, $exercice))->toBe(recordsConcurrentsAttendus($lourde))
+        ->and(recordsConcurrentsAnnonces($user, $lourde))->toBe(['max_1rm' => 1, 'max_volume_set' => 1, 'max_weight' => 1])
+        ->and(recordsConcurrentsValeursDAvant($user, $lourde))->toBe(['max_1rm' => null, 'max_volume_set' => null, 'max_weight' => 100.0]);
 });
 
 /*
