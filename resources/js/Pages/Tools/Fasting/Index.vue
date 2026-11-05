@@ -97,9 +97,10 @@ const remainingTime = computed(() => {
 
 /**
  * Les secondes pleines entre deux instants : l'écart réel, que l'heure murale ne donne pas la nuit où elle se répète.
+ * Tronqué vers zéro, comme `diff(…, 'second')` de dayjs : la seconde qui précède un début à venir affiche 00:00:00.
  * Un instant servi porte son fuseau (`2026-03-10T12:00:00.000000Z`), et se lit donc par `new Date()` (#2189).
  */
-const secondesEntre = (debut, fin) => Math.floor((new Date(fin) - new Date(debut)) / 1000)
+const secondesEntre = (debut, fin) => Math.trunc((new Date(fin) - new Date(debut)) / 1000)
 
 const updateTimer = () => {
     if (!props.activeFast) return

@@ -6,7 +6,8 @@ import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 /*
  * Les durées et les heures que la page du jeûne affiche, là où
  * `fastingIndex.test.js` ne regarde pas (#2189) : la seconde qui n'est pas
- * encore écoulée, un appareil à Paris, et la nuit où Toronto répète une heure.
+ * encore écoulée, après le début comme avant un début à venir, un appareil à
+ * Paris, et la nuit où Toronto répète une heure.
  *
  * Une durée est l'écart réel entre deux instants, en secondes pleines, quel
  * que soit le fuseau : elle ne se lit pas sur les heures murales, qui comptent
@@ -62,6 +63,11 @@ const monterLaPage = async ({ activeFast = null, history = [] } = {}) => {
 
 const ecoule = (page) => page.find('.font-mono.text-4xl').text()
 
+/** Le décalage du trait de l'anneau : sa circonférence entière tant que rien n'est écoulé. */
+const decalageDeLAnneau = (page) => Number(page.get('circle[stroke-dasharray]').attributes('stroke-dashoffset'))
+
+const ANNEAU_VIDE = 2 * Math.PI * 45
+
 /** Le texte de chaque ligne de l'historique détaillé, dans l'ordre. */
 const lignesDeLHistorique = (page) => page.findAll('.space-y-3 > div').map((ligne) => ligne.text())
 
@@ -102,6 +108,30 @@ describe('Le jeûne — une seconde ne compte qu’une fois écoulée', () => {
 
         expect(ecoule(page)).toBe('02:00:00')
         expect(page.text()).toContain('14:00:00 restants')
+    })
+
+    it('affiche 00:00:00 pendant la seconde qui précède un début à venir, comme dayjs, puis compte depuis le début', async () => {
+        // Un début tapé en avance, ou venu d'un appareil dont l'horloge avance, tombe ici 0,4 s après l'instant de
+        // l'appareil. L'écart se tronque vers zéro, comme `diff(…, 'second')` de dayjs : arrondi vers le bas, il
+        // affichait « -1:-1:-1 » et « 16:00:01 restants », et l'anneau reculait sous zéro.
+        vi.setSystemTime(new Date('2026-03-10T12:00:00.600Z'))
+        const page = await monterLaPage({ activeFast: jeune(12, '2026-03-10T12:00:01.000000Z') })
+
+        expect(ecoule(page)).toBe('00:00:00')
+        expect(page.text()).toContain('16:00:00 restants')
+        expect(decalageDeLAnneau(page)).toBe(ANNEAU_VIDE)
+
+        vi.advanceTimersByTime(1000)
+        await flushPromises()
+
+        expect(ecoule(page)).toBe('00:00:00')
+        expect(page.text()).toContain('16:00:00 restants')
+
+        vi.advanceTimersByTime(1000)
+        await flushPromises()
+
+        expect(ecoule(page)).toBe('00:00:01')
+        expect(page.text()).toContain('15:59:59 restants')
     })
 })
 
