@@ -344,12 +344,12 @@ it('donne la même valeur de partie du corps par les deux chemins', function (st
 ]);
 
 /**
- * Les lectures de `body_part_measurements` faites pendant le geste, dans
- * l'ordre.
+ * Les lectures de la table de mesures demandée (`body_part_measurements`,
+ * `body_measurements`) faites pendant le geste, dans l'ordre.
  *
  * @return list<string>
  */
-function lecturesDesPartiesDuCorpsPendant(callable $geste): array
+function lecturesDesMesuresDUnObjectifPendant(string $table, callable $geste): array
 {
     DB::flushQueryLog();
     DB::enableQueryLog();
@@ -364,7 +364,7 @@ function lecturesDesPartiesDuCorpsPendant(callable $geste): array
 
     return array_values(array_filter(
         $lectures,
-        fn (string $requete): bool => str_contains($requete, '`body_part_measurements`'),
+        fn (string $requete): bool => str_contains($requete, "`{$table}`"),
     ));
 }
 
@@ -400,13 +400,13 @@ it('départage deux mesures de partie du corps du même jour par l’identifiant
     $ordre = 'order by `measured_at` desc, `id` desc limit 1';
 
     $groupe = objectifDePartieSuivie($user, 'Waist');
-    $lot = lecturesDesPartiesDuCorpsPendant(fn () => $service->syncGoals($user->refresh()));
+    $lot = lecturesDesMesuresDUnObjectifPendant('body_part_measurements', fn () => $service->syncGoals($user->refresh()));
     $valeurGroupe = (float) Goal::query()->findOrFail($groupe->id)->current_value;
 
     $groupe->delete();
 
     $seul = objectifDePartieSuivie($user, 'Waist');
-    $unSeul = lecturesDesPartiesDuCorpsPendant(fn () => $service->updateGoalProgress($seul));
+    $unSeul = lecturesDesMesuresDUnObjectifPendant('body_part_measurements', fn () => $service->updateGoalProgress($seul));
 
     expect($lot)->toHaveCount(1)
         ->and(substr_count($lot[0], 'from `body_part_measurements`'))->toBe(2)
@@ -415,6 +415,59 @@ it('départage deux mesures de partie du corps du même jour par l’identifiant
         ->and(substr_count($unSeul[0], $ordre))->toBe(1)
         ->and($valeurGroupe)->toBe(84.0)
         ->and((float) $seul->current_value)->toBe(84.0);
+});
+
+/**
+ * Deux pesées du même jour se départagent par leur identifiant, dans la
+ * requête de chaque chemin, pour le poids de corps comme pour la masse grasse
+ * (#2163).
+ *
+ * Le même témoin que pour les parties du corps, et pour la même raison : à
+ * date égale, le parcours à rebours de l'index `(user_id, measured_at)` rend
+ * déjà la pesée saisie en dernier, avec ou sans `orderByDesc('id')`, sur 8.4
+ * comme sur 9.7.2. Les valeurs ne départagent donc rien ; le texte de la
+ * requête, si. Le lot lit les deux colonnes en une instruction, une
+ * sous-requête chacune, et le chemin d'un seul objectif lit sa colonne seule :
+ * chacune de ces lectures trie par la date, puis par l'identifiant, et ne
+ * garde qu'une pesée. Les pesées sont posées avant les objectifs, dans l'ordre
+ * de leur saisie : 86 kg et 20 %, puis 84 kg et 18 %.
+ */
+it('départage deux pesées du même jour par l’identifiant, dans la requête de chaque chemin', function (): void {
+    $user = User::factory()->create();
+
+    foreach ([[86.0, 20.0], [84.0, 18.0]] as [$poids, $masseGrasse]) {
+        BodyMeasurement::factory()->create([
+            'user_id' => $user->id,
+            'measured_at' => '2026-06-15',
+            'weight' => $poids,
+            'body_fat' => $masseGrasse,
+        ]);
+    }
+
+    $service = app(GoalService::class);
+    $ordre = 'order by `measured_at` desc, `id` desc limit 1';
+
+    $poidsDuLot = objectifDePeseeSuivi($user, 'weight');
+    $masseGrasseDuLot = objectifDePeseeSuivi($user, 'body_fat');
+    $lot = lecturesDesMesuresDUnObjectifPendant('body_measurements', fn () => $service->syncGoals($user->refresh()));
+
+    expect($lot)->toHaveCount(1)
+        ->and(substr_count($lot[0], 'from `body_measurements`'))->toBe(2)
+        ->and(substr_count($lot[0], $ordre))->toBe(2)
+        ->and((float) Goal::query()->findOrFail($poidsDuLot->id)->current_value)->toBe(84.0)
+        ->and((float) Goal::query()->findOrFail($masseGrasseDuLot->id)->current_value)->toBe(18.0);
+
+    $poidsDuLot->delete();
+    $masseGrasseDuLot->delete();
+
+    foreach (['weight' => 84.0, 'body_fat' => 18.0] as $colonne => $attendue) {
+        $seul = objectifDePeseeSuivi($user, $colonne);
+        $unSeul = lecturesDesMesuresDUnObjectifPendant('body_measurements', fn () => $service->updateGoalProgress($seul));
+
+        expect($unSeul)->toHaveCount(1)
+            ->and(substr_count($unSeul[0], $ordre))->toBe(1)
+            ->and((float) $seul->current_value)->toBe($attendue);
+    }
 });
 
 /**

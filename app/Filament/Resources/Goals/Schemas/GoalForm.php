@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace App\Filament\Resources\Goals\Schemas;
 
 use App\Enums\GoalType;
+use App\Http\Controllers\GoalController;
+use App\Models\Exercise;
+use App\Rules\CibleAuMoinsEgaleAuDepart;
 use App\Rules\DateQueSaColonneTient;
+use App\Services\Diagnostic\ValeurLue;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class GoalForm
 {
@@ -37,9 +42,9 @@ class GoalForm
 
     /**
      * L'échéance (`DATE`) et la date d'atteinte (`TIMESTAMP`) se bornent à la
-     * plage de leur colonne (`DateQueSaColonneTient`), le titre et la
-     * mensuration à leurs 255 caractères : au-delà, la base refusait
-     * l'écriture, et l'enregistrement finissait en 500 (#2071).
+     * plage de leur colonne (`DateQueSaColonneTient`), le titre à ses 255
+     * caractères : au-delà, la base refusait l'écriture, et l'enregistrement
+     * finissait en 500 (#2071). La mensuration se choisit dans une liste.
      *
      * Un objectif de mensuration nomme sa mensuration, comme l'exige
      * `GoalStoreRequest` (`required_if:type,measurement`), que le panneau ne
@@ -49,19 +54,38 @@ class GoalForm
      * obligatoire dès le choix. La création, la page de modification et
      * l'action de la table partagent ce formulaire.
      *
+     * Le panneau exige aussi le reste de ce que la requête exige (#2164) :
+     * l'exercice d'un objectif de charge ou de volume, sans lequel l'objectif
+     * ne suit rien ; une mensuration prise dans la liste de l'application, sous
+     * son nom français (un nom qu'aucune mesure ne porte, « Taille » pour
+     * `Waist`, revenait à son départ et n'en bougeait plus) ; et, hors
+     * mensuration, une cible au moins égale au départ, que la règle partagée
+     * compare au départ saisi, à l'envoi.
+     *
+     * L'exercice se choisit parmi ceux du compte de l'objectif (#2166) : le
+     * compte est `live()`, et les options suivent `exercicesDuCompte()`.
+     *
      * @return array<int, \Illuminate\Contracts\Support\Htmlable|string>
      */
     private static function getComponents(): array
     {
         return [
-            Select::make('user_id')->label('Compte')->relationship('user', 'name')->searchable()->required(),
+            Select::make('user_id')->label('Compte')->relationship('user', 'name')->searchable()->required()->live(),
             TextInput::make('title')->label('Titre')->required()->maxLength(255),
             Select::make('type')->label('Type')->options(self::TYPES)->required()->live(),
-            TextInput::make('target_value')->label('Valeur cible')->required()->numeric(),
+            TextInput::make('target_value')->label('Valeur cible')->required()->numeric()
+                ->rule(
+                    fn (Get $get): CibleAuMoinsEgaleAuDepart => new CibleAuMoinsEgaleAuDepart($get('start_value')),
+                    fn (Get $get): bool => $get('type') !== GoalType::Measurement->value,
+                ),
             TextInput::make('current_value')->label('Valeur actuelle')->required()->numeric()->default(0),
             TextInput::make('start_value')->label('Valeur de départ')->required()->numeric()->default(0),
-            Select::make('exercise_id')->label('Exercice')->relationship('exercise', 'name')->searchable(),
-            TextInput::make('measurement_type')->label('Mensuration')->maxLength(255)
+            Select::make('exercise_id')->label('Exercice')
+                ->relationship('exercise', 'name', modifyQueryUsing: fn (Builder $query, Get $get): Builder => self::exercicesDuCompte($query, $get('user_id')))
+                ->searchable()
+                ->required(fn (Get $get): bool => in_array($get('type'), [GoalType::Weight->value, GoalType::Volume->value], true)),
+            Select::make('measurement_type')->label('Mensuration')
+                ->options(array_column(GoalController::measurementTypes(), 'label', 'value'))
                 ->required(fn (Get $get): bool => $get('type') === GoalType::Measurement->value),
             DatePicker::make('deadline')->label('Échéance')
                 ->minDate(DateQueSaColonneTient::date()->premierJour)
@@ -70,5 +94,29 @@ class GoalForm
                 ->minDate(DateQueSaColonneTient::horodatage()->premierInstant())
                 ->maxDate(DateQueSaColonneTient::horodatage()->dernierInstant()),
         ];
+    }
+
+    /**
+     * Les exercices qu'un objectif du compte peut suivre : le catalogue et les
+     * exercices personnels du compte, la portée qui borne déjà la requête de
+     * l'application (`Exercise::scopeForUser()`, `GoalStoreRequest`). Sans
+     * compte choisi, le catalogue seul.
+     *
+     * Le panneau proposait les exercices de tous les comptes, et rattachait
+     * sans refus un objectif à l'exercice personnel d'un autre : le recalcul
+     * lit les records du compte de l'objectif, qu'il n'a pas sur cet exercice,
+     * et l'objectif ne suivait rien (#2166). Le `Select` ne retrouve que ce que
+     * cette requête rend : un autre exercice est refusé à l'enregistrement
+     * (règle `in`), y compris quand seul le compte change. Le compte se lit
+     * par `ValeurLue::entier()`, jamais par `(int)` (#2071).
+     *
+     * @param  Builder<Exercise>  $query
+     * @return Builder<Exercise>
+     */
+    private static function exercicesDuCompte(Builder $query, mixed $compte): Builder
+    {
+        $identifiant = ValeurLue::entier($compte);
+
+        return $identifiant === null ? $query->whereNull('user_id') : $query->forUser($identifiant);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Exercise;
 use App\Models\Goal;
+use App\Models\PersonalRecord;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -129,6 +130,122 @@ it('still refuses a deadline moved into the past', function (): void {
         ])
         ->assertSessionHasErrors(['deadline']);
 });
+
+/**
+ * Un objectif de départ 50, de cible 100 et au titre « Avant », pour le cas
+ * demandé, et les champs que son formulaire envoie selon son type.
+ *
+ * @return array{0: Goal, 1: array<string, mixed>, 2: float} l'objectif, les champs propres à son type, la valeur actuelle attendue une fois le départ ramené à 0
+ */
+function objectifAuDepartQuiSeVide(string $cas, User $user): array
+{
+    $exercice = Exercise::factory()->create(['user_id' => null]);
+
+    [$type, $propres, $attendue] = match ($cas) {
+        'charge, exercice sans record' => ['weight', ['exercise_id' => $exercice->id], 0.0],
+        'charge, exercice avec un record de 70' => ['weight', ['exercise_id' => $exercice->id], 70.0],
+        'volume, exercice sans séance' => ['volume', ['exercise_id' => $exercice->id], 0.0],
+        'fréquence' => ['frequency', [], 0.0],
+        'poids de corps, sans pesée' => ['measurement', ['measurement_type' => 'weight'], 0.0],
+        default => throw new LogicException("Cas inconnu : {$cas}"),
+    };
+
+    if ($attendue > 0) {
+        PersonalRecord::factory()->create([
+            'user_id' => $user->id,
+            'exercise_id' => $exercice->id,
+            'type' => 'max_weight',
+            'value' => $attendue,
+        ]);
+    }
+
+    $goal = Goal::factory()->create([
+        'user_id' => $user->id,
+        'title' => 'Avant',
+        'type' => $type,
+        'start_value' => 50,
+        'target_value' => 100,
+        'current_value' => 50,
+        'exercise_id' => $propres['exercise_id'] ?? null,
+        'measurement_type' => $propres['measurement_type'] ?? null,
+    ]);
+
+    return [$goal, $propres, $attendue];
+}
+
+dataset('objectifs dont le départ se vide à la modification', [
+    'charge, exercice sans record',
+    'charge, exercice avec un record de 70',
+    'volume, exercice sans séance',
+    'fréquence',
+    'poids de corps, sans pesée',
+]);
+
+/**
+ * Un départ vidé à la modification vaut 0, comme à la création (#2165).
+ *
+ * Le formulaire de l'application présente le départ comme facultatif, et le
+ * même champ vide vaut 0 à la création. La modification le transmettait nul
+ * à une colonne `NOT NULL`, directement ou par la valeur actuelle que le
+ * recalcul en tire faute de record ou de pesée : la réponse était une 500, et
+ * rien n'était enregistré, ni le départ ni le titre et la cible envoyés avec
+ * lui. Un champ vidé arrive nul (`ConvertEmptyStringsToNull`), un champ blanc
+ * aussi, après `TrimStrings`. La progression se recalcule depuis 0 : avec un
+ * record de 70 et une cible de 120, 70 / 120.
+ */
+it('ramène à 0 un départ vidé à la modification, et enregistre le reste de l’envoi', function (string $cas, ?string $depart): void {
+    $user = User::factory()->create();
+    [$goal, $propres, $attendue] = objectifAuDepartQuiSeVide($cas, $user);
+
+    actingAs($user)
+        ->put(route('goals.update', ['goal' => $goal->id]), [
+            'title' => 'Après',
+            'type' => $goal->type->value,
+            'target_value' => 120,
+            'start_value' => $depart,
+            ...$propres,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('goals.index'));
+
+    $goal->refresh();
+
+    expect($goal->title)->toBe('Après')
+        ->and($goal->target_value)->toBe(120.0)
+        ->and($goal->start_value)->toBe(0.0)
+        ->and($goal->current_value)->toBe($attendue)
+        ->and((float) $goal->progress_pct)->toEqualWithDelta($attendue / 120 * 100, 0.0001);
+})->with('objectifs dont le départ se vide à la modification')->with([
+    'départ nul' => [null],
+    'départ vide' => [''],
+    'départ fait d’espaces' => ['   '],
+]);
+
+/**
+ * La contre-épreuve : un départ absent du corps ne change pas. La requête ne
+ * ramène à 0 qu'un départ envoyé vide, et `update()` ne remplit que ce
+ * qu'elle a validé.
+ */
+it('garde le départ en base quand la modification ne l’envoie pas', function (string $cas): void {
+    $user = User::factory()->create();
+    [$goal, $propres] = objectifAuDepartQuiSeVide($cas, $user);
+
+    actingAs($user)
+        ->put(route('goals.update', ['goal' => $goal->id]), [
+            'title' => 'Après',
+            'type' => $goal->type->value,
+            'target_value' => 120,
+            ...$propres,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('goals.index'));
+
+    $goal->refresh();
+
+    expect($goal->title)->toBe('Après')
+        ->and($goal->target_value)->toBe(120.0)
+        ->and($goal->start_value)->toBe(50.0);
+})->with('objectifs dont le départ se vide à la modification');
 
 it('deletes a goal from the page that now offers it', function (): void {
     $user = User::factory()->create();
