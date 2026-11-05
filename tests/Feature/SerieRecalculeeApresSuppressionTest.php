@@ -15,9 +15,13 @@ use Illuminate\Support\Carbon;
  * partait donc d'une date fantôme, et cassait une série pourtant continue.
  */
 
+/**
+ * Une séance faite ce jour-là, à 10 h : seules les séances faites comptent
+ * pour la série (#2171).
+ */
 function seanceLe(User $user, string $date): Workout
 {
-    return Workout::factory()->create([
+    return Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::parse($date.' 10:00:00'),
     ]);
@@ -173,7 +177,7 @@ it('saute la seconde séance du jour sans cesser de remonter le temps', function
     seanceLe($user, '2026-06-11');
 
     // La seconde du 11, saisie le soir : c'est elle qui ouvre la lecture.
-    Workout::factory()->create([
+    Workout::factory()->faite()->create([
         'user_id' => $user->id,
         'started_at' => Carbon::parse('2026-06-11 20:00:00'),
     ]);
