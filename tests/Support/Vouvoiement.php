@@ -15,6 +15,11 @@ namespace Tests\Support;
  * sans en être une : « chez », « assez », « nez » et « rez ». « faites » et
  * « dites » n'y sont pas : l'application les écrit en participes (« les
  * séances faites »).
+ *
+ * Le même motif garde `resources/js` côté Vitest
+ * (`tests/js/conventions/vouvoiement.js`) : changer l'un, c'est changer
+ * l'autre. `LesTextesDuServeurTutoientTest` le passe sur ce que le serveur
+ * montre, `CourrielsEnFrancaisTest` sur chaque courriel rendu.
  */
 final class Vouvoiement
 {

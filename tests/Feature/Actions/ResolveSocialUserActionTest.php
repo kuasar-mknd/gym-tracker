@@ -246,7 +246,7 @@ it('refuse un retour sans identifiant de fournisseur', function (?string $identi
 
 it('refuse un retour sans adresse au lieu d’échouer à l’écriture', function (?string $adresse): void {
     expect(fn (): User => resoudre(utilisateurSocial(['email' => $adresse])))
-        ->toThrow(new SocialAuthException('Google ne nous a transmis aucune adresse email. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.'));
+        ->toThrow(new SocialAuthException('Google ne nous a transmis aucune adresse email. Connecte-toi avec ton email et ton mot de passe, ou inscris-toi.'));
 
     expect(User::query()->count())->toBe(0);
 })->with([
@@ -272,7 +272,7 @@ it('crée un compte non vérifié quand le fournisseur ne garantit pas l’adres
 
     expect(resoudre(utilisateurSocial(), adresseVerifiee: false)->id)->toBe($nouveau->id);
     expect(fn (): User => resoudre(utilisateurSocial(['email' => 'nouvelle@example.test']), adresseVerifiee: false))
-        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connecte-toi avec l\'adresse email de ce compte et ton mot de passe. Si tu n\'en as pas, « Mot de passe oublié ? » te permet d\'en choisir un.'));
     expect(User::query()->count())->toBe(1);
 });
 
@@ -292,7 +292,7 @@ it('départage deux comptes de la même identité par l’adresse exacte, et ref
     $journal = Log::spy();
 
     expect(fn (): User => resoudre(utilisateurSocial(['email' => 'autre@example.test'])))
-        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connecte-toi avec l\'adresse email de ce compte et ton mot de passe. Si tu n\'en as pas, « Mot de passe oublié ? » te permet d\'en choisir un.'));
 
     expect(User::query()->count())->toBe(2);
 
@@ -313,7 +313,7 @@ it('ne prend pas pour sienne une identité qui ne diffère que par la casse', fu
     $existant = compteVerifieAvecFournisseur('google', 'GOOGLE-42');
 
     expect(fn (): User => resoudre(utilisateurSocial()))
-        ->toThrow(new SocialAuthException('Un compte existe déjà avec cette adresse email, associé à un autre compte Google. Connectez-vous avec cette adresse et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+        ->toThrow(new SocialAuthException('Un compte existe déjà avec cette adresse email, associé à un autre compte Google. Connecte-toi avec cette adresse et ton mot de passe. Si tu n\'en as pas, « Mot de passe oublié ? » te permet d\'en choisir un.'));
 
     expect($existant->refresh()->provider_id)->toBe('GOOGLE-42');
     expect(User::query()->count())->toBe(1);
@@ -344,7 +344,7 @@ it('ouvre le seul compte de l’identité dont la liaison est prouvée quand auc
     $journal = Log::spy();
 
     expect(fn (): User => resoudre(utilisateurSocial(['email' => 'nouvelle@example.test'])))
-        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connectez-vous avec l\'adresse email de ce compte et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.'));
+        ->toThrow(new SocialAuthException('Ce compte Google est associé à un compte dont l\'adresse email n\'est pas celle que Google nous transmet. Connecte-toi avec l\'adresse email de ce compte et ton mot de passe. Si tu n\'en as pas, « Mot de passe oublié ? » te permet d\'en choisir un.'));
 
     $journal->shouldHaveReceived('warning')
         ->once()

@@ -61,7 +61,7 @@ class WorkoutController extends Controller
             );
         } catch (UneSeanceEstDejaEnCours $refus) {
             return response()->json([
-                'message' => 'Une séance est déjà en cours : terminez-la avant d’en commencer une autre.',
+                'message' => UneSeanceEstDejaEnCours::MESSAGE,
                 'raison' => UneSeanceEstDejaEnCours::RAISON,
                 'seance' => ['id' => $refus->seanceEnCours->id],
             ], 409);

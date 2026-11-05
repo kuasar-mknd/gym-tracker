@@ -14,7 +14,7 @@ import { computed, ref } from 'vue'
  *
  * @param {(cible: unknown, termine: () => void) => void} supprimer
  *        Ce qu'il faut faire une fois la question tranchée. Le second argument
- *        referme le dialogue : appelez-le dans `onFinish`, pas dans
+ *        referme le dialogue : il s'appelle dans `onFinish`, pas dans
  *        `onSuccess` — un échec doit rendre l'écran à l'utilisateur, sinon une
  *        coupure réseau laisse le dialogue ouvert sur un bouton qui tourne.
  */

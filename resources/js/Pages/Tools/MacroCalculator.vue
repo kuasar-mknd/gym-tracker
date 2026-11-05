@@ -147,7 +147,7 @@
             <GlassCard v-if="history.length > 1" class="stagger-2 animate-slide-up">
                 <div class="mb-4">
                     <h3 class="titre-carte">Tendances</h3>
-                    <p class="text-text-muted text-xs font-semibold">Évolution de vos objectifs</p>
+                    <p class="text-text-muted text-xs font-semibold">Évolution de tes objectifs</p>
                 </div>
                 <MacroHistoryChart :data="history" />
             </GlassCard>

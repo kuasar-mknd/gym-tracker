@@ -704,13 +704,13 @@ describe('Journal/Index', () => {
     })
 
     /**
-     * The "votre journal est vide" invitation is for an empty journal only — it
+     * The "ton journal est vide" invitation is for an empty journal only — it
      * must not sit under the form the user just opened to fill it.
      */
     it("n'invite à commencer que si le journal est vide et le formulaire fermé", async () => {
         const wrapper = await mountJournal([])
 
-        expect(wrapper.findComponent(GlassEmptyState).props('title')).toBe('Votre journal est vide')
+        expect(wrapper.findComponent(GlassEmptyState).props('title')).toBe('Ton journal est vide')
         expect(wrapper.findComponent(JournalList).exists()).toBe(false)
 
         await openAdd(wrapper)

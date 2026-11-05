@@ -193,7 +193,7 @@ const selectCommonPart = (part) => {
                     icon="📏"
                     color="cyan"
                     title="Aucune mesure enregistrée"
-                    description="Enregistrez un premier tour de bras, de cuisse ou de taille pour suivre son évolution."
+                    description="Enregistre un premier tour de bras, de cuisse ou de taille pour suivre son évolution."
                     action-label="Commencer"
                     action-id="empty-state-measurement-part"
                     @action="showAddForm = true"
