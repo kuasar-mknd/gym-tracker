@@ -10,6 +10,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 ### Corrigé
 - **Un record que reçoit une série encore en attente d'enregistrement est annoncé** (#2185, #2195) : quand la série qui tenait un record était corrigée, décochée ou supprimée, ou son exercice ou sa séance retirés, juste après la validation d'une série plus lourde et avant que le record de celle-ci ne soit enregistré, la série plus lourde recevait le record sans que rien ne l'annonce, ni au centre de notifications ni en push. Il est désormais annoncé, à la valeur qu'il porte, s'il dépasse celui que la personne tenait ; quelques suites de trois retouches faites avant cet enregistrement l'annoncent deux fois, à la même valeur. Corriger une série qui tient déjà le record ne l'annonce pas de nouveau, et la réparation du contrôle de cohérence n'annonce rien. Une migration remonte une fois, sans annonce, les records restés sous leur meilleure série, que le contrôle de nuit signalait : la retouche suivante de l'exercice les aurait annoncés de nouveau.
 
+### Optimisé
+- **La page du jeûne se passe de dayjs, qui quitte l'application** (#2189, #PR) : elle n'en gardait que deux écarts en secondes et un format de date, désormais calculés sur deux dates et écrits par les utilitaires de dates de l'application, à l'heure de l'appareil comme sur les autres pages. Son morceau JavaScript passe de 16 131 à 8 922 octets, de 6 635 à 3 661 compressé (`gzip -9`), et le morceau commun que charge chaque page sous un layout perd 579 octets, ceux des aides que dayjs, module CommonJS, était seul à demander ; rien ne change à l'écran. Une garde refuse désormais toute importation de dayjs, et sa déclaration dans `package.json`.
+
 ## [1.7.0] - 2026-11-05
 
 ### Ajouté
