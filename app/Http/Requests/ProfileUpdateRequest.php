@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\DonneLeCheminVersUnMotDePasse;
+use App\Http\Requests\Concerns\EcritLAdresseSousSaFormeCanonique;
 use App\Models\User;
 use App\Rules\AdresseEnAsciiImprimable;
 use App\Rules\AdresseQueLaMessagerieSaitEcrire;
@@ -43,6 +44,7 @@ use Illuminate\Validation\ValidationException;
 class ProfileUpdateRequest extends FormRequest
 {
     use DonneLeCheminVersUnMotDePasse;
+    use EcritLAdresseSousSaFormeCanonique;
 
     /**
      * La requête ne vérifie que la connexion ; l'autorisation vit dans le
@@ -57,8 +59,10 @@ class ProfileUpdateRequest extends FormRequest
      * Get the validation rules that apply to the request.
      *
      * Une nouvelle adresse s'écrit en ASCII imprimable, comme à l'inscription
-     * (`AdresseEnAsciiImprimable`), et sous une forme que la messagerie écrit
-     * telle quelle, sans quoi le lien de confirmation ne lui parviendrait pas
+     * (`AdresseEnAsciiImprimable`) : un domaine internationalisé tapé en
+     * Unicode a déjà pris sa forme ASCII (`prepareForValidation()`, #2168).
+     * Elle s'écrit aussi sous une forme que la messagerie écrit telle quelle,
+     * sans quoi le lien de confirmation ne lui parviendrait pas
      * (`AdresseQueLaMessagerieSaitEcrire`, #2075) ; l'adresse actuelle du
      * compte reste admise telle quelle par l'une et l'autre, et la règle
      * `email` ne juge qu'une adresse qui change, pour qu'un compte plus ancien
@@ -142,6 +146,9 @@ class ProfileUpdateRequest extends FormRequest
      *
      * Comparée telle quelle, comme `isDirty('email')` la comparera à
      * l'enregistrement : un changement de casse est un changement d'adresse.
+     * La demande a pris sa forme canonique (`prepareForValidation()`) : la
+     * forme Unicode d'un domaine que le compte porte en ASCII n'en est pas
+     * un, et l'adresse actuelle, reçue telle quelle, n'a pas été convertie.
      */
     public function changeLAdresse(): bool
     {
@@ -151,12 +158,16 @@ class ProfileUpdateRequest extends FormRequest
     }
 
     /**
-     * Coupe la requête avant validation quand le compteur d'essais est plein,
-     * seulement si elle change l'adresse : le nom reste modifiable.
+     * Écrit l'adresse demandée sous sa forme canonique, sauf l'adresse
+     * actuelle du compte, reçue telle quelle (`EcritLAdresseSousSaFormeCanonique`),
+     * puis coupe la requête avant validation quand le compteur d'essais est
+     * plein, seulement si elle change l'adresse : le nom reste modifiable.
      */
     #[\Override]
     protected function prepareForValidation(): void
     {
+        $this->ecrireLAdresseSousSaFormeCanonique($this->compte()?->email);
+
         if (! $this->changeLAdresse() || ! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }

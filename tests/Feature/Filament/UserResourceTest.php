@@ -206,8 +206,69 @@ it('refuse au panneau une nouvelle adresse hors ASCII, à la création comme à 
 })->with([
     'un accent' => ['jéan.dupont@example.org'],
     '« ß » pour « ss »' => ['straße@example.org'],
-    'un domaine internationalisé' => ['jean@bücher.example.org'],
 ]);
+
+/**
+ * Un domaine internationalisé tapé en Unicode s'écrit sous sa forme ASCII
+ * avant les règles du champ (`AdresseCanonique`, #2168) : le panneau
+ * l'enregistre en ASCII au lieu de le refuser, à la création, par la page et
+ * par l'action de la table, comme l'inscription et le profil.
+ */
+it('écrit au panneau en ASCII un domaine internationalisé tapé en Unicode, à la création comme à la modification', function (string $adresse): void {
+    Notification::fake();
+    $parLaPage = User::factory()->create(['email' => 'camille@example.org']);
+    $parLaTable = User::factory()->create(['email' => 'dominique@example.org']);
+
+    Livewire::test(CreateUser::class)
+        ->fillForm(['name' => 'Jean Bücher', 'email' => $adresse, 'default_rest_time' => 90, 'password' => 'Un-mot-de-passe-solide-42!'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    Livewire::test(EditUser::class, ['record' => $parLaPage->getKey()])
+        ->fillForm(['email' => str_replace('jean@', 'camille@', $adresse)])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    Livewire::test(ListUsers::class)
+        ->callAction(TestAction::make('edit')->table($parLaTable), ['email' => str_replace('jean@', 'dominique@', $adresse)])
+        ->assertHasNoFormErrors();
+
+    expect(User::query()->where('name', 'Jean Bücher')->sole()->email)->toBe('jean@xn--bcher-kva.example.org')
+        ->and($parLaPage->refresh()->email)->toBe('camille@xn--bcher-kva.example.org')
+        ->and($parLaTable->refresh()->email)->toBe('dominique@xn--bcher-kva.example.org');
+})->with([
+    'en minuscules' => ['jean@bücher.example.org'],
+    'un « b » pleine chasse' => ["jean@\u{FF42}ücher.example.org"],
+]);
+
+/**
+ * L'adresse actuelle du compte reste telle quelle, octet pour octet : un
+ * compte en Unicode que la migration de #2168 laisse enregistre son nom par
+ * la page comme par la table, sans que son adresse change ni qu'un avis parte.
+ */
+it('garde au panneau telle quelle l’adresse actuelle d’un compte en Unicode, par la page comme par la table', function (): void {
+    Notification::fake();
+    User::factory()->create(['email' => 'jean@xn--bcher-kva.example.org']);
+    $ancien = User::factory()->create(['name' => 'Ancien Nom', 'email' => 'jean@bücher.example.org']);
+
+    Livewire::test(EditUser::class, ['record' => $ancien->getKey()])
+        ->fillForm(['name' => 'Par la page'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($ancien->refresh()->name)->toBe('Par la page')
+        ->and($ancien->email)->toBe('jean@bücher.example.org');
+
+    Livewire::test(ListUsers::class)
+        ->callAction(TestAction::make('edit')->table($ancien), ['name' => 'Par la table'])
+        ->assertHasNoFormErrors();
+
+    expect($ancien->refresh()->name)->toBe('Par la table')
+        ->and($ancien->email)->toBe('jean@bücher.example.org')
+        ->and($ancien->hasVerifiedEmail())->toBeTrue();
+
+    Notification::assertNothingSent();
+});
 
 /**
  * Un compte créé par un administrateur n'attend aucun lien : seule
