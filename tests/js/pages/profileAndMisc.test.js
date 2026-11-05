@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 /**
  * Two of the four pages here print a date, and both of them are only correct
@@ -12,11 +13,7 @@ import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
  * the page does, so the zone is pinned to one west of Greenwich — the offset is
  * the whole point.
  */
-const originalTimeZone = process.env.TZ
-process.env.TZ = 'America/New_York'
-afterAll(() => {
-    process.env.TZ = originalTimeZone
-})
+beforeAll(() => poserLeFuseau('America/New_York', 240, new Date('2026-05-20T18:45:00Z')))
 
 const formPost = vi.fn()
 const formDelete = vi.fn()

@@ -9,9 +9,7 @@ import { mount, flushPromises } from '@vue/test-utils'
  * no-op UTC would be: a round trip that drops the conversion still passes under
  * TZ=UTC and cannot here.
  */
-vi.hoisted(() => {
-    process.env.TZ = 'America/New_York'
-})
+beforeAll(() => poserLeFuseau('America/New_York', 240, new Date('2026-07-29T08:00:00Z')))
 
 const post = vi.fn()
 const patch = vi.fn()
@@ -137,6 +135,7 @@ import ActionsDeLaSeance from '@/Components/Workout/ActionsDeLaSeance.vue'
 import ErreurDeSaisie from '@/Components/Workout/ErreurDeSaisie.vue'
 import ConfirmDialog from '@/Components/UI/ConfirmDialog.vue'
 import { suivreLesPagesMontees } from './pagesMontees'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 /** Les fins de séance parties par l'API (#2049) : la charge et les options de chaque envoi. */
 const finsEnvoyees = () =>

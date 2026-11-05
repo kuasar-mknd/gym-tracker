@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, onTestFinished, vi } from 'vitest'
 
 import {
     dateAvecJour,
@@ -9,16 +9,14 @@ import {
     todayAsCalendarDate,
 } from '@/Utils/date'
 import { simulerUnSystemeEnAnglais } from './systemeEnAnglais'
+import { poserLeFuseau } from './fuseauDeLAppareil'
 
 /**
  * The test container runs in UTC, where both the correct and the broken form
  * agree. These set the timezone explicitly, because the whole defect only
  * exists on either side of UTC — asserting from UTC would prove nothing.
  */
-const originalTz = process.env.TZ
-
 afterEach(() => {
-    process.env.TZ = originalTz
     vi.useRealTimers()
 })
 
@@ -28,17 +26,19 @@ describe('todayAsCalendarDate', () => {
         // toISOString() offered yesterday's date for the first two hours of
         // every day — and the journal upserts on that date, so saving
         // overwrote the previous day's entry instead of creating today's.
-        process.env.TZ = 'Europe/Paris'
+        const instant = new Date('2026-07-30T22:30:00Z')
+        onTestFinished(poserLeFuseau('Europe/Paris', -120, instant))
         vi.useFakeTimers()
-        vi.setSystemTime(new Date('2026-07-30T22:30:00Z'))
+        vi.setSystemTime(instant)
 
         expect(todayAsCalendarDate()).toBe('2026-07-31')
     })
 
     it('pads month and day so the string is always sortable', () => {
-        process.env.TZ = 'Europe/Paris'
+        const instant = new Date('2026-03-05T12:00:00Z')
+        onTestFinished(poserLeFuseau('Europe/Paris', -60, instant))
         vi.useFakeTimers()
-        vi.setSystemTime(new Date('2026-03-05T12:00:00Z'))
+        vi.setSystemTime(instant)
 
         expect(todayAsCalendarDate()).toBe('2026-03-05')
     })
@@ -46,17 +46,19 @@ describe('todayAsCalendarDate', () => {
 
 describe('demainEnJourCalendaire', () => {
     it('donne le lendemain local, y compris au passage d’un mois', () => {
-        process.env.TZ = 'Europe/Paris'
+        const instant = new Date('2026-09-30T22:30:00Z')
+        onTestFinished(poserLeFuseau('Europe/Paris', -120, instant))
         vi.useFakeTimers()
-        vi.setSystemTime(new Date('2026-09-30T22:30:00Z'))
+        vi.setSystemTime(instant)
 
         expect(demainEnJourCalendaire()).toBe('2026-10-02')
     })
 
     it('passe à l’année suivante le 31 décembre', () => {
-        process.env.TZ = 'Europe/Paris'
+        const instant = new Date('2026-12-31T12:00:00Z')
+        onTestFinished(poserLeFuseau('Europe/Paris', -60, instant))
         vi.useFakeTimers()
-        vi.setSystemTime(new Date('2026-12-31T12:00:00Z'))
+        vi.setSystemTime(instant)
 
         expect(demainEnJourCalendaire()).toBe('2027-01-01')
     })
@@ -90,7 +92,7 @@ describe('parseCalendarDate', () => {
     it('keeps the day it was given west of UTC', () => {
         // new Date('2026-07-31') is specified to parse as midnight UTC, which
         // renders as 30 July anywhere behind UTC.
-        process.env.TZ = 'America/New_York'
+        onTestFinished(poserLeFuseau('America/New_York', 240, new Date('2026-07-31T12:00:00Z')))
 
         const parsed = parseCalendarDate('2026-07-31')
 
@@ -100,13 +102,13 @@ describe('parseCalendarDate', () => {
     })
 
     it('keeps the day it was given east of UTC', () => {
-        process.env.TZ = 'Europe/Paris'
+        onTestFinished(poserLeFuseau('Europe/Paris', -120, new Date('2026-07-31T12:00:00Z')))
 
         expect(parseCalendarDate('2026-07-31').getDate()).toBe(31)
     })
 
     it('takes the day out of a full timestamp', () => {
-        process.env.TZ = 'America/New_York'
+        onTestFinished(poserLeFuseau('America/New_York', 240, new Date('2026-07-31T12:00:00Z')))
 
         expect(parseCalendarDate('2026-07-31T00:00:00.000000Z').getDate()).toBe(31)
     })

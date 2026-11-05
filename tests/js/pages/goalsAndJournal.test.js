@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
 vi.mock('@/Components/Stats/GoalTypeChart.vue', () => ({
     __esModule: true,
@@ -69,6 +69,7 @@ import JournalIndex from '@/Pages/Journal/Index.vue'
 import JournalForm from '@/Components/Journal/JournalForm.vue'
 import JournalList from '@/Components/Journal/JournalList.vue'
 import GlassEmptyState from '@/Components/UI/GlassEmptyState.vue'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 /**
  * La question passe par un dialogue de l'application, plus par `confirm()`.
@@ -88,11 +89,9 @@ const confirmer = async (wrapper) => {
  * to. Run behind UTC on purpose: that is where a day read as an instant shows up
  * as the day before, so the whole file is a place where that mistake is visible.
  */
-const systemTimeZone = process.env.TZ
+beforeAll(() => poserLeFuseau('America/Los_Angeles', 480, new Date('2026-03-01T12:00:00Z')))
 
 beforeAll(() => {
-    process.env.TZ = 'America/Los_Angeles'
-
     globalThis.route = (name, params = {}) => {
         if (name === 'goals.store') return '/goals'
         if (name === 'goals.edit') return `/goals/${params.goal}/edit`
@@ -101,14 +100,6 @@ beforeAll(() => {
         if (name === 'daily-journals.destroy') return `/daily-journals/${params.daily_journal}`
 
         return `/${name}`
-    }
-})
-
-afterAll(() => {
-    if (systemTimeZone === undefined) {
-        delete process.env.TZ
-    } else {
-        process.env.TZ = systemTimeZone
     }
 })
 

@@ -1,5 +1,7 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
+
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 /**
  * Every line this component prints about a session is rendered in the reader's
@@ -10,18 +12,7 @@ import { mount, flushPromises } from '@vue/test-utils'
  * the *previous* calendar day once placed in New York, which is exactly the case
  * a zone-blind rendering gets wrong.
  */
-const originalTimeZone = process.env.TZ
-process.env.TZ = 'America/New_York'
-afterAll(() => {
-    // `process.env.TZ = undefined` stores the *string* "undefined", which Node
-    // reads as an invalid zone and silently resolves to UTC — so restoring an
-    // unset TZ that way leaves the process somewhere it never was.
-    if (originalTimeZone === undefined) {
-        delete process.env.TZ
-    } else {
-        process.env.TZ = originalTimeZone
-    }
-})
+beforeAll(() => poserLeFuseau('America/New_York', 240, new Date('2026-08-03T01:15:00Z')))
 
 /** La page d'Inertia : rendue par le serveur, ou servie depuis sa copie hors ligne (#2048). */
 const pageDInertia = vi.hoisted(() => ({ props: {} }))

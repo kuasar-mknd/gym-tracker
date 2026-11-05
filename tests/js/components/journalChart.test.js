@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { jeton } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 /**
  * Same substitution as chartAxes.test.js: the real vue-chartjs reaches for a
@@ -33,21 +34,9 @@ const buttonLabelled = (wrapper, label) => wrapper.findAll('button').find((b) =>
  * retard sur UTC — tout le continent américain — `new Date('2026-03-05')` est
  * le 4 mars à 19 h, et l’axe date chaque entrée de la veille. Le fuseau est
  * forcé pour ce fichier, sans quoi la garde ci-dessous serait aveugle depuis
- * l’Europe, où le reste de la suite tourne.
+ * l’Europe, où le reste de la suite tourne. New York est à UTC-5 le 5 mars.
  */
-const originalTimezone = process.env.TZ
-
-beforeAll(() => {
-    process.env.TZ = 'America/New_York'
-})
-
-afterAll(() => {
-    if (originalTimezone === undefined) {
-        delete process.env.TZ
-    } else {
-        process.env.TZ = originalTimezone
-    }
-})
+beforeAll(() => poserLeFuseau('America/New_York', 300, new Date('2026-03-05T12:00:00Z')))
 
 describe('JournalChart', () => {
     it('remet les entrées dans l’ordre chronologique', () => {

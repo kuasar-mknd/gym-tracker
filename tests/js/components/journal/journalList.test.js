@@ -1,26 +1,8 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 import JournalList from '@/Components/Journal/JournalList.vue'
-
-/**
- * The dates come out of the server as calendar days. Read as instants they
- * render the day before anywhere behind UTC, so the timezone is set west on
- * purpose — from UTC the broken and the correct forms agree.
- */
-const originalTz = process.env.TZ
-
-afterEach(() => {
-    // TZ is unset in this project, so `process.env.TZ = originalTz` would write
-    // the string "undefined" — an unparseable zone Node silently reads as UTC.
-    // The "restore" then leaves the process an hour or more away from where it
-    // found it, for every test that runs after.
-    if (originalTz === undefined) {
-        delete process.env.TZ
-    } else {
-        process.env.TZ = originalTz
-    }
-})
+import { poserLeFuseau } from '../../utils/fuseauDeLAppareil'
 
 const moods = [
     { value: 1, label: '😞 Terrible' },
@@ -50,10 +32,15 @@ const mountList = (journalsByMonth, props = {}) =>
 
 const card = (wrapper, index = 0) => wrapper.findAllComponents({ name: 'GlassCard' })[index]
 
+/**
+ * The dates come out of the server as calendar days. Read as instants they
+ * render the day before anywhere behind UTC, so the timezone is set west on
+ * purpose — from UTC the broken and the correct forms agree.
+ */
 describe('JournalList — the date column', () => {
-    it('shows the day the entry was written, west of UTC', () => {
-        process.env.TZ = 'America/New_York'
+    beforeEach(() => poserLeFuseau('America/New_York', 240, new Date('2026-07-31T12:00:00Z')))
 
+    it('shows the day the entry was written, west of UTC', () => {
         const wrapper = mountList({ 'juillet 2026': [entry({ date: '2026-07-31' })] })
 
         expect(card(wrapper).text()).toContain('31')
@@ -61,8 +48,6 @@ describe('JournalList — the date column', () => {
     })
 
     it('takes the day out of a full timestamp too', () => {
-        process.env.TZ = 'America/New_York'
-
         const wrapper = mountList({ 'juillet 2026': [entry({ date: '2026-07-31T00:00:00.000000Z' })] })
 
         expect(card(wrapper).text()).toContain('31')
