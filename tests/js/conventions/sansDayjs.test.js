@@ -1,5 +1,6 @@
 import { it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { collectSourceFiles, jsRoot } from './sourceFiles'
 
 /**
@@ -18,11 +19,16 @@ import { collectSourceFiles, jsRoot } from './sourceFiles'
  * ou une extension tierce (`dayjs-…`), qui l'importe elle-même, en tête, pour
  * son seul effet, à la demande, réexportée ou par `require`. Elle lit le nom
  * du module, pas celui de la variable : un module à soi importé sous le nom
- * `dayjs` passe, et une mention de dayjs hors d'une importation aussi. Un
- * nouveau besoin de date passe par `resources/js/Utils/date.js` ; un retour de
- * dayjs se discute avec la garde, pas à côté d'elle.
+ * `dayjs` passe, et une mention de dayjs hors d'une importation aussi. Elle
+ * refuse aussi une déclaration de dayjs dans package.json, qui l'installerait
+ * sans que rien ne s'en serve. Un nouveau besoin de date passe par
+ * `resources/js/Utils/date.js` ; un retour de dayjs se discute avec la garde,
+ * pas à côté d'elle.
  */
 const IMPORTATION_DE_DAYJS = /\b(?:from|import|require)\s*\(?\s*(['"`])dayjs(?:[/-][^'"`]*)?\1/g
+
+/** Les sections de package.json qui font installer un paquet. */
+const SECTIONS_DES_DEPENDANCES = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']
 
 /**
  * Les importations de dayjs d'un source, avec leur ligne.
@@ -79,4 +85,12 @@ it('laisse passer ce qui remplace dayjs, une mention et un module à soi', () =>
     ]) {
         expect(importationsDe(source), source).toEqual([])
     }
+})
+
+it('ne déclare dayjs dans aucune dépendance de package.json', () => {
+    const manifeste = JSON.parse(readFileSync(resolve(jsRoot, '../../package.json'), 'utf8'))
+
+    const declarations = SECTIONS_DES_DEPENDANCES.filter((section) => Object.hasOwn(manifeste[section] ?? {}, 'dayjs'))
+
+    expect(declarations, 'plus rien n’importe dayjs : il ne s’installe plus').toEqual([])
 })
