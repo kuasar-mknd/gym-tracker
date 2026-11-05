@@ -81,11 +81,13 @@ class StoreFastRequest extends FormRequest
      * qu'elle l'a rempli, sinon l'heure du champ par `formatToUTC()`. Une heure
      * murale sans décalage, celle d'une page chargée avant, reste lue comme une
      * heure de l'application, ce qui n'est juste que pour un appareil dans ce
-     * fuseau.
+     * fuseau. L'instant ramené garde son décalage, que le modèle écrit (#2159) :
+     * pris dans la première occurrence de l'heure que le passage à l'heure
+     * d'hiver répète, il se relisait sinon une heure plus tard.
      */
     #[\Override]
     protected function prepareForValidation(): void
     {
-        $this->ramenerLesInstantsAuFuseauDeLApplication(['start_time']);
+        $this->ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage(['start_time']);
     }
 }

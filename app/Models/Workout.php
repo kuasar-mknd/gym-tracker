@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Casts\InstantAvecSonDecalage;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,10 @@ use Illuminate\Support\Facades\DB;
  * @property string|null $name
  * @property float $workout_volume
  * @property \Illuminate\Support\Carbon $started_at
+ * @property int|null $started_at_offset le décalage de `started_at`, en minutes (#2159), que le cast
+ *                                       `InstantAvecSonDecalage` écrit et lit ; nul sur une ligne d'avant
  * @property \Illuminate\Support\Carbon|null $ended_at
+ * @property int|null $ended_at_offset le décalage de `ended_at`, en minutes (#2159)
  * @property string|null $notes
  * @property string|null $idempotency_key nomme le démarrage que l'appareil a tiré (#2049), pour qu'un
  *                                        démarrage rejoué par la file rende la même séance. Unique par
@@ -57,7 +61,10 @@ class Workout extends Model
      *
      * Le début et la borne viennent de `$maintenant`, la lecture unique de
      * l'horloge de l'opération (`.ai/rules/horloge.md`) ; la valeur rendue est
-     * une copie (`Carbon::instance()`), jamais l'instant reçu.
+     * une copie (`Carbon::instance()`), jamais l'instant reçu. L'âge se
+     * retranche en secondes, sur l'instant : un geste fait dans la première
+     * occurrence de l'heure que le passage à l'heure d'hiver répète y tombe,
+     * et le cast du début l'écrit avec son décalage (#2159).
      */
     public static function debutBorne(?int $ageDuGeste, CarbonInterface $maintenant): Carbon
     {
@@ -83,6 +90,13 @@ class Workout extends Model
      * plus, mais que le panneau peut poser ou qu'une séance plus ancienne peut
      * porter ; elle se ferme alors à ce début, avec une durée nulle. Une fin
      * rejouée longtemps après garde l'heure du geste.
+     *
+     * La comparaison porte sur les instants : le début relu garde son décalage
+     * (`InstantAvecSonDecalage`, #2159). Relu à l'heure murale seule, un début
+     * pris dans la première occurrence de l'heure que le passage à l'heure
+     * d'hiver répète revenait une heure plus tard, et une fin réelle d'avant ce
+     * début relu était ramenée à lui : une séance de quarante minutes durait
+     * 0 min. Une séance d'avant #2159, sans décalage, se lit toujours ainsi.
      */
     public function finBornee(?int $ageDuGeste, CarbonInterface $maintenant): Carbon
     {
@@ -139,12 +153,32 @@ class Workout extends Model
         return $this->hasMany(WorkoutLine::class)->orderBy('order')->orderBy('id');
     }
 
+    /**
+     * Le décalage du début et de la fin ne sort pas du modèle : l'instant
+     * qu'il sert (`…Z`) le porte déjà.
+     *
+     * @var list<string>
+     */
+    #[\Override]
+    protected $hidden = [
+        'started_at_offset',
+        'ended_at_offset',
+    ];
+
+    /**
+     * Le début et la fin s'écrivent avec leur décalage (#2159) : relus à
+     * l'heure murale seule, un début pris dans la première occurrence de
+     * l'heure que le passage à l'heure d'hiver répète revenait une heure plus
+     * tard, et la fin bornée à lui (`finBornee()`) donnait une durée nulle.
+     *
+     * @return array<string, string>
+     */
     #[\Override]
     protected function casts(): array
     {
         return [
-            'started_at' => 'datetime',
-            'ended_at' => 'datetime',
+            'started_at' => InstantAvecSonDecalage::class.':started_at_offset',
+            'ended_at' => InstantAvecSonDecalage::class.':ended_at_offset',
             'workout_volume' => 'float',
         ];
     }

@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Http\Requests\Api\WorkoutFinishRequest;
+use App\Http\Requests\Api\WorkoutStoreRequest;
 use App\Http\Requests\Concerns\RameneLesDatesAuFuseauDeLApplication;
+use App\Models\Casts\InstantAvecSonDecalage;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rules\Date as RegleDate;
@@ -22,13 +26,26 @@ use Symfony\Component\Finder\Finder;
  *
  * Cette garde EXÉCUTE la préparation de chaque requête de app/Http/Requests sur
  * chacun de ses champs `date` (chaîne ou `Rule::date()`), avec 22 h 30 UTC, et
- * exige l'instant ou le jour de l'application. Elle ne voit pas :
+ * exige l'instant ou le jour de l'application : l'instant à l'heure murale,
+ * seule ou suivie du décalage de l'application à cet instant.
+ *
+ * Un champ qui porte le nom d'un instant écrit avec son décalage (un attribut
+ * casté par `InstantAvecSonDecalage` dans un modèle de app/Models : le début
+ * et la fin d'une séance et d'un jeûne, #2159) n'a droit qu'à la seconde
+ * forme, `Y-m-d H:i:sP` : l'heure seule s'y relirait dans la seconde
+ * occurrence de l'heure que le passage à l'heure d'hiver répète. Font
+ * exception, nommés dans `datesRecuesSansDecalageVoulu()`, les champs dont
+ * seul l'âge compte et qui ne s'écrivent nulle part.
+ *
+ * Elle ne voit pas :
  *
  * - un champ `date_format`, dont la conversion casserait le format exigé ;
  * - une validation écrite hors d'une requête de formulaire (`$request->validate()`
  *   dans un contrôleur, un formulaire du panneau, qui gère son fuseau) ;
  * - un champ d'un tableau (`lignes.*.date`) : elle le signale plutôt que de le
- *   croire couvert.
+ *   croire couvert ;
+ * - un champ qui part vers un instant écrit avec son décalage sous un autre
+ *   nom que l'attribut : elle le reconnaît à son nom.
  */
 
 /**
@@ -67,6 +84,62 @@ function datesRecuesChampsParRequete(): array
 }
 
 /**
+ * Les attributs qu'un modèle de app/Models écrit avec leur décalage
+ * (`InstantAvecSonDecalage`), lus dans ses casts.
+ *
+ * @return list<string>
+ */
+function datesRecuesInstantsAvecDecalage(): array
+{
+    $attributs = [];
+
+    foreach (Finder::create()->files()->in(app_path('Models'))->name('*.php')->notPath(['Casts', 'Traits']) as $fichier) {
+        $classe = 'App\\Models\\'.str_replace(['/', '.php'], ['\\', ''], $fichier->getRelativePathname());
+
+        if (! is_subclass_of($classe, Model::class) || new ReflectionClass($classe)->isAbstract()) {
+            continue;
+        }
+
+        foreach (new $classe()->getCasts() as $attribut => $cast) {
+            if (is_string($cast) && str_starts_with($cast, InstantAvecSonDecalage::class.':')) {
+                $attributs[] = $attribut;
+            }
+        }
+    }
+
+    return array_values(array_unique($attributs));
+}
+
+/**
+ * Les champs qui portent le nom d'un instant écrit avec son décalage sans
+ * aller vers sa colonne : seul l'âge du geste y compte (`MesureLAgeDuGeste`),
+ * mesuré sur la valeur reçue avant qu'elle ne soit ramenée, et l'action place
+ * l'instant sur sa propre lecture de l'horloge (`Workout::debutBorne()`,
+ * `finBornee()`) ; l'heure reçue ne s'écrit nulle part (`.ai/rules/horloge.md`).
+ *
+ * @return array<class-string<FormRequest>, list<string>>
+ */
+function datesRecuesSansDecalageVoulu(): array
+{
+    return [
+        WorkoutStoreRequest::class => ['started_at'],
+        WorkoutFinishRequest::class => ['ended_at'],
+    ];
+}
+
+/**
+ * Vrai quand le champ de cette requête doit garder son décalage : il porte le
+ * nom d'un instant écrit avec lui, et n'est pas une exception nommée.
+ *
+ * @param  class-string<FormRequest>  $classe
+ */
+function datesRecuesGardeSonDecalage(string $classe, string $champ): bool
+{
+    return in_array($champ, datesRecuesInstantsAvecDecalage(), true)
+        && ! in_array($champ, datesRecuesSansDecalageVoulu()[$classe] ?? [], true);
+}
+
+/**
  * Vrai quand l'une des règles du champ est `date` elle-même.
  */
 function datesRecuesEstUneRegleDate(mixed $regle): bool
@@ -98,8 +171,9 @@ function datesRecuesPreparer(string $classe, array $donnees): FormRequest
 
 /**
  * Ce qui cloche quand la requête reçoit 22 h 30 UTC sur ce champ, ou null.
+ * Un champ qui garde son décalage n'a droit qu'à `Y-m-d H:i:sP`.
  */
-function datesRecuesEcart(FormRequest $requete, string $champ): ?string
+function datesRecuesEcart(FormRequest $requete, string $champ, bool $gardeSonDecalage = false): ?string
 {
     if (str_contains($champ, '*')) {
         return 'champ daté dans un tableau : la garde ne sait pas le vérifier, étends-la';
@@ -108,18 +182,26 @@ function datesRecuesEcart(FormRequest $requete, string $champ): ?string
     (fn () => $this->prepareForValidation())->call($requete);
 
     $instant = Carbon::parse('2026-10-04T22:30:00Z')->setTimezone(config()->string('app.timezone'));
-    $attendues = [$instant->format('Y-m-d H:i:s'), $instant->format('Y-m-d')];
+    $attendues = $gardeSonDecalage
+        ? [$instant->format('Y-m-d H:i:sP')]
+        : [$instant->format('Y-m-d H:i:s'), $instant->format('Y-m-d H:i:sP'), $instant->format('Y-m-d')];
     $recue = $requete->input($champ);
+    $ecrite = is_scalar($recue) ? (string) $recue : get_debug_type($recue);
 
-    return in_array($recue, $attendues, true)
-        ? null
-        : sprintf("reçoit « %s », l'application écrirait « %s »", '2026-10-04T22:30:00Z', is_scalar($recue) ? (string) $recue : get_debug_type($recue));
+    if (in_array($recue, $attendues, true)) {
+        return null;
+    }
+
+    return $gardeSonDecalage
+        ? sprintf("instant écrit avec son décalage : reçoit « %s », la requête rend « %s » au lieu de « %s », que le modèle relirait dans la seconde occurrence de l'heure répétée", '2026-10-04T22:30:00Z', $ecrite, $attendues[0])
+        : sprintf("reçoit « %s », l'application écrirait « %s »", '2026-10-04T22:30:00Z', $ecrite);
 }
 
 it('trouve des champs datés à vérifier', function (): void {
     expect(datesRecuesChampsParRequete())
         ->toHaveKey(App\Http\Requests\UpdateWorkoutRequest::class)
-        ->toHaveKey(App\Http\Requests\StoreWaterLogRequest::class);
+        ->toHaveKey(App\Http\Requests\StoreWaterLogRequest::class)
+        ->and(datesRecuesInstantsAvecDecalage())->toEqualCanonicalizing(['started_at', 'ended_at', 'start_time', 'end_time']);
 });
 
 it('ramène au fuseau de l’application chaque champ validé par date', function (): void {
@@ -127,7 +209,7 @@ it('ramène au fuseau de l’application chaque champ validé par date', functio
 
     foreach (datesRecuesChampsParRequete() as $classe => $champs) {
         foreach ($champs as $champ) {
-            $ecart = datesRecuesEcart(datesRecuesPreparer($classe, [$champ => '2026-10-04T22:30:00Z']), $champ);
+            $ecart = datesRecuesEcart(datesRecuesPreparer($classe, [$champ => '2026-10-04T22:30:00Z']), $champ, datesRecuesGardeSonDecalage($classe, $champ));
 
             if ($ecart !== null) {
                 $fautes[] = "{$classe} › {$champ} : {$ecart}";
@@ -137,7 +219,23 @@ it('ramène au fuseau de l’application chaque champ validé par date', functio
 
     expect($fautes)->toBe([], "une date reçue avec un décalage serait écrite à l'heure du décalage, relue à celle de l'application :\n  "
         .implode("\n  ", $fautes)
-        ."\n  Appeler ramenerLesInstantsAuFuseauDeLApplication() ou ramenerLesJoursAuFuseauDeLApplication() dans prepareForValidation().");
+        ."\n  Appeler ramenerLesInstantsAuFuseauDeLApplication(), ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage() ou ramenerLesJoursAuFuseauDeLApplication() dans prepareForValidation() ;"
+        ."\n  la deuxième pour un instant écrit avec son décalage, sauf un champ dont seul l'âge compte, à nommer dans datesRecuesSansDecalageVoulu().");
+});
+
+it('ne garde que des exceptions qui portent le nom d’un instant écrit avec son décalage, validé par date dans leur requête', function (): void {
+    $champsDates = datesRecuesChampsParRequete();
+    $perimees = [];
+
+    foreach (datesRecuesSansDecalageVoulu() as $classe => $champs) {
+        foreach ($champs as $champ) {
+            if (! in_array($champ, $champsDates[$classe] ?? [], true) || ! in_array($champ, datesRecuesInstantsAvecDecalage(), true)) {
+                $perimees[] = "{$classe} › {$champ}";
+            }
+        }
+    }
+
+    expect($perimees)->toBe([], "exception qui ne sert plus, à retirer de datesRecuesSansDecalageVoulu() :\n  ".implode("\n  ", $perimees));
 });
 
 it('voit une requête qui laisse passer le décalage, et pas celle qui le ramène', function (): void {
@@ -166,6 +264,75 @@ it('voit une requête qui laisse passer le décalage, et pas celle qui le ramèn
             $this->ramenerLesInstantsAuFuseauDeLApplication(['quand']);
         }
     };
+
+    $avecDecalage = new class() extends FormRequest
+    {
+        use RameneLesDatesAuFuseauDeLApplication;
+
+        /** @return array<string, list<string>> */
+        public function rules(): array
+        {
+            return ['quand' => ['required', 'date']];
+        }
+
+        #[\Override]
+        protected function prepareForValidation(): void
+        {
+            $this->ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage(['quand']);
+        }
+    };
+
+    $requeteAvecDecalage = datesRecuesPreparer($avecDecalage::class, ['quand' => '2026-10-04T22:30:00Z']);
+
+    expect(datesRecuesEcart($requeteAvecDecalage, 'quand'))->toBeNull()
+        ->and($requeteAvecDecalage->input('quand'))->toBe('2026-10-05 00:30:00+02:00');
+
+    /*
+     * Un instant écrit avec son décalage ne se contente pas de l'heure seule :
+     * ramené par la méthode des instants sans décalage, le début d'une séance
+     * est refusé ; avec son décalage, il passe.
+     */
+    $debutSansDecalage = new class() extends FormRequest
+    {
+        use RameneLesDatesAuFuseauDeLApplication;
+
+        /** @return array<string, list<string>> */
+        public function rules(): array
+        {
+            return ['started_at' => ['required', 'date']];
+        }
+
+        #[\Override]
+        protected function prepareForValidation(): void
+        {
+            $this->ramenerLesInstantsAuFuseauDeLApplication(['started_at']);
+        }
+    };
+
+    $debutAvecDecalage = new class() extends FormRequest
+    {
+        use RameneLesDatesAuFuseauDeLApplication;
+
+        /** @return array<string, list<string>> */
+        public function rules(): array
+        {
+            return ['started_at' => ['required', 'date']];
+        }
+
+        #[\Override]
+        protected function prepareForValidation(): void
+        {
+            $this->ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage(['started_at']);
+        }
+    };
+
+    expect(datesRecuesGardeSonDecalage($debutSansDecalage::class, 'started_at'))->toBeTrue()
+        ->and(datesRecuesGardeSonDecalage($debutSansDecalage::class, 'quand'))->toBeFalse()
+        ->and(datesRecuesGardeSonDecalage(WorkoutStoreRequest::class, 'started_at'))->toBeFalse()
+        ->and(datesRecuesGardeSonDecalage(WorkoutStoreRequest::class, 'ended_at'))->toBeTrue()
+        ->and(datesRecuesEcart(datesRecuesPreparer($debutSansDecalage::class, ['started_at' => '2026-10-04T22:30:00Z']), 'started_at', true))->not->toBeNull()
+        ->and(datesRecuesEcart(datesRecuesPreparer($debutSansDecalage::class, ['started_at' => '2026-10-04T22:30:00Z']), 'started_at'))->toBeNull()
+        ->and(datesRecuesEcart(datesRecuesPreparer($debutAvecDecalage::class, ['started_at' => '2026-10-04T22:30:00Z']), 'started_at', true))->toBeNull();
 
     expect(datesRecuesEstUneRegleDate($sansConversion->rules()['quand']))->toBeTrue()
         ->and(datesRecuesEstUneRegleDate(['required', 'date_format:Y-m-d']))->toBeFalse()

@@ -6,9 +6,10 @@ namespace App\Services\Stats;
 
 use App\DTOs\Stats\DistributionStat;
 use App\DTOs\Stats\DurationHistoryPoint;
+use App\Models\Casts\InstantAvecSonDecalage;
 use App\Models\User;
 use App\Models\Workout;
-use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
 
 final class WorkoutStatsService
@@ -43,10 +44,14 @@ final class WorkoutStatsService
              * baseline PHPStan de plus. Le resultat est le meme, les DTO n'etant
              * pas `Arrayable`, mais celui-ci se laisse verifier.
              *
+             * Le début et la fin viennent avec leur décalage (#2159) : sans lui,
+             * une séance commencée dans la première occurrence de l'heure que
+             * le passage à l'heure d'hiver répète perdait une heure.
+             *
              * @return array<int, DurationHistoryPoint>
              */
             fn (): array => Workout::query()
-                ->select(['name', 'started_at', 'ended_at'])
+                ->select(['name', 'started_at', 'started_at_offset', 'ended_at', 'ended_at_offset'])
                 ->where('user_id', $user->id)
                 ->whereNotNull('ended_at')
                 ->latest('started_at')
@@ -82,10 +87,14 @@ final class WorkoutStatsService
                  * `id` en revanche n'etait jamais lu dans la boucle. La colonne
                  * partait en base et revenait pour rien, et le mutant qui la
                  * retirait survivait parce qu'il n'y avait rien a voir.
+                 *
+                 * Le décalage du début et de la fin vient avec eux (#2159) : la
+                 * durée se lit sur les instants qu'ils désignent
+                 * (`InstantAvecSonDecalage::lire()`), comme le modèle les lit.
                  */
                 $workouts = $user->workouts()
                     ->toBase()
-                    ->select(['started_at', 'ended_at'])
+                    ->select(['started_at', 'started_at_offset', 'ended_at', 'ended_at_offset'])
                     ->where('started_at', '>=', now()->subDays($jours))
                     ->get();
 
@@ -121,7 +130,10 @@ final class WorkoutStatsService
                     $timeBuckets[$timeLabel]++;
 
                     if (is_string($workout->ended_at)) {
-                        $durationBuckets[$this->resolveDurationLabel($workout->started_at, $workout->ended_at)]++;
+                        $durationBuckets[$this->resolveDurationLabel(
+                            InstantAvecSonDecalage::lire($workout->started_at, $workout->started_at_offset),
+                            InstantAvecSonDecalage::lire($workout->ended_at, $workout->ended_at_offset),
+                        )]++;
                     }
                 }
 
@@ -151,13 +163,14 @@ final class WorkoutStatsService
         };
     }
 
-    private function resolveDurationLabel(string $startedAt, string $endedAt): string
+    private function resolveDurationLabel(CarbonInterface $debut, CarbonInterface $fin): string
     {
         /*
-         * `parse()` plutot que `strtotime()`, et donc pas de garde `=== false` :
-         * les deux colonnes sont des DATETIME valides, le faux n'arrivait
-         * jamais, et le `return null` qui l'accompagnait faisait disparaitre la
-         * seance du graphique sans rien dire.
+         * Des instants lus plutot que `strtotime()`, et donc pas de garde
+         * `=== false` : les deux colonnes sont des DATETIME valides, le faux
+         * n'arrivait jamais, et le `return null` qui l'accompagnait faisait
+         * disparaitre la seance du graphique sans rien dire. Lus avec leur
+         * décalage (#2159), et non par `parse()` de l'heure murale seule.
          *
          * Un « chemin rapide » se trouvait ici, qui lisait heures et minutes a
          * coups de `substr` quand la seance tenait dans une journee, pour
@@ -177,8 +190,7 @@ final class WorkoutStatsService
          * branche dont le seul comportement propre est de contredire sa voisine
          * sur les memes donnees se supprime — elle ne se teste pas.
          */
-        $debut = CarbonImmutable::parse($startedAt);
-        $minutes = (int) $debut->diffInMinutes(CarbonImmutable::parse($endedAt), true);
+        $minutes = (int) $debut->diffInMinutes($fin, true);
 
         return match (true) {
             $minutes < 30 => '< 30 min',

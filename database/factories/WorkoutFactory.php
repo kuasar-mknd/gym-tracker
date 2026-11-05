@@ -27,6 +27,25 @@ class WorkoutFactory extends Factory
     }
 
     /**
+     * Une séance écrite avant #2159, sans le décalage de son début et de sa
+     * fin : elle se lit comme le cast `datetime` la lisait, une heure de
+     * l'heure que le passage à l'heure d'hiver répète dans sa seconde
+     * occurrence.
+     *
+     * Le cast (`InstantAvecSonDecalage`) écrit le décalage avec l'instant, que
+     * la fabrique reçoive un `Carbon` ou une chaîne : l'état l'efface ensuite,
+     * à la fabrication. Il se pose après `faite()`, dont la fin, posée à la
+     * fabrication elle aussi, écrirait sinon son décalage après lui.
+     */
+    public function sansDecalage(): static
+    {
+        return $this->afterMaking(function (\App\Models\Workout $seance): void {
+            $seance->started_at_offset = null;
+            $seance->ended_at_offset = null;
+        });
+    }
+
+    /**
      * Une séance FAITE : terminée une heure après son début, avec un exercice
      * et une série cochée.
      *

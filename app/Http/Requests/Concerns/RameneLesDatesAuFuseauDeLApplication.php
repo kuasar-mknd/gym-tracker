@@ -25,8 +25,13 @@ use Illuminate\Support\Facades\Date;
  * une heure de l'application, et une valeur que la règle refuse lui est
  * laissée telle quelle, pour qu'elle la refuse encore.
  *
+ * Un instant ramené garde son décalage quand le modèle l'écrit avec lui
+ * (`InstantAvecSonDecalage`, #2159) : sans lui, l'heure murale d'un instant pris
+ * dans la première occurrence de l'heure que le passage à l'heure d'hiver
+ * répète se relisait dans la seconde, une heure plus tard.
+ *
  * `LesDatesRecuesSontRameneesAuFuseauTest` exige que chaque champ validé par
- * `date` dans une requête passe par l'une de ces deux méthodes.
+ * `date` dans une requête passe par l'une de ces méthodes.
  */
 trait RameneLesDatesAuFuseauDeLApplication
 {
@@ -38,6 +43,23 @@ trait RameneLesDatesAuFuseauDeLApplication
     protected function ramenerLesInstantsAuFuseauDeLApplication(array $champs): void
     {
         $this->ramenerAuFuseauDeLApplication($champs, 'Y-m-d H:i:s');
+    }
+
+    /**
+     * Les champs qui désignent un instant que le modèle écrit avec son décalage
+     * (`InstantAvecSonDecalage`) : l'heure de l'application, à la seconde, suivie
+     * du décalage de l'application à cet instant (`2026-10-25 02:30:00+02:00`).
+     *
+     * L'heure seule ne dit pas laquelle des deux occurrences de l'heure que le
+     * passage à l'heure d'hiver répète l'instant désigne, et le cast la relirait
+     * dans la seconde (#2159). Les règles qui comparent la valeur à un instant
+     * (`before_or_equal`) la jugent aussi à cet instant.
+     *
+     * @param  list<string>  $champs
+     */
+    protected function ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage(array $champs): void
+    {
+        $this->ramenerAuFuseauDeLApplication($champs, 'Y-m-d H:i:sP');
     }
 
     /**

@@ -95,10 +95,13 @@ final class FetchCalendarEventsAction
          * chaque colonne revenait non typee et devait etre castee a la main.
          *
          * `withCount()` remplace la sous-requete, et Eloquent caste `started_at`
-         * en Carbon : il ne reste ni cast, ni analyse de date a la main.
+         * en Carbon : il ne reste ni cast, ni analyse de date a la main. Son
+         * décalage vient avec lui : sans lui, une séance commencée dans la
+         * première occurrence de l'heure que le passage à l'heure d'hiver
+         * répète se plaçait une heure plus tard (#2159).
          */
         $workouts = Workout::query()
-            ->select(['id', 'name', 'started_at'])
+            ->select(['id', 'name', 'started_at', 'started_at_offset'])
             ->withCount('workoutLines')
             ->where('user_id', $user->id)
             ->whereBetween('started_at', [$start, $end])

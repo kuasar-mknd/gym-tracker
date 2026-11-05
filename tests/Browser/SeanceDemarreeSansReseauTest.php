@@ -142,7 +142,7 @@ class SeanceDemarreeSansReseauTest extends DuskTestCase
                 fn (): bool => Workout::query()->where('user_id', $compte->id)->whereNotNull('ended_at')->exists(),
                 90,
                 'la séance démarrée sans réseau n’a pas été close au serveur',
-                fn (): string => (string) json_encode(Workout::query()->where('user_id', $compte->id)->get(['id', 'idempotency_key', 'ended_at'])),
+                fn (): string => (string) json_encode(Workout::query()->where('user_id', $compte->id)->get(['id', 'idempotency_key', 'ended_at', 'ended_at_offset'])),
             );
 
             $seance = Workout::query()->where('user_id', $compte->id)->sole();

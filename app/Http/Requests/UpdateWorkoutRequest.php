@@ -72,11 +72,14 @@ class UpdateWorkoutRequest extends FormRequest
 
     /**
      * Les réglages de la séance envoient son début en UTC : sans conversion, la
-     * séance reculait de l'écart UTC à chaque enregistrement (#1952).
+     * séance reculait de l'écart UTC à chaque enregistrement (#1952). Le début
+     * ramené garde son décalage, que le modèle écrit (#2159) : réglé dans la
+     * première occurrence de l'heure que le passage à l'heure d'hiver répète,
+     * il se relisait sinon une heure plus tard.
      */
     #[\Override]
     protected function prepareForValidation(): void
     {
-        $this->ramenerLesInstantsAuFuseauDeLApplication(['started_at']);
+        $this->ramenerLesInstantsAuFuseauDeLApplicationAvecLeurDecalage(['started_at']);
     }
 }
