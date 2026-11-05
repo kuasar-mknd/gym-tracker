@@ -17,6 +17,7 @@ import { oublierLesCopiesDUnAutreTitulaire } from '@/Utils/copiesHorsLigne'
 import { installerLesMessagesDuWorker } from '@/Utils/messagesDuWorker'
 import { demarrerHorsLigne, estLaCoquille } from '@/Utils/demarrageHorsLigne'
 import { installerLInvitationDInstallation } from '@/composables/useInvitationDInstallation'
+import { installerLaPoliceDeRepliDesIcones } from '@/Utils/policeDeRepliDesIcones'
 import { vPress } from './directives/vPress'
 import { registerSW } from 'virtual:pwa-register'
 
@@ -28,6 +29,13 @@ import { registerSW } from 'virtual:pwa-register'
  * déjà.
  */
 if (typeof window !== 'undefined') {
+    /*
+     * La police de repli des icônes, chargée avant que la première icône ne
+     * soit posée : sans elle, avant Material Symbols, une icône écrirait son
+     * nom de toute sa longueur (#2193).
+     */
+    installerLaPoliceDeRepliDesIcones()
+
     installerLesMessagesDuWorker()
 
     /*

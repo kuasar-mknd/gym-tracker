@@ -83,10 +83,17 @@
         U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/*
+ * Avant elle, une icône prend la police de repli qui la suit dans sa pile
+ * (resources/js/Utils/policeDeRepliDesIcones.js), où son nom ne s'écrit pas.
+ * `block`, et non `swap` : si cette police manquait (un navigateur sans
+ * `FontFace`), le nom d'une ligature (« notifications ») resterait au moins
+ * invisible pendant la période de blocage, trois secondes au plus.
+ */
 @font-face {
     font-family: 'Material Symbols Outlined';
     font-style: normal;
     font-weight: 400;
-    font-display: swap;
+    font-display: block;
     src: url('../fonts/material-symbols-outlined.woff2') format('woff2');
 }
