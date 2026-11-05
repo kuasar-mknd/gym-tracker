@@ -21,9 +21,10 @@ use Illuminate\Support\Facades\Schema;
  * un compte enregistré en Unicode ne se trouverait plus sous aucune forme.
  *
  * Chaque adresse dont le domaine porte un caractère hors ASCII passe par la
- * même fonction. Elle s'écrit sous sa forme canonique quand aucun autre
- * compte ne porte cette forme et qu'aucune autre adresse en Unicode ne la
- * partage, selon la base et non selon une égalité en PHP : la collation de
+ * même fonction. Elle s'écrit sous sa forme canonique quand cette forme tient
+ * dans la colonne, qu'aucun autre compte ne la porte et qu'aucune autre
+ * adresse en Unicode ne la partage, selon la base et non selon une égalité en
+ * PHP : la collation de
  * `users.email` tient « NOE@XN--BCHER-KVA.EXAMPLE.ORG » pour la forme de
  * « noe@bücher.example.org », et distingue « jean@ⰰ.example.org » de
  * « jean@Ⰰ.example.org », que la conversion écrit l'un et l'autre
@@ -32,6 +33,12 @@ use Illuminate\Support\Facades\Schema;
  * première et tomberait sur l'index unique à la seconde, et choisir l'une
  * reviendrait à choisir un compte à la place d'un autre. Le partage se mesure
  * par l'index lui-même, dans une transaction annulée, avant toute écriture.
+ * La forme ASCII est plus longue que la forme Unicode (chaque label converti
+ * s'allonge de « xn-- » et de son encodage) : une adresse d'au plus 255
+ * caractères, que l'inscription d'avant #2001 admettait, peut avoir une forme
+ * que `users.email` ne tient pas. L'écrire lèverait une erreur du serveur que
+ * l'index unique ne lève pas, et arrêterait la migration avant toute
+ * conversion : une telle adresse est laissée avant la mesure.
  *
  * L'écriture passe par le constructeur de requêtes, jamais par le modèle : la
  * boîte ne change pas, si bien que ni l'avis de changement d'adresse, ni le
@@ -42,9 +49,10 @@ use Illuminate\Support\Facades\Schema;
  *
  * Rien n'est fusionné ni supprimé. Le journal liste par identifiant, sans
  * adresse, chaque compte laissé en Unicode, les comptes de sa forme et leur
- * état (en attente ou ouvert), ainsi que les comptes dont la forme canonique
- * laisse le domaine tel quel (« ß », lettre pleine chasse, conversion
- * refusée) ; le propriétaire décide de chacun. D'ici là, un compte laissé ne
+ * état (en attente ou ouvert), les comptes dont la forme ASCII ne tient pas
+ * dans la colonne, ainsi que les comptes dont la forme canonique laisse le
+ * domaine tel quel (« ß », lettre pleine chasse, conversion refusée) ; le
+ * propriétaire décide de chacun. D'ici là, un compte laissé ne
  * s'ouvre plus par mot de passe ni ne reçoit le lien : chaque forme saisie
  * trouve le compte qui porte la forme ASCII.
  *
@@ -54,6 +62,12 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class() extends Migration
 {
+    /**
+     * La longueur de `users.email` (`varchar(255)`), en caractères : une
+     * forme plus longue ne s'y écrit pas.
+     */
+    private const int LONGUEUR_DE_LA_COLONNE = 255;
+
     public function up(): void
     {
         if (! Schema::hasTable('users')) {
@@ -69,6 +83,7 @@ return new class() extends Migration
         $etats = [];
         $formes = [];
         $laisses = [];
+        $tropLongues = [];
 
         foreach ($comptes as $compte) {
             $id = filter_var($compte->id ?? null, FILTER_VALIDATE_INT);
@@ -84,6 +99,8 @@ return new class() extends Migration
 
             if ($forme === $adresse) {
                 $laisses[] = $id;
+            } elseif (mb_strlen($forme) > self::LONGUEUR_DE_LA_COLONNE) {
+                $tropLongues[] = $id;
             } else {
                 $formes[$id] = $forme;
             }
@@ -124,7 +141,7 @@ return new class() extends Migration
             }
         }
 
-        $this->journaliser($converties, $portees, $partagees, $laisses, $etats);
+        $this->journaliser($converties, $portees, $partagees, $tropLongues, $laisses, $etats);
     }
 
     /**
@@ -216,10 +233,11 @@ return new class() extends Migration
      * @param  list<int>  $converties
      * @param  array<int, list<array{compte: int, etat: string}>>  $portees
      * @param  array<int, list<int>>  $partagees
+     * @param  list<int>  $tropLongues
      * @param  list<int>  $laisses
      * @param  array<int, string>  $etats
      */
-    private function journaliser(array $converties, array $portees, array $partagees, array $laisses, array $etats): void
+    private function journaliser(array $converties, array $portees, array $partagees, array $tropLongues, array $laisses, array $etats): void
     {
         if ($converties !== []) {
             Log::info('Adresses de compte écrites en ASCII (#2168)', ['comptes' => $converties]);
@@ -239,6 +257,10 @@ return new class() extends Migration
             Log::warning('Adresses de compte laissées en Unicode : elles ont la même forme ASCII (#2168)', [
                 'comptes' => array_map(static fn (int $id): array => ['compte' => $id, 'etat' => $etats[$id] ?? 'ouvert'], $groupe),
             ]);
+        }
+
+        if ($tropLongues !== []) {
+            Log::warning('Adresses de compte laissées en Unicode : leur forme ASCII ne tient pas dans la colonne (#2168)', ['comptes' => $tropLongues]);
         }
 
         if ($laisses !== []) {

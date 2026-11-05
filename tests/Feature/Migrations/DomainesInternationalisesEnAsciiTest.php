@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Support\AdresseCanonique;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -10,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Validator;
 use Mockery\MockInterface;
 
 use function Pest\Laravel\assertAuthenticatedAs;
@@ -179,6 +181,37 @@ it('laisse tel quel un domaine que la forme canonique ne convertit pas, et le li
         'comptes' => [$straße->id, $pleineChasse->id, $commentaire->id],
     ]);
 });
+
+/*
+ * `users.email` tient 255 caractères, et la forme ASCII d'un domaine
+ * internationalisé est plus longue que sa forme Unicode : chaque label
+ * converti s'allonge de « xn-- » et de son encodage. Une adresse d'au plus
+ * 255 caractères, que l'inscription d'avant #2001 admettait (`email`,
+ * `max:255`), peut donc avoir une forme qui ne tient pas dans la colonne.
+ * L'écrire, pour mesurer le partage comme pour convertir, lève une erreur du
+ * serveur qui n'est pas celle de l'index unique : la migration s'arrêtait
+ * avant toute écriture, sans convertir aucun compte, et le démarrage avec
+ * elle. Elle laisse cette adresse, la liste par identifiant, et convertit
+ * les autres.
+ */
+it('laisse une adresse dont la forme ASCII ne tient pas dans la colonne, la liste par identifiant, et convertit les autres', function (string $adresse): void {
+    $long = User::factory()->create(['email' => $adresse]);
+    $tiers = User::factory()->create(['email' => 'tiers@bücher.example.org']);
+    $journal = domainesEnAsciiJournal();
+
+    expect(Validator::make(['email' => $adresse], ['email' => 'required|string|lowercase|email|max:255'])->passes())->toBeTrue()
+        ->and(mb_strlen(AdresseCanonique::de($adresse)))->toBeGreaterThan(255);
+
+    domainesEnAsciiMigrer();
+
+    expect($long->refresh()->email)->toBe($adresse)
+        ->and($tiers->refresh()->email)->toBe('tiers@xn--bcher-kva.example.org');
+    domainesEnAsciiTrace($journal, 'warning', 'Adresses de compte laissées en Unicode : leur forme ASCII ne tient pas dans la colonne (#2168)', ['comptes' => [$long->id]]);
+    domainesEnAsciiTrace($journal, 'info', 'Adresses de compte écrites en ASCII (#2168)', ['comptes' => [$tiers->id]]);
+})->with([
+    'une longue partie locale' => [str_repeat('a', 235).'@bücher.example.org'],
+    'un long domaine' => [str_repeat('j', 47).'@'.implode('.', array_fill(0, 4, str_repeat('a', 49).'ü')).'.org'],
+]);
 
 it('ne touche ni une partie locale hors ASCII sous un domaine ASCII, ni une adresse déjà en ASCII, et ne trace rien', function (): void {
     User::factory()->create(['email' => 'jéan@example.org']);
