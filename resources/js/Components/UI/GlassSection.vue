@@ -7,7 +7,7 @@
  * found in Profile partials and other pages.
  *
  * Usage:
- *   <GlassSection title="Profil" description="Mettez à jour vos informations.">
+ *   <GlassSection title="Profil" description="Mets à jour tes informations.">
  *       <form>...</form>
  *   </GlassSection>
  */

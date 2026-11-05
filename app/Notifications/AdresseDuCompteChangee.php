@@ -92,7 +92,6 @@ final class AdresseDuCompteChangee extends Notification implements ShouldQueue
         $nouvelleAdresseMasquee = self::masquer($this->nouvelleAdresse);
         $courriel = new MailMessage()
             ->subject("L’adresse de ton compte {$application} a changé")
-            ->greeting('Bonjour,')
             ->line("L’adresse e-mail de ton compte {$application} vient d’être remplacée par {$nouvelleAdresseMasquee}. Ce message part à une ancienne adresse du compte, celle-ci, la dernière à avoir été vérifiée : elle ne reçoit plus rien du compte et ne peut plus servir à réinitialiser son mot de passe.");
 
         if ($nouvelleAdresseMasquee === self::masquer(self::adresseDuDestinataire($notifiable))) {

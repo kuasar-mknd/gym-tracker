@@ -156,7 +156,7 @@ function compteSocialExistant(string $adresse, ?string $fournisseur = null, ?str
  */
 function suiteDuRefusSocialSansCompte(): string
 {
-    return 'Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.';
+    return 'Connecte-toi avec ton email et ton mot de passe, ou inscris-toi.';
 }
 
 /**
@@ -164,12 +164,12 @@ function suiteDuRefusSocialSansCompte(): string
  */
 function suiteDuRefusSocialVersLeMotDePasse(string $quelleAdresse): string
 {
-    return 'Connectez-vous avec '.$quelleAdresse.' et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.';
+    return 'Connecte-toi avec '.$quelleAdresse.' et ton mot de passe. Si tu n\'en as pas, « Mot de passe oublié ? » te permet d\'en choisir un.';
 }
 
 function refusSocialDAdresseProche(string $fournisseur): string
 {
-    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la vôtre. S\'il est à vous, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
+    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la tienne. S\'il est à toi, connecte-toi avec son adresse email et ton mot de passe ; sinon, inscris-toi avec une autre adresse.';
 }
 
 /**
@@ -178,7 +178,7 @@ function refusSocialDAdresseProche(string $fournisseur): string
  */
 function refusSocialDAdresseHorsAscii(string $fournisseur): string
 {
-    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une adresse en caractères ASCII, sans accent.';
+    return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si tu as déjà un compte, connecte-toi avec son adresse email et ton mot de passe ; sinon, inscris-toi avec une adresse en caractères ASCII, sans accent.';
 }
 
 function refusSocialDIdentite(string $fournisseur): string
@@ -197,7 +197,7 @@ function refusSocialDeCompteDejaLie(string $fournisseur): string
  */
 function refusSocialDeCompteNonVerifie(): string
 {
-    return 'Ce compte n\'a pas encore confirmé son adresse email : il ne peut pas être associé à un fournisseur de connexion. Connectez-vous avec cette adresse et votre mot de passe, puis confirmez-la. Si vous n\'avez pas de mot de passe, « Mot de passe oublié ? » vous permet d\'en choisir un.';
+    return 'Ce compte n\'a pas encore confirmé son adresse email : il ne peut pas être associé à un fournisseur de connexion. Connecte-toi avec cette adresse et ton mot de passe, puis confirme-la. Si tu n\'as pas de mot de passe, « Mot de passe oublié ? » te permet d\'en choisir un.';
 }
 
 /**
@@ -657,7 +657,7 @@ it('refuse un retour GitHub dont l’adresse est vide', function (): void {
 
     get(route('social.callback', 'github'))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', 'Votre email n\'est pas vérifié par Github');
+        ->assertSessionHas('status', 'Ton email n\'est pas vérifié par Github');
 
     assertGuest();
     expect(User::query()->count())->toBe(0);
@@ -698,7 +698,7 @@ it('ne rattache pas une adresse que le fournisseur ne garantit pas, en productio
 
     get(route('social.callback', $fournisseur))
         ->assertRedirect(route('login'))
-        ->assertSessionHas('status', 'Votre email n\'est pas vérifié par '.ucfirst($fournisseur));
+        ->assertSessionHas('status', 'Ton email n\'est pas vérifié par '.ucfirst($fournisseur));
 
     assertGuest();
 
@@ -715,9 +715,9 @@ it('ne rattache pas une adresse que le fournisseur ne garantit pas, en productio
     expect($compte->refresh()->provider_id)->toBeNull();
     expect(User::query()->count())->toBe(1);
 })->with([
-    'Google' => ['google', 'Votre email n\'est pas vérifié par Google'],
+    'Google' => ['google', 'Ton email n\'est pas vérifié par Google'],
     'GitHub, dont le pilote ne rend pas d’adresse non vérifiée' => ['github', 'Github ne nous a transmis aucune adresse email. '.suiteDuRefusSocialSansCompte()],
-    'Apple' => ['apple', 'Votre email n\'est pas vérifié par Apple'],
+    'Apple' => ['apple', 'Ton email n\'est pas vérifié par Apple'],
 ]);
 
 it('accepte l’adresse que le pilote GitHub rend, parce qu’il ne rend que la principale vérifiée', function (): void {

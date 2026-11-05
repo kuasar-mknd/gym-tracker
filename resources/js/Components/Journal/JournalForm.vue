@@ -142,7 +142,7 @@ const emit = defineEmits(['close', 'submit'])
                     label="Notes"
                     :rows="4"
                     :maxlength="1000"
-                    placeholder="Comment s'est passée votre journée ? Entraînement, repas, sensations..."
+                    placeholder="Comment s'est passée ta journée ? Entraînement, repas, sensations..."
                     :error="form.errors.content"
                 />
                 <div v-if="form.errors.content" class="text-accent-danger-deep mt-1 text-xs">

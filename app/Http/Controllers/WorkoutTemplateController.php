@@ -79,7 +79,7 @@ class WorkoutTemplateController extends Controller
         } catch (UneSeanceEstDejaEnCours $refus) {
             return redirect()->route('workouts.show', $refus->seanceEnCours)->with(
                 'error',
-                "Le modèle « {$template->name} » n'a pas été démarré : une séance est déjà en cours. Terminez-la avant d'en commencer une autre.",
+                "Le modèle « {$template->name} » n'a pas été démarré. ".UneSeanceEstDejaEnCours::MESSAGE,
             );
         }
 

@@ -48,7 +48,6 @@ final class LienDOuvertureDuCompte extends Notification implements ShouldQueue
 
         return new MailMessage()
             ->subject("Ouvre ton compte {$application}")
-            ->greeting('Bonjour,')
             ->line("Un compte {$application} vient d’être demandé avec cette adresse. Il n’est pas encore ouvert : suis ce lien, puis connecte-toi avec cette adresse et ton mot de passe, sur le même appareil.")
             ->action('Ouvrir mon compte', LiensDesCourriels::lienDOuvertureDuCompte($notifiable))
             ->line('Le lien vaut '.LiensDesCourriels::minutesDeValiditeDUnLien().' minutes. Passé ce délai, connecte-toi : un nouveau lien partira.')

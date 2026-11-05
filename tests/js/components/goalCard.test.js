@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, onTestFinished } from 'vitest'
 import { mount } from '@vue/test-utils'
 
 import GoalCard from '@/Components/Goals/GoalCard.vue'
 import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 beforeAll(() => {
     globalThis.route = (name, params) => `/${name}/${Object.values(params ?? {}).join('/')}`
@@ -60,29 +61,6 @@ const statTile = (wrapper, heading) => {
         .map((child) => flat(child.textContent))
         .filter(Boolean)
         .join(' ')
-}
-
-/**
- * Runs `body` with the clock sitting behind UTC.
- *
- * A calendar day read as an instant only lands a day early where the browser is
- * behind UTC. This suite runs in Europe/Zurich locally and UTC on CI — from
- * either, the bug is invisible and the assertion passes on a broken component.
- * So the test goes and stands where the defect shows.
- */
-const inATimezoneBehindUtc = (body) => {
-    const original = process.env.TZ
-    process.env.TZ = 'America/Los_Angeles'
-
-    try {
-        return body()
-    } finally {
-        if (original === undefined) {
-            delete process.env.TZ
-        } else {
-            process.env.TZ = original
-        }
-    }
 }
 
 /**
@@ -193,16 +171,20 @@ describe('GoalCard — figures', () => {
         expect(statTile(wrapper, 'Cible')).toBe('Cible 5 séances')
     })
 
+    /*
+     * La colonne est castée `date:Y-m-d` : lue comme un instant, l'échéance
+     * tombe la veille partout à l'ouest d'UTC. La suite tourne en UTC sur la
+     * CI, où le défaut ne se voit pas, et le composant fautif passerait : le
+     * cas se place à Los Angeles, à UTC-8 le jour de l'échéance.
+     */
     it('renders a deadline as a calendar day, not as an instant', () => {
-        // The column is cast `date:Y-m-d`; read as an instant it lands a day
-        // early anywhere behind UTC.
-        inATimezoneBehindUtc(() => {
-            const wrapper = mountCard({ deadline: '2026-12-25' })
+        onTestFinished(poserLeFuseau('America/Los_Angeles', 480, new Date('2026-12-25T12:00:00Z')))
 
-            expect(wrapper.text()).toContain('Échéance')
-            expect(wrapper.text()).toContain('25/12/2026')
-            expect(wrapper.text()).not.toContain('24/12/2026')
-        })
+        const wrapper = mountCard({ deadline: '2026-12-25' })
+
+        expect(wrapper.text()).toContain('Échéance')
+        expect(wrapper.text()).toContain('25/12/2026')
+        expect(wrapper.text()).not.toContain('24/12/2026')
     })
 
     /*

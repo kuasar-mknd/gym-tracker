@@ -142,8 +142,7 @@ describe('WorkoutTemplateController', function (): void {
             $this->actingAs($user)
                 ->post(route('templates.execute', $template))
                 ->assertRedirect(route('workouts.show', $seanceOuverte))
-                ->assertSessionHas('error', fn (string $message): bool => str_contains($message, '« Jambes »')
-                    && str_contains($message, 'une séance est déjà en cours'));
+                ->assertSessionHas('error', "Le modèle « Jambes » n'a pas été démarré. Une séance est déjà en cours : termine-la avant d'en commencer une autre.");
 
             expect(Workout::query()->where('user_id', $user->id)->whereNull('ended_at')->pluck('id')->all())
                 ->toBe([$seanceOuverte->id])

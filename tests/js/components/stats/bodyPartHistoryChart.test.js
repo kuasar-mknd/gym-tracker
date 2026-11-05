@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { jeton, jetonTransparent } from '@/Utils/couleurs'
 import { mount } from '@vue/test-utils'
+import { poserLeFuseau } from '../../utils/fuseauDeLAppareil'
 
 vi.mock('vue-chartjs', () => {
     const recorder = (name) => ({
@@ -26,19 +27,7 @@ const dayLabel = (year, monthIndex, day) => `${String(day).padStart(2, '0')}/${S
  * blind to that bug in a timezone at or ahead of UTC, which is where this suite
  * otherwise runs, so the zone is forced for this file.
  */
-const originalTimezone = process.env.TZ
-
-beforeAll(() => {
-    process.env.TZ = 'America/New_York'
-})
-
-afterAll(() => {
-    if (originalTimezone === undefined) {
-        delete process.env.TZ
-    } else {
-        process.env.TZ = originalTimezone
-    }
-})
+beforeAll(() => poserLeFuseau('America/New_York', 240, new Date('2026-07-31T12:00:00Z')))
 
 describe('BodyPartHistoryChart', () => {
     it('étiquette le jour saisi, même à l’ouest de UTC', () => {

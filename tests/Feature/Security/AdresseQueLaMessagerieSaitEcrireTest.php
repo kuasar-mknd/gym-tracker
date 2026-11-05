@@ -497,7 +497,7 @@ function adresseMessagerieLeFournisseurRend(string $fournisseur, SocialiteUser $
 
 function adresseMessagerieRefusSocial(string $fournisseur): string
 {
-    return 'L\'adresse transmise par '.ucfirst($fournisseur).' n\'est pas une adresse email que nous acceptons, et l\'inscription la refuserait de même. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
+    return 'L\'adresse transmise par '.ucfirst($fournisseur).' n\'est pas une adresse email que nous acceptons, et l\'inscription la refuserait de même. Si tu as déjà un compte, connecte-toi avec son adresse email et ton mot de passe ; sinon, inscris-toi avec une autre adresse.';
 }
 
 /*

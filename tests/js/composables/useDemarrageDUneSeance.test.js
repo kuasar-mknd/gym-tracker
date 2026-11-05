@@ -283,6 +283,9 @@ describe('lancer un modèle', () => {
 
         await uneSeanceArrive('/workouts/9')
 
+        expect(inertia.page.props.flash.error).toBe(
+            "Le modèle « Push A » n'a pas été démarré. Une séance est déjà en cours : termine-la avant d'en commencer une autre.",
+        )
         expect(inertia.page.props.flash.error).toBe(module.messageDuModeleNonDemarre('Push A'))
     })
 
@@ -330,7 +333,26 @@ describe('lancer un modèle', () => {
 
         await uneSeanceArrive('/workouts/9')
 
-        expect(inertia.page.props.flash.error).toBe(module.messageDuModeleNonDemarre('Push A'))
+        // Le message vient de la réponse du serveur, pas de la copie de la page.
+        expect(inertia.page.props.flash.error).toBe(
+            "Le modèle « Push A » n'a pas été démarré. Une séance est déjà en cours.",
+        )
+    })
+
+    it('en ligne, sans message dans le refus du serveur, dit celui de sa copie', async () => {
+        surLaPageDesModeles()
+        const { noterQueLeServeurRepond } = await import('@/composables/useEtatDuReseau')
+        noterQueLeServeurRepond()
+        serveur.reponses.push(() => {
+            throw { response: { status: 409, data: { raison: 'seance-deja-en-cours', seance: { id: 9 } } } }
+        })
+
+        await demarrer(PUSH)
+        await uneSeanceArrive('/workouts/9')
+
+        expect(inertia.page.props.flash.error).toBe(
+            `Le modèle « Push A » n'a pas été démarré. ${module.SEANCE_DEJA_EN_COURS}`,
+        )
     })
 
     it('ne prend pas l’évènement d’un clic pour un modèle', async () => {

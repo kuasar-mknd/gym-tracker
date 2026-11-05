@@ -117,12 +117,44 @@ it('refuse en 409 le démarrage quand une autre séance est en cours', function 
     $reponse = demarrageApi($compte, '9a8b7c6d-2049-4e5f-8a9b-0000000000d4', ['started_at' => '2026-10-19T09:55:00Z']);
 
     $reponse->assertStatus(409)->assertExactJson([
-        'message' => 'Une séance est déjà en cours : terminez-la avant d’en commencer une autre.',
+        'message' => "Une séance est déjà en cours : termine-la avant d'en commencer une autre.",
         'raison' => UneSeanceEstDejaEnCours::RAISON,
         'seance' => ['id' => $enCours->id],
     ]);
 
     expect(Workout::query()->where('user_id', $compte->id)->pluck('id')->all())->toBe([$enCours->id]);
+});
+
+/**
+ * La chaîne qu'un module de resources/js exporte sous ce nom
+ * (`export const NOM = '…'`), telle que le client la lit.
+ */
+function demarrageApiCopieDuClient(string $fichier, string $nom): string
+{
+    $source = (string) file_get_contents(resource_path("js/{$fichier}"));
+
+    expect(preg_match('/export const '.preg_quote($nom, '/').'\s*=\s*([\'"])((?:\\\\.|(?!\1).)*)\1/s', $source, $trouve))
+        ->toBe(1, "{$fichier} n’exporte plus {$nom}");
+
+    return stripslashes($trouve[2] ?? '');
+}
+
+/*
+ * Le message d'une séance déjà en cours n'est déclaré qu'une fois, sur le
+ * serveur (`UneSeanceEstDejaEnCours::MESSAGE`) : le 409 le porte, la page des
+ * modèles et la page qui lance un modèle en ligne le relisent de la réponse.
+ * La page le dit aussi sans réponse du serveur, quand la séance en cours
+ * vient d'elle-même ou de la file (sur une copie, ou le serveur injoignable) :
+ * d'après sa seule copie, `SEANCE_DEJA_EN_COURS`. La raison du refus, que la
+ * file lit, a la sienne (`RAISON_SEANCE_DEJA_EN_COURS`). Chaque copie reste
+ * égale au serveur (#2119) : le message ne change pas selon que la page a
+ * reçu la réponse ou non.
+ */
+it('garde côté client le message et la raison du serveur, à l’identique', function (): void {
+    expect(demarrageApiCopieDuClient('composables/useDemarrageDUneSeance.js', 'SEANCE_DEJA_EN_COURS'))
+        ->toBe(UneSeanceEstDejaEnCours::MESSAGE)
+        ->and(demarrageApiCopieDuClient('Utils/seanceEnAttente.js', 'RAISON_SEANCE_DEJA_EN_COURS'))
+        ->toBe(UneSeanceEstDejaEnCours::RAISON);
 });
 
 /*

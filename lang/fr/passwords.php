@@ -15,9 +15,9 @@ return [
     |
     */
 
-    'reset' => 'Votre mot de passe a été réinitialisé.',
+    'reset' => 'Ton mot de passe a été réinitialisé.',
     'sent' => 'Si un compte existe pour cette adresse, un lien de réinitialisation du mot de passe vient d\'y être envoyé.',
-    'throttled' => 'Veuillez attendre avant de réessayer.',
+    'throttled' => 'Attends un peu avant de réessayer.',
     'token' => 'Ce jeton de réinitialisation du mot de passe n\'est pas valide.',
     'user' => 'Nous ne trouvons aucun utilisateur avec cette adresse email.',
 

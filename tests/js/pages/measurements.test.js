@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, onTestFinished } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 const formPost = vi.fn()
 const routerDelete = vi.fn()
@@ -307,11 +308,11 @@ describe('Measurements/Index add form', () => {
      * calls would hold whatever that helper does, bug included.
      */
     it('opens on the day the user is living, not on the UTC one', async () => {
-        const systemTimeZone = process.env.TZ
-        process.env.TZ = 'America/Los_Angeles'
         // 02:00 UTC on the 13th is still 19:00 on the 12th in Los Angeles.
+        const instant = new Date('2026-08-13T02:00:00Z')
+        onTestFinished(poserLeFuseau('America/Los_Angeles', 420, instant))
         vi.useFakeTimers({ toFake: ['Date'] })
-        vi.setSystemTime(new Date('2026-08-13T02:00:00Z'))
+        vi.setSystemTime(instant)
 
         try {
             const wrapper = await mountPage(MeasurementsIndex, { measurements: MEASUREMENTS })
@@ -319,12 +320,6 @@ describe('Measurements/Index add form', () => {
             expect(wrapper.vm.form.measured_at).toBe('2026-08-12')
         } finally {
             vi.useRealTimers()
-
-            if (systemTimeZone === undefined) {
-                delete process.env.TZ
-            } else {
-                process.env.TZ = systemTimeZone
-            }
         }
     })
 
