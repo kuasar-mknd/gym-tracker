@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\PersonalRecordType;
+use App\Models\PersonalRecord;
 use App\Models\User;
 use App\Services\PersonalRecordService;
 use Illuminate\Database\Migrations\Migration;
@@ -107,23 +107,19 @@ return new class() extends Migration
             return false;
         }
 
-        /** @var array<string, float> $tenus */
-        $tenus = [];
-
-        $lignes = DB::table('personal_records')
-            ->where('user_id', $idUtilisateur)
-            ->where('exercise_id', $idExercice)
-            ->orderBy('id')
-            ->get(['type', 'value']);
-
-        foreach ($lignes as $ligne) {
-            $type = is_string($ligne->type ?? null) ? $ligne->type : '';
-
-            if (PersonalRecordType::tryFrom($type) === null) {
-                return false;
-            }
-
-            $tenus[$type] = is_numeric($ligne->value ?? null) ? (float) $ligne->value : 0.0;
+        try {
+            /** @var array<string, float> $tenus */
+            $tenus = PersonalRecord::query()
+                ->where('user_id', $idUtilisateur)
+                ->where('exercise_id', $idExercice)
+                ->orderBy('id')
+                ->get()
+                ->mapWithKeys(fn (PersonalRecord $record): array => [$record->type->value => (float) $record->value])
+                ->all();
+        } catch (ValueError) {
+            // Le modèle ne lit pas le type d'un de ces records : la
+            // reconstruction, qui les lit par lui, lèverait de même.
+            return false;
         }
 
         foreach ($attendus as $type => $attendu) {
