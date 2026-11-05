@@ -220,7 +220,7 @@ const getProgressPercent = (habit) => {
                 icon="✅"
                 color="green"
                 title="Aucune habitude"
-                description="Commencez par créer une habitude à suivre."
+                description="Commence par créer une habitude à suivre."
                 action-label="Créer ma première habitude"
                 action-id="empty-state-habit"
                 @action="openAddForm"

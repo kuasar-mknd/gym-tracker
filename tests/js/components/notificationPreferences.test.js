@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { jsRoot } from '../conventions/sourceFiles'
+import { VOUVOIEMENT } from '../conventions/vouvoiement'
 
 const page = {
     props: {
@@ -90,11 +91,11 @@ beforeEach(() => {
 /*
  * La section passait du tutoiement (« Choisis comment tu souhaites… ») au
  * vouvoiement (« Recevez des alertes… sur votre appareil », « quand vous
- * battez un record »), quand `ConfirmDialog` fixe le tutoiement (#1980).
+ * battez un record »), quand `ConfirmDialog` fixe le tutoiement (#1980). Le
+ * motif est celui de la convention qui lit tout resources/js
+ * (`conventions/tutoiement.test.js`, #2119) ; ce cas lit en plus le rendu.
  */
 describe('UpdateNotificationPreferencesForm — le ton', () => {
-    const VOUVOIEMENT = /\b(vous|votre|vos|recevez|activez|choisissez|battez|êtes|avez)\b/i
-
     it('tutoie dans tout ce qu’elle affiche', () => {
         const wrapper = mountForm()
 

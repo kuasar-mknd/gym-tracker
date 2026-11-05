@@ -182,7 +182,7 @@
                         </div>
                         <h3 class="titre-carte">Minuteur d'Intervalle</h3>
                         <p class="text-text-muted text-sm">
-                            Créez et lancez vos propres minuteurs pour vos entraînements HIIT ou Tabata.
+                            Crée et lance tes propres minuteurs pour tes entraînements HIIT ou Tabata.
                         </p>
                     </div>
                 </GlassCard>

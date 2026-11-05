@@ -225,7 +225,7 @@ it('envoie depuis la file un courriel chiffré en attente, dans la langue de la 
     $message = $envoi->getOriginalMessage();
     assert($message instanceof Email);
 
-    expect($message->getSubject())->toBe('Réinitialisez votre mot de passe')
+    expect($message->getSubject())->toBe('Choisis un nouveau mot de passe')
         ->and($message->getTo()[0]->getAddress())->toBe(motDePasseOublieAdresse());
 
     $corps = html_entity_decode((string) $message->getHtmlBody(), ENT_QUOTES | ENT_HTML5);

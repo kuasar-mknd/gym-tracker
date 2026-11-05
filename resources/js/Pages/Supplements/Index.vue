@@ -200,7 +200,7 @@ const formatDate = (dateString) => {
                 icon="💊"
                 color="pink"
                 title="Aucun complément"
-                description="Ajoutez vos compléments pour suivre votre stock et consommation."
+                description="Ajoute tes compléments pour suivre ton stock et ta consommation."
                 action-label="Commencer"
                 action-id="empty-state-supplement"
                 @action="showAddForm = true"

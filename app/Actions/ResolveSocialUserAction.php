@@ -80,7 +80,7 @@ final readonly class ResolveSocialUserAction
         $adresse = $utilisateurSocial->getEmail();
 
         if (! is_string($adresse) || $adresse === '') {
-            throw new SocialAuthException(ucfirst($fournisseur).' ne nous a transmis aucune adresse email. Connectez-vous avec votre email et votre mot de passe, ou inscrivez-vous.');
+            throw new SocialAuthException(ucfirst($fournisseur).' ne nous a transmis aucune adresse email. Connecte-toi avec ton email et ton mot de passe, ou inscris-toi.');
         }
 
         $comptesDeLIdentite = $this->comptesDeLIdentite($fournisseur, $identifiant);
@@ -232,7 +232,7 @@ final readonly class ResolveSocialUserAction
         }
 
         if (! $adresseVerifiee) {
-            throw new SocialAuthException('Votre email n\'est pas vérifié par '.ucfirst($fournisseur));
+            throw new SocialAuthException('Ton email n\'est pas vérifié par '.ucfirst($fournisseur));
         }
 
         // Un compte que l'inscription a ouvert sur cette adresse, jamais
@@ -410,7 +410,7 @@ final readonly class ResolveSocialUserAction
      */
     private function refusDAdresseProche(string $fournisseur): string
     {
-        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la vôtre. S\'il est à vous, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : un compte existe déjà sous une adresse que nous ne distinguons pas de la tienne. S\'il est à toi, connecte-toi avec son adresse email et ton mot de passe ; sinon, inscris-toi avec une autre adresse.';
     }
 
     /**
@@ -423,7 +423,7 @@ final readonly class ResolveSocialUserAction
      */
     private function refusDAdresseHorsAscii(string $fournisseur): string
     {
-        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une adresse en caractères ASCII, sans accent.';
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' ne peut pas être associée automatiquement à un compte : la connexion avec '.ucfirst($fournisseur).' n\'accepte que les adresses en caractères ASCII. Si tu as déjà un compte, connecte-toi avec son adresse email et ton mot de passe ; sinon, inscris-toi avec une adresse en caractères ASCII, sans accent.';
     }
 
     /**
@@ -453,7 +453,7 @@ final readonly class ResolveSocialUserAction
      */
     private function refusDAdresseQueLInscriptionRefuse(string $fournisseur): string
     {
-        return 'L\'adresse transmise par '.ucfirst($fournisseur).' n\'est pas une adresse email que nous acceptons, et l\'inscription la refuserait de même. Si vous avez déjà un compte, connectez-vous avec son adresse email et votre mot de passe ; sinon, inscrivez-vous avec une autre adresse.';
+        return 'L\'adresse transmise par '.ucfirst($fournisseur).' n\'est pas une adresse email que nous acceptons, et l\'inscription la refuserait de même. Si tu as déjà un compte, connecte-toi avec son adresse email et ton mot de passe ; sinon, inscris-toi avec une autre adresse.';
     }
 
     /**
@@ -463,6 +463,6 @@ final readonly class ResolveSocialUserAction
      */
     private function versLeMotDePasse(string $quelleAdresse): string
     {
-        return 'Connectez-vous avec '.$quelleAdresse.' et votre mot de passe. Si vous n\'en avez pas, « Mot de passe oublié ? » vous permet d\'en choisir un.';
+        return 'Connecte-toi avec '.$quelleAdresse.' et ton mot de passe. Si tu n\'en as pas, « Mot de passe oublié ? » te permet d\'en choisir un.';
     }
 }
