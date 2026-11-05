@@ -22,7 +22,11 @@ use Tests\Support\Vouvoiement;
  * - chaque chaîne littérale du PHP de `app/` et de `database/seeders` (le
  *   catalogue des badges), commentaires exclus par le tokenizer ;
  * - chaque vue de `resources/views`, commentaires Blade ôtés (pages
- *   d'erreur, gabarits des courriels).
+ *   d'erreur, gabarits des courriels) ;
+ * - chaque texte du manifeste de l'application (`public/manifest.webmanifest`,
+ *   versionné et servi tel quel), que le navigateur ou le système montre
+ *   quand on installe l'application : sa description disait encore
+ *   « Suivez vos entraînements et progressez efficacement. ».
  *
  * `lang/en` n'est lu que pour une clef que le français n'a pas, et il est
  * anglais. Un fichier de `lang/` qu'un paquet fournirait sans que
@@ -136,6 +140,14 @@ function tutoiementTextesDuServeur(): array
         }
     }
 
+    $manifeste = json_decode((string) file_get_contents(public_path('manifest.webmanifest')), true, flags: JSON_THROW_ON_ERROR);
+    expect($manifeste)->toBeArray();
+    assert(is_array($manifeste));
+
+    foreach (tutoiementValeurs($manifeste) as $champ => $valeur) {
+        $textes["public/manifest.webmanifest « {$champ} »"] = $valeur;
+    }
+
     foreach (Finder::create()->files()->in(resource_path('views'))->name('*.blade.php') as $fichier) {
         $chemin = tutoiementCheminRelatif($fichier->getPathname());
 
@@ -171,7 +183,7 @@ it('tutoie dans chaque texte que le serveur peut montrer', function (): void {
     expect($fautes)->toBe([], 'tutoyer, comme le reste de l’application (#1980) ; un texte qui s’adresse à un autre que la personne qui s’entraîne entre dans tutoiementExceptions(), avec sa raison');
 });
 
-it('lit les traductions, le code et les vues que la personne voit', function (): void {
+it('lit les traductions, le code, les vues et le manifeste que la personne voit', function (): void {
     $textes = tutoiementTextesDuServeur();
     $endroits = implode("\n", array_keys($textes));
 
@@ -187,6 +199,9 @@ it('lit les traductions, le code et les vues que la personne voit', function ():
             'database/seeders/AchievementSeeder.php:',
             'resources/views/errors/404.blade.php:',
             'resources/views/vendor/notifications/email.blade.php:',
+            'public/manifest.webmanifest « name »',
+            'public/manifest.webmanifest « short_name »',
+            'public/manifest.webmanifest « description »',
         )
         ->and($endroits)->not->toContain('app/Filament/', 'resources/views/filament/');
 });
