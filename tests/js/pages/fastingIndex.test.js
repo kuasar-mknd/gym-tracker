@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 
 import { layoutStub } from './pageStubs'
 import { nomAccessible } from '../utils/nomAccessible'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 import { CIBLE, cibleDuRendu } from '../conventions/ciblesTactiles'
 
 /**
@@ -455,37 +456,15 @@ describe('Fasting — le compteur quand le jeûne démarre en cours de route', (
  * affichait dès le départ cinq heures écoulées. Le champ reste à l'heure de
  * l'appareil ; ce qui part porte son décalage et désigne l'instant de l'appareil.
  *
- * Le fuseau se pose par `process.env.TZ`, que Node relit dans un processus (le
- * pool `forks`, celui de Vitest par défaut et de la CI), mais qu'il ignore
- * dans un worker de `--pool=threads`, sans erreur : chaque cas vérifie d'abord
- * que le fuseau est en vigueur, sans quoi il passerait sans rien prouver.
+ * Le fuseau se pose par `poserLeFuseau` (`tests/js/utils/fuseauDeLAppareil.js`),
+ * qui vérifie qu'il est en vigueur à l'instant du cas : sous `--pool=threads`,
+ * où Node l'ignore sans erreur, chaque cas tombe sur son nom au lieu de passer
+ * sans rien prouver.
  *
  * `tests/Feature/Tools/JeuneALInstantDeLAppareilTest.php` envoie au serveur ces
  * mêmes valeurs, et vérifie qu'il les relit au même instant et sert un jeûne
  * dont l'écoulé est nul au départ.
  */
-const fuseauDOrigine = process.env.TZ
-
-/**
- * @param {string} fuseau
- * @param {number} decalageEnMinutes ce que `getTimezoneOffset()` rend à `instant` dans ce fuseau
- * @param {Date} instant l'instant du cas, `NOW` par défaut
- */
-const poserLeFuseau = (fuseau, decalageEnMinutes, instant = NOW) => {
-    process.env.TZ = fuseau
-
-    expect(instant.getTimezoneOffset(), `le fuseau ${fuseau} doit être en vigueur`).toBe(decalageEnMinutes)
-}
-
-const rendreLeFuseau = () => {
-    // `process.env.TZ = undefined` écrirait la chaîne « undefined », que Node
-    // lit comme un fuseau inconnu, donc UTC, pour la suite du processus.
-    if (fuseauDOrigine === undefined) {
-        delete process.env.TZ
-    } else {
-        process.env.TZ = fuseauDOrigine
-    }
-}
 
 /** Seize heures après `NOW` : minuit à Toronto, 05:00 à Paris. */
 const FIN = new Date('2026-03-11T04:00:00Z')
@@ -517,9 +496,7 @@ const envoyerLaFin = async (wrapper) => {
 
 describe('Fasting — un appareil à Toronto, hors du fuseau de l’application (#2111)', () => {
     // 12:00Z le 10 mars 2026 : 08:00 à Toronto (UTC-4 depuis le 8 mars), 13:00 à Paris (UTC+1).
-    beforeEach(() => poserLeFuseau('America/Toronto', 240))
-
-    afterEach(rendreLeFuseau)
+    beforeEach(() => poserLeFuseau('America/Toronto', 240, NOW))
 
     it('garde dans le champ l’heure de l’appareil, et envoie le début à son instant, avec son décalage', async () => {
         const wrapper = await mountPage({})
@@ -570,9 +547,7 @@ describe('Fasting — un appareil à Toronto, hors du fuseau de l’application 
 })
 
 describe('Fasting — un appareil à Paris, dans le fuseau de l’application (#2111)', () => {
-    beforeEach(() => poserLeFuseau('Europe/Paris', -60))
-
-    afterEach(rendreLeFuseau)
+    beforeEach(() => poserLeFuseau('Europe/Paris', -60, NOW))
 
     it('envoie le même instant qu’avant, désormais avec son décalage', async () => {
         const debutPage = await mountPage({})
@@ -604,10 +579,9 @@ describe('Fasting — un appareil à Toronto pendant l’heure que le passage à
 
     beforeEach(() => {
         vi.setSystemTime(SECONDE_OCCURRENCE)
-        poserLeFuseau('America/Toronto', 300, SECONDE_OCCURRENCE)
-    })
 
-    afterEach(rendreLeFuseau)
+        return poserLeFuseau('America/Toronto', 300, SECONDE_OCCURRENCE)
+    })
 
     it('envoie le début prérempli à l’instant du geste, que l’heure murale du champ ne distingue pas de l’heure d’avant', async () => {
         const wrapper = await mountPage({})

@@ -55,6 +55,7 @@ import MacroCalculator from '@/Pages/Tools/MacroCalculator.vue'
 import WaterTracker from '@/Pages/Tools/WaterTracker.vue'
 import { passesSlot } from './pageStubs'
 import { simulerUnSystemeEnAnglais } from '../utils/systemeEnAnglais'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 /**
  * La question est posée par un dialogue de l'application, plus par `confirm()`.
@@ -123,17 +124,16 @@ const pressed = (wrapper, text) =>
  * 15 juin dans tous les fuseaux, et l'heure de l'eau se lit à Paris.
  */
 describe('les dates des trois listes, sur un appareil réglé en anglais', () => {
-    const fuseauDOrigine = process.env.TZ
     let rendre
 
     beforeEach(() => {
         rendre = simulerUnSystemeEnAnglais()
-        process.env.TZ = 'Europe/Paris'
     })
+
+    beforeEach(() => poserLeFuseau('Europe/Paris', -120, new Date(entree.created_at)))
 
     afterEach(() => {
         rendre()
-        process.env.TZ = fuseauDOrigine
     })
 
     const entree = { id: 1, created_at: '2026-06-15T12:00:00Z' }

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { chartDataOf, chartOptionsOf, tooltipLabelOf } from './chartRecorder.js'
+import { poserLeFuseau } from '../utils/fuseauDeLAppareil'
 
 vi.mock('vue-chartjs', async () => (await import('./chartRecorder.js')).chartRecorders())
 
@@ -8,25 +9,13 @@ const HabitConsistencyChart = (await import('@/Components/Stats/HabitConsistency
 
 const mountChart = (data) => mount(HabitConsistencyChart, { props: { data } })
 
-const originalTimeZone = process.env.TZ
-
-beforeAll(() => {
-    /*
-     * Behind UTC on purpose. `new Date('2026-07-31')` is specified to parse as
-     * midnight *UTC*, so anywhere west of Greenwich it reads back as the 30th —
-     * which is the whole reason parseCalendarDate exists. Run in UTC, this
-     * suite could not tell the two parsings apart.
-     */
-    process.env.TZ = 'America/New_York'
-})
-
-afterAll(() => {
-    if (originalTimeZone === undefined) {
-        delete process.env.TZ
-    } else {
-        process.env.TZ = originalTimeZone
-    }
-})
+/*
+ * Behind UTC on purpose. `new Date('2026-07-31')` is specified to parse as
+ * midnight *UTC*, so anywhere west of Greenwich it reads back as the 30th —
+ * which is the whole reason parseCalendarDate exists. Run in UTC, this suite
+ * could not tell the two parsings apart.
+ */
+beforeAll(() => poserLeFuseau('America/New_York', 240, new Date('2026-07-31T12:00:00Z')))
 
 describe('HabitConsistencyChart', () => {
     it('étiquette le jour saisi, pas la veille', () => {
