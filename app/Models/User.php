@@ -326,8 +326,11 @@ final class User extends Authenticatable implements MustVerifyEmail
      * hors ASCII sous une partie locale en ASCII, que Chromium envoie sous sa
      * propre conversion : « strasse » d'un « straße », un ASCII ordinaire
      * d'une lettre pleine chasse, sous lesquels la collation retrouverait
-     * peut-être le compte (mesuré). Dans le doute, il tait un lien qui part
-     * plutôt que d'en promettre un qui ne part pas. D'une partie locale qui
+     * peut-être le compte (mesuré), ou le Punycode d'un « ς », que la forme
+     * canonique laisse aussi tel quel et sous lequel la base ne le retrouve
+     * pas (`AdresseQueLaMessagerieSaitEcrireTest` en tient le témoin). Dans
+     * le doute, il tait un lien qui part plutôt que d'en promettre un qui ne
+     * part pas. D'une partie locale qui
      * n'est pas en ASCII, Chromium envoie l'adresse telle qu'elle est tapée,
      * domaine compris, et la demande en convertit le domaine.
      *
