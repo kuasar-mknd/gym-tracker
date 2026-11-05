@@ -499,9 +499,10 @@ function overridesNpmRelusPerimes(array $overrides, array $installes, array $rel
 
 /**
  * Chaque copie installée que vise un avis tenu. Celle d'un avis sans
- * correctif publié passe sous ses consommateurs relus, et sous eux seuls ; un
- * consommateur relu qui ne charge plus de copie vulnérable est nommé aussi,
- * son admission n'ayant plus lieu d'être.
+ * correctif publié passe sous ses consommateurs relus, et sous eux seuls :
+ * une copie que plus aucun paquet ne charge ne passe jamais, même sous un avis
+ * qui en admet. Un consommateur relu qui ne charge plus de copie vulnérable
+ * est nommé aussi, son admission n'ayant plus lieu d'être.
  *
  * @param  array<string, array<mixed>>  $installes  les entrées `packages` du verrou
  * @param  array<string, array{avis: string, vulnerable: string, admisSous: list<string>}>  $avis
@@ -802,6 +803,19 @@ it('n’admet une copie vulnérable sans correctif publié que sous ses consomma
         ->toBe(['deepmerge 4.3.1 (node_modules/eslint/node_modules/deepmerge) tombe sous GHSA-2 (>=4.2.0 <=4.3.1), chargé par eslint@10.13.0']);
 
     unset($installes['node_modules/eslint/node_modules/deepmerge'], $installes['node_modules/eslint']['dependencies']['deepmerge']);
+
+    expect(avisNpmCopiesVulnerables($installes, $avis))->toBe([]);
+
+    $avis['glob'] = ['avis' => 'GHSA-3', 'vulnerable' => '>=9.0.0 <=14.0.1', 'admisSous' => []];
+    $installes['node_modules/glob'] = ['version' => '13.0.6'];
+    $installes['node_modules/workbox-build/node_modules/deepmerge'] = ['version' => '4.3.1'];
+
+    expect(avisNpmCopiesVulnerables($installes, $avis))->toBe([
+        'glob 13.0.6 (node_modules/glob) tombe sous GHSA-3 (>=9.0.0 <=14.0.1), chargé par aucun paquet',
+        'deepmerge 4.3.1 (node_modules/workbox-build/node_modules/deepmerge) tombe sous GHSA-2 (>=4.2.0 <=4.3.1), chargé par aucun paquet',
+    ]);
+
+    unset($installes['node_modules/glob'], $installes['node_modules/workbox-build/node_modules/deepmerge']);
     $installes['node_modules/deepmerge']['version'] = '4.3.2';
 
     expect(avisNpmCopiesVulnerables($installes, $avis))
