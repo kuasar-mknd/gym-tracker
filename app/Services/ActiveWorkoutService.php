@@ -46,12 +46,15 @@ final class ActiveWorkoutService
     /**
      * La séance porte sa clé d'idempotence (#2049) : de quoi reconnaître,
      * dans le bandeau de la séance en cours, une séance démarrée sans
-     * réponse dont la création attend encore dans la file.
+     * réponse dont la création attend encore dans la file. Le début vient
+     * avec son décalage (#2159) : sans lui, le bandeau d'une séance commencée
+     * dans la première occurrence de l'heure que le passage à l'heure d'hiver
+     * répète comptait d'abord un écoulé négatif.
      */
     private static function chercher(User $user): ?Workout
     {
         return $user->workouts()
-            ->select('id', 'name', 'started_at', 'idempotency_key')
+            ->select('id', 'name', 'started_at', 'started_at_offset', 'idempotency_key')
             ->whereNull('ended_at')
             ->withCount('workoutLines')
             ->latest('started_at')
@@ -91,10 +94,11 @@ final class ActiveWorkoutService
     /**
      * Versionnée par la forme de ce qu'elle garde : une entrée de deux heures
      * écrite avant que la séance porte sa clé (#2049) servirait sinon
-     * l'ancienne forme, sans `idempotency_key`, jusqu'à son expiration.
+     * l'ancienne forme, sans `idempotency_key`, jusqu'à son expiration ; de
+     * même sans le décalage du début (#2159).
      */
     private static function cle(int $idUtilisateur): string
     {
-        return "user_active_workout_v2_{$idUtilisateur}";
+        return "user_active_workout_v3_{$idUtilisateur}";
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Fast;
 use App\Models\User;
 use App\Models\Workout;
+use App\Services\Stats\WorkoutStatsService;
 use App\Support\HeureDeLAppareil;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -116,6 +117,19 @@ function heureRepeteeJeuneServi(User $compte, string $chemin): mixed
         });
 
     return $servi;
+}
+
+/**
+ * Une séance faite, commencée dans la première occurrence et terminée
+ * quarante minutes plus tard, sans passer par les écouteurs.
+ */
+function heureRepeteeSeanceFaite(User $compte): Workout
+{
+    return Workout::withoutEvents(fn (): Workout => Workout::factory()->create([
+        'user_id' => $compte->id,
+        'started_at' => heureRepeteeInstant('2026-10-25T00:30:00Z'),
+        'ended_at' => heureRepeteeInstant('2026-10-25T01:10:00Z'),
+    ]));
 }
 
 describe('une séance', function (): void {
@@ -271,5 +285,53 @@ describe('un jeûne', function (): void {
 
         expect(heureRepeteeJeuneServi($compte, 'history.data.0.start_time'))->toBe('2026-10-25T01:30:00.000000Z')
             ->and(heureRepeteeJeuneServi($compte, 'history.data.0.end_time'))->toBe('2026-10-25T17:30:00.000000Z');
+    });
+});
+
+describe('ce que les pages servent d’une séance', function (): void {
+    it('compte quarante minutes dans l’historique des durées', function (): void {
+        $compte = User::factory()->create();
+        heureRepeteeSeanceFaite($compte);
+
+        $historique = app(WorkoutStatsService::class)->getDurationHistory($compte);
+
+        expect($historique)->toHaveCount(1)
+            ->and($historique[0]->duration)->toBe(40);
+    });
+
+    it('range la séance entre trente et soixante minutes dans la répartition des durées', function (): void {
+        $compte = User::factory()->create();
+        heureRepeteeSeanceFaite($compte);
+        heureRepeteeHorlogeA('2026-10-25T09:00:00Z');
+
+        $durees = app(WorkoutStatsService::class)->repartitionsDesSeances($compte)['duration'];
+
+        expect(array_map(fn (\App\DTOs\Stats\DistributionStat $tranche): int => $tranche->count, $durees))->toBe([0, 1, 0, 0]);
+    });
+
+    it('place la séance du calendrier à l’heure de son début', function (): void {
+        $compte = User::factory()->create();
+        heureRepeteeSeanceFaite($compte);
+        heureRepeteeHorlogeA('2026-10-25T09:00:00Z');
+
+        actingAs($compte)->get(route('calendar.index', ['year' => 2026, 'month' => 10]))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('workouts.0.started_at', '2026-10-25T02:30:00+02:00'));
+    });
+
+    it('sert le début de la séance en cours à son instant, dans le bandeau de chaque page', function (): void {
+        $compte = User::factory()->create();
+        Workout::factory()->create([
+            'user_id' => $compte->id,
+            'started_at' => heureRepeteeInstant('2026-10-25T00:30:00Z'),
+            'ended_at' => null,
+        ]);
+        heureRepeteeHorlogeA('2026-10-25T01:10:00Z');
+
+        actingAs($compte)->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+                ->where('auth.user.active_workout.started_at', '2026-10-25T00:30:00.000000Z'));
     });
 });
