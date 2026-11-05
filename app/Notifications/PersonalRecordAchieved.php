@@ -30,8 +30,9 @@ use NotificationChannels\WebPush\WebPushMessage;
  * record, la reconstruction réécrit la même ligne à la valeur d'avant, et
  * l'avis, qui ne portait que la ligne, partait avec elle : « … avec 90 kg »
  * pour un record de 90 kg déjà annoncé. Il retient donc la série qui a établi
- * le record et la valeur que le record portait avant elle, et relit le record
- * à son départ (`shouldSend()`).
+ * le record, la valeur qu'elle y a écrite et celle que le record portait avant
+ * elle, et juge le record tel que la file le relit à son départ
+ * (`shouldSend()`).
  */
 #[DeleteWhenMissingModels]
 final class PersonalRecordAchieved extends Notification implements ShouldQueue
@@ -48,13 +49,20 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
      * `PersonalRecordService::update()` vient d'y écrire ; null pour un record
      * sans série.
      *
-     * Un avis mis en file avant #2155 ne porte ni elle ni `$valeurDAvant`, et
-     * la file le restaure sans passer par le constructeur : toutes deux restent
-     * alors non initialisées. Elles ne se lisent donc que par `isset()`
-     * (`shouldSend()`), qui les tient pour absentes sans lever ; une lecture
-     * directe ferait échouer l'envoi d'un tel avis.
+     * Un avis mis en file avant #2155 ne porte ni elle, ni `$valeurEcrite`, ni
+     * `$valeurDAvant`, et la file le restaure sans passer par le constructeur :
+     * toutes trois restent alors non initialisées. Elles ne se lisent donc que
+     * par `isset()` (`shouldSend()`), qui les tient pour absentes sans lever ;
+     * une lecture directe ferait échouer l'envoi d'un tel avis.
      */
     private ?int $serie;
+
+    /**
+     * La valeur que la série vient d'écrire sur le record, quand l'avis a été
+     * construit. Une autre série qui tient le record plus haut l'a battue, et
+     * sa propre synchronisation l'annonce.
+     */
+    private float $valeurEcrite;
 
     /**
      * @param  \App\Models\PersonalRecord  $personalRecord  Le record que la série vient d'établir, tel que la synchronisation l'a écrit.
@@ -63,23 +71,39 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
     public function __construct(public PersonalRecord $personalRecord, private ?float $valeurDAvant = null)
     {
         $this->serie = $personalRecord->set_id;
+        $this->valeurEcrite = (float) $personalRecord->value;
     }
 
     /**
-     * Relit le record au départ de l'avis, et ne le laisse partir que s'il dit
-     * encore vrai (#2155).
+     * Ne laisse partir l'avis que si le record, tel qu'il est à son départ,
+     * reste à annoncer (#2155).
      *
      * Laravel pose la question au moment de l'envoi, une fois par canal : dans
      * le worker pour un avis en file (`NotificationSender::shouldSendNotification()`,
      * atteint par `SendQueuedNotifications::handle()`), et non quand il est mis
-     * en file. L'avis ne part pas quand le record n'est plus tenu par la série
-     * qui l'a établi (une autre l'a battu, ou la série a été supprimée, ou
-     * corrigée sous un record qu'une autre tient), ni quand il ne dépasse plus
-     * la valeur qu'il portait avant elle : la personne tenait déjà ce record,
-     * au même exercice, au même type, à cette valeur ou plus haut. Quand il
-     * part, le message dit la valeur que le record porte à l'envoi : une série
-     * corrigée qui garde le record (110 kg corrigés en 100, au-dessus des 90
-     * d'avant) l'annonce à 100 kg.
+     * en file. Le record est alors celui que la file vient de relire en base
+     * pour lancer le travail (`SerializesModels`), un par canal ; un record
+     * disparu a déjà fait supprimer le travail (`#[DeleteWhenMissingModels]`).
+     *
+     * L'avis ne part pas quand une autre série tient le record plus haut que
+     * la valeur que celle-ci y avait écrite : elle l'a battue, et sa propre
+     * synchronisation l'annonce (deux séries validées avant le passage du
+     * worker). Il ne part pas non plus quand le record ne dépasse plus la
+     * valeur qu'il portait avant la série : la personne tenait déjà ce record,
+     * au même exercice, au même type, à cette valeur ou plus haut (la série
+     * supprimée ou corrigée sous l'ancien record). Sinon, il part, et le
+     * message dit la valeur que le record porte à l'envoi : une série corrigée
+     * qui garde le record (110 kg corrigés en 100, au-dessus des 90 d'avant)
+     * l'annonce à 100 kg. De même quand une série validée après elle, sans la
+     * battre, reprend le record parce qu'elle a été supprimée ou corrigée sous
+     * elle : cette série n'a rien battu à sa synchronisation, et le record
+     * qu'elle tient, au-dessus de celui d'avant, n'est annoncé que par cet avis.
+     *
+     * L'avis ne sait pas comment l'autre série a pris le record. Quand une
+     * reconstruction le lui donne avant sa propre synchronisation, plus haut
+     * que la valeur écrite ici, celle-ci ne trouve plus rien à battre et ce
+     * record n'est annoncé par personne : un défaut de la reconstruction, qui
+     * le laisse de même sans annonce quand aucun avis n'attend.
      *
      * Un avis sans série ni valeur d'avant (mis en file avant #2155, ou construit
      * sur un record sans série) n'est jugé que sur l'existence du record, comme
@@ -87,25 +111,13 @@ final class PersonalRecordAchieved extends Notification implements ShouldQueue
      */
     public function shouldSend(object $_notifiable, string $_channel): bool
     {
-        $record = $this->personalRecord->fresh();
+        $valeur = (float) $this->personalRecord->value;
 
-        if ($record === null) {
+        if (isset($this->serie, $this->valeurEcrite) && $this->personalRecord->set_id !== $this->serie && $valeur > $this->valeurEcrite) {
             return false;
         }
 
-        if (isset($this->serie) && $record->set_id !== $this->serie) {
-            return false;
-        }
-
-        if (isset($this->valeurDAvant) && (float) $record->value <= $this->valeurDAvant) {
-            return false;
-        }
-
-        // Chaque canal reçoit sa propre copie de l'avis : le message se compose
-        // sur ce que le record porte maintenant.
-        $this->personalRecord = $record;
-
-        return true;
+        return ! isset($this->valeurDAvant) || $valeur > $this->valeurDAvant;
     }
 
     /**

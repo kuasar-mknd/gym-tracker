@@ -34,10 +34,12 @@ use function Pest\Laravel\actingAs;
  * notifications et en push. Deux séries validées avant le passage du worker
  * donnaient de même six annonces de la seconde, et aucune de la première.
  *
- * L'annonce retient désormais la série qui a établi le record et la valeur que
- * le record de ce type portait avant elle, et ne part que si, relu à son départ,
- * le record est encore tenu par cette série et dépasse toujours cette valeur. Le
- * message dit la valeur que le record porte alors.
+ * L'annonce retient désormais la série qui a établi le record, la valeur qu'elle
+ * y a écrite et celle que le record de ce type portait avant elle. Relu à son
+ * départ, le record ne s'annonce pas quand une autre série le tient plus haut
+ * que cette valeur écrite (elle l'a battue, et s'annonce elle-même), ni quand il
+ * ne dépasse plus la valeur d'avant. Sinon le message dit la valeur qu'il porte
+ * alors, y compris quand une série validée après, sans la battre, l'a repris.
  *
  * Les cas jouent le chemin de production : file `database`, synchronisation des
  * records mise en file par `Set::saved` (`annonceRelueCheminDeProduction()`), et
@@ -293,10 +295,10 @@ function annonceRelueMessagesEnBase(User $user): array
 
 /**
  * La charge d'une annonce telle que l'écrivait la version d'avant #2155 : la
- * même, sans la série ni la valeur d'avant que l'avis retient désormais. Les
- * deux propriétés, privées (leur nom sérialisé est précédé de celui de la
- * classe, entre deux octets nuls), sortent de l'avis sérialisé, dont le compte
- * de propriétés baisse d'autant.
+ * même, sans la série, la valeur écrite ni la valeur d'avant que l'avis
+ * retient désormais. Les trois propriétés, privées (leur nom sérialisé est
+ * précédé de celui de la classe, entre deux octets nuls), sortent de l'avis
+ * sérialisé, dont le compte de propriétés baisse d'autant.
  */
 function annonceRelueChargeDAvant(string $charge): string
 {
@@ -305,13 +307,13 @@ function annonceRelueChargeDAvant(string $charge): string
 
     $retirees = 0;
     $commande = preg_replace(
-        '/s:\d+:"\x00[^\x00"]+\x00serie";(?:i:\d+|N);|s:\d+:"\x00[^\x00"]+\x00valeurDAvant";(?:d:[^;]+|N);/',
+        '/s:\d+:"\x00[^\x00"]+\x00serie";(?:i:\d+|N);|s:\d+:"\x00[^\x00"]+\x00(?:valeurEcrite|valeurDAvant)";(?:d:[^;]+|N);/',
         '',
         $decodee['data']['command'],
         -1,
         $retirees,
     );
-    assert(is_string($commande) && $retirees === 2);
+    assert(is_string($commande) && $retirees === 3);
 
     $entete = 'O:'.strlen(PersonalRecordAchieved::class).':"'.PersonalRecordAchieved::class.'":';
     $commande = preg_replace_callback(
@@ -366,6 +368,7 @@ it('n’annonce une série retouchée avant le départ de ses annonces que si el
         'supprimée' => annonceRelueSupprimer($user, $serie),
         'corrigée à 10 kg' => annonceRelueCorriger($user, $serie, 10),
         'corrigée à 100 kg' => annonceRelueCorriger($user, $serie, 100),
+        'corrigée à 120 kg' => annonceRelueCorriger($user, $serie, 120),
         default => throw new LogicException('Retouche inconnue : '.$retouche),
     };
 
@@ -384,6 +387,49 @@ it('n’annonce une série retouchée avant le départ de ses annonces que si el
     'série corrigée sous l’ancien record' => ['corrigée à 10 kg', null],
     // Elle garde le record : ses annonces partent, avec la valeur corrigée.
     'série corrigée au-dessus de l’ancien record' => ['corrigée à 100 kg', '100'],
+    // Elle le garde aussi, au-dessus de ce qu'elle avait écrit : aucune autre
+    // série ne l'a battue.
+    'série corrigée au-dessus de sa propre valeur' => ['corrigée à 120 kg', '120'],
+]);
+
+it('annonce le record qu’une série validée après elle reprend sans l’avoir battue, quand elle est supprimée ou corrigée avant le départ de ses annonces, sur le chemin de production', function (float $poidsDeLaSerie, float $poidsDeLaSuivante, string $retouche): void {
+    [$user, $ligne] = annonceRelueCompte();
+
+    // Le record de 90 kg, établi et annoncé dans la requête (file synchrone).
+    annonceRelueValider($user, $ligne, 90);
+    annonceRelueCheminDeProduction();
+    $envois = annonceRelueSuivreLesEnvois();
+
+    // La série bat les trois records ; ses annonces attendent. La suivante, à
+    // 100 kg, ne la bat pas : sa synchronisation attend derrière ces annonces,
+    // et n'aura rien à annoncer.
+    $serie = annonceRelueValider($user, $ligne, $poidsDeLaSerie);
+    annonceRelueTraiterLeSuivant();
+    $suivante = annonceRelueValider($user, $ligne, $poidsDeLaSuivante);
+
+    expect(annonceRelueContenuDeLaFile())->toBe([...annonceRelueFileApresLaSynchronisation(), SyncPersonalRecord::class]);
+
+    match ($retouche) {
+        'supprimée' => annonceRelueSupprimer($user, $serie),
+        'corrigée à 95 kg' => annonceRelueCorriger($user, $serie, 95),
+        default => throw new LogicException('Retouche inconnue : '.$retouche),
+    };
+
+    // La suivante tient désormais les trois records, à 100 kg, au-dessus des
+    // 90 kg annoncés : un vrai record, que seules les annonces de la série
+    // peuvent encore dire.
+    expect(PersonalRecord::query()->where('user_id', $user->id)->where('set_id', $suivante->id)->where('value', 100)->count())->toBe(3);
+
+    annonceRelueViderLaFile();
+
+    expect(annonceRelueTravauxEnEchec())->toBe([])
+        ->and(DB::table('jobs')->count())->toBe(0)
+        ->and($envois())->toBe(annonceRelueEnvoisDe('100'))
+        ->and(annonceRelueMessagesEnBase($user))->toBe(annonceRelueTrier([...annonceRelueMessages('90'), ...annonceRelueMessages('100')]));
+})->with([
+    'à égalité, la série supprimée' => [100.0, 100.0, 'supprimée'],
+    'à égalité, la série corrigée sous elle' => [100.0, 100.0, 'corrigée à 95 kg'],
+    'entre l’ancien record et la série, la série supprimée' => [110.0, 100.0, 'supprimée'],
 ]);
 
 it('n’annonce que la dernière de deux séries validées avant le passage du worker, sur le chemin de production', function (): void {
@@ -483,6 +529,7 @@ it('envoie sans échec une annonce mise en file avant le correctif, qui ne porte
 
     expect(annonceRelueContenuDeLaFile())->toBe([PersonalRecordAchieved::class, PersonalRecordAchieved::class])
         ->and($charges)->not->toContain('serie')
+        ->and($charges)->not->toContain('valeurEcrite')
         ->and($charges)->not->toContain('valeurDAvant');
 
     annonceRelueViderLaFile();

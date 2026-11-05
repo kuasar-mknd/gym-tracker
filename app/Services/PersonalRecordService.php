@@ -287,8 +287,9 @@ final class PersonalRecordService
              * une faute de frappe serait pire que de se taire.
              *
              * La ligne se réécrit en place : une annonce de la série encore en
-             * file la relira à son départ, et ne partira pas si la série ne la
-             * tient plus ou ne dépasse plus la valeur d'avant (#2155).
+             * file la relira à son départ, et ne partira pas si elle ne dépasse
+             * plus la valeur d'avant, ou si une autre série la tient plus haut
+             * que ce que la série y avait écrit (#2155).
              */
             $record->fill([
                 'value' => $valeur,
@@ -552,8 +553,9 @@ final class PersonalRecordService
      * Les annonces partent une fois le verrou rendu : elles ne retiennent
      * pas les autres écritures de l'exercice. Chacune retient la valeur que
      * son record portait avant la série, lue sous le verrou avant toute
-     * écriture, et la série qui l'a établi : en file, elle relit le record à
-     * son départ, et ne part pas s'il ne dit plus vrai (#2155,
+     * écriture, la série qui l'a établi et la valeur qu'elle y a écrite : en
+     * file, elle juge le record tel que la file le relit à son départ, et ne
+     * part pas s'il ne reste plus à annoncer (#2155,
      * `PersonalRecordAchieved::shouldSend()`).
      *
      * @param  \App\Models\User  $user  L'auteur de la série.
