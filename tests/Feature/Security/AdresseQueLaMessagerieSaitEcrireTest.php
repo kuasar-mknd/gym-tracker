@@ -144,7 +144,10 @@ $coupeesParLaMessagerie = [
  * domaine internationalisé tapé sous une partie locale en ASCII : le champ
  * `type="email"` de Chromium le convertit (`adresseMessagerieCeQueChromiumEnvoie()`),
  * et la collation ne rapproche pas le Punycode de la forme Unicode. Une partie
- * locale accentuée part telle qu'elle est tapée, domaine compris.
+ * locale accentuée part telle qu'elle est tapée, domaine compris, et la
+ * demande en écrit le domaine en ASCII (`AdresseCanonique`, #2168) : un
+ * compte resté en Unicode, que la migration de #2168 laisse quand sa forme
+ * ASCII est prise, ne se retrouve sous aucune forme.
  */
 $horsDeLAsciiAvantLaRegle = [
     'une espace insécable en tête' => ["\u{00A0}camille@example.org"],
@@ -161,7 +164,10 @@ $horsDeLAsciiAvantLaRegle = [
  * `type="email"` du profil le montre en Unicode
  * (`adresseMessagerieCeQueMontreLeProfil()`), et celui de la demande ne le
  * rend en Punycode que sous une adresse que la spécification HTML admet : ni
- * une partie locale entre guillemets, ni un commentaire dans le domaine.
+ * une partie locale entre guillemets, ni un commentaire dans le domaine. La
+ * demande écrit l'Unicode reçu sous sa forme ASCII (`AdresseCanonique`,
+ * #2168) : seul le domaine avec un commentaire, que la conversion refuse
+ * (règles STD3), ne retrouve pas le compte.
  */
 $domaineEnPunycode = [
     'un domaine en Punycode' => ['jean@xn--bcher-kva.example.org'],
@@ -876,10 +882,13 @@ it('ne promet plus le lien « mot de passe oublié » à un compte relié à un 
  * personne saisit l'adresse du compte telle que la page du profil la lui
  * montre, un domaine en Punycode en Unicode, et chaque page envoie ce qu'en
  * donne son champ `type="email"` sous Chromium : le Punycode d'un domaine
- * internationalisé sous une adresse que la spécification HTML admet. La
- * demande ne retrouve donc ni un compte enregistré en Unicode, avant #2001,
- * ni un domaine en Punycode sous une partie locale entre guillemets ou avec
- * un commentaire, que le champ envoie en Unicode.
+ * internationalisé sous une adresse que la spécification HTML admet, la
+ * saisie telle quelle sinon. La demande écrit l'adresse reçue sous sa forme
+ * canonique (`AdresseCanonique`, #2168) : elle ne retrouve donc ni un compte
+ * resté en Unicode, ni un domaine en Punycode avec un commentaire, que le
+ * champ envoie en Unicode et que la conversion refuse ; un domaine en
+ * Punycode sous une partie locale entre guillemets, que le champ envoie
+ * aussi en Unicode, se retrouve.
  */
 it('ne promet le lien « mot de passe oublié » qu’à une adresse qui le reçoit et qu’il réinitialise', function (string $adresse): void {
     $compte = User::factory()->create(['email' => $adresse]);
@@ -912,42 +921,42 @@ it('ne promet le lien « mot de passe oublié » qu’à une adresse qui le reç
 /*
  * Depuis #2001, un domaine internationalisé s'enregistre en Punycode :
  * l'inscription le reçoit ainsi de son champ `type="email"`, que Chromium
- * convertit, et refuse la forme Unicode (`AdresseEnAsciiImprimable`). Le
- * profil le montre en Unicode (« bücher »), que la personne tape à « mot de
- * passe oublié ». Le champ `type="email"` de la page l'envoie en Punycode,
- * comme celui de la connexion : la demande retrouve le compte, et le lien le
- * réinitialise. Un champ texte l'envoyait tel qu'il est tapé : la page
- * répondait que le lien était parti, et rien ne partait (#2104).
+ * convertit, et écrit en ASCII la forme Unicode qu'un autre client lui
+ * envoie (#2168). Le profil le montre en Unicode (« bücher »), que la
+ * personne tape à « mot de passe oublié ». Le champ `type="email"` de la page
+ * l'envoie en Punycode, comme celui de la connexion ; un champ texte ou un
+ * client hors navigateur l'envoie tel qu'il est tapé. La demande et la
+ * réinitialisation écrivent l'une et l'autre forme en ASCII
+ * (`AdresseCanonique`) : le lien part, et il réinitialise le mot de passe
+ * sous la forme tapée. Envoyée en Unicode, l'adresse ne retrouvait pas le
+ * compte : la page répondait que le lien était parti, et rien ne partait
+ * (#2104), et la réinitialisation refusait le lien comme un jeton faux.
  */
-it('envoie le lien « mot de passe oublié » à un compte relié dont le domaine internationalisé s’est enregistré en Punycode, et le lui promet', function (): void {
+it('envoie le lien « mot de passe oublié » à un compte relié dont le domaine internationalisé s’est enregistré en Punycode, sous chaque forme, et le lui promet', function (string $adresseEnvoyee): void {
     $compte = User::factory()->create(['email' => 'jean@xn--bcher-kva.example.org']);
     $compte->forceFill(['provider' => 'google', 'provider_id' => '4242', 'liaison_prouvee_le' => now()])->save();
-    $adresseTapee = 'jean@bücher.example.org';
-    $adresseEnvoyee = adresseMessagerieCeQueChromiumEnvoie($adresseTapee);
 
     expect($compte->peutRecevoirLeLienDeReinitialisation())->toBeTrue()
-        ->and($adresseEnvoyee)->toBe('jean@xn--bcher-kva.example.org');
+        ->and(adresseMessagerieCeQueChromiumEnvoie('jean@bücher.example.org'))->toBe('jean@xn--bcher-kva.example.org');
 
-    post(route('password.email'), ['email' => $adresseTapee])
+    post(route('password.email'), ['email' => $adresseEnvoyee])
         ->assertSessionHasNoErrors()
         ->assertSessionHas('status', __('passwords.sent'));
 
-    expect(adresseMessagerieLienDeReinitialisationRecuPar($compte->email))->toBeNull();
-
-    post(route('password.email'), ['email' => $adresseEnvoyee])->assertSessionHasNoErrors();
     $lien = adresseMessagerieLienDeReinitialisationRecuPar($compte->email);
 
     expect($lien)->not->toBeNull();
     assert($lien !== null);
 
-    post(route('password.store'), FormulaireDeReinitialisation::depuisLeLien($lien, 'Nouveau-mot-de-passe-2026!', $adresseTapee))
-        ->assertSessionHasErrors('token');
-
     post(route('password.store'), FormulaireDeReinitialisation::depuisLeLien($lien, 'Nouveau-mot-de-passe-2026!', $adresseEnvoyee))
         ->assertSessionHasNoErrors();
 
-    expect(Hash::check('Nouveau-mot-de-passe-2026!', (string) $compte->refresh()->password))->toBeTrue();
-});
+    expect(Hash::check('Nouveau-mot-de-passe-2026!', (string) $compte->refresh()->password))->toBeTrue()
+        ->and($compte->email)->toBe('jean@xn--bcher-kva.example.org');
+})->with([
+    'en Punycode, comme le champ de Chromium l’envoie' => ['jean@xn--bcher-kva.example.org'],
+    'en Unicode, comme un champ texte l’envoie' => ['jean@bücher.example.org'],
+]);
 
 it('laisse le panneau enregistrer le nom d’un compte dont l’adresse est antérieure à la règle, par la page comme par la table', function (string $adresse): void {
     actingAs(FilamentAdminPanel::admin(FilamentAdminPanel::crudPermissions('User')), 'admin');
