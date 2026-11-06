@@ -105,39 +105,35 @@ final class MesureDuTempsServeur
      * (`CacheMissed`) : une lecture de plus, et le temps écoulé depuis la
      * demande, ou depuis la clé précédente du même groupe.
      *
-     * La réponse revient à la lecture ouverte la plus récente. Une lecture
-     * faite pendant une autre — la valeur par défaut d'une clé absente, que
-     * `many()` calcule entre deux réponses — se compte donc une fois, et le
-     * groupe qui l'attendait reprend à sa fin : le calcul autour d'elle n'est
-     * pas du cache. Une demande restée sans réponse (le magasin a levé) reste
-     * dessous, sans rien compter ni rien empêcher.
+     * La réponse revient à la lecture ouverte la plus récente, et chaque
+     * lecture restée ouverte dessous reprend à cet instant. Une lecture faite
+     * pendant une autre — la valeur par défaut d'une clé absente, que `many()`
+     * calcule entre deux réponses — se compte donc une fois, et le calcul
+     * autour d'elle, qui n'est pas du cache, pas du tout. Une demande restée
+     * sans réponse (le magasin a levé) reste dessous, sans rien compter ni
+     * rien empêcher.
      */
     public function noterUneReponseDuCache(): void
     {
-        $rang = array_key_last($this->lecturesEnCours);
+        $lecture = array_pop($this->lecturesEnCours);
 
-        if ($this->debut === null || $rang === null) {
+        if ($lecture === null) {
             return;
         }
 
         $maintenant = $this->maintenant();
-        $lecture = $this->lecturesEnCours[$rang];
 
         $this->nombreDeLecturesDuCache++;
         $this->dureeDuCacheEnNs += $maintenant - $lecture['depuis'];
 
         if ($lecture['cles'] > 1) {
-            $this->lecturesEnCours[$rang] = ['depuis' => $maintenant, 'cles' => $lecture['cles'] - 1];
-
-            return;
+            $this->lecturesEnCours[] = ['depuis' => $maintenant, 'cles' => $lecture['cles'] - 1];
         }
 
-        array_pop($this->lecturesEnCours);
-        $parent = array_key_last($this->lecturesEnCours);
-
-        if ($parent !== null) {
-            $this->lecturesEnCours[$parent]['depuis'] = $maintenant;
-        }
+        $this->lecturesEnCours = array_map(
+            static fn (array $ouverte): array => ['depuis' => $maintenant, 'cles' => $ouverte['cles']],
+            $this->lecturesEnCours,
+        );
     }
 
     /**
