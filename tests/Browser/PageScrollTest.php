@@ -96,7 +96,7 @@ class PageScrollTest extends DuskTestCase
         $bodyIsAScrollContainer = $state['bodyOverflowX'] !== 'visible' || $state['bodyOverflowY'] !== 'visible';
 
         $this->assertFalse(
-            $bodyIsAScrollContainer && ! $state['bodyHasSlackToScroll'] && $state['bodyOverscrollY'] === 'none',
+            $bodyIsAScrollContainer && $state['bodyHasSlackToScroll'] !== true && $state['bodyOverscrollY'] === 'none',
             "On {$page}, <body> is a scroll container with nothing to scroll and no scroll chaining: "
             .'every swipe and wheel is swallowed and the page cannot be scrolled by hand. '
             .'Put overflow and overscroll-behavior on <html>, which is what the viewport reads.'

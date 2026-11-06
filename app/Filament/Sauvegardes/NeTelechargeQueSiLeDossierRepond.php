@@ -43,7 +43,7 @@ final class NeTelechargeQueSiLeDossierRepond
     public function handle(Request $request, Closure $next): Response
     {
         if (! $request->routeIs(self::ROUTE_DU_TELECHARGEMENT)
-            || ! $request->hasValidSignature()
+            || $request->hasValidSignature() !== true
             || $this->dossierDesSauvegardesRepond()) {
             return $next($request);
         }
