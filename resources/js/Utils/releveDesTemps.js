@@ -10,9 +10,9 @@
  *   (`requestStart − workerStart`), les métriques de l'en-tête
  *   `Server-Timing` (`app`, `routage`, `controleur`, `rendu`, `sql` et
  *   `cache`, avec leurs nombres), et l'écart entre le TTFB et `app`, ce qui
- *   se passe avant l'application : réseau, proxy inverse, attente d'un
- *   worker libre. La page complète d'ouverture y entre aussi, par son entrée
- *   `navigation` ;
+ *   entoure l'application : réseau à l'aller et au retour, proxy inverse,
+ *   attente d'un worker libre. La page complète d'ouverture y entre aussi,
+ *   par son entrée `navigation` ;
  * - **la navigation perçue** : une marque User Timing (`releve:toucher`) au
  *   `before` d'une visite au premier plan, ni préchargée, ni asynchrone, ni
  *   partielle, puis une mesure (`navigation /workouts`) à la première image
@@ -170,6 +170,11 @@ const ecart = (depuis, jusqua) => (depuis > 0 && jusqua >= depuis ? jusqua - dep
 /**
  * La ligne du relevé d'une entrée.
  *
+ * L'écart hors de l'application (`horsDeLApp`, TTFB − `app`) va de l'envoi de
+ * la requête au premier octet reçu : il compte le réseau dans les deux sens,
+ * le proxy inverse, l'attente d'un worker libre et ce que le serveur fait
+ * avant et après sa mesure. Ce n'est pas l'attente d'un worker seule.
+ *
  * Le passage par le service worker se lit de `workerStart` (le démarrage du
  * worker, ou l'envoi de l'évènement `fetch` s'il tournait déjà) à l'envoi de
  * la requête : `fetchStart`, que les navigateurs ne placent pas tous du même
@@ -188,8 +193,11 @@ export const ligneDuReleve = (entree, etiquette) => {
     return {
         etiquette,
         ttfb,
-        avantLApp: ttfb !== null && serveur.app !== undefined ? ttfb - serveur.app : null,
+        horsDeLApp: ttfb !== null && serveur.app !== undefined ? ttfb - serveur.app : null,
         app: serveur.app ?? null,
+        routage: serveur.routage ?? null,
+        controleur: serveur.controleur ?? null,
+        rendu: serveur.rendu ?? null,
         sql: serveur.sql ?? null,
         requetesSql: serveur.sqlNombre ?? null,
         cache: serveur.cache ?? null,
@@ -262,16 +270,17 @@ export const tableauDuReleve = ({ requetes, navigations }) => {
     const lignes = [
         'Relevé des temps : chemins relatifs, millisecondes, médiane / p95.',
         '',
-        '| Requête | n | TTFB | avant l’app | app | sql | requêtes SQL | cache | lectures du cache | worker |',
-        '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
+        '| Requête | n | TTFB | hors de l’app | app | routage | contrôleur | rendu | sql | requêtes SQL | cache | lectures du cache | worker |',
+        '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
     ]
 
     for (const [etiquette, groupe] of regroupees(requetes, (ligne) => ligne.etiquette)) {
         const colonne = (nom) => groupe.map((ligne) => ligne[nom])
 
         lignes.push(
-            `| ${etiquette} | ${groupe.length} | ${medianeEtP95(colonne('ttfb'))} | ${medianeEtP95(colonne('avantLApp'))} | ` +
-                `${medianeEtP95(colonne('app'))} | ${medianeEtP95(colonne('sql'))} | ${duree(centile(colonne('requetesSql'), 50))} | ` +
+            `| ${etiquette} | ${groupe.length} | ${medianeEtP95(colonne('ttfb'))} | ${medianeEtP95(colonne('horsDeLApp'))} | ` +
+                `${medianeEtP95(colonne('app'))} | ${medianeEtP95(colonne('routage'))} | ${medianeEtP95(colonne('controleur'))} | ` +
+                `${medianeEtP95(colonne('rendu'))} | ${medianeEtP95(colonne('sql'))} | ${duree(centile(colonne('requetesSql'), 50))} | ` +
                 `${medianeEtP95(colonne('cache'))} | ${duree(centile(colonne('lecturesDuCache'), 50))} | ${medianeEtP95(colonne('worker'))} |`,
         )
     }

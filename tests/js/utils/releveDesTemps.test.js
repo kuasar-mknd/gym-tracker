@@ -219,7 +219,7 @@ describe('les pièces du relevé', () => {
         expect(tempsDuServeur([{ name: 'sql', duration: 1, description: '' }])).toEqual({ sql: 1 })
     })
 
-    it('tire d’une entrée le TTFB, l’écart avant l’application et le passage par le worker', () => {
+    it('tire d’une entrée le TTFB, l’écart hors de l’application, les étapes du serveur et le passage par le worker', () => {
         expect(
             ligneDuReleve(
                 entreeDeRequete('/stats', { requestStart: 100, responseStart: 175, workerStart: 92, fetchStart: 99 }),
@@ -228,8 +228,11 @@ describe('les pièces du relevé', () => {
         ).toEqual({
             etiquette: 'GET /stats (visite)',
             ttfb: 75,
-            avantLApp: 35,
+            horsDeLApp: 35,
             app: 40,
+            routage: 1,
+            controleur: 20,
+            rendu: 19,
             sql: 12,
             requetesSql: 7,
             cache: 2,
@@ -244,8 +247,11 @@ describe('les pièces du relevé', () => {
         )
         expect(sansRien).toMatchObject({
             ttfb: 60,
-            avantLApp: null,
+            horsDeLApp: null,
             app: null,
+            routage: null,
+            controleur: null,
+            rendu: null,
             sql: null,
             lecturesDuCache: null,
             worker: null,
@@ -270,8 +276,11 @@ describe('les pièces du relevé', () => {
         const ligne = (ttfb, app) => ({
             etiquette: 'GET /dashboard (partielle)',
             ttfb,
-            avantLApp: ttfb - app,
+            horsDeLApp: ttfb - app,
             app,
+            routage: 1,
+            controleur: app - 11,
+            rendu: 10,
             sql: 10,
             requetesSql: 12,
             cache: 1.25,
@@ -290,9 +299,9 @@ describe('les pièces du relevé', () => {
         expect(tableau.split('\n')).toEqual([
             'Relevé des temps : chemins relatifs, millisecondes, médiane / p95.',
             '',
-            '| Requête | n | TTFB | avant l’app | app | sql | requêtes SQL | cache | lectures du cache | worker |',
-            '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
-            '| GET /dashboard (partielle) | 3 | 70 / 80 | 25 / 30 | 45 / 50 | 10 / 10 | 12 | 1,3 / 1,3 | 9 | — |',
+            '| Requête | n | TTFB | hors de l’app | app | routage | contrôleur | rendu | sql | requêtes SQL | cache | lectures du cache | worker |',
+            '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
+            '| GET /dashboard (partielle) | 3 | 70 / 80 | 25 / 30 | 45 / 50 | 1 / 1 | 34 / 39 | 10 / 10 | 10 / 10 | 12 | 1,3 / 1,3 | 9 | — |',
             '',
             '| Navigation | n | médiane | p95 |',
             '| --- | --: | --: | --: |',
