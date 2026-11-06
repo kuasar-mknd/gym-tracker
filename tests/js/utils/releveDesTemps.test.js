@@ -738,16 +738,26 @@ describe('rien ne sort de l’appareil', () => {
     it('se retire en entier : écouteurs, observateur, fonction de console, panneau et annonces', () => {
         const simulee = fenetreSimulee({ navigation: documentServi(), hash: FRAGMENT_QUI_AFFICHE })
         const routeur = routeurSimule()
+        // Une annonce de `http()` se lit contre l'adresse de la fenêtre : c'est par là qu'on la voit passer.
+        const lecturesDeLAdresse = vi.fn(() => `${ORIGINE}/dashboard`)
 
+        Object.defineProperty(simulee.fenetre.location, 'href', { get: lecturesDeLAdresse, configurable: true })
         installe = installerLeReleveDesTemps({ routeur, fenetre: simulee.fenetre })
+        noterLaRequete('post', '/api/v1/sets')
+
+        expect(lecturesDeLAdresse).toHaveBeenCalledTimes(1)
+
         installe.desinstaller()
 
         expect(routeur.nombreDEcouteurs()).toBe(0)
         expect(simulee.observateurs.every((observateur) => observateur.coupe)).toBe(true)
         expect(simulee.fenetre[FONCTION_DE_CONSOLE]).toBeUndefined()
         expect(document.getElementById('releve-des-temps')).toBeNull()
-        // Retiré, le relevé n'apprend plus rien de `http()`.
-        expect(() => noterLaRequete('post', '/api/v1/sets')).not.toThrow()
+
+        // Retiré, le relevé n'apprend plus rien de `http()` : l'annonce ne lui parvient plus.
+        noterLaRequete('post', '/api/v1/sets')
+
+        expect(lecturesDeLAdresse).toHaveBeenCalledTimes(1)
 
         installe = null
     })
