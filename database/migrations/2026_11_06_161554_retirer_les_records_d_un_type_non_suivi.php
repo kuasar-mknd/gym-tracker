@@ -34,10 +34,12 @@ use Illuminate\Support\Facades\Schema;
  * records de l'exercice, les lignes partent en base, sans le modèle, puis
  * l'exercice se reconstruit comme par `reparer()`, sans annonce. Un record
  * suivi que la reconstruction recrée ou remonte n'est pas un exploit : il
- * remplace une valeur que l'application ne lisait plus. Un 'cardio' n'a pas
- * d'équivalent suivi et disparaît, comme toute valeur que plus aucune série
- * éligible ne soutient. Les exercices qui ne portent aucune telle ligne ne
- * sont pas touchés.
+ * remplace une valeur que le modèle ne relisait pas, ou qui s'écartait de ses
+ * séries. Un 'cardio' n'a pas d'équivalent suivi et disparaît, comme toute
+ * valeur que plus aucune série éligible ne soutient. Les types hérités se
+ * relisaient, eux : le tableau de bord les montrait parmi les derniers
+ * records, et ils en disparaissent, les records suivis refaits à leur place.
+ * Les exercices qui ne portent aucune telle ligne ne sont pas touchés.
  *
  * Une ligne dont le compte a disparu (la clé étrangère l'emporte avec lui ;
  * seule une base restaurée clés coupées en garde) part aussi, en base, sans
