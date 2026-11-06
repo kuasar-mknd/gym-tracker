@@ -22,7 +22,10 @@ declare(strict_types=1);
  *
  * Une majeure fautive sans correctif publié ne se corrige qu'en changeant de
  * majeure : minimatch 10 et glob 11 et 13 n'en ont pas, et leurs consommateurs
- * n'acceptent pas encore minimatch 11 ni glob 14. Un tel override n'est admis
+ * n'acceptent pas encore minimatch 11 ni glob 14. Au 2026-11-06, glob 13.0.7
+ * reporte le correctif sur la 13, mais l'avis ne nomme que 14.0.2 : OSV et
+ * `avisNpmTenusSurLeVerrou()` la tiennent pour vulnérable, et l'override reste
+ * en 14 jusqu'à la mise à jour de l'avis. Un tel override n'est admis
  * que relu : chaque consommateur qui charge l'autre majeure est inscrit, à sa
  * version, dans `overridesNpmHorsDeLeurMajeureRelus()`, après relecture de ce
  * qu'il appelle contre l'API de la majeure imposée. Un consommateur absent de
