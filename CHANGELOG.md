@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Les records d'un type que l'application ne tient plus sont retirés, et ceux de leurs exercices refaits depuis les séries** (#1811, #PR) : des records pouvaient encore porter un type que plus aucun code n'écrit, l'un des quatre types hérités (« 1RM », « strength », « cardio », « volume ») ou un type suivi écrit en capitales ou suivi d'une espace, que la base confond avec lui mais que l'application ne relit pas. Ces derniers pouvaient faire tomber le tableau de bord, la page d'une séance, l'enregistrement d'une série de l'exercice et la réparation du contrôle de cohérence. Une migration les retire et refait depuis leurs séries les records de chaque exercice qui en portait, sans rien annoncer ; un record qu'aucune série ne soutient, comme un record « cardio », disparaît. Le journal dit combien de records chaque type a perdus, et lesquels, sans leur valeur. `php artisan app:verify-data-coherence --repair` fait de même avant ses autres réparations ; le contrôle seul ne touche à rien. Les quatre types hérités restent connus de l'application jusqu'à une version suivante.
+
 ## [1.7.0] - 2026-11-06
 
 ### Ajouté
