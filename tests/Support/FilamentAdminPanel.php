@@ -53,8 +53,8 @@ final class FilamentAdminPanel
     }
 
     /**
-     * The 'admin' panel. Since Filament 5.11.1 the facade types `getPanel()`
-     * as nullable, null being what an unknown panel id gives.
+     * Le panneau 'admin'. Depuis Filament 5.11.1, la façade type `getPanel()`
+     * comme nullable : un identifiant inconnu rend null.
      */
     public static function panel(): Panel
     {
