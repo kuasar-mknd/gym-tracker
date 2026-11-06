@@ -166,6 +166,9 @@ const endFast = () => {
     endForm.patch(route('tools.fasting.update', props.activeFast.id))
 }
 
+/** Le refus qu'aucun champ ne porte (`base`, un jeûne en cours) ; celui du début ou du type se dit sous lui (#2198). */
+const refus = computed(() => Object.values({ ...startForm.errors, start_time: null, type: null }).find(Boolean))
+
 const goToPage = (url) => {
     if (url) {
         router.visit(url)
@@ -277,16 +280,8 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                         />
                     </div>
 
-                    <!-- The request adds a `base` error when a fast is already
-                         running and the controller a `message` one; neither maps
-                         to a field, so without this the rejection is invisible. -->
-                    <p
-                        v-if="Object.keys(startForm.errors).length"
-                        class="text-accent-danger-deep text-sm font-bold"
-                        role="alert"
-                        dusk="fasting-error"
-                    >
-                        {{ Object.values(startForm.errors)[0] }}
+                    <p v-if="refus" class="text-accent-danger-deep text-sm font-bold" role="alert" dusk="fasting-error">
+                        {{ refus }}
                     </p>
 
                     <GlassButton type="submit" variant="primary" :loading="startForm.processing" class="mt-4 w-full">

@@ -298,6 +298,45 @@ describe('Fasting — démarrer un jeûne', () => {
 
         expect(wrapper.find('[dusk="fasting-error"]').text()).toBe('Un jeûne est déjà en cours.')
     })
+
+    it('dit une seule fois le refus d’un champ, sous lui, et garde l’alerte du formulaire pour ce qu’aucun champ ne porte (#2198)', async () => {
+        // L'alerte du formulaire montrait la première erreur de n'importe quel champ : le refus d'un début à venir, que
+        // le champ « Début » dit déjà, s'affichait et s'annonçait deux fois au lecteur d'écran.
+        const wrapper = await mountPage({})
+        const refusDuDebut =
+            "Ton jeûne ne peut pas commencer dans le futur : vérifie l'heure du début et celle de ton appareil."
+        // Ce que chaque alerte affichée annonce, sans la ligature de son icône décorative. L'erreur d'un champ se cache
+        // par `v-show`, lue sur son style : `isVisible()` passe par `getComputedStyle`, que jsdom garde d'un état à
+        // l'autre quand Vue change `display` par le CSSOM.
+        const alertesVisibles = () =>
+            wrapper
+                .findAll('[role="alert"]')
+                .filter((alerte) => alerte.element.style.display !== 'none')
+                .map((alerte) => nomAccessible(alerte.element))
+
+        wrapper.vm.startForm.errors = { start_time: refusDuDebut }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual([refusDuDebut])
+        expect(wrapper.find('[dusk="fasting-error"]').exists()).toBe(false)
+
+        wrapper.vm.startForm.errors = { type: 'Le type de jeûne sélectionné est invalide.' }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual(['Le type de jeûne sélectionné est invalide.'])
+
+        wrapper.vm.startForm.errors = { start_time: refusDuDebut, base: 'Un jeûne est déjà en cours.' }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual([refusDuDebut, 'Un jeûne est déjà en cours.'])
+        expect(wrapper.find('[dusk="fasting-error"]').text()).toBe('Un jeûne est déjà en cours.')
+
+        // La durée cible, que la page tire du type, n'a pas de champ : son refus reste dans l'alerte du formulaire.
+        wrapper.vm.startForm.errors = { target_duration_minutes: 'La durée cible ne peut pas dépasser 7 jours.' }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual(['La durée cible ne peut pas dépasser 7 jours.'])
+    })
 })
 
 describe('Fasting — historique', () => {
