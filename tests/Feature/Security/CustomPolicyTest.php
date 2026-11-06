@@ -125,7 +125,7 @@ class CustomPolicyTest extends TestCase
      * alors une page du panneau, et le motif de son chemin ne devient pas `*`,
      * qui couvrirait toute l'application.
      */
-    public function test_production_policy_gives_unsafe_eval_to_no_page_without_the_panel(): void
+    public function test_production_policy_without_the_panel_keeps_unsafe_eval_off_its_path(): void
     {
         Config::set('app.env', 'production');
         $this->app['env'] = 'production';
