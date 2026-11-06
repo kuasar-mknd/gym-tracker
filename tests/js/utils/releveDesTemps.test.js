@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
     DRAPEAU_DE_L_AFFICHAGE,
     FONCTION_DE_CONSOLE,
@@ -16,6 +18,7 @@ import {
     tempsDuServeur,
 } from '@/Utils/releveDesTemps'
 import { http } from '@/Utils/http'
+import { jsRoot } from '../conventions/sourceFiles'
 
 /*
  * Le relevé des temps dans le navigateur (#1315, #2148, étape 1), sur des
@@ -888,6 +891,42 @@ describe('le relevé à l’écran', () => {
         expect(document.getElementById('releve-des-temps')).toBeNull()
         expect(simulee.stockage.donnees.has(DRAPEAU_DE_L_AFFICHAGE)).toBe(false)
         expect(installe.releve().requetes).toHaveLength(2)
+    })
+
+    /*
+     * Le minuteur de repos se pose au bas de l'écran, et le README demande le
+     * relevé de la séance en cours : posé à sa place et sur sa couche, le
+     * panneau en cachait le bas. Déplié, il dépassait le haut d'un téléphone
+     * en paysage, titre compris : plus rien ne le repliait, et « Fermer »
+     * oublie le drapeau.
+     */
+    it('se tient en haut de l’écran, loin du minuteur de repos, et garde son titre à l’écran déplié', () => {
+        const simulee = fenetreSimulee({ navigation: documentServi(), hash: FRAGMENT_QUI_AFFICHE })
+
+        installe = installerLeReleveDesTemps({ routeur: routeurSimule(), fenetre: simulee.fenetre })
+
+        const panneau = document.getElementById('releve-des-temps')
+        const minuteur = readFileSync(resolve(jsRoot, 'Components/Workout/RestTimer.vue'), 'utf8')
+            .match(/class="([^"]*\bfixed\b[^"]*)"/)[1]
+            .split(/\s+/)
+        const bords = (classes) => classes.filter((classe) => /^(?:[a-z]+:)*(?:top|bottom)-/.test(classe))
+        const valeur = (classes, motif) => Number(classes.map((classe) => classe.match(motif)?.[1]).find(Boolean))
+
+        expect(bords(minuteur)).toEqual(['bottom-sure-36'])
+        expect(bords([...panneau.classList])).toEqual([expect.stringMatching(/^top-sure-\d+$/)])
+
+        // Le titre d'abord, puis un corps borné à l'écran moins le haut du panneau et son titre, qui défile en lui-même.
+        const [titre, corps] = panneau.children
+        const haut = valeur([...panneau.classList], /^top-sure-(\d+)$/)
+        const borne = valeur([...corps.classList], /^hauteur-sure-(\d+)$/)
+
+        expect(titre.tagName).toBe('SUMMARY')
+        expect(titre.classList).toContain('min-h-touch')
+        // `min-h-touch` vaut 44 px, onze pas d'espacement.
+        expect(borne).toBeGreaterThanOrEqual(haut + 11)
+        expect(corps.querySelector('pre').classList).toContain('overflow-auto')
+        // Les boutons avant le tableau : ils restent à portée, quelle que soit sa longueur.
+        expect(corps.firstElementChild.querySelectorAll('button')).toHaveLength(2)
     })
 
     it('reste caché, sans lever, quand le stockage est bloqué', () => {

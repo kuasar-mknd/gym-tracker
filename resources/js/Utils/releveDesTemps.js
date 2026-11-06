@@ -370,11 +370,19 @@ const sorteDeLaVisite = (visite) => {
 }
 
 /**
- * Le relevé à l'écran : un `<details>` replié au bas de l'écran, le tableau
- * dans un `<pre>`, écrit par `textContent`, et deux boutons. Construit hors
- * de l'application Vue, qu'il ne doit ni attendre ni gêner : c'est un outil
- * de mesure, pas une page. Il n'écrit son tableau que sur demande (`ecrire`),
- * déplié (`deplie`, à chaque ouverture) ou pour le sélectionner à copier.
+ * Le relevé à l'écran : un `<details>` replié en haut de l'écran, sous
+ * l'en-tête, deux boutons puis le tableau dans un `<pre>`, écrit par
+ * `textContent`. Construit hors de l'application Vue, qu'il ne doit ni
+ * attendre ni gêner : c'est un outil de mesure, pas une page. Il n'écrit son
+ * tableau que sur demande (`ecrire`), déplié (`deplie`, à chaque ouverture)
+ * ou pour le sélectionner à copier.
+ *
+ * En haut, parce que le bas de l'écran est au minuteur de repos, qu'il
+ * cachait pendant le relevé de la séance en cours. Déplié, son corps se borne
+ * à l'écran moins le haut du panneau, son titre et la barre du bas
+ * (`hauteur-sure-60`), et le tableau défile en lui-même : le titre, qui le
+ * replie sans oublier le drapeau, et les boutons restent à l'écran, même sur
+ * un téléphone en paysage.
  *
  * @param {Window} fenetre
  * @param {{tableau: () => string, fermer: () => void, deplie: () => void}} rappels
@@ -384,6 +392,7 @@ const monterLePanneau = (fenetre, { tableau, fermer, deplie }) => {
     const document = fenetre.document
     const panneau = document.createElement('details')
     const titre = document.createElement('summary')
+    const corps = document.createElement('div')
     const contenu = document.createElement('pre')
     const copier = document.createElement('button')
     const quitter = document.createElement('button')
@@ -391,10 +400,11 @@ const monterLePanneau = (fenetre, { tableau, fermer, deplie }) => {
 
     panneau.id = 'releve-des-temps'
     panneau.className =
-        'z-flottant right-sure-4 bottom-sure-36 left-sure-4 sm:right-sure-4 glass-panel-light text-text-main fixed rounded-2xl p-3 text-xs shadow-lg sm:left-auto sm:w-96'
+        'z-flottant top-sure-20 right-sure-4 left-sure-4 sm:left-sure-6 glass-panel-light text-text-main fixed rounded-2xl px-3 py-1 text-xs shadow-lg sm:right-auto sm:w-96'
     titre.className = 'min-h-touch flex cursor-pointer items-center font-bold'
-    contenu.className = 'max-h-80 overflow-auto whitespace-pre font-mono'
-    boutons.className = 'mt-2 flex gap-2'
+    corps.className = 'hauteur-sure-60 flex flex-col gap-2 pb-2'
+    contenu.className = 'min-h-0 flex-1 overflow-auto whitespace-pre font-mono'
+    boutons.className = 'flex shrink-0 gap-2'
 
     for (const bouton of [copier, quitter]) {
         bouton.type = 'button'
@@ -404,7 +414,8 @@ const monterLePanneau = (fenetre, { tableau, fermer, deplie }) => {
     copier.textContent = 'Copier le tableau'
     quitter.textContent = 'Fermer'
     boutons.append(copier, quitter)
-    panneau.append(titre, contenu, boutons)
+    corps.append(boutons, contenu)
+    panneau.append(titre, corps)
 
     titre.textContent = 'Relevé des temps : rien ne quitte cet appareil'
 
