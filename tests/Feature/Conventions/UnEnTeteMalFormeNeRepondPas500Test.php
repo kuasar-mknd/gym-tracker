@@ -279,7 +279,7 @@ it('aucune écriture qui lit un en-tête avant d’en valider le corps ne répon
     }
 
     expect($defauts)->toBe([])
-        ->and($paires)->toContain('X-Heure-De-L-Appareil api.v1.workouts.store', 'X-Heure-De-L-Appareil api.v1.workouts.finish')
+        ->and($paires)->toContain('X-Heure-De-L-Appareil api.v1.workouts.store', 'X-Heure-De-L-Appareil api.v1.workouts.finish', 'X-Heure-De-L-Appareil tools.fasting.store', 'X-Heure-De-L-Appareil tools.fasting.update')
         ->and(array_intersect($paires, ['Idempotency-Key api.v1.sets.store', 'Idempotency-Key api.v1.workout-lines.store', 'Idempotency-Key api.v1.workouts.store']))->toBe([])
         ->and($essais)->toBe(count($paires) * count(RequetesMalFormees::formesDeCorps()) * count($formes));
 });
@@ -293,7 +293,7 @@ it('recense chaque en-tête que le code de l’application lit, et en déduit le
     expect(EntetesLus::defautsDuRecensement())->toBe([], 'recense l’en-tête dans EntetesLus::recenses(), ou lis-le dans un middleware, un contrôleur, une requête de validation ou la fermeture d’une route (.ai/rules/controllers.md)')
         ->and(count(EntetesLus::lecturesDeLApplication()))->toBeGreaterThanOrEqual(8)
         ->and($routes['Idempotency-Key'] ?? [])->toEqualCanonicalizing(['api.v1.sets.store', 'api.v1.workout-lines.store', 'api.v1.workouts.store', 'workouts.store', 'templates.execute'])
-        ->and($routes['X-Heure-De-L-Appareil'] ?? [])->toEqualCanonicalizing(['api.v1.workouts.store', 'api.v1.workouts.finish'])
+        ->and($routes['X-Heure-De-L-Appareil'] ?? [])->toEqualCanonicalizing(['api.v1.workouts.store', 'api.v1.workouts.finish', 'tools.fasting.store', 'tools.fasting.update'])
         ->and($routes['X-Compte-De-L-Ecriture'] ?? [])->toContain('api.v1.sets.store', 'workouts.store', 'dashboard', 'profile.update')
         ->and($routes['X-Copies-Hors-Ligne'] ?? [])->toContain('dashboard', 'workouts.show')
         ->and($routes['X-Copies-Hors-Ligne'] ?? [])->not->toContain('api.v1.sets.store');

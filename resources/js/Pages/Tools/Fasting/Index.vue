@@ -145,25 +145,30 @@ onUnmounted(() => {
     if (timerInterval.value) clearInterval(timerInterval.value)
 })
 
+/** L'heure de l'appareil au départ, celle du geste : l'âge est nul, et le serveur place le geste sur son horloge. */
+const auDepart = (geste) => ({ 'X-Heure-De-L-Appareil': geste })
+
 /**
  * Le champ montre l'heure de l'appareil, remplie à chaque retour du formulaire, la page n'étant pas remontée. Laissé
- * tel quel, il dit « maintenant » : le début part à l'instant du geste ; changé, à l'instant qu'il désigne. La fin part
- * à l'instant présent. Sans décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
+ * tel quel, il dit « maintenant » : le début part à l'instant du geste, avec l'heure de l'appareil au départ (#2198) ;
+ * changé, à l'instant qu'il désigne, que le serveur juge tel quel. La fin part à l'instant présent, avec elle aussi.
+ * Sans décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
  */
 const startFast = () => {
+    const geste = startForm.start_time === debutPrerempli ? new Date().toISOString() : null
     startForm
         .transform((data) => ({
             ...data,
-            start_time: data.start_time === debutPrerempli ? new Date().toISOString() : formatToUTC(data.start_time),
+            start_time: geste ?? formatToUTC(data.start_time),
             target_duration_minutes: selectedType.value.hours * 60,
             type: selectedType.value.value,
         }))
-        .post(route('tools.fasting.store'))
+        .post(route('tools.fasting.store'), { headers: geste ? auDepart(geste) : {} })
 }
 
 const endFast = () => {
     endForm.end_time = new Date().toISOString()
-    endForm.patch(route('tools.fasting.update', props.activeFast.id))
+    endForm.patch(route('tools.fasting.update', props.activeFast.id), { headers: auDepart(endForm.end_time) })
 }
 
 /** Le refus qu'aucun champ ne porte (`base`, un jeûne en cours) ; celui du début ou du type se dit sous lui (#2198). */
