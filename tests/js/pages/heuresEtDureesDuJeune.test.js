@@ -135,6 +135,60 @@ describe('Le jeûne — une seconde ne compte qu’une fois écoulée', () => {
     })
 })
 
+describe('Le jeûne — un début à venir (#2198)', () => {
+    /*
+     * Un début postérieur à l'instant de l'appareil : une heure venue d'un appareil dont l'horloge avance, ou un
+     * jeûne enregistré au futur avant que le serveur ne le refuse. L'écoulé était compté sans borne basse, et chaque
+     * champ s'affichait avec son signe : « -1:-30:00 » et « 16:30:00 restants », plus que l'objectif, à la seconde
+     * ronde, « -1:-30:-59 » et « 16:29:59 restants » à 600 ms, l'anneau reculant sous zéro.
+     */
+    const DEBUT = '2026-03-10T12:30:00.000000Z'
+
+    it.each([
+        ['à la seconde ronde', '2026-03-10T12:00:00.000Z'],
+        ['à 600 ms', '2026-03-10T12:00:00.600Z'],
+    ])(
+        'attend à 00:00:00, l’anneau vide et l’objectif entier devant, un début trente minutes en avance (%s), puis compte depuis le début',
+        async (_cas, instant) => {
+            vi.setSystemTime(new Date(instant))
+            const page = await monterLaPage({ activeFast: jeune(13, DEBUT) })
+
+            expect(ecoule(page)).toBe('00:00:00')
+            expect(page.text()).toContain('16:00:00 restants')
+            expect(decalageDeLAnneau(page)).toBe(ANNEAU_VIDE)
+
+            // La seconde qui précède le début : toujours rien d'écoulé.
+            vi.advanceTimersByTime(1799 * 1000)
+            await flushPromises()
+
+            expect(ecoule(page)).toBe('00:00:00')
+            expect(page.text()).toContain('16:00:00 restants')
+            expect(decalageDeLAnneau(page)).toBe(ANNEAU_VIDE)
+            expect(page.text()).not.toMatch(/-\d/)
+
+            // Deux secondes après le début, le compteur est parti.
+            vi.advanceTimersByTime(3000)
+            await flushPromises()
+
+            expect(ecoule(page)).toBe('00:00:02')
+            expect(page.text()).toContain('15:59:58 restants')
+            expect(decalageDeLAnneau(page)).toBeLessThan(ANNEAU_VIDE)
+        },
+    )
+
+    it('donne une durée nulle, pas négative, au jeûne terminé avant son début', async () => {
+        // Commencé sur un appareil en avance de cinq minutes, terminé une minute plus tard sur un autre.
+        const page = await monterLaPage({
+            history: [jeune(14, '2026-03-10T11:05:00.000000Z', '2026-03-10T11:01:00.000000Z')],
+        })
+
+        const [ligne] = lignesDeLHistorique(page)
+
+        expect(ligne).toContain('00:00:00')
+        expect(ligne).not.toMatch(/-\d/)
+    })
+})
+
 describe('Le jeûne — un appareil à Paris', () => {
     beforeEach(() => poserLeFuseau('Europe/Paris', -60, NOW))
 

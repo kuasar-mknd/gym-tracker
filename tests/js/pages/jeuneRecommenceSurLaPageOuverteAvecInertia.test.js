@@ -48,6 +48,10 @@ vi.mock('@/Components/Stats/FastingHistoryChart.vue', () => ({
  * jeûne chevauchait l'ancien, et la page affichait aussitôt « 24:00:00 » et
  * « Objectif atteint ! ».
  *
+ * Le début laissé tel quel et la fin partent avec l'heure de l'appareil au
+ * départ (`X-Heure-De-L-Appareil`), que le serveur place sur son horloge
+ * (#2198) : le test la lit dans les en-têtes que le client envoie.
+ *
  * Seule l'horloge `Date` est simulée : le client d'Inertia garde ses vraies
  * minuteries. Le client ne démarre qu'une fois par fichier : un fichier, un test.
  */
@@ -104,7 +108,8 @@ const boutonTerminer = () =>
  *
  * @param {() => void} geste
  * @param {object} reponse la page que le serveur rend après l'écriture
- * @returns {Promise<{ methode: string, adresse: string, corps: Record<string, unknown> }>} l'écriture partie
+ * @returns {Promise<{ methode: string, adresse: string, corps: Record<string, unknown>, entetes: Record<string, string> }>}
+ *     l'écriture partie
  */
 const ecrire = async (geste, reponse) => {
     const depuis = requetes.length
@@ -132,6 +137,7 @@ const ecrire = async (geste, reponse) => {
         methode: parties[0].methode.toUpperCase(),
         adresse: new URL(parties[0].url, window.location.href).pathname,
         corps: JSON.parse(parties[0].corps),
+        entetes: parties[0].entetes,
     }
 }
 
@@ -191,6 +197,8 @@ it('recommence à l’instant du second geste, sur la page restée montée depui
 
     expect(premier).toMatchObject({ methode: 'POST', adresse: '/tools.fasting.store' })
     expect(premier.corps.start_time).toBe(MONTAGE.toISOString())
+    // Avec l'heure de l'appareil au départ, la même : le serveur place le début sur son horloge (#2198).
+    expect(premier.entetes['X-Heure-De-L-Appareil']).toBe(MONTAGE.toISOString())
 
     // Seize heures plus tard, la personne termine le jeûne.
     vi.setSystemTime(FIN)
@@ -202,6 +210,7 @@ it('recommence à l’instant du second geste, sur la page restée montée depui
 
     expect(fin).toMatchObject({ methode: 'PATCH', adresse: '/tools.fasting.update/1' })
     expect(fin.corps.end_time).toBe(FIN.toISOString())
+    expect(fin.entetes['X-Heure-De-L-Appareil']).toBe(FIN.toISOString())
 
     // La page n'a pas été remontée, et le formulaire reparaît avec l'heure où
     // il reparaît, et non plus celle du premier jeûne.
@@ -218,6 +227,7 @@ it('recommence à l’instant du second geste, sur la page restée montée depui
     expect(second).toMatchObject({ methode: 'POST', adresse: '/tools.fasting.store' })
     expect(titreDeLHistorique()).toBe(titre)
     expect(second.corps.start_time).toBe(SECOND_GESTE.toISOString())
+    expect(second.entetes['X-Heure-De-L-Appareil']).toBe(SECOND_GESTE.toISOString())
     expect(Date.parse(second.corps.start_time)).toBeGreaterThan(Date.parse(termine.end_time))
 
     await uneTache()

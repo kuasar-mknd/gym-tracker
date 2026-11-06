@@ -26,11 +26,13 @@ const labels = computed(() =>
 const datasets = computed(() => [
     {
         label: 'Durée (heures)',
+        // Jamais sous l'axe : un jeûne terminé avant son début, venu d'un appareil en avance, dure zéro, comme dans
+        // l'historique détaillé de la page (#2198).
         data: jeunesTermines.value.map((fast) => {
             const start = new Date(fast.start_time)
             const end = new Date(fast.end_time)
             const diffMs = end - start
-            return Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10
+            return Math.max(0, Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10)
         }),
         backgroundColor: (context) => {
             const chart = context.chart

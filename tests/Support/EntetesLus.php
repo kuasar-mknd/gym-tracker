@@ -207,6 +207,9 @@ final class EntetesLus
             ],
             'api.v1.workouts.store' => static fn (User $compte): array => ['started_at' => $instant()],
             'api.v1.workouts.finish' => static fn (User $compte): array => ['workout_id' => $seance($compte)->id, 'ended_at' => $instant()],
+            // Le début laissé tel quel et la fin du jeûne partent avec l'heure de l'appareil au départ (#2198).
+            'tools.fasting.store' => static fn (User $compte): array => ['start_time' => $instant(), 'target_duration_minutes' => 960, 'type' => '16:8'],
+            'tools.fasting.update' => static fn (User $compte): array => ['end_time' => $instant(), 'status' => 'completed'],
             'workouts.store' => static fn (User $compte): array => [],
             'templates.execute' => static fn (User $compte): array => [],
         ];

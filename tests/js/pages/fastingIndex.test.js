@@ -60,8 +60,9 @@ vi.mock('@inertiajs/vue3', async () => {
 
                     return form
                 },
-                post: (url) => hoisted.post(url, transformer(payload())),
-                patch: (url) => hoisted.patch(url, transformer(payload())),
+                // Les options de la visite (ses en-têtes) suivent le corps, pour qui les lit (#2198).
+                post: (url, options) => hoisted.post(url, transformer(payload()), options),
+                patch: (url, options) => hoisted.patch(url, transformer(payload()), options),
                 reset: vi.fn(),
             })
 
@@ -205,6 +206,19 @@ describe('Fasting — le compteur du jeûne en cours', () => {
         expect(payload.status).toBe('completed')
     })
 
+    it('termine avec l’heure de l’appareil au départ, que le serveur place sur son horloge (#2198)', async () => {
+        // La fin prise au geste part avec l'heure de l'appareil au départ, la même : son âge est nul, et le serveur la
+        // place sur sa propre horloge, comme le début laissé tel quel. Une horloge d'appareil décalée ne déplace plus
+        // ni l'un ni l'autre, et la durée reste l'écart de deux instants lus sur la même horloge.
+        const wrapper = await mountPage({ activeFast: runningFast(3600, 16 * 60) })
+
+        await boutonTerminer(wrapper).trigger('click')
+
+        const [, payload, options] = hoisted.patch.mock.calls[0]
+        expect(options.headers).toEqual({ 'X-Heure-De-L-Appareil': NOW.toISOString() })
+        expect(options.headers['X-Heure-De-L-Appareil']).toBe(payload.end_time)
+    })
+
     it('arrête son horloge en quittant la page', async () => {
         const wrapper = await mountPage({ activeFast: runningFast(0, 16 * 60) })
         const clear = vi.spyOn(globalThis, 'clearInterval')
@@ -275,6 +289,36 @@ describe('Fasting — démarrer un jeûne', () => {
         expect(hoisted.post.mock.calls[0][1].start_time).toBe(geste.toISOString())
     })
 
+    it('envoie avec un début laissé tel quel l’heure de l’appareil au départ, que le serveur place sur son horloge (#2198)', async () => {
+        // Laissé tel quel, le début dit « maintenant », lu sur l'horloge de l'appareil. Une horloge en avance de plus de
+        // cinq minutes le faisait refuser comme un début choisi dans le futur. Il part avec l'heure de l'appareil au
+        // départ, la même : son âge est nul, et le serveur le place sur sa propre horloge (`X-Heure-De-L-Appareil`).
+        const wrapper = await mountPage({})
+        const geste = new Date(NOW.getTime() + 40 * 60 * 1000)
+
+        vi.setSystemTime(geste)
+        await wrapper.find('form').trigger('submit')
+
+        const [, payload, options] = hoisted.post.mock.calls[0]
+        expect(options.headers).toEqual({ 'X-Heure-De-L-Appareil': geste.toISOString() })
+        expect(options.headers['X-Heure-De-L-Appareil']).toBe(payload.start_time)
+    })
+
+    it('envoie sans l’heure de l’appareil un début changé à la main, que le serveur juge tel quel (#2198)', async () => {
+        // Une heure choisie n'est pas un geste : le serveur la garde, et refuse celle qui passe de plus de cinq minutes
+        // l'instant de la requête.
+        const wrapper = await mountPage({})
+
+        await wrapper
+            .find('input[type="datetime-local"]')
+            .setValue(localStamp(new Date(NOW.getTime() - 3600 * 1000), 'T'))
+        await wrapper.find('form').trigger('submit')
+
+        const [, payload, options] = hoisted.post.mock.calls[0]
+        expect(payload.start_time).toBe(new Date(NOW.getTime() - 3600 * 1000).toISOString())
+        expect(options?.headers ?? {}).not.toHaveProperty('X-Heure-De-L-Appareil')
+    })
+
     it('remplit de nouveau le début quand le formulaire réapparaît, sans que la page soit remontée', async () => {
         // Terminer passe par Inertia, qui garde l'état : la page n'est pas
         // remontée, et le champ gardait l'heure de son montage, celle du début
@@ -297,6 +341,45 @@ describe('Fasting — démarrer un jeûne', () => {
         await wrapper.vm.$nextTick()
 
         expect(wrapper.find('[dusk="fasting-error"]').text()).toBe('Un jeûne est déjà en cours.')
+    })
+
+    it('dit une seule fois le refus d’un champ, sous lui, et garde l’alerte du formulaire pour ce qu’aucun champ ne porte (#2198)', async () => {
+        // L'alerte du formulaire montrait la première erreur de n'importe quel champ : le refus d'un début à venir, que
+        // le champ « Début » dit déjà, s'affichait et s'annonçait deux fois au lecteur d'écran.
+        const wrapper = await mountPage({})
+        const refusDuDebut =
+            "Ton jeûne ne peut pas commencer dans le futur : vérifie l'heure du début et celle de ton appareil."
+        // Ce que chaque alerte affichée annonce, sans la ligature de son icône décorative. L'erreur d'un champ se cache
+        // par `v-show`, lue sur son style : `isVisible()` passe par `getComputedStyle`, que jsdom garde d'un état à
+        // l'autre quand Vue change `display` par le CSSOM.
+        const alertesVisibles = () =>
+            wrapper
+                .findAll('[role="alert"]')
+                .filter((alerte) => alerte.element.style.display !== 'none')
+                .map((alerte) => nomAccessible(alerte.element))
+
+        wrapper.vm.startForm.errors = { start_time: refusDuDebut }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual([refusDuDebut])
+        expect(wrapper.find('[dusk="fasting-error"]').exists()).toBe(false)
+
+        wrapper.vm.startForm.errors = { type: 'Le type de jeûne sélectionné est invalide.' }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual(['Le type de jeûne sélectionné est invalide.'])
+
+        wrapper.vm.startForm.errors = { start_time: refusDuDebut, base: 'Un jeûne est déjà en cours.' }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual([refusDuDebut, 'Un jeûne est déjà en cours.'])
+        expect(wrapper.find('[dusk="fasting-error"]').text()).toBe('Un jeûne est déjà en cours.')
+
+        // La durée cible, que la page tire du type, n'a pas de champ : son refus reste dans l'alerte du formulaire.
+        wrapper.vm.startForm.errors = { target_duration_minutes: 'La durée cible ne peut pas dépasser 7 jours.' }
+        await wrapper.vm.$nextTick()
+
+        expect(alertesVisibles()).toEqual(['La durée cible ne peut pas dépasser 7 jours.'])
     })
 })
 

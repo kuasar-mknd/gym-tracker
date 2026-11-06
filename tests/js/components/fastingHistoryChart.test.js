@@ -69,6 +69,17 @@ describe('FastingHistoryChart', () => {
         expect(tooltipLabelOf(wrapper, 'Bar', { parsed: { y: '16.5' } })).toBe('16.5 h')
     })
 
+    it('trace à zéro, et non sous l’axe, un jeûne terminé avant son début (#2198)', () => {
+        // Un début venu d'un appareil en avance, ou enregistré au futur avant que le serveur ne le refuse, puis une fin
+        // prise à l'heure juste : la barre descendait sous zéro, quand l'historique détaillé dit 00:00:00.
+        const chart = chartDataOf(
+            mountChart([completedFast, { start_time: '2026-01-07T20:00:00Z', end_time: '2026-01-07T19:00:00Z' }]),
+            'Bar',
+        )
+
+        expect(chart.datasets[0].data).toEqual([16.5, 0])
+    })
+
     it('ne trace rien quand aucun jeûne n’est terminé', () => {
         const chart = chartDataOf(mountChart([{ start_time: '2026-01-07T20:00:00Z', end_time: null }]), 'Bar')
 

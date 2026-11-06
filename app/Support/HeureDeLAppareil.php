@@ -26,6 +26,10 @@ use Carbon\Exceptions\InvalidFormatException;
  *
  * Reste l'horloge remise à l'heure entre le geste et l'envoi : l'âge prend
  * alors la correction, que les bornes de `Workout` tiennent.
+ *
+ * La page du jeûne l'envoie aussi, égale à l'instant du geste, avec un début
+ * laissé tel quel et avec la fin (#2198) : l'âge est nul, et le serveur prend
+ * son propre maintenant (`StoreFastRequest::instantDuGeste()`).
  */
 final class HeureDeLAppareil
 {

@@ -97,10 +97,11 @@ const remainingTime = computed(() => {
 
 /**
  * Les secondes pleines entre deux instants : l'écart réel, que l'heure murale ne donne pas la nuit où elle se répète.
- * Tronqué vers zéro, comme `diff(…, 'second')` de dayjs : la seconde qui précède un début à venir affiche 00:00:00.
+ * Tronqué vers zéro, comme `diff(…, 'second')` de dayjs, et jamais négatif (#2198) : avant un début à venir (appareil
+ * en avance), le compteur reste à 00:00:00, l'anneau vide, l'objectif entier, et un jeûne fini avant son début dure 0.
  * Un instant servi porte son fuseau (`2026-03-10T12:00:00.000000Z`), et se lit donc par `new Date()` (#2189).
  */
-const secondesEntre = (debut, fin) => Math.trunc((new Date(fin) - new Date(debut)) / 1000)
+const secondesEntre = (debut, fin) => Math.max(0, Math.trunc((new Date(fin) - new Date(debut)) / 1000))
 
 const updateTimer = () => {
     if (!props.activeFast) return
@@ -144,26 +145,34 @@ onUnmounted(() => {
     if (timerInterval.value) clearInterval(timerInterval.value)
 })
 
+/** L'heure de l'appareil au départ, celle du geste : l'âge est nul, et le serveur place le geste sur son horloge. */
+const auDepart = (geste) => ({ 'X-Heure-De-L-Appareil': geste })
+
 /**
  * Le champ montre l'heure de l'appareil, remplie à chaque retour du formulaire, la page n'étant pas remontée. Laissé
- * tel quel, il dit « maintenant » : le début part à l'instant du geste ; changé, à l'instant qu'il désigne. La fin part
- * à l'instant présent. Sans décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
+ * tel quel, il dit « maintenant » : le début part à l'instant du geste, avec l'heure de l'appareil au départ (#2198) ;
+ * changé, à l'instant qu'il désigne, que le serveur juge tel quel. La fin part à l'instant présent, avec elle aussi.
+ * Sans décalage, le serveur lisait une heure de l'application (#2111, `.ai/rules/js.md`).
  */
 const startFast = () => {
+    const geste = startForm.start_time === debutPrerempli ? new Date().toISOString() : null
     startForm
         .transform((data) => ({
             ...data,
-            start_time: data.start_time === debutPrerempli ? new Date().toISOString() : formatToUTC(data.start_time),
+            start_time: geste ?? formatToUTC(data.start_time),
             target_duration_minutes: selectedType.value.hours * 60,
             type: selectedType.value.value,
         }))
-        .post(route('tools.fasting.store'))
+        .post(route('tools.fasting.store'), { headers: geste ? auDepart(geste) : {} })
 }
 
 const endFast = () => {
     endForm.end_time = new Date().toISOString()
-    endForm.patch(route('tools.fasting.update', props.activeFast.id))
+    endForm.patch(route('tools.fasting.update', props.activeFast.id), { headers: auDepart(endForm.end_time) })
 }
+
+/** Le refus qu'aucun champ ne porte (`base`, un jeûne en cours) ; celui du début ou du type se dit sous lui (#2198). */
+const refus = computed(() => Object.values({ ...startForm.errors, start_time: null, type: null }).find(Boolean))
 
 const goToPage = (url) => {
     if (url) {
@@ -276,16 +285,8 @@ const formatHistoryDuration = (start, end) => formatDuration(secondesEntre(start
                         />
                     </div>
 
-                    <!-- The request adds a `base` error when a fast is already
-                         running and the controller a `message` one; neither maps
-                         to a field, so without this the rejection is invisible. -->
-                    <p
-                        v-if="Object.keys(startForm.errors).length"
-                        class="text-accent-danger-deep text-sm font-bold"
-                        role="alert"
-                        dusk="fasting-error"
-                    >
-                        {{ Object.values(startForm.errors)[0] }}
+                    <p v-if="refus" class="text-accent-danger-deep text-sm font-bold" role="alert" dusk="fasting-error">
+                        {{ refus }}
                     </p>
 
                     <GlassButton type="submit" variant="primary" :loading="startForm.processing" class="mt-4 w-full">
