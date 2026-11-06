@@ -164,12 +164,15 @@ describe('se déconnecter sans réseau', () => {
 
     /*
      * Une visite annulée en route passe par `onCancel`, puis par `onFinish` :
-     * la déconnexion se libère par là, sans rappel à part.
+     * la déconnexion se libère par là, sans rappel à part. En route : sa
+     * requête est partie, ce qui, depuis Inertia 3.11, n'arrive plus avant la
+     * fin de `seDeconnecter()`, mais une microtâche après.
      */
     it('repart quand la visite précédente a été annulée en route', async () => {
         reseau.mode = 'muet'
         let fin = await attendreLaFinDeLaVisite()
         await seDeconnecter()
+        await vi.waitUntil(() => logouts().length === 1)
         routeur.cancelAll()
         await fin()
 

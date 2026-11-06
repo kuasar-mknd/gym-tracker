@@ -399,7 +399,10 @@ describe('une réponse qu’Inertia n’a pas posée', () => {
     /*
      * Une réponse asynchrone revenue quand la page a changé de composant,
      * Inertia ne la pose pas (`shouldSetPage`) et émet pourtant `success`,
-     * avec la page courante : rien de ce `success` n'est une réponse.
+     * avec la page courante : rien de ce `success` n'est une réponse. Depuis
+     * Inertia 3.10, une visite côté client vers une autre adresse annule les
+     * requêtes en vol de la page quittée (cas suivant) : la réponse ne revient
+     * donc qu'à une visite côté client qui garde l'adresse.
      */
     it('des props différées revenues après une visite côté client ne s’écrivent nulle part, sans lever', async () => {
         const erreurs = []
@@ -414,9 +417,9 @@ describe('une réponse qu’Inertia n’a pas posée', () => {
         await vi.waitUntil(() => requetes.length === 2)
         await ecriture.ecrituresFinies()
 
-        // La page quitte l'accueil par une visite côté client, avant la réponse des props différées.
+        // La page change de composant par une visite côté client, à la même adresse, avant la réponse des props différées.
         await new Promise((fini) =>
-            routeur.push({ ...pageDe({ component: 'Workouts/Index', url: '/workouts' }), onFinish: fini }),
+            routeur.push({ ...pageDe({ component: 'Workouts/Index', url: '/dashboard' }), onFinish: fini }),
         )
         const arreter = routeur.on('success', (evenement) => succes.push(evenement.detail.page.component))
         requetes[1].repondre(reponsePartielle({ graphique: [1, 2] }))
@@ -426,7 +429,43 @@ describe('une réponse qu’Inertia n’a pas posée', () => {
         await ecriture.ecrituresFinies()
         window.removeEventListener('error', surUneErreur)
 
+        expect(requetes[1].annulee).toBe(false)
         expect(succes).toEqual(['Workouts/Index'])
+        expect([...copiesRangees().keys()]).toEqual(['/dashboard'])
+        expect((await magasin.lireUneCopie('/dashboard')).page.props).not.toHaveProperty('graphique')
+        expect(erreurs).toEqual([])
+        expect(relais.rejets).toEqual([])
+    })
+
+    /*
+     * Une visite côté client vers une autre adresse quitte la page : Inertia
+     * annule ses requêtes en vol (3.10), props différées comprises, et leur
+     * réponse ne revient jamais. Rien ne s'écrit, et rien ne lève.
+     */
+    it('des props différées en vol quand une visite côté client quitte l’adresse sont annulées, sans rien écrire', async () => {
+        const erreurs = []
+        const surUneErreur = (evenement) => erreurs.push(evenement.error ?? evenement.message)
+        const succes = []
+
+        window.addEventListener('error', surUneErreur)
+        reseau.mode = 'muet'
+        routeur.visit('/dashboard')
+        await vi.waitUntil(() => requetes.length === 1)
+        requetes[0].repondre(reponseInertia(pageDe({ deferredProps: { default: ['graphique'] } })))
+        await vi.waitUntil(() => requetes.length === 2)
+        await ecriture.ecrituresFinies()
+
+        const arreter = routeur.on('success', (evenement) => succes.push(evenement.detail.page.component))
+        await new Promise((fini) =>
+            routeur.push({ ...pageDe({ component: 'Workouts/Index', url: '/workouts' }), onFinish: fini }),
+        )
+        await uneTache()
+        await ecriture.ecrituresFinies()
+        arreter()
+        window.removeEventListener('error', surUneErreur)
+
+        expect(requetes[1].annulee).toBe(true)
+        expect(succes).toEqual([])
         expect([...copiesRangees().keys()]).toEqual(['/dashboard'])
         expect((await magasin.lireUneCopie('/dashboard')).page.props).not.toHaveProperty('graphique')
         expect(erreurs).toEqual([])
