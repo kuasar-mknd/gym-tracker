@@ -105,6 +105,48 @@ function seriesPassesPourLesVersions(User $user, Exercise $exercice, string $deb
 }
 
 /**
+ * Les passages d'`app/` qui comptent encore une version de clés de cache, ou
+ * le disent : un appel à `increment()` ou `decrement()` du cache sur une clé
+ * de version ou de révision, que Redis refuse sur un ULID ; un commentaire qui
+ * annonce qu'on incrémente la version, et qui égarerait le prochain lecteur
+ * vers l'ancien compteur. Chacun sous la forme `fichier:ligne`.
+ *
+ * @return list<string>
+ */
+function passagesQuiComptentUneVersionDeCache(): array
+{
+    $passages = [];
+    $fichiers = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(base_path('app'), FilesystemIterator::SKIP_DOTS));
+
+    foreach ($fichiers as $fichier) {
+        if (! $fichier instanceof SplFileInfo || $fichier->getExtension() !== 'php') {
+            continue;
+        }
+
+        $source = (string) file_get_contents($fichier->getPathname());
+        $relatif = str_replace(base_path().'/', '', $fichier->getPathname());
+
+        if (preg_match_all('/Cache::(?:memo\(\s*\)\s*->\s*)?(?:increment|decrement)\s*\(\s*["\'][^"\']*(?:version|revision)/i', $source, $appels, PREG_OFFSET_CAPTURE) > 0) {
+            foreach ($appels[0] as [, $position]) {
+                $passages[] = $relatif.':'.(substr_count(substr($source, 0, $position), "\n") + 1);
+            }
+        }
+
+        foreach (token_get_all($source) as $jeton) {
+            if (is_array($jeton)
+                && in_array($jeton[0], [T_COMMENT, T_DOC_COMMENT], true)
+                && preg_match('/incr[ée]ment\w*\s+(?:la|les|une|sa|leurs?)\s+(?:versions?|r[ée]visions?)\b/iu', $jeton[1], $phrase, PREG_OFFSET_CAPTURE) === 1) {
+                $passages[] = $relatif.':'.($jeton[2] + substr_count(substr($jeton[1], 0, $phrase[0][1]), "\n"));
+            }
+        }
+    }
+
+    sort($passages);
+
+    return $passages;
+}
+
+/**
  * Les noms de la liste d'exercices du compte, telle que le cache la sert.
  *
  * @return list<string>
@@ -261,4 +303,8 @@ it('ne lit la version des statistiques qu’une fois par requête', function ():
     ClesDeStats::seances($user, 'muscle_dist.30');
 
     expect(array_count_values($lectures)["stats-version.seances.{$user->id}"] ?? 0)->toBe(1);
+});
+
+it('ne compte plus aucune version de clés de cache dans app/, ni ne le dit', function (): void {
+    expect(passagesQuiComptentUneVersionDeCache())->toBe([], 'une version de clés de cache est un ULID tiré par VersionDeCache, jamais un compteur (#2151) : ces passages l’incrémentent encore, ou le disent');
 });
