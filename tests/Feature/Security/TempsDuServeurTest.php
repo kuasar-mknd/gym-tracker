@@ -460,10 +460,11 @@ it('ne laisse pas une lecture restée sans réponse fausser les suivantes', func
     $mesure->noterUneDemandeAuCache(2);
     $avancerA(41);
     $mesure->noterUneReponseDuCache();
+    // Un groupe vide, demandé pendant que la seconde clé attend, ne demande rien : la réponse qui suit revient au groupe.
+    $avancerA(42);
+    $mesure->noterUneDemandeAuCache(0);
     $avancerA(43);
     $mesure->noterUneReponseDuCache();
-    // Un groupe vide ne demande rien.
-    $mesure->noterUneDemandeAuCache(0);
     $avancerA(50);
 
     expect($mesure->valeurDeLEnTete())->toEndWith(', cache;dur=5.0;desc="3 lectures"');
