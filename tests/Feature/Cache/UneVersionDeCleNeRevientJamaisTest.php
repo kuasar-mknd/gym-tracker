@@ -76,15 +76,32 @@ function peseePourLesVersions(User $user, string $jour, float $poids): void
 }
 
 /**
- * Une ligne de l'exercice dans une séance passée, et ses séries : chaque série
- * enregistrée invalide les recommandations du compte, par l'écouteur de
- * l'application.
+ * Une ligne de l'exercice dans une séance passée, et trois séries. Écrites en
+ * masse, sans les écouteurs des séries (records, objectifs, succès), que le
+ * test ne lit pas (`.ai/rules/tests.md`) ; il invalide à leur place, une fois
+ * par série, comme l'écouteur de `Set::saved`.
  */
 function seriesPassesPourLesVersions(User $user, Exercise $exercice, string $debut, float $poids): void
 {
     $seance = Workout::withoutEvents(fn (): Workout => Workout::factory()->create(['user_id' => $user->id, 'started_at' => $debut]));
     $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $exercice->id]);
-    Set::factory()->count(3)->create(['workout_line_id' => $ligne->id, 'weight' => $poids, 'reps' => 8]);
+    $rangs = range(0, 2);
+
+    Set::insert(array_map(fn (int $rang): array => [
+        'workout_line_id' => $ligne->id,
+        'user_id' => $user->id,
+        'order' => $rang,
+        'weight' => $poids,
+        'reps' => 8,
+        'is_warmup' => false,
+        'is_completed' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ], $rangs));
+
+    foreach ($rangs as $rang) {
+        app(RecommendedValuesService::class)->invaliderPour($user->id);
+    }
 }
 
 /**
