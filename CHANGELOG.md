@@ -7,6 +7,9 @@ et ce projet adhère au [Versionnage Sémantique](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Corrigé
+- **Une statistique, une valeur proposée ou une liste d'exercices ne revient plus à son état d'avant une modification quand le cache perd sa version** (#2151, #PR) : étape 6 de #2151. Ces entrées se rangent sous une version par compte (une seule pour le catalogue des exercices), qu'il suffit de changer pour les invalider toutes. C'étaient des compteurs, gardés dans le cache comme le reste : quand le cache manquait de place et en évinçait un, il repartait de zéro, remontait vers des numéros déjà servis, et une entrée écrite avant une modification était resservie jusqu'à son échéance (une heure au plus pour les statistiques et la liste des exercices, cinq minutes pour les valeurs proposées). Chaque version est désormais un identifiant tiré à neuf, un ULID, jamais réutilisé, et lu une fois par requête (`app/Support/VersionDeCache.php`). Toutes les clés changent au déploiement : chaque entrée se recalcule une fois. **Revenir à une release d'avant demande `php artisan cache:clear` dans le service `app` juste après** : l'ancien code incrémentait la version, ce que Redis refuse sur un ULID, et plus rien n'invaliderait les statistiques et les valeurs proposées jusqu'à leur échéance.
+
 ## [1.7.0] - 2026-11-06
 
 ### Ajouté
