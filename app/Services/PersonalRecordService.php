@@ -257,7 +257,7 @@ final class PersonalRecordService
     public function retirerLesTypesNonSuivis(User $user, int $idExercice): int
     {
         return $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice): int {
-            $retires = PersonalRecord::query()
+            $retires = DB::table('personal_records')
                 ->where('user_id', $user->id)
                 ->where('exercise_id', $idExercice)
                 ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)

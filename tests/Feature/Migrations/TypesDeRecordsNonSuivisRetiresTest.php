@@ -369,7 +369,8 @@ it('rouvre le tableau de bord, que le dernier record écrit en capitales faisait
  */
 it('retire aussi, sans rien reconstruire, le record d’un type non suivi dont le compte a disparu', function (): void {
     $exercice = Exercise::factory()->create();
-    $absent = (int) DB::table('users')->max('id') + 1000;
+    $plusGrand = DB::table('users')->max('id');
+    $absent = (is_numeric($plusGrand) ? (int) $plusGrand : 0) + 1000;
 
     Schema::withoutForeignKeyConstraints(function () use ($absent, $exercice): void {
         typesNonSuivisPlanter($absent, $exercice->id, 'cardio', 30);
