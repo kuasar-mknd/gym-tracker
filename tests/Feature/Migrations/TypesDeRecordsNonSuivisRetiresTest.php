@@ -362,6 +362,69 @@ it('rouvre le tableau de bord, que le dernier record écrit en capitales faisait
 });
 
 /*
+ * Les types hérités, que l'enum relit encore, se montraient parmi les derniers
+ * records du tableau de bord, que la carte étiquette « Volume » avec leur
+ * valeur en kg. Leur retrait les en ôte : les records suivis, refaits depuis
+ * les séries, prennent leur place.
+ */
+it('ôte du tableau de bord la carte d’un record hérité, que les records suivis refaits depuis les séries remplacent', function (): void {
+    $this->withoutVite();
+    $compte = User::factory()->create();
+    $seance = Workout::factory()->create(['user_id' => $compte->id, 'started_at' => now()->subDay(), 'ended_at' => now()->subDay()->addHour()]);
+    $squat = typesNonSuivisExercice($compte, $seance, 'Squat', 'strength', [[100, 5]]);
+    $herite = typesNonSuivisPlanter($compte->id, $squat->id, '1RM', 140);
+    DB::table('personal_records')->where('id', $herite)->update(['achieved_at' => now()->addMinute()]);
+
+    actingAs($compte)->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('recentPRs', 2)
+            ->where('recentPRs.0.id', $herite)
+            ->where('recentPRs.0.type', '1RM')
+            ->where('recentPRs.0.value', '140.00'));
+
+    typesNonSuivisMigrer();
+
+    $estSuivi = static fn (mixed $type): bool => in_array($type, PersonalRecordType::SUIVIS, true);
+
+    actingAs($compte)->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('recentPRs', 2)
+            ->where('recentPRs.0.type', $estSuivi)
+            ->where('recentPRs.1.type', $estSuivi));
+});
+
+/*
+ * Un exercice du catalogue (sans compte) porte les records de chaque compte
+ * qui s'en sert. Le retrait d'un compte ne touche qu'à ses propres lignes :
+ * celles d'un autre compte relèvent du verrou de leur propre couple
+ * (`records:{compte}:{exercice}`), que ce retrait ne tient pas, et le nombre
+ * rendu ne compte que les siennes.
+ */
+it('ne retire que les lignes du compte demandé sur un exercice du catalogue, que d’autres comptes partagent', function (): void {
+    $catalogue = Exercise::factory()->create(['user_id' => null, 'name' => 'Squat', 'type' => 'strength']);
+    $premier = User::factory()->create();
+    $second = User::factory()->create();
+
+    foreach ([$premier, $second] as $compte) {
+        $seance = Workout::factory()->create(['user_id' => $compte->id, 'started_at' => now()->subDay(), 'ended_at' => now()->subDay()->addHour()]);
+        $ligne = WorkoutLine::factory()->create(['workout_id' => $seance->id, 'exercise_id' => $catalogue->id]);
+        Set::factory()->create(['workout_line_id' => $ligne->id, 'weight' => 100, 'reps' => 5, 'is_warmup' => false, 'is_completed' => true]);
+        typesNonSuivisPlanter($compte->id, $catalogue->id, 'cardio', 30);
+    }
+
+    typesNonSuivisRenommer($second, $catalogue, 'max_weight', 'MAX_WEIGHT');
+    $lignesDuSecond = typesNonSuivisLignes([$second->id]);
+
+    expect($lignesDuSecond)->toHaveCount(4);
+
+    expect(app(PersonalRecordService::class)->retirerLesTypesNonSuivis($premier, $catalogue->id))->toBe(1)
+        ->and(typesNonSuivisRecordsSuivis($premier, $catalogue))->toBe(typesNonSuivisAttendus($premier, $catalogue))
+        ->and(typesNonSuivisLignes([$second->id]))->toBe($lignesDuSecond);
+});
+
+/*
  * Un record dont le compte a disparu ne devrait pas exister : la clé
  * étrangère l'emporte avec le compte. Une base restaurée clés coupées, ou
  * passée par un serveur qui ne l'a pas vérifiée, peut en garder : la

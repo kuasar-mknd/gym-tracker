@@ -641,6 +641,30 @@ it('retire par --repair un record d’un type non suivi, et le contrôle repasse
 ]);
 
 /*
+ * Chaque couple (compte, exercice) se retire sous son propre verrou : la
+ * réparation additionne ce que chacun a retiré, et compte les exercices
+ * refaits.
+ */
+it('additionne par --repair les records retirés de chaque exercice refait', function (): void {
+    [$premier, $seriePremier] = compteCoherent();
+    [$second, $serieSecond] = compteCoherent();
+
+    recordDeTypeHeritePlanteEnBase($premier, $seriePremier, 'cardio');
+    recordDeTypeHeritePlanteEnBase($second, $serieSecond, '1RM');
+    recordDeTypeHeritePlanteEnBase($second, $serieSecond, 'volume');
+
+    $this->artisan('app:verify-data-coherence', ['--repair' => true])
+        ->assertExitCode(0)
+        ->expectsOutputToContain("3 record(s) d'un type que l'application ne tient plus retiré(s), sur 2 exercice(s) refait(s) depuis leurs séries")
+        ->expectsOutputToContain('OK type des records');
+
+    foreach ([$premier, $second] as $compte) {
+        expect(DB::table('personal_records')->where('user_id', $compte->id)->pluck('type')->all())
+            ->toEqualCanonicalizing(['max_weight', 'max_1rm', 'max_volume_set']);
+    }
+});
+
+/*
  * Sans rien à retirer, la réparation le dit, et ne refait aucun exercice de
  * plus que les autres réparations.
  */
