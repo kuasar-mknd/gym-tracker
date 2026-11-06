@@ -39,6 +39,9 @@
  * l'adresse d'une page pose un drapeau local, et le relevé s'affiche alors à
  * l'écran, avec un bouton qui copie le tableau ; « Fermer » retire le
  * drapeau, seule chose que le relevé écrive (`localStorage`, sous try/catch).
+ * Replié, le panneau ne calcule rien ; déplié, il se recalcule au plus une
+ * fois par seconde, jamais pendant une navigation : sinon il allongerait la
+ * mesure qu'il affiche.
  */
 import { nombre } from '@/Utils/nombre'
 
@@ -59,6 +62,9 @@ export const PREFIXE_DES_NAVIGATIONS = 'navigation '
 
 /** La fonction de console, posée sur la fenêtre tant que le relevé est armé. */
 export const FONCTION_DE_CONSOLE = 'releverLesTemps'
+
+/** L'écart au moins entre deux recalculs du tableau du panneau déplié. */
+export const RECALCUL_DU_PANNEAU_AU_PLUS_TOUTES_LES_MS = 1000
 
 /** Les métriques que pose `App\Http\Middleware\TempsDuServeur`. */
 const METRIQUES_DU_SERVEUR = ['app', 'routage', 'controleur', 'rendu', 'sql', 'cache']
@@ -367,14 +373,14 @@ const sorteDeLaVisite = (visite) => {
  * Le relevé à l'écran : un `<details>` replié au bas de l'écran, le tableau
  * dans un `<pre>`, écrit par `textContent`, et deux boutons. Construit hors
  * de l'application Vue, qu'il ne doit ni attendre ni gêner : c'est un outil
- * de mesure, pas une page.
+ * de mesure, pas une page. Il n'écrit son tableau que sur demande (`ecrire`),
+ * déplié (`deplie`, à chaque ouverture) ou pour le sélectionner à copier.
  *
  * @param {Window} fenetre
- * @param {() => string} tableau
- * @param {() => void} fermer
- * @returns {{rafraichir: () => void, retirer: () => void}}
+ * @param {{tableau: () => string, fermer: () => void, deplie: () => void}} rappels
+ * @returns {{ecrire: (texte: string) => void, estDeplie: () => boolean, retirer: () => void}}
  */
-const monterLePanneau = (fenetre, tableau, fermer) => {
+const monterLePanneau = (fenetre, { tableau, fermer, deplie }) => {
     const document = fenetre.document
     const panneau = document.createElement('details')
     const titre = document.createElement('summary')
@@ -402,8 +408,8 @@ const monterLePanneau = (fenetre, tableau, fermer) => {
 
     titre.textContent = 'Relevé des temps : rien ne quitte cet appareil'
 
-    const rafraichir = () => {
-        contenu.textContent = tableau()
+    const ecrire = (texte) => {
+        contenu.textContent = texte
     }
 
     copier.addEventListener('click', async () => {
@@ -414,17 +420,21 @@ const monterLePanneau = (fenetre, tableau, fermer) => {
             copier.textContent = 'Copié'
         } catch {
             // Sans presse-papiers (page non sécurisée, refus) : le texte reste sélectionné, à copier à la main.
+            ecrire(texte)
             fenetre.getSelection?.()?.selectAllChildren(contenu)
             copier.textContent = 'Sélectionné : copie-le'
         }
     })
 
     quitter.addEventListener('click', fermer)
-    panneau.addEventListener('toggle', rafraichir)
-    rafraichir()
+    panneau.addEventListener('toggle', () => {
+        if (panneau.open) {
+            deplie()
+        }
+    })
     document.body.append(panneau)
 
-    return { rafraichir, retirer: () => panneau.remove() }
+    return { ecrire, estDeplie: () => panneau.open, retirer: () => panneau.remove() }
 }
 
 /**
@@ -442,10 +452,60 @@ const armer = ({ routeur, fenetre, origine, fragment }) => {
     const retraits = []
     let panneau = null
     let enCours = null
+    let mesuresAttendues = 0
+    let tableauEnRetard = true
+    let recalculPrevu = false
+    let dernierRecalcul = Number.NEGATIVE_INFINITY
 
     const releve = () => ({ requetes: [...requetes], navigations: [...navigations] })
     const tableau = () => tableauDuReleve(releve())
-    const rafraichir = () => panneau?.rafraichir()
+
+    /*
+     * Le tableau du panneau, tenu loin de ce qu'il mesure. Le bâtir coûte
+     * (deux cents lignes : une dizaine de millisecondes, plusieurs fois plus
+     * sur un téléphone lent), et une entrée de requête arrive pendant
+     * qu'Inertia traite la réponse d'une visite : recalculé dans le rappel de
+     * l'observateur, il allongeait la navigation qu'il rapporte. Il ne se
+     * recalcule donc que déplié : à l'ouverture, puis par une minuterie, une
+     * seconde au moins après le précédent, jamais pendant une navigation, du
+     * `before` d'une visite au premier plan à sa mesure ou à sa fin sans page.
+     */
+    const navigationEnCours = () => enCours !== null || mesuresAttendues > 0
+
+    const recalculer = () => {
+        tableauEnRetard = false
+        dernierRecalcul = performance.now()
+        panneau?.ecrire(tableau())
+    }
+
+    const prevoirLeRecalcul = (attente = 0) => {
+        if (!tableauEnRetard || recalculPrevu || !panneau?.estDeplie() || navigationEnCours()) {
+            return
+        }
+
+        recalculPrevu = true
+        fenetre.setTimeout(() => {
+            recalculPrevu = false
+
+            if (!panneau?.estDeplie() || navigationEnCours()) {
+                return
+            }
+
+            const reste = dernierRecalcul + RECALCUL_DU_PANNEAU_AU_PLUS_TOUTES_LES_MS - performance.now()
+
+            if (reste > 0) {
+                prevoirLeRecalcul(reste)
+            } else {
+                recalculer()
+            }
+        }, attente)
+    }
+
+    /** Une mesure de plus : le tableau est en retard, et se recalculera plus tard s'il est montré. */
+    const signaler = () => {
+        tableauEnRetard = true
+        prevoirLeRecalcul()
+    }
 
     /**
      * L'étiquette d'une requête : sa méthode et sa sorte, d'après ce que la
@@ -483,7 +543,7 @@ const armer = ({ routeur, fenetre, origine, fragment }) => {
 
     const relever = (entree, etiquette) => {
         ajouterBorne(requetes, ligneDuReleve(entree, etiquette), MESURES_AU_PLUS)
-        rafraichir()
+        signaler()
     }
 
     const entreeDuDocument = performance.getEntriesByType('navigation')[0]
@@ -546,6 +606,7 @@ const armer = ({ routeur, fenetre, origine, fragment }) => {
             const chemin = cheminNormalise(page.url, origine) ?? '?'
 
             enCours = null
+            mesuresAttendues += 1
 
             const mesurer = () => {
                 const fin = performance.now()
@@ -556,8 +617,9 @@ const armer = ({ routeur, fenetre, origine, fragment }) => {
                     // Une mesure refusée (User Timing absent ou ancien) n'empêche pas le relevé.
                 }
 
+                mesuresAttendues -= 1
                 ajouterBorne(navigations, { chemin, duree: fin - debut }, MESURES_AU_PLUS)
-                rafraichir()
+                signaler()
             }
 
             // La première image peinte après la nouvelle page : le premier rappel précède sa peinture, le second la suit.
@@ -565,6 +627,20 @@ const armer = ({ routeur, fenetre, origine, fragment }) => {
                 fenetre.requestAnimationFrame(() => fenetre.requestAnimationFrame(mesurer))
             } else {
                 fenetre.setTimeout(mesurer, 0)
+            }
+        }),
+    )
+
+    /*
+     * Une visite marquée qui finit sans `navigate` (vers la page courante,
+     * refusée, interrompue) ne retient plus le recalcul ; Inertia émet
+     * `navigate` avant `finish`, et une visite déjà posée n'a plus rien ici.
+     */
+    retraits.push(
+        routeur.on('finish', (evenement) => {
+            if (enCours !== null && enCours.id === evenement.detail.visit?.id) {
+                enCours = null
+                prevoirLeRecalcul()
             }
         }),
     )
@@ -590,10 +666,14 @@ const armer = ({ routeur, fenetre, origine, fragment }) => {
     }
 
     if (drapeau(fenetre, 'lire') && fenetre.document?.body) {
-        panneau = monterLePanneau(fenetre, tableau, () => {
-            drapeau(fenetre, 'retirer')
-            panneau?.retirer()
-            panneau = null
+        panneau = monterLePanneau(fenetre, {
+            tableau,
+            fermer: () => {
+                drapeau(fenetre, 'retirer')
+                panneau?.retirer()
+                panneau = null
+            },
+            deplie: recalculer,
         })
         retraits.push(() => panneau?.retirer())
     }

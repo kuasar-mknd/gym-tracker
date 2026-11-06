@@ -6,6 +6,7 @@ import {
     MARQUE_DU_TOUCHER,
     MESURES_AU_PLUS,
     PREFIXE_DES_NAVIGATIONS,
+    RECALCUL_DU_PANNEAU_AU_PLUS_TOUTES_LES_MS,
     centile,
     cheminNormalise,
     installerLeReleveDesTemps,
@@ -73,13 +74,14 @@ const routeurSimule = () => {
 /**
  * Une fenêtre où le test décide de tout : l'entrée `navigation`, les entrées
  * de requêtes que reçoivent les observateurs (en différé, comme le
- * navigateur, et toutes d'un coup à qui demande `buffered`), l'horloge et les
- * images.
+ * navigateur, et toutes d'un coup à qui demande `buffered`), l'horloge, les
+ * minuteries, qui ne partent qu'à leur échéance, et les images.
  */
 const fenetreSimulee = ({ navigation, hash = '', stockageBloque = false } = {}) => {
     const observateurs = []
     const entreesPassees = []
     const images = []
+    const minuteries = []
     let instant = 0
 
     class ObservateurSimule {
@@ -138,7 +140,7 @@ const fenetreSimulee = ({ navigation, hash = '', stockageBloque = false } = {}) 
         navigator: { clipboard: { writeText: vi.fn(async () => undefined) } },
         getSelection: () => window.getSelection(),
         requestAnimationFrame: (rappel) => images.push(rappel),
-        setTimeout: (rappel) => rappel(),
+        setTimeout: (rappel, delai = 0) => minuteries.push({ rappel, echeance: instant + delai }),
     }
 
     return {
@@ -150,6 +152,16 @@ const fenetreSimulee = ({ navigation, hash = '', stockageBloque = false } = {}) 
         },
         /** Peint une image : les rappels en attente partent, ceux qu'ils posent attendent la suivante. */
         peindre: () => images.splice(0).forEach((rappel) => rappel()),
+        /** Les minuteries échues à l'instant courant partent, et celles qu'elles posent pour cet instant aussi. */
+        laisserPasser: () => {
+            for (
+                let rang = minuteries.findIndex(({ echeance }) => echeance <= instant);
+                rang !== -1;
+                rang = minuteries.findIndex(({ echeance }) => echeance <= instant)
+            ) {
+                minuteries.splice(rang, 1)[0].rappel()
+            }
+        },
         /** De nouvelles entrées arrivent aux observateurs encore branchés. */
         recevoir: (...entrees) => {
             entreesPassees.push(...entrees)
@@ -162,6 +174,14 @@ const fenetreSimulee = ({ navigation, hash = '', stockageBloque = false } = {}) 
 }
 
 const documentServi = (options = {}) => entreeDeRequete('/dashboard', { initiatorType: 'navigation', ...options })
+
+/** Déplie le panneau comme un toucher sur son titre, et attend son évènement `toggle`, qui part après. */
+const deplier = async (panneau) => {
+    const bascule = new Promise((resoudre) => panneau.addEventListener('toggle', resoudre, { once: true }))
+
+    panneau.querySelector('summary').click()
+    await bascule
+}
 
 /** Une visite d'Inertia telle que ses évènements la portent. */
 const visite = (adresse, options = {}) => ({
@@ -398,7 +418,7 @@ describe('quand le serveur mesure', () => {
         expect(installe.releve().requetes).toEqual([
             expect.objectContaining({ etiquette: 'GET /dashboard (document)', ttfb: 60 }),
         ])
-        expect(routeur.nombreDEcouteurs()).toBe(3)
+        expect(routeur.nombreDEcouteurs()).toBe(4)
         expect(simulee.fenetre[FONCTION_DE_CONSOLE]).toBeTypeOf('function')
     })
 
@@ -413,7 +433,7 @@ describe('quand le serveur mesure', () => {
             'GET /dashboard (document)',
             '? /dashboard',
         ])
-        expect(routeur.nombreDEcouteurs()).toBe(3)
+        expect(routeur.nombreDEcouteurs()).toBe(4)
     })
 
     it('relève chaque requête de même origine faite par la page, et rien d’autre', () => {
@@ -678,6 +698,10 @@ describe('la navigation perçue', () => {
         routeur.emettre('before', { visit: visite('/stats', { id: 'c' }) })
         routeur.emettre('navigate', { type: 'visit', visitId: 'c', page: { url: '/stats' } })
 
+        expect(installe.releve().navigations).toHaveLength(0)
+
+        simulee.laisserPasser()
+
         expect(installe.releve().navigations).toHaveLength(1)
     })
 })
@@ -696,7 +720,7 @@ describe('le relevé à l’écran', () => {
         expect(simulee.stockage.setItem).not.toHaveBeenCalled()
     })
 
-    it('s’affiche par le fragment, qui pose le drapeau, et suit les mesures', () => {
+    it('s’affiche replié par le fragment, qui pose le drapeau, puis déplié suit les mesures', async () => {
         const simulee = fenetreSimulee({ navigation: documentServi(), hash: FRAGMENT_QUI_AFFICHE })
 
         installe = installerLeReleveDesTemps({ routeur: routeurSimule(), fenetre: simulee.fenetre })
@@ -705,12 +729,123 @@ describe('le relevé à l’écran', () => {
 
         expect(simulee.stockage.donnees.get(DRAPEAU_DE_L_AFFICHAGE)).toBe('1')
         expect(panneau.tagName).toBe('DETAILS')
+        expect(panneau.open).toBe(false)
         expect(panneau.querySelector('summary').textContent).toContain('rien ne quitte cet appareil')
+
+        await deplier(panneau)
+
         expect(panneau.querySelector('pre').textContent).toContain('| GET /dashboard (document) | 1 |')
 
         simulee.recevoir(entreeDeRequete('/stats'))
+        simulee.avancerA(RECALCUL_DU_PANNEAU_AU_PLUS_TOUTES_LES_MS)
+        simulee.laisserPasser()
 
         expect(panneau.querySelector('pre').textContent).toContain('| ? /stats | 1 |')
+    })
+
+    /*
+     * Bâtir le tableau coûte, et une entrée arrive pendant qu'Inertia traite
+     * la réponse d'une visite : recalculé à chaque entrée, le panneau
+     * allongeait la navigation qu'il rapporte (#2148).
+     */
+    it('replié, ne recalcule ni ne réécrit rien quand des mesures arrivent', () => {
+        const simulee = fenetreSimulee({ navigation: documentServi(), hash: FRAGMENT_QUI_AFFICHE })
+        const routeur = routeurSimule()
+
+        installe = installerLeReleveDesTemps({ routeur, fenetre: simulee.fenetre })
+
+        const ecritures = new MutationObserver(() => {})
+        const formateurs = vi.spyOn(Intl, 'NumberFormat')
+
+        ecritures.observe(document.querySelector('#releve-des-temps pre'), {
+            childList: true,
+            characterData: true,
+            subtree: true,
+        })
+        simulee.recevoir(...Array.from({ length: 20 }, (_, rang) => entreeDeRequete(`/stats/${rang}`)))
+        routeur.emettre('before', { visit: visite('/stats', { id: 'r' }) })
+        routeur.emettre('navigate', { type: 'visit', visitId: 'r', page: { url: '/stats' } })
+        simulee.peindre()
+        simulee.peindre()
+        simulee.avancerA(10 * RECALCUL_DU_PANNEAU_AU_PLUS_TOUTES_LES_MS)
+        simulee.laisserPasser()
+
+        expect(installe.releve().navigations).toHaveLength(1)
+        expect(ecritures.takeRecords()).toEqual([])
+        expect(formateurs).not.toHaveBeenCalled()
+
+        ecritures.disconnect()
+    })
+
+    it('déplié, se recalcule au plus une fois par seconde, jamais dans le rappel qui apporte la mesure', async () => {
+        const simulee = fenetreSimulee({ navigation: documentServi(), hash: FRAGMENT_QUI_AFFICHE })
+
+        installe = installerLeReleveDesTemps({ routeur: routeurSimule(), fenetre: simulee.fenetre })
+
+        const panneau = document.getElementById('releve-des-temps')
+        const contenu = panneau.querySelector('pre')
+
+        simulee.avancerA(100)
+        await deplier(panneau)
+        simulee.recevoir(entreeDeRequete('/stats'))
+
+        expect(contenu.textContent).not.toContain('/stats')
+
+        simulee.laisserPasser()
+        simulee.avancerA(100 + RECALCUL_DU_PANNEAU_AU_PLUS_TOUTES_LES_MS - 1)
+        simulee.laisserPasser()
+
+        expect(contenu.textContent).not.toContain('/stats')
+
+        simulee.avancerA(100 + RECALCUL_DU_PANNEAU_AU_PLUS_TOUTES_LES_MS)
+        simulee.laisserPasser()
+
+        expect(contenu.textContent).toContain('| ? /stats | 1 |')
+    })
+
+    it('déplié, attend pour se recalculer la fin de la navigation en cours, mesurée ou finie sans page', async () => {
+        const simulee = fenetreSimulee({ navigation: documentServi(), hash: FRAGMENT_QUI_AFFICHE })
+        const routeur = routeurSimule()
+
+        installe = installerLeReleveDesTemps({ routeur, fenetre: simulee.fenetre })
+
+        const panneau = document.getElementById('releve-des-temps')
+        const contenu = panneau.querySelector('pre')
+
+        await deplier(panneau)
+
+        // Du `before` d'une visite au premier plan à sa mesure, une image après la page posée.
+        simulee.avancerA(5000)
+        routeur.emettre('before', { visit: visite('/workouts', { id: 'n' }) })
+        simulee.recevoir(entreeDeRequete('/workouts'))
+        simulee.avancerA(6000)
+        simulee.laisserPasser()
+        routeur.emettre('navigate', { type: 'visit', visitId: 'n', page: { url: '/workouts' } })
+        simulee.laisserPasser()
+        simulee.peindre()
+        simulee.laisserPasser()
+
+        expect(contenu.textContent).not.toContain('/workouts')
+
+        simulee.peindre()
+        simulee.laisserPasser()
+
+        expect(contenu.textContent).toContain('| ? /workouts | 1 |')
+        expect(contenu.textContent).toContain('| /workouts | 1 |')
+
+        // Une visite vers la page courante n'émet pas de `navigate` : sa fin libère le recalcul.
+        simulee.avancerA(8000)
+        routeur.emettre('before', { visit: visite('/workouts', { id: 'p' }) })
+        simulee.recevoir(entreeDeRequete('/habits'))
+        simulee.avancerA(9000)
+        simulee.laisserPasser()
+
+        expect(contenu.textContent).not.toContain('/habits')
+
+        routeur.emettre('finish', { visit: visite('/workouts', { id: 'p' }) })
+        simulee.laisserPasser()
+
+        expect(contenu.textContent).toContain('| ? /habits | 1 |')
     })
 
     it('s’affiche au chargement suivant, le drapeau posé', () => {
