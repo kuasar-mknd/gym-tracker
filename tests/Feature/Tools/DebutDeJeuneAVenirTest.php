@@ -155,3 +155,26 @@ it('termine sans refus un jeûne dont le début est encore à venir', function (
         ->and(debutAVenirEnUtc($jeune->start_time))->toBe('2026-03-10T12:03:00Z')
         ->and(debutAVenirEnUtc($jeune->end_time))->toBe('2026-03-10T12:01:00Z');
 });
+
+it('termine sans refus un jeûne dont la fin, envoyée sans l’heure de l’appareil, vient d’un appareil en avance de plus de cinq minutes', function (): void {
+    // La fin n'est jamais jugée : envoyée à l'instant du geste, lue sur une horloge d'appareil qui peut avancer de plus
+    // que la tolérance du début, sans champ pour la corriger, son refus empêcherait de terminer le jeûne. Le cas
+    // précédent l'envoie à l'instant de la requête, et ne verrait pas une borne posée avec la tolérance du début.
+    $compte = User::factory()->create();
+    debutAVenirDemarrer($compte, '2026-03-10T12:00:00.000Z')->assertSessionHasNoErrors();
+    $jeune = Fast::query()->where('user_id', $compte->id)->sole();
+
+    Carbon::setTestNow(Carbon::parse('2026-03-10T12:01:00Z'));
+
+    debutAVenirEnvoyer($compte, 'PATCH', route('tools.fasting.update', $jeune), [
+        'end_time' => '2026-03-10T12:11:00.000Z',
+        'status' => 'completed',
+    ])
+        ->assertRedirect(route('tools.fasting.index'))
+        ->assertSessionHasNoErrors();
+
+    $jeune->refresh();
+
+    expect($jeune->status)->toBe('completed')
+        ->and(debutAVenirEnUtc($jeune->end_time))->toBe('2026-03-10T12:11:00Z');
+});
