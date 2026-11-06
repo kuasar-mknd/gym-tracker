@@ -64,7 +64,7 @@ class CustomPolicy extends Basic
         // Alpine, que Filament embarque, compile ses expressions avec new Function :
         // il lui faut 'unsafe-eval'. L'application Vue n'en a pas besoin, donc le
         // mot-clef ne sort que sur le panneau.
-        if (request()->is(Filament::getPanel('admin')->getPath().'*') || $this->estUnePageDeHorizon()) {
+        if ($this->estUnePageDuPanneau() || $this->estUnePageDeHorizon()) {
             $policy->add(Directive::SCRIPT, Keyword::UNSAFE_EVAL);
         }
 
@@ -74,6 +74,19 @@ class CustomPolicy extends Basic
         // Filament injectant ses balises <style> à l'exécution.
         $policy->add(Directive::STYLE, Keyword::UNSAFE_INLINE);
         $policy->add(Directive::STYLE_ATTR, Keyword::UNSAFE_INLINE);
+    }
+
+    /**
+     * Une page du panneau. Pour un panneau inconnu, `getPanel()` rend null, ce
+     * que sa façade dit depuis Filament 5.11.1 : aucune page n'en est alors
+     * une, plutôt qu'un chemin vide qui ferait de `*` le motif de toute
+     * l'application.
+     */
+    private function estUnePageDuPanneau(): bool
+    {
+        $panneau = Filament::getPanel('admin');
+
+        return $panneau !== null && request()->is($panneau->getPath().'*');
     }
 
     /**

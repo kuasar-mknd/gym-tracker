@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\Admin;
-use Filament\Facades\Filament;
 use Illuminate\Testing\TestResponse;
 use Livewire\Mechanisms\HandleRequests\HandleRequests;
 use Spatie\Permission\Models\Role;
+use Tests\Support\FilamentAdminPanel;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\postJson;
@@ -85,7 +85,7 @@ it('refuse de charger une carte à l’administrateur qui a perdu les outils dep
     $superAdministrateur->assignRole(Role::findOrCreate('invite', 'admin'));
     $superAdministrateur->unsetRelation('roles');
 
-    expect($superAdministrateur->canAccessPanel(Filament::getPanel('admin')))->toBeTrue();
+    expect($superAdministrateur->canAccessPanel(FilamentAdminPanel::panel()))->toBeTrue();
     pulseCartesCharger($carte)->assertForbidden();
 });
 

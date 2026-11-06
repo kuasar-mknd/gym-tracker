@@ -6,6 +6,8 @@ namespace Tests\Support;
 
 use App\Models\Admin;
 use Filament\Facades\Filament;
+use Filament\Panel;
+use LogicException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -48,6 +50,15 @@ final class FilamentAdminPanel
         Filament::setCurrentPanel('admin');
 
         return $admin;
+    }
+
+    /**
+     * The 'admin' panel. Since Filament 5.11.1 the facade types `getPanel()`
+     * as nullable, null being what an unknown panel id gives.
+     */
+    public static function panel(): Panel
+    {
+        return Filament::getPanel('admin') ?? throw new LogicException("Le panneau 'admin' n'est pas enregistré.");
     }
 
     /**

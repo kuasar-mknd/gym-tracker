@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Security;
 
 use App\Support\Csp\Policies\CustomPolicy;
+use Filament\PanelRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use ReflectionClass;
@@ -117,6 +118,24 @@ class CustomPolicyTest extends TestCase
         new CustomPolicy()->configure($policy);
 
         $this->assertContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $this->getDirectivesFromPolicy($policy)[$this->getDirectiveKey(Directive::SCRIPT)]);
+    }
+
+    /**
+     * Sans panneau enregistré, `getPanel()` rend null : aucune page n'est
+     * alors une page du panneau, et le motif de son chemin ne devient pas `*`,
+     * qui couvrirait toute l'application.
+     */
+    public function test_production_policy_gives_unsafe_eval_to_no_page_without_the_panel(): void
+    {
+        Config::set('app.env', 'production');
+        $this->app['env'] = 'production';
+        $this->app->instance(PanelRegistry::class, new PanelRegistry());
+        $this->app->instance('request', Request::create('/backoffice/login'));
+
+        $policy = new Policy();
+        new CustomPolicy()->configure($policy);
+
+        $this->assertNotContains($this->formatKeyword(Keyword::UNSAFE_EVAL), $this->getDirectivesFromPolicy($policy)[$this->getDirectiveKey(Directive::SCRIPT)]);
     }
 
     /**

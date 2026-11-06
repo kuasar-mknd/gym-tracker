@@ -18,7 +18,6 @@ use App\Models\User;
 use App\Models\Workout;
 use BezhanSalleh\FilamentExceptions\Resources\ExceptionResource\Pages\ListExceptions;
 use BezhanSalleh\FilamentShield\Resources\Roles\Pages\ListRoles;
-use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
@@ -190,5 +189,5 @@ it('garde le rôle du super administrateur, et son titulaire le panneau, face à
     app(PermissionRegistrar::class)->forgetCachedPermissions();
 
     expect(Role::query()->whereKey($role->getKey())->exists())->toBeTrue()
-        ->and($titulaire->fresh()?->canAccessPanel(Filament::getPanel('admin')))->toBeTrue();
+        ->and($titulaire->fresh()?->canAccessPanel(FilamentAdminPanel::panel()))->toBeTrue();
 });
