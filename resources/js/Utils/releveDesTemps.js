@@ -182,6 +182,15 @@ const ecart = (depuis, jusqua) => (depuis > 0 && jusqua >= depuis ? jusqua - dep
  * envoyée pendant que le worker démarrait (le préchargement d'une navigation)
  * n'en a pas.
  *
+ * Une redirection de même origine, que `XMLHttpRequest` et `fetch` suivent
+ * d'eux-mêmes (le 303 qui suit une écriture d'Inertia), ne fait qu'une entrée :
+ * son nom est l'adresse de départ, mais ses instants et ses `serverTiming`
+ * sont ceux de la requête d'arrivée. `redirection` garde le temps de la
+ * requête de départ, de `redirectStart` à `redirectEnd` (la fin de la réponse
+ * qui redirige) ; l'en-tête de cette réponse, lui, ne se lit pas. L'entrée du
+ * document porte au contraire l'adresse d'arrivée, comme ses temps : seule sa
+ * colonne `redirection` dit qu'il a été redirigé.
+ *
  * @param {PerformanceResourceTiming} entree
  * @param {string} etiquette
  * @returns {object}
@@ -203,6 +212,7 @@ export const ligneDuReleve = (entree, etiquette) => {
         cache: serveur.cache ?? null,
         lecturesDuCache: serveur.cacheNombre ?? null,
         worker: ecart(entree.workerStart, entree.requestStart),
+        redirection: ecart(entree.redirectStart, entree.redirectEnd),
     }
 }
 
@@ -269,9 +279,10 @@ const regroupees = (lignes, cle) => {
 export const tableauDuReleve = ({ requetes, navigations }) => {
     const lignes = [
         'Relevé des temps : chemins relatifs, millisecondes, médiane / p95.',
+        'Une requête « → redirigée » porte les temps de sa requête d’arrivée ; « redirection » est le temps de la requête de départ, réponse qui redirige comprise.',
         '',
-        '| Requête | n | TTFB | hors de l’app | app | routage | contrôleur | rendu | sql | requêtes SQL | cache | lectures du cache | worker |',
-        '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
+        '| Requête | n | TTFB | hors de l’app | app | routage | contrôleur | rendu | sql | requêtes SQL | cache | lectures du cache | worker | redirection |',
+        '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
     ]
 
     for (const [etiquette, groupe] of regroupees(requetes, (ligne) => ligne.etiquette)) {
@@ -281,7 +292,8 @@ export const tableauDuReleve = ({ requetes, navigations }) => {
             `| ${etiquette} | ${groupe.length} | ${medianeEtP95(colonne('ttfb'))} | ${medianeEtP95(colonne('horsDeLApp'))} | ` +
                 `${medianeEtP95(colonne('app'))} | ${medianeEtP95(colonne('routage'))} | ${medianeEtP95(colonne('controleur'))} | ` +
                 `${medianeEtP95(colonne('rendu'))} | ${medianeEtP95(colonne('sql'))} | ${duree(centile(colonne('requetesSql'), 50))} | ` +
-                `${medianeEtP95(colonne('cache'))} | ${duree(centile(colonne('lecturesDuCache'), 50))} | ${medianeEtP95(colonne('worker'))} |`,
+                `${medianeEtP95(colonne('cache'))} | ${duree(centile(colonne('lecturesDuCache'), 50))} | ${medianeEtP95(colonne('worker'))} | ` +
+                `${medianeEtP95(colonne('redirection'))} |`,
         )
     }
 
@@ -438,18 +450,21 @@ const armer = ({ routeur, fenetre, origine, fragment }) => {
     /**
      * L'étiquette d'une requête : sa méthode et sa sorte, d'après ce que la
      * page en a annoncé à son départ, la plus ancienne annonce de la même
-     * adresse d'abord ; `?` quand rien ne l'annonce.
+     * adresse d'abord ; `?` quand rien ne l'annonce. Une requête redirigée le
+     * dit : ses temps sont ceux de la requête d'arrivée, pas de l'écriture
+     * qu'elle nomme (`ligneDuReleve()`).
      */
     const etiquetteDe = (entree, chemin) => {
         const rang = annonces.findIndex((annonce) => annonce.adresse === entree.name)
+        const redirigee = entree.redirectEnd > 0 ? ' → redirigée' : ''
 
         if (rang === -1) {
-            return `? ${chemin}`
+            return `? ${chemin}${redirigee}`
         }
 
         const [{ methode, sorte }] = annonces.splice(rang, 1)
 
-        return `${methode} ${chemin}${sorte ? ` (${sorte})` : ''}`
+        return `${methode} ${chemin}${sorte ? ` (${sorte})` : ''}${redirigee}`
     }
 
     /** Une requête qui part : son adresse absolue, sans fragment, comme son entrée la nommera. */

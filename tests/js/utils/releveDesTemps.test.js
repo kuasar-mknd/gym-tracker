@@ -238,6 +238,7 @@ describe('les pièces du relevé', () => {
             cache: 2,
             lecturesDuCache: 8,
             worker: 8,
+            redirection: null,
         })
 
         // Sans worker, sans en-tête, ou envoyée pendant que le worker démarrait.
@@ -258,6 +259,8 @@ describe('les pièces du relevé', () => {
         })
         expect(ligneDuReleve(entreeDeRequete('/', { workerStart: 120 }), '').worker).toBeNull()
         expect(ligneDuReleve(entreeDeRequete('/', { requestStart: 0, responseStart: 0 }), '').ttfb).toBeNull()
+        // Une redirection suivie : le temps de la requête de départ, de son envoi à la fin de la réponse qui redirige.
+        expect(ligneDuReleve(entreeDeRequete('/', { redirectStart: 50, redirectEnd: 90 }), '').redirection).toBe(40)
     })
 
     it('prend la médiane et le p95 au rang le plus proche', () => {
@@ -286,9 +289,25 @@ describe('les pièces du relevé', () => {
             cache: 1.25,
             lecturesDuCache: 9,
             worker: null,
+            redirection: null,
         })
+        const ecritureRedirigee = {
+            etiquette: 'POST /seances (visite) → redirigée',
+            ttfb: 55,
+            horsDeLApp: 11,
+            app: 44,
+            routage: 1,
+            controleur: 30,
+            rendu: 13,
+            sql: 5,
+            requetesSql: 9,
+            cache: 1,
+            lecturesDuCache: 6,
+            worker: null,
+            redirection: 40,
+        }
         const tableau = tableauDuReleve({
-            requetes: [ligne(60, 40), ligne(80, 50), ligne(70, 45)],
+            requetes: [ecritureRedirigee, ligne(60, 40), ligne(80, 50), ligne(70, 45)],
             navigations: [
                 { chemin: '/stats', duree: 120 },
                 { chemin: '/stats', duree: 80.04 },
@@ -298,10 +317,12 @@ describe('les pièces du relevé', () => {
 
         expect(tableau.split('\n')).toEqual([
             'Relevé des temps : chemins relatifs, millisecondes, médiane / p95.',
+            'Une requête « → redirigée » porte les temps de sa requête d’arrivée ; « redirection » est le temps de la requête de départ, réponse qui redirige comprise.',
             '',
-            '| Requête | n | TTFB | hors de l’app | app | routage | contrôleur | rendu | sql | requêtes SQL | cache | lectures du cache | worker |',
-            '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
-            '| GET /dashboard (partielle) | 3 | 70 / 80 | 25 / 30 | 45 / 50 | 1 / 1 | 34 / 39 | 10 / 10 | 10 / 10 | 12 | 1,3 / 1,3 | 9 | — |',
+            '| Requête | n | TTFB | hors de l’app | app | routage | contrôleur | rendu | sql | requêtes SQL | cache | lectures du cache | worker | redirection |',
+            '| --- | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: | --: |',
+            '| GET /dashboard (partielle) | 3 | 70 / 80 | 25 / 30 | 45 / 50 | 1 / 1 | 34 / 39 | 10 / 10 | 10 / 10 | 12 | 1,3 / 1,3 | 9 | — | — |',
+            '| POST /seances (visite) → redirigée | 1 | 55 / 55 | 11 / 11 | 44 / 44 | 1 / 1 | 30 / 30 | 13 / 13 | 5 / 5 | 9 | 1 / 1 | 6 | — | 40 / 40 |',
             '',
             '| Navigation | n | médiane | p95 |',
             '| --- | --: | --: | --: |',
@@ -473,6 +494,37 @@ describe('quand le serveur mesure', () => {
                 .requetes.map((ligne) => ligne.etiquette)
                 .slice(1),
         ).toEqual(['DELETE /api/v1/sets/{id}', 'POST /api/v1/sets'])
+    })
+
+    it('ne range pas sous une écriture redirigée les temps de la page d’arrivée, et garde ceux de sa redirection', () => {
+        const simulee = fenetreSimulee({ navigation: documentServi() })
+        const routeur = routeurSimule()
+
+        installe = installerLeReleveDesTemps({ routeur, fenetre: simulee.fenetre })
+        routeur.emettre('start', { visit: visite('/seances', { method: 'post' }) })
+        routeur.emettre('start', { visit: visite('/seances/12') })
+        // Le XHR suit le 303 : l'entrée garde l'adresse de départ, mais ses instants et son en-tête sont ceux du GET d'arrivée.
+        simulee.recevoir(
+            entreeDeRequete('/seances', {
+                redirectStart: 50,
+                redirectEnd: 90,
+                requestStart: 95,
+                responseStart: 150,
+                serverTiming: tempsDuServeurPoses({ app: 44 }),
+            }),
+            entreeDeRequete('/seances/12'),
+        )
+
+        expect(installe.releve().requetes.slice(1)).toEqual([
+            expect.objectContaining({
+                etiquette: 'POST /seances (visite) → redirigée',
+                ttfb: 55,
+                app: 44,
+                redirection: 40,
+            }),
+            expect.objectContaining({ etiquette: 'GET /seances/{id} (visite)', redirection: null }),
+        ])
+        expect(simulee.fenetre[FONCTION_DE_CONSOLE]()).not.toMatch(/\| POST \/seances \(visite\) \|/)
     })
 
     it('garde au plus les dernières mesures', () => {
