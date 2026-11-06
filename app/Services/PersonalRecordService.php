@@ -188,8 +188,8 @@ final class PersonalRecordService
      * le coût est payé sur l'événement rare, pas à chaque enregistrement.
      *
      * Seuls les types suivis (`PersonalRecordType::SUIVIS`) sont reconstruits ;
-     * une ligne d'un type hérité n'est ni recalculée ni supprimée, c'est le
-     * contrôle de cohérence qui la signale.
+     * une ligne d'un autre type n'est ni recalculée ni supprimée : le contrôle
+     * de cohérence la signale, et `retirerLesTypesNonSuivis()` la retire.
      *
      * Sous le verrou du couple (compte, exercice) (#1984) : la requête web qui
      * corrige une série reconstruit pendant qu'un processus de file
@@ -225,6 +225,48 @@ final class PersonalRecordService
     public function reparer(User $user, int $idExercice): void
     {
         $this->reconstruireLExercice($user, $idExercice, null);
+    }
+
+    /**
+     * Retire les records de l'exercice dont le type n'est pas l'un des types
+     * suivis, puis reconstruit l'exercice depuis ses séries, sans rien
+     * annoncer, comme `reparer()` (#1811) : la migration
+     * `2026_11_06_161554_retirer_les_records_d_un_type_non_suivi` et
+     * `app:verify-data-coherence --repair`.
+     *
+     * Ces lignes portent un type que plus aucun code n'écrit : les quatre types
+     * hérités que l'enum garde encore, ou une valeur qu'il ne connaît pas. Le
+     * type se compare octet par octet (`CAST(type AS BINARY)`), comme
+     * `PersonalRecordType::from()` : la colonne est en utf8mb4_unicode_ci,
+     * insensible à la casse et PAD SPACE, et un `whereNotIn('type', …)`
+     * garderait 'MAX_WEIGHT' et 'max_weight ', que le modèle ne relit pas.
+     * La suppression se fait en base, sans passer par le modèle, qui lèverait
+     * au cast (`ValueError`) sur ces mêmes valeurs.
+     *
+     * Le retrait précède la reconstruction, sous le même verrou : celle-ci
+     * relit les records de l'exercice par le modèle, et l'index unique, qui
+     * suit la collation, refuserait le type suivi qu'elle recrée à côté de la
+     * variante qui l'imite. Une valeur que plus aucune série ne soutient
+     * disparaît ; les autres se refont depuis la meilleure série éligible.
+     *
+     * `reparer()` ne retire rien : la migration de la 1.7.0 qui l'appelle
+     * garde le comportement avec lequel elle a été écrite.
+     *
+     * @return int Le nombre de records retirés.
+     */
+    public function retirerLesTypesNonSuivis(User $user, int $idExercice): int
+    {
+        return $this->sousLeVerrou($user->id, $idExercice, function () use ($user, $idExercice): int {
+            $retires = PersonalRecord::query()
+                ->where('user_id', $user->id)
+                ->where('exercise_id', $idExercice)
+                ->whereNotIn(DB::raw('CAST(type AS BINARY)'), PersonalRecordType::SUIVIS)
+                ->delete();
+
+            $this->reconstruire($user, $idExercice, null);
+
+            return $retires;
+        });
     }
 
     /**
