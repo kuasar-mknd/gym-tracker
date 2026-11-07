@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Set;
 use App\Models\Workout;
 use App\Models\WorkoutLine;
+use App\Support\VersionDeCache;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -31,19 +32,20 @@ final class RecommendedValuesService
 
     /**
      * Clef par utilisateur, exercice et séance, portant une version : une
-     * série enregistrée incrémente la version et rend obsolètes d'un coup
-     * toutes les recommandations de l'utilisateur, sans les énumérer.
+     * série enregistrée tire une version neuve et rend obsolètes d'un coup
+     * toutes les recommandations de l'utilisateur, sans les énumérer. La
+     * version est un ULID, jamais réutilisé : perdue par le cache, elle ne
+     * ramène plus une recommandation d'avant une série (`VersionDeCache`,
+     * #2151).
      */
     public static function cleDeCache(int $idUtilisateur, int $idExercice, int $idSeance): string
     {
-        $version = Cache::get("recommended_values:version:{$idUtilisateur}", 0);
-
-        return "recommended_values:{$idUtilisateur}:v".(is_numeric($version) ? (int) $version : 0).":{$idExercice}:{$idSeance}";
+        return "recommended_values:{$idUtilisateur}:v".VersionDeCache::lire("recommended_values:version:{$idUtilisateur}").":{$idExercice}:{$idSeance}";
     }
 
     public function invaliderPour(int $idUtilisateur): void
     {
-        Cache::increment("recommended_values:version:{$idUtilisateur}");
+        VersionDeCache::renouveler("recommended_values:version:{$idUtilisateur}");
     }
 
     /**

@@ -23,8 +23,8 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/**, app/Rules/**, app/Support/AdresseCanonique.php, lang/fr.json, lang/fr/** | .ai/rules/requests.md |
 | routes/web.php, app/Support/IdentifiantsDesRoutes.php, app/Http/Controllers/ErreurNavigateurController.php, app/Http/Requests/ErreurNavigateurStoreRequest.php, app/Models/ErreurNavigateur.php | .ai/rules/routes.md |
 | app/Services/** | .ai/rules/services.md |
-| app/Services/Stats/** | .ai/rules/stats.md |
+| app/Services/Stats/**, app/Support/VersionDeCache.php, app/Services/RecommendedValuesService.php, app/Models/Exercise.php | .ai/rules/stats.md |
 | tests/js/** | .ai/rules/tests-js.md |
-| tests/** | .ai/rules/tests.md |
+| tests/**, phpstan-baseline.neon | .ai/rules/tests.md |
 | resources/js/Utils/SyncService.js, resources/js/Utils/listePartagee.js, resources/js/Utils/syncErrors.js, resources/js/Utils/seanceEtFile.js, resources/js/composables/useSeanceEtSaFile.js, resources/js/Utils/ecrituresAbandonnees.js, resources/js/composables/useDeconnexion.js, resources/js/Utils/copiesHorsLigne.js, resources/js/Utils/ecritureDesCopies.js, resources/js/Utils/prechauffage.js, resources/js/Utils/pagesGardees.js, resources/js/Utils/auRepos.js, resources/js/Utils/ecrituresAcceptees.js, resources/js/Utils/dernierPrechauffage.js, resources/js/composables/useCopieDeLaSeance.js, resources/js/Utils/demarrageHorsLigne.js, resources/js/Utils/seanceEnAttente.js, resources/js/composables/useDemarrageDUneSeance.js, resources/js/composables/useSeanceEnAttente.js, resources/js/composables/useSeanceEnCoursDeLAppareil.js, resources/js/Pages/Profile/Partials/DeleteUserForm.vue, tests/Feature/HorsLigne/** | .ai/rules/utils.md |
 | .github/workflows/** | .ai/rules/workflows.md |

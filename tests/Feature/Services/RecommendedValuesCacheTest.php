@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Un exercice fait hier, trois series au poids demande, et la ligne du jour
@@ -61,17 +62,39 @@ function requetesSurLHistoriqueDesLignes(callable $action): array
     return $lues;
 }
 
-it('numérote la clef de cache à zéro tant qu’aucune série n’a invalidé les recommandations', function (): void {
-    expect(RecommendedValuesService::cleDeCache(7, 3, 9))->toBe('recommended_values:7:v0:3:9');
+/**
+ * La version des recommandations du compte 7, telle que le cache la garde.
+ */
+function versionDesRecommandationsEnCache(): string
+{
+    $version = Cache::get('recommended_values:version:7');
+
+    return is_string($version) ? $version : '';
+}
+
+it('tire une version neuve, un ULID, tant qu’aucune série n’a invalidé les recommandations, et la garde', function (): void {
+    // Plus de version zéro : une version évincée repartait de zéro, et
+    // retombait sur les entrées encore vivantes de ses numéros d'avant (#2151).
+    $cle = RecommendedValuesService::cleDeCache(7, 3, 9);
+    $version = versionDesRecommandationsEnCache();
+
+    expect(Str::isUlid($version))->toBeTrue()
+        ->and($cle)->toBe("recommended_values:7:v{$version}:3:9")
+        ->and(RecommendedValuesService::cleDeCache(7, 3, 9))->toBe($cle);
 });
 
-it('reprend la version en cours dans la clef, quel que soit le type rendu par le cache', function (mixed $version): void {
-    // Le magasin de cache ne garantit pas le type : Redis rend une chaine la ou
-    // le tableau garde un entier. La clef, elle, doit rester la meme, sinon
-    // deux chemins de lecture cherchent a deux endroits differents.
+it('ne reprend jamais dans la clef une version d’une release d’avant, quel que soit le type rendu par le cache', function (mixed $version): void {
+    // L'ancien code numérotait les versions : Redis rend son compteur en
+    // chaîne, là où le tableau des tests garde l'entier. Une fois évincé, ce
+    // compteur repartait de zéro et remontait vers des numéros déjà servis :
+    // seul un ULID tiré par l'application nomme désormais une clef (#2151).
     Cache::put('recommended_values:version:7', $version);
 
-    expect(RecommendedValuesService::cleDeCache(7, 3, 9))->toBe('recommended_values:7:v7:3:9');
+    $cle = RecommendedValuesService::cleDeCache(7, 3, 9);
+
+    expect($cle)->not->toBe('recommended_values:7:v7:3:9')
+        ->and(Str::isUlid(versionDesRecommandationsEnCache()))->toBeTrue()
+        ->and($cle)->toBe('recommended_values:7:v'.versionDesRecommandationsEnCache().':3:9');
 })->with([
     'entier' => [7],
     'chaîne' => ['7'],
@@ -79,10 +102,14 @@ it('reprend la version en cours dans la clef, quel que soit le type rendu par le
     'chaîne décimale' => ['7.0'],
 ]);
 
-it('retombe sur la version zéro quand le cache rend une version illisible', function (): void {
+it('remplace une version illisible par une version neuve, jamais par zéro', function (): void {
     Cache::put('recommended_values:version:7', 'corrompue');
 
-    expect(RecommendedValuesService::cleDeCache(7, 3, 9))->toBe('recommended_values:7:v0:3:9');
+    $cle = RecommendedValuesService::cleDeCache(7, 3, 9);
+
+    expect($cle)->not->toBe('recommended_values:7:v0:3:9')
+        ->and(Str::isUlid(versionDesRecommandationsEnCache()))->toBeTrue()
+        ->and($cle)->toBe('recommended_values:7:v'.versionDesRecommandationsEnCache().':3:9');
 });
 
 it('oublie la recommandation déjà servie dès qu’une série est enregistrée', function (): void {
