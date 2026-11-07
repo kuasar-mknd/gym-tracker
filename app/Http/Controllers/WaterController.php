@@ -41,8 +41,9 @@ class WaterController extends Controller
     }
 
     /**
-     * Sans heure soumise, la prise est datée de maintenant : le bouton « + 250
-     * ml » n'en envoie pas, et un relevé sans date sortirait de l'historique.
+     * L'heure de la prise vient de la page, qui envoie l'instant du geste
+     * (`WaterTracker.vue`) : `StoreWaterLogRequest` l'exige. Le repli sur
+     * maintenant qui suivait ne servait plus à rien (#1513).
      *
      * @throws \Illuminate\Auth\Access\AuthorizationException
      */
@@ -50,11 +51,7 @@ class WaterController extends Controller
     {
         $this->authorize('create', WaterLog::class);
 
-        $data = $request->validated();
-
-        $data['consumed_at'] ??= now();
-
-        $this->user()->waterLogs()->create($data);
+        $this->user()->waterLogs()->create($request->validated());
 
         return redirect()->back();
     }

@@ -98,6 +98,25 @@ describe('RestTimer countdown', () => {
         expect(clock(wrapper)).toBe('1:25')
     })
 
+    /*
+     * `autoStart` vaut `true` quand la page ne le passe pas, et `Show.vue` ne
+     * le passe pas : chaque repos démarre au montage. Le docbloc du composant
+     * annonçait `false` (#1513).
+     */
+    it('démarre au montage quand la page ne lui dit rien', async () => {
+        const wrapper = mount(RestTimer, {
+            props: { duration: 90 },
+            global: { directives: { press: {} }, stubs: { GlassButton: { template: '<button><slot /></button>' } } },
+        })
+
+        expect(vi.getTimerCount()).toBe(1)
+
+        vi.advanceTimersByTime(5000)
+        await wrapper.vm.$nextTick()
+
+        expect(clock(wrapper)).toBe('1:25')
+    })
+
     it('stays where it is until it is started', async () => {
         const wrapper = mountTimer({ duration: 90, autoStart: false })
 

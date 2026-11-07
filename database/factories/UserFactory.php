@@ -55,7 +55,9 @@ class UserFactory extends Factory
             'current_streak' => 0,
             'longest_streak' => 0,
             'last_workout_at' => null,
-            'default_rest_time' => 60,
+            // Le défaut de la colonne : un compte de test est un compte
+            // ordinaire (relevé dans #1514, réglé par #1513).
+            'default_rest_time' => 90,
             'provider' => null,
             'provider_id' => null,
         ];
